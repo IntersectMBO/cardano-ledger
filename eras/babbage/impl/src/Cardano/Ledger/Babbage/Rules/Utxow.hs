@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -83,7 +84,9 @@ import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+#if __GLASGOW_HASKELL__ < 914
 import Data.Typeable
+#endif
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
@@ -136,22 +139,30 @@ instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure BabbageEra where
 
 deriving instance
   ( AlonzoEraScript era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Show (ShelleyUtxowPredFailure era)
-  , Show (PredicateFailure (EraRule "UTXO" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   , Show (TxOut era)
   , Show (TxCert era)
   , Show (Value era)
+#endif
+  , Show (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Show (BabbageUtxowPredFailure era)
 
 deriving instance
   ( AlonzoEraScript era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Eq (ShelleyUtxowPredFailure era)
-  , Eq (PredicateFailure (EraRule "UTXO" era))
   , Eq (PredicateFailure (EraRule "UTXOS" era))
-  , Eq (TxOut era)
   , Eq (TxCert era)
+  , Eq (TxOut era)
+#endif
+  , Eq (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Eq (BabbageUtxowPredFailure era)
 
@@ -171,12 +182,16 @@ instance
 
 instance
   ( AlonzoEraScript era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , DecCBOR (TxOut era)
   , DecCBOR (TxCert era)
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
-  , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (TxAuxData era)
+#endif
+  , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   ) =>
   DecCBOR (BabbageUtxowPredFailure era)
   where

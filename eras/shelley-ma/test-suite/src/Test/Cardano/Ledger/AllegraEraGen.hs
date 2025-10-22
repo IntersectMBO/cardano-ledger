@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -24,8 +25,13 @@ import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.Allegra.TxBody (TxBody (AllegraTxBody))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -33,14 +39,29 @@ import Cardano.Ledger.Binary (encCBOR, serialize')
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireAnyOf,
+  data RequireMOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
   pattern RequireSignature,
+#endif
  )
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Shelley.Tx (data ShelleyTx)
+#else
 import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)
+#endif
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Shelley.TxWits (data ShelleyTxWits)
+#else
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
+#endif
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>))
 import Cardano.Slotting.Slot (SlotNo (SlotNo))

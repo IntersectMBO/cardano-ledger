@@ -41,8 +41,13 @@ module Cardano.Ledger.Allegra.Scripts (
   mkTimeExpireTimelock,
   getTimeExpireTimelock,
   Timelock (MkTimelock, TimelockConstr),
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
   TimelockRaw (..),
   inInterval,
   showTimelock,
@@ -92,10 +97,17 @@ import Cardano.Ledger.MemoBytes.Internal (mkMemoBytes)
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
   nativeMultiSigTag,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireAnyOf,
+  data RequireMOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
   pattern RequireSignature,
+#endif
  )
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))

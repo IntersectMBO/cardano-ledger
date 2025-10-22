@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -34,7 +35,11 @@ module Cardano.Ledger.Shelley.Transition (
     tcShelleyGenesisL,
     tcInitialPParamsG
   ),
+#if __GLASGOW_HASKELL__ >= 914
+  data ShelleyTransitionConfig,
+#else
   pattern ShelleyTransitionConfig,
+#endif
   tcInitialFundsL,
   tcInitialStakingL,
   mkShelleyTransitionConfig,
