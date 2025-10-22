@@ -58,10 +58,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor.Classes (Eq1 (..))
-import Data.Maybe.Strict (
-  StrictMaybe (..),
-  strictMaybeToMaybe,
- )
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
@@ -203,10 +200,7 @@ shelleyTxEqRaw :: EraTx era => Tx era -> Tx era -> Bool
 shelleyTxEqRaw tx1 tx2 =
   eqRaw (tx1 ^. bodyTxL) (tx2 ^. bodyTxL)
     && eqRaw (tx1 ^. witsTxL) (tx2 ^. witsTxL)
-    && liftEq -- TODO: Implement Eq1 instance for StrictMaybe
-      eqRaw
-      (strictMaybeToMaybe (tx1 ^. auxDataTxL))
-      (strictMaybeToMaybe (tx2 ^. auxDataTxL))
+    && liftEq eqRaw (tx1 ^. auxDataTxL) (tx2 ^. auxDataTxL)
 
 instance EqRaw (Tx ShelleyEra) where
   eqRaw = shelleyTxEqRaw
