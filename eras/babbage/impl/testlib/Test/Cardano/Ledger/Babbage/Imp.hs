@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Babbage.Imp (spec) where
+module Test.Cardano.Ledger.Babbage.Imp (spec, babbageEraSpecificSpec) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
@@ -25,8 +25,15 @@ spec = do
     describe "BabbageImpSpec - era generic tests" $ do
       Utxo.spec
       Utxow.spec
-      Utxos.spec @era
+      Utxos.spec
+
+babbageEraSpecificSpec :: forall era. BabbageEraImp era => SpecWith (ImpInit (LedgerSpec era))
+babbageEraSpecificSpec =
+  describe "Babbage era specific Imp spec" $ do
+    Utxos.babbageEraSpecificSpec
 
 instance EraSpecificSpec BabbageEra where
-  eraSpecificSpec =
-    ShelleyImp.shelleyEraSpecificSpec >> AlonzoImp.alonzoEraSpecificSpec
+  eraSpecificSpec = do
+    ShelleyImp.shelleyEraSpecificSpec
+    AlonzoImp.alonzoEraSpecificSpec
+    babbageEraSpecificSpec
