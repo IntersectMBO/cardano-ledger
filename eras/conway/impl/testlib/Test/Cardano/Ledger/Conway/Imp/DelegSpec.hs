@@ -10,7 +10,6 @@
 
 module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
   spec,
-  conwayEraSpecificSpec,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -169,13 +168,12 @@ spec = do
 
   describe "Delegate stake" $ do
     it "Delegate to unregistered pool" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-
       cred <- KeyHashObj <$> freshKeyHash
+      regTxCert <- genRegTxCert cred
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
-            .~ [RegDepositTxCert cred expectedDeposit]
+            .~ [regTxCert]
 
       poolKh <- freshKeyHash
       submitFailingTx
@@ -529,29 +527,3 @@ spec = do
       accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
       impAnn (show cred <> " expected to not have their vote delegated") $
         expectNothingExpr (lookupDRepDelegation cred accounts)
-
-conwayEraSpecificSpec :: SpecWith (ImpInit (LedgerSpec ConwayEra))
-conwayEraSpecificSpec = do
-  describe "Delegate stake" $ do
-    it "Register and delegate in the same transaction" $ do
-      cred1 <- KeyHashObj <$> freshKeyHash
-      regTxCert1 <- genRegTxCert cred1
-      poolKh <- freshKeyHash
-      registerPool poolKh
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [ regTxCert1
-               , DelegTxCert cred1 (DelegStake poolKh)
-               ]
-      expectDelegatedToPool cred1 poolKh
-
-      cred2 <- KeyHashObj <$> freshKeyHash
-      regTxCert2 <- genRegTxCert cred2
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [ regTxCert2
-               , DelegStakeTxCert cred2 poolKh -- using the pattern from Shelley
-               ]
-      expectDelegatedToPool cred2 poolKh
