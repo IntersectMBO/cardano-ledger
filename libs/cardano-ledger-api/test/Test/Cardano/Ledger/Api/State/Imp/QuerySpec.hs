@@ -1,8 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Api.State.Imp.QuerySpec where
@@ -41,8 +43,8 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpInit (LedgerSpec era))
-spec = do
+  Spec
+spec = withEachEraVersion @era $ do
   describe "DRep" $ do
     describe "Expiries are reported correctly" $ do
       let drepStateFromQuery ::
