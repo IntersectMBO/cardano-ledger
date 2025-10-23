@@ -282,7 +282,7 @@ delegationTransition = do
             certState
               & certDStateL . accountsL .~ accounts
               & certPStateL
-                %~ unDelegStakePool cred (accountState ^. stakePoolDelegationAccountStateL) Nothing
+                %~ unDelegReDelegStakePool cred accountState Nothing
     DelegStakeTxCert cred stakePool -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
@@ -294,10 +294,7 @@ delegationTransition = do
           pure $
             certState
               & certDStateL . accountsL %~ adjustAccountState (stakePoolDelegationAccountStateL ?~ stakePool) cred
-              & certPStateL %~ \ps ->
-                ps
-                  & unDelegStakePool cred (accountState ^. stakePoolDelegationAccountStateL) (Just stakePool)
-                  & psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.insert cred) stakePool
+              & certPStateL %~ unDelegReDelegStakePool cred accountState (Just stakePool)
     GenesisDelegTxCert gkh vkh vrf -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
@@ -420,19 +417,3 @@ updateReservesAndTreasury targetPot combinedMap available certState = do
     case targetPot of
       ReservesMIR -> certState & certDStateL . dsIRewardsL . iRReservesL .~ combinedMap
       TreasuryMIR -> certState & certDStateL . dsIRewardsL . iRTreasuryL .~ combinedMap
-
-unDelegStakePool ::
-  Credential 'Staking ->
-  Maybe (KeyHash 'StakePool) ->
-  Maybe (KeyHash 'StakePool) ->
-  PState era ->
-  PState era
-unDelegStakePool stakeCred mCurStakePool mNewPool =
-  maybe
-    id
-    (\oldPool -> psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.delete stakeCred) oldPool)
-    (mCurStakePool >>= stakePoolToUnDeleg)
-  where
-    stakePoolToUnDeleg oldPool
-      | Just oldPool /= mNewPool = Just oldPool
-      | otherwise = Nothing
