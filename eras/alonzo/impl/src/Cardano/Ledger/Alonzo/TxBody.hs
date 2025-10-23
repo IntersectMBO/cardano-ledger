@@ -141,12 +141,12 @@ type ScriptIntegrityHash = SafeHash EraIndependentScriptIntegrity
 class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   collateralInputsTxBodyL :: Lens' (TxBody era) (Set TxIn)
 
-  reqSignerHashesTxBodyL :: AtMostEra "Conway" era => Lens' (TxBody era) (Set (KeyHash 'Witness))
+  reqSignerHashesTxBodyL :: AtMostEra "Conway" era => Lens' (TxBody era) (Set (KeyHash 'Guard))
 
   reqSignerHashesTxBodyG ::
-    SimpleGetter (TxBody era) (Set (KeyHash Witness))
+    SimpleGetter (TxBody era) (Set (KeyHash Guard))
   default reqSignerHashesTxBodyG ::
-    AtMostEra "Conway" era => SimpleGetter (TxBody era) (Set (KeyHash Witness))
+    AtMostEra "Conway" era => SimpleGetter (TxBody era) (Set (KeyHash Guard))
   reqSignerHashesTxBodyG = reqSignerHashesTxBodyL
 
   scriptIntegrityHashTxBodyL ::
@@ -178,7 +178,7 @@ data AlonzoTxBodyRaw = AlonzoTxBodyRaw
   , atbrTxFee :: !Coin
   , atbrValidityInterval :: !ValidityInterval
   , atbrUpdate :: !(StrictMaybe (Update AlonzoEra))
-  , atbrReqSignerHashes :: Set (KeyHash 'Witness)
+  , atbrReqSignerHashes :: Set (KeyHash 'Guard)
   , atbrMint :: !MultiAsset
   , atbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
   , atbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
@@ -310,7 +310,7 @@ pattern AlonzoTxBody ::
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update AlonzoEra) ->
-  Set (KeyHash 'Witness) ->
+  Set (KeyHash 'Guard) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
   StrictMaybe TxAuxDataHash ->
@@ -401,7 +401,7 @@ txfee' :: TxBody AlonzoEra -> Coin
 withdrawals' :: TxBody AlonzoEra -> Withdrawals
 vldt' :: TxBody AlonzoEra -> ValidityInterval
 update' :: TxBody AlonzoEra -> StrictMaybe (Update AlonzoEra)
-reqSignerHashes' :: TxBody AlonzoEra -> Set (KeyHash 'Witness)
+reqSignerHashes' :: TxBody AlonzoEra -> Set (KeyHash 'Guard)
 adHash' :: TxBody AlonzoEra -> StrictMaybe TxAuxDataHash
 mint' :: TxBody AlonzoEra -> MultiAsset
 scriptIntegrityHash' :: TxBody AlonzoEra -> StrictMaybe ScriptIntegrityHash

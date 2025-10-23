@@ -40,6 +40,7 @@ import Cardano.Ledger.Alonzo.State ()
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Credential (credScriptHash)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Plutus (Language (..))
@@ -327,5 +328,5 @@ getAlonzoWitsVKeyNeeded ::
   Set.Set (KeyHash 'Witness)
 getAlonzoWitsVKeyNeeded certState utxo txBody =
   getShelleyWitsVKeyNeeded certState utxo txBody
-    `Set.union` (txBody ^. reqSignerHashesTxBodyG)
+    `Set.union` Set.map asWitness (txBody ^. reqSignerHashesTxBodyG)
 {-# INLINEABLE getAlonzoWitsVKeyNeeded #-}

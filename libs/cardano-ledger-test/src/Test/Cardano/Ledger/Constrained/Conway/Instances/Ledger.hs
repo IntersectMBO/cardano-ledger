@@ -173,7 +173,7 @@ type ConwayTxBodyTypes =
    , Withdrawals
    , Coin
    , ValidityInterval
-   , Set (KeyHash 'Witness)
+   , Set (KeyHash 'Guard)
    , MultiAsset
    , StrictMaybe ScriptIntegrityHash
    , StrictMaybe TxAuxDataHash

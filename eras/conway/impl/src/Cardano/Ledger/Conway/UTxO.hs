@@ -178,7 +178,7 @@ getConwayWitsVKeyNeeded ::
   Set.Set (KeyHash 'Witness)
 getConwayWitsVKeyNeeded utxo txBody =
   getShelleyWitsVKeyNeededNoGov utxo txBody
-    `Set.union` (txBody ^. reqSignerHashesTxBodyG)
+    `Set.union` Set.map asWitness (txBody ^. reqSignerHashesTxBodyG)
     `Set.union` voterWitnesses txBody
 
 voterWitnesses ::
