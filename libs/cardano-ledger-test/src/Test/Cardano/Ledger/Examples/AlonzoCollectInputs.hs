@@ -58,6 +58,7 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
@@ -73,12 +74,10 @@ import Test.Cardano.Ledger.Plutus (
   alwaysSucceedsPlutus,
   zeroTestingCostModel,
  )
-import Test.Tasty (TestTree)
-import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
-tests :: TestTree
+tests :: Spec
 tests =
-  testCase
+  it
     "collectTwoPhaseScriptInputs output order"
     collectTwoPhaseScriptInputsOutputOrdering
 
@@ -86,10 +85,10 @@ tests =
 
 -- | Never apply this to any Era but Alonzo or Babbage
 collectTwoPhaseScriptInputsOutputOrdering ::
-  Assertion
+  Expectation
 collectTwoPhaseScriptInputsOutputOrdering = do
   collectInputs @AlonzoEra testEpochInfo testSystemStart defaultPParams validatingTx initUTxO
-    @?= Right
+    `shouldBe` Right
       [ PlutusWithContext
           { pwcProtocolVersion = pvMajor (defaultPParams @AlonzoEra ^. ppProtocolVersionL)
           , pwcScript = Left plutus

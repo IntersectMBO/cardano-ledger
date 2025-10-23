@@ -52,6 +52,7 @@ import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Era ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
@@ -65,9 +66,6 @@ import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
-import Test.Cardano.Ledger.TreeDiff (ToExpr, showExpr)
-import Test.Tasty
-import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase)
 
 someKeys :: KeyPair 'Payment
 someKeys = KeyPair vk sk
@@ -233,7 +231,7 @@ testExpectSuccessValid ::
   , BabbageEraPParams era
   ) =>
   TestCaseData era ->
-  Assertion
+  Expectation
 testExpectSuccessValid tc =
   let txBody' = txBody tc
       tx' = txFromTestCaseData tc
@@ -253,18 +251,16 @@ testExpectSuccessValid tc =
         (TRC (env, state, assumedValidTx))
         (genericCont (show assumedValidTx) $ Right expectedState)
 
-babbageFeatures :: TestTree
+babbageFeatures :: Spec
 babbageFeatures =
-  testGroup
-    "Babbage Features"
-    [ testCase "inputs and refinputs overlap in Babbage and don't Fail" $
-        testExpectSuccessValid @BabbageEra commonReferenceScript
-    , testCase "inputs and refinputs overlap in Conway and Fail" $
-        testExpectUTXOFailure
-          @ConwayEra
-          commonReferenceScript
-          (Conway.BabbageNonDisjointRefInputs (pure commonTxIn))
-    ]
+  describe "Babbage Features" $ do
+    it "inputs and refinputs overlap in Babbage and don't Fail" $
+      testExpectSuccessValid @BabbageEra commonReferenceScript
+    it "inputs and refinputs overlap in Conway and Fail" $
+      testExpectUTXOFailure
+        @ConwayEra
+        commonReferenceScript
+        (Conway.BabbageNonDisjointRefInputs (pure commonTxIn))
 
 testExpectUTXOFailure ::
   forall era.
@@ -280,7 +276,7 @@ testExpectUTXOFailure ::
   ) =>
   TestCaseData era ->
   PredicateFailure (EraRule "UTXO" era) ->
-  Assertion
+  Expectation
 testExpectUTXOFailure tc failure =
   let tx' = txFromTestCaseData tc
       InitUtxo inputs' refInputs' collateral' = initUtxoFromTestCaseData @era tc
@@ -295,9 +291,9 @@ testExpectUTXOFailure tc failure =
         state
         tx'
         ( \case
-            Left (predfail :| []) -> assertEqual "unexpected failure" predfail failure
-            Left xs -> assertFailure $ "not exactly one failure" <> showExpr xs
-            Right _ -> assertFailure "testExpectUTXOFailure succeeds"
+            Left (predfail :| []) -> predfail `shouldBe` failure
+            Left xs -> expectationFailure $ "not exactly one failure" <> showExpr xs
+            Right _ -> expectationFailure "testExpectUTXOFailure succeeds"
         )
 
 defaultPParams :: forall era. (AlonzoEraScript era, BabbageEraPParams era) => PParams era

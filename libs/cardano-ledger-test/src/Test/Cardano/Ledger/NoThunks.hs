@@ -15,6 +15,7 @@ import Cardano.Ledger.Conway.Core (Era (..))
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.State
 import NoThunks.Class (NoThunks)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Generic.GenState (EraGenericGen, GenSize, defaultGenSize)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, noThunksGen)
 import Test.Cardano.Ledger.Generic.Proof (
@@ -27,19 +28,15 @@ import Test.Cardano.Ledger.Generic.Proof (
 import Test.Cardano.Ledger.Generic.Trace (Gen1, traceProp)
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty)
 
-test :: TestTree
+test :: Spec
 test =
-  testGroup
-    "There are no unexpected thunks in MockChainState"
-    [ f @ShelleyEra
-    , f @AllegraEra
-    , f @MaryEra
-    , f @AlonzoEra
-    , f @BabbageEra
-    ]
+  describe "There are no unexpected thunks in MockChainState" $ do
+    f @ShelleyEra
+    f @AllegraEra
+    f @MaryEra
+    f @AlonzoEra
+    f @BabbageEra
   where
     f ::
       forall era.
@@ -48,7 +45,7 @@ test =
       , ShelleyEraAccounts era
       , NoThunks (StashedAVVMAddresses era)
       ) =>
-      TestTree
+      Spec
     f = testThunks @era 100 defaultGenSize
 
 testThunks ::
@@ -60,9 +57,9 @@ testThunks ::
   ) =>
   Int ->
   GenSize ->
-  TestTree
+  Spec
 testThunks numTx gensize =
-  testProperty (eraName @era ++ " era. Trace length = " ++ show numTx) $
+  prop (eraName @era ++ " era. Trace length = " ++ show numTx) $
     traceProp @era
       numTx
       gensize

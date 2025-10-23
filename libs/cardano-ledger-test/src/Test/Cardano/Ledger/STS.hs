@@ -23,7 +23,7 @@ import Control.State.Transition.Extended
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import Data.Set (Set)
-import Test.Cardano.Ledger.Common (ToExpr (..))
+import Test.Cardano.Ledger.Common hiding (witness)
 import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Constrained.Conway.Epoch
@@ -32,9 +32,6 @@ import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Pool
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv, genWitUniv, witness)
 import Test.Cardano.Ledger.Shelley.Utils
-import Test.QuickCheck hiding (witness)
-import Test.Tasty
-import Test.Tasty.QuickCheck hiding (witness)
 
 -- ==================================================
 
@@ -83,8 +80,8 @@ stsPropertyV2 ::
   (env -> st -> Specification sig) ->
   (env -> st -> sig -> st -> p) ->
   Property
-stsPropertyV2 specEnv specState specSig prop =
-  stsPropertyV2' @r specEnv specState specSig (\env _ _ -> specState env) prop
+stsPropertyV2 specEnv specState specSig =
+  stsPropertyV2' @r specEnv specState specSig (\env _ _ -> specState env)
 
 stsPropertyV2' ::
   forall r env st sig fail p.
@@ -111,7 +108,7 @@ stsPropertyV2' ::
   (env -> st -> sig -> Specification st) ->
   (env -> st -> sig -> st -> p) ->
   Property
-stsPropertyV2' specEnv specState specSig specPostState prop =
+stsPropertyV2' specEnv specState specSig specPostState theProp =
   uncurry forAllShrinkBlind (genShrinkFromSpec specEnv) $ \env ->
     counterexample (show $ toExpr env) $
       uncurry forAllShrinkBlind (genShrinkFromSpec $ specState env) $ \st ->
@@ -133,7 +130,7 @@ stsPropertyV2' specEnv specState specSig specPostState prop =
                           ( show
                               (toExpr st', show (specState env))
                           )
-                          $ prop env st sig st'
+                          $ theProp env st sig st'
 
 -- STS properties ---------------------------------------------------------
 
@@ -328,45 +325,37 @@ prop_UTXOW =
 -- Test Tree
 ------------------------------------------------------------------------
 
-tests_STS :: TestTree
+tests_STS :: Spec
 tests_STS =
-  testGroup
-    "STS property tests"
-    [ govTests
-    , -- , utxoTests
-      -- TODO: this is probably one of the last things we want to
-      -- get passing as it depends on being able to generate a complete
-      -- `EpochState era`
-      testProperty "prop_EPOCH" prop_EPOCH
-      -- , testProperty "prop_LEDGER" prop_LEDGER
-    ]
+  describe "STS property tests" $ do
+    govTests
+    -- utxoTests
+    -- prop "prop_LEDGER" prop_LEDGER
+    -- TODO: this is probably one of the last things we want to
+    -- get passing as it depends on being able to generate a complete
+    -- `EpochState era`
+    prop "prop_EPOCH" prop_EPOCH
 
-govTests :: TestTree
+govTests :: Spec
 govTests =
-  testGroup
-    "GOV tests"
-    [ testProperty "prop_GOVCERT" prop_GOVCERT
-    , testProperty "prop_POOL" prop_POOL
-    , testProperty "prop_DELEG" prop_DELEG
-    , testProperty "prop_ENACT" prop_ENACT
-    , testProperty "prop_RATIFY" prop_RATIFY
-    , testProperty "prop_CERT" prop_CERT
-    , testProperty "prop_GOV" prop_GOV
-    ]
+  describe "GOV tests" $ do
+    prop "prop_GOVCERT" prop_GOVCERT
+    prop "prop_POOL" prop_POOL
+    prop "prop_DELEG" prop_DELEG
+    prop "prop_ENACT" prop_ENACT
+    prop "prop_RATIFY" prop_RATIFY
+    prop "prop_CERT" prop_CERT
+    prop "prop_GOV" prop_GOV
 
-utxoTests :: TestTree
+utxoTests :: Spec
 utxoTests =
-  testGroup
-    "UTXO* rules"
-    [ {-testProperty "prop_UTXO" prop_UTXO
-      ,-} testProperty "prop_UTXOW" prop_UTXOW
-    , testProperty "prop_UTXOS" prop_UTXOS
-    ]
+  describe "UTXO* rules" $ do
+    -- prop "prop_UTXO" prop_UTXO
+    prop "prop_UTXOW" prop_UTXOW
+    prop "prop_UTXOS" prop_UTXOS
 
-epoch :: TestTree
+epoch :: Spec
 epoch =
-  testGroup
-    "STS property tests"
-    [ govTests
-    , testProperty "prop_EPOCH" prop_EPOCH
-    ]
+  describe "STS property tests" $ do
+    govTests
+    prop "prop_EPOCH" prop_EPOCH

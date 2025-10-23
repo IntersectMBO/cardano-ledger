@@ -69,9 +69,9 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Data.TreeDiff (ToExpr)
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Era (registerTestAccount)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
@@ -99,8 +99,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
   mkVRFKeyPair,
  )
 import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase)
 
 forge :: forall era. EraScript era => Integer -> Script era -> MultiAsset
 forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
@@ -108,14 +106,12 @@ forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     pid = PolicyID (hashScript @era s)
     an = AssetName "an"
 
-tests :: TestTree
+tests :: Spec
 tests =
-  testGroup
-    "Generic Tests, testing Alonzo PredicateFailures, in postAlonzo eras."
-    [ alonzoBBODYexamplesP Alonzo
-    , alonzoBBODYexamplesP Babbage
-    , alonzoBBODYexamplesP Conway
-    ]
+  describe "Generic Tests, testing Alonzo PredicateFailures, in postAlonzo eras" $ do
+    alonzoBBODYexamplesP Alonzo
+    alonzoBBODYexamplesP Babbage
+    alonzoBBODYexamplesP Conway
 
 alonzoBBODYexamplesP ::
   forall era.
@@ -134,19 +130,17 @@ alonzoBBODYexamplesP ::
   , EraPlutusTxInfo PlutusV1 era
   ) =>
   Proof era ->
-  TestTree
+  Spec
 alonzoBBODYexamplesP proof =
-  testGroup
-    (show proof ++ " BBODY examples")
-    [ testCase "eight plutus scripts cases" $
-        runSTS @"BBODY" @era
-          (TRC (BbodyEnv @era defaultPParams def, initialBBodyState @era initUTxO, testAlonzoBlock @era))
-          (genericCont "" $ Right testBBodyState)
-    , testCase "block with bad pool md hash in tx" $
-        runSTS @"BBODY" @era
-          (TRC (BbodyEnv @era defaultPParams def, initialBBodyState initUTxO, testAlonzoBadPMDHBlock))
-          (genericCont "" . Left . pure $ makeTooBig @era)
-    ]
+  describe (show proof ++ " BBODY examples") $ do
+    it "eight plutus scripts cases" $
+      runSTS @"BBODY" @era
+        (TRC (BbodyEnv @era defaultPParams def, initialBBodyState @era initUTxO, testAlonzoBlock @era))
+        (genericCont "" $ Right testBBodyState)
+    it "block with bad pool md hash in tx" $
+      runSTS @"BBODY" @era
+        (TRC (BbodyEnv @era defaultPParams def, initialBBodyState initUTxO, testAlonzoBadPMDHBlock))
+        (genericCont "" . Left . pure $ makeTooBig @era)
 
 initialBBodyState ::
   forall era.

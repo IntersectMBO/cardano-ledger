@@ -22,29 +22,19 @@ import Cardano.Ledger.State (
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.VMap as VMap
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-import Test.QuickCheck ((===))
-import Test.Tasty
-import Test.Tasty.QuickCheck
 
 -- =====================================
 
-calcPoolDistOldEqualsNew :: TestTree
+calcPoolDistOldEqualsNew :: Spec
 calcPoolDistOldEqualsNew =
-  testGroup
-    "calculatePoolDistr"
-    [ testProperty
-        "old==new"
-        ( withMaxSuccess
-            500
-            ( \snap ->
-                counterexample
-                  "BAD"
-                  (oldCalculatePoolDistr (const True) snap === calculatePoolDistr snap)
-            )
-        )
-    ]
+  describe "calculatePoolDistr" $ do
+    prop "old==new" $
+      withMaxSuccess 500 $ \snap ->
+        counterexample "BAD" $
+          oldCalculatePoolDistr (const True) snap === calculatePoolDistr snap
 
 -- | The original version of calculatePoolDistr
 oldCalculatePoolDistr :: (KeyHash 'StakePool -> Bool) -> SnapShot -> PoolDistr

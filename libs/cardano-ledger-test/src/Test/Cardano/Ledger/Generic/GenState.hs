@@ -150,7 +150,7 @@ import Test.Cardano.Ledger.Generic.ModelState (
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Shelley.Era
-import Test.Tasty.QuickCheck (
+import Test.QuickCheck (
   Gen,
   Positive (..),
   arbitrary,
