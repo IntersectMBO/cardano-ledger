@@ -127,7 +127,7 @@ import Cardano.Ledger.MemoBytes (
   getMemoSafeHash,
   lensMemoRawType,
   mkMemoizedEra,
-  rawTypeL,
+  memoRawTypeL,
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (..))
@@ -730,16 +730,16 @@ instance EraTxBody DijkstraEra where
       (mkMemoizedEra @DijkstraEra basicDijkstraTxBodyRaw)
       (mkMemoizedEra @DijkstraEra basicDijkstraSubTxBodyRaw)
 
-  inputsTxBodyL = rawTypeL @DijkstraEra . inputsDijkstraTxBodyRawL
+  inputsTxBodyL = memoRawTypeL @DijkstraEra . inputsDijkstraTxBodyRawL
   {-# INLINE inputsTxBodyL #-}
 
-  outputsTxBodyL = rawTypeL @DijkstraEra . outputsDijkstraTxBodyRawL
+  outputsTxBodyL = memoRawTypeL @DijkstraEra . outputsDijkstraTxBodyRawL
   {-# INLINE outputsTxBodyL #-}
 
-  feeTxBodyL = rawTypeL @DijkstraEra . feeDijkstraTxBodyRawL
+  feeTxBodyL = memoRawTypeL @DijkstraEra . feeDijkstraTxBodyRawL
   {-# INLINE feeTxBodyL #-}
 
-  auxDataHashTxBodyL = rawTypeL @DijkstraEra . auxDataHashDijkstraTxBodyRawL
+  auxDataHashTxBodyL = memoRawTypeL @DijkstraEra . auxDataHashDijkstraTxBodyRawL
   {-# INLINE auxDataHashTxBodyL #-}
 
   spendableInputsTxBodyF = to $ \txBody ->
@@ -749,11 +749,11 @@ instance EraTxBody DijkstraEra where
   allInputsTxBodyF = babbageAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}
 
-  withdrawalsTxBodyL = rawTypeL @DijkstraEra . withdrawalsDijkstraTxBodyRawL
+  withdrawalsTxBodyL = memoRawTypeL @DijkstraEra . withdrawalsDijkstraTxBodyRawL
   {-# INLINE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
-    rawTypeL @DijkstraEra
+    memoRawTypeL @DijkstraEra
       . certsDijkstraTxBodyRawL
       . lens OSet.toStrictSeq (\_ x -> OSet.fromStrictSeq x)
   {-# INLINE certsTxBodyL #-}
@@ -882,7 +882,7 @@ vldtDijkstraTxBodyRawL =
     )
 
 instance AllegraEraTxBody DijkstraEra where
-  vldtTxBodyL = rawTypeL @DijkstraEra . vldtDijkstraTxBodyRawL
+  vldtTxBodyL = memoRawTypeL @DijkstraEra . vldtDijkstraTxBodyRawL
   {-# INLINE vldtTxBodyL #-}
 
 mintDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw l era) MultiAsset
@@ -898,7 +898,7 @@ mintDijkstraTxBodyRawL =
     )
 
 instance MaryEraTxBody DijkstraEra where
-  mintTxBodyL = rawTypeL @DijkstraEra . mintDijkstraTxBodyRawL
+  mintTxBodyL = memoRawTypeL @DijkstraEra . mintDijkstraTxBodyRawL
   {-# INLINE mintTxBodyL #-}
 
 collateralInputsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw TopTx era) (Set TxIn)
@@ -931,7 +931,7 @@ networkIdDijkstraTxBodyRawL =
     )
 
 instance AlonzoEraTxBody DijkstraEra where
-  collateralInputsTxBodyL = rawTypeL @DijkstraEra . collateralInputsDijkstraTxBodyRawL
+  collateralInputsTxBodyL = memoRawTypeL @DijkstraEra . collateralInputsDijkstraTxBodyRawL
   {-# INLINE collateralInputsTxBodyL #-}
 
   reqSignerHashesTxBodyL = notSupportedInThisEraL
@@ -943,10 +943,10 @@ instance AlonzoEraTxBody DijkstraEra where
       insertKeyHash (ScriptHashObj _) = id
   {-# INLINE reqSignerHashesTxBodyG #-}
 
-  scriptIntegrityHashTxBodyL = rawTypeL @DijkstraEra . scriptIntegrityHashDijkstraTxBodyRawL
+  scriptIntegrityHashTxBodyL = memoRawTypeL @DijkstraEra . scriptIntegrityHashDijkstraTxBodyRawL
   {-# INLINE scriptIntegrityHashTxBodyL #-}
 
-  networkIdTxBodyL = rawTypeL @DijkstraEra . networkIdDijkstraTxBodyRawL
+  networkIdTxBodyL = memoRawTypeL @DijkstraEra . networkIdDijkstraTxBodyRawL
   {-# INLINE networkIdTxBodyL #-}
 
   redeemerPointer = dijkstraRedeemerPointer
@@ -989,13 +989,13 @@ instance BabbageEraTxBody DijkstraEra where
       )
   {-# INLINE sizedOutputsTxBodyL #-}
 
-  referenceInputsTxBodyL = rawTypeL @DijkstraEra . referenceInputsDijkstraTxBodyRawL
+  referenceInputsTxBodyL = memoRawTypeL @DijkstraEra . referenceInputsDijkstraTxBodyRawL
   {-# INLINE referenceInputsTxBodyL #-}
 
-  totalCollateralTxBodyL = rawTypeL @DijkstraEra . totalCollateralDijkstraTxBodyRawL
+  totalCollateralTxBodyL = memoRawTypeL @DijkstraEra . totalCollateralDijkstraTxBodyRawL
   {-# INLINE totalCollateralTxBodyL #-}
 
-  collateralReturnTxBodyL = rawTypeL @DijkstraEra . collateralReturnDijkstraTxBodyRawL
+  collateralReturnTxBodyL = memoRawTypeL @DijkstraEra . collateralReturnDijkstraTxBodyRawL
   {-# INLINE collateralReturnTxBodyL #-}
 
   sizedCollateralReturnTxBodyL =
@@ -1057,13 +1057,13 @@ currentTreasuryValueDijkstraTxBodyRawL =
     )
 
 instance ConwayEraTxBody DijkstraEra where
-  votingProceduresTxBodyL = rawTypeL @DijkstraEra . votingProceduresDijkstraTxBodyRawL
+  votingProceduresTxBodyL = memoRawTypeL @DijkstraEra . votingProceduresDijkstraTxBodyRawL
   {-# INLINE votingProceduresTxBodyL #-}
-  proposalProceduresTxBodyL = rawTypeL @DijkstraEra . proposalProceduresDijkstraTxBodyRawL
+  proposalProceduresTxBodyL = memoRawTypeL @DijkstraEra . proposalProceduresDijkstraTxBodyRawL
   {-# INLINE proposalProceduresTxBodyL #-}
-  currentTreasuryValueTxBodyL = rawTypeL @DijkstraEra . currentTreasuryValueDijkstraTxBodyRawL
+  currentTreasuryValueTxBodyL = memoRawTypeL @DijkstraEra . currentTreasuryValueDijkstraTxBodyRawL
   {-# INLINE currentTreasuryValueTxBodyL #-}
-  treasuryDonationTxBodyL = rawTypeL @DijkstraEra . treasuryDonationDijkstraTxBodyRawL
+  treasuryDonationTxBodyL = memoRawTypeL @DijkstraEra . treasuryDonationDijkstraTxBodyRawL
   {-# INLINE treasuryDonationTxBodyL #-}
 
 class ConwayEraTxBody era => DijkstraEraTxBody era where
@@ -1083,7 +1083,7 @@ guardsDijkstraTxBodyRawL =
 
 instance DijkstraEraTxBody DijkstraEra where
   {-# INLINE guardsTxBodyL #-}
-  guardsTxBodyL = rawTypeL @DijkstraEra . guardsDijkstraTxBodyRawL
+  guardsTxBodyL = memoRawTypeL @DijkstraEra . guardsDijkstraTxBodyRawL
 
 -- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
 -- the first element and if it's a credential, it decodes the rest of the
