@@ -24,7 +24,24 @@ flag asserts
   description: Enable assertions
   default: False
 
+common warnings
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+common rtsopts
+  ghc-options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
 library
+  import: warnings
   exposed-modules:
     Cardano.Ledger.Address
     Cardano.Ledger.AuxiliaryData
@@ -88,15 +105,6 @@ library
     Cardano.Ledger.State.UTxO
 
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-
   build-depends:
     FailT,
     aeson >=2,
@@ -147,6 +155,7 @@ library
     ghc-options: -fno-ignore-asserts
 
 library internal
+  import: warnings
   build-depends:
     base,
     cardano-ledger-binary,
@@ -160,16 +169,9 @@ library internal
   visibility: public
   hs-source-dirs: internal
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
 
 library testlib
+  import: warnings
   exposed-modules:
     Test.Cardano.Ledger.Common
     Test.Cardano.Ledger.Core.Address
@@ -194,15 +196,6 @@ library testlib
   visibility: public
   hs-source-dirs: testlib
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-
   build-depends:
     FailT,
     ImpSpec,
@@ -241,25 +234,30 @@ library testlib
     unliftio,
     vector-map:{vector-map, testlib},
 
+library tasty-compat
+  import: warnings
+  visibility: public
+  default-language: Haskell2010
+  hs-source-dirs: tasty-compat
+  exposed-modules:
+    Test.Tasty
+    Test.Tasty.HUnit
+    Test.Tasty.QuickCheck
+
+  build-depends:
+    HUnit,
+    QuickCheck,
+    base,
+    hspec,
+
 executable plutus-debug
+  import: warnings, rtsopts
   main-is: PlutusDebug.hs
   hs-source-dirs: app
   other-modules:
     CLI
 
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
   build-depends:
     base >=4.18 && <5,
     cardano-ledger-binary,
@@ -267,6 +265,7 @@ executable plutus-debug
     optparse-applicative,
 
 test-suite tests
+  import: warnings, rtsopts
   type: exitcode-stdio-1.0
   main-is: Main.hs
   hs-source-dirs: test
@@ -280,18 +279,6 @@ test-suite tests
     Test.Cardano.Ledger.ToolsSpec
 
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
   build-depends:
     FailT,
     aeson,
@@ -312,21 +299,11 @@ test-suite tests
     testlib,
 
 benchmark addr
+  import: warnings, rtsopts
   type: exitcode-stdio-1.0
   main-is: Addr.hs
   hs-source-dirs: bench
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -O2
-
   build-depends:
     QuickCheck,
     base,
