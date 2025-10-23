@@ -79,12 +79,12 @@ library testlib
     cardano-strict-containers,
     deepseq,
     hedgehog >=1.0.4,
+    hspec,
     microlens,
     microlens-th,
     mtl,
     nothunks,
     small-steps >=1.0,
-    tasty-hunit,
     transformers >=0.5,
 
 test-suite tests
