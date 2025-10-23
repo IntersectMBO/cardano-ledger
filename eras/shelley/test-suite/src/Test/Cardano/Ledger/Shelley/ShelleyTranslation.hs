@@ -6,6 +6,7 @@ import Cardano.Ledger.Shelley.LedgerState (EpochState, returnRedeemAddrsToReserv
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
+import Test.QuickCheck ((===))
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

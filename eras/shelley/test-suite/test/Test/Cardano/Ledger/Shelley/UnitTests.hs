@@ -82,6 +82,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Cardano.Protocol.TPraos.Arbitrary (VRFNatVal (VRFNatVal))
 import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
+import Test.QuickCheck ((===), (==>))
 import qualified Test.QuickCheck.Gen as QC
 import qualified Test.QuickCheck.Random as QC
 import Test.Tasty
