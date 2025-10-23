@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `unDelegReDelegStakePool` to `CertState` module
 * Add `iRReservesL`, `iRTreasuryL`, `iRDeltaReservesL`, `iRDeltaTreasuryL`
 * Add `spsDelegators` field to `StakePool`
 * Add `spsDelegatorsL`
