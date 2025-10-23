@@ -3,19 +3,19 @@
 ## 1.15.0.0
 
 * Remove deprecated accessor functions:
-  * `inputs'`
-  * `collateral'`
-  * `outputs'`
-  * `certs'`
-  * `txfee'`
-  * `withdrawals'`
-  * `vldt'`
-  * `update'`
-  * `reqSignerHashes'`
-  * `adHash'`
-  * `mint'`
-  * `scriptIntegrityHash'`
-  * `txnetworkid'`
+  - `inputs'`
+  - `collateral'`
+  - `outputs'`
+  - `certs'`
+  - `txfee'`
+  - `withdrawals'`
+  - `vldt'`
+  - `update'`
+  - `reqSignerHashes'`
+  - `adHash'`
+  - `mint'`
+  - `scriptIntegrityHash'`
+  - `txnetworkid'`
 * Add `TxLevel` argument to `Tx` and `TxBody`
 * Add `HasEraTxLevel` instances for `Tx` and `TxBody`
 * Add `EraTxLevel` instance

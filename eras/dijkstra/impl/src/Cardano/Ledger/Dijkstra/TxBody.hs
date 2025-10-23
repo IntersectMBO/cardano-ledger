@@ -126,8 +126,8 @@ import Cardano.Ledger.MemoBytes (
   getMemoRawType,
   getMemoSafeHash,
   lensMemoRawType,
-  mkMemoizedEra,
   memoRawTypeL,
+  mkMemoizedEra,
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (..))
