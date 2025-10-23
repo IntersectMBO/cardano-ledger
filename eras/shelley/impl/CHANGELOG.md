@@ -2,6 +2,9 @@
 
 ## 1.18.0.0
 
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `HasEraTxLevel` instances for `Tx` and `TxBody`
+* Add `EraTxLevel` instance
 * Move withdrawals-draining from `DELEGS` to `LEDGER`
   - Remove `WithdrawalsNotInRewardsDELEGS`
   - Add to `ShelleyLedgerPredFailure`

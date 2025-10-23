@@ -2,6 +2,8 @@
 
 ## 1.13.0.0
 
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `EraTxLevel` instance
 * Add `AnyEraScript`
 * Add `AnyEraSpendingPurpose`, `AnyEraMintingPurpose`, `AnyEraCertifyingPurpose`, `AnyEraRewardingPurpose`, `AnyEraVotingPurpose`, `AnyEraProposingPurpose`, `AnyEraGuardingPurpose` patterns
 * Re-export `DijkstraEraScript`, `toGuardingPurpose` and `GuardingPurpose` pattern

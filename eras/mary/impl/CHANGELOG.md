@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.9.0.1
+## 1.10.0.0
 
-*
+* Add `burnedMultiAssets`
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `HasEraTxLevel` instances for `Tx` and `TxBody`
+* Add `EraTxLevel` instance
 
 ## 1.9.0.0
 
