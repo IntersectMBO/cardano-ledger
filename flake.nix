@@ -102,7 +102,6 @@
             # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
             shellHook = ''
               export LANG=en_US.UTF-8
-              export LC_ALL=en_US.UTF-8
               export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
             '' + lib.optionalString (nixpkgs.glibcLocales != null && nixpkgs.stdenv.hostPlatform.libc == "glibc") ''
               export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"
