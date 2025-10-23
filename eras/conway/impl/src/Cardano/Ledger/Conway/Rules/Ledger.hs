@@ -18,6 +18,7 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   ConwayLEDGER,
   ConwayLedgerPredFailure (..),
   ConwayLedgerEvent (..),
+  shelleyToConwayLedgerPredFailure,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -40,7 +41,6 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
-  networkId,
   swapMismatch,
   unswapMismatch,
  )
@@ -98,6 +98,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
   ShelleyLEDGERS,
+  ShelleyLedgerPredFailure (..),
   ShelleyLedgersEvent (..),
   ShelleyLedgersPredFailure (..),
   ShelleyPoolPredFailure,
@@ -106,17 +107,16 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
+  testIncompleteAndMissingWithdrawals,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
   TRC (..),
   TransitionRule,
-  failOnJust,
   failOnNonEmpty,
   judgmentContext,
   liftSTS,
@@ -152,6 +152,9 @@ type instance EraRuleFailure "LEDGER" ConwayEra = ConwayLedgerPredFailure Conway
 type instance EraRuleEvent "LEDGER" ConwayEra = ConwayLedgerEvent ConwayEra
 
 instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure ConwayEra
+
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure ConwayEra where
+  injectFailure = shelleyToConwayLedgerPredFailure
 
 instance InjectRuleFailure "LEDGER" ConwayUtxowPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure
@@ -203,6 +206,14 @@ instance InjectRuleFailure "LEDGER" ConwayGovPredFailure ConwayEra where
 
 instance InjectRuleFailure "LEDGER" ConwayUtxosPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
+
+shelleyToConwayLedgerPredFailure ::
+  forall era. ShelleyLedgerPredFailure era -> ConwayLedgerPredFailure era
+shelleyToConwayLedgerPredFailure = \case
+  UtxowFailure x -> ConwayUtxowFailure x
+  DelegsFailure _ -> error "Impossible: DELEGS has ben removed in Conway"
+  ShelleyWithdrawalsMissingAccounts x -> ConwayWithdrawalsMissingAccounts x
+  ShelleyIncompleteWithdrawals x -> ConwayIncompleteWithdrawals x
 
 deriving instance
   ( Era era
@@ -316,6 +327,9 @@ instance
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , ConwayEraCertState era
   , EraCertState era
+  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
+  , EraRule "LEDGER" era ~ ConwayLEDGER era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   STS (ConwayLEDGER era)
   where
@@ -341,25 +355,27 @@ ledgerTransition ::
   , ConwayEraTxBody era
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
-  , Signal (someLEDGER era) ~ Tx era
-  , State (someLEDGER era) ~ LedgerState era
-  , Environment (someLEDGER era) ~ LedgerEnv era
-  , PredicateFailure (someLEDGER era) ~ ConwayLedgerPredFailure era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "GOV" era) (someLEDGER era)
   , Embed (EraRule "CERTS" era) (someLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
+  , State (someLEDGER era) ~ LedgerState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
+  , Environment (someLEDGER era) ~ LedgerEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
+  , Signal (someLEDGER era) ~ Tx era
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
   , ConwayEraCertState era
+  , EraRule "LEDGER" era ~ someLEDGER era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , PredicateFailure (someLEDGER era) ~ ConwayLedgerPredFailure era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -427,18 +443,8 @@ ledgerTransition = do
         certState' <-
           if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule $ pp ^. ppProtocolVersionL
             then do
-              network <- liftSTS $ asks networkId
-              let accounts = certState ^. certDStateL . accountsL
-                  withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
-                  (invalidWithdrawals, incompleteWithdrawals) =
-                    case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
-                      Nothing -> (Nothing, Nothing)
-                      Just (invalid, incomplete) ->
-                        ( if null (unWithdrawals invalid) then Nothing else Just invalid
-                        , if null (unWithdrawals incomplete) then Nothing else Just incomplete
-                        )
-              failOnJust invalidWithdrawals ConwayWithdrawalsMissingAccounts
-              failOnJust incompleteWithdrawals ConwayIncompleteWithdrawals
+              let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+              testIncompleteAndMissingWithdrawals (certState ^. certDStateL . accountsL) withdrawals
               pure $
                 certState
                   & updateDormantDRepExpiries tx curEpochNo
@@ -564,6 +570,8 @@ instance
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era
   , ConwayEraCertState era
+  , EraRule "LEDGER" era ~ ConwayLEDGER era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
   where

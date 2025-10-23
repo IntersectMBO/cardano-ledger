@@ -31,9 +31,10 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   epochFromSlot,
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
+  testIncompleteAndMissingWithdrawals,
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey)
+import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey, networkId)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -65,15 +66,25 @@ import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochFromSlot)
-import Cardano.Ledger.State (EraCertState (..))
+import Cardano.Ledger.State (
+  Accounts,
+  EraAccounts,
+  EraCertState (..),
+  accountsL,
+  drainAccounts,
+  withdrawalsThatDoNotDrainAccounts,
+ )
 import Control.DeepSeq (NFData (..))
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Assertion (PostCondition),
   AssertionViolation (..),
   Embed (..),
+  Rule,
   STS (..),
   TRC (..),
   TransitionRule,
+  failOnJust,
   judgmentContext,
   liftSTS,
   trans,
@@ -116,6 +127,8 @@ instance EraPParams era => EncCBOR (LedgerEnv era) where
 data ShelleyLedgerPredFailure era
   = UtxowFailure (PredicateFailure (EraRule "UTXOW" era)) -- Subtransition Failures
   | DelegsFailure (PredicateFailure (EraRule "DELEGS" era)) -- Subtransition Failures
+  | ShelleyWithdrawalsMissingAccounts Withdrawals
+  | ShelleyIncompleteWithdrawals Withdrawals
   deriving (Generic)
 
 ledgerSlotNoL :: Lens' (LedgerEnv era) SlotNo
@@ -213,8 +226,10 @@ instance
   EncCBOR (ShelleyLedgerPredFailure era)
   where
   encCBOR = \case
-    (UtxowFailure a) -> encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR a
-    (DelegsFailure a) -> encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR a
+    UtxowFailure a -> encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR a
+    DelegsFailure a -> encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR a
+    ShelleyWithdrawalsMissingAccounts w -> encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR w
+    ShelleyIncompleteWithdrawals w -> encodeListLen 2 <> encCBOR (3 :: Word8) <> encCBOR w
 
 instance
   ( DecCBOR (PredicateFailure (EraRule "DELEGS" era))
@@ -232,6 +247,12 @@ instance
         1 -> do
           a <- decCBOR
           pure (2, DelegsFailure a)
+        2 -> do
+          w <- decCBOR
+          pure (2, ShelleyWithdrawalsMissingAccounts w)
+        3 -> do
+          w <- decCBOR
+          pure (2, ShelleyIncompleteWithdrawals w)
         k -> invalidKey k
 
 shelleyLedgerAssertions ::
@@ -261,6 +282,9 @@ instance
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , AtMostEra "Babbage" era
+  , EraRule "LEDGER" era ~ ShelleyLEDGER era
+  , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   STS (ShelleyLEDGER era)
   where
@@ -281,6 +305,7 @@ instance
 ledgerTransition ::
   forall era.
   ( EraTx era
+  , EraCertState era
   , STS (ShelleyLEDGER era)
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
@@ -290,17 +315,21 @@ ledgerTransition ::
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
+  , EraRule "LEDGER" era ~ ShelleyLEDGER era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
   TRC (LedgerEnv slot mbCurEpochNo txIx pp account, LedgerState utxoSt certState, tx) <-
     judgmentContext
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
+  let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+  testIncompleteAndMissingWithdrawals (certState ^. certDStateL . accountsL) withdrawals
   certState' <-
     trans @(EraRule "DELEGS" era) $
       TRC
         ( DelegsEnv slot curEpochNo txIx pp tx account
-        , certState
+        , certState & certDStateL . accountsL %~ drainAccounts withdrawals
         , StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL
         )
 
@@ -312,6 +341,28 @@ ledgerTransition = do
         , tx
         )
   pure (LedgerState utxoSt' certState')
+
+testIncompleteAndMissingWithdrawals ::
+  ( EraAccounts era
+  , STS sts
+  , BaseM sts ~ ShelleyBase
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , sts ~ EraRule "LEDGER" era
+  ) =>
+  Accounts era ->
+  Withdrawals ->
+  Rule sts ctx ()
+testIncompleteAndMissingWithdrawals accounts withdrawals = do
+  network <- liftSTS $ asks networkId
+  let (missingWithdrawals, incompleteWithdrawals) =
+        case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
+          Nothing -> (Nothing, Nothing)
+          Just (missing, incomplete) ->
+            ( if null (unWithdrawals missing) then Nothing else Just missing
+            , if null (unWithdrawals incomplete) then Nothing else Just incomplete
+            )
+  failOnJust missingWithdrawals $ injectFailure . ShelleyWithdrawalsMissingAccounts
+  failOnJust incompleteWithdrawals $ injectFailure . ShelleyIncompleteWithdrawals
 
 instance
   ( Era era

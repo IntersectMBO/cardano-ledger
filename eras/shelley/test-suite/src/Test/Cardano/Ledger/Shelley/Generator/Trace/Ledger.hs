@@ -92,6 +92,7 @@ instance
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , AtMostEra "Babbage" era
+  , EraRule "LEDGER" era ~ ShelleyLEDGER era
   , Crypto c
   ) =>
   TQC.HasTrace (ShelleyLEDGER era) (GenEnv c era)

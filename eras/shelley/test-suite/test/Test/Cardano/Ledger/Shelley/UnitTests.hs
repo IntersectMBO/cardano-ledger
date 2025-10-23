@@ -558,10 +558,7 @@ testWithdrawalWrongAmt =
       rAccount = mkVKeyRewardAccount Testnet bobStake
       dpState' = addReward dpState (raCredential rAccount) (Coin 10)
       tx = MkShelleyTx $ ShelleyTx @ShelleyEra txb txwits SNothing
-      errs =
-        [ DelegsFailure
-            (WithdrawalsNotInRewardsDELEGS (Withdrawals (Map.singleton rAccount (Coin 11))))
-        ]
+      errs = [ShelleyIncompleteWithdrawals $ Withdrawals $ Map.singleton rAccount $ Coin 11]
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion

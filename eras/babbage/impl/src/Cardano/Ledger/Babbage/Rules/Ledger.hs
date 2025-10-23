@@ -119,6 +119,9 @@ instance
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , AtMostEra "Babbage" era
   , EraCertState era
+  , EraRule "LEDGER" era ~ BabbageLEDGER era
+  , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   STS (BabbageLEDGER era)
   where
