@@ -49,6 +49,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   EraModel (..),
@@ -63,12 +64,12 @@ import Test.Cardano.Ledger.Generic.Instances ()
 import Test.Cardano.Ledger.Generic.Proof (AlonzoEra, Reflect (..))
 import Test.Cardano.Ledger.Generic.TxGen ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
-tests :: TestTree
+tests :: Spec
 tests =
-  testGroup "Alonzo API" [testCase "estimateMinFee" $ testEstimateMinFee @AlonzoEra]
+  describe "Alonzo API" $ do
+    it "estimateMinFee" $ do
+      testEstimateMinFee @AlonzoEra
 
 testEstimateMinFee ::
   forall era.
@@ -77,7 +78,7 @@ testEstimateMinFee ::
   , AlonzoEraTxBody era
   , EraModel era
   ) =>
-  Assertion
+  Expectation
 testEstimateMinFee =
   estimateMinFeeTx @era
     pparams
@@ -85,7 +86,7 @@ testEstimateMinFee =
     1
     0
     0
-    @?= alonzoMinFeeTx pparams validatingTx
+    `shouldBe` alonzoMinFeeTx pparams validatingTx
   where
     pparams =
       defaultPPs emptyPParams

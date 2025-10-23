@@ -73,7 +73,6 @@ import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Monad (when)
 import Control.State.Transition.Extended (STS (..), TRC (..))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
@@ -86,11 +85,7 @@ import GHC.Stack
 import Lens.Micro (Lens', (&), (.~))
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Conway.TreeDiff (
-  ToExpr (..),
-  ansiDocToString,
-  diffExpr,
- )
+import Test.Cardano.Ledger.Common hiding (Result)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
 import Test.Cardano.Ledger.Generic.ModelState (Model)
@@ -98,7 +93,6 @@ import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..), runSTS, runS
 import Test.Cardano.Ledger.Shelley.Era (EraTest, ShelleyEraTest)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
-import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
 data PlutusPurposeTag
   = Spending
@@ -274,7 +268,7 @@ testBBODY ::
   Block BHeaderView era ->
   Either (NonEmpty (PredicateFailure (EraRule "BBODY" era))) (ShelleyBbodyState era) ->
   PParams era ->
-  Assertion
+  Expectation
 testBBODY initialSt block expected pparams =
   let env = BbodyEnv pparams def
    in runSTS @"BBODY" @era (TRC (env, initialSt, block)) (genericCont "" expected)
@@ -296,7 +290,7 @@ testUTXOW ::
   PParams era ->
   Tx era ->
   Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
-  Assertion
+  Expectation
 testUTXOW utxo p tx = testUTXOWwith (genericCont (show (utxo, tx))) utxo p tx
 
 -- | Use a subset test on the expected and computed [PredicateFailure]
@@ -315,7 +309,7 @@ testUTXOWsubset ::
   PParams era ->
   Tx era ->
   Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
-  Assertion
+  Expectation
 testUTXOWsubset = testUTXOWwith subsetCont
 
 -- | Use a test where any two (ValidationTagMismatch x y) failures match regardless of 'x' and 'y'
@@ -333,7 +327,7 @@ testUTXOspecialCase ::
   PParams era ->
   Tx era ->
   Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
-  Assertion
+  Expectation
 testUTXOspecialCase utxo pparam tx expected =
   let env = UtxoEnv (SlotNo 0) pparam def
       state = smartUTxOState pparam utxo (Coin 0) (Coin 0) def mempty
@@ -353,12 +347,12 @@ testUTXOWwith ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Tx era ~ Signal (EraRule "UTXOW" era)
   ) =>
-  (Result era -> Result era -> Assertion) ->
+  (Result era -> Result era -> Expectation) ->
   UTxO era ->
   PParams era ->
   Tx era ->
   Result era ->
-  Assertion
+  Expectation
 testUTXOWwith cont utxo pparams tx expected =
   let env = UtxoEnv (SlotNo 0) pparams def
       state = smartUTxOState pparams utxo (Coin 0) (Coin 0) def mempty
@@ -391,7 +385,7 @@ genericCont ::
   String ->
   Either (t x) y ->
   Either (t x) y ->
-  Assertion
+  Expectation
 genericCont cause expected computed =
   when (computed /= expected) $
     assertFailure $
@@ -411,7 +405,7 @@ subsetCont ::
   ) =>
   Either (t x) y ->
   Either (t x) y ->
-  Assertion
+  Expectation
 subsetCont expected computed =
   let
     isSubset small big = all (`elem` big) small
@@ -419,8 +413,8 @@ subsetCont expected computed =
     case (computed, expected) of
       (Left c, Left e) ->
         -- It is OK if the expected is a subset of what's computed
-        if isSubset e c then e @?= e else c @?= e
-      (Right c, Right e) -> c @?= e
+        if isSubset e c then e `shouldBe` e else c `shouldBe` e
+      (Right c, Right e) -> c `shouldBe` e
       (Left x, Right y) ->
         error $
           "expected to pass with "
@@ -445,15 +439,15 @@ specialCont ::
   ) =>
   Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) a ->
   Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) a ->
-  Assertion
+  Expectation
 specialCont expected computed =
   case (computed, expected) of
     (Left (x :| []), Left (y :| [])) ->
       case (findMismatch (reify @era) x, findMismatch (reify @era) y) of
-        (Just _, Just _) -> y @?= y
+        (Just _, Just _) -> y `shouldBe` y
         (_, _) -> error "Not both ValidationTagMismatch case 1"
     (Left _, Left _) -> error "Not both ValidationTagMismatch case 2"
-    (Right x, Right y) -> x @?= y
+    (Right x, Right y) -> x `shouldBe` y
     (Left _, Right _) -> error "expected to pass, but failed."
     (Right _, Left _) -> error "expected to fail, but passed."
 

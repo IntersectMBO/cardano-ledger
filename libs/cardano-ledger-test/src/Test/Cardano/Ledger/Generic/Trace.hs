@@ -64,6 +64,7 @@ import qualified Debug.Trace as Debug
 import GHC.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.Era
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..))
 import Test.Cardano.Ledger.Generic.Functions (
   adaPots,
@@ -92,13 +93,9 @@ import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
-import Test.Cardano.Ledger.Shelley.TreeDiff (showExpr)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
 import Test.Control.State.Transition.Trace (Trace (..), lastState, splitTrace)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), traceFromInitState)
-import Test.QuickCheck
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty)
 
 -- ===========================================
 
@@ -458,8 +455,8 @@ forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 =
 --   Under the assumption that shorter tests have advantages
 --   like not getting turned off because the tests take too long. A glaring failure is
 --   likely to be caught in 'n' tests, rather than the standard '100'
-testPropMax :: Testable prop => Int -> String -> prop -> TestTree
-testPropMax n name x = testProperty name (withMaxSuccess n x)
+testPropMax :: Testable prop => Int -> String -> prop -> Spec
+testPropMax n name x = prop name (withMaxSuccess n x)
 
 chainTest ::
   forall era.
@@ -470,7 +467,7 @@ chainTest ::
   ) =>
   Int ->
   GenSize ->
-  TestTree
+  Spec
 chainTest n gsize = testPropMax 30 (eraName @era) action
   where
     action = do
@@ -485,17 +482,15 @@ chainTest n gsize = testPropMax 30 (eraName @era) action
       -- Here is where we can add some properties for traces:
       pure (_traceInitState trace1 === initState)
 
-testTraces :: Int -> TestTree
+testTraces :: Int -> Spec
 testTraces n =
-  testGroup
-    "MockChainTrace"
-    [ chainTest @BabbageEra n defaultGenSize
-    , chainTest @AlonzoEra n defaultGenSize
-    , chainTest @MaryEra n defaultGenSize
-    , chainTest @AllegraEra n defaultGenSize
-    , multiEpochTest @BabbageEra 225 defaultGenSize
-    , multiEpochTest @ShelleyEra 225 defaultGenSize
-    ]
+  describe "MockChainTrace" $ do
+    chainTest @BabbageEra n defaultGenSize
+    chainTest @AlonzoEra n defaultGenSize
+    chainTest @MaryEra n defaultGenSize
+    chainTest @AllegraEra n defaultGenSize
+    multiEpochTest @BabbageEra 225 defaultGenSize
+    multiEpochTest @ShelleyEra 225 defaultGenSize
 
 -- | Show that Ada is preserved across multiple Epochs
 multiEpochTest ::
@@ -506,7 +501,7 @@ multiEpochTest ::
   ) =>
   Int ->
   GenSize ->
-  TestTree
+  Spec
 multiEpochTest numTx gsize =
   let gensize = gsize {blocksizeMax = 4, slotDelta = (6, 12)}
       getEpoch mockchainstate = nesEL (mcsNes mockchainstate)
