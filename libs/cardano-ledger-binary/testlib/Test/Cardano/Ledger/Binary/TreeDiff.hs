@@ -21,7 +21,6 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   assertColorFailure,
   expectExprEqual,
   expectExprEqualWithMessage,
-  assertExprEqualWithMessage,
   callStackToLocation,
   srcLocToLocation,
   Expr (App, Rec, Lst),
@@ -61,7 +60,6 @@ import Test.Cardano.Slotting.TreeDiff ()
 import Test.Hspec (Expectation)
 import Test.ImpSpec (ansiDocToString)
 import Test.ImpSpec.Expectations (assertColorFailure, callStackToLocation, srcLocToLocation)
-import Test.Tasty.HUnit (Assertion, assertFailure)
 
 -- =====================================================
 -- Cardano functions that deal with TreeDiff and ToExpr
@@ -218,13 +216,8 @@ showHexBytesGrouped n bs
 expectExprEqual :: (Eq a, ToExpr a) => a -> a -> Expectation
 expectExprEqual = expectExprEqualWithMessage "Expected two values to be equal:"
 
--- | Use this with HSpec, but with Tasty use 'assertExprEqualWithMessage' below
 expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => String -> a -> a -> Expectation
 expectExprEqualWithMessage = requireExprEqualWithMessage (assertColorFailure . ansiDocToString) . Pretty.pretty
-
--- | Use this with Tasty, but with HSpec use 'expectExprEqualWithMessage' above
-assertExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => String -> a -> a -> Assertion
-assertExprEqualWithMessage = requireExprEqualWithMessage (assertFailure . ansiDocToString) . Pretty.pretty
 
 requireExprEqualWithMessage ::
   (ToExpr a, Eq a, Monoid b) => (Doc AnsiStyle -> b) -> Doc AnsiStyle -> a -> a -> b

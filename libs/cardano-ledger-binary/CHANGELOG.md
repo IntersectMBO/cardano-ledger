@@ -6,6 +6,10 @@
 * Remove `Typeable` superconstraint from `EncCBOR`
 * Remove `Range`, `szEval`, `Size`, `Case`, `caseValue`, `LengthOf`, `SizeOverride`, `isTodo`, `szCases`, `szLazy`, `szGreedy`, `szForce`, `szWithCtx`, `szSimplify`, `apMono`, `szBounds`, `encodedVerKeyDSIGNSizeExpr`, `encodedSignKeyDSIGNSizeExpr`, `encodedSigDSIGNSizeExpr`, `encodedSignedDSIGNSizeExpr`, `encodedVerKeyKESSizeExpr`, `encodedSignKeyKESSizeExpr`, `encodedSigKESSizeExpr`, `encodedVerKeyVRFSizeExpr`, `encodedSignKeyVRFSizeExpr` and `encodedCertVRFSizeExpr`
 
+### `testlib`
+
+* Remove `assertExprEqualWithMessage`
+
 ## 1.7.0.0
 
 * Add `Random` instance for `Version`.
