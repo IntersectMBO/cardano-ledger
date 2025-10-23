@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Change `reqSignerHashesTxBodyL` and `reqSignerHashesTxBodyG` to return a set of `Guard` instead of `Witness`
 * Add `PlutusTxInInfo` type family
 * Add `toPlutusTxInInfo` method to `EraPlutusTxInfo`
 
