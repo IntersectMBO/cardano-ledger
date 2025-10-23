@@ -129,7 +129,7 @@ data ConwayTxBodyRaw = ConwayTxBodyRaw
   , ctbrWithdrawals :: !Withdrawals
   , ctbrFee :: !Coin
   , ctbrVldt :: !ValidityInterval
-  , ctbrReqSignerHashes :: !(Set (KeyHash 'Witness))
+  , ctbrReqSignerHashes :: !(Set (KeyHash 'Guard))
   , ctbrMint :: !MultiAsset
   , ctbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
   , ctbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
@@ -452,7 +452,7 @@ pattern ConwayTxBody ::
   Withdrawals ->
   Coin ->
   ValidityInterval ->
-  Set (KeyHash 'Witness) ->
+  Set (KeyHash 'Guard) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
   StrictMaybe TxAuxDataHash ->

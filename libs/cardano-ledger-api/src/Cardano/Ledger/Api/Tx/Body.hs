@@ -114,7 +114,7 @@ import Cardano.Ledger.Core (
  )
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), coerceKeyRole)
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..))
@@ -283,9 +283,7 @@ instance AnyEraTxBody AlonzoEra where
   proposalProceduresTxBodyG = to (const Nothing)
   treasuryDonationTxBodyG = to (const Nothing)
   guardsTxBodyG =
-    -- TODO: switch reqSignerHashesTxBodyL to `Guard` from `Witness`, thus getting rid of
-    -- coerceKeyRole: https://github.com/IntersectMBO/cardano-ledger/issues/5315
-    reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map (KeyHashObj . coerceKeyRole))
+    reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map KeyHashObj)
 
 instance AnyEraTxBody BabbageEra where
   updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
@@ -294,11 +292,11 @@ instance AnyEraTxBody BabbageEra where
   proposalProceduresTxBodyG = to (const Nothing)
   treasuryDonationTxBodyG = to (const Nothing)
   guardsTxBodyG =
-    reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map (KeyHashObj . coerceKeyRole))
+    reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map KeyHashObj)
 
 instance AnyEraTxBody ConwayEra where
   guardsTxBodyG =
-    reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map (KeyHashObj . coerceKeyRole))
+    reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map KeyHashObj)
 
 instance AnyEraTxBody DijkstraEra
 

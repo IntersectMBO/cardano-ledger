@@ -492,7 +492,9 @@ queryPoolState nes mPoolKeys =
 -- | Query the current PoolParams.
 queryPoolParameters ::
   EraCertState era =>
-  NewEpochState era -> Set (KeyHash 'StakePool) -> Map (KeyHash 'StakePool) PoolParams
+  NewEpochState era ->
+  Set (KeyHash 'StakePool) ->
+  Map (KeyHash 'StakePool) PoolParams
 queryPoolParameters nes poolKeys =
   let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
    in Map.mapWithKey stakePoolStateToPoolParams $ Map.restrictKeys pools poolKeys

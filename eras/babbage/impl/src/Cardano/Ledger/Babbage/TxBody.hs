@@ -150,7 +150,7 @@ data BabbageTxBodyRaw = BabbageTxBodyRaw
   , btbrFee :: !Coin
   , btbrValidityInterval :: !ValidityInterval
   , btbrUpdate :: !(StrictMaybe (Update BabbageEra))
-  , btbrReqSignerHashes :: !(Set (KeyHash 'Witness))
+  , btbrReqSignerHashes :: !(Set (KeyHash 'Guard))
   , btbrMint :: !MultiAsset
   , -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.MaryValue, not a Value.
@@ -375,7 +375,7 @@ pattern BabbageTxBody ::
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update BabbageEra) ->
-  Set (KeyHash 'Witness) ->
+  Set (KeyHash 'Guard) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
   StrictMaybe TxAuxDataHash ->
@@ -479,7 +479,7 @@ txfee' :: TxBody BabbageEra -> Coin
 withdrawals' :: TxBody BabbageEra -> Withdrawals
 vldt' :: TxBody BabbageEra -> ValidityInterval
 update' :: TxBody BabbageEra -> StrictMaybe (Update BabbageEra)
-reqSignerHashes' :: TxBody BabbageEra -> Set (KeyHash 'Witness)
+reqSignerHashes' :: TxBody BabbageEra -> Set (KeyHash 'Guard)
 adHash' :: TxBody BabbageEra -> StrictMaybe TxAuxDataHash
 mint' :: TxBody BabbageEra -> MultiAsset
 scriptIntegrityHash' :: TxBody BabbageEra -> StrictMaybe ScriptIntegrityHash

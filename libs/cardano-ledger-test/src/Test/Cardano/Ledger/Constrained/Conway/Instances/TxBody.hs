@@ -206,7 +206,7 @@ type AlonzoTxBodyTypes =
    , Coin
    , ValidityInterval
    , Maybe (Update AlonzoEra)
-   , Set (KeyHash 'Witness)
+   , Set (KeyHash 'Guard)
    , MultiAsset
    , Maybe ScriptIntegrityHash
    , Maybe TxAuxDataHash
@@ -272,7 +272,7 @@ type BabbageTxBodyTypes =
    , Coin
    , ValidityInterval
    , Maybe (Update BabbageEra)
-   , Set (KeyHash 'Witness)
+   , Set (KeyHash 'Guard)
    , MultiAsset
    , Maybe ScriptIntegrityHash
    , Maybe TxAuxDataHash
