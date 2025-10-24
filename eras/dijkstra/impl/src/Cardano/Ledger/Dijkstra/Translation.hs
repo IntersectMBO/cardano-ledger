@@ -55,8 +55,8 @@ import Lens.Micro ((&), (.~), (^.))
 
 type instance TranslationContext DijkstraEra = DijkstraGenesis
 
-instance Typeable l => TranslateEra DijkstraEra (Tx l) where
-  type TranslationError DijkstraEra (Tx l) = DecoderError
+instance TranslateEra DijkstraEra (Tx TopTx) where
+  type TranslationError DijkstraEra (Tx TopTx) = DecoderError
   translateEra _ctxt tx = case toSTxLevel tx of
     STopTxOnly -> do
       -- Note that this does not preserve the hidden bytes field of the transaction.
