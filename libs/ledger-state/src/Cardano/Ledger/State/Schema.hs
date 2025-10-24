@@ -91,7 +91,7 @@ SnapShotDelegation
 SnapShotPool
   snapShotId SnapShotId
   keyHashId KeyHashId
-  params Shelley.PoolParams
+  params Shelley.StakePoolParams
   UniqueSnapShotPool snapShotId keyHashId
 
 LedgerState

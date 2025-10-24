@@ -82,7 +82,7 @@ witnessedKeyHashStakePoolMapSpec univ =
 conwayAccountsSpec ::
   Era era =>
   WitUniv era ->
-  Term (Map (KeyHash 'StakePool) PoolParams) ->
+  Term (Map (KeyHash 'StakePool) StakePoolParams) ->
   Specification (ConwayAccounts era)
 conwayAccountsSpec univ poolreg = constrained $ \ [var|conwayAccounts|] ->
   match conwayAccounts $ \ [var|accountmap|] ->

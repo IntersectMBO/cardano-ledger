@@ -59,7 +59,7 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
-import Cardano.Ledger.State (PoolParams (..))
+import Cardano.Ledger.State (StakePoolParams (..))
 import Control.Monad (zipWithM)
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
@@ -195,11 +195,11 @@ transTxCertV1V2 = \case
     Right $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
   DelegTxCert stakeCred (DelegStake keyHash) ->
     Right $ PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
-  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
+  RegPoolTxCert (StakePoolParams {sppId, sppVrf}) ->
     Right $
       PV1.DCertPoolRegister
-        (transKeyHash ppId)
-        (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+        (transKeyHash sppId)
+        (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash sppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
     Right $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
   txCert -> Left $ inject $ CertificateNotSupported txCert
@@ -303,10 +303,10 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
 transTxCert ::
   (ConwayEraTxCert era, TxCert era ~ DijkstraTxCert era) => TxCert era -> PV3.TxCert
 transTxCert = \case
-  RegPoolTxCert PoolParams {ppId, ppVrf} ->
+  RegPoolTxCert StakePoolParams {sppId, sppVrf} ->
     PV3.TxCertPoolRegister
-      (transKeyHash ppId)
-      (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+      (transKeyHash sppId)
+      (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes (unVRFVerKeyHash sppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
     PV3.TxCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
   RegDepositTxCert stakeCred deposit ->

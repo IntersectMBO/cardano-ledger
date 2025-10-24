@@ -199,7 +199,7 @@ instance ToExpr CompactAddr
 -- PoolParams
 instance ToExpr PoolMetadata
 
-instance ToExpr PoolParams
+instance ToExpr StakePoolParams
 
 instance ToExpr StakePoolState
 

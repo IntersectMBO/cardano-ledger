@@ -130,10 +130,10 @@ import Cardano.Ledger.Shelley.TxWits as X (
 import Cardano.Ledger.State as X (
   PoolDistr (..),
   PoolMetadata (..),
-  PoolParams (..),
   SnapShot (..),
   SnapShots (..),
   Stake (..),
+  StakePoolParams (..),
   StakePoolRelay (..),
   UTxO (..),
   balance,

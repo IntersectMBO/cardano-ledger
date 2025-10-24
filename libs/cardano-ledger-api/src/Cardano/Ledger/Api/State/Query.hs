@@ -442,8 +442,8 @@ queryStakePoolDefaultVote nes poolId =
 -- | Used only for the `queryPoolState` query. This resembles the older way of
 -- representing StakePoolState in Ledger.
 data QueryPoolStateResult = QueryPoolStateResult
-  { qpsrStakePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
-  , qpsrFutureStakePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  { qpsrStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
+  , qpsrFutureStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
   , qpsrRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
   , qpsrDeposits :: !(Map (KeyHash 'StakePool) Coin)
   }
@@ -468,8 +468,8 @@ mkQueryPoolStateResult ::
   QueryPoolStateResult
 mkQueryPoolStateResult f ps =
   QueryPoolStateResult
-    { qpsrStakePoolParams = Map.mapWithKey stakePoolStateToPoolParams restrictedStakePools
-    , qpsrFutureStakePoolParams = Map.mapWithKey stakePoolStateToPoolParams restrictedStakePools
+    { qpsrStakePoolParams = Map.mapWithKey stakePoolStateToStakePoolParams restrictedStakePools
+    , qpsrFutureStakePoolParams = Map.mapWithKey stakePoolStateToStakePoolParams restrictedStakePools
     , qpsrRetiring = f $ psRetiring ps
     , qpsrDeposits = Map.map (fromCompact . spsDeposit) restrictedStakePools
     }
@@ -489,12 +489,12 @@ queryPoolState nes mPoolKeys =
         Just keys -> (`Map.restrictKeys` keys)
    in mkQueryPoolStateResult f pstate
 
--- | Query the current PoolParams.
+-- | Query the current StakePoolParams.
 queryPoolParameters ::
   EraCertState era =>
   NewEpochState era ->
   Set (KeyHash 'StakePool) ->
-  Map (KeyHash 'StakePool) PoolParams
+  Map (KeyHash 'StakePool) StakePoolParams
 queryPoolParameters nes poolKeys =
   let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-   in Map.mapWithKey stakePoolStateToPoolParams $ Map.restrictKeys pools poolKeys
+   in Map.mapWithKey stakePoolStateToStakePoolParams $ Map.restrictKeys pools poolKeys

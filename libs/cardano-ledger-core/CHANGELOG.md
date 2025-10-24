@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Rename `PoolParams` to `StakePoolParams`
 * Remove the `UMap` module and the `umap` benchmarks cabal target.
 * Export `dRepToText`
 * Deprecated `bheader` and `bbody`

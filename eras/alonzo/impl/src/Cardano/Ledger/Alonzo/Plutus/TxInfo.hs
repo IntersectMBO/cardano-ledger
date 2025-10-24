@@ -76,7 +76,7 @@ import Cardano.Ledger.Plutus.Language (
  )
 import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
-import Cardano.Ledger.State (PoolParams (..), UTxO (..))
+import Cardano.Ledger.State (StakePoolParams (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Cardano.Ledger.Val (zero)
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -341,11 +341,11 @@ transTxCertCommon = \case
     Just $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
   DelegStakeTxCert stakeCred keyHash ->
     Just $ PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
-  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
+  RegPoolTxCert (StakePoolParams {sppId, sppVrf}) ->
     Just $
       PV1.DCertPoolRegister
-        (transKeyHash ppId)
-        (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+        (transKeyHash sppId)
+        (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash sppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
     Just $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
   _ -> Nothing

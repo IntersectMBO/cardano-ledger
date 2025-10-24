@@ -58,7 +58,7 @@ import Cardano.Ledger.Coin (Coin (..), coinToRational)
 import Cardano.Ledger.Core (EraPParams, PParams, ppA0L, ppNOptL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..), memberRew)
-import Cardano.Ledger.State (PoolParams (..), maxPool)
+import Cardano.Ledger.State (StakePoolParams (..), maxPool)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
@@ -270,7 +270,7 @@ desirability ::
   NonNegativeInterval ->
   NonZero Word16 ->
   Coin ->
-  PoolParams ->
+  StakePoolParams ->
   PerformanceEstimate ->
   Coin ->
   Double
@@ -283,9 +283,9 @@ desirability a0 nOpt r pool (PerformanceEstimate p) totalStake =
     fTilde = fTildeNumer / fTildeDenom
     fTildeNumer = p * fromRational (coinToRational r * (z0 + min s z0 * unboundRational a0))
     fTildeDenom = fromRational $ 1 + unboundRational a0
-    cost = (fromRational . coinToRational . ppCost) pool
-    margin = (fromRational . unboundRational . ppMargin) pool
-    Coin pledge = ppPledge pool
+    cost = (fromRational . coinToRational . sppCost) pool
+    margin = (fromRational . unboundRational . sppMargin) pool
+    Coin pledge = sppPledge pool
     s = toInteger pledge % max 1 (unCoin totalStake)
     z0 = 1 %. toIntegerNonZero nOpt
 
@@ -297,7 +297,7 @@ getTopRankedPools ::
   Coin ->
   Coin ->
   PParams era ->
-  Map (KeyHash 'StakePool) PoolParams ->
+  Map (KeyHash 'StakePool) StakePoolParams ->
   Map (KeyHash 'StakePool) PerformanceEstimate ->
   Set (KeyHash 'StakePool)
 getTopRankedPools rPot totalStake pp poolParams aps =
@@ -309,7 +309,7 @@ getTopRankedPoolsVMap ::
   Coin ->
   Coin ->
   PParams era ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams ->
   Map (KeyHash 'StakePool) PerformanceEstimate ->
   Set (KeyHash 'StakePool)
 getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
@@ -321,7 +321,7 @@ getTopRankedPoolsInternal ::
   Coin ->
   Coin ->
   PParams era ->
-  [(KeyHash 'StakePool, (PoolParams, PerformanceEstimate))] ->
+  [(KeyHash 'StakePool, (StakePoolParams, PerformanceEstimate))] ->
   Set (KeyHash 'StakePool)
 getTopRankedPoolsInternal rPot totalStake pp pdata =
   Set.fromList $
@@ -375,7 +375,7 @@ nonMyopicMemberRew ::
   EraPParams era =>
   PParams era ->
   Coin ->
-  PoolParams ->
+  StakePoolParams ->
   StakeShare ->
   StakeShare ->
   StakeShare ->
@@ -391,7 +391,7 @@ nonMyopicMemberRew
   t
   topPools
   (PerformanceEstimate p) =
-    let nm = nonMyopicStake pp s sigma t (ppId pool) topPools
+    let nm = nonMyopicStake pp s sigma t (sppId pool) topPools
         f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
         fHat = floor (p * (fromRational . coinToRational) f)
      in memberRew (Coin fHat) pool t nm

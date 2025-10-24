@@ -6,7 +6,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | This module provides the 'StakePoolState' data type, which represents the
@@ -40,20 +39,20 @@ module Cardano.Ledger.State.StakePool (
 
   -- * Conversions
   mkStakePoolState,
-  stakePoolStateToPoolParams,
+  stakePoolStateToStakePoolParams,
 
   -- * Pool Parameters and Related Types
 
   -- | These types were previously defined in 'Cardano.Ledger.PoolParams'.
   -- They are now part of this module and re-exported by 'Cardano.Ledger.State'.
-  PoolParams (..),
+  StakePoolParams (..),
   PoolMetadata (..),
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
   SizeOfPoolOwners (..),
-  ppCostL,
-  ppMetadataL,
-  ppVrfL,
+  sppCostL,
+  sppMetadataL,
+  sppVrfL,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount)
@@ -205,38 +204,38 @@ instance Default StakePoolState where
       , spsDeposit = mempty
       }
 
--- | Convert 'PoolParams' to 'StakePoolState' by dropping the pool ID.
+-- | Convert 'StakePoolParams' to 'StakePoolState' by dropping the pool ID.
 -- This is the primary way to create a 'StakePoolState' from registration
 -- or update parameters.
-mkStakePoolState :: CompactForm Coin -> PoolParams -> StakePoolState
-mkStakePoolState deposit pp =
+mkStakePoolState :: CompactForm Coin -> StakePoolParams -> StakePoolState
+mkStakePoolState deposit spp =
   StakePoolState
-    { spsVrf = ppVrf pp
-    , spsPledge = ppPledge pp
-    , spsCost = ppCost pp
-    , spsMargin = ppMargin pp
-    , spsRewardAccount = ppRewardAccount pp
-    , spsOwners = ppOwners pp
-    , spsRelays = ppRelays pp
-    , spsMetadata = ppMetadata pp
+    { spsVrf = sppVrf spp
+    , spsPledge = sppPledge spp
+    , spsCost = sppCost spp
+    , spsMargin = sppMargin spp
+    , spsRewardAccount = sppRewardAccount spp
+    , spsOwners = sppOwners spp
+    , spsRelays = sppRelays spp
+    , spsMetadata = sppMetadata spp
     , spsDeposit = deposit
     }
 
--- | Convert 'StakePoolState' back to 'PoolParams' by providing the pool ID.
+-- | Convert 'StakePoolState' back to 'StakePoolParams' by providing the pool ID.
 -- This is useful when you need to reconstruct the full parameters from
 -- the state representation.
-stakePoolStateToPoolParams :: KeyHash 'StakePool -> StakePoolState -> PoolParams
-stakePoolStateToPoolParams poolId sps =
-  PoolParams
-    { ppId = poolId
-    , ppVrf = spsVrf sps
-    , ppPledge = spsPledge sps
-    , ppCost = spsCost sps
-    , ppMargin = spsMargin sps
-    , ppRewardAccount = spsRewardAccount sps
-    , ppOwners = spsOwners sps
-    , ppRelays = spsRelays sps
-    , ppMetadata = spsMetadata sps
+stakePoolStateToStakePoolParams :: KeyHash 'StakePool -> StakePoolState -> StakePoolParams
+stakePoolStateToStakePoolParams poolId sps =
+  StakePoolParams
+    { sppId = poolId
+    , sppVrf = spsVrf sps
+    , sppPledge = spsPledge sps
+    , sppCost = spsCost sps
+    , sppMargin = spsMargin sps
+    , sppRewardAccount = spsRewardAccount sps
+    , sppOwners = spsOwners sps
+    , sppRelays = spsRelays sps
+    , sppMetadata = spsMetadata sps
     }
 
 data PoolMetadata = PoolMetadata
@@ -367,55 +366,55 @@ instance DecCBOR StakePoolRelay where
       k -> invalidKey k
 
 -- | A stake pool.
-data PoolParams = PoolParams
-  { ppId :: !(KeyHash 'StakePool)
-  , ppVrf :: !(VRFVerKeyHash 'StakePoolVRF)
-  , ppPledge :: !Coin
-  , ppCost :: !Coin
-  , ppMargin :: !UnitInterval
-  , ppRewardAccount :: !RewardAccount
-  , ppOwners :: !(Set (KeyHash 'Staking))
-  , ppRelays :: !(StrictSeq StakePoolRelay)
-  , ppMetadata :: !(StrictMaybe PoolMetadata)
+data StakePoolParams = StakePoolParams
+  { sppId :: !(KeyHash 'StakePool)
+  , sppVrf :: !(VRFVerKeyHash 'StakePoolVRF)
+  , sppPledge :: !Coin
+  , sppCost :: !Coin
+  , sppMargin :: !UnitInterval
+  , sppRewardAccount :: !RewardAccount
+  , sppOwners :: !(Set (KeyHash 'Staking))
+  , sppRelays :: !(StrictSeq StakePoolRelay)
+  , sppMetadata :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
-  deriving (EncCBOR) via CBORGroup PoolParams
-  deriving (DecCBOR) via CBORGroup PoolParams
+  deriving (EncCBOR) via CBORGroup StakePoolParams
+  deriving (DecCBOR) via CBORGroup StakePoolParams
 
-ppVrfL :: Lens' PoolParams (VRFVerKeyHash 'StakePoolVRF)
-ppVrfL = lens ppVrf (\pp u -> pp {ppVrf = u})
+sppVrfL :: Lens' StakePoolParams (VRFVerKeyHash 'StakePoolVRF)
+sppVrfL = lens sppVrf (\spp u -> spp {sppVrf = u})
 
-ppCostL :: Lens' PoolParams Coin
-ppCostL = lens ppCost (\pp u -> pp {ppCost = u})
+sppCostL :: Lens' StakePoolParams Coin
+sppCostL = lens sppCost (\spp u -> spp {sppCost = u})
 
-ppMetadataL :: Lens' PoolParams (StrictMaybe PoolMetadata)
-ppMetadataL = lens ppMetadata (\pp u -> pp {ppMetadata = u})
+sppMetadataL :: Lens' StakePoolParams (StrictMaybe PoolMetadata)
+sppMetadataL = lens sppMetadata (\spp u -> spp {sppMetadata = u})
 
-instance Default PoolParams where
-  def = PoolParams def def (Coin 0) (Coin 0) def def def def def
+instance Default StakePoolParams where
+  def = StakePoolParams def def (Coin 0) (Coin 0) def def def def def
 
-instance NoThunks PoolParams
+instance NoThunks StakePoolParams
 
-deriving instance NFData PoolParams
+deriving instance NFData StakePoolParams
 
-instance ToJSON PoolParams where
-  toJSON pp =
+instance ToJSON StakePoolParams where
+  toJSON spp =
     Aeson.object
-      [ "publicKey" .= ppId pp -- TODO publicKey is an unfortunate name, should be poolId
-      , "vrf" .= ppVrf pp
-      , "pledge" .= ppPledge pp
-      , "cost" .= ppCost pp
-      , "margin" .= ppMargin pp
-      , "rewardAccount" .= ppRewardAccount pp
-      , "owners" .= ppOwners pp
-      , "relays" .= ppRelays pp
-      , "metadata" .= ppMetadata pp
+      [ "publicKey" .= sppId spp -- TODO publicKey is an unfortunate name, should be poolId
+      , "vrf" .= sppVrf spp
+      , "pledge" .= sppPledge spp
+      , "cost" .= sppCost spp
+      , "margin" .= sppMargin spp
+      , "rewardAccount" .= sppRewardAccount spp
+      , "owners" .= sppOwners spp
+      , "relays" .= sppRelays spp
+      , "metadata" .= sppMetadata spp
       ]
 
-instance FromJSON PoolParams where
+instance FromJSON StakePoolParams where
   parseJSON =
-    Aeson.withObject "PoolParams" $ \obj ->
-      PoolParams
+    Aeson.withObject "StakePoolParams" $ \obj ->
+      StakePoolParams
         <$> obj .: "publicKey" -- TODO publicKey is an unfortunate name, should be poolId
         <*> obj .: "vrf"
         <*> obj .: "pledge"
@@ -436,35 +435,35 @@ instance DecCBOR PoolMetadata where
   decCBOR = do
     decodeRecordNamed "PoolMetadata" (const 2) (PoolMetadata <$> decCBOR <*> decCBOR)
 
--- | The size of the 'ppOwners' 'Set'.  Only used to compute size of encoded
--- 'PoolParams'.
+-- | The size of the 'sppOwners' 'Set'.  Only used to compute size of encoded
+-- 'StakePoolParams'.
 data SizeOfPoolOwners = SizeOfPoolOwners
 
 instance EncCBOR SizeOfPoolOwners where
   encCBOR = error "The `SizeOfPoolOwners` type cannot be encoded!"
 
--- | The size of the 'ppRelays' 'Set'.  Only used to compute size of encoded
--- 'PoolParams'.
+-- | The size of the 'sppRelays' 'Set'.  Only used to compute size of encoded
+-- 'StakePoolParams'.
 data SizeOfPoolRelays = SizeOfPoolRelays
 
 instance EncCBOR SizeOfPoolRelays where
   encCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
-instance EncCBORGroup PoolParams where
+instance EncCBORGroup StakePoolParams where
   encCBORGroup poolParams =
-    encCBOR (ppId poolParams)
-      <> encCBOR (ppVrf poolParams)
-      <> encCBOR (ppPledge poolParams)
-      <> encCBOR (ppCost poolParams)
-      <> encCBOR (ppMargin poolParams)
-      <> encCBOR (ppRewardAccount poolParams)
-      <> encCBOR (ppOwners poolParams)
-      <> encCBOR (ppRelays poolParams)
-      <> encodeNullStrictMaybe encCBOR (ppMetadata poolParams)
+    encCBOR (sppId poolParams)
+      <> encCBOR (sppVrf poolParams)
+      <> encCBOR (sppPledge poolParams)
+      <> encCBOR (sppCost poolParams)
+      <> encCBOR (sppMargin poolParams)
+      <> encCBOR (sppRewardAccount poolParams)
+      <> encCBOR (sppOwners poolParams)
+      <> encCBOR (sppRelays poolParams)
+      <> encodeNullStrictMaybe encCBOR (sppMetadata poolParams)
   listLen _ = 9
   listLenBound _ = 9
 
-instance DecCBORGroup PoolParams where
+instance DecCBORGroup StakePoolParams where
   decCBORGroup = do
     hk <- decCBOR
     vrf <- decCBOR
@@ -476,14 +475,14 @@ instance DecCBORGroup PoolParams where
     relays <- decCBOR
     md <- decodeNullStrictMaybe decCBOR
     pure $
-      PoolParams
-        { ppId = hk
-        , ppVrf = vrf
-        , ppPledge = pledge
-        , ppCost = cost
-        , ppMargin = margin
-        , ppRewardAccount = ra
-        , ppOwners = owners
-        , ppRelays = relays
-        , ppMetadata = md
+      StakePoolParams
+        { sppId = hk
+        , sppVrf = vrf
+        , sppPledge = pledge
+        , sppCost = cost
+        , sppMargin = margin
+        , sppRewardAccount = ra
+        , sppOwners = owners
+        , sppRelays = relays
+        , sppMetadata = md
         }

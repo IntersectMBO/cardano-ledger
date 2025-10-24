@@ -14,9 +14,9 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 spec :: Spec
 spec = do
   describe "StakePoolState" $ do
-    prop "mkStakePoolState/stakePoolStateToPoolParams round-trip" $
-      \(poolParams :: PoolParams, deposit :: CompactForm Coin) ->
-        let poolId = ppId poolParams
-            stakePoolState = mkStakePoolState deposit poolParams
-            poolParams' = stakePoolStateToPoolParams poolId stakePoolState
-         in poolParams === poolParams'
+    prop "mkStakePoolState/stakePoolStateToStakePoolParams round-trip" $
+      \(stakePoolParams :: StakePoolParams, deposit :: CompactForm Coin) ->
+        let poolId = sppId stakePoolParams
+            stakePoolState = mkStakePoolState deposit stakePoolParams
+            stakePoolParams' = stakePoolStateToStakePoolParams poolId stakePoolState
+         in stakePoolParams === stakePoolParams'

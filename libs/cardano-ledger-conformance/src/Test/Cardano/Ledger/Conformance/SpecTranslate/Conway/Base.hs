@@ -324,16 +324,16 @@ instance Era era => SpecTranslate ctx (AlonzoTxAuxData era) where
 
   toSpecRep = toSpecRep . hashAnnotated
 
-instance SpecTranslate ctx PoolParams where
-  type SpecRep PoolParams = Agda.StakePoolParams
+instance SpecTranslate ctx StakePoolParams where
+  type SpecRep StakePoolParams = Agda.StakePoolParams
 
-  toSpecRep PoolParams {..} =
+  toSpecRep StakePoolParams {..} =
     Agda.StakePoolParams
-      <$> toSpecRep ppOwners
-      <*> toSpecRep ppCost
-      <*> toSpecRep ppMargin
-      <*> toSpecRep ppPledge
-      <*> toSpecRep (raCredential ppRewardAccount)
+      <$> toSpecRep sppOwners
+      <*> toSpecRep sppCost
+      <*> toSpecRep sppMargin
+      <*> toSpecRep sppPledge
+      <*> toSpecRep (raCredential sppRewardAccount)
 
 instance SpecTranslate ctx DRep where
   type SpecRep DRep = Agda.VDeleg
@@ -635,7 +635,7 @@ instance
       <*> dreps
       <*> toSpecRep reCommitteeState
       <*> toSpecRep treasury
-      <*> toSpecRep (Map.mapWithKey stakePoolStateToPoolParams reStakePools)
+      <*> toSpecRep (Map.mapWithKey stakePoolStateToStakePoolParams reStakePools)
       <*> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
 
 instance

@@ -14,9 +14,9 @@ import Cardano.Ledger.Shelley.Rules (calculatePoolDistr)
 import Cardano.Ledger.State (
   IndividualPoolStake (..),
   PoolDistr (..),
-  PoolParams (ppVrf),
   SnapShot (..),
   Stake (..),
+  StakePoolParams (sppVrf),
   sumAllStake,
  )
 import qualified Data.Map.Strict as Map
@@ -38,7 +38,7 @@ calcPoolDistOldEqualsNew =
 
 -- | The original version of calculatePoolDistr
 oldCalculatePoolDistr :: (KeyHash 'StakePool -> Bool) -> SnapShot -> PoolDistr
-oldCalculatePoolDistr includeHash (SnapShot stake delegs poolParams) =
+oldCalculatePoolDistr includeHash (SnapShot stake delegs stakePoolParams) =
   let Coin totalc = sumAllStake stake
       -- totalc could be zero (in particular when shrinking)
       nonZeroTotal = if totalc == 0 then 1 else totalc
@@ -54,6 +54,6 @@ oldCalculatePoolDistr includeHash (SnapShot stake delegs poolParams) =
         ( Map.intersectionWith
             (\(cc, rat) vrf -> IndividualPoolStake rat cc vrf)
             sd
-            (VMap.toMap (VMap.map ppVrf poolParams))
+            (VMap.toMap (VMap.map sppVrf stakePoolParams))
         )
         (CompactCoin $ fromIntegral nonZeroTotal)

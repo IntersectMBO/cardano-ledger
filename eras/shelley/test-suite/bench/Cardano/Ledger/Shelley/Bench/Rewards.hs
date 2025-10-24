@@ -26,7 +26,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.State (PoolParams (..), UTxO (..))
+import Cardano.Ledger.State (StakePoolParams (..), UTxO (..))
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
@@ -136,19 +136,19 @@ genChainInEpoch epoch = do
       ShelleyGenesisStaking
         { sgsPools =
             LM.ListMap
-              [ (aikColdKeyHash, pp)
+              [ (aikColdKeyHash, spp)
               | (AllIssuerKeys {aikVrf, aikColdKeyHash}, (owner : _)) <- stakeMap
-              , let pp =
-                      PoolParams
-                        { ppId = aikColdKeyHash
-                        , ppVrf = hashVerKeyVRF @MockCrypto $ vrfVerKey aikVrf
-                        , ppPledge = Coin 1
-                        , ppCost = Coin 1
-                        , ppMargin = minBound
-                        , ppRewardAccount = RewardAccount Testnet $ KeyHashObj owner
-                        , ppOwners = Set.singleton owner
-                        , ppRelays = StrictSeq.empty
-                        , ppMetadata = SNothing
+              , let spp =
+                      StakePoolParams
+                        { sppId = aikColdKeyHash
+                        , sppVrf = hashVerKeyVRF @MockCrypto $ vrfVerKey aikVrf
+                        , sppPledge = Coin 1
+                        , sppCost = Coin 1
+                        , sppMargin = minBound
+                        , sppRewardAccount = RewardAccount Testnet $ KeyHashObj owner
+                        , sppOwners = Set.singleton owner
+                        , sppRelays = StrictSeq.empty
+                        , sppMetadata = SNothing
                         }
               ]
         , sgsStake =

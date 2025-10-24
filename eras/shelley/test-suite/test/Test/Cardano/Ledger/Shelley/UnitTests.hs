@@ -583,18 +583,18 @@ alicePoolColdKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
-alicePoolParamsSmallCost :: PoolParams
-alicePoolParamsSmallCost =
-  PoolParams
-    { ppId = hashKey $ vKey alicePoolColdKeys
-    , ppVrf = hashVerKeyVRF @MockCrypto vkVrf
-    , ppPledge = Coin 1
-    , ppCost = Coin 5 -- Too Small!
-    , ppMargin = unsafeBoundRational 0.1
-    , ppRewardAccount = RewardAccount Testnet (KeyHashObj . hashKey . vKey $ aliceStake)
-    , ppOwners = Set.singleton $ (hashKey . vKey) aliceStake
-    , ppRelays = StrictSeq.empty
-    , ppMetadata =
+aliceStakePoolParamsSmallCost :: StakePoolParams
+aliceStakePoolParamsSmallCost =
+  StakePoolParams
+    { sppId = hashKey $ vKey alicePoolColdKeys
+    , sppVrf = hashVerKeyVRF @MockCrypto vkVrf
+    , sppPledge = Coin 1
+    , sppCost = Coin 5 -- Too Small!
+    , sppMargin = unsafeBoundRational 0.1
+    , sppRewardAccount = RewardAccount Testnet (KeyHashObj . hashKey . vKey $ aliceStake)
+    , sppOwners = Set.singleton $ (hashKey . vKey) aliceStake
+    , sppRelays = StrictSeq.empty
+    , sppMetadata =
         SJust $
           PoolMetadata
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
@@ -611,7 +611,7 @@ testPoolCostTooSmall =
         DelplFailure $
           PoolFailure $
             StakePoolCostTooLowPOOL $
-              Mismatch (ppCost alicePoolParamsSmallCost) (pp @ShelleyEra ^. ppMinPoolCostL)
+              Mismatch (sppCost aliceStakePoolParamsSmallCost) (pp @ShelleyEra ^. ppMinPoolCostL)
     ]
     $ aliceGivesBobLovelace
     $ AliceToBob
@@ -620,7 +620,7 @@ testPoolCostTooSmall =
       , fee = Coin 997
       , deposits = Coin 250
       , refunds = Coin 0
-      , certs = [ShelleyTxCertPool $ RegPool alicePoolParamsSmallCost]
+      , certs = [ShelleyTxCertPool $ RegPool aliceStakePoolParamsSmallCost]
       , ttl = SlotNo 0
       , signers =
           ( [ asWitness alicePay
