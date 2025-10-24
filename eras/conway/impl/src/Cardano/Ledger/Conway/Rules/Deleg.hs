@@ -227,7 +227,6 @@ conwayDelegTransition = do
             %~ registerConwayAccount stakeCred ppKeyDepositCompact Nothing
     ConwayUnRegCert stakeCred sMayRefund -> do
       let (mAccountState, newAccounts) = unregisterConwayAccount stakeCred accounts
-          mCurDelegatee = mAccountState >>= accountStateDelegatee
           checkInvalidRefund = do
             SJust suppliedRefund <- Just sMayRefund
             -- we don't want to report invalid refund when stake credential is not registered:
@@ -259,7 +258,7 @@ conwayDelegTransition = do
           pure $
             certState
               & certDStateL . accountsL .~ newAccounts
-              & certVStateL %~ unDelegDRep stakeCred mCurDelegatee
+              & certVStateL %~ unDelegReDelegDRep stakeCred accountState Nothing
               & certPStateL %~ unDelegReDelegStakePool stakeCred accountState Nothing
     ConwayDelegCert stakeCred delegatee -> do
       let mAccountState = lookupAccountState stakeCred accounts
@@ -312,7 +311,6 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mAccountState ne
     DelegVote dRep -> delegVote dRep
     DelegStakeVote sPool dRep -> delegVote dRep . delegStake sPool
   where
-    mCurDelegatee = mAccountState >>= accountStateDelegatee
     delegStake stakePool cState =
       cState
         & certDStateL . accountsL
@@ -322,33 +320,13 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mAccountState ne
           (\accountState -> certPStateL %~ unDelegReDelegStakePool stakeCred accountState (Just stakePool))
           mAccountState
     delegVote dRep cState =
-      let cState' =
-            cState
-              & certDStateL . accountsL
-                %~ adjustAccountState (dRepDelegationAccountStateL ?~ dRep) stakeCred
-              & certVStateL %~ unDelegDRep stakeCred mCurDelegatee
-          dReps
-            | preserveIncorrectDelegation = cState ^. certVStateL . vsDRepsL
-            | otherwise = cState' ^. certVStateL . vsDRepsL
-       in case dRep of
-            DRepCredential targetDRep
-              | Just dRepState <- Map.lookup targetDRep dReps ->
-                  let dRepState' = dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
-                   in cState' & certVStateL . vsDRepsL .~ Map.insert targetDRep dRepState' dReps
-            _ -> cState'
-
-unDelegDRep ::
-  Credential 'Staking ->
-  Maybe Delegatee ->
-  VState era ->
-  VState era
-unDelegDRep stakeCred mCurDelegatee =
-  maybe
-    id
-    (\dRepCred -> vsDRepsL %~ Map.adjust (drepDelegsL %~ Set.delete stakeCred) dRepCred)
-    (mCurDelegatee >>= drepToUndeleg)
-  where
-    drepToUndeleg = \case
-      DelegVote (DRepCredential dRepCred) -> Just dRepCred
-      DelegStakeVote _ (DRepCredential dRepCred) -> Just dRepCred
-      _ -> Nothing
+      cState
+        & certDStateL . accountsL %~ adjustAccountState (dRepDelegationAccountStateL ?~ dRep) stakeCred
+        & maybe
+          (certVStateL %~ insertDRepDeleg dRep)
+          (\accountState -> certVStateL %~ unDelegReDelegDRep stakeCred accountState (Just dRep))
+          (guard (not preserveIncorrectDelegation) >> mAccountState)
+    insertDRepDeleg dRep = case dRep of
+      DRepCredential dRepCred ->
+        vsDRepsL %~ Map.adjust (drepDelegsL %~ Set.insert stakeCred) dRepCred
+      _ -> id
