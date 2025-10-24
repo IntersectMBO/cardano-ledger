@@ -45,7 +45,7 @@ import Test.Cardano.Ledger.Babbage.Binary.Twiddle ()
 import Test.Cardano.Ledger.Babbage.ImpTest ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
-import Test.Cardano.Ledger.Common (ToExpr (..), showExpr)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Era (EraTest)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), isValid')
@@ -77,8 +77,6 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Control.State.Transition.Trace (Trace (..), lastState)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
-import Test.QuickCheck
-import Test.Tasty (TestTree, testGroup)
 
 -- =====================================
 -- Top level generators of TRC
@@ -163,21 +161,19 @@ testTxValidForLEDGER (trc@(TRC (env, ledgerState, vtx)), _genstate) =
 -- The generic types make a roundtrip without adding or losing information
 
 -- | A single Tx preserves Ada
-txPreserveAda :: GenSize -> TestTree
+txPreserveAda :: GenSize -> Spec
 txPreserveAda genSize =
-  testGroup
-    "Individual Tx's preserve Ada"
-    [ testPropMax 30 "Shelley Tx preserves Ada" $
-        forAll (genTxAndLEDGERState @ShelleyEra genSize) testTxValidForLEDGER
-    , testPropMax 30 "Allegra Tx preserves ADA" $
-        forAll (genTxAndLEDGERState @AllegraEra genSize) testTxValidForLEDGER
-    , testPropMax 30 "Mary Tx preserves ADA" $
-        forAll (genTxAndLEDGERState @MaryEra genSize) testTxValidForLEDGER
-    , testPropMax 30 "Alonzo ValidTx preserves ADA" $
-        forAll (genTxAndLEDGERState @AlonzoEra genSize) testTxValidForLEDGER
-    , testPropMax 30 "Babbage ValidTx preserves ADA" $
-        forAll (genTxAndLEDGERState @BabbageEra genSize) testTxValidForLEDGER
-    ]
+  describe "Individual Tx's preserve Ada" $ do
+    testPropMax 30 "Shelley Tx preserves Ada" $
+      forAll (genTxAndLEDGERState @ShelleyEra genSize) testTxValidForLEDGER
+    testPropMax 30 "Allegra Tx preserves ADA" $
+      forAll (genTxAndLEDGERState @AllegraEra genSize) testTxValidForLEDGER
+    testPropMax 30 "Mary Tx preserves ADA" $
+      forAll (genTxAndLEDGERState @MaryEra genSize) testTxValidForLEDGER
+    testPropMax 30 "Alonzo ValidTx preserves ADA" $
+      forAll (genTxAndLEDGERState @AlonzoEra genSize) testTxValidForLEDGER
+    testPropMax 30 "Babbage ValidTx preserves ADA" $
+      forAll (genTxAndLEDGERState @BabbageEra genSize) testTxValidForLEDGER
 
 -- | Ada is preserved over a trace of length 100
 adaIsPreserved ::
@@ -188,7 +184,7 @@ adaIsPreserved ::
   ) =>
   Int ->
   GenSize ->
-  TestTree
+  Spec
 adaIsPreserved numTx gensize =
   testPropMax 30 (eraName @era ++ " era. Trace length = " ++ show numTx) $
     traceProp @era
@@ -196,16 +192,14 @@ adaIsPreserved numTx gensize =
       gensize
       (\firstSt lastSt -> totalAda (mcsNes firstSt) === totalAda (mcsNes lastSt))
 
-tracePreserveAda :: Int -> GenSize -> TestTree
+tracePreserveAda :: Int -> GenSize -> Spec
 tracePreserveAda numTx gensize =
-  testGroup
-    ("Total Ada is preserved over traces of length " ++ show numTx)
-    [ adaIsPreserved @BabbageEra numTx gensize
-    , adaIsPreserved @AlonzoEra numTx gensize
-    , adaIsPreserved @MaryEra numTx gensize
-    , adaIsPreserved @AllegraEra numTx gensize
-    , adaIsPreserved @ShelleyEra numTx gensize
-    ]
+  describe ("Total Ada is preserved over traces of length " ++ show numTx) $ do
+    adaIsPreserved @BabbageEra numTx gensize
+    adaIsPreserved @AlonzoEra numTx gensize
+    adaIsPreserved @MaryEra numTx gensize
+    adaIsPreserved @AllegraEra numTx gensize
+    adaIsPreserved @ShelleyEra numTx gensize
 
 -- | The incremental Stake invaraint is preserved over a trace of length 100=
 stakeInvariant :: EraStake era => MockChainState era -> MockChainState era -> Property
@@ -220,46 +214,40 @@ incrementStakeInvariant ::
   , ShelleyEraAccounts era
   ) =>
   GenSize ->
-  TestTree
+  Spec
 incrementStakeInvariant gensize =
   testPropMax 30 (eraName @era ++ " era. Trace length = 100") $
     traceProp @era 100 gensize stakeInvariant
 
-incrementalStake :: GenSize -> TestTree
+incrementalStake :: GenSize -> Spec
 incrementalStake genSize =
-  testGroup
-    "Incremental Stake invariant holds"
-    [ -- TODO re-enable this once we have added all the new rules to Conway
-      -- incrementStakeInvariant Conway genSize,
-      incrementStakeInvariant @BabbageEra genSize
-    , incrementStakeInvariant @AlonzoEra genSize
-    , incrementStakeInvariant @MaryEra genSize
-    , incrementStakeInvariant @AllegraEra genSize
-    , incrementStakeInvariant @ShelleyEra genSize
-    ]
+  describe "Incremental Stake invariant holds" $ do
+    -- TODO re-enable this once we have added all the new rules to Conway
+    -- incrementStakeInvariant Conway genSize,
+    incrementStakeInvariant @BabbageEra genSize
+    incrementStakeInvariant @AlonzoEra genSize
+    incrementStakeInvariant @MaryEra genSize
+    incrementStakeInvariant @AllegraEra genSize
+    incrementStakeInvariant @ShelleyEra genSize
 
-genericProperties :: GenSize -> TestTree
+genericProperties :: GenSize -> Spec
 genericProperties genSize =
-  testGroup
-    "Generic Property tests"
-    [ txPreserveAda genSize
-    , tracePreserveAda 45 genSize
-    , incrementalStake genSize
-    , testTraces 45
-    , epochPreserveAda genSize
-    , twiddleInvariantHoldsEras
-    ]
+  describe "Generic Property tests" $ do
+    txPreserveAda genSize
+    tracePreserveAda 45 genSize
+    incrementalStake genSize
+    testTraces 45
+    epochPreserveAda genSize
+    twiddleInvariantHoldsEras
 
-epochPreserveAda :: GenSize -> TestTree
+epochPreserveAda :: GenSize -> Spec
 epochPreserveAda genSize =
-  testGroup
-    "Ada is preserved in each epoch"
-    [ adaIsPreservedInEachEpoch @BabbageEra genSize
-    , adaIsPreservedInEachEpoch @AlonzoEra genSize
-    , adaIsPreservedInEachEpoch @MaryEra genSize
-    , adaIsPreservedInEachEpoch @AllegraEra genSize
-    , adaIsPreservedInEachEpoch @ShelleyEra genSize
-    ]
+  describe "Ada is preserved in each epoch" $ do
+    adaIsPreservedInEachEpoch @BabbageEra genSize
+    adaIsPreservedInEachEpoch @AlonzoEra genSize
+    adaIsPreservedInEachEpoch @MaryEra genSize
+    adaIsPreservedInEachEpoch @AllegraEra genSize
+    adaIsPreservedInEachEpoch @ShelleyEra genSize
 
 adaIsPreservedInEachEpoch ::
   forall era.
@@ -292,7 +280,7 @@ adaIsPreservedInEachEpoch ::
   , Show (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   GenSize ->
-  TestTree
+  Spec
 adaIsPreservedInEachEpoch genSize =
   testPropMax 30 (eraName @era) $
     forEachEpochTrace @era 200 genSize withTrace
@@ -310,14 +298,12 @@ twiddleInvariantHolds ::
   , Twiddle a
   ) =>
   String ->
-  TestTree
+  Spec
 twiddleInvariantHolds name =
   testPropMax 30 name $ twiddleInvariantProp @a
 
-twiddleInvariantHoldsEras :: TestTree
+twiddleInvariantHoldsEras :: Spec
 twiddleInvariantHoldsEras =
-  testGroup
-    "Twiddle invariant holds for TxBody"
-    [ twiddleInvariantHolds @(TxBody AlonzoEra) "Alonzo"
-    , twiddleInvariantHolds @(TxBody BabbageEra) "Babbage"
-    ]
+  describe "Twiddle invariant holds for TxBody" $ do
+    twiddleInvariantHolds @(TxBody AlonzoEra) "Alonzo"
+    twiddleInvariantHolds @(TxBody BabbageEra) "Babbage"

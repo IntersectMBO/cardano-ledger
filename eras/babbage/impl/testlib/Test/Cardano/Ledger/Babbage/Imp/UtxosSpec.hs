@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Babbage.Imp.UtxosSpec (spec) where
+module Test.Cardano.Ledger.Babbage.Imp.UtxosSpec (spec, babbageEraSpecificSpec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
@@ -14,7 +14,7 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
  )
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (CollectErrors))
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Core (referenceInputsTxBodyL)
+import Cardano.Ledger.Babbage.Core (dataHashTxOutL, fromPlutusScript, referenceInputsTxBodyL)
 import Cardano.Ledger.Babbage.TxInfo (
   BabbageContextError (
     ReferenceInputsNotSupported,
@@ -22,9 +22,10 @@ import Cardano.Ledger.Babbage.TxInfo (
   ),
  )
 import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), TxIx (..), inject)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), TxIx (..), inject, maybeToStrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (
+  bodyTxL,
   eraProtVerHigh,
   eraProtVerLow,
   fromNativeScript,
@@ -33,12 +34,17 @@ import Cardano.Ledger.Core (
   inputsTxBodyL,
   mkBasicTx,
   mkBasicTxBody,
+  mkBasicTxOut,
   mkCoinTxOut,
   outputsTxBodyL,
+  txIdTx,
  )
-import Cardano.Ledger.Plutus (Language (..), hashPlutusScript, withSLanguage)
+import Cardano.Ledger.Credential (StakeReference (..))
+import Cardano.Ledger.Plutus (Data (..), Language (..), hashData, hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
+import Cardano.Ledger.TxIn (mkTxInPartial)
 import Lens.Micro
+import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
 import Test.Cardano.Ledger.Imp.Common
@@ -46,7 +52,7 @@ import Test.Cardano.Ledger.Plutus.Examples
 
 spec :: forall era. BabbageEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOS" $ do
-  describe "Plutus V1 with references" $ do
+  describe "PlutusV1 with references" $ do
     let inBabbage = eraProtVerLow @era <= eraProtVerHigh @BabbageEra
         behavior = if inBabbage then "fails" else "succeeds"
         submitBabbageFailingTx tx failures =
@@ -92,3 +98,40 @@ spec = describe "UTXOS" $ do
                   ReferenceInputsNotSupported @era [refIn]
               ]
         ]
+
+babbageEraSpecificSpec :: forall era. BabbageEraImp era => SpecWith (ImpInit (LedgerSpec era))
+babbageEraSpecificSpec =
+  describe "UTXOS" $ do
+    it "succeeds with same txIn in regular inputs and reference inputs (PlutusV2)" $ do
+      let
+        setupRefTx = do
+          let shSpending = withSLanguage PlutusV2 $ hashPlutusScript . redeemerSameAsDatum
+          refTxOut <- mkRefTxOut shSpending
+          fmap txIdTx . submitTxAnn "Producing transaction" $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . outputsTxBodyL
+                .~ [ refTxOut
+                   , scriptLockedTxOut shSpending
+                   , scriptLockedTxOut shSpending
+                   ]
+        scriptLockedTxOut shSpending =
+          mkBasicTxOut
+            (mkAddr shSpending StakeRefNull)
+            mempty
+            & dataHashTxOutL .~ SJust (hashData $ Data @era $ P1.I 3)
+        mkRefTxOut sh = do
+          addr <- freshKeyAddr_
+          let mbyPlutusScript = impLookupPlutusScript sh
+          pure $
+            mkBasicTxOut addr mempty
+              & referenceScriptTxOutL .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)
+      producingTx <- setupRefTx
+      let
+        consumingTx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . inputsTxBodyL
+              .~ [ mkTxInPartial producingTx 0
+                 , mkTxInPartial producingTx 1
+                 ]
+            & bodyTxL . referenceInputsTxBodyL .~ [mkTxInPartial producingTx 0]
+      submitTxAnn_ "Consuming transaction" consumingTx
