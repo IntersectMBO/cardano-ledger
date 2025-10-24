@@ -70,7 +70,9 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
           , ("dtbrCurrentTreasuryValue", toExpr dtbrCurrentTreasuryValue)
           , ("dtbrTreasuryDonation", toExpr dtbrTreasuryDonation)
           ]
-    DijkstraSubTxBodyRaw {..} ->
+    txBody@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
+      let DijkstraSubTxBodyRaw {..} = txBody 
+      in
       Rec "DijkstraTxBodyRaw" $
         OMap.fromList
           [ ("dstbrSpendInputs", toExpr dstbrSpendInputs)
