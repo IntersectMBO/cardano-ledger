@@ -349,7 +349,7 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
         fieldGuarded
           (emptyFailure "VotingProcedures" "non-empty")
           (null . unVotingProcedures)
-          (\x tx -> tx & votingProceduresDijkstraTxBodyRawL .~ x)
+          (\x -> votingProceduresDijkstraTxBodyRawL .~ x)
           From
       bodyFields 20 =
         fieldGuarded
