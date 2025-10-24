@@ -277,7 +277,7 @@ poolDelegationTransition = do
                       Nothing -> Map.insert ppVrf (knownNonZeroBounded @1)
                       Just futureStakePoolState
                         | futureStakePoolState ^. spsVrfL /= ppVrf ->
-                            (Map.insert ppVrf (knownNonZeroBounded @1))
+                            Map.insert ppVrf (knownNonZeroBounded @1)
                               . Map.delete (futureStakePoolState ^. spsVrfL)
                         | otherwise -> id
                 | otherwise = id
@@ -297,7 +297,9 @@ poolDelegationTransition = do
           let futureStakePoolState =
                 mkStakePoolState
                   (stakePoolState ^. spsDepositL)
-                  (stakePoolState ^. spsDelegatorsL)
+                  -- delegators are set in PoolReap,
+                  -- in order to capture delegations that happened after re-registration but before the end of the epoch
+                  mempty
                   poolParams
           pure $
             ps

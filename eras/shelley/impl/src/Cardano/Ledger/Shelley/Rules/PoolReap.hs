@@ -152,7 +152,11 @@ poolReapTransition = do
     -- activate future stakePools
     ps =
       ps0
-        { psStakePools = Map.union (ps0 ^. psFutureStakePoolsL) (ps0 ^. psStakePoolsL)
+        { psStakePools =
+            Map.unionWith
+              (\newPoolState oldPoolState -> newPoolState {spsDelegators = spsDelegators oldPoolState})
+              (ps0 ^. psFutureStakePoolsL)
+              (ps0 ^. psStakePoolsL)
         , psFutureStakePools = Map.empty
         }
     cs = cs0 & certPStateL .~ ps
@@ -226,7 +230,6 @@ poolReapTransition = do
     removeVRFKeyHashOccurrence =
       -- Removes the key from the map if the value drops to 0
       Map.update (mapNonZero (\n -> n - 1))
-
     delegsToClear cState pools =
       foldMap spsDelegators $
         Map.restrictKeys (cState ^. certPStateL . psStakePoolsL) pools
