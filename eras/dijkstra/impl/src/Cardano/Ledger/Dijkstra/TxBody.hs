@@ -302,14 +302,9 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
           (\x tx -> tx & withdrawalsDijkstraTxBodyRawL .~ x)
           From
       bodyFields 7 = ofield (\x tx -> tx & auxDataHashDijkstraTxBodyRawL .~ x) From
-      bodyFields n@8 =
-        withSTxBothLevels @l $ \case
-          STopTx ->
-            ofield
-              (\x tx -> tx & vldtDijkstraTxBodyRawL .~ (dtbrVldt tx) {invalidBefore = x})
-              From
-          SSubTx ->
-            invalidField n
+      bodyFields 8 =
+        ofield
+          (\x tx -> tx & vldtDijkstraTxBodyRawL .~ (dtbrVldt tx) {invalidBefore = x})
       bodyFields 9 =
         fieldGuarded
           (emptyFailure "Mint" "non-empty")
