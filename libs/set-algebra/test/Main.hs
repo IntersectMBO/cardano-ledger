@@ -2,17 +2,15 @@ module Main where
 
 import Test.Control.Iterate.RelationReference (relationTests)
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Hspec (Spec, describe, hspec)
 
 -- ====================================================================================
 
-tests :: TestTree
+tests :: Spec
 tests =
-  testGroup
-    "set-algebra"
-    [ setAlgTest
-    , relationTests
-    ]
+  describe "set-algebra" $ do
+    setAlgTest
+    relationTests
 
 main :: IO ()
-main = defaultMain tests
+main = hspec tests
