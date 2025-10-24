@@ -62,8 +62,7 @@ instance TranslateEra BabbageEra NewEpochState where
 instance Typeable l => TranslateEra BabbageEra (Tx l) where
   type TranslationError BabbageEra (Tx l) = DecoderError
   translateEra _ctxt tx =
-    withTopTxLevelOnly tx $ \tx' ->
-      do
+    withTopTxLevelOnly tx $ \tx' -> do
         -- Note that this does not preserve the hidden bytes field of the transaction.
         -- This is under the premise that this is irrelevant for TxInBlocks, which are
         -- not transmitted as contiguous chunks.
