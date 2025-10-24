@@ -59,12 +59,13 @@ vMapTests =
         let xs' = xs <> [(k, v)]
          in (VMap.lookup k (VMap.fromList xs' :: VMapT) === Just v)
               .&&. (Map.lookup k (Map.fromList xs' :: MapT) === Just v)
-      prop "finsWithDefault" $ \d k ->
+      prop "findWithDefault" $ \d k ->
         prop_AsMapTo (VMap.findWithDefault d k) (Map.findWithDefault d k)
-      prop "finsWithDefault (existing)" $ \k v xs ->
+      prop "findWithDefault (existing)" $ \k v xs ->
         let xs' = xs <> [(k, v)]
-         in (VMap.findWithDefault undefined k (VMap.fromList xs' :: VMapT) === v)
-              .&&. (Map.findWithDefault undefined k (Map.fromList xs' :: MapT) === v)
+            unfound = error $ "the expected key " <> show k <> " was not found"
+         in (VMap.findWithDefault unfound k (VMap.fromList xs' :: VMapT) === v)
+              .&&. (Map.findWithDefault unfound k (Map.fromList xs' :: MapT) === v)
     testLawsGroup "classes" $
       [ eqLaws (Proxy @VMapT)
       , semigroupLaws (Proxy @VMapT)
