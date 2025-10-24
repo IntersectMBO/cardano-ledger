@@ -335,7 +335,7 @@ toCBORForMempoolSubmission = \case
         !> To dtBody
         !> To dtWits
         !> To dtIsValid
-        !> E (encodeNullMaybe encCBOR . strictMaybeToMaybe) dtAuxData
+        !> E (encodeNullStrictMaybe encCBOR) dtAuxData
   DijkstraSubTx {dstBody, dstWits, dstAuxData} ->
     encode $
       Rec DijkstraSubTx
