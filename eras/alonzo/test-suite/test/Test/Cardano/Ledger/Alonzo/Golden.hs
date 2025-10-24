@@ -68,8 +68,7 @@ import Test.Cardano.Protocol.TPraos.Examples (
   ProtocolLedgerExamples (..),
   ledgerExamplesAlonzo,
  )
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, testCase, (@?=))
+import Test.Hspec (Expectation, Spec, describe, it, shouldBe)
 
 readDataFile :: FilePath -> IO BSL.ByteString
 readDataFile name = getDataFileName name >>= BSL.readFile
@@ -84,241 +83,229 @@ coinsPerUTxOWordLocal = quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
 calcMinUTxO :: AlonzoTxOut AlonzoEra -> Coin
 calcMinUTxO tout = Coin (utxoEntrySize tout * coinsPerUTxOWordLocal)
 
-tests :: TestTree
+tests :: Spec
 tests =
-  testGroup
-    "Alonzo Golden Tests"
-    [ goldenCborSerialization
-    , goldenJsonSerialization
-    , goldenMinFee
-    , goldenScriptIntegrity
-    , goldenGenesisSerialization
-    , goldenUTxOEntryMinAda
-    ]
+  describe "Alonzo Golden Tests" $ do
+    goldenCborSerialization
+    goldenJsonSerialization
+    goldenMinFee
+    goldenScriptIntegrity
+    goldenGenesisSerialization
+    goldenUTxOEntryMinAda
 
 -- | (heapWords of a DataHash) * coinsPerUTxOWordLocal is 344820
-goldenUTxOEntryMinAda :: TestTree
+goldenUTxOEntryMinAda :: Spec
 goldenUTxOEntryMinAda =
-  testGroup
-    "golden tests - UTxOEntryMinAda"
-    [ testCase "one policy, one (smallest) name, yes datum hash" $
-        calcMinUTxO
-          ( AlonzoTxOut
-              carlAddr
-              (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
-              (SJust $ hashData @AlonzoEra (Data (PV1.List [])))
-          )
-          @?= Coin 1655136
-    , testCase "one policy, one (smallest) name, no datum hash" $
-        calcMinUTxO
-          ( AlonzoTxOut
-              bobAddr
-              (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
-              SNothing
-          )
-          @?= Coin 1310316
-    , testCase "one policy, one (small) name" $
-        calcMinUTxO
-          ( AlonzoTxOut
-              aliceAddr
-              (valueFromList (Coin 1444443) [(pid1, smallName 1, 1)])
-              SNothing
-          )
-          @?= Coin 1344798
-    , testCase "one policy, three (small) names" $
-        calcMinUTxO
-          ( AlonzoTxOut
-              aliceAddr
-              ( valueFromList
-                  (Coin 1555554)
-                  [ (pid1, smallName 1, 1)
-                  , (pid1, smallName 2, 1)
-                  , (pid1, smallName 3, 1)
-                  ]
-              )
-              SNothing
-          )
-          @?= Coin 1448244
-    , testCase "one policy, one (largest) name" $
-        calcMinUTxO
-          ( AlonzoTxOut
-              carlAddr
-              (valueFromList (Coin 1555554) [(pid1, largestName 65, 1)])
-              SNothing
-          )
-          @?= Coin 1448244
-    , testCase "one policy, three (largest) name, with hash" $
-        calcMinUTxO
-          ( AlonzoTxOut
-              carlAddr
-              ( valueFromList
-                  (Coin 1962961)
-                  [ (pid1, largestName 65, 1)
-                  , (pid1, largestName 66, 1)
-                  , (pid1, largestName 67, 1)
-                  ]
-              )
-              (SJust $ hashData @AlonzoEra (Data (PV1.Constr 0 [PV1.Constr 0 []])))
-          )
-          @?= Coin 2172366
-    , testCase "two policies, one (smallest) name" $
-        calcMinUTxO
-          ( AlonzoTxOut
-              aliceAddr
-              (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
-              SNothing
-          )
-          @?= Coin 1482726
-    , testCase "two policies, one (smallest) name, with hash" $
-        calcMinUTxO
-          ( AlonzoTxOut
-              aliceAddr
-              (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
-              (SJust $ hashData @AlonzoEra (Data (PV1.Constr 0 [])))
-          )
-          @?= Coin 1827546
-    , testCase "two policies, two (small) names" $
-        calcMinUTxO
-          ( AlonzoTxOut
-              bobAddr
-              (valueFromList (Coin 1629628) [(pid1, smallName 1, 1), (pid2, smallName 2, 1)])
-              SNothing
-          )
-          @?= Coin 1517208
-    , testCase "three policies, ninety-six (small) names" $
-        calcMinUTxO
-          ( AlonzoTxOut
-              aliceAddr
-              ( let f i c = (i, smallName c, 1)
-                 in valueFromList
-                      (Coin 7407400)
-                      [ f i c
-                      | (i, cs) <-
-                          [(pid1, [32 .. 63]), (pid2, [64 .. 95]), (pid3, [96 .. 127])]
-                      , c <- cs
-                      ]
-              )
-              SNothing
-          )
-          @?= Coin 6896400
-    , testCase "utxo entry size of ada-only" $
-        -- This value, 29, is helpful for comparing the alonzo protocol parameter utxoCostPerWord
-        -- with the old parameter minUTxOValue.
-        -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
-        -- we can divide minUTxOValue by 29 and round.
-        utxoEntrySize @AlonzoEra (AlonzoTxOut aliceAddr mempty SNothing) @?= 29
-    ]
+  describe "golden tests - UTxOEntryMinAda" $ do
+    it "one policy, one (smallest) name, yes datum hash" $
+      calcMinUTxO
+        ( AlonzoTxOut
+            carlAddr
+            (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
+            (SJust $ hashData @AlonzoEra (Data (PV1.List [])))
+        )
+        `shouldBe` Coin 1655136
+    it "one policy, one (smallest) name, no datum hash" $
+      calcMinUTxO
+        ( AlonzoTxOut
+            bobAddr
+            (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
+            SNothing
+        )
+        `shouldBe` Coin 1310316
+    it "one policy, one (small) name" $
+      calcMinUTxO
+        ( AlonzoTxOut
+            aliceAddr
+            (valueFromList (Coin 1444443) [(pid1, smallName 1, 1)])
+            SNothing
+        )
+        `shouldBe` Coin 1344798
+    it "one policy, three (small) names" $
+      calcMinUTxO
+        ( AlonzoTxOut
+            aliceAddr
+            ( valueFromList
+                (Coin 1555554)
+                [ (pid1, smallName 1, 1)
+                , (pid1, smallName 2, 1)
+                , (pid1, smallName 3, 1)
+                ]
+            )
+            SNothing
+        )
+        `shouldBe` Coin 1448244
+    it "one policy, one (largest) name" $
+      calcMinUTxO
+        ( AlonzoTxOut
+            carlAddr
+            (valueFromList (Coin 1555554) [(pid1, largestName 65, 1)])
+            SNothing
+        )
+        `shouldBe` Coin 1448244
+    it "one policy, three (largest) name, with hash" $
+      calcMinUTxO
+        ( AlonzoTxOut
+            carlAddr
+            ( valueFromList
+                (Coin 1962961)
+                [ (pid1, largestName 65, 1)
+                , (pid1, largestName 66, 1)
+                , (pid1, largestName 67, 1)
+                ]
+            )
+            (SJust $ hashData @AlonzoEra (Data (PV1.Constr 0 [PV1.Constr 0 []])))
+        )
+        `shouldBe` Coin 2172366
+    it "two policies, one (smallest) name" $
+      calcMinUTxO
+        ( AlonzoTxOut
+            aliceAddr
+            (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
+            SNothing
+        )
+        `shouldBe` Coin 1482726
+    it "two policies, one (smallest) name, with hash" $
+      calcMinUTxO
+        ( AlonzoTxOut
+            aliceAddr
+            (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
+            (SJust $ hashData @AlonzoEra (Data (PV1.Constr 0 [])))
+        )
+        `shouldBe` Coin 1827546
+    it "two policies, two (small) names" $
+      calcMinUTxO
+        ( AlonzoTxOut
+            bobAddr
+            (valueFromList (Coin 1629628) [(pid1, smallName 1, 1), (pid2, smallName 2, 1)])
+            SNothing
+        )
+        `shouldBe` Coin 1517208
+    it "three policies, ninety-six (small) names" $
+      calcMinUTxO
+        ( AlonzoTxOut
+            aliceAddr
+            ( let f i c = (i, smallName c, 1)
+               in valueFromList
+                    (Coin 7407400)
+                    [ f i c
+                    | (i, cs) <-
+                        [(pid1, [32 .. 63]), (pid2, [64 .. 95]), (pid3, [96 .. 127])]
+                    , c <- cs
+                    ]
+            )
+            SNothing
+        )
+        `shouldBe` Coin 6896400
+    it "utxo entry size of ada-only" $
+      -- This value, 29, is helpful for comparing the alonzo protocol parameter utxoCostPerWord
+      -- with the old parameter minUTxOValue.
+      -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
+      -- we can divide minUTxOValue by 29 and round.
+      utxoEntrySize @AlonzoEra (AlonzoTxOut aliceAddr mempty SNothing) `shouldBe` 29
 
-goldenCborSerialization :: TestTree
+goldenCborSerialization :: Spec
 goldenCborSerialization =
-  testGroup
-    "golden tests - CBOR serialization"
-    [ testCase "Alonzo Block" $ do
-        expected <- readDataFile "golden/block.cbor"
-        Plain.serialize (pleBlock ledgerExamplesAlonzo) @?= expected
-    , testCase "Alonzo Tx" $ do
-        expected <- readDataFile "golden/tx.cbor"
-        Plain.serialize (leTx $ pleLedgerExamples ledgerExamplesAlonzo) @?= expected
-    ]
+  describe "golden tests - CBOR serialization" $ do
+    it "Alonzo Block" $ do
+      expected <- readDataFile "golden/block.cbor"
+      Plain.serialize (pleBlock ledgerExamplesAlonzo) `shouldBe` expected
+    it "Alonzo Tx" $ do
+      expected <- readDataFile "golden/tx.cbor"
+      Plain.serialize (leTx $ pleLedgerExamples ledgerExamplesAlonzo) `shouldBe` expected
 
-goldenJsonSerialization :: TestTree
+goldenJsonSerialization :: Spec
 goldenJsonSerialization =
-  testGroup
-    "golden tests - JSON serialization"
-    [ testCase "ValidityInterval" $ do
-        let value =
-              [ ValidityInterval
-                  { invalidBefore = SNothing
-                  , invalidHereafter = SNothing
-                  }
-              , ValidityInterval
-                  { invalidBefore = SJust (SlotNo 12345)
-                  , invalidHereafter = SNothing
-                  }
-              , ValidityInterval
-                  { invalidBefore = SNothing
-                  , invalidHereafter = SJust (SlotNo 12354)
-                  }
-              , ValidityInterval
-                  { invalidBefore = SJust (SlotNo 12345)
-                  , invalidHereafter = SJust (SlotNo 12354)
-                  }
-              ]
-        expected <- Aeson.throwDecode =<< readDataFile "golden/ValidityInterval.json"
-        Aeson.toJSON value @?= expected
-    , testCase "IsValid" $ do
-        let value =
-              [ IsValid True
-              , IsValid False
-              ]
-        expected <- Aeson.throwDecode =<< readDataFile "golden/IsValid.json"
-        Aeson.toJSON value @?= expected
-    , testCase "FailureDescription" $ do
-        let value =
-              [ PlutusFailure "A description" "A reconstruction"
-              ]
-        expected <- Aeson.throwDecode =<< readDataFile "golden/FailureDescription.json"
-        Aeson.toJSON value @?= expected
-    , testCase "TagMismatchDescription" $ do
-        let value =
-              [ PassedUnexpectedly
-              , FailedUnexpectedly (NE.fromList [PlutusFailure "A description" "A reconstruction"])
-              ]
-        expected <- Aeson.throwDecode =<< readDataFile "golden/TagMismatchDescription.json"
-        Aeson.toJSON value @?= expected
-    ]
+  describe "golden tests - JSON serialization" $ do
+    it "ValidityInterval" $ do
+      let value =
+            [ ValidityInterval
+                { invalidBefore = SNothing
+                , invalidHereafter = SNothing
+                }
+            , ValidityInterval
+                { invalidBefore = SJust (SlotNo 12345)
+                , invalidHereafter = SNothing
+                }
+            , ValidityInterval
+                { invalidBefore = SNothing
+                , invalidHereafter = SJust (SlotNo 12354)
+                }
+            , ValidityInterval
+                { invalidBefore = SJust (SlotNo 12345)
+                , invalidHereafter = SJust (SlotNo 12354)
+                }
+            ]
+      expected <- Aeson.throwDecode =<< readDataFile "golden/ValidityInterval.json"
+      Aeson.toJSON value `shouldBe` expected
+    it "IsValid" $ do
+      let value =
+            [ IsValid True
+            , IsValid False
+            ]
+      expected <- Aeson.throwDecode =<< readDataFile "golden/IsValid.json"
+      Aeson.toJSON value `shouldBe` expected
+    it "FailureDescription" $ do
+      let value =
+            [ PlutusFailure "A description" "A reconstruction"
+            ]
+      expected <- Aeson.throwDecode =<< readDataFile "golden/FailureDescription.json"
+      Aeson.toJSON value `shouldBe` expected
+    it "TagMismatchDescription" $ do
+      let value =
+            [ PassedUnexpectedly
+            , FailedUnexpectedly (NE.fromList [PlutusFailure "A description" "A reconstruction"])
+            ]
+      expected <- Aeson.throwDecode =<< readDataFile "golden/TagMismatchDescription.json"
+      Aeson.toJSON value `shouldBe` expected
 
-goldenGenesisSerialization :: TestTree
+goldenGenesisSerialization :: Spec
 goldenGenesisSerialization =
-  testGroup
-    "golden tests - Alonzo Genesis serialization"
-    [ testCase "JSON deserialization" $ do
-        let file = "golden/mainnet-alonzo-genesis.json"
-        deserialized <- (eitherDecodeFileStrict file :: IO (Either String AlonzoGenesis))
-        deserialized @?= Right expectedGenesis
-    ]
+  describe "golden tests - Alonzo Genesis serialization" $ do
+    it "JSON deserialization" $ do
+      let file = "golden/mainnet-alonzo-genesis.json"
+      deserialized <- (eitherDecodeFileStrict file :: IO (Either String AlonzoGenesis))
+      deserialized `shouldBe` Right expectedGenesis
 
-goldenMinFee :: TestTree
+goldenMinFee :: Spec
 goldenMinFee =
-  testGroup
-    "golden tests - minimum fee calculation"
-    [ testCase "Alonzo Block" $ do
-        -- This golden test uses the block from:
-        -- https://github.com/input-output-hk/cardano-node/issues/4228#issuecomment-1195707491
-        --
-        -- The first transaction in this block is invalid due to:
-        --   FeeTooSmallUTxO (Coin 1006053) (Coin 1001829)
-        --
-        -- The correct behavior is for the minimum fee for this transaction
-        -- to be 1006053 lovelace, as indicated by the failure above.
-        -- Nodes that had the bug determined the minimum fee to be 1001829.
-        hex <- readDataFile "golden/hex-block-node-issue-4228.cbor"
-        let cborBytesBlock =
-              case B16L.decode hex of
-                Left err -> error err
-                Right val -> val
-            blockBody =
-              case decodeFullAnnotator (eraProtVerHigh @AlonzoEra) "Block" decCBOR cborBytesBlock of
-                Left err -> error (show err)
-                Right (Block _bHeader bBody :: Block (BHeader StandardCrypto) AlonzoEra) -> bBody
-            firstTx =
-              case blockBody ^. txSeqBlockBodyL of
-                tx :<| _ -> (tx :: Tx AlonzoEra)
-                Empty -> error "Block doesn't have any transactions"
+  describe "golden tests - minimum fee calculation" $ do
+    it "Alonzo Block" $ do
+      -- This golden test uses the block from:
+      -- https://github.com/input-output-hk/cardano-node/issues/4228#issuecomment-1195707491
+      --
+      -- The first transaction in this block is invalid due to:
+      --   FeeTooSmallUTxO (Coin 1006053) (Coin 1001829)
+      --
+      -- The correct behavior is for the minimum fee for this transaction
+      -- to be 1006053 lovelace, as indicated by the failure above.
+      -- Nodes that had the bug determined the minimum fee to be 1001829.
+      hex <- readDataFile "golden/hex-block-node-issue-4228.cbor"
+      let cborBytesBlock =
+            case B16L.decode hex of
+              Left err -> error err
+              Right val -> val
+          blockBody =
+            case decodeFullAnnotator (eraProtVerHigh @AlonzoEra) "Block" decCBOR cborBytesBlock of
+              Left err -> error (show err)
+              Right (Block _bHeader bBody :: Block (BHeader StandardCrypto) AlonzoEra) -> bBody
+          firstTx =
+            case blockBody ^. txSeqBlockBodyL of
+              tx :<| _ -> (tx :: Tx AlonzoEra)
+              Empty -> error "Block doesn't have any transactions"
 
-            -- Below are the relevant protocol parameters that were active
-            -- at the time this block was rejected.
-            priceMem = fromJust $ boundRational 0.0577
-            priceSteps = fromJust $ boundRational 0.0000721
-            pricesParam = Prices priceMem priceSteps
-            pp =
-              emptyPParams
-                & ppMinFeeAL .~ Coin 44
-                & ppMinFeeBL .~ Coin 155381
-                & ppPricesL .~ pricesParam
+          -- Below are the relevant protocol parameters that were active
+          -- at the time this block was rejected.
+          priceMem = fromJust $ boundRational 0.0577
+          priceSteps = fromJust $ boundRational 0.0000721
+          pricesParam = Prices priceMem priceSteps
+          pp =
+            emptyPParams
+              & ppMinFeeAL .~ Coin 44
+              & ppMinFeeBL .~ Coin 155381
+              & ppPricesL .~ pricesParam
 
-        Coin 1006053 @?= alonzoMinFeeTx pp firstTx
-    ]
+      Coin 1006053 `shouldBe` alonzoMinFeeTx pp firstTx
 
 fromRightError :: (HasCallStack, Show a) => String -> Either a b -> b
 fromRightError errorMsg =
@@ -366,16 +353,14 @@ testScriptIntegritpHash ::
   PParams AlonzoEra ->
   Language ->
   LangDepView ->
-  Assertion
-testScriptIntegritpHash pp lang view = getLanguageView pp lang @?= view
+  Expectation
+testScriptIntegritpHash pp lang view = getLanguageView pp lang `shouldBe` view
 
-goldenScriptIntegrity :: TestTree
+goldenScriptIntegrity :: Spec
 goldenScriptIntegrity =
-  testGroup
-    "golden tests - script integrity hash"
-    [ testCase "PlutusV1" $ testScriptIntegritpHash exPP PlutusV1 exampleLangDepViewPV1
-    , testCase "PlutusV2" $ testScriptIntegritpHash exPP PlutusV2 exampleLangDepViewPV2
-    ]
+  describe "golden tests - script integrity hash" $ do
+    it "PlutusV1" $ testScriptIntegritpHash exPP PlutusV1 exampleLangDepViewPV1
+    it "PlutusV2" $ testScriptIntegritpHash exPP PlutusV2 exampleLangDepViewPV2
 
 expectedGenesis :: AlonzoGenesis
 expectedGenesis =

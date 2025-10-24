@@ -1,16 +1,14 @@
 module Main where
 
-import Test.Tasty
+import Test.Hspec
 import Test.VMap
 
 -- ====================================================================================
 
-tests :: TestTree
+tests :: Spec
 tests =
-  testGroup
-    "vector-map"
-    [ vMapTests
-    ]
+  describe "vector-map" $ do
+    vMapTests
 
 main :: IO ()
-main = defaultMain tests
+main = hspec tests

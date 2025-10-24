@@ -37,6 +37,7 @@ import Data.Maybe (fromMaybe)
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
+import Test.QuickCheck ((===))
 import qualified Test.QuickCheck as QC
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (scale)

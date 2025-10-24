@@ -1,8 +1,3 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Test.Cardano.Ledger.Shelley.ByronTranslation (testGroupByronTranslation) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -13,6 +8,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation
 import Cardano.Ledger.Shelley.Core
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
+import Test.QuickCheck ((===))
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

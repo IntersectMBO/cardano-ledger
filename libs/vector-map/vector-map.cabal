@@ -83,9 +83,8 @@ test-suite tests
     QuickCheck,
     base,
     containers,
+    hspec,
     quickcheck-classes-base,
-    tasty,
-    tasty-quickcheck,
     vector-map,
 
 benchmark bench

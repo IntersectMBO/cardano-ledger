@@ -59,10 +59,9 @@ test-suite tests
     -rtsopts
 
   build-depends:
+    QuickCheck,
     base,
     cardano-data,
     containers,
+    hspec,
     set-algebra,
-    tasty,
-    tasty-hunit,
-    tasty-quickcheck,

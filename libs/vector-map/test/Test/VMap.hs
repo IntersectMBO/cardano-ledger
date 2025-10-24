@@ -29,52 +29,46 @@ prop_AsMapTo fromVM fromM vm = fromVM vm === fromM (toMap vm)
 prop_AsMapFrom :: (a -> VMapT) -> (a -> MapT) -> a -> Property
 prop_AsMapFrom mkVMap mkMap a = toMap (mkVMap a) === mkMap a
 
-vMapTests :: TestTree
+vMapTests :: Spec
 vMapTests =
-  testGroup
-    "VMap"
-    [ testGroup
-        "roundtrip"
-        [ testProperty "to/fromAscDistinctList" $
-            prop_Roundtrip VMap.toAscList VMap.fromDistinctAscList
-        , testProperty "to/fromAscList" $ prop_Roundtrip VMap.toAscList VMap.fromAscList
-        , testProperty "to/fromList" $ prop_Roundtrip VMap.toAscList VMap.fromList
-        , testProperty "to/fromMap" $ prop_Roundtrip VMap.toMap VMap.fromMap
-        ]
-    , testGroup
-        "asMap"
-        [ testProperty "fromList" $ prop_AsMapFrom VMap.fromList Map.fromList
-        , testProperty "fromAscListWithKey" $ \xs f ->
-            prop_AsMapFrom
-              (VMap.fromAscListWithKey (applyFun3 f))
-              (Map.fromAscListWithKey (applyFun3 f))
-              (List.sortOn fst xs)
-        , testProperty "fromAscListWithKeyN" $ \n xs f ->
-            prop_AsMapFrom
-              (VMap.fromAscListWithKeyN n (applyFun3 f))
-              (Map.fromAscListWithKey (applyFun3 f) . take n)
-              (List.sortOn fst xs)
-        , testProperty "toAscList" $ prop_AsMapTo VMap.toAscList Map.toAscList
-        , testProperty "foldMapWithKey" $ \f ->
-            let f' k v = applyFun2 f k v :: String
-             in prop_AsMapTo (VMap.foldMapWithKey f') (Map.foldMapWithKey f')
-        , testProperty "lookup" $ \k -> prop_AsMapTo (VMap.lookup k) (Map.lookup k)
-        , testProperty "lookup (existing)" $ \k v xs ->
-            let xs' = xs <> [(k, v)]
-             in (VMap.lookup k (VMap.fromList xs' :: VMapT) === Just v)
-                  .&&. (Map.lookup k (Map.fromList xs' :: MapT) === Just v)
-        , testProperty "finsWithDefault" $ \d k ->
-            prop_AsMapTo (VMap.findWithDefault d k) (Map.findWithDefault d k)
-        , testProperty "finsWithDefault (existing)" $ \k v xs ->
-            let xs' = xs <> [(k, v)]
-             in (VMap.findWithDefault undefined k (VMap.fromList xs' :: VMapT) === v)
-                  .&&. (Map.findWithDefault undefined k (Map.fromList xs' :: MapT) === v)
-        ]
-    , testLawsGroup
-        "classes"
-        [ eqLaws (Proxy @VMapT)
-        , semigroupLaws (Proxy @VMapT)
-        , monoidLaws (Proxy @VMapT)
-        , isListLaws (Proxy @VMapT)
-        ]
-    ]
+  describe "VMap" $ do
+    describe "roundtrip" $ do
+      prop "to/fromAscDistinctList" $
+        prop_Roundtrip VMap.toAscList VMap.fromDistinctAscList
+      prop "to/fromAscList" $ prop_Roundtrip VMap.toAscList VMap.fromAscList
+      prop "to/fromList" $ prop_Roundtrip VMap.toAscList VMap.fromList
+      prop "to/fromMap" $ prop_Roundtrip VMap.toMap VMap.fromMap
+    describe "asMap" $ do
+      prop "fromList" $ prop_AsMapFrom VMap.fromList Map.fromList
+      prop "fromAscListWithKey" $ \xs f ->
+        prop_AsMapFrom
+          (VMap.fromAscListWithKey (applyFun3 f))
+          (Map.fromAscListWithKey (applyFun3 f))
+          (List.sortOn fst xs)
+      prop "fromAscListWithKeyN" $ \n xs f ->
+        prop_AsMapFrom
+          (VMap.fromAscListWithKeyN n (applyFun3 f))
+          (Map.fromAscListWithKey (applyFun3 f) . take n)
+          (List.sortOn fst xs)
+      prop "toAscList" $ prop_AsMapTo VMap.toAscList Map.toAscList
+      prop "foldMapWithKey" $ \f ->
+        let f' k v = applyFun2 f k v :: String
+         in prop_AsMapTo (VMap.foldMapWithKey f') (Map.foldMapWithKey f')
+      prop "lookup" $ \k -> prop_AsMapTo (VMap.lookup k) (Map.lookup k)
+      prop "lookup (existing)" $ \k v xs ->
+        let xs' = xs <> [(k, v)]
+         in (VMap.lookup k (VMap.fromList xs' :: VMapT) === Just v)
+              .&&. (Map.lookup k (Map.fromList xs' :: MapT) === Just v)
+      prop "findWithDefault" $ \d k ->
+        prop_AsMapTo (VMap.findWithDefault d k) (Map.findWithDefault d k)
+      prop "findWithDefault (existing)" $ \k v xs ->
+        let xs' = xs <> [(k, v)]
+            unfound = error $ "the expected key " <> show k <> " was not found"
+         in (VMap.findWithDefault unfound k (VMap.fromList xs' :: VMapT) === v)
+              .&&. (Map.findWithDefault unfound k (Map.fromList xs' :: MapT) === v)
+    testLawsGroup "classes" $
+      [ eqLaws (Proxy @VMapT)
+      , semigroupLaws (Proxy @VMapT)
+      , monoidLaws (Proxy @VMapT)
+      , isListLaws (Proxy @VMapT)
+      ]

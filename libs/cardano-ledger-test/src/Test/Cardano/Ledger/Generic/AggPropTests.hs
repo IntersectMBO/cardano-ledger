@@ -27,7 +27,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import qualified Prettyprinter as Pretty
-import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Generic.Functions (
   getBody,
   getCollateralInputs,
@@ -59,9 +59,6 @@ import Test.Control.State.Transition.Trace (
   traceSignals,
  )
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
-import Test.QuickCheck
-import Test.Tasty
-import Test.Tasty.QuickCheck (testProperty)
 
 -- ============================================================
 
@@ -104,14 +101,12 @@ aggUTxO proof = do
   trace1 <- genTrace 100 (defaultGenSize {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
   pure $ consistentUtxoSizeProp proof trace1
 
-aggTests :: TestTree
+aggTests :: Spec
 aggTests =
-  testGroup
-    "tests, aggregating Tx's over a Trace."
-    [ testPropMax 30 "UTxO size in Babbage" (aggUTxO Babbage)
-    , testPropMax 30 "UTxO size in Alonzo" (aggUTxO Alonzo)
-    , testPropMax 30 "UTxO size in Mary" (aggUTxO Mary)
-    ]
+  describe "tests, aggregating Tx's over a Trace." $ do
+    testPropMax 30 "UTxO size in Babbage" (aggUTxO Babbage)
+    testPropMax 30 "UTxO size in Alonzo" (aggUTxO Alonzo)
+    testPropMax 30 "UTxO size in Mary" (aggUTxO Mary)
 
 -- ===============================================================
 
@@ -167,22 +162,18 @@ depositEra ::
   , EraGenericGen era
   , ShelleyEraAccounts era
   ) =>
-  TestTree
+  Spec
 depositEra =
-  testGroup
-    (eraName @era)
-    [ testProperty
-        "Deposits = KeyDeposits + PoolDeposits"
-        (forAllChainTrace 10 (itemPropToTraceProp (depositInvariant @era)))
-    ]
+  describe (eraName @era) $ do
+    prop
+      "Deposits = KeyDeposits + PoolDeposits"
+      (forAllChainTrace 10 (itemPropToTraceProp (depositInvariant @era)))
 
-depositTests :: TestTree
+depositTests :: Spec
 depositTests =
-  testGroup
-    "deposit invariants"
-    [ depositEra @ShelleyEra
-    , depositEra @AllegraEra
-    , depositEra @MaryEra
-    , depositEra @AlonzoEra
-    , depositEra @BabbageEra
-    ]
+  describe "deposit invariants" $ do
+    depositEra @ShelleyEra
+    depositEra @AllegraEra
+    depositEra @MaryEra
+    depositEra @AlonzoEra
+    depositEra @BabbageEra

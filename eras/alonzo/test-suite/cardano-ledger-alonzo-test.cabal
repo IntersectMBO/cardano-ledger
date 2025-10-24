@@ -82,7 +82,6 @@ test-suite cardano-ledger-alonzo-test
     -rtsopts
 
   build-depends:
-    QuickCheck,
     aeson >=2,
     base,
     base16-bytestring,
@@ -99,10 +98,8 @@ test-suite cardano-ledger-alonzo-test
     cardano-slotting,
     cardano-strict-containers,
     containers,
+    hspec,
     microlens,
     plutus-ledger-api,
     small-steps:{small-steps, testlib} >=1.1,
-    tasty,
-    tasty-hunit,
-    tasty-quickcheck,
     time,

@@ -136,6 +136,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
  )
 import Test.Cardano.Ledger.TerseTools (Terse (..), tersemapdiffs)
 import Test.Control.State.Transition.Trace (SourceSignalTarget (..), getEvents, sourceSignalTargets)
+import Test.QuickCheck ((===))
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (
   Gen,
@@ -148,7 +149,6 @@ import Test.Tasty.QuickCheck (
   property,
   testProperty,
   withMaxSuccess,
-  (===),
  )
 
 -- ========================================================================

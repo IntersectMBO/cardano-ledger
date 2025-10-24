@@ -25,6 +25,7 @@ import Control.Iterate.SetAlgebra (
   runSet,
   sameDomain,
  )
+import Control.Monad (zipWithM_)
 import Control.SetAlgebra (
   BaseRep (ListR, MapR, SetR, SingleR),
   Iter (element),
@@ -52,9 +53,9 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (intersectDomP, intersectDomPLeft)
 import qualified Data.Set as Set
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertEqual, testCase)
-import Test.Tasty.QuickCheck (
+import Test.Hspec (Spec, describe, shouldBe, specify)
+import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck (
   Arbitrary (arbitrary),
   Gen,
   Property,
@@ -62,7 +63,6 @@ import Test.Tasty.QuickCheck (
   conjoin,
   counterexample,
   frequency,
-  testProperty,
   vectorOf,
   (===),
  )
@@ -163,59 +163,57 @@ z4 = Map.fromList [(3, "c"), (5, "e"), (10, "j"), (21, "v"), (9, "3"), (30, "a")
 
 -- Test that computing  x::(Exp t) computes to the given object with type t.
 
-evalTest :: (Show t, Eq t) => String -> Exp t -> t -> TestTree
-evalTest nm expr ans = testCase name (assertEqual name (compute expr) ans)
+evalTest :: (Show t, Eq t) => String -> Exp t -> t -> Spec
+evalTest nm expr ans = specify name $ compute expr `shouldBe` ans
   where
-    name = (show expr ++ " where Map? = " ++ nm)
+    name = show expr ++ " where Map? = " ++ nm
 
 -- Test that (eval x) and runSet(x) get the same answers
 
-evalCompile :: (Show (f k v), Ord k, Eq (f k v)) => Exp (f k v) -> TestTree
-evalCompile expr = testCase name (assertEqual name (compute expr) (runSet expr))
+evalCompile :: (Show (f k v), Ord k, Eq (f k v)) => Exp (f k v) -> Spec
+evalCompile expr = specify name $ compute expr `shouldBe` runSet expr
   where
-    name = ("compute and runSet of " ++ show expr ++ " are the same")
+    name = "compute and runSet of " ++ show expr ++ " are the same"
 
-evalTests :: TestTree
+evalTests :: Spec
 evalTests =
-  testGroup
-    "eval tests"
-    [ evalTest "m12" (5 ∈ (dom m12)) True
-    , evalTest "m12" (70 ∈ (dom m12)) False
-    , evalTest "m0" (m0 ∪ (singleton 3 'b')) (Map.fromList [(1, 'a'), (2, 'z'), (3, 'b'), (4, 'g')])
-    , evalTest "m0" ((setSingleton 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
-    , evalTest "m0" (dom (singleton 2 'z') ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
-    , evalTest "m0" (rng (singleton 'z' 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
-    , evalTest
-        "m0"
-        ((Map.fromList [(1, 'a'), (2, 'n'), (3, 'r')]) ∪ (singleton 2 'b'))
-        (Map.fromList [(1 :: Int, 'a'), (2, 'n'), (3, 'r')])
-    , evalTest "m0" ([(1, 'a'), (3, 'r')] ∪ singleton 3 'b') (UnSafeList [(1 :: Int, 'a'), (3, 'r')])
-    , evalTest "m0" (70 ∉ dom m12) True
-    , evalTest
-        "((dom stkcred) ◁ deleg) ▷ (dom stpool)"
-        ((dom stkcred ◁ deleg) ▷ dom stpool)
-        (Map.fromList [(5, 'F')])
-    , evalTest "Range exclude 1" (l4 ⋫ Set.empty) (UnSafeList l4)
-    , evalTest "Range exclude 2" (l4 ⋫ Fail) (UnSafeList l4)
-    , evalTest
-        "Range exclude 3"
-        (l4 ⋫ Set.fromList ["m", "Z"])
-        (UnSafeList [(2, "a"), (5, "z"), (6, "b"), (7, "r"), (12, "w"), (34, "v"), (50, "q"), (51, "l")])
-    , evalTest "DomExclude Union" ((z2 ⋪ z1) ∪ z3) z4
-    , evalTest "Set difference" (z2 ➖ dom z1) (Sett (Set.fromList [2 :: Int, 13]))
-    , evalCompile ((dom stkcred ◁ deleg) ▷ dom stpool)
-    , evalCompile (l4 ⋫ Set.fromList ["m", "Z"])
-    , evalCompile (m0 ∪ singleton 3 'b')
-    , evalCompile (setSingleton 2 ⋪ m0)
-    , evalTest "ex1" (5 ∈ dom m12) True
-    , evalTest "ex2" (70 ∈ dom m12) False
-    , evalTest "ex3" (70 ∉ dom m12) True
-    , evalTest "ex4" (m0 ∪ singleton 3 'b') (Map.insert 3 'b' m0)
-    , evalTest "ex5" (setSingleton 2 ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
-    , evalTest "ex6" (dom (singleton 2 'z') ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
-    , evalTest "ex7" (rng (singleton 'z' 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
-    , evalTest "ex8" (z2 ➖ dom z1) (Sett $ Set.fromList [13, 2])
-    ]
+  describe "eval tests" $ do
+    evalTest "m12" (5 ∈ (dom m12)) True
+    evalTest "m12" (70 ∈ (dom m12)) False
+    evalTest "m0" (m0 ∪ (singleton 3 'b')) (Map.fromList [(1, 'a'), (2, 'z'), (3, 'b'), (4, 'g')])
+    evalTest "m0" ((setSingleton 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
+    evalTest "m0" (dom (singleton 2 'z') ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
+    evalTest "m0" (rng (singleton 'z' 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
+    evalTest
+      "m0"
+      ((Map.fromList [(1, 'a'), (2, 'n'), (3, 'r')]) ∪ (singleton 2 'b'))
+      (Map.fromList [(1 :: Int, 'a'), (2, 'n'), (3, 'r')])
+    evalTest "m0" ([(1, 'a'), (3, 'r')] ∪ singleton 3 'b') (UnSafeList [(1 :: Int, 'a'), (3, 'r')])
+    evalTest "m0" (70 ∉ dom m12) True
+    evalTest
+      "((dom stkcred) ◁ deleg) ▷ (dom stpool)"
+      ((dom stkcred ◁ deleg) ▷ dom stpool)
+      (Map.fromList [(5, 'F')])
+    evalTest "Range exclude 1" (l4 ⋫ Set.empty) (UnSafeList l4)
+    evalTest "Range exclude 2" (l4 ⋫ Fail) (UnSafeList l4)
+    evalTest
+      "Range exclude 3"
+      (l4 ⋫ Set.fromList ["m", "Z"])
+      (UnSafeList [(2, "a"), (5, "z"), (6, "b"), (7, "r"), (12, "w"), (34, "v"), (50, "q"), (51, "l")])
+    evalTest "DomExclude Union" ((z2 ⋪ z1) ∪ z3) z4
+    evalTest "Set difference" (z2 ➖ dom z1) (Sett (Set.fromList [2 :: Int, 13]))
+    evalCompile ((dom stkcred ◁ deleg) ▷ dom stpool)
+    evalCompile (l4 ⋫ Set.fromList ["m", "Z"])
+    evalCompile (m0 ∪ singleton 3 'b')
+    evalCompile (setSingleton 2 ⋪ m0)
+    evalTest "ex1" (5 ∈ dom m12) True
+    evalTest "ex2" (70 ∈ dom m12) False
+    evalTest "ex3" (70 ∉ dom m12) True
+    evalTest "ex4" (m0 ∪ singleton 3 'b') (Map.insert 3 'b' m0)
+    evalTest "ex5" (setSingleton 2 ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
+    evalTest "ex6" (dom (singleton 2 'z') ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
+    evalTest "ex7" (rng (singleton 'z' 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
+    evalTest "ex8" (z2 ➖ dom z1) (Sett $ Set.fromList [13, 2])
 
 -- =============== test of KeysEqual and its variants =====================
 
@@ -227,32 +225,30 @@ tree3 = Map.fromList [(i, i :: Int) | i <- [1 .. 19]]
 set1 :: Set.Set Int
 set1 = Set.fromList [1 .. 20]
 
-keysEqTests :: TestTree
+keysEqTests :: Spec
 keysEqTests =
-  testGroup
-    "keysEqual tests"
-    ( zipWith
-        tst
-        [(1 :: Int) ..]
-        [ (keysEqual tree1 tree2, True)
-        , (keysEqual tree2 tree1, True)
-        , (keysEqual tree1 tree3, False)
-        , (sameDomain tree1 tree2, True)
-        , (sameDomain tree2 tree1, True)
-        , (sameDomain tree1 tree3, False)
-        , (eval (tree1 ≍ tree2), True)
-        , (eval (tree1 ≍ tree3), False)
-        , (eval (tree1 ≍ set1), True)
-        , (eval (tree3 ≍ set1), False)
-        ]
-    )
+  describe "keysEqual tests" $ do
+    zipWithM_
+      tst
+      [(1 :: Int) ..]
+      [ (keysEqual tree1 tree2, True)
+      , (keysEqual tree2 tree1, True)
+      , (keysEqual tree1 tree3, False)
+      , (sameDomain tree1 tree2, True)
+      , (sameDomain tree2 tree1, True)
+      , (sameDomain tree1 tree3, False)
+      , (eval (tree1 ≍ tree2), True)
+      , (eval (tree1 ≍ tree3), False)
+      , (eval (tree1 ≍ set1), True)
+      , (eval (tree3 ≍ set1), False)
+      ]
   where
-    tst n (x, y) = testCase ("keysEqual " ++ show n) (assertEqual ("keysEqual " ++ show n) y x)
+    tst n (x, y) = specify ("keysEqual " ++ show n) $ y `shouldBe` x
 
 -- ========================== test that various Compound iterators work ================
 
-testcase :: (Eq k, Eq v, Show k, Show v, Iter f) => String -> f k v -> [(k, v)] -> TestTree
-testcase nm col ans = testCase nm (assertEqual nm ans (runCollect (fifo col) [] (:)))
+testcase :: (Eq k, Eq v, Show k, Show v, Iter f) => String -> f k v -> [(k, v)] -> Spec
+testcase nm col ans = specify nm $ ans `shouldBe` runCollect (fifo col) [] (:)
 
 fromListD :: (Ord k, Iter f) => BaseRep f k v -> [(k, v)] -> Query k v
 fromListD rep xs = BaseD rep (fromList rep (\l _r -> l) xs)
@@ -265,20 +261,17 @@ testAnd1
   , testOr
   , testDiff1
   , testDiff2 ::
-    Iter g => String -> BaseRep g Int String -> TestTree
+    Iter g => String -> BaseRep g Int String -> Spec
 testAnd1 nm rep =
   testcase
     nm
     (AndD (fromListD rep l1) (fromListD rep l2))
     [(4, ("d", "d")), (5, ("e", "e")), (10, ("j", "j")), (21, ("v", "v"))]
 testAnd2 nm rep =
-  testCase
-    nm
-    ( assertEqual
-        nm
-        (runCollect (lifo (AndD (fromListD rep l1) (fromListD rep l2))) [] (:))
-        (reverse [(4, ("d", "d")), (5, ("e", "e")), (10, ("j", "j")), (21, ("v", "v"))])
-    )
+  specify nm $
+    shouldBe
+      (runCollect (lifo (AndD (fromListD rep l1) (fromListD rep l2))) [] (:))
+      (reverse [(4, ("d", "d")), (5, ("e", "e")), (10, ("j", "j")), (21, ("v", "v"))])
 testOr nm rep =
   testcase
     nm
@@ -304,14 +297,14 @@ testDiff2 nm rep = testcase nm (DiffD (fromListD rep l2) (fromListD rep l1)) [(3
 -- ==========================================================================
 -- tests where we vary both the data, and how it is represented.
 
-testGuard :: (Show b, Iter f, Ord b) => String -> BaseRep f Int b -> [(Int, b)] -> TestTree
+testGuard :: (Show b, Iter f, Ord b) => String -> BaseRep f Int b -> [(Int, b)] -> Spec
 testGuard nm rep f =
   testcase
     nm
     (GuardD (fromListD rep f) (domElem evens))
     (filter (even . fst) f)
 
-testProj :: (Show k, Ord k, Iter f) => String -> BaseRep f k [Char] -> [(k, [Char])] -> TestTree
+testProj :: (Show k, Ord k, Iter f) => String -> BaseRep f k [Char] -> [(k, [Char])] -> Spec
 testProj nm rep f =
   testcase
     nm
@@ -322,14 +315,14 @@ testProj nm rep f =
 -- tests where we AndP l1 and l3, and use different type of data for l1 from l3
 -- We use the second projection in AndP, that is the value will come from l3
 
-testAndP :: (Iter f, Iter g) => String -> BaseRep f Int String -> BaseRep g Int Int -> TestTree
+testAndP :: (Iter f, Iter g) => String -> BaseRep f Int String -> BaseRep g Int Int -> Spec
 testAndP nm rep1 rep2 =
   testcase
     nm
     (AndPD (fromListD rep1 l1) (fromListD rep2 l3) rngSnd)
     [(4, 12), (12, 44)]
 
-testChain :: (Iter f, Iter g) => String -> BaseRep f Int String -> BaseRep g String Int -> TestTree
+testChain :: (Iter f, Iter g) => String -> BaseRep f Int String -> BaseRep g String Int -> Spec
 testChain nm rep1 rep2 =
   testcase
     nm
@@ -341,7 +334,7 @@ testChain nm rep1 rep2 =
     , (50, (50, "q", 107))
     ]
 
-testChain2 :: (Iter f, Iter g) => String -> BaseRep f String Int -> BaseRep g Int String -> TestTree
+testChain2 :: (Iter f, Iter g) => String -> BaseRep f String Int -> BaseRep g Int String -> Spec
 testChain2 nm rep1 rep2 =
   testcase
     nm
@@ -349,69 +342,64 @@ testChain2 nm rep1 rep2 =
     [("m", ("m", 105, "Z"))]
 
 -- This test inspired by set expression in EpochBoundary.hs
-testEpochEx :: TestTree
+testEpochEx :: Spec
 testEpochEx =
-  testCase
-    "Epoch Boundary Example"
-    ( assertEqual
-        "Epoch Boundary Example"
-        (Map.fromList [(6, True)])
-        (eval (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR state)))
-    )
+  specify "Epoch Boundary Example" $
+    shouldBe
+      (Map.fromList [(6, True)])
+      (eval (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR state)))
   where
     delegs = Map.fromList [(5 :: Int, "a"), (6, "b"), (12, "c"), (14, "e"), (20, "f"), (25, "g")]
     hk = "b"
     state = Map.fromList [(n, even n) | n <- [1 .. 13]]
 
-iterTests :: TestTree
+iterTests :: Spec
 iterTests =
-  testGroup
-    "Iterator tests"
-    [ testAnd1 "(And l1 l2) as List, fifo" ListR
-    , testAnd1 "(And l1 l2) as Map, fifo" MapR
-    , testAnd2 "(And l1 l2) as List, lifo" ListR
-    , testAnd2 "(And l1 l2) as Map, lifo" MapR
-    , testOr "(Or l1 l2) as List" ListR
-    , testOr "(Or l1 l2) as Map" MapR
-    , testDiff1 "(Diff l1 l2) as List" ListR -- (Diff is not symmetric)
-    , testDiff2 "(Diff l2 l1) as List" ListR
-    , testDiff1 "(Diff l1 l2) as Map" MapR
-    , testDiff2 "(Diff l2 l1) as Map" MapR
-    , testGuard "(Guard l1 even) as List" ListR l1
-    , testGuard "(Guard l1 even) as Map" MapR l1
-    , testGuard "(Guard l2 even) as List" ListR l2
-    , testGuard "(Guard l2 even) as Map" MapR l2
-    , testProj "(Proj l1 ord) as List" ListR l1
-    , testProj "(Proj l1 ord) as Map" MapR l1
-    , testProj "(Proj l2 ord) as List" ListR l2
-    , testProj "(Proj l2 ord) as Map" MapR l2
-    , testAndP "(AndP l1:List l3:Map ord)" ListR MapR
-    , testAndP "(AndP l1:Map l3:List ord)" MapR ListR
-    , testAndP "(AndP l1:Map l3:List Map)" MapR MapR
-    , testChain "(Chain l4:List l5:Map)" ListR MapR
-    , testChain "(Chain l4:Map l5:List)" MapR ListR
-    , testChain "(Chain l4:Map l5:List Map)" MapR MapR
-    , testChain2 "(Chain2 l5:List l4:Map)" ListR MapR
-    , testChain2 "(Chain2 l5:Map l4:List)" MapR ListR
-    , testChain2 "(Chain2 l5:Map l4:List Map)" MapR MapR
-    , testEpochEx
-    ]
+  describe "Iterator tests" $ do
+    testAnd1 "(And l1 l2) as List, fifo" ListR
+    testAnd1 "(And l1 l2) as Map, fifo" MapR
+    testAnd2 "(And l1 l2) as List, lifo" ListR
+    testAnd2 "(And l1 l2) as Map, lifo" MapR
+    testOr "(Or l1 l2) as List" ListR
+    testOr "(Or l1 l2) as Map" MapR
+    testDiff1 "(Diff l1 l2) as List" ListR -- (Diff is not symmetric)
+    testDiff2 "(Diff l2 l1) as List" ListR
+    testDiff1 "(Diff l1 l2) as Map" MapR
+    testDiff2 "(Diff l2 l1) as Map" MapR
+    testGuard "(Guard l1 even) as List" ListR l1
+    testGuard "(Guard l1 even) as Map" MapR l1
+    testGuard "(Guard l2 even) as List" ListR l2
+    testGuard "(Guard l2 even) as Map" MapR l2
+    testProj "(Proj l1 ord) as List" ListR l1
+    testProj "(Proj l1 ord) as Map" MapR l1
+    testProj "(Proj l2 ord) as List" ListR l2
+    testProj "(Proj l2 ord) as Map" MapR l2
+    testAndP "(AndP l1:List l3:Map ord)" ListR MapR
+    testAndP "(AndP l1:Map l3:List ord)" MapR ListR
+    testAndP "(AndP l1:Map l3:List Map)" MapR MapR
+    testChain "(Chain l4:List l5:Map)" ListR MapR
+    testChain "(Chain l4:Map l5:List)" MapR ListR
+    testChain "(Chain l4:Map l5:List Map)" MapR MapR
+    testChain2 "(Chain2 l5:List l4:Map)" ListR MapR
+    testChain2 "(Chain2 l5:Map l4:List)" MapR ListR
+    testChain2 "(Chain2 l5:Map l4:List Map)" MapR MapR
+    testEpochEx
 
 intersect2ways :: Map Int Char -> Map Int String -> Char -> Bool
 intersect2ways delegs stake hk =
   materialize MapR (do (x, y, z) <- delegs `domEq` stake; when (y == hk); one (x, z))
     == intersectDomPLeft (\_k v2 -> v2 == hk) stake delegs
 
-intersectDomPLeftTest :: TestTree
-intersectDomPLeftTest = testProperty "intersect2ways" intersect2ways
+intersectDomPLeftTest :: Spec
+intersectDomPLeftTest = prop "intersect2ways" intersect2ways
 
 ledgerStateProp :: Map Int Bool -> Map Int Char -> Map Char String -> Bool
 ledgerStateProp xx yy zz =
   materialize MapR (do (x, _, y) <- xx `domEq` yy; y `element` zz; one (x, y))
     == intersectDomP (\_k v -> Map.member v zz) xx yy
 
-ledgerStateTest :: TestTree
-ledgerStateTest = testProperty "ledgerStateExample2ways" ledgerStateProp
+ledgerStateTest :: Spec
+ledgerStateTest = prop "ledgerStateExample2ways" ledgerStateProp
 
 threeWay :: Map Int Char -> Map Int String -> Char -> Bool
 threeWay delegs stake hk =
@@ -420,8 +408,8 @@ threeWay delegs stake hk =
     && runSet (dom (delegs ▷ Set.singleton hk) ◁ stake)
       == materialize MapR (do (x, y, z) <- delegs `domEq` stake; when (y == hk); one (x, z))
 
-threeWayTest :: TestTree
-threeWayTest = testProperty "eval-materialize-intersectDom" threeWay
+threeWayTest :: Spec
+threeWayTest = prop "eval-materialize-intersectDom" threeWay
 
 -- ==============================================================================
 -- Slow property tests show that (compute e) and (runExp e) have the same answer.
@@ -469,8 +457,8 @@ qtest expr = compute expr === runSet expr
 
 -- ======================================================
 
-slowFastEquiv :: TestTree
-slowFastEquiv = testProperty "slowFastEquiv" slowProperties
+slowFastEquiv :: Spec
+slowFastEquiv = prop "slowFastEquiv" slowProperties
 
 slowProperties ::
   Key -> -- k
@@ -485,7 +473,7 @@ slowProperties ::
 slowProperties k v m1 m2 s1 s2 rs ls =
   conjoin $
     map
-      (\(prop, name) -> counterexample name prop)
+      (\(property, name) -> counterexample name property)
       [ (qtest (Dom (Base SetR (Sett s1))), "slow1")
       , (qtest (Dom (Base MapR m1)), "slow2")
       , (qtest (Dom (Base SetR (Sett s1))), "slow3")
@@ -628,15 +616,13 @@ instance (Ord k, Arbitrary k) => Arbitrary (Sett k ()) where
 -- Tie all the tests together
 -- ====================================================
 
-setAlgTest :: TestTree
+setAlgTest :: Spec
 setAlgTest =
-  testGroup
-    "Set Algebra Tests"
-    [ evalTests
-    , keysEqTests
-    , iterTests
-    , intersectDomPLeftTest
-    , ledgerStateTest
-    , threeWayTest
-    , slowFastEquiv
-    ]
+  describe "Set Algebra Tests" $ do
+    evalTests
+    keysEqTests
+    iterTests
+    intersectDomPLeftTest
+    ledgerStateTest
+    threeWayTest
+    slowFastEquiv

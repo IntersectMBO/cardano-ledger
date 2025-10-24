@@ -18,8 +18,9 @@ import Data.Monoid (Sum)
 import Data.Set (Set, intersection, isSubsetOf)
 import qualified Data.Set as Set
 import Test.Control.Iterate.SetAlgebra ()
-import Test.Tasty (TestName, TestTree, testGroup)
-import Test.Tasty.QuickCheck (Arbitrary, testProperty, (===))
+import Test.Hspec (Spec, describe)
+import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck (Arbitrary, (===))
 
 ---------------------------------------------------------------------------------
 -- Domain restriction and exclusion
@@ -126,41 +127,39 @@ toSet = Set.fromList . toList
 propUnary ::
   forall b a e.
   (Eq a, Show a, Arbitrary b, Show b, SA.Embed a e) =>
-  TestName ->
+  String ->
   (b -> SA.Exp e) ->
   (b -> a) ->
-  TestTree
+  Spec
 propUnary name expr relExpr =
-  testProperty name (\arg -> SA.eval (expr arg) === relExpr arg)
+  prop name (\arg -> SA.eval (expr arg) === relExpr arg)
 
 propBinary ::
   forall b c a e.
   (Eq a, Show a, Arbitrary b, Show b, Arbitrary c, Show c, SA.Embed a e) =>
-  TestName ->
+  String ->
   (b -> c -> SA.Exp e) ->
   (b -> c -> a) ->
-  TestTree
+  Spec
 propBinary name expr relExpr =
-  testProperty name (\arg1 arg2 -> SA.eval (expr arg1 arg2) === relExpr arg1 arg2)
+  prop name (\arg1 arg2 -> SA.eval (expr arg1 arg2) === relExpr arg1 arg2)
 
 type M = Map Int (Sum Float)
 
-relationTests :: TestTree
+relationTests :: Spec
 relationTests =
-  testGroup
-    "RelationTests - check conformance with the original implementation"
-    [ propUnary @M "dom" SA.dom dom
-    , propUnary @M "range" SA.rng range
-    , propBinary @_ @M "∈" (\k m -> k SA.∈ range m) (∈)
-    , propBinary @_ @M "∉" (\k m -> k SA.∉ range m) (∉)
-    , propBinary @_ @M "haskey" (\k m -> k SA.∈ dom m) haskey
-    , propBinary @_ @M "◁" (SA.◁) (◁)
-    , propBinary @_ @M "⋪" (SA.⋪) (⋪)
-    , propBinary @M "▷" (SA.▷) (▷)
-    , propBinary @M "⋫" (SA.⋫) (⋫)
-    , propBinary @M "∪" (SA.∪) (∪)
-    , propBinary @M "⨃" (SA.⨃) (⨃)
-    , propBinary @M "∪+" (SA.∪+) (∪+)
-    , propBinary @M @M "⊆" (\m1 m2 -> SA.rng m1 SA.⊆ SA.rng m2) (⊆)
-    , propBinary @(Set Int) "∩" (SA.∩) (∩)
-    ]
+  describe "RelationTests - check conformance with the original implementation" $ do
+    propUnary @M "dom" SA.dom dom
+    propUnary @M "range" SA.rng range
+    propBinary @_ @M "∈" (\k m -> k SA.∈ range m) (∈)
+    propBinary @_ @M "∉" (\k m -> k SA.∉ range m) (∉)
+    propBinary @_ @M "haskey" (\k m -> k SA.∈ dom m) haskey
+    propBinary @_ @M "◁" (SA.◁) (◁)
+    propBinary @_ @M "⋪" (SA.⋪) (⋪)
+    propBinary @M "▷" (SA.▷) (▷)
+    propBinary @M "⋫" (SA.⋫) (⋫)
+    propBinary @M "∪" (SA.∪) (∪)
+    propBinary @M "⨃" (SA.⨃) (⨃)
+    propBinary @M "∪+" (SA.∪+) (∪+)
+    propBinary @M @M "⊆" (\m1 m2 -> SA.rng m1 SA.⊆ SA.rng m2) (⊆)
+    propBinary @(Set Int) "∩" (SA.∩) (∩)
