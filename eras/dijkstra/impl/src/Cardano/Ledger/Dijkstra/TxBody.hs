@@ -236,8 +236,8 @@ instance NFData (DijkstraTxBodyRaw l DijkstraEra) where
 
 deriving instance Show (DijkstraTxBodyRaw l DijkstraEra)
 
-basicDijkstraTxBodyRaw :: DijkstraTxBodyRaw TopTx DijkstraEra
-basicDijkstraTxBodyRaw =
+basicDijkstraTxBodyRaw :: STxBothLevels l era -> DijkstraTxBodyRaw l DijkstraEra
+basicDijkstraTxBodyRaw STopTx =
   DijkstraTxBodyRaw
     mempty
     mempty
@@ -258,15 +258,32 @@ basicDijkstraTxBodyRaw =
     OSet.empty
     SNothing
     mempty
+basicDijkstraTxBodyRaw SSubTx =
+  DijkstraSubTxBodyRaw
+    mempty
+    mempty
+    mempty
+    mempty
+    (Withdrawals mempty)
+    (ValidityInterval SNothing SNothing)
+    mempty
+    mempty
+    SNothing
+    SNothing
+    SNothing
+    (VotingProcedures mempty)
+    mempty
+    mempty
+    mempty
 
 instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
   decCBOR = withSTxBothLevels @l $ \sTxLevel ->
-      decode $
-        SparseKeyed
-          "TxBodyRaw"
-          (basicDijkstraTxBodyRaw sTxLevel)
-          (bodyFields sTxLevel)
-          requiredFields
+    decode $
+      SparseKeyed
+        "TxBodyRaw"
+        (basicDijkstraTxBodyRaw sTxLevel)
+        (bodyFields sTxLevel)
+        requiredFields
     where
       bodyFields :: STxBothLevels l era -> Word -> Field (DijkstraTxBodyRaw l DijkstraEra)
       bodyFields _ 0 = field (inputsDijkstraTxBodyRawL .~) From
@@ -294,7 +311,7 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
         fieldGuarded
           (emptyFailure "Mint" "non-empty")
           (== mempty)
-          (\x -> mintDijkstraTxBodyRawL .~ x)
+          (mintDijkstraTxBodyRawL .~)
           From
       bodyFields _ 11 = ofield (scriptIntegrityHashDijkstraTxBodyRawL .~) From
       bodyFields _ n@13 =
@@ -705,10 +722,7 @@ instance EraTxBody DijkstraEra where
   newtype TxBody l DijkstraEra = MkDijkstraTxBody (MemoBytes (DijkstraTxBodyRaw l DijkstraEra))
     deriving (Generic, SafeToHash, ToCBOR)
 
-  mkBasicTxBody =
-    asSTxBothLevels
-      (mkMemoizedEra @DijkstraEra basicDijkstraTxBodyRaw)
-      (mkMemoizedEra @DijkstraEra basicDijkstraSubTxBodyRaw)
+  mkBasicTxBody = mkMemoizedEra @DijkstraEra $ withSTxBothLevels basicDijkstraTxBodyRaw
 
   inputsTxBodyL = memoRawTypeL @DijkstraEra . inputsDijkstraTxBodyRawL
   {-# INLINE inputsTxBodyL #-}
@@ -742,25 +756,6 @@ instance EraTxBody DijkstraEra where
 
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
-
-basicDijkstraSubTxBodyRaw :: DijkstraTxBodyRaw SubTx DijkstraEra
-basicDijkstraSubTxBodyRaw =
-  DijkstraSubTxBodyRaw
-    mempty
-    mempty
-    mempty
-    mempty
-    (Withdrawals mempty)
-    (ValidityInterval SNothing SNothing)
-    mempty
-    mempty
-    SNothing
-    SNothing
-    SNothing
-    (VotingProcedures mempty)
-    mempty
-    mempty
-    mempty
 
 upgradeGovAction ::
   forall era.
