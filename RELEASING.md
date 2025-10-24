@@ -61,8 +61,7 @@ of the Cardano Engineering Handbook for more detailed information on this topic.
 
 ### `CHANGELOG.md`
 
-Every package, that [is subject to the release
-process](packages-excluded-from-release-process), will always have the top most entry in
+Every package that [is subject to the release process](#packages-excluded-from-release-process) will always have the top most entry in
 the `CHANGELOG.md` set to an unreleased version. That top most section will have either
 the patch, minor or the major versions bumped, but not all three, when compared to the
 latest released version. Which one it will be depends on the recent changes that were
