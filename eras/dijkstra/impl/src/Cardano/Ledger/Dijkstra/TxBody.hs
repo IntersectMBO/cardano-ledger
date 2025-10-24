@@ -282,8 +282,8 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
         withSTxBothLevels @l $ \case
           STopTx -> field (\x tx -> tx & feeDijkstraTxBodyRawL .~ x) From
           SSubTx -> invalidField n
-      bodyFields n@3 =
-        withSTxBothLevels @l $ \case
+      bodyFields sTxLevel n@3 =
+        case sTxLevel of
           STopTx ->
             ofield
               (\x tx -> tx & vldtDijkstraTxBodyRawL .~ (dtbrVldt tx) {invalidHereafter = x})
