@@ -73,7 +73,7 @@ unboundedInterval = ValidityInterval SNothing SNothing
 bootstrapTxId :: TxId
 bootstrapTxId = txIdTxBody txb
   where
-    txb :: TxBody MaryEra
+    txb :: TxBody TopTx MaryEra
     txb = mkBasicTxBody
 
 initUTxO :: UTxO MaryEra
@@ -105,7 +105,7 @@ makeMaryTxBody ::
   [ShelleyTxOut MaryEra] ->
   ValidityInterval ->
   MultiAsset ->
-  TxBody MaryEra
+  TxBody TopTx MaryEra
 makeMaryTxBody ins outs interval minted =
   mkBasicTxBody
     & inputsTxBodyL .~ Set.fromList ins
@@ -161,7 +161,7 @@ tokensSimpleEx1 = MaryValue mempty mintSimpleEx1 <+> Val.inject aliceCoinSimpleE
 
 -- Mint a purple token bundle, consisting of thirteen plums and two amethysts.
 -- Give the bundle to Alice.
-txbodySimpleEx1 :: TxBody MaryEra
+txbodySimpleEx1 :: TxBody TopTx MaryEra
 txbodySimpleEx1 =
   makeMaryTxBody
     [mkTxInPartial bootstrapTxId 0]
@@ -169,7 +169,7 @@ txbodySimpleEx1 =
     unboundedInterval
     mintSimpleEx1
 
-txSimpleEx1 :: Tx MaryEra
+txSimpleEx1 :: Tx TopTx MaryEra
 txSimpleEx1 =
   mkBasicTx txbodySimpleEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -208,7 +208,7 @@ bobTokensSimpleEx2 =
       Map.singleton purplePolicyId (Map.singleton plum 5)
 
 -- Alice gives five plums to Bob.
-txbodySimpleEx2 :: TxBody MaryEra
+txbodySimpleEx2 :: TxBody TopTx MaryEra
 txbodySimpleEx2 =
   makeMaryTxBody
     [mkTxInPartial (txIdTxBody txbodySimpleEx1) 0]
@@ -218,7 +218,7 @@ txbodySimpleEx2 =
     unboundedInterval
     mempty
 
-txSimpleEx2 :: Tx MaryEra
+txSimpleEx2 :: Tx TopTx MaryEra
 txSimpleEx2 =
   mkBasicTx txbodySimpleEx2
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw)
@@ -284,7 +284,7 @@ tokensTimeEx1 :: MaryValue
 tokensTimeEx1 = MaryValue mempty mintTimeEx1 <+> Val.inject aliceCoinsTimeEx1
 
 -- Mint tokens
-txbodyTimeEx1 :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> TxBody MaryEra
+txbodyTimeEx1 :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> TxBody TopTx MaryEra
 txbodyTimeEx1 s e =
   makeMaryTxBody
     [mkTxInPartial bootstrapTxId 0]
@@ -292,10 +292,10 @@ txbodyTimeEx1 s e =
     (ValidityInterval s e)
     mintTimeEx1
 
-txbodyTimeEx1Valid :: TxBody MaryEra
+txbodyTimeEx1Valid :: TxBody TopTx MaryEra
 txbodyTimeEx1Valid = txbodyTimeEx1 (SJust startInterval) (SJust stopInterval)
 
-txTimeEx1 :: TxBody MaryEra -> Tx MaryEra
+txTimeEx1 :: TxBody TopTx MaryEra -> Tx TopTx MaryEra
 txTimeEx1 txbody =
   mkBasicTx txbody
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -303,19 +303,19 @@ txTimeEx1 txbody =
     atw = mkWitnessesVKey (hashAnnotated txbody) [asWitness Cast.alicePay]
     stw = Map.fromList [(policyID boundedTimePolicyId, boundedTimePolicy)]
 
-txTimeEx1Valid :: Tx MaryEra
+txTimeEx1Valid :: Tx TopTx MaryEra
 txTimeEx1Valid = txTimeEx1 txbodyTimeEx1Valid
 
-txTimeEx1InvalidLHSfixed :: Tx MaryEra
+txTimeEx1InvalidLHSfixed :: Tx TopTx MaryEra
 txTimeEx1InvalidLHSfixed = txTimeEx1 $ txbodyTimeEx1 (SJust beforeStart) (SJust stopInterval)
 
-txTimeEx1InvalidLHSopen :: Tx MaryEra
+txTimeEx1InvalidLHSopen :: Tx TopTx MaryEra
 txTimeEx1InvalidLHSopen = txTimeEx1 $ txbodyTimeEx1 SNothing (SJust stopInterval)
 
-txTimeEx1InvalidRHSfixed :: Tx MaryEra
+txTimeEx1InvalidRHSfixed :: Tx TopTx MaryEra
 txTimeEx1InvalidRHSfixed = txTimeEx1 $ txbodyTimeEx1 (SJust startInterval) (SJust afterStop)
 
-txTimeEx1InvalidRHSopen :: Tx MaryEra
+txTimeEx1InvalidRHSopen :: Tx TopTx MaryEra
 txTimeEx1InvalidRHSopen = txTimeEx1 $ txbodyTimeEx1 (SJust startInterval) SNothing
 
 expectedUTxOTimeEx1 :: UTxO MaryEra
@@ -343,7 +343,7 @@ aliceCoinsTimeEx2 :: Coin
 aliceCoinsTimeEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> mintTimeEx2)
 
 -- Alice gives one token to Bob
-txbodyTimeEx2 :: TxBody MaryEra
+txbodyTimeEx2 :: TxBody TopTx MaryEra
 txbodyTimeEx2 =
   makeMaryTxBody
     [mkTxInPartial (txIdTxBody txbodyTimeEx1Valid) 0]
@@ -353,7 +353,7 @@ txbodyTimeEx2 =
     unboundedInterval
     mempty
 
-txTimeEx2 :: Tx MaryEra
+txTimeEx2 :: Tx TopTx MaryEra
 txTimeEx2 =
   MkMaryTx $
     ShelleyTx
@@ -408,7 +408,7 @@ tokensSingWitEx1 :: MaryValue
 tokensSingWitEx1 = MaryValue mempty mintSingWitEx1 <+> Val.inject bobCoinsSingWitEx1
 
 -- Bob pays the fees, but only alice can witness the minting
-txbodySingWitEx1 :: TxBody MaryEra
+txbodySingWitEx1 :: TxBody TopTx MaryEra
 txbodySingWitEx1 =
   makeMaryTxBody
     [mkTxInPartial bootstrapTxId 1]
@@ -416,7 +416,7 @@ txbodySingWitEx1 =
     unboundedInterval
     mintSingWitEx1
 
-txSingWitEx1Valid :: Tx MaryEra
+txSingWitEx1Valid :: Tx TopTx MaryEra
 txSingWitEx1Valid =
   mkBasicTx txbodySingWitEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -432,7 +432,7 @@ expectedUTxOSingWitEx1 =
       , (mkTxInPartial bootstrapTxId 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin))
       ]
 
-txSingWitEx1Invalid :: Tx MaryEra
+txSingWitEx1Invalid :: Tx TopTx MaryEra
 txSingWitEx1Invalid =
   mkBasicTx txbodySingWitEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -462,7 +462,7 @@ aliceTokensNegEx1 =
     MultiAsset $
       Map.singleton purplePolicyId (Map.singleton amethyst 2)
 
-txbodyNegEx1 :: TxBody MaryEra
+txbodyNegEx1 :: TxBody TopTx MaryEra
 txbodyNegEx1 =
   makeMaryTxBody
     [mkTxInPartial (txIdTxBody txbodySimpleEx2) 0]
@@ -470,7 +470,7 @@ txbodyNegEx1 =
     unboundedInterval
     mintNegEx1
 
-txNegEx1 :: Tx MaryEra
+txNegEx1 :: Tx TopTx MaryEra
 txNegEx1 =
   mkBasicTx txbodyNegEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -506,7 +506,7 @@ aliceTokensNegEx2 =
       Map.singleton purplePolicyId (Map.fromList [(plum, -1), (amethyst, 2)])
 
 -- Mint negative valued tokens
-txbodyNegEx2 :: TxBody MaryEra
+txbodyNegEx2 :: TxBody TopTx MaryEra
 txbodyNegEx2 =
   makeMaryTxBody
     [mkTxInPartial (txIdTxBody txbodySimpleEx2) 0]
@@ -552,7 +552,7 @@ bigValue =
 bigOut :: ShelleyTxOut MaryEra
 bigOut = ShelleyTxOut Cast.aliceAddr $ MaryValue mempty bigValue <+> Val.inject minUtxoBigEx
 
-txbodyWithBigValue :: TxBody MaryEra
+txbodyWithBigValue :: TxBody TopTx MaryEra
 txbodyWithBigValue =
   makeMaryTxBody
     [mkTxInPartial bootstrapTxId 0]
@@ -560,7 +560,7 @@ txbodyWithBigValue =
     unboundedInterval
     (bigValue <> smallValue)
 
-txBigValue :: Tx MaryEra
+txBigValue :: Tx TopTx MaryEra
 txBigValue =
   mkBasicTx txbodyWithBigValue
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)

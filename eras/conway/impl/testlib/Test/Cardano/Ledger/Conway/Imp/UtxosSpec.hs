@@ -659,7 +659,7 @@ testPlutusV1V2Failure ::
   ) =>
   ScriptHash ->
   a ->
-  Lens' (TxBody era) a ->
+  Lens' (TxBody TopTx era) a ->
   ContextError era ->
   ImpTestM era ()
 testPlutusV1V2Failure sh badField lenz errorField = do

@@ -217,7 +217,7 @@ validatingTx ::
   , AlonzoEraTxBody era
   , EraModel era
   ) =>
-  Tx era
+  Tx TopTx era
 validatingTx =
   mkBasicTx validatingBody
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated $ validatingBody @era) someKeys]
@@ -231,7 +231,7 @@ validatingBody ::
   , AlonzoEraScript era
   , EraModel era
   ) =>
-  TxBody era
+  TxBody TopTx era
 validatingBody =
   mkBasicTxBody
     & inputsTxBodyL .~ Set.singleton (mkGenesisTxIn 1)
@@ -253,7 +253,7 @@ notValidatingTx ::
   , AlonzoEraTxBody era
   , EraModel era
   ) =>
-  Tx era
+  Tx TopTx era
 notValidatingTx =
   mkBasicTx notValidatingBody
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBody) someKeys]
@@ -278,7 +278,7 @@ notValidatingTx =
 validatingTxWithWithdrawal ::
   forall era.
   (AlonzoEraTxBody era, EraModel era, AlonzoEraTxWits era) =>
-  Tx era
+  Tx TopTx era
 validatingTxWithWithdrawal =
   mkBasicTx validatingBodyWithWithdrawal
     & witsTxL . addrTxWitsL
@@ -292,7 +292,7 @@ validatingBodyWithWithdrawal ::
   , AlonzoEraScript era
   , EraModel era
   ) =>
-  TxBody era
+  TxBody TopTx era
 validatingBodyWithWithdrawal =
   mkBasicTxBody
     & inputsTxBodyL .~ Set.singleton (mkGenesisTxIn 5)
@@ -320,7 +320,7 @@ notValidatingTxWithWithdrawal ::
   , AlonzoEraTxBody era
   , EraModel era
   ) =>
-  Tx era
+  Tx TopTx era
 notValidatingTxWithWithdrawal =
   mkBasicTx notValidatingBodyWithWithdrawal
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithWithdrawal) someKeys]
@@ -346,7 +346,7 @@ validatingTxWithCert ::
   , AlonzoEraTxBody era
   , EraModel era
   ) =>
-  Tx era
+  Tx TopTx era
 validatingTxWithCert =
   mkBasicTx validatingBodyWithCert
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated $ validatingBodyWithCert @era) someKeys]
@@ -360,7 +360,7 @@ validatingBodyWithCert ::
   , AlonzoEraScript era
   , EraModel era
   ) =>
-  TxBody era
+  TxBody TopTx era
 validatingBodyWithCert =
   mkBasicTxBody
     & inputsTxBodyL .~ Set.singleton (mkGenesisTxIn 3)
@@ -385,7 +385,7 @@ notValidatingTxWithCert ::
   , AlonzoEraTxBody era
   , EraModel era
   ) =>
-  Tx era
+  Tx TopTx era
 notValidatingTxWithCert =
   mkBasicTx notValidatingBodyWithCert
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithCert) someKeys]
@@ -411,7 +411,7 @@ validatingTxWithMint ::
   , EraModel era
   , EraPlutusTxInfo PlutusV1 era
   ) =>
-  Tx era
+  Tx TopTx era
 validatingTxWithMint =
   mkBasicTx validatingBodyWithMint
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated $ validatingBodyWithMint @era) someKeys]
@@ -425,7 +425,7 @@ validatingBodyWithMint ::
   , EraModel era
   , EraPlutusTxInfo PlutusV1 era
   ) =>
-  TxBody era
+  TxBody TopTx era
 validatingBodyWithMint =
   mkBasicTxBody
     & inputsTxBodyL .~ Set.singleton (mkGenesisTxIn 7)
@@ -458,7 +458,7 @@ notValidatingTxWithMint ::
   , AlonzoEraTxBody era
   , EraModel era
   ) =>
-  Tx era
+  Tx TopTx era
 notValidatingTxWithMint =
   mkBasicTx notValidatingBodyWithMint
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithMint) someKeys]
@@ -481,7 +481,7 @@ notValidatingTxWithMint =
 poolMDHTooBigTx ::
   forall era.
   (ShelleyEraScript era, EraModel era) =>
-  Tx era
+  Tx TopTx era
 poolMDHTooBigTx =
   -- Note that the UTXOW rule will no trigger the expected predicate failure,
   -- since it is checked in the POOL rule. BBODY will trigger it, however.
@@ -594,7 +594,7 @@ coldKeys = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 1 2 3 2 1)
 
 makeNaiveBlock ::
-  forall era. EraBlockBody era => [Tx era] -> Block BHeaderView era
+  forall era. EraBlockBody era => [Tx TopTx era] -> Block BHeaderView era
 makeNaiveBlock txs = Block {blockHeader = bhView, blockBody}
   where
     bhView =

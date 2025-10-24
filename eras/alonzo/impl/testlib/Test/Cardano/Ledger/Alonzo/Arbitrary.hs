@@ -177,7 +177,7 @@ instance
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
 
-instance Arbitrary (TxBody AlonzoEra) where
+instance Arbitrary (TxBody TopTx AlonzoEra) where
   arbitrary =
     AlonzoTxBody
       <$> arbitrary
@@ -197,11 +197,11 @@ instance Arbitrary (TxBody AlonzoEra) where
 deriving newtype instance Arbitrary IsValid
 
 instance
-  ( Arbitrary (TxBody era)
-  , Arbitrary (TxWits era)
+  ( Arbitrary (TxWits era)
   , Arbitrary (TxAuxData era)
+  , Arbitrary (TxBody TopTx era)
   ) =>
-  Arbitrary (AlonzoTx era)
+  Arbitrary (AlonzoTx TopTx era)
   where
   arbitrary =
     AlonzoTx
@@ -479,12 +479,12 @@ mkPlutusScript' = either error fromPlutusScript . runFail . mkPlutusScript
 instance Arbitrary (TransitionConfig AlonzoEra) where
   arbitrary = AlonzoTransitionConfig <$> arbitrary <*> arbitrary
 
-deriving newtype instance Arbitrary (Tx AlonzoEra)
+deriving newtype instance Arbitrary (Tx TopTx AlonzoEra)
 
 instance
   ( EraBlockBody era
   , AlonzoEraTx era
-  , Arbitrary (Tx era)
+  , Arbitrary (Tx TopTx era)
   , SafeToHash (TxWits era)
   ) =>
   Arbitrary (AlonzoBlockBody era)

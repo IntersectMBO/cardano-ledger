@@ -35,6 +35,9 @@ import Cardano.Ledger.Shelley.Rules (
 
 instance EraGenesis BabbageEra
 
+instance EraTxLevel BabbageEra where
+  type STxLevel l BabbageEra = STxTopLevel l BabbageEra
+
 type instance TranslationContext BabbageEra = NoGenesis BabbageEra
 
 type instance Value BabbageEra = MaryValue

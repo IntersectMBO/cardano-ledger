@@ -107,7 +107,7 @@ import Test.Tasty.QuickCheck (testProperty)
 genRsTxAndModel ::
   forall era.
   EraGenericGen era =>
-  Int -> SlotNo -> GenRS era (Tx era)
+  Int -> SlotNo -> GenRS era (Tx TopTx era)
 genRsTxAndModel n slot = do
   (_, tx) <- genAlonzoTx slot
   modifyModel (\model -> applyTx n slot model tx)
@@ -119,9 +119,9 @@ genRsTxSeq ::
   EraGenericGen era =>
   Int ->
   Int ->
-  [(StrictSeq (Tx era), SlotNo)] ->
+  [(StrictSeq (Tx TopTx era), SlotNo)] ->
   SlotNo ->
-  GenRS era (Vector (StrictSeq (Tx era), SlotNo))
+  GenRS era (Vector (StrictSeq (Tx TopTx era), SlotNo))
 genRsTxSeq this lastN ans _slot | this >= lastN = do
   pure (Vector.fromList (reverse ans))
 genRsTxSeq this lastN ans slot = do
@@ -140,7 +140,7 @@ genTxSeq ::
   Int -> -- The number of Tx in the sequence
   GenRS era () -> -- An arbitrary 'initialization action', to run before we generate the sequence
   -- use (pure ()) if you don't want or need initialization
-  Gen (Vector (StrictSeq (Tx era), SlotNo), GenState era)
+  Gen (Vector (StrictSeq (Tx TopTx era), SlotNo), GenState era)
 genTxSeq gensize numTx initialize = do
   runGenRS gensize (initialize >> genRsTxSeq 0 numTx [] (SlotNo 1))
 
@@ -205,7 +205,7 @@ raiseMockError ::
   SlotNo ->
   EpochState era ->
   NonEmpty (MockChainFailure era) ->
-  [Tx era] ->
+  [Tx TopTx era] ->
   GenState era ->
   String
 raiseMockError slot (SlotNo next) epochstate _pdfs _txs _ =
@@ -272,7 +272,7 @@ shortTxOut out = case out ^. addrTxOutL of
   Addr _ pay _ -> toExpr (pay, out ^. coinTxOutL)
   _ -> error "Bootstrap Address in shortTxOut"
 
-smartTxBody :: EraTest era => MUtxo era -> TxBody era -> Expr
+smartTxBody :: EraTest era => MUtxo era -> TxBody TopTx era -> Expr
 smartTxBody u txbody = toExpr (u, txbody)
 
 -- =====================================================================
@@ -287,7 +287,7 @@ instance STS (MOCKCHAIN era)
 -}
 -- ==============================================================
 
-data Gen1 era = Gen1 (Vector (StrictSeq (Tx era), SlotNo)) (GenState era)
+data Gen1 era = Gen1 (Vector (StrictSeq (Tx TopTx era), SlotNo)) (GenState era)
 
 instance
   ( STS (MOCKCHAIN era)

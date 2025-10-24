@@ -134,15 +134,15 @@ deriving newtype instance ToJSON (TxOut era) => ToJSON (UTxO era)
 -- txins has the same problems as txouts, see notes below.
 txins ::
   EraTxBody era =>
-  TxBody era ->
+  TxBody t era ->
   Set TxIn
 txins = (^. inputsTxBodyL)
 
 -- | Compute the transaction outputs of a transaction.
 txouts ::
-  forall era.
+  forall era l.
   EraTxBody era =>
-  TxBody era ->
+  TxBody l era ->
   UTxO era
 txouts txBody =
   UTxO $
@@ -248,7 +248,7 @@ class EraTx era => EraUTxO era where
   -- scripts needed for the transaction.
   type ScriptsNeeded era = (r :: Type) | r -> era
 
-  consumed :: PParams era -> CertState era -> UTxO era -> TxBody era -> Value era
+  consumed :: PParams era -> CertState era -> UTxO era -> TxBody t era -> Value era
 
   -- | Calculate all the value that is being consumed by the transaction.
   getConsumedValue ::
@@ -258,14 +258,14 @@ class EraTx era => EraUTxO era where
     -- | Function that can lookup current drep deposits
     (Credential 'DRepRole -> Maybe Coin) ->
     UTxO era ->
-    TxBody era ->
+    TxBody t era ->
     Value era
 
   getProducedValue ::
     PParams era ->
     -- | Check whether a pool with a supplied PoolStakeId is already registered.
     (KeyHash 'StakePool -> Bool) ->
-    TxBody era ->
+    TxBody t era ->
     Value era
 
   -- | Initial eras will look into witness set to find all of the available scripts, but
@@ -275,19 +275,19 @@ class EraTx era => EraUTxO era where
     -- | For some era it is necessary to look into the UTxO to find all of the available
     -- scripts for the transaction
     UTxO era ->
-    Tx era ->
+    Tx t era ->
     ScriptsProvided era
 
   -- | Produce all the information required for figuring out which scripts are required
   -- for the transaction to be valid, once those scripts are evaluated
-  getScriptsNeeded :: UTxO era -> TxBody era -> ScriptsNeeded era
+  getScriptsNeeded :: UTxO era -> TxBody t era -> ScriptsNeeded era
 
   -- | Extract the set of all script hashes that are needed for script validation.
   getScriptsHashesNeeded :: ScriptsNeeded era -> Set ScriptHash
 
   -- | Extract all of the KeyHash witnesses that are required for validating the transaction
   getWitsVKeyNeeded ::
-    CertState era -> UTxO era -> TxBody era -> Set (KeyHash 'Witness)
+    CertState era -> UTxO era -> TxBody t era -> Set (KeyHash 'Witness)
 
   -- | Minimum fee computation, excluding witnesses and including ref scripts size
-  getMinFeeTxUtxo :: PParams era -> Tx era -> UTxO era -> Coin
+  getMinFeeTxUtxo :: PParams era -> Tx t era -> UTxO era -> Coin

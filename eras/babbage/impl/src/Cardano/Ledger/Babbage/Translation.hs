@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -58,23 +59,24 @@ instance TranslateEra BabbageEra NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-instance TranslateEra BabbageEra Tx where
-  type TranslationError BabbageEra Tx = DecoderError
-  translateEra _ctxt tx = do
-    -- Note that this does not preserve the hidden bytes field of the transaction.
-    -- This is under the premise that this is irrelevant for TxInBlocks, which are
-    -- not transmitted as contiguous chunks.
-    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
-    txWits <- translateEraThroughCBOR "TxWitness" $ tx ^. witsTxL
-    auxData <- case tx ^. auxDataTxL of
-      SNothing -> pure SNothing
-      SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
-    let validating = tx ^. isValidTxL
-    pure $
-      mkBasicTx txBody
-        & witsTxL .~ txWits
-        & auxDataTxL .~ auxData
-        & isValidTxL .~ validating
+instance TranslateEra BabbageEra (Tx TopTx) where
+  type TranslationError BabbageEra (Tx TopTx) = DecoderError
+  translateEra _ctxt tx =
+    withTopTxLevelOnly tx $ \tx' -> do
+      -- Note that this does not preserve the hidden bytes field of the transaction.
+      -- This is under the premise that this is irrelevant for TxInBlocks, which are
+      -- not transmitted as contiguous chunks.
+      txBody <- translateEraThroughCBOR "TxBody" $ tx' ^. bodyTxL
+      txWits <- translateEraThroughCBOR "TxWitness" $ tx' ^. witsTxL
+      auxData <- case tx' ^. auxDataTxL of
+        SNothing -> pure SNothing
+        SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
+      let validating = tx' ^. isValidTxL
+      pure . asSTxTopLevel $
+        mkBasicTx txBody
+          & witsTxL .~ txWits
+          & auxDataTxL .~ auxData
+          & isValidTxL .~ validating
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

@@ -25,6 +25,7 @@ import Cardano.Ledger.Conway.Core (
   EraTx (..),
   EraTxBody (..),
   ScriptHash,
+  TxLevel (..),
   txIdTx,
  )
 import Cardano.Ledger.Conway.Rules (EnactState)
@@ -64,9 +65,9 @@ instance
 
 instance
   Inject ctx TxId =>
-  SpecTranslate ctx (TxBody ConwayEra)
+  SpecTranslate ctx (TxBody TopTx ConwayEra)
   where
-  type SpecRep (TxBody ConwayEra) = Agda.TxBody
+  type SpecRep (TxBody TopTx ConwayEra) = Agda.TxBody
 
   toSpecRep txb = do
     txId <- askCtx @TxId
@@ -90,8 +91,8 @@ instance
       <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
       <*> toSpecRep (txb ^. scriptIntegrityHashTxBodyL)
 
-instance SpecTranslate ctx (Tx ConwayEra) where
-  type SpecRep (Tx ConwayEra) = Agda.Tx
+instance SpecTranslate ctx (Tx TopTx ConwayEra) where
+  type SpecRep (Tx TopTx ConwayEra) = Agda.Tx
 
   toSpecRep tx =
     Agda.MkTx

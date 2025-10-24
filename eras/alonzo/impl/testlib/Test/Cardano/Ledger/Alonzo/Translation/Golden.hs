@@ -48,7 +48,7 @@ generateGoldenFile file = do
 assertTranslationResultsMatchGolden ::
   forall era.
   ( TranslatableGen era
-  , DecCBOR (Tx era)
+  , DecCBOR (Tx TopTx era)
   , HasCallStack
   ) =>
   IO FilePath ->

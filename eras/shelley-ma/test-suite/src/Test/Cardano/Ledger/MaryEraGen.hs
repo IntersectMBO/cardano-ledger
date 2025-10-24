@@ -284,7 +284,7 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update MaryEra) ->
   StrictMaybe TxAuxDataHash ->
-  Gen (TxBody MaryEra, [NativeScript MaryEra])
+  Gen (TxBody TopTx MaryEra, [NativeScript MaryEra])
 genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
   mint <- genMint

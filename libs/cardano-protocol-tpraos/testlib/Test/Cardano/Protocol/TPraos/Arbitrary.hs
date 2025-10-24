@@ -155,7 +155,7 @@ instance
   , EraBlockBody era
   , KES.Signable (KES c) ~ SignableRepresentation
   , VRF.Signable (VRF c) ~ SignableRepresentation
-  , Arbitrary (Tx era)
+  , Arbitrary (Tx TopTx era)
   , Arbitrary (BlockBody era)
   ) =>
   Arbitrary (Block (BHeader c) era)
@@ -190,7 +190,7 @@ genBlock aiks =
 genCoherentBlock ::
   forall era r c.
   ( EraBlockBody era
-  , Arbitrary (Tx era)
+  , Arbitrary (Tx TopTx era)
   , KES.Signable (KES c) ~ SignableRepresentation
   , PraosCrypto c
   ) =>

@@ -1,10 +1,15 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -21,13 +26,14 @@ import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
-import Cardano.Ledger.Dijkstra.Tx (Tx (..))
+import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Data.Functor.Identity (Identity)
+import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Common
@@ -40,7 +46,7 @@ instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
 instance Arbitrary (DijkstraPParams StrictMaybe DijkstraEra) where
   arbitrary = genericArbitraryU
 
-instance Arbitrary (TxBody DijkstraEra) where
+instance Arbitrary (TxBody TopTx DijkstraEra) where
   arbitrary =
     DijkstraTxBody
       <$> arbitrary
@@ -94,7 +100,11 @@ sizedDijkstraNativeScript n =
          , RequireGuard <$> arbitrary
          ]
 
-deriving newtype instance Arbitrary (Tx DijkstraEra)
+instance (Arbitrary (TxBody l DijkstraEra), Typeable l) => Arbitrary (Tx l DijkstraEra) where
+  arbitrary =
+    fmap MkDijkstraTx . withSTxBothLevels @l $ \case
+      STopTx -> DijkstraTx <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+      SSubTx -> DijkstraSubTx <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance Era era => Arbitrary (DijkstraTxCert era) where
   arbitrary =

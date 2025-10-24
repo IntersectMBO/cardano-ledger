@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -45,14 +46,18 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
 
+instance HasEraTxLevel Tx ConwayEra where
+  toSTxLevel (MkConwayTx AlonzoTx {}) = STopTxOnly @ConwayEra
+
 instance EraTx ConwayEra where
-  newtype Tx ConwayEra = MkConwayTx {unConwayTx :: AlonzoTx ConwayEra}
+  newtype Tx l ConwayEra = MkConwayTx {unConwayTx :: AlonzoTx l ConwayEra}
     deriving newtype (Eq, Show, NFData, NoThunks, ToCBOR, EncCBOR)
     deriving (Generic)
 
@@ -75,10 +80,10 @@ instance EraTx ConwayEra where
 
   getMinFeeTx = getConwayMinFeeTx
 
-instance EqRaw (Tx ConwayEra) where
+instance EqRaw (Tx l ConwayEra) where
   eqRaw = alonzoTxEqRaw
 
-conwayTxL :: Lens' (Tx ConwayEra) (AlonzoTx ConwayEra)
+conwayTxL :: Lens' (Tx l ConwayEra) (AlonzoTx l ConwayEra)
 conwayTxL = lens unConwayTx (\x y -> x {unConwayTx = y})
 
 getConwayMinFeeTx ::
@@ -87,7 +92,7 @@ getConwayMinFeeTx ::
   , ConwayEraPParams era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx l era ->
   Int ->
   Coin
 getConwayMinFeeTx pp tx refScriptsSize =
@@ -129,5 +134,5 @@ instance AlonzoEraTx ConwayEra where
   isValidTxL = conwayTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance DecCBOR (Annotator (Tx ConwayEra)) where
+instance Typeable l => DecCBOR (Annotator (Tx l ConwayEra)) where
   decCBOR = fmap MkConwayTx <$> decCBOR

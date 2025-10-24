@@ -2,7 +2,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -25,12 +27,16 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq (NFData)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 
+instance HasEraTxLevel Tx BabbageEra where
+  toSTxLevel (MkBabbageTx AlonzoTx {}) = STopTxOnly @BabbageEra
+
 instance EraTx BabbageEra where
-  newtype Tx BabbageEra = MkBabbageTx {unBabbageTx :: AlonzoTx BabbageEra}
+  newtype Tx l BabbageEra = MkBabbageTx {unBabbageTx :: AlonzoTx l BabbageEra}
     deriving newtype (Eq, NFData, Show, NoThunks, ToCBOR, EncCBOR)
     deriving (Generic)
   mkBasicTx = MkBabbageTx . mkBasicAlonzoTx
@@ -52,15 +58,15 @@ instance EraTx BabbageEra where
 
   getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
 
-instance EqRaw (Tx BabbageEra) where
+instance EqRaw (Tx l BabbageEra) where
   eqRaw = alonzoTxEqRaw
 
 instance AlonzoEraTx BabbageEra where
   isValidTxL = babbageTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance DecCBOR (Annotator (Tx BabbageEra)) where
+instance Typeable l => DecCBOR (Annotator (Tx l BabbageEra)) where
   decCBOR = fmap MkBabbageTx <$> decCBOR
 
-babbageTxL :: Lens' (Tx BabbageEra) (AlonzoTx BabbageEra)
+babbageTxL :: Lens' (Tx l BabbageEra) (AlonzoTx l BabbageEra)
 babbageTxL = lens unBabbageTx (\x y -> x {unBabbageTx = y})

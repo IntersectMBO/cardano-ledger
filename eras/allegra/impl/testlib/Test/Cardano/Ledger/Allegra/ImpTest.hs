@@ -52,7 +52,7 @@ impAllegraSatisfyNativeScript ::
   , NativeScript era ~ Timelock era
   ) =>
   Set.Set (KeyHash 'Witness) ->
-  TxBody era ->
+  TxBody l era ->
   NativeScript era ->
   ImpTestM era (Maybe (Map.Map (KeyHash 'Witness) (KeyPair 'Witness)))
 impAllegraSatisfyNativeScript providedVKeyHashes txBody script = do

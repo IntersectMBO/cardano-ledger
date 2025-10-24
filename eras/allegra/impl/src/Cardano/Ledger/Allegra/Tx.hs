@@ -3,7 +3,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -24,7 +26,9 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Core (
   EraTx (..),
   EraTxWits (..),
+  HasEraTxLevel (..),
   NativeScript,
+  STxTopLevel (..),
  )
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
@@ -41,6 +45,7 @@ import Cardano.Ledger.Shelley.Tx (
  )
 import Control.DeepSeq (NFData)
 import qualified Data.Set as Set (map)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
@@ -48,7 +53,7 @@ import NoThunks.Class (NoThunks)
 -- ========================================
 
 instance EraTx AllegraEra where
-  newtype Tx AllegraEra = MkAllegraTx {unAllegraTx :: ShelleyTx AllegraEra}
+  newtype Tx t AllegraEra = MkAllegraTx {unAllegraTx :: ShelleyTx t AllegraEra}
     deriving newtype (Eq, NFData, NoThunks, Show, ToCBOR, EncCBOR)
     deriving (Generic)
 
@@ -71,13 +76,16 @@ instance EraTx AllegraEra where
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
 
-instance EqRaw (Tx AllegraEra) where
+instance HasEraTxLevel Tx AllegraEra where
+  toSTxLevel (MkAllegraTx ShelleyTx {}) = STopTxOnly @AllegraEra
+
+instance EqRaw (Tx t AllegraEra) where
   eqRaw = shelleyTxEqRaw
 
-instance DecCBOR (Annotator (Tx AllegraEra)) where
+instance Typeable t => DecCBOR (Annotator (Tx t AllegraEra)) where
   decCBOR = fmap MkAllegraTx <$> decCBOR
 
-allegraTxL :: Lens' (Tx AllegraEra) (ShelleyTx AllegraEra)
+allegraTxL :: Lens' (Tx t AllegraEra) (ShelleyTx t AllegraEra)
 allegraTxL = lens unAllegraTx (\x y -> x {unAllegraTx = y})
 
 -- =======================================================
@@ -87,7 +95,7 @@ allegraTxL = lens unAllegraTx (\x y -> x {unAllegraTx = y})
 
 validateTimelock ::
   (EraTx era, AllegraEraTxBody era, AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  Tx era -> NativeScript era -> Bool
+  Tx t era -> NativeScript era -> Bool
 validateTimelock tx timelock = evalTimelock vhks (tx ^. bodyTxL . vldtTxBodyL) timelock
   where
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)

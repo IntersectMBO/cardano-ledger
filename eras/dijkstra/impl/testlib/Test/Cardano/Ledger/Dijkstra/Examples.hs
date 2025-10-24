@@ -73,14 +73,14 @@ ledgerExamples =
     exampleTxDijkstra
     exampleDijkstraGenesis
 
-exampleTxDijkstra :: Tx DijkstraEra
+exampleTxDijkstra :: Tx TopTx DijkstraEra
 exampleTxDijkstra =
   exampleTx
     exampleTxBodyDijkstra
     (DijkstraSpending $ AsIx 0)
     (RequireAllOf @DijkstraEra mempty)
 
-exampleTxBodyDijkstra :: TxBody DijkstraEra
+exampleTxBodyDijkstra :: TxBody TopTx DijkstraEra
 exampleTxBodyDijkstra =
   DijkstraTxBody
     (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]) -- spending inputs

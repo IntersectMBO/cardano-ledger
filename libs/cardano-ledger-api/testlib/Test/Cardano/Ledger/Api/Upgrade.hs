@@ -16,6 +16,7 @@ import Cardano.Ledger.Binary (DecCBOR, decNoShareCBOR, encodeMemPack)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Data.Default (Default (def))
+import Data.Typeable (Typeable)
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Api.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -164,13 +165,14 @@ specTxWitsUpgrade = do
         expectRawEqual "TxWits" curTxWits upgradedTxWits
 
 specTxBodyUpgrade ::
-  forall era.
-  ( EraApi era
+  forall era l.
+  ( Typeable l
+  , EraApi era
   , EraTxBody (PreviousEra era)
-  , Arbitrary (TxBody (PreviousEra era))
+  , Arbitrary (TxBody l (PreviousEra era))
   , HasCallStack
-  , ToExpr (TxBody era)
-  , DecCBOR (TxBody era)
+  , ToExpr (TxBody l era)
+  , DecCBOR (TxBody l era)
   ) =>
   Spec
 specTxBodyUpgrade = do
@@ -183,7 +185,7 @@ specTxBodyUpgrade = do
               "Expected to deserialize: =======================================================\n"
                 ++ show err
         | otherwise -> pure () -- Both upgrade and deserializer fail successfully
-      Right (curTxBody :: TxBody era)
+      Right (curTxBody :: TxBody l era)
         | Right upgradedTxBody <- upgradeTxBody prevTxBody ->
             expectRawEqual "TxBody" curTxBody upgradedTxBody
         | otherwise -> expectationFailure "Expected upgradeTxBody to succeed"
@@ -196,20 +198,21 @@ specTxBodyUpgrade = do
               "Expected to deserialize: =======================================================\n"
                 ++ show err
         | otherwise -> pure () -- Both upgrade and deserializer fail successfully
-      Right (curTxBody :: TxBody era)
+      Right (curTxBody :: TxBody l era)
         | Right upgradedTxBody <- upgradeTxBody prevTxBody ->
             expectRawEqual "TxBody" curTxBody upgradedTxBody
         | otherwise -> expectationFailure "Expected upgradeTxBody to succeed"
 
 specTxUpgrade ::
-  forall era.
-  ( EraApi era
+  forall era l.
+  ( Typeable l
+  , EraApi era
   , EraTx (PreviousEra era)
-  , Arbitrary (Tx (PreviousEra era))
+  , Arbitrary (Tx l (PreviousEra era))
   , HasCallStack
-  , ToExpr (Tx era)
-  , DecCBOR (Tx era)
-  , EqRaw (Tx era)
+  , ToExpr (Tx l era)
+  , DecCBOR (Tx l era)
+  , EqRaw (Tx l era)
   ) =>
   Spec
 specTxUpgrade = do
@@ -222,7 +225,7 @@ specTxUpgrade = do
               "Expected to deserialize: =======================================================\n"
                 ++ show err
         | otherwise -> pure () -- Both upgrade and deserializer fail successfully
-      Right (curTx :: Tx era)
+      Right (curTx :: Tx l era)
         | Right upgradedTx <- upgradeTx prevTx ->
             expectRawEqual "Tx" curTx upgradedTx
         | otherwise -> expectationFailure "Expected upgradeTx to succeed"
@@ -235,7 +238,7 @@ specTxUpgrade = do
               "Expected to deserialize: =======================================================\n"
                 ++ show err
         | otherwise -> pure () -- Both upgrade and deserializer fail successfully
-      Right (curTx :: Tx era)
+      Right (curTx :: Tx l era)
         | Right upgradedTx <- upgradeTx prevTx ->
             expectRawEqual "Tx" curTx upgradedTx
         | otherwise -> expectationFailure "Expected upgradeTx to succeed"
@@ -247,21 +250,21 @@ spec ::
   , Arbitrary (TxCert (PreviousEra era))
   , Arbitrary (TxAuxData (PreviousEra era))
   , Arbitrary (TxWits (PreviousEra era))
-  , Arbitrary (TxBody (PreviousEra era))
+  , Arbitrary (TxBody TopTx (PreviousEra era))
   , EraTx (PreviousEra era)
-  , Arbitrary (Tx (PreviousEra era))
+  , Arbitrary (Tx TopTx (PreviousEra era))
   , Arbitrary (Script (PreviousEra era))
   , HasCallStack
-  , ToExpr (Tx era)
-  , ToExpr (TxBody era)
+  , ToExpr (Tx TopTx era)
+  , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (Script era)
   , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
-  , EqRaw (Tx era)
+  , DecCBOR (TxBody TopTx era)
+  , DecCBOR (Tx TopTx era)
+  , EqRaw (Tx TopTx era)
   ) =>
   BinaryUpgradeOpts ->
   Spec
@@ -271,9 +274,9 @@ spec BinaryUpgradeOpts {isScriptUpgradeable, isTxUpgradeable} =
     specTxCertUpgrade @era
     specTxAuxDataUpgrade @era
     specTxWitsUpgrade @era
-    specTxBodyUpgrade @era
+    specTxBodyUpgrade @era @TopTx
     when isTxUpgradeable $
-      specTxUpgrade @era
+      specTxUpgrade @era @TopTx
     when isScriptUpgradeable $
       specScriptUpgrade @era
     -- This is a test that ensures that binary version of a TxOut is backwards compatible as it is

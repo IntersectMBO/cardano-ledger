@@ -11,6 +11,7 @@
 --
 -- Let's start by defining the GHC extensions and imports.
 --
+-- >>> :set -XTypeApplications
 -- >>> :set -XScopedTypeVariables
 -- >>> import Test.QuickCheck
 -- >>> import qualified Data.Sequence.Strict as StrictSeq
@@ -25,7 +26,7 @@
 -- quickCheck $ \(txOut :: TxOut BabbageEra) ->
 --     let
 --         -- Defining a Babbage era transaction body with a single random transaction output
---         txBody = mkBasicTxBody
+--         txBody = mkBasicTxBody @_ @TopTx
 --                & outputsTxBodyL <>~ StrictSeq.singleton txOut
 --         -- Defining a basic transaction with our transaction body
 --         tx = mkBasicTx txBody
@@ -90,7 +91,7 @@ import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Wits
 import Cardano.Ledger.Babbage.Collateral (mkCollateralTxIn)
-import Cardano.Ledger.Core (EraTx (..), binaryUpgradeTx, txIdTx)
+import Cardano.Ledger.Core (EraTx (..), TxLevel (..), binaryUpgradeTx, txIdTx)
 import Cardano.Ledger.State (UTxO (..), txouts)
 import Cardano.Ledger.Tools (calcMinFeeTx, estimateMinFeeTx, setMinFeeTx, setMinFeeTxUtxo)
 import Control.Monad (join)
@@ -98,8 +99,8 @@ import qualified Data.Map as Map
 import Lens.Micro
 
 class (EraTx era, AnyEraTxBody era, AnyEraTxWits era, AnyEraTxAuxData era) => AnyEraTx era where
-  isValidTxG :: SimpleGetter (Tx era) (Maybe IsValid)
-  default isValidTxG :: AlonzoEraTx era => SimpleGetter (Tx era) (Maybe IsValid)
+  isValidTxG :: SimpleGetter (Tx TopTx era) (Maybe IsValid)
+  default isValidTxG :: AlonzoEraTx era => SimpleGetter (Tx TopTx era) (Maybe IsValid)
   isValidTxG = isValidTxL . to Just
 
 instance AnyEraTx ShelleyEra where
@@ -120,7 +121,7 @@ instance AnyEraTx ConwayEra
 instance AnyEraTx DijkstraEra
 
 -- | Construct all of the unspent outputs that will be produced by this transaction
-producedTxOuts :: AnyEraTx era => Tx era -> UTxO era
+producedTxOuts :: AnyEraTx era => Tx TopTx era -> UTxO era
 producedTxOuts tx =
   case tx ^. isValidTxG of
     Just (IsValid False) ->

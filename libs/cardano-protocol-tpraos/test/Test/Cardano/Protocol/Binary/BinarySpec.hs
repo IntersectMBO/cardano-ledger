@@ -36,7 +36,7 @@ spec = do
 blockEraSpec ::
   forall era.
   ( EraBlockBody era
-  , Arbitrary (Tx era)
+  , Arbitrary (Tx TopTx era)
   , Arbitrary (BlockBody era)
   ) =>
   Spec

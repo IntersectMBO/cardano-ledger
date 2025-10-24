@@ -164,13 +164,13 @@ instance
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , Default (LedgerState era)
   ) =>
   STS (ShelleyLEDGERS era)
   where
   type State (ShelleyLEDGERS era) = LedgerState era
-  type Signal (ShelleyLEDGERS era) = Seq (Tx era)
+  type Signal (ShelleyLEDGERS era) = Seq (Tx TopTx era)
   type Environment (ShelleyLEDGERS era) = ShelleyLedgersEnv era
   type BaseM (ShelleyLEDGERS era) = ShelleyBase
   type PredicateFailure (ShelleyLEDGERS era) = ShelleyLedgersPredFailure era
@@ -183,7 +183,7 @@ ledgersTransition ::
   ( Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   ) =>
   TransitionRule (ShelleyLEDGERS era)
 ledgersTransition = do

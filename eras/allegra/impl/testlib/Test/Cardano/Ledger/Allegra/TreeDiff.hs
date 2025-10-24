@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -20,6 +21,7 @@ import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.PParams
 import Control.State.Transition.Extended (STS (..))
+import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Shelley.TreeDiff
 
 -- Scripts
@@ -41,9 +43,24 @@ instance
   , ToExpr (TxCert era)
   , ToExpr (Update era)
   ) =>
-  ToExpr (AllegraTxBodyRaw ma era)
+  ToExpr (AllegraTxBodyRaw ma TopTx era)
+  where
+  toExpr AllegraTxBodyRaw {..} =
+    Rec
+      "AllegraTxBodyRaw"
+      $ OMap.fromList
+        [ ("atbrInputs", toExpr atbrInputs)
+        , ("atbrOutputs", toExpr atbrOutputs)
+        , ("atbrCerts", toExpr atbrCerts)
+        , ("atbrWithdrawals", toExpr atbrWithdrawals)
+        , ("atbrFee", toExpr atbrFee)
+        , ("atbrValidityInterval", toExpr atbrValidityInterval)
+        , ("atbrUpdate", toExpr atbrUpdate)
+        , ("atbrAuxDataHash", toExpr atbrAuxDataHash)
+        , ("atbrMint", toExpr atbrMint)
+        ]
 
-instance ToExpr (TxBody AllegraEra)
+instance ToExpr (TxBody TopTx AllegraEra)
 
 -- Rules/Utxo
 instance
@@ -60,4 +77,4 @@ instance
   ) =>
   ToExpr (AllegraUtxoEvent era)
 
-deriving newtype instance ToExpr (Tx AllegraEra)
+deriving newtype instance ToExpr (Tx TopTx AllegraEra)

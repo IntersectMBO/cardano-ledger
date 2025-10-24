@@ -17,6 +17,6 @@ import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.Binary
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator
 
-deriving newtype instance DecCBOR (TxBody BabbageEra)
+deriving newtype instance DecCBOR (TxBody TopTx BabbageEra)
 
-deriving newtype instance DecCBOR (Tx BabbageEra)
+deriving newtype instance DecCBOR (Tx TopTx BabbageEra)

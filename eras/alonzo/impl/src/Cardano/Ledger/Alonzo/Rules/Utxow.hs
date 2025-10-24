@@ -228,12 +228,12 @@ instance
 {- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} ⊆ dom(txdats txw)   -}
 {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h, ) ∈ txouts tx ∪ utxo (refInputs tx) } -}
 missingRequiredDatums ::
-  forall era.
+  forall era l.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   ) =>
   UTxO era ->
-  Tx era ->
+  Tx l era ->
   Test (AlonzoUtxowPredFailure era)
 missingRequiredDatums utxo tx = do
   let txBody = tx ^. bodyTxL
@@ -261,9 +261,9 @@ missingRequiredDatums utxo tx = do
 {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
 hasExactSetOfRedeemers ::
-  forall era.
+  forall era l.
   AlonzoEraTx era =>
-  Tx era ->
+  Tx l era ->
   ScriptsProvided era ->
   AlonzoScriptsNeeded era ->
   Test (AlonzoUtxowPredFailure era)
@@ -288,9 +288,9 @@ hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded
 -- =======================
 {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
 checkScriptIntegrityHash ::
-  forall era.
+  forall era l.
   AlonzoEraTx era =>
-  Tx era ->
+  Tx l era ->
   PParams era ->
   StrictMaybe (ScriptIntegrity era) ->
   Test (AlonzoUtxowPredFailure era)
@@ -328,7 +328,7 @@ alonzoStyleWitness ::
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
@@ -422,13 +422,13 @@ instance
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , EraCertState era
   ) =>
   STS (AlonzoUTXOW era)
   where
   type State (AlonzoUTXOW era) = UTxOState era
-  type Signal (AlonzoUTXOW era) = Tx era
+  type Signal (AlonzoUTXOW era) = Tx TopTx era
   type Environment (AlonzoUTXOW era) = UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type PredicateFailure (AlonzoUTXOW era) = AlonzoUtxowPredFailure era

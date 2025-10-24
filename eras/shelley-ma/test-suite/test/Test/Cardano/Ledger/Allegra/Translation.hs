@@ -49,7 +49,7 @@ allegraTranslationTests =
   testGroup
     "Allegra translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" $
-        translateEraEncoding @AllegraEra @Tx NoGenesis toCBOR toCBOR
+        translateEraEncoding @AllegraEra @(Tx TopTx) NoGenesis toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" $
         translateEraEncoding @AllegraEra @S.ShelleyGovState NoGenesis toCBOR toCBOR

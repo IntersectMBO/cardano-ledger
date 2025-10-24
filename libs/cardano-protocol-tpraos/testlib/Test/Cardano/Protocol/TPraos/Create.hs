@@ -259,7 +259,7 @@ mkBlock ::
   -- | All keys in the stake pool
   AllIssuerKeys c r ->
   -- | Transactions to record
-  [Tx era] ->
+  [Tx TopTx era] ->
   -- | Current slot
   SlotNo ->
   -- | Block number/chain length/chain "difficulty"
@@ -295,7 +295,7 @@ mkBlockFakeVRF ::
   -- | All keys in the stake pool
   AllIssuerKeys c r ->
   -- | Transactions to record
-  [Tx era] ->
+  [Tx TopTx era] ->
   -- | Current slot
   SlotNo ->
   -- | Block number\/chain length\/chain "difficulty"

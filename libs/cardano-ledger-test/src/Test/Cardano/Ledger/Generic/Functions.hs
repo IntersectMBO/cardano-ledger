@@ -84,7 +84,7 @@ depositsAndRefunds pp certificates accounts = List.foldl' accum (Coin 0) certifi
 
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
 --  Era and later, where inline Scripts are allowed, they should not appear in this set.
-scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set ScriptHash
+scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody TopTx era -> Set ScriptHash
 scriptWitsNeeded' Conway utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
@@ -107,7 +107,7 @@ scriptWitsNeeded' Shelley utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptWitsNeeded' #-}
 
-scriptsNeeded' :: EraUTxO era => MUtxo era -> TxBody era -> Set ScriptHash
+scriptsNeeded' :: EraUTxO era => MUtxo era -> TxBody TopTx era -> Set ScriptHash
 scriptsNeeded' utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptsNeeded' #-}
@@ -142,7 +142,7 @@ maxRefInputs :: Proof era -> Int
 maxRefInputs Babbage = 3
 maxRefInputs _ = 0
 
-isValid' :: Proof era -> Tx era -> IsValid
+isValid' :: Proof era -> Tx TopTx era -> IsValid
 isValid' Conway x = x ^. isValidTxL
 isValid' Babbage x = x ^. isValidTxL
 isValid' Alonzo x = x ^. isValidTxL
@@ -192,10 +192,10 @@ stakeCredAddr :: Addr -> Maybe (Credential 'Staking)
 stakeCredAddr (Addr _ _ (StakeRefBase cred)) = Just cred
 stakeCredAddr _ = Nothing
 
-getBody :: EraTx era => Proof era -> Tx era -> TxBody era
+getBody :: EraTx era => Proof era -> Tx TopTx era -> TxBody TopTx era
 getBody _ tx = tx ^. bodyTxL
 
-getCollateralInputs :: Proof era -> TxBody era -> Set TxIn
+getCollateralInputs :: Proof era -> TxBody TopTx era -> Set TxIn
 getCollateralInputs Conway txBody = txBody ^. collateralInputsTxBodyL
 getCollateralInputs Babbage txBody = txBody ^. collateralInputsTxBodyL
 getCollateralInputs Alonzo txBody = txBody ^. collateralInputsTxBodyL
@@ -204,7 +204,7 @@ getCollateralInputs Allegra _ = Set.empty
 getCollateralInputs Shelley _ = Set.empty
 {-# NOINLINE getCollateralInputs #-}
 
-getCollateralOutputs :: Proof era -> TxBody era -> [TxOut era]
+getCollateralOutputs :: Proof era -> TxBody TopTx era -> [TxOut era]
 getCollateralOutputs Conway txBody =
   case txBody ^. collateralReturnTxBodyL of
     SNothing -> []
@@ -237,7 +237,7 @@ alwaysFalse (Just l) n = alwaysFailsLang' @era l n
 alwaysFalse Nothing _ = fromNativeScript $ RequireAnyOf mempty
 {-# NOINLINE alwaysFalse #-}
 
-certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx era -> [TxCert era]
+certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx TopTx era -> [TxCert era]
 certs _ tx = Fold.toList $ tx ^. bodyTxL . certsTxBodyL
 
 -- | Create an old style RewardUpdate to be used in tests, in any Era.
@@ -269,7 +269,7 @@ createRUpdNonPulsing' model =
 languagesUsed ::
   forall era.
   Proof era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   Set ScriptHash ->
   Set Language
@@ -286,7 +286,7 @@ languagesUsed proof tx utxo sNeeded = case proof of
 languages ::
   forall era.
   (EraUTxO era, AlonzoEraScript era) =>
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   Set ScriptHash ->
   Set Language

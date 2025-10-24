@@ -69,7 +69,7 @@ tests ::
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , STS (EraRule "LEDGER" era)
   ) =>
   TestTree
@@ -94,7 +94,7 @@ eliminateTxInputs ::
   , EraGen era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , STS (EraRule "LEDGER" era)
   ) =>
@@ -124,7 +124,7 @@ newEntriesAndUniqueTxIns ::
   , EraGen era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , STS (EraRule "LEDGER" era)
   ) =>
@@ -157,7 +157,7 @@ requiredMSigSignaturesSubset ::
   forall era.
   ( ChainProperty era
   , EraGen era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
@@ -180,7 +180,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
 
     existsReqKeyComb keyHashes msig =
       any (\kl -> Set.fromList kl `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
-    keyHashSet :: Tx era -> Set (KeyHash 'Witness)
+    keyHashSet :: Tx TopTx era -> Set (KeyHash 'Witness)
     keyHashSet tx_ =
       Set.map witVKeyHash (tx_ ^. witsTxL . addrTxWitsL)
 
@@ -196,10 +196,10 @@ noDoubleSpend SourceSignalTarget {signal = block} =
   where
     txs = toList $ blockBody block ^. txSeqBlockBodyL
 
-    getDoubleInputs :: [Tx era] -> [(Tx era, [Tx era])]
+    getDoubleInputs :: [Tx TopTx era] -> [(Tx TopTx era, [Tx TopTx era])]
     getDoubleInputs [] = []
     getDoubleInputs (t : ts) = lookForDoubleSpends t ts ++ getDoubleInputs ts
-    lookForDoubleSpends :: Tx era -> [Tx era] -> [(Tx era, [Tx era])]
+    lookForDoubleSpends :: Tx TopTx era -> [Tx TopTx era] -> [(Tx TopTx era, [Tx TopTx era])]
     lookForDoubleSpends _ [] = []
     lookForDoubleSpends tx_j ts =
       [(tx_j, doubles) | not (null doubles)]

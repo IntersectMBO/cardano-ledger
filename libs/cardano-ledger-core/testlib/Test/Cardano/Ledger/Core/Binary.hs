@@ -25,12 +25,12 @@ import Test.Cardano.Ledger.Core.Binary.Annotator
 txSizeSpec ::
   forall era.
   ( EraTx era
-  , Arbitrary (Tx era)
+  , Arbitrary (Tx TopTx era)
   , SafeToHash (TxWits era)
   ) =>
   Spec
 txSizeSpec =
   describe "Transaction size" $ do
-    prop "should match the size of the cbor encoding" $ \(tx :: Tx era) -> do
+    prop "should match the size of the cbor encoding" $ \(tx :: Tx TopTx era) -> do
       let txSize = sizeTxForFeeCalculation tx
       txSize `shouldBe` tx ^. sizeTxF

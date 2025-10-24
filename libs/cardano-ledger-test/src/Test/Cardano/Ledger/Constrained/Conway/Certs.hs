@@ -28,11 +28,11 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 setMapMaybe :: Ord a => (t -> Maybe a) -> Set t -> Set a
 setMapMaybe f set = Set.foldr' (\x s -> maybe s (`Set.insert` s) $ f x) mempty set
 
-txZero :: EraTx era => Tx era
+txZero :: EraTx era => Tx TopTx era
 txZero = mkBasicTx mkBasicTxBody
 
 certsEnvSpec ::
-  (EraSpecPParams era, HasSpec (Tx era)) =>
+  (EraSpecPParams era, HasSpec (Tx TopTx era)) =>
   Specification (CertsEnv era)
 certsEnvSpec = constrained $ \ce ->
   match ce $ \tx pp _currepoch _currcommittee commproposals ->

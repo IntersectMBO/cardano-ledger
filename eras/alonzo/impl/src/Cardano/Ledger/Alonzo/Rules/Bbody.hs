@@ -176,7 +176,7 @@ alonzoBbodyTransition ::
   , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , EraBlockBody era
   , AlonzoEraTxWits era
   , BlockBody era ~ AlonzoBlockBody era
@@ -260,7 +260,7 @@ instance
   , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
   , BlockBody era ~ AlonzoBlockBody era
   , EraBlockBody era
