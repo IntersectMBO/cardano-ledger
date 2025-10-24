@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `unDelegReDelegDRep` to `VState` module
 * Expose `conwayRegisterInitialAccounts`
 * Add `shelleyToConwayLedgerPredFailure`.
 * Move withdrawal-validation and DRep expiry updates from `CERTS` to `LEDGER` starting protocol version 11.

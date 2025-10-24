@@ -17,6 +17,7 @@ module Cardano.Ledger.Conway.State.VState (
   vsNumDormantEpochsL,
   vsActualDRepExpiry,
   lookupDepositVState,
+  unDelegReDelegDRep,
 ) where
 
 import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..), binOpEpochNo)
@@ -33,8 +34,10 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Conway.State.Account
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DRep (drepDelegsL)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData (..))
@@ -42,8 +45,10 @@ import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (def))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- | The state that tracks the voting entities (DReps and Constitutional Committee
@@ -108,6 +113,34 @@ instance ToKeyValuePairs (VState era) where
         , "committeeState" .= vsCommitteeState
         , "numDormantEpochs" .= vsNumDormantEpochs
         ]
+
+-- | Reverses DRep delegation.
+-- To be called when a stake credential is unregistered or its delegation target changes.
+-- If the new delegation matches the previous one, this is a noop.
+unDelegReDelegDRep ::
+  ConwayEraAccounts era =>
+  Credential 'Staking ->
+  -- | Account that is losing its current delegation and/or acquiring a new one
+  AccountState era ->
+  -- | Potential new delegation. In case when stake credential unregisters this must be `Nothing`.
+  Maybe DRep ->
+  VState era ->
+  VState era
+unDelegReDelegDRep stakeCred accountState mNewDRep =
+  fromMaybe (vsDRepsL %~ addNewDelegation) $ do
+    dRep@(DRepCredential dRepCred) <- accountState ^. dRepDelegationAccountStateL
+    pure $
+      -- There is no need to update set of delegations if delegation is unchanged
+      if Just dRep == mNewDRep
+        then id
+        else
+          vsDRepsL %~ addNewDelegation . Map.adjust (drepDelegsL %~ Set.delete stakeCred) dRepCred
+  where
+    addNewDelegation =
+      case mNewDRep of
+        Just (DRepCredential dRepCred) ->
+          Map.adjust (drepDelegsL %~ Set.insert stakeCred) dRepCred
+        _ -> id
 
 vsDRepsL :: Lens' (VState era) (Map (Credential 'DRepRole) DRepState)
 vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
