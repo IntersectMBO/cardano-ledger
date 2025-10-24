@@ -127,7 +127,7 @@ type ScriptIntegrityHash = SafeHash EraIndependentScriptIntegrity
 class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   collateralInputsTxBodyL :: Lens' (TxBody TopTx era) (Set TxIn)
 
-  reqSignerHashesTxBodyL :: AtMostEra "Conway" era => Lens' (TxBody l era) (Set (KeyHash 'Witness))
+  reqSignerHashesTxBodyL :: AtMostEra "Conway" era => Lens' (TxBody l era) (Set (KeyHash 'Guard))
 
   reqSignerHashesTxBodyG ::
     SimpleGetter (TxBody l era) (Set (KeyHash Guard))

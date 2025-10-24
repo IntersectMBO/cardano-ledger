@@ -365,11 +365,9 @@ ledgerTransition ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
-  , State (someLEDGER era) ~ LedgerState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
-  , Environment (someLEDGER era) ~ LedgerEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
@@ -378,7 +376,6 @@ ledgerTransition ::
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ someLEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
-  , PredicateFailure (someLEDGER era) ~ ConwayLedgerPredFailure era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
