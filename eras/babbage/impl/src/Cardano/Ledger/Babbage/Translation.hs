@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -28,7 +29,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
-import Data.Typeable (Typeable)
 import Lens.Micro
 
 --------------------------------------------------------------------------------
@@ -63,20 +63,20 @@ instance TranslateEra BabbageEra (Tx TopTx) where
   type TranslationError BabbageEra (Tx TopTx) = DecoderError
   translateEra _ctxt tx =
     withTopTxLevelOnly tx $ \tx' -> do
-        -- Note that this does not preserve the hidden bytes field of the transaction.
-        -- This is under the premise that this is irrelevant for TxInBlocks, which are
-        -- not transmitted as contiguous chunks.
-        txBody <- translateEraThroughCBOR "TxBody" $ tx' ^. bodyTxL
-        txWits <- translateEraThroughCBOR "TxWitness" $ tx' ^. witsTxL
-        auxData <- case tx' ^. auxDataTxL of
-          SNothing -> pure SNothing
-          SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
-        let validating = tx' ^. isValidTxL
-        pure . asSTxTopLevel $
-          mkBasicTx txBody
-            & witsTxL .~ txWits
-            & auxDataTxL .~ auxData
-            & isValidTxL .~ validating
+      -- Note that this does not preserve the hidden bytes field of the transaction.
+      -- This is under the premise that this is irrelevant for TxInBlocks, which are
+      -- not transmitted as contiguous chunks.
+      txBody <- translateEraThroughCBOR "TxBody" $ tx' ^. bodyTxL
+      txWits <- translateEraThroughCBOR "TxWitness" $ tx' ^. witsTxL
+      auxData <- case tx' ^. auxDataTxL of
+        SNothing -> pure SNothing
+        SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
+      let validating = tx' ^. isValidTxL
+      pure . asSTxTopLevel $
+        mkBasicTx txBody
+          & witsTxL .~ txWits
+          & auxDataTxL .~ auxData
+          & isValidTxL .~ validating
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

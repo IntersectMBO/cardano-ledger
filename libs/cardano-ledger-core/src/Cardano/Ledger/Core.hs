@@ -55,6 +55,8 @@ module Cardano.Ledger.Core (
   binaryUpgradeTxBody,
   binaryUpgradeTxWits,
   binaryUpgradeTxAuxData,
+  fromStrictMaybeL,
+  toStrictMaybeL,
 
   -- * Era
   module Cardano.Ledger.Core.Era,
@@ -126,7 +128,7 @@ import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
-import Data.Maybe.Strict (StrictMaybe, strictMaybe)
+import Data.Maybe.Strict (StrictMaybe, maybeToStrictMaybe, strictMaybe, strictMaybeToMaybe)
 import Data.MemPack
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -686,3 +688,9 @@ binaryUpgradeTxAuxData = translateViaCBORAnnotator (eraProtVerLow @era) (withEra
 
 withEraName :: forall era. Era era => Text -> Text
 withEraName t = t <> " " <> T.pack (eraName @era) <> "Era"
+
+toStrictMaybeL :: Lens' (Maybe a) (StrictMaybe a)
+toStrictMaybeL = lens maybeToStrictMaybe (const strictMaybeToMaybe)
+
+fromStrictMaybeL :: Lens' (StrictMaybe a) (Maybe a)
+fromStrictMaybeL = lens strictMaybeToMaybe (const maybeToStrictMaybe)

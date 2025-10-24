@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -50,7 +51,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
-import Data.Typeable (Typeable)
 import Lens.Micro ((&), (.~), (^.))
 
 type instance TranslationContext DijkstraEra = DijkstraGenesis

@@ -44,6 +44,7 @@ import Cardano.Ledger.Binary (
   decodeNullMaybe,
   encodeListLen,
   encodeNullMaybe,
+  encodeNullStrictMaybe,
   serialize,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<*!))

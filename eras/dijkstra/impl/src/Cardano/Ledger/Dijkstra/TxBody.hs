@@ -64,6 +64,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
   DijkstraTxBodyRaw (..),
 ) where
 
+import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxOut,
@@ -141,7 +142,7 @@ import Data.Set (Set, foldr')
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, to, (&), (.~), (^.))
+import Lens.Micro (Lens', lens, to, (.~), (^.))
 import NoThunks.Class (InspectHeap (..), NoThunks)
 
 data DijkstraTxBodyRaw l era where
@@ -265,99 +266,97 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
         SparseKeyed
           "TxBodyRaw"
           basicDijkstraTxBodyRaw
-          bodyFields
+          (bodyFields STopTx)
           requiredFields
     SSubTx ->
       decode $
         SparseKeyed
           "SubTxBodyRaw"
           basicDijkstraSubTxBodyRaw
-          bodyFields
+          (bodyFields SSubTx)
           requiredFields
     where
-      bodyFields :: Word -> Field (DijkstraTxBodyRaw l DijkstraEra)
-      bodyFields 0 = field (\x tx -> tx & inputsDijkstraTxBodyRawL .~ x) From
-      bodyFields 1 = field (\x tx -> tx & outputsDijkstraTxBodyRawL .~ x) From
-      bodyFields n@2 =
+      bodyFields :: STxBothLevels l era -> Word -> Field (DijkstraTxBodyRaw l DijkstraEra)
+      bodyFields _ 0 = field (inputsDijkstraTxBodyRawL .~) From
+      bodyFields _ 1 = field (outputsDijkstraTxBodyRawL .~) From
+      bodyFields _ n@2 =
         withSTxBothLevels @l $ \case
-          STopTx -> field (\x tx -> tx & feeDijkstraTxBodyRawL .~ x) From
+          STopTx -> field (feeDijkstraTxBodyRawL .~) From
           SSubTx -> invalidField n
       bodyFields sTxLevel n@3 =
         case sTxLevel of
           STopTx ->
             ofield
-              (\x tx -> tx & vldtDijkstraTxBodyRawL .~ (dtbrVldt tx) {invalidHereafter = x})
+              (vldtDijkstraTxBodyRawL . invalidHereAfterL . toStrictMaybeL .~)
               From
           SSubTx -> invalidField n
-      bodyFields 4 =
+      bodyFields _ 4 =
         fieldGuarded
           (emptyFailure "Certificates" "non-empty")
           OSet.null
-          (\x tx -> tx & certsDijkstraTxBodyRawL .~ x)
+          (certsDijkstraTxBodyRawL .~)
           From
-      bodyFields 5 =
+      bodyFields _ 5 =
         fieldGuarded
           (emptyFailure "Withdrawals" "non-empty")
           (null . unWithdrawals)
-          (\x tx -> tx & withdrawalsDijkstraTxBodyRawL .~ x)
+          (withdrawalsDijkstraTxBodyRawL .~)
           From
-      bodyFields 7 = ofield (\x tx -> tx & auxDataHashDijkstraTxBodyRawL .~ x) From
-      bodyFields 8 =
-        ofield
-          (\x tx -> tx & vldtDijkstraTxBodyRawL .~ (dtbrVldt tx) {invalidBefore = x})
-      bodyFields 9 =
+      bodyFields _ 7 = ofield (auxDataHashDijkstraTxBodyRawL .~) From
+      bodyFields _ 8 = ofield (vldtDijkstraTxBodyRawL . invalidBeforeL . toStrictMaybeL .~) From
+      bodyFields _ 9 =
         fieldGuarded
           (emptyFailure "Mint" "non-empty")
           (== mempty)
-          (\x tx -> tx & mintDijkstraTxBodyRawL .~ x)
+          (\x -> mintDijkstraTxBodyRawL .~ x)
           From
-      bodyFields 11 = ofield (\x tx -> tx & scriptIntegrityHashDijkstraTxBodyRawL .~ x) From
-      bodyFields n@13 =
+      bodyFields _ 11 = ofield (scriptIntegrityHashDijkstraTxBodyRawL .~) From
+      bodyFields _ n@13 =
         withSTxBothLevels @l $ \case
           STopTx ->
             fieldGuarded
               (emptyFailure "Collateral Inputs" "non-empty")
               null
-              (\x tx -> tx & collateralInputsDijkstraTxBodyRawL .~ x)
+              (collateralInputsDijkstraTxBodyRawL .~)
               From
           SSubTx -> invalidField n
-      bodyFields 14 =
+      bodyFields _ 14 =
         ofield
-          (\x tx -> tx & guardsDijkstraTxBodyRawL .~ fromSMaybe mempty x)
+          (\x -> guardsDijkstraTxBodyRawL .~ fromSMaybe mempty x)
           (D decodeGuards)
-      bodyFields 15 = ofield (\x tx -> tx & networkIdDijkstraTxBodyRawL .~ x) From
-      bodyFields n@16 =
+      bodyFields _ 15 = ofield (networkIdDijkstraTxBodyRawL .~) From
+      bodyFields _ n@16 =
         withSTxBothLevels @l $ \case
-          STopTx -> ofield (\x tx -> tx & collateralReturnDijkstraTxBodyRawL .~ x) From
+          STopTx -> ofield (collateralReturnDijkstraTxBodyRawL .~) From
           SSubTx -> invalidField n
-      bodyFields n@17 =
+      bodyFields _ n@17 =
         withSTxBothLevels @l $ \case
-          STopTx -> ofield (\x tx -> tx & totalCollateralDijkstraTxBodyRawL .~ x) From
+          STopTx -> ofield (totalCollateralDijkstraTxBodyRawL .~) From
           SSubTx -> invalidField n
-      bodyFields 18 =
+      bodyFields _ 18 =
         fieldGuarded
           (emptyFailure "Reference Inputs" "non-empty")
           null
-          (\x tx -> tx & referenceInputsDijkstraTxBodyRawL .~ x)
+          (referenceInputsDijkstraTxBodyRawL .~)
           From
-      bodyFields 19 =
+      bodyFields _ 19 =
         fieldGuarded
           (emptyFailure "VotingProcedures" "non-empty")
           (null . unVotingProcedures)
-          (\x -> votingProceduresDijkstraTxBodyRawL .~ x)
+          (votingProceduresDijkstraTxBodyRawL .~)
           From
-      bodyFields 20 =
+      bodyFields _ 20 =
         fieldGuarded
           (emptyFailure "ProposalProcedures" "non-empty")
           OSet.null
-          (\x tx -> tx & proposalProceduresDijkstraTxBodyRawL .~ x)
+          (proposalProceduresDijkstraTxBodyRawL .~)
           From
-      bodyFields 21 = ofield (\x tx -> tx & currentTreasuryValueDijkstraTxBodyRawL .~ x) From
-      bodyFields 22 =
+      bodyFields _ 21 = ofield (currentTreasuryValueDijkstraTxBodyRawL .~) From
+      bodyFields _ 22 =
         ofield
-          (\x tx -> tx & treasuryDonationDijkstraTxBodyRawL .~ fromSMaybe zero x)
+          (\x -> treasuryDonationDijkstraTxBodyRawL .~ fromSMaybe zero x)
           (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
-      bodyFields n = invalidField n
+      bodyFields _ n = invalidField n
       requiredFields :: [(Word, String)]
       requiredFields =
         [ (0, "inputs")

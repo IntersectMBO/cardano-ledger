@@ -88,6 +88,7 @@ module Cardano.Ledger.Api.Tx.Body (
 
 import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))
+import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ScriptIntegrityHash)
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Scripts
@@ -95,7 +96,7 @@ import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Out
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
-import Cardano.Ledger.BaseTypes (Network, SlotNo, StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (Network, strictMaybeToMaybe)
 import Cardano.Ledger.Binary.Decoding (Sized)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Governance (
@@ -129,7 +130,7 @@ import qualified Data.OSet.Strict as OSet (fromSet)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set (map)
-import Lens.Micro (Lens', SimpleGetter, lens, to)
+import Lens.Micro (SimpleGetter, to)
 
 class (EraTxBody era, AnyEraTxOut era, AnyEraTxCert era) => AnyEraTxBody era where
   updateTxBodyG :: SimpleGetter (TxBody TopTx era) (Maybe (Maybe (Update era)))
@@ -338,29 +339,3 @@ evalBalanceTxBody ::
 evalBalanceTxBody pp lookupKeyRefund lookupDRepRefund isRegPoolId utxo txBody =
   getConsumedValue pp lookupKeyRefund lookupDRepRefund utxo txBody
     <-> getProducedValue pp isRegPoolId txBody
-
--- | Lens to access the 'invalidBefore' field of a 'ValidityInterval' as a 'Maybe SlotNo'.
-invalidBeforeL :: Lens' ValidityInterval (Maybe SlotNo)
-invalidBeforeL = lens g s
-  where
-    g :: ValidityInterval -> Maybe SlotNo
-    g (ValidityInterval ma _) =
-      case ma of
-        SNothing -> Nothing
-        SJust a -> Just a
-
-    s :: ValidityInterval -> Maybe SlotNo -> ValidityInterval
-    s (ValidityInterval _ b) a = ValidityInterval (maybe SNothing SJust a) b
-
--- | Lens to access the 'invalidHereAfter' field of a 'ValidityInterval' as a 'Maybe SlotNo'.
-invalidHereAfterL :: Lens' ValidityInterval (Maybe SlotNo)
-invalidHereAfterL = lens g s
-  where
-    g :: ValidityInterval -> Maybe SlotNo
-    g (ValidityInterval _ mb) =
-      case mb of
-        SNothing -> Nothing
-        SJust b -> Just b
-
-    s :: ValidityInterval -> Maybe SlotNo -> ValidityInterval
-    s (ValidityInterval ma _) = ValidityInterval ma . maybe SNothing SJust

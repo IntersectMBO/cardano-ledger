@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `fromStrictMaybeL`, `toStrictMaybeL`
 * Add `memoRawTypeL`
 * Remove the `UMap` module and the `umap` benchmarks cabal target.
 * Export `dRepToText`
