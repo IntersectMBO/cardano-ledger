@@ -82,7 +82,6 @@ test-suite cardano-ledger-alonzo-test
     -rtsopts
 
   build-depends:
-    QuickCheck,
     aeson >=2,
     base,
     base16-bytestring,
@@ -90,7 +89,7 @@ test-suite cardano-ledger-alonzo-test
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-alonzo-test,
     cardano-ledger-binary,
-    cardano-ledger-core:{cardano-ledger-core, tasty-compat, testlib},
+    cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-mary,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-ma-test,
@@ -99,6 +98,7 @@ test-suite cardano-ledger-alonzo-test
     cardano-slotting,
     cardano-strict-containers,
     containers,
+    hspec,
     microlens,
     plutus-ledger-api,
     small-steps:{small-steps, testlib} >=1.1,

@@ -13,31 +13,29 @@ import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Alonzo.ChainTrace as ChainTrace
 import qualified Test.Cardano.Ledger.Alonzo.Golden as Golden
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
+import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
 import qualified Test.Cardano.Ledger.Shelley.Rules.IncrementalStake as IncrementalStake
-import Test.Tasty
 
 main :: IO ()
 main = do
   nightly <- lookupEnv "NIGHTLY"
-  defaultMain $ case nightly of
+  ledgerTestMain $ case nightly of
     Nothing -> defaultTests
     Just _ -> nightlyTests
 
-defaultTests :: TestTree
+defaultTests :: Spec
 defaultTests =
-  testGroup
-    "Alonzo tests"
-    [ AdaPreservation.tests @AlonzoEra 50
-    , Golden.tests
-    ]
+  describe "Alonzo tests" $ do
+    AdaPreservation.tests @AlonzoEra 50
+    Golden.tests
 
-nightlyTests :: TestTree
+nightlyTests :: Spec
 nightlyTests =
-  testGroup
-    "Alonzo tests - nightly"
-    $ Shelley.commonTests @AlonzoEra
-      ++ [ IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy AlonzoEra)
-         , ChainTrace.tests
-         ]
+  describe "Alonzo tests - nightly" $ do
+    describe "Shelley common tests" $
+      sequence_ $
+        Shelley.commonTests @AlonzoEra
+    IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy AlonzoEra)
+    ChainTrace.tests
