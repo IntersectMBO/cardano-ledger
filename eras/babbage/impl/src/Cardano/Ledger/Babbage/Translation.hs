@@ -59,8 +59,8 @@ instance TranslateEra BabbageEra NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-instance Typeable l => TranslateEra BabbageEra (Tx l) where
-  type TranslationError BabbageEra (Tx l) = DecoderError
+instance TranslateEra BabbageEra (Tx TopTx) where
+  type TranslationError BabbageEra (Tx TopTx) = DecoderError
   translateEra _ctxt tx =
     withTopTxLevelOnly tx $ \tx' -> do
         -- Note that this does not preserve the hidden bytes field of the transaction.
