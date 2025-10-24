@@ -1,25 +1,66 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 {- HLINT ignore "Use camelCase" -}
 {- HLINT ignore "Evaluate" -}
 
-module Test.Cardano.Ledger.Core.Binary.CDDL where
+module Test.Cardano.Ledger.Core.Binary.CDDL (
+  -- * Base sized bytes
+  hash28,
+  hash32,
+  hash64,
+  bytes80,
+  hash448,
+
+  -- * Misc.
+  coin,
+  positive_coin,
+  address,
+  reward_account,
+  addr_keyhash,
+  pool_keyhash,
+  vrf_keyhash,
+  vkey,
+  vrf_vkey,
+  vrf_cert,
+  kes_vkey,
+  kes_signature,
+  signkeyKES,
+  signature,
+  big_int,
+  minInt64,
+  maxInt64,
+  negInt64,
+  posInt64,
+  nonZeroInt64,
+  int64,
+  positive_int,
+  maxWord32,
+  posWord32,
+  unit_interval,
+  nonnegative_interval,
+  distinct,
+  bounded_bytes,
+) where
 
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Semigroup ((<>))
 import qualified Data.Text as T
 import Data.Word (Word64)
+import GHC.Base (error)
 import GHC.Show (Show (show))
 import Text.Heredoc
 import Prelude (Integer)
 
---------------------------------------------------------------------------------
--- Base Types
---------------------------------------------------------------------------------
 coin :: Rule
 coin = "coin" =:= VUInt
 
@@ -94,15 +135,23 @@ pool_keyhash = "pool_keyhash" =:= hash28
 vrf_keyhash :: Rule
 vrf_keyhash = "vrf_keyhash" =:= hash32
 
---------------------------------------------------------------------------------
--- Crypto
---------------------------------------------------------------------------------
+mkHashSized :: Word64 -> Rule
+mkHashSized size = "hash" <> T.pack (show size) =:= VBytes `sized` size
 
 hash28 :: Rule
-hash28 = "hash28" =:= VBytes `sized` (28 :: Word64)
+hash28 = mkHashSized 28
 
 hash32 :: Rule
-hash32 = "hash32" =:= VBytes `sized` (32 :: Word64)
+hash32 = mkHashSized 32
+
+hash64 :: Rule
+hash64 = mkHashSized 64
+
+bytes80 :: Rule
+bytes80 = "bytes80" =:= VBytes `sized` (80 :: Word64)
+
+hash448 :: Rule
+hash448 = mkHashSized 448
 
 vkey :: Rule
 vkey = "vkey" =:= VBytes `sized` (32 :: Word64)
@@ -226,10 +275,16 @@ distinct x =
         |The type parameter must support .size, for example: bytes or uint
         |]
     $ "distinct_"
-      <> T.pack (show x)
+      <> show' x
         =:= (x `sized` (8 :: Word64))
         / (x `sized` (16 :: Word64))
         / (x `sized` (20 :: Word64))
         / (x `sized` (24 :: Word64))
         / (x `sized` (30 :: Word64))
         / (x `sized` (32 :: Word64))
+  where
+    show' :: Value s -> T.Text
+    show' = \case
+      VBytes -> T.pack "bytes"
+      VUInt -> T.pack "uint"
+      _ -> error "Unsupported Value for `distinct`"
