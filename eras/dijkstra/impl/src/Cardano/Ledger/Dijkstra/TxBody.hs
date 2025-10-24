@@ -283,13 +283,7 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
         withSTxBothLevels @l $ \case
           STopTx -> field (feeDijkstraTxBodyRawL .~) From
           SSubTx -> invalidField n
-      bodyFields sTxLevel n@3 =
-        case sTxLevel of
-          STopTx ->
-            ofield
-              (vldtDijkstraTxBodyRawL . invalidHereAfterL . toStrictMaybeL .~)
-              From
-          SSubTx -> invalidField n
+      bodyFields _ 3 = ofield (vldtDijkstraTxBodyRawL . invalidHereAfterL . toStrictMaybeL .~) From
       bodyFields _ 4 =
         fieldGuarded
           (emptyFailure "Certificates" "non-empty")
