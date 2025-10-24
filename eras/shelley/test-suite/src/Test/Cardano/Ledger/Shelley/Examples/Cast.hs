@@ -19,14 +19,14 @@ module Test.Cardano.Ledger.Shelley.Examples.Cast (
   aliceAddr,
   alicePtrAddr,
   alicePoolKeys,
-  alicePoolParams,
+  aliceStakePoolParams,
   aliceVRFKeyHash,
   bobPay,
   bobStake,
   bobSHK,
   bobAddr,
   bobPoolKeys,
-  bobPoolParams,
+  bobStakePoolParams,
   bobVRFKeyHash,
   carlPay,
   carlStake,
@@ -57,7 +57,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.State (
   PoolMetadata (..),
-  PoolParams (..),
+  StakePoolParams (..),
  )
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -120,18 +120,18 @@ alicePtrAddr :: Addr
 alicePtrAddr = mkAddr alicePHK (Ptr 10 minBound minBound)
 
 -- | Alice's stake pool parameters
-alicePoolParams :: PoolParams
-alicePoolParams =
-  PoolParams
-    { ppId = hashKey . vKey $ aikCold alicePoolKeys
-    , ppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf alicePoolKeys
-    , ppPledge = Coin 1
-    , ppCost = Coin 5
-    , ppMargin = unsafeBoundRational 0.1
-    , ppRewardAccount = RewardAccount Testnet aliceSHK
-    , ppOwners = Set.singleton $ (hashKey . vKey) aliceStake
-    , ppRelays = StrictSeq.empty
-    , ppMetadata =
+aliceStakePoolParams :: StakePoolParams
+aliceStakePoolParams =
+  StakePoolParams
+    { sppId = hashKey . vKey $ aikCold alicePoolKeys
+    , sppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf alicePoolKeys
+    , sppPledge = Coin 1
+    , sppCost = Coin 5
+    , sppMargin = unsafeBoundRational 0.1
+    , sppRewardAccount = RewardAccount Testnet aliceSHK
+    , sppOwners = Set.singleton $ (hashKey . vKey) aliceStake
+    , sppRelays = StrictSeq.empty
+    , sppMetadata =
         SJust $
           PoolMetadata
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
@@ -175,18 +175,18 @@ bobPoolKeys =
     (skCold, vkCold) = mkKeyPair (RawSeed 2 0 0 0 1)
 
 -- | Bob's stake pool parameters
-bobPoolParams :: PoolParams
-bobPoolParams =
-  PoolParams
-    { ppId = hashKey . vKey $ aikCold bobPoolKeys
-    , ppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf bobPoolKeys
-    , ppPledge = Coin 2
-    , ppCost = Coin 1
-    , ppMargin = unsafeBoundRational 0.1
-    , ppRewardAccount = RewardAccount Testnet bobSHK
-    , ppOwners = Set.singleton $ hashKey (vKey bobStake)
-    , ppRelays = StrictSeq.empty
-    , ppMetadata = SNothing
+bobStakePoolParams :: StakePoolParams
+bobStakePoolParams =
+  StakePoolParams
+    { sppId = hashKey . vKey $ aikCold bobPoolKeys
+    , sppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf bobPoolKeys
+    , sppPledge = Coin 2
+    , sppCost = Coin 1
+    , sppMargin = unsafeBoundRational 0.1
+    , sppRewardAccount = RewardAccount Testnet bobSHK
+    , sppOwners = Set.singleton $ hashKey (vKey bobStake)
+    , sppRelays = StrictSeq.empty
+    , sppMetadata = SNothing
     }
 
 -- | Bob's VRF key hash

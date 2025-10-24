@@ -120,37 +120,39 @@ poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = 
 poolRegistrationProp :: SourceSignalTarget (ShelleyPOOL era) -> Property
 poolRegistrationProp
   SourceSignalTarget
-    { signal = RegPool poolParams
+    { signal = RegPool stakePoolParams
     , source = sourceSt
     , target = targetSt
     } =
-    let hk = ppId poolParams
+    let hk = sppId stakePoolParams
      in case Map.lookup hk $ psStakePools sourceSt of
           Just sps ->
             conjoin
               [ counterexample
-                  "Pre-existing PoolParams must still be registered in pParams"
+                  "Pre-existing StakePoolParams must still be registered in pParams"
                   (eval (hk ∈ dom (psStakePools targetSt)) :: Bool)
               , counterexample
-                  "New PoolParams are registered in future Params map"
+                  "New StakePoolParams are registered in future Params map"
                   ( Map.lookup hk (psFutureStakePools targetSt)
-                      === Just (mkStakePoolState (sps ^. spsDepositL) poolParams)
+                      === Just (mkStakePoolState (sps ^. spsDepositL) stakePoolParams)
                   )
               , counterexample
-                  "PoolParams are removed in 'retiring'"
+                  "StakePoolParams are removed in 'retiring'"
                   (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
               ]
           Nothing ->
             -- first registration
             conjoin
               [ counterexample
-                  "New PoolParams are registered in pParams"
-                  ((stakePoolStateToPoolParams hk <$> Map.lookup hk (psStakePools targetSt)) === Just poolParams)
+                  "New StakePoolParams are registered in pParams"
+                  ( (stakePoolStateToStakePoolParams hk <$> Map.lookup hk (psStakePools targetSt))
+                      === Just stakePoolParams
+                  )
               , counterexample
-                  "PoolParams are not present in 'future pool params'"
+                  "StakePoolParams are not present in 'future pool params'"
                   (eval (hk ∉ dom (psFutureStakePools targetSt)) :: Bool)
               , counterexample
-                  "PoolParams are removed in 'retiring'"
+                  "StakePoolParams are removed in 'retiring'"
                   (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
               ]
 poolRegistrationProp _ = property ()

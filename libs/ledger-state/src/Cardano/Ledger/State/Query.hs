@@ -236,7 +236,7 @@ getSnapShotNoSharingM epochStateId snapShotType = do
     SnapShotM
       { ssStake = stake
       , ssDelegations = delegations
-      , ssPoolParams = poolParams
+      , ssStakePoolParams = poolParams
       }
 {-# INLINEABLE getSnapShotNoSharingM #-}
 
@@ -252,7 +252,7 @@ getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
           (foldMap (internsFromMap . ssStake) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherPoolParams =
-        interns (foldMap (internsFromMap . ssPoolParams) otherSnapShots)
+        interns (foldMap (internsFromMap . ssStakePoolParams) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherDelegations =
         interns (foldMap (internsFromMap . ssDelegations) otherSnapShots)
@@ -268,11 +268,11 @@ getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
     selectMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
       pure (internOtherStakes credential, snapShotStakeCoin)
-  poolParams <-
+  stakePoolParams <-
     selectMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do
       KeyHash keyHash <- getJust snapShotPoolKeyHashId
       pure (internOtherPoolParams keyHash, snapShotPoolParams)
-  let internPoolParams = interns (internsFromMap poolParams) . Keys.coerceKeyRole
+  let internPoolParams = interns (internsFromMap stakePoolParams) . Keys.coerceKeyRole
   delegations <-
     selectMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
       Credential credential <- getJust snapShotDelegationCredentialId
@@ -282,7 +282,7 @@ getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
     SnapShotM
       { ssStake = stake
       , ssDelegations = delegations
-      , ssPoolParams = poolParams
+      , ssStakePoolParams = stakePoolParams
       }
 {-# INLINEABLE getSnapShotWithSharingM #-}
 

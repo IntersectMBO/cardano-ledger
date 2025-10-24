@@ -521,10 +521,10 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
     markStake = VMap.fromMap (ls ^. instantStakeL . instantStakeCredentialsL)
     markDelegations :: VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
     markDelegations = VMap.fromMap $ getDelegs (ls ^. lsCertStateL)
-    markPoolParams :: VMap VB VB (KeyHash 'StakePool) PoolParams
+    markPoolParams :: VMap VB VB (KeyHash 'StakePool) StakePoolParams
     markPoolParams =
       VMap.fromMap $
-        Map.mapWithKey stakePoolStateToPoolParams $
+        Map.mapWithKey stakePoolStateToStakePoolParams $
           psStakePools $
             ls ^. lsCertStateL . certPStateL
 

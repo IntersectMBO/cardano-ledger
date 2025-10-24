@@ -350,23 +350,23 @@ firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF
 vrfKeyHash = hashVerKeyVRF @MockCrypto . vrfVerKey . mkVRFKeyPair @MockCrypto $ RawSeed 0 0 0 0 0
 
-mkPoolParameters :: KeyPair 'StakePool -> PoolParams
-mkPoolParameters keys =
-  PoolParams
-    { ppId = hashKey (vKey keys)
-    , ppVrf = vrfKeyHash
-    , ppPledge = Coin 0
-    , ppCost = Coin 0
-    , ppMargin = unsafeBoundRational 0
-    , ppRewardAccount = RewardAccount Testnet firstStakeKeyCred
-    , ppOwners = Set.singleton $ hashKey (vKey stakeKeyOne)
-    , ppRelays = StrictSeq.empty
-    , ppMetadata = SNothing
+mkStakePoolParams :: KeyPair 'StakePool -> StakePoolParams
+mkStakePoolParams keys =
+  StakePoolParams
+    { sppId = hashKey (vKey keys)
+    , sppVrf = vrfKeyHash
+    , sppPledge = Coin 0
+    , sppCost = Coin 0
+    , sppMargin = unsafeBoundRational 0
+    , sppRewardAccount = RewardAccount Testnet firstStakeKeyCred
+    , sppOwners = Set.singleton $ hashKey (vKey stakeKeyOne)
+    , sppRelays = StrictSeq.empty
+    , sppMetadata = SNothing
     }
 
 -- Create stake pool registration certs
 poolRegCerts :: [KeyPair 'StakePool] -> StrictSeq (TxCert ShelleyEra)
-poolRegCerts = StrictSeq.fromList . fmap (RegPoolTxCert . mkPoolParameters)
+poolRegCerts = StrictSeq.fromList . fmap (RegPoolTxCert . mkStakePoolParams)
 
 -- Create a transaction that registers stake pools.
 txRegStakePools :: TxIx -> [KeyPair 'StakePool] -> Tx ShelleyEra

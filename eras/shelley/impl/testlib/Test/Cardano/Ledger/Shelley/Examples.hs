@@ -23,7 +23,7 @@ module Test.Cardano.Ledger.Shelley.Examples (
   exampleStakeKey,
   exampleNewEpochState,
   examplePoolDistr,
-  examplePoolParams,
+  exampleStakePoolParams,
   exampleTxIns,
   exampleProposedPPUpdates,
   exampleByronAddress,
@@ -362,7 +362,7 @@ exampleCerts :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => StrictSeq (Tx
 exampleCerts =
   StrictSeq.fromList
     [ RegTxCert (keyToCredential exampleStakeKey)
-    , RegPoolTxCert examplePoolParams
+    , RegPoolTxCert exampleStakePoolParams
     , MirTxCert $
         MIRCert ReservesMIR $
           StakeAddressesMIR $
@@ -387,18 +387,18 @@ exampleProposedPPUpdates =
       (mkKeyHash 1)
       (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
 
-examplePoolParams :: PoolParams
-examplePoolParams =
-  PoolParams
-    { ppId = hashKey $ vKey $ mkDSIGNKeyPair 1
-    , ppVrf = exampleVrfVerKeyHash
-    , ppPledge = Coin 1
-    , ppCost = Coin 5
-    , ppMargin = unsafeBoundRational 0.1
-    , ppRewardAccount = exampleRewardAccount
-    , ppOwners = Set.singleton $ hashKey $ vKey exampleStakeKey
-    , ppRelays = StrictSeq.empty
-    , ppMetadata =
+exampleStakePoolParams :: StakePoolParams
+exampleStakePoolParams =
+  StakePoolParams
+    { sppId = hashKey $ vKey $ mkDSIGNKeyPair 1
+    , sppVrf = exampleVrfVerKeyHash
+    , sppPledge = Coin 1
+    , sppCost = Coin 5
+    , sppMargin = unsafeBoundRational 0.1
+    , sppRewardAccount = exampleRewardAccount
+    , sppOwners = Set.singleton $ hashKey $ vKey exampleStakeKey
+    , sppRelays = StrictSeq.empty
+    , sppMetadata =
         SJust $
           PoolMetadata
             { pmUrl = fromJust $ textToUrl 64 "consensus.pool"

@@ -437,9 +437,9 @@ instance Arbitrary Reward where
 -- Cardano.Ledger.PoolParams -------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Arbitrary PoolParams where
+instance Arbitrary StakePoolParams where
   arbitrary =
-    PoolParams
+    StakePoolParams
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary

@@ -165,11 +165,11 @@ getPoolParameters ::
   EraCertState era =>
   NewEpochState era ->
   Set (KeyHash 'StakePool) ->
-  Map (KeyHash 'StakePool) PoolParams
+  Map (KeyHash 'StakePool) StakePoolParams
 getPoolParameters = Map.restrictKeys . f
   where
     f nes =
-      Map.mapWithKey stakePoolStateToPoolParams $
+      Map.mapWithKey stakePoolStateToStakePoolParams $
         nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 {-# DEPRECATED getPoolParameters "In favor of `getStakePools`" #-}
 
@@ -273,16 +273,16 @@ getNonMyopicMemberRewards globals ss =
         then nonMyopicMemberRew pp rPot poolp s sigma t topPools hitRateEst
         else mempty
       where
-        s = (toShare . ppPledge) poolp
+        s = (toShare . sppPledge) poolp
         checkPledge pool =
           let ostake = sumPoolOwnersStake pool stake
-           in ppPledge poolp <= ostake
+           in sppPledge poolp <= ostake
 
-sumPoolOwnersStake :: PoolParams -> EB.Stake -> Coin
+sumPoolOwnersStake :: StakePoolParams -> EB.Stake -> Coin
 sumPoolOwnersStake pool stake =
   let getStakeFor o =
         maybe mempty fromCompact $ VMap.lookup (KeyHashObj o) (EB.unStake stake)
-   in foldMap' getStakeFor (ppOwners pool)
+   in foldMap' getStakeFor (sppOwners pool)
 
 -- | Create a current snapshot of the ledger state.
 --
@@ -385,9 +385,9 @@ getRewardInfoPools globals ss =
       RewardInfoPool
         { stake = pstake
         , ownerStake = ostake
-        , ownerPledge = ppPledge poolp
-        , margin = ppMargin poolp
-        , cost = ppCost poolp
+        , ownerPledge = sppPledge poolp
+        , margin = sppMargin poolp
+        , cost = sppCost poolp
         , performanceEstimate =
             unPerformanceEstimate $ percentile' $ histLookup key
         }

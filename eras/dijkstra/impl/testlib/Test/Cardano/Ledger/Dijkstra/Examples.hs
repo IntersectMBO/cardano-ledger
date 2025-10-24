@@ -54,8 +54,8 @@ import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   examplePayKey,
-  examplePoolParams,
   exampleStakeKey,
+  exampleStakePoolParams,
   keyToCredential,
   mkKeyHash,
   mkScriptHash,
@@ -120,5 +120,5 @@ exampleTxBodyDijkstra =
 exampleDijkstraCerts :: OSet.OSet (DijkstraTxCert era)
 exampleDijkstraCerts =
   OSet.fromList -- TODO should I add the new certs here?
-    [ DijkstraTxCertPool (RegPool examplePoolParams)
+    [ DijkstraTxCertPool (RegPool exampleStakePoolParams)
     ]

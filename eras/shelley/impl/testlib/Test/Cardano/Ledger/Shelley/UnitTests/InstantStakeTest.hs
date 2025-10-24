@@ -25,8 +25,8 @@ import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-ppIdL :: Lens' PoolParams (KeyHash 'StakePool)
-ppIdL = lens ppId (\x y -> x {ppId = y})
+sppIdL :: Lens' StakePoolParams (KeyHash 'StakePool)
+sppIdL = lens sppId (\x y -> x {sppId = y})
 
 -- | Generate an arbitrary value and overwrite the specified value using the supplied lens.
 arbitraryLens :: Arbitrary a => Lens' a b -> b -> Gen a
@@ -36,10 +36,10 @@ arbitraryLens l b = (l .~ b) <$> arbitrary
 
 instantStakeIncludesRewards :: forall era. ShelleyEraImp era => Gen Property
 instantStakeIncludesRewards = do
-  (pool1, pool2) <- arbitrary @(TupleN 2 PoolParams)
+  (pool1, pool2) <- arbitrary @(TupleN 2 StakePoolParams)
   let
-    poolId1 = pool1 ^. ppIdL
-    poolId2 = pool2 ^. ppIdL
+    poolId1 = pool1 ^. sppIdL
+    poolId2 = pool2 ^. sppIdL
   let registerAccount poolId accounts = do
         stakingCredential <- arbitrary
         ptr <- arbitrary

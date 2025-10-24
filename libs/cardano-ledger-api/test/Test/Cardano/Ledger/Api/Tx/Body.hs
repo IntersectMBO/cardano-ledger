@@ -35,12 +35,12 @@ totalTxDeposits pp dpstate txb =
   where
     certs = toList (txb ^. certsTxBodyL)
     numKeys = length $ filter isRegStakeTxCert certs
-    regpools = Map.mapWithKey stakePoolStateToPoolParams $ psStakePools (dpstate ^. certPStateL)
-    accum (!pools, !ans) (RegPoolTxCert poolparam) =
+    regpools = Map.mapWithKey stakePoolStateToStakePoolParams $ psStakePools (dpstate ^. certPStateL)
+    accum (!pools, !ans) (RegPoolTxCert stakePoolParams) =
       -- We don't pay a deposit on a pool that is already registered
-      if Map.member (ppId poolparam) pools
+      if Map.member (sppId stakePoolParams) pools
         then (pools, ans)
-        else (Map.insert (ppId poolparam) poolparam pools, ans <+> pp ^. ppPoolDepositL)
+        else (Map.insert (sppId stakePoolParams) stakePoolParams pools, ans <+> pp ^. ppPoolDepositL)
     accum ans _ = ans
 
 keyTxRefunds ::
@@ -114,7 +114,7 @@ genTxBodyFrom certState (UTxO u) = do
   deRegKeys <- sublistOf (Map.keys (certState ^. certPStateL . psStakePoolsL))
   let deReg =
         Map.elems $
-          Map.mapWithKey stakePoolStateToPoolParams $
+          Map.mapWithKey stakePoolStateToStakePoolParams $
             Map.restrictKeys (certState ^. certPStateL . psStakePoolsL) (Set.fromList deRegKeys)
   certs <-
     shuffle $

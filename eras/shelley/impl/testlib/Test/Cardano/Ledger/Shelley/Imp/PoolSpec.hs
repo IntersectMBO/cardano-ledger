@@ -31,7 +31,7 @@ spec = describe "POOL" $ do
       minPoolCost <- getsPParams ppMinPoolCostL
       tooLowCost <- Coin <$> choose (0, unCoin minPoolCost)
       pps <- poolParams kh vrf
-      let tx = registerPoolTx (pps & ppCostL .~ tooLowCost)
+      let tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
       submitFailingTx
         tx
         [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
@@ -61,7 +61,7 @@ spec = describe "POOL" $ do
       let metadata = PoolMetadata url metadataHash
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
       pps <- poolParams kh vrf
-      let tx = registerPoolTx (pps & ppMetadataL .~ SJust metadata)
+      let tx = registerPoolTx (pps & sppMetadataL .~ SJust metadata)
       if pvMajor pv < natVersion @5
         then
           submitTx_ tx
@@ -342,8 +342,8 @@ spec = describe "POOL" $ do
     poolParams ::
       KeyHash 'StakePool ->
       VRFVerKeyHash 'StakePoolVRF ->
-      ImpTestM era PoolParams
+      ImpTestM era StakePoolParams
     poolParams kh vrf = do
       pps <- registerRewardAccount >>= freshPoolParams kh
-      pure $ pps & ppVrfL .~ vrf
+      pure $ pps & sppVrfL .~ vrf
     getPState = getsNES @era $ nesEsL . esLStateL . lsCertStateL . certPStateL

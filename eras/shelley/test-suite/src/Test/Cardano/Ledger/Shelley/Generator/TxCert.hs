@@ -353,9 +353,9 @@ genStakePool ::
   KeyPairs ->
   -- | Minimum pool cost Protocol Param
   Coin ->
-  Gen (PoolParams, KeyPair 'StakePool)
+  Gen (StakePoolParams, KeyPair 'StakePool)
 genStakePool poolKeys skeys (Coin minPoolCost) =
-  mkPoolParams
+  mkStakePoolParams
     <$> QC.elements poolKeys
     <*> ( Coin -- pledge
             <$> QC.frequency
@@ -369,17 +369,17 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
   where
     getAnyStakeKey :: KeyPairs -> Gen (VKey 'Staking)
     getAnyStakeKey keys = vKey . snd <$> QC.elements keys
-    mkPoolParams ::
+    mkStakePoolParams ::
       AllIssuerKeys c 'StakePool ->
       Coin ->
       Coin ->
       Natural ->
       VKey 'Staking ->
-      (PoolParams, KeyPair 'StakePool)
-    mkPoolParams allPoolKeys pledge cost marginPercent acntKey =
+      (StakePoolParams, KeyPair 'StakePool)
+    mkStakePoolParams allPoolKeys pledge cost marginPercent acntKey =
       let interval = unsafeBoundRational $ fromIntegral marginPercent % 100
-          pps =
-            PoolParams
+          spps =
+            StakePoolParams
               (hashKey . vKey $ aikCold allPoolKeys)
               (hashVerKeyVRF @c . vrfVerKey $ aikVrf allPoolKeys)
               pledge
@@ -389,7 +389,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
               Set.empty
               StrictSeq.empty
               SNothing
-       in (pps, aikCold allPoolKeys)
+       in (spps, aikCold allPoolKeys)
 
 -- | Generate `RegPool` and the key witness.
 genRegPool ::

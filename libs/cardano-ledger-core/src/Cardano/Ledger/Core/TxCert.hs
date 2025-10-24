@@ -32,7 +32,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), asWitness)
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.State.StakePool (PoolParams (ppId))
+import Cardano.Ledger.State.StakePool (StakePoolParams (sppId))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Kind (Type)
@@ -76,8 +76,8 @@ class
   -- | Return a ScriptHash for certificate types that require a witness
   getScriptWitnessTxCert :: TxCert era -> Maybe ScriptHash
 
-  mkRegPoolTxCert :: PoolParams -> TxCert era
-  getRegPoolTxCert :: TxCert era -> Maybe PoolParams
+  mkRegPoolTxCert :: StakePoolParams -> TxCert era
+  getRegPoolTxCert :: TxCert era -> Maybe StakePoolParams
 
   mkRetirePoolTxCert :: KeyHash 'StakePool -> EpochNo -> TxCert era
   getRetirePoolTxCert :: TxCert era -> Maybe (KeyHash 'StakePool, EpochNo)
@@ -108,7 +108,7 @@ class
     f (TxCert era) ->
     Coin
 
-pattern RegPoolTxCert :: EraTxCert era => PoolParams -> TxCert era
+pattern RegPoolTxCert :: EraTxCert era => StakePoolParams -> TxCert era
 pattern RegPoolTxCert d <- (getRegPoolTxCert -> Just d)
   where
     RegPoolTxCert d = mkRegPoolTxCert d
@@ -130,7 +130,7 @@ getPoolCertTxCert = \case
 
 data PoolCert
   = -- | A stake pool registration certificate.
-    RegPool !PoolParams
+    RegPool !StakePoolParams
   | -- | A stake pool retirement certificate.
     RetirePool !(KeyHash 'StakePool) !EpochNo
   deriving (Show, Generic, Eq, Ord)
@@ -151,14 +151,15 @@ instance ToJSON PoolCert where
     RegPool poolParams ->
       kindObject "RegPool" ["poolParams" .= toJSON poolParams]
     RetirePool poolId epochNo ->
-      kindObject "RetirePool" $
+      kindObject
+        "RetirePool"
         [ "poolId" .= toJSON poolId
         , "epochNo" .= toJSON epochNo
         ]
 
 poolCertKeyHashWitness :: PoolCert -> KeyHash 'Witness
 poolCertKeyHashWitness = \case
-  RegPool poolParams -> asWitness $ ppId poolParams
+  RegPool stakePoolParams -> asWitness $ sppId stakePoolParams
   RetirePool poolId _ -> asWitness poolId
 
 -- | Check if supplied TxCert is a stake registering certificate

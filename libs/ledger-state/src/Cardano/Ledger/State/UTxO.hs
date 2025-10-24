@@ -275,12 +275,12 @@ instance AggregateStat PoolParamsStats where
   aggregateStat PoolParamsStats {..} =
     mempty {gsCredentialStaking = ppsRewardAccount, gsKeyHashStakePool = ppsPoolId}
 
-countPoolParamsStats :: PoolParams -> PoolParamsStats
-countPoolParamsStats PoolParams {..} =
+countPoolParamsStats :: StakePoolParams -> PoolParamsStats
+countPoolParamsStats StakePoolParams {..} =
   PoolParamsStats
-    { ppsPoolId = statSingleton ppId
-    , ppsRewardAccount = statSingleton (raCredential ppRewardAccount)
-    , ppsOwners = statSet ppOwners
+    { ppsPoolId = statSingleton sppId
+    , ppsRewardAccount = statSingleton (raCredential sppRewardAccount)
+    , ppsOwners = statSet sppOwners
     }
 
 data RewardUpdateStats = RewardUpdateStats
@@ -489,8 +489,8 @@ countPStateStats PState {..} =
           <> statMapKeys psFutureStakePools
           <> statMapKeys psRetiring
     , pssPoolParamsStats =
-        foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToPoolParams psStakePools)
-          <> foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToPoolParams psFutureStakePools)
+        foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToStakePoolParams psStakePools)
+          <> foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToStakePoolParams psFutureStakePools)
     }
 
 data LedgerStateStats = LedgerStateStats

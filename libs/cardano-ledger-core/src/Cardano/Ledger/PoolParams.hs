@@ -7,7 +7,7 @@
 -- convenient access.
 module Cardano.Ledger.PoolParams
   {-# DEPRECATED "Use `Cardano.Ledger.State` instead." #-} (
-  PoolParams (..),
+  StakePoolParams (..),
   PoolMetadata (..),
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
@@ -16,8 +16,8 @@ module Cardano.Ledger.PoolParams
 
 import Cardano.Ledger.State.StakePool (
   PoolMetadata (..),
-  PoolParams (..),
   SizeOfPoolOwners (..),
   SizeOfPoolRelays (..),
+  StakePoolParams (..),
   StakePoolRelay (..),
  )

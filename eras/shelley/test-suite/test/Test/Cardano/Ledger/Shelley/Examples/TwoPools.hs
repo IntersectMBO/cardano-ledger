@@ -79,8 +79,8 @@ import Cardano.Ledger.Slot (
 import Cardano.Ledger.State (
   IndividualPoolStake (..),
   PoolDistr (..),
-  PoolParams (..),
   SnapShot (..),
+  StakePoolParams (..),
   UTxO,
   maxPool,
  )
@@ -170,11 +170,11 @@ aliceCoinEx1 =
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-alicePoolParams' :: PoolParams
-alicePoolParams' = Cast.alicePoolParams {ppRewardAccount = RewardAccount Testnet Cast.carlSHK}
+aliceStakePoolParams' :: StakePoolParams
+aliceStakePoolParams' = Cast.aliceStakePoolParams {sppRewardAccount = RewardAccount Testnet Cast.carlSHK}
 
-bobPoolParams' :: PoolParams
-bobPoolParams' = Cast.bobPoolParams {ppRewardAccount = RewardAccount Testnet Cast.carlSHK}
+bobStakePoolParams' :: StakePoolParams
+bobStakePoolParams' = Cast.bobStakePoolParams {sppRewardAccount = RewardAccount Testnet Cast.carlSHK}
 
 txbodyEx1 :: TxBody ShelleyEra
 txbodyEx1 =
@@ -185,8 +185,8 @@ txbodyEx1 =
         [ RegTxCert Cast.aliceSHK
         , RegTxCert Cast.bobSHK
         , RegTxCert Cast.carlSHK
-        , RegPoolTxCert alicePoolParams'
-        , RegPoolTxCert bobPoolParams'
+        , RegPoolTxCert aliceStakePoolParams'
+        , RegPoolTxCert bobStakePoolParams'
         , DelegStakeTxCert Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys)
         , DelegStakeTxCert Cast.bobSHK (aikColdKeyHash Cast.bobPoolKeys)
         , DelegStakeTxCert Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys)
@@ -237,11 +237,11 @@ expectedStEx1 =
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 1))
     . C.newStakeCred Cast.carlSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 2))
-    . C.regPool alicePoolParams'
-    . C.regPool bobPoolParams'
-    . C.delegation Cast.aliceSHK (ppId alicePoolParams')
-    . C.delegation Cast.bobSHK (ppId bobPoolParams')
-    . C.delegation Cast.carlSHK (ppId alicePoolParams')
+    . C.regPool aliceStakePoolParams'
+    . C.regPool bobStakePoolParams'
+    . C.delegation Cast.aliceSHK (sppId aliceStakePoolParams')
+    . C.delegation Cast.bobSHK (sppId bobStakePoolParams')
+    . C.delegation Cast.carlSHK (sppId aliceStakePoolParams')
     $ initStTwoPools
 
 -- === Block 1, Slot 10, Epoch 0
@@ -324,8 +324,8 @@ snapEx3 =
         , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]
     , ssPoolParams =
-        [ (aikColdKeyHash Cast.alicePoolKeys, alicePoolParams')
-        , (aikColdKeyHash Cast.bobPoolKeys, bobPoolParams')
+        [ (aikColdKeyHash Cast.alicePoolKeys, aliceStakePoolParams')
+        , (aikColdKeyHash Cast.bobPoolKeys, bobStakePoolParams')
         ]
     }
 
@@ -628,7 +628,7 @@ alicePoolRewards :: Coin
 alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
     appPerf = mkApparentPerformance (ppEx @ShelleyEra ^. ppDL) alicePoolStake 2 3
-    pledge = unCoin $ ppPledge alicePoolParams'
+    pledge = unCoin $ sppPledge aliceStakePoolParams'
     pr = pledge % circulation
     maxP = maxPool @ShelleyEra ppEx bigR aliceStakeShareTot pr
 
@@ -636,7 +636,7 @@ carlMemberRewardsFromAlice :: Coin
 carlMemberRewardsFromAlice =
   memberRew
     alicePoolRewards
-    alicePoolParams'
+    aliceStakePoolParams'
     (StakeShare $ unCoin carlInitCoin % circulation)
     (StakeShare aliceStakeShareTot)
 
@@ -644,7 +644,7 @@ carlLeaderRewardsFromAlice :: Coin
 carlLeaderRewardsFromAlice =
   leaderRew
     alicePoolRewards
-    alicePoolParams'
+    aliceStakePoolParams'
     (StakeShare $ unCoin aliceCoinEx1 % circulation)
     (StakeShare aliceStakeShareTot)
 
@@ -652,7 +652,7 @@ bobPoolRewards :: Coin
 bobPoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
     appPerf = mkApparentPerformance (ppEx @ShelleyEra ^. ppDL) bobPoolStake 1 3
-    pledge = unCoin $ ppPledge bobPoolParams'
+    pledge = unCoin $ sppPledge bobStakePoolParams'
     pr = pledge % circulation
     maxP = maxPool @ShelleyEra ppEx bigR bobStakeShareTot pr
 
@@ -660,7 +660,7 @@ carlLeaderRewardsFromBob :: Coin
 carlLeaderRewardsFromBob =
   leaderRew
     bobPoolRewards
-    bobPoolParams'
+    bobStakePoolParams'
     (StakeShare $ unCoin bobInitCoin % circulation)
     (StakeShare bobStakeShareTot)
 

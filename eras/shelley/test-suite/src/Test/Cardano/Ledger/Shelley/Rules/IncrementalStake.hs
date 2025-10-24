@@ -203,7 +203,7 @@ stakeDistr u ds ps =
   SnapShot
     (Stake $ VMap.fromMap (eval (dom activeDelegs ◁ stakeRelation)))
     (VMap.fromMap delegs)
-    (VMap.fromMap $ Map.mapWithKey stakePoolStateToPoolParams poolState)
+    (VMap.fromMap $ Map.mapWithKey stakePoolStateToStakePoolParams poolState)
   where
     accountsMap = ds ^. accountsL . accountsMapL
     rewards' :: Map.Map (Credential 'Staking) (CompactForm Coin)

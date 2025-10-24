@@ -781,13 +781,13 @@ getShelleyTxCertCredential = \case
       ShelleyDelegCert dk _ -> Just dk
   ShelleyTxCertPool pc ->
     case pc of
-      RegPool PoolParams {..} -> Just . coerceKeyRole $ KeyHashObj ppId
+      RegPool StakePoolParams {sppId} -> Just . coerceKeyRole $ KeyHashObj sppId
       RetirePool kh _ -> Just . coerceKeyRole $ KeyHashObj kh
   ShelleyTxCertGenesisDeleg _g -> Nothing
   ShelleyTxCertMir _m -> Nothing
 
 getConwayTxCertCredential :: ConwayTxCert era -> Maybe (Credential 'Staking)
-getConwayTxCertCredential (ConwayTxCertPool (RegPool PoolParams {..})) = Just . coerceKeyRole $ KeyHashObj ppId
+getConwayTxCertCredential (ConwayTxCertPool (RegPool StakePoolParams {..})) = Just . coerceKeyRole $ KeyHashObj sppId
 getConwayTxCertCredential (ConwayTxCertPool (RetirePool kh _)) = Just . coerceKeyRole $ KeyHashObj kh
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegCert _ _)) = Nothing
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayUnRegCert cred _)) = Just cred

@@ -67,7 +67,7 @@ module Test.Cardano.Ledger.Generic.GenState (
   genFreshCredential,
   genFreshRegCred,
   genPool,
-  genPoolParams,
+  genStakePoolParams,
   genRewards,
   genNewPool,
   genRetirementHash,
@@ -260,7 +260,7 @@ data GenState era = GenState
   , gsModel :: !(ModelNewEpochState era)
   , gsInitialUtxo :: !(Map TxIn (TxOut era))
   , gsInitialAccounts :: !(Map (Credential 'Staking) (AccountState era))
-  , gsInitialPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  , gsInitialStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
   , gsInitialPoolDistr ::
       !(Map (KeyHash 'StakePool) IndividualPoolStake)
   , -- Stable fields are stable from initialization to the end of the generation process
@@ -420,12 +420,12 @@ modifyGenStateStablePools ::
   GenRS era ()
 modifyGenStateStablePools f = modify (\gs -> gs {gsStablePools = f (gsStablePools gs)})
 
-modifyGenStateInitialPoolParams ::
-  ( Map.Map (KeyHash 'StakePool) PoolParams ->
-    Map.Map (KeyHash 'StakePool) PoolParams
+modifyGenStateInitialStakePoolParams ::
+  ( Map.Map (KeyHash 'StakePool) StakePoolParams ->
+    Map.Map (KeyHash 'StakePool) StakePoolParams
   ) ->
   GenRS era ()
-modifyGenStateInitialPoolParams f = modify (\gs -> gs {gsInitialPoolParams = f (gsInitialPoolParams gs)})
+modifyGenStateInitialStakePoolParams f = modify (\gs -> gs {gsInitialStakePoolParams = f (gsInitialStakePoolParams gs)})
 
 modifyGenStateInitialPoolDistr ::
   ( Map.Map (KeyHash 'StakePool) IndividualPoolStake ->
@@ -675,7 +675,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         Map.empty
     -- In a wellformed LedgerState the deposited equals the obligation
     deposited = totalObligation dpstate (utxostate ^. utxosGovStateL)
-    pools = gsInitialPoolParams gstate
+    pools = gsInitialStakePoolParams gstate
     pp = mPParams (gsModel gstate)
     poolDeposit = pp ^. ppPoolDepositCompactL
 
@@ -943,20 +943,20 @@ genFreshRegCred tag = do
   modifyGenStateAvoidCred (Set.insert cred)
   pure cred
 
-genPoolParams ::
+genStakePoolParams ::
   Reflect era =>
   KeyHash 'StakePool ->
-  GenRS era PoolParams
-genPoolParams ppId = do
-  ppVrf <- lift arbitrary
-  ppPledge <- lift genPositiveVal
-  ppCost <- lift genPositiveVal
-  ppMargin <- lift arbitrary
-  ppRewardAccount <- RewardAccount Testnet <$> genFreshRegCred Rewarding
-  let ppOwners = mempty
-  let ppRelays = mempty
-  let ppMetadata = SNothing
-  pure PoolParams {..}
+  GenRS era StakePoolParams
+genStakePoolParams sppId = do
+  sppVrf <- lift arbitrary
+  sppPledge <- lift genPositiveVal
+  sppCost <- lift genPositiveVal
+  sppMargin <- lift arbitrary
+  sppRewardAccount <- RewardAccount Testnet <$> genFreshRegCred Rewarding
+  let sppOwners = mempty
+  let sppRelays = mempty
+  let sppMetadata = SNothing
+  pure StakePoolParams {..}
 
 -- | Generate a 'n' fresh credentials (ones not in the set 'old'). We get 'tries' chances,
 --   if it doesn't work in 'tries' attempts then quit with an error. Better to raise an error
@@ -985,16 +985,16 @@ genNewPool ::
   GenRS
     era
     ( KeyHash 'StakePool
-    , PoolParams
+    , StakePoolParams
     , IndividualPoolStake
     )
 genNewPool = do
   poolId <- genFreshKeyHash
-  poolParam <- genPoolParams poolId
+  stakePoolParams <- genStakePoolParams poolId
   percent <- lift $ choose (0, 1 :: Float)
-  let stake = IndividualPoolStake (toRational percent) mempty (ppVrf poolParam)
+  let stake = IndividualPoolStake (toRational percent) mempty (sppVrf stakePoolParams)
   modifyGenStateAvoidKey (Set.insert (coerceKeyRole poolId))
-  pure (poolId, poolParam, stake)
+  pure (poolId, stakePoolParams, stake)
 
 -- | Initialize (or overwrite if they are not empty) the Stable fields. It is
 --   intended that this be called just once at the beginning of a trace generation.
@@ -1003,11 +1003,12 @@ initStableFields = do
   GenEnv {geSize} <- ask
   hashes <- replicateM (maxStablePools geSize) $ do
     pp <- asks gePParams
-    (kh, poolParams, ips) <- genNewPool
+    (kh, stakePoolParams, ips) <- genNewPool
     modifyGenStateStablePools (Set.insert kh)
-    modifyGenStateInitialPoolParams (Map.insert kh poolParams)
+    modifyGenStateInitialStakePoolParams (Map.insert kh stakePoolParams)
     modifyGenStateInitialPoolDistr (Map.insert kh ips)
-    modifyModelStakePools (Map.insert kh $ mkStakePoolState (pp ^. ppPoolDepositCompactL) poolParams)
+    modifyModelStakePools
+      (Map.insert kh $ mkStakePoolState (pp ^. ppPoolDepositCompactL) stakePoolParams)
     return kh
 
   -- This incantation gets a list of fresh (not previously generated) Credential
@@ -1076,7 +1077,7 @@ genRetirementHash = do
       (poolid, poolparams, stake) <- genNewPool
 
       -- add the Pool to the initial state
-      modifyGenStateInitialPoolParams (Map.insert poolid poolparams)
+      modifyGenStateInitialStakePoolParams (Map.insert poolid poolparams)
       modifyGenStateInitialPoolDistr (Map.insert poolid stake)
 
       -- add the Pool to the Model
@@ -1089,21 +1090,21 @@ genRetirementHash = do
 genPool ::
   forall era.
   Reflect era =>
-  GenRS era (KeyHash 'StakePool, PoolParams)
+  GenRS era (KeyHash 'StakePool, StakePoolParams)
 genPool = frequencyT [(10, genNew), (90, pickExisting)]
   where
     genNew = do
-      (kh, pp, ips) <- genNewPool
+      (kh, spp, ips) <- genNewPool
       pparams <- gets (mPParams . gsModel)
       -- add pool to initial state
-      modifyGenStateInitialPoolParams (Map.insert kh pp)
+      modifyGenStateInitialStakePoolParams (Map.insert kh spp)
       modifyGenStateInitialPoolDistr (Map.insert kh ips)
       -- update the model
-      modifyModelStakePools (Map.insert kh $ mkStakePoolState (pparams ^. ppPoolDepositCompactL) pp)
-      return (kh, pp)
+      modifyModelStakePools (Map.insert kh $ mkStakePoolState (pparams ^. ppPoolDepositCompactL) spp)
+      return (kh, spp)
     pickExisting = do
       psStakePools <- gets (mStakePools . gsModel)
       avoidKey <- gets gsAvoidKey
       lift (genMapElemWhere psStakePools 10 (\kh _ -> kh `Set.notMember` avoidKey)) >>= \case
         Nothing -> genNew
-        Just (kh, pp) -> pure (kh, stakePoolStateToPoolParams kh pp)
+        Just (kh, sps) -> pure (kh, stakePoolStateToStakePoolParams kh sps)

@@ -248,7 +248,7 @@ conwayTxCertKey (ConwayTxCertDeleg (ConwayRegCert x _)) = StakeKey x
 conwayTxCertKey (ConwayTxCertDeleg (ConwayUnRegCert x _)) = StakeKey x
 conwayTxCertKey (ConwayTxCertDeleg (ConwayDelegCert x _)) = StakeKey x
 conwayTxCertKey (ConwayTxCertDeleg (ConwayRegDelegCert x _ _)) = StakeKey x
-conwayTxCertKey (ConwayTxCertPool (RegPool x)) = PoolKey (ppId x)
+conwayTxCertKey (ConwayTxCertPool (RegPool x)) = PoolKey (sppId x)
 conwayTxCertKey (ConwayTxCertPool (RetirePool x _)) = PoolKey x
 conwayTxCertKey (ConwayTxCertGov (ConwayRegDRep x _ _)) = DRepKey x
 conwayTxCertKey (ConwayTxCertGov (ConwayUnRegDRep x _)) = DRepKey x
@@ -260,7 +260,7 @@ shelleyTxCertKey :: ShelleyTxCert era -> CertKey
 shelleyTxCertKey (ShelleyTxCertDelegCert (ShelleyRegCert x)) = StakeKey x
 shelleyTxCertKey (ShelleyTxCertDelegCert (ShelleyUnRegCert x)) = StakeKey x
 shelleyTxCertKey (ShelleyTxCertDelegCert (ShelleyDelegCert x _)) = StakeKey x
-shelleyTxCertKey (ShelleyTxCertPool (RegPool x)) = PoolKey (ppId x)
+shelleyTxCertKey (ShelleyTxCertPool (RegPool x)) = PoolKey (sppId x)
 shelleyTxCertKey (ShelleyTxCertPool (RetirePool x _)) = PoolKey x
 shelleyTxCertKey (ShelleyTxCertGenesisDeleg (GenesisDelegCert a _ _)) = GenesisKey a
 shelleyTxCertKey (ShelleyTxCertMir (MIRCert p _)) = MirKey p

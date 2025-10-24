@@ -49,7 +49,7 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.State (
   EraCertState (..),
-  PoolParams (..),
+  StakePoolParams (..),
   dsGenDelegs,
   lookupDepositDState,
   psStakePoolsL,
@@ -260,7 +260,7 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
       where
         accum (RegPoolTxCert pool) !ans =
           Set.union
-            (Set.map asWitness (ppOwners pool))
+            (Set.map asWitness (sppOwners pool))
             ans
         accum _cert ans = ans
     certAuthors :: Set (KeyHash 'Witness)

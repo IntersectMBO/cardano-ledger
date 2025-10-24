@@ -224,7 +224,7 @@ emptySetupArgs =
     }
 
 data PoolInfo = PoolInfo
-  { params :: PoolParams
+  { params :: StakePoolParams
   , coldKey :: KeyPair 'StakePool
   , ownerKey :: KeyPair 'Staking
   , ownerStake :: Coin
@@ -266,16 +266,16 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   -- here we are forcing the pool to meet the pledeg, later we may want flexibility
   let members = Map.insert (KeyHashObj . hashKey . vKey $ ownerKey) ownerStake members'
       params =
-        PoolParams
-          { ppId = hashKey . vKey $ coldKey
-          , ppVrf = hashVerKeyVRF @MockCrypto $ snd vrfKey
-          , ppPledge = pledge
-          , ppCost = cost
-          , ppMargin = margin
-          , ppRewardAccount = RewardAccount Testnet . KeyHashObj . hashKey . vKey $ rewardKey
-          , ppOwners = Set.fromList [hashKey $ vKey ownerKey]
-          , ppRelays = StrictSeq.empty
-          , ppMetadata = SNothing
+        StakePoolParams
+          { sppId = hashKey . vKey $ coldKey
+          , sppVrf = hashVerKeyVRF @MockCrypto $ snd vrfKey
+          , sppPledge = pledge
+          , sppCost = cost
+          , sppMargin = margin
+          , sppRewardAccount = RewardAccount Testnet . KeyHashObj . hashKey . vKey $ rewardKey
+          , sppOwners = Set.fromList [hashKey $ vKey ownerKey]
+          , sppRelays = StrictSeq.empty
+          , sppMetadata = SNothing
           }
   pure $ PoolInfo {params, coldKey, ownerKey, ownerStake, rewardKey, members}
 
@@ -292,10 +292,10 @@ genRewardPPs = do
   where
     g xs = unsafeBoundRational <$> elements xs
 
-genBlocksMade :: [PoolParams] -> Gen BlocksMade
+genBlocksMade :: [StakePoolParams] -> Gen BlocksMade
 genBlocksMade pools = BlocksMade . Map.fromList <$> mapM f pools
   where
-    f p = (ppId p,) <$> genNatural 0 maxPoolBlocks
+    f p = (sppId p,) <$> genNatural 0 maxPoolBlocks
 
 -- Properties --
 
@@ -322,11 +322,11 @@ rewardsBoundedByPot _ = property $ do
       delegs = fold $
         flip fmap pools $
           \PoolInfo {params, members} ->
-            Map.fromList $ (,ppId params) <$> Map.keys members
+            Map.fromList $ (,sppId params) <$> Map.keys members
       rewardAccounts = Set.fromList $ Map.keys delegs
-      poolParams =
+      stakePoolParams =
         VMap.fromList
-          [(ppId params, params) | PoolInfo {params} <- pools]
+          [(sppId params, params) | PoolInfo {params} <- pools]
       totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
       (RewardAns rs _) =
@@ -336,7 +336,7 @@ rewardsBoundedByPot _ = property $ do
             bs
             rewardPot
             rewardAccounts
-            poolParams
+            stakePoolParams
             (Stake (VMap.fromMap (toCompactCoinError <$> stake)))
             (VMap.fromMap delegs)
             totalLovelace
@@ -349,8 +349,8 @@ rewardsBoundedByPot _ = property $ do
           , show rewardPot
           , "\nrewardAccounts\n"
           , show rewardAccounts
-          , "\npoolParams\n"
-          , show poolParams
+          , "\nstakePoolParams\n"
+          , show stakePoolParams
           , "\nstake\n"
           , show stake
           , "\ndelegs\n"
@@ -375,7 +375,7 @@ rewardOnePool ::
   Coin ->
   Natural ->
   Natural ->
-  PoolParams ->
+  StakePoolParams ->
   Stake ->
   Rational ->
   Rational ->
@@ -399,8 +399,8 @@ rewardOnePool
         Set.foldl'
           (\c o -> maybe c (mappend c . fromCompact) $ VMap.lookup (KeyHashObj o) stake)
           mempty
-          (ppOwners pool)
-      Coin pledge = ppPledge pool
+          (sppOwners pool)
+      Coin pledge = sppPledge pool
       pr = fromIntegral pledge % fromIntegral totalStake
       Coin maxP =
         if pledge <= ostake
@@ -422,7 +422,7 @@ rewardOnePool
           | (hk, c) <- VMap.toAscList stake
           , notPoolOwner hk
           ]
-      notPoolOwner (KeyHashObj hk) = hk `Set.notMember` ppOwners pool
+      notPoolOwner (KeyHashObj hk) = hk `Set.notMember` sppOwners pool
       notPoolOwner (ScriptHashObj _) = True
       lReward =
         leaderRew
@@ -435,7 +435,7 @@ rewardOnePool
           then Map.insertWith (<>)
           else Map.insert
       potentialRewards =
-        f (raCredential $ ppRewardAccount pool) lReward mRewards
+        f (raCredential $ sppRewardAccount pool) lReward mRewards
       potentialRewards' =
         if hardforkBabbageForgoRewardPrefilter pv
           then potentialRewards
@@ -449,7 +449,7 @@ rewardOld ::
   BlocksMade ->
   Coin ->
   Set.Set (Credential 'Staking) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams ->
   Stake ->
   VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Coin ->
@@ -463,7 +463,7 @@ rewardOld
   (BlocksMade b)
   r
   addrsRew
-  poolParams
+  stakePoolParams
   stake
   delegs
   (Coin totalStake)
@@ -479,7 +479,7 @@ rewardOld
           )
         ]
       results = do
-        (hk, pparams) <- VMap.toAscList poolParams
+        (hk, spparams) <- VMap.toAscList stakePoolParams
         let sigma = fromIntegral pstake %? fromIntegral totalStake
             sigmaA = fromIntegral pstake %? fromIntegral activeStake
             blocksProduced = Map.lookup hk b
@@ -494,7 +494,7 @@ rewardOld
                     r
                     n
                     totalBlocks
-                    pparams
+                    spparams
                     actgr
                     sigma
                     sigmaA
@@ -742,7 +742,7 @@ reward ::
   BlocksMade ->
   Coin ->
   Set (Credential 'Staking) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams ->
   Stake ->
   VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Coin ->
@@ -752,7 +752,7 @@ reward
   (BlocksMade b)
   r
   addrsRew
-  poolParams
+  stakePoolParams
   stake
   delegs
   totalStake = completeM pulser
@@ -761,7 +761,7 @@ reward
       stakePerPool = sumStakePerPool delegs stake
       activeStake = sumAllStake stake
       -- ensure mkPoolRewardInfo does not use stake that doesn't belong to the pool
-      stakeForPool pool = poolStake (ppId pool) delegs stake
+      stakeForPool pool = poolStake (sppId pool) delegs stake
       mkPoolRewardInfo' pool =
         mkPoolRewardInfo
           pp
@@ -779,7 +779,7 @@ reward
           { fvAddrsRew = addrsRew
           , fvTotalStake = totalStake
           , fvPoolRewardInfo =
-              VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') poolParams
+              VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') stakePoolParams
           , fvDelegs = delegs
           , fvProtVer = pp ^. ppProtocolVersionL
           }

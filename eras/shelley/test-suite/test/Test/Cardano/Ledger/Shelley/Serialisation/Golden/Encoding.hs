@@ -88,7 +88,7 @@ import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State (
   PoolMetadata (..),
-  PoolParams (..),
+  StakePoolParams (..),
   StakePoolRelay (..),
  )
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
@@ -521,16 +521,16 @@ tests =
             shelleyProtVer
             "register_pool"
             ( RegPoolTxCert @ShelleyEra
-                ( PoolParams
-                    { ppId = hashKey $ vKey testStakePoolKey
-                    , ppVrf = vrfKeyHash
-                    , ppPledge = poolPledge
-                    , ppCost = poolCost
-                    , ppMargin = poolMargin
-                    , ppRewardAccount = poolRAcnt
-                    , ppOwners = Set.singleton poolOwner
-                    , ppRelays = poolRelays
-                    , ppMetadata =
+                ( StakePoolParams
+                    { sppId = hashKey $ vKey testStakePoolKey
+                    , sppVrf = vrfKeyHash
+                    , sppPledge = poolPledge
+                    , sppCost = poolCost
+                    , sppMargin = poolMargin
+                    , sppRewardAccount = poolRAcnt
+                    , sppOwners = Set.singleton poolOwner
+                    , sppRelays = poolRelays
+                    , sppMetadata =
                         SJust $
                           PoolMetadata
                             { pmUrl = Maybe.fromJust $ textToUrl 64 poolUrl

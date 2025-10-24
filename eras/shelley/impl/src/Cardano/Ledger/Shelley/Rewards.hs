@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.Era (
   hardforkAllegraAggregatedRewards,
   hardforkBabbageForgoRewardPrefilter,
  )
-import Cardano.Ledger.State (PoolParams (..), Stake (..), maxPool')
+import Cardano.Ledger.State (Stake (..), StakePoolParams (..), maxPool')
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -93,7 +93,7 @@ mkApparentPerformance d_ sigma blocksN blocksTotal
 -- | Calculate pool leader reward
 leaderRew ::
   Coin ->
-  PoolParams ->
+  StakePoolParams ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -104,14 +104,14 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
         <> rationalToCoinViaFloor
           (coinToRational (f <-> c) * (m' + (1 - m') * s / sigma))
   where
-    c = ppCost pool
-    m = ppMargin pool
+    c = sppCost pool
+    m = sppMargin pool
     m' = unboundRational m
 
 -- | Calculate pool member reward
 memberRew ::
   Coin ->
-  PoolParams ->
+  StakePoolParams ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -121,8 +121,8 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
       rationalToCoinViaFloor $
         fromIntegral (f' - c) * (1 - m') * t / sigma
   where
-    Coin c = ppCost pool
-    m = ppMargin pool
+    Coin c = sppCost pool
+    m = sppMargin pool
     m' = unboundRational m
 
 sumRewards ::
@@ -213,7 +213,7 @@ data PoolRewardInfo = PoolRewardInfo
   -- ^ The stake pool's stake divided by the total stake
   , poolPot :: !Coin
   -- ^ The maximum rewards available for the entire pool
-  , poolPs :: !PoolParams
+  , poolPs :: !StakePoolParams
   -- ^ The stake pool parameters
   , poolBlocks :: !Natural
   -- ^ The number of blocks the stake pool produced
@@ -249,11 +249,11 @@ instance DecCBOR PoolRewardInfo where
       )
 
 notPoolOwner ::
-  PoolParams ->
+  StakePoolParams ->
   Credential 'Staking ->
   Bool
 notPoolOwner pps = \case
-  KeyHashObj hk -> hk `Set.notMember` ppOwners pps
+  KeyHashObj hk -> hk `Set.notMember` sppOwners pps
   ScriptHashObj _ -> True
 
 -- | The stake pool member reward calculation
@@ -315,7 +315,7 @@ mkPoolRewardInfo ::
   Map (KeyHash 'StakePool) Coin ->
   Coin ->
   Coin ->
-  PoolParams ->
+  StakePoolParams ->
   Either StakeShare PoolRewardInfo
 mkPoolRewardInfo
   pp
@@ -327,7 +327,7 @@ mkPoolRewardInfo
   stakePerPool
   totalStake
   activeStake
-  pool = case Map.lookup (ppId pool) (unBlocksMade blocks) of
+  pool = case Map.lookup (sppId pool) (unBlocksMade blocks) of
     -- This pool made no blocks this epoch. For the purposes of stake pool
     -- ranking only, we return the relative stake of this pool so that we
     -- can judge how likely it was that this pool made no blocks.
@@ -335,7 +335,7 @@ mkPoolRewardInfo
     -- This pool made no blocks, so we can proceed to calculate the
     -- intermediate values needed for the individual reward calculations.
     Just blocksN ->
-      let Coin pledge = ppPledge pool
+      let Coin pledge = sppPledge pool
           -- warning: totalStake could be zero!
           pledgeRelative = pledge % unCoin totalStake
           sigmaA = pstakeTot %? unCoin activeStake
@@ -357,17 +357,17 @@ mkPoolRewardInfo
               , poolPot = poolR
               , poolPs = pool
               , poolBlocks = blocksN
-              , poolLeaderReward = LeaderOnlyReward (ppId pool) lreward
+              , poolLeaderReward = LeaderOnlyReward (sppId pool) lreward
               }
        in Right $! rewardInfo
     where
       pp_d = pp ^. ppDG
       pp_a0 = pp ^. ppA0L
       pp_nOpt = (pp ^. ppNOptL) `nonZeroOr` error "nOpt is zero"
-      Coin pstakeTot = Map.findWithDefault mempty (ppId pool) stakePerPool
+      Coin pstakeTot = Map.findWithDefault mempty (sppId pool) stakePerPool
       accOwnerStake c o = maybe c (c <>) $ do
         hk <- VMap.lookup (KeyHashObj o) delegs
-        guard (hk == ppId pool)
+        guard (hk == sppId pool)
         fromCompact <$> VMap.lookup (KeyHashObj o) (unStake stake)
-      Coin ostake = Set.foldl' accOwnerStake mempty (ppOwners pool)
+      Coin ostake = Set.foldl' accOwnerStake mempty (sppOwners pool)
       sigma = pstakeTot %? unCoin totalStake

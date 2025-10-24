@@ -220,11 +220,11 @@ poolDelegationTransition = do
       ) <-
     judgmentContext
   case poolCert of
-    RegPool poolParams@PoolParams {ppId, ppVrf, ppRewardAccount, ppMetadata, ppCost} -> do
+    RegPool stakePoolParams@StakePoolParams {sppId, sppVrf, sppRewardAccount, sppMetadata, sppCost} -> do
       let pv = pp ^. ppProtocolVersionL
       when (hardforkAlonzoValidatePoolRewardAccountNetID pv) $ do
         actualNetID <- liftSTS $ asks networkId
-        let suppliedNetID = raNetwork ppRewardAccount
+        let suppliedNetID = raNetwork sppRewardAccount
         actualNetID
           == suppliedNetID
             ?! WrongNetworkPOOL
@@ -232,55 +232,55 @@ poolDelegationTransition = do
                 { mismatchSupplied = suppliedNetID
                 , mismatchExpected = actualNetID
                 }
-              ppId
+              sppId
 
       when (SoftForks.restrictPoolMetadataHash pv) $
-        forM_ ppMetadata $ \pmd ->
+        forM_ sppMetadata $ \pmd ->
           let s = BS.length (pmHash pmd)
            in s
                 <= fromIntegral (sizeHash ([] @HASH))
-                  ?! PoolMedataHashTooBig ppId s
+                  ?! PoolMedataHashTooBig sppId s
 
       let minPoolCost = pp ^. ppMinPoolCostL
-      ppCost
+      sppCost
         >= minPoolCost
           ?! StakePoolCostTooLowPOOL
             Mismatch
-              { mismatchSupplied = ppCost
+              { mismatchSupplied = sppCost
               , mismatchExpected = minPoolCost
               }
-      case Map.lookup ppId psStakePools of
+      case Map.lookup sppId psStakePools of
         -- register new, Pool-Reg
         Nothing -> do
           when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
-            Map.notMember ppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered ppId ppVrf
+            Map.notMember sppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered sppId sppVrf
           let updateVRFKeyHash
-                | hardforkConwayDisallowDuplicatedVRFKeys pv = Map.insert ppVrf (knownNonZeroBounded @1)
+                | hardforkConwayDisallowDuplicatedVRFKeys pv = Map.insert sppVrf (knownNonZeroBounded @1)
                 | otherwise = id
-          tellEvent $ RegisterPool ppId
+          tellEvent $ RegisterPool sppId
           pure $
             ps
-              & psStakePoolsL %~ Map.insert ppId (mkStakePoolState (pp ^. ppPoolDepositCompactL) poolParams)
+              & psStakePoolsL %~ Map.insert sppId (mkStakePoolState (pp ^. ppPoolDepositCompactL) stakePoolParams)
               & psVRFKeyHashesL %~ updateVRFKeyHash
         -- re-register Pool
         Just stakePoolState -> do
           when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
-            ppVrf == stakePoolState ^. spsVrfL
-              || Map.notMember ppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered ppId ppVrf
+            sppVrf == stakePoolState ^. spsVrfL
+              || Map.notMember sppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered sppId sppVrf
           let updateFutureVRFKeyHash
                 | hardforkConwayDisallowDuplicatedVRFKeys pv =
                     -- If a pool re-registers with a fresh VRF, we have to record it in the map,
                     -- but also remove the previous VRFHashKey potentially stored in previous re-registration within the same epoch,
                     -- which we retrieve from futureStakePools.
-                    case Map.lookup ppId psFutureStakePools of
-                      Nothing -> Map.insert ppVrf (knownNonZeroBounded @1)
+                    case Map.lookup sppId psFutureStakePools of
+                      Nothing -> Map.insert sppVrf (knownNonZeroBounded @1)
                       Just futureStakePoolState
-                        | futureStakePoolState ^. spsVrfL /= ppVrf ->
-                            (Map.insert ppVrf (knownNonZeroBounded @1))
+                        | futureStakePoolState ^. spsVrfL /= sppVrf ->
+                            (Map.insert sppVrf (knownNonZeroBounded @1))
                               . Map.delete (futureStakePoolState ^. spsVrfL)
                         | otherwise -> id
                 | otherwise = id
-          tellEvent $ ReregisterPool ppId
+          tellEvent $ ReregisterPool sppId
           -- NOTE: The `ppId` is already registered, so we want to reregister
           -- it. That means adding it to the Future Stake Pools (if it is not
           -- there already), and overriding its range with the new 'poolParams',
@@ -295,11 +295,12 @@ poolDelegationTransition = do
           -- has happened, we cannot be in this branch of the case statement.
           pure $
             ps
-              & psFutureStakePoolsL %~ Map.insert ppId (mkStakePoolState (stakePoolState ^. spsDepositL) poolParams)
-              & psRetiringL %~ Map.delete ppId
+              & psFutureStakePoolsL
+                %~ Map.insert sppId (mkStakePoolState (stakePoolState ^. spsDepositL) stakePoolParams)
+              & psRetiringL %~ Map.delete sppId
               & psVRFKeyHashesL %~ updateFutureVRFKeyHash
-    RetirePool ppId e -> do
-      Map.member ppId psStakePools ?! StakePoolNotRegisteredOnKeyPOOL ppId
+    RetirePool sppId e -> do
+      Map.member sppId psStakePools ?! StakePoolNotRegisteredOnKeyPOOL sppId
       let maxEpoch = pp ^. ppEMaxL
           limitEpoch = addEpochInterval cEpoch maxEpoch
       (cEpoch < e && e <= limitEpoch)
@@ -313,4 +314,4 @@ poolDelegationTransition = do
             , mismatchExpected = limitEpoch
             }
       -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
-      pure $ ps & psRetiringL %~ Map.insert ppId e
+      pure $ ps & psRetiringL %~ Map.insert sppId e

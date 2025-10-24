@@ -113,12 +113,12 @@ applyShelleyCert model dcert = case dcert of
       { mAccounts =
           adjustAccountState (stakePoolDelegationAccountStateL ?~ poolId) cred (mAccounts model)
       }
-  ShelleyTxCertPool (RegPool poolparams) ->
+  ShelleyTxCertPool (RegPool stakePoolParams) ->
     model
       { mStakePools =
           Map.insert
             hk
-            (mkStakePoolState (pp ^. ppPoolDepositCompactL) poolparams)
+            (mkStakePoolState (pp ^. ppPoolDepositCompactL) stakePoolParams)
             (mStakePools model)
       , mDeposited =
           if Map.member hk (mStakePools model)
@@ -126,7 +126,7 @@ applyShelleyCert model dcert = case dcert of
             else mDeposited model <+> pp ^. ppPoolDepositL
       }
     where
-      hk = ppId poolparams
+      hk = sppId stakePoolParams
       pp = mPParams model
   ShelleyTxCertPool (RetirePool keyhash epoch) ->
     model
