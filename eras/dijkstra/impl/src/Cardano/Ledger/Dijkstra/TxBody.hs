@@ -260,20 +260,12 @@ basicDijkstraTxBodyRaw =
     mempty
 
 instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
-  decCBOR = withSTxBothLevels @l $ \case
-    STopTx ->
+  decCBOR = withSTxBothLevels @l $ \sTxLevel ->
       decode $
         SparseKeyed
           "TxBodyRaw"
-          basicDijkstraTxBodyRaw
-          (bodyFields STopTx)
-          requiredFields
-    SSubTx ->
-      decode $
-        SparseKeyed
-          "SubTxBodyRaw"
-          basicDijkstraSubTxBodyRaw
-          (bodyFields SSubTx)
+          (basicDijkstraTxBodyRaw sTxLevel)
+          (bodyFields sTxLevel)
           requiredFields
     where
       bodyFields :: STxBothLevels l era -> Word -> Field (DijkstraTxBodyRaw l DijkstraEra)
