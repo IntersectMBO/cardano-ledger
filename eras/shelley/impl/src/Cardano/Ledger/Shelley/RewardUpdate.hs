@@ -255,21 +255,19 @@ rewardStakePoolMember ::
   Credential 'Staking ->
   CompactForm Coin ->
   RewardAns
-rewardStakePoolMember
-  FreeVars
-    { fvDelegs
-    , fvAddrsRew
-    , fvTotalStake
-    , fvPoolRewardInfo
-    , fvProtVer
-    }
-  inputanswer@(RewardAns accum recent)
-  cred
-  c = fromMaybe inputanswer $ do
-    poolID <- VMap.lookup cred fvDelegs
-    poolRI <- Map.lookup poolID fvPoolRewardInfo
+rewardStakePoolMember freeVars inputAnswer@(RewardAns accum recent) cred c =
+  fromMaybe inputAnswer $ do
+    let FreeVars
+          { fvDelegs
+          , fvAddrsRew
+          , fvTotalStake
+          , fvPoolRewardInfo
+          , fvProtVer
+          } = freeVars
+    poolId <- VMap.lookup cred fvDelegs
+    poolRI <- Map.lookup poolId fvPoolRewardInfo
     r <- rewardOnePoolMember fvProtVer fvTotalStake fvAddrsRew poolRI cred (fromCompact c)
-    let ans = Reward MemberReward poolID r
+    let ans = Reward MemberReward poolId r
     -- There is always just 1 member reward, so Set.singleton is appropriate
     pure $ RewardAns (Map.insert cred ans accum) (Map.insert cred (Set.singleton ans) recent)
 
