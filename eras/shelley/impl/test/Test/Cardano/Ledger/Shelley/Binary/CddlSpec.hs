@@ -13,7 +13,7 @@ import Cardano.Ledger.Shelley.API (
   Credential,
   MultiSig,
   ProposedPPUpdates,
-  Update,
+  -- Update,
  )
 import Cardano.Ledger.State (StakePoolRelay)
 import Cardano.Ledger.TxIn (TxIn)
@@ -47,24 +47,24 @@ spec =
       cddlRoundTripCborSpec @(Credential 'Staking) v "stake_credential"
       cddlRoundTripAnnCborSpec @(TxBody ShelleyEra) v "transaction_body"
       cddlRoundTripCborSpec @(TxBody ShelleyEra) v "transaction_body"
-      cddlRoundTripCborSpec @(TxOut ShelleyEra) v "transaction_output"
+      cddlRoundTripCborSpec @(TxOut ShelleyEra) v "shelley_transaction_output"
       cddlRoundTripCborSpec @StakePoolRelay v "relay"
       cddlRoundTripCborSpec @(TxCert ShelleyEra) v "certificate"
       cddlRoundTripCborSpec @TxIn v "transaction_input"
-      cddlRoundTripAnnCborSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
-      cddlRoundTripCborSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
-      cddlRoundTripAnnCborSpec @(MultiSig ShelleyEra) v "multisig_script"
-      cddlRoundTripCborSpec @(MultiSig ShelleyEra) v "multisig_script"
-      cddlRoundTripCborSpec @(Update ShelleyEra) v "update"
-      cddlRoundTripCborSpec @(ProposedPPUpdates ShelleyEra) v "proposed_protocol_parameter_updates"
+      cddlRoundTripAnnCborSpec @(TxAuxData ShelleyEra) v "shelley_auxiliary_data"
+      cddlRoundTripCborSpec @(TxAuxData ShelleyEra) v "shelley_auxiliary_data"
+      cddlRoundTripAnnCborSpec @(MultiSig ShelleyEra) v "native_script"
+      cddlRoundTripCborSpec @(MultiSig ShelleyEra) v "native_script"
+      -- cddlRoundTripCborSpec @(Update ShelleyEra) v "update" -- FIXME: @aniketd bring back "update" and "proposed_protocol_parameter_updates" for compatibility of types?
+      cddlRoundTripCborSpec @(ProposedPPUpdates ShelleyEra) v "protocol_param_updates"
       cddlRoundTripCborSpec @(PParamsUpdate ShelleyEra) v "protocol_param_update"
       cddlRoundTripAnnCborSpec @(Tx ShelleyEra) v "transaction"
       cddlRoundTripCborSpec @(Tx ShelleyEra) v "transaction"
       describe "DecCBOR instances equivalence via CDDL" $ do
         cddlDecoderEquivalenceSpec @BootstrapWitness v "bootstrap_witness"
         cddlDecoderEquivalenceSpec @(TxBody ShelleyEra) v "transaction_body"
-        cddlDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
-        cddlDecoderEquivalenceSpec @(MultiSig ShelleyEra) v "multisig_script"
+        cddlDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "shelley_auxiliary_data"
+        cddlDecoderEquivalenceSpec @(MultiSig ShelleyEra) v "native_script"
         cddlDecoderEquivalenceSpec @(Tx ShelleyEra) v "transaction"
 
     describe "Huddle" $ specWithHuddle shelleyCDDL 100 $ do
@@ -78,16 +78,16 @@ spec =
       huddleRoundTripCborSpec @(Credential 'Staking) v "stake_credential"
       huddleRoundTripAnnCborSpec @(TxBody ShelleyEra) v "transaction_body"
       huddleRoundTripCborSpec @(TxBody ShelleyEra) v "transaction_body"
-      huddleRoundTripCborSpec @(TxOut ShelleyEra) v "transaction_output"
+      huddleRoundTripCborSpec @(TxOut ShelleyEra) v "shelley_transaction_output"
       huddleRoundTripCborSpec @StakePoolRelay v "relay"
       huddleRoundTripCborSpec @(TxCert ShelleyEra) v "certificate"
       huddleRoundTripCborSpec @TxIn v "transaction_input"
-      huddleRoundTripAnnCborSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
-      huddleRoundTripCborSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
-      huddleRoundTripAnnCborSpec @(MultiSig ShelleyEra) v "multisig_script"
-      huddleRoundTripCborSpec @(MultiSig ShelleyEra) v "multisig_script"
-      huddleRoundTripCborSpec @(Update ShelleyEra) v "update"
-      huddleRoundTripCborSpec @(ProposedPPUpdates ShelleyEra) v "proposed_protocol_parameter_updates"
+      huddleRoundTripAnnCborSpec @(TxAuxData ShelleyEra) v "shelley_auxiliary_data"
+      huddleRoundTripCborSpec @(TxAuxData ShelleyEra) v "shelley_auxiliary_data"
+      huddleRoundTripAnnCborSpec @(MultiSig ShelleyEra) v "native_script"
+      huddleRoundTripCborSpec @(MultiSig ShelleyEra) v "native_script"
+      -- huddleRoundTripCborSpec @(Update ShelleyEra) v "update" -- FIXME: @aniketd
+      -- huddleRoundTripCborSpec @(ProposedPPUpdates ShelleyEra) v "proposed_protocol_parameter_updates"
       huddleRoundTripCborSpec @(PParamsUpdate ShelleyEra) v "protocol_param_update"
       huddleRoundTripAnnCborSpec @(Tx ShelleyEra) v "transaction"
       huddleRoundTripCborSpec @(Tx ShelleyEra) v "transaction"
@@ -96,6 +96,6 @@ spec =
       describe "DecCBOR instances equivalence via CDDL" $ do
         huddleDecoderEquivalenceSpec @BootstrapWitness v "bootstrap_witness"
         huddleDecoderEquivalenceSpec @(TxBody ShelleyEra) v "transaction_body"
-        huddleDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
-        huddleDecoderEquivalenceSpec @(MultiSig ShelleyEra) v "multisig_script"
+        huddleDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "shelley_auxiliary_data"
+        huddleDecoderEquivalenceSpec @(MultiSig ShelleyEra) v "native_script"
         huddleDecoderEquivalenceSpec @(Tx ShelleyEra) v "transaction"

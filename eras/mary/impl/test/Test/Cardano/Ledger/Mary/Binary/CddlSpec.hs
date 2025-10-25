@@ -22,7 +22,7 @@ spec =
   describe "CDDL" $ do
     let v = eraProtVerLow @MaryEra
     describe "Ruby-based" $ beforeAllCddlFile 3 readMaryCddlFiles $ do
-      cddlRoundTripCborSpec @(Value MaryEra) v "value"
+      cddlRoundTripCborSpec @(Value MaryEra) v "mary_value"
       cddlRoundTripAnnCborSpec @(TxBody MaryEra) v "transaction_body"
       cddlRoundTripCborSpec @(TxBody MaryEra) v "transaction_body"
       cddlRoundTripAnnCborSpec @(Script MaryEra) v "native_script"
@@ -34,7 +34,7 @@ spec =
         cddlDecoderEquivalenceSpec @(Script MaryEra) v "native_script"
         cddlDecoderEquivalenceSpec @(TxAuxData MaryEra) v "auxiliary_data"
     describe "Huddle" $ specWithHuddle maryCDDL 100 $ do
-      huddleRoundTripCborSpec @(Value MaryEra) v "value"
+      huddleRoundTripCborSpec @(Value MaryEra) v "mary_value"
       huddleRoundTripAnnCborSpec @(TxBody MaryEra) v "transaction_body"
       huddleRoundTripCborSpec @(TxBody MaryEra) v "transaction_body"
       huddleRoundTripAnnCborSpec @(TxAuxData MaryEra) v "auxiliary_data"
