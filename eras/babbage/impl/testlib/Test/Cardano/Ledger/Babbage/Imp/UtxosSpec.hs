@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -5,6 +6,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Babbage.Imp.UtxosSpec (spec) where
 
@@ -37,7 +39,11 @@ import Cardano.Ledger.Core (
   outputsTxBodyL,
  )
 import Cardano.Ledger.Plutus (Language (..), hashPlutusScript, withSLanguage)
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Shelley.Scripts (data RequireAllOf)
+#else
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
+#endif
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)

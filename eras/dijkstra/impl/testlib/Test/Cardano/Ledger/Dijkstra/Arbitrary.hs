@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -5,14 +6,20 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Dijkstra.Arbitrary () where
 
 import Cardano.Ledger.Allegra.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -25,7 +32,11 @@ import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireSignature,
+#else
   pattern RequireSignature,
+#endif
  )
 import Data.Functor.Identity (Identity)
 import Generic.Random (genericArbitraryU)

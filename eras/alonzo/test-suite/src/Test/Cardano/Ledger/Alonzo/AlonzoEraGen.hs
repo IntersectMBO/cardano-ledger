@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -18,8 +19,13 @@ import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
   translateTimelock,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))

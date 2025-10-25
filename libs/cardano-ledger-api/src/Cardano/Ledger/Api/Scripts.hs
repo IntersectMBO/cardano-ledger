@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -21,6 +22,9 @@ module Cardano.Ledger.Api.Scripts (
 
   -- * Any era
   AnyEraScript (..),
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   pattern AnyEraSpendingPurpose,
   pattern AnyEraMintingPurpose,
   pattern AnyEraCertifyingPurpose,
@@ -28,7 +32,15 @@ module Cardano.Ledger.Api.Scripts (
   pattern AnyEraVotingPurpose,
   pattern AnyEraProposingPurpose,
   pattern AnyEraGuardingPurpose,
-
+#else
+  data AnyEraSpendingPurpose,
+  data AnyEraMintingPurpose,
+  data AnyEraCertifyingPurpose,
+  data AnyEraRewardingPurpose,
+  data AnyEraVotingPurpose,
+  data AnyEraProposingPurpose,
+  data AnyEraGuardingPurpose,
+#endif
   -- * Alonzo
   AlonzoEraScript (
     PlutusScript,
@@ -39,10 +51,17 @@ module Cardano.Ledger.Api.Scripts (
     toRewardingPurpose
   ),
   isPlutusScript,
+#if __GLASGOW_HASKELL__ < 914
   pattern SpendingPurpose,
   pattern MintingPurpose,
   pattern CertifyingPurpose,
   pattern RewardingPurpose,
+#else
+  data SpendingPurpose,
+  data MintingPurpose,
+  data CertifyingPurpose,
+  data RewardingPurpose,
+#endif
   CostModels,
 
   -- * Conway
@@ -50,14 +69,23 @@ module Cardano.Ledger.Api.Scripts (
     toVotingPurpose,
     toProposingPurpose
   ),
+#if __GLASGOW_HASKELL__ < 914
   pattern VotingPurpose,
   pattern ProposingPurpose,
+#else
+  data VotingPurpose,
+  data ProposingPurpose,
+#endif
 
   -- * Dijkstra
   DijkstraEraScript (
     toGuardingPurpose
   ),
+#if __GLASGOW_HASKELL__ < 914
   pattern GuardingPurpose,
+#else
+  data GuardingPurpose,
+#endif
 ) where
 
 import Cardano.Ledger.Address (RewardAccount)
@@ -66,18 +94,30 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   CostModels,
   isPlutusScript,
+#if __GLASGOW_HASKELL__ < 914
   pattern CertifyingPurpose,
   pattern MintingPurpose,
   pattern RewardingPurpose,
   pattern SpendingPurpose,
+#else
+  data CertifyingPurpose,
+  data MintingPurpose,
+  data RewardingPurpose,
+  data SpendingPurpose,
+#endif
  )
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Scripts.Data
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, Voter)
 import Cardano.Ledger.Conway.Scripts (
   ConwayEraScript (..),
+#if __GLASGOW_HASKELL__ < 914
   pattern ProposingPurpose,
   pattern VotingPurpose,
+#else
+  data ProposingPurpose,
+  data VotingPurpose,
+#endif
  )
 import Cardano.Ledger.Core (
   EraScript (..),
@@ -88,7 +128,11 @@ import Cardano.Ledger.Core (
  )
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraEraScript (..),
+#if __GLASGOW_HASKELL__ < 914
   pattern GuardingPurpose,
+#else
+  data GuardingPurpose,
+#endif
  )
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Mary.Value (PolicyID)

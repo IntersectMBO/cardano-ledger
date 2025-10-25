@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -34,7 +35,9 @@ import Data.Default
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map (extract)
+#if __GLASGOW_HASKELL__ < 914
 import Data.Typeable
+#endif
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -66,7 +69,13 @@ instance EncCBOR (ShelleyAccountState era) where
           <> encCBOR sasDeposit
           <> encodeNullStrictMaybe encCBOR sasStakePoolDelegation
 
-instance Typeable era => DecShareCBOR (ShelleyAccountState era) where
+instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable era =>
+#endif
+  DecShareCBOR (ShelleyAccountState era) where
   type
     Share (ShelleyAccountState era) =
       (Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
@@ -109,7 +118,13 @@ instance EncCBOR (ShelleyAccounts era) where
   encCBOR ShelleyAccounts {saStates, saPtrs} =
     encodeListLen 2 <> encCBOR saStates <> encCBOR saPtrs
 
-instance Typeable era => DecShareCBOR (ShelleyAccounts era) where
+instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable era =>
+#endif
+  DecShareCBOR (ShelleyAccounts era) where
   type
     Share (ShelleyAccounts era) =
       (Interns (Credential 'Staking), Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))

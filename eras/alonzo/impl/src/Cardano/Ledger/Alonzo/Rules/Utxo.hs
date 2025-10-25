@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -193,7 +194,11 @@ deriving stock instance
   ( Era era
   , Show (Value era)
   , Show (TxOut era)
+#if __GLASGOW_HASKELL__ < 914
+  -- This constraint is REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Show (TxBody era)
+#endif
   , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Show (AlonzoUtxoPredFailure era)
@@ -697,7 +702,11 @@ instance
   ( Era era
   , DecCBOR (TxOut era)
   , DecCBOR (Value era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , EncCBOR (Value era)
+#endif
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   DecCBOR (AlonzoUtxoPredFailure era)

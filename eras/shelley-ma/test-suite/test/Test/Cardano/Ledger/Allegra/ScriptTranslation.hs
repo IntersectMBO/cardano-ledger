@@ -1,5 +1,7 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Allegra.ScriptTranslation (
   testScriptPostTranslation,
@@ -14,7 +16,11 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+#else
   pattern RequireAllOf,
+#endif
  )
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))
