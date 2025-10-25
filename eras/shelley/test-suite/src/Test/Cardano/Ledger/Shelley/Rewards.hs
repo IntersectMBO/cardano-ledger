@@ -276,6 +276,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
           , ppOwners = Set.fromList [hashKey $ vKey ownerKey]
           , ppRelays = StrictSeq.empty
           , ppMetadata = SNothing
+          , ppDefaultVote = SNothing
           }
   pure $ PoolInfo {params, coldKey, ownerKey, ownerStake, rewardKey, members}
 

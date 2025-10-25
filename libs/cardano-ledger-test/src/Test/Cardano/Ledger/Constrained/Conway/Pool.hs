@@ -70,7 +70,7 @@ poolCertSpec univ (PoolEnv e pp) ps =
     (caseOn pc)
       -- RegPool !(PoolParams c)
       ( branchW 1 $ \poolParams ->
-          match poolParams $ \_ _ _ cost _ rewAccnt _ _ mMetadata ->
+          match poolParams $ \_ _ _ cost _ rewAccnt _ _ mMetadata _ ->
             [ witness univ poolParams
             , match rewAccnt $ \net' _ ->
                 net' ==. lit Testnet

@@ -57,6 +57,7 @@ module Cardano.Ledger.BaseTypes (
   module Data.Maybe.Strict,
   BlocksMade (..),
   kindObject,
+  Vote (..),
 
   -- * Indices
   TxIx (..),
@@ -106,6 +107,8 @@ import Cardano.Ledger.Binary (
   FromCBOR,
   ToCBOR,
   cborError,
+  decodeEnumBounded,
+  encodeEnum,
   ifDecoderVersionAtLeast,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -970,3 +973,23 @@ newtype KeyValuePairs a = KeyValuePairs {unKeyValuePairs :: a}
 instance ToKeyValuePairs a => ToJSON (KeyValuePairs a) where
   toJSON = object . toKeyValuePairs . unKeyValuePairs
   toEncoding = pairs . mconcat . toKeyValuePairs . unKeyValuePairs
+
+data Vote
+  = VoteNo
+  | VoteYes
+  | Abstain
+  deriving (Ord, Generic, Eq, Show, Enum, Bounded)
+
+instance ToJSON Vote
+
+instance FromJSON Vote
+
+instance NoThunks Vote
+
+instance NFData Vote
+
+instance DecCBOR Vote where
+  decCBOR = decodeEnumBounded
+
+instance EncCBOR Vote where
+  encCBOR = encodeEnum

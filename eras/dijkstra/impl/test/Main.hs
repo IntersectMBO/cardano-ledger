@@ -8,6 +8,7 @@ import Cardano.Ledger.Plutus (SLanguage (..))
 import Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec)
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec as Cddl
 import Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip ()
@@ -29,3 +30,4 @@ main =
         BabbageTxInfo.spec @DijkstraEra
         txInfoSpec @DijkstraEra SPlutusV3
         txInfoSpec @DijkstraEra SPlutusV4
+      Binary.spec @DijkstraEra

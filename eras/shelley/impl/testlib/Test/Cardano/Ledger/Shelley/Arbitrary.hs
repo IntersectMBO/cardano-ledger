@@ -77,7 +77,7 @@ import Cardano.Ledger.Shelley.Tx (Tx (..))
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
-  ShelleyTxCert,
+  ShelleyTxCert (..),
  )
 import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
@@ -93,7 +93,7 @@ import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary (genPoolParamsNoDefaultVote)
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
@@ -248,7 +248,7 @@ instance Arbitrary PoolRewardInfo where
     PoolRewardInfo
       <$> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> genPoolParamsNoDefaultVote
       <*> arbitrary
       <*> arbitrary
   shrink = genericShrink
@@ -439,8 +439,18 @@ vectorOfMetadatumSimple = do
 ------------------------------------------------------------------------------------------
 
 instance Era era => Arbitrary (ShelleyTxCert era) where
-  arbitrary = genericArbitraryU
   shrink = genericShrink
+  arbitrary =
+    oneof
+      [ ShelleyTxCertDelegCert <$> arbitrary
+      , ShelleyTxCertPool
+          <$> oneof
+            [ RegPool <$> genPoolParamsNoDefaultVote
+            , RetirePool <$> arbitrary <*> arbitrary
+            ]
+      , ShelleyTxCertGenesisDeleg <$> arbitrary
+      , ShelleyTxCertMir <$> arbitrary
+      ]
 
 instance Arbitrary ShelleyDelegCert where
   arbitrary = genericArbitraryU
@@ -608,7 +618,17 @@ instance
     pure ShelleyGenesis {..}
 
 instance Arbitrary ShelleyGenesisStaking where
-  arbitrary = ShelleyGenesisStaking <$> arbitrary <*> arbitrary
+  arbitrary = ShelleyGenesisStaking <$> genPoolParamsListMap <*> arbitrary
+
+genPoolParamsListMap :: Gen (LM.ListMap (KeyHash 'StakePool) PoolParams)
+genPoolParamsListMap =
+  LM.fromList <$> listOf pair
+  where
+    pair :: Gen (KeyHash 'StakePool, PoolParams)
+    pair = do
+      k <- arbitrary
+      v <- genPoolParamsNoDefaultVote
+      pure (k, v)
 
 instance
   ( Era era

@@ -600,6 +600,7 @@ alicePoolParamsSmallCost =
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
             , pmHash = BS.pack "{}"
             }
+    , ppDefaultVote = SNothing
     }
   where
     vkVrf = vrfVerKey $ mkVRFKeyPair @MockCrypto (RawSeed 0 0 0 0 2)

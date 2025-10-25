@@ -503,6 +503,7 @@ poolMDHTooBigTx =
             , ppOwners = mempty
             , ppRelays = mempty
             , ppMetadata = SJust $ PoolMetadata (fromJust $ textToUrl 64 "") tooManyBytes
+            , ppDefaultVote = SNothing
             }
 
 -- ============================== Expected UTXO  ===============================

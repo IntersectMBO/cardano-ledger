@@ -404,6 +404,7 @@ examplePoolParams =
             { pmUrl = fromJust $ textToUrl 64 "consensus.pool"
             , pmHash = "{}"
             }
+    , ppDefaultVote = SNothing
     }
 
 examplePayKey :: KeyPair 'Payment

@@ -536,6 +536,7 @@ tests =
                             { pmUrl = Maybe.fromJust $ textToUrl 64 poolUrl
                             , pmHash = poolMDHash
                             }
+                    , ppDefaultVote = SNothing
                     }
                 )
             )

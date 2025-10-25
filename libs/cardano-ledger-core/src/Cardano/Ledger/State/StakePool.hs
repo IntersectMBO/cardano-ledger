@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -26,6 +27,9 @@
 module Cardano.Ledger.State.StakePool (
   -- * Stake Pool State
   StakePoolState (..),
+  decCBORGroupPoolParams,
+  encCBORGroupPoolParams,
+  poolParamsCount,
 
   -- * Lenses
   spsVrfL,
@@ -63,17 +67,17 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
   Url,
+  Vote,
   invalidKey,
   maybeToStrictMaybe,
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
-  CBORGroup (..),
   DecCBOR (..),
-  DecCBORGroup (..),
   DecShareCBOR (..),
+  Decoder,
   EncCBOR (..),
-  EncCBORGroup (..),
+  Encoding,
   decodeNullMaybe,
   decodeRecordNamed,
   decodeRecordSum,
@@ -239,6 +243,8 @@ stakePoolStateToPoolParams poolId sps =
     , ppOwners = spsOwners sps
     , ppRelays = spsRelays sps
     , ppMetadata = spsMetadata sps
+    , --  TODO: spsDefaultVote
+      ppDefaultVote = SNothing
     }
 
 data PoolMetadata = PoolMetadata
@@ -379,10 +385,9 @@ data PoolParams = PoolParams
   , ppOwners :: !(Set (KeyHash 'Staking))
   , ppRelays :: !(StrictSeq StakePoolRelay)
   , ppMetadata :: !(StrictMaybe PoolMetadata)
+  , ppDefaultVote :: !(StrictMaybe Vote)
   }
   deriving (Show, Generic, Eq, Ord)
-  deriving (EncCBOR) via CBORGroup PoolParams
-  deriving (DecCBOR) via CBORGroup PoolParams
 
 ppVrfL :: Lens' PoolParams (VRFVerKeyHash 'StakePoolVRF)
 ppVrfL = lens ppVrf (\pp u -> pp {ppVrf = u})
@@ -394,7 +399,7 @@ ppMetadataL :: Lens' PoolParams (StrictMaybe PoolMetadata)
 ppMetadataL = lens ppMetadata (\pp u -> pp {ppMetadata = u})
 
 instance Default PoolParams where
-  def = PoolParams def def (Coin 0) (Coin 0) def def def def def
+  def = PoolParams def def (Coin 0) (Coin 0) def def def def def def
 
 instance NoThunks PoolParams
 
@@ -402,7 +407,7 @@ deriving instance NFData PoolParams
 
 instance ToJSON PoolParams where
   toJSON pp =
-    Aeson.object
+    Aeson.object $
       [ "publicKey" .= ppId pp -- TODO publicKey is an unfortunate name, should be poolId
       , "vrf" .= ppVrf pp
       , "pledge" .= ppPledge pp
@@ -413,6 +418,7 @@ instance ToJSON PoolParams where
       , "relays" .= ppRelays pp
       , "metadata" .= ppMetadata pp
       ]
+        ++ ["defaultVote" .= v | SJust v <- [ppDefaultVote pp]]
 
 instance FromJSON PoolParams where
   parseJSON =
@@ -427,6 +433,7 @@ instance FromJSON PoolParams where
         <*> obj .: "owners"
         <*> obj .: "relays"
         <*> obj .: "metadata"
+        <*> obj .:? "defaultVote" .!= SNothing
 
 instance EncCBOR PoolMetadata where
   encCBOR (PoolMetadata u h) =
@@ -452,40 +459,54 @@ data SizeOfPoolRelays = SizeOfPoolRelays
 instance EncCBOR SizeOfPoolRelays where
   encCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
-instance EncCBORGroup PoolParams where
-  encCBORGroup poolParams =
-    encCBOR (ppId poolParams)
-      <> encCBOR (ppVrf poolParams)
-      <> encCBOR (ppPledge poolParams)
-      <> encCBOR (ppCost poolParams)
-      <> encCBOR (ppMargin poolParams)
-      <> encCBOR (ppRewardAccount poolParams)
-      <> encCBOR (ppOwners poolParams)
-      <> encCBOR (ppRelays poolParams)
-      <> encodeNullMaybe encCBOR (strictMaybeToMaybe (ppMetadata poolParams))
-  listLen _ = 9
-  listLenBound _ = 9
+instance EncCBOR PoolParams where
+  encCBOR poolParams =
+    encodeListLen poolParamsCount
+      <> encCBORGroupPoolParams poolParams
 
-instance DecCBORGroup PoolParams where
-  decCBORGroup = do
-    hk <- decCBOR
-    vrf <- decCBOR
-    pledge <- decCBOR
-    cost <- decCBOR
-    margin <- decCBOR
-    ra <- decCBOR
-    owners <- decCBOR
-    relays <- decCBOR
-    md <- decodeNullMaybe decCBOR
-    pure $
-      PoolParams
-        { ppId = hk
-        , ppVrf = vrf
-        , ppPledge = pledge
-        , ppCost = cost
-        , ppMargin = margin
-        , ppRewardAccount = ra
-        , ppOwners = owners
-        , ppRelays = relays
-        , ppMetadata = maybeToStrictMaybe md
-        }
+instance DecCBOR PoolParams where
+  decCBOR =
+    decodeRecordNamed
+      "CBORGroup"
+      (const (fromIntegral poolParamsCount))
+      decCBORGroupPoolParams
+
+poolParamsCount :: Word
+poolParamsCount = 9
+
+encCBORGroupPoolParams :: PoolParams -> Encoding
+encCBORGroupPoolParams PoolParams {..} =
+  encCBOR ppId
+    <> encCBOR ppVrf
+    <> encCBOR ppPledge
+    <> encCBOR ppCost
+    <> encCBOR ppMargin
+    <> encCBOR ppRewardAccount
+    <> encCBOR ppOwners
+    <> encCBOR ppRelays
+    <> encodeNullMaybe encCBOR (strictMaybeToMaybe ppMetadata)
+
+decCBORGroupPoolParams :: Decoder s PoolParams
+decCBORGroupPoolParams = do
+  hk <- decCBOR
+  vrf <- decCBOR
+  pledge <- decCBOR
+  cost <- decCBOR
+  margin <- decCBOR
+  ra <- decCBOR
+  owners <- decCBOR
+  relays <- decCBOR
+  md <- decodeNullMaybe decCBOR
+  pure $
+    PoolParams
+      { ppId = hk
+      , ppVrf = vrf
+      , ppPledge = pledge
+      , ppCost = cost
+      , ppMargin = margin
+      , ppRewardAccount = ra
+      , ppOwners = owners
+      , ppRelays = relays
+      , ppMetadata = maybeToStrictMaybe md
+      , ppDefaultVote = SNothing
+      }

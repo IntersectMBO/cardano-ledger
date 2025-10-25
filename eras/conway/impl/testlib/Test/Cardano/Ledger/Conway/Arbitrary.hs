@@ -23,6 +23,7 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
   genParameterChange,
   genNewConstitution,
   govActionGenerators,
+  genConwayTxCertPool,
   genConwayPlutusPurposePointer,
   genGovAction,
   genGovActionState,
@@ -76,7 +77,8 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidAndUnknownCostModels, genVa
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Arbitrary (uniformSubMap)
+import Test.Cardano.Ledger.Core.Arbitrary (genPoolParamsNoDefaultVote, uniformSubMap)
+import Test.Cardano.Ledger.Shelley.Arbitrary ()
 
 instance
   (Era era, Arbitrary (PParamsUpdate era)) =>
@@ -163,8 +165,16 @@ instance Era era => Arbitrary (ConwayTxCert era) where
   arbitrary =
     oneof
       [ ConwayTxCertDeleg <$> arbitrary
-      , ConwayTxCertPool <$> arbitrary
+      , genConwayTxCertPool
       , ConwayTxCertGov <$> arbitrary
+      ]
+
+genConwayTxCertPool :: Gen (ConwayTxCert era)
+genConwayTxCertPool =
+  ConwayTxCertPool
+    <$> oneof
+      [ RegPool <$> genPoolParamsNoDefaultVote
+      , RetirePool <$> arbitrary <*> arbitrary
       ]
 
 instance Arbitrary ConwayGovCert where
@@ -561,10 +571,6 @@ instance Arbitrary Voter where
       , StakePoolVoter <$> arbitrary
       ]
   shrink = genericShrink
-
-instance Arbitrary Vote where
-  arbitrary = arbitraryBoundedEnum
-  shrink = shrinkBoundedEnum
 
 instance Arbitrary (TxBody ConwayEra) where
   arbitrary =
