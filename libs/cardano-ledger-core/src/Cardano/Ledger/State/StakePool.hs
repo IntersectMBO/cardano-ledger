@@ -36,6 +36,7 @@ module Cardano.Ledger.State.StakePool (
   spsOwnersL,
   spsRelaysL,
   spsMetadataL,
+  spsDelegatorsL,
   spsDepositL,
 
   -- * Conversions
@@ -74,8 +75,10 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   EncCBORGroup (..),
+  Interns,
   decodeNullMaybe,
   decodeRecordNamed,
+  decodeRecordNamedT,
   decodeRecordSum,
   encodeListLen,
   encodeNullMaybe,
@@ -89,10 +92,12 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
+import Control.Monad.Trans (lift)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser, explicitParseField)
@@ -132,6 +137,8 @@ data StakePoolState = StakePoolState
   -- ^ Optional metadata (URL and hash)
   , spsDeposit :: !(CompactForm Coin)
   -- ^ Deposit for each pool
+  , spsDelegators :: !(Set (Credential 'Staking))
+  -- ^ Credentials that have delegated to the pool
   }
   deriving (Show, Generic, Eq, Ord, NoThunks, NFData, FromJSON, ToJSON)
 
@@ -162,6 +169,9 @@ spsMetadataL = lens spsMetadata $ \sps md -> sps {spsMetadata = md}
 spsDepositL :: Lens' StakePoolState (CompactForm Coin)
 spsDepositL = lens spsDeposit $ \sps d -> sps {spsDeposit = d}
 
+spsDelegatorsL :: Lens' StakePoolState (Set (Credential 'Staking))
+spsDelegatorsL = lens spsDelegators $ \sps delegators -> sps {spsDelegators = delegators}
+
 instance EncCBOR StakePoolState where
   encCBOR sps =
     encode $
@@ -175,6 +185,7 @@ instance EncCBOR StakePoolState where
         !> To (spsRelays sps)
         !> To (spsMetadata sps)
         !> To (spsDeposit sps)
+        !> To (spsDelegators sps)
 
 instance DecCBOR StakePoolState where
   decCBOR =
@@ -189,9 +200,23 @@ instance DecCBOR StakePoolState where
         <! From
         <! From
         <! From
+        <! From
 
 instance DecShareCBOR StakePoolState where
-  decShareCBOR _ = decCBOR
+  type Share StakePoolState = Interns (Credential 'Staking)
+  decSharePlusCBOR =
+    decodeRecordNamedT "StakePoolState" (const 10) $
+      StakePoolState
+        <$> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> decSharePlusCBOR
 
 instance Default StakePoolState where
   def =
@@ -205,13 +230,14 @@ instance Default StakePoolState where
       , spsRelays = def
       , spsMetadata = def
       , spsDeposit = mempty
+      , spsDelegators = def
       }
 
 -- | Convert 'PoolParams' to 'StakePoolState' by dropping the pool ID.
 -- This is the primary way to create a 'StakePoolState' from registration
 -- or update parameters.
-mkStakePoolState :: CompactForm Coin -> PoolParams -> StakePoolState
-mkStakePoolState deposit pp =
+mkStakePoolState :: CompactForm Coin -> Set (Credential 'Staking) -> PoolParams -> StakePoolState
+mkStakePoolState deposit delegators pp =
   StakePoolState
     { spsVrf = ppVrf pp
     , spsPledge = ppPledge pp
@@ -222,6 +248,7 @@ mkStakePoolState deposit pp =
     , spsRelays = ppRelays pp
     , spsMetadata = ppMetadata pp
     , spsDeposit = deposit
+    , spsDelegators = delegators
     }
 
 -- | Convert 'StakePoolState' back to 'PoolParams' by providing the pool ID.

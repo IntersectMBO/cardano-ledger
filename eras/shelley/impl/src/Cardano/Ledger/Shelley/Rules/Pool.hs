@@ -260,7 +260,8 @@ poolDelegationTransition = do
           tellEvent $ RegisterPool ppId
           pure $
             ps
-              & psStakePoolsL %~ Map.insert ppId (mkStakePoolState (pp ^. ppPoolDepositCompactL) poolParams)
+              & psStakePoolsL
+                %~ Map.insert ppId (mkStakePoolState (pp ^. ppPoolDepositCompactL) mempty poolParams)
               & psVRFKeyHashesL %~ updateVRFKeyHash
         -- re-register Pool
         Just stakePoolState -> do
@@ -276,7 +277,7 @@ poolDelegationTransition = do
                       Nothing -> Map.insert ppVrf (knownNonZeroBounded @1)
                       Just futureStakePoolState
                         | futureStakePoolState ^. spsVrfL /= ppVrf ->
-                            (Map.insert ppVrf (knownNonZeroBounded @1))
+                            Map.insert ppVrf (knownNonZeroBounded @1)
                               . Map.delete (futureStakePoolState ^. spsVrfL)
                         | otherwise -> id
                 | otherwise = id
@@ -293,9 +294,16 @@ poolDelegationTransition = do
           -- has been removed from the registered pools).  does it need to pay a
           -- new deposit (at the current deposit amount). But of course, if that
           -- has happened, we cannot be in this branch of the case statement.
+          let futureStakePoolState =
+                mkStakePoolState
+                  (stakePoolState ^. spsDepositL)
+                  -- delegators are set in PoolReap,
+                  -- in order to capture delegations that happened after re-registration but before the end of the epoch
+                  mempty
+                  poolParams
           pure $
             ps
-              & psFutureStakePoolsL %~ Map.insert ppId (mkStakePoolState (stakePoolState ^. spsDepositL) poolParams)
+              & psFutureStakePoolsL %~ Map.insert ppId futureStakePoolState
               & psRetiringL %~ Map.delete ppId
               & psVRFKeyHashesL %~ updateFutureVRFKeyHash
     RetirePool ppId e -> do

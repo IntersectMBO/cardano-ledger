@@ -75,6 +75,7 @@ import Data.Default
 import Data.Kind
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Typeable
 import Data.Void (Void)
 import GHC.Generics (Generic)
@@ -395,11 +396,11 @@ registerInitialStakePools ::
 registerInitialStakePools ShelleyGenesisStaking {sgsPools} nes =
   nes
     & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-      .~ ListMap.toMap (mkStakePoolState deposit <$> sgsPools)
+      .~ ListMap.toMap (mkStakePoolState deposit mempty <$> sgsPools)
   where
     deposit = nes ^. nesEsL . curPParamsEpochStateL . ppPoolDepositCompactL
 
--- | Register all staking credentials and apply delegations. Make sure StakePools that are bing
+-- | Register all staking credentials and apply delegations. Make sure StakePools that are being
 -- delegated to are already registered, which can be done with `registerInitialStakePools`.
 shelleyRegisterInitialAccounts ::
   forall era.
@@ -409,14 +410,20 @@ shelleyRegisterInitialAccounts ::
   NewEpochState era
 shelleyRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
   nes
-    & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL %~ \initAccounts ->
-      foldr registerAndDelegate initAccounts $ zip (ListMap.toList sgsStake) ptrs
+    & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL .~ updatedAccounts
+    & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL .~ updatedStakePoolStates
   where
     stakePools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+    initialAccounts = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
     deposit = compactCoinOrError $ nes ^. nesEsL . curPParamsEpochStateL . ppKeyDepositL
-    registerAndDelegate ((stakeKeyHash, stakePool), ptr) !accounts
+
+    !(!updatedAccounts, !updatedStakePoolStates) =
+      foldr registerAndDelegate (initialAccounts, stakePools) (zip (ListMap.toList sgsStake) ptrs)
+    registerAndDelegate ((stakeKeyHash, stakePool), ptr) (!accounts, !stakePoolMap)
       | stakePool `Map.member` stakePools =
-          registerShelleyAccount (KeyHashObj stakeKeyHash) ptr deposit (Just stakePool) accounts
+          ( registerShelleyAccount (KeyHashObj stakeKeyHash) ptr deposit (Just stakePool) accounts
+          , Map.adjust (spsDelegatorsL %~ Set.insert (KeyHashObj stakeKeyHash)) stakePool stakePoolMap
+          )
       | otherwise =
           error $
             "Invariant of a delegation of "
