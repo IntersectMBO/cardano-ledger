@@ -2,6 +2,10 @@
 
 ## 1.19.0.0
 
+* Rename `PoolParams` to `StakePoolParams`
+  - Replace the prefix for all the fields of this type from `pp*` -> `spp*`
+  - Rename the lenses for the fields from `ppCostL`, `ppMetadataL` and `ppVrfL` to `sppCostL`, `sppMetadataL` and `sppVrfL`
+  - Rename `stakePoolStateToPoolParams` to `stakePoolStateToStakePoolParams`
 * Remove the `UMap` module and the `umap` benchmarks cabal target.
 * Export `dRepToText`
 * Deprecated `bheader` and `bbody`

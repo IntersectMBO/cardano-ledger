@@ -30,7 +30,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.State.Account
 import Cardano.Ledger.State.CertState (DState (..), PState (..))
 import Cardano.Ledger.State.SnapShots
-import Cardano.Ledger.State.StakePool (stakePoolStateToPoolParams)
+import Cardano.Ledger.State.StakePool (stakePoolStateToStakePoolParams)
 import Cardano.Ledger.State.UTxO hiding (balance)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -92,7 +92,7 @@ snapShotFromInstantStake iStake dState PState {psStakePools} =
     , ssPoolParams =
         VMap.fromDistinctAscListN
           (Map.size psStakePools)
-          [(poolId, stakePoolStateToPoolParams poolId ps) | (poolId, ps) <- Map.toAscList psStakePools]
+          [(poolId, stakePoolStateToStakePoolParams poolId ps) | (poolId, ps) <- Map.toAscList psStakePools]
     }
   where
     accounts = dsAccounts dState

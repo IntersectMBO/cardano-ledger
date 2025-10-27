@@ -99,7 +99,7 @@ spec = do
       pps <- registerRewardAccount >>= freshPoolParams kh
       pure $
         mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL .~ [RegPoolTxCert $ pps & ppVrfL .~ vrf]
+          & bodyTxL . certsTxBodyL .~ [RegPoolTxCert $ pps & sppVrfL .~ vrf]
     registerStakePool kh vrf =
       registerStakePoolTx kh vrf >>= submitTx_
     retireStakePool kh retirementInterval = do

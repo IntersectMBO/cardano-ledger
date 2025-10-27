@@ -556,10 +556,10 @@ transTxCert ::
   (ShelleyEraTxCert era, ConwayEraTxCert era, TxCert era ~ ConwayTxCert era) =>
   ProtVer -> TxCert era -> PV3.TxCert
 transTxCert pv = \case
-  RegPoolTxCert PoolParams {ppId, ppVrf} ->
+  RegPoolTxCert StakePoolParams {sppId, sppVrf} ->
     PV3.TxCertPoolRegister
-      (transKeyHash ppId)
-      (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+      (transKeyHash sppId)
+      (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes (unVRFVerKeyHash sppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
     PV3.TxCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
   RegTxCert stakeCred ->

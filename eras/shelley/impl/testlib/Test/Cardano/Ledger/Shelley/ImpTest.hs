@@ -1672,7 +1672,7 @@ freshPoolParams ::
   ShelleyEraImp era =>
   KeyHash 'StakePool ->
   RewardAccount ->
-  ImpTestM era PoolParams
+  ImpTestM era StakePoolParams
 freshPoolParams khPool rewardAccount = do
   vrfHash <- freshKeyHashVRF
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -1680,16 +1680,16 @@ freshPoolParams khPool rewardAccount = do
   poolCostExtra <- uniformRM (Coin 0, Coin 100_000_000)
   pledge <- uniformRM (Coin 0, Coin 100_000_000)
   pure
-    PoolParams
-      { ppVrf = vrfHash
-      , ppRewardAccount = rewardAccount
-      , ppRelays = mempty
-      , ppPledge = pledge
-      , ppOwners = mempty
-      , ppMetadata = SNothing
-      , ppMargin = def
-      , ppId = khPool
-      , ppCost = minCost <> poolCostExtra
+    StakePoolParams
+      { sppVrf = vrfHash
+      , sppRewardAccount = rewardAccount
+      , sppRelays = mempty
+      , sppPledge = pledge
+      , sppOwners = mempty
+      , sppMetadata = SNothing
+      , sppMargin = def
+      , sppId = khPool
+      , sppCost = minCost <> poolCostExtra
       }
 
 registerPool ::

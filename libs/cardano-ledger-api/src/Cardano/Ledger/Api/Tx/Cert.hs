@@ -173,7 +173,7 @@ import Cardano.Ledger.Shelley.TxCert (
   pattern RegTxCert,
   pattern UnRegTxCert,
  )
-import Cardano.Ledger.State (PoolParams)
+import Cardano.Ledger.State (StakePoolParams)
 
 class EraTxCert era => AnyEraTxCert era where
   anyEraToRegTxCert :: TxCert era -> Maybe (Credential 'Staking)
@@ -326,7 +326,7 @@ instance AnyEraTxCert ConwayEra where
 
 instance AnyEraTxCert DijkstraEra
 
-pattern AnyEraRegPoolTxCert :: EraTxCert era => PoolParams -> TxCert era
+pattern AnyEraRegPoolTxCert :: EraTxCert era => StakePoolParams -> TxCert era
 pattern AnyEraRegPoolTxCert poolParams = RegPoolTxCert poolParams
 
 pattern AnyEraRetirePoolTxCert ::

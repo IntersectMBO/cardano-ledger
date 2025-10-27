@@ -83,7 +83,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
-import Cardano.Ledger.State.StakePool (PoolParams (ppVrf))
+import Cardano.Ledger.State.StakePool (StakePoolParams (sppVrf))
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
@@ -182,7 +182,7 @@ maxPool pp r sigma pR = maxPool' a0 nOpt r sigma pR
 data SnapShot = SnapShot
   { ssStake :: !Stake
   , ssDelegations :: !(VMap VB VB (Credential 'Staking) (KeyHash 'StakePool))
-  , ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool) PoolParams)
+  , ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool) StakePoolParams)
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs SnapShot
@@ -309,7 +309,7 @@ calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
                 IndividualPoolStake
                   (toInteger word64 %. nonZeroTotalInteger)
                   (CompactCoin word64)
-                  (ppVrf poolparam)
+                  (sppVrf poolparam)
             )
             poolStakeMap
             (VMap.toMap poolParams)
@@ -348,5 +348,5 @@ ssStakeDistrL = lens (unStake . ssStake) (\ds u -> ds {ssStake = Stake u})
 ssDelegationsL :: Lens' SnapShot (VMap VB VB (Credential 'Staking) (KeyHash 'StakePool))
 ssDelegationsL = lens ssDelegations (\ds u -> ds {ssDelegations = u})
 
-ssPoolParamsL :: Lens' SnapShot (VMap VB VB (KeyHash 'StakePool) PoolParams)
+ssPoolParamsL :: Lens' SnapShot (VMap VB VB (KeyHash 'StakePool) StakePoolParams)
 ssPoolParamsL = lens ssPoolParams (\ds u -> ds {ssPoolParams = u})

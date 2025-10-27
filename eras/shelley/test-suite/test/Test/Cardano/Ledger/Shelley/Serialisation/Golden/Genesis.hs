@@ -247,19 +247,19 @@ exampleShelleyGenesis =
         , L.SingleHostName L.SNothing (fromJust $ textToDns 64 "cool.domain.com")
         , L.MultiHostName (fromJust $ textToDns 64 "cool.domain.com")
         ]
-    poolParams :: L.PoolParams
-    poolParams =
-      L.PoolParams
-        { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
-        , L.ppVrf =
+    stakePoolParams :: L.StakePoolParams
+    stakePoolParams =
+      L.StakePoolParams
+        { L.sppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
+        , L.sppVrf =
             hashVerKeyVRF @StandardCrypto . vrfVerKey $ mkVRFKeyPair @StandardCrypto (RawSeed 1 0 0 0 2)
-        , L.ppPledge = L.Coin 1
-        , L.ppCost = L.Coin 5
-        , L.ppMargin = unsafeBoundRational 0.25
-        , L.ppRewardAccount = L.RewardAccount L.Testnet Cast.aliceSHK
-        , L.ppOwners = Set.singleton $ hashKey (vKey Cast.aliceStake)
-        , L.ppRelays = relays
-        , L.ppMetadata =
+        , L.sppPledge = L.Coin 1
+        , L.sppCost = L.Coin 5
+        , L.sppMargin = unsafeBoundRational 0.25
+        , L.sppRewardAccount = L.RewardAccount L.Testnet Cast.aliceSHK
+        , L.sppOwners = Set.singleton $ hashKey (vKey Cast.aliceStake)
+        , L.sppRelays = relays
+        , L.sppMetadata =
             L.SJust $
               L.PoolMetadata
                 { L.pmUrl = fromJust $ textToUrl 64 "best.pool.com"
@@ -270,7 +270,7 @@ exampleShelleyGenesis =
       ShelleyGenesisStaking
         { sgsPools =
             LM.ListMap
-              [ (L.KeyHash "f583a45e4947c102091b96170ef50ef0cf8edb62666193a2163247bb", poolParams)
+              [ (L.KeyHash "f583a45e4947c102091b96170ef50ef0cf8edb62666193a2163247bb", stakePoolParams)
               ]
         , sgsStake =
             LM.ListMap

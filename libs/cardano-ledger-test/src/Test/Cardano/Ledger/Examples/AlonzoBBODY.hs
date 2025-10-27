@@ -486,23 +486,23 @@ poolMDHTooBigTx =
       mkBasicTxBody
         & inputsTxBodyL .~ [mkGenesisTxIn 3]
         & outputsTxBodyL .~ [mkBasicTxOut someAddr . inject $ Coin 995 <-> poolDeposit]
-        & certsTxBodyL .~ [RegPoolTxCert poolParams]
+        & certsTxBodyL .~ [RegPoolTxCert stakePoolParams]
         & feeTxBodyL .~ Coin 5
       where
         tooManyBytes = BS.replicate (standardHashSize + 1) 0
-        poolParams =
-          PoolParams
-            { ppId = coerceKeyRole . hashKey $ vKey someKeys
-            , ppVrf =
+        stakePoolParams =
+          StakePoolParams
+            { sppId = coerceKeyRole . hashKey $ vKey someKeys
+            , sppVrf =
                 hashVerKeyVRF @MockCrypto . vrfVerKey @MockCrypto . mkVRFKeyPair @MockCrypto $
                   RawSeed 0 0 0 0 0
-            , ppPledge = Coin 0
-            , ppCost = Coin 0
-            , ppMargin = minBound
-            , ppRewardAccount = RewardAccount Testnet $ scriptStakeCredSucceed @era
-            , ppOwners = mempty
-            , ppRelays = mempty
-            , ppMetadata = SJust $ PoolMetadata (fromJust $ textToUrl 64 "") tooManyBytes
+            , sppPledge = Coin 0
+            , sppCost = Coin 0
+            , sppMargin = minBound
+            , sppRewardAccount = RewardAccount Testnet $ scriptStakeCredSucceed @era
+            , sppOwners = mempty
+            , sppRelays = mempty
+            , sppMetadata = SJust $ PoolMetadata (fromJust $ textToUrl 64 "") tooManyBytes
             }
 
 -- ============================== Expected UTXO  ===============================

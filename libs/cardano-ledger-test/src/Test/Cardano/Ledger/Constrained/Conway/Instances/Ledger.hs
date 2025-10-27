@@ -677,9 +677,9 @@ instance HasSimpleRep PoolCert
 
 instance HasSpec PoolCert
 
-instance HasSimpleRep PoolParams
+instance HasSimpleRep StakePoolParams
 
-instance HasSpec PoolParams
+instance HasSpec StakePoolParams
 
 instance HasSimpleRep StakePoolState
 

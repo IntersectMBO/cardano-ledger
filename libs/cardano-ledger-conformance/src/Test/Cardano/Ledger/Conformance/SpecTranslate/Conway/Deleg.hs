@@ -50,7 +50,7 @@ instance
     Agda.MkDelegEnv
       <$> toSpecRep cdePParams
       <*> toSpecRep
-        (Map.mapKeys (hashToInteger . unKeyHash) $ Map.mapWithKey stakePoolStateToPoolParams cdePools)
+        (Map.mapKeys (hashToInteger . unKeyHash) $ Map.mapWithKey stakePoolStateToStakePoolParams cdePools)
       <*> toSpecRep delegatees
 
 instance SpecTranslate ctx ConwayDelegCert where
