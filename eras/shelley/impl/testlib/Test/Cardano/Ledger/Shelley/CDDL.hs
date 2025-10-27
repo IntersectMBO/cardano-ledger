@@ -54,7 +54,7 @@ import Text.Heredoc
 import Prelude hiding ((/))
 
 shelleyCDDL :: Huddle
-shelleyCDDL = collectFrom [HIRule $ block @ShelleyEra, HIRule $ transaction @ShelleyEra, HIRule signkeyKES]
+shelleyCDDL = collectFrom [HIRule $ block @ShelleyEra, HIRule $ transaction @ShelleyEra, HIRule signkey_kes]
 
 block :: forall era. Era era => Rule
 block =

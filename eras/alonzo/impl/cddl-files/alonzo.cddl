@@ -330,9 +330,9 @@ protocol_param_update =
 
 nonnegative_interval = #6.30([uint, positive_int])
 
-positive_int = 1 .. maxWord64
+positive_int = 1 .. max_word64
 
-maxWord64 = 18446744073709551615
+max_word64 = 18446744073709551615
 
 nonce = [0// 1, bytes .size 32]
 
@@ -349,7 +349,11 @@ language = 0
 ;   See Plutus' `ParamName` for parameter ordering
 cost_model = [166*166 int64]
 
-int64 = -9223372036854775808 .. 9223372036854775807
+int64 = min_int64 .. max_int64
+
+min_int64 = -9223372036854775808
+
+max_int64 = 9223372036854775807
 
 ex_unit_prices = [mem_price : positive_interval, step_price : positive_interval]
 
@@ -558,5 +562,5 @@ auxiliary_scripts = [* native_script]
 transaction = 
   [transaction_body, transaction_witness_set, bool, auxiliary_data/ nil]
 
-signkeyKES = bytes .size 64
+signkey_kes = bytes .size 64
 

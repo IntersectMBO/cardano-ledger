@@ -33,18 +33,18 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   vrf_cert,
   kes_vkey,
   kes_signature,
-  signkeyKES,
+  signkey_kes,
   signature,
   big_int,
-  minInt64,
-  maxInt64,
-  negInt64,
-  posInt64,
-  nonZeroInt64,
+  min_int64,
+  max_int64,
+  negative_int64,
+  positive_int64,
+  nonzero_int64,
   int64,
   positive_int,
-  maxWord32,
-  posWord32,
+  max_word32,
+  positive_word32,
   unit_interval,
   nonnegative_interval,
   distinct,
@@ -65,7 +65,7 @@ coin :: Rule
 coin = "coin" =:= VUInt
 
 positive_coin :: Rule
-positive_coin = "positive_coin" =:= (1 :: Integer) ... maxWord64
+positive_coin = "positive_coin" =:= (1 :: Integer) ... max_word64
 
 address :: Rule
 address =
@@ -168,8 +168,8 @@ kes_vkey = "kes_vkey" =:= VBytes `sized` (32 :: Word64)
 kes_signature :: Rule
 kes_signature = "kes_signature" =:= VBytes `sized` (448 :: Word64)
 
-signkeyKES :: Rule
-signkeyKES = "signkeyKES" =:= VBytes `sized` (64 :: Word64)
+signkey_kes :: Rule
+signkey_kes = "signkey_kes" =:= VBytes `sized` (64 :: Word64)
 
 signature :: Rule
 signature = "signature" =:= VBytes `sized` (64 :: Word64)
@@ -187,46 +187,36 @@ big_uint = "big_uint" =:= tag 2 bounded_bytes
 big_nint :: Rule
 big_nint = "big_nint" =:= tag 3 bounded_bytes
 
--- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
--- with:
---
--- minInt64 :: Rule
--- minInt64 = "minInt64" =:= -9223372036854775808
-minInt64 :: Integer
-minInt64 = -9223372036854775808
+min_int64 :: Rule
+min_int64 = "min_int64" =:= (-9223372036854775808 :: Integer)
 
--- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
--- with:
---
--- maxInt64 :: Rule
--- maxInt64 = "maxInt64" =:= 9223372036854775807
-maxInt64 :: Integer
-maxInt64 = 9223372036854775807
+max_int64 :: Rule
+max_int64 = "max_int64" =:= (9223372036854775807 :: Integer)
 
-maxWord64 :: Rule
-maxWord64 = "maxWord64" =:= (18446744073709551615 :: Integer)
+max_word64 :: Rule
+max_word64 = "max_word64" =:= (18446744073709551615 :: Integer)
 
-negInt64 :: Rule
-negInt64 = "negInt64" =:= minInt64 ... (-1 :: Integer)
+negative_int64 :: Rule
+negative_int64 = "negative_int64" =:= min_int64 ... (-1 :: Integer)
 
-posInt64 :: Rule
-posInt64 = "posInt64" =:= (1 :: Integer) ... maxInt64
+positive_int64 :: Rule
+positive_int64 = "positive_int64" =:= (1 :: Integer) ... max_int64
 
 -- | this is the same as the current int64 definition but without zero
-nonZeroInt64 :: Rule
-nonZeroInt64 = "nonZeroInt64" =:= negInt64 / posInt64
+nonzero_int64 :: Rule
+nonzero_int64 = "nonzero_int64" =:= negative_int64 / positive_int64
 
 int64 :: Rule
-int64 = "int64" =:= minInt64 ... maxInt64
+int64 = "int64" =:= min_int64 ... max_int64
 
 positive_int :: Rule
-positive_int = "positive_int" =:= (1 :: Integer) ... maxWord64
+positive_int = "positive_int" =:= (1 :: Integer) ... max_word64
 
-maxWord32 :: Rule
-maxWord32 = "maxWord32" =:= (4294967295 :: Integer)
+max_word32 :: Rule
+max_word32 = "max_word32" =:= (4294967295 :: Integer)
 
-posWord32 :: Rule
-posWord32 = "posWord32" =:= (1 :: Integer) ... maxWord32
+positive_word32 :: Rule
+positive_word32 = "positive_word32" =:= (1 :: Integer) ... max_word32
 
 unit_interval :: Rule
 unit_interval =

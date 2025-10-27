@@ -32,7 +32,7 @@ babbageCDDL =
     , HIRule transaction
     , HIRule kes_signature
     , HIRule language
-    , HIRule signkeyKES
+    , HIRule signkey_kes
     ]
 
 block :: Rule

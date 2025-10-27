@@ -265,9 +265,9 @@ protocol_param_update =
 
 nonnegative_interval = #6.30([uint, positive_int])
 
-positive_int = 1 .. maxWord64
+positive_int = 1 .. max_word64
 
-maxWord64 = 18446744073709551615
+max_word64 = 18446744073709551615
 
 nonce = [0// 1, bytes .size 32]
 
@@ -317,5 +317,5 @@ transaction_metadatum =
 transaction = 
   [transaction_body, transaction_witness_set, transaction_metadata/ nil]
 
-signkeyKES = bytes .size 64
+signkey_kes = bytes .size 64
 

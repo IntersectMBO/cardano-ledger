@@ -103,7 +103,7 @@ conwayCDDL =
     , HIRule kes_signature
     , HIRule language
     , HIRule potential_languages
-    , HIRule signkeyKES
+    , HIRule signkey_kes
     , -- Certificates
       HIRule certificate
     , HIGroup stake_registration
@@ -841,7 +841,7 @@ value :: Rule
 value = "value" =:= coin / sarr [a coin, a (multiasset positive_coin)]
 
 mint :: Rule
-mint = "mint" =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> nonZeroInt64]]
+mint = "mint" =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> nonzero_int64]]
 
 epoch_no :: Rule
 epoch_no = "epoch_no" =:= VUInt `sized` (8 :: Word64)

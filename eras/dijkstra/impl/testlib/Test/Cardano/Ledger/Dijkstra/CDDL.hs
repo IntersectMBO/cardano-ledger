@@ -32,7 +32,7 @@ dijkstraCDDL =
     , HIRule kes_signature
     , HIRule language
     , HIRule potential_languages
-    , HIRule signkeyKES
+    , HIRule signkey_kes
     , -- Certificates
       HIRule certificate
     , HIGroup stake_registration
@@ -322,7 +322,7 @@ protocol_param_update =
       , opt (idx 33 ==> nonnegative_interval) //- "minfee refScript coins per byte"
       , opt (idx 34 ==> (VUInt `sized` (4 :: Word64))) //- "max refScript size per block"
       , opt (idx 35 ==> (VUInt `sized` (4 :: Word64))) //- "max refScript size per tx"
-      , opt (idx 36 ==> posWord32) //- "refScript cost stride"
+      , opt (idx 36 ==> positive_word32) //- "refScript cost stride"
       , opt (idx 37 ==> positive_interval) //- "refScript cost multiplier"
       ]
 
