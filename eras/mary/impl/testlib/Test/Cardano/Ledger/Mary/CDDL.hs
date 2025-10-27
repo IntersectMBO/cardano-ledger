@@ -55,7 +55,7 @@ transaction_body :: forall era. Era era => Rule
 transaction_body =
   "transaction_body"
     =:= mp
-      [ idx 0 ==> set transaction_input
+      [ idx 0 ==> untagged_set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
       , opt (idx 3 ==> VUInt)

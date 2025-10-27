@@ -113,7 +113,7 @@ transaction_body =
         |]
     $ "transaction_body"
       =:= mp
-        [ idx 0 ==> set transaction_input
+        [ idx 0 ==> untagged_set transaction_input
         , idx 1 ==> arr [0 <+ a transaction_output]
         , idx 2 ==> coin
         , opt (idx 3 ==> VUInt)
@@ -124,12 +124,12 @@ transaction_body =
         , opt (idx 8 ==> VUInt)
         , opt (idx 9 ==> mint)
         , opt (idx 11 ==> script_data_hash)
-        , opt (idx 13 ==> set transaction_input)
+        , opt (idx 13 ==> untagged_set transaction_input)
         , opt (idx 14 ==> required_signers)
         , opt (idx 15 ==> network_id)
         , opt (idx 16 ==> transaction_output)
         , opt (idx 17 ==> coin)
-        , opt (idx 18 ==> set transaction_input)
+        , opt (idx 18 ==> untagged_set transaction_input)
         ]
 
 -- TODO: Allow for adding to the comments of a Rule in order to not have to

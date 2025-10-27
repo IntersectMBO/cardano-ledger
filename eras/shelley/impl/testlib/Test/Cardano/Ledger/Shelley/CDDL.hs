@@ -13,10 +13,8 @@
 module Test.Cardano.Ledger.Shelley.CDDL (
   module Test.Cardano.Ledger.Core.Binary.CDDL,
   shelleyCDDL,
-  nonempty_set,
   transaction_metadatum_label,
   transaction_metadatum,
-  set,
   transaction_input,
   transaction_output,
   certificate,
@@ -120,7 +118,7 @@ transaction_body :: forall era. Era era => Rule
 transaction_body =
   "transaction_body"
     =:= mp
-      [ idx 0 ==> set transaction_input
+      [ idx 0 ==> untagged_set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
       , idx 3 ==> VUInt
@@ -225,7 +223,7 @@ pool_params =
       , "cost" ==> coin
       , "margin" ==> unit_interval
       , "reward_account" ==> reward_account
-      , "pool_owners" ==> set addr_keyhash
+      , "pool_owners" ==> untagged_set addr_keyhash
       , "relays" ==> arr [0 <+ a relay]
       , "pool_metadata" ==> (pool_metadata / VNil)
       ]
@@ -394,12 +392,3 @@ metadata_hash = "metadata_hash" =:= hash32
 
 nonce :: Rule
 nonce = "nonce" =:= arr [0] / arr [1, a (VBytes `sized` (32 :: Word64))]
-
--- Shelley does not support some of the tagged core datastructures that we rely
--- on in future eras. In order to have the "correct" common specification in
--- core, we override them here
-set :: IsType0 t0 => t0 -> GRuleCall
-set = binding $ \x -> "set" =:= arr [0 <+ a x]
-
-nonempty_set :: IsType0 t0 => t0 -> GRuleCall
-nonempty_set = binding $ \x -> "nonempty_set" =:= arr [1 <+ a x]

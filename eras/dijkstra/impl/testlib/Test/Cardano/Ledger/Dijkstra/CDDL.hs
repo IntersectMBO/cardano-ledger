@@ -115,7 +115,7 @@ transaction_body :: Rule
 transaction_body =
   "transaction_body"
     =:= mp
-      [ idx 0 ==> set transaction_input
+      [ idx 0 ==> maybe_tagged_set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
       , opt (idx 3 ==> slot_no)
@@ -125,12 +125,12 @@ transaction_body =
       , opt (idx 8 ==> slot_no) -- Validity interval start
       , opt (idx 9 ==> mint)
       , opt (idx 11 ==> script_data_hash)
-      , opt (idx 13 ==> nonempty_set transaction_input)
+      , opt (idx 13 ==> maybe_tagged_nonempty_set transaction_input)
       , opt (idx 14 ==> guards)
       , opt (idx 15 ==> network_id)
       , opt (idx 16 ==> transaction_output)
       , opt (idx 17 ==> coin)
-      , opt (idx 18 ==> nonempty_set transaction_input)
+      , opt (idx 18 ==> maybe_tagged_nonempty_set transaction_input)
       , opt (idx 19 ==> voting_procedures)
       , opt (idx 20 ==> proposal_procedures)
       , opt (idx 21 ==> coin)
@@ -140,8 +140,8 @@ transaction_body =
 guards :: Rule
 guards =
   "guards"
-    =:= nonempty_set addr_keyhash
-    / nonempty_oset credential
+    =:= maybe_tagged_nonempty_set addr_keyhash
+    / maybe_tagged_nonempty_oset credential
 
 proposal_procedure :: Rule
 proposal_procedure =
@@ -154,10 +154,10 @@ proposal_procedure =
       ]
 
 proposal_procedures :: Rule
-proposal_procedures = "proposal_procedures" =:= nonempty_oset proposal_procedure
+proposal_procedures = "proposal_procedures" =:= maybe_tagged_nonempty_oset proposal_procedure
 
 certificates :: Rule
-certificates = "certificates" =:= nonempty_oset certificate
+certificates = "certificates" =:= maybe_tagged_nonempty_oset certificate
 
 gov_action :: Rule
 gov_action =
@@ -345,14 +345,14 @@ transaction_witness_set :: Rule
 transaction_witness_set =
   "transaction_witness_set"
     =:= mp
-      [ opt $ idx 0 ==> nonempty_set vkeywitness
-      , opt $ idx 1 ==> nonempty_set dijkstra_native_script
-      , opt $ idx 2 ==> nonempty_set bootstrap_witness
-      , opt $ idx 3 ==> nonempty_set plutus_v1_script
-      , opt $ idx 4 ==> nonempty_set plutus_data
+      [ opt $ idx 0 ==> maybe_tagged_nonempty_set vkeywitness
+      , opt $ idx 1 ==> maybe_tagged_nonempty_set dijkstra_native_script
+      , opt $ idx 2 ==> maybe_tagged_nonempty_set bootstrap_witness
+      , opt $ idx 3 ==> maybe_tagged_nonempty_set plutus_v1_script
+      , opt $ idx 4 ==> maybe_tagged_nonempty_set plutus_data
       , opt $ idx 5 ==> redeemers dijkstra_redeemer_tag
-      , opt $ idx 6 ==> nonempty_set plutus_v2_script
-      , opt $ idx 7 ==> nonempty_set plutus_v3_script
+      , opt $ idx 6 ==> maybe_tagged_nonempty_set plutus_v2_script
+      , opt $ idx 7 ==> maybe_tagged_nonempty_set plutus_v3_script
       ]
 
 -- TODO: adjust with new script purpose
