@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Rename `poolParamsP` field to `stakePoolParamsP` in `RewardProvenancePool`
 * Move withdrawals-draining from `DELEGS` to `LEDGER`
   - Remove `WithdrawalsNotInRewardsDELEGS`
   - Add to `ShelleyLedgerPredFailure`
@@ -13,6 +14,7 @@
 
 ### `testlib`
 
+* Rename `examplePoolParams` to `exampleStakePoolParams`
 * Removed `shelleyEraSpecificSpec`
 * Added `shelleyGenUnRegTxCert`
 * Added `genUnRegTxCert` to `ShelleyEraImp`

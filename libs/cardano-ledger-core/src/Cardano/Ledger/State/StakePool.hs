@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -45,7 +46,19 @@ module Cardano.Ledger.State.StakePool (
 
   -- | These types were previously defined in 'Cardano.Ledger.PoolParams'.
   -- They are now part of this module and re-exported by 'Cardano.Ledger.State'.
-  StakePoolParams (..),
+  StakePoolParams (
+    ..,
+    PoolParams,
+    ppId,
+    ppVrf,
+    ppPledge,
+    ppCost,
+    ppMargin,
+    ppRewardAccount,
+    ppOwners,
+    ppRelays,
+    ppMetadata
+  ),
   PoolMetadata (..),
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
@@ -424,6 +437,39 @@ instance FromJSON StakePoolParams where
         <*> obj .: "owners"
         <*> obj .: "relays"
         <*> obj .: "metadata"
+
+type PoolParams = StakePoolParams
+
+pattern PoolParams ::
+  KeyHash 'StakePool ->
+  VRFVerKeyHash 'StakePoolVRF ->
+  Coin ->
+  Coin ->
+  UnitInterval ->
+  RewardAccount ->
+  Set (KeyHash 'Staking) ->
+  StrictSeq StakePoolRelay ->
+  StrictMaybe PoolMetadata ->
+  PoolParams
+pattern PoolParams {ppId, ppVrf, ppPledge, ppCost, ppMargin, ppRewardAccount, ppOwners, ppRelays, ppMetadata} =
+  StakePoolParams ppId ppVrf ppPledge ppCost ppMargin ppRewardAccount ppOwners ppRelays ppMetadata
+
+{-# COMPLETE PoolParams #-}
+
+{-# DEPRECATED PoolParams "In favor of `StakePoolParams`" #-}
+
+{-# DEPRECATED
+  ppId
+  , ppVrf
+  , ppPledge
+  , ppCost
+  , ppMargin
+  , ppRewardAccount
+  , ppOwners
+  , ppRelays
+  , ppMetadata
+  "In favor of fields with `spp*` prefix"
+  #-}
 
 instance EncCBOR PoolMetadata where
   encCBOR (PoolMetadata u h) =
