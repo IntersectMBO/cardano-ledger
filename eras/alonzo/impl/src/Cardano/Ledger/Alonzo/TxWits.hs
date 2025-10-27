@@ -578,7 +578,11 @@ instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
       ( peekTokenType >>= \case
           TypeMapLenIndef -> decodeMapRedeemers
           TypeMapLen -> decodeMapRedeemers
-          _ -> decodeListRedeemers
+          _ ->
+            ifDecoderVersionAtLeast
+              (natVersion @12)
+              (fail "List encoding of redeemers not supported starting with PV 12")
+              decodeListRedeemers
       )
       ( mapTraverseableDecoderA
           (decodeList decodeAnnElement)
