@@ -10,32 +10,17 @@
 
 module Test.Cardano.Ledger.Babbage.CDDL (
   module Test.Cardano.Ledger.Alonzo.CDDL,
-  module Test.Cardano.Ledger.Babbage.CDDL,
+  babbageCDDL,
+  operational_cert,
+  babbage_transaction_output,
+  plutus_data,
 ) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Codec.CBOR.Cuddle.Huddle
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Alonzo.CDDL hiding (
-  auxiliary_data,
-  block,
-  cost_models,
-  header,
-  header_body,
-  language,
   operational_cert,
-  plutus_data,
-  plutus_script,
-  proposed_protocol_parameter_updates,
-  protocol_param_update,
-  protocol_version,
-  script_data_hash,
-  script_n_of_k,
-  transaction,
-  transaction_body,
-  transaction_output,
-  transaction_witness_set,
-  update,
  )
 import Text.Heredoc
 import Prelude hiding ((/))

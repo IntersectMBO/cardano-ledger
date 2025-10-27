@@ -12,19 +12,23 @@
 
 module Test.Cardano.Ledger.Allegra.CDDL (
   module Test.Cardano.Ledger.Shelley.CDDL,
-  module Test.Cardano.Ledger.Allegra.CDDL,
+  allegraCDDL,
+  transaction_witness_set,
+  auxiliary_data,
+  metadata,
+  auxiliary_scripts,
+  script_pubkey,
+  script_all,
+  script_any,
+  invalid_before,
+  invalid_hereafter,
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core (Era)
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
-import Test.Cardano.Ledger.Shelley.CDDL hiding (
-  block,
-  transaction,
-  transaction_body,
-  transaction_witness_set,
- )
+import Test.Cardano.Ledger.Shelley.CDDL
 import Text.Heredoc
 
 allegraCDDL :: Huddle

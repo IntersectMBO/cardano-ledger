@@ -9,8 +9,8 @@
 {- HLINT ignore "Evaluate" -}
 
 module Test.Cardano.Ledger.Dijkstra.CDDL (
-  module Test.Cardano.Ledger.Dijkstra.CDDL,
   module Test.Cardano.Ledger.Conway.CDDL,
+  dijkstraCDDL,
 ) where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -20,30 +20,7 @@ import Data.Function (($))
 import Data.Word (Word64)
 import GHC.Num (Integer)
 import Test.Cardano.Ledger.Conway.CDDL hiding (
-  alonzo_auxiliary_data,
-  auxiliary_data,
-  block,
-  certificate,
-  certificates,
-  cost_models,
-  gov_action,
-  header,
-  header_body,
-  language,
-  native_script,
-  parameter_change_action,
-  proposal_procedure,
-  proposal_procedures,
-  protocol_param_update,
-  protocol_version,
-  redeemers,
-  script_data_hash,
-  single_host_name,
-  transaction,
-  transaction_body,
-  transaction_metadatum_label,
-  transaction_output,
-  transaction_witness_set,
+
  )
 import Text.Heredoc
 

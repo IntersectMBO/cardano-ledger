@@ -11,7 +11,12 @@
 
 module Test.Cardano.Ledger.Mary.CDDL (
   module Test.Cardano.Ledger.Allegra.CDDL,
-  module Test.Cardano.Ledger.Mary.CDDL,
+  maryCDDL,
+  multiasset,
+  mint,
+  value,
+  policy_id,
+  asset_name,
 ) where
 
 import Cardano.Ledger.Core (Era)
@@ -19,12 +24,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
-import Test.Cardano.Ledger.Allegra.CDDL hiding (
-  block,
-  transaction,
-  transaction_body,
-  transaction_output,
- )
+import Test.Cardano.Ledger.Allegra.CDDL hiding (transaction_output)
 
 maryCDDL :: Huddle
 maryCDDL =

@@ -10,7 +10,17 @@
 
 module Test.Cardano.Ledger.Alonzo.CDDL (
   module Test.Cardano.Ledger.Mary.CDDL,
-  module Test.Cardano.Ledger.Alonzo.CDDL,
+  alonzoCDDL,
+  certificates,
+  auxiliary_data_hash,
+  required_signers,
+  network_id,
+  native_script,
+  redeemers,
+  constr,
+  ex_unit_prices,
+  ex_units,
+  positive_interval,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -19,21 +29,9 @@ import Data.Function (($))
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Mary.CDDL hiding (
   auxiliary_data,
-  block,
   header,
-  header_body,
-  mint,
-  native_script,
-  proposed_protocol_parameter_updates,
-  protocol_param_update,
-  protocol_version,
-  script_n_of_k,
-  transaction,
-  transaction_body,
-  transaction_output,
   transaction_witness_set,
   update,
-  value,
  )
 import Text.Heredoc
 
@@ -435,9 +433,3 @@ network_id = "network_id" =:= int 0 / int 1
 
 auxiliary_data_hash :: Rule
 auxiliary_data_hash = "auxiliary_data_hash" =:= hash32
-
-mint :: Rule
-mint = "mint" =:= multiasset int64
-
-value :: Rule
-value = "value" =:= coin / sarr [a coin, a (multiasset VUInt)]
