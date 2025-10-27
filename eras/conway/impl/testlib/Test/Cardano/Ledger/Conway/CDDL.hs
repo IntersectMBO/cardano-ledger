@@ -11,7 +11,6 @@
 module Test.Cardano.Ledger.Conway.CDDL (
   module Test.Cardano.Ledger.Babbage.CDDL,
   conwayCDDL,
-  oset,
   potential_languages,
   pool_registration,
   pool_retirement,
@@ -29,11 +28,9 @@ module Test.Cardano.Ledger.Conway.CDDL (
   update_drep_cert,
   block_no,
   slot_no,
-  set,
   transaction_input,
   withdrawals,
   mint,
-  nonempty_set,
   voting_procedures,
   anchor,
   hard_fork_initiation_action,
@@ -45,7 +42,6 @@ module Test.Cardano.Ledger.Conway.CDDL (
   gov_action_id,
   policy_hash,
   shelley_transaction_output,
-  nonempty_oset,
   epoch_interval,
   ex_unit_prices,
   pool_voting_thresholds,
@@ -62,13 +58,19 @@ module Test.Cardano.Ledger.Conway.CDDL (
   metadata,
   shelley_auxiliary_data,
   shelley_ma_auxiliary_data,
+
+  -- * Sets
+  maybe_tagged_set,
+  maybe_tagged_nonempty_set,
+  maybe_tagged_oset,
+  maybe_tagged_nonempty_oset,
 ) where
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
-import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Word (Word64)
 import GHC.Num (Integer)
 import Test.Cardano.Ledger.Babbage.CDDL hiding (
@@ -81,15 +83,14 @@ import Test.Cardano.Ledger.Babbage.CDDL hiding (
   mint,
   multiasset,
   native_script,
-  nonempty_set,
   redeemers,
   required_signers,
   script_all,
   script_any,
   script_pubkey,
-  set,
   transaction_input,
   transaction_metadatum_label,
+  untagged_set,
   value,
   withdrawals,
  )
@@ -186,7 +187,7 @@ transaction_body :: Rule
 transaction_body =
   "transaction_body"
     =:= mp
-      [ idx 0 ==> set transaction_input
+      [ idx 0 ==> maybe_tagged_set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
       , opt (idx 3 ==> slot_no)
@@ -196,12 +197,12 @@ transaction_body =
       , opt (idx 8 ==> slot_no) -- Validity interval start
       , opt (idx 9 ==> mint)
       , opt (idx 11 ==> script_data_hash)
-      , opt (idx 13 ==> nonempty_set transaction_input)
+      , opt (idx 13 ==> maybe_tagged_nonempty_set transaction_input)
       , opt (idx 14 ==> required_signers)
       , opt (idx 15 ==> network_id)
       , opt (idx 16 ==> transaction_output)
       , opt (idx 17 ==> coin)
-      , opt (idx 18 ==> nonempty_set transaction_input)
+      , opt (idx 18 ==> maybe_tagged_nonempty_set transaction_input)
       , opt (idx 19 ==> voting_procedures)
       , opt (idx 20 ==> proposal_procedures)
       , opt (idx 21 ==> coin)
@@ -227,10 +228,10 @@ proposal_procedure =
       ]
 
 proposal_procedures :: Rule
-proposal_procedures = "proposal_procedures" =:= nonempty_oset proposal_procedure
+proposal_procedures = "proposal_procedures" =:= maybe_tagged_nonempty_oset proposal_procedure
 
 certificates :: Rule
-certificates = "certificates" =:= nonempty_oset certificate
+certificates = "certificates" =:= maybe_tagged_nonempty_oset certificate
 
 gov_action :: Rule
 gov_action =
@@ -275,7 +276,7 @@ update_committee =
     =:~ grp
       [ 4
       , a $ gov_action_id / VNil
-      , a (set committee_cold_credential)
+      , a (maybe_tagged_set committee_cold_credential)
       , a (mp [0 <+ asKey committee_cold_credential ==> epoch_no])
       , a unit_interval
       ]
@@ -325,7 +326,7 @@ gov_action_id =
       ]
 
 required_signers :: Rule
-required_signers = "required_signers" =:= nonempty_set addr_keyhash
+required_signers = "required_signers" =:= maybe_tagged_nonempty_set addr_keyhash
 
 transaction_input :: Rule
 transaction_input =
@@ -540,7 +541,7 @@ pool_params =
         , "cost" ==> coin
         , "margin" ==> unit_interval
         , "reward_account" ==> reward_account
-        , "pool_owners" ==> set addr_keyhash
+        , "pool_owners" ==> maybe_tagged_set addr_keyhash
         , "relays" ==> arr [0 <+ a relay]
         , "pool_metadata" ==> (pool_metadata / VNil)
         ]
@@ -646,14 +647,14 @@ transaction_witness_set :: Rule
 transaction_witness_set =
   "transaction_witness_set"
     =:= mp
-      [ opt $ idx 0 ==> nonempty_set vkeywitness
-      , opt $ idx 1 ==> nonempty_set native_script
-      , opt $ idx 2 ==> nonempty_set bootstrap_witness
-      , opt $ idx 3 ==> nonempty_set plutus_v1_script
-      , opt $ idx 4 ==> nonempty_set plutus_data
+      [ opt $ idx 0 ==> maybe_tagged_nonempty_set vkeywitness
+      , opt $ idx 1 ==> maybe_tagged_nonempty_set native_script
+      , opt $ idx 2 ==> maybe_tagged_nonempty_set bootstrap_witness
+      , opt $ idx 3 ==> maybe_tagged_nonempty_set plutus_v1_script
+      , opt $ idx 4 ==> maybe_tagged_nonempty_set plutus_data
       , opt $ idx 5 ==> redeemers conway_redeemer_tag
-      , opt $ idx 6 ==> nonempty_set plutus_v2_script
-      , opt $ idx 7 ==> nonempty_set plutus_v3_script
+      , opt $ idx 6 ==> maybe_tagged_nonempty_set plutus_v2_script
+      , opt $ idx 7 ==> maybe_tagged_nonempty_set plutus_v3_script
       ]
 
 plutus_v1_script :: Rule
@@ -863,27 +864,19 @@ conway_script =
     / arr [2, a plutus_v2_script]
     / arr [3, a plutus_v3_script]
 
--- | Conway era introduces an optional 258 tag for sets, which will
--- become mandatory in the second era after Conway. We recommend all the
--- tooling to account for this future breaking change sooner rather than
--- later, in order to provide a smooth transition for their users.
-set :: IsType0 t0 => t0 -> GRuleCall
-set = set_len_spec "set" 0
+-- | Conway era introduces an optional 258 tag for sets, which will become
+-- mandatory in the second era after Conway.
+mkMaybeTaggedSet :: IsType0 a => T.Text -> Word64 -> a -> GRuleCall
+mkMaybeTaggedSet label n = binding $ \x -> label =:= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
 
--- | Conway era introduces an optional 258 tag for sets, which will
--- become mandatory in the second era after Conway. We recommend all the
--- tooling to account for this future breaking change sooner rather than
--- later, in order to provide a smooth transition for their users.
-nonempty_set :: IsType0 t0 => t0 -> GRuleCall
-nonempty_set = set_len_spec "nonempty_set" 1
+maybe_tagged_set :: IsType0 a => a -> GRuleCall
+maybe_tagged_set = mkMaybeTaggedSet "set" 0
 
--- | An OSet is a Set that preserves the order of its elements.
-oset :: IsType0 t0 => t0 -> GRuleCall
-oset = set_len_spec "oset" 0
+maybe_tagged_nonempty_set :: IsType0 a => a -> GRuleCall
+maybe_tagged_nonempty_set = mkMaybeTaggedSet "nonempty_set" 1
 
--- | An NonEmpty OSet is a NonEmpty Set that preserves the order of its elements.
-nonempty_oset :: IsType0 t0 => t0 -> GRuleCall
-nonempty_oset = set_len_spec "nonempty_oset" 1
+maybe_tagged_oset :: IsType0 a => a -> GRuleCall
+maybe_tagged_oset = mkMaybeTaggedSet "oset" 0
 
-set_len_spec :: IsType0 t0 => Text -> Word64 -> t0 -> GRuleCall
-set_len_spec label n = binding $ \x -> label =:= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
+maybe_tagged_nonempty_oset :: IsType0 a => a -> GRuleCall
+maybe_tagged_nonempty_oset = mkMaybeTaggedSet "nonempty_oset" 1

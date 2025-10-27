@@ -93,7 +93,7 @@ transaction_body =
         |]
     $ "transaction_body"
       =:= mp
-        [ idx 0 ==> set transaction_input
+        [ idx 0 ==> untagged_set transaction_input
         , idx 1 ==> arr [0 <+ a transaction_output]
         , idx 2 ==> coin
         , opt (idx 3 ==> VUInt)
@@ -104,13 +104,13 @@ transaction_body =
         , opt (idx 8 ==> VUInt)
         , opt (idx 9 ==> mint)
         , opt (idx 11 ==> script_data_hash)
-        , opt (idx 13 ==> set transaction_input)
+        , opt (idx 13 ==> untagged_set transaction_input)
         , opt (idx 14 ==> required_signers)
         , opt (idx 15 ==> network_id)
         ]
 
 required_signers :: Rule
-required_signers = "required_signers" =:= set addr_keyhash
+required_signers = "required_signers" =:= untagged_set addr_keyhash
 
 transaction_output :: Rule
 transaction_output =

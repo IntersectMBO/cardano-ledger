@@ -18,23 +18,8 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   hash32,
   hash64,
   bytes80,
-  hash448,
 
-  -- * Misc.
-  coin,
-  positive_coin,
-  address,
-  reward_account,
-  addr_keyhash,
-  pool_keyhash,
-  vrf_keyhash,
-  vkey,
-  vrf_vkey,
-  vrf_cert,
-  kes_vkey,
-  kes_signature,
-  signkey_kes,
-  signature,
+  -- * Numbers
   big_int,
   min_int64,
   max_int64,
@@ -45,10 +30,46 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   positive_int,
   max_word32,
   positive_word32,
+
+  -- * Unit intervals
   unit_interval,
   nonnegative_interval,
+
+  -- * Distinct uint/bytes, bounded bytes
   distinct,
   bounded_bytes,
+
+  -- * Sets
+  untagged_set,
+  untagged_nonempty_set,
+
+  -- * Network
+
+  -- * Hashes, keys and certificates
+  addr_keyhash,
+  pool_keyhash,
+  vrf_keyhash,
+  vkey,
+  vrf_vkey,
+  vrf_cert,
+  kes_vkey,
+  kes_signature,
+  signkey_kes,
+  signature,
+
+  -- * Value
+  coin,
+  positive_coin,
+
+  -- * Addresses and accounts
+  address,
+  reward_account,
+
+  -- * Protocol version
+
+  -- * Transactions
+
+  -- * Misc.
 ) where
 
 import Codec.CBOR.Cuddle.Huddle
@@ -149,9 +170,6 @@ hash64 = mkHashSized 64
 
 bytes80 :: Rule
 bytes80 = "bytes80" =:= VBytes `sized` (80 :: Word64)
-
-hash448 :: Rule
-hash448 = mkHashSized 448
 
 vkey :: Rule
 vkey = "vkey" =:= VBytes `sized` (32 :: Word64)
@@ -278,3 +296,25 @@ distinct x =
       VBytes -> T.pack "bytes"
       VUInt -> T.pack "uint"
       _ -> error "Unsupported Value for `distinct`"
+
+untagged_set :: IsType0 a => a -> GRuleCall
+untagged_set = binding $ \x -> "set" =:= arr [0 <+ a x]
+
+untagged_nonempty_set :: IsType0 a => a -> GRuleCall
+untagged_nonempty_set = binding $ \x -> "nonempty_set" =:= arr [1 <+ a x]
+
+-- | The era after dijkstra enforces the 258 tag for sets.
+mkTaggedSet :: IsType0 a => T.Text -> Word64 -> a -> GRuleCall
+mkTaggedSet label n = binding $ \x -> label =:= tag 258 (arr [n <+ a x])
+
+_tagged_set :: IsType0 a => a -> GRuleCall
+_tagged_set = mkTaggedSet "set" 0
+
+_tagged_nonempty_set :: IsType0 a => a -> GRuleCall
+_tagged_nonempty_set = mkTaggedSet "nonempty_set" 1
+
+_tagged_oset :: IsType0 a => a -> GRuleCall
+_tagged_oset = mkTaggedSet "oset" 0
+
+_tagged_nonempty_oset :: IsType0 a => a -> GRuleCall
+_tagged_nonempty_oset = mkTaggedSet "nonempty_oset" 1
