@@ -35,7 +35,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
 import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody (AlonzoBlockBody))
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.Genesis (AlonzoExtraConfig (..), AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoPParams (AlonzoPParams),
   LangDepView (..),
@@ -432,6 +432,7 @@ instance Arbitrary AlonzoGenesis where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 alwaysSucceeds ::
   forall l era.
@@ -480,3 +481,5 @@ instance
 
 instance Arbitrary LangDepView where
   arbitrary = LangDepView <$> arbitrary <*> arbitrary
+
+deriving instance Arbitrary AlonzoExtraConfig
