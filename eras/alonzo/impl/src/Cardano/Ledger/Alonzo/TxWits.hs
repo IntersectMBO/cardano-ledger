@@ -129,6 +129,7 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+import Data.List.NonEmpty (NonEmpty)
 
 -- ==========================================
 
@@ -579,6 +580,13 @@ instance
         txWitnessField
         []
     where
+      setDecoder :: Decoder s (Annotator a) -> (NonEmpty a -> f a) -> Decoder s (Annotator (f a))
+      setDecoder decoder f = 
+        ifDecoderVersionAtLeast
+          (natVersion @12)
+          undefined
+          (mapTraverseableDecoderA (decodeNonEmptyList decoder) f)
+
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
       txWitnessField 0 =
         fieldAA
@@ -586,9 +594,7 @@ instance
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                ( allowTag setTag
-                    >> mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList)
-                )
+                (allowTag setTag >> setDecoder decCBOR (Set.fromList . NE.toList))
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 1 =
@@ -601,9 +607,7 @@ instance
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                ( allowTag setTag
-                    >> mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList)
-                )
+                (allowTag setTag >> setDecoder decCBOR (Set.fromList . NE.toList))
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 3 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV1)
@@ -621,8 +625,7 @@ instance
       nativeScriptsDecoder =
         ifDecoderVersionAtLeast
           (natVersion @9)
-          ( allowTag setTag
-              >> mapTraverseableDecoderA (decodeNonEmptyList pairDecoder) (Map.fromList . NE.toList)
+          ( allowTag setTag >> mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList
           )
           (mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
         where
