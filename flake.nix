@@ -120,13 +120,13 @@
             # tools we want in our shell, from hackage
             tools =
               {
-                cabal = "3.14.1.0";
+                cabal = "3.14.2.0";
               }
               // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
                 fourmolu = fourmoluVersion;
                 hlint = "3.8";
-                haskell-language-server = "2.11.0.0";
+                haskell-language-server = "2.12.0.0";
                 cabal-gild = "1.5.0.1";
               };
 
