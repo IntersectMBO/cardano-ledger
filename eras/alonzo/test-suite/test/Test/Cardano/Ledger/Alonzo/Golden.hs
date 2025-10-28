@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Alonzo.Golden (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.Genesis (AlonzoExtraConfig (..), AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (
   LangDepView (..),
   getLanguageView,
@@ -373,6 +373,7 @@ expectedGenesis =
     , agMaxValSize = 5000
     , agCollateralPercentage = 150
     , agMaxCollateralInputs = 3
+    , agExtraConfig = AlonzoExtraConfig Nothing
     }
 
 expectedCostModels :: CostModels

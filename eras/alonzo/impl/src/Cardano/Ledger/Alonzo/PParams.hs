@@ -8,6 +8,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -106,10 +107,7 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
-import Data.Aeson as Aeson (
-  FromJSON,
-  ToJSON (..),
- )
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
@@ -422,7 +420,15 @@ data UpgradeAlonzoPParams f = UpgradeAlonzoPParams
 
 emptyAlonzoUpgradePParamsUpdate :: UpgradeAlonzoPParams StrictMaybe
 emptyAlonzoUpgradePParamsUpdate =
-  UpgradeAlonzoPParams SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing
+  UpgradeAlonzoPParams
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
 
 deriving instance Eq (UpgradeAlonzoPParams Identity)
 
