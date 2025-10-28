@@ -3,8 +3,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -30,6 +32,15 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   epochInfoPure,
+ )
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (
+  Decode (From, FromGroup, Invalid, SumD, Summands),
+  Encode (Sum, To, ToGroup),
+  decode,
+  encode,
+  (!>),
+  (<!),
  )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
@@ -117,6 +128,30 @@ instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure ShelleyEra where
 
 instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure ShelleyEra where
   injectFailure = LedgersFailure . injectFailure
+
+instance
+  ( Era era
+  , EncCBOR (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  EncCBOR (ShelleyBbodyPredFailure era)
+  where
+  encCBOR =
+    encode . \case
+      WrongBlockBodySizeBBODY mm -> Sum WrongBlockBodySizeBBODY 0 !> ToGroup mm
+      InvalidBodyHashBBODY mm -> Sum (InvalidBodyHashBBODY @era) 1 !> ToGroup mm
+      LedgersFailure x -> Sum (LedgersFailure @era) 2 !> To x
+
+instance
+  ( Era era
+  , DecCBOR (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  DecCBOR (ShelleyBbodyPredFailure era)
+  where
+  decCBOR = decode . Summands "ShelleyBbodyPredFailure" $ \case
+    0 -> SumD WrongBlockBodySizeBBODY <! FromGroup
+    1 -> SumD InvalidBodyHashBBODY <! FromGroup
+    2 -> SumD LedgersFailure <! From
+    n -> Invalid n
 
 newtype ShelleyBbodyEvent era
   = LedgersEvent (Event (EraRule "LEDGERS" era))
