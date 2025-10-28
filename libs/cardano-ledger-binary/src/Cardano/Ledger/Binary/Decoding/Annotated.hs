@@ -5,6 +5,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -30,10 +31,12 @@ module Cardano.Ledger.Binary.Decoding.Annotated (
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (..))
 import Cardano.Ledger.Binary.Decoding.Decoder (
   Decoder,
+  DecoderError (..),
   allowTag,
   decodeList,
   decodeWithByteSpan,
   fromPlainDecoder,
+  getDecoderVersion,
   getOriginalBytes,
   setTag,
   whenDecoderVersionAtLeast,
@@ -43,6 +46,7 @@ import Cardano.Ledger.Binary.Version (natVersion)
 import Codec.CBOR.Read (ByteOffset)
 import qualified Codec.Serialise as Serialise (decode)
 import Control.DeepSeq (NFData)
+import Control.Monad
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Bifunctor (Bifunctor (first, second))
 import qualified Data.ByteString as BS
@@ -51,6 +55,7 @@ import Data.Function (on)
 import Data.Functor ((<&>))
 import Data.Kind (Type)
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
@@ -183,8 +188,24 @@ newtype FullByteString = Full BSL.ByteString
 --     (Annotator mkInner, Annotator extractInnerBytes) <- withSlice decCBOR
 --     pure (Annotator (\ full -> Outer t (mkInner (Full (extractInnerBytes full)))))
 -- @
-newtype Annotator a = Annotator {runAnnotator :: FullByteString -> a}
-  deriving newtype (Monad, Applicative, Functor)
+newtype Annotator a = Annotator {runAnnotator :: FullByteString -> Either DecoderError a}
+
+instance Functor Annotator where
+  fmap f (Annotator m) = Annotator (fmap f . m)
+  {-# INLINE fmap #-}
+
+instance Applicative Annotator where
+  pure = Annotator . const . pure
+  {-# INLINE pure #-}
+  (<*>) (Annotator m1) (Annotator m2) = Annotator $ \bytes -> m1 bytes <*> m2 bytes
+  {-# INLINE (<*>) #-}
+
+instance Monad Annotator where
+  (>>=) (Annotator m1) m2 = Annotator $ \bytes -> m1 bytes >>= (`runAnnotator` bytes) . m2
+  {-# INLINE (>>=) #-}
+
+instance MonadFail Annotator where
+  fail msg = Annotator $ const $ Left $ DecoderErrorCustom "Annotator" (T.pack msg)
 
 -- | The argument is a decoder for a annotator that needs access to the bytes that
 -- | were decoded. This function constructs and supplies the relevant piece.
@@ -201,17 +222,23 @@ annotatorSlice dec = do
 withSlice :: Decoder s a -> Decoder s (a, Annotator BSL.ByteString)
 withSlice dec = do
   Annotated r byteSpan <- annotatedDecoder dec
-  return (r, Annotator (\(Full bsl) -> slice bsl byteSpan))
+  return (r, Annotator (\(Full bsl) -> pure $ slice bsl byteSpan))
 {-# INLINE withSlice #-}
 
--- TODO: Implement version that matches the length of a list with the size of the Set in
--- order to enforce no duplicates.
+-- | Starting with protocol version 12 this decoder matches the length of a list with the size of
+-- the Set in order to enforce there are no duplicates.
 decodeAnnSet :: Ord t => Decoder s (Annotator t) -> Decoder s (Annotator (Set.Set t))
 decodeAnnSet dec = do
   whenDecoderVersionAtLeast (natVersion @9) $
     allowTag setTag
   xs <- decodeList dec
-  pure (Set.fromList <$> sequence xs)
+  v <- getDecoderVersion
+  pure $ do
+    s <- Set.fromList <$> sequence xs
+    when (v >= natVersion @12 && Set.size s /= length xs) $
+      Annotator $
+        const (Left $ DecoderErrorCustom "Set" "Duplicates detected")
+    pure s
 {-# INLINE decodeAnnSet #-}
 
 instance DecCBOR (Annotator PV1.Data) where

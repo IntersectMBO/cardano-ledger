@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Make `decodeAnnSet` fail when there are duplicates, starting with protocol version `12`.
+* Provide ability for `Annotator` to fail, by changing its type signature to return `Either` and adding `MonadFail` instance.
 * Remove `encodedSizeExpr` and `encodedListSizeExpr` from `EncCBOR`
 * Remove `Typeable` superconstraint from `EncCBOR`
 * Remove `Range`, `szEval`, `Size`, `Case`, `caseValue`, `LengthOf`, `SizeOverride`, `isTodo`, `szCases`, `szLazy`, `szGreedy`, `szForce`, `szWithCtx`, `szSimplify`, `apMono`, `szBounds`, `encodedVerKeyDSIGNSizeExpr`, `encodedSignKeyDSIGNSizeExpr`, `encodedSigDSIGNSizeExpr`, `encodedSignedDSIGNSizeExpr`, `encodedVerKeyKESSizeExpr`, `encodedSignKeyKESSizeExpr`, `encodedSigKESSizeExpr`, `encodedVerKeyVRFSizeExpr`, `encodedSignKeyVRFSizeExpr` and `encodedCertVRFSizeExpr`
