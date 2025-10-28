@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -17,6 +18,7 @@ module Cardano.Ledger.Alonzo.Genesis (
   AlonzoGenesis (
     AlonzoGenesisWrapper,
     unAlonzoGenesisWrapper,
+    extraConfig,
     AlonzoGenesis,
     agCoinsPerUTxOWord,
     agCostModels,
@@ -25,12 +27,17 @@ module Cardano.Ledger.Alonzo.Genesis (
     agMaxBlockExUnits,
     agMaxValSize,
     agCollateralPercentage,
-    agMaxCollateralInputs
+    agMaxCollateralInputs,
+    agExtraConfig
   ),
+  AlonzoExtraConfig (..),
 ) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (CoinPerWord, UpgradeAlonzoPParams (..))
+import Cardano.Ledger.Alonzo.PParams (
+  CoinPerWord,
+  UpgradeAlonzoPParams (..),
+ )
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices (..))
 import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
@@ -51,7 +58,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Cardano.Ledger.Plutus.CostModels (parseCostModels)
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
 import GHC.Generics (Generic)
@@ -59,12 +66,31 @@ import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 
 -- | All configuration that is necessary to bootstrap AlonzoEra from ShelleyGenesis
-newtype AlonzoGenesis = AlonzoGenesisWrapper
+data AlonzoGenesis = AlonzoGenesisWrapper
   { unAlonzoGenesisWrapper :: UpgradeAlonzoPParams Identity
+  , extraConfig :: AlonzoExtraConfig
   }
-  deriving stock (Eq, Generic)
-  deriving newtype (Show, NoThunks, NFData)
+  deriving stock (Eq, Show, Generic)
   deriving (ToJSON) via KeyValuePairs AlonzoGenesis
+
+instance NoThunks AlonzoGenesis
+
+instance NFData AlonzoGenesis
+
+newtype AlonzoExtraConfig = AlonzoExtraConfig
+  { aecCostModels :: Maybe CostModels
+  }
+  deriving (Eq)
+  deriving newtype (EncCBOR, DecCBOR, NFData, NoThunks, Show)
+
+instance FromJSON AlonzoExtraConfig where
+  parseJSON = Aeson.withObject "Extra Config" $ \o ->
+    o .:? "costModels" >>= \case
+      Nothing -> pure $ AlonzoExtraConfig Nothing
+      Just val -> AlonzoExtraConfig . Just <$> parseCostModels True [] val
+
+instance ToJSON AlonzoExtraConfig where
+  toJSON (AlonzoExtraConfig cms) = Aeson.object ["costModels" .= cms]
 
 pattern AlonzoGenesis ::
   CoinPerWord ->
@@ -75,6 +101,7 @@ pattern AlonzoGenesis ::
   Natural ->
   Natural ->
   Natural ->
+  AlonzoExtraConfig ->
   AlonzoGenesis
 pattern AlonzoGenesis
   { agCoinsPerUTxOWord
@@ -85,8 +112,10 @@ pattern AlonzoGenesis
   , agMaxValSize
   , agCollateralPercentage
   , agMaxCollateralInputs
+  , agExtraConfig
   } <-
-  ( unAlonzoGenesisWrapper ->
+  AlonzoGenesisWrapper
+    { unAlonzoGenesisWrapper =
       UpgradeAlonzoPParams
         { uappCoinsPerUTxOWord = agCoinsPerUTxOWord
         , uappCostModels = agCostModels
@@ -97,7 +126,8 @@ pattern AlonzoGenesis
         , uappCollateralPercentage = agCollateralPercentage
         , uappMaxCollateralInputs = agMaxCollateralInputs
         }
-    )
+    , extraConfig = agExtraConfig
+    }
   where
     AlonzoGenesis
       coinsPerUTxOWord_
@@ -107,18 +137,21 @@ pattern AlonzoGenesis
       maxBlockExUnits_
       maxValSize_
       collateralPercentage_
-      maxCollateralInputs_ =
-        AlonzoGenesisWrapper $
-          UpgradeAlonzoPParams
-            { uappCoinsPerUTxOWord = coinsPerUTxOWord_
-            , uappCostModels = costModels_
-            , uappPrices = prices_
-            , uappMaxTxExUnits = maxTxExUnits_
-            , uappMaxBlockExUnits = maxBlockExUnits_
-            , uappMaxValSize = maxValSize_
-            , uappCollateralPercentage = collateralPercentage_
-            , uappMaxCollateralInputs = maxCollateralInputs_
-            }
+      maxCollateralInputs_
+      extraConfig_ =
+        AlonzoGenesisWrapper
+          ( UpgradeAlonzoPParams
+              { uappCoinsPerUTxOWord = coinsPerUTxOWord_
+              , uappCostModels = costModels_
+              , uappPrices = prices_
+              , uappMaxTxExUnits = maxTxExUnits_
+              , uappMaxBlockExUnits = maxBlockExUnits_
+              , uappMaxValSize = maxValSize_
+              , uappCollateralPercentage = collateralPercentage_
+              , uappMaxCollateralInputs = maxCollateralInputs_
+              }
+          )
+          extraConfig_
 
 {-# COMPLETE AlonzoGenesis #-}
 
@@ -135,6 +168,7 @@ instance FromCBOR AlonzoGenesis where
     eraDecoder @AlonzoEra $
       decode $
         RecD AlonzoGenesis
+          <! From
           <! From
           <! From
           <! From
@@ -178,6 +212,7 @@ instance FromJSON AlonzoGenesis where
     agMaxValSize <- o .: "maxValueSize"
     agCollateralPercentage <- o .: "collateralPercentage"
     agMaxCollateralInputs <- o .: "maxCollateralInputs"
+    agExtraConfig <- o .: "extraConfig"
     return AlonzoGenesis {..}
 
 instance ToKeyValuePairs AlonzoGenesis where
@@ -190,4 +225,5 @@ instance ToKeyValuePairs AlonzoGenesis where
     , "maxValueSize" .= agMaxValSize ag
     , "collateralPercentage" .= agCollateralPercentage ag
     , "maxCollateralInputs" .= agMaxCollateralInputs ag
+    , "extraConfig" .= agExtraConfig ag
     ]
