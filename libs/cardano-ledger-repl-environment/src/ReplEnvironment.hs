@@ -50,3 +50,4 @@ import Test.Cardano.Ledger.Core.Rational
 import Test.Cardano.Ledger.Imp.Common
 import Test.ImpSpec
 import Test.QuickCheck
+import Test.Cardano.Ledger.Plutus
