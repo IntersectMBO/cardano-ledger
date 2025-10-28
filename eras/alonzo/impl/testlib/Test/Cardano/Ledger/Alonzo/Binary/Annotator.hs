@@ -36,6 +36,7 @@ import Data.MapExtras as Map (fromElems)
 import Data.Maybe.Strict (maybeToStrictMaybe)
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Lens.Micro
@@ -152,6 +153,15 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxW
         txWitnessField
         []
     where
+      setDecoder :: (Ord a, DecCBOR a) => Decoder s (Set a)
+      setDecoder =
+        allowTag setTag
+          >> ifDecoderVersionAtLeast
+            (natVersion @12)
+            (decodeSetLikeEnforceNoDuplicates Set.insert (\s -> (length s, s)) decCBOR)
+            (Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR)
+      {-# INLINE setDecoder #-}
+
       txWitnessField :: Word -> Field (AlonzoTxWitsRaw era)
       txWitnessField 0 =
         field
@@ -159,9 +169,7 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxW
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                ( allowTag setTag
-                    >> Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
-                )
+                setDecoder
                 (Set.fromList <$> decodeList decCBOR)
           )
       txWitnessField 1 = field addScriptsTxWitsRaw (D nativeScriptsDecoder)
@@ -171,31 +179,49 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxW
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                ( allowTag setTag
-                    >> Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
-                )
+                setDecoder
                 (Set.fromList <$> decodeList decCBOR)
           )
       txWitnessField 3 = field addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV1)
-      txWitnessField 4 = field (\x wits -> wits {atwrDatsTxWits = x}) From
+      txWitnessField 4 =
+        field
+          (\x wits -> wits {atwrDatsTxWits = x})
+          ( D $
+              ifDecoderVersionAtLeast
+                (natVersion @12)
+                ( TxDats
+                    <$> decodeSetLikeEnforceNoDuplicates
+                      (\x -> Map.insert (hashData x) x)
+                      (\m -> (length m, m))
+                      decCBOR
+                )
+                decCBOR
+          )
       txWitnessField 5 = field (\x wits -> wits {atwrRdmrsTxWits = x}) From
       txWitnessField 6 = field addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV2)
       txWitnessField 7 = field addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV3)
       txWitnessField n = invalidField n
       {-# INLINE txWitnessField #-}
 
+      pairDecoder :: Decoder s (ScriptHash, Script era)
+      pairDecoder = asHashedScriptPair @era . fromNativeScript <$> decCBOR
+      {-# INLINE pairDecoder #-}
+
+      mapDecoder :: Decoder s (Map ScriptHash (Script era))
+      mapDecoder =
+        allowTag setTag
+          >> ifDecoderVersionAtLeast
+            (natVersion @12)
+            (decodeSetLikeEnforceNoDuplicates (uncurry Map.insert) (\m -> (length m, m)) pairDecoder)
+            (Map.fromList . NE.toList <$> decodeNonEmptyList pairDecoder)
+      {-# INLINE mapDecoder #-}
+
       nativeScriptsDecoder :: Decoder s (Map ScriptHash (Script era))
       nativeScriptsDecoder =
         ifDecoderVersionAtLeast
           (natVersion @9)
-          ( allowTag setTag
-              >> Map.fromList . NE.toList <$> decodeNonEmptyList pairDecoder
-          )
+          mapDecoder
           (Map.fromList <$> decodeList pairDecoder)
-        where
-          pairDecoder :: Decoder s (ScriptHash, Script era)
-          pairDecoder = asHashedScriptPair @era . fromNativeScript <$> decCBOR
-          {-# INLINE pairDecoder #-}
       {-# INLINE nativeScriptsDecoder #-}
 
 deriving newtype instance
