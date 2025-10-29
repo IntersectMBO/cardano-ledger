@@ -1,7 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.12.1.0
+## 1.13.0.0
 
+* Remove deprecated functions `txOutData`, `txOutDataHash`, `txOutScript`
+* Remove deprecated type `Babbage`
 * Removed deprecated accessor functions:
   - `spendInputs'`
   - `collateralInputs'`

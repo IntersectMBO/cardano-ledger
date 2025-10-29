@@ -26,7 +26,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Hashes
 import Cardano.Ledger.Shelley.Era
-import Cardano.Ledger.State hiding (balance)
+import Cardano.Ledger.State
 import Control.DeepSeq (NFData (rnf), deepseq, rwhnf)
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Aeson as Aeson (ToJSON (..), (.=))

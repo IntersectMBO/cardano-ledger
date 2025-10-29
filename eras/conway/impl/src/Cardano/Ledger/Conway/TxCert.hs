@@ -36,7 +36,6 @@ module Cardano.Ledger.Conway.TxCert (
   getDelegateeTxCert,
   getStakePoolDelegatee,
   getDRepDelegatee,
-  getVoteDelegatee,
   conwayDRepDepositsTxCerts,
   conwayDRepRefundsTxCerts,
   conwayTotalDepositsTxCerts,
@@ -438,10 +437,6 @@ getDRepDelegatee :: Delegatee -> Maybe DRep
 getDRepDelegatee DelegStake {} = Nothing
 getDRepDelegatee (DelegVote x) = Just x
 getDRepDelegatee (DelegStakeVote _ x) = Just x
-
-getVoteDelegatee :: Delegatee -> Maybe DRep
-getVoteDelegatee = getDRepDelegatee
-{-# DEPRECATED getVoteDelegatee "In favor of `getDRepDelegatee`" #-}
 
 instance NFData Delegatee
 

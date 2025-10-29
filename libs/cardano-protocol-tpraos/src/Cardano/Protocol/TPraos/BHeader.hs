@@ -32,7 +32,6 @@ module Cardano.Protocol.TPraos.BHeader (
   bhHash,
   hashHeaderToNonce,
   prevHashToNonce,
-  bHeaderSize,
   bhbody,
   hBbsize,
   seedEta,
@@ -292,10 +291,6 @@ prevHashToNonce = \case
 -- This corresponds to either a genesis/core node or a stake pool.
 issuerIDfromBHBody :: BHBody c -> KeyHash 'BlockIssuer
 issuerIDfromBHBody = hashKey . bheaderVk
-
-{-# DEPRECATED bHeaderSize "In favor of `originalBytesSize`" #-}
-bHeaderSize :: BHeader c -> Int
-bHeaderSize = originalBytesSize
 
 bhbody ::
   Crypto c =>

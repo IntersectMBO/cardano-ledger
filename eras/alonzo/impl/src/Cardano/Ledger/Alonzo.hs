@@ -8,7 +8,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo (
-  Alonzo,
   AlonzoEra,
   AlonzoTxOut,
   MaryValue,
@@ -34,10 +33,6 @@ import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data ()
 import Cardano.Ledger.Shelley.API
-
-type Alonzo = AlonzoEra
-
-{-# DEPRECATED Alonzo "In favor of `AlonzoEra`" #-}
 
 -- =====================================================
 

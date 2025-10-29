@@ -40,7 +40,7 @@ module Cardano.Ledger.Allegra.Scripts (
   getTimeStartTimelock,
   mkTimeExpireTimelock,
   getTimeExpireTimelock,
-  Timelock (MkTimelock, TimelockConstr),
+  Timelock (MkTimelock),
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
   TimelockRaw (..),
@@ -231,13 +231,6 @@ instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
 newtype Timelock era = MkTimelock (MemoBytes (TimelockRaw era))
   deriving (Eq, Generic)
   deriving newtype (ToCBOR, NFData, SafeToHash)
-
-pattern TimelockConstr :: MemoBytes (TimelockRaw era) -> Timelock era
-pattern TimelockConstr timelockRaw = MkTimelock timelockRaw
-
-{-# COMPLETE TimelockConstr #-}
-
-{-# DEPRECATED TimelockConstr "In favor of more consistently name `MkTimelock`" #-}
 
 instance Era era => MemPack (Timelock era) where
   packedByteCount (MkTimelock mb) = byteCountMemoBytes mb

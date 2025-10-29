@@ -22,7 +22,6 @@ module Cardano.Ledger.Shelley.PParams (
   ShelleyPParams (..),
   emptyPParams,
   HKD,
-  PPUpdateEnv (..),
   ProposedPPUpdates (..),
   emptyPPPUpdates,
   Update (..),
@@ -71,10 +70,9 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.HKD (HKD)
-import Cardano.Ledger.Hashes (GenDelegs)
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (
   ToJSON (..),
@@ -253,13 +251,6 @@ instance
   DecCBOR (Update era)
   where
   decCBOR = decode $ RecD Update <! From <! From
-
-data PPUpdateEnv = PPUpdateEnv SlotNo GenDelegs
-  deriving (Show, Eq, Generic)
-
-instance NoThunks PPUpdateEnv
-
-{-# DEPRECATED PPUpdateEnv "As unused" #-}
 
 -- | Update operation for protocol parameters structure @PParams@
 newtype ProposedPPUpdates era

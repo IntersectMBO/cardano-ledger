@@ -37,7 +37,6 @@ module Cardano.Crypto.Hashing (
   Hash,
 
   -- ** Hashing
-  hash,
   hashDecoded,
   hashRaw,
   serializeCborHash,
@@ -260,12 +259,6 @@ abstractHashToShort (AbstractHash h) = h
 -- | The type of our commonly used hash, Blake2b 256
 type Hash :: Type -> Type
 type Hash = AbstractHash Blake2b_256
-
-{-# DEPRECATED hash "Use serializeCborHash or hash the annotation instead." #-}
-
--- | The hash of a value, serialised via 'EncCBOR'.
-hash :: EncCBOR a => a -> Hash a
-hash = abstractHash
 
 -- | The hash of a value, serialised via 'EncCBOR'.
 serializeCborHash :: EncCBOR a => a -> Hash a

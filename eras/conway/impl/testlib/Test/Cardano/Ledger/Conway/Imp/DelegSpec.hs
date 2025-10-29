@@ -26,7 +26,7 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
-import Cardano.Ledger.Conway.State hiding (balance)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Transition (conwayRegisterInitialAccounts)
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))

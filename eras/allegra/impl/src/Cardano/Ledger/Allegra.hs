@@ -6,7 +6,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra (
-  Allegra,
   AllegraEra,
   Tx (..),
 ) where
@@ -22,10 +21,6 @@ import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Allegra.Tx (Tx (..))
 import Cardano.Ledger.Allegra.UTxO ()
 import Cardano.Ledger.Shelley.API
-
-type Allegra = AllegraEra
-
-{-# DEPRECATED Allegra "In favor of `AllegraEra`" #-}
 
 --------------------------------------------------------------------------------
 -- Mempool instances

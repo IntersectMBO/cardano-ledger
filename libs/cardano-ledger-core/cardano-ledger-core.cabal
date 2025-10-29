@@ -44,7 +44,6 @@ library
   import: warnings
   exposed-modules:
     Cardano.Ledger.Address
-    Cardano.Ledger.AuxiliaryData
     Cardano.Ledger.BHeaderView
     Cardano.Ledger.BaseTypes
     Cardano.Ledger.BaseTypes.NonZero
@@ -53,10 +52,7 @@ library
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
     Cardano.Ledger.Credential
-    Cardano.Ledger.Crypto
-    Cardano.Ledger.Crypto.Internal
     Cardano.Ledger.DRep
-    Cardano.Ledger.EpochBoundary
     Cardano.Ledger.Genesis
     Cardano.Ledger.HKD
     Cardano.Ledger.Hashes
@@ -75,16 +71,12 @@ library
     Cardano.Ledger.Plutus.Language
     Cardano.Ledger.Plutus.ToPlutusData
     Cardano.Ledger.Plutus.TxInfo
-    Cardano.Ledger.PoolDistr
-    Cardano.Ledger.PoolParams
     Cardano.Ledger.Rewards
     Cardano.Ledger.Rules.ValidationMode
-    Cardano.Ledger.SafeHash
     Cardano.Ledger.Slot
     Cardano.Ledger.State
     Cardano.Ledger.Tools
     Cardano.Ledger.TxIn
-    Cardano.Ledger.UTxO
     Cardano.Ledger.Val
 
   hs-source-dirs: src
@@ -117,7 +109,6 @@ library
     bytestring >=0.10 && <0.11.3 || >=0.11.4,
     cardano-crypto,
     cardano-crypto-class ^>=2.2,
-    cardano-crypto-praos ^>=2.2,
     cardano-crypto-wrapper,
     cardano-ledger-binary ^>=1.8,
     cardano-ledger-byron,

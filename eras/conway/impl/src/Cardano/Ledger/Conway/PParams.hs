@@ -76,7 +76,6 @@ module Cardano.Ledger.Conway.PParams (
   encodeLangViews,
   upgradeConwayPParams,
   UpgradeConwayPParams (..),
-  toUpgradeConwayPParamsUpdatePairs,
   THKD (..),
   DRepGroup (..),
   PPGroups (..),
@@ -1050,10 +1049,6 @@ instance ToJSON (UpgradeConwayPParams Identity) where
 
 instance ToKeyValuePairs (UpgradeConwayPParams Identity) where
   toKeyValuePairs upp = uncurry (.=) <$> upgradeConwayPParamsHKDPairs upp
-
-toUpgradeConwayPParamsUpdatePairs :: KeyValue e a => UpgradeConwayPParams Identity -> [a]
-toUpgradeConwayPParamsUpdatePairs = toKeyValuePairs
-{-# DEPRECATED toUpgradeConwayPParamsUpdatePairs "In favor of `toKeyValuePairs`" #-}
 
 upgradeConwayPParamsHKDPairs :: UpgradeConwayPParams Identity -> [(Key, Aeson.Value)]
 upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =

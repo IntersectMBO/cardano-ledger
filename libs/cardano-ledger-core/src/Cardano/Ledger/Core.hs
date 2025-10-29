@@ -607,28 +607,13 @@ class
 
   txSeqBlockBodyL :: Lens' (BlockBody era) (StrictSeq (Tx TopTx era))
 
-  fromTxSeq :: BlockBody era -> StrictSeq (Tx TopTx era)
-  fromTxSeq = (^. txSeqBlockBodyL)
-
-  toTxSeq :: StrictSeq (Tx TopTx era) -> BlockBody era
-  toTxSeq s = mkBasicBlockBody & txSeqBlockBodyL .~ s
-
   -- | Get the block body hash from the BlockBody. Note that this is not a regular
   -- "hash the stored bytes" function since the block body hash forms a small
   -- Merkle tree.
   hashBlockBody :: BlockBody era -> Hash.Hash HASH EraIndependentBlockBody
 
-  hashTxSeq :: BlockBody era -> Hash.Hash HASH EraIndependentBlockBody
-  hashTxSeq = hashBlockBody
-
   -- | The number of segregated components
   numSegComponents :: Word64
-
-{-# DEPRECATED fromTxSeq "In favor of the `txSeqBlockBodyL` lens" #-}
-
-{-# DEPRECATED toTxSeq "In favor of the `txSeqBlockBodyL` lens" #-}
-
-{-# DEPRECATED hashTxSeq "In favor of `hashBlockBody`" #-}
 
 bBodySize :: forall era. EraBlockBody era => ProtVer -> BlockBody era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup

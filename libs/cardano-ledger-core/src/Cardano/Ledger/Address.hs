@@ -15,7 +15,6 @@
 module Cardano.Ledger.Address (
   serialiseAddr,
   Addr (..),
-  addrPtrNormalize,
   BootstrapAddress (..),
   bootstrapAddressAttrsSize,
   isBootstrapRedeemer,
@@ -156,24 +155,6 @@ getNetwork (AddrBootstrap (BootstrapAddress byronAddr)) =
     Byron.NetworkTestnet _ -> Testnet
 
 instance NoThunks Addr
-
--- | This function is implemented solely for the purpose of translating garbage pointers
--- into knowingly invalid ones. Any pointer that contains a SlotNo, TxIx or CertIx that
--- is too large to fit into Word32, Word16 and Word16 respectively, will have all of its
--- values set to 0 using `normalizePtr`.
---
--- There are two reasons why we can safely do that at the Babbage/Conway era boundary:
---
--- * Invalid pointers are no longer allowed in transactions starting with Babbage era
---
--- * There are only a handful of `Ptr`s on mainnet that are invalid.
---
--- Once the transition is complete and we are officially in Conway era, this translation
--- logic can be removed in favor of a fixed deserializer that does the same thing for all
--- eras prior to Babbage.
-addrPtrNormalize :: Addr -> Addr
-addrPtrNormalize = id
-{-# DEPRECATED addrPtrNormalize "Pointers are now all normalized and this logic has been moved to the decoder" #-}
 
 -- | An account based address for rewards
 data RewardAccount = RewardAccount

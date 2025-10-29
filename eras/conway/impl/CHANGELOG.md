@@ -2,6 +2,11 @@
 
 ## 1.21.0.0
 
+* Remove deprecated type `Conway`
+* Remove deprecated function `toConwayGenesisPairs`
+* Remove deprecated function `toUpgradeConwayPParamsUpdatePairs`
+* Remove deprecated function `toConwayTransitionConfigPairs`
+* Remove deprecated function `getVoteDelegatee`
 * Add `unDelegReDelegDRep` to `VState` module
 * Expose `conwayRegisterInitialAccounts`
 * Add `TxLevel` argument to `Tx` and `TxBody`

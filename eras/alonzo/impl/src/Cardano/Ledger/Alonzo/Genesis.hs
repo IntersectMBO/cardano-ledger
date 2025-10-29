@@ -27,7 +27,6 @@ module Cardano.Ledger.Alonzo.Genesis (
     agCollateralPercentage,
     agMaxCollateralInputs
   ),
-  toAlonzoGenesisPairs,
 ) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -192,7 +191,3 @@ instance ToKeyValuePairs AlonzoGenesis where
     , "collateralPercentage" .= agCollateralPercentage ag
     , "maxCollateralInputs" .= agMaxCollateralInputs ag
     ]
-
-toAlonzoGenesisPairs :: Aeson.KeyValue e a => AlonzoGenesis -> [a]
-toAlonzoGenesisPairs = toKeyValuePairs
-{-# DEPRECATED toAlonzoGenesisPairs "In favor of `toKeyValuePairs`" #-}

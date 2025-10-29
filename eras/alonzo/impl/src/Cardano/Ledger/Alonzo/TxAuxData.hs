@@ -35,7 +35,6 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoEraTxAuxData (..),
   AlonzoTxAuxDataRaw (..),
   mkAlonzoTxAuxData,
-  hashAlonzoTxAuxData,
   validateAlonzoTxAuxData,
   getAlonzoTxAuxDataScripts,
   metadataAlonzoTxAuxDataL,
@@ -288,13 +287,6 @@ metadataAlonzoTxAuxDataL ::
 metadataAlonzoTxAuxDataL =
   lensMemoRawType @era atadrMetadata $
     \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
-
-hashAlonzoTxAuxData ::
-  HashAnnotated x EraIndependentTxAuxData =>
-  x ->
-  TxAuxDataHash
-hashAlonzoTxAuxData x = TxAuxDataHash (hashAnnotated x)
-{-# DEPRECATED hashAlonzoTxAuxData "In favor of `hashTxAuxData`" #-}
 
 validateAlonzoTxAuxData ::
   (AlonzoEraScript era, Script era ~ AlonzoScript era) =>

@@ -20,7 +20,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Keys hiding (Hash)
+import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank

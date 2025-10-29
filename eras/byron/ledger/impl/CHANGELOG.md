@@ -2,6 +2,8 @@
 
 ## 1.3.0.0
 
+* Remove deprecated function `decCBORTextAddress`
+* Remove deprecated function `subSlotCount`
 * Add `ToCBOR` and `FromCBOR` instances for `KeyHash` and `GenesisHash`
 * Rename `encodedSizeTestEncCBOR` to `encodedSizeTestToCBOR`
 

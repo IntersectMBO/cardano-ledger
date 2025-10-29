@@ -14,7 +14,6 @@
 module Cardano.Ledger.Conway.Transition (
   ConwayEraTransition (..),
   TransitionConfig (..),
-  toConwayTransitionConfigPairs,
   registerDRepsThenDelegs,
   conwayRegisterInitialAccounts,
   conwayRegisterInitialFundsThenStaking,
@@ -22,7 +21,6 @@ module Cardano.Ledger.Conway.Transition (
 
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.Transition (TransitionConfig (BabbageTransitionConfig))
-import Cardano.Ledger.BaseTypes (toKeyValuePairs)
 import Cardano.Ledger.Coin (compactCoinOrError)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -41,7 +39,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
  )
 import Cardano.Ledger.Shelley.Transition
-import Data.Aeson (KeyValue (..))
 import Data.ListMap (ListMap)
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
@@ -100,10 +97,6 @@ tcInitialDRepsL =
     tcConwayGenesisL . lens cgInitialDReps (\g x -> g {cgInitialDReps = x})
 
 instance NoThunks (TransitionConfig ConwayEra)
-
-toConwayTransitionConfigPairs :: KeyValue e a => TransitionConfig ConwayEra -> [a]
-toConwayTransitionConfigPairs = toKeyValuePairs
-{-# DEPRECATED toConwayTransitionConfigPairs "In favor of `toKeyValuePairs`" #-}
 
 conwayRegisterInitialFundsThenStaking ::
   ConwayEraTransition era =>
