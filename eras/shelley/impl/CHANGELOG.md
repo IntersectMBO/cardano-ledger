@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `EncCBOR` and `DecCBOR` instances to `ShelleyBbodyPredFailure`
 * Rename `poolParamsP` field to `stakePoolParamsP` in `RewardProvenancePool`
 * Move withdrawals-draining from `DELEGS` to `LEDGER`
   - Remove `WithdrawalsNotInRewardsDELEGS`

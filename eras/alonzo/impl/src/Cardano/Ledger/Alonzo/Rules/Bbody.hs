@@ -71,7 +71,6 @@ import Control.State.Transition (
  )
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -146,14 +145,15 @@ deriving anyclass instance
   (Era era, NoThunks (PredicateFailure (EraRule "LEDGERS" era))) =>
   NoThunks (AlonzoBbodyPredFailure era)
 
-instance EncCBOR (ShelleyBbodyPredFailure era) => EncCBOR (AlonzoBbodyPredFailure era) where
+instance
+  (Era era, EncCBOR (PredicateFailure (EraRule "LEDGERS" era))) =>
+  EncCBOR (AlonzoBbodyPredFailure era)
+  where
   encCBOR (ShelleyInAlonzoBbodyPredFailure x) = encode (Sum ShelleyInAlonzoBbodyPredFailure 0 !> To x)
   encCBOR (TooManyExUnits m) = encode (Sum TooManyExUnits 1 !> To m)
 
 instance
-  ( Typeable era
-  , DecCBOR (ShelleyBbodyPredFailure era) -- TODO why is there no DecCBOR for (ShelleyBbodyPredFailure era)
-  ) =>
+  (Era era, DecCBOR (PredicateFailure (EraRule "LEDGERS" era))) =>
   DecCBOR (AlonzoBbodyPredFailure era)
   where
   decCBOR = decode (Summands "AlonzoBbodyPredFail" dec)
