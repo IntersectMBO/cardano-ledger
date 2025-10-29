@@ -35,14 +35,14 @@ import qualified Codec.CBOR.Cuddle.CDDL as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.CTree as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
-import Codec.CBOR.Cuddle.Pretty ()
+import qualified Codec.CBOR.Cuddle.IndexMappable as Cuddle
+import Codec.CBOR.Cuddle.Pretty (PrettyStage)
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
 import qualified Codec.CBOR.Write as CBOR
 import Data.Data (Proxy (..))
 import Data.Foldable (Foldable (..), traverse_)
-import Data.Functor.Identity (Identity)
 import Data.List (unfoldr)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
@@ -74,7 +74,7 @@ import Test.QuickCheck.Random (QCGen, mkQCGen)
 import Text.Pretty.Simple (pShow)
 
 data CuddleData = CuddleData
-  { cddl :: !(Cuddle.CTreeRoot' Identity Cuddle.MonoRef)
+  { cddl :: !(Cuddle.CTreeRoot Cuddle.MonoReferenced)
   , numExamples :: !Int
   }
 
@@ -143,7 +143,7 @@ specWithHuddle :: Cuddle.Huddle -> Int -> SpecWith CuddleData -> Spec
 specWithHuddle h numExamples =
   beforeAll $
     let cddl = Cuddle.toCDDL h
-        rCddl = Cuddle.fullResolveCDDL cddl
+        rCddl = Cuddle.fullResolveCDDL $ Cuddle.mapIndex cddl
      in case rCddl of
           Right ct ->
             pure $
@@ -153,7 +153,8 @@ specWithHuddle h numExamples =
                 }
           Left nrf -> error $ show nrf
 
-withGenTerm :: CuddleData -> Cuddle.Name -> (CBOR.Term -> Expectation) -> Seeded Expectation
+withGenTerm ::
+  CuddleData -> Cuddle.Name Cuddle.CTreePhase -> (CBOR.Term -> Expectation) -> Seeded Expectation
 withGenTerm cd n withTerm = Seeded $ \gen ->
   let terms =
         take (numExamples cd) $
@@ -289,6 +290,6 @@ writeSpec hddl path =
       preface = "; This file was auto-generated from huddle. Please do not modify it directly!\n"
    in withFile path WriteMode $ \h -> do
         hPutStrLn h preface
-        hPutDoc h (pretty cddl)
+        hPutDoc h (pretty $ Cuddle.mapIndex @_ @_ @PrettyStage cddl)
         -- Write an empty line at the end of the file
         hPutStrLn h ""
