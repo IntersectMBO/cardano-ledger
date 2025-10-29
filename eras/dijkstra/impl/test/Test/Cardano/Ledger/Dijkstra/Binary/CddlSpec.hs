@@ -40,7 +40,7 @@ spec = do
     describe "Ruby-based" $ beforeAllCddlFile 3 readDijkstraCddlFiles $ do
       cddlRoundTripCborSpec @(Value DijkstraEra) v "positive_coin"
       xdescribe "fix Multiasset" $ do
-        cddlRoundTripCborSpec @(Value DijkstraEra) v "value"
+        cddlRoundTripCborSpec @(Value DijkstraEra) v "conway_value"
       xdescribe "fix TxBody" $ do
         cddlRoundTripAnnCborSpec @(TxBody DijkstraEra) v "transaction_body"
         cddlRoundTripCborSpec @(TxBody DijkstraEra) v "transaction_body"
@@ -84,9 +84,9 @@ spec = do
           cddlDecoderEquivalenceSpec @(Tx DijkstraEra) v "transaction"
     describe "Huddle" $ specWithHuddle dijkstraCDDL 100 $ do
       huddleRoundTripCborSpec @(Value DijkstraEra) v "positive_coin"
-      huddleRoundTripArbitraryValidate @(Value DijkstraEra) v "value"
+      huddleRoundTripArbitraryValidate @(Value DijkstraEra) v "conway_value"
       xdescribe "fix MultiAsset" $ do
-        huddleRoundTripCborSpec @(Value DijkstraEra) v "value"
+        huddleRoundTripCborSpec @(Value DijkstraEra) v "conway_value"
       xdescribe "fix TxBody" $ do
         huddleRoundTripAnnCborSpec @(TxBody DijkstraEra) v "transaction_body"
         huddleRoundTripCborSpec @(TxBody DijkstraEra) v "transaction_body"

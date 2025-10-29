@@ -10,31 +10,25 @@
 
 module Test.Cardano.Ledger.Alonzo.CDDL (
   module Test.Cardano.Ledger.Mary.CDDL,
-  module Test.Cardano.Ledger.Alonzo.CDDL,
+  alonzoCDDL,
+  alonzo_transaction_output,
+  mkAlonzoTransactionOutput,
+  alonzo_required_signers,
+  alonzo_network_id,
+  alonzo_ex_units,
+  alonzo_ex_unit_prices,
+  alonzo_native_script,
+  alonzo_constr,
+  alonzo_redeemers,
+  alonzo_plutus_data,
+  alonzo_positive_interval,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
-import Test.Cardano.Ledger.Mary.CDDL hiding (
-  auxiliary_data,
-  block,
-  header,
-  header_body,
-  mint,
-  native_script,
-  proposed_protocol_parameter_updates,
-  protocol_param_update,
-  protocol_version,
-  script_n_of_k,
-  transaction,
-  transaction_body,
-  transaction_output,
-  transaction_witness_set,
-  update,
-  value,
- )
+import Test.Cardano.Ledger.Mary.CDDL
 import Text.Heredoc
 
 alonzoCDDL :: Huddle
@@ -44,7 +38,7 @@ alonzoCDDL =
     , HIRule transaction
     , HIRule kes_signature
     , HIRule language
-    , HIRule signkeyKES
+    , HIRule signkey_kes
     ]
 
 block :: Rule
@@ -63,8 +57,8 @@ block =
         [ a header
         , "transaction_bodies" ==> arr [0 <+ a transaction_body]
         , "transaction_witness_sets" ==> arr [0 <+ a transaction_witness_set]
-        , "auxiliary_data_set" ==> mp [0 <+ asKey transaction_index ==> auxiliary_data]
-        , "invalid_transactions" ==> arr [0 <+ a transaction_index]
+        , "auxiliary_data_set" ==> mp [0 <+ asKey transaction_ix ==> auxiliary_data]
+        , "invalid_transactions" ==> arr [0 <+ a transaction_ix]
         ]
 
 transaction :: Rule
@@ -76,9 +70,6 @@ transaction =
       , a VBool
       , a (auxiliary_data / VNil)
       ]
-
-protocol_version :: Named Group
-protocol_version = "protocol_version" =:~ grp [a $ major_protocol_version @AlonzoEra, a VUInt]
 
 transaction_body :: Rule
 transaction_body =
@@ -95,33 +86,32 @@ transaction_body =
         |]
     $ "transaction_body"
       =:= mp
-        [ idx 0 ==> set transaction_input
-        , idx 1 ==> arr [0 <+ a transaction_output]
+        [ idx 0 ==> untagged_set transaction_input
+        , idx 1 ==> arr [0 <+ a alonzo_transaction_output]
         , idx 2 ==> coin
         , opt (idx 3 ==> VUInt)
-        , opt (idx 4 ==> arr [0 <+ a certificate])
-        , opt (idx 5 ==> withdrawals)
+        , opt (idx 4 ==> arr [0 <+ a shelley_certificate])
+        , opt (idx 5 ==> shelley_withdrawals)
         , opt (idx 6 ==> update)
         , opt (idx 7 ==> auxiliary_data_hash)
         , opt (idx 8 ==> VUInt)
-        , opt (idx 9 ==> mint)
+        , opt (idx 9 ==> mary_mint)
         , opt (idx 11 ==> script_data_hash)
-        , opt (idx 13 ==> set transaction_input)
-        , opt (idx 14 ==> required_signers)
-        , opt (idx 15 ==> network_id)
+        , opt (idx 13 ==> untagged_set transaction_input)
+        , opt (idx 14 ==> alonzo_required_signers)
+        , opt (idx 15 ==> alonzo_network_id)
         ]
 
-required_signers :: Rule
-required_signers = "required_signers" =:= set addr_keyhash
+alonzo_required_signers :: Rule
+alonzo_required_signers = "required_signers" =:= untagged_set addr_keyhash
 
-transaction_output :: Rule
-transaction_output =
-  comment
-    [str|NEW:
-        |  datum_hash: $hash32
-        |]
-    $ "transaction_output"
-      =:= arr [a address, "amount" ==> value, opt ("datum_hash" ==> hash32)]
+alonzo_transaction_output :: Rule
+alonzo_transaction_output = mkAlonzoTransactionOutput mary_value
+
+mkAlonzoTransactionOutput :: Rule -> Rule
+mkAlonzoTransactionOutput value =
+  "alonzo_transaction_output"
+    =:= arr [a address, "amount" ==> value, opt ("datum_hash" ==> bytes32)]
 
 script_data_hash :: Rule
 script_data_hash =
@@ -184,10 +174,7 @@ script_data_hash =
         |NEW:
         |  script_data_hash
         |]
-    $ "script_data_hash" =:= hash32
-
-certificates :: Rule
-certificates = "certificates" =:= arr [0 <+ a certificate]
+    $ "script_data_hash" =:= bytes32
 
 protocol_param_update :: Rule
 protocol_param_update =
@@ -226,20 +213,20 @@ protocol_param_update =
         , opt (idx 4 ==> (VUInt `sized` (2 :: Word64)))
         , opt (idx 5 ==> coin)
         , opt (idx 6 ==> coin)
-        , opt (idx 7 ==> epoch)
+        , opt (idx 7 ==> shelley_epoch)
         , opt (idx 8 ==> VUInt `sized` (2 :: Word64))
         , opt (idx 9 ==> nonnegative_interval)
         , opt (idx 10 ==> unit_interval)
         , opt (idx 11 ==> unit_interval)
         , opt (idx 12 ==> unit_interval)
-        , opt (idx 13 ==> nonce)
-        , opt (idx 14 ==> arr [a protocol_version])
+        , opt (idx 13 ==> shelley_nonce)
+        , opt (idx 14 ==> arr [a (protocol_version @AlonzoEra)])
         , opt (idx 16 ==> coin)
         , opt (idx 17 ==> coin)
         , opt (idx 18 ==> cost_models)
-        , opt (idx 19 ==> ex_unit_prices)
-        , opt (idx 20 ==> ex_units)
-        , opt (idx 21 ==> ex_units)
+        , opt (idx 19 ==> alonzo_ex_unit_prices)
+        , opt (idx 20 ==> alonzo_ex_units)
+        , opt (idx 21 ==> alonzo_ex_units)
         , opt (idx 22 ==> VUInt)
         , opt (idx 23 ==> VUInt)
         , opt (idx 24 ==> VUInt)
@@ -248,10 +235,10 @@ protocol_param_update =
 proposed_protocol_parameter_updates :: Rule
 proposed_protocol_parameter_updates =
   "proposed_protocol_parameter_updates"
-    =:= mp [0 <+ asKey genesis_hash ==> protocol_param_update]
+    =:= mp [0 <+ asKey shelley_genesis_hash ==> protocol_param_update]
 
 update :: Rule
-update = "update" =:= arr [a proposed_protocol_parameter_updates, a epoch]
+update = "update" =:= arr [a proposed_protocol_parameter_updates, a shelley_epoch]
 
 transaction_witness_set :: Rule
 transaction_witness_set =
@@ -264,33 +251,32 @@ transaction_witness_set =
         |]
     $ "transaction_witness_set"
       =:= mp
-        [ opt $ idx 0 ==> arr [0 <+ a vkeywitness]
-        , opt $ idx 1 ==> arr [0 <+ a native_script]
+        [ opt $ idx 0 ==> arr [0 <+ a vkey_witness]
+        , opt $ idx 1 ==> arr [0 <+ a alonzo_native_script]
         , opt $ idx 2 ==> arr [0 <+ a bootstrap_witness]
         , opt $ idx 3 ==> arr [0 <+ a plutus_script]
-        , opt $ idx 4 ==> arr [0 <+ a plutus_data]
-        , opt $ idx 5 ==> redeemers
+        , opt $ idx 4 ==> arr [0 <+ a alonzo_plutus_data]
+        , opt $ idx 5 ==> alonzo_redeemers
         ]
 
-redeemers :: Rule
-redeemers = "redeemers" =:= arr [0 <+ a redeemer]
+alonzo_redeemers :: Rule
+alonzo_redeemers = "redeemers" =:= arr [0 <+ a redeemer]
 
 plutus_script :: Rule
 plutus_script = "plutus_script" =:= VBytes
 
-plutus_data :: Rule
-plutus_data =
-  comment [str|NEW|] $
-    "plutus_data"
-      =:= constr plutus_data
-      / smp [0 <+ asKey plutus_data ==> plutus_data]
-      / sarr [0 <+ a plutus_data]
-      / big_int
-      / bounded_bytes
+alonzo_plutus_data :: Rule
+alonzo_plutus_data =
+  "plutus_data"
+    =:= alonzo_constr alonzo_plutus_data
+    / smp [0 <+ asKey alonzo_plutus_data ==> alonzo_plutus_data]
+    / sarr [0 <+ a alonzo_plutus_data]
+    / big_int
+    / bounded_bytes
 
 -- FIXME: `GRuleCall` does not serialise the comment in the resulting CDDL
-constr :: IsType0 x => x -> GRuleCall
-constr = binding $ \x ->
+alonzo_constr :: IsType0 x => x -> GRuleCall
+alonzo_constr = binding $ \x ->
   comment
     [str|NEW
         |  #6.102([uint, [* a]]): For tag range 6.1280 .. 6.1400 inclusive
@@ -312,8 +298,8 @@ redeemer =
       =:= arr
         [ "tag" ==> redeemer_tag
         , "index" ==> VUInt
-        , "data" ==> plutus_data
-        , "ex_units" ==> ex_units
+        , "data" ==> alonzo_plutus_data
+        , "ex_units" ==> alonzo_ex_units
         ]
 
 redeemer_tag :: Rule
@@ -326,15 +312,15 @@ redeemer_tag =
         |]
     $ "redeemer_tag" =:= int 0 / int 1 / int 2 / int 3
 
-ex_units :: Rule
-ex_units = "ex_units" =:= arr ["mem" ==> VUInt, "steps" ==> VUInt]
+alonzo_ex_units :: Rule
+alonzo_ex_units = "ex_units" =:= arr ["mem" ==> VUInt, "steps" ==> VUInt]
 
-ex_unit_prices :: Rule
-ex_unit_prices =
+alonzo_ex_unit_prices :: Rule
+alonzo_ex_unit_prices =
   "ex_unit_prices"
     =:= arr
-      [ "mem_price" ==> positive_interval
-      , "step_price" ==> positive_interval
+      [ "mem_price" ==> alonzo_positive_interval
+      , "step_price" ==> alonzo_positive_interval
       ]
 
 language :: Rule
@@ -368,16 +354,16 @@ auxiliary_data =
         |  #6.259(0 ==> metadata): alonzo onwards
         |]
     $ "auxiliary_data"
-      =:= metadata
+      =:= shelley_auxiliary_data
       / sarr
-        [ "transaction_metadata" ==> metadata
-        , "auxiliary_scripts" ==> auxiliary_scripts
+        [ "transaction_metadata" ==> shelley_auxiliary_data
+        , "auxiliary_scripts" ==> allegra_auxiliary_scripts
         ]
       / tag
         259
         ( mp
-            [ opt (idx 0 ==> metadata)
-            , opt (idx 1 ==> arr [0 <+ a native_script])
+            [ opt (idx 0 ==> shelley_auxiliary_data)
+            , opt (idx 1 ==> arr [0 <+ a alonzo_native_script])
             , opt (idx 2 ==> arr [0 <+ a plutus_script])
             ]
         )
@@ -394,19 +380,19 @@ header_body =
       =:= arr
         [ "block_number" ==> VUInt
         , "slot" ==> VUInt
-        , "prev_hash" ==> (hash32 / VNil)
+        , "prev_hash" ==> (bytes32 / VNil)
         , "issuer_vkey" ==> vkey
         , "vrf_vkey" ==> vrf_vkey
         , "nonce_vrf" ==> vrf_cert
         , "leader_vrf" ==> vrf_cert
         , "block_body_size" ==> VUInt
-        , "block_body_hash" ==> hash32
-        , a operational_cert
-        , a protocol_version
+        , "block_body_hash" ==> bytes32
+        , a shelley_operational_cert
+        , a (protocol_version @AlonzoEra)
         ]
 
-native_script :: Rule
-native_script =
+alonzo_native_script :: Rule
+alonzo_native_script =
   comment
     [str|Timelock validity intervals are half-open intervals [a, b).
         |
@@ -417,27 +403,18 @@ native_script =
         |    specifies the right (excluded) endpoint b.
         |]
     $ "native_script"
-      =:= arr [a script_pubkey]
-      / arr [a script_all]
-      / arr [a script_any]
-      / arr [a script_n_of_k]
-      / arr [a invalid_before]
-      / arr [a invalid_hereafter]
+      =:= arr [a allegra_script_pubkey]
+      / arr [a allegra_script_all]
+      / arr [a allegra_script_any]
+      / arr [a alonzo_script_n_of_k]
+      / arr [a allegra_invalid_before]
+      / arr [a allegra_invalid_hereafter]
 
-script_n_of_k :: Named Group
-script_n_of_k = "script_n_of_k" =:~ grp [3, "n" ==> VUInt, a (arr [0 <+ a native_script])]
+alonzo_script_n_of_k :: Named Group
+alonzo_script_n_of_k = "script_n_of_k" =:~ grp [3, "n" ==> VUInt, a (arr [0 <+ a alonzo_native_script])]
 
-positive_interval :: Rule
-positive_interval = "positive_interval" =:= tag 30 (arr [a positive_int, a positive_int])
+alonzo_positive_interval :: Rule
+alonzo_positive_interval = "positive_interval" =:= tag 30 (arr [a pint, a pint])
 
-network_id :: Rule
-network_id = "network_id" =:= int 0 / int 1
-
-auxiliary_data_hash :: Rule
-auxiliary_data_hash = "auxiliary_data_hash" =:= hash32
-
-mint :: Rule
-mint = "mint" =:= multiasset int64
-
-value :: Rule
-value = "value" =:= coin / sarr [a coin, a (multiasset VUInt)]
+alonzo_network_id :: Rule
+alonzo_network_id = "network_id" =:= int 0 / int 1

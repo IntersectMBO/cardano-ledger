@@ -9,8 +9,8 @@
 {- HLINT ignore "Evaluate" -}
 
 module Test.Cardano.Ledger.Dijkstra.CDDL (
-  module Test.Cardano.Ledger.Dijkstra.CDDL,
   module Test.Cardano.Ledger.Conway.CDDL,
+  dijkstraCDDL,
 ) where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -19,32 +19,7 @@ import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
 import GHC.Num (Integer)
-import Test.Cardano.Ledger.Conway.CDDL hiding (
-  alonzo_auxiliary_data,
-  auxiliary_data,
-  block,
-  certificate,
-  certificates,
-  cost_models,
-  gov_action,
-  header,
-  header_body,
-  language,
-  native_script,
-  parameter_change_action,
-  proposal_procedure,
-  proposal_procedures,
-  protocol_param_update,
-  protocol_version,
-  redeemers,
-  script_data_hash,
-  single_host_name,
-  transaction,
-  transaction_body,
-  transaction_metadatum_label,
-  transaction_output,
-  transaction_witness_set,
- )
+import Test.Cardano.Ledger.Conway.CDDL
 import Text.Heredoc
 
 dijkstraCDDL :: Huddle
@@ -54,27 +29,27 @@ dijkstraCDDL =
     , HIRule transaction
     , HIRule kes_signature
     , HIRule language
-    , HIRule potential_languages
-    , HIRule signkeyKES
+    , HIRule conway_potential_languages
+    , HIRule signkey_kes
     , -- Certificates
       HIRule certificate
-    , HIGroup stake_registration
-    , HIGroup stake_deregistration
-    , HIGroup stake_delegation
-    , HIGroup pool_registration
-    , HIGroup pool_retirement
-    , HIGroup reg_cert
-    , HIGroup unreg_cert
-    , HIGroup vote_deleg_cert
-    , HIGroup stake_vote_deleg_cert
-    , HIGroup stake_reg_deleg_cert
-    , HIGroup vote_reg_deleg_cert
-    , HIGroup stake_vote_reg_deleg_cert
-    , HIGroup auth_committee_hot_cert
-    , HIGroup resign_committee_cold_cert
-    , HIGroup reg_drep_cert
-    , HIGroup unreg_drep_cert
-    , HIGroup update_drep_cert
+    , HIGroup shelley_stake_registration
+    , HIGroup shelley_stake_deregistration
+    , HIGroup shelley_stake_delegation
+    , HIGroup conway_pool_registration
+    , HIGroup conway_pool_retirement
+    , HIGroup conway_reg_cert
+    , HIGroup conway_unreg_cert
+    , HIGroup conway_vote_deleg_cert
+    , HIGroup conway_stake_vote_deleg_cert
+    , HIGroup conway_stake_reg_deleg_cert
+    , HIGroup conway_vote_reg_deleg_cert
+    , HIGroup conway_stake_vote_reg_deleg_cert
+    , HIGroup conway_auth_committee_hot_cert
+    , HIGroup conway_resign_committee_cold_cert
+    , HIGroup conway_reg_drep_cert
+    , HIGroup conway_unreg_drep_cert
+    , HIGroup conway_update_drep_cert
     ]
 
 block :: Rule
@@ -93,8 +68,8 @@ block =
         , "transaction_witness_sets"
             ==> arr [0 <+ a transaction_witness_set]
         , "auxiliary_data_set"
-            ==> mp [0 <+ asKey transaction_index ==> auxiliary_data]
-        , "invalid_transactions" ==> arr [0 <+ a transaction_index]
+            ==> mp [0 <+ asKey transaction_ix ==> auxiliary_data]
+        , "invalid_transactions" ==> arr [0 <+ a transaction_ix]
         ]
 
 transaction :: Rule
@@ -119,42 +94,39 @@ header_body :: Rule
 header_body =
   "header_body"
     =:= arr
-      [ "block_number" ==> block_no
-      , "slot" ==> slot_no
-      , "prev_hash" ==> (hash32 / VNil)
+      [ "block_number" ==> conway_block_no
+      , "slot" ==> conway_slot_no
+      , "prev_hash" ==> (bytes32 / VNil)
       , "issuer_vkey" ==> vkey
       , "vrf_vkey" ==> vrf_vkey
       , "vrf_result" ==> vrf_cert
       , "block_body_size" ==> (VUInt `sized` (4 :: Word64))
-      , "block_body_hash" ==> hash32
-      , a operational_cert
-      , a protocol_version
+      , "block_body_hash" ==> bytes32
+      , a babbage_operational_cert
+      , a (protocol_version @DijkstraEra)
       ]
-
-protocol_version :: Rule
-protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @DijkstraEra, a VUInt]
 
 transaction_body :: Rule
 transaction_body =
   "transaction_body"
     =:= mp
-      [ idx 0 ==> set transaction_input
-      , idx 1 ==> arr [0 <+ a transaction_output]
+      [ idx 0 ==> tagged_set transaction_input
+      , idx 1 ==> arr [0 <+ a dijkstra_transaction_output]
       , idx 2 ==> coin
-      , opt (idx 3 ==> slot_no)
+      , opt (idx 3 ==> conway_slot_no)
       , opt (idx 4 ==> certificates)
-      , opt (idx 5 ==> withdrawals)
+      , opt (idx 5 ==> shelley_withdrawals)
       , opt (idx 7 ==> auxiliary_data_hash)
-      , opt (idx 8 ==> slot_no) -- Validity interval start
-      , opt (idx 9 ==> mint)
+      , opt (idx 8 ==> conway_slot_no) -- Validity interval start
+      , opt (idx 9 ==> conway_mint)
       , opt (idx 11 ==> script_data_hash)
-      , opt (idx 13 ==> nonempty_set transaction_input)
+      , opt (idx 13 ==> tagged_nonempty_set transaction_input)
       , opt (idx 14 ==> guards)
-      , opt (idx 15 ==> network_id)
-      , opt (idx 16 ==> transaction_output)
+      , opt (idx 15 ==> alonzo_network_id)
+      , opt (idx 16 ==> dijkstra_transaction_output)
       , opt (idx 17 ==> coin)
-      , opt (idx 18 ==> nonempty_set transaction_input)
-      , opt (idx 19 ==> voting_procedures)
+      , opt (idx 18 ==> tagged_nonempty_set transaction_input)
+      , opt (idx 19 ==> conway_voting_procedures)
       , opt (idx 20 ==> proposal_procedures)
       , opt (idx 21 ==> coin)
       , opt (idx 22 ==> positive_coin)
@@ -163,8 +135,8 @@ transaction_body =
 guards :: Rule
 guards =
   "guards"
-    =:= nonempty_set addr_keyhash
-    / nonempty_oset credential
+    =:= tagged_nonempty_set addr_keyhash
+    / tagged_nonempty_oset credential
 
 proposal_procedure :: Rule
 proposal_procedure =
@@ -173,45 +145,45 @@ proposal_procedure =
       [ "deposit" ==> coin
       , a reward_account
       , a gov_action
-      , a anchor
+      , a conway_anchor
       ]
 
 proposal_procedures :: Rule
-proposal_procedures = "proposal_procedures" =:= nonempty_oset proposal_procedure
+proposal_procedures = "proposal_procedures" =:= tagged_nonempty_oset proposal_procedure
 
 certificates :: Rule
-certificates = "certificates" =:= nonempty_oset certificate
+certificates = "certificates" =:= tagged_nonempty_oset certificate
 
 gov_action :: Rule
 gov_action =
   "gov_action"
     =:= arr [a parameter_change_action]
-    / arr [a hard_fork_initiation_action]
-    / arr [a treasury_withdrawals_action]
-    / arr [a no_confidence]
-    / arr [a update_committee]
-    / arr [a new_constitution]
-    / arr [a info_action]
+    / arr [a conway_hard_fork_initiation_action]
+    / arr [a conway_treasury_withdrawals_action]
+    / arr [a conway_no_confidence]
+    / arr [a conway_update_committee]
+    / arr [a conway_new_constitution]
+    / arr [a conway_info_action]
 
 parameter_change_action :: Named Group
 parameter_change_action =
   "parameter_change_action"
     =:~ grp
       [ 0
-      , a $ gov_action_id / VNil
+      , a $ conway_gov_action_id / VNil
       , a protocol_param_update
-      , a $ policy_hash / VNil
+      , a $ conway_policy_hash / VNil
       ]
 
-transaction_output :: Rule
-transaction_output =
+dijkstra_transaction_output :: Rule
+dijkstra_transaction_output =
   comment
     [str|Both of the Alonzo and Babbage style TxOut formats are equally valid
         |and can be used interchangeably
         |]
-    $ "transaction_output"
-      =:= shelley_transaction_output
-      / babbage_transaction_output dijkstra_script
+    $ "dijkstra_transaction_output"
+      =:= mkAlonzoTransactionOutput conway_value
+      / mkBabbageTransactionOutput conway_value dijkstra_script
 
 -- TODO: Update comment with Plutus v4 when necessary
 script_data_hash :: Rule
@@ -284,29 +256,29 @@ script_data_hash =
         |therefore there is no way to override this behavior by providing a custom
         |representation for empty redeemers.
         |]
-    $ "script_data_hash" =:= hash32
+    $ "script_data_hash" =:= bytes32
 
 -- TODO: adjust to changes in certificates
 certificate :: Rule
 certificate =
   "certificate"
-    =:= arr [a stake_registration]
-    / arr [a stake_deregistration]
-    / arr [a stake_delegation]
-    / arr [a pool_registration]
-    / arr [a pool_retirement]
-    / arr [a reg_cert]
-    / arr [a unreg_cert]
-    / arr [a vote_deleg_cert]
-    / arr [a stake_vote_deleg_cert]
-    / arr [a stake_reg_deleg_cert]
-    / arr [a vote_reg_deleg_cert]
-    / arr [a stake_vote_reg_deleg_cert]
-    / arr [a auth_committee_hot_cert]
-    / arr [a resign_committee_cold_cert]
-    / arr [a reg_drep_cert]
-    / arr [a unreg_drep_cert]
-    / arr [a update_drep_cert]
+    =:= arr [a shelley_stake_registration]
+    / arr [a shelley_stake_deregistration]
+    / arr [a shelley_stake_delegation]
+    / arr [a conway_pool_registration]
+    / arr [a conway_pool_retirement]
+    / arr [a conway_reg_cert]
+    / arr [a conway_unreg_cert]
+    / arr [a conway_vote_deleg_cert]
+    / arr [a conway_stake_vote_deleg_cert]
+    / arr [a conway_stake_reg_deleg_cert]
+    / arr [a conway_vote_reg_deleg_cert]
+    / arr [a conway_stake_vote_reg_deleg_cert]
+    / arr [a conway_auth_committee_hot_cert]
+    / arr [a conway_resign_committee_cold_cert]
+    / arr [a conway_reg_drep_cert]
+    / arr [a conway_unreg_drep_cert]
+    / arr [a conway_update_drep_cert]
 
 -- TODO: adjust with new params
 protocol_param_update :: Rule
@@ -320,7 +292,7 @@ protocol_param_update =
       , opt (idx 4 ==> (VUInt `sized` (2 :: Word64))) //- "max block header size"
       , opt (idx 5 ==> coin) //- "key deposit"
       , opt (idx 6 ==> coin) //- "pool deposit"
-      , opt (idx 7 ==> epoch_interval) //- "maximum epoch"
+      , opt (idx 7 ==> conway_epoch_interval) //- "maximum epoch"
       , opt (idx 8 ==> (VUInt `sized` (2 :: Word64))) //- "n_opt: desired number of stake pools"
       , opt (idx 9 ==> nonnegative_interval) //- "pool pledge influence"
       , opt (idx 10 ==> unit_interval) //- "expansion rate"
@@ -328,25 +300,25 @@ protocol_param_update =
       , opt (idx 16 ==> coin) //- "min pool cost"
       , opt (idx 17 ==> coin) //- "ada per utxo byte"
       , opt (idx 18 ==> cost_models) //- "cost models for script languages"
-      , opt (idx 19 ==> ex_unit_prices) //- "execution costs"
-      , opt (idx 20 ==> ex_units) //- "max tx ex units"
-      , opt (idx 21 ==> ex_units) //- "max block ex units"
+      , opt (idx 19 ==> conway_ex_unit_prices) //- "execution costs"
+      , opt (idx 20 ==> alonzo_ex_units) //- "max tx ex units"
+      , opt (idx 21 ==> alonzo_ex_units) //- "max block ex units"
       , opt (idx 22 ==> (VUInt `sized` (4 :: Word64))) //- "max value size"
       , opt (idx 23 ==> (VUInt `sized` (2 :: Word64))) //- "collateral percentage"
       , opt (idx 24 ==> (VUInt `sized` (2 :: Word64))) //- "max collateral inputs"
-      , opt (idx 25 ==> pool_voting_thresholds) //- "pool voting thresholds"
-      , opt (idx 26 ==> drep_voting_thresholds) //- "drep voting thresholds"
+      , opt (idx 25 ==> conway_pool_voting_thresholds) //- "pool voting thresholds"
+      , opt (idx 26 ==> conway_drep_voting_thresholds) //- "drep voting thresholds"
       , opt (idx 27 ==> (VUInt `sized` (2 :: Word64))) //- "min committee size"
-      , opt (idx 28 ==> epoch_interval) //- "committee term limit"
-      , opt (idx 29 ==> epoch_interval) //- "goveranance action validity period"
+      , opt (idx 28 ==> conway_epoch_interval) //- "committee term limit"
+      , opt (idx 29 ==> conway_epoch_interval) //- "goveranance action validity period"
       , opt (idx 30 ==> coin) //- "governance action deposit"
       , opt (idx 31 ==> coin) //- "drep deposit"
-      , opt (idx 32 ==> epoch_interval) //- "drep inactivity period"
+      , opt (idx 32 ==> conway_epoch_interval) //- "drep inactivity period"
       , opt (idx 33 ==> nonnegative_interval) //- "minfee refScript coins per byte"
       , opt (idx 34 ==> (VUInt `sized` (4 :: Word64))) //- "max refScript size per block"
       , opt (idx 35 ==> (VUInt `sized` (4 :: Word64))) //- "max refScript size per tx"
-      , opt (idx 36 ==> posWord32) //- "refScript cost stride"
-      , opt (idx 37 ==> positive_interval) //- "refScript cost multiplier"
+      , opt (idx 36 ==> pword32) //- "refScript cost stride"
+      , opt (idx 37 ==> alonzo_positive_interval) //- "refScript cost multiplier"
       ]
 
 redeemers :: Rule -> Rule
@@ -360,7 +332,7 @@ redeemers redeemer_tag =
                 , "index" ==> (VUInt `sized` (4 :: Word64))
                 ]
             )
-          ==> arr ["data" ==> plutus_data, "ex_units" ==> ex_units]
+          ==> arr ["data" ==> alonzo_plutus_data, "ex_units" ==> alonzo_ex_units]
       ]
 
 -- TODO: add entry for Plutus v4
@@ -368,14 +340,14 @@ transaction_witness_set :: Rule
 transaction_witness_set =
   "transaction_witness_set"
     =:= mp
-      [ opt $ idx 0 ==> nonempty_set vkeywitness
-      , opt $ idx 1 ==> nonempty_set dijkstra_native_script
-      , opt $ idx 2 ==> nonempty_set bootstrap_witness
-      , opt $ idx 3 ==> nonempty_set plutus_v1_script
-      , opt $ idx 4 ==> nonempty_set plutus_data
+      [ opt $ idx 0 ==> tagged_nonempty_set vkey_witness
+      , opt $ idx 1 ==> tagged_nonempty_set dijkstra_native_script
+      , opt $ idx 2 ==> tagged_nonempty_set bootstrap_witness
+      , opt $ idx 3 ==> tagged_nonempty_set conway_plutus_v1_script
+      , opt $ idx 4 ==> tagged_nonempty_set alonzo_plutus_data
       , opt $ idx 5 ==> redeemers dijkstra_redeemer_tag
-      , opt $ idx 6 ==> nonempty_set plutus_v2_script
-      , opt $ idx 7 ==> nonempty_set plutus_v3_script
+      , opt $ idx 6 ==> tagged_nonempty_set conway_plutus_v2_script
+      , opt $ idx 7 ==> tagged_nonempty_set conway_plutus_v3_script
       ]
 
 -- TODO: adjust with new script purpose
@@ -428,25 +400,25 @@ script_require_guard = "script_require_guard" =:~ grp [6, a credential]
 dijkstra_native_script :: Rule
 dijkstra_native_script =
   "native_script"
-    =:= arr [a script_pubkey]
-    / arr [a script_all]
-    / arr [a script_any]
-    / arr [a script_n_of_k]
-    / arr [a invalid_before]
-    / arr [a invalid_hereafter]
+    =:= arr [a allegra_script_pubkey]
+    / arr [a allegra_script_all]
+    / arr [a allegra_script_any]
+    / arr [a conway_script_n_of_k]
+    / arr [a conway_invalid_before]
+    / arr [a conway_invalid_hereafter]
     / arr [a script_require_guard]
 
-alonzo_auxiliary_data :: Rule
-alonzo_auxiliary_data =
+dijkstra_alonzo_auxiliary_data :: Rule
+dijkstra_alonzo_auxiliary_data =
   "alonzo_auxiliary_data"
     =:= tag
       259
       ( mp
-          [ opt (idx 0 ==> metadata)
+          [ opt (idx 0 ==> conway_auxiliary_data)
           , opt (idx 1 ==> arr [0 <+ a dijkstra_native_script])
-          , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
-          , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
-          , opt (idx 4 ==> arr [0 <+ a plutus_v3_script])
+          , opt (idx 2 ==> arr [0 <+ a conway_plutus_v1_script])
+          , opt (idx 3 ==> arr [0 <+ a conway_plutus_v2_script])
+          , opt (idx 4 ==> arr [0 <+ a conway_plutus_v3_script])
           , opt (idx 5 ==> arr [0 <+ a plutus_v4_script])
           ]
       )
@@ -454,15 +426,15 @@ alonzo_auxiliary_data =
 auxiliary_data :: Rule
 auxiliary_data =
   "auxiliary_data"
-    =:= shelley_auxiliary_data
-    / shelley_ma_auxiliary_data
-    / alonzo_auxiliary_data
+    =:= conway_auxiliary_data
+    / conway_shelley_ma_auxiliary_data
+    / dijkstra_alonzo_auxiliary_data
 
 dijkstra_script :: Rule
 dijkstra_script =
   "script"
     =:= arr [0, a dijkstra_native_script]
-    / arr [1, a plutus_v1_script]
-    / arr [2, a plutus_v2_script]
-    / arr [3, a plutus_v3_script]
+    / arr [1, a conway_plutus_v1_script]
+    / arr [2, a conway_plutus_v2_script]
+    / arr [3, a conway_plutus_v3_script]
     / arr [4, a plutus_v4_script]

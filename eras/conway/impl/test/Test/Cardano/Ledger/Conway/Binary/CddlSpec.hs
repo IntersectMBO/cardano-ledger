@@ -39,7 +39,7 @@ spec = do
     let v = eraProtVerHigh @ConwayEra
     describe "Ruby-based" $ beforeAllCddlFile 3 readConwayCddlFiles $ do
       cddlRoundTripCborSpec @(Value ConwayEra) v "positive_coin"
-      cddlRoundTripCborSpec @(Value ConwayEra) v "value"
+      cddlRoundTripCborSpec @(Value ConwayEra) v "conway_value"
       cddlRoundTripAnnCborSpec @(TxBody ConwayEra) v "transaction_body"
       cddlRoundTripCborSpec @(TxBody ConwayEra) v "transaction_body"
       cddlRoundTripAnnCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
@@ -48,7 +48,7 @@ spec = do
       cddlRoundTripCborSpec @(Timelock ConwayEra) v "native_script"
       cddlRoundTripAnnCborSpec @(Data ConwayEra) v "plutus_data"
       cddlRoundTripCborSpec @(Data ConwayEra) v "plutus_data"
-      cddlRoundTripCborSpec @(TxOut ConwayEra) v "transaction_output"
+      cddlRoundTripCborSpec @(TxOut ConwayEra) v "conway_transaction_output"
       cddlRoundTripAnnCborSpec @(Script ConwayEra) v "script"
       cddlRoundTripCborSpec @(Script ConwayEra) v "script"
       cddlRoundTripCborSpec @(Datum ConwayEra) v "datum_option"
@@ -76,8 +76,8 @@ spec = do
     describe "Huddle" $ specWithHuddle conwayCDDL 100 $ do
       -- Value
       huddleRoundTripCborSpec @(Value ConwayEra) v "positive_coin"
-      huddleRoundTripArbitraryValidate @(Value ConwayEra) v "value"
-      huddleRoundTripCborSpec @(Value ConwayEra) v "value"
+      huddleRoundTripArbitraryValidate @(Value ConwayEra) v "conway_value"
+      huddleRoundTripCborSpec @(Value ConwayEra) v "conway_value"
       -- TxBody
       huddleRoundTripAnnCborSpec @(TxBody ConwayEra) v "transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
@@ -98,9 +98,9 @@ spec = do
       huddleRoundTripArbitraryValidate @(Data ConwayEra) v "plutus_data"
       huddleRoundTripCborSpec @(Data ConwayEra) v "plutus_data"
       -- TxOut
-      huddleRoundTripCborSpec @(TxOut ConwayEra) v "transaction_output"
+      huddleRoundTripCborSpec @(TxOut ConwayEra) v "conway_transaction_output"
       -- TODO fails because of `address`
-      xdescribe "fix address" $ huddleRoundTripArbitraryValidate @(TxOut ConwayEra) v "transaction_output"
+      xdescribe "fix address" $ huddleRoundTripArbitraryValidate @(TxOut ConwayEra) v "conway_transaction_output"
       -- Script
       huddleRoundTripAnnCborSpec @(Script ConwayEra) v "script"
       -- TODO fails because of `plutus_v1_script`

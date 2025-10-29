@@ -1,30 +1,113 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 {- HLINT ignore "Use camelCase" -}
 {- HLINT ignore "Evaluate" -}
 
-module Test.Cardano.Ledger.Core.Binary.CDDL where
+module Test.Cardano.Ledger.Core.Binary.CDDL (
+  -- * Base sized bytes
+  bytes28,
+  bytes32,
+  bytes64,
+  bytes80,
+  bytes448,
 
+  -- * Hashes, keys and certs
+  addr_keyhash,
+  script_hash,
+  pool_keyhash,
+  vrf_keyhash,
+  auxiliary_data_hash,
+  vkey,
+  vkey_witness,
+  bootstrap_witness,
+  vrf_vkey,
+  kes_vkey,
+  vrf_cert,
+  signature,
+  kes_signature,
+  signkey_kes,
+  credential,
+
+  -- * Numbers
+  max_word32,
+  pword32,
+  pint,
+  big_int,
+  min_int64,
+  max_int64,
+  int64,
+  nint64,
+  pint64,
+  nonzero_int64,
+
+  -- * Unit intervals
+  unit_interval,
+  nonnegative_interval,
+
+  -- * Distinct uint/bytes, bounded bytes
+  distinct,
+  bounded_bytes,
+
+  -- * Sets
+  untagged_set,
+  untagged_nonempty_set,
+  tagged_set,
+  tagged_nonempty_set,
+  tagged_oset,
+  tagged_nonempty_oset,
+  -- untagged_set',
+  -- untagged_nonempty_set',
+
+  -- * Network
+  port,
+  ipv4,
+  ipv6,
+  single_host_addr,
+
+  -- * Value
+  coin,
+  positive_coin,
+
+  -- * Protocol version
+  protocol_version,
+
+  -- * Addresses and accounts
+  address,
+  reward_account,
+
+  -- * Tx
+  transaction_id,
+  transaction_ix,
+  transaction_input,
+  transaction_metadatum,
+) where
+
+import Cardano.Ledger.BaseTypes hiding ((==>))
+import Cardano.Ledger.Core (ByronEra, Era, eraProtVerHigh, eraProtVerLow)
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Semigroup ((<>))
 import qualified Data.Text as T
 import Data.Word (Word64)
+import GHC.Base (error)
 import GHC.Show (Show (show))
 import Text.Heredoc
-import Prelude (Integer)
+import Prelude (Integer, succ)
 
---------------------------------------------------------------------------------
--- Base Types
---------------------------------------------------------------------------------
 coin :: Rule
 coin = "coin" =:= VUInt
 
 positive_coin :: Rule
-positive_coin = "positive_coin" =:= (1 :: Integer) ... maxWord64
+positive_coin = "positive_coin" =:= (1 :: Integer) ... max_word64
 
 address :: Rule
 address =
@@ -86,44 +169,83 @@ reward_account =
       / bstr "F0A0000000000000000000000000000000000000000000000000000000"
 
 addr_keyhash :: Rule
-addr_keyhash = "addr_keyhash" =:= hash28
+addr_keyhash = "addr_keyhash" =:= bytes28
+
+script_hash :: Rule
+script_hash =
+  comment
+    [str|To compute a script hash, note that you must prepend
+        |a tag to the bytes of the script before hashing.
+        |The tag is determined by the language.
+        |The tags in the Conway era are:
+        |  "\x00" for multisig scripts
+        |  "\x01" for Plutus V1 scripts
+        |  "\x02" for Plutus V2 scripts
+        |  "\x03" for Plutus V3 scripts
+        |  "\x04" for Plutus V4 scripts
+        |]
+    $ "script_hash" =:= bytes28
 
 pool_keyhash :: Rule
-pool_keyhash = "pool_keyhash" =:= hash28
+pool_keyhash = "pool_keyhash" =:= bytes28
 
 vrf_keyhash :: Rule
-vrf_keyhash = "vrf_keyhash" =:= hash32
+vrf_keyhash = "vrf_keyhash" =:= bytes32
 
---------------------------------------------------------------------------------
--- Crypto
---------------------------------------------------------------------------------
+mkBytesSized :: Word64 -> Rule
+mkBytesSized size = "bytes" <> T.pack (show size) =:= VBytes `sized` size
 
-hash28 :: Rule
-hash28 = "hash28" =:= VBytes `sized` (28 :: Word64)
+bytes28 :: Rule
+bytes28 = mkBytesSized 28
 
-hash32 :: Rule
-hash32 = "hash32" =:= VBytes `sized` (32 :: Word64)
+bytes32 :: Rule
+bytes32 = mkBytesSized 32
+
+bytes64 :: Rule
+bytes64 = mkBytesSized 64
+
+bytes80 :: Rule
+bytes80 = mkBytesSized 80
+
+bytes448 :: Rule
+bytes448 = mkBytesSized 448
 
 vkey :: Rule
-vkey = "vkey" =:= VBytes `sized` (32 :: Word64)
+vkey = "vkey" =:= bytes32
+
+vkey_witness :: Rule
+vkey_witness = "vkey_witness" =:= arr [a vkey, a signature]
+
+bootstrap_witness :: Rule
+bootstrap_witness =
+  "bootstrap_witness"
+    =:= arr
+      [ "public_key" ==> vkey
+      , "signature" ==> signature
+      , "chain_code" ==> bytes32
+      , "attributes" ==> VBytes
+      ]
 
 vrf_vkey :: Rule
-vrf_vkey = "vrf_vkey" =:= VBytes `sized` (32 :: Word64)
+vrf_vkey = "vrf_vkey" =:= bytes32
 
 vrf_cert :: Rule
-vrf_cert = "vrf_cert" =:= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+vrf_cert = "vrf_cert" =:= arr [a VBytes, a bytes80]
 
 kes_vkey :: Rule
-kes_vkey = "kes_vkey" =:= VBytes `sized` (32 :: Word64)
+kes_vkey = "kes_vkey" =:= bytes32
 
 kes_signature :: Rule
-kes_signature = "kes_signature" =:= VBytes `sized` (448 :: Word64)
+kes_signature = "kes_signature" =:= bytes448
 
-signkeyKES :: Rule
-signkeyKES = "signkeyKES" =:= VBytes `sized` (64 :: Word64)
+signkey_kes :: Rule
+signkey_kes = "signkey_kes" =:= bytes64
 
 signature :: Rule
-signature = "signature" =:= VBytes `sized` (64 :: Word64)
+signature = "signature" =:= bytes64
+
+credential :: Rule
+credential = "credential" =:= arr [0, a addr_keyhash] / arr [1, a script_hash]
 
 --------------------------------------------------------------------------------
 -- Utility
@@ -138,46 +260,36 @@ big_uint = "big_uint" =:= tag 2 bounded_bytes
 big_nint :: Rule
 big_nint = "big_nint" =:= tag 3 bounded_bytes
 
--- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
--- with:
---
--- minInt64 :: Rule
--- minInt64 = "minInt64" =:= -9223372036854775808
-minInt64 :: Integer
-minInt64 = -9223372036854775808
+min_int64 :: Rule
+min_int64 = "min_int64" =:= (-9223372036854775808 :: Integer)
 
--- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
--- with:
---
--- maxInt64 :: Rule
--- maxInt64 = "maxInt64" =:= 9223372036854775807
-maxInt64 :: Integer
-maxInt64 = 9223372036854775807
+max_int64 :: Rule
+max_int64 = "max_int64" =:= (9223372036854775807 :: Integer)
 
-maxWord64 :: Rule
-maxWord64 = "maxWord64" =:= (18446744073709551615 :: Integer)
+max_word64 :: Rule
+max_word64 = "max_word64" =:= (18446744073709551615 :: Integer)
 
-negInt64 :: Rule
-negInt64 = "negInt64" =:= minInt64 ... (-1 :: Integer)
+nint64 :: Rule
+nint64 = "nint64" =:= min_int64 ... (-1 :: Integer)
 
-posInt64 :: Rule
-posInt64 = "posInt64" =:= (1 :: Integer) ... maxInt64
+pint64 :: Rule
+pint64 = "pint64" =:= (1 :: Integer) ... max_int64
 
--- | this is the same as the current int64 definition but without zero
-nonZeroInt64 :: Rule
-nonZeroInt64 = "nonZeroInt64" =:= negInt64 / posInt64
+-- | This is the same as the current int64 definition but without zero
+nonzero_int64 :: Rule
+nonzero_int64 = "nonzero_int64" =:= nint64 / pint64
 
 int64 :: Rule
-int64 = "int64" =:= minInt64 ... maxInt64
+int64 = "int64" =:= min_int64 ... max_int64
 
-positive_int :: Rule
-positive_int = "positive_int" =:= (1 :: Integer) ... maxWord64
+pint :: Rule
+pint = "pint" =:= (1 :: Integer) ... max_word64
 
-maxWord32 :: Rule
-maxWord32 = "maxWord32" =:= (4294967295 :: Integer)
+max_word32 :: Rule
+max_word32 = "max_word32" =:= (4294967295 :: Integer)
 
-posWord32 :: Rule
-posWord32 = "posWord32" =:= (1 :: Integer) ... maxWord32
+pword32 :: Rule
+pword32 = "pword32" =:= (1 :: Integer) ... max_word32
 
 unit_interval :: Rule
 unit_interval =
@@ -199,9 +311,9 @@ unit_interval =
         |]
     $ "unit_interval" =:= tag 30 (arr [1, 2])
 
--- | nonnegative_interval = tag 0 [uint, positive_int]
+-- | nonnegative_interval = tag 0 [uint, pint]
 nonnegative_interval :: Rule
-nonnegative_interval = "nonnegative_interval" =:= tag 30 (arr [a VUInt, a positive_int])
+nonnegative_interval = "nonnegative_interval" =:= tag 30 (arr [a VUInt, a pint])
 
 bounded_bytes :: Rule
 bounded_bytes =
@@ -226,10 +338,93 @@ distinct x =
         |The type parameter must support .size, for example: bytes or uint
         |]
     $ "distinct_"
-      <> T.pack (show x)
+      <> show' x
         =:= (x `sized` (8 :: Word64))
         / (x `sized` (16 :: Word64))
         / (x `sized` (20 :: Word64))
         / (x `sized` (24 :: Word64))
         / (x `sized` (30 :: Word64))
         / (x `sized` (32 :: Word64))
+  where
+    show' :: Value s -> T.Text
+    show' = \case
+      VBytes -> T.pack "bytes"
+      VUInt -> T.pack "uint"
+      _ -> error "Unsupported Value for `distinct`"
+
+-- Shelley does not support some of the tagged core datastructures that we rely
+-- on in future eras. In order to have the "correct" common specification in
+-- core, we override them here
+untagged_set :: IsType0 a => a -> GRuleCall
+untagged_set = binding $ \x -> "set" =:= arr [0 <+ a x]
+
+untagged_nonempty_set :: IsType0 a => a -> GRuleCall
+untagged_nonempty_set = binding $ \x -> "nonempty_set" =:= arr [1 <+ a x]
+
+-- | Conway era introduces an optional 258 tag for sets, which will
+-- become mandatory in the second era after Conway. We recommend all the
+-- tooling to account for this future breaking change sooner rather than
+-- later, in order to provide a smooth transition for their users.
+mkTaggedSet :: IsType0 a => T.Text -> Word64 -> a -> GRuleCall
+mkTaggedSet label n = binding $ \x -> label =:= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
+
+tagged_set :: IsType0 a => a -> GRuleCall
+tagged_set = mkTaggedSet "set" 0
+
+tagged_nonempty_set :: IsType0 a => a -> GRuleCall
+tagged_nonempty_set = mkTaggedSet "nonempty_set" 1
+
+-- | An OSet is a Set that preserves the order of its elements.
+tagged_oset :: IsType0 a => a -> GRuleCall
+tagged_oset = mkTaggedSet "oset" 0
+
+-- | An OSet is a Set that preserves the order of its elements.
+tagged_nonempty_oset :: IsType0 a => a -> GRuleCall
+tagged_nonempty_oset = mkTaggedSet "nonempty_oset" 1
+
+port :: Rule
+port = "port" =:= VUInt `le` 65535
+
+ipv4 :: Rule
+ipv4 = "ipv4" =:= VBytes `sized` (4 :: Word64)
+
+ipv6 :: Rule
+ipv6 = "ipv6" =:= VBytes `sized` (16 :: Word64)
+
+transaction_id :: Rule
+transaction_id = "transaction_id" =:= bytes32
+
+transaction_ix :: Rule
+transaction_ix = "transaction_ix" =:= VUInt `sized` (2 :: Word64)
+
+single_host_addr :: Named Group
+single_host_addr =
+  "single_host_addr" =:~ grp [0, a $ port / VNil, a $ ipv4 / VNil, a $ ipv6 / VNil]
+
+auxiliary_data_hash :: Rule
+auxiliary_data_hash = "auxiliary_data_hash" =:= bytes32
+
+transaction_input :: Rule
+transaction_input =
+  "transaction_input"
+    =:= arr
+      [ "id" ==> transaction_id
+      , "index" ==> VUInt `sized` (2 :: Word64)
+      ]
+
+transaction_metadatum :: Rule
+transaction_metadatum =
+  "transaction_metadatum"
+    =:= smp [0 <+ asKey transaction_metadatum ==> transaction_metadatum]
+    / sarr [0 <+ a transaction_metadatum]
+    / VInt
+    / (VBytes `sized` (0 :: Word64, 64 :: Word64))
+    / (VText `sized` (0 :: Word64, 64 :: Word64))
+
+major_protocol_version :: forall era. Era era => Rule
+major_protocol_version =
+  "major_protocol_version"
+    =:= (getVersion @Integer (eraProtVerLow @ByronEra) ... succ (getVersion @Integer (eraProtVerHigh @era)))
+
+protocol_version :: forall era. Era era => Rule
+protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @era, a VUInt]
