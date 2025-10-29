@@ -15,8 +15,6 @@ module Test.Cardano.Ledger.Core.KeyPair (
   MakeCredential (..),
   MakeStakeReference (..),
   mkAddr,
-  mkScriptAddr,
-  mkCred,
   KeyPair (..),
   KeyPairs,
   mkWitnessVKey,
@@ -172,14 +170,6 @@ mkStakeRefMaybe = \case
 -- | Construct a `Testnet` address from payment and staking components
 mkAddr :: (MakeCredential p 'Payment, MakeStakeReference s) => p -> s -> Addr
 mkAddr pay stake = Addr Testnet (mkCredential pay) (mkStakeRef stake)
-
-mkCred :: KeyPair kr -> Credential kr
-mkCred = mkCredential
-{-# DEPRECATED mkCred "In favor of `mkCredential`" #-}
-
-mkScriptAddr :: ScriptHash -> KeyPair 'Staking -> Addr
-mkScriptAddr = mkAddr
-{-# DEPRECATED mkScriptAddr "In favor of `mkAddr`" #-}
 
 -- | Create a witness for transaction
 mkWitnessVKey ::

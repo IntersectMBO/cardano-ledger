@@ -25,7 +25,6 @@ module Cardano.Ledger.Credential (
   SlotNo32 (..),
   StakeCredential,
   StakeReference (..),
-  normalizePtr,
 ) where
 
 import Cardano.Crypto.Hash (hashFromTextAsHex, hashToTextAsHex)
@@ -221,20 +220,6 @@ instance Uniform Ptr where
 instance NFData Ptr
 
 instance NoThunks Ptr
-
--- | Convert any invalid `Ptr` to a `Ptr` that contains all zeros for its fields. Any
--- pointer that contains a `SlotNo`, `TxIx` or `CertIx` that is too large to fit into
--- `Word32`, `Word16` and `Word16` respectively is considered to be an invalid
--- `Ptr`. Valid `Ptr`s will be returned unmodified.
---
--- /Note/ - This is in no way related to dangling pointers, with an exception that any
--- invalid `Ptr` is guarateed to be a dangling `Ptr`.
-normalizePtr :: Ptr -> Ptr
-normalizePtr ptr = ptr
-{-# DEPRECATED
-  normalizePtr
-  "Starting with Conway era all Pointers are now normalized and this logic has been moved into the decoder"
-  #-}
 
 -- | Construct a valid `Ptr`, while protecting against overflow. Constructs a `Ptr` with
 -- all zeros for its fields, whenever either one of them doesn't fit in without overflowing. Any

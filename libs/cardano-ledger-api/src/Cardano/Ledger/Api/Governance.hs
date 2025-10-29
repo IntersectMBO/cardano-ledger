@@ -45,13 +45,11 @@ module Cardano.Ledger.Api.Governance (
   -- *** Anchor
   Anchor (..),
   AnchorData (..),
-  hashAnchorData,
 ) where
 
 -- Lenses
 
 import Cardano.Ledger.Api.Era ()
-import Cardano.Ledger.BaseTypes (hashAnchorData)
 import Cardano.Ledger.Conway.Governance (
   Anchor (..),
   AnchorData (..),

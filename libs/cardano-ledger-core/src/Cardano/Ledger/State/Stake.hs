@@ -31,7 +31,7 @@ import Cardano.Ledger.State.Account
 import Cardano.Ledger.State.CertState (DState (..), PState (..))
 import Cardano.Ledger.State.SnapShots
 import Cardano.Ledger.State.StakePool (stakePoolStateToStakePoolParams)
-import Cardano.Ledger.State.UTxO hiding (balance)
+import Cardano.Ledger.State.UTxO
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Data.Aeson (ToJSON)

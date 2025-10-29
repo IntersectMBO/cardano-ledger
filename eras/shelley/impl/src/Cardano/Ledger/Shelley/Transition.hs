@@ -44,7 +44,6 @@ module Cardano.Ledger.Shelley.Transition (
   registerInitialStakePools,
   registerInitialFunds,
   resetStakeDistribution,
-  toShelleyTransitionConfigPairs,
   protectMainnet,
   protectMainnetLens,
 ) where
@@ -320,13 +319,6 @@ protectMainnet name g isMainnetSafe m =
     else m
 
 deriving instance NoThunks (TransitionConfig ShelleyEra)
-
-toShelleyTransitionConfigPairs ::
-  KeyValue e a =>
-  TransitionConfig ShelleyEra ->
-  [a]
-toShelleyTransitionConfigPairs = toKeyValuePairs
-{-# DEPRECATED toShelleyTransitionConfigPairs "In favor of `toKeyValuePairs`" #-}
 
 -- | Helper function for constructing the initial state for any era
 --

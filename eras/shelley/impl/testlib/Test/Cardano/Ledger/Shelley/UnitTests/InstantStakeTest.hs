@@ -11,7 +11,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (CompactForm, fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
-import Cardano.Ledger.Shelley.State hiding (balance)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.TxIn (TxIn)
 import Data.Default (def)
 import Data.Map.Strict (Map)

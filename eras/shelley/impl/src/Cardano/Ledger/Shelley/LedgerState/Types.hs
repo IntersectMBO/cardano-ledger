@@ -64,11 +64,6 @@ import Numeric.Natural (Natural)
 
 -- ==================================
 
-type RewardAccounts =
-  Map (Credential 'Staking) Coin
-
-{-# DEPRECATED RewardAccounts "In favor of `Map` (`Credential` `Staking`) `Coin`" #-}
-
 data EpochState era = EpochState
   { esChainAccountState :: !ChainAccountState
   , esLState :: !(LedgerState era)
@@ -619,10 +614,6 @@ nesEpochStateL = lens nesEs $ \x y -> x {nesEs = y}
 -- ===================================================
 -- EpochState
 
-esAccountStateL :: Lens' (EpochState era) ChainAccountState
-esAccountStateL = lens esChainAccountState (\x y -> x {esChainAccountState = y})
-{-# DEPRECATED esAccountStateL "In favor of `chainAccountStateL`" #-}
-
 esSnapshotsL :: Lens' (EpochState era) SnapShots
 esSnapshotsL = lens esSnapshots (\x y -> x {esSnapshots = y})
 
@@ -641,17 +632,6 @@ prevPParamsEpochStateL = epochStateGovStateL . prevPParamsGovStateL
 futurePParamsEpochStateL :: EraGov era => Lens' (EpochState era) (FuturePParams era)
 futurePParamsEpochStateL = epochStateGovStateL . futurePParamsGovStateL
 
--- ==========================================
--- ChainAccountState
-
-asTreasuryL :: Lens' ChainAccountState Coin
-asTreasuryL = lens casTreasury (\ds u -> ds {casTreasury = u})
-{-# DEPRECATED asTreasuryL "In favor of `casTreasuryL`" #-}
-
-asReservesL :: Lens' ChainAccountState Coin
-asReservesL = lens casReserves (\ds u -> ds {casReserves = u})
-{-# DEPRECATED asReservesL "In favor of `casReservesL`" #-}
-
 -- ====================================================
 -- LedgerState
 
@@ -662,10 +642,6 @@ lsCertStateL :: Lens' (LedgerState era) (CertState era)
 lsCertStateL = lens lsCertState (\x y -> x {lsCertState = y})
 
 -- ================ UTxOState ===========================
-
-utxosUtxoL :: Lens' (UTxOState era) (UTxO era)
-utxosUtxoL = lens utxosUtxo (\x y -> x {utxosUtxo = y})
-{-# DEPRECATED utxosUtxoL "In favor of `utxoL`" #-}
 
 utxosDepositedL :: Lens' (UTxOState era) Coin
 utxosDepositedL = lens utxosDeposited (\x y -> x {utxosDeposited = y})
@@ -689,10 +665,6 @@ epochStateGovStateL = esLStateL . lsUTxOStateL . utxosGovStateL
 
 epochStateDonationL :: Lens' (EpochState era) Coin
 epochStateDonationL = esLStateL . lsUTxOStateL . utxosDonationL
-
-epochStateTreasuryL :: Lens' (EpochState era) Coin
-epochStateTreasuryL = treasuryL
-{-# DEPRECATED epochStateTreasuryL "In favor of `treasuryL`" #-}
 
 epochStateStakePoolsL ::
   EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) StakePoolState)

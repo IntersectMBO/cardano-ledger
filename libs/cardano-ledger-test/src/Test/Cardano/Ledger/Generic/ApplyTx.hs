@@ -26,7 +26,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
-import Cardano.Ledger.State hiding (balance)
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.Slot (EpochNo (..))

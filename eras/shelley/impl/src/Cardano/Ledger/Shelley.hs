@@ -1,5 +1,4 @@
 module Cardano.Ledger.Shelley (
-  Shelley,
   ShelleyEra,
   ShelleyTx,
   ShelleyTxOut,
@@ -31,7 +30,3 @@ import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.TxBody (TxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.UTxO ()
-
-type Shelley = ShelleyEra
-
-{-# DEPRECATED Shelley "In favor of `ShelleyEra`" #-}

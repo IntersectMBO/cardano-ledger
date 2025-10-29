@@ -37,9 +37,6 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetSPOStakeDistr@
   querySPOStakeDistr,
 
-  -- * @GetCommitteeState@
-  queryCommitteeState,
-
   -- * @GetCommitteeMembersState@
   queryCommitteeMembersState,
 
@@ -266,11 +263,6 @@ querySPOStakeDistr nes keys
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` keys
   where
     distr = psPoolDistr . fst $ finishedPulserState nes
-
--- | Query committee members
-queryCommitteeState :: ConwayEraCertState era => NewEpochState era -> CommitteeState era
-queryCommitteeState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
-{-# DEPRECATED queryCommitteeState "In favor of `queryCommitteeMembersState`" #-}
 
 -- | Query committee members. Whenever the system is in No Confidence mode this query will
 -- return `Nothing`.

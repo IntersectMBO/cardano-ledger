@@ -30,7 +30,6 @@ module Cardano.Ledger.Shelley.TxWits (
   scriptShelleyTxWitsL,
   addrShelleyTxWitsL,
   bootAddrShelleyTxWitsL,
-  addrWits',
   shelleyEqTxWitsRaw,
   mapTraverseableDecoderA,
 ) where
@@ -84,10 +83,6 @@ data ShelleyTxWitsRaw era = ShelleyTxWitsRaw
   , stwrBootAddrTxWits :: !(Set BootstrapWitness)
   }
   deriving (Generic)
-
-addrWits' :: ShelleyTxWitsRaw era -> Set (WitVKey 'Witness)
-addrWits' = stwrAddrTxWits
-{-# DEPRECATED addrWits' "In favor of `stwrAddrTxWits`" #-}
 
 deriving instance EraScript era => Show (ShelleyTxWitsRaw era)
 

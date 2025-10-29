@@ -22,7 +22,6 @@ module Cardano.Ledger.Shelley.TxAuxData (
     ShelleyTxAuxData
   ),
   ShelleyTxAuxDataRaw (..),
-  hashShelleyTxAuxData,
 
   -- * Re-exports
   Metadatum (..),
@@ -102,12 +101,6 @@ instance EqRaw (ShelleyTxAuxData era)
 
 instance HashAnnotated (ShelleyTxAuxData era) EraIndependentTxAuxData where
   hashAnnotated = getMemoSafeHash
-
-hashShelleyTxAuxData ::
-  ShelleyTxAuxData era ->
-  SafeHash EraIndependentTxAuxData
-hashShelleyTxAuxData = hashAnnotated
-{-# DEPRECATED hashShelleyTxAuxData "In favor of `hashAnnotated`" #-}
 
 pattern ShelleyTxAuxData :: forall era. Era era => Map Word64 Metadatum -> ShelleyTxAuxData era
 pattern ShelleyTxAuxData m <-

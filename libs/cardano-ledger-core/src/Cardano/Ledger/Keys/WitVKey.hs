@@ -11,7 +11,6 @@
 module Cardano.Ledger.Keys.WitVKey (
   WitVKey (WitVKey),
   witVKeyHash,
-  wvkSig,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (
@@ -45,10 +44,6 @@ data WitVKey kr = WitVKeyInternal
   --   when used in ordering.
   }
   deriving (Generic, Show, Eq)
-
-wvkSig :: WitVKey kr -> SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
-wvkSig = wvkSignature
-{-# DEPRECATED wvkSig "In favor of `wvkSignature`" #-}
 
 deriving via
   AllowThunksIn '["wvkKeyHash"] (WitVKey kr)

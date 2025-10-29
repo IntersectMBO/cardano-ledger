@@ -6,7 +6,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage (
-  Babbage,
   BabbageEra,
   BabbageTxOut,
   TxBody (BabbageTxBody),
@@ -28,10 +27,6 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut, TxBody (BabbageTxBody))
 import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
 import Cardano.Ledger.Shelley.API
-
-type Babbage = BabbageEra
-
-{-# DEPRECATED Babbage "In favor of `BabbageEra`" #-}
 
 -- =====================================================
 

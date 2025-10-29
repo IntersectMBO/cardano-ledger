@@ -40,7 +40,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
  )
 import Test.Cardano.Ledger.Common hiding ((.&.))
 import Test.Cardano.Ledger.Core.Address
-import Test.Cardano.Ledger.Core.Arbitrary (genAddrBadPtr, genCompactAddrBadPtr)
+import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (genByronVKeyAddr)
 
 spec :: Spec
@@ -69,17 +69,15 @@ roundTripAddressSpec = do
   describe "CompactAddr" $ do
     roundTripCborSpec @CompactAddr
     prop "compactAddr/decompactAddr round trip" $
-      forAll genAddrBadPtr $
-        propCompactAddrRoundTrip
+      forAll arbitrary propCompactAddrRoundTrip
     prop "Compact address binary representation" $
-      forAll genAddrBadPtr $
-        propCompactSerializationAgree
+      forAll arbitrary propCompactSerializationAgree
     prop "Ensure Addr failures on incorrect binary data" $
       propDecompactErrors
     prop "Ensure RewardAccount failures on incorrect binary data" $
       propDeserializeRewardAccountErrors
     prop "RoundTrip-invalid" $
-      forAll genCompactAddrBadPtr $
+      forAll arbitrary $
         roundTripRangeExpectation @CompactAddr
           cborTrip
           (natVersion @2)
@@ -92,7 +90,7 @@ roundTripAddressSpec = do
   describe "Addr" $ do
     roundTripCborSpec @Addr
     prop "RoundTrip-invalid" $
-      forAll genAddrBadPtr $
+      forAll arbitrary $
         roundTripRangeExpectation @Addr cborTrip (natVersion @2) (natVersion @6)
     prop "Deserializing an address matches old implementation" $
       propValidateNewDeserialize

@@ -10,7 +10,7 @@
 module Cardano.Ledger.State.ChainAccount (
   CanGetChainAccountState (..),
   CanSetChainAccountState (..),
-  ChainAccountState (AccountState, asTreasury, asReserves, ..),
+  ChainAccountState (..),
   casTreasuryL,
   casReservesL,
   treasuryL,
@@ -35,14 +35,6 @@ class CanGetChainAccountState t where
 
 class CanGetChainAccountState t => CanSetChainAccountState t where
   chainAccountStateL :: Lens' (t era) ChainAccountState
-
-pattern AccountState :: Coin -> Coin -> ChainAccountState
-pattern AccountState {asTreasury, asReserves} = ChainAccountState asTreasury asReserves
-{-# DEPRECATED AccountState "In favor of `ChainAccountState`" #-}
-
-{-# DEPRECATED asTreasury "In favor of `casTreasury`" #-}
-
-{-# DEPRECATED asReserves "In favor of `casReserves`" #-}
 
 data ChainAccountState = ChainAccountState
   { casTreasury :: !Coin
