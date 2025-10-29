@@ -57,6 +57,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Cardano.Ledger.Plutus.CostModels (parseCostModels)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -205,7 +206,7 @@ instance ToCBOR AlonzoGenesis where
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
     agCoinsPerUTxOWord <- o .: "lovelacePerUTxOWord"
-    agCostModels <- parseCostModels False =<< o .: "costModels"
+    agCostModels <- parseCostModels False [PlutusV1] =<< o .: "costModels"
     agPrices <- o .: "executionPrices"
     agMaxTxExUnits <- o .: "maxTxExUnits"
     agMaxBlockExUnits <- o .: "maxBlockExUnits"

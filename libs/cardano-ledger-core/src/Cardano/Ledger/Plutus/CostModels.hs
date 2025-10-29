@@ -135,17 +135,21 @@ instance NFData CostModel where
   rnf (CostModel lang cm ectx) = lang `deepseq` cm `deepseq` rnf ectx
 
 instance FromJSON CostModels where
-  parseJSON = parseCostModels True
+  parseJSON = parseCostModels True []
 
 parseCostModels ::
   -- | Do not restrict number of parameters to the initial count and allow parsing of cost models
   -- for unknown plutus versions.
   Bool ->
+  [Language] ->
   Value ->
   Parser CostModels
-parseCostModels isLenient =
+parseCostModels isLenient languages =
   withObject "CostModels" $ \o -> do
-    cms <- mapM (parseCostModel isLenient o) nonNativeLanguages
+    cms <-
+      if null languages
+        then mapM (parseCostModel isLenient o) nonNativeLanguages
+        else mapM (parseCostModel isLenient o) languages
     let cmsMap = Map.fromList [(cmLanguage cm, cm) | Just cm <- cms]
     unknownCostModels <-
       if isLenient
