@@ -18,6 +18,10 @@
 
 * Remove the `State.Query` module and `getFilteredDelegationsAndRewardAccounts` function.
 
+## 1.12.1.0
+
+* Fix a bug in `queryPoolState`, where current Pool parameters where returned instead of the future ones.
+
 ## 1.12.0.0
 
 * Add `upgradeNativeScript` method to `EraApi`
