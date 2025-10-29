@@ -25,6 +25,7 @@
 
 ### `testlib`
 
+* Use fixed-sized `uint .size 8` for `slot` and `block_number` in CDDL for header
 * Add `NativeScript` parameter to `exampleTx`
 
 ## 1.14.0.0

@@ -15,6 +15,7 @@
 
 ### `testlib`
 
+* Remove `epoch_no`, `slot_no` and `block_no` reuse definitions from core
 * Removed `regDelegToDRep`
 * Removed `registerRewardAccountWithDeposit`
 * Removed `registerPoolWithDeposit`

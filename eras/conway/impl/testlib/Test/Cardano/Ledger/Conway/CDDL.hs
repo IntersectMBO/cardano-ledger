@@ -26,8 +26,6 @@ module Test.Cardano.Ledger.Conway.CDDL (
   reg_drep_cert,
   unreg_drep_cert,
   update_drep_cert,
-  block_no,
-  slot_no,
   transaction_input,
   withdrawals,
   mint,
@@ -168,8 +166,8 @@ header_body :: Rule
 header_body =
   "header_body"
     =:= arr
-      [ "block_number" ==> block_no
-      , "slot" ==> slot_no
+      [ "block_number" ==> block_number
+      , "slot" ==> slot
       , "prev_hash" ==> (hash32 / VNil)
       , "issuer_vkey" ==> vkey
       , "vrf_vkey" ==> vrf_vkey
@@ -190,11 +188,11 @@ transaction_body =
       [ idx 0 ==> maybe_tagged_set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
-      , opt (idx 3 ==> slot_no)
+      , opt (idx 3 ==> slot)
       , opt (idx 4 ==> certificates)
       , opt (idx 5 ==> withdrawals)
       , opt (idx 7 ==> auxiliary_data_hash)
-      , opt (idx 8 ==> slot_no) -- Validity interval start
+      , opt (idx 8 ==> slot) -- Validity interval start
       , opt (idx 9 ==> mint)
       , opt (idx 11 ==> script_data_hash)
       , opt (idx 13 ==> maybe_tagged_nonempty_set transaction_input)
@@ -277,7 +275,7 @@ update_committee =
       [ 4
       , a $ gov_action_id / VNil
       , a (maybe_tagged_set committee_cold_credential)
-      , a (mp [0 <+ asKey committee_cold_credential ==> epoch_no])
+      , a (mp [0 <+ asKey committee_cold_credential ==> epoch])
       , a unit_interval
       ]
 
@@ -452,7 +450,7 @@ pool_registration :: Named Group
 pool_registration = "pool_registration" =:~ grp [3, a pool_params]
 
 pool_retirement :: Named Group
-pool_retirement = "pool_retirement" =:~ grp [4, a pool_keyhash, a epoch_no]
+pool_retirement = "pool_retirement" =:~ grp [4, a pool_keyhash, a epoch]
 
 -- numbers 5 and 6 used to be the Genesis and MIR certificates respectively,
 -- which were deprecated in Conway
@@ -828,10 +826,10 @@ script_n_of_k =
     =:~ grp [3, "n" ==> int64, a (arr [0 <+ a native_script])]
 
 invalid_before :: Named Group
-invalid_before = "invalid_before" =:~ grp [4, a slot_no]
+invalid_before = "invalid_before" =:~ grp [4, a slot]
 
 invalid_hereafter :: Named Group
-invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot_no]
+invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot]
 
 multiasset :: IsType0 a => a -> GRuleCall
 multiasset = binding $ \x ->
@@ -844,17 +842,8 @@ value = "value" =:= coin / sarr [a coin, a (multiasset positive_coin)]
 mint :: Rule
 mint = "mint" =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> nonzero_int64]]
 
-epoch_no :: Rule
-epoch_no = "epoch_no" =:= VUInt `sized` (8 :: Word64)
-
 epoch_interval :: Rule
 epoch_interval = "epoch_interval" =:= VUInt `sized` (4 :: Word64)
-
-slot_no :: Rule
-slot_no = "slot_no" =:= VUInt `sized` (8 :: Word64)
-
-block_no :: Rule
-block_no = "block_no" =:= VUInt `sized` (8 :: Word64)
 
 conway_script :: Rule
 conway_script =

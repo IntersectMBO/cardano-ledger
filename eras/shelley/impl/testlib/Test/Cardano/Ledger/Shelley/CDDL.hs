@@ -27,8 +27,6 @@ module Test.Cardano.Ledger.Shelley.CDDL (
   bootstrap_witness,
   script_hash,
   major_protocol_version,
-  epoch,
-  nonce,
   genesis_hash,
   operational_cert,
   stake_registration,
@@ -83,8 +81,8 @@ header_body :: forall era. Era era => Rule
 header_body =
   "header_body"
     =:= arr
-      [ "block_number" ==> VUInt
-      , "slot" ==> VUInt
+      [ "block_number" ==> block_number
+      , "slot" ==> slot
       , "prev_hash" ==> (hash32 / VNil)
       , "issuer_vkey" ==> vkey
       , "vrf_vkey" ==> vrf_vkey
@@ -121,7 +119,7 @@ transaction_body =
       [ idx 0 ==> untagged_set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
-      , idx 3 ==> VUInt
+      , idx 3 ==> slot
       , opt (idx 4 ==> arr [0 <+ a certificate])
       , opt (idx 5 ==> withdrawals)
       , opt (idx 6 ==> update @era)
@@ -364,9 +362,6 @@ multisig_any = "multisig_any" =:~ grp [2, a (arr [0 <+ a multisig_script])]
 multisig_n_of_k :: Named Group
 multisig_n_of_k = "multisig_n_of_k" =:~ grp [3, "n" ==> VUInt, a (arr [0 <+ a multisig_script])]
 
-epoch :: Rule
-epoch = "epoch" =:= VUInt
-
 genesis_delegate_hash :: Rule
 genesis_delegate_hash = "genesis_delegate_hash" =:= hash28
 
@@ -389,6 +384,3 @@ script_hash =
 
 metadata_hash :: Rule
 metadata_hash = "metadata_hash" =:= hash32
-
-nonce :: Rule
-nonce = "nonce" =:= arr [0] / arr [1, a (VBytes `sized` (32 :: Word64))]

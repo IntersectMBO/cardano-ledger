@@ -44,6 +44,10 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   untagged_nonempty_set,
 
   -- * Network
+  nonce,
+  epoch,
+  slot,
+  block_number,
 
   -- * Hashes, keys and certificates
   addr_keyhash,
@@ -318,3 +322,15 @@ _tagged_oset = mkTaggedSet "oset" 0
 
 _tagged_nonempty_oset :: IsType0 a => a -> GRuleCall
 _tagged_nonempty_oset = mkTaggedSet "nonempty_oset" 1
+
+nonce :: Rule
+nonce = "nonce" =:= arr [0] / arr [1, a (VBytes `sized` (32 :: Word64))]
+
+epoch :: Rule
+epoch = "epoch" =:= VUInt `sized` (8 :: Word64)
+
+slot :: Rule
+slot = "slot" =:= VUInt `sized` (8 :: Word64)
+
+block_number :: Rule
+block_number = "block_number" =:= VUInt `sized` (8 :: Word64)

@@ -96,12 +96,12 @@ transaction_body =
         [ idx 0 ==> untagged_set transaction_input
         , idx 1 ==> arr [0 <+ a transaction_output]
         , idx 2 ==> coin
-        , opt (idx 3 ==> VUInt)
+        , opt (idx 3 ==> slot)
         , opt (idx 4 ==> arr [0 <+ a certificate])
         , opt (idx 5 ==> withdrawals)
         , opt (idx 6 ==> update)
         , opt (idx 7 ==> auxiliary_data_hash)
-        , opt (idx 8 ==> VUInt)
+        , opt (idx 8 ==> slot)
         , opt (idx 9 ==> mint)
         , opt (idx 11 ==> script_data_hash)
         , opt (idx 13 ==> untagged_set transaction_input)
@@ -390,8 +390,8 @@ header_body =
         |]
     $ "header_body"
       =:= arr
-        [ "block_number" ==> VUInt
-        , "slot" ==> VUInt
+        [ "block_number" ==> block_number
+        , "slot" ==> slot
         , "prev_hash" ==> (hash32 / VNil)
         , "issuer_vkey" ==> vkey
         , "vrf_vkey" ==> vrf_vkey

@@ -20,6 +20,7 @@
 
 ### `testlib`
 
+* Move CDDL definition for `nonce`, `epoch`, `slot` and `block_number` to core
 * Rename `examplePoolParams` to `exampleStakePoolParams`
 * Removed `shelleyEraSpecificSpec`
 * Added `shelleyGenUnRegTxCert`

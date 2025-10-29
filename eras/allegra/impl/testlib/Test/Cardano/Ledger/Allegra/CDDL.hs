@@ -70,10 +70,10 @@ script_n_of_k :: Named Group
 script_n_of_k = "script_n_of_k" =:~ grp [3, "n" ==> int64, a (arr [0 <+ a native_script])]
 
 invalid_before :: Named Group
-invalid_before = "invalid_before" =:~ grp [4, a VUInt]
+invalid_before = "invalid_before" =:~ grp [4, a slot]
 
 invalid_hereafter :: Named Group
-invalid_hereafter = "invalid_hereafter" =:~ grp [5, a VUInt]
+invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot]
 
 metadata :: Rule
 metadata = "metadata" =:= mp [0 <+ asKey transaction_metadatum_label ==> transaction_metadatum]
@@ -100,12 +100,12 @@ transaction_body =
         [ idx 0 ==> untagged_set transaction_input
         , idx 1 ==> arr [0 <+ a transaction_output]
         , idx 2 ==> coin
-        , opt (idx 3 ==> VUInt)
+        , opt (idx 3 ==> slot)
         , opt (idx 4 ==> arr [0 <+ a certificate])
         , opt (idx 5 ==> withdrawals)
         , opt (idx 6 ==> update @era)
         , opt (idx 7 ==> metadata_hash)
-        , opt (idx 8 ==> VUInt)
+        , opt (idx 8 ==> slot)
         ]
 
 block :: forall era. Era era => Rule

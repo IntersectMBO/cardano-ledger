@@ -58,12 +58,12 @@ transaction_body =
       [ idx 0 ==> untagged_set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
-      , opt (idx 3 ==> VUInt)
+      , opt (idx 3 ==> slot)
       , opt (idx 4 ==> arr [0 <+ a certificate])
       , opt (idx 5 ==> withdrawals)
       , opt (idx 6 ==> update @era)
       , opt (idx 7 ==> metadata_hash)
-      , opt (idx 8 ==> VUInt)
+      , opt (idx 8 ==> slot)
       , opt (idx 9 ==> mint)
       ]
 

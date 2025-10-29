@@ -56,7 +56,7 @@ stake_delegation = (2, stake_credential, pool_keyhash)
 
 pool_registration = (3, pool_params)
 
-pool_retirement = (4, pool_keyhash, epoch_no)
+pool_retirement = (4, pool_keyhash, epoch)
 
 reg_cert = (7, stake_credential, coin)
 
@@ -86,8 +86,8 @@ update_drep_cert = (18, drep_credential, anchor/ nil)
 header = [header_body, body_signature : kes_signature]
 
 header_body = 
-  [ block_number      : block_no    
-  , slot              : slot_no     
+  [ block_number      : block_number
+  , slot              : slot        
   , prev_hash         : hash32/ nil 
   , issuer_vkey       : vkey        
   , vrf_vkey          : vrf_vkey    
@@ -99,9 +99,9 @@ header_body =
   ]
 
 
-block_no = uint .size 8
+block_number = uint .size 8
 
-slot_no = uint .size 8
+slot = uint .size 8
 
 hash32 = bytes .size 32
 
@@ -131,11 +131,11 @@ transaction_body =
   {   0  : set<transaction_input>         
   ,   1  : [* transaction_output]      
   ,   2  : coin                            
-  , ? 3  : slot_no                         
+  , ? 3  : slot                            
   , ? 4  : certificates                    
   , ? 5  : withdrawals                     
   , ? 7  : auxiliary_data_hash             
-  , ? 8  : slot_no                         
+  , ? 8  : slot                            
   , ? 9  : mint                            
   , ? 11 : script_data_hash                
   , ? 13 : nonempty_set<transaction_input>
@@ -315,9 +315,9 @@ min_int64 = -9223372036854775808
 
 max_int64 = 9223372036854775807
 
-invalid_before = (4, slot_no)
+invalid_before = (4, slot)
 
-invalid_hereafter = (5, slot_no)
+invalid_hereafter = (5, slot)
 
 ; The real type of plutus_v1_script, plutus_v2_script and
 ; plutus_v3_script is bytes. However, because we enforce
@@ -413,7 +413,7 @@ pool_metadata = [url, bytes]
 
 url = text .size (0 .. 128)
 
-epoch_no = uint .size 8
+epoch = uint .size 8
 
 drep = [0, addr_keyhash// 1, script_hash// 2// 3]
 
@@ -640,11 +640,11 @@ treasury_withdrawals_action = (2, {* reward_account => coin}, policy_hash/ nil)
 no_confidence = (3, gov_action_id/ nil)
 
 update_committee = 
-  ( 4                                            
-  , gov_action_id/ nil                           
-  , set<committee_cold_credential>              
-  , {* committee_cold_credential => epoch_no}
-  , unit_interval                                
+  ( 4                                         
+  , gov_action_id/ nil                        
+  , set<committee_cold_credential>           
+  , {* committee_cold_credential => epoch}
+  , unit_interval                             
   )
 
 new_constitution = (5, gov_action_id/ nil, constitution)

@@ -26,6 +26,7 @@
 
 ### `testlib`
 
+* Use fixed-sized `uint .size 8` for `slot` and `block_number` in CDDL for header
 * Add `BabbageEraImp`
 * Removed `babbageEraSpecificSpec`
 

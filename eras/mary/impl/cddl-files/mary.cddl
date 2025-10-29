@@ -11,8 +11,8 @@ block =
 header = [header_body, body_signature : kes_signature]
 
 header_body = 
-  [ block_number      : uint        
-  , slot              : uint        
+  [ block_number      : block_number
+  , slot              : slot        
   , prev_hash         : hash32/ nil 
   , issuer_vkey       : vkey        
   , vrf_vkey          : vrf_vkey    
@@ -24,6 +24,10 @@ header_body =
   , protocol_version
   ]
 
+
+block_number = uint .size 8
+
+slot = uint .size 8
 
 hash32 = bytes .size 32
 
@@ -54,12 +58,12 @@ transaction_body =
   {   0 : set<transaction_input>   
   ,   1 : [* transaction_output]
   ,   2 : coin                      
-  , ? 3 : uint                      
+  , ? 3 : slot                      
   , ? 4 : [* certificate]       
   , ? 5 : withdrawals               
   , ? 6 : update                    
   , ? 7 : metadata_hash             
-  , ? 8 : uint                      
+  , ? 8 : slot                      
   , ? 9 : mint                      
   }
 
@@ -224,7 +228,7 @@ url = text .size (0 .. 64)
 
 pool_retirement = (4, pool_keyhash, epoch)
 
-epoch = uint
+epoch = uint .size 8
 
 genesis_key_delegation = (5, genesis_hash, genesis_delegate_hash, vrf_keyhash)
 
@@ -321,9 +325,9 @@ script_any = (2, [* native_script])
 
 script_n_of_k = (3, n : int64, [* native_script])
 
-invalid_before = (4, uint)
+invalid_before = (4, slot)
 
-invalid_hereafter = (5, uint)
+invalid_hereafter = (5, slot)
 
 bootstrap_witness = 
   [ public_key : vkey          
