@@ -2,6 +2,11 @@
 
 ## 1.19.0.0
 
+* Add `fromStrictMaybeL`, `toStrictMaybeL`
+* Add `memoRawTypeL`
+* Remove `getterMemoRawType`
+* Add `EncCBOR` instance for `MemoBytes`
+* Add `TxLevel`, `EraTxLevel`, `HasEraTxLevel`
 * Rename `PoolParams` to `StakePoolParams`
   - Replace the prefix for all the fields of this type from `pp*` -> `spp*`
   - Rename the lenses for the fields from `ppCostL`, `ppMetadataL` and `ppVrfL` to `sppCostL`, `sppMetadataL` and `sppVrfL`

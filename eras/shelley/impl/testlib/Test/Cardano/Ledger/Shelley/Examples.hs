@@ -79,7 +79,7 @@ import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 
 data LedgerExamples era = LedgerExamples
   { -- tx
-    leTx :: Tx era
+    leTx :: Tx TopTx era
   , leApplyTxError :: ApplyTxError era
   , -- protocol parameters
     lePParams :: PParams era
@@ -102,7 +102,7 @@ deriving instance
   , Eq (PParams era)
   , Eq (PParamsUpdate era)
   , EraGov era
-  , Eq (Tx era)
+  , Eq (Tx TopTx era)
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
@@ -131,9 +131,9 @@ mkLedgerExamples ::
   , Default (StashedAVVMAddresses era)
   , AtMostEra "Mary" era
   ) =>
-  (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
+  (TxBody TopTx era -> [KeyPair 'Witness] -> TxWits era) ->
   Value era ->
-  TxBody era ->
+  TxBody TopTx era ->
   TxAuxData era ->
   TranslationContext era ->
   LedgerExamples era
@@ -178,10 +178,10 @@ mkLedgerExamples
 exampleTx ::
   forall era.
   EraTx era =>
-  (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
-  TxBody era ->
+  (TxBody TopTx era -> [KeyPair 'Witness] -> TxWits era) ->
+  TxBody TopTx era ->
   TxAuxData era ->
-  Tx era
+  Tx TopTx era
 exampleTx mkWitnesses txBody auxData =
   mkBasicTx @era txBody
     & witsTxL
@@ -320,7 +320,7 @@ testShelleyGenesis =
 exampleCoin :: Coin
 exampleCoin = Coin 10
 
-exampleTxBodyShelley :: TxBody ShelleyEra
+exampleTxBodyShelley :: TxBody TopTx ShelleyEra
 exampleTxBodyShelley =
   ShelleyTxBody
     exampleTxIns
@@ -434,13 +434,13 @@ exampleByronAddress = AddrBootstrap (BootstrapAddress byronAddr)
 mkWitnessesPreAlonzo ::
   EraTx era =>
   Proxy era ->
-  TxBody era ->
+  TxBody TopTx era ->
   [KeyPair 'Witness] ->
   ShelleyTxWits era
 mkWitnessesPreAlonzo _ txBody keyPairWits =
   mempty
     { addrWits =
-        mkWitnessesVKey (coerce (hashAnnotated txBody)) keyPairWits
+        mkWitnessesVKey (coerce (txIdTxBody txBody)) keyPairWits
     }
 
 -- | @mkKeyPair'@ from @Test.Cardano.Ledger.Shelley.Utils@ doesn't work for real

@@ -81,7 +81,7 @@ type TxGen era =
   ChainAccountState ->
   LedgerState era ->
   SlotNo ->
-  Gen (Seq (Tx era))
+  Gen (Seq (Tx TopTx era))
 
 -- | Generate a valid block.
 genBlock ::

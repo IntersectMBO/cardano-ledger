@@ -27,15 +27,14 @@ import Data.Sequence.Strict
 type ShelleyTxSeq = ShelleyBlockBody
 
 pattern ShelleyTxSeq ::
-  forall era.
   ( EraTx era
   , SafeToHash (TxWits era)
   ) =>
-  StrictSeq (Tx era) ->
+  StrictSeq (Tx TopTx era) ->
   ShelleyBlockBody era
 pattern ShelleyTxSeq s = ShelleyBlockBody s
 
-txSeqTxns :: ShelleyBlockBody era -> StrictSeq (Tx era)
+txSeqTxns :: ShelleyBlockBody era -> StrictSeq (Tx TopTx era)
 txSeqTxns = shelleyBlockBodyTxs
 
 bbHash :: EraBlockBody era => BlockBody era -> Hash HASH EraIndependentBlockBody

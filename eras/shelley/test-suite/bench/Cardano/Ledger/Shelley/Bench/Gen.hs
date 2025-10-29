@@ -113,7 +113,7 @@ genTriple ::
   ) =>
   Proxy era ->
   Int ->
-  IO (GenEnv MockCrypto era, ChainState era, GenEnv MockCrypto era -> IO (Tx era))
+  IO (GenEnv MockCrypto era, ChainState era, GenEnv MockCrypto era -> IO (Tx TopTx era))
 genTriple proxy n = do
   let ge = genEnv proxy defaultConstants
   cs <- genChainState n ge

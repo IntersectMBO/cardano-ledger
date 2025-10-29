@@ -284,10 +284,10 @@ transitionRulesUTXOW ::
   , Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , STS (EraRule "UTXOW" era)
   , EraCertState era
@@ -352,7 +352,7 @@ instance
     Embed (EraRule "UTXO" era) (ShelleyUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , EraRule "UTXOW" era ~ ShelleyUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , EraGov era
@@ -361,7 +361,7 @@ instance
   STS (ShelleyUTXOW era)
   where
   type State (ShelleyUTXOW era) = UTxOState era
-  type Signal (ShelleyUTXOW era) = Tx era
+  type Signal (ShelleyUTXOW era) = Tx TopTx era
   type Environment (ShelleyUTXOW era) = UtxoEnv era
   type BaseM (ShelleyUTXOW era) = ShelleyBase
   type PredicateFailure (ShelleyUTXOW era) = ShelleyUtxowPredFailure era
@@ -371,7 +371,7 @@ instance
 
 {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
 validateFailedNativeScripts ::
-  EraTx era => ScriptsProvided era -> Tx era -> Test (ShelleyUtxowPredFailure era)
+  EraTx era => ScriptsProvided era -> Tx l era -> Test (ShelleyUtxowPredFailure era)
 validateFailedNativeScripts (ScriptsProvided scriptsProvided) tx = do
   let failedScripts =
         Map.filter -- we keep around only non-validating native scripts
@@ -398,7 +398,7 @@ validateMissingScripts (ShelleyScriptsNeeded sNeeded) scriptsprovided =
     sProvided = Map.keysSet $ unScriptsProvided scriptsprovided
 
 -- | Determine if the UTxO witnesses in a given transaction are correct.
-validateVerifiedWits :: EraTx era => Tx era -> Test (ShelleyUtxowPredFailure era)
+validateVerifiedWits :: EraTx era => Tx l era -> Test (ShelleyUtxowPredFailure era)
 validateVerifiedWits tx =
   case failed <> failedBootstrap of
     [] -> pure ()
@@ -427,7 +427,7 @@ validateNeededWitnesses ::
   Set (KeyHash 'Witness) ->
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody t era ->
   Test (ShelleyUtxowPredFailure era)
 validateNeededWitnesses witsKeyHashes certState utxo txBody =
   let needed = getWitsVKeyNeeded certState utxo txBody
@@ -437,7 +437,7 @@ validateNeededWitnesses witsKeyHashes certState utxo txBody =
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
-validateMetadata :: EraTx era => PParams era -> Tx era -> Test (ShelleyUtxowPredFailure era)
+validateMetadata :: EraTx era => PParams era -> Tx l era -> Test (ShelleyUtxowPredFailure era)
 validateMetadata pp tx =
   let txBody = tx ^. bodyTxL
       pv = pp ^. ppProtocolVersionL
@@ -467,7 +467,7 @@ validateMIRInsufficientGenesisSigs ::
   GenDelegs ->
   Word64 ->
   Set (KeyHash 'Witness) ->
-  Tx era ->
+  Tx TopTx era ->
   Test (ShelleyUtxowPredFailure era)
 validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKeyHashes tx =
   let genDelegates =

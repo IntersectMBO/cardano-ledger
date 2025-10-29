@@ -119,7 +119,7 @@ genTx ::
   GenEnv c era ->
   LedgerEnv era ->
   LedgerState era ->
-  Gen (Tx era)
+  Gen (Tx TopTx era)
 genTx
   ge@( GenEnv
          keySpace@KeySpace_
@@ -354,7 +354,7 @@ genNextDelta ::
   UTxO era ->
   PParams era ->
   KeySpace c era ->
-  Tx era ->
+  Tx TopTx era ->
   Int ->
   Delta era ->
   Gen (Delta era)
@@ -475,7 +475,7 @@ genNextDeltaTilFixPoint ::
   UTxO era ->
   PParams era ->
   KeySpace c era ->
-  Tx era ->
+  Tx TopTx era ->
   Gen (Delta era)
 genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx = do
   addrs <- genRecipients @era 1 keys scripts
@@ -494,9 +494,9 @@ applyDelta ::
   [KeyPair 'Witness] ->
   Map ScriptHash (Script era) ->
   KeySpace c era ->
-  Tx era ->
+  Tx TopTx era ->
   Delta era ->
-  Tx era
+  Tx TopTx era
 applyDelta
   utxo
   scriptinfo
@@ -553,8 +553,8 @@ converge ::
   UTxO era ->
   PParams era ->
   KeySpace c era ->
-  Tx era ->
-  Gen (Tx era)
+  Tx TopTx era ->
+  Gen (Tx TopTx era)
 converge
   scriptinfo
   initialfee
@@ -642,7 +642,7 @@ mkScriptWits payScripts stakeScripts =
 mkTxWits ::
   forall era.
   EraGen era =>
-  (UTxO era, TxBody era, ScriptInfo era) ->
+  (UTxO era, TxBody TopTx era, ScriptInfo era) ->
   Map (KeyHash 'Payment) (KeyPair 'Payment) ->
   Map (KeyHash 'Staking) (KeyPair 'Staking) ->
   [KeyPair 'Witness] ->

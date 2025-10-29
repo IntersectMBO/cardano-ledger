@@ -155,10 +155,10 @@ commonReferenceScript =
 type InOut era = (TxIn, TxOut era)
 
 data TestCaseData era = TestCaseData
-  { txBody :: TxBody era
+  { txBody :: TxBody TopTx era
   , initOutputs :: InitOutputs era
   , keysForAddrWits :: [KeyPairRole era]
-  , otherWitsFields :: Tx era -> Tx era
+  , otherWitsFields :: Tx TopTx era -> Tx TopTx era
   }
 
 data InitOutputs era = InitOutputs
@@ -199,7 +199,7 @@ txFromTestCaseData ::
   forall era.
   EraTx era =>
   TestCaseData era ->
-  Tx era
+  Tx TopTx era
 txFromTestCaseData
   testCaseData =
     let addrWits =
@@ -222,7 +222,7 @@ testExpectSuccessValid ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Tx era ~ Signal (EraRule "UTXOW" era)
+  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
   , Reflect era
   , BabbageEraTxBody era
   , AlonzoEraTx era
@@ -269,7 +269,7 @@ testExpectUTXOFailure ::
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
-  , Tx era ~ Signal (EraRule "UTXO" era)
+  , Tx TopTx era ~ Signal (EraRule "UTXO" era)
   , STS (EraRule "UTXO" era)
   , ToExpr (PredicateFailure (EraRule "UTXO" era))
   , BabbageEraPParams era

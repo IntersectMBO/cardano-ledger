@@ -84,7 +84,7 @@ data MockChainEvent era
 data MockBlock era = MockBlock
   { mbIssuer :: !(KeyHash 'StakePool)
   , mbSlot :: !SlotNo
-  , mbTrans :: !(StrictSeq (Tx era))
+  , mbTrans :: !(StrictSeq (Tx TopTx era))
   }
   deriving (Generic)
 
@@ -127,11 +127,11 @@ instance
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Environment (EraRule "TICK" era) ~ ()
   , Embed (EraRule "TICK" era) (MOCKCHAIN era)
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Eq (PredicateFailure (EraRule "LEDGER" era))
@@ -191,7 +191,7 @@ instance
   ( STS (ShelleyLEDGERS era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   ) =>
   Embed (ShelleyLEDGERS era) (MOCKCHAIN era)
   where
@@ -218,10 +218,10 @@ ppMockChainState = toExpr
 
 instance (Reflect era, ShelleyEraTest era) => ToExpr (MockChainState era)
 
-ppMockBlock :: ToExpr (StrictSeq (Tx era)) => MockBlock era -> Expr
+ppMockBlock :: ToExpr (StrictSeq (Tx TopTx era)) => MockBlock era -> Expr
 ppMockBlock = toExpr
 
-instance ToExpr (StrictSeq (Tx era)) => ToExpr (MockBlock era)
+instance ToExpr (StrictSeq (Tx TopTx era)) => ToExpr (MockBlock era)
 
 ppMockChainFailure :: ToExpr (MockChainFailure era) => MockChainFailure era -> Expr
 ppMockChainFailure = toExpr

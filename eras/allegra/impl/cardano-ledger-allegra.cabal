@@ -127,6 +127,7 @@ library testlib
     microlens,
     small-steps,
     text,
+    tree-diff,
 
 executable huddle-cddl
   main-is: Main.hs

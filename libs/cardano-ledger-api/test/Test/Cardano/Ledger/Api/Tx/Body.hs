@@ -28,7 +28,7 @@ totalTxDeposits ::
   (EraTxBody era, EraCertState era) =>
   PParams era ->
   CertState era ->
-  TxBody era ->
+  TxBody l era ->
   Coin
 totalTxDeposits pp dpstate txb =
   numKeys <×> pp ^. ppKeyDepositL <+> snd (foldl' accum (regpools, Coin 0) certs)
@@ -47,7 +47,7 @@ keyTxRefunds ::
   (EraTxBody era, ShelleyEraTxCert era, EraCertState era) =>
   PParams era ->
   CertState era ->
-  TxBody era ->
+  TxBody l era ->
   Coin
 keyTxRefunds pp dpstate tx =
   case foldl' accum (initAccountsMap, Set.empty, mempty) certs of
@@ -77,7 +77,7 @@ evaluateTransactionBalance ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody TopTx era ->
   Value era
 evaluateTransactionBalance pp dpstate utxo txBody =
   evaluateTransactionBalanceShelley pp dpstate utxo txBody <> (txBody ^. mintValueTxBodyF)
@@ -87,7 +87,7 @@ evaluateTransactionBalanceShelley ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody TopTx era ->
   Value era
 evaluateTransactionBalanceShelley pp dpstate utxo txBody = consumed <-> produced
   where
@@ -103,10 +103,10 @@ evaluateTransactionBalanceShelley pp dpstate utxo txBody = consumed <-> produced
 -- | Randomly lookup pool params and staking credentials to add them as unregistration and
 -- undelegation certificates respectively.
 genTxBodyFrom ::
-  (EraTxBody era, ShelleyEraTxCert era, Arbitrary (TxBody era), EraCertState era) =>
+  (EraTxBody era, ShelleyEraTxCert era, Arbitrary (TxBody l era), EraCertState era) =>
   CertState era ->
   UTxO era ->
-  Gen (TxBody era)
+  Gen (TxBody l era)
 genTxBodyFrom certState (UTxO u) = do
   txBody <- arbitrary
   inputs <- sublistOf (Map.keys u)
@@ -128,14 +128,19 @@ genTxBodyFrom certState (UTxO u) = do
     )
 
 propEvalBalanceTxBody ::
-  (EraUTxO era, MaryEraTxBody era, ShelleyEraTxCert era, Arbitrary (TxBody era), EraCertState era) =>
+  ( EraUTxO era
+  , MaryEraTxBody era
+  , ShelleyEraTxCert era
+  , Arbitrary (TxBody TopTx era)
+  , EraCertState era
+  ) =>
   PParams era ->
   CertState era ->
   UTxO era ->
   Property
 propEvalBalanceTxBody pp certState utxo =
   property $
-    forAll (genTxBodyFrom certState utxo) $ \txBody ->
+    forAll (genTxBodyFrom @_ @TopTx certState utxo) $ \txBody ->
       evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalance pp certState utxo txBody
   where
@@ -143,14 +148,14 @@ propEvalBalanceTxBody pp certState utxo =
     isRegPoolId = (`Map.member` psStakePools (certState ^. certPStateL))
 
 propEvalBalanceShelleyTxBody ::
-  (EraUTxO era, ShelleyEraTxCert era, Arbitrary (TxBody era), EraCertState era) =>
+  (EraUTxO era, ShelleyEraTxCert era, Arbitrary (TxBody TopTx era), EraCertState era) =>
   PParams era ->
   CertState era ->
   UTxO era ->
   Property
 propEvalBalanceShelleyTxBody pp certState utxo =
   property $
-    forAll (genTxBodyFrom certState utxo) $ \txBody ->
+    forAll (genTxBodyFrom @_ @TopTx certState utxo) $ \txBody ->
       evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalanceShelley pp certState utxo txBody
   where

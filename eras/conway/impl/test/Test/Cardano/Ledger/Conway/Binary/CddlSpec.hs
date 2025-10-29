@@ -40,8 +40,8 @@ spec = do
     describe "Ruby-based" $ beforeAllCddlFile 3 readConwayCddlFiles $ do
       cddlRoundTripCborSpec @(Value ConwayEra) v "positive_coin"
       cddlRoundTripCborSpec @(Value ConwayEra) v "value"
-      cddlRoundTripAnnCborSpec @(TxBody ConwayEra) v "transaction_body"
-      cddlRoundTripCborSpec @(TxBody ConwayEra) v "transaction_body"
+      cddlRoundTripAnnCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
+      cddlRoundTripCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
       cddlRoundTripAnnCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
       cddlRoundTripCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
       cddlRoundTripAnnCborSpec @(Timelock ConwayEra) v "native_script"
@@ -58,31 +58,31 @@ spec = do
       cddlRoundTripCborSpec @CostModels v "cost_models"
       cddlRoundTripAnnCborSpec @(Redeemers ConwayEra) v "redeemers"
       cddlRoundTripCborSpec @(Redeemers ConwayEra) v "redeemers"
-      cddlRoundTripAnnCborSpec @(Tx ConwayEra) v "transaction"
-      cddlRoundTripCborSpec @(Tx ConwayEra) v "transaction"
+      cddlRoundTripAnnCborSpec @(Tx TopTx ConwayEra) v "transaction"
+      cddlRoundTripCborSpec @(Tx TopTx ConwayEra) v "transaction"
       cddlRoundTripCborSpec @(VotingProcedure ConwayEra) v "voting_procedure"
       cddlRoundTripCborSpec @(ProposalProcedure ConwayEra) v "proposal_procedure"
       cddlRoundTripCborSpec @(GovAction ConwayEra) v "gov_action"
       cddlRoundTripCborSpec @(TxCert ConwayEra) v "certificate"
       describe "DecCBOR instances equivalence via CDDL" $ do
-        cddlDecoderEquivalenceSpec @(TxBody ConwayEra) v "transaction_body"
+        cddlDecoderEquivalenceSpec @(TxBody TopTx ConwayEra) v "transaction_body"
         cddlDecoderEquivalenceSpec @(TxAuxData ConwayEra) v "auxiliary_data"
         cddlDecoderEquivalenceSpec @(Timelock ConwayEra) v "native_script"
         cddlDecoderEquivalenceSpec @(Data ConwayEra) v "plutus_data"
         cddlDecoderEquivalenceSpec @(Script ConwayEra) v "script"
         cddlDecoderEquivalenceSpec @(TxWits ConwayEra) v "transaction_witness_set"
         cddlDecoderEquivalenceSpec @(Redeemers ConwayEra) v "redeemers"
-        cddlDecoderEquivalenceSpec @(Tx ConwayEra) v "transaction"
+        cddlDecoderEquivalenceSpec @(Tx TopTx ConwayEra) v "transaction"
     describe "Huddle" $ specWithHuddle conwayCDDL 100 $ do
       -- Value
       huddleRoundTripCborSpec @(Value ConwayEra) v "positive_coin"
       huddleRoundTripArbitraryValidate @(Value ConwayEra) v "value"
       huddleRoundTripCborSpec @(Value ConwayEra) v "value"
       -- TxBody
-      huddleRoundTripAnnCborSpec @(TxBody ConwayEra) v "transaction_body"
+      huddleRoundTripAnnCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(TxBody ConwayEra) v "transaction_body"
-      huddleRoundTripCborSpec @(TxBody ConwayEra) v "transaction_body"
+      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(TxBody TopTx ConwayEra) v "transaction_body"
+      huddleRoundTripCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
       -- AuxData
       huddleRoundTripAnnCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
       -- TODO fails because of plutus scripts
@@ -130,10 +130,10 @@ spec = do
       xdescribe "fix redeemers" $ huddleRoundTripArbitraryValidate @(Redeemers ConwayEra) v "redeemers"
       huddleRoundTripCborSpec @(Redeemers ConwayEra) v "redeemers"
       -- Tx
-      huddleRoundTripAnnCborSpec @(Tx ConwayEra) v "transaction"
+      huddleRoundTripAnnCborSpec @(Tx TopTx ConwayEra) v "transaction"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(Tx ConwayEra) v "transaction"
-      huddleRoundTripCborSpec @(Tx ConwayEra) v "transaction"
+      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(Tx TopTx ConwayEra) v "transaction"
+      huddleRoundTripCborSpec @(Tx TopTx ConwayEra) v "transaction"
       -- VotingProcedure
       huddleRoundTripCborSpec @(VotingProcedure ConwayEra) v "voting_procedure"
       huddleRoundTripArbitraryValidate @(VotingProcedure ConwayEra) v "voting_procedure"
@@ -151,11 +151,11 @@ spec = do
       -- TODO this fails because of the hard-coded `unit_interval` in the CDDL
       xdescribe "fix unit_interval" $ huddleRoundTripArbitraryValidate @(TxCert ConwayEra) v "certificate"
       describe "DecCBOR instances equivalence via CDDL" $ do
-        huddleDecoderEquivalenceSpec @(TxBody ConwayEra) v "transaction_body"
+        huddleDecoderEquivalenceSpec @(TxBody TopTx ConwayEra) v "transaction_body"
         huddleDecoderEquivalenceSpec @(TxAuxData ConwayEra) v "auxiliary_data"
         huddleDecoderEquivalenceSpec @(Timelock ConwayEra) v "native_script"
         huddleDecoderEquivalenceSpec @(Data ConwayEra) v "plutus_data"
         huddleDecoderEquivalenceSpec @(Script ConwayEra) v "script"
         huddleDecoderEquivalenceSpec @(TxWits ConwayEra) v "transaction_witness_set"
         huddleDecoderEquivalenceSpec @(Redeemers ConwayEra) v "redeemers"
-        huddleDecoderEquivalenceSpec @(Tx ConwayEra) v "transaction"
+        huddleDecoderEquivalenceSpec @(Tx TopTx ConwayEra) v "transaction"

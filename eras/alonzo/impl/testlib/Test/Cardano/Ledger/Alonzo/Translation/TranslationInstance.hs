@@ -56,16 +56,17 @@ data TranslationInstance era = TranslationInstance
   { tiProtVer :: ProtVer
   , tiLanguage :: SupportedLanguage era
   , tiUtxo :: UTxO era
-  , tiTx :: Core.Tx era
+  , tiTx :: Core.Tx TopTx era
   , tiResult :: VersionedTxInfo
   }
   deriving (Generic)
 
 deriving instance
-  (Era era, Eq (PParams era), Eq (UTxO era), Eq (Core.Tx era)) => Eq (TranslationInstance era)
+  (Era era, Eq (PParams era), Eq (UTxO era), Eq (Core.Tx TopTx era)) => Eq (TranslationInstance era)
 
 deriving instance
-  (Era era, Show (PParams era), Show (UTxO era), Show (Core.Tx era)) => Show (TranslationInstance era)
+  (Era era, Show (PParams era), Show (UTxO era), Show (Core.Tx TopTx era)) =>
+  Show (TranslationInstance era)
 
 instance Cborg.Serialise PV1.DCert
 
@@ -178,7 +179,7 @@ instance DecCBOR VersionedTxInfo where
 instance
   ( Era era
   , EncCBOR (UTxO era)
-  , EncCBOR (Core.Tx era)
+  , EncCBOR (Core.Tx TopTx era)
   ) =>
   EncCBOR (TranslationInstance era)
   where
@@ -194,7 +195,7 @@ instance
 instance
   ( DecCBOR (PParams era)
   , DecCBOR (UTxO era)
-  , DecCBOR (Core.Tx era)
+  , DecCBOR (Core.Tx TopTx era)
   , EraPlutusContext era
   ) =>
   DecCBOR (TranslationInstance era)
@@ -212,7 +213,7 @@ deserializeTranslationInstances ::
   forall era.
   ( DecCBOR (PParams era)
   , DecCBOR (UTxO era)
-  , DecCBOR (Core.Tx era)
+  , DecCBOR (Core.Tx TopTx era)
   , EraPlutusContext era
   ) =>
   BSL.ByteString ->

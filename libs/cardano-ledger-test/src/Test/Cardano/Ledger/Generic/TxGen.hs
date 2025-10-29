@@ -814,12 +814,12 @@ minus m (Just (txin, _)) = Map.delete txin m
 genAlonzoTx ::
   forall era.
   EraGenericGen era =>
-  SlotNo -> GenRS era (UTxO era, Tx era)
+  SlotNo -> GenRS era (UTxO era, Tx TopTx era)
 genAlonzoTx slot = do
   (utxo, tx, _fee, _old) <- genAlonzoTxAndInfo slot
   pure (utxo, tx)
 
-applyIsValid :: forall era. Reflect era => IsValid -> Tx era -> Tx era
+applyIsValid :: forall era. Reflect era => IsValid -> Tx TopTx era -> Tx TopTx era
 applyIsValid isValid = case reify @era of
   Shelley -> id
   Mary -> id
@@ -835,7 +835,7 @@ genAlonzoTxAndInfo ::
   GenRS
     era
     ( UTxO era
-    , Tx era
+    , Tx TopTx era
     , UtxoEntry era -- The fee key
     , Maybe (UtxoEntry era) -- from oldUtxO
     )

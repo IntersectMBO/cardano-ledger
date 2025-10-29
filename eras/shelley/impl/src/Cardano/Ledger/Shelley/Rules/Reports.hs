@@ -40,9 +40,9 @@ showKeyHash (KeyHash hash) = take 10 (show hash)
 showCerts :: Show (TxCert era) => [TxCert era] -> String
 showCerts certs = unlines (map (("  " ++) . show) certs)
 
-showTxCerts :: EraTxBody era => TxBody era -> String
-showTxCerts txb = case (toList (txb ^. certsTxBodyL)) of
-  [] -> ("No TxCerts in this TxBody\n" ++ show txb)
+showTxCerts :: EraTxBody era => TxBody t era -> String
+showTxCerts txb = case toList (txb ^. certsTxBodyL) of
+  [] -> "No TxCerts in this TxBody\n" ++ show txb
   certs -> showCerts certs
 
 -- | Display a synopsis of a map to Coin
@@ -58,7 +58,7 @@ produceEqualsConsumed ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody TopTx era ->
   String
 produceEqualsConsumed pp dpstate utxo txb =
   let consumedValue = consumedTxBody txb pp dpstate utxo

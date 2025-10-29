@@ -114,7 +114,7 @@ ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( STS (someLEDGER era)
   , BaseM (someLEDGER era) ~ ShelleyBase
-  , Signal (someLEDGER era) ~ Tx era
+  , Signal (someLEDGER era) ~ Tx TopTx era
   , State (someLEDGER era) ~ LedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
@@ -124,7 +124,7 @@ ledgerTransition ::
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , AlonzoEraTx era
   , EraCertState era
   , EraRule "LEDGER" era ~ someLEDGER era
@@ -167,7 +167,7 @@ instance
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
@@ -180,7 +180,7 @@ instance
   STS (AlonzoLEDGER era)
   where
   type State (AlonzoLEDGER era) = LedgerState era
-  type Signal (AlonzoLEDGER era) = Tx era
+  type Signal (AlonzoLEDGER era) = Tx TopTx era
   type Environment (AlonzoLEDGER era) = LedgerEnv era
   type BaseM (AlonzoLEDGER era) = ShelleyBase
   type PredicateFailure (AlonzoLEDGER era) = ShelleyLedgerPredFailure era

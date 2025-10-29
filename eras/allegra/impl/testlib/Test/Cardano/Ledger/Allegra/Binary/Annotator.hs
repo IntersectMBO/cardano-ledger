@@ -27,7 +27,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Binary.Annotator
 
-deriving newtype instance DecCBOR (TxBody AllegraEra)
+deriving newtype instance DecCBOR (TxBody TopTx AllegraEra)
 
 instance
   ( Era era
@@ -75,4 +75,4 @@ instance Era era => DecCBOR (TimelockRaw era) where
 instance Era era => DecCBOR (Timelock era) where
   decCBOR = MkTimelock <$> decodeMemoized decCBOR
 
-deriving newtype instance DecCBOR (Tx AllegraEra)
+deriving newtype instance DecCBOR (Tx TopTx AllegraEra)

@@ -36,7 +36,7 @@ spec = do
       prop "Script" $ roundTripAnnTwiddledProperty @(Script AlonzoEra) eqAlonzoScriptRaw
       prop "Data" $ roundTripAnnTwiddledProperty @(Data AlonzoEra) (zipMemoRawType (===))
       prop "BinaryData" $ roundTripTwiddledProperty @(BinaryData AlonzoEra)
-      prop "TxBody" $ roundTripAnnTwiddledProperty @(TxBody AlonzoEra) (zipMemoRawType (===))
+      prop "TxBody" $ roundTripAnnTwiddledProperty @(TxBody TopTx AlonzoEra) (zipMemoRawType (===))
   describe "DecCBOR instances equivalence" $ do
     Binary.decoderEquivalenceCoreEraTypesSpec @AlonzoEra
     decoderEquivalenceEraSpec @AlonzoEra @(TxDats AlonzoEra)

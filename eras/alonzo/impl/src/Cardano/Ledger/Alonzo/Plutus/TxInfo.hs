@@ -252,15 +252,15 @@ transTxOut txOut = do
   address <- transAddr (txOut ^. addrTxOutL)
   pure $ PV1.TxOut address (transValue val) (transDataHash <$> strictMaybeToMaybe dataHash)
 
-transTxBodyId :: EraTxBody era => TxBody era -> PV1.TxId
-transTxBodyId txBody = PV1.TxId (transSafeHash (hashAnnotated txBody))
+transTxBodyId :: EraTxBody era => TxBody l era -> PV1.TxId
+transTxBodyId txBody = PV1.TxId (transSafeHash (hashAnnotated @_ @EraIndependentTxBody txBody))
 
 -- | Translate all `TxCert`s from within a `TxBody`
 transTxBodyCerts ::
   (EraPlutusTxInfo l era, EraTxBody era) =>
   proxy l ->
   ProtVer ->
-  TxBody era ->
+  TxBody t era ->
   Either (ContextError era) [PlutusTxCert l]
 transTxBodyCerts proxy pv txBody =
   mapM (toPlutusTxCert proxy pv) $ F.toList (txBody ^. certsTxBodyL)
@@ -272,12 +272,12 @@ transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
       Map.insert (PV1.StakingHash (transRewardAccount rewardAccount)) n ans
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
-transTxBodyWithdrawals :: EraTxBody era => TxBody era -> [(PV1.StakingCredential, Integer)]
+transTxBodyWithdrawals :: EraTxBody era => TxBody t era -> [(PV1.StakingCredential, Integer)]
 transTxBodyWithdrawals txBody = Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))
 
 -- | Translate all required signers produced by `reqSignerHashesTxBodyL`s from within a
 -- `TxBody`
-transTxBodyReqSignerHashes :: AlonzoEraTxBody era => TxBody era -> [PV1.PubKeyHash]
+transTxBodyReqSignerHashes :: AlonzoEraTxBody era => TxBody t era -> [PV1.PubKeyHash]
 transTxBodyReqSignerHashes txBody = transKeyHash <$> Set.toList (txBody ^. reqSignerHashesTxBodyG)
 
 -- | Translate all `TxDats`s from within `TxWits`

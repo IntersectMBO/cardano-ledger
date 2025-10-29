@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -27,6 +28,7 @@ import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits
 import Cardano.Ledger.Shelley.UTxO
+import Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.TreeDiff
 
 -- PParams
@@ -88,9 +90,21 @@ instance (EraTxOut era, ToExpr (Value era)) => ToExpr (ShelleyTxOut era) where
   toExpr (ShelleyTxOut x y) = App "ShelleyTxOut" [toExpr x, toExpr y]
 
 -- TxBody
-instance ToExpr ShelleyTxBodyRaw
+instance ToExpr (ShelleyTxBodyRaw TopTx ShelleyEra) where
+  toExpr ShelleyTxBodyRaw {..} =
+    Rec "ShelleyTxBodyRaw" $
+      OMap.fromList
+        [ ("inputs", toExpr stbrInputs)
+        , ("outputs", toExpr stbrOutputs)
+        , ("certs", toExpr stbrCerts)
+        , ("withdrawals", toExpr stbrWithdrawals)
+        , ("fee", toExpr stbrFee)
+        , ("ttl", toExpr stbrTtl)
+        , ("update", toExpr stbrUpdate)
+        , ("auxDataHash", toExpr stbrAuxDataHash)
+        ]
 
-instance ToExpr (TxBody ShelleyEra)
+instance ToExpr (TxBody TopTx ShelleyEra)
 
 -- PoolRank
 instance ToExpr Likelihood
@@ -101,10 +115,18 @@ instance ToExpr NonMyopic
 
 instance
   ( ToExpr (TxAuxData era)
-  , ToExpr (TxBody era)
+  , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   ) =>
-  ToExpr (ShelleyTx era)
+  ToExpr (ShelleyTx TopTx era)
+  where
+  toExpr ShelleyTx {..} =
+    Rec "ShelleyTx" $
+      OMap.fromList
+        [ ("body", toExpr stBody)
+        , ("wits", toExpr stWits)
+        , ("auxData", toExpr stAuxData)
+        ]
 
 -- RewardUpdate
 
@@ -295,4 +317,4 @@ instance
   ToExpr (State (EraRule "LEDGERS" era)) =>
   ToExpr (ShelleyBbodyState era)
 
-instance ToExpr (Tx ShelleyEra)
+instance ToExpr (Tx TopTx ShelleyEra)

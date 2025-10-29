@@ -243,7 +243,7 @@ instance
   ( Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
   , BlockBody era ~ AlonzoBlockBody era
   , EraBlockBody era
@@ -322,7 +322,7 @@ instance
   wrapEvent = ShelleyInAlonzoEvent . LedgersEvent
 
 totalRefScriptSizeInBlock ::
-  (AlonzoEraTx era, BabbageEraTxBody era) => ProtVer -> StrictSeq (Tx era) -> UTxO era -> Int
+  (AlonzoEraTx era, BabbageEraTxBody era) => ProtVer -> StrictSeq (Tx TopTx era) -> UTxO era -> Int
 totalRefScriptSizeInBlock protVer txs (UTxO utxo)
   | pvMajor protVer <= natVersion @10 =
       getSum $ foldMap' (Monoid.Sum . txNonDistinctRefScriptsSize (UTxO utxo)) txs

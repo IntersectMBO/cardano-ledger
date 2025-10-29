@@ -234,7 +234,7 @@ instance
   , Embed (EraRule "UTXOS" era) (ConwayUTXO era)
   , Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , PredicateFailure (EraRule "UTXO" era) ~ ConwayUtxoPredFailure era
   , EraCertState era
   , SafeToHash (TxWits era)
@@ -242,7 +242,7 @@ instance
   STS (ConwayUTXO era)
   where
   type State (ConwayUTXO era) = Shelley.UTxOState era
-  type Signal (ConwayUTXO era) = Tx era
+  type Signal (ConwayUTXO era) = Tx TopTx era
   type Environment (ConwayUTXO era) = Shelley.UtxoEnv era
   type BaseM (ConwayUTXO era) = ShelleyBase
   type PredicateFailure (ConwayUTXO era) = ConwayUtxoPredFailure era

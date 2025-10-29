@@ -2,6 +2,11 @@
 
 ## 1.9.0.0
 
+* Add `invalidBeforeL`, `invalidHereAfterL`
+* Add `basicAllegraTxBody`
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `HasEraTxLevel` instances for `Tx` and `TxBody`
+* Add `EraTxLevel` instance
 * Remove deprecated `timelockScriptsTxAuxDataL`
 
 ### `testlib`

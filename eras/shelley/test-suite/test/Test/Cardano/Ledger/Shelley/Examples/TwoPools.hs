@@ -176,7 +176,7 @@ aliceStakePoolParams' = Cast.aliceStakePoolParams {sppRewardAccount = RewardAcco
 bobStakePoolParams' :: StakePoolParams
 bobStakePoolParams' = Cast.bobStakePoolParams {sppRewardAccount = RewardAccount Testnet Cast.carlSHK}
 
-txbodyEx1 :: TxBody ShelleyEra
+txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -198,7 +198,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: ShelleyTx ShelleyEra
+txEx1 :: ShelleyTx TopTx ShelleyEra
 txEx1 =
   ShelleyTx
     txbodyEx1

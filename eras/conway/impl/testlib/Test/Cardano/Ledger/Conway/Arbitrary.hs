@@ -566,7 +566,7 @@ instance Arbitrary Vote where
   arbitrary = arbitraryBoundedEnum
   shrink = shrinkBoundedEnum
 
-instance Arbitrary (TxBody ConwayEra) where
+instance Arbitrary (TxBody TopTx ConwayEra) where
   arbitrary =
     ConwayTxBody
       <$> arbitrary
@@ -891,4 +891,4 @@ instance Arbitrary (ConwayAccountState era) where
 instance Arbitrary (TransitionConfig ConwayEra) where
   arbitrary = ConwayTransitionConfig <$> arbitrary <*> arbitrary
 
-deriving newtype instance Arbitrary (Tx ConwayEra)
+deriving newtype instance Arbitrary (Tx TopTx ConwayEra)

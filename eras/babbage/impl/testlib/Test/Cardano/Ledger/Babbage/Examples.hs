@@ -82,14 +82,14 @@ exampleBabbageNewEpochState =
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))
 
-exampleTxBabbage :: Tx BabbageEra
+exampleTxBabbage :: Tx TopTx BabbageEra
 exampleTxBabbage =
   exampleTx
     exampleTxBodyBabbage
     (AlonzoSpending $ AsIx 0)
     (RequireAllOf @BabbageEra mempty)
 
-exampleTxBodyBabbage :: TxBody BabbageEra
+exampleTxBodyBabbage :: TxBody TopTx BabbageEra
 exampleTxBodyBabbage =
   BabbageTxBody
     (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]) -- spending inputs

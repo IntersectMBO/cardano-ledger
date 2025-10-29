@@ -23,21 +23,21 @@ spec =
     let v = eraProtVerLow @AllegraEra
     describe "Ruby-based" $ beforeAllCddlFile 3 readAllegraCddlFiles $ do
       cddlRoundTripCborSpec @(Value AllegraEra) v "coin"
-      cddlRoundTripAnnCborSpec @(TxBody AllegraEra) v "transaction_body"
-      cddlRoundTripCborSpec @(TxBody AllegraEra) v "transaction_body"
+      cddlRoundTripAnnCborSpec @(TxBody TopTx AllegraEra) v "transaction_body"
+      cddlRoundTripCborSpec @(TxBody TopTx AllegraEra) v "transaction_body"
       cddlRoundTripAnnCborSpec @(Script AllegraEra) v "native_script"
       cddlRoundTripCborSpec @(Script AllegraEra) v "native_script"
       cddlRoundTripAnnCborSpec @(TxAuxData AllegraEra) v "auxiliary_data"
       cddlRoundTripCborSpec @(TxAuxData AllegraEra) v "auxiliary_data"
       describe "DecCBOR instances equivalence via CDDL" $ do
-        cddlDecoderEquivalenceSpec @(TxBody AllegraEra) v "transaction_body"
+        cddlDecoderEquivalenceSpec @(TxBody TopTx AllegraEra) v "transaction_body"
         cddlDecoderEquivalenceSpec @(Script AllegraEra) v "native_script"
         cddlDecoderEquivalenceSpec @(TxAuxData AllegraEra) v "auxiliary_data"
 
     describe "Huddle" $ specWithHuddle allegraCDDL 100 $ do
       huddleRoundTripCborSpec @(Value AllegraEra) v "coin"
-      huddleRoundTripAnnCborSpec @(TxBody AllegraEra) v "transaction_body"
-      huddleRoundTripCborSpec @(TxBody AllegraEra) v "transaction_body"
+      huddleRoundTripAnnCborSpec @(TxBody TopTx AllegraEra) v "transaction_body"
+      huddleRoundTripCborSpec @(TxBody TopTx AllegraEra) v "transaction_body"
       huddleRoundTripAnnCborSpec @(TxAuxData AllegraEra) v "auxiliary_data"
       huddleRoundTripCborSpec @(TxAuxData AllegraEra) v "auxiliary_data"
       huddleRoundTripAnnCborSpec @(Script AllegraEra) v "native_script"

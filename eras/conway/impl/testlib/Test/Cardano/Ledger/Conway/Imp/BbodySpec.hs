@@ -113,7 +113,7 @@ spec = do
 
       -- We are creating reference scripts and transaction that depend on them in a "simulation",
       -- so the result will be correctly constructed that are not applied to the ledger state
-      txs :: [Tx era] <- simulateThenRestore $ do
+      txs :: [Tx TopTx era] <- simulateThenRestore $ do
         concat
           <$> forM
             txScriptCounts
@@ -154,7 +154,7 @@ spec = do
     -- their individual reference script sizes, and then restore the original state -
     -- meaning the transactions are not actually applied.
     -- Finally, we check that the accumulated sizes from both before and after match.
-    txsWithRefScriptSizes :: ([(Tx era, Int)], Int) <- simulateThenRestore $ do
+    txsWithRefScriptSizes :: ([(Tx TopTx era, Int)], Int) <- simulateThenRestore $ do
       let mkTxWithExpectedSize expectedSize txAction = do
             tx <- txAction
             totalRefScriptSizeInBlock protVer [tx] <$> getUTxO `shouldReturn` expectedSize
@@ -240,7 +240,7 @@ spec = do
       addr <- freshKeyAddr_
       pure $ mkBasicTxOut addr mempty & referenceScriptTxOutL .~ pure (fromNativeScript script)
 
-    (txs :: [Tx era]) <- simulateThenRestore $ do
+    (txs :: [Tx TopTx era]) <- simulateThenRestore $ do
       -- submit an invalid transaction which attempts to consume the failing script
       -- and specifies as collateral return the txout with reference script
       createCollateralTx <-

@@ -59,7 +59,7 @@ import Lens.Micro ((^.))
 getConwayScriptsNeeded ::
   ConwayEraTxBody era =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   AlonzoScriptsNeeded era
 getConwayScriptsNeeded utxo txBody =
   getSpendingScriptsNeeded utxo txBody
@@ -106,7 +106,7 @@ conwayConsumed ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   Value era
 conwayConsumed pp certState =
   getConsumedValue
@@ -115,10 +115,12 @@ conwayConsumed pp certState =
     (lookupDepositVState $ certState ^. certVStateL)
 
 conwayProducedValue ::
-  (ConwayEraTxBody era, Value era ~ MaryValue) =>
+  ( ConwayEraTxBody era
+  , Value era ~ MaryValue
+  ) =>
   PParams era ->
   (KeyHash 'StakePool -> Bool) ->
-  TxBody era ->
+  TxBody TopTx era ->
   Value era
 conwayProducedValue pp isStakePool txBody =
   getProducedMaryValue pp isStakePool txBody
@@ -131,7 +133,8 @@ instance EraUTxO ConwayEra where
 
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue = conwayProducedValue
+  getProducedValue pp isRegPoolId txBody =
+    withTopTxLevelOnly txBody (conwayProducedValue pp isRegPoolId)
 
   getScriptsProvided = getBabbageScriptsProvided
 
@@ -153,7 +156,7 @@ getConwayMinFeeTxUtxo ::
   , BabbageEraTxBody era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx l era ->
   UTxO era ->
   Coin
 getConwayMinFeeTxUtxo pparams tx utxo =
@@ -165,7 +168,7 @@ getConwayMinFeeTxUtxo pparams tx utxo =
 --
 -- Any input that appears in both regular inputs and reference inputs of a transaction is
 -- only used once in this computation.
-txNonDistinctRefScriptsSize :: (EraTx era, BabbageEraTxBody era) => UTxO era -> Tx era -> Int
+txNonDistinctRefScriptsSize :: (EraTx era, BabbageEraTxBody era) => UTxO era -> Tx l era -> Int
 txNonDistinctRefScriptsSize utxo tx = getSum $ foldMap (Sum . originalBytesSize . snd) refScripts
   where
     inputs = (tx ^. bodyTxL . referenceInputsTxBodyL) `Set.union` (tx ^. bodyTxL . inputsTxBodyL)
@@ -174,7 +177,7 @@ txNonDistinctRefScriptsSize utxo tx = getSum $ foldMap (Sum . originalBytesSize 
 getConwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   Set.Set (KeyHash 'Witness)
 getConwayWitsVKeyNeeded utxo txBody =
   getShelleyWitsVKeyNeededNoGov utxo txBody
@@ -183,7 +186,7 @@ getConwayWitsVKeyNeeded utxo txBody =
 
 voterWitnesses ::
   ConwayEraTxBody era =>
-  TxBody era ->
+  TxBody l era ->
   Set.Set (KeyHash 'Witness)
 voterWitnesses txb =
   Map.foldrWithKey' accum mempty (unVotingProcedures (txb ^. votingProceduresTxBodyL))

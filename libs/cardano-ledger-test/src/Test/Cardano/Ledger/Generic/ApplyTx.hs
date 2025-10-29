@@ -61,11 +61,12 @@ import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld (deltaFOld), rsOld)
 
-applyTxSimple :: forall era. EraModel era => Int -> Model era -> Tx era -> Model era
+applyTxSimple :: forall era. EraModel era => Int -> Model era -> Tx TopTx era -> Model era
 applyTxSimple count model tx = applyTxBody count model $ tx ^. bodyTxL
 
 applyTxFail ::
-  (Reflect era, AlonzoEraTxBody era, EraModel era) => Int -> TxIx -> Model era -> Tx era -> Model era
+  (Reflect era, AlonzoEraTxBody era, EraModel era) =>
+  Int -> TxIx -> Model era -> Tx TopTx era -> Model era
 applyTxFail count nextTxIx model tx = updateInfo info model
   where
     info = collInfo count nextTxIx model emptyCollInfo $ tx ^. bodyTxL
@@ -76,7 +77,7 @@ collInfo ::
   TxIx ->
   Model era ->
   CollInfo era ->
-  TxBody era ->
+  TxBody TopTx era ->
   CollInfo era
 collInfo count firstTxIx model info txbody =
   afterColReturn
@@ -129,7 +130,7 @@ epochBoundary transactionEpoch modelEpoch model =
   where
     ru = createRUpdNonPulsing' @era model
 
-applyTxBody :: EraModel era => Int -> Model era -> TxBody era -> Model era
+applyTxBody :: EraModel era => Int -> Model era -> TxBody TopTx era -> Model era
 applyTxBody count model txbody =
   Map.foldlWithKey' applyWithdrawals (foldl' applyCert model' $ txbody ^. certsTxBodyL)
     . unWithdrawals
@@ -246,7 +247,7 @@ notValidatingTx ::
   , AlonzoEraTxBody era
   , EraModel era
   ) =>
-  Tx era
+  Tx TopTx era
 notValidatingTx =
   let s = alwaysFails @PlutusV1 1
       dat = Data (PV1.I 0)

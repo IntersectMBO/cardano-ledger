@@ -113,12 +113,12 @@ import Test.QuickCheck (Gen, choose, shuffle)
 type MinLEDGER_STS era =
   ( Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , STS (EraRule "LEDGER" era)
   )
 
@@ -137,10 +137,10 @@ type MinUTXO_STS era =
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   )
 
 class Show (TxOut era) => MinGenTxout era where
@@ -190,7 +190,7 @@ class
     Coin ->
     StrictMaybe (Update era) ->
     StrictMaybe TxAuxDataHash ->
-    Gen (TxBody era, [Script era])
+    Gen (TxBody TopTx era, [Script era])
 
   -- | Generate era-specific auxiliary data
   genEraAuxiliaryData :: Constants -> Gen (StrictMaybe (TxAuxData era))
@@ -200,17 +200,17 @@ class
     UTxO era ->
     PParams era ->
     TxWits era ->
-    TxBody era ->
+    TxBody TopTx era ->
     Coin ->
     -- | This overrides the existing TxFee
     Set TxIn ->
     -- | This is to be Unioned with the existing TxIn
     TxOut era ->
     -- | This is to be Appended to the end of the existing TxOut
-    TxBody era
+    TxBody TopTx era
 
   -- |  Union the TxIn with the existing TxIn in the TxBody
-  addInputs :: TxBody era -> Set TxIn -> TxBody era
+  addInputs :: TxBody TopTx era -> Set TxIn -> TxBody TopTx era
   addInputs txb _ins = txb
 
   genEraPParamsUpdate :: Constants -> PParams era -> Gen (PParamsUpdate era)
@@ -222,7 +222,7 @@ class
   -- use Test.Cardano.Ledger.Shelley.Generator.Update(genDecentralisationParam) in your instance.
 
   genEraTxWits ::
-    (UTxO era, TxBody era, ScriptInfo era) ->
+    (UTxO era, TxBody TopTx era, ScriptInfo era) ->
     Set (WitVKey 'Witness) ->
     Map ScriptHash (Script era) ->
     TxWits era
@@ -233,10 +233,10 @@ class
 
   -- | Construct a transaction given its constituent parts.
   constructTx ::
-    TxBody era ->
+    TxBody TopTx era ->
     TxWits era ->
     StrictMaybe (TxAuxData era) ->
-    Tx era
+    Tx TopTx era
   constructTx txBody txWits txAuxData =
     mkBasicTx txBody & witsTxL .~ txWits & auxDataTxL .~ txAuxData
 
@@ -246,18 +246,18 @@ class
 
   -- | A final opportunity to tweak things when the generator is done. Possible uses
   --   1) Add tracing when debugging on a per Era basis
-  genEraDone :: UTxO era -> PParams era -> Tx era -> Gen (Tx era)
+  genEraDone :: UTxO era -> PParams era -> Tx TopTx era -> Gen (Tx TopTx era)
   genEraDone _utxo _pp x = pure x
 
   -- | A final opportunity to tweak things at the block level. Possible uses
   --   2) Run a test that might decide to 'discard' the test, because we got unlucky, and a rare unfixible condition has occurred.
-  genEraTweakBlock :: PParams era -> Seq (Tx era) -> Gen (Seq (Tx era))
+  genEraTweakBlock :: PParams era -> Seq (Tx TopTx era) -> Gen (Seq (Tx TopTx era))
   genEraTweakBlock _pp seqTx = pure seqTx
 
-  hasFailedScripts :: Tx era -> Bool
+  hasFailedScripts :: Tx TopTx era -> Bool
   hasFailedScripts = const False
 
-  feeOrCollateral :: Tx era -> UTxO era -> Coin
+  feeOrCollateral :: Tx TopTx era -> UTxO era -> Coin
   feeOrCollateral tx _ = tx ^. bodyTxL . feeTxBodyL
 
 {------------------------------------------------------------------------------
@@ -321,7 +321,7 @@ allScripts c =
 -- =========================================================
 
 data Label t where
-  Body' :: Label (TxBody era)
+  Body' :: Label (TxBody TopTx era)
   Wits' :: Label (TxWits era)
 
 class Sets (x :: Label t) y where

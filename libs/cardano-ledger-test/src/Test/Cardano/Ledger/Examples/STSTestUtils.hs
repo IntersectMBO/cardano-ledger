@@ -106,7 +106,7 @@ data PlutusPurposeTag
 instance ToExpr PlutusPurposeTag
 
 class EraTest era => EraModel era where
-  applyTx :: Int -> SlotNo -> Model era -> Tx era -> Model era
+  applyTx :: Int -> SlotNo -> Model era -> Tx TopTx era -> Model era
   applyCert :: Model era -> TxCert era -> Model era
 
   mkRedeemersFromTags :: [((PlutusPurposeTag, Word32), (Data era, ExUnits))] -> Redeemers era
@@ -130,7 +130,7 @@ class EraTest era => EraModel era where
 
   never :: Natural -> Script era
 
-  collateralReturnTxBodyT :: Lens' (TxBody era) (StrictMaybe (TxOut era))
+  collateralReturnTxBodyT :: Lens' (TxBody TopTx era) (StrictMaybe (TxOut era))
 
   validTxOut :: Map ScriptHash (Script era) -> TxOut era -> Bool
 
@@ -282,13 +282,13 @@ testUTXOW ::
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , STS (EraRule "UTXOW" era)
-  , Tx era ~ Signal (EraRule "UTXOW" era)
+  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
   ) =>
   UTxO era ->
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
   Expectation
 testUTXOW utxo p tx = testUTXOWwith (genericCont (show (utxo, tx))) utxo p tx
@@ -300,14 +300,14 @@ testUTXOWsubset ::
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Tx era ~ Signal (EraRule "UTXOW" era)
+  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
   , STS (EraRule "UTXOW" era)
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , ShelleyEraTest era
   ) =>
   UTxO era ->
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
   Expectation
 testUTXOWsubset = testUTXOWwith subsetCont
@@ -320,12 +320,12 @@ testUTXOspecialCase ::
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Tx era ~ Signal (EraRule "UTXOW" era)
+  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
   , STS (EraRule "UTXOW" era)
   ) =>
   UTxO era ->
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
   Expectation
 testUTXOspecialCase utxo pparam tx expected =
@@ -345,12 +345,12 @@ testUTXOWwith ::
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Tx era ~ Signal (EraRule "UTXOW" era)
+  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
   ) =>
   (Result era -> Result era -> Expectation) ->
   UTxO era ->
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   Result era ->
   Expectation
 testUTXOWwith cont utxo pparams tx expected =
@@ -364,11 +364,11 @@ runLEDGER ::
   , STS (EraRule "LEDGER" era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Tx era ~ Signal (EraRule "LEDGER" era)
+  , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
   ) =>
   LedgerState era ->
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (State (EraRule "LEDGER" era))
 runLEDGER state pparams tx =
   let env = LedgerEnv (SlotNo 0) Nothing minBound pparams def

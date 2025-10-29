@@ -99,7 +99,7 @@ tests ::
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , GovState era ~ ShelleyGovState era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , STS (EraRule "LEDGER" era)
@@ -120,7 +120,7 @@ adaPreservationProps ::
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , GovState era ~ ShelleyGovState era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , STS (EraRule "LEDGER" era)
@@ -282,7 +282,7 @@ checkPreservation SourceSignalTarget {source, target, signal = block} count =
       "\n\n******** Transaction "
         ++ show ix
         ++ " "
-        ++ show (hashAnnotated (tx ^. bodyTxL))
+        ++ show (hashAnnotated @_ @EraIndependentTxBody (tx ^. bodyTxL))
         ++ "\nfee :"
         ++ show (tx ^. bodyTxL . feeTxBodyL)
         ++ "\nwithdrawals:"
@@ -312,7 +312,7 @@ utxoDepositsIncreaseByFeesWithdrawals ::
   forall era.
   ( ChainProperty era
   , EraGen era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
@@ -356,7 +356,7 @@ potsSumIncreaseWithdrawalsPerTx ::
   ( ChainProperty era
   , EraGen era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , STS (EraRule "LEDGER" era)
@@ -388,7 +388,7 @@ potsSumIncreaseByRewardsPerTx ::
   ( ChainProperty era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , STS (EraRule "LEDGER" era)
   ) =>
@@ -423,7 +423,7 @@ potsRewardsDecreaseByWithdrawalsPerTx ::
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -462,7 +462,7 @@ preserveBalance ::
   forall era.
   ( ChainProperty era
   , EraGen era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
@@ -503,7 +503,7 @@ preserveBalanceRestricted ::
   ( ChainProperty era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , STS (EraRule "LEDGER" era)
   ) =>
@@ -541,7 +541,7 @@ preserveOutputsTx ::
   , EraGen era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , STS (EraRule "LEDGER" era)
   ) =>
@@ -567,7 +567,7 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
 canRestrictUTxO ::
   forall era.
   ( ChainProperty era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
@@ -612,14 +612,14 @@ withdrawals (Block _ blockBody) =
 txFees ::
   forall era.
   ( EraGen era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   Trace (EraRule "LEDGER" era) ->
   Coin
 txFees ledgerTr =
   foldMap
-    (\sst -> feeOrCollateral @era (signal sst :: Tx era) (source sst ^. utxoL :: UTxO era))
+    (\sst -> feeOrCollateral @era (signal sst :: Tx TopTx era) (source sst ^. utxoL :: UTxO era))
     (sourceSignalTargets ledgerTr)
 
 -- | Check that deposits are always non-negative

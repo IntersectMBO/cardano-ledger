@@ -242,7 +242,7 @@ utxoTransition = do
 validateOutsideValidityIntervalUTxO ::
   AllegraEraTxBody era =>
   SlotNo ->
-  TxBody era ->
+  TxBody l era ->
   Test (AllegraUtxoPredFailure era)
 validateOutsideValidityIntervalUTxO slot txb =
   failureUnless (inInterval slot (txb ^. vldtTxBodyL)) $
@@ -314,7 +314,7 @@ instance
   STS (AllegraUTXO era)
   where
   type State (AllegraUTXO era) = Shelley.UTxOState era
-  type Signal (AllegraUTXO era) = Tx era
+  type Signal (AllegraUTXO era) = Tx TopTx era
   type Environment (AllegraUTXO era) = Shelley.UtxoEnv era
   type BaseM (AllegraUTXO era) = ShelleyBase
   type PredicateFailure (AllegraUTXO era) = AllegraUtxoPredFailure era

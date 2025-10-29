@@ -20,9 +20,10 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
-import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.BlockBody.Internal
 import Cardano.Ledger.Shelley.Scripts
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), Tx (..))
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxWits hiding (mapTraverseableDecoderA)
@@ -38,7 +39,7 @@ import Test.Cardano.Ledger.Shelley.Arbitrary ()
 
 instance
   ( EraTx era
-  , DecCBOR (TxBody era)
+  , DecCBOR (TxBody TopTx era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   ) =>
@@ -73,9 +74,24 @@ instance
       hash = hashShelleySegWits bodiesBytes witsBytes auxDataBytes
     pure $ ShelleyBlockBodyInternal txs hash bodiesBytes witsBytes auxDataBytes
 
-deriving newtype instance DecCBOR (TxBody ShelleyEra)
+instance
+  ( Era era
+  , DecCBOR (TxBody TopTx era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (ShelleyTx TopTx era)
+  where
+  decCBOR =
+    decode $
+      RecD ShelleyTx
+        <! From
+        <! From
+        <! D (decodeNullStrictMaybe decCBOR)
 
-deriving newtype instance DecCBOR (Tx ShelleyEra)
+deriving newtype instance DecCBOR (TxBody TopTx ShelleyEra)
+
+deriving newtype instance DecCBOR (Tx TopTx ShelleyEra)
 
 deriving newtype instance Era era => DecCBOR (ShelleyTxAuxData era)
 

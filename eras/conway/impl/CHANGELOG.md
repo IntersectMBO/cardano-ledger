@@ -2,6 +2,9 @@
 
 ## 1.21.0.0
 
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `HasEraTxLevel` instances for `Tx` and `TxBody`
+* Add `EraTxLevel` instance
 * Add `shelleyToConwayLedgerPredFailure`.
 * Move withdrawal-validation and DRep expiry updates from `CERTS` to `LEDGER` starting protocol version 11.
   - Add `ConwayWithdrawalsMissingAccounts` and `ConwayIncompleteWithdrawals` to `ConwayLedgerPredFailure`.

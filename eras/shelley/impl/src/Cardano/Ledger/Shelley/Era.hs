@@ -38,8 +38,11 @@ module Cardano.Ledger.Shelley.Era (
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (EraRule, Value)
+import Cardano.Ledger.Core (EraRule, EraTxLevel (..), STxTopLevel, Value)
 import Cardano.Ledger.Internal.Era (ShelleyEra)
+
+instance EraTxLevel ShelleyEra where
+  type STxLevel l ShelleyEra = STxTopLevel l ShelleyEra
 
 type instance Value ShelleyEra = Coin
 

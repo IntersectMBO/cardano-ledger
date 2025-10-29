@@ -58,7 +58,7 @@ instance
     Embed (EraRule "UTXO" era) (AllegraUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , EraRule "UTXOW" era ~ AllegraUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , EraCertState era
@@ -66,7 +66,7 @@ instance
   STS (AllegraUTXOW era)
   where
   type State (AllegraUTXOW era) = UTxOState era
-  type Signal (AllegraUTXOW era) = Tx era
+  type Signal (AllegraUTXOW era) = Tx TopTx era
   type Environment (AllegraUTXOW era) = UtxoEnv era
   type BaseM (AllegraUTXOW era) = ShelleyBase
   type PredicateFailure (AllegraUTXOW era) = ShelleyUtxowPredFailure era

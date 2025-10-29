@@ -106,7 +106,7 @@ newGenesisVrfKH = hashVerKeyVRF @MockCrypto (vrfVerKey (mkVRFKeyPair @MockCrypto
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: TxBody ShelleyEra
+txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -127,7 +127,7 @@ txbodyEx1 =
     aliceCoinEx1 = aliceInitCoin <-> Val.inject feeTx1
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
-txEx1 :: ShelleyTx ShelleyEra
+txEx1 :: ShelleyTx TopTx ShelleyEra
 txEx1 = ShelleyTx txbodyEx1 txwits SNothing
   where
     txwits :: ShelleyTxWits ShelleyEra

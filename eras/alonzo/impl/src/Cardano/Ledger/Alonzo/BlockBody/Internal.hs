@@ -72,7 +72,7 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 -- order to support segregated witnessing.
 
 data AlonzoBlockBody era = AlonzoBlockBodyInternal
-  { abbTxs :: !(StrictSeq (Tx era))
+  { abbTxs :: !(StrictSeq (Tx TopTx era))
   , abbHash :: Hash.Hash HASH EraIndependentBlockBody
   -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
   , abbTxsBodyBytes :: BSL.ByteString
@@ -109,7 +109,7 @@ txSeqBlockBodyAlonzoL ::
   , BlockBody era ~ AlonzoBlockBody era
   , AlonzoEraTx era
   ) =>
-  Lens' (BlockBody era) (StrictSeq (Tx era))
+  Lens' (BlockBody era) (StrictSeq (Tx TopTx era))
 txSeqBlockBodyAlonzoL = lens abbTxs (\_ s -> AlonzoBlockBody s)
 {-# INLINEABLE txSeqBlockBodyAlonzoL #-}
 
@@ -118,7 +118,7 @@ pattern AlonzoBlockBody ::
   ( AlonzoEraTx era
   , SafeToHash (TxWits era)
   ) =>
-  StrictSeq (Tx era) ->
+  StrictSeq (Tx TopTx era) ->
   AlonzoBlockBody era
 pattern AlonzoBlockBody xs <-
   AlonzoBlockBodyInternal xs _ _ _ _ _
@@ -161,11 +161,11 @@ deriving via
      ]
     (AlonzoBlockBody era)
   instance
-    (Typeable era, NoThunks (Tx era)) => NoThunks (AlonzoBlockBody era)
+    (Typeable era, NoThunks (Tx TopTx era)) => NoThunks (AlonzoBlockBody era)
 
-deriving stock instance Show (Tx era) => Show (AlonzoBlockBody era)
+deriving stock instance Show (Tx TopTx era) => Show (AlonzoBlockBody era)
 
-deriving stock instance Eq (Tx era) => Eq (AlonzoBlockBody era)
+deriving stock instance Eq (Tx TopTx era) => Eq (AlonzoBlockBody era)
 
 --------------------------------------------------------------------------------
 -- Serialisation and hashing
@@ -207,7 +207,7 @@ hashAlonzoSegWits txSeqBodies txSeqWits txAuxData txSeqIsValids =
 instance
   ( AlonzoEraTx era
   , DecCBOR (Annotator (TxAuxData era))
-  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxBody TopTx era))
   , DecCBOR (Annotator (TxWits era))
   ) =>
   DecCBOR (Annotator (AlonzoBlockBody era))
@@ -258,7 +258,7 @@ instance
 -- | Given a sequence of transactions, return the indices of those which do not
 -- validate. We store the indices of the non-validating transactions because we
 -- expect this to be a much smaller set than the validating transactions.
-nonValidatingIndices :: AlonzoEraTx era => StrictSeq (Tx era) -> [Int]
+nonValidatingIndices :: AlonzoEraTx era => StrictSeq (Tx TopTx era) -> [Int]
 nonValidatingIndices (StrictSeq.fromStrict -> xs) =
   Seq.foldrWithIndex
     ( \idx tx acc ->
@@ -286,17 +286,17 @@ alignedValidFlags = alignedValidFlags' (-1)
 -- | Construct an annotated Alonzo style transaction.
 alonzoSegwitTx ::
   AlonzoEraTx era =>
-  Annotator (TxBody era) ->
+  Annotator (TxBody TopTx era) ->
   Annotator (TxWits era) ->
   IsValid ->
   Maybe (Annotator (TxAuxData era)) ->
-  Annotator (Tx era)
-alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes -> do
+  Annotator (Tx TopTx era)
+alonzoSegwitTx txBodyAnn txWitsAnn txIsValid txAuxDataAnn = Annotator $ \bytes -> do
   txBody <- runAnnotator txBodyAnn bytes
   txWits <- runAnnotator txWitsAnn bytes
-  txAuxData <- mapM (`runAnnotator` bytes) auxDataAnn
+  txAuxData <- mapM (`runAnnotator` bytes) txAuxDataAnn
   pure $
     mkBasicTx txBody
       & witsTxL .~ txWits
       & auxDataTxL .~ maybeToStrictMaybe txAuxData
-      & isValidTxL .~ isValid
+      & isValidTxL .~ txIsValid

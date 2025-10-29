@@ -350,12 +350,12 @@ transTxInInfoV3 utxo txIn = do
   Right (PV3.TxInInfo (transTxIn txIn) plutusTxOut)
 
 guardConwayFeaturesForPlutusV1V2 ::
-  forall era.
+  forall era l.
   ( EraTx era
   , ConwayEraTxBody era
   , Inject (ConwayContextError era) (ContextError era)
   ) =>
-  Tx era ->
+  Tx l era ->
   Either (ContextError era) ()
 guardConwayFeaturesForPlutusV1V2 tx = do
   let txBody = tx ^. bodyTxL
@@ -532,8 +532,8 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
 transTxId :: TxId -> PV3.TxId
 transTxId txId = PV3.TxId (transSafeHash (unTxId txId))
 
-transTxBodyId :: EraTxBody era => TxBody era -> PV3.TxId
-transTxBodyId txBody = PV3.TxId (transSafeHash (hashAnnotated txBody))
+transTxBodyId :: EraTxBody era => TxBody l era -> PV3.TxId
+transTxBodyId txBody = PV3.TxId (transSafeHash (hashAnnotated @_ @EraIndependentTxBody txBody))
 
 transTxIn :: TxIn -> PV3.TxOutRef
 transTxIn (TxIn txid txIx) = PV3.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
@@ -542,7 +542,7 @@ transMintValue :: MultiAsset -> PV3.MintValue
 transMintValue = PV3.UnsafeMintValue . PV1.getValue . Alonzo.transMultiAsset
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
-transTxBodyWithdrawals :: EraTxBody era => TxBody era -> PV3.Map PV3.Credential PV3.Lovelace
+transTxBodyWithdrawals :: EraTxBody era => TxBody l era -> PV3.Map PV3.Credential PV3.Lovelace
 transTxBodyWithdrawals txBody =
   transMap transRewardAccount transCoinToLovelace (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
 

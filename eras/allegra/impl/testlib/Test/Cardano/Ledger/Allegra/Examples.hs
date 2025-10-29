@@ -56,7 +56,7 @@ exampleAllegraTxBody ::
   , ShelleyEraTxBody era
   ) =>
   Value era ->
-  TxBody era
+  TxBody TopTx era
 exampleAllegraTxBody value =
   mkBasicTxBody
     & inputsTxBodyL .~ exampleTxIns

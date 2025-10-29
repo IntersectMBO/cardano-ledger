@@ -34,10 +34,10 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 
 instance TranslatableGen ConwayEra where
   tgRedeemers = genRedeemers
-  tgTx = fmap MkConwayTx . BabbageTranslatableGen.genTx @ConwayEra . genTxBody
+  tgTx = fmap MkConwayTx . BabbageTranslatableGen.genTx @ConwayEra . fmap asSTxTopLevel . genTxBody
   tgUtxo = BabbageTranslatableGen.utxoWithTx @ConwayEra
 
-genTxBody :: SupportedLanguage ConwayEra -> Gen (TxBody ConwayEra)
+genTxBody :: SupportedLanguage ConwayEra -> Gen (TxBody TopTx ConwayEra)
 genTxBody l@(SupportedLanguage slang) = do
   let lang = plutusLanguage slang
       genTxOuts =

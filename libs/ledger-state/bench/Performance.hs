@@ -43,6 +43,7 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys, extractKeysSmallSet)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
 import System.Environment (getEnv)
@@ -186,7 +187,7 @@ selectRandomMapKeys n gen m = runStateGenT_ gen $ \g ->
 extractKeysNaive :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
 extractKeysNaive sm s = (Map.withoutKeys sm s, Map.restrictKeys sm s)
 
-decodeTx :: HasCallStack => ByteString -> Tx CurrentEra
+decodeTx :: (HasCallStack, Typeable l) => ByteString -> Tx l CurrentEra
 decodeTx hex = either error id $ do
   bsl <- BSL16.decode hex
   tx <- first show $ decodeFullAnnotator (eraProtVerHigh @CurrentEra) "Tx" decCBOR bsl
@@ -197,7 +198,7 @@ decodeTx hex = either error id $ do
 --
 -- * One input with Shelley address without staking
 -- * One destination and change back to the address from original input.
-validatedTx1 :: Validated (Tx CurrentEra)
+validatedTx1 :: Validated (Tx TopTx CurrentEra)
 validatedTx1 =
   unsafeMakeValidated $
     decodeTx
@@ -215,7 +216,7 @@ validatedTx1 =
 --
 -- * One input with Shelley address /with/ staking address
 -- * One destination and change back to the address from original input.
-validatedTx2 :: Validated (Tx CurrentEra)
+validatedTx2 :: Validated (Tx TopTx CurrentEra)
 validatedTx2 =
   unsafeMakeValidated $
     decodeTx
@@ -234,7 +235,7 @@ validatedTx2 =
 --
 -- * One input with Shelley address /with/ staking address and some tokens
 -- * One destination and change back to the address from original input.
-validatedTx3 :: Validated (Tx CurrentEra)
+validatedTx3 :: Validated (Tx TopTx CurrentEra)
 validatedTx3 =
   unsafeMakeValidated $
     decodeTx

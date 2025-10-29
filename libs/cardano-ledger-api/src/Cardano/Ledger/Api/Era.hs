@@ -72,42 +72,47 @@ module Cardano.Ledger.Api.Era (
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (translateTimelock, upgradeMultiSig)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.TxBody (
+  AllegraEraTxBody (..),
+  AllegraTxBodyRaw (..),
+  ValidityInterval (..),
+ )
 import qualified Cardano.Ledger.Allegra.TxBody as Allegra (TxBody (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (appExtraEntropy), appD)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, upgradePlutusPurposeAsIx)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), AlonzoTxAuxDataRaw (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), TxBody (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxBodyRaw (..), TxBody (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (upgradeBabbagePParams)
 import Cardano.Ledger.Babbage.Tx
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBodyRaw (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), isSJust)
 import Cardano.Ledger.Binary (mkSized, unsafeMapSized)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
-import Cardano.Ledger.Conway.TxBody (TxBody (..))
+import Cardano.Ledger.Conway.TxBody (ConwayTxBodyRaw (..), TxBody (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCertUpgradeError)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts
-import Cardano.Ledger.Dijkstra.Tx (Tx (..))
+import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..), upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCertUpgradeError)
 import Cardano.Ledger.Internal.Era (EraHasName (..))
 import Cardano.Ledger.Keys (HasKeyRole (..))
 import Cardano.Ledger.Mary (MaryEra, TxBody (..))
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
-import Cardano.Ledger.MemoBytes (mkMemoizedEra)
+import Cardano.Ledger.MemoBytes (getMemoRawType, mkMemoizedEra)
 import Cardano.Ledger.Plutus.Data (upgradeData)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), ShelleyTxBodyRaw (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (left)
@@ -196,16 +201,16 @@ class
   -- Use `binaryUpgradeTx` instead, if you need to preserve the serialised form.
   upgradeTx ::
     EraTx (PreviousEra era) =>
-    Tx (PreviousEra era) ->
-    Either (TxUpgradeError era) (Tx era)
+    Tx l (PreviousEra era) ->
+    Either (TxUpgradeError era) (Tx l era)
 
   -- | Upgrade a transaction body from the previous era.
   -- /Warning/ - This may not preserve the underlying binary representation.
   -- Use `binaryUpgradeTxBody` instead, if you need to preserve the serialised form.
   upgradeTxBody ::
     EraTxBody (PreviousEra era) =>
-    TxBody (PreviousEra era) ->
-    Either (TxBodyUpgradeError era) (TxBody era)
+    TxBody l (PreviousEra era) ->
+    Either (TxBodyUpgradeError era) (TxBody l era)
 
   -- | Upgrade txAuxData from the previous era.
   -- /Warning/ - This may not preserve the underlying binary representation.
@@ -250,19 +255,21 @@ instance EraApi AllegraEra where
         <*> pure (upgradeTxWits txwits)
         <*> pure (fmap upgradeTxAuxData txAux)
 
-  upgradeTxBody txBody = do
-    certs <- traverse upgradeTxCert (txBody ^. certsTxBodyL)
-    pure $
-      Allegra.AllegraTxBody
-        { Allegra.atbInputs = txBody ^. inputsTxBodyL
-        , Allegra.atbOutputs = upgradeTxOut <$> (txBody ^. outputsTxBodyL)
-        , Allegra.atbCerts = certs
-        , Allegra.atbWithdrawals = txBody ^. withdrawalsTxBodyL
-        , Allegra.atbTxFee = txBody ^. feeTxBodyL
-        , Allegra.atbValidityInterval = ttlToValidityInterval (txBody ^. ttlTxBodyL)
-        , Allegra.atbUpdate = upgradeUpdate () <$> (txBody ^. updateTxBodyL)
-        , Allegra.atbAuxDataHash = txBody ^. auxDataHashTxBodyL
-        }
+  upgradeTxBody txBody =
+    case getMemoRawType txBody of
+      ShelleyTxBodyRaw {} -> do
+        certs <- traverse upgradeTxCert (txBody ^. certsTxBodyL)
+        pure . asSTxTopLevel $
+          Allegra.AllegraTxBody
+            { Allegra.atbInputs = txBody ^. inputsTxBodyL
+            , Allegra.atbOutputs = upgradeTxOut <$> (txBody ^. outputsTxBodyL)
+            , Allegra.atbCerts = certs
+            , Allegra.atbWithdrawals = txBody ^. withdrawalsTxBodyL
+            , Allegra.atbTxFee = txBody ^. feeTxBodyL
+            , Allegra.atbValidityInterval = ttlToValidityInterval (txBody ^. ttlTxBodyL)
+            , Allegra.atbUpdate = upgradeUpdate () <$> (txBody ^. updateTxBodyL)
+            , Allegra.atbAuxDataHash = txBody ^. auxDataHashTxBodyL
+            }
 
   upgradeTxAuxData (ShelleyTxAuxData md) = AllegraTxAuxData md mempty
 
@@ -285,20 +292,22 @@ instance EraApi MaryEra where
         <*> pure (upgradeTxWits txwits)
         <*> pure (fmap upgradeTxAuxData txAux)
 
-  upgradeTxBody atb = do
-    certs <- traverse upgradeTxCert (Allegra.atbCerts atb)
-    pure $
-      MaryTxBody
-        { mtbInputs = Allegra.atbInputs atb
-        , mtbOutputs = upgradeTxOut <$> Allegra.atbOutputs atb
-        , mtbCerts = certs
-        , mtbWithdrawals = Allegra.atbWithdrawals atb
-        , mtbTxFee = Allegra.atbTxFee atb
-        , mtbValidityInterval = Allegra.atbValidityInterval atb
-        , mtbUpdate = upgradeUpdate () <$> Allegra.atbUpdate atb
-        , mtbAuxDataHash = Allegra.atbAuxDataHash atb
-        , mtbMint = mempty
-        }
+  upgradeTxBody atb =
+    case getMemoRawType atb of
+      AllegraTxBodyRaw {} -> do
+        certs <- traverse upgradeTxCert (Allegra.atbCerts atb)
+        pure $
+          MaryTxBody
+            { mtbInputs = Allegra.atbInputs atb
+            , mtbOutputs = upgradeTxOut <$> Allegra.atbOutputs atb
+            , mtbCerts = certs
+            , mtbWithdrawals = Allegra.atbWithdrawals atb
+            , mtbTxFee = Allegra.atbTxFee atb
+            , mtbValidityInterval = Allegra.atbValidityInterval atb
+            , mtbUpdate = upgradeUpdate () <$> Allegra.atbUpdate atb
+            , mtbAuxDataHash = Allegra.atbAuxDataHash atb
+            , mtbMint = mempty
+            }
 
   upgradeTxAuxData (AllegraTxAuxData md scripts) = AllegraTxAuxData md $ upgradeScript <$> scripts
 
@@ -333,58 +342,60 @@ instance EraApi AlonzoEra where
         <*> pure (fmap upgradeTxAuxData aux)
 
   upgradeTxBody
-    MaryTxBody
-      { mtbInputs
-      , mtbOutputs
-      , mtbCerts
-      , mtbWithdrawals
-      , mtbTxFee
-      , mtbValidityInterval
-      , mtbUpdate
-      , mtbAuxDataHash
-      , mtbMint
-      } = do
-      certs <-
-        traverse
-          (left absurd . upgradeTxCert)
-          mtbCerts
+    txb =
+      case getMemoRawType txb of
+        AllegraTxBodyRaw
+          { atbrInputs
+          , atbrOutputs
+          , atbrCerts
+          , atbrWithdrawals
+          , atbrFee
+          , atbrValidityInterval
+          , atbrUpdate
+          , atbrAuxDataHash
+          , atbrMint
+          } -> do
+            certs <-
+              traverse
+                (left absurd . upgradeTxCert)
+                atbrCerts
 
-      updates <- traverse upgradeUpdateEither mtbUpdate
-      pure $
-        AlonzoTxBody
-          { atbInputs = mtbInputs
-          , atbOutputs = upgradeTxOut <$> mtbOutputs
-          , atbCerts = certs
-          , atbWithdrawals = mtbWithdrawals
-          , atbTxFee = mtbTxFee
-          , atbValidityInterval = mtbValidityInterval
-          , atbUpdate = updates
-          , atbAuxDataHash = mtbAuxDataHash
-          , atbMint = mtbMint
-          , atbCollateral = mempty
-          , atbReqSignerHashes = mempty
-          , atbScriptIntegrityHash = SNothing
-          , atbTxNetworkId = SNothing
-          }
-      where
-        upgradeUpdateEither ::
-          Update MaryEra ->
-          Either AlonzoTxBodyUpgradeError (Update AlonzoEra)
-        upgradeUpdateEither (Update pp epoch) =
-          Update <$> upgradeProposedPPUpdates pp <*> pure epoch
+            updates <- traverse upgradeUpdateEither atbrUpdate
+            pure $
+              AlonzoTxBody
+                { atbInputs = atbrInputs
+                , atbOutputs = upgradeTxOut <$> atbrOutputs
+                , atbCerts = certs
+                , atbWithdrawals = atbrWithdrawals
+                , atbTxFee = atbrFee
+                , atbValidityInterval = atbrValidityInterval
+                , atbUpdate = updates
+                , atbAuxDataHash = atbrAuxDataHash
+                , atbMint = atbrMint
+                , atbCollateral = mempty
+                , atbReqSignerHashes = mempty
+                , atbScriptIntegrityHash = SNothing
+                , atbTxNetworkId = SNothing
+                }
+            where
+              upgradeUpdateEither ::
+                Update MaryEra ->
+                Either AlonzoTxBodyUpgradeError (Update AlonzoEra)
+              upgradeUpdateEither (Update pp epoch) =
+                Update <$> upgradeProposedPPUpdates pp <*> pure epoch
 
-        upgradeProposedPPUpdates ::
-          ProposedPPUpdates MaryEra ->
-          Either AlonzoTxBodyUpgradeError (ProposedPPUpdates AlonzoEra)
-        upgradeProposedPPUpdates (ProposedPPUpdates m) =
-          ProposedPPUpdates
-            <$> traverse
-              ( \ppu -> do
-                  when (isSJust $ ppu ^. ppuMinUTxOValueL) $
-                    Left ATBUEMinUTxOUpdated
-                  pure $ upgradePParamsUpdate def ppu
-              )
-              m
+              upgradeProposedPPUpdates ::
+                ProposedPPUpdates MaryEra ->
+                Either AlonzoTxBodyUpgradeError (ProposedPPUpdates AlonzoEra)
+              upgradeProposedPPUpdates (ProposedPPUpdates m) =
+                ProposedPPUpdates
+                  <$> traverse
+                    ( \ppu -> do
+                        when (isSJust $ ppu ^. ppuMinUTxOValueL) $
+                          Left ATBUEMinUTxOUpdated
+                        pure $ upgradePParamsUpdate def ppu
+                    )
+                    m
 
   upgradeTxAuxData (AllegraTxAuxData md scripts) =
     mkMemoizedEra @AllegraEra $
@@ -458,57 +469,59 @@ instance EraApi BabbageEra where
         <*> pure valid
         <*> pure (fmap upgradeTxAuxData aux)
 
-  upgradeTxBody txBody = do
-    certs <-
-      traverse
-        (left absurd . upgradeTxCert)
-        (txBody ^. certsTxBodyL)
-    updates <- traverse upgradeUpdateEither (txBody ^. updateTxBodyL)
-    pure $
-      BabbageTxBody
-        { btbInputs = txBody ^. inputsTxBodyL
-        , btbOutputs =
-            mkSized (eraProtVerLow @BabbageEra) . upgradeTxOut <$> (txBody ^. outputsTxBodyL)
-        , btbCerts = certs
-        , btbWithdrawals = txBody ^. withdrawalsTxBodyL
-        , btbTxFee = txBody ^. feeTxBodyL
-        , btbValidityInterval = txBody ^. vldtTxBodyL
-        , btbUpdate = updates
-        , btbAuxDataHash = txBody ^. auxDataHashTxBodyL
-        , btbMint = txBody ^. mintTxBodyL
-        , btbCollateral = txBody ^. collateralInputsTxBodyL
-        , btbReqSignerHashes = txBody ^. reqSignerHashesTxBodyL
-        , btbScriptIntegrityHash = txBody ^. scriptIntegrityHashTxBodyL
-        , btbTxNetworkId = txBody ^. networkIdTxBodyL
-        , btbReferenceInputs = mempty
-        , btbCollateralReturn = SNothing
-        , btbTotalCollateral = SNothing
-        }
-    where
-      upgradeUpdateEither ::
-        Update AlonzoEra ->
-        Either BabbageTxBodyUpgradeError (Update BabbageEra)
-      upgradeUpdateEither (Update pp epoch) =
-        Update <$> upgradeProposedPPUpdates pp <*> pure epoch
+  upgradeTxBody txBody =
+    case getMemoRawType txBody of
+      AlonzoTxBodyRaw {} -> do
+        certs <-
+          traverse
+            (left absurd . upgradeTxCert)
+            (txBody ^. certsTxBodyL)
+        updates <- traverse upgradeUpdateEither (txBody ^. updateTxBodyL)
+        pure $
+          BabbageTxBody
+            { btbInputs = txBody ^. inputsTxBodyL
+            , btbOutputs =
+                mkSized (eraProtVerLow @BabbageEra) . upgradeTxOut <$> (txBody ^. outputsTxBodyL)
+            , btbCerts = certs
+            , btbWithdrawals = txBody ^. withdrawalsTxBodyL
+            , btbTxFee = txBody ^. feeTxBodyL
+            , btbValidityInterval = txBody ^. vldtTxBodyL
+            , btbUpdate = updates
+            , btbAuxDataHash = txBody ^. auxDataHashTxBodyL
+            , btbMint = txBody ^. mintTxBodyL
+            , btbCollateral = txBody ^. collateralInputsTxBodyL
+            , btbReqSignerHashes = txBody ^. reqSignerHashesTxBodyL
+            , btbScriptIntegrityHash = txBody ^. scriptIntegrityHashTxBodyL
+            , btbTxNetworkId = txBody ^. networkIdTxBodyL
+            , btbReferenceInputs = mempty
+            , btbCollateralReturn = SNothing
+            , btbTotalCollateral = SNothing
+            }
+        where
+          upgradeUpdateEither ::
+            Update AlonzoEra ->
+            Either BabbageTxBodyUpgradeError (Update BabbageEra)
+          upgradeUpdateEither (Update pp epoch) =
+            Update <$> upgradeProposedPPUpdates pp <*> pure epoch
 
-      -- Note that here we use 'upgradeBabbagePParams False' in order to
-      -- preserve 'CoinsPerUTxOWord', in spite of the value now being
-      -- semantically incorrect. Anything else will result in an invalid
-      -- transaction.
-      upgradeProposedPPUpdates ::
-        ProposedPPUpdates AlonzoEra ->
-        Either BabbageTxBodyUpgradeError (ProposedPPUpdates BabbageEra)
-      upgradeProposedPPUpdates (ProposedPPUpdates m) =
-        ProposedPPUpdates
-          <$> traverse
-            ( \(PParamsUpdate pphkd) -> do
-                when (isSJust $ appD pphkd) $
-                  Left BTBUEUpdatesD
-                when (isSJust $ appExtraEntropy pphkd) $
-                  Left BTBUEUpdatesExtraEntropy
-                pure . PParamsUpdate $ upgradeBabbagePParams False pphkd
-            )
-            m
+          -- Note that here we use 'upgradeBabbagePParams False' in order to
+          -- preserve 'CoinsPerUTxOWord', in spite of the value now being
+          -- semantically incorrect. Anything else will result in an invalid
+          -- transaction.
+          upgradeProposedPPUpdates ::
+            ProposedPPUpdates AlonzoEra ->
+            Either BabbageTxBodyUpgradeError (ProposedPPUpdates BabbageEra)
+          upgradeProposedPPUpdates (ProposedPPUpdates m) =
+            ProposedPPUpdates
+              <$> traverse
+                ( \(PParamsUpdate pphkd) -> do
+                    when (isSJust $ appD pphkd) $
+                      Left BTBUEUpdatesD
+                    when (isSJust $ appExtraEntropy pphkd) $
+                      Left BTBUEUpdatesExtraEntropy
+                    pure . PParamsUpdate $ upgradeBabbagePParams False pphkd
+                )
+                m
 
   upgradeTxAuxData = translateAlonzoTxAuxData
 
@@ -544,33 +557,35 @@ instance EraApi ConwayEra where
         <*> pure valid
         <*> pure (fmap upgradeTxAuxData aux)
 
-  upgradeTxBody btb = do
-    when (isSJust (btbUpdate btb)) $ Left CTBUEContainsUpdate
-    certs <- traverse (left CTBUETxCert . upgradeTxCert) (btbCerts btb)
-    let (duplicates, certsOSet) = OSet.fromStrictSeqDuplicates certs
-    unless (null duplicates) $ Left $ CTBUEContainsDuplicateCerts duplicates
-    pure $
-      ConwayTxBody
-        { ctbSpendInputs = btbInputs btb
-        , ctbOutputs = unsafeMapSized upgradeTxOut <$> btbOutputs btb
-        , ctbCerts = certsOSet
-        , ctbWithdrawals = btbWithdrawals btb
-        , ctbTxfee = btbTxFee btb
-        , ctbVldt = btbValidityInterval btb
-        , ctbAdHash = btbAuxDataHash btb
-        , ctbMint = btbMint btb
-        , ctbCollateralInputs = btbCollateral btb
-        , ctbReqSignerHashes = btbReqSignerHashes btb
-        , ctbScriptIntegrityHash = btbScriptIntegrityHash btb
-        , ctbTxNetworkId = btbTxNetworkId btb
-        , ctbReferenceInputs = btbReferenceInputs btb
-        , ctbCollateralReturn = unsafeMapSized upgradeTxOut <$> btbCollateralReturn btb
-        , ctbTotalCollateral = btbTotalCollateral btb
-        , ctbCurrentTreasuryValue = SNothing
-        , ctbProposalProcedures = OSet.empty
-        , ctbVotingProcedures = VotingProcedures mempty
-        , ctbTreasuryDonation = Coin 0
-        }
+  upgradeTxBody btb =
+    case getMemoRawType btb of
+      BabbageTxBodyRaw {} -> do
+        when (isSJust (btbUpdate btb)) $ Left CTBUEContainsUpdate
+        certs <- traverse (left CTBUETxCert . upgradeTxCert) (btbCerts btb)
+        let (duplicates, certsOSet) = OSet.fromStrictSeqDuplicates certs
+        unless (null duplicates) $ Left $ CTBUEContainsDuplicateCerts duplicates
+        pure $
+          ConwayTxBody
+            { ctbSpendInputs = btbInputs btb
+            , ctbOutputs = unsafeMapSized upgradeTxOut <$> btbOutputs btb
+            , ctbCerts = certsOSet
+            , ctbWithdrawals = btbWithdrawals btb
+            , ctbTxfee = btbTxFee btb
+            , ctbVldt = btbValidityInterval btb
+            , ctbAdHash = btbAuxDataHash btb
+            , ctbMint = btbMint btb
+            , ctbCollateralInputs = btbCollateral btb
+            , ctbReqSignerHashes = btbReqSignerHashes btb
+            , ctbScriptIntegrityHash = btbScriptIntegrityHash btb
+            , ctbTxNetworkId = btbTxNetworkId btb
+            , ctbReferenceInputs = btbReferenceInputs btb
+            , ctbCollateralReturn = unsafeMapSized upgradeTxOut <$> btbCollateralReturn btb
+            , ctbTotalCollateral = btbTotalCollateral btb
+            , ctbCurrentTreasuryValue = SNothing
+            , ctbProposalProcedures = OSet.empty
+            , ctbVotingProcedures = VotingProcedures mempty
+            , ctbTreasuryDonation = Coin 0
+            }
 
   upgradeTxAuxData = translateAlonzoTxAuxData
 
@@ -593,36 +608,38 @@ instance EraApi DijkstraEra where
   type TxBodyUpgradeError DijkstraEra = DijkstraTxBodyUpgradeError
   upgradeTx (MkConwayTx (AlonzoTx b w valid aux)) =
     fmap MkDijkstraTx $
-      AlonzoTx
+      DijkstraTx
         <$> upgradeTxBody b
         <*> pure (upgradeTxWits w)
         <*> pure valid
         <*> pure (fmap upgradeTxAuxData aux)
 
-  upgradeTxBody ConwayTxBody {..} = do
-    certs <- traverse (left DTBUETxCert . upgradeTxCert) $ OSet.toStrictSeq ctbCerts
-    pure $
-      DijkstraTxBody
-        { dtbSpendInputs = ctbSpendInputs
-        , dtbOutputs = unsafeMapSized upgradeTxOut <$> ctbOutputs
-        , dtbCerts = OSet.fromStrictSeq certs
-        , dtbWithdrawals = ctbWithdrawals
-        , dtbTxfee = ctbTxfee
-        , dtbVldt = ctbVldt
-        , dtbAdHash = ctbAdHash
-        , dtbMint = ctbMint
-        , dtbCollateralInputs = ctbCollateralInputs
-        , dtbGuards = OSet.fromSet $ Set.map (KeyHashObj . coerceKeyRole) ctbReqSignerHashes
-        , dtbScriptIntegrityHash = ctbScriptIntegrityHash
-        , dtbTxNetworkId = ctbTxNetworkId
-        , dtbReferenceInputs = ctbReferenceInputs
-        , dtbCollateralReturn = unsafeMapSized upgradeTxOut <$> ctbCollateralReturn
-        , dtbTotalCollateral = ctbTotalCollateral
-        , dtbCurrentTreasuryValue = ctbCurrentTreasuryValue
-        , dtbProposalProcedures = OSet.mapL upgradeProposals ctbProposalProcedures
-        , dtbVotingProcedures = coerce ctbVotingProcedures
-        , dtbTreasuryDonation = ctbTreasuryDonation
-        }
+  upgradeTxBody txBody =
+    case getMemoRawType txBody of
+      ConwayTxBodyRaw {..} -> do
+        certs <- traverse (left DTBUETxCert . upgradeTxCert) $ OSet.toStrictSeq ctbrCerts
+        pure $
+          DijkstraTxBody
+            { dtbSpendInputs = ctbrSpendInputs
+            , dtbOutputs = unsafeMapSized upgradeTxOut <$> ctbrOutputs
+            , dtbCerts = OSet.fromStrictSeq certs
+            , dtbWithdrawals = ctbrWithdrawals
+            , dtbTxfee = ctbrFee
+            , dtbVldt = ctbrVldt
+            , dtbAdHash = ctbrAuxDataHash
+            , dtbMint = ctbrMint
+            , dtbCollateralInputs = ctbrCollateralInputs
+            , dtbGuards = OSet.fromSet $ Set.map (KeyHashObj . coerceKeyRole) ctbrReqSignerHashes
+            , dtbScriptIntegrityHash = ctbrScriptIntegrityHash
+            , dtbTxNetworkId = ctbrNetworkId
+            , dtbReferenceInputs = ctbrReferenceInputs
+            , dtbCollateralReturn = unsafeMapSized upgradeTxOut <$> ctbrCollateralReturn
+            , dtbTotalCollateral = ctbrTotalCollateral
+            , dtbCurrentTreasuryValue = ctbrCurrentTreasuryValue
+            , dtbProposalProcedures = OSet.mapL upgradeProposals ctbrProposalProcedures
+            , dtbVotingProcedures = coerce ctbrVotingProcedures
+            , dtbTreasuryDonation = ctbrTreasuryDonation
+            }
 
   upgradeTxWits atw =
     AlonzoTxWits

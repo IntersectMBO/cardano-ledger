@@ -72,14 +72,14 @@ ledgerExamples =
     exampleTxConway
     exampleConwayGenesis
 
-exampleTxConway :: Tx ConwayEra
+exampleTxConway :: Tx TopTx ConwayEra
 exampleTxConway =
   exampleTx
     exampleTxBodyConway
     (ConwaySpending $ AsIx 0)
     (RequireAllOf @ConwayEra mempty)
 
-exampleTxBodyConway :: TxBody ConwayEra
+exampleTxBodyConway :: TxBody TopTx ConwayEra
 exampleTxBodyConway =
   ConwayTxBody
     (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]) -- spending inputs

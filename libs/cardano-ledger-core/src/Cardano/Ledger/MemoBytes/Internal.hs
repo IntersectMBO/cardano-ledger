@@ -57,7 +57,7 @@ module Cardano.Ledger.MemoBytes.Internal (
   eqRawType,
   getMemoRawBytes,
   lensMemoRawType,
-  getterMemoRawType,
+  memoRawTypeL,
 
   -- * MemoBytes MemPack instance definitions
   byteCountMemoBytes,
@@ -74,10 +74,11 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
   Decoder,
-  EncCBOR,
+  EncCBOR (..),
   Version,
   decodeAnnotated,
   decodeFullAnnotator,
+  encodePreEncoded,
   serialize,
   withSlice,
  )
@@ -163,6 +164,9 @@ deriving instance NFData t => NFData (MemoBytes t)
 
 instance Typeable t => Plain.ToCBOR (MemoBytes t) where
   toCBOR (MemoBytes _ bytes _hash) = Plain.encodePreEncoded (fromShort bytes)
+
+instance EncCBOR (MemoBytes t) where
+  encCBOR (MemoBytes _ bytes _hash) = encodePreEncoded (fromShort bytes)
 
 instance DecCBOR t => DecCBOR (MemoBytes t) where
   decCBOR = decodeMemoized decCBOR
@@ -333,14 +337,14 @@ lensMemoRawType getter setter =
   lens (getter . getMemoRawType) (\t b -> mkMemoizedEra @era $ setter (getMemoRawType t) b)
 {-# INLINEABLE lensMemoRawType #-}
 
--- | This is a helper SimpleGetter creator for any Memoized type
-getterMemoRawType ::
-  Memoized t =>
-  (RawType t -> a) ->
-  SimpleGetter t a
-getterMemoRawType getter =
-  to (getter . getMemoRawType)
-{-# INLINEABLE getterMemoRawType #-}
+memoRawTypeL ::
+  forall era t.
+  ( Era era
+  , EncCBOR (RawType t)
+  , Memoized t
+  ) =>
+  Lens' t (RawType t)
+memoRawTypeL = lensMemoRawType @era id (\_ x -> x)
 
 -- | Type class that implements equality on the Haskell type, ignoring any of the
 -- potentially memoized binary representation of the type.

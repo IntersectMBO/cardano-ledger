@@ -133,7 +133,7 @@ txb ::
   TxIn ->
   Maybe TxIn ->
   TxOut era ->
-  TxBody era
+  TxBody TopTx era
 txb i mRefInp o =
   mkBasicTxBody
     & inputsTxBodyL .~ Set.singleton i
@@ -146,10 +146,10 @@ txBare ::
   (EraTx era, BabbageEraTxBody era) =>
   TxIn ->
   TxOut era ->
-  Tx era
+  Tx TopTx era
 txBare i o = mkBasicTx (txb i Nothing o)
 
-txRefInput :: forall era. (EraTx era, BabbageEraTxBody era) => TxIn -> Tx era
+txRefInput :: forall era. (EraTx era, BabbageEraTxBody era) => TxIn -> Tx TopTx era
 txRefInput refInput = mkBasicTx (txb shelleyInput (Just refInput) shelleyOutput)
 
 hasReferenceInput :: SLanguage l -> PlutusTxInfo l -> Expectation
@@ -197,7 +197,7 @@ successfulTranslation ::
   , Value era ~ MaryValue
   ) =>
   SLanguage l ->
-  Tx era ->
+  Tx TopTx era ->
   (SLanguage l -> PlutusTxInfo l -> Expectation) ->
   Expectation
 successfulTranslation slang tx f =
@@ -221,7 +221,7 @@ expectTranslationError ::
   , Value era ~ MaryValue
   ) =>
   SLanguage l ->
-  Tx era ->
+  Tx TopTx era ->
   ContextError era ->
   Expectation
 expectTranslationError slang tx expected =
@@ -243,7 +243,7 @@ expectV1TranslationError ::
   , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
   ) =>
-  Tx era ->
+  Tx TopTx era ->
   ContextError era ->
   Expectation
 expectV1TranslationError = expectTranslationError SPlutusV1

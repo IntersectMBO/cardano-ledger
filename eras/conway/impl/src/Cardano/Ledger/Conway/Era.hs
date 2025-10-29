@@ -46,6 +46,9 @@ import Cardano.Ledger.Shelley.Rules (
 
 -- =====================================================
 
+instance EraTxLevel ConwayEra where
+  type STxLevel l ConwayEra = STxTopLevel l ConwayEra
+
 type instance Value ConwayEra = MaryValue
 
 -------------------------------------------------------------------------------

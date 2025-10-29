@@ -101,7 +101,7 @@ library
     cardano-ledger-babbage ^>=1.12,
     cardano-ledger-binary ^>=1.8,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.19,
-    cardano-ledger-mary ^>=1.9,
+    cardano-ledger-mary ^>=1.10,
     cardano-ledger-shelley ^>=1.18,
     cardano-slotting,
     cardano-strict-containers,
@@ -205,6 +205,7 @@ library testlib
     small-steps >=1.1,
     text,
     time,
+    tree-diff,
 
 executable huddle-cddl
   main-is: Main.hs
