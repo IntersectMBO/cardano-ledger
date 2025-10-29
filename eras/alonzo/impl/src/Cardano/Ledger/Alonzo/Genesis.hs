@@ -21,7 +21,7 @@ module Cardano.Ledger.Alonzo.Genesis (
     extraConfig,
     AlonzoGenesis,
     agCoinsPerUTxOWord,
-    agCostModels,
+    agPlutusV1CostModel,
     agPrices,
     agMaxTxExUnits,
     agMaxBlockExUnits,
@@ -38,25 +38,29 @@ import Cardano.Ledger.Alonzo.PParams (
   CoinPerWord,
   UpgradeAlonzoPParams (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices (..))
+import Cardano.Ledger.Alonzo.Scripts (
+  CostModel,
+  CostModels,
+  ExUnits (..),
+  Prices (..),
+  decodeCostModel,
+  decodeCostModelsLenient,
+  encodeCostModel,
+ )
 import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
-  DecCBOR,
-  EncCBOR,
+  DecCBOR (..),
+  EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
+  decodeNullMaybe,
+  encodeNullMaybe,
  )
-import Cardano.Ledger.Binary.Coders (
-  Decode (From, RecD),
-  Encode (Rec, To),
-  decode,
-  encode,
-  (!>),
-  (<!),
- )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis (..))
-import Cardano.Ledger.Plutus.CostModels (parseCostModels)
+import Cardano.Ledger.Plutus.CostModels (parseCostModelAsArray, parseCostModels)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -81,20 +85,38 @@ newtype AlonzoExtraConfig = AlonzoExtraConfig
   { aecCostModels :: Maybe CostModels
   }
   deriving (Eq)
-  deriving newtype (EncCBOR, DecCBOR, NFData, NoThunks, Show)
+  deriving newtype (NFData, NoThunks, Show)
+
+instance DecCBOR AlonzoExtraConfig
+
+instance EncCBOR AlonzoExtraConfig
+
+instance FromCBOR AlonzoExtraConfig where
+  fromCBOR =
+    eraDecoder @AlonzoEra $
+      decode $
+        RecD AlonzoExtraConfig
+          <! D (decodeNullMaybe decodeCostModelsLenient)
+
+instance ToCBOR AlonzoExtraConfig where
+  toCBOR x@(AlonzoExtraConfig _) =
+    let AlonzoExtraConfig {..} = x
+     in toEraCBOR @AlonzoEra . encode $
+          Rec AlonzoExtraConfig
+            !> E (encodeNullMaybe encCBOR) aecCostModels
 
 instance FromJSON AlonzoExtraConfig where
   parseJSON = Aeson.withObject "Extra Config" $ \o ->
     o .:? "costModels" >>= \case
       Nothing -> pure $ AlonzoExtraConfig Nothing
-      Just val -> AlonzoExtraConfig . Just <$> parseCostModels True [] val
+      Just val -> AlonzoExtraConfig . Just <$> parseCostModels True val
 
 instance ToJSON AlonzoExtraConfig where
   toJSON (AlonzoExtraConfig cms) = Aeson.object ["costModels" .= cms]
 
 pattern AlonzoGenesis ::
   CoinPerWord ->
-  CostModels ->
+  CostModel ->
   Prices ->
   ExUnits ->
   ExUnits ->
@@ -105,7 +127,7 @@ pattern AlonzoGenesis ::
   AlonzoGenesis
 pattern AlonzoGenesis
   { agCoinsPerUTxOWord
-  , agCostModels
+  , agPlutusV1CostModel
   , agPrices
   , agMaxTxExUnits
   , agMaxBlockExUnits
@@ -118,7 +140,7 @@ pattern AlonzoGenesis
     { unAlonzoGenesisWrapper =
       UpgradeAlonzoPParams
         { uappCoinsPerUTxOWord = agCoinsPerUTxOWord
-        , uappCostModels = agCostModels
+        , uappPlutusV1CostModel = agPlutusV1CostModel
         , uappPrices = agPrices
         , uappMaxTxExUnits = agMaxTxExUnits
         , uappMaxBlockExUnits = agMaxBlockExUnits
@@ -142,7 +164,7 @@ pattern AlonzoGenesis
         AlonzoGenesisWrapper
           ( UpgradeAlonzoPParams
               { uappCoinsPerUTxOWord = coinsPerUTxOWord_
-              , uappCostModels = costModels_
+              , uappPlutusV1CostModel = costModels_
               , uappPrices = prices_
               , uappMaxTxExUnits = maxTxExUnits_
               , uappMaxBlockExUnits = maxBlockExUnits_
@@ -169,7 +191,7 @@ instance FromCBOR AlonzoGenesis where
       decode $
         RecD AlonzoGenesis
           <! From
-          <! From
+          <! D (decodeCostModel PlutusV1)
           <! From
           <! From
           <! From
@@ -179,33 +201,24 @@ instance FromCBOR AlonzoGenesis where
           <! From
 
 instance ToCBOR AlonzoGenesis where
-  toCBOR
-    AlonzoGenesis
-      { agCoinsPerUTxOWord
-      , agCostModels
-      , agPrices
-      , agMaxTxExUnits
-      , agMaxBlockExUnits
-      , agMaxValSize
-      , agCollateralPercentage
-      , agMaxCollateralInputs
-      } =
-      toEraCBOR @AlonzoEra
-        . encode
-        $ Rec AlonzoGenesis
-          !> To agCoinsPerUTxOWord
-          !> To agCostModels
-          !> To agPrices
-          !> To agMaxTxExUnits
-          !> To agMaxBlockExUnits
-          !> To agMaxValSize
-          !> To agCollateralPercentage
-          !> To agMaxCollateralInputs
+  toCBOR x@(AlonzoGenesis _ _ _ _ _ _ _ _ _) =
+    let AlonzoGenesis {..} = x
+     in toEraCBOR @AlonzoEra . encode $
+          Rec AlonzoGenesis
+            !> To agCoinsPerUTxOWord
+            !> E encodeCostModel agPlutusV1CostModel
+            !> To agPrices
+            !> To agMaxTxExUnits
+            !> To agMaxBlockExUnits
+            !> To agMaxValSize
+            !> To agCollateralPercentage
+            !> To agMaxCollateralInputs
+            !> To agExtraConfig
 
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
     agCoinsPerUTxOWord <- o .: "lovelacePerUTxOWord"
-    agCostModels <- parseCostModels False =<< o .: "costModels"
+    agPlutusV1CostModel <- parseCostModelAsArray False PlutusV1 =<< o .: "plutusV1CostModel"
     agPrices <- o .: "executionPrices"
     agMaxTxExUnits <- o .: "maxTxExUnits"
     agMaxBlockExUnits <- o .: "maxBlockExUnits"
@@ -218,7 +231,7 @@ instance FromJSON AlonzoGenesis where
 instance ToKeyValuePairs AlonzoGenesis where
   toKeyValuePairs ag =
     [ "lovelacePerUTxOWord" .= agCoinsPerUTxOWord ag
-    , "costModels" .= agCostModels ag
+    , "plutusV1CostModel" .= agPlutusV1CostModel ag
     , "executionPrices" .= agPrices ag
     , "maxTxExUnits" .= agMaxTxExUnits ag
     , "maxBlockExUnits" .= agMaxBlockExUnits ag

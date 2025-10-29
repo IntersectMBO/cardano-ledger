@@ -367,19 +367,19 @@ expectedGenesis =
   AlonzoGenesis
     { agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
     , agPrices = Prices (fromJust $ boundRational 0.0577) (fromJust $ boundRational 0.0000721)
-    , agCostModels = expectedCostModels
+    , agPlutusV1CostModel = expectedCostModel
     , agMaxTxExUnits = ExUnits 10000000 10000000000
     , agMaxBlockExUnits = ExUnits 50000000 40000000000
     , agMaxValSize = 5000
     , agCollateralPercentage = 150
     , agMaxCollateralInputs = 3
-    , agExtraConfig = AlonzoExtraConfig Nothing
+    , agExtraConfig = AlonzoExtraConfig $ Just expectedCostModels
     }
 
 expectedCostModels :: CostModels
 expectedCostModels =
   mkCostModels
-    (Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)])
+    (Map.fromList [(PlutusV2, expectedCostModelV2)])
 
 expectedCostModel :: CostModel
 expectedCostModel =

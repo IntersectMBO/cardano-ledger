@@ -425,7 +425,7 @@ instance Arbitrary AlonzoGenesis where
   arbitrary =
     AlonzoGenesis
       <$> arbitrary
-      <*> genValidCostModels [PlutusV1, PlutusV2]
+      <*> genValidCostModel PlutusV1
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
