@@ -75,9 +75,6 @@ transaction =
       , a (auxiliary_data / VNil)
       ]
 
-protocol_version :: Named Group
-protocol_version = "protocol_version" =:~ grp [a $ major_protocol_version @AlonzoEra, a VUInt]
-
 transaction_body :: Rule
 transaction_body =
   comment
@@ -231,7 +228,7 @@ protocol_param_update =
         , opt (idx 11 ==> unit_interval)
         , opt (idx 12 ==> unit_interval)
         , opt (idx 13 ==> nonce)
-        , opt (idx 14 ==> arr [a protocol_version])
+        , opt (idx 14 ==> arr [a (protocol_version @AlonzoEra)])
         , opt (idx 16 ==> coin)
         , opt (idx 17 ==> coin)
         , opt (idx 18 ==> cost_models)
@@ -400,7 +397,7 @@ header_body =
         , "block_body_size" ==> VUInt
         , "block_body_hash" ==> hash32
         , a operational_cert
-        , a protocol_version
+        , a (protocol_version @AlonzoEra)
         ]
 
 native_script :: Rule

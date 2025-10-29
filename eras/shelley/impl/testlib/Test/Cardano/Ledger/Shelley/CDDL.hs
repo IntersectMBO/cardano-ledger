@@ -27,6 +27,7 @@ module Test.Cardano.Ledger.Shelley.CDDL (
   bootstrap_witness,
   script_hash,
   major_protocol_version,
+  protocol_version,
   genesis_hash,
   operational_cert,
   stake_registration,
@@ -99,7 +100,7 @@ operational_cert =
   "operational_cert"
     =:~ grp
       [ "hot_vkey" ==> kes_vkey
-      , "sequence_number" ==> VUInt
+      , "sequence_number" ==> (VUInt `sized` (8 :: Word64))
       , "kes_period" ==> VUInt
       , "sigma" ==> signature
       ]

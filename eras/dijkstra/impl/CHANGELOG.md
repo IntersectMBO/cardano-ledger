@@ -17,6 +17,7 @@
 
 ### `testlib`
 
+* Remove CDDL `protocol_version` redefinition
 * Add `impDijkstraSatisfyNativeScript`
 * Add `DijkstraEraTxBody` and `DijkstraEraScript` constraints to `DijkstraEraTest`
 

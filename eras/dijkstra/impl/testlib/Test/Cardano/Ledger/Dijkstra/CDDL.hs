@@ -105,11 +105,8 @@ header_body =
       , "block_body_size" ==> (VUInt `sized` (4 :: Word64))
       , "block_body_hash" ==> hash32
       , a operational_cert
-      , a protocol_version
+      , a (protocol_version @DijkstraEra)
       ]
-
-protocol_version :: Rule
-protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @DijkstraEra, a VUInt]
 
 transaction_body :: Rule
 transaction_body =

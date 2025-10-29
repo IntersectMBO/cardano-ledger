@@ -26,6 +26,7 @@
 
 ### `testlib`
 
+* Hide Shelley CDDL `protocol_version` and re-export a new one for Babbage
 * Use fixed-sized `uint .size 8` for `slot` and `block_number` in CDDL for header
 * Add `BabbageEraImp`
 * Removed `babbageEraSpecificSpec`

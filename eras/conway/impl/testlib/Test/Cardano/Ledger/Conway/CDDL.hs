@@ -175,11 +175,8 @@ header_body =
       , "block_body_size" ==> (VUInt `sized` (4 :: Word64))
       , "block_body_hash" ==> hash32
       , a operational_cert
-      , a protocol_version
+      , a (protocol_version @ConwayEra)
       ]
-
-protocol_version :: Rule
-protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @ConwayEra, a VUInt]
 
 transaction_body :: Rule
 transaction_body =
@@ -258,7 +255,7 @@ parameter_change_action =
 hard_fork_initiation_action :: Named Group
 hard_fork_initiation_action =
   "hard_fork_initiation_action"
-    =:~ grp [1, a $ gov_action_id / VNil, a protocol_version]
+    =:~ grp [1, a $ gov_action_id / VNil, a (protocol_version @ConwayEra)]
 
 treasury_withdrawals_action :: Named Group
 treasury_withdrawals_action =
