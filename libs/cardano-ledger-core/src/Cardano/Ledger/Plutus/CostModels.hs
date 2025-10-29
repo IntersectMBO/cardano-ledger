@@ -23,7 +23,6 @@ module Cardano.Ledger.Plutus.CostModels (
   costModelParamNames,
   costModelToMap,
   costModelFromMap,
-  costModelParamsCount,
   decodeCostModel,
   costModelInitParamNames,
   costModelInitParamCount,
@@ -307,19 +306,6 @@ decodeCostModels =
     decodeCostModelsLenient
     decodeCostModelsFailing
 {-# INLINEABLE decodeCostModels #-}
-
--- | Initial number of parameters in a CostModel for a specific language when the language was
--- introduced. Starting with Conway we support variable number of parameters, therefore
--- do not expect this number to reflect the reality on the number of supported parameters.
-costModelParamsCount :: Language -> Int
-costModelParamsCount PlutusV1 = 166
-costModelParamsCount PlutusV2 = 175
-costModelParamsCount PlutusV3 = 231
-costModelParamsCount PlutusV4 = 231
-{-# DEPRECATED
-  costModelParamsCount
-  "Deprecated in favor of `costModelInitParamCount`, since this function provided an incorrect value of 231 for PlutusV3, where it should have been 251"
-  #-}
 
 decodeCostModelLegacy :: Language -> Decoder s CostModel
 decodeCostModelLegacy lang = do

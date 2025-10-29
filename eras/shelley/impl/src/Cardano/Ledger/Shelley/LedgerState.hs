@@ -17,7 +17,7 @@ module Cardano.Ledger.Shelley.LedgerState (
 
   -- * Others to organize
   AccountState,
-  ChainAccountState (AccountState, asReserves, asTreasury),
+  ChainAccountState,
   EraCertState (..),
   DState (..),
   EpochState (..),
@@ -26,7 +26,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   InstantaneousRewards (..),
   LedgerState (..),
   PState (..),
-  RewardAccounts,
   RewardUpdate (..),
   RewardSnapShot (..),
   UTxOState (..),
@@ -82,18 +81,14 @@ module Cardano.Ledger.Shelley.LedgerState (
   nesRuL,
   nesStashedAVVMAddressesL,
   nesEpochStateL,
-  esAccountStateL,
   esSnapshotsL,
   esLStateL,
   esNonMyopicL,
   curPParamsEpochStateL,
   prevPParamsEpochStateL,
   futurePParamsEpochStateL,
-  asTreasuryL,
-  asReservesL,
   lsUTxOStateL,
   lsCertStateL,
-  utxosUtxoL,
   utxosDepositedL,
   utxosFeesL,
   utxosGovStateL,
@@ -103,7 +98,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   epochStateStakePoolsL,
   epochStateDonationL,
   newEpochStateGovStateL,
-  epochStateTreasuryL,
 
   -- * Lenses from CertState
   dsGenDelegsL,

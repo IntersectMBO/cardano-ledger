@@ -6,7 +6,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway (
-  Conway,
   ConwayEra,
   hardforkConwayBootstrapPhase,
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
@@ -34,10 +33,6 @@ import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Shelley.API
-
-type Conway = ConwayEra
-
-{-# DEPRECATED Conway "In favor of `ConwayEra`" #-}
 
 -- =====================================================
 

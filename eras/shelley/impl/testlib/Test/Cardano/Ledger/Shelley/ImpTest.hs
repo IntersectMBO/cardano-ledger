@@ -77,8 +77,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   expectStakeCredNotRegistered,
   expectDelegatedToPool,
   getRewardAccountFor,
-  getReward,
-  lookupReward,
   freshPoolParams,
   registerPool,
   registerPoolWithRewardAccount,
@@ -87,7 +85,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   lookupBalance,
   getAccountBalance,
   lookupAccountBalance,
-  getRewardAccountAmount,
   shelleyFixupTx,
   getImpRootTxOut,
   sendValueTo,
@@ -226,7 +223,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.Shelley.State hiding (balance)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
 import Cardano.Ledger.Tools (
@@ -915,10 +912,6 @@ runShelleyBase :: ShelleyBase a -> ImpTestM era a
 runShelleyBase act = do
   globals <- use impGlobalsL
   pure $ runIdentity $ runReaderT act globals
-
-getRewardAccountAmount :: (HasCallStack, EraCertState era) => RewardAccount -> ImpTestM era Coin
-getRewardAccountAmount = getAccountBalance
-{-# DEPRECATED getRewardAccountAmount "In favor of `getAccountBalance`" #-}
 
 lookupBalance :: EraCertState era => Credential 'Staking -> ImpTestM era (Maybe Coin)
 lookupBalance cred = do
@@ -1691,14 +1684,6 @@ registerRewardAccount ::
   ) =>
   ImpTestM era RewardAccount
 registerRewardAccount = freshKeyHash >>= registerStakeCredential . KeyHashObj
-
-lookupReward :: EraCertState era => Credential 'Staking -> ImpTestM era (Maybe Coin)
-lookupReward = lookupBalance
-{-# DEPRECATED lookupReward "In favor of `lookupBalance`" #-}
-
-getReward :: (HasCallStack, EraCertState era) => Credential 'Staking -> ImpTestM era Coin
-getReward = getBalance
-{-# DEPRECATED getReward "In favor of `getBalance`" #-}
 
 freshPoolParams ::
   ShelleyEraImp era =>

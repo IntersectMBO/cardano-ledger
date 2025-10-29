@@ -62,16 +62,13 @@ module Cardano.Ledger.BaseTypes (
   TxIx (..),
   txIxToInt,
   txIxFromIntegral,
-  mkTxIx,
   mkTxIxPartial,
   CertIx (..),
   certIxToInt,
   certIxFromIntegral,
-  mkCertIx,
   mkCertIxPartial,
   Anchor (..),
   AnchorData (..),
-  hashAnchorData,
 
   -- * STS Base
   Globals (..),
@@ -126,7 +123,7 @@ import Cardano.Ledger.Binary.Plain (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain (decodeRationalWithTag, encodeRatioWithTag)
 import Cardano.Ledger.Binary.Version
-import Cardano.Ledger.Hashes (HashAnnotated (hashAnnotated), SafeHash, SafeToHash)
+import Cardano.Ledger.Hashes (HashAnnotated, SafeHash, SafeToHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
@@ -836,11 +833,6 @@ instance Uniform TxIx where
 instance UniformRange TxIx where
   uniformRM r g = TxIx <$> uniformRM (coerce r) g
 
--- | Construct a `TxIx` from a 16 bit unsigned integer
-mkTxIx :: Word16 -> TxIx
-mkTxIx = TxIx . fromIntegral
-{-# DEPRECATED mkTxIx "In favor of `TxIx`" #-}
-
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
 
@@ -872,11 +864,6 @@ instance UniformRange CertIx where
   isInRange = isInRangeOrd
 #endif
 
--- | Construct a `CertIx` from a 16 bit unsigned integer
-mkCertIx :: Word16 -> CertIx
-mkCertIx = CertIx . fromIntegral
-{-# DEPRECATED mkCertIx "In favor of `CertIx`" #-}
-
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16
 
@@ -898,11 +885,6 @@ newtype AnchorData = AnchorData ByteString
   deriving newtype (SafeToHash)
 
 instance HashAnnotated AnchorData AnchorData
-
--- | Hash `AnchorData`
-hashAnchorData :: AnchorData -> SafeHash AnchorData
-hashAnchorData = hashAnnotated
-{-# DEPRECATED hashAnchorData "In favor of `hashAnnotated`" #-}
 
 data Anchor = Anchor
   { anchorUrl :: !Url

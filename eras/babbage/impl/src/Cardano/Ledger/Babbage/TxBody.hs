@@ -57,9 +57,6 @@ module Cardano.Ledger.Babbage.TxBody (
   getEitherAddrBabbageTxOut,
   EraIndependentScriptIntegrity,
   ScriptIntegrityHash,
-  txOutData,
-  txOutDataHash,
-  txOutScript,
 ) where
 
 import Cardano.Ledger.Alonzo.Core

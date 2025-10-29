@@ -39,10 +39,10 @@ import Cardano.Ledger.Conway.Core (
   pattern SpendingPurpose,
  )
 import Cardano.Ledger.Core (EraScript (..), EraTx (..), EraTxBody (..), EraTxWits (..), hashScript)
+import Cardano.Ledger.Hashes (hashAnnotated)
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
 import Cardano.Ledger.Tools (estimateMinFeeTx)
 import qualified Data.Map.Strict as Map

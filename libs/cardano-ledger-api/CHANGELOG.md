@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Remove deprecated function `queryCommitteeState`
 * Add `TxLevel` argument to `Tx` and `TxBody`
 * Add `EraTxLevel` instance
 * Add `AnyEraScript`

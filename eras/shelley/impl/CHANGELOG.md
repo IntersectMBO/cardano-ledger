@@ -2,6 +2,16 @@
 
 ## 1.18.0.0
 
+* Remove deprecated function `getPoolParameters`
+* Remove deprecated function `toShelleyGenesisPairs`
+* Remove deprecated type `RewardAccounts`
+* Remove deprecated lenses `esAccountStateL`, `asTreasuryL`, `asReservesL`, `utxosUtxoL`, `epochStateTreasuryL`
+* Remove deprecated type `PPUpdateEnv`
+* Remove deprecated function `toShelleyTransitionConfigPairs`
+* Remove deprecated function `hashShelleyTxAuxData`
+* Remove deprecated function `addrWits'`
+* Remove deprecated type `Shelley`
+* Remove deprecated module `Cardano.Ledger.Shelley.BlockChain`
 * Change state of `ShelleyDELEG` rule from `DState` to `CertState`
 * Add `EraCertState` constraint to `STS` instance for `ShelleyDELEG`
 * Add `TxLevel` argument to `Tx` and `TxBody`
@@ -20,6 +30,10 @@
 
 ### `testlib`
 
+* Remove deprecated module `Test.Cardano.Ledger.Shelley.Generator.Constants`
+* Remove deprecated module `Test.Cardano.Ledger.Shelley.Generator.Delegation`
+* Remove deprecated module `Test.Cardano.Ledger.Shelley.Generator.Trace.DCert`
+* Remove deprecated functions `getReward`, `lookupReward`, `getRewardAccountAmount`
 * Correct the CDDL definition of the `sequence_number` to be sized
 * Export polymorphic CDDL definition for `protocol_version`
 * Move CDDL definition for `nonce`, `epoch`, `slot` and `block_number` to core

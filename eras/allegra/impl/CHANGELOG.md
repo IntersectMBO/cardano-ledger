@@ -2,6 +2,8 @@
 
 ## 1.9.0.0
 
+* Remove deprecated type `Allegra`
+* Remove deprecated type `TimelockConstr`
 * Add `invalidBeforeL`, `invalidHereAfterL`
 * Add `basicAllegraTxBody`
 * Add `TxLevel` argument to `Tx` and `TxBody`

@@ -68,7 +68,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Era (ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance.Internal
 import Cardano.Ledger.Conway.Governance.Procedures (GovActionState)
-import Cardano.Ledger.Conway.State hiding (balance)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Control.DeepSeq (NFData (..), deepseq)

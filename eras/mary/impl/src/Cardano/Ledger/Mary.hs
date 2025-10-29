@@ -6,7 +6,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary (
-  Mary,
   MaryEra,
   ShelleyTx,
   ShelleyTxOut,
@@ -29,10 +28,6 @@ import Cardano.Ledger.Mary.TxBody (TxBody (..))
 import Cardano.Ledger.Mary.UTxO ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.API
-
-type Mary = MaryEra
-
-{-# DEPRECATED Mary "In favor of `MaryEra`" #-}
 
 instance ApplyTx MaryEra where
   applyTxValidation = ruleApplyTxValidation @"LEDGER"

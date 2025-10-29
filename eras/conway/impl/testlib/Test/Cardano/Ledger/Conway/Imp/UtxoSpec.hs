@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
-import Cardano.Ledger.State hiding (balance)
+import Cardano.Ledger.State
 import Cardano.Ledger.Val
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence.Strict as SSeq

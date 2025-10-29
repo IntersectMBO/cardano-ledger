@@ -16,7 +16,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.Arbitrary (
-  mkPlutusScript',
   alwaysSucceeds,
   alwaysSucceedsLang,
   alwaysFails,
@@ -84,12 +83,9 @@ import Cardano.Ledger.Plutus.Data (hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (
   Language (..),
-  Plutus (..),
-  PlutusLanguage,
   asSLanguage,
  )
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
-import Control.Monad.Trans.Fail (runFail)
 import Data.Functor.Identity (Identity)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE (toList)
@@ -466,15 +462,6 @@ alwaysFailsLang ::
 alwaysFailsLang supportedLanguage n =
   case supportedLanguage of
     SupportedLanguage slang -> mkSupportedPlutusScript $ asSLanguage slang (alwaysFailsPlutus n)
-
--- | Partial version of `mkPlutusScript`
-mkPlutusScript' ::
-  forall era l.
-  (HasCallStack, AlonzoEraScript era, PlutusLanguage l) =>
-  Plutus l ->
-  Script era
-mkPlutusScript' = either error fromPlutusScript . runFail . mkPlutusScript
-{-# DEPRECATED mkPlutusScript' "In favor of `fromPlutusScript` . `mkSupportedPlutusScript`" #-}
 
 instance Arbitrary (TransitionConfig AlonzoEra) where
   arbitrary = AlonzoTransitionConfig <$> arbitrary <*> arbitrary

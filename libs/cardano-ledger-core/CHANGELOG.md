@@ -2,6 +2,26 @@
 
 ## 1.19.0.0
 
+* Remove deprecated function `addrPtrNormalize`
+* Remove deprecated functions `mkTxIx`, `mkCertIx`, `hashAnchorData`
+* Remove deprecated functions `bheader`, `bbody`
+* Remove deprecated methods `fromTxSeq`, `toTxSeq`, `hashTxSeq` from `EraBlockBody` typeclass
+* Remove deprecated function `normalizePtr`
+* Remove deprecated functions `hashSignature`, `hashVerKeyVRF`
+* Remove deprecated types `Hash`, `SignedDSIGN`, `SignKeyDSIGN`, `KESignable`, `SignedKES`, `SignKeyKES`, `VerKeyKES`, `VRFSignable`, `CertifiedVRF`, `SignKeyVRF`, `VerKeyVRF`
+* Remove deprecated function `wvSig`
+* Remove deprecated functions `shorten`, `showMemo`, `printMemo`
+* Remove deprecated function `costModelParamsCount`
+* Remove deprecated type `AccountState` and its accessors `asTreasury` and `asReserves`
+* Remove deprecated functions `balance`, `coinBalance`
+* Remove deprecated module `Cardano.Ledger.AuxiliaryData`
+* Remove deprecated modules `Cardano.Ledger.Crypto` `Cardano.Ledger.Crypto.Internal`
+  - Their content has moved to `Cardano.Protocol.Crypto` in the `cardano-protocol-tpraos` package
+* Remove deprecated module `Cardano.Ledger.EpochBoundary`
+* Remove deprecated module `Cardano.Ledger.PoolDistr`
+* Remove deprecated module `Cardano.Ledger.PoolParams`
+* Remove deprecated module `Cardano.Ledger.SafeHash`
+* Remove deprecated module `Cardano.Ledger.UTxO`
 * Add `unDelegReDelegStakePool` to `CertState` module
 * Add `iRReservesL`, `iRTreasuryL`, `iRDeltaReservesL`, `iRDeltaTreasuryL`
 * Add `spsDelegators` field to `StakePool`
@@ -26,6 +46,8 @@
 
 ### `testlib`
 
+* Remove deprecated generators `genAddrBadPtr`, `genCompactAddrBadPtr`, `genBadPtr`
+* Remove deprecated functions `mkCred`, `mkScriptAddr`
 * Add CDDL definition for `nonce`, `epoch`, `epoch_interval`, `slot` and `block_number`
 * Remove `Test.Cardano.Ledger.Plutus.ExUnits`
 * Remove the `accountsToUMap` member function from the `EraTest` class.
