@@ -23,7 +23,7 @@ language = 0/ 1/ 2
 
 potential_languages = 0 .. 255
 
-signkeyKES = bytes .size 64
+signkey_kes = bytes .size 64
 
 certificate = 
   [  stake_registration
@@ -228,9 +228,9 @@ hash28 = bytes .size 28
 
 asset_name = bytes .size (0 .. 32)
 
-positive_coin = 1 .. maxWord64
+positive_coin = 1 .. max_word64
 
-maxWord64 = 18446744073709551615
+max_word64 = 18446744073709551615
 
 ; NEW starting with babbage
 ;   datum_option
@@ -311,7 +311,11 @@ script_any = (2, [* native_script])
 
 script_n_of_k = (3, n : int64, [* native_script])
 
-int64 = -9223372036854775808 .. 9223372036854775807
+int64 = min_int64 .. max_int64
+
+min_int64 = -9223372036854775808
+
+max_int64 = 9223372036854775807
 
 invalid_before = (4, slot_no)
 
@@ -327,11 +331,11 @@ credential = [0, addr_keyhash// 1, script_hash]
 ; around for tests in order to avoid generating duplicates, since
 ; the cddl tool we use for roundtrip testing doesn't generate
 ; distinct collections.
-plutus_v1_script = distinct_VBytes
+plutus_v1_script = distinct_bytes
 
 ; A type for distinct values.
 ; The type parameter must support .size, for example: bytes or uint
-distinct_VBytes = 
+distinct_bytes = 
   bytes .size 8 
   / bytes .size 16
   / bytes .size 20
@@ -339,11 +343,11 @@ distinct_VBytes =
   / bytes .size 30
   / bytes .size 32
 
-plutus_v2_script = distinct_VBytes
+plutus_v2_script = distinct_bytes
 
-plutus_v3_script = distinct_VBytes
+plutus_v3_script = distinct_bytes
 
-plutus_v4_script = distinct_VBytes
+plutus_v4_script = distinct_bytes
 
 certificates = nonempty_oset<certificate>
 
@@ -431,13 +435,13 @@ withdrawals = {+ reward_account => coin}
 
 auxiliary_data_hash = hash32
 
-mint = {+ policy_id => {+ asset_name => nonZeroInt64}}
+mint = {+ policy_id => {+ asset_name => nonzero_int64}}
 
-nonZeroInt64 = negInt64/ posInt64
+nonzero_int64 = negative_int64/ positive_int64
 
-negInt64 = -9223372036854775808 .. -1
+negative_int64 = min_int64 .. -1
 
-posInt64 = 1 .. 9223372036854775807
+positive_int64 = 1 .. max_int64
 
 ; This is a hash of data which may affect evaluation of a script.
 ; This data consists of:
@@ -587,7 +591,7 @@ protocol_param_update =
   , ? 33 : nonnegative_interval   ; minfee refScript coins per byte
   , ? 34 : uint .size 4           ; max refScript size per block
   , ? 35 : uint .size 4           ; max refScript size per tx
-  , ? 36 : posWord32              ; refScript cost stride
+  , ? 36 : positive_word32        ; refScript cost stride
   , ? 37 : positive_interval      ; refScript cost multiplier
   }
 
@@ -596,7 +600,7 @@ epoch_interval = uint .size 4
 
 nonnegative_interval = #6.30([uint, positive_int])
 
-positive_int = 1 .. maxWord64
+positive_int = 1 .. max_word64
 
 ; The format for cost_models is flexible enough to allow adding
 ; Plutus built-ins and language versions in the future.
@@ -637,9 +641,9 @@ drep_voting_thresholds =
   ]
 
 
-posWord32 = 1 .. maxWord32
+positive_word32 = 1 .. max_word32
 
-maxWord32 = 4294967295
+max_word32 = 4294967295
 
 positive_interval = #6.30([positive_int, positive_int])
 

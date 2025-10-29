@@ -1,30 +1,92 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 {- HLINT ignore "Use camelCase" -}
 {- HLINT ignore "Evaluate" -}
 
-module Test.Cardano.Ledger.Core.Binary.CDDL where
+module Test.Cardano.Ledger.Core.Binary.CDDL (
+  -- * Base sized bytes
+  hash28,
+  hash32,
+  hash64,
+  bytes80,
+
+  -- * Numbers
+  big_int,
+  min_int64,
+  max_int64,
+  negative_int64,
+  positive_int64,
+  nonzero_int64,
+  int64,
+  positive_int,
+  max_word32,
+  positive_word32,
+
+  -- * Unit intervals
+  unit_interval,
+  nonnegative_interval,
+
+  -- * Distinct uint/bytes, bounded bytes
+  distinct,
+  bounded_bytes,
+
+  -- * Sets
+  untagged_set,
+  untagged_nonempty_set,
+
+  -- * Network
+
+  -- * Hashes, keys and certificates
+  addr_keyhash,
+  pool_keyhash,
+  vrf_keyhash,
+  vkey,
+  vrf_vkey,
+  vrf_cert,
+  kes_vkey,
+  kes_signature,
+  signkey_kes,
+  signature,
+
+  -- * Value
+  coin,
+  positive_coin,
+
+  -- * Addresses and accounts
+  address,
+  reward_account,
+
+  -- * Protocol version
+
+  -- * Transactions
+
+  -- * Misc.
+) where
 
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Semigroup ((<>))
 import qualified Data.Text as T
 import Data.Word (Word64)
+import GHC.Base (error)
 import GHC.Show (Show (show))
 import Text.Heredoc
 import Prelude (Integer)
 
---------------------------------------------------------------------------------
--- Base Types
---------------------------------------------------------------------------------
 coin :: Rule
 coin = "coin" =:= VUInt
 
 positive_coin :: Rule
-positive_coin = "positive_coin" =:= (1 :: Integer) ... maxWord64
+positive_coin = "positive_coin" =:= (1 :: Integer) ... max_word64
 
 address :: Rule
 address =
@@ -94,15 +156,20 @@ pool_keyhash = "pool_keyhash" =:= hash28
 vrf_keyhash :: Rule
 vrf_keyhash = "vrf_keyhash" =:= hash32
 
---------------------------------------------------------------------------------
--- Crypto
---------------------------------------------------------------------------------
+mkHashSized :: Word64 -> Rule
+mkHashSized size = "hash" <> T.pack (show size) =:= VBytes `sized` size
 
 hash28 :: Rule
-hash28 = "hash28" =:= VBytes `sized` (28 :: Word64)
+hash28 = mkHashSized 28
 
 hash32 :: Rule
-hash32 = "hash32" =:= VBytes `sized` (32 :: Word64)
+hash32 = mkHashSized 32
+
+hash64 :: Rule
+hash64 = mkHashSized 64
+
+bytes80 :: Rule
+bytes80 = "bytes80" =:= VBytes `sized` (80 :: Word64)
 
 vkey :: Rule
 vkey = "vkey" =:= VBytes `sized` (32 :: Word64)
@@ -119,8 +186,8 @@ kes_vkey = "kes_vkey" =:= VBytes `sized` (32 :: Word64)
 kes_signature :: Rule
 kes_signature = "kes_signature" =:= VBytes `sized` (448 :: Word64)
 
-signkeyKES :: Rule
-signkeyKES = "signkeyKES" =:= VBytes `sized` (64 :: Word64)
+signkey_kes :: Rule
+signkey_kes = "signkey_kes" =:= VBytes `sized` (64 :: Word64)
 
 signature :: Rule
 signature = "signature" =:= VBytes `sized` (64 :: Word64)
@@ -138,46 +205,36 @@ big_uint = "big_uint" =:= tag 2 bounded_bytes
 big_nint :: Rule
 big_nint = "big_nint" =:= tag 3 bounded_bytes
 
--- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
--- with:
---
--- minInt64 :: Rule
--- minInt64 = "minInt64" =:= -9223372036854775808
-minInt64 :: Integer
-minInt64 = -9223372036854775808
+min_int64 :: Rule
+min_int64 = "min_int64" =:= (-9223372036854775808 :: Integer)
 
--- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
--- with:
---
--- maxInt64 :: Rule
--- maxInt64 = "maxInt64" =:= 9223372036854775807
-maxInt64 :: Integer
-maxInt64 = 9223372036854775807
+max_int64 :: Rule
+max_int64 = "max_int64" =:= (9223372036854775807 :: Integer)
 
-maxWord64 :: Rule
-maxWord64 = "maxWord64" =:= (18446744073709551615 :: Integer)
+max_word64 :: Rule
+max_word64 = "max_word64" =:= (18446744073709551615 :: Integer)
 
-negInt64 :: Rule
-negInt64 = "negInt64" =:= minInt64 ... (-1 :: Integer)
+negative_int64 :: Rule
+negative_int64 = "negative_int64" =:= min_int64 ... (-1 :: Integer)
 
-posInt64 :: Rule
-posInt64 = "posInt64" =:= (1 :: Integer) ... maxInt64
+positive_int64 :: Rule
+positive_int64 = "positive_int64" =:= (1 :: Integer) ... max_int64
 
 -- | this is the same as the current int64 definition but without zero
-nonZeroInt64 :: Rule
-nonZeroInt64 = "nonZeroInt64" =:= negInt64 / posInt64
+nonzero_int64 :: Rule
+nonzero_int64 = "nonzero_int64" =:= negative_int64 / positive_int64
 
 int64 :: Rule
-int64 = "int64" =:= minInt64 ... maxInt64
+int64 = "int64" =:= min_int64 ... max_int64
 
 positive_int :: Rule
-positive_int = "positive_int" =:= (1 :: Integer) ... maxWord64
+positive_int = "positive_int" =:= (1 :: Integer) ... max_word64
 
-maxWord32 :: Rule
-maxWord32 = "maxWord32" =:= (4294967295 :: Integer)
+max_word32 :: Rule
+max_word32 = "max_word32" =:= (4294967295 :: Integer)
 
-posWord32 :: Rule
-posWord32 = "posWord32" =:= (1 :: Integer) ... maxWord32
+positive_word32 :: Rule
+positive_word32 = "positive_word32" =:= (1 :: Integer) ... max_word32
 
 unit_interval :: Rule
 unit_interval =
@@ -226,10 +283,38 @@ distinct x =
         |The type parameter must support .size, for example: bytes or uint
         |]
     $ "distinct_"
-      <> T.pack (show x)
+      <> show' x
         =:= (x `sized` (8 :: Word64))
         / (x `sized` (16 :: Word64))
         / (x `sized` (20 :: Word64))
         / (x `sized` (24 :: Word64))
         / (x `sized` (30 :: Word64))
         / (x `sized` (32 :: Word64))
+  where
+    show' :: Value s -> T.Text
+    show' = \case
+      VBytes -> T.pack "bytes"
+      VUInt -> T.pack "uint"
+      _ -> error "Unsupported Value for `distinct`"
+
+untagged_set :: IsType0 a => a -> GRuleCall
+untagged_set = binding $ \x -> "set" =:= arr [0 <+ a x]
+
+untagged_nonempty_set :: IsType0 a => a -> GRuleCall
+untagged_nonempty_set = binding $ \x -> "nonempty_set" =:= arr [1 <+ a x]
+
+-- | The era after dijkstra enforces the 258 tag for sets.
+mkTaggedSet :: IsType0 a => T.Text -> Word64 -> a -> GRuleCall
+mkTaggedSet label n = binding $ \x -> label =:= tag 258 (arr [n <+ a x])
+
+_tagged_set :: IsType0 a => a -> GRuleCall
+_tagged_set = mkTaggedSet "set" 0
+
+_tagged_nonempty_set :: IsType0 a => a -> GRuleCall
+_tagged_nonempty_set = mkTaggedSet "nonempty_set" 1
+
+_tagged_oset :: IsType0 a => a -> GRuleCall
+_tagged_oset = mkTaggedSet "oset" 0
+
+_tagged_nonempty_oset :: IsType0 a => a -> GRuleCall
+_tagged_nonempty_oset = mkTaggedSet "nonempty_oset" 1

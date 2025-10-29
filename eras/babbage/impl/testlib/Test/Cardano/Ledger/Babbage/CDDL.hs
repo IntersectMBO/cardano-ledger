@@ -10,32 +10,17 @@
 
 module Test.Cardano.Ledger.Babbage.CDDL (
   module Test.Cardano.Ledger.Alonzo.CDDL,
-  module Test.Cardano.Ledger.Babbage.CDDL,
+  babbageCDDL,
+  operational_cert,
+  babbage_transaction_output,
+  plutus_data,
 ) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Codec.CBOR.Cuddle.Huddle
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Alonzo.CDDL hiding (
-  auxiliary_data,
-  block,
-  cost_models,
-  header,
-  header_body,
-  language,
   operational_cert,
-  plutus_data,
-  plutus_script,
-  proposed_protocol_parameter_updates,
-  protocol_param_update,
-  protocol_version,
-  script_data_hash,
-  script_n_of_k,
-  transaction,
-  transaction_body,
-  transaction_output,
-  transaction_witness_set,
-  update,
  )
 import Text.Heredoc
 import Prelude hiding ((/))
@@ -47,7 +32,7 @@ babbageCDDL =
     , HIRule transaction
     , HIRule kes_signature
     , HIRule language
-    , HIRule signkeyKES
+    , HIRule signkey_kes
     ]
 
 block :: Rule
@@ -128,7 +113,7 @@ transaction_body =
         |]
     $ "transaction_body"
       =:= mp
-        [ idx 0 ==> set transaction_input
+        [ idx 0 ==> untagged_set transaction_input
         , idx 1 ==> arr [0 <+ a transaction_output]
         , idx 2 ==> coin
         , opt (idx 3 ==> VUInt)
@@ -139,12 +124,12 @@ transaction_body =
         , opt (idx 8 ==> VUInt)
         , opt (idx 9 ==> mint)
         , opt (idx 11 ==> script_data_hash)
-        , opt (idx 13 ==> set transaction_input)
+        , opt (idx 13 ==> untagged_set transaction_input)
         , opt (idx 14 ==> required_signers)
         , opt (idx 15 ==> network_id)
         , opt (idx 16 ==> transaction_output)
         , opt (idx 17 ==> coin)
-        , opt (idx 18 ==> set transaction_input)
+        , opt (idx 18 ==> untagged_set transaction_input)
         ]
 
 -- TODO: Allow for adding to the comments of a Rule in order to not have to
