@@ -31,4 +31,4 @@ main =
         txInfoSpec @DijkstraEra SPlutusV3
         txInfoSpec @DijkstraEra SPlutusV4
       describe "Golden" $ do
-        Golden.goldenListRedeemersDisallowed @DijkstraEra
+        Golden.spec @DijkstraEra
