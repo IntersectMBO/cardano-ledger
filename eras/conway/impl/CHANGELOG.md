@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Add `unDelegReDelegDRep` to `VState` module
+* Expose `conwayRegisterInitialAccounts`
 * Add `TxLevel` argument to `Tx` and `TxBody`
 * Add `HasEraTxLevel` instances for `Tx` and `TxBody`
 * Add `EraTxLevel` instance

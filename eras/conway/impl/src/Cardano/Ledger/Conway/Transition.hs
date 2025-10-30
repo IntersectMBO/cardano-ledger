@@ -16,6 +16,7 @@ module Cardano.Ledger.Conway.Transition (
   TransitionConfig (..),
   toConwayTransitionConfigPairs,
   registerDRepsThenDelegs,
+  conwayRegisterInitialAccounts,
   conwayRegisterInitialFundsThenStaking,
 ) where
 
@@ -44,6 +45,7 @@ import Data.Aeson (KeyValue (..))
 import Data.ListMap (ListMap)
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import GHC.Generics
 import GHC.Stack
 import Lens.Micro
@@ -127,14 +129,20 @@ conwayRegisterInitialAccounts ::
   NewEpochState era
 conwayRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
   nes
-    & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL %~ \initAccounts ->
-      foldr registerAndDelegate initAccounts $ ListMap.toList sgsStake
+    & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL .~ updatedAccounts
+    & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL .~ updatedStakePoolStates
   where
     stakePools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+    initialAccounts = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
     deposit = compactCoinOrError $ nes ^. nesEsL . curPParamsEpochStateL . ppKeyDepositL
-    registerAndDelegate (stakeKeyHash, stakePool) !accounts
+
+    !(!updatedAccounts, !updatedStakePoolStates) =
+      foldr registerAndDelegate (initialAccounts, stakePools) (ListMap.toList sgsStake)
+    registerAndDelegate (stakeKeyHash, stakePool) (!accounts, !stakePoolMap)
       | stakePool `Map.member` stakePools =
-          registerConwayAccount (KeyHashObj stakeKeyHash) deposit (Just (DelegStake stakePool)) accounts
+          ( (registerConwayAccount (KeyHashObj stakeKeyHash) deposit (Just (DelegStake stakePool)) accounts)
+          , Map.adjust (spsDelegatorsL %~ Set.insert (KeyHashObj stakeKeyHash)) stakePool stakePoolMap
+          )
       | otherwise =
           error $
             "Invariant of a delegation of "

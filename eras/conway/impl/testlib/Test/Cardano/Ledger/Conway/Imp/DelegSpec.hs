@@ -27,6 +27,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.State hiding (balance)
+import Cardano.Ledger.Conway.Transition (conwayRegisterInitialAccounts)
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
@@ -34,8 +35,10 @@ import Cardano.Ledger.Plutus (
   SLanguage (..),
   hashPlutusScript,
  )
+import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Val (Val (..))
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -182,7 +185,7 @@ spec = do
               .~ [DelegTxCert cred (DelegStake poolKh)]
         )
         [injectFailure $ DelegateeStakePoolNotRegisteredDELEG poolKh]
-      expectNotDelegatedToPool cred
+      expectNotDelegatedToAnyPool cred
 
   describe "Delegate vote" $ do
     it "Delegate vote of registered stake credentials to registered drep" $ do
@@ -201,7 +204,7 @@ spec = do
             .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
 
       expectDelegatedVote cred (DRepCredential drepCred)
-      expectNotDelegatedToPool cred
+      expectNotDelegatedToAnyPool cred
       whenBootstrap $ do
         impAnn "Ensure DRep delegation is populated after bootstrap" $ do
           -- Clear out delegation, in order to check its repopulation from accounts.
@@ -220,6 +223,25 @@ spec = do
           passNEpochs 2
           getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
           expectDelegatedVote cred (DRepCredential drepCred)
+
+    it "Redelegate vote to the same DRep" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      cred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+
+      expectDelegatedVote cred (DRepCredential drepCred)
 
     it "Delegate vote of registered stake credentials to unregistered drep" $ do
       RewardAccount _ cred <- registerRewardAccount
@@ -282,7 +304,16 @@ spec = do
       impAnn "Check that unregistration of previous delegation does not affect current delegation" $ do
         unRegisterDRep drepCred
         -- we need to preserve the buggy behavior until the boostrap phase is over.
-        ifBootstrap (expectNotDelegatedVote cred) (expectDelegatedVote cred (DRepCredential drepCred2))
+        ifBootstrap
+          ( do
+              -- we cannot `expectNotDelegatedVote` because the delegation is still in the DRepState of the other pool
+              accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+              expectNothingExpr (lookupDRepDelegation cred accounts)
+              dReps <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+              drepState2 <- expectJust $ Map.lookup drepCred2 dReps
+              drepDelegs drepState2 `shouldSatisfy` Set.member cred
+          )
+          (expectDelegatedVote cred (DRepCredential drepCred2))
 
     it "Delegate vote and unregister stake credentials" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -298,6 +329,8 @@ spec = do
             .~ [UnRegDepositTxCert cred expectedDeposit]
       expectStakeCredNotRegistered cred
       expectNotDelegatedVote cred
+      expectNotDelegatedToAnyPool cred
+
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/917
     -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "Delegate vote and unregister after hardfork" $ do
@@ -410,9 +443,9 @@ spec = do
 
       -- when pool is re-registered after its expiration, all delegations are cleared
       passNEpochs $ fromIntegral poolLifetime
-      expectNotDelegatedToPool cred
+      expectNotDelegatedToAnyPool cred
       registerPoolWithRewardAccount poolKh rewardAccount
-      expectNotDelegatedToPool cred
+      expectNotDelegatedToAnyPool cred
       -- the vote delegation is kept
       expectDelegatedVote cred (DRepCredential drepCred)
 
@@ -500,7 +533,31 @@ spec = do
           & bodyTxL . certsTxBodyL
             .~ [DelegTxCert cred (DelegStake poolKh')]
       expectDelegatedToPool cred poolKh'
+      expectNotDelegatedToPool cred poolKh
       expectDelegatedVote cred (DRepCredential drepCred)
+
+  it "Transition creates the delegations correctly" $ do
+    pool1 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    pool2 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    pool3 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    poolParams <- freshKeyHash >>= \kh -> registerRewardAccount >>= freshPoolParams kh
+    deleg1 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    deleg2 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    deleg3 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    nes <- getsNES id
+    let sgs =
+          ShelleyGenesisStaking
+            { sgsPools = LM.ListMap [(pool1, poolParams), (pool2, poolParams), (pool3, poolParams)]
+            , sgsStake = LM.ListMap [(deleg1, pool1), (deleg2, pool1), (deleg3, pool2)]
+            }
+    let updatedNES = conwayRegisterInitialAccounts sgs nes
+    delegateStake (KeyHashObj deleg1) pool1
+    delegateStake (KeyHashObj deleg2) pool1
+    delegateStake (KeyHashObj deleg3) pool2
+    getPoolsState <$> (getsNES id) `shouldReturn` getPoolsState updatedNES
+    getDelegs deleg1 updatedNES `shouldReturn` Just pool1
+    getDelegs deleg2 updatedNES `shouldReturn` Just pool1
+    getDelegs deleg3 updatedNES `shouldReturn` Just pool2
   where
     expectDelegatedVote :: HasCallStack => Credential 'Staking -> DRep -> ImpTestM era ()
     expectDelegatedVote cred drep = do
@@ -525,5 +582,13 @@ spec = do
     expectNotDelegatedVote :: Credential 'Staking -> ImpTestM era ()
     expectNotDelegatedVote cred = do
       accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-      impAnn (show cred <> " expected to not have their vote delegated") $
+      dreps <- getsNES $ nesEsL . epochStateRegDrepL
+      impAnn (show cred <> " expected to not have their vote delegated") $ do
         expectNothingExpr (lookupDRepDelegation cred accounts)
+        assertBool
+          ("Expected no drep state delegation to contain the stake credential: " <> show cred)
+          (all (Set.notMember cred . drepDelegs) dreps)
+    getDelegs kh nes = do
+      let accounts = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+      pure $ Map.lookup (KeyHashObj kh) accounts >>= (^. stakePoolDelegationAccountStateL)
+    getPoolsState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL

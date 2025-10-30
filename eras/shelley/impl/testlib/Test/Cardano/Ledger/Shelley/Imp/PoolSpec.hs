@@ -16,7 +16,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
 import Cardano.Ledger.State
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict as Map
 import Data.Proxy
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
@@ -52,6 +52,7 @@ spec = describe "POOL" $ do
           submitTx_ tx
         else
           submitFailingTx tx [injectFailure $ WrongNetworkPOOL (Mismatch Mainnet Testnet) kh]
+
     it "register a pool with too big metadata" $ do
       pv <- getsPParams ppProtocolVersionL
       let maxMetadataSize = sizeHash (Proxy :: Proxy HASH)
@@ -81,6 +82,39 @@ spec = describe "POOL" $ do
             submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
             expectPool khNew Nothing
       expectPool kh (Just vrf)
+
+    it "re-register a pool and change its delegations in the same epoch" $ do
+      (poolKh, _) <- registerNewPool
+      (poolKh2, _) <- registerNewPool
+      stakeCred <- KeyHashObj <$> freshKeyHash
+      _ <- registerStakeCredential stakeCred
+      stakeCred2 <- KeyHashObj <$> freshKeyHash
+      _ <- registerStakeCredential stakeCred2
+      delegateStake stakeCred poolKh
+      vrf1 <- freshKeyHashVRF
+      registerPoolTx <$> poolParams poolKh vrf1 >>= \tx -> do
+        submitTx_ tx
+        expectPoolDelegs poolKh (Just [stakeCred])
+        delegateStake stakeCred2 poolKh
+        expectPoolDelegs poolKh (Just [stakeCred, stakeCred2])
+        passEpoch
+        expectPoolDelegs poolKh (Just [stakeCred, stakeCred2])
+
+      vrf2 <- freshKeyHashVRF
+      registerPoolTx <$> poolParams poolKh vrf2 >>= \tx -> do
+        submitTx_ tx
+        expectPoolDelegs poolKh (Just [stakeCred, stakeCred2])
+
+        unRegTxCert <- genUnRegTxCert stakeCred2
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ [unRegTxCert]
+        expectPoolDelegs poolKh (Just [stakeCred])
+        delegateStake stakeCred poolKh2
+        expectPoolDelegs poolKh (Just [])
+        passEpoch
+        expectPoolDelegs poolKh (Just [])
 
     it "re-register a pool with an already registered VRF" $ do
       pv <- getsPParams ppProtocolVersionL
@@ -287,6 +321,27 @@ spec = describe "POOL" $ do
       expectRetiring False khNew
       expectPool kh Nothing
 
+    it "retiring a pool clears its delegations" $ do
+      (poolKh, _) <- registerNewPool
+      let retirement = 1
+      stakeCred1 <- do
+        cred <- KeyHashObj <$> freshKeyHash
+        _ <- registerStakeCredential cred
+        delegateStake cred poolKh
+        pure cred
+
+      retirePoolTx poolKh (EpochInterval retirement) >>= submitTx_
+      expectPoolDelegs poolKh (Just [stakeCred1])
+      stakeCred2 <- do
+        cred <- KeyHashObj <$> freshKeyHash
+        _ <- registerStakeCredential cred
+        delegateStake cred poolKh
+        pure cred
+      expectPoolDelegs poolKh (Just [stakeCred1, stakeCred2])
+
+      passNEpochs (fromIntegral retirement)
+      expectPoolDelegs poolKh Nothing
+
   describe "Retired pools" $ do
     it "re-register a pool with the same keyhash and VRF " $ do
       (kh, vrf) <- registerNewPool
@@ -331,6 +386,9 @@ spec = describe "POOL" $ do
     expectFuturePool poolKh mbVrf = do
       fps <- psFutureStakePools <$> getPState
       spsVrf <$> Map.lookup poolKh fps `shouldBe` mbVrf
+    expectPoolDelegs poolKh delegs = do
+      pps <- psStakePools <$> getPState
+      spsDelegators <$> Map.lookup poolKh pps `shouldBe` delegs
     expectRetiring isRetiring poolKh = do
       retiring <- psRetiring <$> getPState
       assertBool

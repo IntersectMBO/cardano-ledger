@@ -34,9 +34,14 @@ module Cardano.Ledger.State.CertState (
   lookupRewardDState,
   Obligations (..),
   sumObligation,
+  unDelegReDelegStakePool,
   -- Lenses
-  dsGenDelegsL,
+  iRReservesL,
   dsIRewardsL,
+  dsGenDelegsL,
+  iRTreasuryL,
+  iRDeltaReservesL,
+  iRDeltaTreasuryL,
   dsFutureGenDelegsL,
   psStakePoolsL,
   psFutureStakePoolsL,
@@ -76,7 +81,7 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State.Account
-import Cardano.Ledger.State.StakePool (StakePoolState (..))
+import Cardano.Ledger.State.StakePool (StakePoolState (..), spsDelegatorsL)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (ToJSON (..), object, (.=))
@@ -85,6 +90,7 @@ import qualified Data.Foldable as F
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -269,6 +275,30 @@ instance ToKeyValuePairs (PState era) where
     , "retiring" .= psRetiring
     ]
 
+-- | Reverses stake pool delegation.
+-- To be called when a stake credential is unregistered or its delegation target changes.
+-- If the new delegation matches the previous one, this is a noop.
+unDelegReDelegStakePool ::
+  EraAccounts era =>
+  Credential 'Staking ->
+  -- | Account that is losing its current delegation and/or acquiring a new one
+  AccountState era ->
+  -- | Optional new delegation target. Use 'Nothing' when the stake credential unregisters.
+  Maybe (KeyHash 'StakePool) ->
+  PState era ->
+  PState era
+unDelegReDelegStakePool stakeCred accountState mNewStakePool =
+  fromMaybe (psStakePoolsL %~ addNewDelegation) $ do
+    curStakePool <- accountState ^. stakePoolDelegationAccountStateL
+    pure $
+      -- no need to update the set of delegations if the delegation is unchanged
+      if Just curStakePool == mNewStakePool
+        then id
+        else
+          psStakePoolsL %~ addNewDelegation . Map.adjust (spsDelegatorsL %~ Set.delete stakeCred) curStakePool
+  where
+    addNewDelegation = maybe id (Map.adjust (spsDelegatorsL %~ Set.insert stakeCred)) mNewStakePool
+
 data CommitteeAuthorization
   = -- | Member authorized with a Hot credential acting on behalf of their Cold credential
     CommitteeHotCredential !(Credential 'HotCommitteeRole)
@@ -433,6 +463,18 @@ dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
 
 dsIRewardsL :: Lens' (DState era) InstantaneousRewards
 dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
+
+iRReservesL :: Lens' InstantaneousRewards (Map (Credential 'Staking) Coin)
+iRReservesL = lens iRReserves (\ir m -> ir {iRReserves = m})
+
+iRTreasuryL :: Lens' InstantaneousRewards (Map (Credential 'Staking) Coin)
+iRTreasuryL = lens iRTreasury (\ir m -> ir {iRTreasury = m})
+
+iRDeltaReservesL :: Lens' InstantaneousRewards DeltaCoin
+iRDeltaReservesL = lens deltaReserves (\ir d -> ir {deltaReserves = d})
+
+iRDeltaTreasuryL :: Lens' InstantaneousRewards DeltaCoin
+iRDeltaTreasuryL = lens deltaTreasury (\ir d -> ir {deltaTreasury = d})
 
 dsFutureGenDelegsL ::
   Lens' (DState era) (Map FutureGenDeleg GenDelegPair)

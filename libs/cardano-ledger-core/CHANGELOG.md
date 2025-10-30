@@ -2,6 +2,11 @@
 
 ## 1.19.0.0
 
+* Add `unDelegReDelegStakePool` to `CertState` module
+* Add `iRReservesL`, `iRTreasuryL`, `iRDeltaReservesL`, `iRDeltaTreasuryL`
+* Add `spsDelegators` field to `StakePool`
+* Add `spsDelegatorsL`
+* Change parameter type of `removeStakePoolDelegations` from `Set (KeyHash 'StakePool)` to `Set (Credential 'Staking)`
 * Add `fromStrictMaybeL`, `toStrictMaybeL`
 * Add `memoRawTypeL`
 * Remove `getterMemoRawType`
