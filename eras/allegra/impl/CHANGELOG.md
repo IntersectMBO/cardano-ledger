@@ -13,6 +13,7 @@
 
 ### `testlib`
 
+* Add `auxiliary_data_array` to CDDL for simplification
 * Remove `metadata` redefinition in CDDL
 * Use fixed-sized `uint .size 8` for `slot` in CDDL for timelock validity intervals
 * Add `impSatisfyMNativeScripts`
