@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | This module provides the 'StakePoolState' data type, which represents the
@@ -36,6 +37,7 @@ module Cardano.Ledger.State.StakePool (
   spsOwnersL,
   spsRelaysL,
   spsMetadataL,
+  spsDelegatorsL,
   spsDepositL,
 
   -- * Conversions
@@ -99,6 +101,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
@@ -142,6 +145,8 @@ data StakePoolState = StakePoolState
   -- ^ Optional metadata (URL and hash)
   , spsDeposit :: !(CompactForm Coin)
   -- ^ Deposit for each pool
+  , spsDelegators :: !(Set (Credential 'Staking))
+  -- ^ Credentials that have delegated to the pool
   }
   deriving (Show, Generic, Eq, Ord, NoThunks, NFData, FromJSON, ToJSON)
 
@@ -172,6 +177,9 @@ spsMetadataL = lens spsMetadata $ \sps md -> sps {spsMetadata = md}
 spsDepositL :: Lens' StakePoolState (CompactForm Coin)
 spsDepositL = lens spsDeposit $ \sps d -> sps {spsDeposit = d}
 
+spsDelegatorsL :: Lens' StakePoolState (Set (Credential 'Staking))
+spsDelegatorsL = lens spsDelegators $ \sps delegators -> sps {spsDelegators = delegators}
+
 instance EncCBOR StakePoolState where
   encCBOR sps =
     encode $
@@ -185,11 +193,13 @@ instance EncCBOR StakePoolState where
         !> To (spsRelays sps)
         !> To (spsMetadata sps)
         !> To (spsDeposit sps)
+        !> To (spsDelegators sps)
 
 instance DecCBOR StakePoolState where
   decCBOR =
     decode $
       RecD StakePoolState
+        <! From
         <! From
         <! From
         <! From
@@ -215,13 +225,15 @@ instance Default StakePoolState where
       , spsRelays = def
       , spsMetadata = def
       , spsDeposit = mempty
+      , spsDelegators = def
       }
 
 -- | Convert 'StakePoolParams' to 'StakePoolState' by dropping the pool ID.
 -- This is the primary way to create a 'StakePoolState' from registration
 -- or update parameters.
-mkStakePoolState :: CompactForm Coin -> StakePoolParams -> StakePoolState
-mkStakePoolState deposit spp =
+mkStakePoolState ::
+  CompactForm Coin -> Set (Credential 'Staking) -> StakePoolParams -> StakePoolState
+mkStakePoolState deposit delegators spp =
   StakePoolState
     { spsVrf = sppVrf spp
     , spsPledge = sppPledge spp
@@ -232,6 +244,7 @@ mkStakePoolState deposit spp =
     , spsRelays = sppRelays spp
     , spsMetadata = sppMetadata spp
     , spsDeposit = deposit
+    , spsDelegators = delegators
     }
 
 -- | Convert 'StakePoolState' back to 'StakePoolParams' by providing the pool ID.

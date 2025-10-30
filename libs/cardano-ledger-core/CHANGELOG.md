@@ -2,6 +2,8 @@
 
 ## 1.19.0.0
 
+* Add `spsDelegators` field to `StakePool`
+* Add `spsDelegatorsL`
 * Add `fromStrictMaybeL`, `toStrictMaybeL`
 * Add `memoRawTypeL`
 * Remove `getterMemoRawType`

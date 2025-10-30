@@ -7,16 +7,22 @@
 module Test.Cardano.Ledger.State.StakePoolSpec (spec) where
 
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.State
+import Data.Set (Set)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 
 spec :: Spec
 spec = do
   describe "StakePoolState" $ do
-    prop "mkStakePoolState/stakePoolStateToStakePoolParams round-trip" $
-      \(stakePoolParams :: StakePoolParams, deposit :: CompactForm Coin) ->
-        let poolId = sppId stakePoolParams
-            stakePoolState = mkStakePoolState deposit stakePoolParams
-            stakePoolParams' = stakePoolStateToStakePoolParams poolId stakePoolState
-         in stakePoolParams === stakePoolParams'
+    prop "mkStakePoolState/stakePoolStateToPoolParams round-trip" $
+      \( stakePoolParams :: StakePoolParams
+         , deposit :: CompactForm Coin
+         , delegs :: Set (Credential 'Staking)
+         ) ->
+          let poolId = sppId stakePoolParams
+              stakePoolState = mkStakePoolState deposit delegs stakePoolParams
+              stakePoolParams' = stakePoolStateToStakePoolParams poolId stakePoolState
+           in stakePoolParams === stakePoolParams'

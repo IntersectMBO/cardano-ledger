@@ -118,7 +118,7 @@ applyShelleyCert model dcert = case dcert of
       { mStakePools =
           Map.insert
             hk
-            (mkStakePoolState (pp ^. ppPoolDepositCompactL) stakePoolParams)
+            (mkStakePoolState (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
             (mStakePools model)
       , mDeposited =
           if Map.member hk (mStakePools model)
