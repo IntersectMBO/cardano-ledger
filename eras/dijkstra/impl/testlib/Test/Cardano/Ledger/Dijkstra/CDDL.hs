@@ -410,9 +410,9 @@ dijkstra_native_script =
     / arr [a invalid_hereafter]
     / arr [a script_require_guard]
 
-alonzo_auxiliary_data :: Rule
-alonzo_auxiliary_data =
-  "alonzo_auxiliary_data"
+auxiliary_data_map :: Rule
+auxiliary_data_map =
+  "auxiliary_data_map"
     =:= tag
       259
       ( mp
@@ -427,10 +427,17 @@ alonzo_auxiliary_data =
 
 auxiliary_data :: Rule
 auxiliary_data =
-  "auxiliary_data"
-    =:= shelley_auxiliary_data
-    / shelley_ma_auxiliary_data
-    / alonzo_auxiliary_data
+  comment
+    [str|auxiliary_data supports three serialization formats:
+        |  1. metadata (raw) - Supported since Shelley
+        |  2. auxiliary_data_array - Array format, introduced in Allegra
+        |  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
+        |     Dijkstra adds plutus_v4_script support at index 5
+        |]
+    $ "auxiliary_data"
+      =:= metadata
+      / auxiliary_data_array
+      / auxiliary_data_map
 
 dijkstra_script :: Rule
 dijkstra_script =

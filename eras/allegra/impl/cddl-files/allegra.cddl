@@ -331,9 +331,7 @@ bootstrap_witness =
 
 transaction_index = uint .size 2
 
-auxiliary_data = 
-  metadata                                                                              
-  / [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
+auxiliary_data = metadata/ auxiliary_data_array
 
 metadata = {* metadatum_label => metadatum}
 
@@ -345,6 +343,9 @@ metadatum =
   / int                     
   / bytes .size (0 .. 64)
   / text .size (0 .. 64) 
+
+auxiliary_data_array = 
+  [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
 
 auxiliary_scripts = [* native_script]
 

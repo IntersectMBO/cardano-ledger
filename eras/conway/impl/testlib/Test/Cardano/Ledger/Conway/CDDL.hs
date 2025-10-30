@@ -52,8 +52,6 @@ module Test.Cardano.Ledger.Conway.CDDL (
   script_n_of_k,
   invalid_before,
   invalid_hereafter,
-  shelley_auxiliary_data,
-  shelley_ma_auxiliary_data,
 
   -- * Sets
   maybe_tagged_set,
@@ -744,21 +742,9 @@ cost_models =
         , 0 <+ asKey ((3 :: Integer) ... (255 :: Integer)) ==> arr [0 <+ a int64]
         ]
 
-shelley_auxiliary_data :: Rule
-shelley_auxiliary_data =
-  "shelley_auxiliary_data" =:= metadata
-
-shelley_ma_auxiliary_data :: Rule
-shelley_ma_auxiliary_data =
-  "shelley_ma_auxiliary_data"
-    =:= arr
-      [ "transaction_metadata" ==> metadata
-      , "auxiliary_scripts" ==> arr [0 <+ a native_script]
-      ]
-
-alonzo_auxiliary_data :: Rule
-alonzo_auxiliary_data =
-  "alonzo_auxiliary_data"
+auxiliary_data_map :: Rule
+auxiliary_data_map =
+  "auxiliary_data_map"
     =:= tag
       259
       ( mp
@@ -772,10 +758,17 @@ alonzo_auxiliary_data =
 
 auxiliary_data :: Rule
 auxiliary_data =
-  "auxiliary_data"
-    =:= shelley_auxiliary_data
-    / shelley_ma_auxiliary_data
-    / alonzo_auxiliary_data
+  comment
+    [str|auxiliary_data supports three serialization formats:
+        |  1. metadata (raw) - Supported since Shelley
+        |  2. auxiliary_data_array - Array format, introduced in Allegra
+        |  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
+        |     Conway adds plutus_v3_script support at index 4
+        |]
+    $ "auxiliary_data"
+      =:= metadata
+      / auxiliary_data_array
+      / auxiliary_data_map
 
 native_script :: Rule
 native_script =

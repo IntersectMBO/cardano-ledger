@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Allegra.CDDL (
   allegraCDDL,
   transaction_witness_set,
   auxiliary_data,
+  auxiliary_data_array,
   auxiliary_scripts,
   script_pubkey,
   script_all,
@@ -77,14 +78,19 @@ invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot]
 auxiliary_scripts :: Rule
 auxiliary_scripts = "auxiliary_scripts" =:= arr [0 <+ a native_script]
 
+auxiliary_data_array :: Rule
+auxiliary_data_array =
+  "auxiliary_data_array"
+    =:= arr
+      [ "transaction_metadata" ==> metadata
+      , "auxiliary_scripts" ==> auxiliary_scripts
+      ]
+
 auxiliary_data :: Rule
 auxiliary_data =
   "auxiliary_data"
     =:= metadata
-    / sarr
-      [ "transaction_metadata" ==> metadata
-      , "auxiliary_scripts" ==> auxiliary_scripts
-      ]
+    / auxiliary_data_array
 
 transaction_body :: forall era. Era era => Rule
 transaction_body =

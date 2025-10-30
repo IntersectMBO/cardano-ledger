@@ -308,30 +308,32 @@ cost_models =
         , opt $ idx 1 ==> arr [175 <+ a int64 +> 175]
         ]
 
+auxiliary_data_map :: Rule
+auxiliary_data_map =
+  "auxiliary_data_map"
+    =:= tag
+      259
+      ( mp
+          [ opt (idx 0 ==> metadata)
+          , opt (idx 1 ==> arr [0 <+ a native_script])
+          , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
+          , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
+          ]
+      )
+
 auxiliary_data :: Rule
 auxiliary_data =
   comment
-    [str|              metadata: shelley
-        |  transaction_metadata: shelley-ma
-        |#6.259(0 ==> metadata): alonzo onwards
-        |NEW:
-        |  3: [* plutus_v2_script]
+    [str|auxiliary_data supports three serialization formats:
+        |  1. metadata (raw) - Supported since Shelley
+        |  2. auxiliary_data_array - Array format, introduced in Allegra
+        |  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
+        |     Babbage adds plutus_v2_script support at index 3
         |]
     $ "auxiliary_data"
       =:= metadata
-      / sarr
-        [ "transaction_metadata" ==> metadata
-        , "auxiliary_scripts" ==> auxiliary_scripts
-        ]
-      / tag
-        259
-        ( mp
-            [ opt (idx 0 ==> metadata)
-            , opt (idx 1 ==> arr [0 <+ a native_script])
-            , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
-            , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
-            ]
-        )
+      / auxiliary_data_array
+      / auxiliary_data_map
 
 data' :: Rule
 data' = "data" =:= tag 24 (VBytes `cbor` plutus_data)

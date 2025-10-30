@@ -704,10 +704,12 @@ redeemer_tag =
 
 transaction_index = uint .size 2
 
-auxiliary_data = 
-  shelley_auxiliary_data/ shelley_ma_auxiliary_data/ alonzo_auxiliary_data
-
-shelley_auxiliary_data = metadata
+; auxiliary_data supports three serialization formats:
+;   1. metadata (raw) - Supported since Shelley
+;   2. auxiliary_data_array - Array format, introduced in Allegra
+;   3. auxiliary_data_map - Tagged map format, introduced in Alonzo
+;      Conway adds plutus_v3_script support at index 4
+auxiliary_data = metadata/ auxiliary_data_array/ auxiliary_data_map
 
 metadata = {* metadatum_label => metadatum}
 
@@ -720,10 +722,12 @@ metadatum =
   / bytes .size (0 .. 64)
   / text .size (0 .. 64) 
 
-shelley_ma_auxiliary_data = 
-  [transaction_metadata : metadata, auxiliary_scripts : [* native_script]]
+auxiliary_data_array = 
+  [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
 
-alonzo_auxiliary_data = 
+auxiliary_scripts = [* native_script]
+
+auxiliary_data_map = 
   #6.259(
     { ? 0 : metadata                
     , ? 1 : [* native_script]   
