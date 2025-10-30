@@ -51,8 +51,8 @@ spec =
       cddlRoundTripCborSpec @StakePoolRelay v "relay"
       cddlRoundTripCborSpec @(TxCert ShelleyEra) v "certificate"
       cddlRoundTripCborSpec @TxIn v "transaction_input"
-      cddlRoundTripAnnCborSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
-      cddlRoundTripCborSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
+      cddlRoundTripAnnCborSpec @(TxAuxData ShelleyEra) v "metadata"
+      cddlRoundTripCborSpec @(TxAuxData ShelleyEra) v "metadata"
       cddlRoundTripAnnCborSpec @(MultiSig ShelleyEra) v "multisig_script"
       cddlRoundTripCborSpec @(MultiSig ShelleyEra) v "multisig_script"
       cddlRoundTripCborSpec @(Update ShelleyEra) v "update"
@@ -63,7 +63,7 @@ spec =
       describe "DecCBOR instances equivalence via CDDL" $ do
         cddlDecoderEquivalenceSpec @BootstrapWitness v "bootstrap_witness"
         cddlDecoderEquivalenceSpec @(TxBody TopTx ShelleyEra) v "transaction_body"
-        cddlDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
+        cddlDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "metadata"
         cddlDecoderEquivalenceSpec @(MultiSig ShelleyEra) v "multisig_script"
         cddlDecoderEquivalenceSpec @(Tx TopTx ShelleyEra) v "transaction"
 
@@ -82,8 +82,8 @@ spec =
       huddleRoundTripCborSpec @StakePoolRelay v "relay"
       huddleRoundTripCborSpec @(TxCert ShelleyEra) v "certificate"
       huddleRoundTripCborSpec @TxIn v "transaction_input"
-      huddleRoundTripAnnCborSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
-      huddleRoundTripCborSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
+      huddleRoundTripAnnCborSpec @(TxAuxData ShelleyEra) v "metadata"
+      huddleRoundTripCborSpec @(TxAuxData ShelleyEra) v "metadata"
       huddleRoundTripAnnCborSpec @(MultiSig ShelleyEra) v "multisig_script"
       huddleRoundTripCborSpec @(MultiSig ShelleyEra) v "multisig_script"
       huddleRoundTripCborSpec @(Update ShelleyEra) v "update"
@@ -96,6 +96,6 @@ spec =
       describe "DecCBOR instances equivalence via CDDL" $ do
         huddleDecoderEquivalenceSpec @BootstrapWitness v "bootstrap_witness"
         huddleDecoderEquivalenceSpec @(TxBody TopTx ShelleyEra) v "transaction_body"
-        huddleDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
+        huddleDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "metadata"
         huddleDecoderEquivalenceSpec @(MultiSig ShelleyEra) v "multisig_script"
         huddleDecoderEquivalenceSpec @(Tx TopTx ShelleyEra) v "transaction"

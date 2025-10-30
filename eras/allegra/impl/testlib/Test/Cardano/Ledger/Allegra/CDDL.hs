@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Allegra.CDDL (
   allegraCDDL,
   transaction_witness_set,
   auxiliary_data,
-  metadata,
   auxiliary_scripts,
   script_pubkey,
   script_all,
@@ -75,9 +74,6 @@ invalid_before = "invalid_before" =:~ grp [4, a slot]
 invalid_hereafter :: Named Group
 invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot]
 
-metadata :: Rule
-metadata = "metadata" =:= mp [0 <+ asKey transaction_metadatum_label ==> transaction_metadatum]
-
 auxiliary_scripts :: Rule
 auxiliary_scripts = "auxiliary_scripts" =:= arr [0 <+ a native_script]
 
@@ -104,7 +100,7 @@ transaction_body =
         , opt (idx 4 ==> arr [0 <+ a certificate])
         , opt (idx 5 ==> withdrawals)
         , opt (idx 6 ==> update @era)
-        , opt (idx 7 ==> metadata_hash)
+        , opt (idx 7 ==> auxiliary_data_hash)
         , opt (idx 8 ==> slot)
         ]
 
