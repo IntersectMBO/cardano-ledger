@@ -38,6 +38,7 @@
 
 ### `testlib`
 
+* Add `auxiliary_data_map` to CDDL for simplification
 * Remove redefinition of `auxiliary_data_hash` from CDDL
 * Remove deprecated function `mkPlutusScript'`
 * Use fixed-sized `uint .size 8` for `slot` and `block_number` in CDDL for header

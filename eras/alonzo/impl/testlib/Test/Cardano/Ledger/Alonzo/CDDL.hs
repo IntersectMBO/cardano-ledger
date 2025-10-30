@@ -353,28 +353,30 @@ cost_model =
         |]
     $ "cost_model" =:= arr [166 <+ a int64 +> 166]
 
+auxiliary_data_map :: Rule
+auxiliary_data_map =
+  "auxiliary_data_map"
+    =:= tag
+      259
+      ( mp
+          [ opt (idx 0 ==> metadata)
+          , opt (idx 1 ==> arr [0 <+ a native_script])
+          , opt (idx 2 ==> arr [0 <+ a plutus_script])
+          ]
+      )
+
 auxiliary_data :: Rule
 auxiliary_data =
   comment
-    [str|            metadata: shelley
-        |transaction_metadata: shelley-ma
-        |NEW
-        |  #6.259(0 ==> metadata): alonzo onwards
+    [str|auxiliary_data supports three serialization formats:
+        |  1. metadata (raw) - Supported since Shelley
+        |  2. auxiliary_data_array - Array format, introduced in Allegra
+        |  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
         |]
     $ "auxiliary_data"
       =:= metadata
-      / sarr
-        [ "transaction_metadata" ==> metadata
-        , "auxiliary_scripts" ==> auxiliary_scripts
-        ]
-      / tag
-        259
-        ( mp
-            [ opt (idx 0 ==> metadata)
-            , opt (idx 1 ==> arr [0 <+ a native_script])
-            , opt (idx 2 ==> arr [0 <+ a plutus_script])
-            ]
-        )
+      / auxiliary_data_array
+      / auxiliary_data_map
 
 header :: Rule
 header = "header" =:= arr [a header_body, "body_signature" ==> kes_signature]

@@ -20,6 +20,7 @@
 
 ### `testlib`
 
+* Rename `shelley_auxiliary_data`, `shelley_ma_auxiliary_data`, `alonzo_auxiliary_data` to more suitable `metadata`, `auxiliary_data_array`, `auxiliary_data_map`
 * Remove redefinition of `metadatum_label`, `metadata` from CDDL
 * Remove CDDL `protocol_version` redefinition
 * Remove `epoch_no`, `epoch_interval`, `slot_no` and `block_no`. Reuse definitions from core
