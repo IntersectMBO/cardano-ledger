@@ -10,7 +10,7 @@
 
 module Test.Cardano.Ledger.Conway.Binary.Golden (
   expectDecoderResultOn,
-  expectDecoderFailure,
+  expectDecoderFailureAnn,
   listRedeemersEnc,
   goldenListRedeemers,
 ) where
@@ -50,14 +50,14 @@ import Test.Cardano.Ledger.Common (
  )
 import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
 
-expectDecoderFailure ::
+expectDecoderFailureAnn ::
   forall a.
   (ToExpr a, DecCBOR (Annotator a), Typeable a, HasCallStack) =>
   Version ->
   Enc ->
   DecoderError ->
   Expectation
-expectDecoderFailure version enc expectedErr =
+expectDecoderFailureAnn version enc expectedErr =
   case result of
     Left err -> err `shouldBe` expectedErr
     Right x ->
