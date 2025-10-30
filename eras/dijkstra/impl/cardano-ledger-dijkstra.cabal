@@ -112,6 +112,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Arbitrary
     Test.Cardano.Ledger.Dijkstra.Binary.Annotator
     Test.Cardano.Ledger.Dijkstra.Binary.Cddl
+    Test.Cardano.Ledger.Dijkstra.Binary.Golden
     Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip
     Test.Cardano.Ledger.Dijkstra.CDDL
     Test.Cardano.Ledger.Dijkstra.Era
@@ -137,7 +138,7 @@ library testlib
     bytestring,
     cardano-data,
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
-    cardano-ledger-alonzo:testlib,
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
     cardano-ledger-binary,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},

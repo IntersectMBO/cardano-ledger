@@ -20,6 +20,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsS
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Conway.Binary.Golden as Golden
 import qualified Test.Cardano.Ledger.Conway.Binary.Regression as Regression
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
 import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
@@ -60,3 +61,4 @@ spec =
       BabbageTxInfo.spec @era
       describe "PlutusV3" $
         BabbageTxInfo.txInfoSpec @era SPlutusV3
+    describe "Golden" $ Golden.goldenListRedeemers @era
