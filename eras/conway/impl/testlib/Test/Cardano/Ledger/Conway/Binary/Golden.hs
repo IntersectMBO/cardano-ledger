@@ -21,24 +21,25 @@ import Cardano.Ledger.Alonzo.Core (
   pattern SpendingPurpose,
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), unRedeemers)
 import Cardano.Ledger.BaseTypes (Version)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
   ToCBOR (..),
   decodeFullAnnotator,
-  toStrictByteString,
+  toLazyByteString,
  )
 import Cardano.Ledger.Binary.Plain (DecoderError (..), Tokens (..))
 import Cardano.Ledger.Plutus (Data (..))
-import Data.ByteString (fromStrict)
 import qualified Data.Map as Map
 import Data.Typeable (Proxy (..), Typeable)
 import PlutusLedgerApi.Common (Data (..))
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
+import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation)
 import Test.Cardano.Ledger.Common (
   Expectation,
+  HasCallStack,
   Spec,
   ToExpr,
   expectationFailure,
@@ -51,7 +52,7 @@ import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
 
 expectDecoderFailure ::
   forall a.
-  (ToExpr a, DecCBOR (Annotator a), Typeable a) =>
+  (ToExpr a, DecCBOR (Annotator a), Typeable a, HasCallStack) =>
   Version ->
   Enc ->
   DecoderError ->
@@ -64,20 +65,15 @@ expectDecoderFailure version enc expectedErr =
         "Expected a failure, but decoder succeeded:\n"
           <> showExpr x
   where
-    bytes = fromStrict . toStrictByteString $ toCBOR enc
+    bytes = toLazyByteString $ toCBOR enc
     result = decodeFullAnnotator @a version (label $ Proxy @(Annotator a)) decCBOR bytes
 
 expectDecoderResultOn ::
   forall a b.
-  (ToExpr b, DecCBOR (Annotator a), Typeable a, Eq b) =>
+  (ToExpr b, DecCBOR (Annotator a), Eq b, HasCallStack) =>
   Version -> Enc -> a -> (a -> b) -> Expectation
 expectDecoderResultOn version enc expected f =
-  case result of
-    Left err -> expectationFailure $ "Decoder failed with:\n" <> show err
-    Right x -> f x `shouldBeExpr` f expected
-  where
-    bytes = fromStrict . toStrictByteString $ toCBOR enc
-    result = decodeFullAnnotator @a version (label $ Proxy @(Annotator a)) decCBOR bytes
+  embedTripAnnExpectation version version (\x _ -> f x `shouldBeExpr` f expected) enc
 
 -- | A simple redeemer encoded as a list
 listRedeemersEnc :: Enc
@@ -87,12 +83,12 @@ listRedeemersEnc =
     , mconcat
         [ E (TkListLen 4)
         , E (0 :: Int)
-        , E (0 :: Int)
-        , E (0 :: Int)
+        , E (10 :: Int)
+        , E (20 :: Int)
         , mconcat
             [ E (TkListLen 2)
-            , E (0 :: Int)
-            , E (0 :: Int)
+            , E (30 :: Int)
+            , E (40 :: Int)
             ]
         ]
     ]
@@ -103,5 +99,5 @@ goldenListRedeemers =
     expectDecoderResultOn @(Redeemers era)
       (eraProtVerLow @era)
       listRedeemersEnc
-      (Redeemers $ Map.singleton (SpendingPurpose $ AsIx 0) (Data $ I 0, ExUnits 0 0))
-      (\(Redeemers m) -> m)
+      (Redeemers $ Map.singleton (SpendingPurpose $ AsIx 10) (Data $ I 20, ExUnits 30 40))
+      unRedeemers
