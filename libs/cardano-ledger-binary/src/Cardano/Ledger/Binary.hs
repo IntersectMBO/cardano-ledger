@@ -9,6 +9,7 @@ module Cardano.Ledger.Binary (
   Term (..),
   C.DeserialiseFailure (..),
   translateViaCBORAnnotator,
+  toLazyByteString,
 ) where
 
 import Cardano.Ledger.Binary.Decoding
@@ -40,6 +41,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary.Version
 import qualified Codec.CBOR.Read as C (DeserialiseFailure (..))
 import Codec.CBOR.Term (Term (..))
+import Codec.CBOR.Write (toLazyByteString)
 import Control.Monad.Except (Except, MonadError (throwError))
 import Data.Text (Text)
 
