@@ -2,9 +2,9 @@
 
 block = 
   [ header                 
-  , transaction_bodies       : [* transaction_body]                         
-  , transaction_witness_sets : [* transaction_witness_set]                  
-  , transaction_metadata_set : {* transaction_index => transaction_metadata}
+  , transaction_bodies       : [* transaction_body]             
+  , transaction_witness_sets : [* transaction_witness_set]      
+  , transaction_metadata_set : {* transaction_index => metadata}
   ]
 
 
@@ -62,7 +62,7 @@ transaction_body =
   , ? 4 : [* certificate]       
   , ? 5 : withdrawals               
   , ? 6 : update                    
-  , ? 7 : metadata_hash             
+  , ? 7 : auxiliary_data_hash       
   }
 
 
@@ -277,7 +277,7 @@ max_word64 = 18446744073709551615
 
 nonce = [0// 1, bytes .size 32]
 
-metadata_hash = hash32
+auxiliary_data_hash = hash32
 
 transaction_witness_set = 
   { ? 0 : [* vkeywitness]      
@@ -309,19 +309,18 @@ bootstrap_witness =
 
 transaction_index = uint .size 2
 
-transaction_metadata = {* transaction_metadatum_label => transaction_metadatum}
+metadata = {* metadatum_label => metadatum}
 
-transaction_metadatum_label = uint
+metadatum_label = uint .size 8
 
-transaction_metadatum = 
-  {* transaction_metadatum => transaction_metadatum}
-  / [* transaction_metadatum]
-  / int                          
-  / bytes .size (0 .. 64)     
-  / text .size (0 .. 64)      
+metadatum = 
+  {* metadatum => metadatum}
+  / [* metadatum]       
+  / int                     
+  / bytes .size (0 .. 64)
+  / text .size (0 .. 64) 
 
-transaction = 
-  [transaction_body, transaction_witness_set, transaction_metadata/ nil]
+transaction = [transaction_body, transaction_witness_set, metadata/ nil]
 
 signkey_kes = bytes .size 64
 

@@ -12,7 +12,6 @@ module Test.Cardano.Ledger.Alonzo.CDDL (
   module Test.Cardano.Ledger.Mary.CDDL,
   alonzoCDDL,
   certificates,
-  auxiliary_data_hash,
   required_signers,
   network_id,
   native_script,
@@ -427,6 +426,3 @@ positive_interval = "positive_interval" =:= tag 30 (arr [a positive_int, a posit
 
 network_id :: Rule
 network_id = "network_id" =:= int 0 / int 1
-
-auxiliary_data_hash :: Rule
-auxiliary_data_hash = "auxiliary_data_hash" =:= hash32

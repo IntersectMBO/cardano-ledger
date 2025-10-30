@@ -62,7 +62,7 @@ transaction_body =
   , ? 4 : [* certificate]       
   , ? 5 : withdrawals               
   , ? 6 : update                    
-  , ? 7 : metadata_hash             
+  , ? 7 : auxiliary_data_hash       
   , ? 8 : slot                      
   , ? 9 : mint                      
   }
@@ -287,7 +287,7 @@ max_word64 = 18446744073709551615
 
 nonce = [0// 1, bytes .size 32]
 
-metadata_hash = hash32
+auxiliary_data_hash = hash32
 
 mint = multiasset<int64>
 
@@ -345,16 +345,16 @@ auxiliary_data =
   metadata                                                                              
   / [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
 
-metadata = {* transaction_metadatum_label => transaction_metadatum}
+metadata = {* metadatum_label => metadatum}
 
-transaction_metadatum_label = uint
+metadatum_label = uint .size 8
 
-transaction_metadatum = 
-  {* transaction_metadatum => transaction_metadatum}
-  / [* transaction_metadatum]
-  / int                          
-  / bytes .size (0 .. 64)     
-  / text .size (0 .. 64)      
+metadatum = 
+  {* metadatum => metadatum}
+  / [* metadatum]       
+  / int                     
+  / bytes .size (0 .. 64)
+  / text .size (0 .. 64) 
 
 auxiliary_scripts = [* native_script]
 

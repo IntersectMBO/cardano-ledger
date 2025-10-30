@@ -716,16 +716,16 @@ auxiliary_data =
 
 shelley_auxiliary_data = metadata
 
-metadata = {* transaction_metadatum_label => transaction_metadatum}
+metadata = {* metadatum_label => metadatum}
 
-transaction_metadatum_label = uint .size 8
+metadatum_label = uint .size 8
 
-transaction_metadatum = 
-  {* transaction_metadatum => transaction_metadatum}
-  / [* transaction_metadatum]
-  / int                          
-  / bytes .size (0 .. 64)     
-  / text .size (0 .. 64)      
+metadatum = 
+  {* metadatum => metadatum}
+  / [* metadatum]       
+  / int                     
+  / bytes .size (0 .. 64)
+  / text .size (0 .. 64) 
 
 shelley_ma_auxiliary_data = 
   [transaction_metadata : metadata, auxiliary_scripts : [* native_script]]

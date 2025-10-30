@@ -73,6 +73,13 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   -- * Protocol version
 
   -- * Transactions
+  transaction_index,
+
+  -- * Metadata and Auxiliary Data
+  metadatum_label,
+  metadatum,
+  metadata,
+  auxiliary_data_hash,
 
   -- * Misc.
 ) where
@@ -338,3 +345,24 @@ slot = "slot" =:= VUInt `sized` (8 :: Word64)
 
 block_number :: Rule
 block_number = "block_number" =:= VUInt `sized` (8 :: Word64)
+
+transaction_index :: Rule
+transaction_index = "transaction_index" =:= VUInt `sized` (2 :: Word64)
+
+metadatum_label :: Rule
+metadatum_label = "metadatum_label" =:= VUInt `sized` (8 :: Word64)
+
+metadatum :: Rule
+metadatum =
+  "metadatum"
+    =:= smp [0 <+ asKey metadatum ==> metadatum]
+    / sarr [0 <+ a metadatum]
+    / VInt
+    / (VBytes `sized` (0 :: Word64, 64 :: Word64))
+    / (VText `sized` (0 :: Word64, 64 :: Word64))
+
+metadata :: Rule
+metadata = "metadata" =:= mp [0 <+ asKey metadatum_label ==> metadatum]
+
+auxiliary_data_hash :: Rule
+auxiliary_data_hash = "auxiliary_data_hash" =:= hash32

@@ -13,16 +13,12 @@
 module Test.Cardano.Ledger.Shelley.CDDL (
   module Test.Cardano.Ledger.Core.Binary.CDDL,
   shelleyCDDL,
-  transaction_metadatum_label,
-  transaction_metadatum,
   transaction_input,
   transaction_output,
   certificate,
   withdrawals,
   update,
-  metadata_hash,
   header,
-  transaction_index,
   vkeywitness,
   bootstrap_witness,
   script_hash,
@@ -60,7 +56,7 @@ block =
       [ a $ header @era
       , "transaction_bodies" ==> arr [0 <+ a (transaction_body @era)]
       , "transaction_witness_sets" ==> arr [0 <+ a transaction_witness_set]
-      , "transaction_metadata_set" ==> mp [0 <+ asKey transaction_index ==> transaction_metadata]
+      , "transaction_metadata_set" ==> mp [0 <+ asKey transaction_index ==> metadata]
       ]
 
 transaction :: forall era. Era era => Rule
@@ -69,11 +65,8 @@ transaction =
     =:= arr
       [ a $ transaction_body @era
       , a transaction_witness_set
-      , a (transaction_metadata / VNil)
+      , a (metadata / VNil)
       ]
-
-transaction_index :: Rule
-transaction_index = "transaction_index" =:= VUInt `sized` (2 :: Word64)
 
 header :: forall era. Era era => Rule
 header = "header" =:= arr [a $ header_body @era, "body_signature" ==> kes_signature]
@@ -124,7 +117,7 @@ transaction_body =
       , opt (idx 4 ==> arr [0 <+ a certificate])
       , opt (idx 5 ==> withdrawals)
       , opt (idx 6 ==> update @era)
-      , opt (idx 7 ==> metadata_hash)
+      , opt (idx 7 ==> auxiliary_data_hash)
       ]
 
 transaction_input :: Rule
@@ -313,23 +306,6 @@ transaction_witness_set =
       , opt $ idx 2 ==> arr [0 <+ a bootstrap_witness]
       ]
 
-transaction_metadatum :: Rule
-transaction_metadatum =
-  "transaction_metadatum"
-    =:= smp [0 <+ asKey transaction_metadatum ==> transaction_metadatum]
-    / sarr [0 <+ a transaction_metadatum]
-    / VInt
-    / (VBytes `sized` (0 :: Word64, 64 :: Word64))
-    / (VText `sized` (0 :: Word64, 64 :: Word64))
-
-transaction_metadatum_label :: Rule
-transaction_metadatum_label = "transaction_metadatum_label" =:= VUInt
-
-transaction_metadata :: Rule
-transaction_metadata =
-  "transaction_metadata"
-    =:= mp [0 <+ asKey transaction_metadatum_label ==> transaction_metadatum]
-
 vkeywitness :: Rule
 vkeywitness = "vkeywitness" =:= arr [a vkey, a signature]
 
@@ -382,6 +358,3 @@ script_hash =
         |  "\x03" for Plutus V3 scripts
         |]
     $ "script_hash" =:= hash28
-
-metadata_hash :: Rule
-metadata_hash = "metadata_hash" =:= hash32
