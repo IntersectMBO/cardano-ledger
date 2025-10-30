@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -18,6 +19,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Core (
   EraTxBody (..),
   EraTxOut (..),
+  EraTxWits (..),
   TxLevel (..),
   eraProtVerLow,
   pattern DelegTxCert,
@@ -27,13 +29,16 @@ import qualified Data.Set as Set
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
 import Test.Cardano.Ledger.Common (Spec, describe, it)
 import Test.Cardano.Ledger.Conway.Binary.Golden (expectDecoderFailureAnn, listRedeemersEnc)
-import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
+import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash, mkKeyPair, mkWitnessVKey)
+import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Dijkstra.Era (DijkstraEraTest)
 
 spec :: forall era. DijkstraEraTest era => Spec
 spec = describe "Golden" $ do
   goldenListRedeemersDisallowed @era
   goldenDuplicateCertsDisallowed @era
+  describe "TxWits" $ do
+    goldenDuplicateVKeyWitsDisallowed @era
 
 goldenListRedeemersDisallowed :: forall era. DijkstraEraTest era => Spec
 goldenListRedeemersDisallowed =
@@ -66,6 +71,21 @@ duplicateCertsTx v =
   where
     cert = DelegTxCert @era (KeyHashObj (mkKeyHash 0)) (DelegStake (mkKeyHash 1))
 
+witsDuplicateVKeyWits :: Enc
+witsDuplicateVKeyWits =
+  mconcat
+    [ E $ TkMapLen 1
+    , E @Int 0
+    , Em
+        [ E $ TkTag 258
+        , E $ TkListLen 2
+        , E vkeywit
+        , E vkeywit
+        ]
+    ]
+  where
+    vkeywit = mkWitnessVKey (mkDummySafeHash 0) (mkKeyPair 0)
+
 goldenDuplicateCertsDisallowed :: forall era. DijkstraEraTest era => Spec
 goldenDuplicateCertsDisallowed =
   it "Decoding a transaction body with duplicate certificates fails" $
@@ -81,3 +101,11 @@ goldenDuplicateCertsDisallowed =
       )
   where
     version = eraProtVerLow @era
+
+goldenDuplicateVKeyWitsDisallowed :: forall era. DijkstraEraTest era => Spec
+goldenDuplicateVKeyWitsDisallowed =
+  it "Decoding a TxWits with duplicate VKeyWits fails" $
+    expectDecoderFailureAnn @(TxWits era)
+      (eraProtVerLow @era)
+      witsDuplicateVKeyWits
+      (DecoderErrorCustom "foo" "bar")
