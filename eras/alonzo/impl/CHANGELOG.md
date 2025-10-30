@@ -38,6 +38,7 @@
 
 ### `testlib`
 
+* Remove redefinition of `auxiliary_data_hash` from CDDL
 * Remove deprecated function `mkPlutusScript'`
 * Use fixed-sized `uint .size 8` for `slot` and `block_number` in CDDL for header
 * Remove CDDL `protocol_version` redefinition

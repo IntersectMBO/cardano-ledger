@@ -52,7 +52,6 @@ module Test.Cardano.Ledger.Conway.CDDL (
   script_n_of_k,
   invalid_before,
   invalid_hereafter,
-  metadata,
   shelley_auxiliary_data,
   shelley_ma_auxiliary_data,
 
@@ -76,7 +75,6 @@ import Test.Cardano.Ledger.Babbage.CDDL hiding (
   ex_unit_prices,
   invalid_before,
   invalid_hereafter,
-  metadata,
   mint,
   multiasset,
   native_script,
@@ -86,7 +84,6 @@ import Test.Cardano.Ledger.Babbage.CDDL hiding (
   script_any,
   script_pubkey,
   transaction_input,
-  transaction_metadatum_label,
   untagged_set,
   value,
   withdrawals,
@@ -746,18 +743,6 @@ cost_models =
         , opt $ idx 2 ==> arr [0 <+ a int64]
         , 0 <+ asKey ((3 :: Integer) ... (255 :: Integer)) ==> arr [0 <+ a int64]
         ]
-
-transaction_metadatum_label :: Rule
-transaction_metadatum_label = "transaction_metadatum_label" =:= (VUInt `sized` (8 :: Word64))
-
-metadata :: Rule
-metadata =
-  "metadata"
-    =:= mp
-      [ 0
-          <+ asKey transaction_metadatum_label
-          ==> transaction_metadatum
-      ]
 
 shelley_auxiliary_data :: Rule
 shelley_auxiliary_data =

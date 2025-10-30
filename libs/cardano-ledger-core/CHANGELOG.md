@@ -47,6 +47,7 @@
 
 ### `testlib`
 
+* Add CDDL definition for `transaction_index`, `metadatum_label`, `metadatum`, `metadata` and `auxiliary_data_hash`
 * Remove deprecated generators `genAddrBadPtr`, `genCompactAddrBadPtr`, `genBadPtr`
 * Remove deprecated functions `mkCred`, `mkScriptAddr`
 * Add CDDL definition for `nonce`, `epoch`, `epoch_interval`, `slot` and `block_number`
