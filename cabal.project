@@ -24,6 +24,12 @@ source-repository-package
   --sha256: sha256-DQHX7V1Ci/n7UVKotqGpBLKyiNHkttTu+tvuQqn/e/k=
   tag: d4b12a415712666e139a19cdc4584423a5397c5f
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cuddle.git
+  --sha256: sha256-XplTfcHBwZprhR3NXKgUNGb7kGGbFG4ogn4BVJxtz0s=
+  tag: 29b8db51bb132e403a91e7ac622184e047b8fede
+
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
