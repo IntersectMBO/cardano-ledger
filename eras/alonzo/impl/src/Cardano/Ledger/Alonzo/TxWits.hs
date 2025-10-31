@@ -89,6 +89,7 @@ import Cardano.Ledger.Binary (
   decodeMapLenOrIndef,
   decodeMapLikeEnforceNoDuplicates,
   decodeNonEmptyList,
+  decodeSetLikeEnforceNoDuplicates,
   encodeFoldableEncoder,
   encodeListLen,
   encodeTag,
@@ -138,7 +139,6 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-import Data.List.NonEmpty (NonEmpty)
 
 -- ==========================================
 
@@ -637,12 +637,14 @@ instance
         txWitnessField
         []
     where
-      setDecoder :: Decoder s (Annotator a) -> (NonEmpty a -> f a) -> Decoder s (Annotator (f a))
-      setDecoder decoder f = 
-        ifDecoderVersionAtLeast
-          (natVersion @12)
-          undefined
-          (mapTraverseableDecoderA (decodeNonEmptyList decoder) f)
+      setDecoder :: (Ord a, DecCBOR a) => Decoder s (Annotator (Set a))
+      setDecoder =
+        pure
+          <$> ifDecoderVersionAtLeast
+            (natVersion @12)
+            (decodeSetLikeEnforceNoDuplicates Set.insert (\s -> (length s, s)) decCBOR)
+            (allowTag setTag >> Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR)
+      {-# INLINE setDecoder #-}
 
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
       txWitnessField 0 =
@@ -651,20 +653,20 @@ instance
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                (allowTag setTag >> setDecoder decCBOR (Set.fromList . NE.toList))
+                setDecoder
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 1 =
         fieldAA
           addScriptsTxWitsRaw
-          (D nativeScriptsDecoder)
+          (D scriptsDecoder)
       txWitnessField 2 =
         fieldAA
           (\x wits -> wits {atwrBootAddrTxWits = x})
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                (allowTag setTag >> setDecoder decCBOR (Set.fromList . NE.toList))
+                setDecoder
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 3 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV1)
@@ -678,16 +680,21 @@ instance
       txWitnessField n = invalidField n
       {-# INLINE txWitnessField #-}
 
-      nativeScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
-      nativeScriptsDecoder =
+      pairDecoder :: Decoder s (Annotator (ScriptHash, Script era))
+      pairDecoder = fmap (asHashedScriptPair @era . fromNativeScript) <$> decCBOR
+      {-# INLINE pairDecoder #-}
+
+      scriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
+      scriptsDecoder =
         ifDecoderVersionAtLeast
-          (natVersion @9)
-          ( allowTag setTag >> mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList
+          (natVersion @12)
+          ( decodeSetLikeEnforceNoDuplicates
+              (\x m -> uncurry Map.insert <$> x <*> undefined)
+              undefined
+              pairDecoder
           )
-          (mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
-        where
-          pairDecoder :: Decoder s (Annotator (ScriptHash, Script era))
-          pairDecoder = fmap (asHashedScriptPair . fromNativeScript) <$> decCBOR
+          (allowTag setTag >> mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
+      {-# INLINE scriptsDecoder #-}
   {-# INLINE decCBOR #-}
 
 deriving via

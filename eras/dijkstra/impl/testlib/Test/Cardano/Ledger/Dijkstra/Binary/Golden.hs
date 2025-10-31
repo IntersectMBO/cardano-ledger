@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Dijkstra.Binary.Golden (
   spec,
 ) where
 
+import Cardano.Ledger.Allegra.Scripts (TimelockRaw (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.BaseTypes (Version)
 import Cardano.Ledger.Binary (DecoderError (..), DeserialiseFailure (..), Tokens (..))
@@ -39,6 +40,7 @@ spec = describe "Golden" $ do
   goldenDuplicateCertsDisallowed @era
   describe "TxWits" $ do
     goldenDuplicateVKeyWitsDisallowed @era
+    goldenDuplicateNativeScriptsDisallowed @era
 
 goldenListRedeemersDisallowed :: forall era. DijkstraEraTest era => Spec
 goldenListRedeemersDisallowed =
@@ -86,6 +88,21 @@ witsDuplicateVKeyWits =
   where
     vkeywit = mkWitnessVKey (mkDummySafeHash 0) (mkKeyPair 0)
 
+witsDuplicateNativeScripts :: forall era. DijkstraEraTest era => Version -> Enc
+witsDuplicateNativeScripts v =
+  mconcat
+    [ E $ TkMapLen 1
+    , E @Int 1
+    , Em
+        [ E $ TkTag 258
+        , E $ TkListLen 2
+        , Ev v nativeScript
+        , Ev v nativeScript
+        ]
+    ]
+  where
+    nativeScript = TimelockAllOf @era mempty
+
 goldenDuplicateCertsDisallowed :: forall era. DijkstraEraTest era => Spec
 goldenDuplicateCertsDisallowed =
   it "Decoding a transaction body with duplicate certificates fails" $
@@ -108,4 +125,20 @@ goldenDuplicateVKeyWitsDisallowed =
     expectDecoderFailureAnn @(TxWits era)
       (eraProtVerLow @era)
       witsDuplicateVKeyWits
+      ( DecoderErrorDeserialiseFailure
+          "Annotator (MemoBytes (AlonzoTxWitsRaw DijkstraEra))"
+          ( DeserialiseFailure
+              208
+              "Final number of elements: 1 does not match the total count that was decoded: 2"
+          )
+      )
+
+goldenDuplicateNativeScriptsDisallowed :: forall era. DijkstraEraTest era => Spec
+goldenDuplicateNativeScriptsDisallowed =
+  it "Decoding a TxWits with duplicate native scripts fails" $
+    expectDecoderFailureAnn @(TxWits era)
+      version
+      (witsDuplicateNativeScripts @era version)
       (DecoderErrorCustom "foo" "bar")
+  where
+    version = eraProtVerLow @era
