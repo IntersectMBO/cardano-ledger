@@ -96,10 +96,8 @@ import Cardano.Ledger.Binary (
   Interns,
   Sized (sizedValue),
   ToCBOR,
-  encCBORGroup,
   mkSized,
   serialize,
-  serialize',
   translateViaCBORAnnotator,
  )
 import Cardano.Ledger.Coin (Coin)
@@ -598,6 +596,7 @@ class
   , Typeable (BlockBody era)
   , EncCBORGroup (BlockBody era)
   , DecCBOR (Annotator (BlockBody era))
+  , HashAnnotated (BlockBody era) EraIndependentBlockBody
   ) =>
   EraBlockBody era
   where
@@ -630,8 +629,8 @@ class
 
 {-# DEPRECATED hashTxSeq "In favor of `hashBlockBody`" #-}
 
-bBodySize :: forall era. EraBlockBody era => ProtVer -> BlockBody era -> Int
-bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
+bBodySize :: forall era. EraBlockBody era => BlockBody era -> Int
+bBodySize = originalBytesSize
 
 txIdTx :: EraTx era => Tx l era -> TxId
 txIdTx tx = txIdTxBody (tx ^. bodyTxL)

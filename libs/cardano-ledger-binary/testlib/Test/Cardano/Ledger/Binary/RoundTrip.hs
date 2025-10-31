@@ -457,7 +457,7 @@ roundTripAnnTwiddled version x = do
 decodeAnn ::
   forall t.
   DecCBOR (Annotator t) =>
-  -- | Version for the encoder
+  -- | Version that was used for the for the `Plain.Encoding`
   Version ->
   -- | Version for the decoder
   Version ->
