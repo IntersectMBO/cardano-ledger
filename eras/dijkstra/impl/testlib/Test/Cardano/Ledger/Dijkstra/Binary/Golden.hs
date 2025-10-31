@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -10,6 +11,8 @@ module Test.Cardano.Ledger.Dijkstra.Binary.Golden (
   spec,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, SupportedLanguage (..))
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptBinary)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.BaseTypes (Version)
 import Cardano.Ledger.Binary (DecoderError (..), DeserialiseFailure (..), Tokens (..))
@@ -24,8 +27,10 @@ import Cardano.Ledger.Dijkstra.Core (
   eraProtVerLow,
   pattern DelegTxCert,
  )
+import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Data.Set as Set
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceedsLang)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
 import Test.Cardano.Ledger.Common (Spec, describe, it)
 import Test.Cardano.Ledger.Conway.Binary.Golden (expectDecoderFailureAnn, listRedeemersEnc)
@@ -39,17 +44,11 @@ spec = describe "Golden" $ do
   goldenDuplicateCertsDisallowed @era
   describe "TxWits" $ do
     goldenDuplicateVKeyWitsDisallowed @era
-
-goldenListRedeemersDisallowed :: forall era. DijkstraEraTest era => Spec
-goldenListRedeemersDisallowed =
-  it "Decoding Redeemers encoded as a list fails" $
-    expectDecoderFailureAnn @(Redeemers era)
-      (eraProtVerLow @era)
-      listRedeemersEnc
-      ( DecoderErrorDeserialiseFailure
-          "Annotator (MemoBytes (RedeemersRaw DijkstraEra))"
-          (DeserialiseFailure 0 "List encoding of redeemers not supported starting with PV 12")
-      )
+    goldenDuplicateNativeScriptsDisallowed @era
+    goldenDuplicatePlutusScriptsDisallowed @era SPlutusV1
+    goldenDuplicatePlutusScriptsDisallowed @era SPlutusV2
+    goldenDuplicatePlutusScriptsDisallowed @era SPlutusV3
+    goldenDuplicatePlutusDataDisallowed @era
 
 duplicateCertsTx :: forall era. DijkstraEraTest era => Version -> Enc
 duplicateCertsTx v =
@@ -86,6 +85,69 @@ witsDuplicateVKeyWits =
   where
     vkeywit = mkWitnessVKey (mkDummySafeHash 0) (mkKeyPair 0)
 
+witsDuplicateNativeScripts :: Enc
+witsDuplicateNativeScripts =
+  mconcat
+    [ E $ TkMapLen 1
+    , E @Int 1
+    , Em
+        [ E $ TkTag 258
+        , E $ TkListLen 2
+        , nativeScript
+        , nativeScript
+        ]
+    ]
+  where
+    nativeScript = Em [E $ TkListLen 2, E @Int 1, E $ TkListLen 0]
+
+witsDuplicatePlutus ::
+  forall era l.
+  EraPlutusTxInfo l era =>
+  SLanguage l -> Enc
+witsDuplicatePlutus slang =
+  mconcat
+    [ E $ TkMapLen 1
+    , E @Int $ case slang of
+        SPlutusV1 -> 3
+        SPlutusV2 -> 6
+        SPlutusV3 -> 7
+        l -> error $ "Unsupported plutus version: " <> show l
+    , Em
+        [ E $ TkTag 258
+        , E $ TkListLen 2
+        , plutus
+        , plutus
+        ]
+    ]
+  where
+    plutus = E . plutusScriptBinary $ alwaysSucceedsLang @era (SupportedLanguage slang) 0
+
+witsDuplicatePlutusData :: Enc
+witsDuplicatePlutusData =
+  mconcat
+    [ E $ TkMapLen 1
+    , E @Int 4
+    , Em
+        [ E $ TkTag 258
+        , E $ TkListLen 2
+        , dat
+        , dat
+        ]
+    ]
+  where
+    dat = E @Int 0
+
+goldenListRedeemersDisallowed :: forall era. DijkstraEraTest era => Spec
+goldenListRedeemersDisallowed =
+  it "Decoding Redeemers encoded as a list fails" $
+    expectDecoderFailureAnn @(Redeemers era)
+      (eraProtVerLow @era)
+      listRedeemersEnc
+      ( DecoderErrorDeserialiseFailure
+          "Annotator (MemoBytes (RedeemersRaw DijkstraEra))"
+          (DeserialiseFailure 0 "List encoding of redeemers not supported starting with PV 12")
+      )
+
 goldenDuplicateCertsDisallowed :: forall era. DijkstraEraTest era => Spec
 goldenDuplicateCertsDisallowed =
   it "Decoding a transaction body with duplicate certificates fails" $
@@ -108,4 +170,53 @@ goldenDuplicateVKeyWitsDisallowed =
     expectDecoderFailureAnn @(TxWits era)
       (eraProtVerLow @era)
       witsDuplicateVKeyWits
-      (DecoderErrorCustom "foo" "bar")
+      ( DecoderErrorDeserialiseFailure
+          "Annotator (MemoBytes (AlonzoTxWitsRaw DijkstraEra))"
+          ( DeserialiseFailure
+              208
+              "Final number of elements: 1 does not match the total count that was decoded: 2"
+          )
+      )
+
+goldenDuplicateNativeScriptsDisallowed :: forall era. DijkstraEraTest era => Spec
+goldenDuplicateNativeScriptsDisallowed =
+  it "Decoding a TxWits with duplicate native scripts fails" $
+    expectDecoderFailureAnn @(TxWits era)
+      version
+      witsDuplicateNativeScripts
+      ( DecoderErrorCustom
+          "Annotator"
+          "Duplicate scripts found: ScriptHash \"d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf\""
+      )
+  where
+    version = eraProtVerLow @era
+
+goldenDuplicatePlutusScriptsDisallowed ::
+  forall era l.
+  ( DijkstraEraTest era
+  , EraPlutusTxInfo l era
+  ) =>
+  SLanguage l -> Spec
+goldenDuplicatePlutusScriptsDisallowed slang =
+  it ("Decoding a TxWits with duplicate " <> show slang <> " scripts fails") $
+    expectDecoderFailureAnn @(TxWits era)
+      (eraProtVerLow @era)
+      (witsDuplicatePlutus @era slang)
+      ( DecoderErrorDeserialiseFailure
+          "Annotator (MemoBytes (AlonzoTxWitsRaw DijkstraEra))"
+          ( DeserialiseFailure
+              22
+              "Final number of elements: 1 does not match the total count that was decoded: 2"
+          )
+      )
+
+goldenDuplicatePlutusDataDisallowed :: forall era. DijkstraEraTest era => Spec
+goldenDuplicatePlutusDataDisallowed =
+  it "Decoding a TxWits with duplicate plutus data fails" $
+    expectDecoderFailureAnn @(TxWits era)
+      (eraProtVerLow @era)
+      witsDuplicatePlutusData
+      ( DecoderErrorCustom
+          "Annotator"
+          "Duplicate dats found: SafeHash \"03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314\""
+      )
