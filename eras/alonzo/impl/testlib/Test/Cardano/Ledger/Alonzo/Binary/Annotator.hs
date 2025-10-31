@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -278,7 +279,8 @@ instance AlonzoEraScript era => DecCBOR (RedeemersRaw era) where
       {-# INLINE decodeListRedeemers #-}
       decodeElement :: Decoder s (PlutusPurpose AsIx era, (Data era, ExUnits))
       decodeElement = do
-        decodeRecordNamed "Redeemer" (\(redeemerPtr, _) -> fromIntegral (listLen redeemerPtr) + 2) $ do
+        let redeemerLen (redeemerPtr, _) = listLenInt (Just redeemerPtr) + 2
+        decodeRecordNamed "Redeemer" redeemerLen do
           !redeemerPtr <- decCBORGroup
           !redeemerData <- decCBOR
           !redeemerExUnits <- decCBOR

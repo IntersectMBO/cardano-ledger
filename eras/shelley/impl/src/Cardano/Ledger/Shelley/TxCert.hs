@@ -74,6 +74,7 @@ module Cardano.Ledger.Shelley.TxCert (
   isUnRegStakeTxCert,
 ) where
 
+import Cardano.Base.Proxy (asProxy)
 import Cardano.Ledger.BaseTypes (invalidKey, kindObject)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
@@ -434,7 +435,7 @@ encodeShelleyDelegCert = \case
 encodePoolCert :: PoolCert -> Encoding
 encodePoolCert = \case
   RegPool poolParams ->
-    encodeListLen (1 + listLen poolParams)
+    encodeListLen (1 + listLen (asProxy poolParams))
       <> encodeWord8 3
       <> encCBORGroup poolParams
   RetirePool vk epoch ->
@@ -505,7 +506,7 @@ poolTxCertDecoder :: EraTxCert era => Word -> Decoder s (Int, TxCert era)
 poolTxCertDecoder = \case
   3 -> do
     group <- decCBORGroup
-    pure (1 + listLenInt group, RegPoolTxCert group)
+    pure (1 + listLenInt (Just group), RegPoolTxCert group)
   4 -> do
     a <- decCBOR
     b <- decCBOR

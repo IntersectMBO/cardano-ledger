@@ -177,7 +177,6 @@ instance Era era => EncCBORGroup (AlonzoBlockBody era) where
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes <> invalidBytes
   listLen _ = 4
-  listLenBound _ = 4
 
 hashAlonzoSegWits ::
   BSL.ByteString ->

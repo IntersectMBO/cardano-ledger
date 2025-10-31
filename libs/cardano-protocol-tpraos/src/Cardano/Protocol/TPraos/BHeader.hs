@@ -41,6 +41,7 @@ module Cardano.Protocol.TPraos.BHeader (
   makeHeaderView,
 ) where
 
+import Cardano.Base.Proxy (asProxy)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -168,7 +169,7 @@ instance Crypto c => NoThunks (BHBody c)
 
 instance Crypto c => EncCBOR (BHBody c) where
   encCBOR bhBody =
-    encodeListLen (9 + listLen oc + listLen pv)
+    encodeListLen (9 + listLen (asProxy oc) + listLen (asProxy pv))
       <> encCBOR (bheaderBlockNo bhBody)
       <> encCBOR (bheaderSlotNo bhBody)
       <> encCBOR (bheaderPrev bhBody)
@@ -212,7 +213,7 @@ instance Crypto c => DecCBOR (BHBody c) where
         , bprotver
         }
     where
-      bhBodySize body = 9 + listLenInt (bheaderOCert body) + listLenInt (bprotver body)
+      bhBodySize body = 9 + listLenInt (Just $ bheaderOCert body) + listLenInt (Just $ bprotver body)
 
 data BHeaderRaw c = BHeaderRaw
   { bhrBody :: !(BHBody c)

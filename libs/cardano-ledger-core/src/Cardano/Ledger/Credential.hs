@@ -311,7 +311,6 @@ instance EncCBORGroup Ptr where
       <> encCBOR txIx
       <> encCBOR certIx
   listLen _ = 3
-  listLenBound _ = 3
 
 instance DecCBORGroup Ptr where
   decCBORGroup = do
