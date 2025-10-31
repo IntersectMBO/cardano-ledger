@@ -80,6 +80,7 @@ import Cardano.Ledger.Binary (
   decodeMapLenOrIndef,
   decodeMapLikeEnforceNoDuplicates,
   decodeNonEmptyList,
+  decodeSetLikeEnforceNoDuplicates,
   encodeFoldableEncoder,
   encodeListLen,
   encodeTag,
@@ -129,7 +130,6 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-import Data.List.NonEmpty (NonEmpty)
 
 -- ==========================================
 
@@ -580,12 +580,14 @@ instance
         txWitnessField
         []
     where
-      setDecoder :: Decoder s (Annotator a) -> (NonEmpty a -> f a) -> Decoder s (Annotator (f a))
-      setDecoder decoder f = 
-        ifDecoderVersionAtLeast
-          (natVersion @12)
-          undefined
-          (mapTraverseableDecoderA (decodeNonEmptyList decoder) f)
+      setDecoder :: (Ord a, DecCBOR a) => Decoder s (Annotator (Set a))
+      setDecoder =
+        pure
+          <$> ifDecoderVersionAtLeast
+            (natVersion @12)
+            (decodeSetLikeEnforceNoDuplicates Set.insert (\s -> (length s, s)) decCBOR)
+            (allowTag setTag >> Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR)
+      {-# INLINE setDecoder #-}
 
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
       txWitnessField 0 =
@@ -594,43 +596,75 @@ instance
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                (allowTag setTag >> setDecoder decCBOR (Set.fromList . NE.toList))
+                setDecoder
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 1 =
-        fieldAA
-          addScriptsTxWitsRaw
-          (D nativeScriptsDecoder)
+        fieldAA addScriptsTxWitsRaw (D scriptsDecoder)
       txWitnessField 2 =
         fieldAA
           (\x wits -> wits {atwrBootAddrTxWits = x})
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                (allowTag setTag >> setDecoder decCBOR (Set.fromList . NE.toList))
+                setDecoder
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 3 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV1)
       txWitnessField 4 =
         fieldAA
           (\x wits -> wits {atwrDatsTxWits = x})
-          From
+          ( D $
+              ifDecoderVersionAtLeast
+                (natVersion @12)
+                noDuplicatesDatsDecoder
+                decCBOR
+          )
       txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
       txWitnessField 6 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV2)
       txWitnessField 7 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV3)
       txWitnessField n = invalidField n
       {-# INLINE txWitnessField #-}
 
-      nativeScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
-      nativeScriptsDecoder =
-        ifDecoderVersionAtLeast
-          (natVersion @9)
-          ( allowTag setTag >> mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList
-          )
-          (mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
+      pairDecoder :: Decoder s (Annotator (ScriptHash, Script era))
+      pairDecoder = fmap (asHashedScriptPair @era . fromNativeScript) <$> decCBOR
+      {-# INLINE pairDecoder #-}
+
+      noDuplicatesDatsDecoder :: Decoder s (Annotator (TxDats era))
+      noDuplicatesDatsDecoder = do
+        allowTag setTag
+        dats <- decodeList decCBOR
+        pure $ TxDats <$> go Map.empty dats
         where
-          pairDecoder :: Decoder s (Annotator (ScriptHash, Script era))
-          pairDecoder = fmap (asHashedScriptPair . fromNativeScript) <$> decCBOR
+          go m [] = pure m
+          go m (x:xs) = do
+            x' <- x
+            let dh = hashData x'
+            if dh `Map.member` m
+              then fail $ "Duplicate dats found: " <> show dh
+              else go (Map.insert dh x' m) xs
+
+      noDuplicatesScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
+      noDuplicatesScriptsDecoder = do
+        allowTag setTag
+        scripts <- decodeList $ fmap (fromNativeScript @era) <$> decCBOR
+        pure $ go Map.empty scripts
+        where
+          go m [] = pure m
+          go m (x : xs) = do
+            x' <- x
+            let sh = hashScript x'
+            if sh `Map.member` m
+              then fail $ "Duplicate scripts found: " <> show sh
+              else go (Map.insert sh x' m) xs
+
+      scriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
+      scriptsDecoder =
+        ifDecoderVersionAtLeast
+          (natVersion @12)
+          noDuplicatesScriptsDecoder
+          (allowTag setTag >> mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
+      {-# INLINE scriptsDecoder #-}
   {-# INLINE decCBOR #-}
 
 deriving via
