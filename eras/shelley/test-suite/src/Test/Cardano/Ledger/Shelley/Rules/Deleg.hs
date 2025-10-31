@@ -53,7 +53,7 @@ import Test.QuickCheck (
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
 
--- | Various properties of the POOL STS Rule, tested on longer traces
+-- | Various properties of the DELEG STS Rule, tested on longer traces
 -- (double the default length)
 tests ::
   forall era.
