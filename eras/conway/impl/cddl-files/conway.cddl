@@ -217,11 +217,12 @@ policy_id = script_hash
 ; To compute a script hash, note that you must prepend
 ; a tag to the bytes of the script before hashing.
 ; The tag is determined by the language.
-; The tags in the Conway era are:
-;   "\x00" for multisig scripts
+; The tags are:
+;   "\x00" for multisig/native scripts
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
 ;   "\x03" for Plutus V3 scripts
+;   "\x04" for Plutus V4 scripts
 script_hash = hash28
 
 hash28 = bytes .size 28
@@ -281,6 +282,11 @@ big_nint = #6.3(bounded_bytes)
 
 script_ref = #6.24(bytes .cbor script)
 
+; Conway supports four script types:
+;   0: Native scripts (timelock) - unchanged from Allegra
+;   1: Plutus V1 scripts
+;   2: Plutus V2 scripts
+;   3: Plutus V3 scripts (NEW)
 script = 
   [  0, native_script
   // 1, plutus_v1_script
@@ -289,6 +295,15 @@ script =
   ]
 
 
+; Allegra introduces timelock support for native scripts.
+; This is the 6-variant native script format used by
+; Allegra, Mary, Alonzo, Babbage, and Conway.
+; 
+; Timelock validity intervals are half-open intervals [a, b).
+;   invalid_before: specifies the left (included) endpoint a.
+;   invalid_hereafter: specifies the right (excluded) endpoint b.
+; 
+; Note: Allegra switched to int64 for script_n_of_k thresholds.
 native_script = 
   [  script_pubkey
   // script_all
@@ -315,17 +330,28 @@ min_int64 = -9223372036854775808
 
 max_int64 = 9223372036854775807
 
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the left (included) endpoint a.
 invalid_before = (4, slot)
 
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the right (excluded) endpoint b.
 invalid_hereafter = (5, slot)
 
-; The real type of plutus_v1_script, plutus_v2_script and
-; plutus_v3_script is bytes. However, because we enforce
-; uniqueness when many scripts are supplied, we need to hack
-; around for tests in order to avoid generating duplicates, since
-; the cddl tool we use for roundtrip testing doesn't generate
-; distinct collections.
-plutus_v1_script = distinct_bytes
+; Alonzo introduces Plutus smart contracts.
+; Plutus V1 scripts are opaque bytestrings.
+plutus_v1_script = bytes
+
+; Babbage introduces Plutus V2 with improved cost model
+; and additional builtins.
+plutus_v2_script = bytes
+
+; Conway introduces Plutus V3 with support for new governance features.
+; 
+; Note: distinct VBytes ensures uniqueness in test generation.
+; The cddl tool we use for roundtrip testing doesn't generate
+; distinct collections, so we use sized variants to ensure uniqueness.
+plutus_v3_script = distinct_bytes
 
 ; A type for distinct values.
 ; The type parameter must support .size, for example: bytes or uint
@@ -336,10 +362,6 @@ distinct_bytes =
   / bytes .size 24
   / bytes .size 30
   / bytes .size 32
-
-plutus_v2_script = distinct_bytes
-
-plutus_v3_script = distinct_bytes
 
 certificates = nonempty_oset<certificate>
 
