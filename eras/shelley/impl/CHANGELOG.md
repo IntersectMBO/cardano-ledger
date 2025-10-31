@@ -20,6 +20,9 @@
 
 ### `testlib`
 
+* Correct the CDDL definition of the `sequence_number` to be sized
+* Export polymorphic CDDL definition for `protocol_version`
+* Move CDDL definition for `nonce`, `epoch`, `slot` and `block_number` to core
 * Rename `examplePoolParams` to `exampleStakePoolParams`
 * Removed `shelleyEraSpecificSpec`
 * Added `shelleyGenUnRegTxCert`

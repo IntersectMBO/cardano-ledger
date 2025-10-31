@@ -1,7 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
@@ -14,13 +17,16 @@ module Test.Cardano.Ledger.Babbage.CDDL (
   operational_cert,
   babbage_transaction_output,
   plutus_data,
+  protocol_version,
 ) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Core (Era)
 import Codec.CBOR.Cuddle.Huddle
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Alonzo.CDDL hiding (
   operational_cert,
+  protocol_version,
  )
 import Text.Heredoc
 import Prelude hiding ((/))
@@ -74,8 +80,8 @@ header_body =
         |]
     $ "header_body"
       =:= arr
-        [ "block_number" ==> VUInt
-        , "slot" ==> VUInt
+        [ "block_number" ==> block_number
+        , "slot" ==> slot
         , "prev_hash" ==> (hash32 / VNil)
         , "issuer_vkey" ==> vkey
         , "vrf_vkey" ==> vrf_vkey
@@ -83,7 +89,7 @@ header_body =
         , "block_body_size" ==> VUInt
         , "block_body_hash" ==> hash32
         , a operational_cert
-        , a protocol_version
+        , a (protocol_version @BabbageEra)
         ]
 
 operational_cert :: Rule
@@ -96,8 +102,21 @@ operational_cert =
       , "sigma" ==> signature
       ]
 
-protocol_version :: Rule
-protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @BabbageEra, a VUInt]
+-- IMPORTANT: Babbage changed operational_cert and protocol_version from 'grp'
+-- to 'arr' to match actual block serialization (see PR #3762, issue #3559).
+--
+-- Semantic difference:
+--   grp (Named Group):
+--     fields are inlined directly into parent array
+--     -> header_body becomes 14-element flat array
+--   arr (Rule):
+--     fields are nested as separate sub-arrays
+--     -> header_body becomes 10-element array with nested structures
+--
+-- Pre-Babbage eras used 'grp' but actual Babbage+ blocks serialize with 'arr'.
+-- This change corrects the CDDL spec to match reality.
+protocol_version :: forall era. Era era => Rule
+protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @era, a VUInt]
 
 transaction_body :: Rule
 transaction_body =
@@ -116,12 +135,12 @@ transaction_body =
         [ idx 0 ==> untagged_set transaction_input
         , idx 1 ==> arr [0 <+ a transaction_output]
         , idx 2 ==> coin
-        , opt (idx 3 ==> VUInt)
+        , opt (idx 3 ==> slot)
         , opt (idx 4 ==> arr [0 <+ a certificate])
         , opt (idx 5 ==> withdrawals)
         , opt (idx 6 ==> update)
         , opt (idx 7 ==> auxiliary_data_hash)
-        , opt (idx 8 ==> VUInt)
+        , opt (idx 8 ==> slot)
         , opt (idx 9 ==> mint)
         , opt (idx 11 ==> script_data_hash)
         , opt (idx 13 ==> untagged_set transaction_input)
@@ -362,12 +381,12 @@ protocol_param_update =
         , opt (idx 4 ==> (VUInt `sized` (2 :: Word64)))
         , opt (idx 5 ==> coin)
         , opt (idx 6 ==> coin)
-        , opt (idx 7 ==> epoch)
+        , opt (idx 7 ==> epoch_interval)
         , opt (idx 8 ==> VUInt `sized` (2 :: Word64))
         , opt (idx 9 ==> nonnegative_interval)
         , opt (idx 10 ==> unit_interval)
         , opt (idx 11 ==> unit_interval)
-        , opt (idx 14 ==> protocol_version)
+        , opt (idx 14 ==> protocol_version @BabbageEra)
         , opt (idx 16 ==> coin)
         , opt (idx 17 ==> coin)
         , opt (idx 18 ==> cost_models)

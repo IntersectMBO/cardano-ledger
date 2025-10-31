@@ -26,6 +26,7 @@
 
 ### `testlib`
 
+* Add CDDL definition for `nonce`, `epoch`, `epoch_interval`, `slot` and `block_number`
 * Remove `Test.Cardano.Ledger.Plutus.ExUnits`
 * Remove the `accountsToUMap` member function from the `EraTest` class.
   - Also remove the related `accountsFromUMap` function.

@@ -11,8 +11,8 @@ block =
 header = [header_body, body_signature : kes_signature]
 
 header_body = 
-  [ block_number      : uint        
-  , slot              : uint        
+  [ block_number      : block_number
+  , slot              : slot        
   , prev_hash         : hash32/ nil 
   , issuer_vkey       : vkey        
   , vrf_vkey          : vrf_vkey    
@@ -25,6 +25,10 @@ header_body =
   ]
 
 
+block_number = uint .size 8
+
+slot = uint .size 8
+
 hash32 = bytes .size 32
 
 vkey = bytes .size 32
@@ -34,10 +38,10 @@ vrf_vkey = bytes .size 32
 vrf_cert = [bytes, bytes .size 80]
 
 operational_cert = 
-  ( hot_vkey        : kes_vkey 
-  , sequence_number : uint     
-  , kes_period      : uint     
-  , sigma           : signature
+  ( hot_vkey        : kes_vkey    
+  , sequence_number : uint .size 8
+  , kes_period      : uint        
+  , sigma           : signature   
   )
 
 kes_vkey = bytes .size 32
@@ -54,7 +58,7 @@ transaction_body =
   {   0 : set<transaction_input>   
   ,   1 : [* transaction_output]
   ,   2 : coin                      
-  ,   3 : uint                      
+  ,   3 : slot                      
   , ? 4 : [* certificate]       
   , ? 5 : withdrawals               
   , ? 6 : update                    
@@ -214,7 +218,7 @@ url = text .size (0 .. 64)
 
 pool_retirement = (4, pool_keyhash, epoch)
 
-epoch = uint
+epoch = uint .size 8
 
 genesis_key_delegation = (5, genesis_hash, genesis_delegate_hash, vrf_keyhash)
 
@@ -250,7 +254,7 @@ protocol_param_update =
   , ? 4  : uint .size 2           ; max block header size
   , ? 5  : coin                   ; key deposit
   , ? 6  : coin                   ; pool deposit
-  , ? 7  : epoch                  ; maximum epoch
+  , ? 7  : epoch_interval         ; maximum epoch
   , ? 8  : uint .size 2           ; n_opt: desired number of stake pools
   , ? 9  : nonnegative_interval   ; pool pledge influence
   , ? 10 : unit_interval          ; expansion rate
@@ -262,6 +266,8 @@ protocol_param_update =
   , ? 16 : coin                   ; min pool cost
   }
 
+
+epoch_interval = uint .size 4
 
 nonnegative_interval = #6.30([uint, positive_int])
 

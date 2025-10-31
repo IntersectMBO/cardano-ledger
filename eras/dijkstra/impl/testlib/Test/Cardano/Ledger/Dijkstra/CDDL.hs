@@ -96,8 +96,8 @@ header_body :: Rule
 header_body =
   "header_body"
     =:= arr
-      [ "block_number" ==> block_no
-      , "slot" ==> slot_no
+      [ "block_number" ==> block_number
+      , "slot" ==> slot
       , "prev_hash" ==> (hash32 / VNil)
       , "issuer_vkey" ==> vkey
       , "vrf_vkey" ==> vrf_vkey
@@ -105,11 +105,8 @@ header_body =
       , "block_body_size" ==> (VUInt `sized` (4 :: Word64))
       , "block_body_hash" ==> hash32
       , a operational_cert
-      , a protocol_version
+      , a (protocol_version @DijkstraEra)
       ]
-
-protocol_version :: Rule
-protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @DijkstraEra, a VUInt]
 
 transaction_body :: Rule
 transaction_body =
@@ -118,11 +115,11 @@ transaction_body =
       [ idx 0 ==> maybe_tagged_set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
-      , opt (idx 3 ==> slot_no)
+      , opt (idx 3 ==> slot)
       , opt (idx 4 ==> certificates)
       , opt (idx 5 ==> withdrawals)
       , opt (idx 7 ==> auxiliary_data_hash)
-      , opt (idx 8 ==> slot_no) -- Validity interval start
+      , opt (idx 8 ==> slot) -- Validity interval start
       , opt (idx 9 ==> mint)
       , opt (idx 11 ==> script_data_hash)
       , opt (idx 13 ==> maybe_tagged_nonempty_set transaction_input)

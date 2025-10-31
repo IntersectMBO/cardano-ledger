@@ -20,8 +20,8 @@ header = [header_body, body_signature : kes_signature]
 
 ;  block_body_size: merkle triple root
 header_body = 
-  [ block_number      : uint       
-  , slot              : uint       
+  [ block_number      : block_number
+  , slot              : slot       
   , prev_hash         : hash32/ nil
   , issuer_vkey       : vkey       
   , vrf_vkey          : vrf_vkey   
@@ -34,6 +34,10 @@ header_body =
   ]
 
 
+block_number = uint .size 8
+
+slot = uint .size 8
+
 hash32 = bytes .size 32
 
 vkey = bytes .size 32
@@ -43,10 +47,10 @@ vrf_vkey = bytes .size 32
 vrf_cert = [bytes, bytes .size 80]
 
 operational_cert = 
-  ( hot_vkey        : kes_vkey 
-  , sequence_number : uint     
-  , kes_period      : uint     
-  , sigma           : signature
+  ( hot_vkey        : kes_vkey    
+  , sequence_number : uint .size 8
+  , kes_period      : uint        
+  , sigma           : signature   
   )
 
 kes_vkey = bytes .size 32
@@ -72,12 +76,12 @@ transaction_body =
   {   0  : set<transaction_input>   
   ,   1  : [* transaction_output]
   ,   2  : coin                      
-  , ? 3  : uint                      
+  , ? 3  : slot                      
   , ? 4  : [* certificate]       
   , ? 5  : withdrawals               
   , ? 6  : update                    
   , ? 7  : auxiliary_data_hash       
-  , ? 8  : uint                      
+  , ? 8  : slot                      
   , ? 9  : mint                      
   , ? 11 : script_data_hash          
   , ? 13 : set<transaction_input>   
@@ -248,7 +252,7 @@ url = text .size (0 .. 64)
 
 pool_retirement = (4, pool_keyhash, epoch)
 
-epoch = uint
+epoch = uint .size 8
 
 genesis_key_delegation = (5, genesis_hash, genesis_delegate_hash, vrf_keyhash)
 
@@ -308,7 +312,7 @@ protocol_param_update =
   , ? 4  : uint .size 2          
   , ? 5  : coin                  
   , ? 6  : coin                  
-  , ? 7  : epoch                 
+  , ? 7  : epoch_interval        
   , ? 8  : uint .size 2          
   , ? 9  : nonnegative_interval  
   , ? 10 : unit_interval         
@@ -327,6 +331,8 @@ protocol_param_update =
   , ? 24 : uint                  
   }
 
+
+epoch_interval = uint .size 4
 
 nonnegative_interval = #6.30([uint, positive_int])
 
@@ -470,9 +476,9 @@ script_any = (2, [* native_script])
 
 script_n_of_k = (3, n : uint, [* native_script])
 
-invalid_before = (4, uint)
+invalid_before = (4, slot)
 
-invalid_hereafter = (5, uint)
+invalid_hereafter = (5, slot)
 
 bootstrap_witness = 
   [ public_key : vkey          

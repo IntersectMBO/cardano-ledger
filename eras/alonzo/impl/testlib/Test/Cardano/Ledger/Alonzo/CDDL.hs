@@ -75,9 +75,6 @@ transaction =
       , a (auxiliary_data / VNil)
       ]
 
-protocol_version :: Named Group
-protocol_version = "protocol_version" =:~ grp [a $ major_protocol_version @AlonzoEra, a VUInt]
-
 transaction_body :: Rule
 transaction_body =
   comment
@@ -96,12 +93,12 @@ transaction_body =
         [ idx 0 ==> untagged_set transaction_input
         , idx 1 ==> arr [0 <+ a transaction_output]
         , idx 2 ==> coin
-        , opt (idx 3 ==> VUInt)
+        , opt (idx 3 ==> slot)
         , opt (idx 4 ==> arr [0 <+ a certificate])
         , opt (idx 5 ==> withdrawals)
         , opt (idx 6 ==> update)
         , opt (idx 7 ==> auxiliary_data_hash)
-        , opt (idx 8 ==> VUInt)
+        , opt (idx 8 ==> slot)
         , opt (idx 9 ==> mint)
         , opt (idx 11 ==> script_data_hash)
         , opt (idx 13 ==> untagged_set transaction_input)
@@ -224,14 +221,14 @@ protocol_param_update =
         , opt (idx 4 ==> (VUInt `sized` (2 :: Word64)))
         , opt (idx 5 ==> coin)
         , opt (idx 6 ==> coin)
-        , opt (idx 7 ==> epoch)
+        , opt (idx 7 ==> epoch_interval)
         , opt (idx 8 ==> VUInt `sized` (2 :: Word64))
         , opt (idx 9 ==> nonnegative_interval)
         , opt (idx 10 ==> unit_interval)
         , opt (idx 11 ==> unit_interval)
         , opt (idx 12 ==> unit_interval)
         , opt (idx 13 ==> nonce)
-        , opt (idx 14 ==> arr [a protocol_version])
+        , opt (idx 14 ==> arr [a (protocol_version @AlonzoEra)])
         , opt (idx 16 ==> coin)
         , opt (idx 17 ==> coin)
         , opt (idx 18 ==> cost_models)
@@ -390,8 +387,8 @@ header_body =
         |]
     $ "header_body"
       =:= arr
-        [ "block_number" ==> VUInt
-        , "slot" ==> VUInt
+        [ "block_number" ==> block_number
+        , "slot" ==> slot
         , "prev_hash" ==> (hash32 / VNil)
         , "issuer_vkey" ==> vkey
         , "vrf_vkey" ==> vrf_vkey
@@ -400,7 +397,7 @@ header_body =
         , "block_body_size" ==> VUInt
         , "block_body_hash" ==> hash32
         , a operational_cert
-        , a protocol_version
+        , a (protocol_version @AlonzoEra)
         ]
 
 native_script :: Rule
