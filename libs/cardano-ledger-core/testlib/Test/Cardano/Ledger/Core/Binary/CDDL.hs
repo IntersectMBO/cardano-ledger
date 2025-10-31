@@ -81,6 +81,15 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   metadata,
   auxiliary_data_hash,
 
+  -- * Scripts
+  script_hash,
+  mkScriptPubkey,
+  mkScriptAll,
+  mkScriptAny,
+  mkScriptNOfK,
+  mkScriptInvalidBefore,
+  mkScriptInvalidHereafter,
+
   -- * Misc.
 ) where
 
@@ -366,3 +375,47 @@ metadata = "metadata" =:= mp [0 <+ asKey metadatum_label ==> metadatum]
 
 auxiliary_data_hash :: Rule
 auxiliary_data_hash = "auxiliary_data_hash" =:= hash32
+
+script_hash :: Rule
+script_hash =
+  comment
+    [str|To compute a script hash, note that you must prepend
+        |a tag to the bytes of the script before hashing.
+        |The tag is determined by the language.
+        |The tags are:
+        |  "\x00" for multisig/native scripts
+        |  "\x01" for Plutus V1 scripts
+        |  "\x02" for Plutus V2 scripts
+        |  "\x03" for Plutus V3 scripts
+        |  "\x04" for Plutus V4 scripts
+        |]
+    $ "script_hash" =:= hash28
+
+mkScriptPubkey :: Named Group
+mkScriptPubkey = "script_pubkey" =:~ grp [0, a addr_keyhash]
+
+mkScriptAll :: IsType0 script => script -> Named Group
+mkScriptAll s = "script_all" =:~ grp [1, a (arr [0 <+ a s])]
+
+mkScriptAny :: IsType0 script => script -> Named Group
+mkScriptAny s = "script_any" =:~ grp [2, a (arr [0 <+ a s])]
+
+mkScriptNOfK :: (IsType0 threshold, IsType0 script) => threshold -> script -> Named Group
+mkScriptNOfK threshold s =
+  "script_n_of_k" =:~ grp [3, "n" ==> threshold, a (arr [0 <+ a s])]
+
+mkScriptInvalidBefore :: Named Group
+mkScriptInvalidBefore =
+  comment
+    [str|Timelock validity intervals are half-open intervals [a, b).
+        |This field specifies the left (included) endpoint a.
+        |]
+    $ "script_invalid_before" =:~ grp [4, a slot]
+
+mkScriptInvalidHereafter :: Named Group
+mkScriptInvalidHereafter =
+  comment
+    [str|Timelock validity intervals are half-open intervals [a, b).
+        |This field specifies the right (excluded) endpoint b.
+        |]
+    $ "script_invalid_hereafter" =:~ grp [5, a slot]

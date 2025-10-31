@@ -11,6 +11,9 @@
 module Test.Cardano.Ledger.Dijkstra.CDDL (
   module Test.Cardano.Ledger.Conway.CDDL,
   dijkstraCDDL,
+  plutus_v4_script,
+  dijkstra_native_script,
+  script_require_guard,
 ) where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -394,21 +397,54 @@ cost_models =
         ]
 
 plutus_v4_script :: Rule
-plutus_v4_script = "plutus_v4_script" =:= distinct VBytes
+plutus_v4_script =
+  comment
+    [str|Dijkstra introduces Plutus V4.
+        |
+        |Note: distinct VBytes ensures uniqueness in test generation.
+        |]
+    $ "plutus_v4_script" =:= distinct VBytes
 
 script_require_guard :: Named Group
-script_require_guard = "script_require_guard" =:~ grp [6, a credential]
+script_require_guard =
+  comment
+    [str|Dijkstra adds guard scripts for enhanced security.
+        |A guard script requires a credential to authorize execution.
+        |]
+    $ "script_require_guard" =:~ grp [6, a credential]
 
 dijkstra_native_script :: Rule
 dijkstra_native_script =
-  "native_script"
-    =:= arr [a script_pubkey]
-    / arr [a script_all]
-    / arr [a script_any]
-    / arr [a script_n_of_k]
-    / arr [a invalid_before]
-    / arr [a invalid_hereafter]
-    / arr [a script_require_guard]
+  comment
+    [str|Dijkstra native scripts extend Allegra's 6-variant format
+        |with a 7th variant for guard scripts.
+        |]
+    $ "native_script"
+      =:= arr [a script_pubkey]
+      / arr [a script_all]
+      / arr [a script_any]
+      / arr [a script_n_of_k]
+      / arr [a script_invalid_before]
+      / arr [a script_invalid_hereafter]
+      / arr [a script_require_guard]
+
+script_pubkey :: Named Group
+script_pubkey = mkScriptPubkey
+
+script_all :: Named Group
+script_all = mkScriptAll dijkstra_native_script
+
+script_any :: Named Group
+script_any = mkScriptAny dijkstra_native_script
+
+script_n_of_k :: Named Group
+script_n_of_k = mkScriptNOfK int64 dijkstra_native_script
+
+script_invalid_before :: Named Group
+script_invalid_before = mkScriptInvalidBefore
+
+script_invalid_hereafter :: Named Group
+script_invalid_hereafter = mkScriptInvalidHereafter
 
 auxiliary_data_map :: Rule
 auxiliary_data_map =
@@ -441,9 +477,17 @@ auxiliary_data =
 
 dijkstra_script :: Rule
 dijkstra_script =
-  "script"
-    =:= arr [0, a dijkstra_native_script]
-    / arr [1, a plutus_v1_script]
-    / arr [2, a plutus_v2_script]
-    / arr [3, a plutus_v3_script]
-    / arr [4, a plutus_v4_script]
+  comment
+    [str|Dijkstra supports five script types:
+        |  0: Native scripts with guard support (7 variants)
+        |  1: Plutus V1 scripts
+        |  2: Plutus V2 scripts
+        |  3: Plutus V3 scripts
+        |  4: Plutus V4 scripts (NEW)
+        |]
+    $ "script"
+      =:= arr [0, a dijkstra_native_script]
+      / arr [1, a plutus_v1_script]
+      / arr [2, a plutus_v2_script]
+      / arr [3, a plutus_v3_script]
+      / arr [4, a plutus_v4_script]

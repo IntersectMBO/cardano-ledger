@@ -47,6 +47,7 @@
 
 ### `testlib`
 
+* Add CDDL definitions for `script_hash`, `mkScriptPubkey`, `mkScriptAll`, `mkScriptAny`, `mkScriptNOfK`, `mkScriptInvalidBefore`, `mkScriptInvalidHereafter`
 * Add CDDL definition for `transaction_index`, `metadatum_label`, `metadatum`, `metadata` and `auxiliary_data_hash`
 * Remove deprecated generators `genAddrBadPtr`, `genCompactAddrBadPtr`, `genBadPtr`
 * Remove deprecated functions `mkCred`, `mkScriptAddr`
