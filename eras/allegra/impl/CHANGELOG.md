@@ -11,6 +11,9 @@
 
 ### `testlib`
 
+* Rename `native_script` -> `allegra_native_script` in CDDL
+* Add `auxiliary_data_array` to CDDL for simplification
+* Remove `metadata` redefinition in CDDL
 * Use fixed-sized `uint .size 8` for `slot` in CDDL for timelock validity intervals
 * Add `impSatisfyMNativeScripts`
 * Add `impSatisfySignature`

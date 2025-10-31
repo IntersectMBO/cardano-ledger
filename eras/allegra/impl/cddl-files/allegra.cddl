@@ -63,7 +63,7 @@ transaction_body =
   , ? 4 : [* certificate]       
   , ? 5 : withdrawals               
   , ? 6 : update                    
-  , ? 7 : metadata_hash             
+  , ? 7 : auxiliary_data_hash       
   , ? 8 : slot                      
   }
 
@@ -145,11 +145,12 @@ hash28 = bytes .size 28
 ; To compute a script hash, note that you must prepend
 ; a tag to the bytes of the script before hashing.
 ; The tag is determined by the language.
-; The tags in the Conway era are:
-;   "\x00" for multisig scripts
+; The tags are:
+;   "\x00" for multisig/native scripts
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
 ;   "\x03" for Plutus V3 scripts
+;   "\x04" for Plutus V4 scripts
 script_hash = hash28
 
 ; This will be deprecated in a future era
@@ -279,20 +280,22 @@ max_word64 = 18446744073709551615
 
 nonce = [0// 1, bytes .size 32]
 
-metadata_hash = hash32
+auxiliary_data_hash = hash32
 
 transaction_witness_set = 
   {? 0 : [* vkeywitness], ? 1 : [* native_script], ? 2 : [* bootstrap_witness]}
 
 vkeywitness = [vkey, signature]
 
+; Allegra introduces timelock support for native scripts.
+; This is the 6-variant native script format used by
+; Allegra, Mary, Alonzo, Babbage, and Conway.
+; 
 ; Timelock validity intervals are half-open intervals [a, b).
+;   invalid_before: specifies the left (included) endpoint a.
+;   invalid_hereafter: specifies the right (excluded) endpoint b.
 ; 
-;   invalid_before:
-;     specifies the left (included) endpoint a.
-; 
-;   invalid_hereafter:
-;     specifies the right (excluded) endpoint b.
+; Note: Allegra switched to int64 for script_n_of_k thresholds.
 native_script = 
   [  script_pubkey
   // script_all
@@ -317,8 +320,12 @@ min_int64 = -9223372036854775808
 
 max_int64 = 9223372036854775807
 
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the left (included) endpoint a.
 invalid_before = (4, slot)
 
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the right (excluded) endpoint b.
 invalid_hereafter = (5, slot)
 
 bootstrap_witness = 
@@ -331,20 +338,21 @@ bootstrap_witness =
 
 transaction_index = uint .size 2
 
-auxiliary_data = 
-  metadata                                                                              
-  / [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
+auxiliary_data = metadata/ auxiliary_data_array
 
-metadata = {* transaction_metadatum_label => transaction_metadatum}
+metadata = {* metadatum_label => metadatum}
 
-transaction_metadatum_label = uint
+metadatum_label = uint .size 8
 
-transaction_metadatum = 
-  {* transaction_metadatum => transaction_metadatum}
-  / [* transaction_metadatum]
-  / int                          
-  / bytes .size (0 .. 64)     
-  / text .size (0 .. 64)      
+metadatum = 
+  {* metadatum => metadatum}
+  / [* metadatum]       
+  / int                     
+  / bytes .size (0 .. 64)
+  / text .size (0 .. 64) 
+
+auxiliary_data_array = 
+  [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
 
 auxiliary_scripts = [* native_script]
 

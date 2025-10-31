@@ -73,6 +73,22 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   -- * Protocol version
 
   -- * Transactions
+  transaction_index,
+
+  -- * Metadata and Auxiliary Data
+  metadatum_label,
+  metadatum,
+  metadata,
+  auxiliary_data_hash,
+
+  -- * Scripts
+  script_hash,
+  mkScriptPubkey,
+  mkScriptAll,
+  mkScriptAny,
+  mkScriptNOfK,
+  mkInvalidBefore,
+  mkInvalidHereafter,
 
   -- * Misc.
 ) where
@@ -338,3 +354,68 @@ slot = "slot" =:= VUInt `sized` (8 :: Word64)
 
 block_number :: Rule
 block_number = "block_number" =:= VUInt `sized` (8 :: Word64)
+
+transaction_index :: Rule
+transaction_index = "transaction_index" =:= VUInt `sized` (2 :: Word64)
+
+metadatum_label :: Rule
+metadatum_label = "metadatum_label" =:= VUInt `sized` (8 :: Word64)
+
+metadatum :: Rule
+metadatum =
+  "metadatum"
+    =:= smp [0 <+ asKey metadatum ==> metadatum]
+    / sarr [0 <+ a metadatum]
+    / VInt
+    / (VBytes `sized` (0 :: Word64, 64 :: Word64))
+    / (VText `sized` (0 :: Word64, 64 :: Word64))
+
+metadata :: Rule
+metadata = "metadata" =:= mp [0 <+ asKey metadatum_label ==> metadatum]
+
+auxiliary_data_hash :: Rule
+auxiliary_data_hash = "auxiliary_data_hash" =:= hash32
+
+script_hash :: Rule
+script_hash =
+  comment
+    [str|To compute a script hash, note that you must prepend
+        |a tag to the bytes of the script before hashing.
+        |The tag is determined by the language.
+        |The tags are:
+        |  "\x00" for multisig/native scripts
+        |  "\x01" for Plutus V1 scripts
+        |  "\x02" for Plutus V2 scripts
+        |  "\x03" for Plutus V3 scripts
+        |  "\x04" for Plutus V4 scripts
+        |]
+    $ "script_hash" =:= hash28
+
+mkScriptPubkey :: Named Group
+mkScriptPubkey = "script_pubkey" =:~ grp [0, a addr_keyhash]
+
+mkScriptAll :: IsType0 script => script -> Named Group
+mkScriptAll s = "script_all" =:~ grp [1, a (arr [0 <+ a s])]
+
+mkScriptAny :: IsType0 script => script -> Named Group
+mkScriptAny s = "script_any" =:~ grp [2, a (arr [0 <+ a s])]
+
+mkScriptNOfK :: (IsType0 threshold, IsType0 script) => threshold -> script -> Named Group
+mkScriptNOfK threshold s =
+  "script_n_of_k" =:~ grp [3, "n" ==> threshold, a (arr [0 <+ a s])]
+
+mkInvalidBefore :: Named Group
+mkInvalidBefore =
+  comment
+    [str|Timelock validity intervals are half-open intervals [a, b).
+        |This field specifies the left (included) endpoint a.
+        |]
+    $ "invalid_before" =:~ grp [4, a slot]
+
+mkInvalidHereafter :: Named Group
+mkInvalidHereafter =
+  comment
+    [str|Timelock validity intervals are half-open intervals [a, b).
+        |This field specifies the right (excluded) endpoint b.
+        |]
+    $ "invalid_hereafter" =:~ grp [5, a slot]

@@ -62,7 +62,7 @@ transaction_body =
       , opt (idx 4 ==> arr [0 <+ a certificate])
       , opt (idx 5 ==> withdrawals)
       , opt (idx 6 ==> update @era)
-      , opt (idx 7 ==> metadata_hash)
+      , opt (idx 7 ==> auxiliary_data_hash)
       , opt (idx 8 ==> slot)
       , opt (idx 9 ==> mint)
       ]

@@ -12,10 +12,9 @@ module Test.Cardano.Ledger.Alonzo.CDDL (
   module Test.Cardano.Ledger.Mary.CDDL,
   alonzoCDDL,
   certificates,
-  auxiliary_data_hash,
   required_signers,
   network_id,
-  native_script,
+  plutus_v1_script,
   redeemers,
   constr,
   ex_unit_prices,
@@ -253,16 +252,16 @@ transaction_witness_set =
   comment
     [str|
         |NEW:
-        |  3: [* plutus_script ]
+        |  3: [* plutus_v1_script ]
         |  4: [* plutus_data ]
         |  5: redeemers
         |]
     $ "transaction_witness_set"
       =:= mp
         [ opt $ idx 0 ==> arr [0 <+ a vkeywitness]
-        , opt $ idx 1 ==> arr [0 <+ a native_script]
+        , opt $ idx 1 ==> arr [0 <+ a allegra_native_script]
         , opt $ idx 2 ==> arr [0 <+ a bootstrap_witness]
-        , opt $ idx 3 ==> arr [0 <+ a plutus_script]
+        , opt $ idx 3 ==> arr [0 <+ a plutus_v1_script]
         , opt $ idx 4 ==> arr [0 <+ a plutus_data]
         , opt $ idx 5 ==> redeemers
         ]
@@ -270,8 +269,13 @@ transaction_witness_set =
 redeemers :: Rule
 redeemers = "redeemers" =:= arr [0 <+ a redeemer]
 
-plutus_script :: Rule
-plutus_script = "plutus_script" =:= VBytes
+plutus_v1_script :: Rule
+plutus_v1_script =
+  comment
+    [str|Alonzo introduces Plutus smart contracts.
+        |Plutus V1 scripts are opaque bytestrings.
+        |]
+    $ "plutus_v1_script" =:= VBytes
 
 plutus_data :: Rule
 plutus_data =
@@ -354,28 +358,30 @@ cost_model =
         |]
     $ "cost_model" =:= arr [166 <+ a int64 +> 166]
 
+auxiliary_data_map :: Rule
+auxiliary_data_map =
+  "auxiliary_data_map"
+    =:= tag
+      259
+      ( mp
+          [ opt (idx 0 ==> metadata)
+          , opt (idx 1 ==> arr [0 <+ a allegra_native_script])
+          , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
+          ]
+      )
+
 auxiliary_data :: Rule
 auxiliary_data =
   comment
-    [str|            metadata: shelley
-        |transaction_metadata: shelley-ma
-        |NEW
-        |  #6.259(0 ==> metadata): alonzo onwards
+    [str|auxiliary_data supports three serialization formats:
+        |  1. metadata (raw) - Supported since Shelley
+        |  2. auxiliary_data_array - Array format, introduced in Allegra
+        |  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
         |]
     $ "auxiliary_data"
       =:= metadata
-      / sarr
-        [ "transaction_metadata" ==> metadata
-        , "auxiliary_scripts" ==> auxiliary_scripts
-        ]
-      / tag
-        259
-        ( mp
-            [ opt (idx 0 ==> metadata)
-            , opt (idx 1 ==> arr [0 <+ a native_script])
-            , opt (idx 2 ==> arr [0 <+ a plutus_script])
-            ]
-        )
+      / auxiliary_data_array
+      / auxiliary_data_map
 
 header :: Rule
 header = "header" =:= arr [a header_body, "body_signature" ==> kes_signature]
@@ -400,33 +406,8 @@ header_body =
         , a (protocol_version @AlonzoEra)
         ]
 
-native_script :: Rule
-native_script =
-  comment
-    [str|Timelock validity intervals are half-open intervals [a, b).
-        |
-        |  invalid_before:
-        |    specifies the left (included) endpoint a.
-        |
-        |  invalid_hereafter:
-        |    specifies the right (excluded) endpoint b.
-        |]
-    $ "native_script"
-      =:= arr [a script_pubkey]
-      / arr [a script_all]
-      / arr [a script_any]
-      / arr [a script_n_of_k]
-      / arr [a invalid_before]
-      / arr [a invalid_hereafter]
-
-script_n_of_k :: Named Group
-script_n_of_k = "script_n_of_k" =:~ grp [3, "n" ==> VUInt, a (arr [0 <+ a native_script])]
-
 positive_interval :: Rule
 positive_interval = "positive_interval" =:= tag 30 (arr [a positive_int, a positive_int])
 
 network_id :: Rule
 network_id = "network_id" =:= int 0 / int 1
-
-auxiliary_data_hash :: Rule
-auxiliary_data_hash = "auxiliary_data_hash" =:= hash32

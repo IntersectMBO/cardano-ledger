@@ -26,6 +26,8 @@
 
 ### `testlib`
 
+* Add CDDL definitions for `script_hash`, `mkScriptPubkey`, `mkScriptAll`, `mkScriptAny`, `mkScriptNOfK`, `mkInvalidBefore`, `mkInvalidHereafter`
+* Add CDDL definition for `transaction_index`, `metadatum_label`, `metadatum`, `metadata` and `auxiliary_data_hash`
 * Add CDDL definition for `nonce`, `epoch`, `epoch_interval`, `slot` and `block_number`
 * Remove `Test.Cardano.Ledger.Plutus.ExUnits`
 * Remove the `accountsToUMap` member function from the `EraTest` class.

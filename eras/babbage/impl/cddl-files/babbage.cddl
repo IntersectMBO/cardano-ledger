@@ -158,11 +158,12 @@ policy_id = script_hash
 ; To compute a script hash, note that you must prepend
 ; a tag to the bytes of the script before hashing.
 ; The tag is determined by the language.
-; The tags in the Conway era are:
-;   "\x00" for multisig scripts
+; The tags are:
+;   "\x00" for multisig/native scripts
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
 ;   "\x03" for Plutus V3 scripts
+;   "\x04" for Plutus V4 scripts
 script_hash = hash28
 
 hash28 = bytes .size 28
@@ -218,15 +219,21 @@ big_nint = #6.3(bounded_bytes)
 
 script_ref = #6.24(bytes .cbor script)
 
+; Babbage supports three script types:
+;   0: Native scripts (timelock)
+;   1: Plutus V1 scripts
+;   2: Plutus V2 scripts
 script = [0, native_script// 1, plutus_v1_script// 2, plutus_v2_script]
 
+; Allegra introduces timelock support for native scripts.
+; This is the 6-variant native script format used by
+; Allegra, Mary, Alonzo, Babbage, and Conway.
+; 
 ; Timelock validity intervals are half-open intervals [a, b).
+;   invalid_before: specifies the left (included) endpoint a.
+;   invalid_hereafter: specifies the right (excluded) endpoint b.
 ; 
-;   invalid_before:
-;     specifies the left (included) endpoint a.
-; 
-;   invalid_hereafter:
-;     specifies the right (excluded) endpoint b.
+; Note: Allegra switched to int64 for script_n_of_k thresholds.
 native_script = 
   [  script_pubkey
   // script_all
@@ -245,14 +252,28 @@ script_all = (1, [* native_script])
 
 script_any = (2, [* native_script])
 
-script_n_of_k = (3, n : uint, [* native_script])
+script_n_of_k = (3, n : int64, [* native_script])
 
+int64 = min_int64 .. max_int64
+
+min_int64 = -9223372036854775808
+
+max_int64 = 9223372036854775807
+
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the left (included) endpoint a.
 invalid_before = (4, slot)
 
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the right (excluded) endpoint b.
 invalid_hereafter = (5, slot)
 
+; Alonzo introduces Plutus smart contracts.
+; Plutus V1 scripts are opaque bytestrings.
 plutus_v1_script = bytes
 
+; Babbage introduces Plutus V2 with improved cost model
+; and additional builtins.
 plutus_v2_script = bytes
 
 certificate = 
@@ -429,12 +450,6 @@ max_word64 = 18446744073709551615
 ; 1: Plutus v2
 cost_models = {? 0 : [166*166 int64], ? 1 : [175*175 int64]}
 
-int64 = min_int64 .. max_int64
-
-min_int64 = -9223372036854775808
-
-max_int64 = 9223372036854775807
-
 ex_unit_prices = [mem_price : positive_interval, step_price : positive_interval]
 
 positive_interval = #6.30([positive_int, positive_int])
@@ -550,16 +565,31 @@ redeemer_tag = 0/ 1/ 2/ 3
 
 transaction_index = uint .size 2
 
-;               metadata: shelley
-;   transaction_metadata: shelley-ma
-; #6.259(0 ==> metadata): alonzo onwards
-; NEW:
-;   3: [* plutus_v2_script]
-auxiliary_data = 
-  metadata                                                                                                                                            
-  / [ transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts
-  ]                                                              
-  / #6.259(
+; auxiliary_data supports three serialization formats:
+;   1. metadata (raw) - Supported since Shelley
+;   2. auxiliary_data_array - Array format, introduced in Allegra
+;   3. auxiliary_data_map - Tagged map format, introduced in Alonzo
+;      Babbage adds plutus_v2_script support at index 3
+auxiliary_data = metadata/ auxiliary_data_array/ auxiliary_data_map
+
+metadata = {* metadatum_label => metadatum}
+
+metadatum_label = uint .size 8
+
+metadatum = 
+  {* metadatum => metadatum}
+  / [* metadatum]       
+  / int                     
+  / bytes .size (0 .. 64)
+  / text .size (0 .. 64) 
+
+auxiliary_data_array = 
+  [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
+
+auxiliary_scripts = [* native_script]
+
+auxiliary_data_map = 
+  #6.259(
     { ? 0 : metadata                
     , ? 1 : [* native_script]   
     , ? 2 : [* plutus_v1_script]
@@ -568,18 +598,6 @@ auxiliary_data =
 
   )
 
-metadata = {* transaction_metadatum_label => transaction_metadatum}
-
-transaction_metadatum_label = uint
-
-transaction_metadatum = 
-  {* transaction_metadatum => transaction_metadatum}
-  / [* transaction_metadatum]
-  / int                          
-  / bytes .size (0 .. 64)     
-  / text .size (0 .. 64)      
-
-auxiliary_scripts = [* native_script]
 
 transaction = 
   [transaction_body, transaction_witness_set, bool, auxiliary_data/ nil]

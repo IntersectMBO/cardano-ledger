@@ -217,11 +217,12 @@ policy_id = script_hash
 ; To compute a script hash, note that you must prepend
 ; a tag to the bytes of the script before hashing.
 ; The tag is determined by the language.
-; The tags in the Conway era are:
-;   "\x00" for multisig scripts
+; The tags are:
+;   "\x00" for multisig/native scripts
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
 ;   "\x03" for Plutus V3 scripts
+;   "\x04" for Plutus V4 scripts
 script_hash = hash28
 
 hash28 = bytes .size 28
@@ -281,6 +282,12 @@ big_nint = #6.3(bounded_bytes)
 
 script_ref = #6.24(bytes .cbor script)
 
+; Dijkstra supports five script types:
+;   0: Native scripts with guard support (7 variants)
+;   1: Plutus V1 scripts
+;   2: Plutus V2 scripts
+;   3: Plutus V3 scripts
+;   4: Plutus V4 scripts (NEW)
 script = 
   [  0, native_script
   // 1, plutus_v1_script
@@ -290,6 +297,8 @@ script =
   ]
 
 
+; Dijkstra native scripts extend Allegra's 6-variant format
+; with a 7th variant for guard scripts.
 native_script = 
   [  script_pubkey
   // script_all
@@ -317,21 +326,34 @@ min_int64 = -9223372036854775808
 
 max_int64 = 9223372036854775807
 
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the left (included) endpoint a.
 invalid_before = (4, slot)
 
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the right (excluded) endpoint b.
 invalid_hereafter = (5, slot)
 
+; Dijkstra adds guard scripts for enhanced security.
+; A guard script requires a credential to authorize execution.
 script_require_guard = (6, credential)
 
 credential = [0, addr_keyhash// 1, script_hash]
 
-; The real type of plutus_v1_script, plutus_v2_script and
-; plutus_v3_script is bytes. However, because we enforce
-; uniqueness when many scripts are supplied, we need to hack
-; around for tests in order to avoid generating duplicates, since
-; the cddl tool we use for roundtrip testing doesn't generate
-; distinct collections.
-plutus_v1_script = distinct_bytes
+; Alonzo introduces Plutus smart contracts.
+; Plutus V1 scripts are opaque bytestrings.
+plutus_v1_script = bytes
+
+; Babbage introduces Plutus V2 with improved cost model
+; and additional builtins.
+plutus_v2_script = bytes
+
+; Conway introduces Plutus V3 with support for new governance features.
+; 
+; Note: distinct VBytes ensures uniqueness in test generation.
+; The cddl tool we use for roundtrip testing doesn't generate
+; distinct collections, so we use sized variants to ensure uniqueness.
+plutus_v3_script = distinct_bytes
 
 ; A type for distinct values.
 ; The type parameter must support .size, for example: bytes or uint
@@ -343,10 +365,9 @@ distinct_bytes =
   / bytes .size 30
   / bytes .size 32
 
-plutus_v2_script = distinct_bytes
-
-plutus_v3_script = distinct_bytes
-
+; Dijkstra introduces Plutus V4.
+; 
+; Note: distinct VBytes ensures uniqueness in test generation.
 plutus_v4_script = distinct_bytes
 
 certificates = nonempty_oset<certificate>
@@ -711,26 +732,30 @@ redeemer_tag =
 
 transaction_index = uint .size 2
 
-auxiliary_data = 
-  shelley_auxiliary_data/ shelley_ma_auxiliary_data/ alonzo_auxiliary_data
+; auxiliary_data supports three serialization formats:
+;   1. metadata (raw) - Supported since Shelley
+;   2. auxiliary_data_array - Array format, introduced in Allegra
+;   3. auxiliary_data_map - Tagged map format, introduced in Alonzo
+;      Dijkstra adds plutus_v4_script support at index 5
+auxiliary_data = metadata/ auxiliary_data_array/ auxiliary_data_map
 
-shelley_auxiliary_data = metadata
+metadata = {* metadatum_label => metadatum}
 
-metadata = {* transaction_metadatum_label => transaction_metadatum}
+metadatum_label = uint .size 8
 
-transaction_metadatum_label = uint .size 8
+metadatum = 
+  {* metadatum => metadatum}
+  / [* metadatum]       
+  / int                     
+  / bytes .size (0 .. 64)
+  / text .size (0 .. 64) 
 
-transaction_metadatum = 
-  {* transaction_metadatum => transaction_metadatum}
-  / [* transaction_metadatum]
-  / int                          
-  / bytes .size (0 .. 64)     
-  / text .size (0 .. 64)      
+auxiliary_data_array = 
+  [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
 
-shelley_ma_auxiliary_data = 
-  [transaction_metadata : metadata, auxiliary_scripts : [* native_script]]
+auxiliary_scripts = [* native_script]
 
-alonzo_auxiliary_data = 
+auxiliary_data_map = 
   #6.259(
     { ? 0 : metadata                
     , ? 1 : [* native_script]   
