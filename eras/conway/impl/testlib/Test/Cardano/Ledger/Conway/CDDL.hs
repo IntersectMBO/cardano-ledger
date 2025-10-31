@@ -43,15 +43,7 @@ module Test.Cardano.Ledger.Conway.CDDL (
   ex_unit_prices,
   pool_voting_thresholds,
   drep_voting_thresholds,
-  plutus_v1_script,
-  plutus_v2_script,
   plutus_v3_script,
-  script_pubkey,
-  script_all,
-  script_any,
-  script_n_of_k,
-  invalid_before,
-  invalid_hereafter,
 
   -- * Sets
   maybe_tagged_set,
@@ -71,16 +63,10 @@ import Test.Cardano.Ledger.Babbage.CDDL hiding (
   certificate,
   certificates,
   ex_unit_prices,
-  invalid_before,
-  invalid_hereafter,
   mint,
   multiasset,
-  native_script,
   redeemers,
   required_signers,
-  script_all,
-  script_any,
-  script_pubkey,
   transaction_input,
   untagged_set,
   value,
@@ -637,7 +623,7 @@ transaction_witness_set =
   "transaction_witness_set"
     =:= mp
       [ opt $ idx 0 ==> maybe_tagged_nonempty_set vkeywitness
-      , opt $ idx 1 ==> maybe_tagged_nonempty_set native_script
+      , opt $ idx 1 ==> maybe_tagged_nonempty_set allegra_native_script
       , opt $ idx 2 ==> maybe_tagged_nonempty_set bootstrap_witness
       , opt $ idx 3 ==> maybe_tagged_nonempty_set plutus_v1_script
       , opt $ idx 4 ==> maybe_tagged_nonempty_set plutus_data
@@ -646,23 +632,16 @@ transaction_witness_set =
       , opt $ idx 7 ==> maybe_tagged_nonempty_set plutus_v3_script
       ]
 
-plutus_v1_script :: Rule
-plutus_v1_script =
-  comment
-    [str|The real type of plutus_v1_script, plutus_v2_script and
-        |plutus_v3_script is bytes. However, because we enforce
-        |uniqueness when many scripts are supplied, we need to hack
-        |around for tests in order to avoid generating duplicates, since
-        |the cddl tool we use for roundtrip testing doesn't generate
-        |distinct collections.
-        |]
-    $ "plutus_v1_script" =:= distinct VBytes
-
-plutus_v2_script :: Rule
-plutus_v2_script = "plutus_v2_script" =:= distinct VBytes
-
 plutus_v3_script :: Rule
-plutus_v3_script = "plutus_v3_script" =:= distinct VBytes
+plutus_v3_script =
+  comment
+    [str|Conway introduces Plutus V3 with support for new governance features.
+        |
+        |Note: distinct VBytes ensures uniqueness in test generation.
+        |The cddl tool we use for roundtrip testing doesn't generate
+        |distinct collections, so we use sized variants to ensure uniqueness.
+        |]
+    $ "plutus_v3_script" =:= distinct VBytes
 
 redeemers :: Rule -> Rule
 redeemers redeemer_tag =
@@ -749,7 +728,7 @@ auxiliary_data_map =
       259
       ( mp
           [ opt (idx 0 ==> metadata)
-          , opt (idx 1 ==> arr [0 <+ a native_script])
+          , opt (idx 1 ==> arr [0 <+ a allegra_native_script])
           , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
           , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
           , opt (idx 4 ==> arr [0 <+ a plutus_v3_script])
@@ -770,41 +749,6 @@ auxiliary_data =
       / auxiliary_data_array
       / auxiliary_data_map
 
-native_script :: Rule
-native_script =
-  "native_script"
-    =:= arr [a script_pubkey]
-    / arr [a script_all]
-    / arr [a script_any]
-    / arr [a script_n_of_k]
-    / arr [a invalid_before]
-    -- Timelock validity intervals are half-open intervals [a, b).
-    -- This field specifies the left (included) endpoint a.
-    / arr [a invalid_hereafter]
-
--- Timelock validity intervals are half-open intervals [a, b).
--- This field specifies the right (excluded) endpoint b.
-
-script_pubkey :: Named Group
-script_pubkey = "script_pubkey" =:~ grp [0, a addr_keyhash]
-
-script_all :: Named Group
-script_all = "script_all" =:~ grp [1, a (arr [0 <+ a native_script])]
-
-script_any :: Named Group
-script_any = "script_any" =:~ grp [2, a (arr [0 <+ a native_script])]
-
-script_n_of_k :: Named Group
-script_n_of_k =
-  "script_n_of_k"
-    =:~ grp [3, "n" ==> int64, a (arr [0 <+ a native_script])]
-
-invalid_before :: Named Group
-invalid_before = "invalid_before" =:~ grp [4, a slot]
-
-invalid_hereafter :: Named Group
-invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot]
-
 multiasset :: IsType0 a => a -> GRuleCall
 multiasset = binding $ \x ->
   "multiasset"
@@ -818,11 +762,18 @@ mint = "mint" =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> non
 
 conway_script :: Rule
 conway_script =
-  "script"
-    =:= arr [0, a native_script]
-    / arr [1, a plutus_v1_script]
-    / arr [2, a plutus_v2_script]
-    / arr [3, a plutus_v3_script]
+  comment
+    [str|Conway supports four script types:
+        |  0: Native scripts (timelock) - unchanged from Allegra
+        |  1: Plutus V1 scripts
+        |  2: Plutus V2 scripts
+        |  3: Plutus V3 scripts (NEW)
+        |]
+    $ "script"
+      =:= arr [0, a allegra_native_script]
+      / arr [1, a plutus_v1_script]
+      / arr [2, a plutus_v2_script]
+      / arr [3, a plutus_v3_script]
 
 -- | Conway era introduces an optional 258 tag for sets, which will become
 -- mandatory in the second era after Conway.

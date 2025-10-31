@@ -30,6 +30,8 @@
 
 ### `testlib`
 
+* Rename `multisig_script` -> `shelley_native_script` in CDDL
+* Move `script_hash` to core CDDL
 * Move `transaction_metadatum_label`, `transaction_metadatum`, `transaction_index` and `metadata_hash` to core CDDL
 * Remove deprecated module `Test.Cardano.Ledger.Shelley.Generator.Constants`
 * Remove deprecated module `Test.Cardano.Ledger.Shelley.Generator.Delegation`

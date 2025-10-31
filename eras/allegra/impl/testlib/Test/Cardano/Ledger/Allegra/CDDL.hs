@@ -17,11 +17,7 @@ module Test.Cardano.Ledger.Allegra.CDDL (
   auxiliary_data,
   auxiliary_data_array,
   auxiliary_scripts,
-  script_pubkey,
-  script_all,
-  script_any,
-  invalid_before,
-  invalid_hereafter,
+  allegra_native_script,
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
@@ -38,45 +34,47 @@ allegraCDDL =
     , HIRule $ transaction @AllegraEra
     ]
 
-native_script :: Rule
-native_script =
+allegra_native_script :: Rule
+allegra_native_script =
   comment
-    [str|Timelock validity intervals are half-open intervals [a, b).
+    [str|Allegra introduces timelock support for native scripts.
+        |This is the 6-variant native script format used by
+        |Allegra, Mary, Alonzo, Babbage, and Conway.
         |
-        |  invalid_before:
-        |    specifies the left (included) endpoint a.
+        |Timelock validity intervals are half-open intervals [a, b).
+        |  script_invalid_before: specifies the left (included) endpoint a.
+        |  script_invalid_hereafter: specifies the right (excluded) endpoint b.
         |
-        |  invalid_hereafter:
-        |    specifies the right (excluded) endpoint b.
+        |Note: Allegra switched to int64 for script_n_of_k thresholds.
         |]
     $ "native_script"
       =:= arr [a script_pubkey]
       / arr [a script_all]
       / arr [a script_any]
       / arr [a script_n_of_k]
-      / arr [a invalid_before]
-      / arr [a invalid_hereafter]
+      / arr [a script_invalid_before]
+      / arr [a script_invalid_hereafter]
 
 script_pubkey :: Named Group
-script_pubkey = "script_pubkey" =:~ grp [0, a addr_keyhash]
+script_pubkey = mkScriptPubkey
 
 script_all :: Named Group
-script_all = "script_all" =:~ grp [1, a (arr [0 <+ a native_script])]
+script_all = mkScriptAll allegra_native_script
 
 script_any :: Named Group
-script_any = "script_any" =:~ grp [2, a (arr [0 <+ a native_script])]
+script_any = mkScriptAny allegra_native_script
 
 script_n_of_k :: Named Group
-script_n_of_k = "script_n_of_k" =:~ grp [3, "n" ==> int64, a (arr [0 <+ a native_script])]
+script_n_of_k = mkScriptNOfK int64 allegra_native_script
 
-invalid_before :: Named Group
-invalid_before = "invalid_before" =:~ grp [4, a slot]
+script_invalid_before :: Named Group
+script_invalid_before = mkScriptInvalidBefore
 
-invalid_hereafter :: Named Group
-invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot]
+script_invalid_hereafter :: Named Group
+script_invalid_hereafter = mkScriptInvalidHereafter
 
 auxiliary_scripts :: Rule
-auxiliary_scripts = "auxiliary_scripts" =:= arr [0 <+ a native_script]
+auxiliary_scripts = "auxiliary_scripts" =:= arr [0 <+ a allegra_native_script]
 
 auxiliary_data_array :: Rule
 auxiliary_data_array =
@@ -134,6 +132,6 @@ transaction_witness_set =
   "transaction_witness_set"
     =:= mp
       [ opt $ idx 0 ==> arr [0 <+ a vkeywitness]
-      , opt $ idx 1 ==> arr [0 <+ a native_script]
+      , opt $ idx 1 ==> arr [0 <+ a allegra_native_script]
       , opt $ idx 2 ==> arr [0 <+ a bootstrap_witness]
       ]

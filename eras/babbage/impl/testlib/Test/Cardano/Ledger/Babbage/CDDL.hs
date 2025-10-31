@@ -17,6 +17,7 @@ module Test.Cardano.Ledger.Babbage.CDDL (
   operational_cert,
   babbage_transaction_output,
   plutus_data,
+  plutus_v2_script,
   protocol_version,
 ) where
 
@@ -264,7 +265,7 @@ transaction_witness_set =
     $ "transaction_witness_set"
       =:= mp
         [ opt $ idx 0 ==> arr [0 <+ a vkeywitness]
-        , opt $ idx 1 ==> arr [0 <+ a native_script]
+        , opt $ idx 1 ==> arr [0 <+ a allegra_native_script]
         , opt $ idx 2 ==> arr [0 <+ a bootstrap_witness]
         , opt $ idx 3 ==> arr [0 <+ a plutus_v1_script]
         , opt $ idx 4 ==> arr [0 <+ a plutus_data]
@@ -282,11 +283,13 @@ plutus_data =
     / big_int
     / bounded_bytes
 
-plutus_v1_script :: Rule
-plutus_v1_script = "plutus_v1_script" =:= VBytes
-
 plutus_v2_script :: Rule
-plutus_v2_script = "plutus_v2_script" =:= VBytes
+plutus_v2_script =
+  comment
+    [str|Babbage introduces Plutus V2 with improved cost model
+        |and additional builtins.
+        |]
+    $ "plutus_v2_script" =:= distinct VBytes
 
 language :: Rule
 language =
@@ -315,7 +318,7 @@ auxiliary_data_map =
       259
       ( mp
           [ opt (idx 0 ==> metadata)
-          , opt (idx 1 ==> arr [0 <+ a native_script])
+          , opt (idx 1 ==> arr [0 <+ a allegra_native_script])
           , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
           , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
           ]
@@ -343,10 +346,16 @@ datum_option = "datum_option" =:= arr [0, a hash32] / arr [1, a data']
 
 babbage_script :: Rule
 babbage_script =
-  "script"
-    =:= arr [0, a native_script]
-    / arr [1, a plutus_v1_script]
-    / arr [2, a plutus_v2_script]
+  comment
+    [str|Babbage supports three script types:
+        |  0: Native scripts (timelock)
+        |  1: Plutus V1 scripts
+        |  2: Plutus V2 scripts
+        |]
+    $ "script"
+      =:= arr [0, a allegra_native_script]
+      / arr [1, a plutus_v1_script]
+      / arr [2, a plutus_v2_script]
 
 protocol_param_update :: Rule
 protocol_param_update =

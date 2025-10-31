@@ -38,6 +38,8 @@
 
 ### `testlib`
 
+* Rename `plutus_script` -> `plutus_v1_script` in CDDL
+* Add `plutus_v1_script` to CDDL exports
 * Add `auxiliary_data_map` to CDDL for simplification
 * Remove redefinition of `auxiliary_data_hash` from CDDL
 * Remove deprecated function `mkPlutusScript'`

@@ -21,7 +21,6 @@ module Test.Cardano.Ledger.Shelley.CDDL (
   header,
   vkeywitness,
   bootstrap_witness,
-  script_hash,
   major_protocol_version,
   protocol_version,
   genesis_hash,
@@ -302,7 +301,7 @@ transaction_witness_set =
   "transaction_witness_set"
     =:= mp
       [ opt $ idx 0 ==> arr [0 <+ a vkeywitness]
-      , opt $ idx 1 ==> arr [0 <+ a multisig_script]
+      , opt $ idx 1 ==> arr [0 <+ a shelley_native_script]
       , opt $ idx 2 ==> arr [0 <+ a bootstrap_witness]
       ]
 
@@ -319,42 +318,37 @@ bootstrap_witness =
       , "attributes" ==> VBytes
       ]
 
-multisig_script :: Rule
-multisig_script =
-  "multisig_script"
-    =:= arr [a multisig_pubkey]
-    / arr [a multisig_all]
-    / arr [a multisig_any]
-    / arr [a multisig_n_of_k]
+shelley_native_script :: Rule
+shelley_native_script =
+  comment
+    [str|Shelley-era native scripts support 4 operations:
+        |  - Signature verification (script_pubkey)
+        |  - Conjunctions (script_all)
+        |  - Disjunctions (script_any)
+        |  - M-of-N thresholds (script_n_of_k)
+        |
+        |Note: Shelley uses VUInt for the threshold in script_n_of_k.
+        |]
+    $ "native_script"
+      =:= arr [a script_pubkey]
+      / arr [a script_all]
+      / arr [a script_any]
+      / arr [a script_n_of_k]
 
-multisig_pubkey :: Named Group
-multisig_pubkey = "multisig_pubkey" =:~ grp [0, a addr_keyhash]
+script_pubkey :: Named Group
+script_pubkey = mkScriptPubkey
 
-multisig_all :: Named Group
-multisig_all = "multisig_all" =:~ grp [1, a (arr [0 <+ a multisig_script])]
+script_all :: Named Group
+script_all = mkScriptAll shelley_native_script
 
-multisig_any :: Named Group
-multisig_any = "multisig_any" =:~ grp [2, a (arr [0 <+ a multisig_script])]
+script_any :: Named Group
+script_any = mkScriptAny shelley_native_script
 
-multisig_n_of_k :: Named Group
-multisig_n_of_k = "multisig_n_of_k" =:~ grp [3, "n" ==> VUInt, a (arr [0 <+ a multisig_script])]
+script_n_of_k :: Named Group
+script_n_of_k = mkScriptNOfK VUInt shelley_native_script
 
 genesis_delegate_hash :: Rule
 genesis_delegate_hash = "genesis_delegate_hash" =:= hash28
 
 genesis_hash :: Rule
 genesis_hash = "genesis_hash" =:= hash28
-
-script_hash :: Rule
-script_hash =
-  comment
-    [str|To compute a script hash, note that you must prepend
-        |a tag to the bytes of the script before hashing.
-        |The tag is determined by the language.
-        |The tags in the Conway era are:
-        |  "\x00" for multisig scripts
-        |  "\x01" for Plutus V1 scripts
-        |  "\x02" for Plutus V2 scripts
-        |  "\x03" for Plutus V3 scripts
-        |]
-    $ "script_hash" =:= hash28
