@@ -12,7 +12,6 @@
 
 module Cardano.Ledger.Conway.Genesis (
   ConwayGenesis (..),
-  toConwayGenesisPairs,
   cgDelegsL,
 ) where
 
@@ -110,7 +109,3 @@ instance ToKeyValuePairs ConwayGenesis where
           ++ toKeyValuePairs cgUpgradePParams
           ++ ["delegs" .= cgDelegs | not (null cgDelegs)]
           ++ ["initialDReps" .= cgInitialDReps | not (null cgInitialDReps)]
-
-toConwayGenesisPairs :: KeyValue e a => ConwayGenesis -> [a]
-toConwayGenesisPairs = toKeyValuePairs
-{-# DEPRECATED toConwayGenesisPairs "In favor of `toKeyValuePairs`" #-}

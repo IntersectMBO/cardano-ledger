@@ -29,7 +29,7 @@ import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Hashes
-import Cardano.Ledger.State hiding (balance)
+import Cardano.Ledger.State
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Aeson (ToJSON (..), (.=))

@@ -18,9 +18,7 @@ module Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
   MultiAsset (..),
-  insert,
   insertMultiAsset,
-  lookup,
   lookupMultiAsset,
   multiAssetFromList,
   policies,
@@ -35,9 +33,6 @@ module Cardano.Ledger.Mary.Value (
   CompactForm (CompactValue),
   isMultiAssetSmallEnough,
   assetNameToTextAsHex,
-
-  -- * Deprecated
-  prune,
 ) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
@@ -811,29 +806,11 @@ readShortByteString sbs start len =
 policies :: MultiAsset -> Set PolicyID
 policies (MultiAsset m) = Map.keysSet m
 
-lookup :: PolicyID -> AssetName -> MaryValue -> Integer
-lookup = lookupMultiAsset
-{-# DEPRECATED lookup "In favor of `lookupMultiAsset`" #-}
-
 lookupMultiAsset :: PolicyID -> AssetName -> MaryValue -> Integer
 lookupMultiAsset pid aid (MaryValue _ (MultiAsset m)) =
   case Map.lookup pid m of
     Nothing -> 0
     Just m2 -> Map.findWithDefault 0 aid m2
-
--- | insert comb policy asset n v,
---   if comb = \ old new -> old, the integer in the MultiAsset is prefered over n
---   if comb = \ old new -> new, then n is prefered over the integer in the MultiAsset
---   if (comb old new) == 0, then that value should not be stored in the MultiAsset
-insert ::
-  (Integer -> Integer -> Integer) ->
-  PolicyID ->
-  AssetName ->
-  Integer ->
-  MultiAsset ->
-  MultiAsset
-insert = insertMultiAsset
-{-# DEPRECATED insert "In favor of `insertMultiAsset`" #-}
 
 -- | insertMultiAsset comb policy asset n v,
 --   if comb = \ old new -> old, the integer in the MultiAsset is prefered over n
@@ -879,14 +856,6 @@ insertMultiAsset combine pid aid new (MultiAsset m1) =
         )
 
 -- ========================================================
-
--- | Remove 0 assets from a `MultiAsset`
-prune ::
-  Map PolicyID (Map AssetName Integer) ->
-  Map PolicyID (Map AssetName Integer)
-prune assets =
-  Map.filter (not . null) $ Map.filter (/= 0) <$> assets
-{-# DEPRECATED prune "In favor of `pruneZeroMultiAsset`" #-}
 
 -- | Remove all assets with that have zero amount specified
 pruneZeroMultiAsset :: MultiAsset -> MultiAsset

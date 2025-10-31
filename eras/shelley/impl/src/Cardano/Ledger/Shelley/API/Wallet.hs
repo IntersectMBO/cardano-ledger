@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.API.Wallet (
 
   -- * Stake Pools
   getPools,
-  getPoolParameters,
   getTotalStake,
   poolsByTotalStakeFraction,
   RewardInfoPool (..),
@@ -157,21 +156,6 @@ getPools ::
 getPools = Map.keysSet . f
   where
     f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-
--- | Get the /current/ registered stake pool parameters for a given set of
--- stake pools. The result map will contain entries for all the given stake
--- pools that are currently registered.
-getPoolParameters ::
-  EraCertState era =>
-  NewEpochState era ->
-  Set (KeyHash 'StakePool) ->
-  Map (KeyHash 'StakePool) StakePoolParams
-getPoolParameters = Map.restrictKeys . f
-  where
-    f nes =
-      Map.mapWithKey stakePoolStateToStakePoolParams $
-        nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-{-# DEPRECATED getPoolParameters "In favor of `getStakePools`" #-}
 
 -- | Get the /current/ registered stake pool state for a given set of
 -- stake pools. The result map will contain entries for all the given stake

@@ -39,9 +39,6 @@ module Cardano.Ledger.MemoBytes.Internal (
   getMemoBytesHash,
   memoBytes,
   memoBytesEra,
-  shorten,
-  showMemo,
-  printMemo,
   shortToLazy,
   contentsEq,
   decodeMemoBytes,
@@ -197,11 +194,6 @@ instance SafeToHash (MemoBytes t) where
   originalBytes = fromShort . mbBytes
   originalBytesSize = SBS.length . mbBytes
 
--- | Turn a lazy bytestring into a short bytestring.
-shorten :: BSL.ByteString -> ShortByteString
-shorten x = toShort (toStrict x)
-{-# DEPRECATED shorten "As unused. Use `toShort` `.` `toStrict` instead" #-}
-
 -- | Useful when deriving DecCBOR(Annotator T)
 -- deriving via (Mem T) instance DecCBOR (Annotator T)
 type Mem t = Annotator (MemoBytes t)
@@ -219,16 +211,6 @@ mkMemoBytesStrict :: forall t. t -> ByteString -> MemoBytes t
 mkMemoBytesStrict t bs =
   MemoBytes t (toShort bs) $
     makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) bs
-
--- | Turn a MemoBytes into a string, showing both its internal structure and its original bytes.
---   Useful since the Show instance of MemoBytes does not display the original bytes.
-showMemo :: Show t => MemoBytes t -> String
-showMemo (MemoBytes t b _) = "(Memo " ++ show t ++ "  " ++ show b ++ ")"
-{-# DEPRECATED showMemo "As unused. Show instance will show the hash, which is enough most of the time" #-}
-
-printMemo :: Show t => MemoBytes t -> IO ()
-printMemo x = putStrLn (showMemo x)
-{-# DEPRECATED printMemo "As unused. Show instance will show the hash, which is enough most of the time" #-}
 
 -- | Create MemoBytes from its CBOR encoding
 --

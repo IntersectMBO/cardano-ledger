@@ -32,8 +32,6 @@ module Cardano.Ledger.State.UTxO (
   txouts,
   sumUTxO,
   sumCoinUTxO,
-  balance,
-  coinBalance,
   sumAllValue,
   sumAllCoin,
   areAllAdaOnly,
@@ -182,10 +180,6 @@ sumUTxO :: EraTxOut era => UTxO era -> Value era
 sumUTxO = sumAllValue . unUTxO
 {-# INLINE sumUTxO #-}
 
-balance :: EraTxOut era => UTxO era -> Value era
-balance = sumUTxO
-{-# DEPRECATED balance "In favor of `sumUTxO`" #-}
-
 -- | Determine the total Ada only balance contained in the UTxO. This is
 -- equivalent to `coin` . `sumUTxO`, but it will be more efficient.
 --
@@ -194,10 +188,6 @@ balance = sumUTxO
 sumCoinUTxO :: EraTxOut era => UTxO era -> Coin
 sumCoinUTxO = sumAllCoin . unUTxO
 {-# INLINE sumCoinUTxO #-}
-
-coinBalance :: EraTxOut era => UTxO era -> Coin
-coinBalance = sumCoinUTxO
-{-# DEPRECATED coinBalance "In favor of `sumCoinUTxO`" #-}
 
 -- | Sum all the value in any Foldable with 'TxOut's
 sumAllValue :: (EraTxOut era, Foldable f) => f (TxOut era) -> Value era

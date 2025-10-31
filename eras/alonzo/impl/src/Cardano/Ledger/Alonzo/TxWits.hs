@@ -27,9 +27,7 @@ module Cardano.Ledger.Alonzo.TxWits (
   RedeemersRaw (..),
   unRedeemersL,
   unRedeemers,
-  nullRedeemers,
-  lookupRedeemer,
-  TxDats (MkTxDats, TxDats, TxDats'),
+  TxDats (MkTxDats, TxDats),
   TxDatsRaw (..),
   AlonzoTxWits (
     MkAlonzoTxWits,
@@ -38,13 +36,7 @@ module Cardano.Ledger.Alonzo.TxWits (
     txwitsBoot,
     txscripts,
     txdats,
-    txrdmrs,
-    AlonzoTxWits',
-    txwitsVKey',
-    txwitsBoot',
-    txscripts',
-    txdats',
-    txrdmrs'
+    txrdmrs
   ),
   AlonzoTxWitsRaw (..),
   addrAlonzoTxWitsL,
@@ -56,7 +48,6 @@ module Cardano.Ledger.Alonzo.TxWits (
   hashDataTxWitsL,
   unTxDats,
   unTxDatsL,
-  nullDats,
   alonzoEqTxWitsRaw,
   emptyTxWitsRaw,
   addScriptsTxWitsRaw,
@@ -222,23 +213,11 @@ unRedeemersL ::
 unRedeemersL f = fmap Redeemers . f . unRedeemers
 {-# INLINE unRedeemersL #-}
 
-nullRedeemers :: Redeemers era -> Bool
-nullRedeemers = Map.null . unRedeemers
-{-# DEPRECATED nullRedeemers "In favor of `unRedeemersL`" #-}
-
 emptyTxWitsRaw :: AlonzoEraScript era => AlonzoTxWitsRaw era
 emptyTxWitsRaw = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
 
 emptyRedeemers :: AlonzoEraScript era => Redeemers era
 emptyRedeemers = Redeemers mempty
-
-lookupRedeemer ::
-  Ord (PlutusPurpose AsIx era) =>
-  PlutusPurpose AsIx era ->
-  Redeemers era ->
-  Maybe (Data era, ExUnits)
-lookupRedeemer key = Map.lookup key . unRedeemers
-{-# DEPRECATED lookupRedeemer "In favor of `unRedeemersL`" #-}
 
 -- ====================================================================
 -- In the Spec, AlonzoTxWits has 4 logical fields. Here in the implementation
@@ -314,13 +293,6 @@ deriving instance Show (TxDatsRaw era)
 instance EncCBOR (Data era) => EncCBOR (TxDatsRaw era) where
   encCBOR = encodeWithSetTag . Map.elems . unTxDatsRaw
 
-pattern TxDats' :: Map DataHash (Data era) -> TxDats era
-pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
-
-{-# COMPLETE TxDats' #-}
-
-{-# DEPRECATED TxDats' "In favor of `TxDats`" #-}
-
 pattern TxDats :: forall era. Era era => Map DataHash (Data era) -> TxDats era
 pattern TxDats m <- (getMemoRawType -> TxDatsRaw m)
   where
@@ -335,10 +307,6 @@ unTxDats (getMemoRawType -> TxDatsRaw m) = m
 unTxDatsL :: forall era. Era era => Lens' (TxDats era) (Map DataHash (Data era))
 unTxDatsL f = fmap TxDats . f . unTxDats
 {-# INLINE unTxDatsL #-}
-
-nullDats :: TxDats era -> Bool
-nullDats (getMemoRawType -> TxDatsRaw m) = Map.null m
-{-# DEPRECATED nullDats "In favor of `unTxDatsL`" #-}
 
 instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
   decCBOR =
@@ -396,31 +364,6 @@ deriving newtype instance AlonzoEraScript era => NoThunks (AlonzoTxWits era)
 
 -- =====================================================
 -- Pattern for AlonzoTxWits
-
-pattern AlonzoTxWits' ::
-  Era era =>
-  Set (WitVKey 'Witness) ->
-  Set BootstrapWitness ->
-  Map ScriptHash (Script era) ->
-  TxDats era ->
-  Redeemers era ->
-  AlonzoTxWits era
-pattern AlonzoTxWits' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} <-
-  (getMemoRawType -> AlonzoTxWitsRaw txwitsVKey' txwitsBoot' txscripts' txdats' txrdmrs')
-
-{-# COMPLETE AlonzoTxWits' #-}
-
-{-# DEPRECATED AlonzoTxWits' "In favor of `AlonzoTxWits`" #-}
-
-{-# DEPRECATED txwitsVKey' "In favor of `txwitsVKey`" #-}
-
-{-# DEPRECATED txwitsBoot' "In favor of `txwitsBoot`" #-}
-
-{-# DEPRECATED txscripts' "In favor of `txscripts`" #-}
-
-{-# DEPRECATED txdats' "In favor of `txdats`" #-}
-
-{-# DEPRECATED txrdmrs' "In favor of `txrdmrs`" #-}
 
 pattern AlonzoTxWits ::
   forall era.

@@ -18,7 +18,6 @@
 module Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesisStaking (..),
   ShelleyGenesis (..),
-  toShelleyGenesisPairs,
   ValidationErr (..),
   NominalDiffTimeMicro (..),
   emptyGenesisStaking,
@@ -388,10 +387,6 @@ instance ToJSON LegacyJSONPParams where
         , "minUTxOValue" .= sppMinUTxOValue
         , "minPoolCost" .= sppMinPoolCost
         ]
-
-toShelleyGenesisPairs :: Aeson.KeyValue e a => ShelleyGenesis -> [a]
-toShelleyGenesisPairs = toKeyValuePairs
-{-# DEPRECATED toShelleyGenesisPairs "In favor of `toKeyValuePairs`" #-}
 
 instance FromJSON ShelleyGenesis where
   parseJSON =

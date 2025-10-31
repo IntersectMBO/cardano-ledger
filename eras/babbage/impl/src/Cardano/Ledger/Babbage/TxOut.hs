@@ -39,9 +39,6 @@ module Cardano.Ledger.Babbage.TxOut (
   getDatumBabbageTxOut,
   babbageMinUTxOValue,
   getEitherAddrBabbageTxOut,
-  txOutData,
-  txOutDataHash,
-  txOutScript,
   internBabbageTxOut,
 ) where
 
@@ -75,7 +72,6 @@ import Cardano.Ledger.BaseTypes (
   KeyValuePairs (..),
   StrictMaybe (..),
   ToKeyValuePairs (..),
-  strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
   Annotator,
@@ -752,18 +748,6 @@ getCompactValueBabbageTxOut =
     TxOut_AddrHash28_AdaOnly _ _ cc -> injectCompact cc
     TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> injectCompact cc
 {-# INLINE getCompactValueBabbageTxOut #-}
-
-txOutData :: Era era => BabbageTxOut era -> Maybe (Data era)
-txOutData = strictMaybeToMaybe . getDataBabbageTxOut
-{-# DEPRECATED txOutData "In favor of `dataTxOutL` or `getDataBabbageTxOut`" #-}
-
-txOutDataHash :: BabbageTxOut era -> Maybe DataHash
-txOutDataHash = strictMaybeToMaybe . getDataHashBabbageTxOut
-{-# DEPRECATED txOutDataHash "In favor of `dataHashTxOutL` or `getDataHashBabbageTxOut`" #-}
-
-txOutScript :: BabbageTxOut era -> Maybe (Script era)
-txOutScript = strictMaybeToMaybe . getScriptBabbageTxOut
-{-# DEPRECATED txOutScript "In favor of `dataTxOutL` or `getScriptBabbageTxOut`" #-}
 
 decodeCIC :: DecCBOR (Annotator b) => T.Text -> Decoder s b
 decodeCIC s = do

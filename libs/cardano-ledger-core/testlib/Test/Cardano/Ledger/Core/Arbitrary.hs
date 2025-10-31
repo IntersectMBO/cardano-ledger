@@ -17,9 +17,6 @@
 
 module Test.Cardano.Ledger.Core.Arbitrary (
   module Test.Cardano.Ledger.Binary.Arbitrary,
-  genAddrBadPtr,
-  genCompactAddrBadPtr,
-  genBadPtr,
   genericShrinkMemo,
 
   -- * Plutus
@@ -282,11 +279,6 @@ deriving instance Arbitrary SlotNo32
 instance Arbitrary Ptr where
   arbitrary = Ptr <$> arbitrary <*> arbitrary <*> arbitrary
 
--- | Generate a Ptr with full 64bit range for values. Not allowed starting in Babbage
-genBadPtr :: Gen Ptr
-genBadPtr = Ptr <$> arbitrary <*> arbitrary <*> arbitrary
-{-# DEPRECATED genBadPtr "Bad pointers are no longer possible" #-}
-
 instance Arbitrary (Credential r) where
   arbitrary =
     oneof
@@ -389,14 +381,6 @@ genAddrWith genPtr =
     [ (8, Addr <$> arbitrary <*> arbitrary <*> genStakeRefWith genPtr)
     , (2, AddrBootstrap <$> arbitrary)
     ]
-
-genAddrBadPtr :: Gen Addr
-genAddrBadPtr = genAddrWith genBadPtr
-{-# DEPRECATED genAddrBadPtr "Addresses with bad pointers are no longer possible" #-}
-
-genCompactAddrBadPtr :: Gen CompactAddr
-genCompactAddrBadPtr = compactAddr <$> genAddrBadPtr
-{-# DEPRECATED genCompactAddrBadPtr "Addresses with bad pointers are no longer possible" #-}
 
 instance Arbitrary CompactAddr where
   arbitrary = compactAddr <$> arbitrary

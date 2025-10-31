@@ -44,7 +44,6 @@ library
     Cardano.Ledger.Alonzo.TxAuxData
     Cardano.Ledger.Alonzo.TxBody
     Cardano.Ledger.Alonzo.TxOut
-    Cardano.Ledger.Alonzo.TxSeq
     Cardano.Ledger.Alonzo.TxWits
     Cardano.Ledger.Alonzo.UTxO
 
@@ -143,7 +142,6 @@ library testlib
     -Wunused-packages
 
   build-depends:
-    FailT,
     HUnit,
     base,
     bytestring,

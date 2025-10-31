@@ -2,6 +2,19 @@
 
 ## 1.15.0.0
 
+* Remove deprecated functions `nullRedeemers`, `lookupRedeemers`, `nullDats`
+* Remove deprecated type `AlonzoTxWits'` and its accessor functions:
+  - `txwitsVKey'`
+  - `txwitsBoot'`
+  - `txscripts'`
+  - `txdats'`
+  - `txrdmrs'`
+* Remove deprecated type `TxDats'`
+* Remove deprecated function `toAlonzoGenesisPairs`
+* Remove deprecated function `toAlonzoTransitionConfigPairs`
+* Remove deprecated function `hashAlonzoTxAuxData`
+* Remove deprecated type `Alonzo`
+* Remove deprecated module `Cardano.Ledger.TxSeq`
 * Remove deprecated accessor functions:
   - `inputs'`
   - `collateral'`
@@ -25,6 +38,7 @@
 
 ### `testlib`
 
+* Remove deprecated function `mkPlutusScript'`
 * Add `NativeScript` parameter to `exampleTx`
 
 ## 1.14.0.0

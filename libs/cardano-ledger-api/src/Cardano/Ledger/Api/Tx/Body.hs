@@ -20,7 +20,6 @@ module Cardano.Ledger.Api.Tx.Body (
   Withdrawals (..),
   auxDataHashTxBodyL,
   TxAuxDataHash (..),
-  AuxiliaryDataHash,
   spendableInputsTxBodyF,
   allInputsTxBodyF,
   evalBalanceTxBody,
@@ -94,7 +93,6 @@ import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Scripts
 import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Out
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.BaseTypes (Network, strictMaybeToMaybe)
 import Cardano.Ledger.Binary.Decoding (Sized)

@@ -13,7 +13,6 @@
 
 module Cardano.Ledger.Babbage.Translation () where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
@@ -148,7 +147,7 @@ instance TranslateEra BabbageEra ShelleyInstantStake where
 
 instance TranslateEra BabbageEra UTxO where
   translateEra _ctxt utxo =
-    pure $ UTxO $ translateTxOut `Map.map` unUTxO utxo
+    pure $ UTxO $ upgradeTxOut `Map.map` unUTxO utxo
 
 instance TranslateEra BabbageEra ShelleyGovState where
   translateEra ctxt ps =
@@ -164,9 +163,3 @@ instance TranslateEra BabbageEra ShelleyGovState where
 instance TranslateEra BabbageEra ProposedPPUpdates where
   translateEra _ctxt (ProposedPPUpdates ppup) =
     pure $ ProposedPPUpdates $ fmap (upgradePParamsUpdate ()) ppup
-
-translateTxOut ::
-  TxOut AlonzoEra ->
-  TxOut BabbageEra
-translateTxOut = upgradeTxOut
-{-# DEPRECATED translateTxOut "Use `upgradeTxOut` instead" #-}

@@ -20,7 +20,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
-import Cardano.Ledger.Conway.State hiding (balance)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential

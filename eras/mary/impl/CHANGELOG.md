@@ -2,6 +2,8 @@
 
 ## 1.10.0.0
 
+* Remove deprecated functions `insert`, `lookup`, `prune`
+* Remove deprecated type `Mary`
 * Add `burnedMultiAssets`
 * Add `TxLevel` argument to `Tx` and `TxBody`
 * Add `HasEraTxLevel` instances for `Tx` and `TxBody`
