@@ -435,7 +435,7 @@ encodeShelleyDelegCert = \case
 encodePoolCert :: PoolCert -> Encoding
 encodePoolCert = \case
   RegPool poolParams ->
-    encodeListLen (1 + listLen poolParams)
+    encodeListLen (1 + listLen (toProxy poolParams))
       <> encodeWord8 3
       <> encCBORGroup poolParams
   RetirePool vk epoch ->

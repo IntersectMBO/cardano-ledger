@@ -198,7 +198,6 @@ instance Era era => EncCBORGroup (ShelleyBlockBody era) where
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes
   listLen _ = 3
-  listLenBound _ = 3
 
 hashShelleySegWits ::
   BSL.ByteString ->
