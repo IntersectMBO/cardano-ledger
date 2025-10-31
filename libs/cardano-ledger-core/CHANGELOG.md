@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Remove `Generic` instance from `BoundedRatio` type
 * Add `unDelegReDelegStakePool` to `CertState` module
 * Add `iRReservesL`, `iRTreasuryL`, `iRDeltaReservesL`, `iRDeltaTreasuryL`
 * Add `spsDelegators` field to `StakePool`
