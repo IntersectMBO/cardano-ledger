@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -10,7 +11,11 @@ module Cardano.Ledger.Shelley.BlockChain
   {-# DEPRECATED "Use `Cardano.Ledger.Shelley.BlockBody` instead" #-} (
   ShelleyTxSeq,
   txSeqTxns,
+#if __GLASGOW_HASKELL__ >= 914
+  data ShelleyTxSeq,
+#else
   pattern ShelleyTxSeq,
+#endif
   bbHash,
   hashShelleySegWits,
   bBodySize,

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -94,10 +95,16 @@ deriving instance EraScript era => Show (ShelleyTxWitsRaw era)
 deriving instance EraScript era => Eq (ShelleyTxWitsRaw era)
 
 instance
-  ( Era era
-  , NFData (Script era)
+  (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+    Era era
   , NFData (WitVKey 'Witness)
   , NFData BootstrapWitness
+  ,
+#endif
+    NFData (Script era)
   ) =>
   NFData (ShelleyTxWitsRaw era)
 
@@ -123,10 +130,16 @@ deriving newtype instance EraScript era => Eq (ShelleyTxWits era)
 deriving newtype instance EraScript era => Show (ShelleyTxWits era)
 
 instance
-  ( Era era
-  , NFData (Script era)
+  (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+    Era era
   , NFData (WitVKey 'Witness)
   , NFData BootstrapWitness
+  ,
+#endif
+    NFData (Script era)
   ) =>
   NFData (ShelleyTxWits era)
 

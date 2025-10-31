@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -184,7 +185,12 @@ deriving instance
   ( Eq (BabbageContextError era)
   , Eq (TxCert era)
   , Eq (PlutusPurpose AsItem era)
-  , Eq (PlutusPurpose AsIx era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+
+  , Show (PlutusPurpose AsIx era)
+#endif
   , EraPParams era
   ) =>
   Eq (ConwayContextError era)
@@ -193,7 +199,12 @@ deriving instance
   ( Show (BabbageContextError era)
   , Show (TxCert era)
   , Show (PlutusPurpose AsItem era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+
   , Show (PlutusPurpose AsIx era)
+#endif
   , EraPParams era
   ) =>
   Show (ConwayContextError era)

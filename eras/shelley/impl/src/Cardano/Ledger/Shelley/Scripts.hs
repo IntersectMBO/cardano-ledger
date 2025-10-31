@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -22,10 +23,17 @@
 module Cardano.Ledger.Shelley.Scripts (
   MultiSig (..),
   ShelleyEraScript (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireSignature,
+  data RequireAllOf,
+  data RequireAnyOf,
+  data RequireMOf,
+#else
   pattern RequireSignature,
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
+#endif
   evalMultiSig,
   validateMultiSig,
   nativeMultiSigTag,
@@ -53,7 +61,11 @@ import Cardano.Ledger.MemoBytes (
   MemoBytes,
   Memoized (..),
   getMemoRawType,
+#if __GLASGOW_HASKELL__ >= 914
+  data Memo,
+#else
   pattern Memo,
+#endif
  )
 import Cardano.Ledger.MemoBytes.Internal (memoBytesEra)
 import Cardano.Ledger.Shelley.Era

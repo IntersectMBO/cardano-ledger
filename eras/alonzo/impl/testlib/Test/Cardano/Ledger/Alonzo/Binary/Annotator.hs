@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -48,7 +49,11 @@ instance
   , DecCBOR (TxBody TopTx era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , DecCBOR (NativeScript era)
+#endif
   ) =>
   DecCBOR (AlonzoBlockBody era)
   where

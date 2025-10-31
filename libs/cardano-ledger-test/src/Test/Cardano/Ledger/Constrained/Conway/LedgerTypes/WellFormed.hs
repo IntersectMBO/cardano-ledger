@@ -77,7 +77,13 @@ conwayDStateGen ::
   forall era. era ~ ConwayEra => Gen (DState era)
 conwayDStateGen = dsX @ConwayEra
 
-vsX :: forall era. (GenScript era, era ~ ConwayEra) => Gen (VState era)
+vsX :: forall era. (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  GenScript era, 
+#endif
+  era ~ ConwayEra) => Gen (VState era)
 vsX = do
   univ <- genWitUniv 25
   epoch <- genFromSpec @EpochNo epochNoSpec
@@ -101,7 +107,13 @@ utxoX = do
 
 utxostateX ::
   forall era.
-  (era ~ ConwayEra, HasSpec (InstantStake era)) =>
+  (era ~ ConwayEra
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , HasSpec (InstantStake era)
+#endif
+  ) =>
   PParams era ->
   Gen (UTxOState era)
 utxostateX pp = do
@@ -118,7 +130,13 @@ conwaygovX pp = do
   genFromSpec @(ConwayGovState ConwayEra) (conwayGovStateSpec pp env)
 
 lsX ::
-  forall era. (era ~ ConwayEra, HasSpec (InstantStake era)) => PParams era -> Gen (LedgerState era)
+  forall era. (era ~ ConwayEra
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , HasSpec (InstantStake era)
+#endif
+  ) => PParams era -> Gen (LedgerState era)
 lsX pp = do
   univ <- genWitUniv @era 200
   context <- genCertContext @era univ
@@ -127,7 +145,13 @@ lsX pp = do
 
 esX ::
   forall era.
-  (era ~ ConwayEra, HasSpec (InstantStake era)) =>
+  (era ~ ConwayEra
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , HasSpec (InstantStake era)
+#endif
+  ) =>
   PParams era ->
   Gen (EpochState era)
 esX pp = do
@@ -138,7 +162,13 @@ esX pp = do
 
 nesX ::
   forall era.
-  (era ~ ConwayEra, HasSpec (InstantStake era)) =>
+  (era ~ ConwayEra
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , HasSpec (InstantStake era)
+#endif
+  ) =>
   PParams era ->
   Gen (NewEpochState era)
 nesX pp = do
@@ -151,8 +181,12 @@ snapX = genFromSpec @SnapShot snapShotSpec
 
 snapsX ::
   forall era.
-  ( HasSpec (InstantStake era)
-  , era ~ ConwayEra
+  ( era ~ ConwayEra
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , HasSpec (InstantStake era)
+#endif
   ) =>
   PParams era ->
   Gen SnapShots
@@ -163,7 +197,13 @@ snapsX pp = do
   ls <- genFromSpec @(LedgerState era) (ledgerStateSpec pp univ context (lit epoch))
   genFromSpec @SnapShots (snapShotsSpec (lit (getMarkSnapShot ls)))
 
-instanRewX :: forall era. (era ~ ConwayEra, EraSpecTxOut era) => Gen InstantaneousRewards
+instanRewX :: forall era. (era ~ ConwayEra
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , EraSpecTxOut era
+#endif
+  ) => Gen InstantaneousRewards
 instanRewX = do
   univ <- genWitUniv @era 50
   acct <- genFromSpec @ChainAccountState accountStateSpec

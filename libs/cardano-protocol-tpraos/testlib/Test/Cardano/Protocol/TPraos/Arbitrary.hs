@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -155,7 +156,11 @@ instance
   , EraBlockBody era
   , KES.Signable (KES c) ~ SignableRepresentation
   , VRF.Signable (VRF c) ~ SignableRepresentation
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Arbitrary (Tx TopTx era)
+#endif
   , Arbitrary (BlockBody era)
   ) =>
   Arbitrary (Block (BHeader c) era)

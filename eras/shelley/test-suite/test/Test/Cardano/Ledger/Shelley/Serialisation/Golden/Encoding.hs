@@ -9,6 +9,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Golden tests that check CBOR token encoding.
@@ -75,11 +76,20 @@ import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data ProposedPPUpdates,
+  data Update,
+#else
   pattern ProposedPPUpdates,
   pattern Update,
+#endif
  )
 import Cardano.Ledger.Shelley.Rewards ()
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Shelley.Scripts (data RequireSignature)
+#else
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
+#endif
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
 import Cardano.Ledger.Shelley.TxBody (TxBody (ShelleyTxBody))
@@ -116,7 +126,11 @@ import Cardano.Protocol.TPraos.OCert (
   KESPeriod (..),
   OCert,
   OCertSignable (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data OCert,
+#else
   pattern OCert,
+#endif
  )
 import qualified Codec.CBOR.Encoding as CBOR (Encoding (..))
 import Control.Monad

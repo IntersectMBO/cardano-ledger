@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -83,7 +84,11 @@ import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)
+#if __GLASGOW_HASKELL__ < 914
 import Data.Aeson (ToJSON (..), (.=), pattern String)
+#else
+import Data.Aeson (ToJSON (..), (.=), data String)
+#endif
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -254,11 +259,23 @@ data BabbageContextError era
   deriving (Generic)
 
 deriving instance
-  (Eq (AlonzoContextError era), Eq (PlutusPurpose AsIx era)) =>
+  (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Eq (AlonzoContextError era), 
+#endif
+  Eq (PlutusPurpose AsIx era)) =>
   Eq (BabbageContextError era)
 
 deriving instance
-  (Show (AlonzoContextError era), Show (PlutusPurpose AsIx era)) =>
+  (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Show (AlonzoContextError era),
+#endif
+  Show (PlutusPurpose AsIx era)) =>
   Show (BabbageContextError era)
 
 instance NoThunks (PlutusPurpose AsIx era) => NoThunks (BabbageContextError era)

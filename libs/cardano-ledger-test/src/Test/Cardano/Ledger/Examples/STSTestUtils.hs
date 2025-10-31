@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -41,7 +43,11 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript, data RequireTimeStart)
+#else
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript, pattern RequireTimeStart)
+#endif
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
@@ -66,8 +72,13 @@ import Cardano.Ledger.Shelley.Rules (BbodyEnv (..), ShelleyBbodyState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireSignature,
+#endif
  )
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
