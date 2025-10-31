@@ -12,7 +12,6 @@ module Cardano.Ledger.Binary.Group (
 
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
-import Data.Proxy
 import Data.Typeable
 
 --------------------------------------------------------------------------------
@@ -40,9 +39,6 @@ class EncCBORGroup a where
 
   listLen :: a -> Word
 
-  -- | an upper bound for 'listLen', used in 'Size' expressions.
-  listLenBound :: Proxy a -> Word
-
 listLenInt :: EncCBORGroup a => a -> Int
 listLenInt x = fromIntegral (listLen x)
 
@@ -57,7 +53,6 @@ instance EncCBOR a => EncCBORGroup (a, a) where
   encCBORGroup (x, y) =
     encCBOR x <> encCBOR y
   listLen _ = 2
-  listLenBound _ = 2
 
 instance DecCBOR a => DecCBORGroup (a, a) where
   decCBORGroup = do

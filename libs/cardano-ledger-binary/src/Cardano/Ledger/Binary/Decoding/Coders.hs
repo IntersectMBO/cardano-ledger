@@ -76,7 +76,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set, insert, member)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import Data.Typeable (Proxy (..), Typeable, typeOf)
+import Data.Typeable (Typeable, typeOf)
 import Data.Void (Void)
 
 -- ====================================================================
@@ -425,7 +425,7 @@ hsize (SumD _) = 0
 hsize (RecD _) = 0
 hsize (KeyedD _) = 0
 hsize From = 1
-hsize FromGroup = fromIntegral $ listLenBound $ Proxy @t
+hsize FromGroup = 1
 hsize (D _) = 1
 hsize (ApplyD f x) = hsize f + hsize x
 hsize (Invalid _) = 0
