@@ -256,7 +256,7 @@ protocol_param_update =
   , ? 4  : uint .size 2           ; max block header size
   , ? 5  : coin                   ; key deposit
   , ? 6  : coin                   ; pool deposit
-  , ? 7  : epoch                  ; maximum epoch
+  , ? 7  : epoch_interval         ; maximum epoch
   , ? 8  : uint .size 2           ; n_opt: desired number of stake pools
   , ? 9  : nonnegative_interval   ; pool pledge influence
   , ? 10 : unit_interval          ; expansion rate
@@ -268,6 +268,8 @@ protocol_param_update =
   , ? 16 : coin                   ; min pool cost
   }
 
+
+epoch_interval = uint .size 4
 
 nonnegative_interval = #6.30([uint, positive_int])
 

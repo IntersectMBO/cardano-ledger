@@ -16,7 +16,7 @@
 ### `testlib`
 
 * Remove CDDL `protocol_version` redefinition
-* Remove `epoch_no`, `slot_no` and `block_no` reuse definitions from core
+* Remove `epoch_no`, `epoch_interval`, `slot_no` and `block_no`. Reuse definitions from core
 * Removed `regDelegToDRep`
 * Removed `registerRewardAccountWithDeposit`
 * Removed `registerPoolWithDeposit`

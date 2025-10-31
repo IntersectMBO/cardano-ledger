@@ -381,7 +381,7 @@ protocol_param_update =
         , opt (idx 4 ==> (VUInt `sized` (2 :: Word64)))
         , opt (idx 5 ==> coin)
         , opt (idx 6 ==> coin)
-        , opt (idx 7 ==> epoch)
+        , opt (idx 7 ==> epoch_interval)
         , opt (idx 8 ==> VUInt `sized` (2 :: Word64))
         , opt (idx 9 ==> nonnegative_interval)
         , opt (idx 10 ==> unit_interval)

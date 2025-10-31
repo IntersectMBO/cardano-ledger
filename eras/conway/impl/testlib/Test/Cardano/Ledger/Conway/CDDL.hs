@@ -40,7 +40,6 @@ module Test.Cardano.Ledger.Conway.CDDL (
   gov_action_id,
   policy_hash,
   shelley_transaction_output,
-  epoch_interval,
   ex_unit_prices,
   pool_voting_thresholds,
   drep_voting_thresholds,
@@ -838,9 +837,6 @@ value = "value" =:= coin / sarr [a coin, a (multiasset positive_coin)]
 
 mint :: Rule
 mint = "mint" =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> nonzero_int64]]
-
-epoch_interval :: Rule
-epoch_interval = "epoch_interval" =:= VUInt `sized` (4 :: Word64)
 
 conway_script :: Rule
 conway_script =

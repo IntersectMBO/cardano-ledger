@@ -312,7 +312,7 @@ protocol_param_update =
   , ? 4  : uint .size 2          
   , ? 5  : coin                  
   , ? 6  : coin                  
-  , ? 7  : epoch                 
+  , ? 7  : epoch_interval        
   , ? 8  : uint .size 2          
   , ? 9  : nonnegative_interval  
   , ? 10 : unit_interval         
@@ -331,6 +331,8 @@ protocol_param_update =
   , ? 24 : uint                  
   }
 
+
+epoch_interval = uint .size 4
 
 nonnegative_interval = #6.30([uint, positive_int])
 
