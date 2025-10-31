@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Remove `listLenBound` from `EncCBORGroup`
+* Change type of `listLen` in `EncCBORGroup` to accept a `Proxy` instead of a concrete value
 * Add `decodeNonEmptySetLikeEnforceNoDuplicatesAnn` to `Annotated` module
 * Add `ofieldA` and `fieldAGuarded` to `Coders` module
 * Change `Density` type to only be available at the type level

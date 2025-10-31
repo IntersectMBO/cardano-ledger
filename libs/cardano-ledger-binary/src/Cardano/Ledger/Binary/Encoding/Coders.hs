@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -69,6 +70,7 @@ import Cardano.Ledger.Binary.Encoding.Encoder (
  )
 import Cardano.Ledger.Binary.Group (EncCBORGroup (..))
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
+import Data.Typeable (Proxy (Proxy))
 
 -- ====================================================================
 
@@ -172,11 +174,11 @@ runE (Tag _ x) = runE x
 runE (Key _ x) = runE x
 runE (Keyed cn) = cn
 
-gsize :: Encode w t -> Word
+gsize :: forall w t. Encode w t -> Word
 gsize (Sum _ _) = 0
 gsize (Rec _) = 0
 gsize (To _) = 1
-gsize (ToGroup x) = listLen x
+gsize (ToGroup _) = listLen $ Proxy @t
 gsize (E _ _) = 1
 gsize (MapE _ x) = gsize x
 gsize (ApplyE f x) = gsize f + gsize x

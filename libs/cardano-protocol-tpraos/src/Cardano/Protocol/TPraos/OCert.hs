@@ -19,6 +19,7 @@ module Cardano.Protocol.TPraos.OCert (
   kesPeriod,
 ) where
 
+import Cardano.Base.Proxy (asProxy)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -33,6 +34,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   fromPlainDecoder,
   fromPlainEncoding,
+  listLenInt,
   runByteBuilder,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -106,17 +108,16 @@ instance Crypto c => NoThunks (OCert c)
 instance Crypto c => EncCBORGroup (OCert c) where
   encCBORGroup = fromPlainEncoding . encodeOCertFields
   listLen _ = 4
-  listLenBound _ = 4
 
 instance Crypto c => DecCBORGroup (OCert c) where
   decCBORGroup = fromPlainDecoder decodeOCertFields
 
 instance Crypto c => ToCBOR (OCert c) where
-  toCBOR ocert = Plain.encodeListLen (listLen ocert) <> encodeOCertFields ocert
+  toCBOR ocert = Plain.encodeListLen (listLen (asProxy ocert)) <> encodeOCertFields ocert
 
 instance Crypto c => FromCBOR (OCert c) where
   fromCBOR =
-    Plain.decodeRecordNamed "OCert" (fromIntegral . listLen) decodeOCertFields
+    Plain.decodeRecordNamed "OCert" (listLenInt . Just) decodeOCertFields
 
 encodeOCertFields :: Crypto c => OCert c -> Plain.Encoding
 encodeOCertFields ocert =

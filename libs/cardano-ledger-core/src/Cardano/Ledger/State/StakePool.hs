@@ -537,7 +537,6 @@ instance EncCBORGroup StakePoolParams where
       <> encCBOR (sppRelays poolParams)
       <> encodeNullStrictMaybe encCBOR (sppMetadata poolParams)
   listLen _ = 9
-  listLenBound _ = 9
 
 instance DecCBORGroup StakePoolParams where
   decCBORGroup = do

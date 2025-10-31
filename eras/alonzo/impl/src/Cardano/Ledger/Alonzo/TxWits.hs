@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -7,7 +8,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -55,6 +55,7 @@ module Cardano.Ledger.Alonzo.TxWits (
   asHashedScriptPair,
 ) where
 
+import Cardano.Base.Proxy (asProxy)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
@@ -86,6 +87,7 @@ import Cardano.Ledger.Binary (
   encodeTag,
   ifDecoderVersionAtLeast,
   ifEncodingVersionAtLeast,
+  listLenInt,
   natVersion,
   peekTokenType,
   setTag,
@@ -154,8 +156,9 @@ instance AlonzoEraScript era => EncCBOR (RedeemersRaw era) where
       (encCBOR rs)
       (encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs)
     where
+      keyValueEncoder :: (PlutusPurpose AsIx era, (Data era, ExUnits)) -> Encoding
       keyValueEncoder (ptr, (dats, exs)) =
-        encodeListLen (listLen ptr + 2)
+        encodeListLen (listLen (asProxy ptr) + 2)
           <> encCBORGroup ptr
           <> encCBOR dats
           <> encCBOR exs
@@ -580,7 +583,8 @@ instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
       decodeElement ::
         forall s. Decoder s (PlutusPurpose AsIx era, Annotator (Data era), ExUnits)
       decodeElement = do
-        decodeRecordNamed "Redeemer" (\(rdmrPtr, _, _) -> fromIntegral (listLen rdmrPtr) + 2) $ do
+        let redeemerLen (redeemerPtr, _, _) = listLenInt (Just redeemerPtr) + 2
+        decodeRecordNamed "Redeemer" redeemerLen do
           !redeemerPtr <- decCBORGroup
           !redeemerData <- decCBOR
           !redeemerExUnits <- decCBOR

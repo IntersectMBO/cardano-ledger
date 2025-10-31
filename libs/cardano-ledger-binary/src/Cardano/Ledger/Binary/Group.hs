@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Binary.Group (
   CBORGroup (..),
@@ -10,10 +12,10 @@ module Cardano.Ledger.Binary.Group (
   DecCBORGroup (..),
 ) where
 
+import Cardano.Base.Proxy
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
-import Data.Proxy
-import Data.Typeable
+import Data.Typeable (Typeable)
 
 --------------------------------------------------------------------------------
 -- CBORGroup
@@ -26,10 +28,11 @@ instance (DecCBORGroup a, EncCBORGroup a) => DecCBOR (CBORGroup a) where
   decCBOR = CBORGroup <$> groupRecord
 
 instance EncCBORGroup a => EncCBOR (CBORGroup a) where
-  encCBOR (CBORGroup x) = encodeListLen (listLen x) <> encCBORGroup x
+  encCBOR (CBORGroup x) = encodeListLen (listLen $ Proxy @a) <> encCBORGroup x
 
 groupRecord :: forall a s. (EncCBORGroup a, DecCBORGroup a) => Decoder s a
-groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen) decCBORGroup
+groupRecord =
+  decodeRecordNamed "CBORGroup" (listLenInt . asProxy) decCBORGroup
 
 --------------------------------------------------------------------------------
 -- EncCBORGroup
@@ -38,13 +41,10 @@ groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen)
 class EncCBORGroup a where
   encCBORGroup :: a -> Encoding
 
-  listLen :: a -> Word
+  listLen :: Proxy a -> Word
 
-  -- | an upper bound for 'listLen', used in 'Size' expressions.
-  listLenBound :: Proxy a -> Word
-
-listLenInt :: EncCBORGroup a => a -> Int
-listLenInt x = fromIntegral (listLen x)
+listLenInt :: forall proxy a. EncCBORGroup a => proxy a -> Int
+listLenInt _ = fromIntegral $ listLen $ Proxy @a
 
 --------------------------------------------------------------------------------
 -- DecCBORGroup
@@ -57,7 +57,6 @@ instance EncCBOR a => EncCBORGroup (a, a) where
   encCBORGroup (x, y) =
     encCBOR x <> encCBOR y
   listLen _ = 2
-  listLenBound _ = 2
 
 instance DecCBOR a => DecCBORGroup (a, a) where
   decCBORGroup = do

@@ -19,6 +19,7 @@ module Cardano.Ledger.Block (
   neededTxInsForBlock,
 ) where
 
+import Cardano.Base.Proxy (asProxy)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -69,7 +70,7 @@ instance
   EncCBOR (Block h era)
   where
   encCBOR (Block h txns) =
-    encodeListLen (1 + listLen txns) <> encCBOR h <> encCBORGroup txns
+    encodeListLen (1 + listLen (asProxy txns)) <> encCBOR h <> encCBORGroup txns
 
 instance
   forall era h.

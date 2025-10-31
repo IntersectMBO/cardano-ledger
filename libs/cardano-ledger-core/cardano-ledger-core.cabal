@@ -107,6 +107,7 @@ library
     base64-bytestring,
     binary,
     bytestring >=0.10 && <0.11.3 || >=0.11.4,
+    cardano-base >=0.1.1.0,
     cardano-crypto,
     cardano-crypto-class ^>=2.2,
     cardano-crypto-wrapper,
