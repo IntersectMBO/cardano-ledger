@@ -157,7 +157,6 @@ instance
   EncCBORGroup (DijkstraPlutusPurpose f era)
   where
   listLen _ = 2
-  listLenBound _ = 2
   encCBORGroup = \case
     DijkstraSpending p -> encodeWord8 0 <> encCBOR p
     DijkstraMinting p -> encodeWord8 1 <> encCBOR p

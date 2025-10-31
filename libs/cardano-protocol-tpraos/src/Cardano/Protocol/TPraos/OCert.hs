@@ -106,7 +106,6 @@ instance Crypto c => NoThunks (OCert c)
 instance Crypto c => EncCBORGroup (OCert c) where
   encCBORGroup = fromPlainEncoding . encodeOCertFields
   listLen _ = 4
-  listLenBound _ = 4
 
 instance Crypto c => DecCBORGroup (OCert c) where
   decCBORGroup = fromPlainDecoder decodeOCertFields
