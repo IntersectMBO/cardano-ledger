@@ -258,7 +258,7 @@ integralToBounded i
 -- interval that is controlled by phantom type variable @b@ as well as by
 -- the bounds of underlying type @a@.
 newtype BoundedRatio b a = BoundedRatio (Ratio a)
-  deriving (Eq, Generic)
+  deriving (Eq)
   deriving newtype (Show, NoThunks, NFData)
 
 -- Deriving Ord instance can lead to integer overflow. We must go through Rational.

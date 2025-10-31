@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Remove `Generic` instance from `BoundedRatio` type
 * Remove deprecated function `addrPtrNormalize`
 * Remove deprecated functions `mkTxIx`, `mkCertIx`, `hashAnchorData`
 * Remove deprecated functions `bheader`, `bbody`
