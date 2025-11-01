@@ -14,21 +14,14 @@ module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (
 ) where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
-import Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure (..))
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Plutus.Language (
-  SLanguage (..),
-  hashPlutusScript,
- )
+import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
@@ -42,7 +35,7 @@ import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum, inputsOverlapsWithRefInputs)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
 
 spec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = do
@@ -159,22 +152,6 @@ spec = do
         [fromNativeScript spendingScript, fromNativeScript spendingScript]
           ++ extraScripts
           ++ extraScripts
-
-    let scriptHash lang = hashPlutusScript $ inputsOverlapsWithRefInputs lang
-    it "Cannot run scripts that expect inputs and refInputs to overlap (PV 9/10)" $ do
-      whenMajorVersionAtMost @10 $ do
-        txIn <- produceScript $ scriptHash SPlutusV3
-        submitFailingTx @era
-          (mkTxWithRefInputs txIn (NE.fromList [txIn]))
-          [ injectFailure $ BabbageNonDisjointRefInputs [txIn]
-          ]
-    it "Same script cannot appear in regular and reference inputs in PlutusV3 (PV 11)" $ whenMajorVersionAtLeast @11 $ do
-      txIn <- produceScript $ scriptHash SPlutusV3
-      submitFailingTx @era
-        (mkTxWithRefInputs txIn (NE.fromList [txIn]))
-        [ injectFailure $
-            CollectErrors [BadTranslation . inject $ ReferenceInputsNotDisjointFromInputs @era [txIn]]
-        ]
 
 conwayEraSpecificSpec ::
   forall era.

@@ -14,7 +14,14 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
  )
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (CollectErrors))
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Core (referenceInputsTxBodyL)
+import Cardano.Ledger.Babbage.Core (
+  collateralInputsTxBodyL,
+  collateralReturnTxBodyL,
+  datumTxOutL,
+  referenceInputsTxBodyL,
+  totalCollateralTxBodyL,
+ )
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (
   BabbageContextError (
     ReferenceInputsNotSupported,
@@ -22,9 +29,11 @@ import Cardano.Ledger.Babbage.TxInfo (
   ),
  )
 import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), TxIx (..), inject)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx (..), inject, natVersion)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (
+  ProtVerHigh,
+  bodyTxL,
   eraProtVerHigh,
   eraProtVerLow,
   fromNativeScript,
@@ -33,20 +42,24 @@ import Cardano.Ledger.Core (
   inputsTxBodyL,
   mkBasicTx,
   mkBasicTxBody,
+  mkBasicTxOut,
   mkCoinTxOut,
   outputsTxBodyL,
  )
-import Cardano.Ledger.Plutus (Language (..), hashPlutusScript, withSLanguage)
+import Cardano.Ledger.Credential (StakeReference (..))
+import Cardano.Ledger.Plutus (Language (..), hashPlutusScript, mkInlineDatum, withSLanguage)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
 import Lens.Micro
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
 
 spec :: forall era. BabbageEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOS" $ do
-  describe "Plutus V1 with references" $ do
+  describe "PlutusV1 with references" $ do
     let inBabbage = eraProtVerLow @era <= eraProtVerHigh @BabbageEra
         behavior = if inBabbage then "fails" else "succeeds"
         submitBabbageFailingTx tx failures =
@@ -59,7 +72,7 @@ spec = describe "UTXOS" $ do
       addr <- freshKeyAddr_
       let txOut =
             mkCoinTxOut addr (inject $ Coin 5_000_000)
-              & referenceScriptTxOutL .~ SJust nativeScript
+              & referenceScriptTxOutL .~ pure nativeScript
           tx =
             mkBasicTx $
               mkBasicTxBody
@@ -92,3 +105,48 @@ spec = describe "UTXOS" $ do
                   ReferenceInputsNotSupported @era [refIn]
               ]
         ]
+
+  describe "PlutusV2 with references" $ do
+    it "succeeds with same txIn in regular inputs and reference inputs" $ do
+      let
+        scriptHash = withSLanguage PlutusV2 $ hashPlutusScript . inputsOverlapsWithRefInputs
+        txOut =
+          mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
+            & datumTxOutL .~ mkInlineDatum (PV1.I 0)
+      tx <-
+        submitTx $
+          mkBasicTx $
+            mkBasicTxBody & outputsTxBodyL .~ [txOut]
+      let txIn = txInAt 0 tx
+      majorVer <- pvMajor <$> getProtVer
+      when (majorVer <= natVersion @(ProtVerHigh BabbageEra) || majorVer >= natVersion @11) $
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . inputsTxBodyL .~ [txIn]
+            & bodyTxL . referenceInputsTxBodyL .~ [txIn]
+
+  it "Incorrect collateral total" $ do
+    let
+      scriptHash = withSLanguage PlutusV2 (hashPlutusScript . alwaysSucceedsWithDatum)
+      txOut =
+        mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
+          & datumTxOutL .~ mkInlineDatum (PV1.I 1)
+    tx <-
+      submitTx $
+        mkBasicTx $
+          mkBasicTxBody & outputsTxBodyL .~ [txOut]
+    let txIn = txInAt 0 tx
+    addr <- freshKeyAddr_
+    coll <- sendCoinTo addr $ Coin 5_000_000
+    let
+      collReturn = mkBasicTxOut addr . inject $ Coin 2_000_000
+      tx2 =
+        mkBasicTx $
+          mkBasicTxBody
+            & inputsTxBodyL .~ [txIn]
+            & collateralInputsTxBodyL .~ [coll]
+            & collateralReturnTxBodyL .~ pure collReturn
+            & totalCollateralTxBodyL .~ pure (Coin 1_000_000)
+    submitFailingTx
+      tx2
+      [injectFailure (IncorrectTotalCollateralField (DeltaCoin 3_000_000) (Coin 1_000_000))]
