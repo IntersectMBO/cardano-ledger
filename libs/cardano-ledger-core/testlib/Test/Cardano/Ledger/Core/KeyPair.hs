@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -72,7 +73,9 @@ import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.TreeDiff as Tree (Expr (..))
+#if __GLASGOW_HASKELL__ < 914
 import Data.Typeable
+#endif
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import System.Random.Stateful
@@ -110,7 +113,13 @@ instance Uniform (KeyPair kd) where
 instance EncCBOR (KeyPair r) where
   encCBOR (KeyPair x y) = encode $ Coders.Rec KeyPair !> To x !> To y
 
-deriving instance Typeable r => Eq (KeyPair r)
+deriving instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable r =>
+#endif
+  Eq (KeyPair r)
 
 instance ToExpr (KeyPair r) where
   toExpr (KeyPair x y) = Tree.App "KeyPair" [toExpr x, Tree.App (take 10 (show y)) []]

@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -424,7 +425,13 @@ instance Ord k => Foldable (OMap k) where
 instance (EncCBOR v, Ord k) => EncCBOR (OMap k v) where
   encCBOR omap = encodeStrictSeq encCBOR (toStrictSeq omap)
 
-instance (Typeable k, HasOKey k v, DecCBOR v, Eq v) => DecCBOR (OMap k v) where
+instance (Typeable k, HasOKey k v, DecCBOR v
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Eq v
+#endif
+  ) => DecCBOR (OMap k v) where
   decCBOR = decodeOMap decCBOR
 
 decodeOMap :: HasOKey k v => Decoder s v -> Decoder s (OMap k v)

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -351,11 +352,15 @@ instance
 
 instance
   ( Era era
-  , Arbitrary (PredicateFailure (EraRule "UTXO" era))
   , Arbitrary (ShelleyUtxowPredFailure era)
-  , Arbitrary (TxCert era)
   , Arbitrary (PlutusPurpose AsItem era)
   , Arbitrary (PlutusPurpose AsIx era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Arbitrary (PredicateFailure (EraRule "UTXO" era))
+  , Arbitrary (TxCert era)
+#endif
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
   where

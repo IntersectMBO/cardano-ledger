@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -599,16 +600,40 @@ instance EncCBOR a => EncCBOR (THKD t StrictMaybe a) where
 instance (Typeable t, DecCBOR a) => DecCBOR (THKD t StrictMaybe a) where
   decCBOR = THKD <$> decCBOR
 
-instance (Typeable t, ToJSON a) => ToJSON (THKD t Identity a) where
+instance (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable t,
+#endif
+  ToJSON a) => ToJSON (THKD t Identity a) where
   toJSON = toJSON . unTHKD
 
-instance (Typeable t, FromJSON a) => FromJSON (THKD t Identity a) where
+instance (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable t,
+#endif
+  FromJSON a) => FromJSON (THKD t Identity a) where
   parseJSON = fmap THKD . parseJSON
 
-instance (Typeable t, ToJSON a) => ToJSON (THKD t StrictMaybe a) where
+instance (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable t,
+#endif
+  ToJSON a) => ToJSON (THKD t StrictMaybe a) where
   toJSON = toJSON . unTHKD
 
-instance (Typeable t, FromJSON a) => FromJSON (THKD t StrictMaybe a) where
+instance (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable t,
+#endif
+  FromJSON a) => FromJSON (THKD t StrictMaybe a) where
   parseJSON = fmap THKD . parseJSON
 
 ppGroup ::

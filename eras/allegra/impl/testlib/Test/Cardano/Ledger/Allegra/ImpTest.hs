@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -18,14 +19,26 @@ import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock,
   evalTimelock,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireAnyOf,
+  data RequireMOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
   pattern RequireSignature,
+#endif
  )
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set

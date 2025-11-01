@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -37,7 +38,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   UTxOState (..),
  )
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Shelley.Scripts (data RequireAllOf, data RequireAnyOf)
+#else
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf, pattern RequireAnyOf)
+#endif
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)

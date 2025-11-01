@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -264,7 +265,13 @@ instance DecShareCBOR (PState era) where
     psRetiring <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     pure PState {psVRFKeyHashes, psStakePools, psFutureStakePools, psRetiring}
 
-instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
+instance (Era era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , DecShareCBOR (PState era)
+#endif
+  ) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
 
 instance ToKeyValuePairs (PState era) where

@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -32,8 +33,13 @@ module Test.Cardano.Ledger.Generic.TxGen (
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
@@ -58,10 +64,17 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
   ShelleyEraScript,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireAnyOf,
+  data RequireMOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
   pattern RequireSignature,
+#endif
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
@@ -139,7 +152,7 @@ import Test.Cardano.Ledger.Generic.ModelState (
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
-import Test.QuickCheck
+import Test.QuickCheck hiding (Some)
 
 alonzoMkRedeemersFromTags ::
   (AlonzoEraScript era, EraModel era) =>

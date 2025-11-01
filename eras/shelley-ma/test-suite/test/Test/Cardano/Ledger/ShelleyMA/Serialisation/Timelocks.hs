@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -15,8 +16,13 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.Binary (natVersion)
 import Cardano.Ledger.Core
@@ -24,7 +30,11 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+#else
   pattern RequireAllOf,
+#endif
  )
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.Sequence.Strict (fromList)

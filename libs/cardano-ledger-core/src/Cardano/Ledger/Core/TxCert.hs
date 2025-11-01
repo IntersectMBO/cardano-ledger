@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -12,8 +13,13 @@
 
 module Cardano.Ledger.Core.TxCert (
   EraTxCert (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data RegPoolTxCert,
+  data RetirePoolTxCert,
+#else
   pattern RegPoolTxCert,
   pattern RetirePoolTxCert,
+#endif
   PoolCert (..),
   getPoolCertTxCert,
   poolCertKeyHashWitness,

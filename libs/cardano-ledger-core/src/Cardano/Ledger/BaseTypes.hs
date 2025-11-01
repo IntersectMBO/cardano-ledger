@@ -346,11 +346,23 @@ fromRatioBoundedRatio ratio
     lowerBound = minBound :: BoundedRatio b a
     upperBound = maxBound :: BoundedRatio b a
 
-instance (ToCBOR a, Integral a, Bounded a, Typeable b) => ToCBOR (BoundedRatio b a) where
+instance (ToCBOR a,
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Integral a, Bounded a,
+#endif
+  Typeable b) => ToCBOR (BoundedRatio b a) where
   toCBOR (BoundedRatio u) = Plain.encodeRatioWithTag toCBOR u
 
 instance
-  (FromCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Show a) =>
+  (FromCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Show a
+#endif
+  ) =>
   FromCBOR (BoundedRatio b a)
   where
   fromCBOR = do
