@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -11,6 +11,11 @@
 module Cardano.Ledger.Shelley.Rules.Pulser (
   ShelleyPULSER,
 ) where
+
+
+class EraPulser era where
+  type PulserState era :: (r :: Type) | r -> era
+
 
 instance STS (ShelleyPULSER era) where
   type State (ShelleyNEWPP era) = PulserState era
