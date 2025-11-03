@@ -637,7 +637,7 @@ instance
         pure $ TxDats <$> go Map.empty dats
         where
           go m [] = pure m
-          go m (x:xs) = do
+          go m (x : xs) = do
             x' <- x
             let dh = hashData x'
             if dh `Map.member` m

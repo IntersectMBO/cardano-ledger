@@ -48,6 +48,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus
 import Test.ImpSpec
 import Test.QuickCheck
-import Test.Cardano.Ledger.Plutus
