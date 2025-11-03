@@ -7,7 +7,6 @@ import Cardano.Ledger.Allegra
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Mary (MaryEra)
 import Data.Default (def)
@@ -26,7 +25,6 @@ import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.Binary.Annotator ()
-import Test.Cardano.Ledger.Shelley.ImpTest (LedgerSpec, modifyImpInitProtVer)
 
 -- ====================================================================================
 
@@ -40,10 +38,7 @@ apiSpec =
     describe "State" $ do
       StateQuery.spec
     describe "Imp" $
-      withImpInit @(LedgerSpec ConwayEra) $
-        forM_ (eraProtVersions @ConwayEra) $ \v ->
-          modifyImpInitProtVer v $ do
-            ImpQuery.spec @ConwayEra
+      ImpQuery.spec @ConwayEra
     describe "Upgrade" $ do
       Upgrade.spec @AllegraEra def
       Upgrade.spec @MaryEra def
