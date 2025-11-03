@@ -639,6 +639,7 @@ instance EraApi DijkstraEra where
             , dtbProposalProcedures = OSet.mapL upgradeProposals ctbrProposalProcedures
             , dtbVotingProcedures = coerce ctbrVotingProcedures
             , dtbTreasuryDonation = ctbrTreasuryDonation
+            , dtbSubTransactions = mempty
             }
 
   upgradeTxWits atw =
