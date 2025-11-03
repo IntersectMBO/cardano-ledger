@@ -193,7 +193,7 @@ noStakeProp =
     )
 
 activeDRepAcceptedRatio :: TestData -> Rational
-activeDRepAcceptedRatio (TestData {..}) =
+activeDRepAcceptedRatio TestData {..} =
   let activeDrepState =
         -- non-expired dReps
         Map.fromList
