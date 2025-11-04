@@ -236,7 +236,6 @@ spoAndCCVotingSpec = do
       logRatificationChecks constitutionActionId
       passNEpochs 2
       getConstitution `shouldNotReturn` newConstitution
-      True `shouldBe` False
 
 committeeExpiryResignationDiscountSpec ::
   forall era.
