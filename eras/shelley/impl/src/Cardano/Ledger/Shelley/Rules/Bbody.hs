@@ -160,6 +160,10 @@ newtype ShelleyBbodyEvent era
   = LedgersEvent (Event (EraRule "LEDGERS" era))
   deriving (Generic)
 
+deriving instance
+  Eq (Event (EraRule "LEDGERS" era)) =>
+  Eq (ShelleyBbodyEvent era)
+
 deriving stock instance
   ( Era era
   , Show (PredicateFailure (EraRule "LEDGERS" era))
