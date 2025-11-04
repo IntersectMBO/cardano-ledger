@@ -178,7 +178,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Typeable (Typeable)
-import Data.Word (Word16, Word64, Word8)
+import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
@@ -228,7 +228,13 @@ instance EncCBORGroup ProtVer where
   listLenBound _ = 2
 
 instance DecCBORGroup ProtVer where
-  decCBORGroup = ProtVer <$> decCBOR <*> decCBOR
+  decCBORGroup =
+    ProtVer
+      <$> decCBOR
+      <*> ifDecoderVersionAtLeast
+        (natVersion @12)
+        (fromIntegral @Word32 @Natural <$> decCBOR @Word32)
+        (decCBOR @Natural)
 
 data E34
 

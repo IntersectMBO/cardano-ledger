@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Limit `DecCBORGroup` decoding of `ProtVer` fields to `Word32` starting from protocol version `12`
 * Change `Relation` type to only be visible at the type level
 * Change `KeyRole` type to only be visible at the type level
 * Rename `Genesis` constructor of `KeyRole` to `GenesisRole`
