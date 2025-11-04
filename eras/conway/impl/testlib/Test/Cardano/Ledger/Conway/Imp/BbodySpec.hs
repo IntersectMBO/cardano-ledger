@@ -21,11 +21,13 @@ import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
-import Cardano.Ledger.TxIn
-import Control.Monad (forM)
+import Data.Foldable (for_)
+import Data.List (inits)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
+import Data.Traversable (for)
 import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Babbage.ImpTest
@@ -48,38 +50,32 @@ spec = do
     let
       maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
       maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+
     txScriptCounts <-
       genNumAdditionsExceeding
         scriptSize
         maxRefScriptSizePerTx
         maxRefScriptSizePerBlock
 
-    let mkTxWithNScripts n = do
-          -- Instead of using the rootTxIn, we are creating an input for each transaction
-          -- that we subsequently need to submit,
-          -- so that we can submit them independently of each other.
-          txIn <- freshKeyAddr_ >>= \addr -> sendCoinTo addr (Coin 8_000_000)
-          refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
-          pure $ mkTxWithRefInputs txIn (NE.fromList refIns)
+    txs <- for txScriptCounts $ \n -> do
+      -- Instead of using the rootTxIn, we're creating an input for each transaction
+      -- so that transactions that will be submitted in a block
+      -- can be submitted independently from the ones that prepared the
+      -- reference inputs
+      txIn <- freshKeyAddr_ >>= \addr -> sendCoinTo addr (Coin 100_000_000)
+      refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
+      pure $ mkTxWithRefInputs txIn (NE.fromList refIns)
 
-    txs <- do
-      forM txScriptCounts $ \n -> do
-        mkTxWithNScripts n
-          >>= fixupFees
-          >>= updateAddrTxWits
-
-    let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
-    predFailures <- expectLeftExpr =<< tryRunImpBBODY txs
-    predFailures
-      `shouldBe` NE.fromList
-        [ injectFailure
-            ( BodyRefScriptsSizeTooBig $
-                Mismatch
-                  { mismatchSupplied = expectedTotalRefScriptSize
-                  , mismatchExpected = maxRefScriptSizePerBlock
-                  }
-            )
-        ]
+    submitFailingBlock
+      txs
+      [ injectFailure
+          ( BodyRefScriptsSizeTooBig $
+              Mismatch
+                { mismatchSupplied = scriptSize * sum txScriptCounts
+                , mismatchExpected = maxRefScriptSizePerBlock
+                }
+          )
+      ]
 
   it "BodyRefScriptsSizeTooBig with reference scripts in the same block" $
     whenMajorVersionAtLeast @11 $ do
@@ -96,37 +92,24 @@ spec = do
           maxRefScriptSizePerTx
           maxRefScriptSizePerBlock
 
-      let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
+      let
+        -- These txs will be grouped into a block
+        buildTxs = for_ txScriptCounts $ \n -> do
+          refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
+          submitTx $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . referenceInputsTxBodyL .~ Set.fromList refIns
 
-      -- We are creating reference scripts and transaction that depend on them in a "simulation",
-      -- so the result will be correctly constructed that are not applied to the ledger state
-      txs :: [Tx TopTx era] <- simulateThenRestore $ do
-        concat
-          <$> forM
-            txScriptCounts
-            ( \n -> do
-                -- produce reference scripts
-                refScriptTxs <-
-                  replicateM n (produceRefScriptsTx (fromPlutusScript plutusScript :| []))
-
-                -- spend using the reference scripts
-                let txIns = (`mkTxInPartial` 0) . txIdTx <$> refScriptTxs
-                rootIn <- fst <$> getImpRootTxOut
-                spendTx <- submitTxWithRefInputs rootIn (NE.fromList txIns)
-                pure $ refScriptTxs ++ [spendTx]
+      withTxsInFailingBlock
+        buildTxs
+        [ injectFailure
+            ( BodyRefScriptsSizeTooBig $
+                Mismatch
+                  { mismatchSupplied = scriptSize * sum txScriptCounts
+                  , mismatchExpected = maxRefScriptSizePerBlock
+                  }
             )
-
-      predFailures <- expectLeftExpr =<< tryRunImpBBODY txs
-      predFailures
-        `shouldBe` NE.fromList
-          [ injectFailure
-              ( BodyRefScriptsSizeTooBig $
-                  Mismatch
-                    { mismatchSupplied = expectedTotalRefScriptSize
-                    , mismatchExpected = maxRefScriptSizePerBlock
-                    }
-              )
-          ]
+        ]
 
   it "totalRefScriptSizeInBlock" $ do
     script <- RequireSignature @era <$> freshKeyHash
@@ -141,7 +124,7 @@ spec = do
     -- their individual reference script sizes, and then restore the original state -
     -- meaning the transactions are not actually applied.
     -- Finally, we check that the accumulated sizes from both before and after match.
-    txsWithRefScriptSizes :: ([(Tx TopTx era, Int)], Int) <- simulateThenRestore $ do
+    txsWithSizes <- simulateThenRestore $ do
       let mkTxWithExpectedSize expectedSize txAction = do
             tx <- txAction
             totalRefScriptSizeInBlock protVer [tx] <$> getUTxO `shouldReturn` expectedSize
@@ -187,24 +170,16 @@ spec = do
 
       -- check and return the accumulated reference script size of all transactions,
       -- so we can check that the same sum for the unapplied transactions matches
-      let expectedTotalRefScriptSize = 5 * scriptSize
-      totalRefScriptSizeInBlock protVer (SSeq.fromList (fst <$> txsWithRefScriptSizes))
-        <$> getUTxO `shouldReturn` expectedTotalRefScriptSize
-      pure (txsWithRefScriptSizes, expectedTotalRefScriptSize)
+      let (txs, sizes) = unzip txsWithRefScriptSizes
+      totalRefScriptSizeInBlock protVer (SSeq.fromList txs) <$> getUTxO `shouldReturn` sum sizes
 
-    let (txWithSizes, expectedTotalSize) = txsWithRefScriptSizes
+      pure txsWithRefScriptSizes
 
     -- for each prefix of the list, the accumulated sum should match the sum of the applied transactions
-    forM_ ([1 .. length txWithSizes] :: [Int]) $ \ix -> do
-      let slice = take ix txWithSizes
-
-      totalRefScriptSizeInBlock protVer (SSeq.fromList (fst <$> slice))
-        <$> getUTxO
-          `shouldReturn` (if isPostV10 protVer then sum (snd <$> slice) else 0)
-
-    totalRefScriptSizeInBlock protVer (SSeq.fromList (fst <$> txWithSizes))
-      <$> getUTxO
-        `shouldReturn` (if isPostV10 protVer then expectedTotalSize else 0)
+    for_ (drop 1 $ inits txsWithSizes) $ \prefix -> do
+      let (txs, sizes) = unzip prefix
+          expectedSize = if isPostV10 protVer then sum sizes else 0
+      totalRefScriptSizeInBlock protVer (SSeq.fromList txs) <$> getUTxO `shouldReturn` expectedSize
 
   -- disabled in conformance because submiting phase2-invalid transactions are not supported atm
   -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/910
@@ -231,7 +206,7 @@ spec = do
           else freshKeyAddrNoPtr_
       pure $ mkBasicTxOut addr mempty & referenceScriptTxOutL .~ pure (fromNativeScript script)
 
-    (txs :: [Tx TopTx era]) <- simulateThenRestore $ do
+    txs <- simulateThenRestore $ do
       -- submit an invalid transaction which attempts to consume the failing script
       -- and specifies as collateral return the txout with reference script
       createCollateralTx <-
