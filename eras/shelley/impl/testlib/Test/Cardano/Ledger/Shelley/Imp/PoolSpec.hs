@@ -384,8 +384,8 @@ spec = describe "POOL" $ do
       pps <- psStakePools <$> getPState
       spsVrf <$> Map.lookup poolKh pps `shouldBe` mbVrf
     expectFuturePool poolKh mbVrf = do
-      fps <- psFutureStakePools <$> getPState
-      spsVrf <$> Map.lookup poolKh fps `shouldBe` mbVrf
+      fps <- psFutureStakePoolParams <$> getPState
+      sppVrf <$> Map.lookup poolKh fps `shouldBe` mbVrf
     expectPoolDelegs poolKh delegs = do
       pps <- psStakePools <$> getPState
       spsDelegators <$> Map.lookup poolKh pps `shouldBe` delegs

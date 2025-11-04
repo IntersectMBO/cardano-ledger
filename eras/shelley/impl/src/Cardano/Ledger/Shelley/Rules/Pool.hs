@@ -215,7 +215,7 @@ poolDelegationTransition ::
 poolDelegationTransition = do
   TRC
     ( PoolEnv cEpoch pp
-      , ps@PState {psStakePools, psFutureStakePools, psVRFKeyHashes}
+      , ps@PState {psStakePools, psFutureStakePoolParams, psVRFKeyHashes}
       , poolCert
       ) <-
     judgmentContext
@@ -273,38 +273,23 @@ poolDelegationTransition = do
                     -- If a pool re-registers with a fresh VRF, we have to record it in the map,
                     -- but also remove the previous VRFHashKey potentially stored in previous re-registration within the same epoch,
                     -- which we retrieve from futureStakePools.
-                    case Map.lookup sppId psFutureStakePools of
+                    case Map.lookup sppId psFutureStakePoolParams of
                       Nothing -> Map.insert sppVrf (knownNonZeroBounded @1)
-                      Just futureStakePoolState
-                        | futureStakePoolState ^. spsVrfL /= sppVrf ->
+                      Just futureStakePoolParams
+                        | futureStakePoolParams ^. sppVrfL /= sppVrf ->
                             Map.insert sppVrf (knownNonZeroBounded @1)
-                              . Map.delete (futureStakePoolState ^. spsVrfL)
+                              . Map.delete (futureStakePoolParams ^. sppVrfL)
                         | otherwise -> id
                 | otherwise = id
           tellEvent $ ReregisterPool sppId
-          -- NOTE: The `ppId` is already registered, so we want to reregister
-          -- it. That means adding it to the Future Stake Pools (if it is not
-          -- there already), and overriding its range with the new 'poolParams',
-          -- if it is.
-          --
+          -- This `sppId` is already registered, so we want to reregister it.
+          -- That means adding it to the futureStakePoolParams or overriding it  with the new 'poolParams'.
           -- We must also unretire it, if it has been scheduled for retirement.
-          --
-          -- The deposit does not change. One pays the deposit just once. Only
-          -- if it is fully retired (i.e. it's deposit has been refunded, and it
-          -- has been removed from the registered pools).  does it need to pay a
-          -- new deposit (at the current deposit amount). But of course, if that
-          -- has happened, we cannot be in this branch of the case statement.
-          let futureStakePoolState =
-                mkStakePoolState
-                  (stakePoolState ^. spsDepositL)
-                  -- delegators are set in PoolReap,
-                  -- in order to capture delegations that happened after re-registration but before the end of the epoch
-                  mempty
-                  stakePoolParams
+          -- The deposit does not change.
           pure $
             ps
-              & psFutureStakePoolsL
-                %~ Map.insert sppId futureStakePoolState
+              & psFutureStakePoolParamsL
+                %~ Map.insert sppId stakePoolParams
               & psRetiringL %~ Map.delete sppId
               & psVRFKeyHashesL %~ updateFutureVRFKeyHash
     RetirePool sppId e -> do

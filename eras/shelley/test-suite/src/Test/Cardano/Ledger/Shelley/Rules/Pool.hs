@@ -24,7 +24,6 @@ import Cardano.Protocol.TPraos.BHeader (bhbody, bheaderSlotNo)
 import Control.SetAlgebra (dom, eval, (∈), (∉))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Lens.Micro
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
@@ -126,15 +125,15 @@ poolRegistrationProp
     } =
     let hk = sppId stakePoolParams
      in case Map.lookup hk $ psStakePools sourceSt of
-          Just sps ->
+          Just _ ->
             conjoin
               [ counterexample
                   "Pre-existing StakePoolParams must still be registered in pParams"
                   (eval (hk ∈ dom (psStakePools targetSt)) :: Bool)
               , counterexample
                   "New StakePoolParams are registered in future Params map"
-                  ( Map.lookup hk (psFutureStakePools targetSt)
-                      === Just (mkStakePoolState (sps ^. spsDepositL) mempty stakePoolParams)
+                  ( Map.lookup hk (psFutureStakePoolParams targetSt)
+                      === Just stakePoolParams
                   )
               , counterexample
                   "StakePoolParams are removed in 'retiring'"
@@ -150,7 +149,7 @@ poolRegistrationProp
                   )
               , counterexample
                   "StakePoolParams are not present in 'future pool params'"
-                  (eval (hk ∉ dom (psFutureStakePools targetSt)) :: Bool)
+                  (eval (hk ∉ dom (psFutureStakePoolParams targetSt)) :: Bool)
               , counterexample
                   "StakePoolParams are removed in 'retiring'"
                   (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)

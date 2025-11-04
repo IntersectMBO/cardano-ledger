@@ -2,6 +2,9 @@
 
 ## 1.18.0.0
 
+* Replace `StakePoolState` values in `psFutureStakePoolParams` with `StakePoolParams`
+* Remove `psFutureStakePoolsL`
+* Add `psFutureStakePoolParamsL`
 * Remove deprecated function `getPoolParameters`
 * Remove deprecated function `toShelleyGenesisPairs`
 * Remove deprecated type `RewardAccounts`

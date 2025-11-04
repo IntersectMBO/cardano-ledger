@@ -104,7 +104,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   dsIRewardsL,
   dsFutureGenDelegsL,
   psStakePoolsL,
-  psFutureStakePoolsL,
+  psFutureStakePoolParamsL,
   psRetiringL,
   psVRFKeyHashesL,
 
