@@ -16,6 +16,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -55,7 +56,12 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   submitTxAnn_,
   submitFailingTx,
   submitFailingTxM,
+  submitBlock_,
+  submitBlock,
+  submitFailingBlock,
+  submitFailingBlockM,
   trySubmitTx,
+  trySubmitBlock,
   impShelleyExpectTxSuccess,
   modifyNES,
   getProtVer,
@@ -66,7 +72,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impAnnDoc,
   impLogToExpr,
   runImpRule,
-  tryRunImpBBODY,
   tryRunImpRule,
   tryRunImpRuleNoAssertions,
   delegateStake,
@@ -235,7 +240,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
-import Control.Monad (forM)
+import Control.Monad (forM, (<=<))
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
 import Control.Monad.State.Strict (MonadState (..), evalStateT, get, gets, modify, put)
@@ -249,7 +254,7 @@ import Control.State.Transition.Extended (
   SingEP (..),
   ValidationPolicy (..),
  )
-import Data.Bifunctor (first)
+import Data.Bifunctor (bimap, first)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default (Default (..))
@@ -420,6 +425,10 @@ class
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , ToExpr (Event (EraRule "BBODY" era))
+  , NFData (BlockBody era)
+  , ToExpr (BlockBody era)
+  , NFData (PredicateFailure (EraRule "BBODY" era))
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , -- For the LEDGER rule
     STS (EraRule "LEDGER" era)
@@ -1248,24 +1257,117 @@ submitFailingTxM tx mkExpectedFailures = do
   expectedFailures <- mkExpectedFailures fixedUpTx
   predFailures `shouldBeExpr` expectedFailures
 
-tryRunImpBBODY ::
+-- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to succeed.
+submittingTxsAsBlock_ ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  ImpTestM era a ->
+  ImpTestM era ()
+submittingTxsAsBlock_ = void . submittingTxsAsBlock . void
+
+-- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to succeed.
+submittingTxsAsBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  ImpTestM era () ->
+  ImpTestM era (Block BHeaderView era)
+submittingTxsAsBlock act = do
+  txs <- simulateThenRestore $ impTxsFrom act
+  submitBlock txs
+
+-- | Gather all the txs submitted by @act@ and resubmit them as a block
+-- that's expected to fail with the given predicate failures.
+submittingTxsAsFailingBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  ImpTestM era () ->
+  NonEmpty (PredicateFailure (EraRule "BBODY" era)) ->
+  ImpTestM era ()
+submittingTxsAsFailingBlock act = submittingTxsAsFailingBlockM act . const . pure
+
+-- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to fail
+-- and compute the expected predicate failures from the created block using the supplied action.
+submittingTxsAsFailingBlockM ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  ImpTestM era () ->
+  (Block BHeaderView era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "BBODY" era)))) ->
+  ImpTestM era ()
+submittingTxsAsFailingBlockM act mkExpectedFailures = do
+  txs <- simulateThenRestore $ impTxsFrom act
+  submitFailingBlockM txs mkExpectedFailures
+
+-- | Submit a list of transactions as a block that's expected to succeed.
+-- The transactions are not modified to make them balance.
+submitBlock_ ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  [Tx TopTx era] -> ImpTestM era ()
+submitBlock_ = void . submitBlock
+
+-- | Submit a list of transactions as a block that's expected to succeed.
+-- The transactions are not modified to make them balance.
+submitBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  [Tx TopTx era] -> ImpTestM era (Block BHeaderView era)
+submitBlock = expectRightDeepExpr . first fst <=< trySubmitBlock
+
+-- | Submit a list of transactions as a block that's expected to fail
+-- with the given predicate failures.
+-- The transactions are not modified to make them balance.
+submitFailingBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  [Tx TopTx era] ->
+  NonEmpty (PredicateFailure (EraRule "BBODY" era)) ->
+  ImpTestM era ()
+submitFailingBlock txs = submitFailingBlockM txs . const . pure
+
+-- | Submit a list of transactions as a block that's expected to be rejected,
+-- and compute the expected predicate failures from the created block using the supplied action.
+-- The transactions are not modified to make them balance.
+submitFailingBlockM ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  [Tx TopTx era] ->
+  (Block BHeaderView era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "BBODY" era)))) ->
+  ImpTestM era ()
+submitFailingBlockM txs mkExpectedFailures = do
+  (predFailures, block) <- expectLeftDeepExpr =<< trySubmitBlock txs
+  expectedFailures <- mkExpectedFailures block
+  predFailures `shouldBeExpr` expectedFailures
+
+-- | Try to submit a list of transactions as a block,
+-- Return the block that was created using the transactions and any predicate
+-- failures that are produced.
+-- The transactions are not modified to make them balance.
+trySubmitBlock ::
   forall era.
   ShelleyEraImp era =>
   [Tx TopTx era] ->
   ImpTestM
     era
     ( Either
-        (NonEmpty (PredicateFailure (EraRule "BBODY" era)))
-        (State (EraRule "BBODY" era), [Event (EraRule "BBODY" era)])
+        (NonEmpty (PredicateFailure (EraRule "BBODY" era)), Block BHeaderView era)
+        (Block BHeaderView era)
     )
-tryRunImpBBODY txs = do
+trySubmitBlock txs = do
   let blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ SSeq.fromList txs
   nes <- use impNESL
   let ls = nes ^. nesEsL . esLStateL
       pp = nes ^. nesEsL . curPParamsEpochStateL @era
   kh <- freshKeyHash
   slotNo <- use impLastTickG
-  let bhView =
+  let blockHeader =
         BHeaderView
           { bhviewID = kh
           , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
@@ -1273,10 +1375,12 @@ tryRunImpBBODY txs = do
           , bhviewBHash = hashBlockBody blockBody
           , bhviewSlot = slotNo
           }
-  tryRunImpRule @"BBODY"
-    (BbodyEnv pp (nes ^. chainAccountStateL))
-    (BbodyState ls (BlocksMade Map.empty))
-    (Block {blockHeader = bhView, blockBody})
+      block = Block {blockHeader, blockBody}
+  bimap (,block) (const block)
+    <$> tryRunImpRule @"BBODY"
+      (BbodyEnv pp (nes ^. chainAccountStateL))
+      (BbodyState ls (BlocksMade Map.empty))
+      block
 
 tryRunImpRule ::
   forall rule era.

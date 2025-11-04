@@ -55,31 +55,25 @@ spec = do
         maxRefScriptSizePerBlock
 
     let mkTxWithNScripts n = do
-          -- Instead of using the rootTxIn, we are creating an input for each transaction
-          -- that we subsequently need to submit,
-          -- so that we can submit them independently of each other.
-          txIn <- freshKeyAddr_ >>= \addr -> sendCoinTo addr (Coin 8_000_000)
+          -- Instead of using the rootTxIn, we're creating an input for each transaction
+          -- so that they're independent of each other
+          txIn <- freshKeyAddr_ >>= \addr -> sendCoinTo addr (Coin 100_000_000)
           refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
           pure $ mkTxWithRefInputs txIn (NE.fromList refIns)
 
-    txs <- do
-      forM txScriptCounts $ \n -> do
-        mkTxWithNScripts n
-          >>= fixupFees
-          >>= updateAddrTxWits
+    txs <- forM txScriptCounts mkTxWithNScripts
+    fixedUpTxs <- simulateThenRestore $ forM txs submitTx
 
-    let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
-    predFailures <- expectLeftExpr =<< tryRunImpBBODY txs
-    predFailures
-      `shouldBe` NE.fromList
-        [ injectFailure
-            ( BodyRefScriptsSizeTooBig $
-                Mismatch
-                  { mismatchSupplied = expectedTotalRefScriptSize
-                  , mismatchExpected = maxRefScriptSizePerBlock
-                  }
-            )
-        ]
+    submitFailingBlock
+      fixedUpTxs
+      [ injectFailure
+          ( BodyRefScriptsSizeTooBig $
+              Mismatch
+                { mismatchSupplied = scriptSize * sum txScriptCounts
+                , mismatchExpected = maxRefScriptSizePerBlock
+                }
+          )
+      ]
 
   it "BodyRefScriptsSizeTooBig with reference scripts in the same block" $
     whenMajorVersionAtLeast @11 $ do
@@ -96,8 +90,6 @@ spec = do
           maxRefScriptSizePerTx
           maxRefScriptSizePerBlock
 
-      let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
-
       -- We are creating reference scripts and transaction that depend on them in a "simulation",
       -- so the result will be correctly constructed that are not applied to the ledger state
       txs :: [Tx TopTx era] <- simulateThenRestore $ do
@@ -107,7 +99,8 @@ spec = do
             ( \n -> do
                 -- produce reference scripts
                 refScriptTxs <-
-                  replicateM n (produceRefScriptsTx (fromPlutusScript plutusScript :| []))
+                  replicateM n $
+                    produceRefScriptsTx (fromPlutusScript plutusScript :| [])
 
                 -- spend using the reference scripts
                 let txIns = (`mkTxInPartial` 0) . txIdTx <$> refScriptTxs
@@ -116,17 +109,16 @@ spec = do
                 pure $ refScriptTxs ++ [spendTx]
             )
 
-      predFailures <- expectLeftExpr =<< tryRunImpBBODY txs
-      predFailures
-        `shouldBe` NE.fromList
-          [ injectFailure
-              ( BodyRefScriptsSizeTooBig $
-                  Mismatch
-                    { mismatchSupplied = expectedTotalRefScriptSize
-                    , mismatchExpected = maxRefScriptSizePerBlock
-                    }
-              )
-          ]
+      submitFailingBlock
+        txs
+        [ injectFailure
+            ( BodyRefScriptsSizeTooBig $
+                Mismatch
+                  { mismatchSupplied = scriptSize * sum txScriptCounts
+                  , mismatchExpected = maxRefScriptSizePerBlock
+                  }
+            )
+        ]
 
   it "totalRefScriptSizeInBlock" $ do
     script <- RequireSignature @era <$> freshKeyHash
