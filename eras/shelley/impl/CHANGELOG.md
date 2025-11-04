@@ -49,6 +49,21 @@
 
 ### `testlib`
 
+* Add:
+  - `submitBlock_`
+  - `submitBlock`
+  - `submitFailingBlock`
+  - `submitFailingBlockM`
+  - `withTxsInBlock_`
+  - `withTxsInBlock`
+  - `withTxsInFailingBlock`
+  - `withTxsInFailingBlockM`
+  - `tryTxsInBlock`
+* Remove `tryRunImpBBODY`
+* Add `Eq` instances for:
+  - `AlonzoBbodyEvent`
+  - `ShelleyBbodyEvent`
+  - `ShelleyLedgersEvent`
 * Add `NFData` and `ToExpr` constraints and instances for:
   - `AlonzoBlockBody`
   - `AlonzoBbodyPredFailure`
@@ -58,7 +73,7 @@
   - `BHeaderView`
   - `Block`
 * Add a `Generic` instance for `BHeaderView`
-* Add `impEventsFrom`
+* Add `impEventsFrom`, `impTransactionsFrom`
 * Change type of `ImpTestState.impEvents` field from `[]` to `Seq`
 * Renamed `impLastTick` to `impCurSlotNo` and `impLastTickG` to `impCurSlotNoG`
 * Add CDDL certificate definitions: `account_registration_cert`, `account_unregistration_cert`, `delegation_to_stake_pool_cert`

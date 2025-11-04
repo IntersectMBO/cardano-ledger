@@ -87,6 +87,10 @@ newtype AlonzoBbodyEvent era
   = ShelleyInAlonzoEvent (ShelleyBbodyEvent era)
   deriving (Generic)
 
+deriving instance
+  Eq (Event (EraRule "LEDGERS" era)) =>
+  Eq (AlonzoBbodyEvent era)
+
 type instance EraRuleFailure "BBODY" AlonzoEra = AlonzoBbodyPredFailure AlonzoEra
 
 instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure AlonzoEra
