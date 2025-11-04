@@ -23,6 +23,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.TxIn
 import Control.Monad (forM)
+import Control.State.Transition (STS (PredicateFailure))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence.Strict as SSeq
@@ -34,7 +35,15 @@ import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsNoDatum, purposeIsWellformedNoDatum)
 
-spec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  ( ConwayEraImp era
+  , ToExpr (BlockBody era)
+  , NFData (BlockBody era)
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
+  , NFData (PredicateFailure (EraRule "BBODY" era))
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "BodyRefScriptsSizeTooBig" $ do
     plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
@@ -68,18 +77,16 @@ spec = do
           >>= fixupFees
           >>= updateAddrTxWits
 
-    let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
-    predFailures <- expectLeftExpr =<< tryRunImpBBODY txs
-    predFailures
-      `shouldBe` NE.fromList
-        [ injectFailure
-            ( BodyRefScriptsSizeTooBig $
-                Mismatch
-                  { mismatchSupplied = expectedTotalRefScriptSize
-                  , mismatchExpected = maxRefScriptSizePerBlock
-                  }
-            )
-        ]
+    submitFailingBlock
+      txs
+      [ injectFailure
+          ( BodyRefScriptsSizeTooBig $
+              Mismatch
+                { mismatchSupplied = scriptSize * sum txScriptCounts
+                , mismatchExpected = maxRefScriptSizePerBlock
+                }
+          )
+      ]
 
   it "BodyRefScriptsSizeTooBig with reference scripts in the same block" $
     whenMajorVersionAtLeast @11 $ do
@@ -95,8 +102,6 @@ spec = do
           scriptSize
           maxRefScriptSizePerTx
           maxRefScriptSizePerBlock
-
-      let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
 
       -- We are creating reference scripts and transaction that depend on them in a "simulation",
       -- so the result will be correctly constructed that are not applied to the ledger state
@@ -116,17 +121,16 @@ spec = do
                 pure $ refScriptTxs ++ [spendTx]
             )
 
-      predFailures <- expectLeftExpr =<< tryRunImpBBODY txs
-      predFailures
-        `shouldBe` NE.fromList
-          [ injectFailure
-              ( BodyRefScriptsSizeTooBig $
-                  Mismatch
-                    { mismatchSupplied = expectedTotalRefScriptSize
-                    , mismatchExpected = maxRefScriptSizePerBlock
-                    }
-              )
-          ]
+      submitFailingBlock
+        txs
+        [ injectFailure
+            ( BodyRefScriptsSizeTooBig $
+                Mismatch
+                  { mismatchSupplied = scriptSize * sum txScriptCounts
+                  , mismatchExpected = maxRefScriptSizePerBlock
+                  }
+            )
+        ]
 
   it "totalRefScriptSizeInBlock" $ do
     script <- RequireSignature @era <$> freshKeyHash
