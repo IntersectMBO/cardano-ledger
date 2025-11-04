@@ -66,6 +66,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impAnnDoc,
   impLogToExpr,
   runImpRule,
+  tryRunImpBBODY,
   tryRunImpRule,
   tryRunImpRuleNoAssertions,
   delegateStake,
@@ -167,10 +168,10 @@ import Cardano.Ledger.Address (
   RewardAccount (..),
   bootstrapKeyHash,
  )
-import Cardano.Ledger.BHeaderView (BHeaderView)
+import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (Block)
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..), credToText)
@@ -209,7 +210,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   LedgerEnv (..),
-  ShelleyBbodyState,
+  ShelleyBbodyState (..),
   ShelleyDelegPredFailure,
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
@@ -1246,6 +1247,36 @@ submitFailingTxM tx mkExpectedFailures = do
   (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
   expectedFailures <- mkExpectedFailures fixedUpTx
   predFailures `shouldBeExpr` expectedFailures
+
+tryRunImpBBODY ::
+  forall era.
+  ShelleyEraImp era =>
+  [Tx TopTx era] ->
+  ImpTestM
+    era
+    ( Either
+        (NonEmpty (PredicateFailure (EraRule "BBODY" era)))
+        (State (EraRule "BBODY" era), [Event (EraRule "BBODY" era)])
+    )
+tryRunImpBBODY txs = do
+  let blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ SSeq.fromList txs
+  nes <- use impNESL
+  let ls = nes ^. nesEsL . esLStateL
+      pp = nes ^. nesEsL . curPParamsEpochStateL @era
+  kh <- freshKeyHash
+  slotNo <- use impLastTickG
+  let bhView =
+        BHeaderView
+          { bhviewID = kh
+          , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
+          , bhviewHSize = 0
+          , bhviewBHash = hashBlockBody blockBody
+          , bhviewSlot = slotNo
+          }
+  tryRunImpRule @"BBODY"
+    (BbodyEnv pp (nes ^. chainAccountStateL))
+    (BbodyState ls (BlocksMade Map.empty))
+    (Block {blockHeader = bhView, blockBody})
 
 tryRunImpRule ::
   forall rule era.
