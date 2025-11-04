@@ -652,7 +652,7 @@ withEachEraVersion ::
 withEachEraVersion specWith =
   withImpInit @(LedgerSpec era) $ do
     forM_ (eraProtVersions @era) $ \protVer ->
-      describe (show protVer) $
+      describe ("Protocol " <> show protVer) $
         modifyImpInitProtVer protVer specWith
 
 shelleyModifyImpInitProtVer ::
