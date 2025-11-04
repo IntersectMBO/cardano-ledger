@@ -95,7 +95,6 @@ import Data.Maybe (fromMaybe)
 import Data.VMap as VMap
 import Data.Word (Word16)
 import GHC.Generics (Generic)
-import GHC.Word (Word64)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
@@ -283,14 +282,14 @@ calculatePoolStake ::
   (KeyHash StakePool -> Bool) ->
   VMap VB VB (Credential Staking) (KeyHash StakePool) ->
   Stake ->
-  Map.Map (KeyHash StakePool) Word64
+  Map.Map (KeyHash StakePool) (CompactForm Coin)
 calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty delegs
   where
     accum ans cred keyHash =
       if includeHash keyHash
         then
-          let CompactCoin c = fromMaybe mempty $ VMap.lookup cred (unStake stake)
-           in Map.insertWith (+) keyHash c ans
+          let !c = fromMaybe mempty $ VMap.lookup cred (unStake stake)
+           in Map.insertWith (<>) keyHash c ans
         else ans
 
 calculatePoolDistr :: SnapShot -> PoolDistr
@@ -305,11 +304,11 @@ calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
       poolStakeMap = calculatePoolStake includeHash delegs stake
    in PoolDistr
         ( Map.intersectionWith
-            ( \word64 poolparam ->
+            ( \stakePoolStake@(CompactCoin w64) poolParam ->
                 IndividualPoolStake
-                  (toInteger word64 %. nonZeroTotalInteger)
-                  (CompactCoin word64)
-                  (sppVrf poolparam)
+                  (toInteger w64 %. nonZeroTotalInteger)
+                  stakePoolStake
+                  (sppVrf poolParam)
             )
             poolStakeMap
             (VMap.toMap poolParams)
