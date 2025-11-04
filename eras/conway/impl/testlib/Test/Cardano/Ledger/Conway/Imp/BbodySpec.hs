@@ -1,34 +1,23 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conway.Imp.BbodySpec (
-  spec,
-) where
+module Test.Cardano.Ledger.Conway.Imp.BbodySpec (spec) where
 
-import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Mismatch (..), ProtVer (..), natVersion)
-import Cardano.Ledger.Block
+import Cardano.Ledger.BaseTypes (Mismatch (..), ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure (..),
   totalRefScriptSizeInBlock,
  )
-import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (
-  BbodyEnv (..),
-  ShelleyBbodyState (..),
- )
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
@@ -36,11 +25,9 @@ import Cardano.Ledger.TxIn
 import Control.Monad (forM)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as SSeq
 import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
-import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
@@ -82,7 +69,7 @@ spec = do
           >>= updateAddrTxWits
 
     let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
-    predFailures <- expectLeftExpr =<< tryRunBBODY txs
+    predFailures <- expectLeftExpr =<< tryRunImpBBODY txs
     predFailures
       `shouldBe` NE.fromList
         [ injectFailure
@@ -129,7 +116,7 @@ spec = do
                 pure $ refScriptTxs ++ [spendTx]
             )
 
-      predFailures <- expectLeftExpr =<< tryRunBBODY txs
+      predFailures <- expectLeftExpr =<< tryRunImpBBODY txs
       predFailures
         `shouldBe` NE.fromList
           [ injectFailure
@@ -267,26 +254,6 @@ spec = do
       <$> getUTxO
         `shouldReturn` (if isPostV10 protVer then scriptSize else 0)
   where
-    tryRunBBODY txs = do
-      let blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ SSeq.fromList txs
-      nes <- use impNESL
-      let ls = nes ^. nesEsL . esLStateL
-          pp = nes ^. nesEsL . curPParamsEpochStateL @era
-      kh <- freshKeyHash
-      slotNo <- use impCurSlotNoG
-      let bhView =
-            BHeaderView
-              { bhviewID = kh
-              , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
-              , bhviewHSize = 0
-              , bhviewBHash = hashBlockBody blockBody
-              , bhviewSlot = slotNo
-              , bhviewPrevEpochNonce = Nothing
-              }
-      tryRunImpRule @"BBODY"
-        (BbodyEnv pp (nes ^. chainAccountStateL))
-        (BbodyState ls (BlocksMade Map.empty))
-        (Block {blockHeader = bhView, blockBody})
     isPostV10 protVer = pvMajor protVer >= natVersion @11
 
 -- Generate a list of integers such that the sum of their multiples by scale is greater than toExceed
