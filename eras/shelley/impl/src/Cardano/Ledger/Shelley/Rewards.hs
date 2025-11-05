@@ -28,9 +28,11 @@ module Cardano.Ledger.Shelley.Rewards (
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   BoundedRational (..),
+  NonZero,
   ProtVer,
   UnitInterval,
   nonZeroOr,
+  (%.),
   (%?),
  )
 import Cardano.Ledger.Binary (
@@ -44,6 +46,7 @@ import Cardano.Ledger.Coin (
   coinToRational,
   compactCoinOrError,
   rationalToCoinViaFloor,
+  unCoinNonZero,
  )
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -52,7 +55,7 @@ import Cardano.Ledger.Shelley.Era (
   hardforkAllegraAggregatedRewards,
   hardforkBabbageForgoRewardPrefilter,
  )
-import Cardano.Ledger.State (Stake (..), StakePoolParams (..), maxPool')
+import Cardano.Ledger.State (Stake (..), StakePoolParams (..), StakePoolSnapShot (..), maxPool')
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -97,15 +100,28 @@ leaderRew ::
   StakeShare ->
   StakeShare ->
   Coin
-leaderRew f pool (StakeShare s) (StakeShare sigma)
-  | f <= c = f
+leaderRew f pool = calcStakePoolOperatorReward f (sppCost pool) (sppMargin pool)
+{-# DEPRECATED leaderRew "In favor of `calcStakePoolOperatorReward`" #-}
+
+-- | See section "5.5.4.1 Pool Operator Reward" in [Design Specification for Delegation and Incentives in Cardano](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-delegation.pdf)
+calcStakePoolOperatorReward ::
+  -- | Total Pool Rewards
+  Coin ->
+  -- | Stake Pool Cost
+  Coin ->
+  -- | Stake Pool Margin
+  UnitInterval ->
+  -- | Stake delegated to the pool by its owner(s)
+  StakeShare ->
+  -- | The relative stake of the pool.
+  StakeShare ->
+  Coin
+calcStakePoolOperatorReward f cost margin (StakeShare s) (StakeShare sigma)
+  | f <= cost = f
   | otherwise =
-      c
-        <> rationalToCoinViaFloor
-          (coinToRational (f <-> c) * (m + (1 - m) * s / sigma))
+      cost <> rationalToCoinViaFloor (coinToRational (f <-> cost) * (m + (1 - m) * s / sigma))
   where
-    c = sppCost pool
-    m = unboundRational (sppMargin pool)
+    m = unboundRational margin
 
 -- | Calculate pool member reward
 memberRew ::
@@ -303,10 +319,10 @@ mkPoolRewardInfo ::
   Natural ->
   Stake ->
   VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
-  Map (KeyHash StakePool) Coin ->
   Coin ->
-  Coin ->
-  StakePoolParams ->
+  NonZero Coin ->
+  KeyHash 'StakePool ->
+  StakePoolSnapShot ->
   Either StakeShare PoolRewardInfo
 mkPoolRewardInfo
   pp
@@ -315,52 +331,54 @@ mkPoolRewardInfo
   blocksTotal
   stake
   delegs
-  stakePerPool
   (Coin totalStake)
-  (Coin activeStake)
-  pool = case Map.lookup (sppId pool) (unBlocksMade blocks) of
-    -- This pool made no blocks this epoch. For the purposes of stake pool
-    -- ranking only, we return the relative stake of this pool so that we
-    -- can judge how likely it was that this pool made no blocks.
-    Nothing -> Left $! StakeShare sigma
-    -- This pool made no blocks, so we can proceed to calculate the
-    -- intermediate values needed for the individual reward calculations.
-    Just blocksN ->
-      let Coin maxP =
-            if pledge <= poolOwnerStake
-              then maxPool' pp_a0 pp_nOpt r sigma poolRelativePledge
-              else mempty
-          appPerf = mkApparentPerformance pp_d sigmaA blocksN blocksTotal
-          poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
-          lreward =
-            leaderRew
-              poolR
-              pool
-              (StakeShare poolOwnerRelativeStake)
-              (StakeShare sigma)
-          rewardInfo =
-            PoolRewardInfo
-              { poolRelativeStake = StakeShare sigma
-              , poolPot = poolR
-              , poolPs = pool
-              , poolBlocks = blocksN
-              , poolLeaderReward = LeaderOnlyReward (sppId pool) lreward
-              }
-       in Right $! rewardInfo
+  totalActiveStake
+  stakePoolId
+  stakePoolSnapShot =
+    case Map.lookup stakePoolId (unBlocksMade blocks) of
+      -- This pool made no blocks this epoch. For the purposes of stake pool
+      -- ranking only, we return the relative stake of this pool so that we
+      -- can judge how likely it was that this pool made no blocks.
+      Nothing -> Left $! StakeShare sigma
+      -- This pool made no blocks, so we can proceed to calculate the
+      -- intermediate values needed for the individual reward calculations.
+      Just blocksN ->
+        let Coin maxP =
+              if pledge <= poolOwnerStake
+                then maxPool' pp_a0 pp_nOpt r sigma poolRelativePledge
+                else mempty
+            appPerf = mkApparentPerformance pp_d sigmaA blocksN blocksTotal
+            poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
+            lreward =
+              calcStakePoolOperatorReward
+                poolR
+                (spssCost stakePoolSnapShot)
+                (spssMargin stakePoolSnapShot)
+                (StakeShare poolOwnerRelativeStake)
+                (StakeShare sigma)
+            rewardInfo =
+              PoolRewardInfo
+                { poolRelativeStake = StakeShare sigma
+                , poolPot = poolR
+                , poolPs = pool
+                , poolBlocks = blocksN
+                , poolLeaderReward = LeaderOnlyReward stakePoolId lreward
+                }
+         in Right $! rewardInfo
     where
       pp_d = pp ^. ppDG
       pp_a0 = pp ^. ppA0L
       pp_nOpt = (pp ^. ppNOptL) `nonZeroOr` error "nOpt is zero"
-      Coin poolTotalStake = Map.findWithDefault mempty (sppId pool) stakePerPool
+      Coin poolTotalStake = Map.findWithDefault mempty stakePoolId stakePerPool
       accOwnerStake c o = maybe c (c <>) $ do
         hk <- VMap.lookup (KeyHashObj o) delegs
-        guard (hk == sppId pool)
+        guard (hk == stakePoolId)
         VMap.lookup (KeyHashObj o) (unStake stake)
       Coin poolOwnerStake = fromCompact $ Set.foldl' accOwnerStake mempty (sppOwners pool)
       Coin pledge = sppPledge pool
-      -- warning: In theory `totalStake` and `activeStake` could be zero, but that would imply no
+      -- warning: In theory `totalStake` and `totalActiveStake` could be zero, but that would imply no
       -- active stake pools and no delegators, which would mean PoS would be dead!
       poolRelativePledge = pledge % totalStake
       poolOwnerRelativeStake = poolOwnerStake %? totalStake
       sigma = poolTotalStake %? totalStake
-      sigmaA = poolTotalStake %? activeStake
+      sigmaA = poolTotalStake %. unCoinNonZero totalActiveStake

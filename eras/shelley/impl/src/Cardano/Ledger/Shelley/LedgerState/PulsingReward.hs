@@ -38,6 +38,7 @@ import Cardano.Ledger.Coin (
   rationalToCoinViaFloor,
   toDeltaCoin,
  )
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (hardforkBabbageForgoRewardPrefilter)
 import Cardano.Ledger.Shelley.LedgerState.Types
@@ -68,6 +69,7 @@ import Cardano.Ledger.Shelley.Rewards (
 import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Ledger.State
 import Cardano.Ledger.Val ((<->))
+import Control.Exception (assert)
 import Data.Group (invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -97,7 +99,7 @@ startStep ::
   NonZero Word64 ->
   PulsingRewUpdate
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSupply asc secparam =
-  let SnapShot stake delegs poolParams = ssStakeGo ss
+  let SnapShot stake totalActiveStake delegs poolParams stakePoolSnapShots = ssStakeGo ss
       numStakeCreds = fromIntegral (VMap.size $ unStake stake)
       k = toIntegerNonZero secparam
       -- We expect approximately 10k-many blocks to be produced each epoch.
@@ -141,7 +143,6 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       _R = Coin $ rPot - deltaT1
       -- We now compute stake pool specific values that are needed for computing
       -- member and leader rewards.
-      activeStake = sumAllStake stake
       totalStake = circulation es maxSupply
       stakePerPool = sumStakePerPool delegs stake
       mkPoolRewardInfoCurry =
@@ -154,7 +155,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           delegs
           stakePerPool
           totalStake
-          activeStake
+          totalActiveStake
       -- We map over the registered stake pools to compute the relevant
       -- stake pool specific values.
       allPoolInfo = VMap.map mkPoolRewardInfoCurry poolParams
@@ -215,7 +216,8 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           free
           (unStake stake)
           (RewardAns Map.empty Map.empty)
-   in Pulsing rewsnap pulser
+   in assert (stakePerPool == Map.map (fromCompact . spssStake) stakePoolSnapShots) $
+        Pulsing rewsnap pulser
 
 -- Phase 2
 

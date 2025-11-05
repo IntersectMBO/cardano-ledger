@@ -209,8 +209,10 @@ data StakePoolSnapShot = StakePoolSnapShot
   { spssStake :: CompactForm Coin
   , spssStakeRatio :: Rational
   -- ^ Ratio of the stake pool stake `spssStake` over the total `ssTotalActiveStake` for that snapshot
-  , spssOwners :: !(Set (KeyHash 'Staking))
-  , spssOwnersStake :: CompactForm Coin
+  , spssSelfDelegatedOwnersStake :: CompactForm Coin
+  -- ^ Sum of all the stake that is associated with the owners of the pool. Unlike owners that are
+  -- specified in the `StakePoolParams`, owners used in computing this field are also ensured to be
+  -- delegating to the stake pool they own.
   , spssVrf :: !(VRFVerKeyHash 'StakePoolVRF)
   , spssPledge :: !Coin
   , spssCost :: !Coin
@@ -232,8 +234,9 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
   StakePoolSnapShot
     { spssStake = stakePoolStake
     , spssStakeRatio = unCoin (fromCompact stakePoolStake) %. unCoinNonZero totalActiveStake
-    , spssOwners = spsOwners
-    , spssOwnersStake = sumCredentialsCompactStake activeStake $ map KeyHashObj $ Set.elems spsOwners
+    , spssSelfDelegatedOwners = selfDelegatedOwners
+    , spssSelfDelegatedOwnersStake =
+        sumCredentialsCompactStake activeStake selfDelegatedOwners
     , spssVrf = spsVrf
     , spssPledge = spsPledge
     , spssCost = spsCost
@@ -243,6 +246,7 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
   where
     StakePoolState {spsVrf, spsPledge, spsCost, spsMargin, spsRewardAccount, spsOwners, spsDelegators} =
       stakePoolState
+    selfDelegatedOwners = Set.map KeyHashObj spsOwners `Set.intersection` spsDelegators
     stakePoolStake = sumCredentialsCompactStake activeStake spsDelegators
 
 instance NoThunks StakePoolSnapShot
@@ -254,8 +258,8 @@ instance ToKeyValuePairs StakePoolSnapShot where
     let StakePoolSnapShot {..} = ss
      in [ "stake" .= spssStake
         , "stakeRatio" .= spssStakeRatio
-        , "owners" .= spssOwners
-        , "ownersStake" .= spssOwnersStake
+        , "selfDelegatedOwners" .= spssSelfDelegatedOwners
+        , "selfDelegatedOwnersStake" .= spssSelfDelegatedOwnersStake
         , "vrf" .= spssVrf
         , "pledge" .= spssPledge
         , "cost" .= spssCost
@@ -269,8 +273,8 @@ instance EncCBOR StakePoolSnapShot where
      in encodeListLen 9
           <> encCBOR spssStake
           <> encCBOR spssStakeRatio
-          <> encCBOR spssOwners
-          <> encCBOR spssOwnersStake
+          <> encCBOR spssSelfDelegatedOwners
+          <> encCBOR spssSelfDelegatedOwnersStake
           <> encCBOR spssVrf
           <> encCBOR spssPledge
           <> encCBOR spssCost
@@ -285,8 +289,8 @@ instance DecShareCBOR StakePoolSnapShot where
     spssStakeRatio <- lift decCBOR
     let unwrap cred =
           fromMaybe (error $ "Impossible: Unwrapping an intern " <> show cred) $ credKeyHash cred
-    spssOwners <- Set.map (unwrap . interns credInterns . KeyHashObj) <$> lift decCBOR
-    spssOwnersStake <- lift decCBOR
+    spssSelfDelegatedOwners <- Set.map (unwrap . interns credInterns . KeyHashObj) <$> lift decCBOR
+    spssSelfDelegatedOwnersStake <- lift decCBOR
     spssVrf <- lift decCBOR
     spssPledge <- lift decCBOR
     spssCost <- lift decCBOR
