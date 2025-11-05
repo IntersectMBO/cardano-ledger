@@ -66,6 +66,8 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   kes_signature,
   signkey_kes,
   signature,
+  sequence_number,
+  kes_period,
 
   -- * Value
   coin,
@@ -217,6 +219,12 @@ signkey_kes = "signkey_kes" =:= VBytes `sized` (64 :: Word64)
 
 signature :: Rule
 signature = "signature" =:= VBytes `sized` (64 :: Word64)
+
+sequence_number :: Rule
+sequence_number = "sequence_number" =:= VUInt `sized` (8 :: Word64)
+
+kes_period :: Rule
+kes_period = "kes_period" =:= VUInt `sized` (8 :: Word64)
 
 max_word64 :: Rule
 max_word64 = "max_word64" =:= (18446744073709551615 :: Integer)

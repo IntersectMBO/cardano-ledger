@@ -47,13 +47,17 @@ vrf_vkey = bytes .size 32
 vrf_cert = [bytes, bytes .size 80]
 
 operational_cert = 
-  ( hot_vkey        : kes_vkey    
-  , sequence_number : uint .size 8
-  , kes_period      : uint        
-  , sigma           : signature   
+  ( hot_vkey        : kes_vkey       
+  , sequence_number : sequence_number
+  , kes_period      : kes_period     
+  , sigma           : signature      
   )
 
 kes_vkey = bytes .size 32
+
+sequence_number = uint .size 8
+
+kes_period = uint .size 8
 
 signature = bytes .size 64
 

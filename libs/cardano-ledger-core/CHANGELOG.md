@@ -53,6 +53,7 @@
 
 ### `testlib`
 
+* Add `kes_period` and `sequence_number` CDDL definitions.
 * Add CDDL definitions for:
   - Credentials: `credential`, `stake_credential`
   - Pool primitives: `port`, `ipv4`, `ipv6`, `dns_name64`, `url64`, `single_host_addr`

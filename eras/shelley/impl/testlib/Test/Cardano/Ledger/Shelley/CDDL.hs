@@ -106,8 +106,8 @@ operational_cert =
   "operational_cert"
     =:~ grp
       [ "hot_vkey" ==> kes_vkey
-      , "sequence_number" ==> (VUInt `sized` (8 :: Word64))
-      , "kes_period" ==> VUInt
+      , "sequence_number" ==> sequence_number
+      , "kes_period" ==> kes_period
       , "sigma" ==> signature
       ]
 
