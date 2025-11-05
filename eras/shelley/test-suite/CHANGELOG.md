@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `mkSnapShot` as a backwards compatible smart constructor.
 * Changed the type of `stakeDistr` by adding `Network` argument
 
 ## 1.7.0.0

@@ -1416,6 +1416,10 @@ instance HasSimpleRep ChainAccountState
 
 instance HasSpec ChainAccountState
 
+instance HasSimpleRep StakePoolSnapShot
+
+instance HasSpec StakePoolSnapShot
+
 instance HasSimpleRep SnapShot
 
 instance HasSpec SnapShot

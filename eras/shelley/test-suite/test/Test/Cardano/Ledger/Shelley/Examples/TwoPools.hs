@@ -29,14 +29,15 @@ import Cardano.Ledger.BaseTypes (
   activeSlotVal,
   mkCertIxPartial,
   natVersion,
+  nonZeroOr,
   (⭒),
  )
 import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (
   Coin (..),
-  CompactForm (CompactCoin),
   DeltaCoin (..),
   compactCoinOrError,
+  knownNonZeroCoin,
   rationalToCoinViaFloor,
   toDeltaCoin,
  )
@@ -59,8 +60,8 @@ import Cardano.Ledger.Shelley.PoolRank (
 import Cardano.Ledger.Shelley.Rewards (
   StakeShare (..),
   aggregateRewards,
-  leaderRew,
-  memberRew,
+  calcStakePoolMemberReward,
+  calcStakePoolOperatorReward,
   mkApparentPerformance,
   sumRewards,
  )
@@ -123,6 +124,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (
   epochSize,
@@ -311,23 +313,24 @@ blockEx3 =
 
 snapEx3 :: SnapShot
 snapEx3 =
-  SnapShot
-    { ssStake =
-        mkStake
-          [ (Cast.aliceSHK, aliceCoinEx1)
-          , (Cast.bobSHK, bobInitCoin)
-          , (Cast.carlSHK, carlInitCoin)
-          ]
-    , ssDelegations =
-        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.bobSHK, aikColdKeyHash Cast.bobPoolKeys)
-        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
+  let
+    stake =
+      mkStake
+        [ (Cast.aliceSHK, aliceCoinEx1)
+        , (Cast.bobSHK, bobInitCoin)
+        , (Cast.carlSHK, carlInitCoin)
         ]
-    , ssPoolParams =
-        [ (aikColdKeyHash Cast.alicePoolKeys, aliceStakePoolParams')
-        , (aikColdKeyHash Cast.bobPoolKeys, bobStakePoolParams')
-        ]
-    }
+    delegations =
+      [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
+      , (Cast.bobSHK, aikColdKeyHash Cast.bobPoolKeys)
+      , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
+      ]
+    poolParams =
+      [ (aikColdKeyHash Cast.alicePoolKeys, aliceStakePoolParams')
+      , (aikColdKeyHash Cast.bobPoolKeys, bobStakePoolParams')
+      ]
+   in
+    mkSnapShot stake delegations poolParams
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
@@ -441,7 +444,7 @@ pdEx5 =
           )
         ]
     )
-    (CompactCoin $ fromIntegral activeStakeEx5)
+    (Coin activeStakeEx5 `nonZeroOr` knownNonZeroCoin @1)
 
 expectedStEx5 :: ChainState ShelleyEra
 expectedStEx5 =
@@ -634,17 +637,19 @@ alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ ma
 
 carlMemberRewardsFromAlice :: Coin
 carlMemberRewardsFromAlice =
-  memberRew
+  calcStakePoolMemberReward
     alicePoolRewards
-    aliceStakePoolParams'
+    (sppCost aliceStakePoolParams')
+    (sppMargin aliceStakePoolParams')
     (StakeShare $ unCoin carlInitCoin % circulation)
     (StakeShare aliceStakeShareTot)
 
 carlLeaderRewardsFromAlice :: Coin
 carlLeaderRewardsFromAlice =
-  leaderRew
+  calcStakePoolOperatorReward
     alicePoolRewards
-    aliceStakePoolParams'
+    (sppCost aliceStakePoolParams')
+    (sppMargin aliceStakePoolParams')
     (StakeShare $ unCoin aliceCoinEx1 % circulation)
     (StakeShare aliceStakeShareTot)
 
@@ -658,9 +663,10 @@ bobPoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP
 
 carlLeaderRewardsFromBob :: Coin
 carlLeaderRewardsFromBob =
-  leaderRew
+  calcStakePoolOperatorReward
     bobPoolRewards
-    bobStakePoolParams'
+    (sppCost bobStakePoolParams')
+    (sppMargin bobStakePoolParams')
     (StakeShare $ unCoin bobInitCoin % circulation)
     (StakeShare bobStakeShareTot)
 

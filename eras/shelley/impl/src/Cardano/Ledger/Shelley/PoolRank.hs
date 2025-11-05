@@ -17,6 +17,7 @@ module Cardano.Ledger.Shelley.PoolRank (
   getTopRankedPools,
   getTopRankedPoolsVMap,
   nonMyopicStake,
+  calcNonMyopicMemberReward,
   nonMyopicMemberRew,
   percentile',
   Histogram (..),
@@ -57,8 +58,8 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
 import Cardano.Ledger.Core (EraPParams, PParams, ppA0L, ppNOptL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Shelley.Rewards (StakeShare (..), memberRew)
-import Cardano.Ledger.State (StakePoolParams (..), maxPool)
+import Cardano.Ledger.Shelley.Rewards (StakeShare (..), calcStakePoolMemberReward)
+import Cardano.Ledger.State (StakePoolParams (..), StakePoolSnapShot (..), maxPool)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
@@ -266,6 +267,39 @@ instance ToKeyValuePairs NonMyopic where
 -- | Desirability calculation for non-myopic utility,
 -- corresponding to f^~ in section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
+calcStakePoolDesirability ::
+  -- | Total Stake in the system
+  Coin ->
+  -- | @a0@ protocol parameter
+  NonNegativeInterval ->
+  -- | @nOpt@ protocol parameter
+  NonZero Word16 ->
+  -- | Rewards Pot
+  Coin ->
+  -- | Stake Pool Cost
+  Coin ->
+  -- | Stake Pool Margin
+  UnitInterval ->
+  -- | Stake Pool Pledge
+  Coin ->
+  -- | Stake Performance Estimate
+  PerformanceEstimate ->
+  Double
+calcStakePoolDesirability totalStake a0 nOpt r poolCost poolMargin (Coin pledge) pe =
+  if fTilde <= cost
+    then 0
+    else (fTilde - cost) * (1 - margin)
+  where
+    PerformanceEstimate p = pe
+    -- This division is safe, because 1 <= fTildeDenom <= 2
+    fTilde = fTildeNumer / fTildeDenom
+    fTildeNumer = p * fromRational (coinToRational r * (z0 + min s z0 * unboundRational a0))
+    fTildeDenom = fromRational $ 1 + unboundRational a0
+    cost = fromIntegral (unCoin poolCost)
+    margin = fromRational (unboundRational poolMargin)
+    s = toInteger pledge % max 1 (unCoin totalStake)
+    z0 = 1 %. toIntegerNonZero nOpt
+
 desirability ::
   NonNegativeInterval ->
   NonZero Word16 ->
@@ -274,35 +308,36 @@ desirability ::
   PerformanceEstimate ->
   Coin ->
   Double
-desirability a0 nOpt r pool (PerformanceEstimate p) totalStake =
-  if fTilde <= cost
-    then 0
-    else (fTilde - cost) * (1 - margin)
-  where
-    -- This division is safe, because 1 <= fTildeDenom <= 2
-    fTilde = fTildeNumer / fTildeDenom
-    fTildeNumer = p * fromRational (coinToRational r * (z0 + min s z0 * unboundRational a0))
-    fTildeDenom = fromRational $ 1 + unboundRational a0
-    cost = (fromRational . coinToRational . sppCost) pool
-    margin = (fromRational . unboundRational . sppMargin) pool
-    Coin pledge = sppPledge pool
-    s = toInteger pledge % max 1 (unCoin totalStake)
-    z0 = 1 %. toIntegerNonZero nOpt
+desirability a0 nOpt r StakePoolParams {sppCost, sppMargin, sppPledge} pe totalStake =
+  calcStakePoolDesirability totalStake a0 nOpt r sppCost sppMargin sppPledge pe
+{-# DEPRECATED desirability "In favor of `calcStakePoolDesirability`" #-}
 
--- | Computes the top ranked stake pools
--- corresponding to section 5.6.1 of
--- "Design Specification for Delegation and Incentives in Cardano"
+-- | Computes the top ranked stake pools. See Section 5.6.1 in [Design Specification for Delegation and Incentives in Cardano](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-delegation.pdf)
 getTopRankedPools ::
   EraPParams era =>
   Coin ->
   Coin ->
   PParams era ->
-  Map (KeyHash StakePool) StakePoolParams ->
-  Map (KeyHash StakePool) PerformanceEstimate ->
+  Map (KeyHash StakePool) (PerformanceEstimate, StakePoolSnapShot) ->
   Set (KeyHash StakePool)
-getTopRankedPools rPot totalStake pp poolParams aps =
-  let pdata = Map.toAscList $ Map.intersectionWith (,) poolParams aps
-   in getTopRankedPoolsInternal rPot totalStake pp pdata
+getTopRankedPools rPot totalStake pp poolsWithPerformance =
+  Set.fromList $
+    fst
+      <$> take (fromIntegral $ pp ^. ppNOptL) (sortBy (flip compare `on` snd) rankings)
+  where
+    mkDesirabilty StakePoolSnapShot {spssCost, spssMargin, spssPledge} =
+      calcStakePoolDesirability
+        totalStake
+        (pp ^. ppA0L)
+        ((pp ^. ppNOptL) `nonZeroOr` knownNonZeroBounded @1)
+        rPot
+        spssCost
+        spssMargin
+        spssPledge
+    rankings =
+      [ (poolId, mkDesirabilty spss ap)
+      | (poolId, (ap, spss)) <- Map.toList poolsWithPerformance
+      ]
 
 getTopRankedPoolsVMap ::
   EraPParams era =>
@@ -315,6 +350,7 @@ getTopRankedPoolsVMap ::
 getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
   let pdata = [(kh, (pps, a)) | (kh, a) <- Map.toAscList aps, Just pps <- [VMap.lookup kh poolParams]]
    in getTopRankedPoolsInternal rPot totalStake pp pdata
+{-# DEPRECATED getTopRankedPoolsVMap "In favor of `getTopRankedPools`" #-}
 
 getTopRankedPoolsInternal ::
   EraPParams era =>
@@ -371,6 +407,28 @@ nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
 --   in the design document. Additionally, instead of passing a rank
 --   r to compare with k, we pass the top k desirable pools and
 --   check for membership.
+calcNonMyopicMemberReward ::
+  EraPParams era =>
+  PParams era ->
+  Coin ->
+  -- | Stake pool id
+  KeyHash StakePool ->
+  -- | Stake pool cost
+  Coin ->
+  -- | Stake pool margin
+  UnitInterval ->
+  StakeShare ->
+  StakeShare ->
+  StakeShare ->
+  Set (KeyHash StakePool) ->
+  PerformanceEstimate ->
+  Coin
+calcNonMyopicMemberReward pp rPot poolId cost margin s sigma t topPools (PerformanceEstimate p) =
+  let nm = nonMyopicStake pp s sigma t poolId topPools
+      f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
+      fHat = floor (p * fromRational (coinToRational f))
+   in calcStakePoolMemberReward (Coin fHat) cost margin t nm
+
 nonMyopicMemberRew ::
   EraPParams era =>
   PParams era ->
@@ -382,16 +440,6 @@ nonMyopicMemberRew ::
   Set (KeyHash StakePool) ->
   PerformanceEstimate ->
   Coin
-nonMyopicMemberRew
-  pp
-  rPot
-  pool
-  s
-  sigma
-  t
-  topPools
-  (PerformanceEstimate p) =
-    let nm = nonMyopicStake pp s sigma t (sppId pool) topPools
-        f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
-        fHat = floor (p * (fromRational . coinToRational) f)
-     in memberRew (Coin fHat) pool t nm
+nonMyopicMemberRew pp rPot pool =
+  calcNonMyopicMemberReward pp rPot (sppId pool) (sppCost pool) (sppMargin pool)
+{-# DEPRECATED nonMyopicMemberRew "In favor of `calcNonMyopicMemberReward`" #-}

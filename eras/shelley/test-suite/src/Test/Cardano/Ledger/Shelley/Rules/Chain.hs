@@ -223,7 +223,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
             & futurePParamsEpochStateL .~ PotentialPParamsUpdate Nothing
         )
         SNothing
-        (PoolDistr Map.empty mempty)
+        def
         def
     )
     cs

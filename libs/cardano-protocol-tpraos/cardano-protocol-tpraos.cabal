@@ -52,6 +52,7 @@ library
     cardano-ledger-shelley >=1.16,
     cardano-slotting,
     containers,
+    data-default,
     deepseq,
     microlens,
     mtl,

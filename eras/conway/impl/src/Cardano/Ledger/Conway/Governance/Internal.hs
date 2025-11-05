@@ -600,7 +600,7 @@ instance (Default (InstantStake era), Default (Accounts era)) => Default (Ratify
   def =
     RatifyEnv
       def
-      (PoolDistr Map.empty mempty)
+      def
       Map.empty
       Map.empty
       (EpochNo 0)

@@ -23,7 +23,6 @@ import Cardano.Ledger.Shelley.Bench.Gen (
   genTriple,
  )
 import Cardano.Ledger.Shelley.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
-import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -61,7 +60,6 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNregisteredKeys,
   ledgerStateWithNregisteredPools,
  )
-import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen as QC
@@ -165,12 +163,6 @@ profileCreateRegPools size = do
 
 -- ==========================================
 -- Epoch Boundary
-
-action2m ::
-  (EraTxOut era, ShelleyEraAccounts era) =>
-  (DState era, PState era, UTxO era, Network) ->
-  SnapShot
-action2m (dstate, pstate, utxo, network) = stakeDistr network utxo dstate pstate
 
 benchInstantStake ::
   forall era.

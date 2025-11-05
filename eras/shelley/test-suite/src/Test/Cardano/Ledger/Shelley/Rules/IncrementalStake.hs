@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Globals (Globals, networkId), Network)
+import Cardano.Ledger.BaseTypes (Globals (Globals, networkId), Network (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -44,6 +44,7 @@ import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
@@ -177,7 +178,7 @@ checkIncrementalStake network es =
     LedgerState (UTxOState utxo _ _ _ instantStake _) certState = esLState es
     dstate = certState ^. certDStateL
     pstate = certState ^. certPStateL
-    stake = stakeDistr @era network utxo dstate pstate
+    stake = stakeDistr @era utxo dstate pstate
     snapShot = snapShotFromInstantStake instantStake dstate pstate network
     _pp = es ^. curPParamsEpochStateL
    in
@@ -198,28 +199,25 @@ tersediffincremental message (Stake a) (Stake c) =
 stakeDistr ::
   forall era.
   (EraTxOut era, ShelleyEraAccounts era) =>
-  Network ->
   UTxO era ->
   DState era ->
   PState era ->
   SnapShot
-stakeDistr network u ds ps =
-  SnapShot
-    (Stake $ VMap.fromMap $ Map.intersection stakeRelation activeDelegs)
-    (VMap.fromMap delegs)
-    (VMap.fromMap $ Map.mapWithKey (`stakePoolStateToStakePoolParams` network) poolState)
+stakeDistr u ds PState {psStakePools} =
+  mkSnapShot activeStake (VMap.fromMap delegs) poolParams
   where
+    activeStake = Stake $ VMap.fromMap (stakeRelation `Map.intersection` activeDelegs)
     accountsMap = ds ^. accountsL . accountsMapL
     rewards' :: Map.Map (Credential Staking) (CompactForm Coin)
     rewards' = Map.map (^. balanceAccountStateL) accountsMap
     delegs :: Map.Map (Credential Staking) (KeyHash StakePool)
     delegs = Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap
     ptrs' = ds ^. accountsL . accountsPtrsMapG
-    PState {psStakePools = poolState} = ps
     stakeRelation :: Map (Credential Staking) (CompactForm Coin)
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
     activeDelegs :: Map.Map (Credential Staking) (KeyHash StakePool)
-    activeDelegs = Map.filterWithKey (\k v -> Map.member k rewards' && Map.member v poolState) delegs
+    activeDelegs = Map.filterWithKey (\k v -> Map.member k rewards' && Map.member v psStakePools) delegs
+    poolParams = VMap.fromMap $ Map.mapWithKey (`stakePoolStateToStakePoolParams` Testnet) psStakePools
 
 -- | Sum up all the Coin for each staking Credential. This function has an
 --   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'

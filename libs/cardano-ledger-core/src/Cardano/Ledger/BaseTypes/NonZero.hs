@@ -21,6 +21,7 @@ module Cardano.Ledger.BaseTypes.NonZero (
   NonZero,
   unNonZero,
   nonZero,
+  nonZeroM,
   knownNonZero,
   knownNonZeroBounded,
   (%.),
