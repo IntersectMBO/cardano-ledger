@@ -62,7 +62,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as BaseTypes
 import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..), knownNonZeroCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
@@ -652,15 +652,29 @@ instance Arbitrary StakePoolSnapShot where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary SnapShot where
-  arbitrary =
-    SnapShot
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = do
+    ssStake <- arbitrary
+    let ssTotalActiveStake = sumAllStake ssStake `BaseTypes.nonZeroOr` (knownNonZeroCoin @1)
+    ssDelegations <- arbitrary
+    ssPoolParams <- arbitrary
+    deposit <- arbitrary
+    let delegationsPerStakePool :: Map (KeyHash 'StakePool) (Set (Credential 'Staking))
+        delegationsPerStakePool =
+          VMap.foldlWithKey
+            ( \acc cred stakePool ->
+                Map.insertWith (<>) stakePool (Set.singleton cred) acc
+            )
+            mempty
+            ssDelegations
+        stakePoolSnapShotFromParams poolId =
+          mkStakePoolSnapShot ssStake ssTotalActiveStake
+            . mkStakePoolState deposit (Map.findWithDefault mempty poolId delegationsPerStakePool)
+        ssStakePoolsSnapShot =
+          VMap.toMap $ VMap.mapWithKey stakePoolSnapShotFromParams ssPoolParams
+    pure SnapShot {..}
 
 instance Arbitrary SnapShots where
   arbitrary = do
@@ -831,5 +845,6 @@ genericShrinkMemo ::
   , RecursivelyShrink (Rep (RawType (a era)))
   , GSubterms (Rep (RawType (a era))) (RawType (a era))
   ) =>
-  a era -> [a era]
+  a era ->
+  [a era]
 genericShrinkMemo = fmap (mkMemoizedEra @era) . genericShrink . getMemoRawType

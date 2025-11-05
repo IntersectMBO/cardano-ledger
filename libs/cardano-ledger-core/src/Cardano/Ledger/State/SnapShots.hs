@@ -102,7 +102,7 @@ import Cardano.Ledger.State.StakePool (
  )
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
-import Control.Exception (assert)
+-- import Control.Exception (assert)
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State.Strict (get)
@@ -219,6 +219,8 @@ data StakePoolSnapShot = StakePoolSnapShot
   , spssPledge :: !Coin
   , spssCost :: !Coin
   , spssMargin :: !UnitInterval
+  , spssNumDelegators :: !Int
+  -- ^ Number of delegators.
   , spssAccount :: !(Credential 'Staking)
   }
   deriving (Show, Eq, Generic)
@@ -247,6 +249,7 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
     , spssPledge = spsPledge
     , spssCost = spsCost
     , spssMargin = spsMargin
+    , spssNumDelegators = Set.size spsDelegators
     , spssAccount = raCredential spsRewardAccount
     }
   where
@@ -261,7 +264,7 @@ instance NoThunks StakePoolSnapShot
 instance NFData StakePoolSnapShot
 
 instance ToKeyValuePairs StakePoolSnapShot where
-  toKeyValuePairs ss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _) =
+  toKeyValuePairs ss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _ _) =
     let StakePoolSnapShot {..} = ss
      in [ "stake" .= spssStake
         , "stakeRatio" .= spssStakeRatio
@@ -271,13 +274,14 @@ instance ToKeyValuePairs StakePoolSnapShot where
         , "pledge" .= spssPledge
         , "cost" .= spssCost
         , "margin" .= spssMargin
+        , "numDelegators" .= spssNumDelegators
         , "account" .= spssAccount
         ]
 
 instance EncCBOR StakePoolSnapShot where
-  encCBOR spss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _) =
+  encCBOR spss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _ _) =
     let StakePoolSnapShot {..} = spss
-     in encodeListLen 9
+     in encodeListLen 10
           <> encCBOR spssStake
           <> encCBOR spssStakeRatio
           <> encCBOR spssSelfDelegatedOwners
@@ -286,11 +290,12 @@ instance EncCBOR StakePoolSnapShot where
           <> encCBOR spssPledge
           <> encCBOR spssCost
           <> encCBOR spssMargin
+          <> encCBOR spssNumDelegators
           <> encCBOR spssAccount
 
 instance DecShareCBOR StakePoolSnapShot where
   type Share StakePoolSnapShot = Interns (Credential 'Staking)
-  decSharePlusCBOR = decodeRecordNamedT "StakePoolSnapShot" (const 9) $ do
+  decSharePlusCBOR = decodeRecordNamedT "StakePoolSnapShot" (const 10) $ do
     credInterns <- get
     spssStake <- lift decCBOR
     spssStakeRatio <- lift decCBOR
@@ -302,6 +307,7 @@ instance DecShareCBOR StakePoolSnapShot where
     spssPledge <- lift decCBOR
     spssCost <- lift decCBOR
     spssMargin <- lift decCBOR
+    spssNumDelegators <- lift decCBOR
     spssAccount <- interns credInterns <$> lift decCBOR
     pure StakePoolSnapShot {..}
 
@@ -427,7 +433,9 @@ snapShotFromInstantStake iStake dState PState {psStakePools} =
     , ssPoolParams =
         VMap.fromDistinctAscListN
           (Map.size psStakePools)
-          [(poolId, stakePoolStateToStakePoolParams poolId ps) | (poolId, ps) <- Map.toAscList psStakePools]
+          [ (poolId, stakePoolStateToStakePoolParams poolId ps)
+          | (poolId, ps) <- Map.toAscList psStakePools
+          ]
     , ssStakePoolsSnapShot =
         Map.map (mkStakePoolSnapShot activeStake totalActiveStake) psStakePools
     }
@@ -470,7 +478,7 @@ calculatePoolDistr :: SnapShot -> PoolDistr
 calculatePoolDistr = calculatePoolDistr' (const True)
 
 calculatePoolDistr' :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
-calculatePoolDistr' includeHash (SnapShot stake activeStake delegs poolParams stakePoolSnapShot) =
+calculatePoolDistr' includeHash ss@(SnapShot stake activeStake delegs poolParams stakePoolSnapShot) =
   let total = sumAllStakeCompact stake
       -- total could be zero (in particular when shrinking)
       nonZeroTotal = fromCompactCoinNonZero $ total `nonZeroOr` knownNonZeroCompactCoin @1
@@ -488,20 +496,25 @@ calculatePoolDistr' includeHash (SnapShot stake activeStake delegs poolParams st
               (VMap.toMap poolParams)
           )
           nonZeroTotal
-      toIndividualPoolStake poolId StakePoolSnapShot {spssStake, spssStakeRatio, spssVrf} = do
+      toIndividualPoolStake poolId spss = do
         guard (includeHash poolId)
+        guard (spssNumDelegators spss > 0)
         pure
           IndividualPoolStake
-            { individualPoolStake = spssStakeRatio
-            , individualTotalPoolStake = spssStake
-            , individualPoolStakeVrf = spssVrf
+            { individualPoolStake = spssStakeRatio spss
+            , individualTotalPoolStake = spssStake spss
+            , individualPoolStakeVrf = spssVrf spss
             }
       poolDistr =
         PoolDistr
           { unPoolDistr = Map.mapMaybeWithKey toIndividualPoolStake stakePoolSnapShot
           , pdTotalActiveStake = activeStake
           }
-   in assert (oldPoolDistr == poolDistr) poolDistr
+   in if oldPoolDistr == poolDistr
+        then poolDistr
+        else error $ show ss <> "\n" <> show oldPoolDistr <> "\n/=\n" <> show poolDistr
+
+-- assert (oldPoolDistr == poolDistr) poolDistr
 
 -- ======================================================
 -- Lenses
