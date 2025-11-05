@@ -136,6 +136,7 @@
                 (python3.withPackages (ps: with ps; [sphinx sphinx_rtd_theme recommonmark sphinx-markdown-tables sphinxemoji]))
                 haskellPackages.implicit-hie
                 shellcheck
+                git
                 cardano-ledger-release-tool
               ] ++
               (let
