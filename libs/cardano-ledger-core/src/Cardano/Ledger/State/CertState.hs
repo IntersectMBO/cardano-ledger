@@ -44,7 +44,7 @@ module Cardano.Ledger.State.CertState (
   iRDeltaTreasuryL,
   dsFutureGenDelegsL,
   psStakePoolsL,
-  psFutureStakePoolsL,
+  psFutureStakePoolParamsL,
   psRetiringL,
   psVRFKeyHashesL,
 ) where
@@ -81,7 +81,7 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State.Account
-import Cardano.Ledger.State.StakePool (StakePoolState (..), spsDelegatorsL)
+import Cardano.Ledger.State.StakePool (StakePoolParams, StakePoolState (..), spsDelegatorsL)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (ToJSON (..), object, (.=))
@@ -234,8 +234,8 @@ data PState era = PState
   -- ^ VRF key hashes that have been registered via PoolParams
   , psStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
   -- ^ The state of current stake pools.
-  , psFutureStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
-  -- ^ The state of future stake pools.
+  , psFutureStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
+  -- ^ Future pool params
   -- Changes to existing stake pool parameters are staged in order
   -- to give delegators time to react to changes.
   -- See section 11.2, "Example Illustration of the Reward Cycle",
@@ -260,9 +260,9 @@ instance DecShareCBOR (PState era) where
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
     psVRFKeyHashes <- decSharePlusLensCBOR (toMemptyLens _1 _1)
     psStakePools <- decSharePlusLensCBOR (toMemptyLens _1 _2)
-    psFutureStakePools <- decSharePlusLensCBOR (toMemptyLens _1 _2)
+    psFutureStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     psRetiring <- decSharePlusLensCBOR (toMemptyLens _1 _2)
-    pure PState {psVRFKeyHashes, psStakePools, psFutureStakePools, psRetiring}
+    pure PState {psVRFKeyHashes, psStakePools, psFutureStakePoolParams, psRetiring}
 
 instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
@@ -271,7 +271,7 @@ instance ToKeyValuePairs (PState era) where
   toKeyValuePairs PState {..} =
     [ "vrfKeyHashes" .= psVRFKeyHashes
     , "stakePools" .= psStakePools
-    , "futureStakePools" .= psFutureStakePools
+    , "futureStakePoolParams" .= psFutureStakePoolParams
     , "retiring" .= psRetiring
     ]
 
@@ -483,8 +483,8 @@ dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u}
 psStakePoolsL :: Lens' (PState era) (Map (KeyHash 'StakePool) StakePoolState)
 psStakePoolsL = lens psStakePools (\ps u -> ps {psStakePools = u})
 
-psFutureStakePoolsL :: Lens' (PState era) (Map (KeyHash 'StakePool) StakePoolState)
-psFutureStakePoolsL = lens psFutureStakePools (\ps u -> ps {psFutureStakePools = u})
+psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool) StakePoolParams)
+psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ps u -> ps {psFutureStakePoolParams = u})
 
 psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})

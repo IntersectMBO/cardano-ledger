@@ -272,13 +272,13 @@ regPool pool cs = cs {chainNes = nes'}
                   (mkStakePoolState poolDeposit mempty pool)
                   (psStakePools ps)
             }
-        Just sps ->
+        Just _ ->
           ps
-            { psFutureStakePools =
+            { psFutureStakePoolParams =
                 Map.insert
                   (sppId pool)
-                  (mkStakePoolState (spsDeposit sps) mempty pool)
-                  (psFutureStakePools ps)
+                  pool
+                  (psFutureStakePoolParams ps)
             }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -312,7 +312,14 @@ updatePoolParams pool cs = cs {chainNes = nes'}
               (sppId pool)
               (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) mempty pool)
               (psStakePools ps)
-        , psFutureStakePools = Map.delete (sppId pool) (psStakePools ps)
+        , psFutureStakePoolParams =
+            Map.mapMaybeWithKey
+              ( \k sps ->
+                  if k == sppId pool
+                    then Nothing
+                    else Just $ stakePoolStateToStakePoolParams k sps
+              )
+              (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}

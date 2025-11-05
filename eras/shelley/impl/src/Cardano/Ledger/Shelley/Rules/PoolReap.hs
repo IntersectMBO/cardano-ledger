@@ -143,21 +143,28 @@ poolReapTransition = do
           Map.merge
             Map.dropMissing
             Map.dropMissing
-            ( Map.zipWithMaybeMatched $ \_ sps spsF ->
-                if sps ^. spsVrfL /= spsF ^. spsVrfL then Just (sps ^. spsVrfL) else Nothing
+            ( Map.zipWithMaybeMatched $ \_ sps sppF ->
+                if sps ^. spsVrfL /= sppF ^. sppVrfL then Just (sps ^. spsVrfL) else Nothing
             )
             (ps0 ^. psStakePoolsL)
-            (ps0 ^. psFutureStakePoolsL)
+            (ps0 ^. psFutureStakePoolParamsL)
 
     -- activate future stakePools
     ps =
       ps0
         { psStakePools =
-            Map.unionWith
-              (\newPoolState oldPoolState -> newPoolState {spsDelegators = spsDelegators oldPoolState})
-              (ps0 ^. psFutureStakePoolsL)
+            Map.merge
+              Map.dropMissing
+              Map.preserveMissing
+              ( Map.zipWithMatched $ \_ futureParams currentState ->
+                  mkStakePoolState
+                    (currentState ^. spsDepositL)
+                    (currentState ^. spsDelegatorsL)
+                    futureParams
+              )
+              (ps0 ^. psFutureStakePoolParamsL)
               (ps0 ^. psStakePoolsL)
-        , psFutureStakePools = Map.empty
+        , psFutureStakePoolParams = Map.empty
         }
     cs = cs0 & certPStateL .~ ps
 

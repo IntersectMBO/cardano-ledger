@@ -108,15 +108,16 @@ populateVRFKeyHashes :: PState era -> PState era
 populateVRFKeyHashes pState =
   pState
     & psVRFKeyHashesL
-      %~ accumulateVRFKeyHashes (pState ^. psStakePoolsL)
-        . accumulateVRFKeyHashes (pState ^. psFutureStakePoolsL)
+      %~ accumulateVRFKeyHashes (pState ^. psStakePoolsL) (^. spsVrfL)
+        . accumulateVRFKeyHashes (pState ^. psFutureStakePoolParamsL) (^. sppVrfL)
   where
     accumulateVRFKeyHashes ::
-      Map (KeyHash 'StakePool) StakePoolState ->
+      Map (KeyHash 'StakePool) a ->
+      (a -> VRFVerKeyHash 'StakePoolVRF) ->
       Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64) ->
       Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64)
-    accumulateVRFKeyHashes spsMap acc =
-      Map.foldr' (\sps -> addVRFKeyHashOccurrence (sps ^. spsVrfL)) acc spsMap
+    accumulateVRFKeyHashes spMap getVrf acc =
+      Map.foldr' (addVRFKeyHashOccurrence . getVrf) acc spMap
     addVRFKeyHashOccurrence vrfKeyHash =
       Map.insertWith combine vrfKeyHash (knownNonZeroBounded @1)
       where

@@ -109,7 +109,7 @@ data ModelNewEpochState era = ModelNewEpochState
   , mCount :: !Int
   , mIndex :: !(Map Int TxId)
   , -- below here NO EFFECT until we model EpochBoundary
-    mFStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
+    mFStakePools :: !(Map (KeyHash 'StakePool) StakePoolParams)
   , mRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
   , mSnapshots :: !SnapShots
   , mEL :: !EpochNo -- The current epoch,
@@ -161,7 +161,7 @@ pStateZero =
   PState
     { psVRFKeyHashes = Map.empty
     , psStakePools = Map.empty
-    , psFutureStakePools = Map.empty
+    , psFutureStakePoolParams = Map.empty
     , psRetiring = Map.empty
     }
 
@@ -340,7 +340,7 @@ abstract x =
     , mIndex = Map.empty
     , -- below here NO EFFECT until we model EpochBoundary
       mFStakePools =
-        ( psFutureStakePools
+        ( psFutureStakePoolParams
             . certPState
             . lsCertState
             . esLState

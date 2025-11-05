@@ -461,8 +461,7 @@ mkQueryPoolStateResult ::
 mkQueryPoolStateResult f ps =
   QueryPoolStateResult
     { qpsrStakePoolParams = Map.mapWithKey stakePoolStateToStakePoolParams restrictedStakePools
-    , qpsrFutureStakePoolParams =
-        Map.mapWithKey stakePoolStateToStakePoolParams (f $ psFutureStakePools ps)
+    , qpsrFutureStakePoolParams = f $ psFutureStakePoolParams ps
     , qpsrRetiring = f $ psRetiring ps
     , qpsrDeposits = Map.map (fromCompact . spsDeposit) restrictedStakePools
     }
