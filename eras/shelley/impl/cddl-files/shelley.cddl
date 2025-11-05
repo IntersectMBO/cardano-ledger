@@ -280,7 +280,7 @@ positive_int = 1 .. max_word64
 
 max_word64 = 18446744073709551615
 
-nonce = [0// 1, bytes .size 32]
+nonce = [0// 1, hash32]
 
 auxiliary_data_hash = hash32
 

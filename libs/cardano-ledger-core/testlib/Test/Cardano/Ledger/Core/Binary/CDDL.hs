@@ -16,8 +16,6 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   -- * Base sized bytes
   hash28,
   hash32,
-  hash64,
-  bytes80,
 
   -- * Numbers
   positive_int,
@@ -193,12 +191,6 @@ hash28 = mkHashSized 28
 hash32 :: Rule
 hash32 = mkHashSized 32
 
-hash64 :: Rule
-hash64 = mkHashSized 64
-
-bytes80 :: Rule
-bytes80 = "bytes80" =:= VBytes `sized` (80 :: Word64)
-
 vkey :: Rule
 vkey = "vkey" =:= VBytes `sized` (32 :: Word64)
 
@@ -306,7 +298,7 @@ _tagged_nonempty_oset :: IsType0 a => a -> GRuleCall
 _tagged_nonempty_oset = mkTaggedSet "nonempty_oset" 1
 
 nonce :: Rule
-nonce = "nonce" =:= arr [0] / arr [1, a (VBytes `sized` (32 :: Word64))]
+nonce = "nonce" =:= arr [0] / arr [1, a hash32]
 
 epoch :: Rule
 epoch = "epoch" =:= VUInt `sized` (8 :: Word64)
