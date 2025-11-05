@@ -232,6 +232,8 @@ instance ToExpr SnapShots
 
 instance ToExpr SnapShot
 
+instance ToExpr StakePoolSnapShot
+
 deriving newtype instance ToExpr Stake
 
 instance ToExpr (PState era)

@@ -2,6 +2,13 @@
 
 ## 1.19.0.0
 
+* Add `HasZero` instance for `CompactForm Coin`
+* Export `nonZeroM`
+* Add `knownNonZeroCoin` and `knownNonZeroCompactCoin`
+* Add `sumCredentialsCompactStake`
+* Change type of `pdTotalActiveStake` to `NonZero Coin` and change its value in `Default` instance to `1`
+* Introduce `StakePoolSnapShot`, `mkStakePoolSnapShot` and remove `poolStake` as unused
+* Add `ssTotalActiveStake` and `ssStakePooslSnapShot` to `SnapShot` type.
 * Add `DirectDeposits` newtype.
 * Change `PoolMetadata.pmHash` from `ByteString` to `Data.Array.Byte.ByteArray` to reduce memory fragmentation.
 * Added:

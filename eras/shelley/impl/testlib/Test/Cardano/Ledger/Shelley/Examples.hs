@@ -286,7 +286,7 @@ examplePoolDistr =
           )
         ]
     )
-    (CompactCoin 1)
+    (knownNonZeroCoin @1)
 
 exampleNonMyopicRewards :: Map (Either Coin (Credential Staking)) (Map (KeyHash StakePool) Coin)
 exampleNonMyopicRewards =
