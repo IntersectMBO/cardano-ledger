@@ -57,7 +57,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
 import Cardano.Ledger.Core (EraPParams, PParams, ppA0L, ppNOptL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Shelley.Rewards (StakeShare (..), memberRew)
+import Cardano.Ledger.Shelley.Rewards (StakeShare (..), calcStakePoolMemberReward)
 import Cardano.Ledger.State (StakePoolParams (..), maxPool)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
@@ -394,4 +394,4 @@ nonMyopicMemberRew
     let nm = nonMyopicStake pp s sigma t (sppId pool) topPools
         f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
         fHat = floor (p * (fromRational . coinToRational) f)
-     in memberRew (Coin fHat) pool t nm
+     in calcStakePoolMemberReward (Coin fHat) (sppCost pool) (sppMargin pool) t nm

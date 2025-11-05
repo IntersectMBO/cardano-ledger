@@ -7,7 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-
+{-# OPTIONS_GHC -Wno-deprecations #-} -- Remove when removing `sumStakePerPool` usage
 module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
   startStep,
   pulseStep,
@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
   decayFactor,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..), raCredential)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),
@@ -153,17 +152,17 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           (fromIntegral blocksMade)
           stake
           delegs
-          stakePerPool
           totalStake
           totalActiveStake
+          poolParams
       -- We map over the registered stake pools to compute the relevant
       -- stake pool specific values.
-      allPoolInfo = VMap.map mkPoolRewardInfoCurry poolParams
+      allPoolInfo = Map.mapWithKey mkPoolRewardInfoCurry stakePoolSnapShots
 
       -- Stake pools that do not produce any blocks get no rewards,
       -- but some information is still needed from non-block-producing
       -- pools for the ranking algorithm used by the wallets.
-      blockProducingPoolInfo = VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just) allPoolInfo
+      blockProducingPoolInfo = Map.mapMaybe (either (const Nothing) Just) allPoolInfo
       getSigma = unStakeShare . poolRelativeStake
       makeLikelihoods = \case
         -- This pool produced no blocks this epoch
@@ -178,10 +177,10 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
             (poolBlocks info)
             (leaderProbability asc (getSigma info) $ pr ^. ppDG)
             slotsPerEpoch
-      newLikelihoods = VMap.toMap $ VMap.map makeLikelihoods allPoolInfo
+      newLikelihoods = Map.map makeLikelihoods allPoolInfo
       -- We now compute the leader rewards for each stake pool.
       collectLRs acc poolRI =
-        let account = raCredential . sppRewardAccount $ poolPs poolRI
+        let account = spssAccount $ poolPs poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
          in if hardforkBabbageForgoRewardPrefilter (pr ^. ppProtocolVersionL)
               || isAccountRegistered account accounts

@@ -209,10 +209,12 @@ data StakePoolSnapShot = StakePoolSnapShot
   { spssStake :: CompactForm Coin
   , spssStakeRatio :: Rational
   -- ^ Ratio of the stake pool stake `spssStake` over the total `ssTotalActiveStake` for that snapshot
-  , spssSelfDelegatedOwnersStake :: CompactForm Coin
-  -- ^ Sum of all the stake that is associated with the owners of the pool. Unlike owners that are
-  -- specified in the `StakePoolParams`, owners used in computing this field are also ensured to be
-  -- delegating to the stake pool they own.
+  , spssSelfDelegatedOwners :: !(Set (KeyHash 'Staking))
+  -- ^ Unlike owners that are specified in the `StakePoolParams`, the owners listed in this field
+  -- are also ensured to be delegating to the stake pool they claim to own.
+  , spssSelfDelegatedOwnersStake :: !Coin
+  -- ^ Sum of all the stake that is associated with the owners of the pool listed in
+  -- `spssSelfDelegatedOwners`
   , spssVrf :: !(VRFVerKeyHash 'StakePoolVRF)
   , spssPledge :: !Coin
   , spssCost :: !Coin
@@ -236,7 +238,11 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
     , spssStakeRatio = unCoin (fromCompact stakePoolStake) %. unCoinNonZero totalActiveStake
     , spssSelfDelegatedOwners = selfDelegatedOwners
     , spssSelfDelegatedOwnersStake =
-        sumCredentialsCompactStake activeStake selfDelegatedOwners
+        fromCompact $
+          sumCredentialsCompactStake activeStake $
+            -- Conversion to a list allows us to tap into list fusion, thus avoiding unnecessary
+            -- extra Set allocation and `O(n*log(n))` mappping over a Set.
+            map KeyHashObj (Set.elems selfDelegatedOwners)
     , spssVrf = spsVrf
     , spssPledge = spsPledge
     , spssCost = spsCost
@@ -246,7 +252,8 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
   where
     StakePoolState {spsVrf, spsPledge, spsCost, spsMargin, spsRewardAccount, spsOwners, spsDelegators} =
       stakePoolState
-    selfDelegatedOwners = Set.map KeyHashObj spsOwners `Set.intersection` spsDelegators
+    selfDelegatedOwners =
+      Set.filter (\ownerKeyHash -> KeyHashObj ownerKeyHash `Set.member` spsDelegators) spsOwners
     stakePoolStake = sumCredentialsCompactStake activeStake spsDelegators
 
 instance NoThunks StakePoolSnapShot
