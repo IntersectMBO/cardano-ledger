@@ -12,7 +12,6 @@ import Data.OMap.Strict
 import Data.Proxy (Proxy (Proxy))
 import Data.Sequence.Strict qualified as SSeq
 import Data.Set qualified as Set
-import Lens.Micro hiding (set)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborSpec)
 import Test.Hspec
@@ -29,11 +28,11 @@ spec =
       prop "unconsed" $
         \(m :: OMap Int Int) -> case m of
           Empty -> pure ()
-          v :<|: _kv -> v ^. okeyL `shouldSatisfy` (`member` m)
+          v :<|: _kv -> toOKey v `shouldSatisfy` (`member` m)
       prop "unsnoced" $
         \(m :: OMap Int Int) -> case m of
           Empty -> pure ()
-          _kv :|>: v -> v ^. okeyL `shouldSatisfy` (`member` m)
+          _kv :|>: v -> toOKey v `shouldSatisfy` (`member` m)
     context "when cons-ing" $ do
       prop "adding a duplicate results in a no-op" $
         \(m :: OMap Int Int) -> do
@@ -108,16 +107,16 @@ spec =
       prop "cons' - (<||)" $
         \((omap, i) :: (OMap Int OMapTest, OMapTest)) -> do
           let consed = i <|| omap
-              k = i ^. okeyL
+              k = toOKey i
           if k `member` omap
-            then consed `shouldBe` adjust (const i) (i ^. okeyL) omap
+            then consed `shouldBe` adjust (const i) (toOKey i) omap
             else consed `shouldBe` i <| omap
       prop "snoc' - (||>)" $
         \((omap, i) :: (OMap Int OMapTest, OMapTest)) -> do
           let snoced = omap ||> i
-              k = i ^. okeyL
+              k = toOKey i
           if k `member` omap
-            then snoced `shouldBe` adjust (const i) (i ^. okeyL) omap
+            then snoced `shouldBe` adjust (const i) (toOKey i) omap
             else snoced `shouldBe` omap |> i
     prop "fromFoldable preserves order" $
       \(set :: Set.Set Int) -> do
@@ -156,13 +155,13 @@ spec =
           ]
 
 instance HasOKey Int Int where
-  okeyL = lens id const
+  toOKey = id
 
 data OMapTest = OMapTest {omFst :: Int, omSnd :: Int}
   deriving (Eq, Show, Ord)
 
 instance HasOKey Int OMapTest where
-  okeyL = lens omFst $ \om u -> om {omFst = u}
+  toOKey = omFst
 
 instance Arbitrary OMapTest where
   arbitrary = OMapTest <$> arbitrary <*> arbitrary
