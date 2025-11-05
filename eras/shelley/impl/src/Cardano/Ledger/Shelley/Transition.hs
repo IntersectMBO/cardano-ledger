@@ -358,7 +358,7 @@ createInitialState tc =
             , esNonMyopic = def
             }
       , nesRu = SNothing
-      , nesPd = PoolDistr Map.empty mempty
+      , nesPd = def
       , stashedAVVMAddresses = def
       }
   where

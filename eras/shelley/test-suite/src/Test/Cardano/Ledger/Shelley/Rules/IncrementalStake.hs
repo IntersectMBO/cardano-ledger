@@ -45,6 +45,7 @@ import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
@@ -199,23 +200,21 @@ stakeDistr ::
   DState era ->
   PState era ->
   SnapShot
-stakeDistr u ds ps =
-  SnapShot
-    (Stake $ VMap.fromMap (eval (dom activeDelegs ◁ stakeRelation)))
-    (VMap.fromMap delegs)
-    (VMap.fromMap $ Map.mapWithKey stakePoolStateToStakePoolParams poolState)
+stakeDistr u ds PState {psStakePools} =
+  mkSnapShot activeStake (VMap.fromMap delegs) poolParams
   where
+    activeStake = Stake $ VMap.fromMap (eval (dom activeDelegs ◁ stakeRelation))
     accountsMap = ds ^. accountsL . accountsMapL
     rewards' :: Map.Map (Credential Staking) (CompactForm Coin)
     rewards' = Map.map (^. balanceAccountStateL) accountsMap
     delegs :: Map.Map (Credential Staking) (KeyHash StakePool)
     delegs = Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap
     ptrs' = ds ^. accountsL . accountsPtrsMapG
-    PState {psStakePools = poolState} = ps
     stakeRelation :: Map (Credential Staking) (CompactForm Coin)
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
     activeDelegs :: Map.Map (Credential Staking) (KeyHash StakePool)
-    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolState)
+    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom psStakePools)
+    poolParams = VMap.fromMap $ Map.mapWithKey stakePoolStateToStakePoolParams psStakePools
 
 -- | Sum up all the Coin for each staking Credential. This function has an
 --   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'

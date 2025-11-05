@@ -1,13 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Test that modifications to the calculatePoolDistr function
 --   made when building the Tickf benchmarks behave the same as
 --   the code that was replaced.
 module Test.Cardano.Ledger.Tickf (oldCalculatePoolDistr, calcPoolDistOldEqualsNew) where
 
-import Cardano.Ledger.Coin (Coin (Coin), CompactForm (CompactCoin))
+import Cardano.Ledger.BaseTypes (nonZeroOr, unNonZero)
+import Cardano.Ledger.Coin (Coin (..), knownNonZeroCoin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.Shelley.Rules (calculatePoolDistr)
@@ -38,13 +40,12 @@ calcPoolDistOldEqualsNew =
 
 -- | The original version of calculatePoolDistr
 oldCalculatePoolDistr :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
-oldCalculatePoolDistr includeHash (SnapShot stake delegs stakePoolParams) =
-  let Coin totalc = sumAllStake stake
-      -- totalc could be zero (in particular when shrinking)
-      nonZeroTotal = if totalc == 0 then 1 else totalc
+oldCalculatePoolDistr includeHash (SnapShot stake _ delegs stakePoolParams _) =
+  let totalActiveStake = sumAllStake stake
+      nonZeroTotalActiveStake = totalActiveStake `nonZeroOr` knownNonZeroCoin @1
       sd =
         Map.fromListWith (\(cc, rat) (cc', rat') -> (cc <> cc', rat + rat')) $
-          [ (d, (compactCoin, c % nonZeroTotal))
+          [ (d, (compactCoin, c % unCoin (unNonZero nonZeroTotalActiveStake)))
           | (hk, compactCoin) <- VMap.toAscList (unStake stake)
           , let Coin c = fromCompact compactCoin
           , Just d <- [VMap.lookup hk delegs]
@@ -56,4 +57,4 @@ oldCalculatePoolDistr includeHash (SnapShot stake delegs stakePoolParams) =
             sd
             (VMap.toMap (VMap.map sppVrf stakePoolParams))
         )
-        (CompactCoin $ fromIntegral nonZeroTotal)
+        nonZeroTotalActiveStake

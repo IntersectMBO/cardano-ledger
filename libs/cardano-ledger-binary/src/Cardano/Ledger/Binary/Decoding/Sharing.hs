@@ -15,6 +15,7 @@ module Cardano.Ledger.Binary.Decoding.Sharing (
   Intern (..),
   decShareLensCBOR,
   decSharePlusLensCBOR,
+  decSharePlusIsoCBOR,
   decNoShareCBOR,
   interns,
   internsFromSet,
@@ -206,6 +207,13 @@ decSharePlusLensCBOR l = do
   s <- get
   (x, k) <- lift $ runStateT decSharePlusCBOR (s ^. l)
   x <$ put (s & l .~ k)
+
+decSharePlusIsoCBOR ::
+  DecShareCBOR b =>
+  (i -> Share b) ->
+  (Share b -> i) ->
+  StateT i (Decoder s) b
+decSharePlusIsoCBOR toShare fromShare = decSharePlusLensCBOR (lens toShare (const fromShare))
 
 -- | Use `DecShareCBOR` class while ignoring sharing
 decNoShareCBOR :: DecShareCBOR a => Decoder s a
