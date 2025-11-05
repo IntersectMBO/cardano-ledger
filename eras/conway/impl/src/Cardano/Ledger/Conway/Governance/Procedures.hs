@@ -327,7 +327,7 @@ instance EraPParams era => EncCBOR (GovActionState era) where
         !> To gasExpiresAfter
 
 instance OMap.HasOKey GovActionId (GovActionState era) where
-  okeyL = lens gasId $ \gas gi -> gas {gasId = gi}
+  toOKey = gasId
 
 data Voter
   = CommitteeVoter !(Credential 'HotCommitteeRole)

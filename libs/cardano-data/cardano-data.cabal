@@ -44,7 +44,6 @@ library
     containers,
     data-default,
     deepseq,
-    microlens,
     mtl,
     nothunks,
     vector,
@@ -73,7 +72,6 @@ library testlib
     cardano-ledger-binary:testlib,
     containers,
     hspec,
-    microlens,
 
 test-suite cardano-data-tests
   type: exitcode-stdio-1.0
@@ -103,6 +101,5 @@ test-suite cardano-data-tests
     cardano-strict-containers,
     containers,
     hspec,
-    microlens,
     quickcheck-classes,
     testlib,

@@ -14,7 +14,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Data.OMap.Strict (
-  HasOKey (okeyL),
+  HasOKey (toOKey),
   OMap (Empty, (:<|:), (:|>:)),
   null,
   size,
@@ -61,6 +61,7 @@ import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
 import Data.Default (Default (..))
 import Data.Foldable qualified as F
+import Data.Functor ((<&>))
 import Data.Map.Strict qualified as Map
 import Data.MapExtras qualified as MapE
 import Data.Maybe (isJust)
@@ -69,7 +70,6 @@ import Data.Set qualified as Set
 import Data.Typeable (Typeable)
 import GHC.Exts qualified as Exts
 import GHC.Generics (Generic)
-import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Prelude hiding (elem, filter, lookup, null, seq)
 
@@ -78,7 +78,7 @@ import Prelude hiding (elem, filter, lookup, null, seq)
 --
 -- For a type @V@, defines a lens from @V@ to and Ord type @K@.
 class Ord k => HasOKey k v | v -> k where
-  okeyL :: Lens' v k
+  toOKey :: v -> k
 
 -- | A general-purpose finite, insert-ordered, map that is strict in its
 -- keys and values.
@@ -130,7 +130,7 @@ size (OMap sseq _) = SSeq.length sseq
 -- | \(O(1)\). Strict in its arguments.
 singleton :: HasOKey k v => v -> OMap k v
 singleton !v =
-  let k = v ^. okeyL
+  let k = toOKey v
    in OMap (SSeq.singleton k) (Map.singleton k v)
 
 -- | \(O(\log n)\). If the key is not present 'lookup' returns
@@ -148,7 +148,7 @@ cons v omap@(OMap sseq kv)
   | Map.member k kv = omap
   | otherwise = OMap (k SSeq.<| sseq) (Map.insert k v kv)
   where
-    k = v ^. okeyL
+    k = toOKey v
 
 -- | \(O(\log n)\). Checks membership before cons'ing.
 (<|) :: HasOKey k v => v -> OMap k v -> OMap k v
@@ -163,7 +163,7 @@ cons' v (OMap sseq kv)
   | Map.member k kv = OMap sseq kv'
   | otherwise = OMap (k SSeq.<| sseq) kv'
   where
-    k = v ^. okeyL
+    k = toOKey v
     kv' = Map.insert k v kv
 
 -- | \(O(\log n)\). Checks membership before cons'ing. Overwrites a
@@ -181,7 +181,7 @@ snoc omap@(OMap sseq kv) v
   | Map.member k kv = omap
   | otherwise = OMap (sseq SSeq.|> k) (Map.insert k v kv)
   where
-    k = v ^. okeyL
+    k = toOKey v
 
 -- | \(O(\log n)\). Checks membership before snoc'ing.
 (|>) :: HasOKey k v => OMap k v -> v -> OMap k v
@@ -196,7 +196,7 @@ snoc' (OMap sseq kv) v
   | Map.member k kv = OMap sseq kv'
   | otherwise = OMap (sseq SSeq.|> k) kv'
   where
-    k = v ^. okeyL
+    k = toOKey v
     kv' = Map.insert k v kv
 
 -- | \(O(\log n)\). Checks membership before snoc'ing. Overwrites a
@@ -238,7 +238,7 @@ fromFoldableDuplicates = F.foldl' snoc_ (Set.empty, empty)
   where
     snoc_ :: (HasOKey k v, Ord v) => (Set.Set v, OMap k v) -> v -> (Set.Set v, OMap k v)
     snoc_ (duplicates, omap@(OMap sseq kv)) v =
-      let k = v ^. okeyL
+      let k = toOKey v
        in if Map.member k kv
             then (Set.insert v duplicates, omap)
             else (duplicates, OMap (sseq SSeq.|> k) (Map.insert k v kv))
@@ -269,7 +269,7 @@ member k (OMap _sseq kv) = Map.member k kv
 
 -- | \(O(\log n)\). Value membership check.
 elem :: (HasOKey k v, Eq v) => v -> OMap k v -> Bool
-elem v = (Just v ==) . lookup (v ^. okeyL)
+elem v = (Just v ==) . lookup (toOKey v)
 
 -- | \(O(n)\). Given a `Set` of @k@s, and an `OMap` @k@ @v@ return
 -- a pair of `Map` and `OMap` where the @k@s in the `Set` have been
@@ -321,7 +321,7 @@ adjust f k omap@(OMap sseq kv) =
     Nothing -> omap
     Just v ->
       let v' = f v
-          k' = v' ^. okeyL
+          k' = toOKey v'
        in if k' == k
             then OMap sseq (Map.insert k v' kv)
             else
