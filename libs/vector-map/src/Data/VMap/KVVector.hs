@@ -30,6 +30,7 @@ module Data.VMap.KVVector (
   memberKVVector,
   lookupKVVector,
   lookupDefaultKVVector,
+  elemAtKVVector,
   sortAscKVMVector,
   internKVVectorMaybe,
   normalize,
@@ -216,6 +217,11 @@ lookupDefaultKVVector v k = fromMaybe v . lookupKVVector k
 memberKVVector :: (Ord k, VG.Vector kv k) => k -> KVVector kv vv (k, v) -> Bool
 memberKVVector k = isJust . lookupIxSortedVector k . keysVector
 {-# INLINE memberKVVector #-}
+
+elemAtKVVector ::
+  (VG.Vector kv k, VG.Vector vv v) => Int -> KVVector kv vv (k, v) -> (k, v)
+elemAtKVVector ix (KVVector keys values) = (keys VG.! ix, values VG.! ix)
+{-# INLINE elemAtKVVector #-}
 
 -- | Perform a binary search on a sorted vector
 lookupIxSortedVector ::
