@@ -166,18 +166,18 @@ hash28 = bytes .size 28
 asset_name = bytes .size (0 .. 32)
 
 certificate = 
-  [  stake_registration
-  // stake_deregistration
-  // stake_delegation
-  // pool_registration
-  // pool_retirement
-  // genesis_key_delegation
+  [  account_registration_cert
+  // account_unregistration_cert
+  // delegation_to_stake_pool_cert
+  // pool_registration_cert
+  // pool_retirement_cert
+  // genesis_delegation_cert
   // move_instantaneous_rewards_cert
   ]
 
 
-; This will be deprecated in a future era
-stake_registration = (0, stake_credential)
+; This certificate will be deprecated in a future era
+account_registration_cert = (0, stake_credential)
 
 stake_credential = credential
 
@@ -185,14 +185,14 @@ credential = [0, addr_keyhash// 1, script_hash]
 
 addr_keyhash = hash28
 
-; This will be deprecated in a future era
-stake_deregistration = (1, stake_credential)
+; This certificate will be deprecated in a future era
+account_unregistration_cert = (1, stake_credential)
 
-stake_delegation = (2, stake_credential, pool_keyhash)
+delegation_to_stake_pool_cert = (2, stake_credential, pool_keyhash)
 
 pool_keyhash = hash28
 
-pool_registration = (3, pool_params)
+pool_registration_cert = (3, pool_params)
 
 pool_params = 
   ( operator       : pool_keyhash      
@@ -251,11 +251,11 @@ pool_metadata = [url, bytes]
 
 url = text .size (0 .. 64)
 
-pool_retirement = (4, pool_keyhash, epoch)
+pool_retirement_cert = (4, pool_keyhash, epoch)
 
 epoch = uint .size 8
 
-genesis_key_delegation = (5, genesis_hash, genesis_delegate_hash, vrf_keyhash)
+genesis_delegation_cert = (5, genesis_hash, genesis_delegate_hash, vrf_keyhash)
 
 genesis_hash = hash28
 

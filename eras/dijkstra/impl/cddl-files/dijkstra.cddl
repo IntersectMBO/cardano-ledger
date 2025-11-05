@@ -26,62 +26,25 @@ potential_languages = 0 .. 255
 signkey_kes = bytes .size 64
 
 certificate = 
-  [  stake_registration
-  // stake_deregistration
-  // stake_delegation
-  // pool_registration
-  // pool_retirement
-  // reg_cert
-  // unreg_cert
-  // vote_deleg_cert
-  // stake_vote_deleg_cert
-  // stake_reg_deleg_cert
-  // vote_reg_deleg_cert
-  // stake_vote_reg_deleg_cert
-  // auth_committee_hot_cert
-  // resign_committee_cold_cert
-  // reg_drep_cert
-  // unreg_drep_cert
-  // update_drep_cert
+  [  account_registration_cert
+  // account_unregistration_cert
+  // delegation_to_stake_pool_cert
+  // pool_registration_cert
+  // pool_retirement_cert
+  // account_registration_deposit_cert
+  // account_unregistration_deposit_cert
+  // delegation_to_drep_cert
+  // delegation_to_stake_pool_and_drep_cert
+  // account_registration_delegation_to_stake_pool_cert
+  // account_registration_delegation_to_drep_cert
+  // account_registration_delegation_to_stake_pool_and_drep_cert
+  // committee_authorization_cert
+  // committee_resignation_cert
+  // drep_registration_cert
+  // drep_unregistration_cert
+  // drep_update_cert
   ]
 
-
-; This will be deprecated in a future era
-stake_registration = (0, stake_credential)
-
-; This will be deprecated in a future era
-stake_deregistration = (1, stake_credential)
-
-stake_delegation = (2, stake_credential, pool_keyhash)
-
-pool_registration = (3, pool_params)
-
-pool_retirement = (4, pool_keyhash, epoch)
-
-reg_cert = (7, stake_credential, coin)
-
-unreg_cert = (8, stake_credential, coin)
-
-vote_deleg_cert = (9, stake_credential, drep)
-
-stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, drep)
-
-stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
-
-vote_reg_deleg_cert = (12, stake_credential, drep, coin)
-
-stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
-
-auth_committee_hot_cert = 
-  (14, committee_cold_credential, committee_hot_credential)
-
-resign_committee_cold_cert = (15, committee_cold_credential, anchor/ nil)
-
-reg_drep_cert = (16, drep_credential, coin, anchor/ nil)
-
-unreg_drep_cert = (17, drep_credential, coin)
-
-update_drep_cert = (18, drep_credential, anchor/ nil)
 
 header = [header_body, body_signature : kes_signature]
 
@@ -374,15 +337,20 @@ certificates = nonempty_oset<certificate>
 
 nonempty_oset<a0> = #6.258([+ a0])/ [+ a0]
 
+; This certificate will be deprecated in a future era
+account_registration_cert = (0, stake_credential)
+
 stake_credential = credential
+
+; This certificate will be deprecated in a future era
+account_unregistration_cert = (1, stake_credential)
+
+delegation_to_stake_pool_cert = (2, stake_credential, pool_keyhash)
 
 pool_keyhash = hash28
 
-;         pool_keyhash: operator
-;                 coin: pledge
-;                 coin: cost
-;        unit_interval: margin
-;    set<addr_keyhash>: pool_owners
+pool_registration_cert = (3, pool_params)
+
 pool_params = 
   ( operator       : pool_keyhash      
   , vrf_keyhash    : vrf_keyhash       
@@ -440,17 +408,50 @@ pool_metadata = [url, bytes]
 
 url = text .size (0 .. 128)
 
+pool_retirement_cert = (4, pool_keyhash, epoch)
+
 epoch = uint .size 8
 
+account_registration_deposit_cert = (7, stake_credential, coin)
+
+account_unregistration_deposit_cert = (8, stake_credential, coin)
+
+delegation_to_drep_cert = (9, stake_credential, drep)
+
 drep = [0, addr_keyhash// 1, script_hash// 2// 3]
+
+delegation_to_stake_pool_and_drep_cert = 
+  (10, stake_credential, pool_keyhash, drep)
+
+account_registration_delegation_to_stake_pool_cert = 
+  (11, stake_credential, pool_keyhash, coin)
+
+account_registration_delegation_to_drep_cert = 
+  (12, stake_credential, drep, coin)
+
+account_registration_delegation_to_stake_pool_and_drep_cert = 
+  (13, stake_credential, pool_keyhash, drep, coin)
+
+; Authorize committee hot key for cold key
+committee_authorization_cert = 
+  (14, committee_cold_credential, committee_hot_credential)
 
 committee_cold_credential = credential
 
 committee_hot_credential = credential
 
+; Resign from committee with cold key
+committee_resignation_cert = (15, committee_cold_credential, anchor/ nil)
+
 anchor = [anchor_url : url, anchor_data_hash : hash32]
 
+drep_registration_cert = (16, drep_credential, coin, anchor/ nil)
+
 drep_credential = credential
+
+drep_unregistration_cert = (17, drep_credential, coin)
+
+drep_update_cert = (18, drep_credential, anchor/ nil)
 
 withdrawals = {+ reward_account => coin}
 

@@ -13,26 +13,32 @@
 module Test.Cardano.Ledger.Shelley.CDDL (
   module Test.Cardano.Ledger.Core.Binary.CDDL,
   shelleyCDDL,
-  transaction_input,
-  transaction_output,
+
+  -- * Certificates and withdrawals
   certificate,
+  account_registration_cert,
+  account_unregistration_cert,
+  delegation_to_stake_pool_cert,
   withdrawals,
-  update,
+  genesis_hash,
+
+  -- * Transaction
+  transaction_input,
+  transaction_id,
+  transaction_output,
+
+  -- * Block and header
   header,
-  vkeywitness,
-  bootstrap_witness,
+  operational_cert,
   major_protocol_version,
   protocol_version,
-  genesis_hash,
-  operational_cert,
-  stake_registration,
-  stake_deregistration,
-  transaction_id,
-  stake_delegation,
-  stake_credential,
-  credential,
-  port,
-  single_host_addr,
+
+  -- * Update
+  update,
+
+  -- * Witnesses
+  vkeywitness,
+  bootstrap_witness,
 ) where
 
 import Cardano.Ledger.BaseTypes (getVersion)
@@ -46,7 +52,15 @@ import Text.Heredoc
 import Prelude hiding ((/))
 
 shelleyCDDL :: Huddle
-shelleyCDDL = collectFrom [HIRule $ block @ShelleyEra, HIRule $ transaction @ShelleyEra, HIRule signkey_kes]
+shelleyCDDL =
+  collectFrom $
+    [HIRule $ block @ShelleyEra, HIRule $ transaction @ShelleyEra, HIRule signkey_kes]
+      <> shelleyPoolRules
+
+pool_registration_cert :: Named Group
+pool_retirement_cert :: Named Group
+shelleyPoolRules :: [HuddleItem]
+(pool_registration_cert, pool_retirement_cert, shelleyPoolRules) = mkPoolRules dns_name64 url64
 
 block :: forall era. Era era => Rule
 block =
@@ -134,45 +148,34 @@ transaction_id =
 transaction_output :: Rule
 transaction_output = "transaction_output" =:= arr [a address, "amount" ==> coin]
 
-certificate :: Rule
-certificate =
-  "certificate"
-    =:= arr [a stake_registration]
-    / arr [a stake_deregistration]
-    / arr [a stake_delegation]
-    / arr [a pool_registration]
-    / arr [a pool_retirement]
-    / arr [a genesis_key_delegation]
-    / arr [a move_instantaneous_rewards_cert]
+account_registration_cert :: Named Group
+account_registration_cert =
+  comment "This certificate will be deprecated in a future era" $
+    "account_registration_cert" =:~ grp [0, a stake_credential]
 
-stake_registration :: Named Group
-stake_registration =
-  comment "This will be deprecated in a future era" $
-    "stake_registration" =:~ grp [0, a stake_credential]
+account_unregistration_cert :: Named Group
+account_unregistration_cert =
+  comment "This certificate will be deprecated in a future era" $
+    "account_unregistration_cert" =:~ grp [1, a stake_credential]
 
-stake_deregistration :: Named Group
-stake_deregistration =
-  comment "This will be deprecated in a future era" $
-    "stake_deregistration" =:~ grp [1, a stake_credential]
+delegation_to_stake_pool_cert :: Named Group
+delegation_to_stake_pool_cert = "delegation_to_stake_pool_cert" =:~ grp [2, a stake_credential, a pool_keyhash]
 
-stake_delegation :: Named Group
-stake_delegation = "stake_delegation" =:~ grp [2, a stake_credential, a pool_keyhash]
-
-pool_registration :: Named Group
-pool_registration = "pool_registration" =:~ grp [3, a pool_params]
-
-pool_retirement :: Named Group
-pool_retirement = "pool_retirement" =:~ grp [4, a pool_keyhash, a epoch]
-
-genesis_key_delegation :: Named Group
-genesis_key_delegation =
-  "genesis_key_delegation"
+-- Legacy certificates (removed in Conway)
+genesis_delegation_cert :: Named Group
+genesis_delegation_cert =
+  "genesis_delegation_cert"
     =:~ grp [5, a genesis_hash, a genesis_delegate_hash, a vrf_keyhash]
+
+genesis_hash :: Rule
+genesis_hash = "genesis_hash" =:= hash28
+
+genesis_delegate_hash :: Rule
+genesis_delegate_hash = "genesis_delegate_hash" =:= hash28
 
 move_instantaneous_rewards_cert :: Named Group
 move_instantaneous_rewards_cert =
-  "move_instantaneous_rewards_cert"
-    =:~ grp [6, a move_instantaneous_reward]
+  "move_instantaneous_rewards_cert" =:~ grp [6, a move_instantaneous_reward]
 
 move_instantaneous_reward :: Rule
 move_instantaneous_reward =
@@ -198,69 +201,16 @@ delta_coin =
         |]
     $ "delta_coin" =:= VInt
 
-stake_credential :: Rule
-stake_credential = "stake_credential" =:= credential
-
-credential :: Rule
-credential = "credential" =:= arr [0, a addr_keyhash] / arr [1, a script_hash]
-
-pool_params :: Named Group
-pool_params =
-  "pool_params"
-    =:~ grp
-      [ "operator" ==> pool_keyhash
-      , "vrf_keyhash" ==> vrf_keyhash
-      , "pledge" ==> coin
-      , "cost" ==> coin
-      , "margin" ==> unit_interval
-      , "reward_account" ==> reward_account
-      , "pool_owners" ==> untagged_set addr_keyhash
-      , "relays" ==> arr [0 <+ a relay]
-      , "pool_metadata" ==> (pool_metadata / VNil)
-      ]
-
-port :: Rule
-port = "port" =:= VUInt `le` 65535
-
-ipv4 :: Rule
-ipv4 = "ipv4" =:= VBytes `sized` (4 :: Word64)
-
-ipv6 :: Rule
-ipv6 = "ipv6" =:= VBytes `sized` (16 :: Word64)
-
-dns_name :: Rule
-dns_name = "dns_name" =:= VText `sized` (0 :: Word64, 64 :: Word64)
-
-single_host_addr :: Named Group
-single_host_addr =
-  "single_host_addr" =:~ grp [0, a $ port / VNil, a $ ipv4 / VNil, a $ ipv6 / VNil]
-
-single_host_name :: Named Group
-single_host_name =
-  comment
-    [str|dns_name: An A or AAAA DNS record
-        |]
-    $ "single_host_name" =:~ grp [1, a $ port / VNil, a dns_name]
-
-multi_host_name :: Named Group
-multi_host_name =
-  comment
-    [str|dns_name: An SRV DNS record
-        |]
-    $ "multi_host_name" =:~ grp [2, a dns_name]
-
-relay :: Rule
-relay =
-  "relay"
-    =:= arr [a single_host_addr]
-    / arr [a single_host_name]
-    / arr [a multi_host_name]
-
-pool_metadata :: Rule
-pool_metadata = "pool_metadata" =:= arr [a url, a VBytes]
-
-url :: Rule
-url = "url" =:= VText `sized` (0 :: Word64, 64 :: Word64)
+certificate :: Rule
+certificate =
+  "certificate"
+    =:= arr [a account_registration_cert]
+    / arr [a account_unregistration_cert]
+    / arr [a delegation_to_stake_pool_cert]
+    / arr [a pool_registration_cert]
+    / arr [a pool_retirement_cert]
+    / arr [a genesis_delegation_cert]
+    / arr [a move_instantaneous_rewards_cert]
 
 withdrawals :: Rule
 withdrawals = "withdrawals" =:= mp [0 <+ asKey reward_account ==> coin]
@@ -321,7 +271,7 @@ bootstrap_witness =
 shelley_native_script :: Rule
 shelley_native_script =
   comment
-    [str|Shelley-era native scripts support 4 operations:
+    [str|Native scripts support 4 operations:
         |  - Signature verification (script_pubkey)
         |  - Conjunctions (script_all)
         |  - Disjunctions (script_any)
@@ -346,9 +296,3 @@ script_any = mkScriptAny shelley_native_script
 
 script_n_of_k :: Named Group
 script_n_of_k = mkScriptNOfK VUInt shelley_native_script
-
-genesis_delegate_hash :: Rule
-genesis_delegate_hash = "genesis_delegate_hash" =:= hash28
-
-genesis_hash :: Rule
-genesis_hash = "genesis_hash" =:= hash28

@@ -12,11 +12,13 @@
 module Test.Cardano.Ledger.Mary.CDDL (
   module Test.Cardano.Ledger.Allegra.CDDL,
   maryCDDL,
-  multiasset,
-  mint,
+
+  -- * Multi-asset support
   value,
+  multiasset,
   policy_id,
   asset_name,
+  mint,
 ) where
 
 import Cardano.Ledger.Core (Era)

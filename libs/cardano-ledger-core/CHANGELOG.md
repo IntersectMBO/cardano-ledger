@@ -53,6 +53,12 @@
 
 ### `testlib`
 
+* Add CDDL definitions for:
+  - Credentials: `credential`, `stake_credential`
+  - Pool primitives: `port`, `ipv4`, `ipv6`, `dns_name64`, `url64`, `single_host_addr`
+* Add `mkPoolRules` function to generate protocol-version-specific pool-related definitions
+* Remove CDDL definitions for Plutus V1 types: `big_int`, `big_uint`, `big_nint`, `bounded_bytes` (moved to Alonzo)
+* Remove CDDL definitions for int64 types: `min_int64`, `max_int64`, `negative_int64`, `positive_int64`, `nonzero_int64`, `int64` (moved to Allegra)
 * Add CDDL definitions for `script_hash`, `mkScriptPubkey`, `mkScriptAll`, `mkScriptAny`, `mkScriptNOfK`, `mkScriptInvalidBefore`, `mkScriptInvalidHereafter`
 * Add CDDL definition for `transaction_index`, `metadatum_label`, `metadatum`, `metadata` and `auxiliary_data_hash`
 * Remove deprecated generators `genAddrBadPtr`, `genCompactAddrBadPtr`, `genBadPtr`

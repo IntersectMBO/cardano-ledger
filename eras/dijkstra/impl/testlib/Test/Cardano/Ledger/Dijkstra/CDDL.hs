@@ -22,9 +22,7 @@ import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
 import GHC.Num (Integer)
-import Test.Cardano.Ledger.Conway.CDDL hiding (
-
- )
+import Test.Cardano.Ledger.Conway.CDDL
 import Text.Heredoc
 
 dijkstraCDDL :: Huddle
@@ -36,25 +34,7 @@ dijkstraCDDL =
     , HIRule language
     , HIRule potential_languages
     , HIRule signkey_kes
-    , -- Certificates
-      HIRule certificate
-    , HIGroup stake_registration
-    , HIGroup stake_deregistration
-    , HIGroup stake_delegation
-    , HIGroup pool_registration
-    , HIGroup pool_retirement
-    , HIGroup reg_cert
-    , HIGroup unreg_cert
-    , HIGroup vote_deleg_cert
-    , HIGroup stake_vote_deleg_cert
-    , HIGroup stake_reg_deleg_cert
-    , HIGroup vote_reg_deleg_cert
-    , HIGroup stake_vote_reg_deleg_cert
-    , HIGroup auth_committee_hot_cert
-    , HIGroup resign_committee_cold_cert
-    , HIGroup reg_drep_cert
-    , HIGroup unreg_drep_cert
-    , HIGroup update_drep_cert
+    , HIRule certificate
     ]
 
 block :: Rule
@@ -262,28 +242,6 @@ script_data_hash =
         |representation for empty redeemers.
         |]
     $ "script_data_hash" =:= hash32
-
--- TODO: adjust to changes in certificates
-certificate :: Rule
-certificate =
-  "certificate"
-    =:= arr [a stake_registration]
-    / arr [a stake_deregistration]
-    / arr [a stake_delegation]
-    / arr [a pool_registration]
-    / arr [a pool_retirement]
-    / arr [a reg_cert]
-    / arr [a unreg_cert]
-    / arr [a vote_deleg_cert]
-    / arr [a stake_vote_deleg_cert]
-    / arr [a stake_reg_deleg_cert]
-    / arr [a vote_reg_deleg_cert]
-    / arr [a stake_vote_reg_deleg_cert]
-    / arr [a auth_committee_hot_cert]
-    / arr [a resign_committee_cold_cert]
-    / arr [a reg_drep_cert]
-    / arr [a unreg_drep_cert]
-    / arr [a update_drep_cert]
 
 -- TODO: adjust with new params
 protocol_param_update :: Rule

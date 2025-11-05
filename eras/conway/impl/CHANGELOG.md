@@ -20,6 +20,19 @@
 
 ### `testlib`
 
+* Add CDDL definitions:
+  - Credentials: `drep_credential`, `committee_cold_credential`, `committee_hot_credential`
+  - Governance primitives: `drep`, `anchor`
+  - New pool primitives with 128-byte limits: `dns_name128`, `url128`
+  - New pool certificate definitions via `mkPoolRules`: `pool_registration_cert`, `pool_retirement_cert`
+  - Certificates:
+    + `account_registration_deposit_cert`, `account_unregistration_deposit_cert`
+    + `delegation_to_drep_cert`, `delegation_to_stake_pool_and_drep_cert`
+    + `account_registration_delegation_to_stake_pool_cert`, `account_registration_delegation_to_drep_cert`, `account_registration_delegation_to_stake_pool_and_drep_cert`
+    + `committee_authorization_cert`, `committee_resignation_cert`
+    + `drep_registration_cert`, `drep_unregistration_cert`, `drep_update_cert`
+* Remove old CDDL certificate definitions: `reg_cert`, `unreg_cert`, `vote_deleg_cert`, `stake_vote_deleg_cert`, `stake_reg_deleg_cert`, `vote_reg_deleg_cert`, `stake_vote_reg_deleg_cert`, `auth_committee_hot_cert`, `resign_committee_cold_cert`, `reg_drep_cert`, `unreg_drep_cert`, `update_drep_cert`
+* Remove CDDL pool-related definitions: `pool_params`, `dns_name`, `single_host_name`, `multi_host_name`, `relay`, `url`, `pool_metadata` (now generated via `mkPoolRules`)
 * Rename `shelley_auxiliary_data`, `shelley_ma_auxiliary_data`, `alonzo_auxiliary_data` to more suitable `metadata`, `auxiliary_data_array`, `auxiliary_data_map`
 * Remove redefinition of `metadatum_label`, `metadata` from CDDL
 * Remove CDDL `protocol_version` redefinition

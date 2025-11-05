@@ -13,10 +13,19 @@
 module Test.Cardano.Ledger.Allegra.CDDL (
   module Test.Cardano.Ledger.Shelley.CDDL,
   allegraCDDL,
+
+  -- * 64-bit integers
+  int64,
+  nonzero_int64,
+
+  -- * Transaction
   transaction_witness_set,
+
+  -- * Auxiliary data
   auxiliary_data,
   auxiliary_data_array,
-  auxiliary_scripts,
+
+  -- * Native scripts
   allegra_native_script,
 ) where
 
@@ -24,6 +33,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core (Era)
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
+import GHC.Num (Integer)
 import Test.Cardano.Ledger.Shelley.CDDL
 import Text.Heredoc
 
@@ -33,6 +43,24 @@ allegraCDDL =
     [ HIRule $ block @AllegraEra
     , HIRule $ transaction @AllegraEra
     ]
+
+min_int64 :: Rule
+min_int64 = "min_int64" =:= (-9223372036854775808 :: Integer)
+
+max_int64 :: Rule
+max_int64 = "max_int64" =:= (9223372036854775807 :: Integer)
+
+negative_int64 :: Rule
+negative_int64 = "negative_int64" =:= min_int64 ... (-1 :: Integer)
+
+positive_int64 :: Rule
+positive_int64 = "positive_int64" =:= (1 :: Integer) ... max_int64
+
+nonzero_int64 :: Rule
+nonzero_int64 = "nonzero_int64" =:= negative_int64 / positive_int64
+
+int64 :: Rule
+int64 = "int64" =:= min_int64 ... max_int64
 
 allegra_native_script :: Rule
 allegra_native_script =

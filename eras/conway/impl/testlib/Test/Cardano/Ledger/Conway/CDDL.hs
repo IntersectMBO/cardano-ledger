@@ -11,39 +11,37 @@
 module Test.Cardano.Ledger.Conway.CDDL (
   module Test.Cardano.Ledger.Babbage.CDDL,
   conwayCDDL,
-  potential_languages,
-  pool_registration,
-  pool_retirement,
-  reg_cert,
-  unreg_cert,
-  vote_deleg_cert,
-  stake_vote_deleg_cert,
-  stake_reg_deleg_cert,
-  vote_reg_deleg_cert,
-  stake_vote_reg_deleg_cert,
-  auth_committee_hot_cert,
-  resign_committee_cold_cert,
-  reg_drep_cert,
-  unreg_drep_cert,
-  update_drep_cert,
-  transaction_input,
-  withdrawals,
-  mint,
-  voting_procedures,
+
+  -- * Certificates
+  certificate,
+
+  -- * Governance
+  drep,
   anchor,
+  gov_action_id,
   hard_fork_initiation_action,
   treasury_withdrawals_action,
   no_confidence,
   update_committee,
   new_constitution,
   info_action,
-  gov_action_id,
   policy_hash,
-  shelley_transaction_output,
-  ex_unit_prices,
+
+  -- * Voting
+  voting_procedures,
   pool_voting_thresholds,
   drep_voting_thresholds,
+
+  -- * Scripts
   plutus_v3_script,
+  potential_languages,
+
+  -- * Transaction
+  transaction_input,
+  shelley_transaction_output,
+  withdrawals,
+  mint,
+  ex_unit_prices,
 
   -- * Sets
   maybe_tagged_set,
@@ -56,12 +54,12 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
+import Data.Semigroup ((<>))
 import Data.Text qualified as T
 import Data.Word (Word64)
 import GHC.Num (Integer)
 import Test.Cardano.Ledger.Babbage.CDDL hiding (
   certificate,
-  certificates,
   ex_unit_prices,
   mint,
   multiasset,
@@ -74,35 +72,45 @@ import Test.Cardano.Ledger.Babbage.CDDL hiding (
  )
 import Text.Heredoc
 
+drep_credential :: Rule
+drep_credential = "drep_credential" =:= credential
+
+committee_cold_credential :: Rule
+committee_cold_credential = "committee_cold_credential" =:= credential
+
+committee_hot_credential :: Rule
+committee_hot_credential = "committee_hot_credential" =:= credential
+
+drep :: Rule
+drep =
+  "drep"
+    =:= arr [0, a addr_keyhash]
+    / arr [1, a script_hash]
+    / arr [2] -- always abstain
+    / arr [3] -- always no confidence
+
+anchor :: Rule
+anchor = "anchor" =:= arr ["anchor_url" ==> url128, "anchor_data_hash" ==> hash32]
+
+-- Pool primitives (size limits increased from 64 to 128)
+dns_name128 :: Rule
+dns_name128 = "dns_name" =:= VText `sized` (0 :: Word64, 128 :: Word64)
+
+url128 :: Rule
+url128 = "url" =:= VText `sized` (0 :: Word64, 128 :: Word64)
+
 conwayCDDL :: Huddle
 conwayCDDL =
-  collectFromInit
+  collectFromInit $
     [ HIRule block
     , HIRule transaction
     , HIRule kes_signature
     , HIRule language
     , HIRule potential_languages
     , HIRule signkey_kes
-    , -- Certificates
-      HIRule certificate
-    , HIGroup stake_registration
-    , HIGroup stake_deregistration
-    , HIGroup stake_delegation
-    , HIGroup pool_registration
-    , HIGroup pool_retirement
-    , HIGroup reg_cert
-    , HIGroup unreg_cert
-    , HIGroup vote_deleg_cert
-    , HIGroup stake_vote_deleg_cert
-    , HIGroup stake_reg_deleg_cert
-    , HIGroup vote_reg_deleg_cert
-    , HIGroup stake_vote_reg_deleg_cert
-    , HIGroup auth_committee_hot_cert
-    , HIGroup resign_committee_cold_cert
-    , HIGroup reg_drep_cert
-    , HIGroup unreg_drep_cert
-    , HIGroup update_drep_cert
+    , HIRule certificate
     ]
+      <> conwayPoolRules
 
 block :: Rule
 block =
@@ -281,14 +289,6 @@ voter =
     / (arr [3, a script_hash] //- "drep script hash")
     / (arr [4, a addr_keyhash] //- "staking pool key hash")
 
-anchor :: Rule
-anchor =
-  "anchor"
-    =:= arr
-      [ "anchor_url" ==> url
-      , "anchor_data_hash" ==> hash32
-      ]
-
 vote :: Rule
 vote = "vote" =:= (0 :: Integer) ... (2 :: Integer)
 
@@ -404,153 +404,76 @@ script_data_hash =
 certificate :: Rule
 certificate =
   "certificate"
-    =:= arr [a stake_registration]
-    / arr [a stake_deregistration]
-    / arr [a stake_delegation]
-    / arr [a pool_registration]
-    / arr [a pool_retirement]
-    / arr [a reg_cert]
-    / arr [a unreg_cert]
-    / arr [a vote_deleg_cert]
-    / arr [a stake_vote_deleg_cert]
-    / arr [a stake_reg_deleg_cert]
-    / arr [a vote_reg_deleg_cert]
-    / arr [a stake_vote_reg_deleg_cert]
-    / arr [a auth_committee_hot_cert]
-    / arr [a resign_committee_cold_cert]
-    / arr [a reg_drep_cert]
-    / arr [a unreg_drep_cert]
-    / arr [a update_drep_cert]
+    =:= arr [a account_registration_cert]
+    / arr [a account_unregistration_cert]
+    / arr [a delegation_to_stake_pool_cert]
+    / arr [a pool_registration_cert]
+    / arr [a pool_retirement_cert]
+    / arr [a account_registration_deposit_cert]
+    / arr [a account_unregistration_deposit_cert]
+    / arr [a delegation_to_drep_cert]
+    / arr [a delegation_to_stake_pool_and_drep_cert]
+    / arr [a account_registration_delegation_to_stake_pool_cert]
+    / arr [a account_registration_delegation_to_drep_cert]
+    / arr [a account_registration_delegation_to_stake_pool_and_drep_cert]
+    / arr [a committee_authorization_cert]
+    / arr [a committee_resignation_cert]
+    / arr [a drep_registration_cert]
+    / arr [a drep_unregistration_cert]
+    / arr [a drep_update_cert]
 
--- POOL
-pool_registration :: Named Group
-pool_registration = "pool_registration" =:~ grp [3, a pool_params]
+pool_registration_cert :: Named Group
+pool_retirement_cert :: Named Group
+conwayPoolRules :: [HuddleItem]
+(pool_registration_cert, pool_retirement_cert, conwayPoolRules) = mkPoolRules dns_name128 url128
 
-pool_retirement :: Named Group
-pool_retirement = "pool_retirement" =:~ grp [4, a pool_keyhash, a epoch]
+account_registration_deposit_cert :: Named Group
+account_registration_deposit_cert = "account_registration_deposit_cert" =:~ grp [7, a stake_credential, a coin]
 
--- numbers 5 and 6 used to be the Genesis and MIR certificates respectively,
--- which were deprecated in Conway
+account_unregistration_deposit_cert :: Named Group
+account_unregistration_deposit_cert = "account_unregistration_deposit_cert" =:~ grp [8, a stake_credential, a coin]
 
--- DELEG
-reg_cert :: Named Group
-reg_cert = "reg_cert" =:~ grp [7, a stake_credential, a coin]
+delegation_to_drep_cert :: Named Group
+delegation_to_drep_cert = "delegation_to_drep_cert" =:~ grp [9, a stake_credential, a drep]
 
-unreg_cert :: Named Group
-unreg_cert = "unreg_cert" =:~ grp [8, a stake_credential, a coin]
+delegation_to_stake_pool_and_drep_cert :: Named Group
+delegation_to_stake_pool_and_drep_cert =
+  "delegation_to_stake_pool_and_drep_cert" =:~ grp [10, a stake_credential, a pool_keyhash, a drep]
 
-vote_deleg_cert :: Named Group
-vote_deleg_cert = "vote_deleg_cert" =:~ grp [9, a stake_credential, a drep]
-
-stake_vote_deleg_cert :: Named Group
-stake_vote_deleg_cert =
-  "stake_vote_deleg_cert"
-    =:~ grp [10, a stake_credential, a pool_keyhash, a drep]
-
-stake_reg_deleg_cert :: Named Group
-stake_reg_deleg_cert =
-  "stake_reg_deleg_cert"
+account_registration_delegation_to_stake_pool_cert :: Named Group
+account_registration_delegation_to_stake_pool_cert =
+  "account_registration_delegation_to_stake_pool_cert"
     =:~ grp [11, a stake_credential, a pool_keyhash, a coin]
 
-vote_reg_deleg_cert :: Named Group
-vote_reg_deleg_cert =
-  "vote_reg_deleg_cert"
-    =:~ grp [12, a stake_credential, a drep, a coin]
+account_registration_delegation_to_drep_cert :: Named Group
+account_registration_delegation_to_drep_cert =
+  "account_registration_delegation_to_drep_cert" =:~ grp [12, a stake_credential, a drep, a coin]
 
-stake_vote_reg_deleg_cert :: Named Group
-stake_vote_reg_deleg_cert =
-  "stake_vote_reg_deleg_cert"
+account_registration_delegation_to_stake_pool_and_drep_cert :: Named Group
+account_registration_delegation_to_stake_pool_and_drep_cert =
+  "account_registration_delegation_to_stake_pool_and_drep_cert"
     =:~ grp [13, a stake_credential, a pool_keyhash, a drep, a coin]
 
--- GOVCERT
-auth_committee_hot_cert :: Named Group
-auth_committee_hot_cert =
-  "auth_committee_hot_cert"
-    =:~ grp [14, a committee_cold_credential, a committee_hot_credential]
+committee_authorization_cert :: Named Group
+committee_authorization_cert =
+  comment "Authorize committee hot key for cold key" $
+    "committee_authorization_cert"
+      =:~ grp [14, a committee_cold_credential, a committee_hot_credential]
 
-resign_committee_cold_cert :: Named Group
-resign_committee_cold_cert =
-  "resign_committee_cold_cert"
-    =:~ grp [15, a committee_cold_credential, a $ anchor / VNil]
+committee_resignation_cert :: Named Group
+committee_resignation_cert =
+  comment "Resign from committee with cold key" $
+    "committee_resignation_cert"
+      =:~ grp [15, a committee_cold_credential, a $ anchor / VNil]
 
-reg_drep_cert :: Named Group
-reg_drep_cert = "reg_drep_cert" =:~ grp [16, a drep_credential, a coin, a $ anchor / VNil]
+drep_registration_cert :: Named Group
+drep_registration_cert = "drep_registration_cert" =:~ grp [16, a drep_credential, a coin, a $ anchor / VNil]
 
-unreg_drep_cert :: Named Group
-unreg_drep_cert = "unreg_drep_cert" =:~ grp [17, a drep_credential, a coin]
+drep_unregistration_cert :: Named Group
+drep_unregistration_cert = "drep_unregistration_cert" =:~ grp [17, a drep_credential, a coin]
 
-update_drep_cert :: Named Group
-update_drep_cert = "update_drep_cert" =:~ grp [18, a drep_credential, a $ anchor / VNil]
-
-drep :: Rule
-drep =
-  "drep"
-    =:= arr [0, a addr_keyhash]
-    / arr [1, a script_hash]
-    / arr [2] -- always abstain
-    / arr [3] -- always no confidence
-
-drep_credential :: Rule
-drep_credential = "drep_credential" =:= credential
-
-committee_cold_credential :: Rule
-committee_cold_credential = "committee_cold_credential" =:= credential
-
-committee_hot_credential :: Rule
-committee_hot_credential = "committee_hot_credential" =:= credential
-
-pool_params :: Named Group
-pool_params =
-  comment
-    [str|        pool_keyhash: operator
-        |                coin: pledge
-        |                coin: cost
-        |       unit_interval: margin
-        |   set<addr_keyhash>: pool_owners
-        |]
-    $ "pool_params"
-      =:~ grp
-        [ "operator" ==> pool_keyhash
-        , "vrf_keyhash" ==> vrf_keyhash
-        , "pledge" ==> coin
-        , "cost" ==> coin
-        , "margin" ==> unit_interval
-        , "reward_account" ==> reward_account
-        , "pool_owners" ==> maybe_tagged_set addr_keyhash
-        , "relays" ==> arr [0 <+ a relay]
-        , "pool_metadata" ==> (pool_metadata / VNil)
-        ]
-
-dns_name :: Rule
-dns_name = "dns_name" =:= VText `sized` (0 :: Word64, 128 :: Word64)
-
-single_host_name :: Named Group
-single_host_name =
-  comment
-    [str|dns_name: An A or AAAA DNS record
-        |]
-    $ "single_host_name" =:~ grp [1, a $ port / VNil, a dns_name]
-
-multi_host_name :: Named Group
-multi_host_name =
-  comment
-    [str|dns_name: An SRV DNS record
-        |]
-    $ "multi_host_name"
-      =:~ grp [2, a dns_name]
-
-relay :: Rule
-relay =
-  "relay"
-    =:= arr [a single_host_addr]
-    / arr [a single_host_name]
-    / arr [a multi_host_name]
-
-url :: Rule
-url = "url" =:= VText `sized` (0 :: Word64, 128 :: Word64)
-
-pool_metadata :: Rule
-pool_metadata = "pool_metadata" =:= arr [a url, a VBytes]
+drep_update_cert :: Named Group
+drep_update_cert = "drep_update_cert" =:~ grp [18, a drep_credential, a $ anchor / VNil]
 
 withdrawals :: Rule
 withdrawals = "withdrawals" =:= mp [1 <+ asKey reward_account ==> coin]

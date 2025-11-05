@@ -13,6 +13,7 @@
 
 ### `testlib`
 
+* Add CDDL definitions for int64 types: `int64`, `min_int64`, `max_int64`, `negative_int64`, `positive_int64`, `nonzero_int64`
 * Rename `native_script` -> `allegra_native_script` in CDDL
 * Add `auxiliary_data_array` to CDDL for simplification
 * Remove `metadata` redefinition in CDDL

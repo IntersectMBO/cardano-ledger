@@ -20,13 +20,6 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   bytes80,
 
   -- * Numbers
-  big_int,
-  min_int64,
-  max_int64,
-  negative_int64,
-  positive_int64,
-  nonzero_int64,
-  int64,
   positive_int,
   max_word32,
   positive_word32,
@@ -35,9 +28,8 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   unit_interval,
   nonnegative_interval,
 
-  -- * Distinct uint/bytes, bounded bytes
+  -- * Distinct uint/bytes
   distinct,
-  bounded_bytes,
 
   -- * Sets
   untagged_set,
@@ -50,7 +42,20 @@ module Test.Cardano.Ledger.Core.Binary.CDDL (
   slot,
   block_number,
 
-  -- * Hashes, keys and certificates
+  -- * Credentials
+  credential,
+  stake_credential,
+
+  -- * Pool primitives
+  port,
+  ipv4,
+  ipv6,
+  dns_name64,
+  url64,
+  single_host_addr,
+  mkPoolRules,
+
+  -- * Hashes
   addr_keyhash,
   pool_keyhash,
   vrf_keyhash,
@@ -213,40 +218,8 @@ signkey_kes = "signkey_kes" =:= VBytes `sized` (64 :: Word64)
 signature :: Rule
 signature = "signature" =:= VBytes `sized` (64 :: Word64)
 
---------------------------------------------------------------------------------
--- Utility
---------------------------------------------------------------------------------
-
-big_int :: Rule
-big_int = "big_int" =:= VInt / big_uint / big_nint
-
-big_uint :: Rule
-big_uint = "big_uint" =:= tag 2 bounded_bytes
-
-big_nint :: Rule
-big_nint = "big_nint" =:= tag 3 bounded_bytes
-
-min_int64 :: Rule
-min_int64 = "min_int64" =:= (-9223372036854775808 :: Integer)
-
-max_int64 :: Rule
-max_int64 = "max_int64" =:= (9223372036854775807 :: Integer)
-
 max_word64 :: Rule
 max_word64 = "max_word64" =:= (18446744073709551615 :: Integer)
-
-negative_int64 :: Rule
-negative_int64 = "negative_int64" =:= min_int64 ... (-1 :: Integer)
-
-positive_int64 :: Rule
-positive_int64 = "positive_int64" =:= (1 :: Integer) ... max_int64
-
--- | this is the same as the current int64 definition but without zero
-nonzero_int64 :: Rule
-nonzero_int64 = "nonzero_int64" =:= negative_int64 / positive_int64
-
-int64 :: Rule
-int64 = "int64" =:= min_int64 ... max_int64
 
 positive_int :: Rule
 positive_int = "positive_int" =:= (1 :: Integer) ... max_word64
@@ -280,22 +253,6 @@ unit_interval =
 -- | nonnegative_interval = tag 0 [uint, positive_int]
 nonnegative_interval :: Rule
 nonnegative_interval = "nonnegative_interval" =:= tag 30 (arr [a VUInt, a positive_int])
-
-bounded_bytes :: Rule
-bounded_bytes =
-  comment
-    [str|The real bounded_bytes does not have this limit. it instead has
-        |a different limit which cannot be expressed in CDDL.
-        |
-        |The limit is as follows:
-        | - bytes with a definite-length encoding are limited to size 0..64
-        | - for bytes with an indefinite-length CBOR encoding, each chunk is
-        |   limited to size 0..64
-        | ( reminder: in CBOR, the indefinite-length encoding of
-        | bytestrings consists of a token #2.31 followed by a sequence
-        | of definite-length encoded bytestrings and a stop code )
-        |]
-    $ "bounded_bytes" =:= VBytes `sized` (0 :: Word64, 64 :: Word64)
 
 distinct :: IsSizeable s => Value s -> Rule
 distinct x =
@@ -419,3 +376,92 @@ mkScriptInvalidHereafter =
         |This field specifies the right (excluded) endpoint b.
         |]
     $ "script_invalid_hereafter" =:~ grp [5, a slot]
+
+stake_credential :: Rule
+stake_credential = "stake_credential" =:= credential
+
+credential :: Rule
+credential = "credential" =:= arr [0, a addr_keyhash] / arr [1, a script_hash]
+
+port :: Rule
+port = "port" =:= VUInt `le` 65535
+
+ipv4 :: Rule
+ipv4 = "ipv4" =:= VBytes `sized` (4 :: Word64)
+
+ipv6 :: Rule
+ipv6 = "ipv6" =:= VBytes `sized` (16 :: Word64)
+
+dns_name64 :: Rule
+dns_name64 = "dns_name" =:= VText `sized` (0 :: Word64, 64 :: Word64)
+
+url64 :: Rule
+url64 = "url" =:= VText `sized` (0 :: Word64, 64 :: Word64)
+
+single_host_addr :: Named Group
+single_host_addr =
+  "single_host_addr"
+    =:~ grp
+      [ 0
+      , a $ port / VNil
+      , a $ ipv4 / VNil
+      , a $ ipv6 / VNil
+      ]
+
+-- | Generate pool-related definitions with protocol-version-specific dns_name and url sizes.
+mkPoolRules :: Rule -> Rule -> (Named Group, Named Group, [HuddleItem])
+mkPoolRules dns_name url = (pool_registration_cert, pool_retirement_cert, subFields)
+  where
+    subFields =
+      [ HIGroup single_host_name
+      , HIGroup multi_host_name
+      , HIRule pool_metadata
+      , HIRule relay
+      , HIGroup pool_params
+      ]
+
+    single_host_name :: Named Group
+    single_host_name =
+      comment
+        [str|dns_name: An A or AAAA DNS record
+            |]
+        $ "single_host_name" =:~ grp [1, a $ port / VNil, a dns_name]
+
+    multi_host_name :: Named Group
+    multi_host_name =
+      comment
+        [str|dns_name: An SRV DNS record
+            |]
+        $ "multi_host_name"
+          =:~ grp [2, a dns_name]
+
+    pool_metadata :: Rule
+    pool_metadata = "pool_metadata" =:= arr [a url, a VBytes]
+
+    relay :: Rule
+    relay =
+      "relay"
+        =:= arr [a single_host_addr]
+        / arr [a single_host_name]
+        / arr [a multi_host_name]
+
+    pool_params :: Named Group
+    pool_params =
+      "pool_params"
+        =:~ grp
+          [ "operator" ==> pool_keyhash
+          , "vrf_keyhash" ==> vrf_keyhash
+          , "pledge" ==> coin
+          , "cost" ==> coin
+          , "margin" ==> unit_interval
+          , "reward_account" ==> reward_account
+          , "pool_owners" ==> untagged_set addr_keyhash
+          , "relays" ==> arr [0 <+ a relay]
+          , "pool_metadata" ==> pool_metadata / VNil
+          ]
+
+    pool_registration_cert :: Named Group
+    pool_registration_cert = "pool_registration_cert" =:~ grp [3, a pool_params]
+
+    pool_retirement_cert :: Named Group
+    pool_retirement_cert = "pool_retirement_cert" =:~ grp [4, a pool_keyhash, a epoch]

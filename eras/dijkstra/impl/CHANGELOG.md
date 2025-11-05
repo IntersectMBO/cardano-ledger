@@ -19,6 +19,7 @@
 
 ### `testlib`
 
+* Remove CDDL `certificate` redefinition to reuse from conway.
 * Add CDDL exports for `plutus_v4_script`, `dijkstra_native_script`, `script_require_guard`
 * Remove CDDL `protocol_version` redefinition
 * Add `impDijkstraSatisfyNativeScript`
