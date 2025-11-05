@@ -656,10 +656,23 @@ instance Arbitrary StakePoolSnapShot where
 
 instance Arbitrary SnapShot where
   arbitrary = do
-    ssStake <- arbitrary
+    ssStake@(Stake stake) <- arbitrary
     let ssTotalActiveStake = sumAllStake ssStake `BaseTypes.nonZeroOr` (knownNonZeroCoin @1)
-    ssDelegations <- arbitrary
     ssPoolParams <- arbitrary
+    ssDelegations <-
+      if VMap.null ssPoolParams
+        then pure mempty
+        else fmap VMap.fromList $ listOf $ do
+          cred <-
+            if VMap.null stake
+              then arbitrary
+              else
+                let pickFromStake = do
+                      ix <- chooseInt (0, VMap.size stake - 1)
+                      pure $ fst $ VMap.elemAt ix stake
+                 in frequency [(1, arbitrary), (20, pickFromStake)]
+          ix <- chooseInt (0, VMap.size ssPoolParams - 1)
+          pure (cred, fst $ VMap.elemAt ix ssPoolParams)
     deposit <- arbitrary
     let delegationsPerStakePool :: Map (KeyHash 'StakePool) (Set (Credential 'Staking))
         delegationsPerStakePool =
