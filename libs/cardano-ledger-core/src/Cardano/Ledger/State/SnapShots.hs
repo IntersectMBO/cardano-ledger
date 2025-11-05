@@ -20,10 +20,6 @@
 --
 -- This modules implements the necessary functions for the changes that can happen at epoch boundaries.
 module Cardano.Ledger.State.SnapShots (
-  Stake (..),
-  sumAllStake,
-  sumAllStakeCompact,
-  sumCredentialsCompactStake,
   sumStakePerPool,
   StakePoolSnapShot (..),
   mkStakePoolSnapShot,
@@ -102,13 +98,12 @@ import Cardano.Ledger.State.StakePool (
  )
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
--- import Control.Exception (assert)
+import Control.Exception (assert)
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State.Strict (get)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default, def)
-import Data.Foldable (foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -120,31 +115,6 @@ import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
-
--- | Type of stake as map from staking credential to coins associated. Any staking credential that
--- has no stake will not appear in this Map, even if it is registered. For this reason, this data
--- type should not be used for infering whether credential is registered or not.
-newtype Stake = Stake
-  { unStake :: VMap VB VP (Credential Staking) (CompactForm Coin)
-  }
-  deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR)
-
-instance DecShareCBOR Stake where
-  type Share Stake = Share (VMap VB VP (Credential Staking) (CompactForm Coin))
-  getShare = getShare . unStake
-  decShareCBOR = fmap Stake . decShareCBOR
-
-sumAllStake :: Stake -> Coin
-sumAllStake = fromCompact . sumAllStakeCompact
-{-# INLINE sumAllStake #-}
-
-sumAllStakeCompact :: Stake -> CompactForm Coin
-sumAllStakeCompact = VMap.foldl (<>) mempty . unStake
-{-# INLINE sumAllStakeCompact #-}
-
-sumCredentialsCompactStake :: Foldable f => Stake -> f (Credential 'Staking) -> CompactForm Coin
-sumCredentialsCompactStake (Stake stake) = foldMap' (fromMaybe mempty . (`VMap.lookup` stake))
-{-# INLINE sumCredentialsCompactStake #-}
 
 -- | Get stake of one pool
 poolStake ::
@@ -425,7 +395,7 @@ emptySnapShots =
 
 snapShotFromInstantStake ::
   forall era. EraStake era => InstantStake era -> DState era -> PState era -> SnapShot
-snapShotFromInstantStake iStake dState PState {psStakePools} =
+snapShotFromInstantStake instantStake dState PState {psStakePools} =
   SnapShot
     { ssStake = activeStake
     , ssTotalActiveStake = totalActiveStake
@@ -440,7 +410,7 @@ snapShotFromInstantStake iStake dState PState {psStakePools} =
         Map.map (mkStakePoolSnapShot activeStake totalActiveStake) psStakePools
     }
   where
-    activeStake = Stake $ VMap.fromMap $ resolveInstantStake iStake accounts
+    activeStake = resolveInstantStake instantStake accounts
     totalActiveStake =
       fromCompact (sumAllStakeCompact activeStake) `nonZeroOr` knownNonZeroCoin @1
     accounts = dsAccounts dState
@@ -478,7 +448,7 @@ calculatePoolDistr :: SnapShot -> PoolDistr
 calculatePoolDistr = calculatePoolDistr' (const True)
 
 calculatePoolDistr' :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
-calculatePoolDistr' includeHash ss@(SnapShot stake activeStake delegs poolParams stakePoolSnapShot) =
+calculatePoolDistr' includeHash (SnapShot stake activeStake delegs poolParams stakePoolSnapShot) =
   let total = sumAllStakeCompact stake
       -- total could be zero (in particular when shrinking)
       nonZeroTotal = fromCompactCoinNonZero $ total `nonZeroOr` knownNonZeroCompactCoin @1
@@ -510,11 +480,7 @@ calculatePoolDistr' includeHash ss@(SnapShot stake activeStake delegs poolParams
           { unPoolDistr = Map.mapMaybeWithKey toIndividualPoolStake stakePoolSnapShot
           , pdTotalActiveStake = activeStake
           }
-   in if oldPoolDistr == poolDistr
-        then poolDistr
-        else error $ show ss <> "\n" <> show oldPoolDistr <> "\n/=\n" <> show poolDistr
-
--- assert (oldPoolDistr == poolDistr) poolDistr
+   in assert (oldPoolDistr == poolDistr) poolDistr
 
 -- ======================================================
 -- Lenses

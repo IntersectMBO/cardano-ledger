@@ -1,17 +1,24 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 -- TODO: submit a ghc bug report
 -- some GHC bug wrongfully complains about CanGetInstantStake constraint being redundant.
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.State.Stake (
+  Stake (..),
+  sumAllStake,
+  sumAllStakeCompact,
+  sumCredentialsCompactStake,
   EraStake (..),
   CanGetInstantStake (..),
   CanSetInstantStake (..),
@@ -24,6 +31,7 @@ import Cardano.Ledger.Binary (
   Interns,
  )
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.State.Account
@@ -32,12 +40,42 @@ import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Data.Aeson (ToJSON)
 import Data.Default (Default)
+import Data.Foldable (foldMap')
 import Data.Functor.Identity
 import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
 import Data.Map.Strict (Map)
+import Data.Maybe (fromMaybe)
+import Data.VMap (VB, VMap, VP)
+import qualified Data.VMap as VMap
+import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+
+-- | Type of stake as map from staking credential to coins associated. Any staking credential that
+-- has no stake will not appear in this Map, even if it is registered. For this reason, this data
+-- type should not be used for infering whether credential is registered or not.
+newtype Stake = Stake
+  { unStake :: VMap VB VP (Credential Staking) (CompactForm Coin)
+  }
+  deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR)
+
+instance DecShareCBOR Stake where
+  type Share Stake = Share (VMap VB VP (Credential Staking) (CompactForm Coin))
+  getShare = getShare . unStake
+  decShareCBOR = fmap Stake . decShareCBOR
+
+sumAllStake :: Stake -> Coin
+sumAllStake = fromCompact . sumAllStakeCompact
+{-# INLINE sumAllStake #-}
+
+sumAllStakeCompact :: Stake -> CompactForm Coin
+sumAllStakeCompact = VMap.foldl (<>) mempty . unStake
+{-# INLINE sumAllStakeCompact #-}
+
+sumCredentialsCompactStake :: Foldable f => Stake -> f (Credential Staking) -> CompactForm Coin
+sumCredentialsCompactStake (Stake stake) = foldMap' (fromMaybe mempty . (`VMap.lookup` stake))
+{-# INLINE sumCredentialsCompactStake #-}
 
 class
   ( EraAccounts era
@@ -75,8 +113,7 @@ class
 
   -- | Using known stake credential registrations and delegations resolve the instant stake into a
   -- `Stake` that will be used for `SnapShot` creation by `snapShotFromInstantStake`.
-  resolveInstantStake ::
-    InstantStake era -> Accounts era -> Map (Credential Staking) (CompactForm Coin)
+  resolveInstantStake :: InstantStake era -> Accounts era -> Stake
 
 class CanGetInstantStake t where
   instantStakeG :: SimpleGetter (t era) (InstantStake era)

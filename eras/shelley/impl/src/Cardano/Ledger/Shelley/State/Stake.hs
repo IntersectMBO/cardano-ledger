@@ -43,6 +43,7 @@ import Data.Coerce
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -148,9 +149,9 @@ resolveShelleyInstantStake ::
   ) =>
   ShelleyInstantStake era ->
   ShelleyAccounts era ->
-  Map.Map (Credential 'Staking) (CompactForm Coin)
+  Stake
 resolveShelleyInstantStake instantStake@ShelleyInstantStake {sisPtrStake} sas =
-  Map.foldlWithKey' addPtrStake credentialStakeMap sisPtrStake
+  Stake $ VMap.fromMap $ Map.foldlWithKey' addPtrStake credentialStakeMap sisPtrStake
   where
     !credentialStakeMap = resolveActiveInstantStakeCredentials instantStake sas
     addPtrStake !acc ptr ptrStake = fromMaybe acc $ do
