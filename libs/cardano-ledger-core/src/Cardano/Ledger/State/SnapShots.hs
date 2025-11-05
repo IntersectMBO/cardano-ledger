@@ -314,7 +314,7 @@ data SnapShot = SnapShot
   -- stake to produce blocks.
   , ssDelegations :: !(VMap VB VB (Credential Staking) (KeyHash StakePool)) -- TODO: remove
   , ssPoolParams :: !(VMap VB VB (KeyHash StakePool) StakePoolParams) -- TODO: remove
-  , ssStakePoolSnapShots :: !(Map (KeyHash StakePool) StakePoolSnapShot)
+  , ssStakePoolsSnapShot :: !(Map (KeyHash StakePool) StakePoolSnapShot)
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs SnapShot
@@ -331,7 +331,7 @@ instance EncCBOR SnapShot where
           <> encCBOR ssTotalActiveStake
           <> encCBOR ssDelegations
           <> encCBOR ssPoolParams
-          <> encCBOR ssStakePoolSnapShots
+          <> encCBOR ssStakePoolsSnapShot
 
 instance DecShareCBOR SnapShot where
   type Share SnapShot = (Interns (Credential Staking), Interns (KeyHash StakePool))
@@ -341,7 +341,7 @@ instance DecShareCBOR SnapShot where
     ssDelegations <- decSharePlusCBOR
     ssPoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     (stakeCredInterns, stakePoolIdInterns) <- get
-    ssStakePoolSnapShots <-
+    ssStakePoolsSnapShot <-
       lift $ decodeMap (interns stakePoolIdInterns <$> decCBOR) (decShareCBOR stakeCredInterns)
     pure SnapShot {..}
 
@@ -352,7 +352,7 @@ instance ToKeyValuePairs SnapShot where
         , "totalActiveStake" .= ssTotalActiveStake
         , "delegations" .= ssDelegations
         , "poolParams" .= ssPoolParams
-        , "stakePoolSnapShots" .= ssStakePoolSnapShots
+        , "stakePoolsSnapShot" .= ssStakePoolsSnapShot
         ]
 
 -- | Snapshots of the stake distribution.
@@ -428,7 +428,7 @@ snapShotFromInstantStake iStake dState PState {psStakePools} =
         VMap.fromDistinctAscListN
           (Map.size psStakePools)
           [(poolId, stakePoolStateToStakePoolParams poolId ps) | (poolId, ps) <- Map.toAscList psStakePools]
-    , ssStakePoolSnapShots =
+    , ssStakePoolsSnapShot =
         Map.map (mkStakePoolSnapShot activeStake totalActiveStake) psStakePools
     }
   where
