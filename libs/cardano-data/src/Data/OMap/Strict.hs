@@ -304,13 +304,12 @@ extractKeys ks (OMap sseq kv) =
 --
 -- >>> :set -XFlexibleInstances -XMultiParamTypeClasses
 -- >>> import Data.OMap.Strict
--- >>> import Lens.Micro
--- >>> instance HasOKey Int (Int, Char) where okeyL = _1
+-- >>> instance HasOKey Int (Int, Char) where toOKey = fst
 -- >>> let m = fromFoldable $ zip [1,2] ['a','b'] :: OMap Int (Int, Char)
 -- >>> m
 -- StrictSeq {fromStrict = fromList [(1,(1,'a')),(2,(2,'b'))]}
 -- >>> let adjustingFn (k, v) = (k, succ v) -- Changes the value
--- >>> let overwritingAdjustingFn (k,v) = (succ k, v) -- Changes the `okeyL`.
+-- >>> let overwritingAdjustingFn (k,v) = (succ k, v) -- Modify the key.
 -- >>> adjust adjustingFn 1 m
 -- StrictSeq {fromStrict = fromList [(1,(1,'b')),(2,(2,'b'))]}
 -- >>> adjust overwritingAdjustingFn  1 m
