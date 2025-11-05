@@ -121,7 +121,7 @@ instance
           (BlocksMade Map.empty)
           def
           SNothing
-          (PoolDistr Map.empty mempty)
+          def
           def
     ]
 

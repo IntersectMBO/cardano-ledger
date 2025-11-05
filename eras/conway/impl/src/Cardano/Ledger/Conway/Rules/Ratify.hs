@@ -34,6 +34,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
   addEpochInterval,
+  unNonZero,
   (%?),
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
@@ -195,7 +196,7 @@ spoAcceptedRatio ::
   ConwayEraAccounts era => RatifyEnv era -> GovActionState era -> ProtVer -> Rational
 spoAcceptedRatio
   RatifyEnv
-    { reStakePoolDistr = PoolDistr individualPoolStake (CompactCoin totalActiveStake)
+    { reStakePoolDistr = PoolDistr individualPoolStake totalActiveStake
     , reAccounts
     , reStakePools
     }
@@ -204,7 +205,7 @@ spoAcceptedRatio
     , gasProposalProcedure = ProposalProcedure {pProcGovAction}
     }
   pv =
-    toInteger yesStake %? toInteger (totalActiveStake - abstainStake)
+    toInteger yesStake %? (unCoin (unNonZero totalActiveStake) - toInteger abstainStake)
     where
       accumStake (!yes, !abstain) poolId distr =
         let CompactCoin stake = individualTotalPoolStake distr

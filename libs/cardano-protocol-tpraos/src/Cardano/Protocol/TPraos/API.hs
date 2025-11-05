@@ -59,6 +59,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
+import Cardano.Ledger.Coin (knownNonZeroCoin)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -593,7 +594,7 @@ mkInitialShelleyLedgerView transCtxt =
    in LedgerView
         { lvD = fbtcProtocolParams transCtxt ^. ppDG
         , lvExtraEntropy = ee
-        , lvPoolDistr = PoolDistr Map.empty mempty
+        , lvPoolDistr = PoolDistr Map.empty (knownNonZeroCoin @1)
         , lvGenDelegs = GenDelegs $ fbtcGenDelegs transCtxt
         , lvChainChecks = pparamsToChainChecksPParams . fbtcProtocolParams $ transCtxt
         }

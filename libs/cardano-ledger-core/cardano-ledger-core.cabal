@@ -219,6 +219,7 @@ library testlib
     ImpSpec,
     QuickCheck,
     aeson,
+    cardano-crypto-class,
     aeson-pretty,
     base,
     base16-bytestring,
