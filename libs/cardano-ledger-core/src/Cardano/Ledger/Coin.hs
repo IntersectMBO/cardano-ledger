@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -6,8 +7,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UnboxedTuples #-}
 
 module Cardano.Ledger.Coin (
@@ -33,12 +36,17 @@ module Cardano.Ledger.Coin (
   toCoinNonZero,
   fromCompactCoinNonZero,
   compactCoinNonZero,
+  knownNonZeroCoin,
+  knownNonZeroCompactCoin,
 ) where
 
 import Cardano.Ledger.BaseTypes (
   HasZero (..),
   Inject (..),
   NonZero,
+  WithinBounds,
+  knownNonZero,
+  knownNonZeroBounded,
   unNonZero,
   unsafeNonZero,
  )
@@ -64,6 +72,7 @@ import Data.Primitive.Types
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Stack
+import GHC.TypeLits
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -124,7 +133,7 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin {unCompactCoin :: Word64}
-    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON, Generic)
+    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON, HasZero, Generic)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
@@ -223,3 +232,15 @@ compactCoinNonZero = unsafeNonZero . CompactCoin . unNonZero
 
 partialCompactCoinL :: HasCallStack => Lens' (CompactForm Coin) Coin
 partialCompactCoinL = lens fromCompact $ const compactCoinOrError
+
+knownNonZeroCoin ::
+  forall (n :: Nat).
+  (KnownNat n, 1 <= n) =>
+  NonZero Coin
+knownNonZeroCoin = toCoinNonZero (knownNonZero @n)
+
+knownNonZeroCompactCoin ::
+  forall (n :: Nat).
+  (KnownNat n, 1 <= n, WithinBounds n Word64) =>
+  NonZero (CompactForm Coin)
+knownNonZeroCompactCoin = compactCoinNonZero (knownNonZeroBounded @n)

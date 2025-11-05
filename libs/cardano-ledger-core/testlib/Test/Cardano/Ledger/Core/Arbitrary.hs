@@ -474,9 +474,7 @@ instance Arbitrary ChainAccountState where
 ------------------------------------------------------------------------------------------
 
 instance Arbitrary PoolDistr where
-  arbitrary = do
-    Positive denominator <- arbitrary
-    PoolDistr <$> arbitrary <*> pure (CompactCoin denominator)
+  arbitrary = PoolDistr <$> arbitrary <*> arbitrary
 
 instance Arbitrary IndividualPoolStake where
   arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary
@@ -642,10 +640,25 @@ instance Arbitrary FutureGenDeleg where
 -- Cardano.Ledger.EpochBoundary ----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+instance Arbitrary StakePoolSnapShot where
+  arbitrary =
+    StakePoolSnapShot
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
 instance Arbitrary SnapShot where
   arbitrary =
     SnapShot
       <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
 

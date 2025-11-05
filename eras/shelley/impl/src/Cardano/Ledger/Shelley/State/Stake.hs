@@ -151,7 +151,7 @@ resolveShelleyInstantStake ::
   ShelleyAccounts era ->
   Stake
 resolveShelleyInstantStake instantStake@ShelleyInstantStake {sisPtrStake} sas =
-  Stake $ VMap.fromMap $ Map.foldlWithKey' addPtrStake credentialStakeMap sisPtrStake
+  Map.foldlWithKey' addPtrStake credentialStakeMap sisPtrStake
   where
     !credentialStakeMap = resolveActiveInstantStakeCredentials instantStake sas
     addPtrStake !acc ptr ptrStake = fromMaybe acc $ do

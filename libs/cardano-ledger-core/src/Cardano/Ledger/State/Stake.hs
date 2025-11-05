@@ -15,7 +15,6 @@ module Cardano.Ledger.State.Stake (
   EraStake (..),
   CanGetInstantStake (..),
   CanSetInstantStake (..),
-  snapShotFromInstantStake,
   resolveActiveInstantStakeCredentials,
 ) where
 
@@ -28,9 +27,6 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.State.Account
-import Cardano.Ledger.State.CertState (DState (..), PState (..))
-import Cardano.Ledger.State.SnapShots
-import Cardano.Ledger.State.StakePool (stakePoolStateToStakePoolParams)
 import Cardano.Ledger.State.UTxO
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -40,8 +36,6 @@ import Data.Functor.Identity
 import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import qualified Data.VMap as VMap
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
@@ -81,33 +75,8 @@ class
 
   -- | Using known stake credential registrations and delegations resolve the instant stake into a
   -- `Stake` that will be used for `SnapShot` creation by `snapShotFromInstantStake`.
-  resolveInstantStake :: InstantStake era -> Accounts era -> Stake
-
-snapShotFromInstantStake ::
-  forall era. EraStake era => InstantStake era -> DState era -> PState era -> SnapShot
-snapShotFromInstantStake iStake dState PState {psStakePools} =
-  SnapShot
-    { ssStake = resolveInstantStake iStake accounts
-    , ssDelegations = VMap.fromDistinctAscListN delegsCount delegsAscList
-    , ssPoolParams =
-        VMap.fromDistinctAscListN
-          (Map.size psStakePools)
-          [(poolId, stakePoolStateToStakePoolParams poolId ps) | (poolId, ps) <- Map.toAscList psStakePools]
-    }
-  where
-    accounts = dsAccounts dState
-    keepAndCountDelegations ::
-      Credential Staking ->
-      AccountState era ->
-      ([(Credential Staking, KeyHash StakePool)], Int) ->
-      ([(Credential Staking, KeyHash StakePool)], Int)
-    keepAndCountDelegations cred accountState acc@(!delegs, !count) =
-      case accountState ^. stakePoolDelegationAccountStateL of
-        Nothing -> acc
-        Just deleg -> ((cred, deleg) : delegs, count + 1)
-    (delegsAscList, delegsCount) =
-      Map.foldrWithKey keepAndCountDelegations ([], 0) $ accounts ^. accountsMapL
-{-# INLINE snapShotFromInstantStake #-}
+  resolveInstantStake ::
+    InstantStake era -> Accounts era -> Map (Credential Staking) (CompactForm Coin)
 
 class CanGetInstantStake t where
   instantStakeG :: SimpleGetter (t era) (InstantStake era)
