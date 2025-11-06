@@ -7,7 +7,9 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-} -- Remove when removing `sumStakePerPool` usage
+-- Remove when removing `sumStakePerPool` usage
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
   startStep,
   pulseStep,

@@ -11,9 +11,8 @@
 module Test.Cardano.Ledger.Conway.SPORatifySpec (spec) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), nonZeroOr, unNonZero)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
 import Cardano.Ledger.Conway (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -39,7 +38,6 @@ import Data.Default (def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromKeys)
-import Data.Maybe (fromJust)
 import Data.Ratio ((%))
 import Lens.Micro
 import Test.Cardano.Ledger.Common
@@ -75,19 +73,19 @@ acceptedRatioProp = do
                   gas {gasStakePoolVotes = votes}
                   protVer
               expected =
-                if fromCompact totalStake == stakeAbstain <+> stakeAlwaysAbstain
+                if totalStake == stakeAbstain <+> stakeAlwaysAbstain
                   then 0
                   else case gas ^. gasActionL of
-                    HardForkInitiation _ _ -> unCoin stakeYes % unCoin (fromCompact totalStake <-> stakeAbstain)
+                    HardForkInitiation _ _ -> unCoin stakeYes % unCoin (totalStake <-> stakeAbstain)
                     action
                       | hardforkConwayBootstrapPhase protVer ->
                           unCoin stakeYes
-                            % unCoin (fromCompact totalStake <-> stakeAbstain <-> stakeAlwaysAbstain <-> stakeNoConfidence)
+                            % unCoin (totalStake <-> stakeAbstain <-> stakeAlwaysAbstain <-> stakeNoConfidence)
                       | NoConfidence {} <- action ->
                           unCoin (stakeYes <+> stakeNoConfidence)
-                            % unCoin (fromCompact totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
+                            % unCoin (totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
                       | otherwise ->
-                          unCoin stakeYes % unCoin (fromCompact totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
+                          unCoin stakeYes % unCoin (totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
             actual `shouldBe` expected
         )
 
@@ -96,7 +94,7 @@ noStakeProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> IO ())
     "If there is no stake, accept iff threshold is zero"
     ( \(re, rs, gas) ->
-        let re' = re {reStakePoolDistr = PoolDistr Map.empty (fromJust . toCompact $ Coin 100)}
+        let re' = re {reStakePoolDistr = PoolDistr Map.empty (knownNonZeroCoin @100)}
          in spoAccepted @era re' rs gas
               `shouldBe` (votingStakePoolThreshold @era rs (gasAction gas) == SJust minBound)
     )
@@ -153,7 +151,7 @@ allYesProp =
                       re {reStakePoolDistr = distr}
                       gas {gasStakePoolVotes = votes}
                       (rs ^. rsEnactStateL . ensProtVerL)
-               in if fromCompact totalStake == Coin 0
+               in if totalStake == Coin 0
                     then acceptedRatio `shouldBe` 0
                     else acceptedRatio `shouldBe` 1
           )
@@ -178,7 +176,7 @@ noConfidenceProp =
 data TestData era = TestData
   { distr :: PoolDistr
   , votes :: Map (KeyHash StakePool) Vote
-  , totalStake :: CompactForm Coin
+  , totalStake :: Coin
   , stakeYes :: Coin
   , stakeNo :: Coin
   , stakeAbstain :: Coin
@@ -223,7 +221,7 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
             , (poolsNoConfidence, indivStake)
             ]
         )
-        (CompactCoin $ fromIntegral totalStake)
+        (Coin (toInteger totalStake) `nonZeroOr` knownNonZeroCoin @1)
 
   poolStateAA <- genPoolState poolsAlwaysAbstain
   poolStateNC <- genPoolState poolsNoConfidence
@@ -236,7 +234,7 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
     TestData
       { distr
       , votes
-      , totalStake = pdTotalActiveStake distr
+      , totalStake = unNonZero $ pdTotalActiveStake distr
       , stakeYes = Coin . fromIntegral $ length poolsYes
       , stakeNo = Coin . fromIntegral $ length poolsNo
       , stakeAbstain = Coin . fromIntegral $ length poolsAbstain

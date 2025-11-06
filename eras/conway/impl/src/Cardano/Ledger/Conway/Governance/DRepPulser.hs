@@ -42,6 +42,8 @@ import Cardano.Ledger.BaseTypes (
   Globals (..),
   KeyValuePairs (..),
   ToKeyValuePairs (..),
+  unNonZero,
+  unsafeNonZero,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -204,6 +206,7 @@ instance EraPParams era => FromCBOR (PulsingSnapshot era) where
 --   (e) is the size of the registered DReps, lookup
 --   (f) is the size of the PoolDistr, insert
 computeDRepDistr ::
+  forall era.
   (EraStake era, ConwayEraAccounts era) =>
   InstantStake era ->
   Map (Credential DRepRole) DRepState ->
@@ -230,7 +233,7 @@ computeDRepDistr instantStake regDReps proposalDeposits poolDistr dRepDistr =
       pure $
         distr
           & poolDistrDistrL %~ Map.insert stakePool (ips & individualTotalPoolStakeL <>~ proposalDeposit)
-          & poolDistrTotalL <>~ proposalDeposit
+          & poolDistrTotalL %~ \t -> unsafeNonZero (unNonZero t <> fromCompact proposalDeposit)
     addToDRepDistr accountState stakeAndDeposits distr = fromMaybe distr $ do
       dRep <- accountState ^. dRepDelegationAccountStateL
       let
