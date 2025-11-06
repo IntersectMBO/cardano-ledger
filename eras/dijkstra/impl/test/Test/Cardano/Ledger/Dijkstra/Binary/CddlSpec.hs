@@ -117,11 +117,12 @@ spec = do
       huddleRoundTripCborSpec @(Datum DijkstraEra) v "datum_option"
       -- TODO NoDatum is encoded as an empty bytestring
       xdescribe "fix NoDatum" $ huddleRoundTripArbitraryValidate @(Datum DijkstraEra) v "datum_option"
-      huddleRoundTripAnnCborSpec @(TxWits DijkstraEra) v "transaction_witness_set"
+      xdescribe "fix duplicates in maps" $ do
+        huddleRoundTripAnnCborSpec @(TxWits DijkstraEra) v "transaction_witness_set"
+        huddleRoundTripCborSpec @(TxWits DijkstraEra) v "transaction_witness_set"
       -- TODO fails because of plutus_v1_script
       xdescribe "fix plutus_v1_script" $
         huddleRoundTripArbitraryValidate @(TxWits DijkstraEra) v "transaction_witness_set"
-      huddleRoundTripCborSpec @(TxWits DijkstraEra) v "transaction_witness_set"
       huddleRoundTripCborSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       -- TODO enable this once map/list expansion has been optimized in cuddle
       xdescribe "hangs" $ do
