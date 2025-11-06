@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `lookupAccountStateIntern` to `State.Account` module
 * Add `HasOKey` instance for `TxId (Tx l era)`
 * Remove `Generic` instance from `BoundedRatio` type
 * Remove deprecated function `addrPtrNormalize`

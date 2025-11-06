@@ -286,15 +286,15 @@ delegationTransition = do
     DelegStakeTxCert cred stakePool -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
-      case lookupAccountState cred (ds ^. accountsL) of
+      case lookupAccountStateIntern cred (ds ^. accountsL) of
         Nothing -> do
           failBecause $ StakeDelegationImpossibleDELEG cred
           pure certState
-        Just accountState ->
+        Just (internedCred, accountState) ->
           pure $
             certState
               & certDStateL . accountsL %~ adjustAccountState (stakePoolDelegationAccountStateL ?~ stakePool) cred
-              & certPStateL %~ unDelegReDelegStakePool cred accountState (Just stakePool)
+              & certPStateL %~ unDelegReDelegStakePool internedCred accountState (Just stakePool)
     GenesisDelegTxCert gkh vkh vrf -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec

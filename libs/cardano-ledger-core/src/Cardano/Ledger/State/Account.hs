@@ -15,6 +15,7 @@ module Cardano.Ledger.State.Account (
   CanSetAccounts (..),
   EraAccounts (..),
   lookupAccountState,
+  lookupAccountStateIntern,
   updateLookupAccountState,
   isAccountRegistered,
   adjustAccountState,
@@ -44,6 +45,7 @@ import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (lookupInternMap)
 import Data.Set (Set)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -144,6 +146,12 @@ addToBalanceAccounts addBalanceMap accounts =
 lookupAccountState ::
   EraAccounts era => Credential 'Staking -> Accounts era -> Maybe (AccountState era)
 lookupAccountState cred accounts = Map.lookup cred (accounts ^. accountsMapL)
+
+lookupAccountStateIntern ::
+  EraAccounts era =>
+  Credential 'Staking -> Accounts era -> Maybe (Credential 'Staking, AccountState era)
+lookupAccountStateIntern cred accounts =
+  lookupInternMap cred (accounts ^. accountsMapL)
 
 -- | Update account state. Returns Nothing if the value is not present and modified value otherwise
 updateLookupAccountState ::

@@ -75,7 +75,6 @@ import Control.State.Transition (
  )
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust)
 import Data.Set as Set
 import Data.Void (Void)
 import GHC.Generics (Generic)
@@ -261,11 +260,19 @@ conwayDelegTransition = do
               & certVStateL %~ unDelegReDelegDRep stakeCred accountState Nothing
               & certPStateL %~ unDelegReDelegStakePool stakeCred accountState Nothing
     ConwayDelegCert stakeCred delegatee -> do
-      let mAccountState = lookupAccountState stakeCred accounts
-      isJust mAccountState ?! StakeKeyNotRegisteredDELEG stakeCred
       checkStakeDelegateeRegistered delegatee
-      pure $
-        processDelegationInternal (pvMajor pv < natVersion @10) stakeCred mAccountState delegatee certState
+      case lookupAccountStateIntern stakeCred accounts of
+        Nothing -> do
+          failBecause $ StakeKeyNotRegisteredDELEG stakeCred
+          pure certState
+        Just (internedCred, accountState) -> do
+          pure $
+            processDelegationInternal
+              (pvMajor pv < natVersion @10)
+              internedCred
+              (Just accountState)
+              delegatee
+              certState
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       checkDepositAgainstPParams deposit
       checkStakeKeyNotRegistered stakeCred
