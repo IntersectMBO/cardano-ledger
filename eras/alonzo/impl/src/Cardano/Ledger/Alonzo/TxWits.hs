@@ -643,6 +643,7 @@ instance
             if dh `Map.member` m
               then fail $ "Duplicate dats found: " <> show dh
               else go (Map.insert dh x' m) xs
+      {-# INLINE noDuplicatesDatsDecoder #-}
 
       noDuplicatesScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
       noDuplicatesScriptsDecoder = do
@@ -657,6 +658,7 @@ instance
             if sh `Map.member` m
               then fail $ "Duplicate scripts found: " <> show sh
               else go (Map.insert sh x' m) xs
+      {-# INLINE noDuplicatesScriptsDecoder #-}
 
       scriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
       scriptsDecoder =
