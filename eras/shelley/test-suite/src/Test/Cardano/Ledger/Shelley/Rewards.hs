@@ -758,7 +758,6 @@ reward
   totalStake = completeM pulser
     where
       totalBlocks = sum b
-      stakePerPool = sumStakePerPool delegs stake
       activeStake = sumAllStake stake
       -- ensure mkPoolRewardInfo does not use stake that doesn't belong to the pool
       stakeForPool pool = poolStake (sppId pool) delegs stake
@@ -770,10 +769,11 @@ reward
           totalBlocks
           (stakeForPool pool)
           delegs
-          stakePerPool
           totalStake
           activeStake
           pool
+          (ppId pool)
+          undefined
       free =
         FreeVars
           { fvAddrsRew = addrsRew
