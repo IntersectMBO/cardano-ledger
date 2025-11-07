@@ -28,6 +28,7 @@ module Data.MapExtras (
   extractKeysSmallSet,
   fromKeys,
   fromElems,
+  lookupInternMap,
 ) where
 
 import Data.Foldable (toList)
@@ -270,3 +271,16 @@ fromElems f vs =
   -- a nice optimization for already sorted keys and with list fusion there should be no overhead
   Map.fromList [(f v, v) | v <- toList vs]
 {-# INLINE fromElems #-}
+
+-- | Look up a key in a map and return the interned key together with its value, if present.
+-- The returned key is exactly the one stored in the map.
+-- Useful for maximizing sharing by avoiding duplicate-but-equal keys.
+lookupInternMap :: Ord k => k -> Map k v -> Maybe (k, v)
+lookupInternMap k = go
+  where
+    go Tip = Nothing
+    go (Bin _ kx v l r) =
+      case compare k kx of
+        LT -> go l
+        GT -> go r
+        EQ -> Just (kx, v)
