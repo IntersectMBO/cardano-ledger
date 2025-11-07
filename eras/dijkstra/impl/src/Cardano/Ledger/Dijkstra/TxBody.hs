@@ -136,7 +136,7 @@ import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq)
 import Data.Coerce (coerce)
-import Data.OMap.Strict (HasOKey (..), OMap)
+import Data.OMap.Strict (OMap)
 import Data.OSet.Strict (OSet, decodeOSet)
 import qualified Data.OSet.Strict as OSet
 import Data.STRef (newSTRef, readSTRef, writeSTRef)
@@ -243,7 +243,7 @@ instance EraTx era => NFData (DijkstraTxBodyRaw l era) where
 
 deriving instance EraTx era => Show (DijkstraTxBodyRaw l era)
 
-basicDijkstraTxBodyRaw :: DijkstraEraTxBody era => STxBothLevels l era -> DijkstraTxBodyRaw l era
+basicDijkstraTxBodyRaw :: EraTx era => STxBothLevels l era -> DijkstraTxBodyRaw l era
 basicDijkstraTxBodyRaw STopTx =
   DijkstraTxBodyRaw
     mempty
@@ -284,12 +284,7 @@ basicDijkstraTxBodyRaw SSubTx =
     mempty
     mempty
 
-instance
-  ( Typeable l
-  , DijkstraEraTxBody era
-  ) =>
-  DecCBOR (DijkstraTxBodyRaw l era)
-  where
+instance (Typeable l, EraTx era) => DecCBOR (DijkstraTxBodyRaw l era) where
   decCBOR = withSTxBothLevels @l $ \sTxLevel ->
     decode $
       SparseKeyed
@@ -655,12 +650,7 @@ type instance MemoHashIndex (DijkstraTxBodyRaw l DijkstraEra) = EraIndependentTx
 instance HashAnnotated (TxBody l DijkstraEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
-instance
-  ( Typeable l
-  , DijkstraEraTxBody era
-  ) =>
-  DecCBOR (Annotator (DijkstraTxBodyRaw l era))
-  where
+instance (Typeable l, EraTx era) => DecCBOR (Annotator (DijkstraTxBodyRaw l era)) where
   decCBOR = pure <$> decCBOR
 
 deriving via
@@ -1066,12 +1056,7 @@ instance EraTx DijkstraEra => ConwayEraTxBody DijkstraEra where
   treasuryDonationTxBodyL = memoRawTypeL @DijkstraEra . treasuryDonationDijkstraTxBodyRawL
   {-# INLINE treasuryDonationTxBodyL #-}
 
-class
-  ( ConwayEraTxBody era
-  , HasOKey TxId (Tx SubTx era)
-  ) =>
-  DijkstraEraTxBody era
-  where
+class (ConwayEraTxBody era, EraTx era) => DijkstraEraTxBody era where
   guardsTxBodyL :: Lens' (TxBody l era) (OSet (Credential Guard))
 
   subTransactionsTxBodyL :: Lens' (TxBody TopTx era) (OMap TxId (Tx SubTx era))
@@ -1090,9 +1075,6 @@ guardsDijkstraTxBodyRawL =
 
 subTransactionsDijkstraTxBodyL :: Lens' (DijkstraTxBodyRaw TopTx era) (OMap TxId (Tx SubTx era))
 subTransactionsDijkstraTxBodyL = lens dtbrSubTransactions (\x y -> x {dtbrSubTransactions = y})
-
-instance EraTx DijkstraEra => HasOKey TxId (Tx SubTx DijkstraEra) where
-  toOKey = txIdTx
 
 instance EraTx DijkstraEra => DijkstraEraTxBody DijkstraEra where
   {-# INLINE guardsTxBodyL #-}
