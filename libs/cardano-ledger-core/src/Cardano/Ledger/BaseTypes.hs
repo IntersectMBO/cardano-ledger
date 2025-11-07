@@ -185,6 +185,7 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet (Quiet (Quiet))
 import System.Random.Stateful (Random, Uniform (..), UniformRange (..))
+import Type.Reflection (typeRep)
 #if MIN_VERSION_random(1,3,0)
 import System.Random.Stateful (isInRangeOrd)
 #endif
@@ -343,11 +344,21 @@ fromRatioBoundedRatio ratio
     lowerBound = minBound :: BoundedRatio b a
     upperBound = maxBound :: BoundedRatio b a
 
-instance (ToCBOR a, Integral a, Bounded a, Typeable b) => ToCBOR (BoundedRatio b a) where
+instance
+  (ToCBOR a, Integral a, Bounded a, Typeable b, Typeable (BoundedRatio b a)) =>
+  ToCBOR (BoundedRatio b a)
+  where
   toCBOR (BoundedRatio u) = Plain.encodeRatioWithTag toCBOR u
 
 instance
-  (FromCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Show a) =>
+  ( FromCBOR a
+  , Bounded (BoundedRatio b a)
+  , Bounded a
+  , Integral a
+  , Typeable b
+  , Show a
+  , Typeable (BoundedRatio b a)
+  ) =>
   FromCBOR (BoundedRatio b a)
   where
   fromCBOR = do
@@ -359,7 +370,9 @@ instance
 
 instance (ToCBOR (BoundedRatio b a), Typeable b, Typeable a) => EncCBOR (BoundedRatio b a)
 
-instance (FromCBOR (BoundedRatio b a), Typeable b, Typeable a) => DecCBOR (BoundedRatio b a)
+instance
+  (FromCBOR (BoundedRatio b a), Typeable b, Typeable a, Typeable (BoundedRatio b a)) =>
+  DecCBOR (BoundedRatio b a)
 
 instance Bounded (BoundedRatio b Word64) => ToJSON (BoundedRatio b Word64) where
   toJSON :: BoundedRatio b Word64 -> Value
@@ -747,7 +760,14 @@ data Mismatch (r :: Relation) a = Mismatch
   { mismatchSupplied :: !a
   , mismatchExpected :: !a
   }
-  deriving (Eq, Ord, Show, Generic, NFData, ToJSON, FromJSON, NoThunks)
+  deriving (Eq, Ord, Generic, NFData, ToJSON, FromJSON, NoThunks)
+
+instance (Typeable r, Show a) => Show (Mismatch (r :: Relation) a) where
+  show (Mismatch {mismatchSupplied, mismatchExpected}) =
+    let headerLine = "Mismatch (" <> show (typeRep @r) <> ")"
+        suppliedLine = "supplied: " <> show mismatchSupplied
+        expectedLine = "expected: " <> show mismatchExpected
+     in headerLine <> " {" <> suppliedLine <> ", " <> expectedLine <> "}"
 
 -- | Convert a `Mismatch` to a tuple that has "supplied" and "expected" swapped places
 swapMismatch :: Mismatch r a -> (a, a)
