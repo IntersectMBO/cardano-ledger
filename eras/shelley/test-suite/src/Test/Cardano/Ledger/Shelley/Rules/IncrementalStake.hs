@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.BaseTypes (Globals, nonZeroOr)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -199,23 +199,28 @@ stakeDistr ::
   DState era ->
   PState era ->
   SnapShot
-stakeDistr u ds ps =
+stakeDistr u ds ps@PState {psStakePools} =
   SnapShot
-    (Stake $ VMap.fromMap (eval (dom activeDelegs ◁ stakeRelation)))
-    (VMap.fromMap delegs)
-    (VMap.fromMap $ Map.mapWithKey stakePoolStateToStakePoolParams poolState)
+    { ssStake = activeStake
+    , ssTotalActiveStake = totalActiveStake
+    , ssDelegations = VMap.fromMap delegs
+    , ssPoolParams = VMap.fromMap $ Map.mapWithKey stakePoolStateToStakePoolParams psStakePools
+    , ssStakePoolsSnapShot =
+        Map.map (mkStakePoolSnapShot activeStake totalActiveStake) psStakePools
+    }
   where
+    activeStake = Stake $ VMap.fromMap (eval (dom activeDelegs ◁ stakeRelation))
+    totalActiveStake = sumAllStake activeStake `nonZeroOr` knownNonZeroCoin @1
     accountsMap = ds ^. accountsL . accountsMapL
     rewards' :: Map.Map (Credential Staking) (CompactForm Coin)
     rewards' = Map.map (^. balanceAccountStateL) accountsMap
     delegs :: Map.Map (Credential Staking) (KeyHash StakePool)
     delegs = Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap
     ptrs' = ds ^. accountsL . accountsPtrsMapG
-    PState {psStakePools = poolState} = ps
     stakeRelation :: Map (Credential Staking) (CompactForm Coin)
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
     activeDelegs :: Map.Map (Credential Staking) (KeyHash StakePool)
-    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolState)
+    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom psStakePools)
 
 -- | Sum up all the Coin for each staking Credential. This function has an
 --   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'

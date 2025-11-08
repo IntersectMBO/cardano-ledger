@@ -28,7 +28,6 @@ module Cardano.Ledger.State.SnapShots (
   emptySnapShot,
   emptySnapShots,
   snapShotFromInstantStake,
-  poolStake,
   maxPool,
   maxPool',
   calculatePoolDistr,
@@ -115,16 +114,6 @@ import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
-
--- | Get stake of one pool
-poolStake ::
-  KeyHash StakePool ->
-  VMap VB VB (Credential Staking) (KeyHash StakePool) ->
-  Stake ->
-  Stake
-poolStake hk delegs (Stake stake) =
-  -- Stake $ (eval (dom (delegs ▷ setSingleton hk) ◁ stake))
-  Stake $ VMap.filter (\cred _ -> VMap.lookup cred delegs == Just hk) stake
 
 -- | Compute amount of stake each pool has. Any registered stake pool that has no stake will not be
 -- included in the resulting map
@@ -284,6 +273,8 @@ instance DecShareCBOR StakePoolSnapShot where
 -- | Snapshot of the stake distribution.
 data SnapShot = SnapShot
   { ssStake :: !Stake -- TODO: rename to `ssActiveStake`
+
+  -- ^ All of the stake for registered staking credentials that have a delegation to a stake pool.
   , ssTotalActiveStake :: NonZero Coin
   -- ^ Total active stake is primarely used in denominator, therefore it cannot be zero and is
   -- defaulted to 1. This is a reasonable assumption for a system that relies on non-zero active
@@ -291,6 +282,7 @@ data SnapShot = SnapShot
   , ssDelegations :: !(VMap VB VB (Credential Staking) (KeyHash StakePool)) -- TODO: remove
   , ssPoolParams :: !(VMap VB VB (KeyHash StakePool) StakePoolParams) -- TODO: remove
   , ssStakePoolsSnapShot :: !(Map (KeyHash StakePool) StakePoolSnapShot)
+  -- ^ Snapshot of stake pools' information that is relevant only for the reward calculation logic.
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs SnapShot
@@ -411,8 +403,7 @@ snapShotFromInstantStake instantStake dState PState {psStakePools} =
     }
   where
     activeStake = resolveInstantStake instantStake accounts
-    totalActiveStake =
-      fromCompact (sumAllStakeCompact activeStake) `nonZeroOr` knownNonZeroCoin @1
+    totalActiveStake = sumAllStake activeStake `nonZeroOr` knownNonZeroCoin @1
     accounts = dsAccounts dState
     keepAndCountDelegations ::
       Credential Staking ->

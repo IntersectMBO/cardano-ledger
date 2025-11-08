@@ -353,7 +353,7 @@ mkPoolRewardInfo
   delegs
   (Coin totalStake)
   totalActiveStake
-  stakePoolParams
+  stakePools
   stakePoolId
   stakePoolSnapShot =
     case Map.lookup stakePoolId (unBlocksMade blocks) of
@@ -396,7 +396,7 @@ mkPoolRewardInfo
         guard (hk == stakePoolId)
         VMap.lookup (KeyHashObj o) (unStake stake)
       Coin poolOwnerStakeOld =
-        case VMap.lookup stakePoolId stakePoolParams of
+        case VMap.lookup stakePoolId stakePools of
           Nothing ->
             error $ "Impossible: Transition to StakePoolSnapShot is missing relevant pool: " <> show stakePoolId
           Just pool ->

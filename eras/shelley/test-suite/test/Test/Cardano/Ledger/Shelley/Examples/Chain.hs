@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Shelley.Examples.Chain (
@@ -6,6 +7,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Chain (
 ) where
 
 import Cardano.Ledger.Block (Block)
+import Cardano.Ledger.Coin (knownNonZeroCoin)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (nesPdL)
 import Cardano.Ledger.Shelley.Scripts ()
@@ -37,11 +39,11 @@ testCHAINExample :: HasCallStack => CHAINExample ShelleyEra -> Assertion
 testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
   ( checkTrace @(CHAIN ShelleyEra) runShelleyBase () $
       ( pure initSt .- block
-          <&> chainStateNesL . nesPdL . poolDistrTotalL .~ mempty
+          <&> chainStateNesL . nesPdL . poolDistrTotalL .~ knownNonZeroCoin @1
           <&> chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
       )
         .->> ( expectedSt
-                 & chainStateNesL . nesPdL . poolDistrTotalL .~ mempty
+                 & chainStateNesL . nesPdL . poolDistrTotalL .~ knownNonZeroCoin @1
                  & chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
              )
     )
