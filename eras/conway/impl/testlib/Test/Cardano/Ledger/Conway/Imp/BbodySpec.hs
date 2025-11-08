@@ -21,11 +21,12 @@ import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
-import Cardano.Ledger.TxIn
-import Control.Monad (forM)
+import Data.Foldable (for_)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
+import Data.Traversable (for)
 import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Babbage.ImpTest
@@ -48,24 +49,26 @@ spec = do
     let
       maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
       maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+
     txScriptCounts <-
       genNumAdditionsExceeding
         scriptSize
         maxRefScriptSizePerTx
         maxRefScriptSizePerBlock
 
-    let mkTxWithNScripts n = do
-          -- Instead of using the rootTxIn, we're creating an input for each transaction
-          -- so that they're independent of each other
-          txIn <- freshKeyAddr_ >>= \addr -> sendCoinTo addr (Coin 100_000_000)
-          refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
-          pure $ mkTxWithRefInputs txIn (NE.fromList refIns)
+    allInputs <- for txScriptCounts $ \n -> do
+      -- Instead of using the rootTxIn, we're creating an input for each transaction
+      -- so that they're independent of each other
+      txIn <- freshKeyAddr_ >>= \addr -> sendCoinTo addr (Coin 100_000_000)
+      refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
+      pure (txIn, NE.fromList refIns)
 
-    txs <- forM txScriptCounts mkTxWithNScripts
-    fixedUpTxs <- simulateThenRestore $ forM txs submitTx
+    let
+      -- These txs will be grouped into a block
+      buildTxs = for_ allInputs $ uncurry submitTxWithRefInputs
 
-    submitFailingBlock
-      fixedUpTxs
+    withTxsInFailingBlock
+      buildTxs
       [ injectFailure
           ( BodyRefScriptsSizeTooBig $
               Mismatch
@@ -90,27 +93,16 @@ spec = do
           maxRefScriptSizePerTx
           maxRefScriptSizePerBlock
 
-      -- We are creating reference scripts and transaction that depend on them in a "simulation",
-      -- so the result will be correctly constructed that are not applied to the ledger state
-      txs :: [Tx TopTx era] <- simulateThenRestore $ do
-        concat
-          <$> forM
-            txScriptCounts
-            ( \n -> do
-                -- produce reference scripts
-                refScriptTxs <-
-                  replicateM n $
-                    produceRefScriptsTx (fromPlutusScript plutusScript :| [])
+      let
+        -- These txs will be grouped into a block
+        buildTxs = for_ txScriptCounts $ \n -> do
+          refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
+          submitTx $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . referenceInputsTxBodyL .~ Set.fromList refIns
 
-                -- spend using the reference scripts
-                let txIns = (`mkTxInPartial` 0) . txIdTx <$> refScriptTxs
-                rootIn <- fst <$> getImpRootTxOut
-                spendTx <- submitTxWithRefInputs rootIn (NE.fromList txIns)
-                pure $ refScriptTxs ++ [spendTx]
-            )
-
-      submitFailingBlock
-        txs
+      withTxsInFailingBlock
+        buildTxs
         [ injectFailure
             ( BodyRefScriptsSizeTooBig $
                 Mismatch
@@ -187,7 +179,7 @@ spec = do
     let (txWithSizes, expectedTotalSize) = txsWithRefScriptSizes
 
     -- for each prefix of the list, the accumulated sum should match the sum of the applied transactions
-    forM_ ([1 .. length txWithSizes] :: [Int]) $ \ix -> do
+    for_ ([1 .. length txWithSizes] :: [Int]) $ \ix -> do
       let slice = take ix txWithSizes
 
       totalRefScriptSizeInBlock protVer (SSeq.fromList (fst <$> slice))
