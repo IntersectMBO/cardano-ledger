@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Change `KeyRoleVRF` type to only be visible at the type level
 * Add `lookupAccountStateIntern` to `State.Account` module
 * Add `HasOKey` instance for `TxId (Tx l era)`
 * Remove `Generic` instance from `BoundedRatio` type

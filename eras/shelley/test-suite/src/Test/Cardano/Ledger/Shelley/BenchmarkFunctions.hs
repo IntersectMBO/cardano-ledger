@@ -347,7 +347,7 @@ mkPoolKeyHash = hashKey . vKey
 firstStakePoolKeyHash :: KeyHash 'StakePool
 firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 
-vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF
+vrfKeyHash :: VRFVerKeyHash StakePoolVRF
 vrfKeyHash = hashVerKeyVRF @MockCrypto . vrfVerKey . mkVRFKeyPair @MockCrypto $ RawSeed 0 0 0 0 0
 
 mkStakePoolParams :: KeyPair 'StakePool -> StakePoolParams

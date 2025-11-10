@@ -100,8 +100,8 @@ data OverlayPredicateFailure c
       (KeyHash 'StakePool) -- unknown VRF keyhash (not registered)
   | VRFKeyWrongVRFKey
       (KeyHash 'StakePool) -- KeyHash of block issuer
-      (VRFVerKeyHash 'StakePoolVRF) -- VRF KeyHash registered with stake pool
-      (VRFVerKeyHash 'BlockIssuerVRF) -- VRF KeyHash from Header
+      (VRFVerKeyHash StakePoolVRF) -- VRF KeyHash registered with stake pool
+      (VRFVerKeyHash BlockIssuerVRF) -- VRF KeyHash from Header
   | VRFKeyBadNonce
       Nonce -- Nonce constant to distinguish VRF nonce values
       SlotNo -- Slot used for VRF calculation
@@ -123,8 +123,8 @@ data OverlayPredicateFailure c
       (KeyHash 'GenesisDelegate) -- KeyHash genesis delegate keyhash assigned to this slot
   | WrongGenesisVRFKeyOVERLAY
       (KeyHash 'BlockIssuer) -- KeyHash of block issuer
-      (VRFVerKeyHash 'GenDelegVRF) -- VRF KeyHash registered with genesis delegation
-      (VRFVerKeyHash 'BlockIssuerVRF) -- VRF KeyHash from Header
+      (VRFVerKeyHash GenDelegVRF) -- VRF KeyHash registered with genesis delegation
+      (VRFVerKeyHash BlockIssuerVRF) -- VRF KeyHash from Header
   | UnknownGenesisKeyOVERLAY
       (KeyHash 'Genesis) -- KeyHash which does not correspond to o genesis node
   | OcertFailure (PredicateFailure (OCERT c)) -- Subtransition Failures
@@ -215,7 +215,7 @@ pbftVrfChecks ::
   ( Crypto c
   , VRF.Signable (VRF c) Seed
   ) =>
-  VRFVerKeyHash 'GenDelegVRF ->
+  VRFVerKeyHash GenDelegVRF ->
   Nonce ->
   BHBody c ->
   Either (PredicateFailure (OVERLAY c)) ()

@@ -515,7 +515,7 @@ tests =
               , SingleHostName (SJust 42) $ Maybe.fromJust $ textToDns 64 "singlehost.relay.com"
               , MultiHostName $ Maybe.fromJust $ textToDns 64 "multihost.relay.com"
               ]
-          vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF
+          vrfKeyHash :: VRFVerKeyHash StakePoolVRF
           vrfKeyHash = testVRFKH
        in checkEncodingCBOR
             shelleyProtVer
@@ -571,7 +571,7 @@ tests =
             <> S (hashKey $ vKey testStakePoolKey) -- key hash
             <> S (EpochNo 1729) -- epoch
         )
-    , let vrfKeyHash :: VRFVerKeyHash 'GenDelegVRF
+    , let vrfKeyHash :: VRFVerKeyHash GenDelegVRF
           vrfKeyHash = testVRFKH
           genesisDelegate :: KeyHash 'GenesisDelegate
           genesisDelegate = hashKey $ vKey testGenesisDelegateKey

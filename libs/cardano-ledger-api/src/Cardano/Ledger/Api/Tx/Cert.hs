@@ -346,7 +346,7 @@ pattern AnyEraGenesisDelegTxCert ::
   AnyEraTxCert era =>
   KeyHash 'Genesis ->
   KeyHash 'GenesisDelegate ->
-  VRFVerKeyHash 'GenDelegVRF ->
+  VRFVerKeyHash GenDelegVRF ->
   TxCert era
 pattern AnyEraGenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
   (anyEraToGenesisDelegTxCert -> Just (GenesisDelegCert genKey genDelegKey vrfKeyHash))

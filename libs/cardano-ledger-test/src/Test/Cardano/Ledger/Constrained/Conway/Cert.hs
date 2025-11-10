@@ -138,7 +138,7 @@ genesisDelegCertSpec ds =
 --   This mimics what happens in the Cardano.Ledger.Shelley.Rules.Deleg module
 computeSets ::
   DState era ->
-  ( KeyHash 'Genesis -> Set (VRFVerKeyHash 'GenDelegVRF)
+  ( KeyHash 'Genesis -> Set (VRFVerKeyHash GenDelegVRF)
   , KeyHash 'Genesis -> Set (KeyHash 'GenesisDelegate)
   )
 computeSets ds =

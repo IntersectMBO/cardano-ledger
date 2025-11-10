@@ -230,7 +230,7 @@ lookupRewardDState DState {dsAccounts} cred = do
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState era = PState
-  { psVRFKeyHashes :: !(Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64))
+  { psVRFKeyHashes :: !(Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64))
   -- ^ VRF key hashes that have been registered via PoolParams
   , psStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
   -- ^ The state of current stake pools.
@@ -255,7 +255,7 @@ instance Era era => EncCBOR (PState era) where
     encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
 instance DecShareCBOR (PState era) where
-  type Share (PState era) = (Interns (VRFVerKeyHash 'StakePoolVRF), Interns (KeyHash 'StakePool))
+  type Share (PState era) = (Interns (VRFVerKeyHash StakePoolVRF), Interns (KeyHash 'StakePool))
 
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
     psVRFKeyHashes <- decSharePlusLensCBOR (toMemptyLens _1 _1)
@@ -489,5 +489,5 @@ psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ps u -> ps {psFutureSt
 psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
 
-psVRFKeyHashesL :: Lens' (PState era) (Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64))
+psVRFKeyHashesL :: Lens' (PState era) (Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64))
 psVRFKeyHashesL = lens psVRFKeyHashes (\ps u -> ps {psVRFKeyHashes = u})

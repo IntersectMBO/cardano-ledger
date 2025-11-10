@@ -57,7 +57,7 @@ data IndividualPoolStake = IndividualPoolStake
   -- ^ Total stake delegated to this pool. In addition to all the stake  that
   -- is part of `individualPoolStake` we also add proposal-deposits to this
   -- field.
-  , individualPoolStakeVrf :: !(VRFVerKeyHash 'StakePoolVRF)
+  , individualPoolStakeVrf :: !(VRFVerKeyHash StakePoolVRF)
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)

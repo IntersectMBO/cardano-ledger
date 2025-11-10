@@ -130,7 +130,7 @@ import NoThunks.Class (NoThunks (..))
 -- information as 'PoolParams' except for the pool ID, which is stored
 -- separately as the key in state maps.
 data StakePoolState = StakePoolState
-  { spsVrf :: !(VRFVerKeyHash 'StakePoolVRF)
+  { spsVrf :: !(VRFVerKeyHash StakePoolVRF)
   -- ^ VRF verification key hash for leader election
   , spsPledge :: !Coin
   -- ^ Pledge amount committed by the pool operator
@@ -153,7 +153,7 @@ data StakePoolState = StakePoolState
   }
   deriving (Show, Generic, Eq, Ord, NoThunks, NFData, FromJSON, ToJSON)
 
-spsVrfL :: Lens' StakePoolState (VRFVerKeyHash 'StakePoolVRF)
+spsVrfL :: Lens' StakePoolState (VRFVerKeyHash StakePoolVRF)
 spsVrfL = lens spsVrf (\sps u -> sps {spsVrf = u})
 
 spsPledgeL :: Lens' StakePoolState Coin
@@ -410,7 +410,7 @@ instance DecCBOR StakePoolRelay where
 -- | A stake pool.
 data StakePoolParams = StakePoolParams
   { sppId :: !(KeyHash 'StakePool)
-  , sppVrf :: !(VRFVerKeyHash 'StakePoolVRF)
+  , sppVrf :: !(VRFVerKeyHash StakePoolVRF)
   , sppPledge :: !Coin
   , sppCost :: !Coin
   , sppMargin :: !UnitInterval
@@ -423,7 +423,7 @@ data StakePoolParams = StakePoolParams
   deriving (EncCBOR) via CBORGroup StakePoolParams
   deriving (DecCBOR) via CBORGroup StakePoolParams
 
-sppVrfL :: Lens' StakePoolParams (VRFVerKeyHash 'StakePoolVRF)
+sppVrfL :: Lens' StakePoolParams (VRFVerKeyHash StakePoolVRF)
 sppVrfL = lens sppVrf (\spp u -> spp {sppVrf = u})
 
 sppCostL :: Lens' StakePoolParams Coin
@@ -471,7 +471,7 @@ type PoolParams = StakePoolParams
 
 pattern PoolParams ::
   KeyHash 'StakePool ->
-  VRFVerKeyHash 'StakePoolVRF ->
+  VRFVerKeyHash StakePoolVRF ->
   Coin ->
   Coin ->
   UnitInterval ->

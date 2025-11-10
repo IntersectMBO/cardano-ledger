@@ -140,7 +140,7 @@ aliceStakePoolParams =
     }
 
 -- | Alice's VRF key hash
-aliceVRFKeyHash :: VRFVerKeyHash 'StakePoolVRF
+aliceVRFKeyHash :: VRFVerKeyHash StakePoolVRF
 aliceVRFKeyHash = hashVerKeyVRF @MockCrypto (vrfVerKey $ aikVrf alicePoolKeys)
 
 -- | Bob's payment key pair
@@ -190,7 +190,7 @@ bobStakePoolParams =
     }
 
 -- | Bob's VRF key hash
-bobVRFKeyHash :: VRFVerKeyHash 'StakePoolVRF
+bobVRFKeyHash :: VRFVerKeyHash StakePoolVRF
 bobVRFKeyHash = hashVerKeyVRF @MockCrypto (vrfVerKey $ aikVrf bobPoolKeys)
 
 -- Carl's payment key pair

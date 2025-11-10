@@ -399,7 +399,7 @@ spec = describe "POOL" $ do
         Map.keysSet . psVRFKeyHashes <$> getPState `shouldReturn` vrfs
     poolParams ::
       KeyHash 'StakePool ->
-      VRFVerKeyHash 'StakePoolVRF ->
+      VRFVerKeyHash StakePoolVRF ->
       ImpTestM era StakePoolParams
     poolParams kh vrf = do
       pps <- registerRewardAccount >>= freshPoolParams kh

@@ -412,7 +412,7 @@ examplePayKey = mkDSIGNKeyPair 0
 exampleStakeKey :: KeyPair 'Staking
 exampleStakeKey = mkDSIGNKeyPair 1
 
-exampleVrfVerKeyHash :: VRFVerKeyHash 'StakePoolVRF
+exampleVrfVerKeyHash :: VRFVerKeyHash StakePoolVRF
 exampleVrfVerKeyHash = VRFVerKeyHash "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
 
 exampleRewardAccount :: RewardAccount

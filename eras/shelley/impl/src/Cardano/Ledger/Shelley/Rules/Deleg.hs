@@ -109,7 +109,7 @@ data ShelleyDelegPredFailure era
   | MIRCertificateTooLateinEpochDELEG
       (Mismatch 'RelLT SlotNo)
   | DuplicateGenesisVRFDELEG
-      (VRFVerKeyHash 'GenDelegVRF) -- VRF KeyHash which is already delegated to
+      (VRFVerKeyHash GenDelegVRF) -- VRF KeyHash which is already delegated to
   | MIRTransferNotCurrentlyAllowed
   | MIRNegativesNotCurrentlyAllowed
   | InsufficientForTransferDELEG

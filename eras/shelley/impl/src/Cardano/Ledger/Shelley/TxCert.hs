@@ -222,7 +222,7 @@ pattern GenesisDelegTxCert ::
   (ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   KeyHash 'Genesis ->
   KeyHash 'GenesisDelegate ->
-  VRFVerKeyHash 'GenDelegVRF ->
+  VRFVerKeyHash GenDelegVRF ->
   TxCert era
 pattern GenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
   (getGenesisDelegTxCert -> Just (GenesisDelegCert genKey genDelegKey vrfKeyHash))
@@ -290,7 +290,7 @@ data GenesisDelegCert
   = GenesisDelegCert
       !(KeyHash 'Genesis)
       !(KeyHash 'GenesisDelegate)
-      !(VRFVerKeyHash 'GenDelegVRF)
+      !(VRFVerKeyHash GenDelegVRF)
   deriving (Show, Generic, Eq, Ord)
 
 instance NoThunks GenesisDelegCert

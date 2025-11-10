@@ -100,7 +100,7 @@ newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (RawSeed 108 0 0 0 1)
 
-newGenesisVrfKH :: VRFVerKeyHash 'GenDelegVRF
+newGenesisVrfKH :: VRFVerKeyHash GenDelegVRF
 newGenesisVrfKH = hashVerKeyVRF @MockCrypto (vrfVerKey (mkVRFKeyPair @MockCrypto (RawSeed 9 8 7 6 5)))
 
 feeTx1 :: Coin

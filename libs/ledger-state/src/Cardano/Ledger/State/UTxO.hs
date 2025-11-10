@@ -294,7 +294,7 @@ instance AggregateStat RewardUpdateStats where
 
 data PoolDistrStats = PoolDistrStats
   { pdsStakePoolKeyHash :: !(Stat (KeyHash 'StakePool))
-  , pdsStakePoolStakeVrf :: !(Stat (VRFVerKeyHash 'StakePoolVRF))
+  , pdsStakePoolStakeVrf :: !(Stat (VRFVerKeyHash StakePoolVRF))
   }
 
 instance Pretty PoolDistrStats where
@@ -421,7 +421,7 @@ data DStateStats = DStateStats
   , dssDelegations :: !(Stat (KeyHash 'StakePool))
   , dssKeyHashGenesis :: !(Stat (KeyHash 'Genesis))
   , dssKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate))
-  , dssHashVerKeyVRF :: !(Stat (VRFVerKeyHash 'GenDelegVRF))
+  , dssHashVerKeyVRF :: !(Stat (VRFVerKeyHash GenDelegVRF))
   }
 
 instance Pretty DStateStats where

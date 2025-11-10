@@ -219,7 +219,7 @@ exampleShelleyGenesis =
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
     delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate
     delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
-    delegVrfKeyHash :: VRFVerKeyHash 'GenDelegVRF
+    delegVrfKeyHash :: VRFVerKeyHash GenDelegVRF
     delegVrfKeyHash = VRFVerKeyHash "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
     initialFundedAddress :: L.Addr
     initialFundedAddress =

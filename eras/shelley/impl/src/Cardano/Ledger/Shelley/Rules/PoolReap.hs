@@ -230,9 +230,9 @@ poolReapTransition = do
       )
   where
     removeVRFKeyHashOccurrences ::
-      [VRFVerKeyHash 'StakePoolVRF] ->
-      Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64) ->
-      Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64)
+      [VRFVerKeyHash StakePoolVRF] ->
+      Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
+      Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
     removeVRFKeyHashOccurrences vrfs vrfsMap = F.foldl' (flip removeVRFKeyHashOccurrence) vrfsMap vrfs
     removeVRFKeyHashOccurrence =
       -- Removes the key from the map if the value drops to 0
