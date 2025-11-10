@@ -79,10 +79,8 @@ import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), fromSMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
-  DecShareCBOR (..),
   Decoder,
   EncCBOR (..),
-  Interns,
   Sized (..),
   ToCBOR,
   TokenType (..),
@@ -195,29 +193,22 @@ data DijkstraTxBodyRaw l era where
     } ->
     DijkstraTxBodyRaw SubTx era
 
-deriving instance
-  ( EraPParams era
-  , Eq (Tx SubTx era)
-  , Eq (TxOut era)
-  , Eq (TxCert era)
-  ) =>
-  Eq (DijkstraTxBodyRaw l era)
+deriving instance (EraTxBody era, Eq (Tx SubTx era)) => Eq (DijkstraTxBodyRaw l era)
 
-instance Eq (Tx SubTx DijkstraEra) => EqRaw (TxBody l DijkstraEra)
+instance
+  ( Eq (Tx SubTx DijkstraEra)
+  , NFData (Tx SubTx DijkstraEra)
+  , Show (Tx SubTx DijkstraEra)
+  , EncCBOR (Tx SubTx DijkstraEra)
+  ) =>
+  EqRaw (TxBody l DijkstraEra)
 
 deriving via
   InspectHeap (DijkstraTxBodyRaw l era)
   instance
     (Typeable l, EraTxBody era) => NoThunks (DijkstraTxBodyRaw l era)
 
-instance
-  ( NFData (TxOut era)
-  , NFData (TxCert era)
-  , EraPParams era
-  , NFData (Tx SubTx era)
-  ) =>
-  NFData (DijkstraTxBodyRaw l era)
-  where
+instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l era) where
   rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraTxBodyRaw {..} = txBodyRaw
      in dtbrSpendInputs `deepseq`
@@ -258,20 +249,9 @@ instance
                                   dstbrCurrentTreasuryValue `deepseq`
                                     rnf dstbrTreasuryDonation
 
-deriving instance
-  ( EraPParams era
-  , Show (Tx SubTx era)
-  , Show (TxOut era)
-  , Show (TxCert era)
-  ) =>
-  Show (DijkstraTxBodyRaw l era)
+deriving instance (EraTxBody era, Show (Tx SubTx era)) => Show (DijkstraTxBodyRaw l era)
 
-basicDijkstraTxBodyRaw ::
-  forall era l.
-  ( EraPParams era
-  , Ord (TxCert era)
-  ) =>
-  STxBothLevels l era -> DijkstraTxBodyRaw l era
+basicDijkstraTxBodyRaw :: EraTxBody era => STxBothLevels l era -> DijkstraTxBodyRaw l era
 basicDijkstraTxBodyRaw STopTx =
   DijkstraTxBodyRaw
     mempty
@@ -312,19 +292,7 @@ basicDijkstraTxBodyRaw SSubTx =
     mempty
     mempty
 
-instance
-  ( Typeable l
-  , EraPParams era
-  , EraTxOut era
-  , Ord (TxCert era)
-  , Typeable (TxOut era)
-  , Typeable (TxCert era)
-  , Share (TxOut era) ~ Interns (Credential Staking)
-  , Show (TxCert era)
-  , DecCBOR (TxCert era)
-  ) =>
-  DecCBOR (DijkstraTxBodyRaw l era)
-  where
+instance (Typeable l, EraTxBody era) => DecCBOR (DijkstraTxBodyRaw l era) where
   decCBOR = withSTxBothLevels @l $ \sTxLevel ->
     decode $
       SparseKeyed
@@ -412,7 +380,7 @@ instance
         "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
 
 encodeTxBodyRaw ::
-  (EraPParams era, EncCBOR (TxOut era), EncCBOR (TxCert era), EncCBOR (Tx SubTx era)) =>
+  (EraTxBody era, EncCBOR (Tx SubTx era)) =>
   DijkstraTxBodyRaw l era -> Encode ('Closed 'Sparse) (DijkstraTxBodyRaw l era)
 encodeTxBodyRaw DijkstraTxBodyRaw {..} =
   let ValidityInterval bot top = dtbrVldt
@@ -465,10 +433,8 @@ encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
         !> Omit (== mempty) (Key 22 $ To dstbrTreasuryDonation)
 
 instance
-  ( EraPParams era
+  ( EraTxBody era
   , EncCBOR (Tx SubTx era)
-  , EncCBOR (TxOut era)
-  , EncCBOR (TxCert era)
   ) =>
   EncCBOR (DijkstraTxBodyRaw l era)
   where
@@ -483,14 +449,36 @@ deriving instance
   ) =>
   NoThunks (TxBody l DijkstraEra)
 
-deriving instance Eq (Tx SubTx DijkstraEra) => Eq (TxBody l DijkstraEra)
+deriving instance
+  ( Eq (Tx SubTx DijkstraEra)
+  , NFData (Tx SubTx DijkstraEra)
+  , Show (Tx SubTx DijkstraEra)
+  , EncCBOR (Tx SubTx DijkstraEra)
+  ) =>
+  Eq (TxBody l DijkstraEra)
 
-deriving newtype instance NFData (Tx SubTx DijkstraEra) => NFData (TxBody l DijkstraEra)
+deriving newtype instance
+  ( NFData (Tx SubTx DijkstraEra)
+  , Eq (Tx SubTx DijkstraEra)
+  , Show (Tx SubTx DijkstraEra)
+  , EncCBOR (Tx SubTx DijkstraEra)
+  ) =>
+  NFData (TxBody l DijkstraEra)
 
-deriving instance Show (Tx SubTx DijkstraEra) => Show (TxBody l DijkstraEra)
+deriving instance
+  ( Show (Tx SubTx DijkstraEra)
+  , Eq (Tx SubTx DijkstraEra)
+  , NFData (Tx SubTx DijkstraEra)
+  , EncCBOR (Tx SubTx DijkstraEra)
+  ) =>
+  Show (TxBody l DijkstraEra)
 
 pattern DijkstraTxBody ::
-  EncCBOR (Tx SubTx DijkstraEra) =>
+  ( EncCBOR (Tx SubTx DijkstraEra)
+  , Eq (Tx SubTx DijkstraEra)
+  , NFData (Tx SubTx DijkstraEra)
+  , Show (Tx SubTx DijkstraEra)
+  ) =>
   Set TxIn ->
   Set TxIn ->
   Set TxIn ->
@@ -604,7 +592,11 @@ pattern DijkstraTxBody
             subTransactions
 
 pattern DijkstraSubTxBody ::
-  EncCBOR (Tx SubTx DijkstraEra) =>
+  ( EncCBOR (Tx SubTx DijkstraEra)
+  , Eq (Tx SubTx DijkstraEra)
+  , NFData (Tx SubTx DijkstraEra)
+  , Show (Tx SubTx DijkstraEra)
+  ) =>
   Set TxIn ->
   Set TxIn ->
   StrictSeq (Sized (TxOut DijkstraEra)) ->
@@ -704,22 +696,19 @@ type instance MemoHashIndex (DijkstraTxBodyRaw l DijkstraEra) = EraIndependentTx
 instance HashAnnotated (TxBody l DijkstraEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
-instance
-  ( Typeable l
-  , EraTxOut era
-  , Share (TxOut era) ~ Interns (Credential Staking)
-  , Ord (TxCert era)
-  , Show (TxCert era)
-  , DecCBOR (TxCert era)
-  ) =>
-  DecCBOR (Annotator (DijkstraTxBodyRaw l era))
-  where
+instance (Typeable l, EraTxBody era) => DecCBOR (Annotator (DijkstraTxBodyRaw l era)) where
   decCBOR = pure <$> decCBOR
 
 deriving via
   Mem (DijkstraTxBodyRaw l DijkstraEra)
   instance
-    Typeable l => DecCBOR (Annotator (TxBody l DijkstraEra))
+    ( Typeable l
+    , Eq (Tx SubTx DijkstraEra)
+    , NFData (Tx SubTx DijkstraEra)
+    , Show (Tx SubTx DijkstraEra)
+    , EncCBOR (Tx SubTx DijkstraEra)
+    ) =>
+    DecCBOR (Annotator (TxBody l DijkstraEra))
 
 instance HasEraTxLevel DijkstraTxBodyRaw DijkstraEra where
   toSTxLevel DijkstraTxBodyRaw {} = STopTx
@@ -1034,9 +1023,7 @@ instance
 
 collateralReturnDijkstraTxBodyRawL ::
   forall era.
-  ( Era era
-  , EncCBOR (TxOut era)
-  ) =>
+  EraTxBody era =>
   Lens' (DijkstraTxBodyRaw TopTx era) (StrictMaybe (TxOut era))
 collateralReturnDijkstraTxBodyRawL =
   lens (fmap sizedValue . dtbrCollateralReturn) $
