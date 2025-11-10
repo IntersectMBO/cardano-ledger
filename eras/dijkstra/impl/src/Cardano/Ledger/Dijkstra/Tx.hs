@@ -279,7 +279,8 @@ instance Typeable l => DecCBOR (Annotator (Tx l DijkstraEra)) where
   decCBOR = fmap MkDijkstraTx <$> decCBOR
 
 validateDijkstraNativeScript ::
-  ( DijkstraEraTxBody era
+  ( EraTx era
+  , DijkstraEraTxBody era
   , DijkstraEraScript era
   , NativeScript era ~ DijkstraNativeScript era
   ) =>
