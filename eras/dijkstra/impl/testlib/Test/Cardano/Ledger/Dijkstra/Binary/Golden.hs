@@ -111,6 +111,7 @@ witsDuplicatePlutus slang =
         SPlutusV1 -> 3
         SPlutusV2 -> 6
         SPlutusV3 -> 7
+        -- TODO add PlutusV4 support once the CDDL for TxWits is updated to include V4 scripts
         l -> error $ "Unsupported plutus version: " <> show l
     , Em
         [ E $ TkTag 258
@@ -186,7 +187,7 @@ goldenDuplicateNativeScriptsDisallowed =
       witsDuplicateNativeScripts
       ( DecoderErrorCustom
           "Annotator"
-          "Duplicate scripts found: ScriptHash \"d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf\""
+          "Duplicate elements in the scripts Set were encountered"
       )
   where
     version = eraProtVerLow @era
@@ -218,5 +219,5 @@ goldenDuplicatePlutusDataDisallowed =
       witsDuplicatePlutusData
       ( DecoderErrorCustom
           "Annotator"
-          "Duplicate dats found: SafeHash \"03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314\""
+          "Duplicate elements in the scripts Set were encountered"
       )

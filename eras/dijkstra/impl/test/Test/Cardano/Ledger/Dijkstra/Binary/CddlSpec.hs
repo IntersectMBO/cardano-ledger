@@ -117,6 +117,7 @@ spec = do
       huddleRoundTripCborSpec @(Datum DijkstraEra) v "datum_option"
       -- TODO NoDatum is encoded as an empty bytestring
       xdescribe "fix NoDatum" $ huddleRoundTripArbitraryValidate @(Datum DijkstraEra) v "datum_option"
+      -- TODO enable once CDDL sets no longer generate duplicate elements
       xdescribe "fix duplicates in maps" $ do
         huddleRoundTripAnnCborSpec @(TxWits DijkstraEra) v "transaction_witness_set"
         huddleRoundTripCborSpec @(TxWits DijkstraEra) v "transaction_witness_set"
