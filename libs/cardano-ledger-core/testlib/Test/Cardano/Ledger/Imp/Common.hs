@@ -64,6 +64,8 @@ module Test.Cardano.Ledger.Imp.Common (
 
   -- * MonadGen
   module QuickCheckT,
+  unGen,
+  mkQCGen,
   arbitrary,
   -- TODO: add here any other lifted functions from quickcheck
 
@@ -152,7 +154,9 @@ import Test.ImpSpec.Random (
   uniformRM,
   uniformShortByteStringM,
  )
+import Test.QuickCheck.Gen (unGen)
 import Test.QuickCheck.GenT as QuickCheckT
+import Test.QuickCheck.Random (mkQCGen)
 import UnliftIO (MonadUnliftIO (..))
 import UnliftIO.Exception (evaluateDeep)
 

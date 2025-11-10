@@ -1,0 +1,29 @@
+commit 35d3824233b55fd5da818c74fa7a014887509285
+Author: teodanciu <teodora.danciu@tweag.io>
+Date:   Thu Oct 16 16:32:30 2025 +0100
+
+    REPL - QC Gen and Random
+
+diff --git a/libs/cardano-ledger-core/testlib/Test/Cardano/Ledger/Imp/Common.hs b/libs/cardano-ledger-core/testlib/Test/Cardano/Ledger/Imp/Common.hs
+index 2bb53a5594..aed73c22a6 100644
+--- a/libs/cardano-ledger-core/testlib/Test/Cardano/Ledger/Imp/Common.hs
++++ b/libs/cardano-ledger-core/testlib/Test/Cardano/Ledger/Imp/Common.hs
+@@ -64,6 +64,8 @@ module Test.Cardano.Ledger.Imp.Common (
+ 
+   -- * MonadGen
+   module QuickCheckT,
++  unGen,
++  mkQCGen,
+   arbitrary,
+   -- TODO: add here any other lifted functions from quickcheck
+ 
+@@ -152,7 +154,9 @@ import Test.ImpSpec.Random (
+   uniformRM,
+   uniformShortByteStringM,
+  )
++import Test.QuickCheck.Gen (unGen)
+ import Test.QuickCheck.GenT as QuickCheckT
++import Test.QuickCheck.Random (mkQCGen)
+ import UnliftIO (MonadUnliftIO (..))
+ import UnliftIO.Exception (evaluateDeep)
+ 
