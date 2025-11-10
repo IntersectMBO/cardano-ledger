@@ -16,5 +16,5 @@ instance (Arbitrary a, Ord a) => Arbitrary (OSet.OSet a) where
 genOSet :: Ord a => Gen a -> Gen (OSet.OSet a)
 genOSet = fmap OSet.fromFoldable . listOf
 
-instance (Ord v, Arbitrary v, OMap.HasOKey k v, Arbitrary k) => Arbitrary (OMap.OMap k v) where
+instance (Arbitrary v, OMap.HasOKey k v, Arbitrary k) => Arbitrary (OMap.OMap k v) where
   arbitrary = OMap.fromFoldable @[] <$> arbitrary

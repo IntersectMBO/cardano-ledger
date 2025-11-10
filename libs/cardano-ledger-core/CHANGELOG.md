@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `HasOKey` instance for `TxId (Tx l era)`
 * Remove `Generic` instance from `BoundedRatio` type
 * Remove deprecated function `addrPtrNormalize`
 * Remove deprecated functions `mkTxIx`, `mkCertIx`, `hashAnchorData`

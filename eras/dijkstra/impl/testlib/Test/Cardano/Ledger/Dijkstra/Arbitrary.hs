@@ -46,6 +46,25 @@ instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
 instance Arbitrary (DijkstraPParams StrictMaybe DijkstraEra) where
   arbitrary = genericArbitraryU
 
+instance Arbitrary (TxBody SubTx DijkstraEra) where
+  arbitrary =
+    DijkstraSubTxBody
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
+      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
 instance Arbitrary (TxBody TopTx DijkstraEra) where
   arbitrary =
     DijkstraTxBody
@@ -61,6 +80,7 @@ instance Arbitrary (TxBody TopTx DijkstraEra) where
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> scale (`div` 15) arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

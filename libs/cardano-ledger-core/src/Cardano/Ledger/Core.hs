@@ -130,6 +130,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
 import Data.Maybe.Strict (StrictMaybe, maybeToStrictMaybe, strictMaybe, strictMaybeToMaybe)
 import Data.MemPack
+import Data.OMap.Strict (HasOKey (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -679,3 +680,6 @@ toStrictMaybeL = lens maybeToStrictMaybe (const strictMaybeToMaybe)
 
 fromStrictMaybeL :: Lens' (StrictMaybe a) (Maybe a)
 fromStrictMaybeL = lens strictMaybeToMaybe (const maybeToStrictMaybe)
+
+instance EraTx era => HasOKey TxId (Tx l era) where
+  toOKey = txIdTx

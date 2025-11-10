@@ -47,7 +47,7 @@ instance ToExpr (DijkstraPParams StrictMaybe DijkstraEra)
 
 instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
   toExpr = \case
-    txBody@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
+    txBody@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
       let DijkstraTxBodyRaw {..} = txBody
        in Rec "DijkstraTxBodyRaw" $
             OMap.fromList
@@ -70,6 +70,7 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dtbrProposalProcedures", toExpr dtbrProposalProcedures)
               , ("dtbrCurrentTreasuryValue", toExpr dtbrCurrentTreasuryValue)
               , ("dtbrTreasuryDonation", toExpr dtbrTreasuryDonation)
+              , ("dtbrSubTransactions", toExpr dtbrSubTransactions)
               ]
     txBody@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
       let DijkstraSubTxBodyRaw {..} = txBody
