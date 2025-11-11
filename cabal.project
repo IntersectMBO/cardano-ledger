@@ -24,6 +24,15 @@ source-repository-package
   --sha256: sha256-DQHX7V1Ci/n7UVKotqGpBLKyiNHkttTu+tvuQqn/e/k=
   tag: d4b12a415712666e139a19cdc4584423a5397c5f
 
+-- Temporary reference to cardano-base until we integrate cardano-crypto-peras
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  --sha256: sha256-SxHGlsw7GvKqKQMtlJTrtvtZzf9P+fVQmJIXEfMlzP4=
+  tag: 8a4b6d986edb2a7ec373f7cb42354a47e3f59f4f
+  subdir:
+    cardano-crypto-peras
+
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
