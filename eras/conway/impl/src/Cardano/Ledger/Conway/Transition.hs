@@ -85,13 +85,13 @@ instance ConwayEraTransition ConwayEra where
   tcConwayGenesisL = lens ctcConwayGenesis (\g x -> g {ctcConwayGenesis = x})
 
 tcDelegsL ::
-  ConwayEraTransition era => Lens' (TransitionConfig era) (ListMap (Credential 'Staking) Delegatee)
+  ConwayEraTransition era => Lens' (TransitionConfig era) (ListMap (Credential Staking) Delegatee)
 tcDelegsL =
   protectMainnetLens "ConwayDelegs" null $
     tcConwayGenesisL . lens cgDelegs (\g x -> g {cgDelegs = x})
 
 tcInitialDRepsL ::
-  ConwayEraTransition era => Lens' (TransitionConfig era) (ListMap (Credential 'DRepRole) DRepState)
+  ConwayEraTransition era => Lens' (TransitionConfig era) (ListMap (Credential DRepRole) DRepState)
 tcInitialDRepsL =
   protectMainnetLens "InitialDReps" null $
     tcConwayGenesisL . lens cgInitialDReps (\g x -> g {cgInitialDReps = x})

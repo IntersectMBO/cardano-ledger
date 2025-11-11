@@ -39,7 +39,7 @@ import Test.Cardano.Ledger.Shelley.Utils
 genContext ::
   Gen
     ( WitUniv ConwayEra
-    , Set (Credential 'DRepRole)
+    , Set (Credential DRepRole)
     , Map RewardAccount Coin
     )
 genContext = do

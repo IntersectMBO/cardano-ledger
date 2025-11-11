@@ -18,7 +18,7 @@ import Data.Word (Word32)
 -- 'BHeaderView' provide 'BBODY' all the data that it needs from the
 -- block headers.
 data BHeaderView = BHeaderView
-  { bhviewID :: KeyHash 'BlockIssuer
+  { bhviewID :: KeyHash BlockIssuer
   -- ^ The block issuer. In the TPraos protocol, this can be a
   --  Genesis delegate, everywhere else it is the stake pool ID.
   , bhviewBSize :: Word32

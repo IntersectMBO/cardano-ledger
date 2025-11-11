@@ -291,7 +291,7 @@ getScriptWitnessDijkstraTxCert = \case
       ConwayUnRegDRep cred _ -> credScriptHash cred
       ConwayUpdateDRep cred _ -> credScriptHash cred
 
-getVKeyWitnessDijkstraTxCert :: DijkstraTxCert era -> Maybe (KeyHash 'Witness)
+getVKeyWitnessDijkstraTxCert :: DijkstraTxCert era -> Maybe (KeyHash Witness)
 getVKeyWitnessDijkstraTxCert = \case
   DijkstraTxCertDeleg delegCert ->
     case delegCert of

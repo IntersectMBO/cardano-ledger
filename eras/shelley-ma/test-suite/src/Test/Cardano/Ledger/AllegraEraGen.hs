@@ -190,7 +190,7 @@ genValidityInterval cs@(SlotNo currentSlot) =
 someLeaf ::
   forall era.
   (AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  KeyHash 'Witness ->
+  KeyHash Witness ->
   NativeScript era
 someLeaf x =
   let n = mod (hash (serialize' (eraProtVerLow @era) (encCBOR x))) 200

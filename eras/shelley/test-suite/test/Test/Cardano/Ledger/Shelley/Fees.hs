@@ -84,25 +84,25 @@ sizeTest b16 tx = do
   Base16.encode (Plain.serialize tx) @?= b16
   (tx ^. sizeTxF) @?= (fromIntegral @Int64 @Word32 (BSL.length b16) `div` 2)
 
-alicePay :: KeyPair 'Payment
+alicePay :: KeyPair Payment
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 0)
 
-aliceStake :: KeyPair 'Staking
+aliceStake :: KeyPair Staking
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
-aliceSHK :: Credential 'Staking
+aliceSHK :: Credential Staking
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
-alicePool :: KeyPair 'StakePool
+alicePool :: KeyPair StakePool
 alicePool = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 2)
 
-alicePoolKH :: KeyHash 'StakePool
+alicePoolKH :: KeyHash StakePool
 alicePoolKH = hashKey $ vKey alicePool
 
 aliceStakePoolParams :: StakePoolParams
@@ -132,23 +132,23 @@ aliceStakePoolParams =
 aliceAddr :: Addr
 aliceAddr = mkAddr alicePay aliceStake
 
-bobPay :: KeyPair 'Payment
+bobPay :: KeyPair Payment
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 0 0 0 0)
 
-bobStake :: KeyPair 'Staking
+bobStake :: KeyPair Staking
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 0 0 0 1)
 
-bobSHK :: Credential 'Staking
+bobSHK :: Credential Staking
 bobSHK = KeyHashObj . hashKey $ vKey bobStake
 
 bobAddr :: Addr
 bobAddr = mkAddr bobPay bobStake
 
-carlPay :: KeyPair 'Payment
+carlPay :: KeyPair Payment
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 2 0 0 0 0)

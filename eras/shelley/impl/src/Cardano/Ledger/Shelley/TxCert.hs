@@ -158,8 +158,8 @@ class (EraTxCert era, AtMostEra "Conway" era) => ShelleyEraTxCert era where
   mkUnRegTxCert :: StakeCredential -> TxCert era
   getUnRegTxCert :: TxCert era -> Maybe StakeCredential
 
-  mkDelegStakeTxCert :: StakeCredential -> KeyHash 'StakePool -> TxCert era
-  getDelegStakeTxCert :: TxCert era -> Maybe (StakeCredential, KeyHash 'StakePool)
+  mkDelegStakeTxCert :: StakeCredential -> KeyHash StakePool -> TxCert era
+  getDelegStakeTxCert :: TxCert era -> Maybe (StakeCredential, KeyHash StakePool)
 
   mkGenesisDelegTxCert :: AtMostEra "Babbage" era => GenesisDelegCert -> TxCert era
   getGenesisDelegTxCert :: AtMostEra "Babbage" era => TxCert era -> Maybe GenesisDelegCert
@@ -206,7 +206,7 @@ pattern UnRegTxCert c <- (getUnRegTxCert -> Just c)
 pattern DelegStakeTxCert ::
   ShelleyEraTxCert era =>
   StakeCredential ->
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   TxCert era
 pattern DelegStakeTxCert c kh <- (getDelegStakeTxCert -> Just (c, kh))
   where
@@ -220,8 +220,8 @@ pattern MirTxCert d <- (getMirTxCert -> Just d)
 
 pattern GenesisDelegTxCert ::
   (ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
-  KeyHash 'Genesis ->
-  KeyHash 'GenesisDelegate ->
+  KeyHash GenesisRole ->
+  KeyHash GenesisDelegate ->
   VRFVerKeyHash GenDelegVRF ->
   TxCert era
 pattern GenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
@@ -288,8 +288,8 @@ pattern GenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
 -- | Genesis key delegation certificate
 data GenesisDelegCert
   = GenesisDelegCert
-      !(KeyHash 'Genesis)
-      !(KeyHash 'GenesisDelegate)
+      !(KeyHash GenesisRole)
+      !(KeyHash GenesisDelegate)
       !(VRFVerKeyHash GenDelegVRF)
   deriving (Show, Generic, Eq, Ord)
 
@@ -306,10 +306,10 @@ instance ToJSON GenesisDelegCert where
       , "hashVrf" .= toJSON hashVrf
       ]
 
-genesisKeyHashWitness :: GenesisDelegCert -> KeyHash 'Witness
+genesisKeyHashWitness :: GenesisDelegCert -> KeyHash Witness
 genesisKeyHashWitness (GenesisDelegCert gk _ _) = asWitness gk
 
-genesisCWitness :: GenesisDelegCert -> KeyHash 'Genesis
+genesisCWitness :: GenesisDelegCert -> KeyHash GenesisRole
 genesisCWitness (GenesisDelegCert gk _ _) = gk
 
 data MIRPot = ReservesMIR | TreasuryMIR
@@ -337,7 +337,7 @@ instance ToJSON MIRPot where
 -- or the treasury are to be handed out to a collection of
 -- reward accounts or instead transfered to the opposite pot.
 data MIRTarget
-  = StakeAddressesMIR !(Map (Credential 'Staking) DeltaCoin)
+  = StakeAddressesMIR !(Map (Credential Staking) DeltaCoin)
   | SendToOppositePotMIR !Coin
   deriving (Show, Generic, Eq, Ord, NFData)
 
@@ -520,7 +520,7 @@ data ShelleyDelegCert
   | -- | A stake credential deregistration certificate.
     ShelleyUnRegCert !StakeCredential
   | -- | A stake delegation certificate.
-    ShelleyDelegCert !StakeCredential !(KeyHash 'StakePool)
+    ShelleyDelegCert !StakeCredential !(KeyHash StakePool)
   deriving (Show, Generic, Eq, Ord)
 
 instance ToJSON ShelleyDelegCert where
@@ -543,7 +543,7 @@ isDelegation :: ShelleyEraTxCert era => TxCert era -> Bool
 isDelegation (DelegStakeTxCert _ _) = True
 isDelegation _ = False
 
--- | Check for 'GenesisDelegate' constructor
+-- | Check for GenesisDelegate' constructor
 isGenesisDelegation :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> Bool
 isGenesisDelegation = isJust . getGenesisDelegTxCert
 
@@ -581,7 +581,7 @@ getScriptWitnessShelleyTxCert = \case
       ShelleyDelegCert cred _ -> credScriptHash cred
   _ -> Nothing
 
-getVKeyWitnessShelleyTxCert :: ShelleyTxCert era -> Maybe (KeyHash 'Witness)
+getVKeyWitnessShelleyTxCert :: ShelleyTxCert era -> Maybe (KeyHash Witness)
 getVKeyWitnessShelleyTxCert = \case
   ShelleyTxCertDelegCert delegCert ->
     case delegCert of
@@ -608,7 +608,7 @@ shelleyTotalDepositsTxCerts ::
   (EraPParams era, Foldable f, EraTxCert era) =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
-  (KeyHash 'StakePool -> Bool) ->
+  (KeyHash StakePool -> Bool) ->
   f (TxCert era) ->
   Coin
 shelleyTotalDepositsTxCerts pp isRegPoolRegistered certs =

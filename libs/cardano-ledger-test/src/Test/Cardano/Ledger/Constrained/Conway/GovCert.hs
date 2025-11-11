@@ -36,7 +36,7 @@ vStateSpec ::
   forall era.
   Era era =>
   WitUniv era ->
-  Set (Credential 'DRepRole) ->
+  Set (Credential DRepRole) ->
   Specification (VState era)
 vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
   match vstate $ \ [var|dreps2|] [var|committeestate|] [var|_numdormant|] ->

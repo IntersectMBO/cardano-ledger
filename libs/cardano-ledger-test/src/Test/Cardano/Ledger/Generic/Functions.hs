@@ -156,7 +156,7 @@ txoutEvidence ::
   forall era.
   Proof era ->
   TxOut era ->
-  ([Credential 'Payment], Maybe DataHash)
+  ([Credential Payment], Maybe DataHash)
 txoutEvidence Alonzo (AlonzoTxOut addr _ (SJust dh)) =
   (addrCredentials addr, Just dh)
 txoutEvidence Alonzo (AlonzoTxOut addr _ SNothing) =
@@ -181,14 +181,14 @@ txoutEvidence Shelley (ShelleyTxOut addr _) =
   (addrCredentials addr, Nothing)
 {-# NOINLINE txoutEvidence #-}
 
-addrCredentials :: Addr -> [Credential 'Payment]
+addrCredentials :: Addr -> [Credential Payment]
 addrCredentials addr = maybeToList (paymentCredAddr addr)
 
-paymentCredAddr :: Addr -> Maybe (Credential 'Payment)
+paymentCredAddr :: Addr -> Maybe (Credential Payment)
 paymentCredAddr (Addr _ cred _) = Just cred
 paymentCredAddr _ = Nothing
 
-stakeCredAddr :: Addr -> Maybe (Credential 'Staking)
+stakeCredAddr :: Addr -> Maybe (Credential Staking)
 stakeCredAddr (Addr _ _ (StakeRefBase cred)) = Just cred
 stakeCredAddr _ = Nothing
 

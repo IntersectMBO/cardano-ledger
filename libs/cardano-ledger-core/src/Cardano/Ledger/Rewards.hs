@@ -67,7 +67,7 @@ instance DecCBOR RewardType where
 -- * the number of Lovelace in the reward
 data Reward = Reward
   { rewardType :: !RewardType
-  , rewardPool :: !(KeyHash 'StakePool)
+  , rewardPool :: !(KeyHash StakePool)
   , rewardAmount :: !Coin
   }
   deriving (Eq, Show, Generic)

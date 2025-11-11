@@ -79,7 +79,7 @@ import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common (ToExpr (..))
 import Test.Cardano.Ledger.TreeDiff ()
-import Test.QuickCheck
+import Test.QuickCheck hiding (Witness)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
 data KeyPair (kd :: KeyRole) = KeyPair
@@ -89,7 +89,7 @@ data KeyPair (kd :: KeyRole) = KeyPair
   deriving (Generic, Show)
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
-type KeyPairs = [(KeyPair 'Payment, KeyPair 'Staking)]
+type KeyPairs = [(KeyPair Payment, KeyPair Staking)]
 
 instance NFData (KeyPair kd)
 
@@ -130,17 +130,17 @@ instance MakeCredential ScriptHash r where
 
 class MakeStakeReference c where
   mkStakeRef :: c -> StakeReference
-  default mkStakeRef :: MakeCredential c 'Staking => c -> StakeReference
+  default mkStakeRef :: MakeCredential c Staking => c -> StakeReference
   mkStakeRef = StakeRefBase . mkCredential
 
 instance MakeStakeReference StakeReference where
   mkStakeRef = id
 
-instance MakeStakeReference (Credential 'Staking)
+instance MakeStakeReference (Credential Staking)
 
-instance MakeStakeReference (KeyPair 'Staking)
+instance MakeStakeReference (KeyPair Staking)
 
-instance MakeStakeReference (KeyHash 'Staking)
+instance MakeStakeReference (KeyHash Staking)
 
 instance MakeStakeReference ScriptHash
 
@@ -150,13 +150,13 @@ instance MakeStakeReference Ptr where
 instance MakeStakeReference (Maybe StakeReference) where
   mkStakeRef = mkStakeRefMaybe
 
-instance MakeStakeReference (Maybe (Credential 'Staking)) where
+instance MakeStakeReference (Maybe (Credential Staking)) where
   mkStakeRef = mkStakeRefMaybe
 
-instance MakeStakeReference (Maybe (KeyPair 'Staking)) where
+instance MakeStakeReference (Maybe (KeyPair Staking)) where
   mkStakeRef = mkStakeRefMaybe
 
-instance MakeStakeReference (Maybe (KeyHash 'Staking)) where
+instance MakeStakeReference (Maybe (KeyHash Staking)) where
   mkStakeRef = mkStakeRefMaybe
 
 instance MakeStakeReference (Maybe ScriptHash) where
@@ -168,14 +168,14 @@ mkStakeRefMaybe = \case
   Just c -> mkStakeRef c
 
 -- | Construct a `Testnet` address from payment and staking components
-mkAddr :: (MakeCredential p 'Payment, MakeStakeReference s) => p -> s -> Addr
+mkAddr :: (MakeCredential p Payment, MakeStakeReference s) => p -> s -> Addr
 mkAddr pay stake = Addr Testnet (mkCredential pay) (mkStakeRef stake)
 
 -- | Create a witness for transaction
 mkWitnessVKey ::
   SafeHash EraIndependentTxBody ->
   KeyPair kr ->
-  WitVKey 'Witness
+  WitVKey Witness
 mkWitnessVKey safe keys =
   WitVKey (asWitness $ vKey keys) (coerce $ signedDSIGN (sKey keys) (extractHash safe))
 
@@ -183,7 +183,7 @@ mkWitnessVKey safe keys =
 mkWitnessesVKey ::
   SafeHash EraIndependentTxBody ->
   [KeyPair kr] ->
-  Set (WitVKey 'Witness)
+  Set (WitVKey Witness)
 mkWitnessesVKey safe xs = Set.fromList (fmap (mkWitnessVKey safe) xs)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
@@ -192,7 +192,7 @@ makeWitnessesFromScriptKeys ::
   SafeHash EraIndependentTxBody ->
   Map (KeyHash kr) (KeyPair kr) ->
   Set (KeyHash kr) ->
-  Set (WitVKey 'Witness)
+  Set (WitVKey Witness)
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in mkWitnessesVKey txbodyHash (Map.elems witKeys)
@@ -207,14 +207,14 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 --          tx = ... txbody ... (witfun safehash) ...
 mkKeyHashWitFunPair ::
   forall kr.
-  Gen (KeyHash kr, SafeHash EraIndependentTxBody -> WitVKey 'Witness)
+  Gen (KeyHash kr, SafeHash EraIndependentTxBody -> WitVKey Witness)
 mkKeyHashWitFunPair = do
   keyPair@(KeyPair vk _) <- arbitrary @(KeyPair kr)
   pure (hashKey vk, \safeHash -> mkWitnessVKey safeHash keyPair)
 
 mkVKeyRewardAccount ::
   Network ->
-  KeyPair 'Staking ->
+  KeyPair Staking ->
   RewardAccount
 mkVKeyRewardAccount network keys = RewardAccount network $ KeyHashObj (hashKey $ vKey keys)
 

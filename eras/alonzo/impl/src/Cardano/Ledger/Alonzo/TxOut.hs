@@ -128,7 +128,7 @@ instance MemPack DataHash32 where
   {-# INLINE unpackM #-}
 
 decodeAddress28 ::
-  Credential 'Staking ->
+  Credential Staking ->
   Addr28Extra ->
   Addr
 decodeAddress28 stakeRef (Addr28Extra a b c d) =
@@ -153,11 +153,11 @@ data AlonzoTxOut era
       !(CompactForm (Value era))
       !DataHash
   | TxOut_AddrHash28_AdaOnly
-      !(Credential 'Staking)
+      !(Credential Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
   | TxOut_AddrHash28_AdaOnly_DataHash32
-      !(Credential 'Staking)
+      !(Credential Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
@@ -414,7 +414,7 @@ instance (Era era, Val (Value era)) => DecCBOR (AlonzoTxOut era) where
   {-# INLINEABLE decCBOR #-}
 
 instance (Era era, Val (Value era), MemPack (CompactForm (Value era))) => DecShareCBOR (AlonzoTxOut era) where
-  type Share (AlonzoTxOut era) = Interns (Credential 'Staking)
+  type Share (AlonzoTxOut era) = Interns (Credential Staking)
   decShareCBOR credsInterns = do
     txOut <-
       peekTokenType >>= \case
@@ -425,7 +425,7 @@ instance (Era era, Val (Value era), MemPack (CompactForm (Value era))) => DecSha
   {-# INLINEABLE decShareCBOR #-}
 
 internAlonzoTxOut ::
-  (Credential 'Staking -> Credential 'Staking) ->
+  (Credential Staking -> Credential Staking) ->
   AlonzoTxOut era ->
   AlonzoTxOut era
 internAlonzoTxOut internCred = \case

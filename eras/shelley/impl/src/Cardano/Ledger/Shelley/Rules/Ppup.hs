@@ -89,7 +89,7 @@ data ShelleyPpupPredFailure era
     --  `mismatchSupplied` ~ key hashes which were a part of the update.
     --  `mismatchExpected` ~ key hashes of the genesis keys.
     NonGenesisUpdatePPUP
-      (Mismatch 'RelSubset (Set (KeyHash 'Genesis)))
+      (Mismatch 'RelSubset (Set (KeyHash GenesisRole)))
   | -- | An update was proposed for the wrong epoch.
     --  The first 'EpochNo' is the current epoch.
     --  The second 'EpochNo' is the epoch listed in the update.

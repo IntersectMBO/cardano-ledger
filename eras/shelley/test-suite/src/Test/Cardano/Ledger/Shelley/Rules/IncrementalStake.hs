@@ -206,15 +206,15 @@ stakeDistr u ds ps =
     (VMap.fromMap $ Map.mapWithKey stakePoolStateToStakePoolParams poolState)
   where
     accountsMap = ds ^. accountsL . accountsMapL
-    rewards' :: Map.Map (Credential 'Staking) (CompactForm Coin)
+    rewards' :: Map.Map (Credential Staking) (CompactForm Coin)
     rewards' = Map.map (^. balanceAccountStateL) accountsMap
-    delegs :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)
+    delegs :: Map.Map (Credential Staking) (KeyHash StakePool)
     delegs = Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap
     ptrs' = ds ^. accountsL . accountsPtrsMapG
     PState {psStakePools = poolState} = ps
-    stakeRelation :: Map (Credential 'Staking) (CompactForm Coin)
+    stakeRelation :: Map (Credential Staking) (CompactForm Coin)
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
-    activeDelegs :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)
+    activeDelegs :: Map.Map (Credential Staking) (KeyHash StakePool)
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolState)
 
 -- | Sum up all the Coin for each staking Credential. This function has an
@@ -222,10 +222,10 @@ stakeDistr u ds ps =
 aggregateUtxoCoinByCredential ::
   forall era.
   EraTxOut era =>
-  Map Ptr (Credential 'Staking) ->
+  Map Ptr (Credential Staking) ->
   UTxO era ->
-  Map (Credential 'Staking) (CompactForm Coin) ->
-  Map (Credential 'Staking) (CompactForm Coin)
+  Map (Credential Staking) (CompactForm Coin) ->
+  Map (Credential Staking) (CompactForm Coin)
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldl' accum (Map.filter (/= mempty) initial) u
   where

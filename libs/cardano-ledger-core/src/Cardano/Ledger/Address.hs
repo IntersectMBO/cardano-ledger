@@ -159,11 +159,11 @@ instance NoThunks Addr
 -- | An account based address for rewards
 data RewardAccount = RewardAccount
   { raNetwork :: !Network
-  , raCredential :: !(Credential 'Staking)
+  , raCredential :: !(Credential Staking)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
-rewardAccountCredentialL :: Lens' RewardAccount (Credential 'Staking)
+rewardAccountCredentialL :: Lens' RewardAccount (Credential Staking)
 rewardAccountCredentialL = lens raCredential $ \x y -> x {raCredential = y}
 
 rewardAccountNetworkL :: Lens' RewardAccount Network
@@ -346,7 +346,7 @@ instance NoThunks BootstrapAddress
 
 bootstrapKeyHash ::
   BootstrapAddress ->
-  KeyHash 'Payment
+  KeyHash Payment
 bootstrapKeyHash (BootstrapAddress byronAddress) =
   let root = Byron.addrRoot byronAddress
       bytes = Byron.abstractHashToBytes root

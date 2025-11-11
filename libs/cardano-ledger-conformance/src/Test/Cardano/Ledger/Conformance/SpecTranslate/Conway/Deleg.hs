@@ -39,14 +39,14 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecTranslate ctx (PParamsHKD Identity era)
-  , Inject ctx (Set (Credential 'DRepRole))
+  , Inject ctx (Set (Credential DRepRole))
   ) =>
   SpecTranslate ctx (ConwayDelegEnv era)
   where
   type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
 
   toSpecRep ConwayDelegEnv {..} = do
-    delegatees <- askCtx @(Set (Credential 'DRepRole))
+    delegatees <- askCtx @(Set (Credential DRepRole))
     Agda.MkDelegEnv
       <$> toSpecRep cdePParams
       <*> toSpecRep

@@ -134,7 +134,7 @@ instance Split Coin where
     | m <= 0 = error "must split coins into positive parts"
     | otherwise = (take (fromIntegral m) (repeat (Coin (n `div` m))), Coin (n `rem` m))
 
-type GenesisKeyPair c = KeyPair 'Genesis
+type GenesisKeyPair c = KeyPair GenesisRole
 
 -- | Construct a seed from a bunch of Word64s
 --

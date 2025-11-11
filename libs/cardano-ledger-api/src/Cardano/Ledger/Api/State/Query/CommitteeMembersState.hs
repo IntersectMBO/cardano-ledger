@@ -49,7 +49,7 @@ instance DecCBOR MemberStatus where
   decCBOR = decodeEnumBounded
 
 data HotCredAuthStatus
-  = MemberAuthorized (Credential 'HotCommitteeRole)
+  = MemberAuthorized (Credential HotCommitteeRole)
   | -- | Member enacted, but no hot credential for voting has been registered
     MemberNotAuthorized
   | MemberResigned (Maybe Anchor)
@@ -140,7 +140,7 @@ instance ToKeyValuePairs CommitteeMemberState where
         ]
 
 data CommitteeMembersState = CommitteeMembersState
-  { csCommittee :: !(Map (Credential 'ColdCommitteeRole) CommitteeMemberState)
+  { csCommittee :: !(Map (Credential ColdCommitteeRole) CommitteeMemberState)
   , csThreshold :: !(Maybe UnitInterval)
   , csEpochNo :: !EpochNo
   -- ^ Current epoch number. This is necessary to interpret committee member states

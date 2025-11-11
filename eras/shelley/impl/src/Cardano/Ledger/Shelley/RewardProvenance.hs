@@ -127,9 +127,9 @@ data RewardProvenance = RewardProvenance
   -- ^ The amount of Lovelace taken from the treasury for the given epoch.
   , activeStake :: !Coin
   -- ^ The amount of Lovelace that is delegated during the given epoch.
-  , pools :: !(Map (KeyHash 'StakePool) RewardProvenancePool)
+  , pools :: !(Map (KeyHash StakePool) RewardProvenancePool)
   -- ^ Individual stake pool provenance.
-  , desirabilities :: !(Map (KeyHash 'StakePool) Desirability)
+  , desirabilities :: !(Map (KeyHash StakePool) Desirability)
   -- ^ A map from pool ID to the desirability score.
   -- See the <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/pool-ranking.pdf stake pool ranking document>.
   }

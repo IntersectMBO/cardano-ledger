@@ -69,7 +69,7 @@ mkShelleyTestAccountState ::
   (HasCallStack, ShelleyEraAccounts era) =>
   Maybe Ptr ->
   CompactForm Coin ->
-  Maybe (KeyHash 'StakePool) ->
+  Maybe (KeyHash StakePool) ->
   Maybe DRep ->
   AccountState era
 mkShelleyTestAccountState mPtr deposit mStakePool mDRep =
@@ -85,7 +85,7 @@ shelleyAccountsFromAccountsMap ::
   , AccountState era ~ ShelleyAccountState era
   , ShelleyEraAccounts era
   ) =>
-  Map.Map (Credential 'Staking) (AccountState era) -> Accounts era
+  Map.Map (Credential Staking) (AccountState era) -> Accounts era
 shelleyAccountsFromAccountsMap accountsMap =
   ShelleyAccounts
     { saStates = accountsMap

@@ -86,11 +86,11 @@ infixl 4 !*!
 
 delegationsSpec ::
   Specification
-    (Map (Credential 'Staking) (KeyHash 'StakePool))
+    (Map (Credential Staking) (KeyHash StakePool))
 delegationsSpec = (hasSize (rangeSize 8 12))
 
 poolRegSpec ::
-  forall era. Era era => WitUniv era -> Specification (Map (KeyHash 'StakePool) StakePoolState)
+  forall era. Era era => WitUniv era -> Specification (Map (KeyHash StakePool) StakePoolState)
 poolRegSpec univ = constrained $ \poolRegMap ->
   [ witness univ (dom_ poolRegMap)
   , witness univ (rng_ poolRegMap)

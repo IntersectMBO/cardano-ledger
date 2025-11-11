@@ -252,22 +252,22 @@ data GenEnv era = GenEnv
 
 data GenState era = GenState
   { gsValidityInterval :: !ValidityInterval
-  , gsKeys :: !(Map (KeyHash 'Witness) (KeyPair 'Witness))
+  , gsKeys :: !(Map (KeyHash Witness) (KeyPair Witness))
   , gsScripts :: !(Map ScriptHash (Script era))
   , gsPlutusScripts :: !(Map (ScriptHash, PlutusPurposeTag) (IsValid, Script era))
   , gsDatums :: !(Map DataHash (Data era))
   , gsVI :: !(Map ValidityInterval (Set ScriptHash))
   , gsModel :: !(ModelNewEpochState era)
   , gsInitialUtxo :: !(Map TxIn (TxOut era))
-  , gsInitialAccounts :: !(Map (Credential 'Staking) (AccountState era))
-  , gsInitialStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
+  , gsInitialAccounts :: !(Map (Credential Staking) (AccountState era))
+  , gsInitialStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
   , gsInitialPoolDistr ::
-      !(Map (KeyHash 'StakePool) IndividualPoolStake)
+      !(Map (KeyHash StakePool) IndividualPoolStake)
   , -- Stable fields are stable from initialization to the end of the generation process
-    gsStablePools :: !(Set (KeyHash 'StakePool))
+    gsStablePools :: !(Set (KeyHash StakePool))
   , gsStableDelegators :: !(Set StakeCredential)
-  , gsAvoidCred :: !(Set (Credential 'Staking))
-  , gsAvoidKey :: !(Set (KeyHash 'StakePool))
+  , gsAvoidCred :: !(Set (Credential Staking))
+  , gsAvoidKey :: !(Set (KeyHash StakePool))
   , gsGenEnv :: !(GenEnv era)
   , gsSeedIdx :: !Int
   }
@@ -371,8 +371,8 @@ setVi gs vi = gs {gsValidityInterval = vi}
 {-# NOINLINE setVi #-}
 
 modifyGenStateKeys ::
-  ( Map.Map (KeyHash 'Witness) (KeyPair 'Witness) ->
-    Map.Map (KeyHash 'Witness) (KeyPair 'Witness)
+  ( Map.Map (KeyHash Witness) (KeyPair Witness) ->
+    Map.Map (KeyHash Witness) (KeyPair Witness)
   ) ->
   GenRS era ()
 modifyGenStateKeys f = modify (\x -> x {gsKeys = f (gsKeys x)})
@@ -390,8 +390,8 @@ modifyGenStateVI ::
 modifyGenStateVI f = modify (\x -> x {gsVI = f (gsVI x)})
 
 modifyGenStateInitialAccounts ::
-  ( Map.Map (Credential 'Staking) (AccountState era) ->
-    Map.Map (Credential 'Staking) (AccountState era)
+  ( Map.Map (Credential Staking) (AccountState era) ->
+    Map.Map (Credential Staking) (AccountState era)
   ) ->
   GenRS era ()
 modifyGenStateInitialAccounts f = modify $ \st -> st {gsInitialAccounts = f (gsInitialAccounts st)}
@@ -404,32 +404,32 @@ modifyGenStateInitialUtxo ::
 modifyGenStateInitialUtxo f = modify $ \st -> st {gsInitialUtxo = f (gsInitialUtxo st)}
 
 modifyGenStateAvoidCred ::
-  ( Set (Credential 'Staking) ->
-    Set (Credential 'Staking)
+  ( Set (Credential Staking) ->
+    Set (Credential Staking)
   ) ->
   GenRS era ()
 modifyGenStateAvoidCred f = modify (\st -> st {gsAvoidCred = f (gsAvoidCred st)})
 
 modifyGenStateAvoidKey ::
-  (Set (KeyHash 'StakePool) -> Set (KeyHash 'StakePool)) ->
+  (Set (KeyHash StakePool) -> Set (KeyHash StakePool)) ->
   GenRS era ()
 modifyGenStateAvoidKey f = modify (\s -> s {gsAvoidKey = f (gsAvoidKey s)})
 
 modifyGenStateStablePools ::
-  (Set (KeyHash 'StakePool) -> Set (KeyHash 'StakePool)) ->
+  (Set (KeyHash StakePool) -> Set (KeyHash StakePool)) ->
   GenRS era ()
 modifyGenStateStablePools f = modify (\gs -> gs {gsStablePools = f (gsStablePools gs)})
 
 modifyGenStateInitialStakePoolParams ::
-  ( Map.Map (KeyHash 'StakePool) StakePoolParams ->
-    Map.Map (KeyHash 'StakePool) StakePoolParams
+  ( Map.Map (KeyHash StakePool) StakePoolParams ->
+    Map.Map (KeyHash StakePool) StakePoolParams
   ) ->
   GenRS era ()
 modifyGenStateInitialStakePoolParams f = modify (\gs -> gs {gsInitialStakePoolParams = f (gsInitialStakePoolParams gs)})
 
 modifyGenStateInitialPoolDistr ::
-  ( Map.Map (KeyHash 'StakePool) IndividualPoolStake ->
-    Map.Map (KeyHash 'StakePool) IndividualPoolStake
+  ( Map.Map (KeyHash StakePool) IndividualPoolStake ->
+    Map.Map (KeyHash StakePool) IndividualPoolStake
   ) ->
   GenRS era ()
 modifyGenStateInitialPoolDistr f = modify (\gs -> gs {gsInitialPoolDistr = f (gsInitialPoolDistr gs)})
@@ -467,15 +467,15 @@ modifyModelDeposited :: (Coin -> Coin) -> GenRS era ()
 modifyModelDeposited f = modifyModel (\ms -> ms {mDeposited = f (mDeposited ms)})
 
 modifyModelStakePools ::
-  ( Map.Map (KeyHash 'StakePool) StakePoolState ->
-    Map.Map (KeyHash 'StakePool) StakePoolState
+  ( Map.Map (KeyHash StakePool) StakePoolState ->
+    Map.Map (KeyHash StakePool) StakePoolState
   ) ->
   GenRS era ()
 modifyModelStakePools f = modifyModel (\ms -> ms {mStakePools = f (mStakePools ms)})
 
 modifyModelPoolDistr ::
-  ( Map (KeyHash 'StakePool) IndividualPoolStake ->
-    Map (KeyHash 'StakePool) IndividualPoolStake
+  ( Map (KeyHash StakePool) IndividualPoolStake ->
+    Map (KeyHash StakePool) IndividualPoolStake
   ) ->
   GenRS era ()
 modifyModelPoolDistr f = modifyModel (\ms -> ms {mPoolDistr = f (mPoolDistr ms)})
@@ -589,7 +589,7 @@ getUtxoTest = do
 -- | To compute deposits we need a function that tells if the KeyHash is a new Pool
 --   Compute this function before we do any generation, since such generation
 --   may actually add to the mPoolParams, and then the added thing won't appear new.
-getNewPoolTest :: GenRS era (KeyHash 'StakePool -> Bool)
+getNewPoolTest :: GenRS era (KeyHash StakePool -> Bool)
 getNewPoolTest = do
   stakePools <- gets (mStakePools . gsModel)
   pure (`Map.member` stakePools)
@@ -934,7 +934,7 @@ genFreshCredential tries0 tag old = go tries0
         else pure c
 
 genFreshRegCred ::
-  Reflect era => PlutusPurposeTag -> GenRS era (Credential 'Staking)
+  Reflect era => PlutusPurposeTag -> GenRS era (Credential Staking)
 genFreshRegCred tag = do
   old <- gets (Map.keysSet . gsInitialAccounts)
   avoid <- gets gsAvoidCred
@@ -945,7 +945,7 @@ genFreshRegCred tag = do
 
 genStakePoolParams ::
   Reflect era =>
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   GenRS era StakePoolParams
 genStakePoolParams sppId = do
   sppVrf <- lift arbitrary
@@ -984,7 +984,7 @@ genNewPool ::
   Reflect era =>
   GenRS
     era
-    ( KeyHash 'StakePool
+    ( KeyHash StakePool
     , StakePoolParams
     , IndividualPoolStake
     )
@@ -1023,7 +1023,7 @@ initStableFields = do
   modifyGenStateStableDelegators (Set.union (Set.fromList credentials))
 
 registerNewAccount ::
-  EraTest era => Credential 'Staking -> Maybe (KeyHash 'StakePool) -> GenRS era ()
+  EraTest era => Credential Staking -> Maybe (KeyHash StakePool) -> GenRS era ()
 registerNewAccount cred mPoolId = do
   pp <- asks gePParams
   let deposit = pp ^. ppKeyDepositL
@@ -1039,7 +1039,7 @@ registerNewAccount cred mPoolId = do
 
 -- Adds to the rewards of the ModelNewEpochState. This used exclusively to generate Withdrawals, so
 -- we mark these as ones to avoid in the future. Especialy when generating DeRegKey.
-genRewards :: Reflect era => GenRS era (Map (Credential 'Staking) Coin)
+genRewards :: Reflect era => GenRS era (Map (Credential Staking) Coin)
 genRewards = do
   wmax <- gets (withdrawalMax . geSize . gsGenEnv)
   n <- lift $ choose (1, wmax)
@@ -1060,7 +1060,7 @@ genRewards = do
   modifyGenStateAvoidCred (Set.union (Map.keysSet balanceMap))
   pure balanceMap
 
-genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash 'StakePool)
+genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash StakePool)
 genRetirementHash = do
   m <- gets (mStakePools . gsModel)
   pp <- gets (mPParams . gsModel)
@@ -1090,7 +1090,7 @@ genRetirementHash = do
 genPool ::
   forall era.
   Reflect era =>
-  GenRS era (KeyHash 'StakePool, StakePoolParams)
+  GenRS era (KeyHash StakePool, StakePoolParams)
 genPool = frequencyT [(10, genNew), (90, pickExisting)]
   where
     genNew = do

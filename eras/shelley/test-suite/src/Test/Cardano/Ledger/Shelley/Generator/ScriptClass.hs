@@ -52,8 +52,8 @@ import qualified Test.QuickCheck as QC
 ------------------------------------------------------------------------------}
 
 class EraScript era => ScriptClass era where
-  basescript :: Proxy era -> KeyHash 'Witness -> Script era
-  isKey :: Proxy era -> Script era -> Maybe (KeyHash 'Witness)
+  basescript :: Proxy era -> KeyHash Witness -> Script era
+  isKey :: Proxy era -> Script era -> Maybe (KeyHash Witness)
   isOnePhase :: Proxy era -> Script era -> Bool
   isOnePhase _proxy _ = True -- Many Eras have only OnePhase Scripts.
   quantify :: Proxy era -> Script era -> Quantifier (Script era)
@@ -95,7 +95,7 @@ scriptKeyCombination ::
   ScriptClass era =>
   Proxy era ->
   Script era ->
-  [KeyHash 'Witness]
+  [KeyHash Witness]
 scriptKeyCombination prox script = case quantify prox script of
   AllOf xs -> concatMap (scriptKeyCombination prox) xs
   AnyOf xs -> getFirst (not . null) (map (scriptKeyCombination prox) xs)
@@ -111,7 +111,7 @@ scriptKeyCombinations ::
   ScriptClass era =>
   Proxy era ->
   Script era ->
-  [[KeyHash 'Witness]]
+  [[KeyHash Witness]]
 scriptKeyCombinations prox script = case quantify prox script of
   AllOf xs -> [concat $ concatMap (scriptKeyCombinations prox) xs]
   AnyOf xs -> concatMap (scriptKeyCombinations prox) xs
@@ -124,13 +124,13 @@ scriptKeyCombinations prox script = case quantify prox script of
 
 -- | Make a simple (non-combined, ie NO quantifer like All, Any, MofN, etc.) script.
 --   'basescript' is a method of ScriptClass, and is different for every Era.
-mkScriptFromKey :: forall era. ScriptClass era => KeyPair 'Witness -> Script era
+mkScriptFromKey :: forall era. ScriptClass era => KeyPair Witness -> Script era
 mkScriptFromKey = basescript (Proxy :: Proxy era) . hashKey . vKey
 
 mkScriptsFromKeyPair ::
   forall era.
   ScriptClass era =>
-  (KeyPair 'Payment, KeyPair 'Staking) ->
+  (KeyPair Payment, KeyPair Staking) ->
   (Script era, Script era)
 mkScriptsFromKeyPair (k0, k1) =
   (mkScriptFromKey @era $ asWitness k0, mkScriptFromKey @era $ asWitness k1)

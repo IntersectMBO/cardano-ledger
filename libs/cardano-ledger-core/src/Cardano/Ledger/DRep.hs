@@ -62,7 +62,7 @@ import NoThunks.Class (NoThunks (..))
 -- DRep and DRepState
 
 data DRep
-  = DRepKeyHash !(KeyHash 'DRepRole)
+  = DRepKeyHash !(KeyHash DRepRole)
   | DRepScriptHash !ScriptHash
   | DRepAlwaysAbstain
   | DRepAlwaysNoConfidence
@@ -94,7 +94,7 @@ instance DecCBOR DRep where
       k -> Invalid k
 
 instance DecShareCBOR DRep where
-  type Share DRep = Interns (Credential 'DRepRole)
+  type Share DRep = Interns (Credential DRepRole)
   decShareCBOR cd = do
     dRep <- decCBOR
     pure $!
@@ -102,12 +102,12 @@ instance DecShareCBOR DRep where
         Nothing -> dRep
         Just cred -> credToDRep $ interns cd cred
 
-dRepToCred :: DRep -> Maybe (Credential 'DRepRole)
+dRepToCred :: DRep -> Maybe (Credential DRepRole)
 dRepToCred (DRepKeyHash kh) = Just $ KeyHashObj kh
 dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
 dRepToCred _ = Nothing
 
-credToDRep :: Credential 'DRepRole -> DRep
+credToDRep :: Credential DRepRole -> DRep
 credToDRep (KeyHashObj kh) = DRepKeyHash kh
 credToDRep (ScriptHashObj sh) = DRepScriptHash sh
 
@@ -138,7 +138,7 @@ parseDRep t = case T.span (/= '-') t of
         DRepCredential <$> parseCredential rest
   _ -> fail $ "Invalid DRep: " <> show t
 
-pattern DRepCredential :: Credential 'DRepRole -> DRep
+pattern DRepCredential :: Credential DRepRole -> DRep
 pattern DRepCredential c <- (dRepToCred -> Just c)
   where
     DRepCredential c = case c of
@@ -151,7 +151,7 @@ data DRepState = DRepState
   { drepExpiry :: !EpochNo
   , drepAnchor :: !(StrictMaybe Anchor)
   , drepDeposit :: !(CompactForm Coin)
-  , drepDelegs :: !(Set (Credential 'Staking))
+  , drepDelegs :: !(Set (Credential Staking))
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -163,7 +163,7 @@ instance DecCBOR DRepState where
   decCBOR = decNoShareCBOR
 
 instance DecShareCBOR DRepState where
-  type Share DRepState = Interns (Credential 'Staking)
+  type Share DRepState = Interns (Credential Staking)
   getShare = internsFromSet . drepDelegs
   decShareCBOR is = do
     decode $
@@ -216,5 +216,5 @@ drepDepositL = drepDepositCompactL . partialCompactCoinL
 drepDepositCompactL :: Lens' DRepState (CompactForm Coin)
 drepDepositCompactL = lens drepDeposit (\x y -> x {drepDeposit = y})
 
-drepDelegsL :: Lens' DRepState (Set (Credential 'Staking))
+drepDelegsL :: Lens' DRepState (Set (Credential Staking))
 drepDelegsL = lens drepDelegs (\x y -> x {drepDelegs = y})

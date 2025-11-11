@@ -177,7 +177,7 @@ noConfidenceProp =
 
 data TestData era = TestData
   { distr :: PoolDistr
-  , votes :: Map (KeyHash 'StakePool) Vote
+  , votes :: Map (KeyHash StakePool) Vote
   , totalStake :: CompactForm Coin
   , stakeYes :: Coin
   , stakeNo :: Coin
@@ -185,8 +185,8 @@ data TestData era = TestData
   , stakeAlwaysAbstain :: Coin
   , stakeNoConfidence :: Coin
   , stakeNotVoted :: Coin
-  , delegatees :: Map (Credential 'Staking) DRep
-  , stakePools :: Map (KeyHash 'StakePool) StakePoolState
+  , delegatees :: Map (Credential Staking) DRep
+  , stakePools :: Map (KeyHash StakePool) StakePoolState
   }
   deriving (Show)
 
@@ -205,7 +205,7 @@ genTestData ::
   Ratios ->
   Gen (TestData era)
 genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
-  pools <- listOf (arbitrary @(KeyHash 'StakePool))
+  pools <- listOf (arbitrary @(KeyHash StakePool))
   let (poolsYes, poolsNo, poolsAbstain, poolsAlwaysAbstain, poolsNoConfidence, rest) =
         splitByPct yes no abstain alwaysAbstain noConfidence pools
       totalStake = length pools
@@ -272,16 +272,16 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
     -- create a map of reward account delegatees.
     mkDelegatees ::
       DRep ->
-      Map (KeyHash 'StakePool) StakePoolState ->
-      Map (Credential 'Staking) DRep
+      Map (KeyHash StakePool) StakePoolState ->
+      Map (Credential Staking) DRep
     mkDelegatees drep =
       fromKeys (const drep) . map (raCredential . spsRewardAccount) . Map.elems
 
     -- Create a map from each pool with the given value, where the key is the pool credential
     -- and take the union of all these maps.
     unionAllFromLists ::
-      [([KeyHash 'StakePool], a)] ->
-      Map (KeyHash 'StakePool) a
+      [([KeyHash StakePool], a)] ->
+      Map (KeyHash StakePool) a
     unionAllFromLists = foldMap (\(ks, v) -> fromKeys (const v) ks)
 
 genRatios :: Gen Ratios
@@ -301,6 +301,6 @@ genPctsOf100 = do
   let s = a + b + c + d + e + f
   pure (a % s, b % s, c % s, d % s, e % s)
 
-accountsFromDelegatees :: ShelleyEraTest era => Map (Credential 'Staking) DRep -> Accounts era
+accountsFromDelegatees :: ShelleyEraTest era => Map (Credential Staking) DRep -> Accounts era
 accountsFromDelegatees =
   Map.foldrWithKey' (\cred drep -> registerTestAccount cred Nothing mempty Nothing (Just drep)) def

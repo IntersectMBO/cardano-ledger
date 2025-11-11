@@ -138,7 +138,7 @@ data BHBody c = BHBody
   -- ^ block slot
   , bheaderPrev :: !PrevHash
   -- ^ Hash of the previous block header
-  , bheaderVk :: !(VKey 'BlockIssuer)
+  , bheaderVk :: !(VKey BlockIssuer)
   -- ^ verification key of block issuer
   , bheaderVrfVk :: !(VRF.VerKeyVRF (VRF c))
   -- ^ VRF verification key for block issuer
@@ -289,7 +289,7 @@ prevHashToNonce = \case
 
 -- | Retrieve the issuer id (the hash of the cold key) from the body of the block header.
 -- This corresponds to either a genesis/core node or a stake pool.
-issuerIDfromBHBody :: BHBody c -> KeyHash 'BlockIssuer
+issuerIDfromBHBody :: BHBody c -> KeyHash BlockIssuer
 issuerIDfromBHBody = hashKey . bheaderVk
 
 bhbody ::

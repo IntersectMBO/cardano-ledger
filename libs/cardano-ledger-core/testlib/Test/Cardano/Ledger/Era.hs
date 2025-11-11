@@ -98,19 +98,19 @@ class
     HasCallStack =>
     Maybe Ptr ->
     CompactForm Coin ->
-    Maybe (KeyHash 'StakePool) ->
+    Maybe (KeyHash StakePool) ->
     Maybe DRep ->
     AccountState era
 
-  accountsFromAccountsMap :: Map.Map (Credential 'Staking) (AccountState era) -> Accounts era
+  accountsFromAccountsMap :: Map.Map (Credential Staking) (AccountState era) -> Accounts era
 
 -- | This is a helper function that uses `mkTestAccountState` to register an account.
 registerTestAccount ::
   (HasCallStack, EraTest era) =>
-  Credential 'Staking ->
+  Credential Staking ->
   Maybe Ptr ->
   CompactForm Coin ->
-  Maybe (KeyHash 'StakePool) ->
+  Maybe (KeyHash StakePool) ->
   Maybe DRep ->
   Accounts era ->
   Accounts era

@@ -56,11 +56,11 @@ data ShelleyNewEpochEvent era
   = DeltaRewardEvent (Event (EraRule "RUPD" era))
   | RestrainedRewards
       EpochNo
-      (Map.Map (Credential 'Staking) (Set Reward))
-      (Set (Credential 'Staking))
+      (Map.Map (Credential Staking) (Set Reward))
+      (Set (Credential Staking))
   | TotalRewardEvent
       EpochNo
-      (Map.Map (Credential 'Staking) (Set Reward))
+      (Map.Map (Credential Staking) (Set Reward))
   | EpochEvent (Event (EraRule "EPOCH" era))
   | MirEvent (Event (EraRule "MIR" era))
   | TotalAdaPotsEvent AdaPots

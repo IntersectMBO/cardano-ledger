@@ -254,7 +254,7 @@ instance
 
 -- | Update operation for protocol parameters structure @PParams@
 newtype ProposedPPUpdates era
-  = ProposedPPUpdates (Map (KeyHash 'Genesis) (PParamsUpdate era))
+  = ProposedPPUpdates (Map (KeyHash GenesisRole) (PParamsUpdate era))
   deriving (Generic, Semigroup, Monoid)
 
 deriving instance Eq (PParamsUpdate era) => Eq (ProposedPPUpdates era)

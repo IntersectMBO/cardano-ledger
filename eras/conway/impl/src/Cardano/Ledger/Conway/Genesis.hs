@@ -52,13 +52,13 @@ data ConwayGenesis = ConwayGenesis
   { cgUpgradePParams :: !(UpgradeConwayPParams Identity)
   , cgConstitution :: !(Constitution ConwayEra)
   , cgCommittee :: !(Committee ConwayEra)
-  , cgDelegs :: ListMap (Credential 'Staking) Delegatee
-  , cgInitialDReps :: ListMap (Credential 'DRepRole) DRepState
+  , cgDelegs :: ListMap (Credential Staking) Delegatee
+  , cgInitialDReps :: ListMap (Credential DRepRole) DRepState
   }
   deriving (Eq, Generic, Show)
   deriving (ToJSON) via KeyValuePairs ConwayGenesis
 
-cgDelegsL :: Lens' ConwayGenesis (ListMap (Credential 'Staking) Delegatee)
+cgDelegsL :: Lens' ConwayGenesis (ListMap (Credential Staking) Delegatee)
 cgDelegsL = lens cgDelegs (\x y -> x {cgDelegs = y})
 
 instance EraGenesis ConwayEra where

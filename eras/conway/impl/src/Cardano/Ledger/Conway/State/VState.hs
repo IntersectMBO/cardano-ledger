@@ -54,7 +54,7 @@ import NoThunks.Class (NoThunks (..))
 -- | The state that tracks the voting entities (DReps and Constitutional Committee
 -- members). In the formal ledger specification this type is called @GState@
 data VState era = VState
-  { vsDReps :: !(Map (Credential 'DRepRole) DRepState)
+  { vsDReps :: !(Map (Credential DRepRole) DRepState)
   , vsCommitteeState :: !(CommitteeState era)
   , vsNumDormantEpochs :: !EpochNo
   -- ^ Number of contiguous epochs in which there are exactly zero
@@ -69,7 +69,7 @@ data VState era = VState
   deriving (ToJSON) via KeyValuePairs (VState era)
 
 -- | Function that looks up the deposit for currently registered DRep
-lookupDepositVState :: VState era -> Credential 'DRepRole -> Maybe Coin
+lookupDepositVState :: VState era -> Credential DRepRole -> Maybe Coin
 lookupDepositVState vstate = fmap (fromCompact . drepDeposit) . flip Map.lookup (vstate ^. vsDRepsL)
 
 instance Default (VState era) where
@@ -82,9 +82,9 @@ instance NFData (VState era)
 instance Era era => DecShareCBOR (VState era) where
   type
     Share (VState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   getShare VState {vsDReps, vsCommitteeState} =
     (internsFromSet (foldMap drepDelegs vsDReps), fst (getShare vsDReps), getShare vsCommitteeState)
@@ -119,7 +119,7 @@ instance ToKeyValuePairs (VState era) where
 -- If the new delegation matches the previous one, this is a noop.
 unDelegReDelegDRep ::
   ConwayEraAccounts era =>
-  Credential 'Staking ->
+  Credential Staking ->
   -- | Account that is losing its current delegation and/or acquiring a new one
   AccountState era ->
   -- | Potential new delegation. In case when stake credential unregisters this must be `Nothing`.
@@ -142,7 +142,7 @@ unDelegReDelegDRep stakeCred accountState mNewDRep =
           Map.adjust (drepDelegsL %~ Set.insert stakeCred) dRepCred
         _ -> id
 
-vsDRepsL :: Lens' (VState era) (Map (Credential 'DRepRole) DRepState)
+vsDRepsL :: Lens' (VState era) (Map (Credential DRepRole) DRepState)
 vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
 
 vsCommitteeStateL :: Lens' (VState era) (CommitteeState era)
@@ -151,6 +151,6 @@ vsCommitteeStateL = lens vsCommitteeState (\vs u -> vs {vsCommitteeState = u})
 vsNumDormantEpochsL :: Lens' (VState era) EpochNo
 vsNumDormantEpochsL = lens vsNumDormantEpochs (\vs u -> vs {vsNumDormantEpochs = u})
 
-vsActualDRepExpiry :: Credential 'DRepRole -> VState era -> Maybe EpochNo
+vsActualDRepExpiry :: Credential DRepRole -> VState era -> Maybe EpochNo
 vsActualDRepExpiry cred vs =
   binOpEpochNo (+) (vsNumDormantEpochs vs) . drepExpiry <$> Map.lookup cred (vsDReps vs)

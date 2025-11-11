@@ -131,7 +131,7 @@ data ConwayTxBodyRaw l era where
     , ctbrWithdrawals :: !Withdrawals
     , ctbrFee :: !Coin
     , ctbrVldt :: !ValidityInterval
-    , ctbrReqSignerHashes :: !(Set (KeyHash 'Guard))
+    , ctbrReqSignerHashes :: !(Set (KeyHash Guard))
     , ctbrMint :: !MultiAsset
     , ctbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
     , ctbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
@@ -372,7 +372,7 @@ instance EraTxBody ConwayEra where
 -- `Cardano.Ledger.CertState.Obligations`
 conwayTotalDepositsTxBody ::
   PParams ConwayEra ->
-  (KeyHash 'StakePool -> Bool) ->
+  (KeyHash StakePool -> Bool) ->
   TxBody l ConwayEra ->
   Coin
 conwayTotalDepositsTxBody pp isPoolRegisted txBody =
@@ -484,7 +484,7 @@ pattern ConwayTxBody ::
   Withdrawals ->
   Coin ->
   ValidityInterval ->
-  Set (KeyHash 'Guard) ->
+  Set (KeyHash Guard) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
   StrictMaybe TxAuxDataHash ->

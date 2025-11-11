@@ -153,7 +153,7 @@ import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.Cardano.Slotting.Numeric ()
-import Test.QuickCheck hiding (Args, Fun, NonZero, forAll)
+import Test.QuickCheck hiding (Args, Fun, NonZero, Witness, forAll)
 
 -- ==========================================================
 -- TxBody HasSpec instance ------------------------------------------------
@@ -173,7 +173,7 @@ type ConwayTxBodyTypes =
    , Withdrawals
    , Coin
    , ValidityInterval
-   , Set (KeyHash 'Guard)
+   , Set (KeyHash Guard)
    , MultiAsset
    , StrictMaybe ScriptIntegrityHash
    , StrictMaybe TxAuxDataHash
@@ -497,7 +497,7 @@ how else you would do it.
 
 type TimelockTypes era =
   '[ -- RequireSignature
-     '[KeyHash 'Witness ]
+     '[KeyHash Witness ]
      -- RequireAllOf
    , '[StrictSeq (Timelock era)]
      -- RequireAnyOf
@@ -1076,12 +1076,12 @@ gasId_ = sel @0
 
 gasCommitteeVotes_ ::
   Term (GovActionState ConwayEra) ->
-  Term (Map (Credential 'HotCommitteeRole) Vote)
+  Term (Map (Credential HotCommitteeRole) Vote)
 gasCommitteeVotes_ = sel @1
 
 gasDRepVotes_ ::
   Term (GovActionState ConwayEra) ->
-  Term (Map (Credential 'DRepRole) Vote)
+  Term (Map (Credential DRepRole) Vote)
 gasDRepVotes_ = sel @2
 
 gasProposalProcedure_ ::
@@ -1445,13 +1445,13 @@ type DRepPulserTypes =
    , InstantStake ConwayEra
    , PoolDistr
    , Map DRep (CompactForm Coin)
-   , Map (Credential 'DRepRole) DRepState
+   , Map (Credential DRepRole) DRepState
    , EpochNo
    , CommitteeState ConwayEra
    , EnactState ConwayEra
    , StrictSeq (GovActionState ConwayEra)
-   , Map (Credential 'Staking) (CompactForm Coin)
-   , Map (KeyHash 'StakePool) StakePoolState
+   , Map (Credential Staking) (CompactForm Coin)
+   , Map (KeyHash StakePool) StakePoolState
    ]
 
 instance
@@ -1666,7 +1666,7 @@ instance HasSpec Metadatum
 -- All the TxWits instances
 
 type AlonzoTxWitsTypes =
-  '[ Set (WitVKey 'Witness)
+  '[ Set (WitVKey Witness)
    , Set BootstrapWitness
    ]
 
@@ -1685,7 +1685,7 @@ instance AlonzoEraScript era => HasSimpleRep (AlonzoTxWits era) where
 instance AlonzoEraScript era => HasSpec (AlonzoTxWits era)
 
 type ShelleyTxWitsTypes era =
-  '[ Set (WitVKey 'Witness)
+  '[ Set (WitVKey Witness)
    , Set BootstrapWitness
    ]
 
@@ -1830,7 +1830,7 @@ instance HasSpec RewardUpdate
 type PulserTypes =
   '[ Int
    , FreeVars
-   , VMap VMap.VB VMap.VP (Credential 'Staking) (CompactForm Coin)
+   , VMap VMap.VB VMap.VP (Credential Staking) (CompactForm Coin)
    , RewardAns
    ]
 
@@ -1863,7 +1863,7 @@ class Coercible a b => CoercibleLike a b where
     TypeSpec a ->
     Specification b
 
-instance Typeable krole => CoercibleLike (KeyHash krole) (KeyHash 'Witness) where
+instance Typeable krole => CoercibleLike (KeyHash krole) (KeyHash Witness) where
   coerceSpec (ExplainSpec es x) = explainSpec es (coerceSpec x)
   coerceSpec (TypeSpec z excl) = TypeSpec z $ coerceKeyRole <$> excl
   coerceSpec (MemberSpec s) = MemberSpec $ coerceKeyRole <$> s
@@ -1876,7 +1876,7 @@ instance Typeable krole => CoercibleLike (KeyHash krole) (KeyHash 'Witness) wher
 
   getCoerceSpec ::
     TypeSpec (KeyHash krole) ->
-    Specification (KeyHash 'Witness)
+    Specification (KeyHash Witness)
   getCoerceSpec x = TypeSpec x mempty
 
 instance CoercibleLike (CompactForm Coin) Word64 where

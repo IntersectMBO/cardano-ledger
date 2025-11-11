@@ -134,8 +134,8 @@ committeeAccepted RatifyEnv {reCommitteeState, reCurrentEpoch} rs gas =
 
 committeeAcceptedRatio ::
   forall era.
-  Map (Credential 'ColdCommitteeRole) EpochNo ->
-  Map (Credential 'HotCommitteeRole) Vote ->
+  Map (Credential ColdCommitteeRole) EpochNo ->
+  Map (Credential HotCommitteeRole) Vote ->
   CommitteeState era ->
   EpochNo ->
   Rational
@@ -144,7 +144,7 @@ committeeAcceptedRatio members votes committeeState currentEpoch =
   where
     accumVotes ::
       (Integer, Integer) ->
-      Credential 'ColdCommitteeRole ->
+      Credential ColdCommitteeRole ->
       EpochNo ->
       (Integer, Integer)
     accumVotes (!yes, !tot) member expiry
@@ -251,7 +251,7 @@ dRepAccepted re rs GovActionState {gasDRepVotes, gasProposalProcedure} =
 dRepAcceptedRatio ::
   forall era.
   RatifyEnv era ->
-  Map (Credential 'DRepRole) Vote ->
+  Map (Credential DRepRole) Vote ->
   GovAction era ->
   Rational
 dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVotes govAction =

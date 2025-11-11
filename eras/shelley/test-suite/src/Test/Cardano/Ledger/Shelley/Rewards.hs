@@ -211,7 +211,7 @@ data PoolSetUpArgs f = PoolSetUpArgs
   { poolPledge :: f Coin
   , poolCost :: f Coin
   , poolMargin :: f UnitInterval
-  , poolMembers :: f (Map (Credential 'Staking) Coin)
+  , poolMembers :: f (Map (Credential Staking) Coin)
   }
 
 emptySetupArgs :: PoolSetUpArgs Maybe
@@ -225,16 +225,16 @@ emptySetupArgs =
 
 data PoolInfo = PoolInfo
   { params :: StakePoolParams
-  , coldKey :: KeyPair 'StakePool
-  , ownerKey :: KeyPair 'Staking
+  , coldKey :: KeyPair StakePool
+  , ownerKey :: KeyPair Staking
   , ownerStake :: Coin
-  , rewardKey :: KeyPair 'Staking
-  , members :: Map (Credential 'Staking) Coin
+  , rewardKey :: KeyPair Staking
+  , members :: Map (Credential Staking) Coin
   }
 
 -- Generators --
 
-genNonOwnerMembers :: Gen (Map (Credential 'Staking) Coin)
+genNonOwnerMembers :: Gen (Map (Credential Staking) Coin)
 genNonOwnerMembers = do
   numMembers <- choose (0, maxNumMembers)
   fmap Map.fromList . replicateM numMembers $ do
@@ -380,8 +380,8 @@ rewardOnePool ::
   Rational ->
   Rational ->
   Coin ->
-  Set.Set (Credential 'Staking) ->
-  Map (Credential 'Staking) Coin
+  Set.Set (Credential Staking) ->
+  Map (Credential Staking) Coin
 rewardOnePool
   pp
   r
@@ -448,15 +448,15 @@ rewardOld ::
   PParams era ->
   BlocksMade ->
   Coin ->
-  Set.Set (Credential 'Staking) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams ->
+  Set.Set (Credential Staking) ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) StakePoolParams ->
   Stake ->
-  VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
+  VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
-  ( Map (Credential 'Staking) Coin
-  , Map (KeyHash 'StakePool) Likelihood
+  ( Map (Credential Staking) Coin
+  , Map (KeyHash StakePool) Likelihood
   )
 rewardOld
   pp
@@ -473,8 +473,8 @@ rewardOld
       totalBlocks = sum b
       Coin activeStake = sumAllStake stake
       results ::
-        [ ( KeyHash 'StakePool
-          , Maybe (Map (Credential 'Staking) Coin)
+        [ ( KeyHash StakePool
+          , Maybe (Map (Credential Staking) Coin)
           , Likelihood
           )
         ]
@@ -517,7 +517,7 @@ rewardOld
 data RewardUpdateOld = RewardUpdateOld
   { deltaTOld :: !DeltaCoin
   , deltaROld :: !DeltaCoin
-  , rsOld :: !(Map (Credential 'Staking) Coin)
+  , rsOld :: !(Map (Credential Staking) Coin)
   , deltaFOld :: !DeltaCoin
   , nonMyopicOld :: !NonMyopic
   }
@@ -549,7 +549,7 @@ createRUpdOld_ ::
   Coin ->
   PParams era ->
   Coin ->
-  Set.Set (Credential 'Staking) ->
+  Set.Set (Credential Staking) ->
   NonMyopic ->
   ShelleyBase RewardUpdateOld
 createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake rs nm = do
@@ -651,7 +651,7 @@ oldEqualsNewOn pv newepochstate = old === new
     slotsPerEpoch = epochInfoSize (epochInfoPure globals) epochNumber
     unAggregated =
       runReader (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
-    old :: Map (Credential 'Staking) Coin
+    old :: Map (Credential Staking) Coin
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     newWithZeros = aggregateRewards pv (rs unAggregated)
     new = Map.filter (/= Coin 0) newWithZeros
@@ -683,7 +683,7 @@ newEpochEventsProp tracelen propf = withMaxSuccess 10 $
 
 aggIncrementalRewardEvents ::
   [ChainEvent ShelleyEra] ->
-  Map (Credential 'Staking) (Set Reward)
+  Map (Credential Staking) (Set Reward)
 aggIncrementalRewardEvents = F.foldl' accum Map.empty
   where
     accum ans (TickEvent (TickRupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
@@ -693,7 +693,7 @@ aggIncrementalRewardEvents = F.foldl' accum Map.empty
 
 getMostRecentTotalRewardEvent ::
   [ChainEvent ShelleyEra] ->
-  Map (Credential 'Staking) (Set Reward)
+  Map (Credential Staking) (Set Reward)
 getMostRecentTotalRewardEvent = F.foldl' accum Map.empty
   where
     accum ans (TickEvent (TickNewEpochEvent (TotalRewardEvent _ m))) = Map.unionWith Set.union m ans
@@ -741,10 +741,10 @@ reward ::
   PParams era ->
   BlocksMade ->
   Coin ->
-  Set (Credential 'Staking) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams ->
+  Set (Credential Staking) ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) StakePoolParams ->
   Stake ->
-  VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
+  VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
   Coin ->
   ShelleyBase RewardAns
 reward

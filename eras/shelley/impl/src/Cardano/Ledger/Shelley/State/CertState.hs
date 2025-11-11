@@ -127,10 +127,10 @@ instance EraAccounts era => EncCBOR (ShelleyCertState era) where
 instance EraAccounts era => DecShareCBOR (ShelleyCertState era) where
   type
     Share (ShelleyCertState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decSharePlusCBOR = decodeRecordNamedT "ShelleyCertState" (const 2) $ do
     shelleyCertPState <-

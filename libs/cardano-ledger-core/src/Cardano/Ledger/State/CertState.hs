@@ -99,7 +99,7 @@ import NoThunks.Class (NoThunks (..))
 
 data FutureGenDeleg = FutureGenDeleg
   { fGenDelegSlot :: !SlotNo
-  , fGenDelegGenKeyHash :: !(KeyHash 'Genesis)
+  , fGenDelegGenKeyHash :: !(KeyHash GenesisRole)
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -132,8 +132,8 @@ instance ToJSON FutureGenDeleg where
 -- NOTE that the following property should always hold:
 --   deltaReserves + deltaTreasury = 0
 data InstantaneousRewards = InstantaneousRewards
-  { iRReserves :: !(Map (Credential 'Staking) Coin)
-  , iRTreasury :: !(Map (Credential 'Staking) Coin)
+  { iRReserves :: !(Map (Credential Staking) Coin)
+  , iRTreasury :: !(Map (Credential Staking) Coin)
   , deltaReserves :: !DeltaCoin
   , deltaTreasury :: !DeltaCoin
   }
@@ -198,7 +198,7 @@ instance (Era era, EncCBOR (Accounts era)) => EncCBOR (DState era) where
 instance EraAccounts era => DecShareCBOR (DState era) where
   type
     Share (DState era) =
-      (Interns (Credential 'Staking), Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
+      (Interns (Credential Staking), Interns (KeyHash StakePool), Interns (Credential DRepRole))
   decSharePlusCBOR =
     decodeRecordNamedT "DState" (const 4) $ do
       dsAccounts <- decSharePlusCBOR
@@ -232,15 +232,15 @@ lookupRewardDState DState {dsAccounts} cred = do
 data PState era = PState
   { psVRFKeyHashes :: !(Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64))
   -- ^ VRF key hashes that have been registered via PoolParams
-  , psStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
+  , psStakePools :: !(Map (KeyHash StakePool) StakePoolState)
   -- ^ The state of current stake pools.
-  , psFutureStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
+  , psFutureStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
   -- ^ Future pool params
   -- Changes to existing stake pool parameters are staged in order
   -- to give delegators time to react to changes.
   -- See section 11.2, "Example Illustration of the Reward Cycle",
   -- of the Shelley Ledger Specification for a sequence diagram.
-  , psRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
+  , psRetiring :: !(Map (KeyHash StakePool) EpochNo)
   -- ^ A map of retiring stake pools to the epoch when they retire.
   }
   deriving (Show, Eq, Generic)
@@ -255,7 +255,7 @@ instance Era era => EncCBOR (PState era) where
     encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
 instance DecShareCBOR (PState era) where
-  type Share (PState era) = (Interns (VRFVerKeyHash StakePoolVRF), Interns (KeyHash 'StakePool))
+  type Share (PState era) = (Interns (VRFVerKeyHash StakePoolVRF), Interns (KeyHash StakePool))
 
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
     psVRFKeyHashes <- decSharePlusLensCBOR (toMemptyLens _1 _1)
@@ -280,11 +280,11 @@ instance ToKeyValuePairs (PState era) where
 -- If the new delegation matches the previous one, this is a noop.
 unDelegReDelegStakePool ::
   EraAccounts era =>
-  Credential 'Staking ->
+  Credential Staking ->
   -- | Account that is losing its current delegation and/or acquiring a new one
   AccountState era ->
   -- | Optional new delegation target. Use 'Nothing' when the stake credential unregisters.
-  Maybe (KeyHash 'StakePool) ->
+  Maybe (KeyHash StakePool) ->
   PState era ->
   PState era
 unDelegReDelegStakePool stakeCred accountState mNewStakePool =
@@ -301,7 +301,7 @@ unDelegReDelegStakePool stakeCred accountState mNewStakePool =
 
 data CommitteeAuthorization
   = -- | Member authorized with a Hot credential acting on behalf of their Cold credential
-    CommitteeHotCredential !(Credential 'HotCommitteeRole)
+    CommitteeHotCredential !(Credential HotCommitteeRole)
   | -- | Member resigned with a potential explanation in Anchor
     CommitteeMemberResigned !(StrictMaybe Anchor)
   deriving (Eq, Ord, Show, Generic)
@@ -326,7 +326,7 @@ instance DecCBOR CommitteeAuthorization where
       k -> Invalid k
 
 newtype CommitteeState era = CommitteeState
-  { csCommitteeCreds :: Map (Credential 'ColdCommitteeRole) CommitteeAuthorization
+  { csCommitteeCreds :: Map (Credential ColdCommitteeRole) CommitteeAuthorization
   }
   deriving (Eq, Ord, Show, Generic, EncCBOR, NFData, Default, NoThunks)
 
@@ -335,7 +335,7 @@ instance ToJSON (CommitteeState era)
 -- | Extract all unique hot credential authorizations for the current committee.  Note
 -- that there is no unique mapping from Hot to Cold credential, therefore we produce a
 -- Set, instead of a Map.
-authorizedHotCommitteeCredentials :: CommitteeState era -> Set.Set (Credential 'HotCommitteeRole)
+authorizedHotCommitteeCredentials :: CommitteeState era -> Set.Set (Credential HotCommitteeRole)
 authorizedHotCommitteeCredentials CommitteeState {csCommitteeCreds} =
   let toHotCredSet acc = \case
         CommitteeHotCredential hotCred -> Set.insert hotCred acc
@@ -343,7 +343,7 @@ authorizedHotCommitteeCredentials CommitteeState {csCommitteeCreds} =
    in F.foldl' toHotCredSet Set.empty csCommitteeCreds
 
 instance Era era => DecShareCBOR (CommitteeState era) where
-  type Share (CommitteeState era) = Interns (Credential 'HotCommitteeRole)
+  type Share (CommitteeState era) = Interns (Credential HotCommitteeRole)
   getShare = internsFromSet . authorizedHotCommitteeCredentials
   decShareCBOR _ = CommitteeState <$> decCBOR
 
@@ -361,10 +361,10 @@ class
   , EncCBOR (CertState era)
   , DecShareCBOR (CertState era)
   , Share (CertState era)
-      ~ ( Interns (Credential 'Staking)
-        , Interns (KeyHash 'StakePool)
-        , Interns (Credential 'DRepRole)
-        , Interns (Credential 'HotCommitteeRole)
+      ~ ( Interns (Credential Staking)
+        , Interns (KeyHash StakePool)
+        , Interns (Credential DRepRole)
+        , Interns (Credential HotCommitteeRole)
         )
   , Default (CertState era)
   , NoThunks (CertState era)
@@ -404,7 +404,7 @@ instance EncCBOR InstantaneousRewards where
     encodeListLen 4 <> encCBOR irR <> encCBOR irT <> encCBOR dR <> encCBOR dT
 
 instance DecShareCBOR InstantaneousRewards where
-  type Share InstantaneousRewards = Interns (Credential 'Staking)
+  type Share InstantaneousRewards = Interns (Credential Staking)
   decSharePlusCBOR =
     decodeRecordNamedT "InstantaneousRewards" (const 4) $ do
       irR <- decSharePlusLensCBOR (toMemptyLens _1 id)
@@ -464,10 +464,10 @@ dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
 dsIRewardsL :: Lens' (DState era) InstantaneousRewards
 dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
 
-iRReservesL :: Lens' InstantaneousRewards (Map (Credential 'Staking) Coin)
+iRReservesL :: Lens' InstantaneousRewards (Map (Credential Staking) Coin)
 iRReservesL = lens iRReserves (\ir m -> ir {iRReserves = m})
 
-iRTreasuryL :: Lens' InstantaneousRewards (Map (Credential 'Staking) Coin)
+iRTreasuryL :: Lens' InstantaneousRewards (Map (Credential Staking) Coin)
 iRTreasuryL = lens iRTreasury (\ir m -> ir {iRTreasury = m})
 
 iRDeltaReservesL :: Lens' InstantaneousRewards DeltaCoin
@@ -480,13 +480,13 @@ dsFutureGenDelegsL ::
   Lens' (DState era) (Map FutureGenDeleg GenDelegPair)
 dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u})
 
-psStakePoolsL :: Lens' (PState era) (Map (KeyHash 'StakePool) StakePoolState)
+psStakePoolsL :: Lens' (PState era) (Map (KeyHash StakePool) StakePoolState)
 psStakePoolsL = lens psStakePools (\ps u -> ps {psStakePools = u})
 
-psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool) StakePoolParams)
+psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash StakePool) StakePoolParams)
 psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ps u -> ps {psFutureStakePoolParams = u})
 
-psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
+psRetiringL :: Lens' (PState era) (Map (KeyHash StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
 
 psVRFKeyHashesL :: Lens' (PState era) (Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64))

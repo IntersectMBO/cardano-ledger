@@ -39,7 +39,7 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 data WitVKey kr = WitVKeyInternal
   { wvkKey :: !(VKey kr)
   , wvkSignature :: !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
-  , wvkKeyHash :: KeyHash 'Witness
+  , wvkKeyHash :: KeyHash Witness
   -- ^ Hash of the witness vkey. We store this here to avoid repeated hashing
   --   when used in ordering.
   }
@@ -98,5 +98,5 @@ pattern WitVKey k s <-
 {-# COMPLETE WitVKey #-}
 
 -- | Access computed hash. Evaluated lazily
-witVKeyHash :: WitVKey kr -> KeyHash 'Witness
+witVKeyHash :: WitVKey kr -> KeyHash Witness
 witVKeyHash = wvkKeyHash

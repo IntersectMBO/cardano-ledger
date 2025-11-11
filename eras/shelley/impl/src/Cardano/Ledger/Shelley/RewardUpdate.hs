@@ -80,12 +80,12 @@ import NoThunks.Class (NoThunks (..), allNoThunks)
 
 -- ===============================================================
 
-type RewardEvent = Map (Credential 'Staking) (Set Reward)
+type RewardEvent = Map (Credential Staking) (Set Reward)
 
 -- | The result of reward calculation is a pair of aggregate Maps.
 --   One for the accumulated answer, and one for the answer since the last pulse
 data RewardAns = RewardAns
-  { accumRewardAns :: !(Map (Credential 'Staking) Reward)
+  { accumRewardAns :: !(Map (Credential Staking) Reward)
   , recentRewardAns :: !RewardEvent
   }
   deriving (Show, Eq, Generic)
@@ -109,7 +109,7 @@ type Pulser = RewardPulser ShelleyBase RewardAns
 data RewardUpdate = RewardUpdate
   { deltaT :: !DeltaCoin
   , deltaR :: !DeltaCoin
-  , rs :: !(Map (Credential 'Staking) (Set Reward))
+  , rs :: !(Map (Credential Staking) (Set Reward))
   , deltaF :: !DeltaCoin
   , nonMyopic :: !NonMyopic
   }
@@ -163,8 +163,8 @@ data RewardSnapShot = RewardSnapShot
   , rewDeltaR1 :: !Coin -- deltaR1
   , rewR :: !Coin -- r
   , rewDeltaT1 :: !Coin -- deltaT1
-  , rewLikelihoods :: !(Map (KeyHash 'StakePool) Likelihood)
-  , rewLeaders :: !(Map (Credential 'Staking) (Set Reward))
+  , rewLikelihoods :: !(Map (KeyHash StakePool) Likelihood)
+  , rewLeaders :: !(Map (Credential Staking) (Set Reward))
   }
   deriving (Show, Eq, Generic)
 
@@ -206,11 +206,11 @@ instance DecCBOR RewardSnapShot where
 -- Pulsable function.
 
 data FreeVars = FreeVars
-  { fvDelegs :: !(VMap VB VB (Credential 'Staking) (KeyHash 'StakePool))
-  , fvAddrsRew :: !(Set (Credential 'Staking))
+  { fvDelegs :: !(VMap VB VB (Credential Staking) (KeyHash StakePool))
+  , fvAddrsRew :: !(Set (Credential Staking))
   , fvTotalStake :: !Coin
   , fvProtVer :: !ProtVer
-  , fvPoolRewardInfo :: !(Map (KeyHash 'StakePool) PoolRewardInfo)
+  , fvPoolRewardInfo :: !(Map (KeyHash StakePool) PoolRewardInfo)
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
@@ -252,7 +252,7 @@ instance DecCBOR FreeVars where
 rewardStakePoolMember ::
   FreeVars ->
   RewardAns ->
-  Credential 'Staking ->
+  Credential Staking ->
   CompactForm Coin ->
   RewardAns
 rewardStakePoolMember freeVars inputAnswer@(RewardAns accum recent) cred c =
@@ -285,7 +285,7 @@ data RewardPulser (m :: Type -> Type) ans where
     (ans ~ RewardAns, m ~ ShelleyBase) =>
     !Int ->
     !FreeVars ->
-    !(VMap.VMap VMap.VB VMap.VP (Credential 'Staking) (CompactForm Coin)) ->
+    !(VMap.VMap VMap.VB VMap.VP (Credential Staking) (CompactForm Coin)) ->
     !ans ->
     RewardPulser m ans
 

@@ -244,7 +244,7 @@ class
   getTotalDepositsTxBody ::
     PParams era ->
     -- | Check whether stake pool is registered or not
-    (KeyHash 'StakePool -> Bool) ->
+    (KeyHash StakePool -> Bool) ->
     TxBody l era ->
     Coin
   getTotalDepositsTxBody pp isPoolRegisted txBody =
@@ -256,9 +256,9 @@ class
   getTotalRefundsTxBody ::
     PParams era ->
     -- | Lookup current deposit for Staking credential if one is registered
-    (Credential 'Staking -> Maybe Coin) ->
+    (Credential Staking -> Maybe Coin) ->
     -- | Lookup current deposit for DRep credential if one is registered
-    (Credential 'DRepRole -> Maybe Coin) ->
+    (Credential DRepRole -> Maybe Coin) ->
     TxBody l era ->
     Coin
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
@@ -281,7 +281,7 @@ class
   , EncCBOR (TxOut era)
   , DecCBOR (TxOut era)
   , DecShareCBOR (TxOut era)
-  , Share (TxOut era) ~ Interns (Credential 'Staking)
+  , Share (TxOut era) ~ Interns (Credential Staking)
   , NoThunks (TxOut era)
   , NFData (TxOut era)
   , Show (TxOut era)
@@ -485,7 +485,7 @@ class
   mkBasicTxWits :: TxWits era
   mkBasicTxWits = mempty
 
-  addrTxWitsL :: Lens' (TxWits era) (Set (WitVKey 'Witness))
+  addrTxWitsL :: Lens' (TxWits era) (Set (WitVKey Witness))
 
   bootAddrTxWitsL :: Lens' (TxWits era) (Set BootstrapWitness)
 
@@ -505,7 +505,7 @@ hashScriptTxWitsL =
 keyHashWitnessesTxWits ::
   EraTxWits era =>
   TxWits era ->
-  Set (KeyHash 'Witness)
+  Set (KeyHash Witness)
 keyHashWitnessesTxWits txWits =
   Set.map witVKeyHash (txWits ^. addrTxWitsL)
     `Set.union` Set.map bootstrapWitKeyHash (txWits ^. bootAddrTxWitsL)

@@ -153,7 +153,7 @@ makeTxBody inp addrCs wdrl =
 
 makeTx ::
   TxBody TopTx ShelleyEra ->
-  [KeyPair 'Witness] ->
+  [KeyPair Witness] ->
   Map ScriptHash (MultiSig ShelleyEra) ->
   Maybe (ShelleyTxAuxData ShelleyEra) ->
   Tx TopTx ShelleyEra
@@ -254,7 +254,7 @@ applyTxWithScript ::
   [MultiSig ShelleyEra] ->
   Withdrawals ->
   Coin ->
-  [KeyPair 'Witness] ->
+  [KeyPair Witness] ->
   Either (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra))) (UTxOState ShelleyEra)
 applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where

@@ -223,7 +223,7 @@ class
 
   genEraTxWits ::
     (UTxO era, TxBody TopTx era, ScriptInfo era) ->
-    Set (WitVKey 'Witness) ->
+    Set (WitVKey Witness) ->
     Map ScriptHash (Script era) ->
     TxWits era
 

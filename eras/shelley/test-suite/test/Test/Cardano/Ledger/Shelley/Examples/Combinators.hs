@@ -185,7 +185,7 @@ newUTxO txb cs = cs {chainNes = nes'}
 --   Add a newly registered stake credential.
 newStakeCred ::
   (EraCertState era, EraGov era, ShelleyEraAccounts era) =>
-  Credential 'Staking ->
+  Credential Staking ->
   Ptr ->
   ChainState era ->
   ChainState era
@@ -203,7 +203,7 @@ newStakeCred cred ptr cs = cs {chainNes = nes}
 -- De-register a stake credential and all associated data.
 deregStakeCred ::
   (HasCallStack, EraCertState era, ShelleyEraAccounts era) =>
-  Credential 'Staking ->
+  Credential Staking ->
   ChainState era ->
   ChainState era
 deregStakeCred cred cs = cs {chainNes = nes}
@@ -232,8 +232,8 @@ deregStakeCred cred cs = cs {chainNes = nes}
 -- stake pool.
 delegation ::
   EraCertState era =>
-  Credential 'Staking ->
-  KeyHash 'StakePool ->
+  Credential Staking ->
+  KeyHash StakePool ->
   ChainState era ->
   ChainState era
 delegation cred poolId cs = cs {chainNes = nes}
@@ -332,7 +332,7 @@ updatePoolParams pool cs = cs {chainNes = nes'}
 stageRetirement ::
   forall era.
   EraCertState era =>
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   EpochNo ->
   ChainState era ->
   ChainState era
@@ -407,7 +407,7 @@ reapPool pool cs = cs {chainNes = nes'}
 mir ::
   forall era.
   EraCertState era =>
-  Credential 'Staking ->
+  Credential Staking ->
   MIRPot ->
   Coin ->
   ChainState era ->
@@ -441,7 +441,7 @@ applyMIR ::
   forall era.
   EraCertState era =>
   MIRPot ->
-  Map (Credential 'Staking) Coin ->
+  Map (Credential Staking) Coin ->
   ChainState era ->
   ChainState era
 applyMIR pot addBalances cs = cs {chainNes = nes'}
@@ -551,7 +551,7 @@ setPoolDistr pd cs = cs {chainNes = nes'}
 -- Set the operational certificates counter for a given stake pool.
 setOCertCounter ::
   forall era.
-  KeyHash 'BlockIssuer ->
+  KeyHash BlockIssuer ->
   Word64 ->
   ChainState era ->
   ChainState era
@@ -564,7 +564,7 @@ setOCertCounter kh n cs = cs {chainOCertIssue = counters}
 -- Record that the given stake pool (non-core node) produced a block.
 incrBlockCount ::
   forall era.
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   ChainState era ->
   ChainState era
 incrBlockCount kh cs = cs {chainNes = nes'}

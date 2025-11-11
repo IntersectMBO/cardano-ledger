@@ -833,7 +833,7 @@ instance DecCBOR Network
 
 -- | Number of blocks which have been created by stake pools in the current epoch.
 newtype BlocksMade = BlocksMade
-  { unBlocksMade :: Map (KeyHash 'StakePool) Natural
+  { unBlocksMade :: Map (KeyHash StakePool) Natural
   }
   deriving (Eq, Generic)
   deriving (Show) via Quiet BlocksMade

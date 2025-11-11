@@ -83,7 +83,7 @@ import NoThunks.Class (NoThunks (..))
 data MultiSigRaw era
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
-    MultiSigSignature !(KeyHash 'Witness)
+    MultiSigSignature !(KeyHash Witness)
   | -- | Require all the sub-terms to be satisfied.
     MultiSigAllOf !(StrictSeq (MultiSig era))
   | -- | Require any one of the sub-terms to be satisfied.
@@ -94,8 +94,8 @@ data MultiSigRaw era
   deriving anyclass (NoThunks)
 
 class EraScript era => ShelleyEraScript era where
-  mkRequireSignature :: KeyHash 'Witness -> NativeScript era
-  getRequireSignature :: NativeScript era -> Maybe (KeyHash 'Witness)
+  mkRequireSignature :: KeyHash Witness -> NativeScript era
+  getRequireSignature :: NativeScript era -> Maybe (KeyHash Witness)
 
   mkRequireAllOf :: StrictSeq (NativeScript era) -> NativeScript era
   getRequireAllOf :: NativeScript era -> Maybe (StrictSeq (NativeScript era))
@@ -166,7 +166,7 @@ deriving newtype instance NFData (MultiSig era)
 instance EqRaw (MultiSig era) where
   eqRaw = eqMultiSigRaw
 
-pattern RequireSignature :: ShelleyEraScript era => KeyHash 'Witness -> NativeScript era
+pattern RequireSignature :: ShelleyEraScript era => KeyHash Witness -> NativeScript era
 pattern RequireSignature akh <- (getRequireSignature -> Just akh)
   where
     RequireSignature akh = mkRequireSignature akh
@@ -232,7 +232,7 @@ eqMultiSigRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
 -- key hashes that signed the transaction to be validated.
 evalMultiSig ::
   (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
-  Set.Set (KeyHash 'Witness) ->
+  Set.Set (KeyHash Witness) ->
   NativeScript era ->
   Bool
 evalMultiSig vhks = go

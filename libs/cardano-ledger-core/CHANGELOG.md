@@ -2,6 +2,8 @@
 
 ## 1.19.0.0
 
+* Change `KeyRole` type to only be visible at the type level
+* Rename `Genesis` constructor of `KeyRole` to `GenesisRole`
 * Change `KeyRoleVRF` type to only be visible at the type level
 * Add `lookupAccountStateIntern` to `State.Account` module
 * Add `HasOKey` instance for `TxId (Tx l era)`

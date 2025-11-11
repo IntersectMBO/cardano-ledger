@@ -88,11 +88,11 @@ data LedgerExamples era = LedgerExamples
     leNewEpochState :: NewEpochState era
   , lePoolDistr :: PoolDistr
   , -- rewards and delegation
-    leRewardsCredentials :: Set (Either Coin (Credential 'Staking))
+    leRewardsCredentials :: Set (Either Coin (Credential Staking))
   , leNonMyopicRewards ::
       Map
-        (Either Coin (Credential 'Staking))
-        (Map (KeyHash 'StakePool) Coin)
+        (Either Coin (Credential Staking))
+        (Map (KeyHash StakePool) Coin)
   , leTranslationContext :: TranslationContext era
   , leShelleyGenesis :: ShelleyGenesis
   }
@@ -131,7 +131,7 @@ mkLedgerExamples ::
   , Default (StashedAVVMAddresses era)
   , AtMostEra "Mary" era
   ) =>
-  (TxBody TopTx era -> [KeyPair 'Witness] -> TxWits era) ->
+  (TxBody TopTx era -> [KeyPair Witness] -> TxWits era) ->
   Value era ->
   TxBody TopTx era ->
   TxAuxData era ->
@@ -178,7 +178,7 @@ mkLedgerExamples
 exampleTx ::
   forall era.
   EraTx era =>
-  (TxBody TopTx era -> [KeyPair 'Witness] -> TxWits era) ->
+  (TxBody TopTx era -> [KeyPair Witness] -> TxWits era) ->
   TxBody TopTx era ->
   TxAuxData era ->
   Tx TopTx era
@@ -286,7 +286,7 @@ examplePoolDistr =
     )
     (CompactCoin 1)
 
-exampleNonMyopicRewards :: Map (Either Coin (Credential 'Staking)) (Map (KeyHash 'StakePool) Coin)
+exampleNonMyopicRewards :: Map (Either Coin (Credential Staking)) (Map (KeyHash StakePool) Coin)
 exampleNonMyopicRewards =
   Map.fromList
     [ (Left (Coin 100), Map.singleton (mkKeyHash 2) (Coin 3))
@@ -406,10 +406,10 @@ exampleStakePoolParams =
             }
     }
 
-examplePayKey :: KeyPair 'Payment
+examplePayKey :: KeyPair Payment
 examplePayKey = mkDSIGNKeyPair 0
 
-exampleStakeKey :: KeyPair 'Staking
+exampleStakeKey :: KeyPair Staking
 exampleStakeKey = mkDSIGNKeyPair 1
 
 exampleVrfVerKeyHash :: VRFVerKeyHash StakePoolVRF
@@ -435,7 +435,7 @@ mkWitnessesPreAlonzo ::
   EraTx era =>
   Proxy era ->
   TxBody TopTx era ->
-  [KeyPair 'Witness] ->
+  [KeyPair Witness] ->
   ShelleyTxWits era
 mkWitnessesPreAlonzo _ txBody keyPairWits =
   mempty

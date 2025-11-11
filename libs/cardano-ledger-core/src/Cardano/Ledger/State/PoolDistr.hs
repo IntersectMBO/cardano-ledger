@@ -95,7 +95,7 @@ instance ToKeyValuePairs IndividualPoolStake where
 -- verification key) to 'IndividualPoolStake'. Also holds absolute values
 -- necessary for the calculations in the `computeDRepDistr`.
 data PoolDistr = PoolDistr
-  { unPoolDistr :: !(Map (KeyHash 'StakePool) IndividualPoolStake)
+  { unPoolDistr :: !(Map (KeyHash StakePool) IndividualPoolStake)
   , pdTotalActiveStake :: !(CompactForm Coin)
   -- ^ Total stake delegated to registered stake pools. In addition to
   -- the stake considered for the `individualPoolStake` Rational, we add
@@ -107,7 +107,7 @@ data PoolDistr = PoolDistr
 instance Default PoolDistr where
   def = PoolDistr mempty mempty
 
-poolDistrDistrL :: Lens' PoolDistr (Map (KeyHash 'StakePool) IndividualPoolStake)
+poolDistrDistrL :: Lens' PoolDistr (Map (KeyHash StakePool) IndividualPoolStake)
 poolDistrDistrL = lens unPoolDistr $ \x y -> x {unPoolDistr = y}
 
 poolDistrTotalL :: Lens' PoolDistr (CompactForm Coin)

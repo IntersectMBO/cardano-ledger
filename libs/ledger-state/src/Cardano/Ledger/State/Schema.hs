@@ -36,9 +36,9 @@ import Database.Persist.TH
 
 type FGenDelegs = (Enc (Map.Map Shelley.FutureGenDeleg Keys.GenDelegPair))
 
-type CredentialWitness = Credential.Credential 'Keys.Witness
+type CredentialWitness = Credential.Credential Keys.Witness
 
-type KeyHashWitness = Keys.KeyHash 'Keys.Witness
+type KeyHashWitness = Keys.KeyHash Keys.Witness
 
 data DRepDelegation
   = DRepDelegationNone

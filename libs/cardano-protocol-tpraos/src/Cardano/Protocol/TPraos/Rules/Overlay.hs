@@ -97,9 +97,9 @@ instance NoThunks OverlayEnv
 
 data OverlayPredicateFailure c
   = VRFKeyUnknown
-      (KeyHash 'StakePool) -- unknown VRF keyhash (not registered)
+      (KeyHash StakePool) -- unknown VRF keyhash (not registered)
   | VRFKeyWrongVRFKey
-      (KeyHash 'StakePool) -- KeyHash of block issuer
+      (KeyHash StakePool) -- KeyHash of block issuer
       (VRFVerKeyHash StakePoolVRF) -- VRF KeyHash registered with stake pool
       (VRFVerKeyHash BlockIssuerVRF) -- VRF KeyHash from Header
   | VRFKeyBadNonce
@@ -119,14 +119,14 @@ data OverlayPredicateFailure c
   | NotActiveSlotOVERLAY
       SlotNo -- Slot which is supposed to be silent
   | WrongGenesisColdKeyOVERLAY
-      (KeyHash 'BlockIssuer) -- KeyHash of block issuer
-      (KeyHash 'GenesisDelegate) -- KeyHash genesis delegate keyhash assigned to this slot
+      (KeyHash BlockIssuer) -- KeyHash of block issuer
+      (KeyHash GenesisDelegate) -- KeyHash genesis delegate keyhash assigned to this slot
   | WrongGenesisVRFKeyOVERLAY
-      (KeyHash 'BlockIssuer) -- KeyHash of block issuer
+      (KeyHash BlockIssuer) -- KeyHash of block issuer
       (VRFVerKeyHash GenDelegVRF) -- VRF KeyHash registered with genesis delegation
       (VRFVerKeyHash BlockIssuerVRF) -- VRF KeyHash from Header
   | UnknownGenesisKeyOVERLAY
-      (KeyHash 'Genesis) -- KeyHash which does not correspond to o genesis node
+      (KeyHash GenesisRole) -- KeyHash which does not correspond to o genesis node
   | OcertFailure (PredicateFailure (OCERT c)) -- Subtransition Failures
   deriving (Generic)
 
@@ -137,7 +137,7 @@ instance
   ) =>
   STS (OVERLAY c)
   where
-  type State (OVERLAY c) = Map (KeyHash 'BlockIssuer) Word64
+  type State (OVERLAY c) = Map (KeyHash BlockIssuer) Word64
   type Signal (OVERLAY c) = BHeader c
   type Environment (OVERLAY c) = OverlayEnv
   type BaseM (OVERLAY c) = ShelleyBase
@@ -290,7 +290,7 @@ instance
 
 data OBftSlot
   = NonActiveSlot
-  | ActiveSlot !(KeyHash 'Genesis)
+  | ActiveSlot !(KeyHash GenesisRole)
   deriving (Show, Eq, Ord, Generic)
 
 instance EncCBOR OBftSlot where
@@ -311,7 +311,7 @@ instance NFData OBftSlot
 
 classifyOverlaySlot ::
   SlotNo -> -- first slot of the epoch
-  Set (KeyHash 'Genesis) -> -- genesis Nodes
+  Set (KeyHash GenesisRole) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   SlotNo -> -- overlay slot to classify
@@ -331,7 +331,7 @@ classifyOverlaySlot firstSlotNo gkeys dval ascValue slot =
 
 lookupInOverlaySchedule ::
   SlotNo -> -- first slot of the epoch
-  Set (KeyHash 'Genesis) -> -- genesis Nodes
+  Set (KeyHash GenesisRole) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   SlotNo -> -- slot to lookup

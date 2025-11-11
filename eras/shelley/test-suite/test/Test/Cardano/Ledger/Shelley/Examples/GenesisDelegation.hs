@@ -95,7 +95,7 @@ initStGenesisDeleg = initSt initUTxO
 -- Block 1, Slot 10, Epoch 0
 --
 
-newGenDelegate :: KeyPair 'GenesisDelegate
+newGenDelegate :: KeyPair GenesisDelegate
 newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (RawSeed 108 0 0 0 1)
@@ -138,7 +138,7 @@ txEx1 = ShelleyTx txbodyEx1 txwits SNothing
               (hashAnnotated txbodyEx1)
               ( [asWitness Cast.alicePay]
                   <> [ asWitness $
-                         KeyPair @'Genesis
+                         KeyPair @GenesisRole
                            (coreNodeVK 0)
                            (coreNodeSK 0)
                      ]

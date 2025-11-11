@@ -37,7 +37,7 @@ calcPoolDistOldEqualsNew =
           oldCalculatePoolDistr (const True) snap === calculatePoolDistr snap
 
 -- | The original version of calculatePoolDistr
-oldCalculatePoolDistr :: (KeyHash 'StakePool -> Bool) -> SnapShot -> PoolDistr
+oldCalculatePoolDistr :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
 oldCalculatePoolDistr includeHash (SnapShot stake delegs stakePoolParams) =
   let Coin totalc = sumAllStake stake
       -- totalc could be zero (in particular when shrinking)

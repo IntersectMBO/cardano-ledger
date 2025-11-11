@@ -80,9 +80,9 @@ prCertStateL = lens prCertState $ \sprs x -> sprs {prCertState = x}
 
 data ShelleyPoolreapEvent era = RetiredPools
   { refundPools ::
-      Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) (CompactForm Coin))
+      Map.Map (Credential Staking) (Map.Map (KeyHash StakePool) (CompactForm Coin))
   , unclaimedPools ::
-      Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) (CompactForm Coin))
+      Map.Map (Credential Staking) (Map.Map (KeyHash StakePool) (CompactForm Coin))
   , epochNo :: EpochNo
   }
   deriving (Generic)
@@ -170,23 +170,23 @@ poolReapTransition = do
 
     ds = cs ^. certDStateL
     -- The set of pools retiring this epoch
-    retired :: Set (KeyHash 'StakePool)
+    retired :: Set (KeyHash StakePool)
     retired = Set.fromDistinctAscList [k | (k, v) <- Map.toAscList (psRetiring ps), v == e]
     -- The Map of pools retiring this epoch
-    retiringPools :: Map.Map (KeyHash 'StakePool) StakePoolState
+    retiringPools :: Map.Map (KeyHash StakePool) StakePoolState
     retiringPools = Map.restrictKeys (psStakePools ps) retired
     -- collect all accounts for stake pools that will retire
     retiredVRFKeyHashes = spsVrf <$> Map.elems retiringPools
 
     -- collect all of the potential refunds
-    accountRefunds :: Map.Map (Credential 'Staking) (CompactForm Coin)
+    accountRefunds :: Map.Map (Credential Staking) (CompactForm Coin)
     accountRefunds =
       Map.fromListWith
         (<>)
         [(raCredential $ spsRewardAccount sps, spsDeposit sps) | sps <- Map.elems retiringPools]
     accounts = ds ^. accountsL
     -- Deposits that can be refunded and those that are unclaimed (to be deposited into the treasury).
-    refunds, unclaimedDeposits :: Map.Map (Credential 'Staking) (CompactForm Coin)
+    refunds, unclaimedDeposits :: Map.Map (Credential Staking) (CompactForm Coin)
     (refunds, unclaimedDeposits) =
       Map.partitionWithKey
         (\stakeCred _ -> isAccountRegistered stakeCred accounts) -- (k ∈ dom (rewards ds))

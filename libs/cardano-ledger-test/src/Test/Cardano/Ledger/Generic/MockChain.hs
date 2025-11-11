@@ -82,7 +82,7 @@ data MockChainEvent era
   | MockChainFromLedgersEvent !(ShelleyLedgersEvent era)
 
 data MockBlock era = MockBlock
-  { mbIssuer :: !(KeyHash 'StakePool)
+  { mbIssuer :: !(KeyHash StakePool)
   , mbSlot :: !SlotNo
   , mbTrans :: !(StrictSeq (Tx TopTx era))
   }

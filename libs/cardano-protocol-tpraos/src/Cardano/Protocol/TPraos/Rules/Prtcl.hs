@@ -66,7 +66,7 @@ data PRTCL c
 data PrtclState
   = PrtclState
       -- | Operation Certificate counters
-      !(Map (KeyHash 'BlockIssuer) Word64)
+      !(Map (KeyHash BlockIssuer) Word64)
       -- | Evolving nonce
       !Nonce
       -- | Candidate nonce

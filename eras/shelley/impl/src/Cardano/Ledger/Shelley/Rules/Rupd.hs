@@ -95,7 +95,7 @@ instance
 data RupdEvent
   = RupdEvent
       !EpochNo
-      !(Map.Map (Credential 'Staking) (Set Reward))
+      !(Map.Map (Credential Staking) (Set Reward))
   deriving (Generic, Eq)
 
 instance NFData RupdEvent

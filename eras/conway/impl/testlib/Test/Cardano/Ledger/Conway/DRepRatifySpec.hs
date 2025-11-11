@@ -221,7 +221,7 @@ activeDRepAcceptedRatio (TestData {..}) =
 
 data TestData = TestData
   { distr :: Map DRep (CompactForm Coin)
-  , votes :: Map (Credential 'DRepRole) Vote
+  , votes :: Map (Credential DRepRole) Vote
   , totalStake :: Coin
   , stakeYes :: Coin
   , stakeNo :: Coin
@@ -244,7 +244,7 @@ data Ratios = Ratios
 -- Prepare the stake distribution and votes according to the given ratios.
 genTestData :: Ratios -> Gen TestData
 genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
-  let inDreps = listOf (DRepCredential <$> arbitrary @(Credential 'DRepRole))
+  let inDreps = listOf (DRepCredential <$> arbitrary @(Credential DRepRole))
   dreps <- inDreps
 
   let drepSize = length dreps

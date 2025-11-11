@@ -180,7 +180,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
 
     existsReqKeyComb keyHashes msig =
       any (\kl -> Set.fromList kl `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
-    keyHashSet :: Tx TopTx era -> Set (KeyHash 'Witness)
+    keyHashSet :: Tx TopTx era -> Set (KeyHash Witness)
     keyHashSet tx_ =
       Set.map witVKeyHash (tx_ ^. witsTxL . addrTxWitsL)
 

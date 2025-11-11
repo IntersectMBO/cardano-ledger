@@ -83,7 +83,7 @@ import NoThunks.Class (NoThunks)
 
 data ConwayDelegEnv era = ConwayDelegEnv
   { cdePParams :: PParams era
-  , cdePools :: Map (KeyHash 'StakePool) StakePoolState
+  , cdePools :: Map (KeyHash StakePool) StakePoolState
   }
   deriving (Generic)
 
@@ -103,11 +103,11 @@ deriving instance Show (PParams era) => Show (ConwayDelegEnv era)
 
 data ConwayDelegPredFailure era
   = IncorrectDepositDELEG Coin
-  | StakeKeyRegisteredDELEG (Credential 'Staking)
-  | StakeKeyNotRegisteredDELEG (Credential 'Staking)
+  | StakeKeyRegisteredDELEG (Credential Staking)
+  | StakeKeyNotRegisteredDELEG (Credential Staking)
   | StakeKeyHasNonZeroRewardAccountBalanceDELEG Coin
-  | DelegateeDRepNotRegisteredDELEG (Credential 'DRepRole)
-  | DelegateeStakePoolNotRegisteredDELEG (KeyHash 'StakePool)
+  | DelegateeDRepNotRegisteredDELEG (Credential DRepRole)
+  | DelegateeStakePoolNotRegisteredDELEG (KeyHash StakePool)
   | DepositIncorrectDELEG (Mismatch 'RelEQ Coin)
   | RefundIncorrectDELEG (Mismatch 'RelEQ Coin)
   deriving (Show, Eq, Generic)
@@ -288,7 +288,7 @@ conwayDelegTransition = do
 processDelegation ::
   ConwayEraCertState era =>
   -- | Delegator
-  Credential 'Staking ->
+  Credential Staking ->
   -- | New delegatee
   Delegatee ->
   CertState era ->
@@ -305,7 +305,7 @@ processDelegationInternal ::
   -- | Preserve the buggy behavior where DRep delegations are not updated correctly (See #4772)
   Bool ->
   -- | Delegator
-  Credential 'Staking ->
+  Credential Staking ->
   -- | Account state for the above stake credential
   Maybe (AccountState era) ->
   -- | New delegatee

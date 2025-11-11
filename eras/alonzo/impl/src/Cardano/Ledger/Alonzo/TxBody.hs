@@ -127,7 +127,7 @@ type ScriptIntegrityHash = SafeHash EraIndependentScriptIntegrity
 class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   collateralInputsTxBodyL :: Lens' (TxBody TopTx era) (Set TxIn)
 
-  reqSignerHashesTxBodyL :: AtMostEra "Conway" era => Lens' (TxBody l era) (Set (KeyHash 'Guard))
+  reqSignerHashesTxBodyL :: AtMostEra "Conway" era => Lens' (TxBody l era) (Set (KeyHash Guard))
 
   reqSignerHashesTxBodyG ::
     SimpleGetter (TxBody l era) (Set (KeyHash Guard))
@@ -165,7 +165,7 @@ data AlonzoTxBodyRaw l era where
     , atbrTxFee :: !Coin
     , atbrValidityInterval :: !ValidityInterval
     , atbrUpdate :: !(StrictMaybe (Update era))
-    , atbrReqSignerHashes :: Set (KeyHash 'Guard)
+    , atbrReqSignerHashes :: Set (KeyHash Guard)
     , atbrMint :: !MultiAsset
     , atbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
     , atbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
@@ -326,7 +326,7 @@ pattern AlonzoTxBody ::
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update AlonzoEra) ->
-  Set (KeyHash 'Guard) ->
+  Set (KeyHash Guard) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
   StrictMaybe TxAuxDataHash ->

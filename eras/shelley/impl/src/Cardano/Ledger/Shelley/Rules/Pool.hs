@@ -94,7 +94,7 @@ instance NFData (PParams era) => NFData (PoolEnv era)
 data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
       -- | KeyHash which cannot be retired since it is not registered
-      (KeyHash 'StakePool)
+      (KeyHash StakePool)
   | StakePoolRetirementWrongEpochPOOL
       (Mismatch 'RelGT EpochNo)
       (Mismatch 'RelLTEQ EpochNo)
@@ -103,15 +103,15 @@ data ShelleyPoolPredFailure era
   | WrongNetworkPOOL
       (Mismatch 'RelEQ Network)
       -- | Stake Pool ID
-      (KeyHash 'StakePool)
+      (KeyHash StakePool)
   | PoolMedataHashTooBig
       -- | Stake Pool ID
-      (KeyHash 'StakePool)
+      (KeyHash StakePool)
       -- | Size of the metadata hash
       Int
   | VRFKeyHashAlreadyRegistered
       -- | Stake Pool ID
-      (KeyHash 'StakePool)
+      (KeyHash StakePool)
       -- | VRF key attempted to use, that has already been registered
       (VRFVerKeyHash StakePoolVRF)
   deriving (Eq, Show, Generic)
@@ -138,8 +138,8 @@ instance EraPParams era => STS (ShelleyPOOL era) where
   transitionRules = [poolDelegationTransition]
 
 data PoolEvent era
-  = RegisterPool (KeyHash 'StakePool)
-  | ReregisterPool (KeyHash 'StakePool)
+  = RegisterPool (KeyHash StakePool)
+  | ReregisterPool (KeyHash StakePool)
   deriving (Generic, Eq)
 
 instance NFData (PoolEvent era)

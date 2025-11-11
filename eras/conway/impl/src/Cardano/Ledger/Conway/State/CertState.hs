@@ -74,11 +74,11 @@ deriving via
 -- VState
 
 csCommitteeCredsL ::
-  Lens' (CommitteeState era) (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
+  Lens' (CommitteeState era) (Map (Credential ColdCommitteeRole) CommitteeAuthorization)
 csCommitteeCredsL = lens csCommitteeCreds (\cs u -> cs {csCommitteeCreds = u})
 
 epochStateRegDrepL ::
-  ConwayEraCertState era => Lens' (EpochState era) (Map (Credential 'DRepRole) DRepState)
+  ConwayEraCertState era => Lens' (EpochState era) (Map (Credential DRepRole) DRepState)
 epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
 class (EraCertState era, ConwayEraAccounts era) => ConwayEraCertState era where
@@ -158,10 +158,10 @@ instance EraAccounts era => EncCBOR (ConwayCertState era) where
 instance EraAccounts era => DecShareCBOR (ConwayCertState era) where
   type
     Share (ConwayCertState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decSharePlusCBOR = decodeRecordNamedT "ConwayCertState" (const 3) $ do
     conwayCertVState <-

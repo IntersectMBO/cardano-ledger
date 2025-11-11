@@ -147,11 +147,11 @@ data BabbageTxOut era
       !(Datum era)
       !(Script era)
   | TxOut_AddrHash28_AdaOnly
-      !(Credential 'Staking)
+      !(Credential Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
   | TxOut_AddrHash28_AdaOnly_DataHash32
-      !(Credential 'Staking)
+      !(Credential Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
@@ -524,7 +524,7 @@ instance
   ) =>
   DecShareCBOR (BabbageTxOut era)
   where
-  type Share (BabbageTxOut era) = Interns (Credential 'Staking)
+  type Share (BabbageTxOut era) = Interns (Credential Staking)
   decShareCBOR credsInterns = do
     txOut <-
       peekTokenType >>= \case
@@ -535,7 +535,7 @@ instance
   {-# INLINEABLE decShareCBOR #-}
 
 internBabbageTxOut ::
-  (Credential 'Staking -> Credential 'Staking) ->
+  (Credential Staking -> Credential Staking) ->
   BabbageTxOut era ->
   BabbageTxOut era
 internBabbageTxOut internCred = \case

@@ -159,7 +159,7 @@ txOutSpec ::
   forall era.
   EraSpecTxOut era =>
   WitUniv era ->
-  Term (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
+  Term (Map (Credential Staking) (KeyHash StakePool)) ->
   Term (TxOut era) ->
   Pred
 txOutSpec univ delegs txOut =
@@ -180,7 +180,7 @@ txOutSpec univ delegs txOut =
 
 -- | Generate random Stake references that have a high probability of being delegated.
 delegatedStakeReference ::
-  Term (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
+  Term (Map (Credential Staking) (KeyHash StakePool)) ->
   Specification StakeReference
 delegatedStakeReference delegs =
   constrained $ \ [var|ref|] ->

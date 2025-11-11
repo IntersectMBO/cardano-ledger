@@ -368,15 +368,15 @@ redeemerWitnessMaker tag listWithCred =
 --   As we generate this we add to the gsKeys field of the GenState.
 genNoScriptRecipient :: GenRS era Addr
 genNoScriptRecipient = do
-  paymentCred <- genKeyHash @'Payment
-  stakeCred <- genKeyHash @'Staking
+  paymentCred <- genKeyHash @Payment
+  stakeCred <- genKeyHash @Staking
   pure (mkAddr paymentCred stakeCred)
 
 -- | Sometimes generates new Credentials, and some times reuses old ones
 genRecipient :: Reflect era => GenRS era Addr
 genRecipient = do
-  paymentCred <- genCredential @'Payment Spending
-  stakeCred <- genCredential @'Staking Rewarding
+  paymentCred <- genCredential @Payment Spending
+  stakeCred <- genCredential @Staking Rewarding
   pure (mkAddr paymentCred stakeCred)
 
 genDatum :: Era era => GenRS era (Data era)
@@ -648,8 +648,8 @@ genTxCerts slot = do
   accounts <- gets (mAccounts . gsModel)
   let initSets ::
         ( [TxCert era]
-        , Set (ScriptHash, Maybe (KeyHash 'StakePool))
-        , Map (Credential 'Staking) Coin
+        , Set (ScriptHash, Maybe (KeyHash StakePool))
+        , Map (Credential Staking) Coin
         )
       initSets = ([], Set.empty, Map.map (fromCompact . (^. balanceAccountStateL)) (accounts ^. accountsMapL))
   (dcs, _, _) <- F.foldlM genUniqueScript initSets ([1 .. n] :: [Int])
@@ -763,7 +763,7 @@ genRecipientsFrom txOuts = do
   goNew extra txOuts []
 
 getTxCertCredential ::
-  forall era. Reflect era => TxCert era -> Maybe (Credential 'Staking)
+  forall era. Reflect era => TxCert era -> Maybe (Credential Staking)
 getTxCertCredential = case reify @era of
   Shelley -> getShelleyTxCertCredential
   Mary -> getShelleyTxCertCredential
@@ -772,7 +772,7 @@ getTxCertCredential = case reify @era of
   Babbage -> getShelleyTxCertCredential
   Conway -> getConwayTxCertCredential
 
-getShelleyTxCertCredential :: ShelleyTxCert era -> Maybe (Credential 'Staking)
+getShelleyTxCertCredential :: ShelleyTxCert era -> Maybe (Credential Staking)
 getShelleyTxCertCredential = \case
   ShelleyTxCertDelegCert d ->
     case d of
@@ -786,7 +786,7 @@ getShelleyTxCertCredential = \case
   ShelleyTxCertGenesisDeleg _g -> Nothing
   ShelleyTxCertMir _m -> Nothing
 
-getConwayTxCertCredential :: ConwayTxCert era -> Maybe (Credential 'Staking)
+getConwayTxCertCredential :: ConwayTxCert era -> Maybe (Credential Staking)
 getConwayTxCertCredential (ConwayTxCertPool (RegPool StakePoolParams {..})) = Just . coerceKeyRole $ KeyHashObj sppId
 getConwayTxCertCredential (ConwayTxCertPool (RetirePool kh _)) = Just . coerceKeyRole $ KeyHashObj kh
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegCert _ _)) = Nothing

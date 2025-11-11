@@ -150,7 +150,7 @@ expiredAndResignedMembersProp =
 
     genExpiredOrResigned ::
       TestData era ->
-      [Credential 'HotCommitteeRole] ->
+      [Credential HotCommitteeRole] ->
       EpochNo ->
       Gen (TestData era, Int)
     genExpiredOrResigned td votes epochNo = do
@@ -162,7 +162,7 @@ expiredAndResignedMembersProp =
         ]
     expireAndResign ::
       EpochNo ->
-      Set.Set (Credential 'HotCommitteeRole) ->
+      Set.Set (Credential HotCommitteeRole) ->
       TestData era ->
       TestData era
     expireAndResign epochNo hotCreds td =
@@ -182,9 +182,9 @@ expiredAndResignedMembersProp =
 updatePctOfCommittee ::
   TestData era ->
   Rational ->
-  [Credential 'HotCommitteeRole] ->
+  [Credential HotCommitteeRole] ->
   -- | The update function, which updates test data based on a set of credentials.
-  (Set.Set (Credential 'HotCommitteeRole) -> TestData era -> TestData era) ->
+  (Set.Set (Credential HotCommitteeRole) -> TestData era -> TestData era) ->
   (TestData era, Int)
 updatePctOfCommittee td pct hotCreds action =
   let
@@ -208,17 +208,17 @@ data Ratios = Ratios
   deriving (Show)
 
 data TestData era = TestData
-  { members :: Map (Credential 'ColdCommitteeRole) EpochNo
+  { members :: Map (Credential ColdCommitteeRole) EpochNo
   , votes :: Votes era
   , committeeState :: CommitteeState era
   }
   deriving (Show)
 
 data Votes era = Votes
-  { votedYes :: [Credential 'HotCommitteeRole]
-  , votedNo :: [Credential 'HotCommitteeRole]
-  , votedAbstain :: [Credential 'HotCommitteeRole]
-  , notVoted :: [Credential 'HotCommitteeRole]
+  { votedYes :: [Credential HotCommitteeRole]
+  , votedNo :: [Credential HotCommitteeRole]
+  , votedAbstain :: [Credential HotCommitteeRole]
+  , notVoted :: [Credential HotCommitteeRole]
   }
   deriving (Show)
 
@@ -233,7 +233,7 @@ genTestData ratios = do
 
 -- Updates the given test data by resigning the given hot credentials.
 resignMembers ::
-  Set.Set (Credential 'HotCommitteeRole) ->
+  Set.Set (Credential HotCommitteeRole) ->
   TestData era ->
   TestData era
 resignMembers hotCreds td@TestData {committeeState} =
@@ -252,7 +252,7 @@ resignMembers hotCreds td@TestData {committeeState} =
 
 expireMembers ::
   EpochNo ->
-  Set.Set (Credential 'HotCommitteeRole) ->
+  Set.Set (Credential HotCommitteeRole) ->
   TestData era ->
   TestData era
 expireMembers newEpochNo hotCreds td@TestData {members, committeeState} =
@@ -265,7 +265,7 @@ expireMembers newEpochNo hotCreds td@TestData {members, committeeState} =
       Just (CommitteeHotCredential k) | k `Set.member` hotCreds -> True
       _ -> False
 
-totalVotes :: Votes era -> Map (Credential 'HotCommitteeRole) Vote
+totalVotes :: Votes era -> Map (Credential HotCommitteeRole) Vote
 totalVotes Votes {votedYes, votedNo, votedAbstain} =
   Map.unions @[]
     [ Map.fromList $ (,VoteYes) <$> votedYes
@@ -273,13 +273,13 @@ totalVotes Votes {votedYes, votedNo, votedAbstain} =
     , Map.fromList $ (,Abstain) <$> votedAbstain
     ]
 
-genNonEmptyColdCreds :: Gen (Set.Set (Credential 'ColdCommitteeRole))
+genNonEmptyColdCreds :: Gen (Set.Set (Credential ColdCommitteeRole))
 genNonEmptyColdCreds =
   Set.fromList <$> listOf1 arbitrary
 
 genMembers ::
-  Set.Set (Credential 'ColdCommitteeRole) ->
-  Gen (Map (Credential 'ColdCommitteeRole) EpochNo)
+  Set.Set (Credential ColdCommitteeRole) ->
+  Gen (Map (Credential ColdCommitteeRole) EpochNo)
 genMembers coldCreds =
   Map.fromList . zip (Set.toList coldCreds)
     <$> vectorOf (length coldCreds) genNonExpiredEpoch
@@ -293,7 +293,7 @@ genNonExpiredEpoch = EpochNo <$> choose (1000, maxBound)
 genExpiredEpoch :: Gen EpochNo
 genExpiredEpoch = EpochNo <$> choose (0, 99)
 
-genNonResignedCommitteeState :: Set.Set (Credential 'ColdCommitteeRole) -> Gen (CommitteeState era)
+genNonResignedCommitteeState :: Set.Set (Credential ColdCommitteeRole) -> Gen (CommitteeState era)
 genNonResignedCommitteeState coldCreds = do
   hotCredsMap <-
     sequence $
@@ -315,7 +315,7 @@ genNonResignedCommitteeState coldCreds = do
 
 distributeVotes ::
   Ratios ->
-  [Credential 'HotCommitteeRole] ->
+  [Credential HotCommitteeRole] ->
   Votes era
 distributeVotes Ratios {yes, no, abstain} hotCreds = do
   let

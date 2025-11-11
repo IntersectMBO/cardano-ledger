@@ -130,10 +130,10 @@ instance
   where
   type
     Share (ShelleyGovState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decShareCBOR _ =
     decode $

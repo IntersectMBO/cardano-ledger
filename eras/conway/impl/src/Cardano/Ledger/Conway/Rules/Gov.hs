@@ -179,10 +179,10 @@ data ConwayGovPredFailure era
     DisallowedVoters (NonEmpty (Voter, GovActionId))
   | ConflictingCommitteeUpdate
       -- | Credentials that are mentioned as members to be both removed and added
-      (Set.Set (Credential 'ColdCommitteeRole))
+      (Set.Set (Credential ColdCommitteeRole))
   | ExpirationEpochTooSmall
       -- | Members for which the expiration epoch has already been reached
-      (Map.Map (Credential 'ColdCommitteeRole) EpochNo)
+      (Map.Map (Credential ColdCommitteeRole) EpochNo)
   | InvalidPrevGovActionId (ProposalProcedure era)
   | VotingOnExpiredGovAction (NonEmpty (Voter, GovActionId))
   | ProposalCantFollow
@@ -207,7 +207,7 @@ data ConwayGovPredFailure era
   | -- | Treasury withdrawal proposals to an invalid reward account
     TreasuryWithdrawalReturnAccountsDoNotExist (NonEmpty RewardAccount)
   | -- | Disallow votes by unelected committee members
-    UnelectedCommitteeVoters (NonEmpty (Credential 'HotCommitteeRole))
+    UnelectedCommitteeVoters (NonEmpty (Credential HotCommitteeRole))
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "GOV" ConwayEra = ConwayGovPredFailure ConwayEra
@@ -298,7 +298,7 @@ data ConwayGovEvent era
       -- | Votes that were replaced in this tx.
       !(Set (Voter, GovActionId))
       -- | Any votes from these DReps in this or in previous txs are removed
-      !(Set (Credential 'DRepRole))
+      !(Set (Credential DRepRole))
   deriving (Generic, Eq)
 
 instance EraPParams era => NFData (ConwayGovEvent era)
@@ -638,7 +638,7 @@ unelectedCommitteeVoters ::
   StrictMaybe (Committee era) ->
   CommitteeState era ->
   VotingProcedures era ->
-  Set (Credential 'HotCommitteeRole)
+  Set (Credential HotCommitteeRole)
 unelectedCommitteeVoters committee committeeState =
   let authorizedElectedCommittee = authorizedElectedHotCommitteeCredentials committee committeeState
       collectUnelectedCommitteeVotes !unelectedHotCreds voter _ =

@@ -75,11 +75,11 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 data ConwayUtxowPredFailure era
   = UtxoFailure (PredicateFailure (EraRule "UTXO" era))
   | InvalidWitnessesUTXOW
-      [VKey 'Witness]
+      [VKey Witness]
   | -- | witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
       -- | witnesses which were needed and not supplied
-      (Set (KeyHash 'Witness))
+      (Set (KeyHash Witness))
   | -- | missing scripts
     MissingScriptWitnessesUTXOW
       (Set ScriptHash)

@@ -32,7 +32,7 @@ import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Allegra.Era ()
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
-import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Imp.Common (KeyPair (..), choose, frequency)
 import Test.Cardano.Ledger.Shelley.ImpTest
 
 instance ShelleyEraImp AllegraEra where
@@ -51,10 +51,10 @@ impAllegraSatisfyNativeScript ::
   , AllegraEraTxBody era
   , NativeScript era ~ Timelock era
   ) =>
-  Set.Set (KeyHash 'Witness) ->
+  Set.Set (KeyHash Witness) ->
   TxBody l era ->
   NativeScript era ->
-  ImpTestM era (Maybe (Map.Map (KeyHash 'Witness) (KeyPair 'Witness)))
+  ImpTestM era (Maybe (Map.Map (KeyHash Witness) (KeyPair Witness)))
 impAllegraSatisfyNativeScript providedVKeyHashes txBody script = do
   let vi = txBody ^. vldtTxBodyL
   case script of

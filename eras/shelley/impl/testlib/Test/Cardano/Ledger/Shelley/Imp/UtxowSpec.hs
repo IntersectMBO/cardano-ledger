@@ -54,7 +54,7 @@ spec = describe "UTXOW" $ do
       submitFailingTx txBad [injectFailure $ InvalidWitnessesUTXOW [aliceVKey]]
 
   it "MissingVKeyWitnessesUTXOW" $ do
-    aliceKh <- freshKeyHash @'Payment
+    aliceKh <- freshKeyHash @Payment
     txIn <- sendCoinTo (mkAddr aliceKh StakeRefNull) mempty
     let tx = mkBasicTx $ mkBasicTxBody & inputsTxBodyL <>~ [txIn]
     let isAliceWitness wit = witVKeyHash wit == asWitness aliceKh

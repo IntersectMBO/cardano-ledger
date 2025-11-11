@@ -28,10 +28,10 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModelV3)
 
-credMember :: Credential 'ColdCommitteeRole
+credMember :: Credential ColdCommitteeRole
 credMember = KeyHashObj (KeyHash "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a")
 
-scriptMember :: Credential 'ColdCommitteeRole
+scriptMember :: Credential ColdCommitteeRole
 scriptMember = ScriptHashObj (ScriptHash "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a")
 
 comm :: Committee ConwayEra

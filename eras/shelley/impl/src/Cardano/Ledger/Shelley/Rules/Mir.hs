@@ -121,7 +121,7 @@ mirTransition = do
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` deltaReserves (dsIRewards ds)
       availableTreasury = treasury `addDeltaCoin` deltaTreasury (dsIRewards ds)
-      update = eval (irwdR ∪+ irwdT) :: Map.Map (Credential 'Staking) Coin
+      update = eval (irwdR ∪+ irwdT) :: Map.Map (Credential Staking) Coin
 
   if totR <= availableReserves && totT <= availableTreasury
     then do

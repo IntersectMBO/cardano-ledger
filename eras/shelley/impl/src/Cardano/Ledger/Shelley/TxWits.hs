@@ -78,7 +78,7 @@ import Lens.Micro (Lens', (^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyTxWitsRaw era = ShelleyTxWitsRaw
-  { stwrAddrTxWits :: !(Set (WitVKey 'Witness))
+  { stwrAddrTxWits :: !(Set (WitVKey Witness))
   , stwrScriptTxWits :: !(Map ScriptHash (Script era))
   , stwrBootAddrTxWits :: !(Set BootstrapWitness)
   }
@@ -91,7 +91,7 @@ deriving instance EraScript era => Eq (ShelleyTxWitsRaw era)
 instance
   ( Era era
   , NFData (Script era)
-  , NFData (WitVKey 'Witness)
+  , NFData (WitVKey Witness)
   , NFData BootstrapWitness
   ) =>
   NFData (ShelleyTxWitsRaw era)
@@ -120,7 +120,7 @@ deriving newtype instance EraScript era => Show (ShelleyTxWits era)
 instance
   ( Era era
   , NFData (Script era)
-  , NFData (WitVKey 'Witness)
+  , NFData (WitVKey Witness)
   , NFData BootstrapWitness
   ) =>
   NFData (ShelleyTxWits era)
@@ -134,7 +134,7 @@ instance EraScript era => NoThunks (ShelleyTxWits era)
 -- | Addresses witness setter and getter for `ShelleyTxWits`. The
 -- setter does update memoized binary representation.
 addrShelleyTxWitsL ::
-  EraScript era => Lens' (ShelleyTxWits era) (Set (WitVKey 'Witness))
+  EraScript era => Lens' (ShelleyTxWits era) (Set (WitVKey Witness))
 addrShelleyTxWitsL =
   lensMemoRawType @ShelleyEra stwrAddrTxWits $ \witsRaw aw -> witsRaw {stwrAddrTxWits = aw}
 {-# INLINEABLE addrShelleyTxWitsL #-}
@@ -197,7 +197,7 @@ instance EraScript era => Monoid (ShelleyTxWits era) where
 pattern ShelleyTxWits ::
   forall era.
   EraScript era =>
-  Set (WitVKey 'Witness) ->
+  Set (WitVKey Witness) ->
   Map ScriptHash (Script era) ->
   Set BootstrapWitness ->
   ShelleyTxWits era

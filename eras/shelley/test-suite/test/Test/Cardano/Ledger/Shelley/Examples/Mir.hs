@@ -126,16 +126,16 @@ txbodyEx1 pot =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     aliceCoinEx1 = aliceInitCoin <-> Val.inject (feeTx1 <+> Coin 7)
 
-mirWits :: [Int] -> [KeyPair 'Witness]
+mirWits :: [Int] -> [KeyPair Witness]
 mirWits = map (asWitness . aikCold . coreNodeIssuerKeys)
 
-sufficientMIRWits :: [KeyPair 'Witness]
+sufficientMIRWits :: [KeyPair Witness]
 sufficientMIRWits = mirWits [0 .. 4]
 
-insufficientMIRWits :: [KeyPair 'Witness]
+insufficientMIRWits :: [KeyPair Witness]
 insufficientMIRWits = mirWits [0 .. 3]
 
-txEx1 :: [KeyPair 'Witness] -> MIRPot -> ShelleyTx TopTx ShelleyEra
+txEx1 :: [KeyPair Witness] -> MIRPot -> ShelleyTx TopTx ShelleyEra
 txEx1 txwits pot =
   ShelleyTx
     (txbodyEx1 pot)
@@ -147,7 +147,7 @@ txEx1 txwits pot =
       }
     SNothing
 
-blockEx1' :: [KeyPair 'Witness] -> MIRPot -> Block (BHeader MockCrypto) ShelleyEra
+blockEx1' :: [KeyPair Witness] -> MIRPot -> Block (BHeader MockCrypto) ShelleyEra
 blockEx1' txwits pot =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -165,7 +165,7 @@ blockEx1' txwits pot =
 blockEx1 :: MIRPot -> Block (BHeader MockCrypto) ShelleyEra
 blockEx1 = blockEx1' sufficientMIRWits
 
-expectedStEx1' :: [KeyPair 'Witness] -> MIRPot -> ChainState ShelleyEra
+expectedStEx1' :: [KeyPair Witness] -> MIRPot -> ChainState ShelleyEra
 expectedStEx1' txwits pot =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1' txwits pot))
     . C.newLab (blockEx1' txwits pot)

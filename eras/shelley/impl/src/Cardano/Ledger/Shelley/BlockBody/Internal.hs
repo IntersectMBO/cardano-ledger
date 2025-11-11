@@ -286,7 +286,7 @@ slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 incrBlocks ::
   Bool ->
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   BlocksMade ->
   BlocksMade
 incrBlocks isOverlay hk blocksMade@(BlocksMade blocksMadeMap)

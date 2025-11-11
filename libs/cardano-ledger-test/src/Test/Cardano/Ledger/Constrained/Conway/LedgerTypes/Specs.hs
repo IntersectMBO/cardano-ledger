@@ -64,12 +64,12 @@ import Test.QuickCheck hiding (forAll, witness)
 -- and the necessary relationships between parts of the CertState
 -- ======================================================================================
 
-type WhoDelegates = Map (Credential 'DRepRole) (Set (Credential 'Staking))
+type WhoDelegates = Map (Credential DRepRole) (Set (Credential Staking))
 
 -- | In the Coway Era, the relationship between the Stake delegation and DRep delegation is
 --   quite subtle. The best way to get this right during constrained generation, is to generate
 --   one piece, we call `WhoDelegates` and compute the other pieces from that.
---   type WhoDelegates = Map (Credential 'DRepRole) (Set (Credential 'Staking)
+--   type WhoDelegates = Map (Credential DRepRole) (Set (Credential Staking)
 --   The functions `delegatesTo`, `dRepsOf`, `credToDRep`, `delegators`, help compute the other pieces.
 --   One can observe that the VState and ConwayAccounts, both have Maps whose domain come from the
 --   domain of WhoDelegates and these maps have strong invariants with each other.
@@ -87,7 +87,7 @@ type WhoDelegates = Map (Credential 'DRepRole) (Set (Credential 'Staking))
 --   So we give special Specifcations that will generate both in ways that maintain the important relationships.
 whoDelegatesSpec ::
   forall era.
-  Era era => WitUniv era -> Specification (Map (Credential 'DRepRole) (Set (Credential 'Staking)))
+  Era era => WitUniv era -> Specification (Map (Credential DRepRole) (Set (Credential Staking)))
 whoDelegatesSpec univ = constrained $ \m ->
   [ assert $ sizeOf_ m >=. 10
   , assert $ sizeOf_ m <=. 20
@@ -96,7 +96,7 @@ whoDelegatesSpec univ = constrained $ \m ->
   ]
 
 wdrlSpec ::
-  Map (Credential 'DRepRole) (Set (Credential 'Staking)) ->
+  Map (Credential DRepRole) (Set (Credential Staking)) ->
   Specification (Map RewardAccount Coin)
 wdrlSpec whodelegates = constrained $ \m ->
   [ assert $ sizeOf_ (dom_ m) <=. lit 5
@@ -107,28 +107,28 @@ wdrlSpec whodelegates = constrained $ \m ->
         ]
   ]
 
--- | Compute the set of DRep Credentials that some (Credential 'Staking) delegates to
-delegatesTo :: Map (Credential 'DRepRole) (Set (Credential 'Staking)) -> Set (Credential 'DRepRole)
+-- | Compute the set of DRep Credentials that some (Credential Staking) delegates to
+delegatesTo :: Map (Credential DRepRole) (Set (Credential Staking)) -> Set (Credential DRepRole)
 delegatesTo m = Map.keysSet m
 
--- | Compute the set of (Credential 'Staking) that delegate their vote to some DRep
-delegators :: Map (Credential 'DRepRole) (Set (Credential 'Staking)) -> Set (Credential 'Staking)
+-- | Compute the set of (Credential Staking) that delegate their vote to some DRep
+delegators :: Map (Credential DRepRole) (Set (Credential Staking)) -> Set (Credential Staking)
 delegators m = fold (Map.elems m)
 
--- | Compute the set of DReps that some (Credential 'Staking) delegates to
---   Like `delegatesTo` but returns the DRep rather than the (Credential 'DRepRole)
-dRepsOf :: Map (Credential 'DRepRole) (Set (Credential 'Staking)) -> Set DRep
+-- | Compute the set of DReps that some (Credential Staking) delegates to
+--   Like `delegatesTo` but returns the DRep rather than the (Credential DRepRole)
+dRepsOf :: Map (Credential DRepRole) (Set (Credential Staking)) -> Set DRep
 dRepsOf m = Set.map credToDRep (delegatesTo m)
 
 -- | Turn a DRep Credential into a DRep
-credToDRep :: Credential 'DRepRole -> DRep
+credToDRep :: Credential DRepRole -> DRep
 credToDRep (KeyHashObj kh) = DRepKeyHash kh
 credToDRep (ScriptHashObj sh) = DRepScriptHash sh
 
 toDelta :: Coin -> DeltaCoin
 toDelta (Coin n) = DeltaCoin n
 
-type CertContext = (Map (Credential 'DRepRole) (Set (Credential 'Staking)), Map RewardAccount Coin)
+type CertContext = (Map (Credential DRepRole) (Set (Credential Staking)), Map RewardAccount Coin)
 
 genCertContext :: forall era. Era era => WitUniv era -> Gen CertContext
 genCertContext univ = do
@@ -223,7 +223,7 @@ accountStateSpec =
 
 goodDrep ::
   forall era.
-  Era era => WitUniv era -> Specification (Map (Credential 'DRepRole) (Set.Set (Credential 'Staking)))
+  Era era => WitUniv era -> Specification (Map (Credential DRepRole) (Set.Set (Credential Staking)))
 goodDrep = whoDelegatesSpec
 
 -- ========================================================================
@@ -238,7 +238,7 @@ vStateSpec ::
   Era era =>
   WitUniv era ->
   Term EpochNo ->
-  Map (Credential 'DRepRole) (Set (Credential 'Staking)) ->
+  Map (Credential DRepRole) (Set (Credential Staking)) ->
   Specification (VState era)
 vStateSpec univ epoch whoDelegated = constrained $ \ [var|vstate|] ->
   match vstate $ \ [var|dreps|] [var|committeestate|] [var|numdormant|] ->
@@ -268,8 +268,8 @@ conwayDStateSpec ::
   forall era.
   era ~ ConwayEra =>
   WitUniv era ->
-  (Map (Credential 'DRepRole) (Set (Credential 'Staking)), Map RewardAccount Coin) ->
-  Term (Map (KeyHash 'StakePool) StakePoolState) ->
+  (Map (Credential DRepRole) (Set (Credential Staking)), Map RewardAccount Coin) ->
+  Term (Map (KeyHash StakePool) StakePoolState) ->
   Specification (DState era)
 conwayDStateSpec univ (whoDelegates, wdrl) poolreg =
   constrained $ \ [var| ds |] ->
@@ -297,17 +297,17 @@ conwayAccountMapSpec ::
   forall era.
   Era era =>
   WitUniv era ->
-  Map (Credential 'DRepRole) (Set (Credential 'Staking)) ->
-  Term (Map (KeyHash 'StakePool) StakePoolState) ->
+  Map (Credential DRepRole) (Set (Credential Staking)) ->
+  Term (Map (KeyHash StakePool) StakePoolState) ->
   Map RewardAccount Coin ->
-  Specification (Map (Credential 'Staking) (ConwayAccountState era))
+  Specification (Map (Credential Staking) (ConwayAccountState era))
 conwayAccountMapSpec univ whoDelegates poolreg wdrl =
   let witsize = fromIntegral @Int (wvSize univ)
       wdlsize = fromIntegral @Int (Map.size wdrl)
       minAccountsize = wdlsize + 2
-      withdrawalMap :: Map (Credential 'Staking) (CompactForm Coin)
+      withdrawalMap :: Map (Credential Staking) (CompactForm Coin)
       withdrawalMap = Map.mapKeys raCredential (Map.map compactCoinOrError wdrl)
-      withdrawalKeys :: Set (Credential 'Staking)
+      withdrawalKeys :: Set (Credential Staking)
       withdrawalKeys = Map.keysSet (Map.mapKeys raCredential wdrl)
    in constrained $ \ [var|conwayAccountMap|] ->
         [ -- Size of conwayAccounts, can't be bigger than the witness set (n keys + n scripts)
@@ -394,7 +394,7 @@ pStateSpec univ currepoch = constrained $ \ [var|pState|] ->
 
 conwayCertStateSpec ::
   WitUniv ConwayEra ->
-  (Map (Credential 'DRepRole) (Set (Credential 'Staking)), Map RewardAccount Coin) ->
+  (Map (Credential DRepRole) (Set (Credential Staking)), Map RewardAccount Coin) ->
   Term EpochNo ->
   Specification (ConwayCertState ConwayEra)
 conwayCertStateSpec univ (whodelegates, wdrl) epoch = constrained $ \ [var|convCertState|] ->
@@ -415,7 +415,7 @@ utxoSpecWit ::
   forall era.
   EraSpecTxOut era =>
   WitUniv era ->
-  Term (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
+  Term (Map (Credential Staking) (KeyHash StakePool)) ->
   Specification (UTxO era)
 utxoSpecWit univ delegs = constrained $ \ [var|utxo|] ->
   match utxo $ \ [var|utxomap|] ->
@@ -447,7 +447,7 @@ getDelegs ::
   forall era.
   EraCertState era =>
   CertState era ->
-  Map (Credential 'Staking) (KeyHash 'StakePool)
+  Map (Credential Staking) (KeyHash StakePool)
 getDelegs cs =
   Map.mapMaybe
     (^. stakePoolDelegationAccountStateL)
@@ -517,11 +517,11 @@ snapShotsSpec marksnap =
 getMarkSnapShot :: forall era. (EraCertState era, EraStake era) => LedgerState era -> SnapShot
 getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
   where
-    markStake :: VMap VB VP (Credential 'Staking) (CompactForm Coin)
+    markStake :: VMap VB VP (Credential Staking) (CompactForm Coin)
     markStake = VMap.fromMap (ls ^. instantStakeL . instantStakeCredentialsL)
-    markDelegations :: VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+    markDelegations :: VMap VB VB (Credential Staking) (KeyHash StakePool)
     markDelegations = VMap.fromMap $ getDelegs (ls ^. lsCertStateL)
-    markPoolParams :: VMap VB VB (KeyHash 'StakePool) StakePoolParams
+    markPoolParams :: VMap VB VB (KeyHash StakePool) StakePoolParams
     markPoolParams =
       VMap.fromMap $
         Map.mapWithKey stakePoolStateToStakePoolParams $

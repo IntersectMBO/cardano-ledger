@@ -155,7 +155,7 @@ instance ToJSON ValidityInterval where
 -- ==================================================================
 
 data TimelockRaw era
-  = TimelockSignature !(KeyHash 'Witness)
+  = TimelockSignature !(KeyHash Witness)
   | TimelockAllOf !(StrictSeq (Timelock era)) -- NOTE that Timelock and
   | TimelockAnyOf !(StrictSeq (Timelock era)) -- TimelockRaw are mutually recursive.
   | TimelockMOf !Int !(StrictSeq (Timelock era))
@@ -355,10 +355,10 @@ pattern RequireTimeStart mslot <- (getTimeStart -> Just mslot)
     ConwayEra
   #-}
 
-mkRequireSignatureTimelock :: forall era. Era era => KeyHash 'Witness -> Timelock era
+mkRequireSignatureTimelock :: forall era. Era era => KeyHash Witness -> Timelock era
 mkRequireSignatureTimelock = mkMemoizedEra @era . TimelockSignature
 
-getRequireSignatureTimelock :: Timelock era -> Maybe (KeyHash 'Witness)
+getRequireSignatureTimelock :: Timelock era -> Maybe (KeyHash Witness)
 getRequireSignatureTimelock (MkTimelock (Memo (TimelockSignature kh) _)) = Just kh
 getRequireSignatureTimelock _ = Nothing
 
@@ -412,7 +412,7 @@ ltePosInfty (SJust i) j = i <= j
 
 evalTimelock ::
   (AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  Set.Set (KeyHash 'Witness) ->
+  Set.Set (KeyHash Witness) ->
   ValidityInterval ->
   NativeScript era ->
   Bool

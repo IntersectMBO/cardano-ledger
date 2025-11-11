@@ -122,7 +122,7 @@ data CHAIN era
 
 data ChainState era = ChainState
   { chainNes :: NewEpochState era
-  , chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer) Word64
+  , chainOCertIssue :: Map.Map (KeyHash BlockIssuer) Word64
   , chainEpochNonce :: Nonce
   , chainEvolvingNonce :: Nonce
   , chainCandidateNonce :: Nonce
@@ -190,7 +190,7 @@ initialShelleyState ::
   EpochNo ->
   UTxO era ->
   Coin ->
-  Map (KeyHash 'Genesis) GenDelegPair ->
+  Map (KeyHash GenesisRole) GenDelegPair ->
   PParams era ->
   Nonce ->
   ChainState era

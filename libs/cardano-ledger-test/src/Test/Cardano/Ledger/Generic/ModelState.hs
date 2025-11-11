@@ -83,7 +83,7 @@ type MUtxo era = Map TxIn (TxOut era)
 
 data ModelNewEpochState era = ModelNewEpochState
   { -- PState fields
-    mStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
+    mStakePools :: !(Map (KeyHash StakePool) StakePoolState)
   , -- DState state fields
     mAccounts :: !(Accounts era)
   , --  _fGenDelegs,  _genDelegs, and _irwd, are for
@@ -102,19 +102,19 @@ data ModelNewEpochState era = ModelNewEpochState
     -- esNonMyopic is for efficiency, and all are abstracted away
 
     -- Model NewEpochState fields
-    mPoolDistr :: !(Map (KeyHash 'StakePool) IndividualPoolStake)
+    mPoolDistr :: !(Map (KeyHash StakePool) IndividualPoolStake)
   , mPParams :: !(PParams era)
   , mDeposited :: !Coin
   , mFees :: !Coin
   , mCount :: !Int
   , mIndex :: !(Map Int TxId)
   , -- below here NO EFFECT until we model EpochBoundary
-    mFStakePools :: !(Map (KeyHash 'StakePool) StakePoolParams)
-  , mRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
+    mFStakePools :: !(Map (KeyHash StakePool) StakePoolParams)
+  , mRetiring :: !(Map (KeyHash StakePool) EpochNo)
   , mSnapshots :: !SnapShots
   , mEL :: !EpochNo -- The current epoch,
-  , mBprev :: !(Map (KeyHash 'StakePool) Natural) --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
-  , mBcur :: !(Map (KeyHash 'StakePool) Natural)
+  , mBprev :: !(Map (KeyHash StakePool) Natural) --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
+  , mBcur :: !(Map (KeyHash StakePool) Natural)
   , mRu :: !(StrictMaybe RewardUpdate) -- Possible reward update
   }
   deriving (Generic)

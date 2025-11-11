@@ -59,7 +59,7 @@ import Test.Cardano.Ledger.Shelley.Examples (exampleByronAddress)
 shelleyAddr :: Addr
 shelleyAddr = Addr Testnet pk StakeRefNull
   where
-    pk = mkCredential (mkKeyPair 0 :: KeyPair 'Payment)
+    pk = mkCredential (mkKeyPair 0 :: KeyPair Payment)
 
 ei :: EpochInfo (Either a)
 ei = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

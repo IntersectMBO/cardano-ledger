@@ -47,13 +47,13 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 newtype ConwayInstantStake era = ConwayInstantStake
-  { cisCredentialStake :: Map.Map (Credential 'Staking) (CompactForm Coin)
+  { cisCredentialStake :: Map.Map (Credential Staking) (CompactForm Coin)
   }
   deriving (Generic, Show, Eq, Ord, EncCBOR, NFData, NoThunks, Default, Monoid)
   deriving (ToJSON) via KeyValuePairs (ConwayInstantStake era)
 
 instance DecShareCBOR (ConwayInstantStake era) where
-  type Share (ConwayInstantStake era) = Interns (Credential 'Staking)
+  type Share (ConwayInstantStake era) = Interns (Credential Staking)
   decShareCBOR credInterns = do
     peekTokenType >>= \case
       TypeListLen -> toConwayInstantStake <$> decShareCBOR credInterns
@@ -81,7 +81,7 @@ instance EraStake ConwayEra where
   resolveInstantStake = resolveConwayInstantStake
 
 conwayInstantStakeCredentialsL ::
-  Lens' (ConwayInstantStake era) (Map.Map (Credential 'Staking) (CompactForm Coin))
+  Lens' (ConwayInstantStake era) (Map.Map (Credential Staking) (CompactForm Coin))
 conwayInstantStakeCredentialsL = lens cisCredentialStake $ \is m -> is {cisCredentialStake = m}
 
 addConwayInstantStake ::

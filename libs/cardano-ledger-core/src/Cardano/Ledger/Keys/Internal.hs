@@ -8,6 +8,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeData #-}
 
 module Cardano.Ledger.Keys.Internal (
   -- * DSIGN
@@ -64,8 +65,8 @@ type DSIGN = DSIGN.Ed25519DSIGN
 -- their payment and staking credential, as well as the key for their stake pool. However,
 -- in the ledger code mixing up keys with different roles could be catastrophic, that is
 -- why we have this separation.
-data KeyRole
-  = Genesis
+type data KeyRole
+  = GenesisRole
   | GenesisDelegate
   | Payment
   | Staking
@@ -76,7 +77,6 @@ data KeyRole
   | HotCommitteeRole
   | ColdCommitteeRole
   | Guard
-  deriving (Show)
 
 class HasKeyRole (a :: KeyRole -> Type) where
   -- | General coercion of key roles.
@@ -100,7 +100,7 @@ class HasKeyRole (a :: KeyRole -> Type) where
 asWitness ::
   HasKeyRole a =>
   a r ->
-  a 'Witness
+  a Witness
 asWitness = coerceKeyRole
 
 --------------------------------------------------------------------------------

@@ -59,7 +59,7 @@ newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving newtype (NoThunks, ToCBOR, FromCBOR, EncCBOR, DecCBOR, NFData)
 
 data BootstrapWitness = BootstrapWitness
-  { bwKey :: !(VKey 'Witness)
+  { bwKey :: !(VKey Witness)
   , bwSignature :: !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
   , bwChainCode :: !ChainCode
   , bwAttributes :: !ByteString
@@ -98,7 +98,7 @@ instance Ord BootstrapWitness where
 -- | Rebuild the addrRoot of the corresponding address.
 bootstrapWitKeyHash ::
   BootstrapWitness ->
-  KeyHash 'Witness
+  KeyHash Witness
 bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
   KeyHash . hash_crypto . hash_SHA3_256 $ bytes
   where
@@ -128,7 +128,7 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
 
 unpackByronVKey ::
   Byron.VerificationKey ->
-  (VKey 'Witness, ChainCode)
+  (VKey Witness, ChainCode)
 unpackByronVKey
   ( Byron.VerificationKey
       (WC.XPub vkeyBytes (WC.ChainCode chainCodeBytes))

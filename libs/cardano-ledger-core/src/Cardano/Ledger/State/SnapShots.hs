@@ -103,12 +103,12 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 -- has no stake will not appear in this Map, even if it is registered. For this reason, this data
 -- type should not be used for infering whether credential is registered or not.
 newtype Stake = Stake
-  { unStake :: VMap VB VP (Credential 'Staking) (CompactForm Coin)
+  { unStake :: VMap VB VP (Credential Staking) (CompactForm Coin)
   }
   deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR)
 
 instance DecShareCBOR Stake where
-  type Share Stake = Share (VMap VB VP (Credential 'Staking) (CompactForm Coin))
+  type Share Stake = Share (VMap VB VP (Credential Staking) (CompactForm Coin))
   getShare = getShare . unStake
   decShareCBOR = fmap Stake . decShareCBOR
 
@@ -122,8 +122,8 @@ sumAllStakeCompact = VMap.foldl (<>) mempty . unStake
 
 -- | Get stake of one pool
 poolStake ::
-  KeyHash 'StakePool ->
-  VMap VB VB (Credential 'Staking) (KeyHash 'StakePool) ->
+  KeyHash StakePool ->
+  VMap VB VB (Credential Staking) (KeyHash StakePool) ->
   Stake ->
   Stake
 poolStake hk delegs (Stake stake) =
@@ -133,9 +133,9 @@ poolStake hk delegs (Stake stake) =
 -- | Compute amount of stake each pool has. Any registered stake pool that has no stake will not be
 -- included in the resulting map
 sumStakePerPool ::
-  VMap VB VB (Credential 'Staking) (KeyHash 'StakePool) ->
+  VMap VB VB (Credential Staking) (KeyHash StakePool) ->
   Stake ->
-  Map (KeyHash 'StakePool) Coin
+  Map (KeyHash StakePool) Coin
 sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
   where
     accum !acc cred compactCoin =
@@ -181,8 +181,8 @@ maxPool pp r sigma pR = maxPool' a0 nOpt r sigma pR
 -- | Snapshot of the stake distribution.
 data SnapShot = SnapShot
   { ssStake :: !Stake
-  , ssDelegations :: !(VMap VB VB (Credential 'Staking) (KeyHash 'StakePool))
-  , ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool) StakePoolParams)
+  , ssDelegations :: !(VMap VB VB (Credential Staking) (KeyHash StakePool))
+  , ssPoolParams :: !(VMap VB VB (KeyHash StakePool) StakePoolParams)
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs SnapShot
@@ -199,7 +199,7 @@ instance EncCBOR SnapShot where
       <> encCBOR ssPoolParams
 
 instance DecShareCBOR SnapShot where
-  type Share SnapShot = (Interns (Credential 'Staking), Interns (KeyHash 'StakePool))
+  type Share SnapShot = (Interns (Credential Staking), Interns (KeyHash StakePool))
   decSharePlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
     ssStake <- decSharePlusLensCBOR _1
     ssDelegations <- decSharePlusCBOR
@@ -280,10 +280,10 @@ emptySnapShots =
 
 -- | Sum up the Coin (as CompactForm Coin = Word64) for each StakePool
 calculatePoolStake ::
-  (KeyHash 'StakePool -> Bool) ->
-  VMap VB VB (Credential 'Staking) (KeyHash 'StakePool) ->
+  (KeyHash StakePool -> Bool) ->
+  VMap VB VB (Credential Staking) (KeyHash StakePool) ->
   Stake ->
-  Map.Map (KeyHash 'StakePool) Word64
+  Map.Map (KeyHash StakePool) Word64
 calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty delegs
   where
     accum ans cred keyHash =
@@ -296,7 +296,7 @@ calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty 
 calculatePoolDistr :: SnapShot -> PoolDistr
 calculatePoolDistr = calculatePoolDistr' (const True)
 
-calculatePoolDistr' :: (KeyHash 'StakePool -> Bool) -> SnapShot -> PoolDistr
+calculatePoolDistr' :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
 calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
   let CompactCoin total = sumAllStakeCompact stake
       -- total could be zero (in particular when shrinking)
@@ -342,11 +342,11 @@ ssFeeL = lens ssFee (\ds u -> ds {ssFee = u})
 ssStakeL :: Lens' SnapShot Stake
 ssStakeL = lens ssStake (\ds u -> ds {ssStake = u})
 
-ssStakeDistrL :: Lens' SnapShot (VMap VB VP (Credential 'Staking) (CompactForm Coin))
+ssStakeDistrL :: Lens' SnapShot (VMap VB VP (Credential Staking) (CompactForm Coin))
 ssStakeDistrL = lens (unStake . ssStake) (\ds u -> ds {ssStake = Stake u})
 
-ssDelegationsL :: Lens' SnapShot (VMap VB VB (Credential 'Staking) (KeyHash 'StakePool))
+ssDelegationsL :: Lens' SnapShot (VMap VB VB (Credential Staking) (KeyHash StakePool))
 ssDelegationsL = lens ssDelegations (\ds u -> ds {ssDelegations = u})
 
-ssPoolParamsL :: Lens' SnapShot (VMap VB VB (KeyHash 'StakePool) StakePoolParams)
+ssPoolParamsL :: Lens' SnapShot (VMap VB VB (KeyHash StakePool) StakePoolParams)
 ssPoolParamsL = lens ssPoolParams (\ds u -> ds {ssPoolParams = u})

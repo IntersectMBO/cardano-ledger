@@ -161,9 +161,9 @@ credToText :: Credential kr -> T.Text
 credToText (ScriptHashObj (ScriptHash hash)) = "scriptHash-" <> hashToTextAsHex hash
 credToText (KeyHashObj (KeyHash has)) = "keyHash-" <> hashToTextAsHex has
 
-type PaymentCredential = Credential 'Payment
+type PaymentCredential = Credential Payment
 
-type StakeCredential = Credential 'Staking
+type StakeCredential = Credential Staking
 
 credKeyHash :: Credential r -> Maybe (KeyHash r)
 credKeyHash = \case
@@ -171,7 +171,7 @@ credKeyHash = \case
   ScriptHashObj _ -> Nothing
 
 -- | Convert a KeyHash into a Witness KeyHash. Does nothing for Script credentials.
-credKeyHashWitness :: Credential r -> Maybe (KeyHash 'Witness)
+credKeyHashWitness :: Credential r -> Maybe (KeyHash Witness)
 credKeyHashWitness = credKeyHash . asWitness
 
 -- | Extract ScriptHash from a Credential. Returns Nothing for KeyHashes

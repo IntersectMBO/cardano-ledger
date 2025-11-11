@@ -81,9 +81,9 @@ witnessDepositPurpose univ = constrained $ \ [var|depPurpose|] ->
     (branch $ \_ -> True)
 
 data DepositPurpose
-  = CredentialDeposit !(Credential 'Staking)
-  | PoolDeposit !(KeyHash 'StakePool)
-  | DRepDeposit !(Credential 'DRepRole)
+  = CredentialDeposit !(Credential Staking)
+  | PoolDeposit !(KeyHash StakePool)
+  | DRepDeposit !(Credential DRepRole)
   | GovActionDeposit !GovActionId
   deriving (Generic, Eq, Show, Ord)
 

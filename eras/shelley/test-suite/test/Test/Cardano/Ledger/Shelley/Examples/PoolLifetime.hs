@@ -133,7 +133,7 @@ toCompactCoinError c =
     Nothing -> error $ "Invalid coin: " <> show c
     Just compactCoin -> compactCoin
 
-mkStake :: [(Credential 'Staking, Coin)] -> Stake
+mkStake :: [(Credential Staking, Coin)] -> Stake
 mkStake = Stake . GHC.Exts.fromList . map (fmap toCompactCoinError)
 
 initUTxO :: UTxO ShelleyEra

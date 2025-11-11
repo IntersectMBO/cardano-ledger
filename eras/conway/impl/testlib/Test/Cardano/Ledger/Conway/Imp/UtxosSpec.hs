@@ -642,8 +642,8 @@ enactCostModels ::
   ConwayEraImp era =>
   StrictMaybe (GovPurposeId 'PParamUpdatePurpose) ->
   CostModels ->
-  Credential 'DRepRole ->
-  NonEmpty (Credential 'HotCommitteeRole) ->
+  Credential DRepRole ->
+  NonEmpty (Credential HotCommitteeRole) ->
   ImpTestM era (GovPurposeId 'PParamUpdatePurpose)
 enactCostModels prevGovId cms dRep committeeMembers' = do
   initialCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL

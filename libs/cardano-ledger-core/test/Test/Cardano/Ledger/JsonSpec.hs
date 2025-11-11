@@ -11,7 +11,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
-import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Common (Spec, describe)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.JSON
 
@@ -33,7 +33,7 @@ spec = do
     roundTripJsonSpec @StakePoolState
     roundTripJsonSpec @Addr
     roundTripJsonSpec @RewardAccount
-    roundTripJsonSpec @(Credential 'Witness)
+    roundTripJsonSpec @(Credential Witness)
     roundTripJsonSpec @DRep
     roundTripJsonSpec @Anchor
     roundTripJsonSpec @TxId

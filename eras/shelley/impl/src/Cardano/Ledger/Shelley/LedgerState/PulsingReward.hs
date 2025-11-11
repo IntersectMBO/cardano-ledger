@@ -317,7 +317,7 @@ decayFactor = 0.9
 updateNonMyopic ::
   NonMyopic ->
   Coin ->
-  Map (KeyHash 'StakePool) Likelihood ->
+  Map (KeyHash StakePool) Likelihood ->
   NonMyopic
 updateNonMyopic nm rPot_ newLikelihoods =
   nm
