@@ -45,6 +45,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
+  Network,
   Nonce (..),
   StrictMaybe (..),
   quorum,
@@ -295,10 +296,11 @@ updatePoolParams ::
   ( EraCertState era
   , EraGov era
   ) =>
+  Network ->
   StakePoolParams ->
   ChainState era ->
   ChainState era
-updatePoolParams pool cs = cs {chainNes = nes'}
+updatePoolParams network pool cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
     es = nesEs nes
@@ -317,7 +319,7 @@ updatePoolParams pool cs = cs {chainNes = nes'}
               ( \k sps ->
                   if k == sppId pool
                     then Nothing
-                    else Just $ stakePoolStateToStakePoolParams k sps
+                    else Just $ stakePoolStateToStakePoolParams k network sps
               )
               (psStakePools ps)
         }

@@ -16,6 +16,7 @@ import BenchValidation (
   updateChain,
   validateInput,
  )
+import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Bench.Gen (
@@ -183,18 +184,18 @@ profileCreateRegPools size = do
 
 action2m ::
   (EraTxOut era, ShelleyEraAccounts era) =>
-  (DState era, PState era, UTxO era) ->
+  (DState era, PState era, UTxO era, Network) ->
   SnapShot
-action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
+action2m (dstate, pstate, utxo, network) = stakeDistr network utxo dstate pstate
 
 benchInstantStake ::
   forall era.
   EraStake era =>
-  (DState era, PState era, UTxO era) ->
+  (DState era, PState era, UTxO era, Network) ->
   SnapShot
-benchInstantStake (dstate, pstate, utxo) =
+benchInstantStake (dstate, pstate, utxo, network) =
   let instantStake = addInstantStake utxo mempty
-   in snapShotFromInstantStake instantStake dstate pstate
+   in snapShotFromInstantStake instantStake dstate pstate network
 
 -- =================================================================
 

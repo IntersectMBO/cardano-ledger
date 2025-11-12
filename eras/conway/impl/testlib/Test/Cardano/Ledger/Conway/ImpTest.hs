@@ -1836,7 +1836,7 @@ delegateSPORewardAddressToDRep_ kh stake drep = do
   sps <- getRatifyEnv >>= expectJust . Map.lookup kh . reStakePools
   void $
     delegateToDRep
-      (raCredential $ spsRewardAccount sps)
+      (spsRewardAccount sps)
       stake
       drep
 
