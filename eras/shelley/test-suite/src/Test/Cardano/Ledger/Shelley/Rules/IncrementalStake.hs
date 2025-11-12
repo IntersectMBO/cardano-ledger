@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.BaseTypes (Globals (Globals, networkId), Network)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -31,7 +31,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (Identity, LedgerEnv)
 import Cardano.Ledger.Shelley.State
-import Control.Monad.Reader (ReaderT)
+import Control.Monad.Reader (MonadReader (ask), ReaderT)
 import Control.SetAlgebra (dom, eval, (▷), (◁))
 import Control.State.Transition (STS (..))
 import Data.Foldable (fold)
@@ -54,6 +54,7 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
  )
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
+  runShelleyBase,
  )
 import Test.Cardano.Ledger.TerseTools (tersemapdiffs)
 import Test.Control.State.Transition.Trace (
@@ -154,12 +155,14 @@ incrStakeComparisonTest ::
   ) =>
   Proxy era ->
   TestTree
-incrStakeComparisonTest Proxy =
+incrStakeComparisonTest Proxy = do
+  let network = runShelleyBase $ ask >>= \Globals {networkId} -> pure networkId
   testProperty "Incremental stake distribution at epoch boundaries agrees" $
     forAllChainTrace traceLen defaultConstants $ \tr ->
-      conjoin $
-        map (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era ((nesEs . chainNes) target)) $
-          filter (not . sameEpoch) (sourceSignalTargets tr)
+      conjoin
+        $ map
+          (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era network ((nesEs . chainNes) target))
+        $ filter (not . sameEpoch) (sourceSignalTargets tr)
   where
     sameEpoch SourceSignalTarget {source, target} = epoch source == epoch target
     epoch = nesEL . chainNes
@@ -167,15 +170,16 @@ incrStakeComparisonTest Proxy =
 checkIncrementalStake ::
   forall era.
   (EraGov era, EraTxOut era, EraStake era, EraCertState era, ShelleyEraAccounts era) =>
+  Network ->
   EpochState era ->
   Property
-checkIncrementalStake es =
+checkIncrementalStake network es =
   let
     LedgerState (UTxOState utxo _ _ _ instantStake _) certState = esLState es
     dstate = certState ^. certDStateL
     pstate = certState ^. certPStateL
-    stake = stakeDistr @era utxo dstate pstate
-    snapShot = snapShotFromInstantStake instantStake dstate pstate
+    stake = stakeDistr @era network utxo dstate pstate
+    snapShot = snapShotFromInstantStake instantStake dstate pstate network
     _pp = es ^. curPParamsEpochStateL
    in
     counterexample
@@ -195,15 +199,16 @@ tersediffincremental message (Stake a) (Stake c) =
 stakeDistr ::
   forall era.
   (EraTxOut era, ShelleyEraAccounts era) =>
+  Network ->
   UTxO era ->
   DState era ->
   PState era ->
   SnapShot
-stakeDistr u ds ps =
+stakeDistr network u ds ps =
   SnapShot
     (Stake $ VMap.fromMap (eval (dom activeDelegs ◁ stakeRelation)))
     (VMap.fromMap delegs)
-    (VMap.fromMap $ Map.mapWithKey stakePoolStateToStakePoolParams poolState)
+    (VMap.fromMap $ Map.mapWithKey (`stakePoolStateToStakePoolParams` network) poolState)
   where
     accountsMap = ds ^. accountsL . accountsMapL
     rewards' :: Map.Map (Credential Staking) (CompactForm Coin)

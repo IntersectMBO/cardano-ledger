@@ -489,7 +489,9 @@ countPStateStats PState {..} =
           <> statMapKeys psFutureStakePoolParams
           <> statMapKeys psRetiring
     , pssPoolParamsStats =
-        foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToStakePoolParams psStakePools)
+        foldMap
+          countPoolParamsStats
+          (Map.mapWithKey (`stakePoolStateToStakePoolParams` Testnet) psStakePools)
           <> foldMap countPoolParamsStats psFutureStakePoolParams
     }
 

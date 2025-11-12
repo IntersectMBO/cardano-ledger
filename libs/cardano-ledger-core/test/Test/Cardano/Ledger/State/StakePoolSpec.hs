@@ -6,6 +6,7 @@
 
 module Test.Cardano.Ledger.State.StakePoolSpec (spec) where
 
+import Cardano.Ledger.Address (raNetwork)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -23,6 +24,7 @@ spec = do
          , delegs :: Set (Credential Staking)
          ) ->
           let poolId = sppId stakePoolParams
+              network = raNetwork $ sppRewardAccount stakePoolParams
               stakePoolState = mkStakePoolState deposit delegs stakePoolParams
-              stakePoolParams' = stakePoolStateToStakePoolParams poolId stakePoolState
+              stakePoolParams' = stakePoolStateToStakePoolParams poolId network stakePoolState
            in stakePoolParams === stakePoolParams'

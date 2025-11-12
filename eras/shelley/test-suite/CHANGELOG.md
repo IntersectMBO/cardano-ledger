@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-shelley-test`
 
-## 1.7.0.1
+## 1.8.0.0
 
-*
+* Changed the type of `stakeDistr` by adding `Network` argument
 
 ## 1.7.0.0
 

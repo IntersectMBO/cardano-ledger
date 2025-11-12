@@ -2,6 +2,10 @@
 
 ## 1.19.0.0
 
+* Changed the type of the following functions by adding `Network` argument:
+  - `stakePoolStateToStakePoolParams`
+  - `snapShotFromInstantStake`
+* Changed type of `spsRewardAccount` in `StakePoolState` to `Credential Staking`
 * Changed type of `parseCostModels` by adding `[Language]` argument
 * Add `HasOKey` instance for `TxId (TxBody l era)`
 * Add `cddl` sub-library.

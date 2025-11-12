@@ -1108,4 +1108,4 @@ genPool = frequencyT [(10, genNew), (90, pickExisting)]
       avoidKey <- gets gsAvoidKey
       lift (genMapElemWhere psStakePools 10 (\kh _ -> kh `Set.notMember` avoidKey)) >>= \case
         Nothing -> genNew
-        Just (kh, sps) -> pure (kh, stakePoolStateToStakePoolParams kh sps)
+        Just (kh, sps) -> pure (kh, stakePoolStateToStakePoolParams kh Testnet sps)

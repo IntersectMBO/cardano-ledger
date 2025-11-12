@@ -635,7 +635,7 @@ instance
       <*> dreps
       <*> toSpecRep reCommitteeState
       <*> toSpecRep treasury
-      <*> toSpecRep (Map.mapWithKey stakePoolStateToStakePoolParams reStakePools)
+      <*> toSpecRep (Map.mapWithKey (`stakePoolStateToStakePoolParams` Testnet) reStakePools)
       <*> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
 
 instance
