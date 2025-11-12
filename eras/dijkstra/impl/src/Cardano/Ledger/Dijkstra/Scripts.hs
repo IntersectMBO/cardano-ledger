@@ -243,7 +243,7 @@ instance Era era => EncCBOR (DijkstraNativeScriptRaw era) where
 instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
   decCBOR = decode (Summands "DijkstraNativeScriptRaw" decRaw)
     where
-      decRaw :: Word -> Decode 'Open (Annotator (DijkstraNativeScriptRaw era))
+      decRaw :: Word -> Decode Open (Annotator (DijkstraNativeScriptRaw era))
       decRaw 0 = Ann (SumD DijkstraRequireSignature <! From)
       decRaw 1 = Ann (SumD DijkstraRequireAllOf) <*! D (sequence <$> decCBOR)
       decRaw 2 = Ann (SumD DijkstraRequireAnyOf) <*! D (sequence <$> decCBOR)

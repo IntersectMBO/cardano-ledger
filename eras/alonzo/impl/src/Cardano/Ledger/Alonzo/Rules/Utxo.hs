@@ -621,7 +621,7 @@ encFail ::
   , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   AlonzoUtxoPredFailure era ->
-  Encode 'Open (AlonzoUtxoPredFailure era)
+  Encode Open (AlonzoUtxoPredFailure era)
 encFail (BadInputsUTxO ins) =
   Sum (BadInputsUTxO @era) 0 !> To ins
 encFail (OutsideValidityIntervalUTxO a b) =
@@ -670,7 +670,7 @@ decFail ::
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Word ->
-  Decode 'Open (AlonzoUtxoPredFailure era)
+  Decode Open (AlonzoUtxoPredFailure era)
 decFail 0 = SumD BadInputsUTxO <! From
 decFail 1 = SumD OutsideValidityIntervalUTxO <! From <! From
 decFail 2 = SumD MaxTxSizeUTxO <! From

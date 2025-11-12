@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Change `Density` type to only be available at the type level
+* Change `Wrapped` type to only be available at the type level
 * Make `decodeAnnSet` fail when there are duplicates, starting with protocol version `12`.
 * Provide ability for `Annotator` to fail, by changing its type signature to return `Either` and adding `MonadFail` instance.
 * Remove `encodedSizeExpr` and `encodedListSizeExpr` from `EncCBOR`

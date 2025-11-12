@@ -11,6 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeData #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Binary.Decoding.Coders (
@@ -117,20 +118,20 @@ import Data.Void (Void)
 --  fields). We use indexes to types to try and mark (and enforce) these distinctions.
 
 -- | Index for record density. Distinguishing (all the fields) from (some of the fields).
-data Density = Dense | Sparse
+type data Density = Dense | Sparse
 
--- | Index for a wrapped Coder. Wrapping is necessary for 'Summands' and 'SparseKeyed'.
-data Wrapped where
+-- | Index for a wrapped Coder. Wrapping is necessary for 'Summands' and SparseKeyed'.
+type data Wrapped where
   Open :: Wrapped -- Needs some type-wide wrapping
   Closed :: Density -> Wrapped -- Does not need type-wide wrapping,
-  -- But may need field-wide wrapping, when Density is 'Sparse
+  -- But may need field-wide wrapping, when Density is Sparse
 
 -- | A Field pairs an update function and a decoder for one field of a Sparse record.
 data Field t where
   Field :: (x -> t -> t) -> (forall s. Decoder s x) -> Field t
 
 {-# INLINE field #-}
-field :: Typeable x => (x -> t -> t) -> Decode ('Closed d) x -> Field t
+field :: Typeable x => (x -> t -> t) -> Decode (Closed d) x -> Field t
 field update dec = Field update (decode dec)
 
 {-# INLINE fieldGuarded #-}
@@ -141,7 +142,7 @@ fieldGuarded ::
   -- | The condition to guard against
   (x -> Bool) ->
   (x -> t -> t) ->
-  Decode ('Closed d) x ->
+  Decode (Closed d) x ->
   Field t
 fieldGuarded failMsg check update dec =
   Field
@@ -151,7 +152,7 @@ fieldGuarded failMsg check update dec =
     )
 
 {-# INLINE ofield #-}
-ofield :: Typeable x => (StrictMaybe x -> t -> t) -> Decode ('Closed d) x -> Field t
+ofield :: Typeable x => (StrictMaybe x -> t -> t) -> Decode (Closed d) x -> Field t
 ofield update dec = Field update (SJust <$> decode dec)
 
 {-# INLINE invalidField #-}
@@ -160,7 +161,7 @@ invalidField n = field (flip $ const @t @Void) (Invalid n)
 
 -- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 -- A special case of 'field'
-fieldA :: (Typeable x, Applicative ann) => (x -> t -> t) -> Decode ('Closed d) x -> Field (ann t)
+fieldA :: (Typeable x, Applicative ann) => (x -> t -> t) -> Decode (Closed d) x -> Field (ann t)
 fieldA update dec = Field (liftA2 update) (pure <$> decode dec)
 {-# INLINE fieldA #-}
 
@@ -168,7 +169,7 @@ fieldA update dec = Field (liftA2 update) (pure <$> decode dec)
 fieldAA ::
   (Typeable x, Typeable ann, Applicative ann) =>
   (x -> t -> t) ->
-  Decode ('Closed d) (ann x) ->
+  Decode (Closed d) (ann x) ->
   Field (ann t)
 fieldAA update dec = Field (liftA2 update) (decode dec)
 {-# INLINE fieldAA #-}
@@ -197,10 +198,10 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 --
 -- data A = ACon Int B C
 --
--- encodeA :: A -> Encode ('Closed 'Dense) A
+-- encodeA :: A -> Encode (Closed Dense) A
 -- encodeA (ACon i b c) = Rec ACon !> To i !> E (encCBOR . unB) b !> To c
 --
--- decodeA :: Decode ('Closed 'Dense) A
+-- decodeA :: Decode (Closed Dense) A
 -- decodeA = RecD ACon <! From <! D (B <$> decCBOR) <! From
 --
 -- instance EncCBOR A where
@@ -214,13 +215,13 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 -- @
 -- data N = N1 Int | N2 B Bool | N3 A
 --
--- encodeN :: N -> Encode 'Open N
+-- encodeN :: N -> Encode Open N
 -- encodeN (N1 i)    = Sum N1 0 !> To i
 -- encodeN (N2 b tf) = Sum N2 1 !> E (encCBOR . unB) b !> To tf
 -- encodeN (N3 a)    = Sum N3 2 !> To a
 --
--- decodeN :: Decode ('Closed 'Dense) N    -- Note each clause has an 'Open decoder,
--- decodeN = Summands "N" decodeNx           -- But Summands returns a ('Closed 'Dense) decoder
+-- decodeN :: Decode (Closed Dense) N    -- Note each clause has an Open decoder,
+-- decodeN = Summands "N" decodeNx           -- But Summands returns a (Closed Dense) decoder
 --   where decodeNx 0 = SumD N1 <! From
 --         decodeNx 1 = SumD N2 <! D (B <$> decCBOR) <! From
 --         decodeNx 3 = SumD N3 <! From
@@ -253,13 +254,13 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 -- encoding some of the values. Note the use of 'Sum' with virtual constructor tags 0,1,2,3
 --
 -- @
--- encM :: M -> Encode 'Open M
+-- encM :: M -> Encode Open M
 -- encM (M 0 [] t) = Sum M 0 !> OmitC 0 !> OmitC [] !> To t
 -- encM (M 0 bs t) = Sum M 1 !> OmitC 0 !> To bs !> To t
 -- encM (M n [] t) = Sum M 2 !> To n !> OmitC [] !> To t
 -- encM (M n bs t) = Sum M 3 !> To n !> To bs !> To t
 --
--- decM :: Word -> Decode 'Open M
+-- decM :: Word -> Decode Open M
 -- decM 0 = SumD M <! Emit 0 <! Emit [] <! From  -- The virtual constructors tell which fields have been Omited
 -- decM 1 = SumD M <! Emit 0 <! From <! From     -- So those fields are reconstructed using 'Emit'.
 -- decM 2 = SumD M <! From <! Emit [] <! From
@@ -287,7 +288,7 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 -- The user must ensure that there is NOT an Omit on a required field. 'encM2' is an example.
 --
 -- @
--- encM2:: M -> Encode ('Closed 'Sparse) M
+-- encM2:: M -> Encode (Closed Sparse) M
 -- encM2 (M n xs t) =
 --     Keyed M
 --        !> Omit (== 0) (Key 0 (To n))    -- Omit if n is zero
@@ -337,11 +338,11 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 -- @
 data Decode (w :: Wrapped) t where
   -- | Label the constructor of a Record-like datatype (one with exactly 1 constructor) as a Decode.
-  RecD :: t -> Decode ('Closed 'Dense) t
+  RecD :: t -> Decode (Closed Dense) t
   -- | Label the constructor of a Record-like datatype (one with multiple constructors) as an Decode.
-  SumD :: t -> Decode 'Open t
+  SumD :: t -> Decode Open t
   -- | Lift a Word to Decode function into a DeCode for a type with multiple constructors.
-  Summands :: Text.Text -> (Word -> Decode 'Open t) -> Decode ('Closed 'Dense) t
+  Summands :: Text.Text -> (Word -> Decode Open t) -> Decode (Closed Dense) t
   -- | Lift a Word to Field function into a DeCode for a type with 1 constructor stored sparsely
   SparseKeyed ::
     Typeable t =>
@@ -353,10 +354,10 @@ data Decode (w :: Wrapped) t where
     (Word -> Field t) ->
     -- | Pairs of keys and Strings which must be there (default values not allowed)
     [(Word, String)] ->
-    Decode ('Closed 'Dense) t
+    Decode (Closed Dense) t
   -- | Label a (component, field, argument) as sparsely stored, which will be populated
   -- with the default value.
-  KeyedD :: t -> Decode ('Closed 'Sparse) t
+  KeyedD :: t -> Decode (Closed Sparse) t
   -- | Label a (component, field, argument). It will be decoded using the existing
   -- DecCBOR instance at @t@
   From :: DecCBOR t => Decode w t
@@ -364,17 +365,17 @@ data Decode (w :: Wrapped) t where
   -- DecCBORGroup instance at @t@
   FromGroup :: (EncCBORGroup t, DecCBORGroup t) => Decode w t
   -- | Label a (component, field, argument). It will be decoded using the given decoder.
-  D :: (forall s. Decoder s t) -> Decode ('Closed 'Dense) t
+  D :: (forall s. Decoder s t) -> Decode (Closed Dense) t
   -- | Apply a functional decoding (arising from 'RecD' or 'SumD') to get (type wise)
   -- smaller decoding.
-  ApplyD :: Typeable a => Decode w1 (a -> t) -> Decode ('Closed d) a -> Decode w1 t
+  ApplyD :: Typeable a => Decode w1 (a -> t) -> Decode (Closed d) a -> Decode w1 t
   -- | Mark a Word as a Decoding which is not a valid Decoding. Used when decoding sums
   -- that are tagged out of range.
   Invalid :: Word -> Decode w t
   -- | Used to make (Decode w) an instance of Functor.
   Map :: Typeable a => (a -> b) -> Decode w a -> Decode w b
   -- | Assert that the next thing decoded must be tagged with the given word.
-  TagD :: Word -> Decode ('Closed x) t -> Decode ('Closed x) t
+  TagD :: Word -> Decode (Closed x) t -> Decode (Closed x) t
   -- | Decode the next thing, not by inspecting the bytes, but pulled out of thin air,
   -- returning @t@. Used in sparse decoding.
   Emit :: t -> Decode w t
@@ -391,10 +392,10 @@ data Decode (w :: Wrapped) t where
     -- | A functional Decode
     Decode w1 (Annotator (a -> t)) ->
     -- | An Decoder for an Annotator
-    Decode ('Closed d) (Annotator a) ->
+    Decode (Closed d) (Annotator a) ->
     Decode w1 (Annotator t)
   -- | the function to Either can raise an error when applied by returning (Left errorMessage)
-  ApplyErr :: Typeable a => Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
+  ApplyErr :: Typeable a => Decode w1 (a -> Either String t) -> Decode (Closed d) a -> Decode w1 t
 
 infixl 4 <!
 
@@ -403,19 +404,19 @@ infixl 4 <*!
 infixl 4 <?
 
 -- | Infix form of @ApplyD@ with the same infixity and precedence as @($)@.
-(<!) :: Typeable a => Decode w1 (a -> t) -> Decode ('Closed w) a -> Decode w1 t
+(<!) :: Typeable a => Decode w1 (a -> t) -> Decode (Closed w) a -> Decode w1 t
 x <! y = ApplyD x y
 {-# INLINE (<!) #-}
 
 -- | Infix form of @ApplyAnn@ with the same infixity and precedence as @($)@.
 (<*!) ::
   (Typeable a, Typeable t) =>
-  Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
+  Decode w1 (Annotator (a -> t)) -> Decode (Closed d) (Annotator a) -> Decode w1 (Annotator t)
 x <*! y = ApplyAnn x y
 {-# INLINE (<*!) #-}
 
 -- | Infix form of @ApplyErr@ with the same infixity and precedence as @($)@.
-(<?) :: Typeable a => Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
+(<?) :: Typeable a => Decode w1 (a -> Either String t) -> Decode (Closed d) a -> Decode w1 t
 f <? y = ApplyErr f y
 {-# INLINE (<?) #-}
 
@@ -481,7 +482,7 @@ decodeCount (ApplyErr cn g) n = do
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
 
-decodeClosed :: Typeable t => Decode ('Closed d) t -> Decoder s t
+decodeClosed :: Typeable t => Decode (Closed d) t -> Decoder s t
 decodeClosed (Summands nm f) = decodeRecordSum nm (decodE . f)
 decodeClosed (KeyedD cn) = pure cn
 decodeClosed (RecD cn) = pure cn
@@ -569,7 +570,7 @@ mapCoder f x = Map f x
 
 -- | Use `Cardano.Ledger.Binary.Coders.encodeDual` and `decodeDual`, when you want to
 -- guarantee that a type has both `EncCBOR` and `FromCBR` instances.
-decodeDual :: forall t. (EncCBOR t, DecCBOR t) => Decode ('Closed 'Dense) t
+decodeDual :: forall t. (EncCBOR t, DecCBOR t) => Decode (Closed Dense) t
 decodeDual = D decCBOR
   where
     -- Enforce EncCBOR constraint on t
@@ -579,22 +580,22 @@ decodeDual = D decCBOR
 -- =============================================================================
 
 listDecodeA ::
-  Typeable x => Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator [x])
+  Typeable x => Decode (Closed Dense) (Annotator x) -> Decode (Closed Dense) (Annotator [x])
 listDecodeA dx = D (sequence <$> decodeList (decode dx))
 {-# INLINE listDecodeA #-}
 
 setDecodeA ::
   (Ord x, Typeable x) =>
-  Decode ('Closed 'Dense) (Annotator x) ->
-  Decode ('Closed 'Dense) (Annotator (Set x))
+  Decode (Closed Dense) (Annotator x) ->
+  Decode (Closed Dense) (Annotator (Set x))
 setDecodeA dx = D (decodeAnnSet (decode dx))
 {-# INLINE setDecodeA #-}
 
 mapDecodeA ::
   (Ord k, Typeable k, Typeable v) =>
-  Decode ('Closed 'Dense) (Annotator k) ->
-  Decode ('Closed 'Dense) (Annotator v) ->
-  Decode ('Closed 'Dense) (Annotator (Map.Map k v))
+  Decode (Closed Dense) (Annotator k) ->
+  Decode (Closed Dense) (Annotator v) ->
+  Decode (Closed Dense) (Annotator (Map.Map k v))
 mapDecodeA k v = D (decodeMapTraverse (decode k) (decode v))
 {-# INLINE mapDecodeA #-}
 
@@ -625,6 +626,6 @@ unusedRequiredKeys used required name =
 {-# NOINLINE unusedRequiredKeys #-}
 
 -- | Prevent decoding until the 'Version' is at least the provided version.
-guardUntilAtLeast :: DecCBOR a => String -> Version -> Decode ('Closed 'Dense) a
+guardUntilAtLeast :: DecCBOR a => String -> Version -> Decode (Closed Dense) a
 guardUntilAtLeast errMessage v = D (unlessDecoderVersionAtLeast v (fail errMessage) >> decCBOR)
 {-# INLINE guardUntilAtLeast #-}

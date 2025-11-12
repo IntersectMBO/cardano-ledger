@@ -604,7 +604,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoScript era)
 instance AlonzoEraScript era => ToCBOR (AlonzoScript era) where
   toCBOR = toEraCBOR @era . encode . encodeScript
 
-encodeScript :: AlonzoEraScript era => AlonzoScript era -> Encode 'Open (AlonzoScript era)
+encodeScript :: AlonzoEraScript era => AlonzoScript era -> Encode Open (AlonzoScript era)
 encodeScript = \case
   NativeScript i -> Sum NativeScript 0 !> To i
   PlutusScript plutusScript -> withPlutusScript plutusScript $ \plutus@(Plutus pb) ->
@@ -620,7 +620,7 @@ instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
       decodeAnnPlutus slang =
         Ann (SumD PlutusScript) <*! Ann (D (decodePlutusScript slang))
       {-# INLINE decodeAnnPlutus #-}
-      decodeScript :: Word -> Decode 'Open (Annotator (AlonzoScript era))
+      decodeScript :: Word -> Decode Open (Annotator (AlonzoScript era))
       decodeScript = \case
         0 -> Ann (SumD NativeScript) <*! From
         1 -> decodeAnnPlutus SPlutusV1

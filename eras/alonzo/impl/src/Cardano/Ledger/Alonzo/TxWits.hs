@@ -502,7 +502,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
       encodePlutus ::
         PlutusLanguage l =>
         SLanguage l ->
-        Encode ('Closed 'Dense) (Map.Map ScriptHash (Plutus l))
+        Encode (Closed Dense) (Map.Map ScriptHash (Plutus l))
       encodePlutus slang =
         E
           (encodeWithSetTag . encCBOR . map plutusBinary . Map.elems)
@@ -651,7 +651,7 @@ addScriptsTxWitsRaw scriptWitnesses txWits =
 decodeAlonzoPlutusScript ::
   (AlonzoEraScript era, PlutusLanguage l) =>
   SLanguage l ->
-  Decode ('Closed 'Dense) (Map ScriptHash (Script era))
+  Decode (Closed Dense) (Map ScriptHash (Script era))
 decodeAlonzoPlutusScript slang =
   D $
     ifDecoderVersionAtLeast

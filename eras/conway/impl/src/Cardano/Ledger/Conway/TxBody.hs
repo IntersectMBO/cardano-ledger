@@ -589,7 +589,7 @@ pattern ConwayTxBody
 
 encodeTxBodyRaw ::
   ConwayTxBodyRaw l ConwayEra ->
-  Encode ('Closed 'Sparse) (ConwayTxBodyRaw l ConwayEra)
+  Encode (Closed Sparse) (ConwayTxBodyRaw l ConwayEra)
 encodeTxBodyRaw ConwayTxBodyRaw {..} =
   let ValidityInterval bot top = ctbrVldt
    in Keyed

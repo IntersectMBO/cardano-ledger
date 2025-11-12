@@ -121,41 +121,41 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 -- different styles of encoding.
 data Encode (w :: Wrapped) t where
   -- | Label the constructor of a Record-like datatype (one with exactly 1 constructor) as an Encode.
-  Rec :: t -> Encode ('Closed 'Dense) t
+  Rec :: t -> Encode (Closed Dense) t
   -- | Label one of the constructors of a sum datatype (one with multiple constructors) as an Encode
-  Sum :: t -> Word -> Encode 'Open t
+  Sum :: t -> Word -> Encode Open t
   -- | Label the constructor of a Record-like datatype as being encoded sparsely (storing only non-default values).
-  Keyed :: t -> Encode ('Closed 'Sparse) t
+  Keyed :: t -> Encode (Closed Sparse) t
   -- | Label an (component, field, argument) to be encoded using an existing EncCBOR instance.
-  To :: EncCBOR a => a -> Encode ('Closed 'Dense) a
+  To :: EncCBOR a => a -> Encode (Closed Dense) a
   -- | Label components, set of fields, or arguments to be encoded using an existing EncCBORGroup instance.
-  ToGroup :: EncCBORGroup t => t -> Encode ('Closed 'Dense) t
+  ToGroup :: EncCBORGroup t => t -> Encode (Closed Dense) t
   -- | Label an (component, field, argument) to be encoded using an existing EncCBOR instance.
-  E :: (t -> Encoding) -> t -> Encode ('Closed 'Dense) t
+  E :: (t -> Encoding) -> t -> Encode (Closed Dense) t
   -- | Lift one Encode to another with a different type. Used to make a Functor instance of (Encode w).
   MapE :: (a -> b) -> Encode w a -> Encode w b
   -- | Skip over the  (component,field, argument), don't encode it at all (used in sparse encoding).
   OmitC :: t -> Encode w t
   -- | Precede the given encoding (in the produced bytes) with the given tag Word.
-  Tag :: Word -> Encode ('Closed x) t -> Encode ('Closed x) t
+  Tag :: Word -> Encode (Closed x) t -> Encode (Closed x) t
   -- | Omit the  (component,field, argument) if the function is True, otherwise encode with the given encoding.
   Omit ::
     (t -> Bool) ->
-    Encode ('Closed 'Sparse) t ->
-    Encode ('Closed 'Sparse) t
-  -- | Precede the encoding (in the produced bytes) with the key Word. Analagous to 'Tag', but lifts a 'Dense' encoding to a 'Sparse' encoding.
-  Key :: Word -> Encode ('Closed 'Dense) t -> Encode ('Closed 'Sparse) t
+    Encode (Closed Sparse) t ->
+    Encode (Closed Sparse) t
+  -- | Precede the encoding (in the produced bytes) with the key Word. Analagous to 'Tag', but lifts a Dense' encoding to a Sparse' encoding.
+  Key :: Word -> Encode (Closed Dense) t -> Encode (Closed Sparse) t
   -- | Apply a functional encoding (arising from 'Rec' or 'Sum') to get (type wise) smaller encoding. A fully saturated chain of 'ApplyE' will be a complete encoding. See also '!>' which is infix 'ApplyE'.
-  ApplyE :: Encode w (a -> t) -> Encode ('Closed r) a -> Encode w t
+  ApplyE :: Encode w (a -> t) -> Encode (Closed r) a -> Encode w t
 
 -- The Wrapped index of ApplyE is determined by the index
--- at the bottom of its left spine. The choices are 'Open (Sum c tag),
--- ('Closed 'Dense) (Rec c), and ('Closed 'Sparse) (Keyed c).
+-- at the bottom of its left spine. The choices are Open (Sum c tag),
+-- (Closed Dense) (Rec c), and (Closed Sparse) (Keyed c).
 
 infixl 4 !>
 
 -- | Infix operator version of @ApplyE@. Has the same infxity and operator precedence as '$'
-(!>) :: Encode w (a -> t) -> Encode ('Closed r) a -> Encode w t
+(!>) :: Encode w (a -> t) -> Encode (Closed r) a -> Encode w t
 x !> y = ApplyE x y
 
 runE :: Encode w t -> t
@@ -206,7 +206,7 @@ encode = encodeCountPrefix 0
       if p (runE x) then mempty else encodeCountPrefix n x
     encodeCountPrefix n (ApplyE ff xx) = encodeCountPrefix (n + gsize xx) ff <> encodeClosed xx
       where
-        encodeClosed :: Encode ('Closed d) t -> Encoding
+        encodeClosed :: Encode (Closed d) t -> Encoding
         encodeClosed (Rec _) = mempty
         encodeClosed (To x) = encCBOR x
         encodeClosed (ToGroup x) = encCBORGroup x
@@ -224,7 +224,7 @@ encodeKeyedStrictMaybeWith ::
   Word ->
   (a -> Encoding) ->
   StrictMaybe a ->
-  Encode ('Closed 'Sparse) (StrictMaybe a)
+  Encode (Closed Sparse) (StrictMaybe a)
 encodeKeyedStrictMaybeWith _ _ SNothing = OmitC SNothing
 encodeKeyedStrictMaybeWith key enc (SJust x) = Key key (MapE SJust $ E enc x)
 
@@ -232,12 +232,12 @@ encodeKeyedStrictMaybe ::
   EncCBOR a =>
   Word ->
   StrictMaybe a ->
-  Encode ('Closed 'Sparse) (StrictMaybe a)
+  Encode (Closed Sparse) (StrictMaybe a)
 encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key encCBOR
 
 -- | Use `encodeDual` and `Cardano.Ledger.Binary.Coders.decodeDual`, when you want to
 -- guarantee that a type has both `EncCBOR` and `FromCBR` instances.
-encodeDual :: forall t. (EncCBOR t, DecCBOR t) => t -> Encode ('Closed 'Dense) t
+encodeDual :: forall t. (EncCBOR t, DecCBOR t) => t -> Encode (Closed Dense) t
 encodeDual = E encCBOR
   where
     -- Enforce DecCBOR constraint on t
