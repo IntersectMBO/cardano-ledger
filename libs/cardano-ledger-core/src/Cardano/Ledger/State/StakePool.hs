@@ -70,9 +70,10 @@ module Cardano.Ledger.State.StakePool (
   sppVrfL,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   DnsName,
+  Network,
   Port,
   StrictMaybe (..),
   UnitInterval,
@@ -138,7 +139,7 @@ data StakePoolState = StakePoolState
   -- ^ Fixed operational cost per epoch
   , spsMargin :: !UnitInterval
   -- ^ Pool profit margin (variable fee percentage)
-  , spsRewardAccount :: !RewardAccount
+  , spsRewardAccount :: !(Credential Staking)
   -- ^ Reward account for pool rewards
   , spsOwners :: !(Set (KeyHash Staking))
   -- ^ Set of stake key hashes that own this pool
@@ -165,8 +166,8 @@ spsCostL = lens spsCost $ \sps c -> sps {spsCost = c}
 spsMarginL :: Lens' StakePoolState UnitInterval
 spsMarginL = lens spsMargin $ \sps m -> sps {spsMargin = m}
 
-spsRewardAccountL :: Lens' StakePoolState RewardAccount
-spsRewardAccountL = lens spsRewardAccount $ \sps ra -> sps {spsRewardAccount = ra}
+spsRewardAccountL :: Lens' StakePoolState (Credential Staking)
+spsRewardAccountL = lens spsRewardAccount $ \sps sc -> sps {spsRewardAccount = sc}
 
 spsOwnersL :: Lens' StakePoolState (Set (KeyHash Staking))
 spsOwnersL = lens spsOwners $ \sps s -> sps {spsOwners = s}
@@ -255,7 +256,7 @@ mkStakePoolState deposit delegators spp =
     , spsPledge = sppPledge spp
     , spsCost = sppCost spp
     , spsMargin = sppMargin spp
-    , spsRewardAccount = sppRewardAccount spp
+    , spsRewardAccount = raCredential $ sppRewardAccount spp
     , spsOwners = sppOwners spp
     , spsRelays = sppRelays spp
     , spsMetadata = sppMetadata spp
@@ -266,15 +267,15 @@ mkStakePoolState deposit delegators spp =
 -- | Convert 'StakePoolState' back to 'StakePoolParams' by providing the pool ID.
 -- This is useful when you need to reconstruct the full parameters from
 -- the state representation.
-stakePoolStateToStakePoolParams :: KeyHash StakePool -> StakePoolState -> StakePoolParams
-stakePoolStateToStakePoolParams poolId sps =
+stakePoolStateToStakePoolParams :: KeyHash StakePool -> Network -> StakePoolState -> StakePoolParams
+stakePoolStateToStakePoolParams poolId networkId sps =
   StakePoolParams
     { sppId = poolId
     , sppVrf = spsVrf sps
     , sppPledge = spsPledge sps
     , sppCost = spsCost sps
     , sppMargin = spsMargin sps
-    , sppRewardAccount = spsRewardAccount sps
+    , sppRewardAccount = RewardAccount networkId $ spsRewardAccount sps
     , sppOwners = spsOwners sps
     , sppRelays = spsRelays sps
     , sppMetadata = spsMetadata sps

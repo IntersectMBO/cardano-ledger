@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Api.Tx.Body (spec) where
 
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Body
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Shelley.Core
@@ -26,16 +27,18 @@ import Test.Cardano.Ledger.Common
 
 totalTxDeposits ::
   (EraTxBody era, EraCertState era) =>
+  Network ->
   PParams era ->
   CertState era ->
   TxBody l era ->
   Coin
-totalTxDeposits pp dpstate txb =
+totalTxDeposits network pp dpstate txb =
   numKeys <×> pp ^. ppKeyDepositL <+> snd (foldl' accum (regpools, Coin 0) certs)
   where
     certs = toList (txb ^. certsTxBodyL)
     numKeys = length $ filter isRegStakeTxCert certs
-    regpools = Map.mapWithKey stakePoolStateToStakePoolParams $ psStakePools (dpstate ^. certPStateL)
+    regpools =
+      Map.mapWithKey (`stakePoolStateToStakePoolParams` network) $ psStakePools (dpstate ^. certPStateL)
     accum (!pools, !ans) (RegPoolTxCert stakePoolParams) =
       -- We don't pay a deposit on a pool that is already registered
       if Map.member (sppId stakePoolParams) pools
@@ -74,26 +77,28 @@ keyTxRefunds pp dpstate tx =
 -- the produced result hasn't changed
 evaluateTransactionBalance ::
   (MaryEraTxBody era, ShelleyEraTxCert era, EraCertState era) =>
+  Network ->
   PParams era ->
   CertState era ->
   UTxO era ->
   TxBody TopTx era ->
   Value era
-evaluateTransactionBalance pp dpstate utxo txBody =
-  evaluateTransactionBalanceShelley pp dpstate utxo txBody <> (txBody ^. mintValueTxBodyF)
+evaluateTransactionBalance network pp dpstate utxo txBody =
+  evaluateTransactionBalanceShelley network pp dpstate utxo txBody <> (txBody ^. mintValueTxBodyF)
 
 evaluateTransactionBalanceShelley ::
   (EraTxBody era, ShelleyEraTxCert era, EraCertState era) =>
+  Network ->
   PParams era ->
   CertState era ->
   UTxO era ->
   TxBody TopTx era ->
   Value era
-evaluateTransactionBalanceShelley pp dpstate utxo txBody = consumed <-> produced
+evaluateTransactionBalanceShelley network pp dpstate utxo txBody = consumed <-> produced
   where
     produced =
       sumUTxO (txouts txBody)
-        <+> inject (txBody ^. feeTxBodyL <+> totalTxDeposits pp dpstate txBody)
+        <+> inject (txBody ^. feeTxBodyL <+> totalTxDeposits network pp dpstate txBody)
     consumed =
       sumUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
         <> inject (refunds <> withdrawals)
@@ -112,9 +117,10 @@ genTxBodyFrom certState (UTxO u) = do
   inputs <- sublistOf (Map.keys u)
   unDelegCreds <- sublistOf (Map.keys (certState ^. certDStateL . accountsL . accountsMapL))
   deRegKeys <- sublistOf (Map.keys (certState ^. certPStateL . psStakePoolsL))
+  network <- arbitrary
   let deReg =
         Map.elems $
-          Map.mapWithKey stakePoolStateToStakePoolParams $
+          Map.mapWithKey (`stakePoolStateToStakePoolParams` network) $
             Map.restrictKeys (certState ^. certPStateL . psStakePoolsL) (Set.fromList deRegKeys)
   certs <-
     shuffle $
@@ -138,26 +144,28 @@ propEvalBalanceTxBody ::
   CertState era ->
   UTxO era ->
   Property
-propEvalBalanceTxBody pp certState utxo =
+propEvalBalanceTxBody pp certState utxo = do
   property $
     forAll (genTxBodyFrom @_ @TopTx certState utxo) $ \txBody ->
-      evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
-        `shouldBe` evaluateTransactionBalance pp certState utxo txBody
+      forAll arbitrary $ \network ->
+        evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
+          `shouldBe` evaluateTransactionBalance network pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
     isRegPoolId = (`Map.member` psStakePools (certState ^. certPStateL))
 
 propEvalBalanceShelleyTxBody ::
   (EraUTxO era, ShelleyEraTxCert era, Arbitrary (TxBody TopTx era), EraCertState era) =>
+  Network ->
   PParams era ->
   CertState era ->
   UTxO era ->
   Property
-propEvalBalanceShelleyTxBody pp certState utxo =
+propEvalBalanceShelleyTxBody network pp certState utxo =
   property $
     forAll (genTxBodyFrom @_ @TopTx certState utxo) $ \txBody ->
       evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
-        `shouldBe` evaluateTransactionBalanceShelley pp certState utxo txBody
+        `shouldBe` evaluateTransactionBalanceShelley network pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
     isRegPoolId = (`Map.member` psStakePools (certState ^. certPStateL))

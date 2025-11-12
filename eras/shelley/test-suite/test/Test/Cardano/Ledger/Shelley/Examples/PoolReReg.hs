@@ -283,7 +283,7 @@ expectedStEx3 =
   C.newEpoch blockEx3
     . C.newSnapshot snapEx3 (feeTx1 <+> feeTx2)
     . C.applyRewardUpdate emptyRewardUpdate
-    . C.updatePoolParams newPoolParams
+    . C.updatePoolParams (networkId testGlobals) newPoolParams
     $ expectedStEx2B
 
 -- === Block 3, Slot 110, Epoch 1

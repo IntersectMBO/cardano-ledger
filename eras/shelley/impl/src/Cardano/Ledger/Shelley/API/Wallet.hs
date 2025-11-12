@@ -40,6 +40,7 @@ module Cardano.Ledger.Shelley.API.Wallet (
 import Cardano.Ledger.Address (Addr (..), compactAddr)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
+  Network,
   NonNegativeInterval,
   UnitInterval,
   epochInfoPure,
@@ -188,7 +189,8 @@ poolsByTotalStakeFraction ::
 poolsByTotalStakeFraction globals ss =
   PoolDistr poolsByTotalStake totalActiveStake
   where
-    snap = currentSnapshot ss
+    network = networkId globals
+    snap = currentSnapshot ss network
     Coin totalStake = getTotalStake globals ss
     stakeRatio = unCoin (fromCompact totalActiveStake) %? totalStake
     PoolDistr poolsByActiveStake totalActiveStake = calculatePoolDistr snap
@@ -232,7 +234,8 @@ getNonMyopicMemberRewards globals ss =
     es = nesEs ss
     pp = es ^. curPParamsEpochStateL
     NonMyopic {likelihoodsNM = ls, rewardPotNM = rPot} = esNonMyopic es
-    EB.SnapShot stake delegs poolParams = currentSnapshot ss
+    network = networkId globals
+    EB.SnapShot stake delegs poolParams = currentSnapshot ss network
     poolData =
       Map.fromDistinctAscList
         [ ( k
@@ -273,7 +276,8 @@ sumPoolOwnersStake pool stake =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: (EraGov era, EraStake era, EraCertState era) => NewEpochState era -> EB.SnapShot
+currentSnapshot ::
+  (EraGov era, EraStake era, EraCertState era) => NewEpochState era -> Network -> EB.SnapShot
 currentSnapshot ss =
   snapShotFromInstantStake instantStake dstate pstate
   where
@@ -355,8 +359,9 @@ getRewardInfoPools globals ss =
       , rewardPotNM = rPot
       } = esNonMyopic es
     histLookup key = Map.findWithDefault mempty key ls
+    network = networkId globals
 
-    EB.SnapShot stakes delegs poolParams = currentSnapshot ss
+    EB.SnapShot stakes delegs poolParams = currentSnapshot ss network
 
     mkRewardParams =
       RewardParams

@@ -9,6 +9,7 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool where
 
+import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.State
@@ -32,7 +33,7 @@ instance SpecTranslate ctx (PState era) where
 
   toSpecRep PState {..} =
     Agda.MkPState
-      <$> toSpecRep (Map.mapWithKey stakePoolStateToStakePoolParams psStakePools)
+      <$> toSpecRep (Map.mapWithKey (`stakePoolStateToStakePoolParams` Testnet) psStakePools)
       <*> toSpecRep psFutureStakePoolParams
       <*> toSpecRep psRetiring
 
