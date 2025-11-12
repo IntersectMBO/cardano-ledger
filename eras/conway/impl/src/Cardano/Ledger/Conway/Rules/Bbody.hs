@@ -22,6 +22,7 @@ module Cardano.Ledger.Conway.Rules.Bbody (
   alonzoToConwayBbodyPredFailure,
   shelleyToConwayBbodyPredFailure,
   totalRefScriptSizeInBlock,
+  conwayBbodyTransition,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)

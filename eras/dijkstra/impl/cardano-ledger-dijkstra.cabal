@@ -30,6 +30,7 @@ library
   exposed-modules:
     Cardano.Ledger.Dijkstra
     Cardano.Ledger.Dijkstra.BlockBody
+    Cardano.Ledger.Dijkstra.BlockBody.Internal
     Cardano.Ledger.Dijkstra.Core
     Cardano.Ledger.Dijkstra.Era
     Cardano.Ledger.Dijkstra.Genesis

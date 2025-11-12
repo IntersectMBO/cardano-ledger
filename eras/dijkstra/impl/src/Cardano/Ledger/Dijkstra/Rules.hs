@@ -4,7 +4,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Dijkstra.Rules () where
+module Cardano.Ledger.Dijkstra.Rules (
+  module Cardano.Ledger.Dijkstra.Rules.Bbody
+) where
 
 import Cardano.Ledger.Conway.Rules (
   ConwayEpochEvent (..),
@@ -13,7 +15,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Dijkstra.Core (EraRuleEvent, InjectRuleEvent (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Rules.Bbody ()
+import Cardano.Ledger.Dijkstra.Rules.Bbody
 import Cardano.Ledger.Dijkstra.Rules.Cert ()
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.Deleg ()

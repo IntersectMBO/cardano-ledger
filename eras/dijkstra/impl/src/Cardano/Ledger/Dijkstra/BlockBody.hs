@@ -1,16 +1,18 @@
-{-# LANGUAGE TypeFamilies #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+module Cardano.Ledger.Dijkstra.BlockBody (
+  DijkstraBlockBody (DijkstraBlockBody),
+  mkBasicBlockBodyDijkstra,
+  txSeqBlockBodyDijkstraL,
+  dijkstraBlockBodyHash,
+  dijkstraBlockBodyTxs,
+) where
 
-module Cardano.Ledger.Dijkstra.BlockBody where
+import Cardano.Crypto.Hash (Hash)
+import Cardano.Ledger.Core (EraIndependentBlockBody, HASH, Tx, TxLevel (..))
+import Cardano.Ledger.Dijkstra.BlockBody.Internal
+import Data.Sequence.Strict (StrictSeq)
 
-import Cardano.Ledger.Alonzo.BlockBody
-import Cardano.Ledger.Core
-import Cardano.Ledger.Dijkstra.Era
-import Cardano.Ledger.Dijkstra.Tx ()
+dijkstraBlockBodyHash :: DijkstraBlockBody era -> Hash HASH EraIndependentBlockBody
+dijkstraBlockBodyHash = dbbHash
 
-instance EraBlockBody DijkstraEra where
-  type BlockBody DijkstraEra = AlonzoBlockBody DijkstraEra
-  mkBasicBlockBody = mkBasicBlockBodyAlonzo
-  txSeqBlockBodyL = txSeqBlockBodyAlonzoL
-  hashBlockBody = alonzoBlockBodyHash
-  numSegComponents = 4
+dijkstraBlockBodyTxs :: DijkstraBlockBody era -> StrictSeq (Tx TopTx era)
+dijkstraBlockBodyTxs = dbbTxs
