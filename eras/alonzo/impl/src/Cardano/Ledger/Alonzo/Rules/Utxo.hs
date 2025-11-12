@@ -126,10 +126,10 @@ data AlonzoUtxoPredFailure era
       ValidityInterval
       -- | current slot
       SlotNo
-  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Word32)
+  | MaxTxSizeUTxO (Mismatch RelLTEQ Word32)
   | InputSetEmptyUTxO
-  | FeeTooSmallUTxO (Mismatch 'RelGTEQ Coin)
-  | ValueNotConservedUTxO (Mismatch 'RelEQ (Value era))
+  | FeeTooSmallUTxO (Mismatch RelGTEQ Coin)
+  | ValueNotConservedUTxO (Mismatch RelEQ (Value era))
   | -- | the set of addresses with incorrect network IDs
     WrongNetwork
       -- | the expected network id
@@ -160,16 +160,16 @@ data AlonzoUtxoPredFailure era
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
       (UTxO era)
-  | ExUnitsTooBigUTxO (Mismatch 'RelLTEQ ExUnits)
+  | ExUnitsTooBigUTxO (Mismatch RelLTEQ ExUnits)
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body
-    WrongNetworkInTxBody (Mismatch 'RelEQ Network)
+    WrongNetworkInTxBody (Mismatch RelEQ Network)
   | -- | slot number outside consensus forecast range
     OutsideForecast
       SlotNo
   | -- | There are too many collateral inputs
-    TooManyCollateralInputs (Mismatch 'RelLTEQ Natural)
+    TooManyCollateralInputs (Mismatch RelLTEQ Natural)
   | NoCollateralInputs
   deriving (Generic)
 

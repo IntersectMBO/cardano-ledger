@@ -105,16 +105,16 @@ data ShelleyDelegPredFailure era
       (KeyHash GenesisDelegate) -- Keyhash which is already delegated to
   | InsufficientForInstantaneousRewardsDELEG
       MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
-      (Mismatch 'RelLTEQ Coin)
+      (Mismatch RelLTEQ Coin)
   | MIRCertificateTooLateinEpochDELEG
-      (Mismatch 'RelLT SlotNo)
+      (Mismatch RelLT SlotNo)
   | DuplicateGenesisVRFDELEG
       (VRFVerKeyHash GenDelegVRF) -- VRF KeyHash which is already delegated to
   | MIRTransferNotCurrentlyAllowed
   | MIRNegativesNotCurrentlyAllowed
   | InsufficientForTransferDELEG
       MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
-      (Mismatch 'RelLTEQ Coin)
+      (Mismatch RelLTEQ Coin)
   | MIRProducesNegativeUpdate
   | MIRNegativeTransfer
       MIRPot -- which pot the rewards are to be drawn from, treasury or reserves

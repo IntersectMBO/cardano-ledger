@@ -102,7 +102,7 @@ data BabbageUtxowPredFailure era
       (Set ScriptHash)
   | -- | The computed script integrity hash does not match the provided script integrity hash
     ScriptIntegrityHashMismatch
-      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
+      (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
       (StrictMaybe ByteString)
   deriving (Generic)
 

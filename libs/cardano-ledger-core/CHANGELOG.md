@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Change `Relation` type to only be visible at the type level
 * Change `KeyRole` type to only be visible at the type level
 * Rename `Genesis` constructor of `KeyRole` to `GenesisRole`
 * Change `KeyRoleVRF` type to only be visible at the type level

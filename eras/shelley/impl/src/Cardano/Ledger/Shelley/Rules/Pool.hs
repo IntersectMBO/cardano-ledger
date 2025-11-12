@@ -96,12 +96,12 @@ data ShelleyPoolPredFailure era
       -- | KeyHash which cannot be retired since it is not registered
       (KeyHash StakePool)
   | StakePoolRetirementWrongEpochPOOL
-      (Mismatch 'RelGT EpochNo)
-      (Mismatch 'RelLTEQ EpochNo)
+      (Mismatch RelGT EpochNo)
+      (Mismatch RelLTEQ EpochNo)
   | StakePoolCostTooLowPOOL
-      (Mismatch 'RelGTEQ Coin)
+      (Mismatch RelGTEQ Coin)
   | WrongNetworkPOOL
-      (Mismatch 'RelEQ Network)
+      (Mismatch RelEQ Network)
       -- | Stake Pool ID
       (KeyHash StakePool)
   | PoolMedataHashTooBig
@@ -298,11 +298,11 @@ poolDelegationTransition = do
           limitEpoch = addEpochInterval cEpoch maxEpoch
       (cEpoch < e && e <= limitEpoch)
         ?! StakePoolRetirementWrongEpochPOOL
-          Mismatch -- 'RelGT - The supplied value should be greater than the current epoch
+          Mismatch -- RelGT - The supplied value should be greater than the current epoch
             { mismatchSupplied = e
             , mismatchExpected = cEpoch
             }
-          Mismatch -- 'RelLTEQ - The supplied value should be less then or equal to ppEMax after the current epoch
+          Mismatch -- RelLTEQ - The supplied value should be less then or equal to ppEMax after the current epoch
             { mismatchSupplied = e
             , mismatchExpected = limitEpoch
             }

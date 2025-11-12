@@ -140,8 +140,8 @@ data ConwayLedgerPredFailure era
   | ConwayCertsFailure (PredicateFailure (EraRule "CERTS" era))
   | ConwayGovFailure (PredicateFailure (EraRule "GOV" era))
   | ConwayWdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
-  | ConwayTreasuryValueMismatch (Mismatch 'RelEQ Coin) -- The serialisation order is in reverse
-  | ConwayTxRefScriptsSizeTooBig (Mismatch 'RelLTEQ Int)
+  | ConwayTreasuryValueMismatch (Mismatch RelEQ Coin) -- The serialisation order is in reverse
+  | ConwayTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | ConwayMempoolFailure Text
   | ConwayWithdrawalsMissingAccounts Withdrawals
   | ConwayIncompleteWithdrawals Withdrawals

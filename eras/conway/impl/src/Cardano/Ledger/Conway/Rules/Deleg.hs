@@ -108,8 +108,8 @@ data ConwayDelegPredFailure era
   | StakeKeyHasNonZeroRewardAccountBalanceDELEG Coin
   | DelegateeDRepNotRegisteredDELEG (Credential DRepRole)
   | DelegateeStakePoolNotRegisteredDELEG (KeyHash StakePool)
-  | DepositIncorrectDELEG (Mismatch 'RelEQ Coin)
-  | RefundIncorrectDELEG (Mismatch 'RelEQ Coin)
+  | DepositIncorrectDELEG (Mismatch RelEQ Coin)
+  | RefundIncorrectDELEG (Mismatch RelEQ Coin)
   deriving (Show, Eq, Generic)
 
 type instance EraRuleFailure "DELEG" ConwayEra = ConwayDelegPredFailure ConwayEra

@@ -172,7 +172,7 @@ data ConwayGovPredFailure era
   | MalformedProposal (GovAction era)
   | ProposalProcedureNetworkIdMismatch RewardAccount Network
   | TreasuryWithdrawalsNetworkIdMismatch (Set.Set RewardAccount) Network
-  | ProposalDepositIncorrect (Mismatch 'RelEQ Coin)
+  | ProposalDepositIncorrect (Mismatch RelEQ Coin)
   | -- | Some governance actions are not allowed to be voted on by certain types of
     -- Voters. This failure lists all governance action ids with their respective voters
     -- that are not allowed to vote on those governance actions.
@@ -189,7 +189,7 @@ data ConwayGovPredFailure era
       -- | The PrevGovActionId of the HardForkInitiation that fails
       (StrictMaybe (GovPurposeId 'HardForkPurpose))
       -- | Its protocol version and the protocal version of the previous gov-action pointed to by the proposal
-      (Mismatch 'RelGT ProtVer)
+      (Mismatch RelGT ProtVer)
   | InvalidPolicyHash
       -- | The policy script hash in the proposal
       (StrictMaybe ScriptHash)

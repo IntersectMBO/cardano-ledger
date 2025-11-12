@@ -126,7 +126,7 @@ data ShelleyUtxowPredFailure era
   | MissingTxMetadata
       TxAuxDataHash -- hash of the metadata included in the transaction body
   | ConflictingMetadataHash
-      (Mismatch 'RelEQ TxAuxDataHash)
+      (Mismatch RelEQ TxAuxDataHash)
   | -- Contains out of range values (strings too long)
     InvalidMetadata
   | ExtraneousScriptWitnessesUTXOW

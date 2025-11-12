@@ -18,6 +18,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE TypeData #-}
 
 module Cardano.Ledger.BaseTypes (
   module Slotting,
@@ -739,7 +740,7 @@ deriving instance Show EpochErr
 instance Exception EpochErr
 
 -- | Relationship descriptor for the expectation in the 'Mismatch' type.
-data Relation
+type data Relation
   = -- | Equal
     RelEQ
   | -- | Less then
@@ -752,7 +753,6 @@ data Relation
     RelGTEQ
   | -- | Is subset of
     RelSubset
-  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, ToJSON, FromJSON, NoThunks)
 
 -- | This is intended to help clarify supplied and expected values reported by
 -- predicate-failures in all eras.

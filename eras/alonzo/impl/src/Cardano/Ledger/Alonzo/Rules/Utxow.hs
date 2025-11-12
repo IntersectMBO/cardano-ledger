@@ -114,7 +114,7 @@ data AlonzoUtxowPredFailure era
       -- | Set of acceptable supplemental data hashes
       (Set DataHash)
   | PPViewHashesDontMatch
-      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
+      (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
       -- TODO: Make this NonEmpty #4066
@@ -124,7 +124,7 @@ data AlonzoUtxowPredFailure era
       [PlutusPurpose AsIx era]
   | -- | The computed script integrity hash does not match the provided script integrity hash
     ScriptIntegrityHashMismatch
-      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
+      (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
       (StrictMaybe ByteString)
   deriving (Generic)
 

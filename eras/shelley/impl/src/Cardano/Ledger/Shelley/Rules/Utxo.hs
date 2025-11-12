@@ -169,14 +169,14 @@ data ShelleyUtxoPredFailure era
   = BadInputsUTxO
       (Set TxIn) -- The bad transaction inputs
   | ExpiredUTxO
-      (Mismatch 'RelLTEQ SlotNo)
+      (Mismatch RelLTEQ SlotNo)
   | MaxTxSizeUTxO
-      (Mismatch 'RelLTEQ Word32)
+      (Mismatch RelLTEQ Word32)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
-      (Mismatch 'RelGTEQ Coin)
+      (Mismatch RelGTEQ Coin)
   | ValueNotConservedUTxO
-      (Mismatch 'RelEQ (Value era))
+      (Mismatch RelEQ (Value era))
   | WrongNetwork
       Network -- the expected network id
       (Set Addr) -- the set of addresses with incorrect network IDs
