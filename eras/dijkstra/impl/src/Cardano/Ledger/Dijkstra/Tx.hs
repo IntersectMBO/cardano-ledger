@@ -22,11 +22,15 @@ module Cardano.Ledger.Dijkstra.Tx (
   DijkstraTx (..),
   Tx (..),
   validateDijkstraNativeScript,
+
+  -- * Re-exports from Cardano.Ledger.Alonzo.Tx
+  AlonzoEraTx (..),
+  IsValid (..),
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
 import Cardano.Ledger.Alonzo.Tx (
-  AlonzoEraTx,
+  AlonzoEraTx (..),
   IsValid (..),
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), integralToBounded)
@@ -42,7 +46,7 @@ import Cardano.Ledger.Binary (
   serialize,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<*!))
-import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), Tx (..), getConwayMinFeeTx)
+import Cardano.Ledger.Conway.Tx (Tx (..), getConwayMinFeeTx)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (
@@ -94,14 +98,14 @@ instance
   NFData (DijkstraTx l era)
   where
   rnf DijkstraTx {..} =
-    dtBody `deepseq`
-      dtWits `deepseq`
-        dtIsValid `deepseq`
-          rnf dtAuxData
+    dtBody
+      `deepseq` dtWits
+      `deepseq` dtIsValid
+      `deepseq` rnf dtAuxData
   rnf DijkstraSubTx {..} =
-    dstBody `deepseq`
-      dstWits `deepseq`
-        rnf dstAuxData
+    dstBody
+      `deepseq` dstWits
+      `deepseq` rnf dstAuxData
 
 deriving via
   InspectHeap (DijkstraTx l era)
