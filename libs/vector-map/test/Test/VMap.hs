@@ -39,6 +39,11 @@ vMapTests =
       prop "to/fromList" $ prop_Roundtrip VMap.toAscList VMap.fromList
       prop "to/fromMap" $ prop_Roundtrip VMap.toMap VMap.fromMap
     describe "asMap" $ do
+      prop "mapMaybeWithKey" $ \xs f ->
+        prop_AsMapFrom
+          (\m -> VMap.mapMaybeWithKey (applyFun2 f) (VMap.fromMap m))
+          (Map.mapMaybeWithKey (applyFun2 f) :: MapT -> MapT)
+          (Map.fromList xs)
       prop "fromList" $ prop_AsMapFrom VMap.fromList Map.fromList
       prop "fromAscListWithKey" $ \xs f ->
         prop_AsMapFrom

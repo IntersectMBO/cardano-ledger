@@ -2,6 +2,7 @@
 
 ## 1.2.0.0
 
+* Add `mapMaybeWithKey`
 * Add `unionWithKey`
 * Switch `Semigroup` instance for `VMap` to be left-biased, just like it is for `Map`
 

@@ -17,6 +17,7 @@ module Data.VMap (
   notMember,
   map,
   mapMaybe,
+  mapMaybeWithKey,
   mapWithKey,
   filter,
   fold,
@@ -216,8 +217,16 @@ mapMaybe ::
   (a -> Maybe b) ->
   VMap kv vv k a ->
   VMap kv vv k b
-mapMaybe f (VMap vec) = VMap (VG.mapMaybe (\(k, x) -> (,) k <$> f x) vec)
+mapMaybe f = mapMaybeWithKey (const f)
 {-# INLINE mapMaybe #-}
+
+mapMaybeWithKey ::
+  (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
+  (k -> a -> Maybe b) ->
+  VMap kv vv k a ->
+  VMap kv vv k b
+mapMaybeWithKey f (VMap vec) = VMap (VG.mapMaybe (\(k, x) -> (,) k <$> f k x) vec)
+{-# INLINE mapMaybeWithKey #-}
 
 mapWithKey ::
   (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
