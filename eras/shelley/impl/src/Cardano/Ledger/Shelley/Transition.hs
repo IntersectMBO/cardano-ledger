@@ -427,6 +427,8 @@ shelleyRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
       [ Ptr minBound txIx certIx | txIx <- [minBound .. maxBound], certIx <- [minBound .. maxBound]
       ]
 
+-- NOTE: it seems like this is only used for testing, so hardcoding `Testnet` as a Network for now
+
 -- | Having initial funds, stake pools and accounts with delegations, we need to reset the stake
 -- distribution, otherwise those initial stake pools will not be able to produce blocks
 resetStakeDistribution ::
@@ -447,7 +449,7 @@ resetStakeDistribution nes =
     -- establish an initial stake distribution.
     initSnapShot :: SnapShot
     initSnapShot =
-      snapShotFromInstantStake (addInstantStake (nes ^. utxoL) mempty) dState pState
+      snapShotFromInstantStake (addInstantStake (nes ^. utxoL) mempty) dState pState Testnet
 
 -- | Register the initial funds in the 'NewEpochState'.
 --

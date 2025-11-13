@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Pool (
   tests,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..))
 import Cardano.Ledger.Block (blockHeader)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -144,7 +144,7 @@ poolRegistrationProp
             conjoin
               [ counterexample
                   "New StakePoolParams are registered in pParams"
-                  ( (stakePoolStateToStakePoolParams hk <$> Map.lookup hk (psStakePools targetSt))
+                  ( (stakePoolStateToStakePoolParams hk Testnet <$> Map.lookup hk (psStakePools targetSt))
                       === Just stakePoolParams
                   )
               , counterexample

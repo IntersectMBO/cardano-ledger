@@ -174,7 +174,6 @@ module Cardano.Ledger.Conway.Governance (
   showGovActionType,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (raCredential))
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Globals (..),
@@ -567,7 +566,7 @@ defaultStakePoolVote ::
 defaultStakePoolVote poolId poolParams accounts =
   toDefaultVote $ do
     spp <- Map.lookup poolId poolParams
-    accountState <- Map.lookup (raCredential $ spsRewardAccount spp) (accounts ^. accountsMapL)
+    accountState <- Map.lookup (spsRewardAccount spp) (accounts ^. accountsMapL)
     accountState ^. dRepDelegationAccountStateL
   where
     toDefaultVote (Just DRepAlwaysAbstain) = DefaultAbstain

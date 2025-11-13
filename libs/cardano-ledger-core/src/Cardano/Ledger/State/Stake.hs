@@ -19,6 +19,7 @@ module Cardano.Ledger.State.Stake (
   resolveActiveInstantStakeCredentials,
 ) where
 
+import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
@@ -84,15 +85,17 @@ class
   resolveInstantStake :: InstantStake era -> Accounts era -> Stake
 
 snapShotFromInstantStake ::
-  forall era. EraStake era => InstantStake era -> DState era -> PState era -> SnapShot
-snapShotFromInstantStake iStake dState PState {psStakePools} =
+  forall era. EraStake era => InstantStake era -> DState era -> PState era -> Network -> SnapShot
+snapShotFromInstantStake iStake dState PState {psStakePools} network =
   SnapShot
     { ssStake = resolveInstantStake iStake accounts
     , ssDelegations = VMap.fromDistinctAscListN delegsCount delegsAscList
     , ssPoolParams =
         VMap.fromDistinctAscListN
           (Map.size psStakePools)
-          [(poolId, stakePoolStateToStakePoolParams poolId ps) | (poolId, ps) <- Map.toAscList psStakePools]
+          [ (poolId, stakePoolStateToStakePoolParams poolId network ps)
+          | (poolId, ps) <- Map.toAscList psStakePools
+          ]
     }
   where
     accounts = dsAccounts dState
