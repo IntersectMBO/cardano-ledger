@@ -401,6 +401,8 @@ script_data_hash =
         |]
     $ "script_data_hash" =:= hash32
 
+-- | Adds DRep delegation, committee management, and removes genesis/MIR certificates.
+-- Ref: CIP-1694
 certificate :: Rule
 certificate =
   "certificate"
@@ -475,6 +477,7 @@ drep_unregistration_cert = "drep_unregistration_cert" =:~ grp [17, a drep_creden
 drep_update_cert :: Named Group
 drep_update_cert = "drep_update_cert" =:~ grp [18, a drep_credential, a $ anchor / VNil]
 
+-- | Requires at least one withdrawal (non-empty map).
 withdrawals :: Rule
 withdrawals = "withdrawals" =:= mp [1 <+ asKey reward_account ==> coin]
 
@@ -566,6 +569,8 @@ plutus_v3_script =
         |]
     $ "plutus_v3_script" =:= distinct VBytes
 
+-- | Changes to map-based format for O(1) lookup; adds voting (tag 4) and proposing (tag 5) purposes.
+-- Ref: CIP-1694
 redeemers :: Rule -> Rule
 redeemers redeemer_tag =
   comment
@@ -606,6 +611,7 @@ conway_redeemer_tag =
     / (int 4 //- "voting")
     / (int 5 //- "proposing")
 
+-- | Changes from array to map format for clearer field identification.
 ex_unit_prices :: Rule
 ex_unit_prices =
   "ex_unit_prices"
@@ -672,14 +678,17 @@ auxiliary_data =
       / auxiliary_data_array
       / auxiliary_data_map
 
+-- | If there is a policy, it has to have at least one token mapped to an amount.
 multiasset :: IsType0 a => a -> GRuleCall
 multiasset = binding $ \x ->
   "multiasset"
     =:= mp [0 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> x]]
 
+-- | Uses positive_coin in multiasset to ensure non-zero token amounts.
 value :: Rule
 value = "value" =:= coin / sarr [a coin, a (multiasset positive_coin)]
 
+-- | Requires at least one policy with at least one non-zero amount.
 mint :: Rule
 mint = "mint" =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> nonzero_int64]]
 
@@ -699,7 +708,7 @@ conway_script =
       / arr [3, a plutus_v3_script]
 
 -- | Conway era introduces an optional 258 tag for sets, which will become
--- mandatory in the second era after Conway.
+-- mandatory in the second era after Dijkstra.
 mkMaybeTaggedSet :: IsType0 a => T.Text -> Word64 -> a -> GRuleCall
 mkMaybeTaggedSet label n = binding $ \x -> label =:= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
 

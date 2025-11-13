@@ -59,6 +59,7 @@ positive_int64 = "positive_int64" =:= (1 :: Integer) ... max_int64
 nonzero_int64 :: Rule
 nonzero_int64 = "nonzero_int64" =:= negative_int64 / positive_int64
 
+-- | 64-bit signed integers for native script timelock thresholds.
 int64 :: Rule
 int64 = "int64" =:= min_int64 ... max_int64
 
@@ -112,12 +113,14 @@ auxiliary_data_array =
       , "auxiliary_scripts" ==> auxiliary_scripts
       ]
 
+-- | Adds auxiliary_data_array format for batching native scripts with metadata.
 auxiliary_data :: Rule
 auxiliary_data =
   "auxiliary_data"
     =:= metadata
     / auxiliary_data_array
 
+-- | Adds validity interval start (index 8) for timelock script support.
 transaction_body :: forall era. Era era => Rule
 transaction_body =
   comment
@@ -155,6 +158,7 @@ transaction =
       , a (auxiliary_data / VNil)
       ]
 
+-- | Uses allegra_native_script with timelock support (invalid_before/hereafter).
 transaction_witness_set :: Rule
 transaction_witness_set =
   "transaction_witness_set"

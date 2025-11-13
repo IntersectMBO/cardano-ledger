@@ -69,6 +69,7 @@ transaction_body =
       , opt (idx 9 ==> mint)
       ]
 
+-- | Replaces coin with value.
 transaction_output :: Rule
 transaction_output = "transaction_output" =:= arr [a address, "amount" ==> value]
 

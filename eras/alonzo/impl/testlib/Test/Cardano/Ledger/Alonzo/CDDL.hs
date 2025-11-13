@@ -252,9 +252,12 @@ proposed_protocol_parameter_updates =
   "proposed_protocol_parameter_updates"
     =:= mp [0 <+ asKey genesis_hash ==> protocol_param_update]
 
+-- | Adds Plutus protocol parameters: cost models, execution units, collateral settings (indices 16-24).
+-- Ref: CIP-28
 update :: Rule
 update = "update" =:= arr [a proposed_protocol_parameter_updates, a epoch]
 
+-- | Adds Plutus V1 scripts (index 3), datums (index 4), and redeemers (index 5) for smart contracts.
 transaction_witness_set :: Rule
 transaction_witness_set =
   comment
@@ -403,6 +406,7 @@ auxiliary_data_map =
           ]
       )
 
+-- | Adds auxiliary_data_map format (tag 259).
 auxiliary_data :: Rule
 auxiliary_data =
   comment
@@ -416,6 +420,7 @@ auxiliary_data =
       / auxiliary_data_array
       / auxiliary_data_map
 
+-- | Updates header_body to use Alonzo protocol_version.
 header :: Rule
 header = "header" =:= arr [a header_body, "body_signature" ==> kes_signature]
 
