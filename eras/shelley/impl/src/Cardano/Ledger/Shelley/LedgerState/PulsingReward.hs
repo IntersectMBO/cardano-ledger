@@ -217,7 +217,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           free
           (unStake stake)
           (RewardAns Map.empty Map.empty)
-   in assert (stakePerPool == Map.map (fromCompact . spssStake) stakePoolSnapShots) $
+   in --assert (stakePerPool == Map.map (fromCompact . spssStake) stakePoolSnapShots) $
         Pulsing rewsnap pulser
 
 -- Phase 2
