@@ -58,6 +58,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
@@ -83,9 +84,15 @@ data AlonzoBbodyPredFailure era
   | TooManyExUnits (Mismatch RelLTEQ ExUnits)
   deriving (Generic)
 
+instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (AlonzoBbodyPredFailure era)
+
 newtype AlonzoBbodyEvent era
   = ShelleyInAlonzoEvent (ShelleyBbodyEvent era)
   deriving (Generic)
+
+deriving instance
+  Eq (Event (EraRule "LEDGERS" era)) =>
+  Eq (AlonzoBbodyEvent era)
 
 type instance EraRuleFailure "BBODY" AlonzoEra = AlonzoBbodyPredFailure AlonzoEra
 

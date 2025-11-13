@@ -1,46 +1,34 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conway.Imp.BbodySpec (
-  spec,
-) where
+module Test.Cardano.Ledger.Conway.Imp.BbodySpec (spec) where
 
-import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Mismatch (..), ProtVer (..), natVersion)
-import Cardano.Ledger.Block
+import Cardano.Ledger.BaseTypes (Mismatch (..), ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure (..),
   totalRefScriptSizeInBlock,
  )
-import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (
-  BbodyEnv (..),
-  ShelleyBbodyState (..),
- )
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
-import Cardano.Ledger.TxIn
-import Control.Monad (forM)
+import Data.Foldable (for_)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
+import Data.Traversable (for)
 import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
-import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
@@ -61,38 +49,34 @@ spec = do
     let
       maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
       maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+
     txScriptCounts <-
       genNumAdditionsExceeding
         scriptSize
         maxRefScriptSizePerTx
         maxRefScriptSizePerBlock
 
-    let mkTxWithNScripts n = do
-          -- Instead of using the rootTxIn, we are creating an input for each transaction
-          -- that we subsequently need to submit,
-          -- so that we can submit them independently of each other.
-          txIn <- freshKeyAddr_ >>= \addr -> sendCoinTo addr (Coin 8_000_000)
-          refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
-          pure $ mkTxWithRefInputs txIn (NE.fromList refIns)
+    allInputs <- for txScriptCounts $ \n -> do
+      -- Instead of using the rootTxIn, we're creating an input for each transaction
+      -- so that they're independent of each other
+      txIn <- freshKeyAddr_ >>= \addr -> sendCoinTo addr (Coin 100_000_000)
+      refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
+      pure (txIn, NE.fromList refIns)
 
-    txs <- do
-      forM txScriptCounts $ \n -> do
-        mkTxWithNScripts n
-          >>= fixupFees
-          >>= updateAddrTxWits
+    let
+      -- These txs will be grouped into a block
+      buildTxs = for_ allInputs $ uncurry submitTxWithRefInputs
 
-    let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
-    predFailures <- expectLeftExpr =<< tryRunBBODY txs
-    predFailures
-      `shouldBe` NE.fromList
-        [ injectFailure
-            ( BodyRefScriptsSizeTooBig $
-                Mismatch
-                  { mismatchSupplied = expectedTotalRefScriptSize
-                  , mismatchExpected = maxRefScriptSizePerBlock
-                  }
-            )
-        ]
+    withTxsInFailingBlock
+      buildTxs
+      [ injectFailure
+          ( BodyRefScriptsSizeTooBig $
+              Mismatch
+                { mismatchSupplied = scriptSize * sum txScriptCounts
+                , mismatchExpected = maxRefScriptSizePerBlock
+                }
+          )
+      ]
 
   it "BodyRefScriptsSizeTooBig with reference scripts in the same block" $
     whenMajorVersionAtLeast @11 $ do
@@ -109,37 +93,24 @@ spec = do
           maxRefScriptSizePerTx
           maxRefScriptSizePerBlock
 
-      let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
+      let
+        -- These txs will be grouped into a block
+        buildTxs = for_ txScriptCounts $ \n -> do
+          refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
+          submitTx $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . referenceInputsTxBodyL .~ Set.fromList refIns
 
-      -- We are creating reference scripts and transaction that depend on them in a "simulation",
-      -- so the result will be correctly constructed that are not applied to the ledger state
-      txs :: [Tx TopTx era] <- simulateThenRestore $ do
-        concat
-          <$> forM
-            txScriptCounts
-            ( \n -> do
-                -- produce reference scripts
-                refScriptTxs <-
-                  replicateM n (produceRefScriptsTx (fromPlutusScript plutusScript :| []))
-
-                -- spend using the reference scripts
-                let txIns = (`mkTxInPartial` 0) . txIdTx <$> refScriptTxs
-                rootIn <- fst <$> getImpRootTxOut
-                spendTx <- submitTxWithRefInputs rootIn (NE.fromList txIns)
-                pure $ refScriptTxs ++ [spendTx]
+      withTxsInFailingBlock
+        buildTxs
+        [ injectFailure
+            ( BodyRefScriptsSizeTooBig $
+                Mismatch
+                  { mismatchSupplied = scriptSize * sum txScriptCounts
+                  , mismatchExpected = maxRefScriptSizePerBlock
+                  }
             )
-
-      predFailures <- expectLeftExpr =<< tryRunBBODY txs
-      predFailures
-        `shouldBe` NE.fromList
-          [ injectFailure
-              ( BodyRefScriptsSizeTooBig $
-                  Mismatch
-                    { mismatchSupplied = expectedTotalRefScriptSize
-                    , mismatchExpected = maxRefScriptSizePerBlock
-                    }
-              )
-          ]
+        ]
 
   it "totalRefScriptSizeInBlock" $ do
     script <- RequireSignature @era <$> freshKeyHash
@@ -208,7 +179,7 @@ spec = do
     let (txWithSizes, expectedTotalSize) = txsWithRefScriptSizes
 
     -- for each prefix of the list, the accumulated sum should match the sum of the applied transactions
-    forM_ ([1 .. length txWithSizes] :: [Int]) $ \ix -> do
+    for_ ([1 .. length txWithSizes] :: [Int]) $ \ix -> do
       let slice = take ix txWithSizes
 
       totalRefScriptSizeInBlock protVer (SSeq.fromList (fst <$> slice))
@@ -263,25 +234,6 @@ spec = do
       <$> getUTxO
         `shouldReturn` (if isPostV10 protVer then scriptSize else 0)
   where
-    tryRunBBODY txs = do
-      let blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ SSeq.fromList txs
-      nes <- use impNESL
-      let ls = nes ^. nesEsL . esLStateL
-          pp = nes ^. nesEsL . curPParamsEpochStateL @era
-      kh <- freshKeyHash
-      slotNo <- use impLastTickG
-      let bhView =
-            BHeaderView
-              { bhviewID = kh
-              , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
-              , bhviewHSize = 0
-              , bhviewBHash = hashBlockBody blockBody
-              , bhviewSlot = slotNo
-              }
-      tryRunImpRule @"BBODY"
-        (BbodyEnv pp (nes ^. chainAccountStateL))
-        (BbodyState ls (BlocksMade Map.empty))
-        (Block {blockHeader = bhView, blockBody})
     isPostV10 protVer = pvMajor protVer >= natVersion @11
 
 -- Generate a list of integers such that the sum of their multiples by scale is greater than toExceed

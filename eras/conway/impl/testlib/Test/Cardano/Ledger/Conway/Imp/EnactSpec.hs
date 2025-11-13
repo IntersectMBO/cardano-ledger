@@ -23,7 +23,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
 import Cardano.Ledger.Val (zero, (<->))
 import Control.Monad (forM)
-import Control.Monad.Writer (listen)
 import Data.Default (def)
 import Data.Foldable as F (foldl', traverse_)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -219,18 +218,18 @@ hardForkInitiationSpec =
     submitYesVote_ (DRepVoter dRep1) govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd <*> pure []
+      & impSTSEventsFrom
+      >>= expectHardForkEvents <*> pure []
     getProtVer `shouldReturn` curProtVer
     submitYesVote_ (DRepVoter dRep2) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd <*> pure []
+      & impSTSEventsFrom
+      >>= expectHardForkEvents <*> pure []
     getProtVer `shouldReturn` curProtVer
     submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd
+      & impSTSEventsFrom
+      >>= expectHardForkEvents
         <*> pure
           [ SomeSTSEvent @era @"TICK" . injectEvent $ ConwayHardForkEvent nextProtVer
           ]
@@ -260,13 +259,13 @@ hardForkInitiationNoDRepsSpec =
     submitYesVoteCCs_ committeeMembers' govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd <*> pure []
+      & impSTSEventsFrom
+      >>= expectHardForkEvents <*> pure []
     getProtVer `shouldReturn` curProtVer
     submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd
+      & impSTSEventsFrom
+      >>= expectHardForkEvents
         <*> pure
           [ SomeSTSEvent @era @"TICK" . injectEvent $ ConwayHardForkEvent nextProtVer
           ]
