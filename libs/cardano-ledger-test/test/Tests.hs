@@ -11,7 +11,6 @@ import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests as LedgerTypes
 import qualified Test.Cardano.Ledger.Constrained.Conway.MiniTrace as MiniTrace
 import qualified Test.Cardano.Ledger.Examples.AlonzoAPI as AlonzoAPI (tests)
-import qualified Test.Cardano.Ledger.Examples.AlonzoBBODY as AlonzoBBODY (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoCollectInputs as AlonzoCollectInputs (tests)
 import Test.Cardano.Ledger.Generic.AggPropTests (aggTests, depositTests)
 import Test.Cardano.Ledger.Generic.GenState (defaultGenSize)
@@ -37,7 +36,6 @@ defaultTests = do
   depositTests
   calcPoolDistOldEqualsNew
   describe "STS Tests" $ do
-    AlonzoBBODY.tests
     AlonzoAPI.tests
     AlonzoCollectInputs.tests
   genericProperties defaultGenSize
