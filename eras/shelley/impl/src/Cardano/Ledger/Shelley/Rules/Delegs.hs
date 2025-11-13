@@ -90,7 +90,7 @@ deriving stock instance
 data ShelleyDelegsPredFailure era
   = -- | Target pool which is not registered
     DelegateeNotRegisteredDELEG
-      (KeyHash 'StakePool)
+      (KeyHash StakePool)
   | -- | Subtransition Failures
     DelplFailure (PredicateFailure (EraRule "DELPL" era))
   deriving (Generic)
@@ -225,8 +225,8 @@ delegsTransition = do
 
 validateStakePoolDelegateeRegistered ::
   PState era ->
-  KeyHash 'StakePool ->
-  Test (KeyHash 'StakePool)
+  KeyHash StakePool ->
+  Test (KeyHash StakePool)
 validateStakePoolDelegateeRegistered pState targetPool =
   let stPools = psStakePools pState
    in failureUnless (eval (targetPool ∈ dom stPools)) targetPool

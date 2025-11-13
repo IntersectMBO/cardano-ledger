@@ -67,10 +67,10 @@ import qualified Test.QuickCheck as QC
 
 data CertCred era
   = CoreKeyCred [GenesisKeyPair MockCrypto]
-  | StakeCred (KeyPair 'Staking)
-  | PoolCred (KeyPair 'StakePool)
+  | StakeCred (KeyPair Staking)
+  | PoolCred (KeyPair StakePool)
   | ScriptCred (Script era, Script era)
-  | DelegateCred [KeyPair 'GenesisDelegate]
+  | DelegateCred [KeyPair GenesisDelegate]
   | NoCred
 
 deriving instance (Era era, Show (Script era)) => Show (CertCred era)
@@ -306,9 +306,9 @@ genGenesisDelegation ::
   forall era c.
   (Era era, ShelleyEraTxCert era, AtMostEra "Babbage" era, EraCertState era, Crypto c) =>
   -- | Core nodes
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  [(GenesisKeyPair c, AllIssuerKeys c GenesisDelegate)] ->
   -- | All potential genesis delegate keys
-  [AllIssuerKeys c 'GenesisDelegate] ->
+  [AllIssuerKeys c GenesisDelegate] ->
   CertState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genGenesisDelegation coreNodes delegateKeys dpState =
@@ -348,12 +348,12 @@ genStakePool ::
   forall c.
   Crypto c =>
   -- | Available keys for stake pool registration
-  [AllIssuerKeys c 'StakePool] ->
+  [AllIssuerKeys c StakePool] ->
   -- | KeyPairs containing staking keys to act as owners/reward account
   KeyPairs ->
   -- | Minimum pool cost Protocol Param
   Coin ->
-  Gen (StakePoolParams, KeyPair 'StakePool)
+  Gen (StakePoolParams, KeyPair StakePool)
 genStakePool poolKeys skeys (Coin minPoolCost) =
   mkStakePoolParams
     <$> QC.elements poolKeys
@@ -367,15 +367,15 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
     <*> (fromInteger <$> QC.choose (0, 100) :: Gen Natural)
     <*> getAnyStakeKey skeys
   where
-    getAnyStakeKey :: KeyPairs -> Gen (VKey 'Staking)
+    getAnyStakeKey :: KeyPairs -> Gen (VKey Staking)
     getAnyStakeKey keys = vKey . snd <$> QC.elements keys
     mkStakePoolParams ::
-      AllIssuerKeys c 'StakePool ->
+      AllIssuerKeys c StakePool ->
       Coin ->
       Coin ->
       Natural ->
-      VKey 'Staking ->
-      (StakePoolParams, KeyPair 'StakePool)
+      VKey Staking ->
+      (StakePoolParams, KeyPair StakePool)
     mkStakePoolParams allPoolKeys pledge cost marginPercent acntKey =
       let interval = unsafeBoundRational $ fromIntegral marginPercent % 100
           spps =
@@ -394,7 +394,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
 -- | Generate `RegPool` and the key witness.
 genRegPool ::
   (Era era, EraTxCert era, Crypto c) =>
-  [AllIssuerKeys c 'StakePool] ->
+  [AllIssuerKeys c StakePool] ->
   KeyPairs ->
   Coin ->
   Gen (Maybe (TxCert era, CertCred era))
@@ -412,7 +412,7 @@ genRegPool poolKeys keyPairs minPoolCost = do
 genRetirePool ::
   (EraPParams era, EraTxCert era) =>
   PParams era ->
-  [AllIssuerKeys c 'StakePool] ->
+  [AllIssuerKeys c StakePool] ->
   PState era ->
   SlotNo ->
   Gen (Maybe (TxCert era, CertCred era))
@@ -450,7 +450,7 @@ genInstantaneousRewardsAccounts ::
   (EraPParams era, EraAccounts era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
+  Map (KeyHash GenesisDelegate) (AllIssuerKeys c GenesisDelegate) ->
   PParams era ->
   ChainAccountState ->
   DState era ->
@@ -500,7 +500,7 @@ genInstantaneousRewardsTransfer ::
   (EraPParams era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
+  Map (KeyHash GenesisDelegate) (AllIssuerKeys c GenesisDelegate) ->
   PParams era ->
   ChainAccountState ->
   DState era ->
@@ -537,7 +537,7 @@ genInstantaneousRewards ::
   (EraPParams era, EraAccounts era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
+  Map (KeyHash GenesisDelegate) (AllIssuerKeys c GenesisDelegate) ->
   PParams era ->
   ChainAccountState ->
   DState era ->

@@ -152,7 +152,7 @@ getUTxOSubset nes = txInsFilter (getUTxO nes)
 getPools ::
   EraCertState era =>
   NewEpochState era ->
-  Set (KeyHash 'StakePool)
+  Set (KeyHash StakePool)
 getPools = Map.keysSet . f
   where
     f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
@@ -163,8 +163,8 @@ getPools = Map.keysSet . f
 getStakePools ::
   EraCertState era =>
   NewEpochState era ->
-  Set (KeyHash 'StakePool) ->
-  Map (KeyHash 'StakePool) StakePoolState
+  Set (KeyHash StakePool) ->
+  Map (KeyHash StakePool) StakePoolState
 getStakePools = Map.restrictKeys . f
   where
     f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
@@ -216,10 +216,10 @@ getNonMyopicMemberRewards ::
   (EraGov era, EraStake era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
-  Set (Either Coin (Credential 'Staking)) ->
+  Set (Either Coin (Credential Staking)) ->
   Map
-    (Either Coin (Credential 'Staking))
-    (Map (KeyHash 'StakePool) Coin)
+    (Either Coin (Credential Staking))
+    (Map (KeyHash StakePool) Coin)
 getNonMyopicMemberRewards globals ss =
   Map.fromSet (\cred -> Map.map (mkNMMRewards $ memShare cred) poolData)
   where
@@ -344,7 +344,7 @@ getRewardInfoPools ::
   (EraGov era, EraStake era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
-  (RewardParams, Map (KeyHash 'StakePool) RewardInfoPool)
+  (RewardParams, Map (KeyHash StakePool) RewardInfoPool)
 getRewardInfoPools globals ss =
   (mkRewardParams, VMap.toMap (VMap.mapWithKey mkRewardInfoPool poolParams))
   where
@@ -415,7 +415,7 @@ getRewardProvenance globals newEpochState =
 -- Transaction helpers
 --------------------------------------------------------------------------------
 
-addKeyWitnesses :: EraTx era => Tx t era -> Set (WitVKey 'Witness) -> Tx t era
+addKeyWitnesses :: EraTx era => Tx t era -> Set (WitVKey Witness) -> Tx t era
 addKeyWitnesses tx newWits = tx & witsTxL . addrTxWitsL %~ Set.union newWits
 
 --------------------------------------------------------------------------------

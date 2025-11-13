@@ -185,9 +185,9 @@ goldenTests_ShelleyCrypto =
         "82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5"
     ]
   where
-    paymentKey :: Credential 'Payment
+    paymentKey :: Credential Payment
     paymentKey = keyBlake2b224 $ B16.encode "1a2a3a4a5a6a7a8a"
-    stakeKey :: Credential 'Staking
+    stakeKey :: Credential Staking
     stakeKey = keyBlake2b224 $ B16.encode "1c2c3c4c5c6c7c8c"
     ptr :: Ptr
     ptr = Ptr (SlotNo32 128) (mkTxIxPartial 2) (mkCertIxPartial 3)

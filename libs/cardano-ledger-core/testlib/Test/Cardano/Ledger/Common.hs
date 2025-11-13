@@ -68,7 +68,7 @@ import Test.Hspec.QuickCheck as X
 import Test.Hspec.Runner
 import Test.ImpSpec (ansiDocToString, impSpecConfig, impSpecMainWithConfig)
 import Test.ImpSpec.Expectations
-import Test.QuickCheck as X
+import Test.QuickCheck as X hiding (Witness)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Random (mkQCGen)
 import UnliftIO.Exception (evaluateDeep)

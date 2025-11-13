@@ -148,7 +148,7 @@ shelleyProducedValue ::
   EraTxBody era =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
-  (KeyHash 'StakePool -> Bool) ->
+  (KeyHash StakePool -> Bool) ->
   TxBody TopTx era ->
   Value era
 shelleyProducedValue pp isRegPoolId txBody =
@@ -161,7 +161,7 @@ shelleyProducedValue pp isRegPoolId txBody =
 getConsumedCoin ::
   EraTxBody era =>
   PParams era ->
-  (Credential 'Staking -> Maybe Coin) ->
+  (Credential Staking -> Maybe Coin) ->
   UTxO era ->
   TxBody l era ->
   Coin
@@ -209,7 +209,7 @@ witsVKeyNeededGenDelegs ::
   ShelleyEraTxBody era =>
   TxBody TopTx era ->
   GenDelegs ->
-  Set (KeyHash 'Witness)
+  Set (KeyHash Witness)
 witsVKeyNeededGenDelegs txBody (GenDelegs genDelegs) =
   asWitness `Set.map` proposedUpdatesWitnesses (txBody ^. updateTxBodyL)
   where
@@ -229,14 +229,14 @@ getShelleyWitsVKeyNeededNoGov ::
   EraTx era =>
   UTxO era ->
   TxBody l era ->
-  Set (KeyHash 'Witness)
+  Set (KeyHash Witness)
 getShelleyWitsVKeyNeededNoGov utxo' txBody =
   certAuthors
     `Set.union` inputAuthors
     `Set.union` owners
     `Set.union` wdrlAuthors
   where
-    inputAuthors :: Set (KeyHash 'Witness)
+    inputAuthors :: Set (KeyHash Witness)
     inputAuthors = foldr' accum Set.empty (txBody ^. spendableInputsTxBodyF)
       where
         accum txin !ans =
@@ -249,14 +249,14 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
                 _ -> ans
             Nothing -> ans
 
-    wdrlAuthors :: Set (KeyHash 'Witness)
+    wdrlAuthors :: Set (KeyHash Witness)
     wdrlAuthors = Map.foldrWithKey' accum Set.empty (unWithdrawals (txBody ^. withdrawalsTxBodyL))
       where
         accum key _ !ans =
           case credKeyHashWitness (raCredential key) of
             Nothing -> ans
             Just vkeyWit -> Set.insert vkeyWit ans
-    owners :: Set (KeyHash 'Witness)
+    owners :: Set (KeyHash Witness)
     owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum (RegPoolTxCert pool) !ans =
@@ -264,7 +264,7 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
             (Set.map asWitness (sppOwners pool))
             ans
         accum _cert ans = ans
-    certAuthors :: Set (KeyHash 'Witness)
+    certAuthors :: Set (KeyHash Witness)
     certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum cert !ans =
@@ -277,7 +277,7 @@ getShelleyWitsVKeyNeeded ::
   CertState era ->
   UTxO era ->
   TxBody l era ->
-  Set (KeyHash 'Witness)
+  Set (KeyHash Witness)
 getShelleyWitsVKeyNeeded certState utxo txBody =
   case toSTxLevel txBody of
     STopTxOnly ->

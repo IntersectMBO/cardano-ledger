@@ -592,13 +592,13 @@ transTxCert pv = \case
     PV3.TxCertUpdateDRep (transDRepCred drepCred)
   _ -> error "Impossible: All TxCerts should have been accounted for"
 
-transDRepCred :: Credential 'DRepRole -> PV3.DRepCredential
+transDRepCred :: Credential DRepRole -> PV3.DRepCredential
 transDRepCred = PV3.DRepCredential . transCred
 
-transColdCommitteeCred :: Credential 'ColdCommitteeRole -> PV3.ColdCommitteeCredential
+transColdCommitteeCred :: Credential ColdCommitteeRole -> PV3.ColdCommitteeCredential
 transColdCommitteeCred = PV3.ColdCommitteeCredential . transCred
 
-transHotCommitteeCred :: Credential 'HotCommitteeRole -> PV3.HotCommitteeCredential
+transHotCommitteeCred :: Credential HotCommitteeRole -> PV3.HotCommitteeCredential
 transHotCommitteeCred = PV3.HotCommitteeCredential . transCred
 
 transDelegatee :: Delegatee -> PV3.Delegatee

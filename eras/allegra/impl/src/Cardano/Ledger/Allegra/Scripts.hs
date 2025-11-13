@@ -130,13 +130,13 @@ invalidBeforeL = lens invalidBefore (\vi before -> vi {invalidBefore = before})
 invalidHereAfterL :: Lens' ValidityInterval (StrictMaybe SlotNo)
 invalidHereAfterL = lens invalidHereafter (\vi hereAfter -> vi {invalidHereafter = hereAfter})
 
-encodeVI :: ValidityInterval -> Encode ('Closed 'Dense) ValidityInterval
+encodeVI :: ValidityInterval -> Encode (Closed Dense) ValidityInterval
 encodeVI (ValidityInterval f t) = Rec ValidityInterval !> To f !> To t
 
 instance EncCBOR ValidityInterval where
   encCBOR vi = encode (encodeVI vi)
 
-decodeVI :: Decode ('Closed 'Dense) ValidityInterval
+decodeVI :: Decode (Closed Dense) ValidityInterval
 decodeVI = RecD ValidityInterval <! From <! From
 
 instance DecCBOR ValidityInterval where
@@ -155,7 +155,7 @@ instance ToJSON ValidityInterval where
 -- ==================================================================
 
 data TimelockRaw era
-  = TimelockSignature !(KeyHash 'Witness)
+  = TimelockSignature !(KeyHash Witness)
   | TimelockAllOf !(StrictSeq (Timelock era)) -- NOTE that Timelock and
   | TimelockAnyOf !(StrictSeq (Timelock era)) -- TimelockRaw are mutually recursive.
   | TimelockMOf !Int !(StrictSeq (Timelock era))
@@ -213,7 +213,7 @@ instance Era era => EncCBOR (TimelockRaw era) where
 instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
   decCBOR = decode (Summands "TimelockRaw" decRaw)
     where
-      decRaw :: Word -> Decode 'Open (Annotator (TimelockRaw era))
+      decRaw :: Word -> Decode Open (Annotator (TimelockRaw era))
       decRaw 0 = Ann (SumD TimelockSignature <! From)
       decRaw 1 = Ann (SumD TimelockAllOf) <*! D (sequence <$> decCBOR)
       decRaw 2 = Ann (SumD TimelockAnyOf) <*! D (sequence <$> decCBOR)
@@ -355,10 +355,10 @@ pattern RequireTimeStart mslot <- (getTimeStart -> Just mslot)
     ConwayEra
   #-}
 
-mkRequireSignatureTimelock :: forall era. Era era => KeyHash 'Witness -> Timelock era
+mkRequireSignatureTimelock :: forall era. Era era => KeyHash Witness -> Timelock era
 mkRequireSignatureTimelock = mkMemoizedEra @era . TimelockSignature
 
-getRequireSignatureTimelock :: Timelock era -> Maybe (KeyHash 'Witness)
+getRequireSignatureTimelock :: Timelock era -> Maybe (KeyHash Witness)
 getRequireSignatureTimelock (MkTimelock (Memo (TimelockSignature kh) _)) = Just kh
 getRequireSignatureTimelock _ = Nothing
 
@@ -412,7 +412,7 @@ ltePosInfty (SJust i) j = i <= j
 
 evalTimelock ::
   (AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  Set.Set (KeyHash 'Witness) ->
+  Set.Set (KeyHash Witness) ->
   ValidityInterval ->
   NativeScript era ->
   Bool

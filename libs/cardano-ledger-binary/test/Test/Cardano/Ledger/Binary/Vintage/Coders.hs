@@ -78,8 +78,8 @@ instance EncCBOR TT where
 data Two = Two Int Bool
   deriving (Show, Eq)
 
-decTwo :: Decode ('Closed 'Dense) Two
-encTwo :: Two -> Encode ('Closed 'Dense) Two
+decTwo :: Decode (Closed Dense) Two
+encTwo :: Two -> Encode (Closed Dense) Two
 decTwo = RecD Two <! From <! From
 
 encTwo (Two a b) = Rec Two !> To a !> To b
@@ -98,8 +98,8 @@ data Test = Test Int Two Integer
 test1 :: Test
 test1 = Test 3 (Two 9 True) 33
 
-decTestWithGroupForTwo :: Decode ('Closed 'Dense) Test
-encTestWithGroupForTwo :: Test -> Encode ('Closed 'Dense) Test
+decTestWithGroupForTwo :: Decode (Closed Dense) Test
+encTestWithGroupForTwo :: Test -> Encode (Closed Dense) Test
 decTestWithGroupForTwo = RecD Test <! From <! decTwo <! From
 
 encTestWithGroupForTwo (Test a b c) = Rec Test !> To a !> encTwo b !> To c
@@ -146,13 +146,13 @@ instance DecCBOR Three where
       k -> invalidKey k
 -}
 
-decThree :: Word -> Decode 'Open Three
+decThree :: Word -> Decode Open Three
 decThree 0 = SumD In <! From
 decThree 1 = SumD N <! From <! From
 decThree 2 = SumD F <! decTwo
 decThree k = Invalid k
 
-encThree :: Three -> Encode 'Open Three
+encThree :: Three -> Encode Open Three
 encThree (In x) = Sum In 0 !> To x
 encThree (N b i) = Sum N 1 !> To b !> To i
 encThree (F t) = Sum F 2 !> encTwo t
@@ -181,14 +181,14 @@ bigger = Bigger (Test 2 (Two 4 True) 99) (Two 7 False) (Big 5 False 102)
 biggerItems :: FlatTerm
 biggerItems = toFlatTerm shelleyProtVer (encode (encBigger bigger))
 
-decBigger :: Decode ('Closed 'Dense) Bigger
+decBigger :: Decode (Closed Dense) Bigger
 decBigger =
   RecD Bigger
     <! (RecD Test <! From <! (RecD Two <! From <! From) <! From)
     <! (RecD Two <! From <! From)
     <! (RecD Big <! From <! From <! From)
 
-encBigger :: Bigger -> Encode ('Closed 'Dense) Bigger
+encBigger :: Bigger -> Encode (Closed Dense) Bigger
 encBigger (Bigger (Test a (Two b c) d) (Two e f) (Big g h i)) =
   Rec Bigger
     !> (Rec Test !> To a !> (Rec Two !> To b !> To c) !> To d)
@@ -222,13 +222,13 @@ a3 = M 9 [False] "ABC"
 -- Even though there is only one. We use invariants about the data to avoid
 -- encoding some of the values.
 
-encM :: M -> Encode 'Open M
+encM :: M -> Encode Open M
 encM (M 0 [] t) = Sum M 0 !> OmitC 0 !> OmitC [] !> To t
 encM (M 0 bs t) = Sum M 1 !> OmitC 0 !> To bs !> To t
 encM (M n [] t) = Sum M 2 !> To n !> OmitC [] !> To t
 encM (M n bs t) = Sum M 3 !> To n !> To bs !> To t
 
-decM :: Word -> Decode 'Open M
+decM :: Word -> Decode Open M
 decM 0 = SumD M <! Emit 0 <! Emit [] <! From
 decM 1 = SumD M <! Emit 0 <! From <! From
 decM 2 = SumD M <! From <! Emit [] <! From
@@ -247,7 +247,7 @@ dualMvirtual = mkTrip (encode . encM) (decode (Summands "M" decM))
 -- key, and fields with default values have Omit wrapped around the Key encoding.
 -- The user must ensure that there is NOT an Omit on a required field. 'baz' is an example.
 
-baz :: M -> Encode ('Closed 'Sparse) M
+baz :: M -> Encode (Closed Sparse) M
 baz (M n xs t) = Keyed M !> Omit (== 0) (Key 0 (To n)) !> Omit null (Key 1 (To xs)) !> Key 2 (To t)
 
 -- To write an Decoder we must pair a decoder for each field, with a function that updates only
@@ -276,7 +276,7 @@ boxM n = invalidField n
 -- else, the intial values in the required fields might survive decoding. The list
 -- of required fields is checked.
 
-decodeM :: Decode ('Closed 'Dense) M -- Only the field with Key 2 is required
+decodeM :: Decode (Closed Dense) M -- Only the field with Key 2 is required
 decodeM = SparseKeyed "M" (M 0 [] (pack "a")) boxM [(2, "Stringpart")]
 
 dualM :: Trip M M
@@ -309,10 +309,10 @@ dualBB = mkTrip (\(BB t) -> encCBOR t) (BB <$> decCBOR)
 data A = ACon Int BB C
   deriving (Show, Eq)
 
-encodeA :: A -> Encode ('Closed 'Dense) A
+encodeA :: A -> Encode (Closed Dense) A
 encodeA (ACon i b c) = Rec ACon !> To i !> E (tripEncoder dualBB) b !> To c
 
-decodeA :: Decode ('Closed 'Dense) A
+decodeA :: Decode (Closed Dense) A
 decodeA = RecD ACon <! From <! D (tripDecoder dualBB) <! From
 
 instance EncCBOR A where
@@ -338,12 +338,12 @@ data N
   | N3 A
   deriving (Show, Eq)
 
-encodeN :: N -> Encode 'Open N
+encodeN :: N -> Encode Open N
 encodeN (N1 i) = Sum N1 0 !> To i
 encodeN (N2 b tf) = Sum N2 1 !> E (tripEncoder dualBB) b !> To tf
 encodeN (N3 a) = Sum N3 2 !> To a
 
-decodeN :: Decode ('Closed 'Dense) N
+decodeN :: Decode (Closed Dense) N
 decodeN = Summands "N" decodeNx
   where
     decodeNx 0 = SumD N1 <! From

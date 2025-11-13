@@ -98,7 +98,7 @@ removedAfterPoolreap p p' e =
     stp' = psStakePools p'
     retiring = psRetiring p
     retiring' = psRetiring p'
-    retire :: Set.Set (KeyHash 'StakePool) -- This declaration needed to disambiguate 'eval'
+    retire :: Set.Set (KeyHash StakePool) -- This declaration needed to disambiguate 'eval'
     retire = eval (dom (retiring ▷ setSingleton e))
 
 sameEpoch ::

@@ -119,7 +119,7 @@ conwayProducedValue ::
   , Value era ~ MaryValue
   ) =>
   PParams era ->
-  (KeyHash 'StakePool -> Bool) ->
+  (KeyHash StakePool -> Bool) ->
   TxBody TopTx era ->
   Value era
 conwayProducedValue pp isStakePool txBody =
@@ -178,7 +178,7 @@ getConwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
   UTxO era ->
   TxBody l era ->
-  Set.Set (KeyHash 'Witness)
+  Set.Set (KeyHash Witness)
 getConwayWitsVKeyNeeded utxo txBody =
   getShelleyWitsVKeyNeededNoGov utxo txBody
     `Set.union` Set.map asWitness (txBody ^. reqSignerHashesTxBodyG)
@@ -187,7 +187,7 @@ getConwayWitsVKeyNeeded utxo txBody =
 voterWitnesses ::
   ConwayEraTxBody era =>
   TxBody l era ->
-  Set.Set (KeyHash 'Witness)
+  Set.Set (KeyHash Witness)
 voterWitnesses txb =
   Map.foldrWithKey' accum mempty (unVotingProcedures (txb ^. votingProceduresTxBodyL))
   where

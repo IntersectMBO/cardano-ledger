@@ -113,11 +113,11 @@ deriving newtype instance (Era era, DecCBOR (TxOut era)) => DecCBOR (UTxO era)
 
 instance
   ( DecShareCBOR (TxOut era)
-  , Share (TxOut era) ~ Interns (Credential 'Staking)
+  , Share (TxOut era) ~ Interns (Credential Staking)
   ) =>
   DecShareCBOR (UTxO era)
   where
-  type Share (UTxO era) = Interns (Credential 'Staking)
+  type Share (UTxO era) = Interns (Credential Staking)
   decShareCBOR credsInterns =
     UTxO <$!> decodeMap decNoShareCBOR (decShareCBOR credsInterns)
 
@@ -244,9 +244,9 @@ class EraTx era => EraUTxO era where
   getConsumedValue ::
     PParams era ->
     -- | Function that can lookup current delegation deposits
-    (Credential 'Staking -> Maybe Coin) ->
+    (Credential Staking -> Maybe Coin) ->
     -- | Function that can lookup current drep deposits
-    (Credential 'DRepRole -> Maybe Coin) ->
+    (Credential DRepRole -> Maybe Coin) ->
     UTxO era ->
     TxBody t era ->
     Value era
@@ -254,7 +254,7 @@ class EraTx era => EraUTxO era where
   getProducedValue ::
     PParams era ->
     -- | Check whether a pool with a supplied PoolStakeId is already registered.
-    (KeyHash 'StakePool -> Bool) ->
+    (KeyHash StakePool -> Bool) ->
     TxBody t era ->
     Value era
 
@@ -277,7 +277,7 @@ class EraTx era => EraUTxO era where
 
   -- | Extract all of the KeyHash witnesses that are required for validating the transaction
   getWitsVKeyNeeded ::
-    CertState era -> UTxO era -> TxBody t era -> Set (KeyHash 'Witness)
+    CertState era -> UTxO era -> TxBody t era -> Set (KeyHash Witness)
 
   -- | Minimum fee computation, excluding witnesses and including ref scripts size
   getMinFeeTxUtxo :: PParams era -> Tx t era -> UTxO era -> Coin

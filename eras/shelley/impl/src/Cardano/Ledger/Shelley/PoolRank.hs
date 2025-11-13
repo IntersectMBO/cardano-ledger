@@ -228,7 +228,7 @@ instance DecCBOR PerformanceEstimate where
   decCBOR = PerformanceEstimate <$> decodeDouble
 
 data NonMyopic = NonMyopic
-  { likelihoodsNM :: !(Map (KeyHash 'StakePool) Likelihood)
+  { likelihoodsNM :: !(Map (KeyHash StakePool) Likelihood)
   , rewardPotNM :: !Coin
   }
   deriving (Show, Eq, Generic)
@@ -249,7 +249,7 @@ instance EncCBOR NonMyopic where
           <> encCBOR rewardPotNM
 
 instance DecShareCBOR NonMyopic where
-  type Share NonMyopic = Interns (KeyHash 'StakePool)
+  type Share NonMyopic = Interns (KeyHash StakePool)
   decSharePlusCBOR = do
     decodeRecordNamedT "NonMyopic" (const 2) $ do
       likelihoodsNM <- decSharePlusLensCBOR (toMemptyLens _1 id)
@@ -297,9 +297,9 @@ getTopRankedPools ::
   Coin ->
   Coin ->
   PParams era ->
-  Map (KeyHash 'StakePool) StakePoolParams ->
-  Map (KeyHash 'StakePool) PerformanceEstimate ->
-  Set (KeyHash 'StakePool)
+  Map (KeyHash StakePool) StakePoolParams ->
+  Map (KeyHash StakePool) PerformanceEstimate ->
+  Set (KeyHash StakePool)
 getTopRankedPools rPot totalStake pp poolParams aps =
   let pdata = Map.toAscList $ Map.intersectionWith (,) poolParams aps
    in getTopRankedPoolsInternal rPot totalStake pp pdata
@@ -309,9 +309,9 @@ getTopRankedPoolsVMap ::
   Coin ->
   Coin ->
   PParams era ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams ->
-  Map (KeyHash 'StakePool) PerformanceEstimate ->
-  Set (KeyHash 'StakePool)
+  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) StakePoolParams ->
+  Map (KeyHash StakePool) PerformanceEstimate ->
+  Set (KeyHash StakePool)
 getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
   let pdata = [(kh, (pps, a)) | (kh, a) <- Map.toAscList aps, Just pps <- [VMap.lookup kh poolParams]]
    in getTopRankedPoolsInternal rPot totalStake pp pdata
@@ -321,8 +321,8 @@ getTopRankedPoolsInternal ::
   Coin ->
   Coin ->
   PParams era ->
-  [(KeyHash 'StakePool, (StakePoolParams, PerformanceEstimate))] ->
-  Set (KeyHash 'StakePool)
+  [(KeyHash StakePool, (StakePoolParams, PerformanceEstimate))] ->
+  Set (KeyHash StakePool)
 getTopRankedPoolsInternal rPot totalStake pp pdata =
   Set.fromList $
     fst
@@ -354,8 +354,8 @@ nonMyopicStake ::
   StakeShare ->
   StakeShare ->
   StakeShare ->
-  KeyHash 'StakePool ->
-  Set (KeyHash 'StakePool) ->
+  KeyHash StakePool ->
+  Set (KeyHash StakePool) ->
   StakeShare
 nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
   let z0 = 1 %. (toInteger (pp ^. ppNOptL) `nonZeroOr` knownNonZero @1)
@@ -379,7 +379,7 @@ nonMyopicMemberRew ::
   StakeShare ->
   StakeShare ->
   StakeShare ->
-  Set (KeyHash 'StakePool) ->
+  Set (KeyHash StakePool) ->
   PerformanceEstimate ->
   Coin
 nonMyopicMemberRew

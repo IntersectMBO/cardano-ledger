@@ -20,7 +20,7 @@ spec = do
     prop "mkStakePoolState/stakePoolStateToPoolParams round-trip" $
       \( stakePoolParams :: StakePoolParams
          , deposit :: CompactForm Coin
-         , delegs :: Set (Credential 'Staking)
+         , delegs :: Set (Credential Staking)
          ) ->
           let poolId = sppId stakePoolParams
               stakePoolState = mkStakePoolState deposit delegs stakePoolParams

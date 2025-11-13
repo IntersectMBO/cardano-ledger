@@ -339,10 +339,10 @@ mkEnactState gs =
 instance EraPParams era => DecShareCBOR (ConwayGovState era) where
   type
     Share (ConwayGovState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decSharePlusCBOR =
     decodeRecordNamedT "ConwayGovState" (const 7) $ do
@@ -558,9 +558,9 @@ instance DecCBOR DefaultVote
 defaultStakePoolVote ::
   ConwayEraAccounts era =>
   -- | Specify the key hash of the pool whose default vote should be returned.
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   -- | Registered Stake Pools
-  Map (KeyHash 'StakePool) StakePoolState ->
+  Map (KeyHash StakePool) StakePoolState ->
   -- | Delegations of staking credneitals to a DRep
   Accounts era ->
   DefaultVote
@@ -579,7 +579,7 @@ defaultStakePoolVote poolId poolParams accounts =
 authorizedElectedHotCommitteeCredentials ::
   StrictMaybe (Committee era) ->
   CommitteeState era ->
-  Set.Set (Credential 'HotCommitteeRole)
+  Set.Set (Credential HotCommitteeRole)
 authorizedElectedHotCommitteeCredentials committee committeeState =
   case committee of
     SNothing -> Set.empty

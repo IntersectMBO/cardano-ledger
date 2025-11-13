@@ -129,9 +129,9 @@ import Lens.Micro.Extras (view)
 queryStakePoolDelegsAndRewards ::
   EraCertState era =>
   NewEpochState era ->
-  Set (Credential 'Staking) ->
-  ( Map (Credential 'Staking) (KeyHash 'StakePool)
-  , Map (Credential 'Staking) Coin
+  Set (Credential Staking) ->
+  ( Map (Credential Staking) (KeyHash StakePool)
+  , Map (Credential Staking) Coin
   )
 queryStakePoolDelegsAndRewards nes creds =
   let accountsMap = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
@@ -160,8 +160,8 @@ queryDRepState ::
   NewEpochState era ->
   -- | Specify a set of DRep credentials whose state should be returned. When this set is
   -- empty, states for all of the DReps will be returned.
-  Set (Credential 'DRepRole) ->
-  Map (Credential 'DRepRole) DRepState
+  Set (Credential DRepRole) ->
+  Map (Credential DRepRole) DRepState
 queryDRepState nes creds
   | null creds = updateDormantDRepExpiry' vState ^. vsDRepsL
   | otherwise = updateDormantDRepExpiry' vStateFiltered ^. vsDRepsL
@@ -179,7 +179,7 @@ queryDRepDelegations ::
   -- | Specify a set of DReps whose state should be returned. When this set is
   -- empty, states for all of the DReps will be returned.
   Set DRep ->
-  Map DRep (Set (Credential 'Staking))
+  Map DRep (Set (Credential Staking))
 queryDRepDelegations nes dreps =
   case getDRepCreds dreps of
     Just creds ->
@@ -231,8 +231,8 @@ queryRegisteredDRepStakeDistr ::
   NewEpochState era ->
   -- | Specify DRep Ids whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the registered DReps will be returned.
-  Set (Credential 'DRepRole) ->
-  Map (Credential 'DRepRole) Coin
+  Set (Credential DRepRole) ->
+  Map (Credential DRepRole) Coin
 queryRegisteredDRepStakeDistr nes creds =
   Map.foldlWithKey' computeDistr mempty selectedDReps
   where
@@ -254,10 +254,10 @@ queryRegisteredDRepStakeDistr nes creds =
 querySPOStakeDistr ::
   ConwayEraGov era =>
   NewEpochState era ->
-  Set (KeyHash 'StakePool) ->
+  Set (KeyHash StakePool) ->
   -- | Specify pool key hashes whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the pools will be returned.
-  Map (KeyHash 'StakePool) Coin
+  Map (KeyHash StakePool) Coin
 querySPOStakeDistr nes keys
   | null keys = Map.map fromCompact distr
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` keys
@@ -270,9 +270,9 @@ queryCommitteeMembersState ::
   forall era.
   (ConwayEraGov era, ConwayEraCertState era) =>
   -- | filter by cold credentials (don't filter when empty)
-  Set (Credential 'ColdCommitteeRole) ->
+  Set (Credential ColdCommitteeRole) ->
   -- | filter by hot credentials (don't filter when empty)
-  Set (Credential 'HotCommitteeRole) ->
+  Set (Credential HotCommitteeRole) ->
   -- | filter by status (don't filter when empty)
   -- (useful, for discovering, for example, only active members)
   Set MemberStatus ->
@@ -316,7 +316,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
     currentEpoch = nes ^. nesELL
 
     mkMaybeMemberState ::
-      Credential 'ColdCommitteeRole ->
+      Credential ColdCommitteeRole ->
       Maybe CommitteeMemberState
     mkMaybeMemberState coldCred = do
       let mbExpiry = Map.lookup coldCred comMembers
@@ -333,7 +333,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
               Just (CommitteeHotCredential hk) -> MemberAuthorized hk
       pure $ CommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
 
-    nextEpochChange :: Credential 'ColdCommitteeRole -> NextEpochChange
+    nextEpochChange :: Credential ColdCommitteeRole -> NextEpochChange
     nextEpochChange ck
       | not inCurrent && inNext = ToBeEnacted
       | not inNext = ToBeRemoved
@@ -368,7 +368,7 @@ queryChainAccountState = view chainAccountStateL
 getNextEpochCommitteeMembers ::
   ConwayEraGov era =>
   NewEpochState era ->
-  Map (Credential 'ColdCommitteeRole) EpochNo
+  Map (Credential ColdCommitteeRole) EpochNo
 getNextEpochCommitteeMembers nes =
   let ratifyState = queryRatifyState nes
       committee = ratifyState ^. rsEnactStateL . ensCommitteeL
@@ -425,7 +425,7 @@ queryStakePoolDefaultVote ::
   (EraCertState era, ConwayEraAccounts era) =>
   NewEpochState era ->
   -- | Specify the key hash of the pool whose default vote should be returned.
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   DefaultVote
 queryStakePoolDefaultVote nes poolId =
   defaultStakePoolVote poolId (nes ^. nesEsL . epochStateStakePoolsL) $
@@ -434,10 +434,10 @@ queryStakePoolDefaultVote nes poolId =
 -- | Used only for the `queryPoolState` query. This resembles the older way of
 -- representing StakePoolState in Ledger.
 data QueryPoolStateResult = QueryPoolStateResult
-  { qpsrStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
-  , qpsrFutureStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
-  , qpsrRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
-  , qpsrDeposits :: !(Map (KeyHash 'StakePool) Coin)
+  { qpsrStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
+  , qpsrFutureStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
+  , qpsrRetiring :: !(Map (KeyHash StakePool) EpochNo)
+  , qpsrDeposits :: !(Map (KeyHash StakePool) Coin)
   }
   deriving (Show, Eq)
 
@@ -455,7 +455,7 @@ instance DecCBOR QueryPoolStateResult where
       QueryPoolStateResult {qpsrStakePoolParams, qpsrFutureStakePoolParams, qpsrRetiring, qpsrDeposits}
 
 mkQueryPoolStateResult ::
-  (forall x. Map.Map (KeyHash 'StakePool) x -> Map.Map (KeyHash 'StakePool) x) ->
+  (forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x) ->
   PState era ->
   QueryPoolStateResult
 mkQueryPoolStateResult f ps =
@@ -472,10 +472,10 @@ mkQueryPoolStateResult f ps =
 -- representation used by Ledger and is intended to resemble how the internal
 -- representation used to be.
 queryPoolState ::
-  EraCertState era => NewEpochState era -> Maybe (Set (KeyHash 'StakePool)) -> QueryPoolStateResult
+  EraCertState era => NewEpochState era -> Maybe (Set (KeyHash StakePool)) -> QueryPoolStateResult
 queryPoolState nes mPoolKeys =
   let pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
-      f :: forall x. Map.Map (KeyHash 'StakePool) x -> Map.Map (KeyHash 'StakePool) x
+      f :: forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x
       f = case mPoolKeys of
         Nothing -> id
         Just keys -> (`Map.restrictKeys` keys)
@@ -485,8 +485,8 @@ queryPoolState nes mPoolKeys =
 queryPoolParameters ::
   EraCertState era =>
   NewEpochState era ->
-  Set (KeyHash 'StakePool) ->
-  Map (KeyHash 'StakePool) StakePoolParams
+  Set (KeyHash StakePool) ->
+  Map (KeyHash StakePool) StakePoolParams
 queryPoolParameters nes poolKeys =
   let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
    in Map.mapWithKey stakePoolStateToStakePoolParams $ Map.restrictKeys pools poolKeys

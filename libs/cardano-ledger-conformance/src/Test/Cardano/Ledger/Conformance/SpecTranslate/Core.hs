@@ -242,23 +242,23 @@ instance SpecTranslate ctx TxAuxDataHash where
 instance SpecTranslate ctx CommitteeAuthorization where
   type
     SpecRep CommitteeAuthorization =
-      SpecRep (Maybe (Credential 'HotCommitteeRole))
+      SpecRep (Maybe (Credential HotCommitteeRole))
 
   toSpecRep (CommitteeHotCredential c) = toSpecRep $ Just c
   toSpecRep (CommitteeMemberResigned _) =
     toSpecRep $
-      Nothing @(Credential 'HotCommitteeRole)
+      Nothing @(Credential HotCommitteeRole)
 
 instance SpecTranslate ctx (CommitteeState era) where
   type
     SpecRep (CommitteeState era) =
-      SpecRep (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
+      SpecRep (Map (Credential ColdCommitteeRole) CommitteeAuthorization)
 
   toSpecRep = toSpecRep . csCommitteeCreds
 
 committeeCredentialToStrictMaybe ::
   CommitteeAuthorization ->
-  StrictMaybe (Credential 'HotCommitteeRole)
+  StrictMaybe (Credential HotCommitteeRole)
 committeeCredentialToStrictMaybe (CommitteeHotCredential c) = SJust c
 committeeCredentialToStrictMaybe (CommitteeMemberResigned _) = SNothing
 
@@ -268,6 +268,6 @@ instance SpecTranslate ctx IndividualPoolStake where
   toSpecRep (IndividualPoolStake _ c _) = toSpecRep c
 
 instance SpecTranslate ctx PoolDistr where
-  type SpecRep PoolDistr = Agda.HSMap (SpecRep (KeyHash 'StakePool)) Agda.Coin
+  type SpecRep PoolDistr = Agda.HSMap (SpecRep (KeyHash StakePool)) Agda.Coin
 
   toSpecRep (PoolDistr ps _) = toSpecRep ps

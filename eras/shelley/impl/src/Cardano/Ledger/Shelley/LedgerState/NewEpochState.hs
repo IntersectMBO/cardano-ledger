@@ -46,7 +46,7 @@ availableAfterMIR TreasuryMIR as ir =
 getGKeys ::
   EraCertState era =>
   NewEpochState era ->
-  Set (KeyHash 'Genesis)
+  Set (KeyHash GenesisRole)
 getGKeys nes = Map.keysSet $ unGenDelegs (ls ^. lsCertStateL . certDStateL . dsGenDelegsL)
   where
     NewEpochState _ _ _ es _ _ _ = nes
@@ -57,7 +57,7 @@ getGKeys nes = Map.keysSet $ unGenDelegs (ls ^. lsCertStateL . certDStateL . dsG
 genesisState ::
   forall era.
   (EraGov era, EraCertState era, EraStake era) =>
-  Map (KeyHash 'Genesis) GenDelegPair ->
+  Map (KeyHash GenesisRole) GenDelegPair ->
   UTxO era ->
   LedgerState era
 genesisState genDelegs0 utxo0 =

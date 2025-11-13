@@ -130,7 +130,7 @@ import NoThunks.Class (NoThunks (..))
 -- information as 'PoolParams' except for the pool ID, which is stored
 -- separately as the key in state maps.
 data StakePoolState = StakePoolState
-  { spsVrf :: !(VRFVerKeyHash 'StakePoolVRF)
+  { spsVrf :: !(VRFVerKeyHash StakePoolVRF)
   -- ^ VRF verification key hash for leader election
   , spsPledge :: !Coin
   -- ^ Pledge amount committed by the pool operator
@@ -140,7 +140,7 @@ data StakePoolState = StakePoolState
   -- ^ Pool profit margin (variable fee percentage)
   , spsRewardAccount :: !RewardAccount
   -- ^ Reward account for pool rewards
-  , spsOwners :: !(Set (KeyHash 'Staking))
+  , spsOwners :: !(Set (KeyHash Staking))
   -- ^ Set of stake key hashes that own this pool
   , spsRelays :: !(StrictSeq StakePoolRelay)
   -- ^ Network relay information for pool connectivity
@@ -148,12 +148,12 @@ data StakePoolState = StakePoolState
   -- ^ Optional metadata (URL and hash)
   , spsDeposit :: !(CompactForm Coin)
   -- ^ Deposit for each pool
-  , spsDelegators :: !(Set (Credential 'Staking))
+  , spsDelegators :: !(Set (Credential Staking))
   -- ^ Credentials that have delegated to the pool
   }
   deriving (Show, Generic, Eq, Ord, NoThunks, NFData, FromJSON, ToJSON)
 
-spsVrfL :: Lens' StakePoolState (VRFVerKeyHash 'StakePoolVRF)
+spsVrfL :: Lens' StakePoolState (VRFVerKeyHash StakePoolVRF)
 spsVrfL = lens spsVrf (\sps u -> sps {spsVrf = u})
 
 spsPledgeL :: Lens' StakePoolState Coin
@@ -168,7 +168,7 @@ spsMarginL = lens spsMargin $ \sps m -> sps {spsMargin = m}
 spsRewardAccountL :: Lens' StakePoolState RewardAccount
 spsRewardAccountL = lens spsRewardAccount $ \sps ra -> sps {spsRewardAccount = ra}
 
-spsOwnersL :: Lens' StakePoolState (Set (KeyHash 'Staking))
+spsOwnersL :: Lens' StakePoolState (Set (KeyHash Staking))
 spsOwnersL = lens spsOwners $ \sps s -> sps {spsOwners = s}
 
 spsRelaysL :: Lens' StakePoolState (StrictSeq StakePoolRelay)
@@ -180,7 +180,7 @@ spsMetadataL = lens spsMetadata $ \sps md -> sps {spsMetadata = md}
 spsDepositL :: Lens' StakePoolState (CompactForm Coin)
 spsDepositL = lens spsDeposit $ \sps d -> sps {spsDeposit = d}
 
-spsDelegatorsL :: Lens' StakePoolState (Set (Credential 'Staking))
+spsDelegatorsL :: Lens' StakePoolState (Set (Credential Staking))
 spsDelegatorsL = lens spsDelegators $ \sps delegators -> sps {spsDelegators = delegators}
 
 instance EncCBOR StakePoolState where
@@ -214,7 +214,7 @@ instance DecCBOR StakePoolState where
         <! From
 
 instance DecShareCBOR StakePoolState where
-  type Share StakePoolState = Interns (Credential 'Staking)
+  type Share StakePoolState = Interns (Credential Staking)
   decSharePlusCBOR =
     decodeRecordNamedT "StakePoolState" (const 10) $
       StakePoolState
@@ -248,7 +248,7 @@ instance Default StakePoolState where
 -- This is the primary way to create a 'StakePoolState' from registration
 -- or update parameters.
 mkStakePoolState ::
-  CompactForm Coin -> Set (Credential 'Staking) -> StakePoolParams -> StakePoolState
+  CompactForm Coin -> Set (Credential Staking) -> StakePoolParams -> StakePoolState
 mkStakePoolState deposit delegators spp =
   StakePoolState
     { spsVrf = sppVrf spp
@@ -266,7 +266,7 @@ mkStakePoolState deposit delegators spp =
 -- | Convert 'StakePoolState' back to 'StakePoolParams' by providing the pool ID.
 -- This is useful when you need to reconstruct the full parameters from
 -- the state representation.
-stakePoolStateToStakePoolParams :: KeyHash 'StakePool -> StakePoolState -> StakePoolParams
+stakePoolStateToStakePoolParams :: KeyHash StakePool -> StakePoolState -> StakePoolParams
 stakePoolStateToStakePoolParams poolId sps =
   StakePoolParams
     { sppId = poolId
@@ -409,13 +409,13 @@ instance DecCBOR StakePoolRelay where
 
 -- | A stake pool.
 data StakePoolParams = StakePoolParams
-  { sppId :: !(KeyHash 'StakePool)
-  , sppVrf :: !(VRFVerKeyHash 'StakePoolVRF)
+  { sppId :: !(KeyHash StakePool)
+  , sppVrf :: !(VRFVerKeyHash StakePoolVRF)
   , sppPledge :: !Coin
   , sppCost :: !Coin
   , sppMargin :: !UnitInterval
   , sppRewardAccount :: !RewardAccount
-  , sppOwners :: !(Set (KeyHash 'Staking))
+  , sppOwners :: !(Set (KeyHash Staking))
   , sppRelays :: !(StrictSeq StakePoolRelay)
   , sppMetadata :: !(StrictMaybe PoolMetadata)
   }
@@ -423,7 +423,7 @@ data StakePoolParams = StakePoolParams
   deriving (EncCBOR) via CBORGroup StakePoolParams
   deriving (DecCBOR) via CBORGroup StakePoolParams
 
-sppVrfL :: Lens' StakePoolParams (VRFVerKeyHash 'StakePoolVRF)
+sppVrfL :: Lens' StakePoolParams (VRFVerKeyHash StakePoolVRF)
 sppVrfL = lens sppVrf (\spp u -> spp {sppVrf = u})
 
 sppCostL :: Lens' StakePoolParams Coin
@@ -470,13 +470,13 @@ instance FromJSON StakePoolParams where
 type PoolParams = StakePoolParams
 
 pattern PoolParams ::
-  KeyHash 'StakePool ->
-  VRFVerKeyHash 'StakePoolVRF ->
+  KeyHash StakePool ->
+  VRFVerKeyHash StakePoolVRF ->
   Coin ->
   Coin ->
   UnitInterval ->
   RewardAccount ->
-  Set (KeyHash 'Staking) ->
+  Set (KeyHash Staking) ->
   StrictSeq StakePoolRelay ->
   StrictMaybe PoolMetadata ->
   PoolParams

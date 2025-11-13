@@ -276,7 +276,7 @@ data Delta era = Delta
   , extraInputs :: Set.Set TxIn
   , extraWitnesses :: TxWits era
   , change :: TxOut era
-  , deltaVKeys :: [KeyPair 'Witness]
+  , deltaVKeys :: [KeyPair Witness]
   , deltaScripts :: [(Script era, Script era)]
   }
 
@@ -491,7 +491,7 @@ applyDelta ::
   UTxO era ->
   ScriptInfo era ->
   PParams era ->
-  [KeyPair 'Witness] ->
+  [KeyPair Witness] ->
   Map ScriptHash (Script era) ->
   KeySpace c era ->
   Tx TopTx era ->
@@ -546,7 +546,7 @@ converge ::
   (EraGen era, EraUTxO era) =>
   ScriptInfo era ->
   Coin ->
-  [KeyPair 'Witness] ->
+  [KeyPair Witness] ->
   Map ScriptHash (Script era) ->
   KeyPairs ->
   [(Script era, Script era)] ->
@@ -643,9 +643,9 @@ mkTxWits ::
   forall era.
   EraGen era =>
   (UTxO era, TxBody TopTx era, ScriptInfo era) ->
-  Map (KeyHash 'Payment) (KeyPair 'Payment) ->
-  Map (KeyHash 'Staking) (KeyPair 'Staking) ->
-  [KeyPair 'Witness] ->
+  Map (KeyHash Payment) (KeyPair Payment) ->
+  Map (KeyHash Staking) (KeyPair Staking) ->
+  [KeyPair Witness] ->
   Map ScriptHash (Script era) ->
   SafeHash EraIndependentTxBody ->
   TxWits era
@@ -722,13 +722,13 @@ genInputs ::
   forall era.
   EraTxOut era =>
   (Int, Int) ->
-  Map (KeyHash 'Payment) (KeyPair 'Payment) ->
+  Map (KeyHash Payment) (KeyPair Payment) ->
   Map ScriptHash (Script era, Script era) ->
   UTxO era ->
   Gen
     ( [TxIn]
     , Value era
-    , ([KeyPair 'Witness], [(Script era, Script era)])
+    , ([KeyPair Witness], [(Script era, Script era)])
     )
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   numInputs <- QC.choose (minNumGenInputs, maxNumGenInputs)
@@ -753,11 +753,11 @@ genWithdrawals ::
   forall era.
   Constants ->
   Map ScriptHash (Script era, Script era) ->
-  Map (KeyHash 'Staking) (KeyPair 'Staking) ->
-  Map (Credential 'Staking) Coin ->
+  Map (KeyHash Staking) (KeyPair Staking) ->
+  Map (Credential Staking) Coin ->
   Gen
     ( [(RewardAccount, Coin)]
-    , ([KeyPair 'Witness], [(Script era, Script era)])
+    , ([KeyPair Witness], [(Script era, Script era)])
     )
 genWithdrawals
   Constants
@@ -800,9 +800,9 @@ genWithdrawals
 mkWithdrawalsWits ::
   forall era.
   Map ScriptHash (Script era, Script era) ->
-  Map (KeyHash 'Staking) (KeyPair 'Staking) ->
-  Credential 'Staking ->
-  Either (KeyPair 'Witness) (Script era, Script era)
+  Map (KeyHash Staking) (KeyPair Staking) ->
+  Credential Staking ->
+  Either (KeyPair Witness) (Script era, Script era)
 mkWithdrawalsWits scriptsByStakeHash _ c@(ScriptHashObj _) =
   Right $
     findStakeScriptFromCred @era (asWitness c) scriptsByStakeHash
@@ -842,9 +842,9 @@ genRecipients nRecipients' keys scripts = do
       stakeScripts = mkCredential . hashScript . snd <$> recipientScripts
 
   -- zip keys and scripts together as base addresses
-  let payCreds :: [Credential 'Payment]
+  let payCreds :: [Credential Payment]
       payCreds = payKeys ++ payScripts
-      stakeCreds :: [Credential 'Staking]
+      stakeCreds :: [Credential Staking]
       stakeCreds = stakeKeys ++ stakeScripts
 
   return (zipWith mkAddr payCreds stakeCreds)

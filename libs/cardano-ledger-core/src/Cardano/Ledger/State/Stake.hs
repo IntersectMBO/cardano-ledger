@@ -56,7 +56,7 @@ class
   , ToJSON (InstantStake era)
   , EncCBOR (InstantStake era)
   , DecShareCBOR (InstantStake era)
-  , Share (InstantStake era) ~ Interns (Credential 'Staking)
+  , Share (InstantStake era) ~ Interns (Credential Staking)
   ) =>
   EraStake era
   where
@@ -67,7 +67,7 @@ class
   -- all the active stake.
   type InstantStake era = (r :: Type) | r -> era
 
-  instantStakeCredentialsL :: Lens' (InstantStake era) (Map (Credential 'Staking) (CompactForm Coin))
+  instantStakeCredentialsL :: Lens' (InstantStake era) (Map (Credential Staking) (CompactForm Coin))
 
   -- | Add new UTxO to the `InstantStake`. This is invoked for every new TxOut that is added to the
   -- ledger state
@@ -97,10 +97,10 @@ snapShotFromInstantStake iStake dState PState {psStakePools} =
   where
     accounts = dsAccounts dState
     keepAndCountDelegations ::
-      Credential 'Staking ->
+      Credential Staking ->
       AccountState era ->
-      ([(Credential 'Staking, KeyHash 'StakePool)], Int) ->
-      ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+      ([(Credential Staking, KeyHash StakePool)], Int) ->
+      ([(Credential Staking, KeyHash StakePool)], Int)
     keepAndCountDelegations cred accountState acc@(!delegs, !count) =
       case accountState ^. stakePoolDelegationAccountStateL of
         Nothing -> acc
@@ -125,7 +125,7 @@ resolveActiveInstantStakeCredentials ::
   EraStake era =>
   InstantStake era ->
   Accounts era ->
-  Map (Credential 'Staking) (CompactForm Coin)
+  Map (Credential Staking) (CompactForm Coin)
 resolveActiveInstantStakeCredentials instantStake accounts =
   Map.merge
     Map.dropMissing -- ignore non-registered stake credentials

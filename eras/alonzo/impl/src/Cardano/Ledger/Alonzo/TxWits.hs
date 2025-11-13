@@ -229,7 +229,7 @@ emptyRedeemers = Redeemers mempty
 --    earlier Eras: Byron, Mary, Allegra
 -- So logically things look like this
 --   data AlonzoTxWits = AlonzoTxWits
---      (Set (WitVKey 'Witness (Crypto era)))
+--      (Set (WitVKey Witness (Crypto era)))
 --      (Set (BootstrapWitness (Crypto era)))
 --      (Map (ScriptHash (Crypto era)) (Script era))
 --      (TxDats era)
@@ -237,7 +237,7 @@ emptyRedeemers = Redeemers mempty
 
 -- | Internal 'AlonzoTxWits' type, lacking serialised bytes.
 data AlonzoTxWitsRaw era = AlonzoTxWitsRaw
-  { atwrAddrTxWits :: !(Set (WitVKey 'Witness))
+  { atwrAddrTxWits :: !(Set (WitVKey Witness))
   , atwrBootAddrTxWits :: !(Set BootstrapWitness)
   , atwrScriptTxWits :: !(Map ScriptHash (Script era))
   , atwrDatsTxWits :: !(TxDats era)
@@ -368,7 +368,7 @@ deriving newtype instance AlonzoEraScript era => NoThunks (AlonzoTxWits era)
 pattern AlonzoTxWits ::
   forall era.
   AlonzoEraScript era =>
-  Set (WitVKey 'Witness) ->
+  Set (WitVKey Witness) ->
   Set BootstrapWitness ->
   Map ScriptHash (Script era) ->
   TxDats era ->
@@ -389,7 +389,7 @@ pattern AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
 addrAlonzoTxWitsL ::
   forall era.
   AlonzoEraScript era =>
-  Lens' (AlonzoTxWits era) (Set (WitVKey 'Witness))
+  Lens' (AlonzoTxWits era) (Set (WitVKey Witness))
 addrAlonzoTxWitsL =
   lensMemoRawType @era atwrAddrTxWits $
     \witsRaw addrWits -> witsRaw {atwrAddrTxWits = addrWits}
@@ -502,7 +502,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
       encodePlutus ::
         PlutusLanguage l =>
         SLanguage l ->
-        Encode ('Closed 'Dense) (Map.Map ScriptHash (Plutus l))
+        Encode (Closed Dense) (Map.Map ScriptHash (Plutus l))
       encodePlutus slang =
         E
           (encodeWithSetTag . encCBOR . map plutusBinary . Map.elems)
@@ -651,7 +651,7 @@ addScriptsTxWitsRaw scriptWitnesses txWits =
 decodeAlonzoPlutusScript ::
   (AlonzoEraScript era, PlutusLanguage l) =>
   SLanguage l ->
-  Decode ('Closed 'Dense) (Map ScriptHash (Script era))
+  Decode (Closed Dense) (Map ScriptHash (Script era))
 decodeAlonzoPlutusScript slang =
   D $
     ifDecoderVersionAtLeast

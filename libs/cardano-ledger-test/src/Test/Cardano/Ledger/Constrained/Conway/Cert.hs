@@ -57,7 +57,7 @@ certEnvSpec _univ =
 delegateeSpec ::
   Era era =>
   WitUniv era ->
-  Specification (Set (Credential 'DRepRole))
+  Specification (Set (Credential DRepRole))
 delegateeSpec univ = constrained $ \x ->
   [ witness univ x
   , assert $ sizeOf_ x <=. 20
@@ -68,7 +68,7 @@ shelleyCertStateSpec ::
   forall era.
   (EraSpecDeleg era, EraCertState era) =>
   WitUniv era ->
-  Set (Credential 'DRepRole) ->
+  Set (Credential DRepRole) ->
   Map RewardAccount Coin ->
   Specification (ShelleyCertState era)
 shelleyCertStateSpec univ _delegatees wdrls =
@@ -82,7 +82,7 @@ conwayCertStateSpec ::
   forall era.
   (EraSpecDeleg era, EraCertState era, ConwayEraCertState era) =>
   WitUniv era ->
-  Set (Credential 'DRepRole) ->
+  Set (Credential DRepRole) ->
   Map RewardAccount Coin ->
   Specification (ConwayCertState era)
 conwayCertStateSpec univ delegatees wdrls =
@@ -138,8 +138,8 @@ genesisDelegCertSpec ds =
 --   This mimics what happens in the Cardano.Ledger.Shelley.Rules.Deleg module
 computeSets ::
   DState era ->
-  ( KeyHash 'Genesis -> Set (VRFVerKeyHash 'GenDelegVRF)
-  , KeyHash 'Genesis -> Set (KeyHash 'GenesisDelegate)
+  ( KeyHash GenesisRole -> Set (VRFVerKeyHash GenDelegVRF)
+  , KeyHash GenesisRole -> Set (KeyHash GenesisDelegate)
   )
 computeSets ds =
   let genDelegs = unGenDelegs (dsGenDelegs ds)
@@ -196,7 +196,7 @@ class
   txCertKey :: TxCert era -> CertKey
   certStateSpec ::
     WitUniv era ->
-    Set (Credential 'DRepRole) ->
+    Set (Credential DRepRole) ->
     Map RewardAccount Coin ->
     Specification (CertState era)
 
@@ -234,11 +234,11 @@ instance EraSpecCert ConwayEra where
 --   certificates use different kinds of Keys, that allows us to use one
 --   type to represent all kinds of keys (Similar to DepositPurpose)
 data CertKey
-  = StakeKey !(Credential 'Staking)
-  | PoolKey !(KeyHash 'StakePool)
-  | DRepKey !(Credential 'DRepRole)
-  | ColdKey !(Credential 'ColdCommitteeRole)
-  | GenesisKey !(KeyHash 'Genesis)
+  = StakeKey !(Credential Staking)
+  | PoolKey !(KeyHash StakePool)
+  | DRepKey !(Credential DRepRole)
+  | ColdKey !(Credential ColdCommitteeRole)
+  | GenesisKey !(KeyHash GenesisRole)
   | MirKey !MIRPot
   deriving (Eq, Show, Ord)
 

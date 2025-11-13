@@ -73,10 +73,10 @@ data AllegraUtxoPredFailure era
   | OutsideValidityIntervalUTxO
       ValidityInterval -- transaction's validity interval
       SlotNo -- current slot
-  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Word32)
+  | MaxTxSizeUTxO (Mismatch RelLTEQ Word32)
   | InputSetEmptyUTxO
-  | FeeTooSmallUTxO (Mismatch 'RelGTEQ Coin)
-  | ValueNotConservedUTxO (Mismatch 'RelEQ (Value era)) -- Consumed, then produced
+  | FeeTooSmallUTxO (Mismatch RelGTEQ Coin)
+  | ValueNotConservedUTxO (Mismatch RelEQ (Value era)) -- Consumed, then produced
   | WrongNetwork
       Network -- the expected network id
       (Set Addr) -- the set of addresses with incorrect network IDs

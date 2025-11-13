@@ -47,7 +47,7 @@ data ShelleyAccountState era
   -- ^ Current balance of the account
   , sasDeposit :: {-# UNPACK #-} !(CompactForm Coin)
   -- ^ Deposit amount that was left when staking credential was registered
-  , sasStakePoolDelegation :: !(StrictMaybe (KeyHash 'StakePool))
+  , sasStakePoolDelegation :: !(StrictMaybe (KeyHash StakePool))
   -- ^ Potential delegation to a stake pool
   }
   deriving (Show, Eq, Generic)
@@ -69,7 +69,7 @@ instance EncCBOR (ShelleyAccountState era) where
 instance Typeable era => DecShareCBOR (ShelleyAccountState era) where
   type
     Share (ShelleyAccountState era) =
-      (Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
+      (Interns (KeyHash StakePool), Interns (Credential DRepRole))
   decShareCBOR (ks, _) =
     decodeRecordNamed "ShelleyAccountState" (const 4) $
       ShelleyAccountState
@@ -91,9 +91,9 @@ instance ToKeyValuePairs (ShelleyAccountState era) where
 deriving via KeyValuePairs (ShelleyAccountState era) instance ToJSON (ShelleyAccountState era)
 
 data ShelleyAccounts era = ShelleyAccounts
-  { saStates :: !(Map (Credential 'Staking) (ShelleyAccountState era))
+  { saStates :: !(Map (Credential Staking) (ShelleyAccountState era))
   -- ^ Map from a staking credential to the account state.
-  , saPtrs :: !(Map Ptr (Credential 'Staking))
+  , saPtrs :: !(Map Ptr (Credential Staking))
   -- ^ A Map from a pointer, to the staking credential. Pointer points to the certificate which
   -- registered the staking credential.
   }
@@ -112,7 +112,7 @@ instance EncCBOR (ShelleyAccounts era) where
 instance Typeable era => DecShareCBOR (ShelleyAccounts era) where
   type
     Share (ShelleyAccounts era) =
-      (Interns (Credential 'Staking), Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
+      (Interns (Credential Staking), Interns (KeyHash StakePool), Interns (Credential DRepRole))
   decSharePlusCBOR =
     StateT
       ( \(a, b, c) ->
@@ -172,14 +172,14 @@ class EraAccounts era => ShelleyEraAccounts era where
 
   -- | This lens is explicitely not exported, since it is not safe to overwrite pointers
   -- directly. For accessing this Map use `accountsPtrsMapG` instead.
-  accountsPtrsMapL :: Lens' (Accounts era) (Map Ptr (Credential 'Staking))
+  accountsPtrsMapL :: Lens' (Accounts era) (Map Ptr (Credential Staking))
   default accountsPtrsMapL ::
     Accounts era ~ ShelleyAccounts era =>
-    Lens' (Accounts era) (Map Ptr (Credential 'Staking))
+    Lens' (Accounts era) (Map Ptr (Credential Staking))
   accountsPtrsMapL = lens saPtrs $ \as ptrsMap -> as {saPtrs = ptrsMap}
 
   -- | Get the map with all of the pointers and their respective credentials.
-  accountsPtrsMapG :: SimpleGetter (Accounts era) (Map Ptr (Credential 'Staking))
+  accountsPtrsMapG :: SimpleGetter (Accounts era) (Map Ptr (Credential Staking))
   accountsPtrsMapG = accountsPtrsMapL
 
   -- | This is a getter for a `Ptr`. It is not a full lens, because it is not only unsafe to modify
@@ -205,12 +205,12 @@ shelleyAddAccountState cred accountState accounts =
 
 registerShelleyAccount ::
   ShelleyEraAccounts era =>
-  Credential 'Staking ->
+  Credential Staking ->
   -- | Pointer to the certificate that registered the credential
   Ptr ->
   -- | Deposit
   CompactForm Coin ->
-  Maybe (KeyHash 'StakePool) ->
+  Maybe (KeyHash StakePool) ->
   Accounts era ->
   Accounts era
 registerShelleyAccount cred ptr deposit mStakePool = addAccountState cred accountState
@@ -221,7 +221,7 @@ registerShelleyAccount cred ptr deposit mStakePool = addAccountState cred accoun
 unregisterShelleyAccount ::
   ShelleyEraAccounts era =>
   -- | Credential to unregister
-  Credential 'Staking ->
+  Credential Staking ->
   -- | `Accounts` to remove the account state from
   Accounts era ->
   -- | Returns `Just` whenever account was registered and `Nothing` otherwise. Produced `Accounts`

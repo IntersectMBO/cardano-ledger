@@ -544,7 +544,7 @@ testBBodyState =
           (inject $ Coin 3000)
           & dataHashTxOutL .~ SJust (hashData $ anotherDatum @era)
       timelockOut = mkBasicTxOut timelockAddr . inject $ Coin 1
-      timelockAddr = mkAddr timelockHash $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
+      timelockAddr = mkAddr timelockHash $ mkKeyPair' @Staking (RawSeed 0 0 0 0 2)
         where
           timelockHash =
             hashScript . fromNativeScript @era $
@@ -582,7 +582,7 @@ makeTooBig =
   injectFailure @"BBODY" @_ @era $
     PoolMedataHashTooBig (coerceKeyRole . hashKey $ vKey someKeys) (standardHashSize + 1)
 
-coldKeys :: KeyPair 'BlockIssuer
+coldKeys :: KeyPair BlockIssuer
 coldKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 2 3 2 1)

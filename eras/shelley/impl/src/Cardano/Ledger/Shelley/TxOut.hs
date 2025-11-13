@@ -168,7 +168,7 @@ instance
   ) =>
   DecShareCBOR (ShelleyTxOut era)
   where
-  type Share (ShelleyTxOut era) = Interns (Credential 'Staking)
+  type Share (ShelleyTxOut era) = Interns (Credential Staking)
   decShareCBOR _ = do
     peekTokenType >>= \case
       TypeBytes -> decodeMemPack

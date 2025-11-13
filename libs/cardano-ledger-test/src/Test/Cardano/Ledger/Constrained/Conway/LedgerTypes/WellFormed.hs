@@ -95,7 +95,7 @@ utxoX = do
   univ <- genWitUniv @era 50
   cs <-
     genFromSpec
-      @(Map (Credential 'Staking) (KeyHash 'StakePool))
+      @(Map (Credential Staking) (KeyHash StakePool))
       (hasSize (rangeSize 30 30))
   genFromSpec @(UTxO era) (utxoSpecWit @era univ (lit cs))
 

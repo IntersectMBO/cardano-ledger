@@ -48,7 +48,7 @@ theKeyHash n = hashKey (theVKey n)
 theWitVKey ::
   Int ->
   SafeHash EraIndependentTxBody ->
-  WitVKey 'Witness
+  WitVKey Witness
 theWitVKey n hash = mkWitnessVKey hash (theKeyPair n)
 
 theKeyHashObj :: Int -> Credential kr

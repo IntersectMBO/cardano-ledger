@@ -27,14 +27,14 @@ Rewards are paid at each epoch boundary. An epoch is roughly 5 days, so rewards 
 What data must be available to compute rewards.
 
 1. The UTxO. Each `UTxO` entry records 
-      - The entry owner. This is a Haskell datatype (Credential 'Staking), which is a cryptographic hash of the owner's identity
+      - The entry owner. This is a Haskell datatype (Credential Staking), which is a cryptographic hash of the owner's identity
       - The amount of the entry in Coin. This is always non-zero and positive.
       - Staking information about which Pool (if any) the UTxO entry is delegated to. This may be deliberately left blank, or it is
         a Haskell datatype (KeyHash 'Pool), which is another cryptographic hash, this time of the Pool owner's identity
       - Other information not related to the Reward calculation
 
 2. Information about which staking credentials are registered to participate in staking, and which Pool they delegate to.
-This is a Haskell Datatype (Map (Credential 'Staking)  (KeyHash StakePool)), which we will call the `stakeDelegationMap`.
+This is a Haskell Datatype (Map (Credential Staking)  (KeyHash StakePool)), which we will call the `stakeDelegationMap`.
 Only registered credentials will receive rewards.
 
 3. Information about which pool operators are currently registered to operate pools, and the parameters under which the pools operate.
@@ -50,14 +50,14 @@ how it might be computed in the ShelleyEra. Other eras would be very similar, bu
 fields than just the Addr and Coin.
 
 
-1. Aggregate the total `Coin` in the `UTxO` for each (Credential 'Staking) that appears somewhere in the UTxO, resulting in
-a (Map (Credential 'Staking) Coin). This only requires the UTxO. At this point we do not care if the Credential is registered
+1. Aggregate the total `Coin` in the `UTxO` for each (Credential Staking) that appears somewhere in the UTxO, resulting in
+a (Map (Credential Staking) Coin). This only requires the UTxO. At this point we do not care if the Credential is registered
 in the `stakeDelegationMap` . We call this the `aggregateStakeMap` .
 
 ```
 -- | Loop through all the TxOut in the UTxO, if the Addr in the TxOut has a `StakeRefBase` credential
 --   then add the (cred,coin) pair to the answer map.
-aggregateStakeMap :: UTxO ShelleyEra -> Map (Credential 'Staking) Coin
+aggregateStakeMap :: UTxO ShelleyEra -> Map (Credential Staking) Coin
 aggregateStakeMap (UTxO utxoMap) = loop (Map.toList utxoMap) Map.empty
   where loop ((_,ShelleyTxOut @ShelleyEra (Addr _network _payCred stakeRef) coin):more) aggrAns =
            case stakeRef of
@@ -68,7 +68,7 @@ aggregateStakeMap (UTxO utxoMap) = loop (Map.toList utxoMap) Map.empty
 
 
 2. For each pool operator compute the set of Credentials that delegate stake to that pool, resulting in
-a (Map (KeyHash 'StakePool) (Set (Credential 'Staking))). This requires the UTxO and the stakeDelegationMap. 
+a (Map (KeyHash StakePool) (Set (Credential Staking))). This requires the UTxO and the stakeDelegationMap. 
 At this point we don't care if the pool is registered in the `poolParamsNap`. This is called the `whoPaysMap`.
 
 ```
@@ -76,8 +76,8 @@ At this point we don't care if the pool is registered in the `poolParamsNap`. Th
 --   then lookup if that credential delegates to some Pool, if it does, add the credential 
 --   to the answer map for that Pool.
 whoPaysMap :: UTxO ShelleyEra -> 
-              Map (Credential 'Staking) (KeyHash StakePool) -> 
-              Map (KeyHash 'StakePool) (Set (Credential 'Staking))
+              Map (Credential Staking) (KeyHash StakePool) -> 
+              Map (KeyHash StakePool) (Set (Credential Staking))
 whoPaysMap (UTxO utxoMap) stakeDelegationMap = loop (Map.toList utxoMap) Map.empty
   where loop ((_,ShelleyTxOut @ShelleyEra (Addr _network _payCred stakeRef) coin):more) aggrAns =
            case stakeRef of
@@ -89,13 +89,13 @@ whoPaysMap (UTxO utxoMap) stakeDelegationMap = loop (Map.toList utxoMap) Map.emp
 ```        
 
 3. Aggregate the total Coin delegated by registered credentials to each registered Pool, resulting in 
-(Map (KeyHash 'StakePool) Coin). This requires the results from steps 1 and 2. This is called the `stakeDistributionMap`.
+(Map (KeyHash StakePool) Coin). This requires the results from steps 1 and 2. This is called the `stakeDistributionMap`.
 This will not be used in the rest of the Reward calculation, but will be used to compute the ercentage of stake controlled by each pool, to choose Pools to make blocks in a following epoch.
 
 ```
-stakeDistrMap :: Map (KeyHash 'StakePool) (Set (Credential 'Staking)) -> 
-                 Map (Credential 'Staking) Coin -> 
-                 Map (KeyHash 'StakePool) Coin
+stakeDistrMap :: Map (KeyHash StakePool) (Set (Credential Staking)) -> 
+                 Map (Credential Staking) Coin -> 
+                 Map (KeyHash StakePool) Coin
 stakeDistrMap whoPaysMap aggregateStakeMap = Map.map setCredToCoin whoPaysMap
    where setCredToCoin :: Set (Credential Staking) -> Coin
          setCredToCoin set = loop (Set.toList set) (Coin 0)
@@ -108,7 +108,7 @@ stakeDistrMap whoPaysMap aggregateStakeMap = Map.map setCredToCoin whoPaysMap
 
 4. For each Pool in the domain of `whoPaysMap`, and each Credential in the range, compute a Reward owed to that Credential by that Pool,
 resulting in (Set Reward). This requires the `whoPaysMap` the `poolParamMap`, the `stakeDelegationMap`, and the `aggregateStakeMap`, because the amount in the reward depends on the PoolParameters of the Pool and the Coin amount delegated by that Credential to that Pool. We must also check
-that each (Credential 'Staking) and (KeyHash 'StakePool) are currently registered, to make a valid Reward.
+that each (Credential Staking) and (KeyHash StakePool) are currently registered, to make a valid Reward.
 [Source code for computing a Reward from Coin and PoolParam values.](https://github.com/IntersectMBO/cardano-ledger/blob/a7fb33a2b2922933eb6dd7e2420363291f6d4903/eras/shelley/impl/src/Cardano/Ledger/Shelley/Rewards.hs#L260)  
 [Source code for `rewardStakePoolMember`](https://github.com/IntersectMBO/cardano-ledger/blob/a7fb33a2b2922933eb6dd7e2420363291f6d4903/eras/shelley/impl/src/Cardano/Ledger/Shelley/RewardUpdate.hs#L251)
 
@@ -159,27 +159,27 @@ the amount of money in a bank deposit. Here are the basic data structures that e
 mkBasicTxOut :: Addr -> Value era -> TxOut era
 
 data StakeReference
-  = StakeRefBase !(Credential 'Staking)
+  = StakeRefBase !(Credential Staking)
   | StakeRefPtr !Ptr  -- Ptr are no longer allowed in the Conway and later Eras
   | StakeRefNull
 
 
 data Addr
-  = Addr Network (Credential 'Payment) StakeReference
+  = Addr Network (Credential Payment) StakeReference
   | AddrBootstrap BootstrapAddress  
        -- `AddrBootstrap` has an implicit `StakeRefNull` StakeReference
        -- No (Credential `Staking) are delegated in a AddrBootstrap
 
 data RewardAccount = RewardAccount
   { raNetwork :: !Network
-  , raCredential :: !(Credential 'Staking)
+  , raCredential :: !(Credential Staking)
   }
 
 ```  
 
-In order for rewards to be paid, the (Credential 'Staking) must be associated with two things
+In order for rewards to be paid, the (Credential Staking) must be associated with two things
 
-1. A `(KeyHash 'StakePool)`. The hash of the entity that will pay the reward
+1. A `(KeyHash StakePool)`. The hash of the entity that will pay the reward
 2. A `RewardAccount`. Information about where to store the reward
 
 The `StakePool` must also be associated with a Pool operator for rewards to be paid.
@@ -191,9 +191,9 @@ The actual values are stored in internal maps found in the type family `CertStat
 
 ```
 
-Map (Credential 'Staking) (StrictMaybe (KeyHash 'StakePool)) -- The User registration map
-Map (Credential 'Staking) Coin                               -- The User Rewards map
-Map (KeyHash 'StakePool) PoolParams                          -- The StakePool registration map
+Map (Credential Staking) (StrictMaybe (KeyHash StakePool)) -- The User registration map
+Map (Credential Staking) Coin                               -- The User Rewards map
+Map (KeyHash StakePool) PoolParams                          -- The StakePool registration map
 ```
 
 A `Reward` contains information about a computed reward, that has yet to be applied to the internal Rewards map.
@@ -204,7 +204,7 @@ data RewardType = MemberReward   -- A User
   
 data Reward = Reward
   { rewardType :: !RewardType              -- to be paid to a User or a StakePool operator
-  , rewardPool :: !(KeyHash 'StakePool)    -- which Stakepool operator will pay this reward
+  , rewardPool :: !(KeyHash StakePool)    -- which Stakepool operator will pay this reward
   , rewardAmount :: !Coin                  -- the amount of the reward.
   }
 ```  
@@ -214,24 +214,24 @@ The Reward calculation has several parts
 1. Sum the total `Coin` for each unique `StakeReference` in the `UTxO`
 
     ```
-    UTxO era -> Map (Credential 'Staking) Coin
+    UTxO era -> Map (Credential Staking) Coin
     ```
 
 2. For each `StakePool` compute the set of `StakeReference` that delegate stake to that pool.
 
     ```
-    Map (KeyHash 'StakePool) (Set (Credential 'Staking))
+    Map (KeyHash StakePool) (Set (Credential Staking))
     ```
 
 3. For each pool and each stake reference to that pool, compute a `Reward` for that reference
 
     ```
-    Map (Credential 'Staking) (Set Reward)
+    Map (Credential Staking) (Set Reward)
 
 4. Pay the rewards for every pool and stake reference
    
     ```
-    Map (Credential 'Staking) (Set Reward) -> EpochState era -> EpochState era
+    Map (Credential Staking) (Set Reward) -> EpochState era -> EpochState era
     ````
 
 ## What makes it complicated and hard
@@ -250,7 +250,7 @@ In order to address this problem the reward calculation uses several strategies.
 1. Use incremental computation to compute the changes to the UTxO and total coin for each StakeReference 
 in lock step, so step one is not necessary. We call this the "InstantStake" calculation, as it computes
 two different things (both stored in the UTxOState) simultaneously 
-     - The InstantStake `(Map (Credential 'Staking) Coin)
+     - The InstantStake `(Map (Credential Staking) Coin)
      - The UTxO
 
 There are strong invariants that must be maintained between these two maps.   
@@ -272,7 +272,7 @@ We look closely at each of these strategies in turn, studying the data structure
 
 ## The InstantStake strategy.
 
-This strategy computes the InstantStake `(Map (Credential 'Staking) Coin)` and the `UTxO` simultaneously.
+This strategy computes the InstantStake `(Map (Credential Staking) Coin)` and the `UTxO` simultaneously.
 It is an instance of incremental computation, as the InstantStake is a pure function of the `UTxO`.
 It works by observing every change to the `UTxO`, and if that change could alter the `InstantStake`, it makes
 corresponding changes to the InstantStake that keep the two in lockstep. The `UTxO` and the `InstantStake` are 
@@ -362,7 +362,7 @@ later, when we know what the address the `Ptr` points to.
 
 ```
 data ShelleyInstantStake era = ShelleyInstantStake
-  { sisCredentialStake :: !(Map.Map (Credential 'Staking) (CompactForm Coin))
+  { sisCredentialStake :: !(Map.Map (Credential Staking) (CompactForm Coin))
   , sisPtrStake :: !(Map.Map Ptr (CompactForm Coin))
   }
 ```  
@@ -436,7 +436,7 @@ is simpler, since it does not need the Map of `Ptrs` that need to be resolved.
 
 ```
 newtype ConwayInstantStake era = ConwayInstantStake
-  { cisCredentialStake :: Map.Map (Credential 'Staking) (CompactForm Coin)
+  { cisCredentialStake :: Map.Map (Credential Staking) (CompactForm Coin)
   }
 ```
 
@@ -533,12 +533,12 @@ is `RewardAns` which has two maps as components
 
 
 ```
-type RewardEvent = Map (Credential 'Staking) (Set Reward)
+type RewardEvent = Map (Credential Staking) (Set Reward)
 
 -- | The result of reward calculation is a pair of aggregate Maps.
 --   One for the accumulated answer, and one for the answer since the last pulse
 data RewardAns = RewardAns
-  { accumRewardAns :: !(Map (Credential 'Staking) Reward)
+  { accumRewardAns :: !(Map (Credential Staking) Reward)
   , recentRewardAns :: !RewardEvent
   }
 ```
@@ -560,7 +560,7 @@ data RewardPulser (m :: Type -> Type) ans where
     (ans ~ RewardAns, m ~ ShelleyBase) =>
     !Int ->
     !FreeVars ->
-    !(VMap.VMap VMap.VB VMap.VP (Credential 'Staking) (CompactForm Coin)) ->
+    !(VMap.VMap VMap.VB VMap.VP (Credential Staking) (CompactForm Coin)) ->
     !ans ->
     RewardPulser m ans
 

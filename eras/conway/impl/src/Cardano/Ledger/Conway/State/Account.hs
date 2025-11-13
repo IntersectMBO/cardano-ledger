@@ -48,7 +48,7 @@ data ConwayAccountState era
   -- ^ Current balance of the account
   , casDeposit :: {-# UNPACK #-} !(CompactForm Coin)
   -- ^ Deposit amount that was left when staking credential was registered
-  , casStakePoolDelegation :: !(StrictMaybe (KeyHash 'StakePool))
+  , casStakePoolDelegation :: !(StrictMaybe (KeyHash StakePool))
   -- ^ Potential delegation to a stake pool
   , casDRepDelegation :: !(StrictMaybe DRep)
   -- ^ Potential delegation to a DRep
@@ -72,7 +72,7 @@ instance EncCBOR (ConwayAccountState era) where
 instance Typeable era => DecShareCBOR (ConwayAccountState era) where
   type
     Share (ConwayAccountState era) =
-      (Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
+      (Interns (KeyHash StakePool), Interns (Credential DRepRole))
   decShareCBOR (ks, cd) =
     decodeRecordNamed "ConwayAccountState" (const 4) $
       ConwayAccountState
@@ -94,7 +94,7 @@ instance ToKeyValuePairs (ConwayAccountState era) where
 deriving via KeyValuePairs (ConwayAccountState era) instance ToJSON (ConwayAccountState era)
 
 newtype ConwayAccounts era = ConwayAccounts
-  { caStates :: Map (Credential 'Staking) (ConwayAccountState era)
+  { caStates :: Map (Credential Staking) (ConwayAccountState era)
   -- ^ Map from a staking credential to the account state.
   }
   deriving (Show, Eq, Generic, EncCBOR, NoThunks, NFData, Default, ToJSON)
@@ -102,7 +102,7 @@ newtype ConwayAccounts era = ConwayAccounts
 instance Typeable era => DecShareCBOR (ConwayAccounts era) where
   type
     Share (ConwayAccounts era) =
-      (Interns (Credential 'Staking), Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
+      (Interns (Credential Staking), Interns (KeyHash StakePool), Interns (Credential DRepRole))
   decSharePlusCBOR =
     StateT $ \(a, b, c) -> do
       caStates <- decodeMap (interns a <$> decCBOR) (decShareCBOR (b, c))
@@ -148,14 +148,14 @@ instance ConwayEraAccounts ConwayEra where
     lens (strictMaybeToMaybe . casDRepDelegation) $ \cas d ->
       cas {casDRepDelegation = maybeToStrictMaybe d}
 
-lookupDRepDelegation :: ConwayEraAccounts era => Credential 'Staking -> Accounts era -> Maybe DRep
+lookupDRepDelegation :: ConwayEraAccounts era => Credential Staking -> Accounts era -> Maybe DRep
 lookupDRepDelegation cred accounts = do
   accountState <- lookupAccountState cred accounts
   accountState ^. dRepDelegationAccountStateL
 
 registerConwayAccount ::
   ConwayEraAccounts era =>
-  Credential 'Staking ->
+  Credential Staking ->
   -- | Deposit
   CompactForm Coin ->
   Maybe Delegatee ->
@@ -176,7 +176,7 @@ registerConwayAccount cred deposit mDelegatee accounts =
 unregisterConwayAccount ::
   EraAccounts era =>
   -- | Credential to unregister
-  Credential 'Staking ->
+  Credential Staking ->
   -- | `Accounts` to remove the account state from
   Accounts era ->
   -- | Returns `Just` whenever account was registered and `Nothing` otherwise. Produced `Accounts`

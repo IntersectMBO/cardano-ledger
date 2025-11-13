@@ -175,7 +175,7 @@ checkEncodingCBORCBORGroup name x t =
   let d = decodeFullDecoder shelleyProtVer (fromString name) decCBORGroup
    in checkEncoding shelleyProtVer encCBORGroup d name x t
 
-getRawKeyHash :: KeyHash 'Payment -> ByteString
+getRawKeyHash :: KeyHash Payment -> ByteString
 getRawKeyHash (KeyHash hsh) = Hash.hashToBytes hsh
 
 getRawNonce :: Nonce -> ByteString
@@ -187,7 +187,7 @@ testGKey = KeyPair vk sk
   where
     (sk, vk) = mkGenKey (RawSeed 0 0 0 0 0)
 
-testGKeyHash :: KeyHash 'Genesis
+testGKeyHash :: KeyHash GenesisRole
 testGKeyHash = hashKey $ vKey testGKey
 
 testVRF :: VRFKeyPair MockCrypto
@@ -212,7 +212,7 @@ testTxbHash ::
   SafeHash EraIndependentTxBody
 testTxbHash = hashAnnotated testTxb
 
-testKey1 :: KeyPair 'Payment
+testKey1 :: KeyPair Payment
 testKey1 = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
@@ -222,17 +222,17 @@ testKey2 = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 2)
 
-testBlockIssuerKey :: KeyPair 'BlockIssuer
+testBlockIssuerKey :: KeyPair BlockIssuer
 testBlockIssuerKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 4)
 
-testStakePoolKey :: KeyPair 'StakePool
+testStakePoolKey :: KeyPair StakePool
 testStakePoolKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 5)
 
-testGenesisDelegateKey :: KeyPair 'GenesisDelegate
+testGenesisDelegateKey :: KeyPair GenesisDelegate
 testGenesisDelegateKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 6)
@@ -264,10 +264,10 @@ testOpCertSigTokens = e
         (OCertSignable @MockCrypto (kesVerKey testKESKeys) 0 (KESPeriod 0))
     CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedDSIGN s)
 
-testKeyHash1 :: KeyHash 'Payment
+testKeyHash1 :: KeyHash Payment
 testKeyHash1 = hashKey $ vKey testKey1
 
-testKeyHash2 :: KeyHash 'Staking
+testKeyHash2 :: KeyHash Staking
 testKeyHash2 = hashKey $ vKey testKey2
 
 testKESKeys :: KESKeyPair MockCrypto
@@ -280,10 +280,10 @@ testAddrE =
     (KeyHashObj testKeyHash1)
     StakeRefNull
 
-testPayCred :: Credential 'Payment
+testPayCred :: Credential Payment
 testPayCred = KeyHashObj testKeyHash1
 
-testStakeCred :: Credential 'Staking
+testStakeCred :: Credential Staking
 testStakeCred = KeyHashObj testKeyHash2
 
 testScript :: MultiSig ShelleyEra
@@ -515,7 +515,7 @@ tests =
               , SingleHostName (SJust 42) $ Maybe.fromJust $ textToDns 64 "singlehost.relay.com"
               , MultiHostName $ Maybe.fromJust $ textToDns 64 "multihost.relay.com"
               ]
-          vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF
+          vrfKeyHash :: VRFVerKeyHash StakePoolVRF
           vrfKeyHash = testVRFKH
        in checkEncodingCBOR
             shelleyProtVer
@@ -571,9 +571,9 @@ tests =
             <> S (hashKey $ vKey testStakePoolKey) -- key hash
             <> S (EpochNo 1729) -- epoch
         )
-    , let vrfKeyHash :: VRFVerKeyHash 'GenDelegVRF
+    , let vrfKeyHash :: VRFVerKeyHash GenDelegVRF
           vrfKeyHash = testVRFKH
-          genesisDelegate :: KeyHash 'GenesisDelegate
+          genesisDelegate :: KeyHash GenesisDelegate
           genesisDelegate = hashKey $ vKey testGenesisDelegateKey
        in checkEncodingCBOR
             shelleyProtVer

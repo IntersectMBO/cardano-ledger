@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON (
 
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (Genesis))
+import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (GenesisRole))
 import Cardano.Ledger.Shelley.API.Types (ShelleyGenesis)
 import Data.Aeson (FromJSON, ToJSON (toJSON), decode, encode, fromJSON)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -33,7 +33,7 @@ tests =
     , testProperty "Address roundtrip" $
         propRoundTripJSON @Addr
     , testProperty "Genesis KeyHash " $
-        propRoundTripJSON @(KeyHash 'Genesis)
+        propRoundTripJSON @(KeyHash GenesisRole)
     , testProperty "GenDelegPair roundtrip" $
         propRoundTripJSON @GenDelegPair
     ]

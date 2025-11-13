@@ -71,7 +71,7 @@ class
     Either (TxCertUpgradeError era) (TxCert era)
 
   -- | Return a witness key whenever a certificate requires one
-  getVKeyWitnessTxCert :: TxCert era -> Maybe (KeyHash 'Witness)
+  getVKeyWitnessTxCert :: TxCert era -> Maybe (KeyHash Witness)
 
   -- | Return a ScriptHash for certificate types that require a witness
   getScriptWitnessTxCert :: TxCert era -> Maybe ScriptHash
@@ -79,21 +79,21 @@ class
   mkRegPoolTxCert :: StakePoolParams -> TxCert era
   getRegPoolTxCert :: TxCert era -> Maybe StakePoolParams
 
-  mkRetirePoolTxCert :: KeyHash 'StakePool -> EpochNo -> TxCert era
-  getRetirePoolTxCert :: TxCert era -> Maybe (KeyHash 'StakePool, EpochNo)
+  mkRetirePoolTxCert :: KeyHash StakePool -> EpochNo -> TxCert era
+  getRetirePoolTxCert :: TxCert era -> Maybe (KeyHash StakePool, EpochNo)
 
   -- | Extract staking credential from any certificate that can register such credential
-  lookupRegStakeTxCert :: TxCert era -> Maybe (Credential 'Staking)
+  lookupRegStakeTxCert :: TxCert era -> Maybe (Credential Staking)
 
   -- | Extract staking credential from any certificate that can unregister such credential
-  lookupUnRegStakeTxCert :: TxCert era -> Maybe (Credential 'Staking)
+  lookupUnRegStakeTxCert :: TxCert era -> Maybe (Credential Staking)
 
   -- | Compute the total deposits from a list of certificates.
   getTotalDepositsTxCerts ::
     Foldable f =>
     PParams era ->
     -- | Check whether stake pool is registered or not
-    (KeyHash 'StakePool -> Bool) ->
+    (KeyHash StakePool -> Bool) ->
     f (TxCert era) ->
     Coin
 
@@ -102,9 +102,9 @@ class
     Foldable f =>
     PParams era ->
     -- | Lookup current deposit for Staking credential if one is registered
-    (Credential 'Staking -> Maybe Coin) ->
+    (Credential Staking -> Maybe Coin) ->
     -- | Lookup current deposit for DRep credential if one is registered
-    (Credential 'DRepRole -> Maybe Coin) ->
+    (Credential DRepRole -> Maybe Coin) ->
     f (TxCert era) ->
     Coin
 
@@ -115,7 +115,7 @@ pattern RegPoolTxCert d <- (getRegPoolTxCert -> Just d)
 
 pattern RetirePoolTxCert ::
   EraTxCert era =>
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   EpochNo ->
   TxCert era
 pattern RetirePoolTxCert poolId epochNo <- (getRetirePoolTxCert -> Just (poolId, epochNo))
@@ -132,7 +132,7 @@ data PoolCert
   = -- | A stake pool registration certificate.
     RegPool !StakePoolParams
   | -- | A stake pool retirement certificate.
-    RetirePool !(KeyHash 'StakePool) !EpochNo
+    RetirePool !(KeyHash StakePool) !EpochNo
   deriving (Show, Generic, Eq, Ord)
 
 instance EncCBOR PoolCert where
@@ -157,7 +157,7 @@ instance ToJSON PoolCert where
         , "epochNo" .= toJSON epochNo
         ]
 
-poolCertKeyHashWitness :: PoolCert -> KeyHash 'Witness
+poolCertKeyHashWitness :: PoolCert -> KeyHash Witness
 poolCertKeyHashWitness = \case
   RegPool stakePoolParams -> asWitness $ sppId stakePoolParams
   RetirePool poolId _ -> asWitness poolId

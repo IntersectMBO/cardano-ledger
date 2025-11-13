@@ -70,8 +70,8 @@ mkAllCoreNodeKeys w =
     (skCold, vkCold) = mkKeyPair (RawSeed w 0 0 0 1)
 
 coreNodes ::
-  [ ( (SignKeyDSIGN DSIGN, VKey 'Genesis)
-    , AllIssuerKeys MockCrypto 'GenesisDelegate
+  [ ( (SignKeyDSIGN DSIGN, VKey GenesisRole)
+    , AllIssuerKeys MockCrypto GenesisDelegate
     )
   ]
 coreNodes =
@@ -88,7 +88,7 @@ coreNodeSK = fst . fst . (coreNodes !!)
 -- | === Verification (Public) Keys
 -- Retrieve the verification key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeVK :: Int -> VKey 'Genesis
+coreNodeVK :: Int -> VKey GenesisRole
 coreNodeVK = snd . fst . (coreNodes !!)
 
 -- | === Block Issuer Keys
@@ -97,7 +97,7 @@ coreNodeVK = snd . fst . (coreNodes !!)
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
 coreNodeIssuerKeys ::
   Int ->
-  AllIssuerKeys MockCrypto 'GenesisDelegate
+  AllIssuerKeys MockCrypto GenesisDelegate
 coreNodeIssuerKeys = snd . (coreNodes !!)
 
 -- | === Keys by Overlay Schedule
@@ -110,7 +110,7 @@ coreNodeKeysBySchedule ::
   (HasCallStack, EraPParams era) =>
   PParams era ->
   Word64 ->
-  AllIssuerKeys MockCrypto 'GenesisDelegate
+  AllIssuerKeys MockCrypto GenesisDelegate
 coreNodeKeysBySchedule pp slot =
   case lookupInOverlaySchedule
     firstSlot
@@ -134,7 +134,7 @@ coreNodeKeysBySchedule pp slot =
 -- | === Genesis Delegation Mapping
 -- The map from genesis/core node (verification) key hashes
 -- to their delegate's (verification) key hash.
-genDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+genDelegs :: Map (KeyHash GenesisRole) GenDelegPair
 genDelegs =
   Map.fromList
     [ ( hashKey $ snd gkey

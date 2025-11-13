@@ -50,7 +50,7 @@ spec = describe "Valid transactions" $ do
     -- Attach a datum (hash) to a non-script output and then spend it.
     -- Note that the datum cannot be supplied when spending the output,
     -- because it's considered extraneous.
-    addr <- mkAddr <$> freshKeyHash @'Payment <*> pure StakeRefNull
+    addr <- mkAddr <$> freshKeyHash @Payment <*> pure StakeRefNull
     amount <- Coin <$> choose (2_000_000, 8_000_000)
     let
       datumHash = hashData @era $ Data (P.I 123)
@@ -104,7 +104,7 @@ spec = describe "Valid transactions" $ do
           submitPhase2Invalid_ =<< mkTokenMintingTx alwaysFailsNoDatumHash
 
         it "Acceptable supplementary datum" $ do
-          inputAddr <- freshKeyHash @'Payment
+          inputAddr <- freshKeyHash @Payment
           amount <- Coin <$> choose (2_000_000, 8_000_000)
           txIn <- sendCoinTo (mkAddr inputAddr StakeRefNull) amount
           let
@@ -175,7 +175,7 @@ alonzoEraSpecificSpec = do
           txIns <- traverse produceScript inputScriptHashes
           multiAsset <- MultiAsset . fromList <$> traverse scriptAsset assetScriptHashes
           rewardAccounts <- traverse (registerStakeCredentialNoDeposit . ScriptHashObj) rewardScriptHashes
-          outputAddr <- freshKeyHash @'Payment
+          outputAddr <- freshKeyHash @Payment
           let
             txOut =
               mkBasicTxOut

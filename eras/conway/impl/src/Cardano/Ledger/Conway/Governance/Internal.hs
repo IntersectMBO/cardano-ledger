@@ -136,7 +136,7 @@ data EnactState era = EnactState
   , ensCurPParams :: !(PParams era)
   , ensPrevPParams :: !(PParams era)
   , ensTreasury :: !Coin
-  , ensWithdrawals :: !(Map (Credential 'Staking) Coin)
+  , ensWithdrawals :: !(Map (Credential Staking) Coin)
   , ensPrevGovActionIds :: !(GovRelation StrictMaybe)
   -- ^ Last enacted GovAction Ids
   }
@@ -160,7 +160,7 @@ ensPrevPParamsL = lens ensPrevPParams (\es x -> es {ensPrevPParams = x})
 ensTreasuryL :: Lens' (EnactState era) Coin
 ensTreasuryL = lens ensTreasury $ \es x -> es {ensTreasury = x}
 
-ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential 'Staking) Coin)
+ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential Staking) Coin)
 ensWithdrawalsL = lens ensWithdrawals $ \es x -> es {ensWithdrawals = x}
 
 ensPrevGovActionIdsL :: Lens' (EnactState era) (GovRelation StrictMaybe)
@@ -216,7 +216,7 @@ instance EraPParams era => DecCBOR (EnactState era) where
   decCBOR = decNoShareCBOR
 
 instance EraPParams era => DecShareCBOR (EnactState era) where
-  type Share (EnactState era) = Interns (Credential 'Staking)
+  type Share (EnactState era) = Interns (Credential Staking)
   decShareCBOR is =
     decode $
       RecD EnactState
@@ -563,11 +563,11 @@ data RatifyEnv era = RatifyEnv
   { reInstantStake :: InstantStake era
   , reStakePoolDistr :: PoolDistr
   , reDRepDistr :: Map DRep (CompactForm Coin)
-  , reDRepState :: Map (Credential 'DRepRole) DRepState
+  , reDRepState :: Map (Credential DRepRole) DRepState
   , reCurrentEpoch :: EpochNo
   , reCommitteeState :: CommitteeState era
   , reAccounts :: Accounts era
-  , reStakePools :: Map (KeyHash 'StakePool) StakePoolState
+  , reStakePools :: Map (KeyHash StakePool) StakePoolState
   }
   deriving (Generic)
 
@@ -583,7 +583,7 @@ reDRepDistrL :: Lens' (RatifyEnv era) (Map DRep (CompactForm Coin))
 reDRepDistrL = lens reDRepDistr (\x y -> x {reDRepDistr = y})
 
 reDRepStateL ::
-  Lens' (RatifyEnv era) (Map (Credential 'DRepRole) DRepState)
+  Lens' (RatifyEnv era) (Map (Credential DRepRole) DRepState)
 reDRepStateL = lens reDRepState (\x y -> x {reDRepState = y})
 
 reCurrentEpochL :: Lens' (RatifyEnv era) EpochNo
@@ -691,10 +691,10 @@ instance EraPParams era => DecCBOR (RatifyState era) where
 instance EraPParams era => DecShareCBOR (RatifyState era) where
   type
     Share (RatifyState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decShareCBOR is@(cs, _, _, _) =
     decode $

@@ -186,32 +186,32 @@ class EraTxCert era => ConwayEraTxCert era where
     TxCert era -> Maybe (StakeCredential, Delegatee, Coin)
 
   mkAuthCommitteeHotKeyTxCert ::
-    Credential 'ColdCommitteeRole ->
-    Credential 'HotCommitteeRole ->
+    Credential ColdCommitteeRole ->
+    Credential HotCommitteeRole ->
     TxCert era
   getAuthCommitteeHotKeyTxCert ::
     TxCert era ->
-    Maybe (Credential 'ColdCommitteeRole, Credential 'HotCommitteeRole)
+    Maybe (Credential ColdCommitteeRole, Credential HotCommitteeRole)
 
   mkResignCommitteeColdTxCert ::
-    Credential 'ColdCommitteeRole -> StrictMaybe Anchor -> TxCert era
+    Credential ColdCommitteeRole -> StrictMaybe Anchor -> TxCert era
   getResignCommitteeColdTxCert ::
     TxCert era ->
-    Maybe (Credential 'ColdCommitteeRole, StrictMaybe Anchor)
+    Maybe (Credential ColdCommitteeRole, StrictMaybe Anchor)
 
   mkRegDRepTxCert ::
-    Credential 'DRepRole -> Coin -> StrictMaybe Anchor -> TxCert era
+    Credential DRepRole -> Coin -> StrictMaybe Anchor -> TxCert era
   getRegDRepTxCert ::
     TxCert era ->
-    Maybe (Credential 'DRepRole, Coin, StrictMaybe Anchor)
+    Maybe (Credential DRepRole, Coin, StrictMaybe Anchor)
 
-  mkUnRegDRepTxCert :: Credential 'DRepRole -> Coin -> TxCert era
-  getUnRegDRepTxCert :: TxCert era -> Maybe (Credential 'DRepRole, Coin)
+  mkUnRegDRepTxCert :: Credential DRepRole -> Coin -> TxCert era
+  getUnRegDRepTxCert :: TxCert era -> Maybe (Credential DRepRole, Coin)
 
   mkUpdateDRepTxCert ::
-    Credential 'DRepRole -> StrictMaybe Anchor -> TxCert era
+    Credential DRepRole -> StrictMaybe Anchor -> TxCert era
   getUpdateDRepTxCert ::
-    TxCert era -> Maybe (Credential 'DRepRole, StrictMaybe Anchor)
+    TxCert era -> Maybe (Credential DRepRole, StrictMaybe Anchor)
 
 instance ConwayEraTxCert ConwayEra where
   mkRegDepositTxCert cred c = ConwayTxCertDeleg $ ConwayRegCert cred $ SJust c
@@ -293,8 +293,8 @@ pattern RegDepositDelegTxCert cred d c <- (getRegDepositDelegTxCert -> Just (cre
 
 pattern AuthCommitteeHotKeyTxCert ::
   ConwayEraTxCert era =>
-  Credential 'ColdCommitteeRole ->
-  Credential 'HotCommitteeRole ->
+  Credential ColdCommitteeRole ->
+  Credential HotCommitteeRole ->
   TxCert era
 pattern AuthCommitteeHotKeyTxCert ck hk <- (getAuthCommitteeHotKeyTxCert -> Just (ck, hk))
   where
@@ -302,7 +302,7 @@ pattern AuthCommitteeHotKeyTxCert ck hk <- (getAuthCommitteeHotKeyTxCert -> Just
 
 pattern ResignCommitteeColdTxCert ::
   ConwayEraTxCert era =>
-  Credential 'ColdCommitteeRole ->
+  Credential ColdCommitteeRole ->
   StrictMaybe Anchor ->
   TxCert era
 pattern ResignCommitteeColdTxCert ck a <- (getResignCommitteeColdTxCert -> Just (ck, a))
@@ -311,7 +311,7 @@ pattern ResignCommitteeColdTxCert ck a <- (getResignCommitteeColdTxCert -> Just 
 
 pattern RegDRepTxCert ::
   ConwayEraTxCert era =>
-  Credential 'DRepRole ->
+  Credential DRepRole ->
   Coin ->
   StrictMaybe Anchor ->
   TxCert era
@@ -321,7 +321,7 @@ pattern RegDRepTxCert cred deposit mAnchor <- (getRegDRepTxCert -> Just (cred, d
 
 pattern UnRegDRepTxCert ::
   ConwayEraTxCert era =>
-  Credential 'DRepRole ->
+  Credential DRepRole ->
   Coin ->
   TxCert era
 pattern UnRegDRepTxCert cred deposit <- (getUnRegDRepTxCert -> Just (cred, deposit))
@@ -330,7 +330,7 @@ pattern UnRegDRepTxCert cred deposit <- (getUnRegDRepTxCert -> Just (cred, depos
 
 pattern UpdateDRepTxCert ::
   ConwayEraTxCert era =>
-  Credential 'DRepRole ->
+  Credential DRepRole ->
   StrictMaybe Anchor ->
   TxCert era
 pattern UpdateDRepTxCert cred mAnchor <- (getUpdateDRepTxCert -> Just (cred, mAnchor))
@@ -377,9 +377,9 @@ getDelegateeTxCert = \case
 
 -- | First type argument is the deposit
 data Delegatee
-  = DelegStake !(KeyHash 'StakePool)
+  = DelegStake !(KeyHash StakePool)
   | DelegVote !DRep
-  | DelegStakeVote !(KeyHash 'StakePool) !DRep
+  | DelegStakeVote !(KeyHash StakePool) !DRep
   deriving (Show, Generic, Eq, Ord)
 
 instance ToJSON Delegatee where
@@ -427,7 +427,7 @@ mkDelegatee mStakePool mDRep =
     (Nothing, Just dRep) -> Just $ DelegVote dRep
     (Just pool, Just dRep) -> Just $ DelegStakeVote pool dRep
 
-getStakePoolDelegatee :: Delegatee -> Maybe (KeyHash 'StakePool)
+getStakePoolDelegatee :: Delegatee -> Maybe (KeyHash StakePool)
 getStakePoolDelegatee = \case
   DelegStake targetPool -> Just targetPool
   DelegVote {} -> Nothing
@@ -545,11 +545,11 @@ instance ToJSON ConwayDelegCert where
         ]
 
 data ConwayGovCert
-  = ConwayRegDRep !(Credential 'DRepRole) !Coin !(StrictMaybe Anchor)
-  | ConwayUnRegDRep !(Credential 'DRepRole) !Coin
-  | ConwayUpdateDRep !(Credential 'DRepRole) !(StrictMaybe Anchor)
-  | ConwayAuthCommitteeHotKey !(Credential 'ColdCommitteeRole) !(Credential 'HotCommitteeRole)
-  | ConwayResignCommitteeColdKey !(Credential 'ColdCommitteeRole) !(StrictMaybe Anchor)
+  = ConwayRegDRep !(Credential DRepRole) !Coin !(StrictMaybe Anchor)
+  | ConwayUnRegDRep !(Credential DRepRole) !Coin
+  | ConwayUpdateDRep !(Credential DRepRole) !(StrictMaybe Anchor)
+  | ConwayAuthCommitteeHotKey !(Credential ColdCommitteeRole) !(Credential HotCommitteeRole)
+  | ConwayResignCommitteeColdKey !(Credential ColdCommitteeRole) !(StrictMaybe Anchor)
   deriving (Show, Generic, Eq, Ord)
 
 instance NFData ConwayGovCert
@@ -757,7 +757,7 @@ getScriptWitnessConwayTxCert = \case
       ConwayUnRegDRep cred _ -> credScriptHash cred
       ConwayUpdateDRep cred _ -> credScriptHash cred
 
-getVKeyWitnessConwayTxCert :: ConwayTxCert era -> Maybe (KeyHash 'Witness)
+getVKeyWitnessConwayTxCert :: ConwayTxCert era -> Maybe (KeyHash Witness)
 getVKeyWitnessConwayTxCert = \case
   ConwayTxCertDeleg delegCert ->
     case delegCert of
@@ -769,7 +769,7 @@ getVKeyWitnessConwayTxCert = \case
   ConwayTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
   ConwayTxCertGov govCert -> conwayGovCertVKeyWitness govCert
 
-conwayGovCertVKeyWitness :: ConwayGovCert -> Maybe (KeyHash 'Witness)
+conwayGovCertVKeyWitness :: ConwayGovCert -> Maybe (KeyHash Witness)
 conwayGovCertVKeyWitness = \case
   ConwayAuthCommitteeHotKey coldCred _hotCred -> credKeyHashWitness coldCred
   ConwayResignCommitteeColdKey coldCred _ -> credKeyHashWitness coldCred
@@ -792,7 +792,7 @@ conwayTotalDepositsTxCerts ::
   (ConwayEraPParams era, Foldable f, ConwayEraTxCert era) =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
-  (KeyHash 'StakePool -> Bool) ->
+  (KeyHash StakePool -> Bool) ->
   f (TxCert era) ->
   Coin
 conwayTotalDepositsTxCerts pp isRegPoolRegistered certs =
@@ -814,9 +814,9 @@ conwayTotalRefundsTxCerts ::
   (EraPParams era, Foldable f, ConwayEraTxCert era) =>
   PParams era ->
   -- | Function that can lookup current deposit, in case when the Staking credential is registered.
-  (Credential 'Staking -> Maybe Coin) ->
+  (Credential Staking -> Maybe Coin) ->
   -- | Function that can lookup current deposit, in case when the DRep credential is registered.
-  (Credential 'DRepRole -> Maybe Coin) ->
+  (Credential DRepRole -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
 conwayTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit certs =
@@ -827,7 +827,7 @@ conwayTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit certs =
 -- known Credentials.
 conwayDRepRefundsTxCerts ::
   (Foldable f, ConwayEraTxCert era) =>
-  (Credential 'DRepRole -> Maybe Coin) ->
+  (Credential DRepRole -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
 conwayDRepRefundsTxCerts lookupDRepDeposit = snd . F.foldl' go (Map.empty, Coin 0)

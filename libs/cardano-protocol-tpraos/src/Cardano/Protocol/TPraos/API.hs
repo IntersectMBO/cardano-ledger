@@ -385,7 +385,7 @@ data ChainDepState = ChainDepState
 -- genesis delegates.
 initialChainDepState ::
   Nonce ->
-  Map (KeyHash 'Genesis) GenDelegPair ->
+  Map (KeyHash GenesisRole) GenDelegPair ->
   ChainDepState
 initialChainDepState initNonce genDelegs =
   ChainDepState
@@ -564,7 +564,7 @@ getLeaderSchedule ::
   Globals ->
   NewEpochState era ->
   ChainDepState ->
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   VRF.SignKeyVRF v ->
   PParams era ->
   Set SlotNo

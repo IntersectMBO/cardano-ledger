@@ -125,7 +125,7 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
 
 sumRewards ::
   ProtVer ->
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential Staking) (Set Reward) ->
   Coin
 sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 
@@ -136,9 +136,9 @@ sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 -- both of the domains of the returned maps are a subset of the the domain of the input map 'rewards'
 filterRewards ::
   ProtVer ->
-  Map (Credential 'Staking) (Set Reward) ->
-  ( Map (Credential 'Staking) (Set Reward) -- delivered
-  , Map (Credential 'Staking) (Set Reward) -- ignored in Shelley Era
+  Map (Credential Staking) (Set Reward) ->
+  ( Map (Credential Staking) (Set Reward) -- delivered
+  , Map (Credential Staking) (Set Reward) -- ignored in Shelley Era
   )
 filterRewards pv rewards =
   if hardforkAllegraAggregatedRewards pv
@@ -152,8 +152,8 @@ filterRewards pv rewards =
 --   Note that domain of the returned map is a subset of the input map 'rewards'
 aggregateRewards ::
   ProtVer ->
-  Map (Credential 'Staking) (Set Reward) ->
-  Map (Credential 'Staking) Coin
+  Map (Credential Staking) (Set Reward) ->
+  Map (Credential Staking) Coin
 aggregateRewards pv rewards =
   Map.map (foldMap' rewardAmount) $ fst $ filterRewards pv rewards
 
@@ -162,7 +162,7 @@ aggregateRewards pv rewards =
 
 sumCompactRewards ::
   ProtVer ->
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential Staking) (Set Reward) ->
   CompactForm Coin
 sumCompactRewards protocolVersion rs = fold $ aggregateCompactRewards protocolVersion rs
 
@@ -171,8 +171,8 @@ sumCompactRewards protocolVersion rs = fold $ aggregateCompactRewards protocolVe
 --   Note that the domain of the output map is a subset of the domain of the input rewards.
 aggregateCompactRewards ::
   ProtVer ->
-  Map (Credential 'Staking) (Set Reward) ->
-  Map (Credential 'Staking) (CompactForm Coin)
+  Map (Credential Staking) (Set Reward) ->
+  Map (Credential Staking) (CompactForm Coin)
 aggregateCompactRewards pv rewards =
   Map.map (foldMap' (compactCoinOrError . rewardAmount)) $ fst $ filterRewards pv rewards
 
@@ -186,7 +186,7 @@ aggregateCompactRewards pv rewards =
 -- =====================================================
 
 data LeaderOnlyReward = LeaderOnlyReward
-  { lRewardPool :: !(KeyHash 'StakePool)
+  { lRewardPool :: !(KeyHash StakePool)
   , lRewardAmount :: !Coin
   }
   deriving (Eq, Ord, Show, Generic)
@@ -248,7 +248,7 @@ instance DecCBOR PoolRewardInfo where
 
 notPoolOwner ::
   StakePoolParams ->
-  Credential 'Staking ->
+  Credential Staking ->
   Bool
 notPoolOwner pps = \case
   KeyHashObj hk -> hk `Set.notMember` sppOwners pps
@@ -261,12 +261,12 @@ rewardOnePoolMember ::
   -- | The total amount of stake in the system
   Coin ->
   -- | The set of registered stake credentials
-  Set (Credential 'Staking) ->
+  Set (Credential Staking) ->
   -- | Stake pool specific intermediate values needed
   -- to compute member rewards.
   PoolRewardInfo ->
   -- | The stake credential whose reward is being calculated.
-  Credential 'Staking ->
+  Credential Staking ->
   -- | The stake controlled by the stake credential
   -- in the previous parameter above.
   Coin ->
@@ -302,8 +302,8 @@ mkPoolRewardInfo ::
   BlocksMade ->
   Natural ->
   Stake ->
-  VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
-  Map (KeyHash 'StakePool) Coin ->
+  VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
+  Map (KeyHash StakePool) Coin ->
   Coin ->
   Coin ->
   StakePoolParams ->

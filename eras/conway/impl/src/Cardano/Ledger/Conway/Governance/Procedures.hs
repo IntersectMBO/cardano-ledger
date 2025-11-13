@@ -212,9 +212,9 @@ govActionIdToText (GovActionId (TxId txidHash) (GovActionIx ix)) =
 
 data GovActionState era = GovActionState
   { gasId :: !GovActionId
-  , gasCommitteeVotes :: !(Map (Credential 'HotCommitteeRole) Vote)
-  , gasDRepVotes :: !(Map (Credential 'DRepRole) Vote)
-  , gasStakePoolVotes :: !(Map (KeyHash 'StakePool) Vote)
+  , gasCommitteeVotes :: !(Map (Credential HotCommitteeRole) Vote)
+  , gasDRepVotes :: !(Map (Credential DRepRole) Vote)
+  , gasStakePoolVotes :: !(Map (KeyHash StakePool) Vote)
   , gasProposalProcedure :: !(ProposalProcedure era)
   , gasProposedIn :: !EpochNo
   , gasExpiresAfter :: !EpochNo
@@ -225,13 +225,13 @@ gasIdL :: Lens' (GovActionState era) GovActionId
 gasIdL = lens gasId $ \x y -> x {gasId = y}
 
 gasCommitteeVotesL ::
-  Lens' (GovActionState era) (Map (Credential 'HotCommitteeRole) Vote)
+  Lens' (GovActionState era) (Map (Credential HotCommitteeRole) Vote)
 gasCommitteeVotesL = lens gasCommitteeVotes (\x y -> x {gasCommitteeVotes = y})
 
-gasDRepVotesL :: Lens' (GovActionState era) (Map (Credential 'DRepRole) Vote)
+gasDRepVotesL :: Lens' (GovActionState era) (Map (Credential DRepRole) Vote)
 gasDRepVotesL = lens gasDRepVotes (\x y -> x {gasDRepVotes = y})
 
-gasStakePoolVotesL :: Lens' (GovActionState era) (Map (KeyHash 'StakePool) Vote)
+gasStakePoolVotesL :: Lens' (GovActionState era) (Map (KeyHash StakePool) Vote)
 gasStakePoolVotesL = lens gasStakePoolVotes (\x y -> x {gasStakePoolVotes = y})
 
 gasProposalProcedureL :: Lens' (GovActionState era) (ProposalProcedure era)
@@ -289,10 +289,10 @@ instance EraPParams era => NFData (GovActionState era)
 instance EraPParams era => DecShareCBOR (GovActionState era) where
   type
     Share (GovActionState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decSharePlusCBOR =
     decodeRecordNamedT "GovActionState" (const 7) $ do
@@ -330,9 +330,9 @@ instance OMap.HasOKey GovActionId (GovActionState era) where
   toOKey = gasId
 
 data Voter
-  = CommitteeVoter !(Credential 'HotCommitteeRole)
-  | DRepVoter !(Credential 'DRepRole)
-  | StakePoolVoter !(KeyHash 'StakePool)
+  = CommitteeVoter !(Credential HotCommitteeRole)
+  | DRepVoter !(Credential DRepRole)
+  | StakePoolVoter !(KeyHash StakePool)
   deriving (Generic, Eq, Ord, Show)
 
 instance ToJSON Voter
@@ -542,7 +542,7 @@ instance EraPParams era => ToKeyValuePairs (ProposalProcedure era) where
         ]
 
 data Committee era = Committee
-  { committeeMembers :: !(Map (Credential 'ColdCommitteeRole) EpochNo)
+  { committeeMembers :: !(Map (Credential ColdCommitteeRole) EpochNo)
   -- ^ Committee members with epoch number when each of them expires
   , committeeThreshold :: !UnitInterval
   -- ^ Threshold of the committee that is necessary for a successful vote
@@ -558,7 +558,7 @@ instance Default (Committee era) where
   def = Committee mempty minBound
 
 committeeMembersL ::
-  Lens' (Committee era) (Map (Credential 'ColdCommitteeRole) EpochNo)
+  Lens' (Committee era) (Map (Credential ColdCommitteeRole) EpochNo)
 committeeMembersL = lens committeeMembers (\c m -> c {committeeMembers = m})
 
 committeeThresholdL :: Lens' (Committee era) UnitInterval
@@ -820,9 +820,9 @@ data GovAction era
       -- corresponds to `CommitteePurpose`
       !(StrictMaybe (GovPurposeId 'CommitteePurpose))
       -- | Constitutional Committe members to be removed
-      !(Set (Credential 'ColdCommitteeRole))
+      !(Set (Credential ColdCommitteeRole))
       -- | Constitutional committee members to be added
-      !(Map (Credential 'ColdCommitteeRole) EpochNo)
+      !(Map (Credential ColdCommitteeRole) EpochNo)
       -- | New Threshold
       !UnitInterval
   | NewConstitution

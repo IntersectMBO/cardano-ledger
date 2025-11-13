@@ -25,7 +25,7 @@ import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-sppIdL :: Lens' StakePoolParams (KeyHash 'StakePool)
+sppIdL :: Lens' StakePoolParams (KeyHash StakePool)
 sppIdL = lens sppId (\x y -> x {sppId = y})
 
 -- | Generate an arbitrary value and overwrite the specified value using the supplied lens.
@@ -54,7 +54,7 @@ instantStakeIncludesRewards = do
   (ann, annBalance, accounts2) <- registerAccount poolId2 accounts1
   (ron, ronBalance, accounts3) <- registerAccount poolId1 accounts2
   (mary, maryBalance, accounts) <- registerAccount poolId2 accounts3
-  (tomPay, johnPay, annPay, ronPay) <- arbitrary @(TupleN 4 (Credential 'Payment))
+  (tomPay, johnPay, annPay, ronPay) <- arbitrary @(TupleN 4 (Credential Payment))
 
   let tomAddr = mkAddr tomPay StakeRefNull
       johnAddr = mkAddr johnPay john
@@ -89,7 +89,7 @@ instantStakeIncludesRewards = do
   let snapShot = snapShotFromInstantStake instantStake dState pState
       computedStakeDistr = VMap.toMap (unStake (ssStake snapShot))
 
-      expectedStakeDistr :: Map (Credential 'Staking) (CompactForm Coin)
+      expectedStakeDistr :: Map (Credential Staking) (CompactForm Coin)
       expectedStakeDistr =
         Map.fromList $
           [ stake

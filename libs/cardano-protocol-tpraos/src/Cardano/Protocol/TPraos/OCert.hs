@@ -58,16 +58,16 @@ import NoThunks.Class (NoThunks (..))
 import Quiet
 
 data OCertEnv = OCertEnv
-  { ocertEnvStPools :: Set (KeyHash 'StakePool)
-  , ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate)
+  { ocertEnvStPools :: Set (KeyHash StakePool)
+  , ocertEnvGenDelegs :: Set (KeyHash GenesisDelegate)
   }
   deriving (Show, Eq)
 
 currentIssueNo ::
   OCertEnv ->
-  Map (KeyHash 'BlockIssuer) Word64 ->
+  Map (KeyHash BlockIssuer) Word64 ->
   -- | Pool hash
-  KeyHash 'BlockIssuer ->
+  KeyHash BlockIssuer ->
   Maybe Word64
 currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | Map.member hk cs = Map.lookup hk cs

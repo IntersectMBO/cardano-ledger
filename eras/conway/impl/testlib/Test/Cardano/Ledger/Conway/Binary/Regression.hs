@@ -83,7 +83,7 @@ spec = describe "Regression" $ do
     withImpInit @(LedgerSpec ConwayEra) $
       it "InsufficientCollateral is not encoded with negative coin #4198" $ do
         collateralAddress <- freshKeyAddr_
-        stakingKeyHash <- freshKeyHash @'Staking
+        stakingKeyHash <- freshKeyHash @Staking
         let
           plutusVersion = SPlutusV2
           scriptHash = hashPlutusScript $ redeemerSameAsDatum plutusVersion

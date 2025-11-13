@@ -172,7 +172,7 @@ mkGenesisChainState ge@(GenEnv _ _ constants) (IRC _slotNo) = do
 
 mkOCertIssueNos ::
   GenDelegs ->
-  Map (KeyHash 'BlockIssuer) Natural
+  Map (KeyHash BlockIssuer) Natural
 mkOCertIssueNos (GenDelegs delegs0) =
   Map.fromList (fmap f (Map.elems delegs0))
   where

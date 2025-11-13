@@ -393,10 +393,10 @@ instance EraPParams era => DecCBOR (Proposals era) where
 instance EraPParams era => DecShareCBOR (Proposals era) where
   type
     Share (Proposals era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decSharePlusCBOR = do
     decodeRecordNamedT "Proposals" (const 2) $ do
@@ -565,7 +565,7 @@ proposalsActions (Proposals omap _ _) = OMap.toStrictSeq omap
 -- all proposals.
 proposalsDeposits ::
   Proposals era ->
-  Map (Credential 'Staking) (CompactForm Coin)
+  Map (Credential Staking) (CompactForm Coin)
 proposalsDeposits =
   F.foldl'
     ( \gasMap gas ->

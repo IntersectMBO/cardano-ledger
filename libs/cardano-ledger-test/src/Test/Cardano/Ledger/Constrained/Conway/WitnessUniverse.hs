@@ -97,7 +97,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
-import Test.QuickCheck hiding (forAll, witness)
+import Test.QuickCheck hiding (Witness, forAll, witness)
 import Text.PrettyPrint.HughesPJ (Doc)
 
 -- ======================================================
@@ -227,10 +227,10 @@ type BodyHash = SafeHash EraIndependentTxBody
 -- KeyHash and VKey
 -- KeyPair seems to be missing a lot of instances, so we define them here
 
-instance Era era => HasWitness (KeyHash 'Witness) era where
-  type ProofType (KeyHash 'Witness) era = KeyPair 'Witness
-  type WitnessType (KeyHash 'Witness) era = (BodyHash -> WitVKey 'Witness)
-  type TypeHashed (KeyHash 'Witness) era = VKey 'Witness
+instance Era era => HasWitness (KeyHash Witness) era where
+  type ProofType (KeyHash Witness) era = KeyPair Witness
+  type WitnessType (KeyHash Witness) era = (BodyHash -> WitVKey Witness)
+  type TypeHashed (KeyHash Witness) era = VKey Witness
   hash x = hashKey x
   mkWitness keypair safehash = mkWitnessVKey safehash keypair
   getTypeHashed (KeyPair x _) = x
@@ -306,7 +306,7 @@ instance EraScript era => HasWitness DataHash era where
 data WitUniv era
   = WitUniv
   { wvSize :: Int
-  , wvVKey :: WitBlock (KeyHash 'Witness) era
+  , wvVKey :: WitBlock (KeyHash Witness) era
   , wvBoot :: WitBlock (BootstrapAddress) era
   , wvScript :: WitBlock (ScriptHash) era
   , wvDats :: WitBlock (DataHash) era
@@ -407,7 +407,7 @@ witRewardAccountSpec univ =
         satisfies raCred (witCredSpec @era univ)
 
 owners_ ::
-  Term StakePoolParams -> Term (Set (KeyHash 'Staking))
+  Term StakePoolParams -> Term (Set (KeyHash Staking))
 owners_ = sel @6
 
 witStakePoolParamsSpec ::
@@ -517,12 +517,12 @@ witnessBootAddr bodyhash bootaddr wu = case Map.lookup bootaddr (wbMap (wvBoot w
 witnessKeyHash ::
   forall era.
   EraTxWits era =>
-  BodyHash -> KeyHash 'Witness -> WitUniv era -> TxWits era
+  BodyHash -> KeyHash Witness -> WitUniv era -> TxWits era
 witnessKeyHash bodyhash keyhash wu = case Map.lookup keyhash (wbMap (wvVKey wu)) of
   Just x ->
     (mkBasicTxWits @era)
       & addrTxWitsL
-        .~ (Set.singleton (mkWitness @(KeyHash 'Witness) @era x bodyhash))
+        .~ (Set.singleton (mkWitness @(KeyHash Witness) @era x bodyhash))
   Nothing -> error ("missing key hash in WitUnv " ++ show keyhash)
 
 witnessScriptHash ::
@@ -594,7 +594,7 @@ genWitUniv ::
   Int -> Gen (WitUniv era)
 genWitUniv n =
   WitUniv n
-    <$> genWitBlock n (arbitrary @(KeyPair 'Witness))
+    <$> genWitBlock n (arbitrary @(KeyPair Witness))
     <*> genWitBlock n (snd <$> genAddrPair Testnet)
     <*> genWitBlock n (genScript @era)
     <*> genWitBlock n (arbitrary @(Data era))
@@ -629,7 +629,7 @@ genNestedMultiSig depth
       n <- choose (0, 4)
       m <- choose (0, n)
       RequireMOf m . Seq.fromList <$> replicateM n (genNestedMultiSig @era (k - 1))
-    genKeyHash :: Gen (KeyHash 'Witness)
+    genKeyHash :: Gen (KeyHash Witness)
     genKeyHash = arbitrary
 
 genNestedTimelock :: forall era. AllegraEraScript era => Int -> Gen (NativeScript era)
@@ -661,7 +661,7 @@ genNestedTimelock depth
     requireTimeExpire (SlotNo validTill) = do
       maxSlotNo <- choose (validTill, maxBound)
       pure $ RequireTimeExpire (SlotNo maxSlotNo)
-    genKeyHash :: Gen (KeyHash 'Witness)
+    genKeyHash :: Gen (KeyHash Witness)
     genKeyHash = arbitrary
 
 -- =======================================================================

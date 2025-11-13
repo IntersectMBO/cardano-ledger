@@ -76,12 +76,12 @@ import Test.Cardano.Ledger.Shelley.Utils (
 
 -- =========================================================
 
-aliceStake :: KeyPair 'Staking
+aliceStake :: KeyPair Staking
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
-alicePay :: KeyPair 'Payment
+alicePay :: KeyPair Payment
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 0)
@@ -174,20 +174,20 @@ ledgerSpendOneGivenUTxO state = testLEDGER (LedgerState state def) txSpendOneUTx
 
 -- Create stake key pairs, corresponding to seeds
 -- (RawSeed start 0 0 0 0) through (RawSeed end 0 0 0 0)
-stakeKeys :: Word64 -> Word64 -> [KeyPair 'Staking]
+stakeKeys :: Word64 -> Word64 -> [KeyPair Staking]
 stakeKeys start end = fmap (\w -> mkKeyPair' (RawSeed w 0 0 0 0)) [start .. end]
 
-stakeKeyOne :: KeyPair 'Staking
+stakeKeyOne :: KeyPair Staking
 stakeKeyOne = mkKeyPair' (RawSeed 1 0 0 0 0)
 
-stakeKeyToCred :: KeyPair 'Staking -> Credential 'Staking
+stakeKeyToCred :: KeyPair Staking -> Credential Staking
 stakeKeyToCred = KeyHashObj . hashKey . vKey
 
-firstStakeKeyCred :: Credential 'Staking
+firstStakeKeyCred :: Credential Staking
 firstStakeKeyCred = stakeKeyToCred stakeKeyOne
 
 -- Create stake key registration certificates
-stakeKeyRegistrations :: [KeyPair 'Staking] -> StrictSeq (TxCert ShelleyEra)
+stakeKeyRegistrations :: [KeyPair Staking] -> StrictSeq (TxCert ShelleyEra)
 stakeKeyRegistrations keys =
   StrictSeq.fromList $
     fmap (RegTxCert . KeyHashObj . hashKey . vKey) keys
@@ -208,7 +208,7 @@ txbFromCerts ix regCerts =
 
 makeSimpleTx ::
   TxBody TopTx ShelleyEra ->
-  [KeyPair 'Witness] ->
+  [KeyPair Witness] ->
   Tx TopTx ShelleyEra
 makeSimpleTx txbody keysAddr =
   mkBasicTx mkBasicTxBody
@@ -217,7 +217,7 @@ makeSimpleTx txbody keysAddr =
     & auxDataTxL .~ SNothing
 
 -- Create a transaction that registers stake credentials.
-txRegStakeKeys :: TxIx -> [KeyPair 'Staking] -> Tx TopTx ShelleyEra
+txRegStakeKeys :: TxIx -> [KeyPair Staking] -> Tx TopTx ShelleyEra
 txRegStakeKeys ix keys =
   makeSimpleTx
     (txbFromCerts ix $ stakeKeyRegistrations keys)
@@ -335,22 +335,22 @@ ledgerRewardWithdrawals x y state = testLEDGER state (txWithdrawals x y) ledgerE
 
 -- Create stake pool key pairs, corresponding to seeds
 -- (RawSeed start 0 0 0 0) through (RawSeed end 0 0 0 0)
-poolColdKeys :: Word64 -> Word64 -> [KeyPair 'StakePool]
+poolColdKeys :: Word64 -> Word64 -> [KeyPair StakePool]
 poolColdKeys start end = fmap (\w -> mkKeyPair' (RawSeed w 1 0 0 0)) [start .. end]
 
-firstStakePool :: KeyPair 'StakePool
+firstStakePool :: KeyPair StakePool
 firstStakePool = mkKeyPair' (RawSeed 1 1 0 0 0)
 
-mkPoolKeyHash :: KeyPair 'StakePool -> KeyHash 'StakePool
+mkPoolKeyHash :: KeyPair StakePool -> KeyHash StakePool
 mkPoolKeyHash = hashKey . vKey
 
-firstStakePoolKeyHash :: KeyHash 'StakePool
+firstStakePoolKeyHash :: KeyHash StakePool
 firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 
-vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF
+vrfKeyHash :: VRFVerKeyHash StakePoolVRF
 vrfKeyHash = hashVerKeyVRF @MockCrypto . vrfVerKey . mkVRFKeyPair @MockCrypto $ RawSeed 0 0 0 0 0
 
-mkStakePoolParams :: KeyPair 'StakePool -> StakePoolParams
+mkStakePoolParams :: KeyPair StakePool -> StakePoolParams
 mkStakePoolParams keys =
   StakePoolParams
     { sppId = hashKey (vKey keys)
@@ -365,11 +365,11 @@ mkStakePoolParams keys =
     }
 
 -- Create stake pool registration certs
-poolRegCerts :: [KeyPair 'StakePool] -> StrictSeq (TxCert ShelleyEra)
+poolRegCerts :: [KeyPair StakePool] -> StrictSeq (TxCert ShelleyEra)
 poolRegCerts = StrictSeq.fromList . fmap (RegPoolTxCert . mkStakePoolParams)
 
 -- Create a transaction that registers stake pools.
-txRegStakePools :: TxIx -> [KeyPair 'StakePool] -> Tx TopTx ShelleyEra
+txRegStakePools :: TxIx -> [KeyPair StakePool] -> Tx TopTx ShelleyEra
 txRegStakePools ix keys =
   makeSimpleTx
     (txbFromCerts ix $ poolRegCerts keys)

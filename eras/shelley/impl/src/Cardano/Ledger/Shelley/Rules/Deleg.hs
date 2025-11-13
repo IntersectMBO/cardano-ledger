@@ -91,30 +91,30 @@ instance NFData (PParams era) => NFData (DelegEnv era)
 
 data ShelleyDelegPredFailure era
   = StakeKeyAlreadyRegisteredDELEG
-      (Credential 'Staking) -- Credential which is already registered
+      (Credential Staking) -- Credential which is already registered
   | StakeKeyNotRegisteredDELEG
-      (Credential 'Staking) -- Credential which is not registered
+      (Credential Staking) -- Credential which is not registered
   | StakeKeyNonZeroAccountBalanceDELEG
       Coin -- The remaining reward account balance
   | StakeDelegationImpossibleDELEG
-      (Credential 'Staking) -- Credential that is not registered
+      (Credential Staking) -- Credential that is not registered
   | WrongCertificateTypeDELEG -- The TxCertPool constructor should not be used by this transition
   | GenesisKeyNotInMappingDELEG
-      (KeyHash 'Genesis) -- Unknown Genesis KeyHash
+      (KeyHash GenesisRole) -- Unknown Genesis KeyHash
   | DuplicateGenesisDelegateDELEG
-      (KeyHash 'GenesisDelegate) -- Keyhash which is already delegated to
+      (KeyHash GenesisDelegate) -- Keyhash which is already delegated to
   | InsufficientForInstantaneousRewardsDELEG
       MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
-      (Mismatch 'RelLTEQ Coin)
+      (Mismatch RelLTEQ Coin)
   | MIRCertificateTooLateinEpochDELEG
-      (Mismatch 'RelLT SlotNo)
+      (Mismatch RelLT SlotNo)
   | DuplicateGenesisVRFDELEG
-      (VRFVerKeyHash 'GenDelegVRF) -- VRF KeyHash which is already delegated to
+      (VRFVerKeyHash GenDelegVRF) -- VRF KeyHash which is already delegated to
   | MIRTransferNotCurrentlyAllowed
   | MIRNegativesNotCurrentlyAllowed
   | InsufficientForTransferDELEG
       MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
-      (Mismatch 'RelLTEQ Coin)
+      (Mismatch RelLTEQ Coin)
   | MIRProducesNegativeUpdate
   | MIRNegativeTransfer
       MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
@@ -399,7 +399,7 @@ checkSlotNotTooLate slot curEpochNo = do
 updateReservesAndTreasury ::
   EraCertState era =>
   MIRPot ->
-  Map.Map (Credential 'Staking) Coin ->
+  Map.Map (Credential Staking) Coin ->
   Coin ->
   CertState era ->
   Rule (ShelleyDELEG era) 'Transition (CertState era)

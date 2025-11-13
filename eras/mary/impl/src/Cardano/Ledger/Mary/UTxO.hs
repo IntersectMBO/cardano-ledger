@@ -69,8 +69,8 @@ instance EraUTxO MaryEra where
 getConsumedMaryValue ::
   (MaryEraTxBody era, Value era ~ MaryValue) =>
   PParams era ->
-  (Credential 'Staking -> Maybe Coin) ->
-  (Credential 'DRepRole -> Maybe Coin) ->
+  (Credential Staking -> Maybe Coin) ->
+  (Credential DRepRole -> Maybe Coin) ->
   UTxO era ->
   TxBody l era ->
   MaryValue
@@ -89,7 +89,7 @@ getProducedMaryValue ::
   (MaryEraTxBody era, Value era ~ MaryValue) =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
-  (KeyHash 'StakePool -> Bool) ->
+  (KeyHash StakePool -> Bool) ->
   TxBody TopTx era ->
   MaryValue
 getProducedMaryValue pp isPoolRegistered txBody =

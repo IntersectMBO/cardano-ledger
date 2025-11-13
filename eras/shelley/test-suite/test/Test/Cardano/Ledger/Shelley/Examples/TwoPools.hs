@@ -690,7 +690,7 @@ nonMyopicEx9 =
 
 rewardUpdateEx9 ::
   PParams ShelleyEra ->
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential Staking) (Set Reward) ->
   RewardUpdate
 rewardUpdateEx9 pp rewards =
   RewardUpdate
@@ -744,7 +744,7 @@ carlsRewards =
     , Reward LeaderReward (aikColdKeyHash Cast.bobPoolKeys) carlLeaderRewardsFromBob
     ]
 
-rsEx9Agg :: Map (Credential 'Staking) (Set Reward)
+rsEx9Agg :: Map (Credential Staking) (Set Reward)
 rsEx9Agg = Map.singleton Cast.carlSHK carlsRewards
 
 ppProtVer3 :: PParams ShelleyEra

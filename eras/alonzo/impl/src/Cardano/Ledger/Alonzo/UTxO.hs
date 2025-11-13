@@ -332,7 +332,7 @@ getAlonzoWitsVKeyNeeded ::
   CertState era ->
   UTxO era ->
   TxBody l era ->
-  Set.Set (KeyHash 'Witness)
+  Set.Set (KeyHash Witness)
 getAlonzoWitsVKeyNeeded certState utxo txBody =
   getShelleyWitsVKeyNeeded certState utxo txBody
     `Set.union` Set.map asWitness (txBody ^. reqSignerHashesTxBodyG)

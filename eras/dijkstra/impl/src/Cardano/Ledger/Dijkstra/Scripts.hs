@@ -216,13 +216,13 @@ deriving instance (EraPParams era, EraTxCert era) => Show (DijkstraPlutusPurpose
 deriving instance (EraPParams era, EraTxCert era) => Show (DijkstraPlutusPurpose AsIxItem era)
 
 data DijkstraNativeScriptRaw era
-  = DijkstraRequireSignature !(KeyHash 'Witness)
+  = DijkstraRequireSignature !(KeyHash Witness)
   | DijkstraRequireAllOf !(StrictSeq (DijkstraNativeScript era))
   | DijkstraRequireAnyOf !(StrictSeq (DijkstraNativeScript era))
   | DijkstraRequireMOf !Int !(StrictSeq (DijkstraNativeScript era))
   | DijkstraTimeStart !SlotNo
   | DijkstraTimeExpire !SlotNo
-  | DijkstraRequireGuard (Credential 'Guard)
+  | DijkstraRequireGuard (Credential Guard)
   deriving (Eq, Generic, NFData)
 
 deriving instance Show (DijkstraNativeScriptRaw era)
@@ -243,7 +243,7 @@ instance Era era => EncCBOR (DijkstraNativeScriptRaw era) where
 instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
   decCBOR = decode (Summands "DijkstraNativeScriptRaw" decRaw)
     where
-      decRaw :: Word -> Decode 'Open (Annotator (DijkstraNativeScriptRaw era))
+      decRaw :: Word -> Decode Open (Annotator (DijkstraNativeScriptRaw era))
       decRaw 0 = Ann (SumD DijkstraRequireSignature <! From)
       decRaw 1 = Ann (SumD DijkstraRequireAllOf) <*! D (sequence <$> decCBOR)
       decRaw 2 = Ann (SumD DijkstraRequireAnyOf) <*! D (sequence <$> decCBOR)
@@ -442,8 +442,8 @@ class ConwayEraScript era => DijkstraEraScript era where
   mkGuardingPurpose :: f Word32 ScriptHash -> PlutusPurpose f era
   toGuardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
 
-  mkRequireGuard :: Credential 'Guard -> NativeScript era
-  getRequireGuard :: NativeScript era -> Maybe (Credential 'Guard)
+  mkRequireGuard :: Credential Guard -> NativeScript era
+  getRequireGuard :: NativeScript era -> Maybe (Credential Guard)
 
 instance DijkstraEraScript DijkstraEra where
   mkGuardingPurpose = DijkstraGuarding
@@ -460,16 +460,16 @@ pattern GuardingPurpose c <- (toGuardingPurpose -> Just c)
   where
     GuardingPurpose c = mkGuardingPurpose c
 
-pattern RequireGuard :: DijkstraEraScript era => Credential 'Guard -> NativeScript era
+pattern RequireGuard :: DijkstraEraScript era => Credential Guard -> NativeScript era
 pattern RequireGuard cred <- (getRequireGuard -> Just cred)
   where
     RequireGuard cred = mkRequireGuard cred
 
 evalDijkstraNativeScript ::
   (DijkstraEraScript era, NativeScript era ~ DijkstraNativeScript era) =>
-  Set.Set (KeyHash 'Witness) ->
+  Set.Set (KeyHash Witness) ->
   ValidityInterval ->
-  OSet (Credential 'Guard) ->
+  OSet (Credential Guard) ->
   NativeScript era ->
   Bool
 evalDijkstraNativeScript keyHashes (ValidityInterval txStart txExp) guards = go
@@ -488,10 +488,10 @@ evalDijkstraNativeScript keyHashes (ValidityInterval txStart txExp) guards = go
       RequireGuard cred -> cred `OSet.member` guards
       _ -> error "Impossible: All NativeScripts should have been accounted for"
 
-mkDijkstraRequireSignature :: forall era. Era era => KeyHash 'Witness -> DijkstraNativeScript era
+mkDijkstraRequireSignature :: forall era. Era era => KeyHash Witness -> DijkstraNativeScript era
 mkDijkstraRequireSignature = mkMemoizedEra @era . DijkstraRequireSignature
 
-getDijkstraRequireSignature :: DijkstraNativeScript era -> Maybe (KeyHash 'Witness)
+getDijkstraRequireSignature :: DijkstraNativeScript era -> Maybe (KeyHash Witness)
 getDijkstraRequireSignature (MkDijkstraNativeScript (Memo (DijkstraRequireSignature kh) _)) = Just kh
 getDijkstraRequireSignature _ = Nothing
 
@@ -534,9 +534,9 @@ getDijkstraTimeExpire :: DijkstraNativeScript era -> Maybe SlotNo
 getDijkstraTimeExpire (MkDijkstraNativeScript (Memo (DijkstraTimeExpire mslot) _)) = Just mslot
 getDijkstraTimeExpire _ = Nothing
 
-mkDijkstraRequireGuard :: forall era. Era era => Credential 'Guard -> DijkstraNativeScript era
+mkDijkstraRequireGuard :: forall era. Era era => Credential Guard -> DijkstraNativeScript era
 mkDijkstraRequireGuard = mkMemoizedEra @era . DijkstraRequireGuard
 
-getDijkstraRequireGuard :: DijkstraNativeScript era -> Maybe (Credential 'Guard)
+getDijkstraRequireGuard :: DijkstraNativeScript era -> Maybe (Credential Guard)
 getDijkstraRequireGuard (MkDijkstraNativeScript (Memo (DijkstraRequireGuard cred) _)) = Just cred
 getDijkstraRequireGuard _ = Nothing

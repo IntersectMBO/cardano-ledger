@@ -41,13 +41,13 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n
 
-wdrlCredentials :: Map RewardAccount Coin -> Set (Credential 'Staking)
+wdrlCredentials :: Map RewardAccount Coin -> Set (Credential Staking)
 wdrlCredentials m = Set.map raCredential (Map.keysSet m)
 
-keyHashWdrl :: Map RewardAccount Coin -> Set (Credential 'Staking)
+keyHashWdrl :: Map RewardAccount Coin -> Set (Credential Staking)
 keyHashWdrl m = Set.filter isKeyHash (wdrlCredentials m)
 
-isKeyHash :: Credential 'Staking -> Bool
+isKeyHash :: Credential Staking -> Bool
 isKeyHash (KeyHashObj _) = True
 isKeyHash (ScriptHashObj _) = False
 
@@ -60,7 +60,7 @@ accountBalanceSpec balance =
         (3, constrained (const True))
     )
 
-dRepMembershipPred :: Map (Credential 'DRepRole) a -> Term DRep -> Pred
+dRepMembershipPred :: Map (Credential DRepRole) a -> Term DRep -> Pred
 dRepMembershipPred dRepsMap dRep =
   assert $
     (caseOn dRep)
@@ -69,7 +69,7 @@ dRepMembershipPred dRepsMap dRep =
       (branchW 1 $ const True)
       (branchW 1 $ const True)
   where
-    dRepsSet :: Ord a => (Credential 'DRepRole -> Maybe a) -> Set a
+    dRepsSet :: Ord a => (Credential DRepRole -> Maybe a) -> Set a
     dRepsSet f = Set.fromList [k' | k <- Map.keys dRepsMap, Just k' <- [f k]]
 
 -- | The DState needs a witnessed set of delegations to be usefull. Use this Spec to obtain a random one
@@ -82,7 +82,7 @@ witnessedKeyHashStakePoolMapSpec univ =
 conwayAccountsSpec ::
   Era era =>
   WitUniv era ->
-  Term (Map (KeyHash 'StakePool) StakePoolParams) ->
+  Term (Map (KeyHash StakePool) StakePoolParams) ->
   Specification (ConwayAccounts era)
 conwayAccountsSpec univ poolreg = constrained $ \ [var|conwayAccounts|] ->
   match conwayAccounts $ \ [var|accountmap|] ->
@@ -93,7 +93,7 @@ conwayAccountsSpec univ poolreg = constrained $ \ [var|conwayAccounts|] ->
           , witness univ accountstate
           , match accountstate $ \ [var|_rewardbal|] [var|_depositbal|] [var|mStakeDelegKeyhash|] [var|mDRep|] ->
               [ ( caseOn
-                    (mStakeDelegKeyhash :: Term (StrictMaybe (KeyHash 'StakePool)))
+                    (mStakeDelegKeyhash :: Term (StrictMaybe (KeyHash StakePool)))
                     (branchW 1 $ \_ -> True)
                     (branchW 3 $ \ [var|stakekeyhash|] -> mapMember_ stakekeyhash poolreg)
                 )
@@ -113,14 +113,14 @@ conwayAccountsSpec univ poolreg = constrained $ \ [var|conwayAccounts|] ->
 stakePoolDelegationsSpec ::
   Era era =>
   WitUniv era ->
-  Specification (Map (Credential 'Staking) (KeyHash 'StakePool))
+  Specification (Map (Credential Staking) (KeyHash StakePool))
 stakePoolDelegationsSpec univ =
   constrained $ \ [var|stakePoolDelegations|] -> witness univ stakePoolDelegations
 
 dRepDelegationsSpec ::
   Era era =>
   WitUniv era ->
-  Specification (Map (Credential 'Staking) DRep)
+  Specification (Map (Credential Staking) DRep)
 dRepDelegationsSpec univ =
   constrained $ \ [var|dRepDelegations|] ->
     [ witness univ (dom_ dRepDelegations)

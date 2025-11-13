@@ -91,22 +91,22 @@ certStateWithRewards ir =
         , dsIRewards = ir
         }
 
-alice :: Credential 'Staking
+alice :: Credential Staking
 alice = (KeyHashObj . hashKey . snd) $ mkKeyPair (RawSeed 0 0 0 0 1)
 
-aliceOnlyReward :: Integer -> Map (Credential 'Staking) Coin
+aliceOnlyReward :: Integer -> Map (Credential Staking) Coin
 aliceOnlyReward c = Map.fromList [(alice, Coin c)]
 
-aliceOnlyDelta :: Integer -> Map (Credential 'Staking) DeltaCoin
+aliceOnlyDelta :: Integer -> Map (Credential Staking) DeltaCoin
 aliceOnlyDelta c = Map.fromList [(alice, DeltaCoin c)]
 
-bob :: Credential 'Staking
+bob :: Credential Staking
 bob = (KeyHashObj . hashKey . snd) $ mkKeyPair (RawSeed 0 0 0 0 2)
 
-bobOnlyReward :: Integer -> Map (Credential 'Staking) Coin
+bobOnlyReward :: Integer -> Map (Credential Staking) Coin
 bobOnlyReward c = Map.fromList [(bob, Coin c)]
 
-bobOnlyDelta :: Integer -> Map (Credential 'Staking) DeltaCoin
+bobOnlyDelta :: Integer -> Map (Credential Staking) DeltaCoin
 bobOnlyDelta c = Map.fromList [(bob, DeltaCoin c)]
 
 testMIRTransfer :: TestTree

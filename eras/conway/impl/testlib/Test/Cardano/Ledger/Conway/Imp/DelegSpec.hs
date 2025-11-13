@@ -559,7 +559,7 @@ spec = do
     getDelegs deleg2 updatedNES `shouldReturn` Just pool1
     getDelegs deleg3 updatedNES `shouldReturn` Just pool2
   where
-    expectDelegatedVote :: HasCallStack => Credential 'Staking -> DRep -> ImpTestM era ()
+    expectDelegatedVote :: HasCallStack => Credential Staking -> DRep -> ImpTestM era ()
     expectDelegatedVote cred drep = do
       accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
       dreps <- getsNES $ nesEsL . epochStateRegDrepL
@@ -579,7 +579,7 @@ spec = do
                   (cred `Set.member` drepDelegs drepState)
           _ -> pure ()
 
-    expectNotDelegatedVote :: Credential 'Staking -> ImpTestM era ()
+    expectNotDelegatedVote :: Credential Staking -> ImpTestM era ()
     expectNotDelegatedVote cred = do
       accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
       dreps <- getsNES $ nesEsL . epochStateRegDrepL

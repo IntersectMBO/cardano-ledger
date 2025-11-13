@@ -134,10 +134,10 @@ impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era
   , NativeScript era ~ DijkstraNativeScript era
   ) =>
-  Set.Set (KeyHash 'Witness) ->
+  Set.Set (KeyHash Witness) ->
   TxBody l era ->
   NativeScript era ->
-  ImpTestM era (Maybe (Map.Map (KeyHash 'Witness) (KeyPair 'Witness)))
+  ImpTestM era (Maybe (Map.Map (KeyHash Witness) (KeyPair Witness)))
 impDijkstraSatisfyNativeScript providedVKeyHashes txBody script = do
   let vi = txBody ^. vldtTxBodyL
   let guards = txBody ^. guardsTxBodyL
@@ -165,7 +165,7 @@ dijkstraGenRegTxCert ::
   ( ShelleyEraImp era
   , ConwayEraTxCert era
   ) =>
-  Credential 'Staking ->
+  Credential Staking ->
   ImpTestM era (TxCert era)
 dijkstraGenRegTxCert stakingCredential =
   RegDepositTxCert stakingCredential
@@ -176,7 +176,7 @@ dijkstraGenUnRegTxCert ::
   ( ShelleyEraImp era
   , ConwayEraTxCert era
   ) =>
-  Credential 'Staking ->
+  Credential Staking ->
   ImpTestM era (TxCert era)
 dijkstraGenUnRegTxCert stakingCredential = do
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL

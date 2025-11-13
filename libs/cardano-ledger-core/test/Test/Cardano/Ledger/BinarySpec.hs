@@ -14,7 +14,7 @@ import Cardano.Ledger.TxIn
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Binary.RoundTrip
-import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Common (Spec, describe, prop)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Binary.Annotator ()
 
@@ -50,5 +50,5 @@ spec = do
 
   describe "DecCBOR instances equivalence" $ do
     decoderEquivalenceSpec @BootstrapWitness minBound maxBound
-    decoderEquivalenceSpec @(WitVKey 'Witness) minBound maxBound
+    decoderEquivalenceSpec @(WitVKey Witness) minBound maxBound
     decoderEquivalenceSpec @PV1.Data minBound maxBound

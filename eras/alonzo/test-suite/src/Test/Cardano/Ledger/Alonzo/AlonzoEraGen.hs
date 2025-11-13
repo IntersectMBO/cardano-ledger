@@ -122,7 +122,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Update (genM, genShelleyPParamsUpda
 import qualified Test.Cardano.Ledger.Shelley.Generator.Update as Shelley (genPParams)
 import Test.Cardano.Ledger.Shelley.Generator.Utxo (encodedLen)
 import Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
-import Test.QuickCheck hiding ((><))
+import Test.QuickCheck hiding (Witness, (><))
 
 -- ============================================================
 
@@ -620,7 +620,7 @@ someLeaf ::
   , NativeScript era ~ Timelock era
   ) =>
   Proxy era ->
-  KeyHash 'Witness ->
+  KeyHash Witness ->
   AlonzoScript era
 someLeaf _proxy keyHash =
   let

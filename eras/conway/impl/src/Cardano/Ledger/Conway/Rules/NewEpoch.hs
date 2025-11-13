@@ -66,11 +66,11 @@ data ConwayNewEpochEvent era
   = DeltaRewardEvent !(Event (EraRule "RUPD" era))
   | RestrainedRewards
       !EpochNo
-      !(Map.Map (Credential 'Staking) (Set Reward))
-      !(Set (Credential 'Staking))
+      !(Map.Map (Credential Staking) (Set Reward))
+      !(Set (Credential Staking))
   | TotalRewardEvent
       !EpochNo
-      !(Map.Map (Credential 'Staking) (Set Reward))
+      !(Map.Map (Credential Staking) (Set Reward))
   | EpochEvent !(Event (EraRule "EPOCH" era))
   | TotalAdaPotsEvent !AdaPots
   deriving (Generic)

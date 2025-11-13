@@ -98,8 +98,8 @@ import NoThunks.Class (NoThunks (..), allNoThunks)
 data PulsingSnapshot era = PulsingSnapshot
   { psProposals :: !(StrictSeq (GovActionState era))
   , psDRepDistr :: !(Map DRep (CompactForm Coin))
-  , psDRepState :: !(Map (Credential 'DRepRole) DRepState)
-  , psPoolDistr :: Map (KeyHash 'StakePool) (CompactForm Coin)
+  , psDRepState :: !(Map (Credential DRepRole) DRepState)
+  , psPoolDistr :: Map (KeyHash StakePool) (CompactForm Coin)
   }
   deriving (Generic)
 
@@ -110,13 +110,13 @@ psDRepDistrL :: Lens' (PulsingSnapshot era) (Map DRep (CompactForm Coin))
 psDRepDistrL = lens psDRepDistr (\x y -> x {psDRepDistr = y})
 
 psDRepStateL ::
-  Lens' (PulsingSnapshot era) (Map (Credential 'DRepRole) DRepState)
+  Lens' (PulsingSnapshot era) (Map (Credential DRepRole) DRepState)
 psDRepStateL = lens psDRepState (\x y -> x {psDRepState = y})
 
 psPoolDistrL ::
   Lens'
     (PulsingSnapshot era)
-    (Map (KeyHash 'StakePool) (CompactForm Coin))
+    (Map (KeyHash StakePool) (CompactForm Coin))
 psPoolDistrL = lens psPoolDistr (\x y -> x {psPoolDistr = y})
 
 deriving instance EraPParams era => Eq (PulsingSnapshot era)
@@ -156,10 +156,10 @@ instance EraPParams era => EncCBOR (PulsingSnapshot era) where
 instance EraPParams era => DecShareCBOR (PulsingSnapshot era) where
   type
     Share (PulsingSnapshot era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decShareCBOR is@(cs, ks, cd, _) =
     decode $
@@ -206,11 +206,11 @@ instance EraPParams era => FromCBOR (PulsingSnapshot era) where
 computeDRepDistr ::
   (EraStake era, ConwayEraAccounts era) =>
   InstantStake era ->
-  Map (Credential 'DRepRole) DRepState ->
-  Map (Credential 'Staking) (CompactForm Coin) ->
+  Map (Credential DRepRole) DRepState ->
+  Map (Credential Staking) (CompactForm Coin) ->
   PoolDistr ->
   Map DRep (CompactForm Coin) ->
-  Map (Credential 'Staking) (AccountState era) ->
+  Map (Credential Staking) (AccountState era) ->
   (Map DRep (CompactForm Coin), PoolDistr)
 computeDRepDistr instantStake regDReps proposalDeposits poolDistr dRepDistr =
   Map.foldlWithKey' go (dRepDistr, poolDistr)
@@ -269,7 +269,7 @@ data DRepPulser era (m :: Type -> Type) ans where
     -- for explanation.
     , dpDRepDistr :: !(Map DRep (CompactForm Coin))
     -- ^ The partial result that grows with each pulse. The purpose of the pulsing.
-    , dpDRepState :: !(Map (Credential 'DRepRole) DRepState)
+    , dpDRepState :: !(Map (Credential DRepRole) DRepState)
     -- ^ Snapshot of registered DRep credentials
     , dpCurrentEpoch :: !EpochNo
     -- ^ Snapshot of the EpochNo this pulser will complete in.
@@ -279,10 +279,10 @@ data DRepPulser era (m :: Type -> Type) ans where
     -- ^ Snapshot of the EnactState, Used to build the Env of the RATIFY rule
     , dpProposals :: !(StrictSeq (GovActionState era))
     -- ^ Snapshot of the proposals. This is the Signal for the RATIFY rule
-    , dpProposalDeposits :: !(Map (Credential 'Staking) (CompactForm Coin))
+    , dpProposalDeposits :: !(Map (Credential Staking) (CompactForm Coin))
     -- ^ Snapshot of the proposal-deposits per reward-account-staking-credential
     , dpGlobals :: !Globals
-    , dpStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
+    , dpStakePools :: !(Map (KeyHash StakePool) StakePoolState)
     -- ^ Snapshot of the parameters of stake pools -
     --   this is needed to get the reward account for SPO vote calculation
     } ->
@@ -467,10 +467,10 @@ instance (ConwayEraAccounts era, EraStake era, EraPParams era) => EncCBOR (DRepP
 instance EraPParams era => DecShareCBOR (DRepPulsingState era) where
   type
     Share (DRepPulsingState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decShareCBOR is =
     decode $

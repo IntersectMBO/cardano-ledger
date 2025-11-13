@@ -49,7 +49,7 @@ spec = withEachEraVersion @era $ do
     describe "Expiries are reported correctly" $ do
       let drepStateFromQuery ::
             (HasCallStack, Monad m) =>
-            Credential 'DRepRole ->
+            Credential DRepRole ->
             NewEpochState era ->
             m DRepState
           drepStateFromQuery drep nes =
@@ -452,10 +452,10 @@ spec = withEachEraVersion @era $ do
   where
     expectQueryResult ::
       HasCallStack =>
-      Set.Set (Credential 'ColdCommitteeRole) ->
-      Set.Set (Credential 'HotCommitteeRole) ->
+      Set.Set (Credential ColdCommitteeRole) ->
+      Set.Set (Credential HotCommitteeRole) ->
       Set.Set MemberStatus ->
-      Map.Map (Credential 'ColdCommitteeRole) CommitteeMemberState ->
+      Map.Map (Credential ColdCommitteeRole) CommitteeMemberState ->
       ImpTestM era ()
     expectQueryResult ckFilter hkFilter statusFilter expResult = do
       nes <- use impNESL
@@ -470,7 +470,7 @@ spec = withEachEraVersion @era $ do
 
     expectNoFilterQueryResult ::
       HasCallStack =>
-      Map.Map (Credential 'ColdCommitteeRole) CommitteeMemberState ->
+      Map.Map (Credential ColdCommitteeRole) CommitteeMemberState ->
       ImpTestM era ()
     expectNoFilterQueryResult =
       expectQueryResult mempty mempty mempty

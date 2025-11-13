@@ -213,13 +213,13 @@ exampleShelleyGenesis =
     }
   where
     -- hash of the genesis verification key
-    genesisVerKeyHash :: L.KeyHash 'L.Genesis
+    genesisVerKeyHash :: L.KeyHash L.GenesisRole
     genesisVerKeyHash = L.KeyHash "38e7c5986a34f334e19b712c0aa525146dab8f0ff889b2ad16894241"
     -- hash of the delegators verififation key
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
-    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate
+    delegVerKeyHash :: L.KeyHash L.GenesisDelegate
     delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
-    delegVrfKeyHash :: VRFVerKeyHash 'GenDelegVRF
+    delegVrfKeyHash :: VRFVerKeyHash GenDelegVRF
     delegVrfKeyHash = VRFVerKeyHash "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
     initialFundedAddress :: L.Addr
     initialFundedAddress =

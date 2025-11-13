@@ -61,7 +61,7 @@ instance ConwayEraTest ConwayEra
 mkConwayTestAccountState ::
   ConwayEraAccounts era =>
   CompactForm Coin ->
-  Maybe (KeyHash 'StakePool) ->
+  Maybe (KeyHash StakePool) ->
   Maybe DRep ->
   AccountState era
 mkConwayTestAccountState deposit mStakePool mDRep =

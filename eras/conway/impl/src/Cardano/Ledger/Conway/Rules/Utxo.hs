@@ -93,12 +93,12 @@ data ConwayUtxoPredFailure era
       ValidityInterval
       -- | current slot
       SlotNo
-  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Word32)
+  | MaxTxSizeUTxO (Mismatch RelLTEQ Word32)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
-      (Mismatch 'RelGTEQ Coin) -- The values are serialised in reverse order
+      (Mismatch RelGTEQ Coin) -- The values are serialised in reverse order
   | ValueNotConservedUTxO
-      (Mismatch 'RelEQ (Value era)) -- Serialise consumed first, then produced
+      (Mismatch RelEQ (Value era)) -- Serialise consumed first, then produced
   | -- | the set of addresses with incorrect network IDs
     WrongNetwork
       -- | the expected network id
@@ -128,18 +128,18 @@ data ConwayUtxoPredFailure era
     ScriptsNotPaidUTxO
       (UTxO era)
   | ExUnitsTooBigUTxO
-      (Mismatch 'RelLTEQ ExUnits) -- The values are serialised in reverse order
+      (Mismatch RelLTEQ ExUnits) -- The values are serialised in reverse order
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body
     WrongNetworkInTxBody
-      (Mismatch 'RelEQ Network) -- The values are serialised in reverse order
+      (Mismatch RelEQ Network) -- The values are serialised in reverse order
   | -- | slot number outside consensus forecast range
     OutsideForecast
       SlotNo
   | -- | There are too many collateral inputs
     TooManyCollateralInputs
-      (Mismatch 'RelLTEQ Natural) -- The values are serialised in reverse order
+      (Mismatch RelLTEQ Natural) -- The values are serialised in reverse order
   | NoCollateralInputs
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField

@@ -15,6 +15,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeData #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -739,7 +740,7 @@ deriving instance Show EpochErr
 instance Exception EpochErr
 
 -- | Relationship descriptor for the expectation in the 'Mismatch' type.
-data Relation
+type data Relation
   = -- | Equal
     RelEQ
   | -- | Less then
@@ -752,7 +753,6 @@ data Relation
     RelGTEQ
   | -- | Is subset of
     RelSubset
-  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, ToJSON, FromJSON, NoThunks)
 
 -- | This is intended to help clarify supplied and expected values reported by
 -- predicate-failures in all eras.
@@ -833,7 +833,7 @@ instance DecCBOR Network
 
 -- | Number of blocks which have been created by stake pools in the current epoch.
 newtype BlocksMade = BlocksMade
-  { unBlocksMade :: Map (KeyHash 'StakePool) Natural
+  { unBlocksMade :: Map (KeyHash StakePool) Natural
   }
   deriving (Eq, Generic)
   deriving (Show) via Quiet BlocksMade

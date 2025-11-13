@@ -455,7 +455,7 @@ spec = do
 data ConwayCertGenContext era = ConwayCertGenContext
   { ccccWithdrawals :: !(Map RewardAccount Coin)
   , ccccVotes :: !(VotingProcedures era)
-  , ccccDelegatees :: !(Map (Credential 'DRepRole) (Set (Credential 'Staking)))
+  , ccccDelegatees :: !(Map (Credential DRepRole) (Set (Credential Staking)))
   }
   deriving (Generic, Eq, Show)
 

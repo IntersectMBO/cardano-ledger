@@ -75,9 +75,9 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Genesis (EraGenesis (..))
+import Cardano.Ledger.Genesis
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
-import Cardano.Ledger.Keys
+import Cardano.Ledger.Keys (GenDelegPair (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.StabilityWindow
@@ -120,13 +120,13 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 -- For simplicity, pools defined in the genesis staking do not pay deposits for
 -- their registration.
 data ShelleyGenesisStaking = ShelleyGenesisStaking
-  { sgsPools :: LM.ListMap (KeyHash 'StakePool) StakePoolParams
+  { sgsPools :: LM.ListMap (KeyHash StakePool) StakePoolParams
   -- ^ Pools to register
   --
   --   The key in this map is the hash of the public key of the _pool_. This
   --   need not correspond to any payment or staking key, but must correspond
   --   to the cold key held by 'TPraosIsCoreNode'.
-  , sgsStake :: LM.ListMap (KeyHash 'Staking) (KeyHash 'StakePool)
+  , sgsStake :: LM.ListMap (KeyHash Staking) (KeyHash StakePool)
   -- ^ Stake-holding key hash credentials and the pools to delegate that stake
   -- to. We require the raw staking key hash in order to:
   --
@@ -221,7 +221,7 @@ data ShelleyGenesis = ShelleyGenesis
   , sgUpdateQuorum :: !Word64
   , sgMaxLovelaceSupply :: !Word64
   , sgProtocolParams :: !(PParams ShelleyEra)
-  , sgGenDelegs :: !(Map (KeyHash 'Genesis) GenDelegPair)
+  , sgGenDelegs :: !(Map (KeyHash GenesisRole) GenDelegPair)
   , sgInitialFunds :: LM.ListMap Addr Coin
   -- ^ 'sgInitialFunds' is intentionally kept lazy, as it can otherwise cause
   --   out-of-memory problems in testing and benchmarking.

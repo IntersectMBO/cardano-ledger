@@ -10,6 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeData #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Hashes (
@@ -213,7 +214,7 @@ newtype ScriptHash
 -- VRF Key Hashes
 --------------------------------------------------------------------------------
 
-data KeyRoleVRF
+type data KeyRoleVRF
   = StakePoolVRF
   | GenDelegVRF
   | BlockIssuerVRF
@@ -258,8 +259,8 @@ newtype TxAuxDataHash = TxAuxDataHash
 
 -- TODO: Move to cardano-ledger-shelley, whenever CertState will become era parametric
 data GenDelegPair = GenDelegPair
-  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate)
-  , genDelegVrfHash :: !(VRFVerKeyHash 'GenDelegVRF)
+  { genDelegKeyHash :: !(KeyHash GenesisDelegate)
+  , genDelegVrfHash :: !(VRFVerKeyHash GenDelegVRF)
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -294,7 +295,7 @@ instance FromJSON GenDelegPair where
         <*> obj .: "vrf"
 
 newtype GenDelegs = GenDelegs
-  { unGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+  { unGenDelegs :: Map (KeyHash GenesisRole) GenDelegPair
   }
   deriving (Eq, EncCBOR, DecCBOR, NoThunks, NFData, Generic, FromJSON, ToJSON)
   deriving (Show) via Quiet GenDelegs

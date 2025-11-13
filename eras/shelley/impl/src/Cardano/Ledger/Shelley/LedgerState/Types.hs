@@ -269,10 +269,10 @@ instance
 instance (EraTxOut era, EraGov era, EraStake era) => DecShareCBOR (UTxOState era) where
   type
     Share (UTxOState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decShareCBOR is@(cs, _, _, _) =
     decodeRecordNamed "UTxOState" (const 6) $ do
@@ -525,10 +525,10 @@ instance
   where
   type
     Share (LedgerState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decSharePlusCBOR =
     decodeRecordNamedT "LedgerState" (const 2) $ do
@@ -595,10 +595,10 @@ nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
 nesELL :: Lens' (NewEpochState era) EpochNo
 nesELL = lens nesEL (\ds u -> ds {nesEL = u})
 
-nesBprevL :: Lens' (NewEpochState era) (Map (KeyHash 'StakePool) Natural)
+nesBprevL :: Lens' (NewEpochState era) (Map (KeyHash StakePool) Natural)
 nesBprevL = lens (unBlocksMade . nesBprev) (\ds u -> ds {nesBprev = BlocksMade u})
 
-nesBcurL :: Lens' (NewEpochState era) (Map (KeyHash 'StakePool) Natural)
+nesBcurL :: Lens' (NewEpochState era) (Map (KeyHash StakePool) Natural)
 nesBcurL = lens (unBlocksMade . nesBcur) (\ds u -> ds {nesBcur = BlocksMade u})
 
 nesRuL :: Lens' (NewEpochState era) (StrictMaybe PulsingRewUpdate)
@@ -667,11 +667,11 @@ epochStateDonationL :: Lens' (EpochState era) Coin
 epochStateDonationL = esLStateL . lsUTxOStateL . utxosDonationL
 
 epochStateStakePoolsL ::
-  EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) StakePoolState)
+  EraCertState era => Lens' (EpochState era) (Map (KeyHash StakePool) StakePoolState)
 epochStateStakePoolsL = esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
 epochStateStakeDistrL ::
-  Lens' (EpochState era) (VMap VB VP (Credential 'Staking) (CompactForm Coin))
+  Lens' (EpochState era) (VMap VB VP (Credential Staking) (CompactForm Coin))
 epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssStakeDistrL
 
 potEqualsObligation ::

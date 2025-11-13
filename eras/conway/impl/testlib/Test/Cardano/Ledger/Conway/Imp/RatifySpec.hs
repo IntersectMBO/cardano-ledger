@@ -318,8 +318,8 @@ paramChangeAffectsProposalsSpec =
   -- so we can only run them post-bootstrap
   describe "ParameterChange affects existing proposals" $ do
     let submitTwoExampleProposalsAndVoteOnTheChild ::
-          [(KeyHash 'StakePool, Vote)] ->
-          [(Credential 'DRepRole, Vote)] ->
+          [(KeyHash StakePool, Vote)] ->
+          [(Credential DRepRole, Vote)] ->
           ImpTestM era (GovActionId, GovActionId)
         submitTwoExampleProposalsAndVoteOnTheChild spos dreps = do
           committeeC <- KeyHashObj <$> freshKeyHash
@@ -365,7 +365,7 @@ paramChangeAffectsProposalsSpec =
         isDRepAccepted gaiChild `shouldReturn` True
         enactCommitteeUpdateThreshold
           (65 %! 100)
-          ([drepC, drep] :: [Credential 'DRepRole])
+          ([drepC, drep] :: [Credential DRepRole])
           hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` False
       it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ whenPostBootstrap $ do
@@ -380,7 +380,7 @@ paramChangeAffectsProposalsSpec =
         isDRepAccepted gaiChild `shouldReturn` False
         enactCommitteeUpdateThreshold
           (65 %! 100)
-          ([drepC, drep] :: [Credential 'DRepRole])
+          ([drepC, drep] :: [Credential DRepRole])
           hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` True
         -- Not vote on the parent too to make sure both get enacted
@@ -1725,9 +1725,9 @@ committeeMaxTermLengthSpec =
   describe "Committee members can serve full `CommitteeMaxTermLength`" $ do
     let
       electMembersWithMaxTermLength ::
-        KeyHash 'StakePool ->
-        Credential 'DRepRole ->
-        ImpTestM era [Credential 'ColdCommitteeRole]
+        KeyHash StakePool ->
+        Credential DRepRole ->
+        ImpTestM era [Credential ColdCommitteeRole]
       electMembersWithMaxTermLength spoC drep = do
         m1 <- KeyHashObj <$> freshKeyHash
         m2 <- KeyHashObj <$> freshKeyHash

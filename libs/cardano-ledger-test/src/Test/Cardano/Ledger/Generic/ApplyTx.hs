@@ -195,9 +195,9 @@ additions bodyhash firstTxIx outputs =
 filterRewards ::
   EraPParams era =>
   PParams era ->
-  Map (Credential 'Staking) (Set Reward) ->
-  ( Map (Credential 'Staking) (Set Reward)
-  , Map (Credential 'Staking) (Set Reward)
+  Map (Credential Staking) (Set Reward) ->
+  ( Map (Credential Staking) (Set Reward)
+  , Map (Credential Staking) (Set Reward)
   )
 filterRewards pp rewards =
   if pvMajor (pp ^. ppProtocolVersionL) > natVersion @2
@@ -208,11 +208,11 @@ filterRewards pp rewards =
 
 filterAllRewards ::
   (EraPParams era, EraAccounts era) =>
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential Staking) (Set Reward) ->
   Model era ->
-  ( Map (Credential 'Staking) (Set Reward)
-  , Map (Credential 'Staking) (Set Reward)
-  , Set (Credential 'Staking)
+  ( Map (Credential Staking) (Set Reward)
+  , Map (Credential Staking) (Set Reward)
+  , Set (Credential Staking)
   , Coin
   )
 filterAllRewards rs' m =

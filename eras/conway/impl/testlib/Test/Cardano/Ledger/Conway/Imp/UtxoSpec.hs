@@ -47,14 +47,14 @@ spec = do
       accountDeposit <- getsPParams ppKeyDepositL
       stakePoolDeposit <- getsPParams ppPoolDepositL
       dRepDeposit <- getsPParams ppDRepDepositL
-      cred0 <- KeyHashObj <$> freshKeyHash @'Staking
-      cred1 <- KeyHashObj <$> freshKeyHash @'Staking
-      cred2 <- KeyHashObj <$> freshKeyHash @'Staking
-      cred3 <- KeyHashObj <$> freshKeyHash @'Staking
-      cred4 <- KeyHashObj <$> freshKeyHash @'Staking
+      cred0 <- KeyHashObj <$> freshKeyHash @Staking
+      cred1 <- KeyHashObj <$> freshKeyHash @Staking
+      cred2 <- KeyHashObj <$> freshKeyHash @Staking
+      cred3 <- KeyHashObj <$> freshKeyHash @Staking
+      cred4 <- KeyHashObj <$> freshKeyHash @Staking
       poolId <- freshKeyHash
       poolParams <- freshPoolParams poolId (RewardAccount Testnet cred0)
-      dRepCred <- KeyHashObj <$> freshKeyHash @'DRepRole
+      dRepCred <- KeyHashObj <$> freshKeyHash @DRepRole
       let delegatee = DelegStakeVote poolId (DRepCredential dRepCred)
       anchor <- arbitrary
       txRegister <-
@@ -166,14 +166,14 @@ conwayEraSpecificSpec = do
       accountDeposit <- getsPParams ppKeyDepositL
       stakePoolDeposit <- getsPParams ppPoolDepositL
       dRepDeposit <- getsPParams ppDRepDepositL
-      cred0 <- KeyHashObj <$> freshKeyHash @'Staking
-      cred1 <- KeyHashObj <$> freshKeyHash @'Staking
-      cred2 <- KeyHashObj <$> freshKeyHash @'Staking
-      cred3 <- KeyHashObj <$> freshKeyHash @'Staking
-      cred4 <- KeyHashObj <$> freshKeyHash @'Staking
+      cred0 <- KeyHashObj <$> freshKeyHash @Staking
+      cred1 <- KeyHashObj <$> freshKeyHash @Staking
+      cred2 <- KeyHashObj <$> freshKeyHash @Staking
+      cred3 <- KeyHashObj <$> freshKeyHash @Staking
+      cred4 <- KeyHashObj <$> freshKeyHash @Staking
       poolId <- freshKeyHash
       poolParams <- freshPoolParams poolId (RewardAccount Testnet cred0)
-      dRepCred <- KeyHashObj <$> freshKeyHash @'DRepRole
+      dRepCred <- KeyHashObj <$> freshKeyHash @DRepRole
       let delegatee = DelegStakeVote poolId (DRepCredential dRepCred)
       anchor <- arbitrary
       txRegister <-

@@ -15,9 +15,9 @@ import Control.DeepSeq
 import Data.Map.Strict as Map
 
 data SnapShotM = SnapShotM
-  { ssStake :: !(Map (Credential 'Staking) (CompactForm Coin))
-  , ssDelegations :: !(Map (Credential 'Staking) (KeyHash 'StakePool))
-  , ssStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
+  { ssStake :: !(Map (Credential Staking) (CompactForm Coin))
+  , ssDelegations :: !(Map (Credential Staking) (KeyHash StakePool))
+  , ssStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
   }
 
 instance NFData SnapShotM where

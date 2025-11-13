@@ -174,7 +174,7 @@ import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..), credToText)
-import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
+import Cardano.Ledger.Genesis
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
   asWitness,
@@ -339,7 +339,7 @@ instance ToExpr (SomeSTSEvent era) where
 data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
   , impRootTxIn :: !TxIn
-  , impKeyPairs :: !(Map (KeyHash 'Witness) (KeyPair 'Witness))
+  , impKeyPairs :: !(Map (KeyHash Witness) (KeyPair Witness))
   , impByronKeyPairs :: !(Map BootstrapAddress ByronKeyPair)
   , impNativeScripts :: !(Map ScriptHash (NativeScript era))
   , impLastTick :: !SlotNo
@@ -349,7 +349,7 @@ data ImpTestState era = ImpTestState
 
 -- | This is a preliminary state that is used to prepare the actual `ImpTestState`
 data ImpPrepState = ImpPrepState
-  { impPrepKeyPairs :: !(Map (KeyHash 'Witness) (KeyPair 'Witness))
+  { impPrepKeyPairs :: !(Map (KeyHash Witness) (KeyPair Witness))
   , impPrepByronKeyPairs :: !(Map BootstrapAddress ByronKeyPair)
   }
 
@@ -368,7 +368,7 @@ instance Monoid ImpPrepState where
       }
 
 class HasKeyPairs t where
-  keyPairsL :: Lens' t (Map (KeyHash 'Witness) (KeyPair 'Witness))
+  keyPairsL :: Lens' t (Map (KeyHash Witness) (KeyPair Witness))
   keyPairsByronL :: Lens' t (Map BootstrapAddress ByronKeyPair)
 
 instance Era era => HasKeyPairs (ImpTestState era) where
@@ -397,7 +397,7 @@ impRootTxInL = lens impRootTxIn (\x y -> x {impRootTxIn = y})
 impKeyPairsG ::
   SimpleGetter
     (ImpTestState era)
-    (Map (KeyHash 'Witness) (KeyPair 'Witness))
+    (Map (KeyHash Witness) (KeyPair Witness))
 impKeyPairsG = to impKeyPairs
 
 impNativeScriptsL :: Lens' (ImpTestState era) (Map ScriptHash (NativeScript era))
@@ -499,11 +499,11 @@ class
   -- Whenever script can't be satisfied, Nothing is returned
   impSatisfyNativeScript ::
     -- | Set of Witnesses that have already been satisfied
-    Set.Set (KeyHash 'Witness) ->
+    Set.Set (KeyHash Witness) ->
     -- | The transaction body that the script will be applied to
     TxBody l era ->
     NativeScript era ->
-    ImpTestM era (Maybe (Map (KeyHash 'Witness) (KeyPair 'Witness)))
+    ImpTestM era (Maybe (Map (KeyHash Witness) (KeyPair Witness)))
 
   -- | This modifer should change not only the current PParams, but also the future
   -- PParams. If the future PParams are not updated, then they will overwrite the
@@ -523,16 +523,16 @@ class
 
   expectTxSuccess :: HasCallStack => Tx TopTx era -> ImpTestM era ()
 
-  genRegTxCert :: Credential 'Staking -> ImpTestM era (TxCert era)
+  genRegTxCert :: Credential Staking -> ImpTestM era (TxCert era)
 
-  genUnRegTxCert :: Credential 'Staking -> ImpTestM era (TxCert era)
+  genUnRegTxCert :: Credential Staking -> ImpTestM era (TxCert era)
 
-  delegStakeTxCert :: Credential 'Staking -> KeyHash 'StakePool -> TxCert era
+  delegStakeTxCert :: Credential Staking -> KeyHash StakePool -> TxCert era
 
 impSatisfySignature ::
-  KeyHash 'Witness ->
-  Set.Set (KeyHash 'Witness) ->
-  ImpTestM era (Maybe (Map (KeyHash 'Witness) (KeyPair 'Witness)))
+  KeyHash Witness ->
+  Set.Set (KeyHash Witness) ->
+  ImpTestM era (Maybe (Map (KeyHash Witness) (KeyPair Witness)))
 impSatisfySignature keyHash providedVKeyHashes = do
   if keyHash `Set.member` providedVKeyHashes
     then
@@ -543,7 +543,7 @@ impSatisfySignature keyHash providedVKeyHashes = do
 
 impSatisfyMNativeScripts ::
   ShelleyEraImp era =>
-  Set.Set (KeyHash 'Witness) ->
+  Set.Set (KeyHash Witness) ->
   -- | Set of Witnesses that have already been satisfied
   TxBody l era ->
   -- | The transaction body that the scripts will be applied to
@@ -551,7 +551,7 @@ impSatisfyMNativeScripts ::
   -- | Number of scripts to satisfy
   StrictSeq (NativeScript era) ->
   -- | List of scripts that can be satisfied
-  ImpTestM era (Maybe (Map (KeyHash 'Witness) (KeyPair 'Witness)))
+  ImpTestM era (Maybe (Map (KeyHash Witness) (KeyPair Witness)))
 impSatisfyMNativeScripts providedVKeyHashes txBody =
   go mempty
   where
@@ -614,7 +614,7 @@ defaultInitImpTestState ::
   m (ImpTestState era)
 defaultInitImpTestState nes = do
   shelleyGenesis <- initGenesis @ShelleyEra
-  rootKeyHash <- freshKeyHash @'Payment
+  rootKeyHash <- freshKeyHash @Payment
   let
     rootAddr :: Addr
     rootAddr = mkAddr rootKeyHash StakeRefNull
@@ -834,7 +834,7 @@ impWitsVKeyNeeded ::
   ImpTestM
     era
     ( Set.Set BootstrapAddress -- Byron Based Addresses
-    , Set.Set (KeyHash 'Witness) -- Shelley Based KeyHashes
+    , Set.Set (KeyHash Witness) -- Shelley Based KeyHashes
     )
 impWitsVKeyNeeded txBody = do
   ls <- getsNES (nesEsL . esLStateL)
@@ -913,7 +913,7 @@ runShelleyBase act = do
   globals <- use impGlobalsL
   pure $ runIdentity $ runReaderT act globals
 
-lookupBalance :: EraCertState era => Credential 'Staking -> ImpTestM era (Maybe Coin)
+lookupBalance :: EraCertState era => Credential Staking -> ImpTestM era (Maybe Coin)
 lookupBalance cred = do
   accountsMap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
   pure $
@@ -929,7 +929,7 @@ lookupAccountBalance ra@RewardAccount {raNetwork, raCredential} = do
       "Reward Account with an unexpected NetworkId: " ++ show ra
   lookupBalance raCredential
 
-getBalance :: (HasCallStack, EraCertState era) => Credential 'Staking -> ImpTestM era Coin
+getBalance :: (HasCallStack, EraCertState era) => Credential Staking -> ImpTestM era Coin
 getBalance cred =
   lookupBalance cred >>= \case
     Nothing ->
@@ -1045,7 +1045,7 @@ addRootTxIn tx = impAnn "addRootTxIn" $ do
 impNativeScriptKeyPairs ::
   ShelleyEraImp era =>
   Tx l era ->
-  ImpTestM era (Map (KeyHash 'Witness) (KeyPair 'Witness))
+  ImpTestM era (Map (KeyHash Witness) (KeyPair Witness))
 impNativeScriptKeyPairs tx = do
   scriptsRequired <- impNativeScriptsRequired tx
   let nativeScripts = Map.elems scriptsRequired
@@ -1481,12 +1481,12 @@ freshKeyAddr_ = snd <$> freshKeyAddr
 -- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
 freshKeyAddr ::
   (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =>
-  m (KeyHash 'Payment, Addr)
+  m (KeyHash Payment, Addr)
 freshKeyAddr = do
-  paymentKeyHash <- freshKeyHash @'Payment
+  paymentKeyHash <- freshKeyHash @Payment
   stakingKeyHash <-
     oneof
-      [Just . mkStakeRef <$> freshKeyHash @'Staking, Just . mkStakeRef @Ptr <$> arbitrary, pure Nothing]
+      [Just . mkStakeRef <$> freshKeyHash @Staking, Just . mkStakeRef @Ptr <$> arbitrary, pure Nothing]
   pure (paymentKeyHash, mkAddr paymentKeyHash stakingKeyHash)
 
 -- | Looks up the keypair corresponding to the `BootstrapAddress`. The `BootstrapAddress`
@@ -1573,7 +1573,7 @@ submitTxAnn_ ::
 submitTxAnn_ msg = void . submitTxAnn msg
 
 getRewardAccountFor ::
-  Credential 'Staking ->
+  Credential Staking ->
   ImpTestM era RewardAccount
 getRewardAccountFor stakingC = do
   networkId <- use (impGlobalsL . to networkId)
@@ -1584,7 +1584,7 @@ registerStakeCredential ::
   ( HasCallStack
   , ShelleyEraImp era
   ) =>
-  Credential 'Staking ->
+  Credential Staking ->
   ImpTestM era RewardAccount
 registerStakeCredential cred = do
   regTxCert <- genRegTxCert cred
@@ -1597,8 +1597,8 @@ registerStakeCredential cred = do
 
 delegateStake ::
   ShelleyEraImp era =>
-  Credential 'Staking ->
-  KeyHash 'StakePool ->
+  Credential Staking ->
+  KeyHash StakePool ->
   ImpTestM era ()
 delegateStake cred poolKH = do
   submitTxAnn_ ("Delegate Staking Credential: " <> T.unpack (credToText cred)) $
@@ -1607,7 +1607,7 @@ delegateStake cred poolKH = do
 
 expectStakeCredRegistered ::
   (HasCallStack, ShelleyEraImp era) =>
-  Credential 'Staking ->
+  Credential Staking ->
   ImpTestM era ()
 expectStakeCredRegistered cred = do
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
@@ -1618,7 +1618,7 @@ expectStakeCredRegistered cred = do
 
 expectStakeCredNotRegistered ::
   (HasCallStack, ShelleyEraImp era) =>
-  Credential 'Staking ->
+  Credential Staking ->
   ImpTestM era ()
 expectStakeCredNotRegistered cred = do
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
@@ -1627,8 +1627,8 @@ expectStakeCredNotRegistered cred = do
 
 expectDelegatedToPool ::
   (HasCallStack, ShelleyEraImp era) =>
-  Credential 'Staking ->
-  KeyHash 'StakePool ->
+  Credential Staking ->
+  KeyHash StakePool ->
   ImpTestM era ()
 expectDelegatedToPool cred poolKh = do
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
@@ -1648,7 +1648,7 @@ expectDelegatedToPool cred poolKh = do
 
 expectNotDelegatedToAnyPool ::
   (HasCallStack, ShelleyEraImp era) =>
-  Credential 'Staking ->
+  Credential Staking ->
   ImpTestM era ()
 expectNotDelegatedToAnyPool cred = do
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
@@ -1663,8 +1663,8 @@ expectNotDelegatedToAnyPool cred = do
 
 expectNotDelegatedToPool ::
   (HasCallStack, ShelleyEraImp era) =>
-  Credential 'Staking ->
-  KeyHash 'StakePool ->
+  Credential Staking ->
+  KeyHash StakePool ->
   ImpTestM era ()
 expectNotDelegatedToPool cred pool = do
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
@@ -1687,7 +1687,7 @@ registerRewardAccount = freshKeyHash >>= registerStakeCredential . KeyHashObj
 
 freshPoolParams ::
   ShelleyEraImp era =>
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   RewardAccount ->
   ImpTestM era StakePoolParams
 freshPoolParams khPool rewardAccount = do
@@ -1711,13 +1711,13 @@ freshPoolParams khPool rewardAccount = do
 
 registerPool ::
   ShelleyEraImp era =>
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   ImpTestM era ()
 registerPool khPool = registerRewardAccount >>= registerPoolWithRewardAccount khPool
 
 registerPoolWithRewardAccount ::
   ShelleyEraImp era =>
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   RewardAccount ->
   ImpTestM era ()
 registerPoolWithRewardAccount khPool rewardAccount = do
@@ -1728,7 +1728,7 @@ registerPoolWithRewardAccount khPool rewardAccount = do
 
 registerAndRetirePoolToMakeReward ::
   ShelleyEraImp era =>
-  Credential 'Staking ->
+  Credential Staking ->
   ImpTestM era ()
 registerAndRetirePoolToMakeReward stakingCred = do
   poolId <- freshKeyHash
@@ -1930,19 +1930,19 @@ simulateThenRestore sim = do
 
 shelleyGenRegTxCert ::
   ShelleyEraTxCert era =>
-  Credential 'Staking ->
+  Credential Staking ->
   ImpTestM era (TxCert era)
 shelleyGenRegTxCert = pure . RegTxCert
 
 shelleyGenUnRegTxCert ::
   ShelleyEraTxCert era =>
-  Credential 'Staking ->
+  Credential Staking ->
   ImpTestM era (TxCert era)
 shelleyGenUnRegTxCert = pure . UnRegTxCert
 
 shelleyDelegStakeTxCert ::
   ShelleyEraTxCert era =>
-  Credential 'Staking ->
-  KeyHash 'StakePool ->
+  Credential Staking ->
+  KeyHash StakePool ->
   TxCert era
 shelleyDelegStakeTxCert cred pool = DelegStakeTxCert cred pool

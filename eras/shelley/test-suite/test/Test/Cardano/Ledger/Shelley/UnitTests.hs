@@ -87,14 +87,14 @@ import qualified Test.QuickCheck.Gen as QC
 import qualified Test.QuickCheck.Random as QC
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck hiding (Witness)
 
 -- ========================================================================================
 
-alicePay :: KeyPair 'Payment
+alicePay :: KeyPair Payment
 alicePay = mkKeyPair' $ RawSeed 1 1 1 1 1
 
-aliceStake :: KeyPair 'Staking
+aliceStake :: KeyPair Staking
 aliceStake = mkKeyPair' $ RawSeed 2 2 2 2 2
 
 aliceAddr :: Addr
@@ -104,10 +104,10 @@ aliceAddr =
     (KeyHashObj . hashKey $ vKey alicePay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay :: KeyPair 'Payment
+bobPay :: KeyPair Payment
 bobPay = mkKeyPair' $ RawSeed 3 3 3 3 3
 
-bobStake :: KeyPair 'Staking
+bobStake :: KeyPair Staking
 bobStake = mkKeyPair' $ RawSeed 4 4 4 4 4
 
 bobAddr :: Addr
@@ -251,7 +251,7 @@ data AliceToBob = AliceToBob
   , refunds :: Coin
   , certs :: [TxCert ShelleyEra]
   , ttl :: SlotNo
-  , signers :: [KeyPair 'Witness]
+  , signers :: [KeyPair Witness]
   }
 
 aliceGivesBobLovelace :: AliceToBob -> Tx TopTx ShelleyEra
@@ -305,7 +305,7 @@ dpState = def
 ledgerState :: LedgerState ShelleyEra
 ledgerState = LedgerState utxoState dpState
 
-addReward :: CertState ShelleyEra -> Credential 'Staking -> Coin -> CertState ShelleyEra
+addReward :: CertState ShelleyEra -> Credential Staking -> Coin -> CertState ShelleyEra
 addReward dp cred c =
   dp
     & certDStateL . accountsL
@@ -578,7 +578,7 @@ testOutputTooSmall =
       , signers = [asWitness alicePay]
       }
 
-alicePoolColdKeys :: KeyPair 'StakePool
+alicePoolColdKeys :: KeyPair StakePool
 alicePoolColdKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)

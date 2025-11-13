@@ -259,8 +259,8 @@ propActiveAuthorized nes = do
 propFilters ::
   forall era.
   (ConwayEraGov era, ConwayEraCertState era) =>
-  Set (Credential 'ColdCommitteeRole) ->
-  Set (Credential 'HotCommitteeRole) ->
+  Set (Credential ColdCommitteeRole) ->
+  Set (Credential HotCommitteeRole) ->
   Set MemberStatus ->
   NewEpochState era ->
   Expectation
@@ -376,7 +376,7 @@ genNextCommittee ::
 genNextCommittee maybeCm =
   oneof [pure Nothing, Just <$> genCommittee' (genMembersRetaining maybeCm)]
 
-genCommittee' :: Gen [Credential 'ColdCommitteeRole] -> Gen (Committee era)
+genCommittee' :: Gen [Credential ColdCommitteeRole] -> Gen (Committee era)
 genCommittee' genCreds = do
   creds <- genCreds
   m <- zip creds <$> listOf (EpochNo <$> chooseBoundedIntegral (0, 20))
@@ -386,7 +386,7 @@ genRelevantColdCredsFilter ::
   forall era.
   Maybe (Committee era) ->
   CommitteeState era ->
-  Gen (Set.Set (Credential 'ColdCommitteeRole))
+  Gen (Set.Set (Credential ColdCommitteeRole))
 genRelevantColdCredsFilter maybeCm (CommitteeState comStateMembers) = do
   creds <-
     (++)
@@ -397,7 +397,7 @@ genRelevantColdCredsFilter maybeCm (CommitteeState comStateMembers) = do
 genRelevantHotCredsFilter ::
   forall era.
   CommitteeState era ->
-  Gen (Set.Set (Credential 'HotCommitteeRole))
+  Gen (Set.Set (Credential HotCommitteeRole))
 genRelevantHotCredsFilter (CommitteeState comStateMembers) =
   Set.fromList
     <$> genRetaining
@@ -406,7 +406,7 @@ genRelevantHotCredsFilter (CommitteeState comStateMembers) =
 genMembersRetaining ::
   forall era.
   Maybe (Committee era) ->
-  Gen [Credential 'ColdCommitteeRole]
+  Gen [Credential ColdCommitteeRole]
 genMembersRetaining maybeCm =
   genRetaining $ Map.keys $ foldMap' committeeMembers maybeCm
 
@@ -419,9 +419,9 @@ genRetaining ret = do
 withCommitteeInfo ::
   (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
-  ( Map.Map (Credential 'ColdCommitteeRole) EpochNo -> -- current committee members
+  ( Map.Map (Credential ColdCommitteeRole) EpochNo -> -- current committee members
     CommitteeState era ->
-    Map.Map (Credential 'ColdCommitteeRole) EpochNo -> -- next epoch committee members
+    Map.Map (Credential ColdCommitteeRole) EpochNo -> -- next epoch committee members
     CommitteeMembersState ->
     Expectation
   ) ->
@@ -435,9 +435,9 @@ committeeInfo ::
   forall era.
   (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
-  ( Map.Map (Credential 'ColdCommitteeRole) EpochNo
+  ( Map.Map (Credential ColdCommitteeRole) EpochNo
   , CommitteeState era
-  , Map.Map (Credential 'ColdCommitteeRole) EpochNo
+  , Map.Map (Credential ColdCommitteeRole) EpochNo
   )
 committeeInfo nes =
   let ledgerState = nes ^. nesEpochStateL . esLStateL

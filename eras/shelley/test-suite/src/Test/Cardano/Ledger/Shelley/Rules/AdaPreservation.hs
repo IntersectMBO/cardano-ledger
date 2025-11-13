@@ -154,7 +154,7 @@ adaPreservationProps =
       , map feesNonDecreasing noEpochBoundarySsts
       ]
 
-infoRetire :: Show a => Map (KeyHash 'StakePool) a -> KeyHash 'StakePool -> String
+infoRetire :: Show a => Map (KeyHash StakePool) a -> KeyHash StakePool -> String
 infoRetire deposits keyhash = showKeyHash keyhash ++ extra
   where
     extra = case Map.lookup keyhash deposits of
@@ -245,7 +245,7 @@ checkPreservation SourceSignalTarget {source, target, signal = block} count =
         ]
 
     mir = lsOld ^. lsCertStateL . certDStateL . dsIRewardsL
-    isRegistered :: Credential 'Staking -> a -> Bool
+    isRegistered :: Credential Staking -> a -> Bool
     isRegistered cred _ = isAccountRegistered cred oldAccounts
     (regMirRes, unRegMirRes) = Map.partitionWithKey isRegistered (iRReserves mir)
     (regMirTre, unRegMirTre) = Map.partitionWithKey isRegistered (iRTreasury mir)

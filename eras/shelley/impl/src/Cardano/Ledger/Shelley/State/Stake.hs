@@ -50,7 +50,7 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyInstantStake era = ShelleyInstantStake
-  { sisCredentialStake :: !(Map.Map (Credential 'Staking) (CompactForm Coin))
+  { sisCredentialStake :: !(Map.Map (Credential Staking) (CompactForm Coin))
   , sisPtrStake :: !(Map.Map Ptr (CompactForm Coin))
   }
   deriving (Generic, Show, Eq, Ord)
@@ -65,7 +65,7 @@ instance EncCBOR (ShelleyInstantStake era) where
     encodeListLen 2 <> encCBOR credentialStake <> encCBOR ptrStake
 
 instance DecShareCBOR (ShelleyInstantStake era) where
-  type Share (ShelleyInstantStake era) = Interns (Credential 'Staking)
+  type Share (ShelleyInstantStake era) = Interns (Credential Staking)
   decShareCBOR credInterns =
     decodeRecordNamed "ShelleyInstantStake" (const 2) $ do
       sisCredentialStake <- decShareCBOR (credInterns, mempty)
@@ -97,7 +97,7 @@ instance EraStake ShelleyEra where
   resolveInstantStake = resolveShelleyInstantStake
 
 shelleyInstantStakeCredentialsL ::
-  Lens' (ShelleyInstantStake era) (Map.Map (Credential 'Staking) (CompactForm Coin))
+  Lens' (ShelleyInstantStake era) (Map.Map (Credential Staking) (CompactForm Coin))
 shelleyInstantStakeCredentialsL = lens sisCredentialStake $ \is m -> is {sisCredentialStake = m}
 
 addShelleyInstantStake ::

@@ -80,7 +80,7 @@ import NoThunks.Class (NoThunks (..))
 
 data AlonzoBbodyPredFailure era
   = ShelleyInAlonzoBbodyPredFailure (ShelleyBbodyPredFailure era)
-  | TooManyExUnits (Mismatch 'RelLTEQ ExUnits)
+  | TooManyExUnits (Mismatch RelLTEQ ExUnits)
   deriving (Generic)
 
 newtype AlonzoBbodyEvent era

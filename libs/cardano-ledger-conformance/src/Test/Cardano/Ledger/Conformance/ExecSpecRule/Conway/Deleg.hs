@@ -23,7 +23,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 
 instance ExecSpecRule "DELEG" ConwayEra where
   -- The context is the set of all DRep delegatees in the transaction
-  type ExecContext "DELEG" ConwayEra = Set (Credential 'DRepRole)
+  type ExecContext "DELEG" ConwayEra = Set (Credential DRepRole)
 
   runAgdaRule (SpecTRC env (Agda.MkCertState dState pState vState) sig) =
     second

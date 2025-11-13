@@ -199,10 +199,10 @@ prettyRecord h content = h <> ":" <+> line <> indent 2 (vsep content)
 infixr 6 <:>
 
 data SnapShotStats = SnapShotStats
-  { sssStake :: !(Stat (Credential 'Staking))
-  , sssDelegationCredential :: !(Stat (Credential 'Staking))
-  , sssDelegationStakePool :: !(Stat (KeyHash 'StakePool))
-  , sssPoolParams :: !(Stat (KeyHash 'StakePool))
+  { sssStake :: !(Stat (Credential Staking))
+  , sssDelegationCredential :: !(Stat (Credential Staking))
+  , sssDelegationStakePool :: !(Stat (KeyHash StakePool))
+  , sssPoolParams :: !(Stat (KeyHash StakePool))
   , sssPoolParamsStats :: !PoolParamsStats
   }
 
@@ -247,9 +247,9 @@ countSnapShotStat SnapShot {..} =
     }
 
 data PoolParamsStats = PoolParamsStats
-  { ppsPoolId :: !(Stat (KeyHash 'StakePool))
-  , ppsRewardAccount :: !(Stat (Credential 'Staking))
-  , ppsOwners :: !(Stat (KeyHash 'Staking))
+  { ppsPoolId :: !(Stat (KeyHash StakePool))
+  , ppsRewardAccount :: !(Stat (Credential Staking))
+  , ppsOwners :: !(Stat (KeyHash Staking))
   }
 
 instance Semigroup PoolParamsStats where
@@ -293,8 +293,8 @@ instance AggregateStat RewardUpdateStats where
   aggregateStat RewardUpdateStats = mempty
 
 data PoolDistrStats = PoolDistrStats
-  { pdsStakePoolKeyHash :: !(Stat (KeyHash 'StakePool))
-  , pdsStakePoolStakeVrf :: !(Stat (VRFVerKeyHash 'StakePoolVRF))
+  { pdsStakePoolKeyHash :: !(Stat (KeyHash StakePool))
+  , pdsStakePoolStakeVrf :: !(Stat (VRFVerKeyHash StakePoolVRF))
   }
 
 instance Pretty PoolDistrStats where
@@ -320,9 +320,9 @@ calcPoolDistrStats (PoolDistr pd _tot) =
     }
 
 data NewEpochStateStats = NewEpochStateStats
-  { nessPrevBlocksMade :: !(Stat (KeyHash 'StakePool))
-  , nessCurBlocksMade :: !(Stat (KeyHash 'StakePool))
-  , nessBlocksMade :: !(Stat (KeyHash 'StakePool))
+  { nessPrevBlocksMade :: !(Stat (KeyHash StakePool))
+  , nessCurBlocksMade :: !(Stat (KeyHash StakePool))
+  , nessBlocksMade :: !(Stat (KeyHash StakePool))
   , nessEpochStateStats :: !EpochStateStats
   , nessRewardUpdate :: !RewardUpdateStats
   , nessPoolDistrStats :: !PoolDistrStats
@@ -375,7 +375,7 @@ data EpochStateStats = EpochStateStats
   , essGoSnapShotStats :: !SnapShotStats
   , essSnapShotsStats :: !SnapShotStats
   , essLedgerStateStats :: !LedgerStateStats
-  , essNonMyopic :: !(Stat (KeyHash 'StakePool))
+  , essNonMyopic :: !(Stat (KeyHash StakePool))
   , essAggregateStats :: !AggregateStats
   }
 
@@ -417,11 +417,11 @@ countEpochStateStats EpochState {..} =
         }
 
 data DStateStats = DStateStats
-  { dssCredentialStaking :: !(Stat (Credential 'Staking))
-  , dssDelegations :: !(Stat (KeyHash 'StakePool))
-  , dssKeyHashGenesis :: !(Stat (KeyHash 'Genesis))
-  , dssKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate))
-  , dssHashVerKeyVRF :: !(Stat (VRFVerKeyHash 'GenDelegVRF))
+  { dssCredentialStaking :: !(Stat (Credential Staking))
+  , dssDelegations :: !(Stat (KeyHash StakePool))
+  , dssKeyHashGenesis :: !(Stat (KeyHash GenesisRole))
+  , dssKeyHashGenesisDelegate :: !(Stat (KeyHash GenesisDelegate))
+  , dssHashVerKeyVRF :: !(Stat (VRFVerKeyHash GenDelegVRF))
   }
 
 instance Pretty DStateStats where
@@ -465,7 +465,7 @@ countDStateStats ds@DState {..} =
         }
 
 data PStateStats = PStateStats
-  { pssKeyHashStakePool :: !(Stat (KeyHash 'StakePool))
+  { pssKeyHashStakePool :: !(Stat (KeyHash StakePool))
   , pssPoolParamsStats :: !PoolParamsStats
   }
 
@@ -544,8 +544,8 @@ countTxInStats txIns =
 
 data TxOutStats = TxOutStats
   { tosBootstrap :: !(Stat BootstrapAddress)
-  , tosPaymentCredential :: !(Stat (Credential 'Payment))
-  , tosStakingCredential :: !(Stat (Credential 'Staking))
+  , tosPaymentCredential :: !(Stat (Credential Payment))
+  , tosStakingCredential :: !(Stat (Credential Staking))
   , tosStakingPtr :: !(Stat Ptr)
   , tosNetwork :: !(Stat Network)
   , tosValue :: !(Stat Integer)
@@ -647,10 +647,10 @@ countUTxOStats (UTxO m) =
     }
 
 data AggregateStats = AggregateStats
-  { gsCredentialStaking :: !(Stat (Credential 'Staking))
-  , gsKeyHashStakePool :: !(Stat (KeyHash 'StakePool))
-  , gsKeyHashGenesis :: !(Stat (KeyHash 'Genesis))
-  , gsKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate))
+  { gsCredentialStaking :: !(Stat (Credential Staking))
+  , gsKeyHashStakePool :: !(Stat (KeyHash StakePool))
+  , gsKeyHashGenesis :: !(Stat (KeyHash GenesisRole))
+  , gsKeyHashGenesisDelegate :: !(Stat (KeyHash GenesisDelegate))
   , gsVerKeyVRF :: !(Stat (Hash HASH KeyRoleVRF))
   , gsScriptHash :: !(Stat ScriptHash)
   }
@@ -680,10 +680,10 @@ instance Pretty AggregateStats where
 class AggregateStat s where
   aggregateStat :: s -> AggregateStats
 
-instance AggregateStat (Stat (Credential 'Staking)) where
+instance AggregateStat (Stat (Credential Staking)) where
   aggregateStat s = mempty {gsCredentialStaking = s}
 
-instance AggregateStat (Stat (KeyHash 'StakePool)) where
+instance AggregateStat (Stat (KeyHash StakePool)) where
   aggregateStat s = mempty {gsKeyHashStakePool = s}
 
 instance AggregateStat (Stat ScriptHash) where
@@ -693,9 +693,9 @@ instance AggregateStat (Stat ScriptHash) where
 -- approach that works for the whole state
 
 data UTxOUniques = UTxOUniques
-  { paymentKeys :: !(Set.Set (KeyHash 'Payment))
+  { paymentKeys :: !(Set.Set (KeyHash Payment))
   , paymentScripts :: !(Set.Set ScriptHash)
-  , stakeKeys :: !(Set.Set (KeyHash 'Staking))
+  , stakeKeys :: !(Set.Set (KeyHash Staking))
   , stakeScripts :: !(Set.Set ScriptHash)
   , stakePtrs :: !(Set.Set Ptr)
   , scripts :: !(Set.Set ScriptHash)

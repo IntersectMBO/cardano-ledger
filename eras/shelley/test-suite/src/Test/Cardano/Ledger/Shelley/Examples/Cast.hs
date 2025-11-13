@@ -81,19 +81,19 @@ import Test.Cardano.Ledger.Shelley.Utils (
  )
 
 -- | Alice's payment key pair
-alicePay :: KeyPair 'Payment
+alicePay :: KeyPair Payment
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 0)
 
 -- | Alice's stake key pair
-aliceStake :: KeyPair 'Staking
+aliceStake :: KeyPair Staking
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 -- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
-alicePoolKeys :: AllIssuerKeys MockCrypto 'StakePool
+alicePoolKeys :: AllIssuerKeys MockCrypto StakePool
 alicePoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -108,11 +108,11 @@ aliceAddr :: Addr
 aliceAddr = mkAddr alicePay aliceStake
 
 -- | Alice's payment credential
-alicePHK :: Credential 'Payment
+alicePHK :: Credential Payment
 alicePHK = mkCredential alicePay
 
 -- | Alice's stake credential
-aliceSHK :: Credential 'Staking
+aliceSHK :: Credential Staking
 aliceSHK = mkCredential aliceStake
 
 -- | Alice's base address
@@ -140,17 +140,17 @@ aliceStakePoolParams =
     }
 
 -- | Alice's VRF key hash
-aliceVRFKeyHash :: VRFVerKeyHash 'StakePoolVRF
+aliceVRFKeyHash :: VRFVerKeyHash StakePoolVRF
 aliceVRFKeyHash = hashVerKeyVRF @MockCrypto (vrfVerKey $ aikVrf alicePoolKeys)
 
 -- | Bob's payment key pair
-bobPay :: KeyPair 'Payment
+bobPay :: KeyPair Payment
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 2 2 2 2 2)
 
 -- | Bob's stake key pair
-bobStake :: KeyPair 'Staking
+bobStake :: KeyPair Staking
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 3 3 3 3 3)
@@ -160,11 +160,11 @@ bobAddr :: Addr
 bobAddr = mkAddr bobPay bobStake
 
 -- | Bob's stake credential
-bobSHK :: Credential 'Staking
+bobSHK :: Credential Staking
 bobSHK = mkCredential bobStake
 
 -- | Bob's stake pool keys (cold keys, VRF keys, hot KES keys)
-bobPoolKeys :: AllIssuerKeys MockCrypto 'StakePool
+bobPoolKeys :: AllIssuerKeys MockCrypto StakePool
 bobPoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -190,17 +190,17 @@ bobStakePoolParams =
     }
 
 -- | Bob's VRF key hash
-bobVRFKeyHash :: VRFVerKeyHash 'StakePoolVRF
+bobVRFKeyHash :: VRFVerKeyHash StakePoolVRF
 bobVRFKeyHash = hashVerKeyVRF @MockCrypto (vrfVerKey $ aikVrf bobPoolKeys)
 
 -- Carl's payment key pair
-carlPay :: KeyPair 'Payment
+carlPay :: KeyPair Payment
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 4 4 4 4 4)
 
 -- | Carl's stake key pair
-carlStake :: KeyPair 'Staking
+carlStake :: KeyPair Staking
 carlStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 5 5 5 5 5)
@@ -210,17 +210,17 @@ carlAddr :: Addr
 carlAddr = mkAddr carlPay carlStake
 
 -- | Carl's stake credential
-carlSHK :: Credential 'Staking
+carlSHK :: Credential Staking
 carlSHK = mkCredential carlStake
 
 -- | Daria's payment key pair
-dariaPay :: KeyPair 'Payment
+dariaPay :: KeyPair Payment
 dariaPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 6 6 6 6 6)
 
 -- | Daria's stake key pair
-dariaStake :: KeyPair 'Staking
+dariaStake :: KeyPair Staking
 dariaStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 7 7 7 7 7)
@@ -230,5 +230,5 @@ dariaAddr :: Addr
 dariaAddr = mkAddr dariaPay dariaStake
 
 -- | Daria's stake credential
-dariaSHK :: Credential 'Staking
+dariaSHK :: Credential Staking
 dariaSHK = mkCredential dariaStake

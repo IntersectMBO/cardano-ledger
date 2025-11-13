@@ -94,26 +94,26 @@ instance NFData (PParams era) => NFData (PoolEnv era)
 data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
       -- | KeyHash which cannot be retired since it is not registered
-      (KeyHash 'StakePool)
+      (KeyHash StakePool)
   | StakePoolRetirementWrongEpochPOOL
-      (Mismatch 'RelGT EpochNo)
-      (Mismatch 'RelLTEQ EpochNo)
+      (Mismatch RelGT EpochNo)
+      (Mismatch RelLTEQ EpochNo)
   | StakePoolCostTooLowPOOL
-      (Mismatch 'RelGTEQ Coin)
+      (Mismatch RelGTEQ Coin)
   | WrongNetworkPOOL
-      (Mismatch 'RelEQ Network)
+      (Mismatch RelEQ Network)
       -- | Stake Pool ID
-      (KeyHash 'StakePool)
+      (KeyHash StakePool)
   | PoolMedataHashTooBig
       -- | Stake Pool ID
-      (KeyHash 'StakePool)
+      (KeyHash StakePool)
       -- | Size of the metadata hash
       Int
   | VRFKeyHashAlreadyRegistered
       -- | Stake Pool ID
-      (KeyHash 'StakePool)
+      (KeyHash StakePool)
       -- | VRF key attempted to use, that has already been registered
-      (VRFVerKeyHash 'StakePoolVRF)
+      (VRFVerKeyHash StakePoolVRF)
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "POOL" ShelleyEra = ShelleyPoolPredFailure ShelleyEra
@@ -138,8 +138,8 @@ instance EraPParams era => STS (ShelleyPOOL era) where
   transitionRules = [poolDelegationTransition]
 
 data PoolEvent era
-  = RegisterPool (KeyHash 'StakePool)
-  | ReregisterPool (KeyHash 'StakePool)
+  = RegisterPool (KeyHash StakePool)
+  | ReregisterPool (KeyHash StakePool)
   deriving (Generic, Eq)
 
 instance NFData (PoolEvent era)
@@ -298,11 +298,11 @@ poolDelegationTransition = do
           limitEpoch = addEpochInterval cEpoch maxEpoch
       (cEpoch < e && e <= limitEpoch)
         ?! StakePoolRetirementWrongEpochPOOL
-          Mismatch -- 'RelGT - The supplied value should be greater than the current epoch
+          Mismatch -- RelGT - The supplied value should be greater than the current epoch
             { mismatchSupplied = e
             , mismatchExpected = cEpoch
             }
-          Mismatch -- 'RelLTEQ - The supplied value should be less then or equal to ppEMax after the current epoch
+          Mismatch -- RelLTEQ - The supplied value should be less then or equal to ppEMax after the current epoch
             { mismatchSupplied = e
             , mismatchExpected = limitEpoch
             }

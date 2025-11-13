@@ -116,8 +116,8 @@ enactmentTransition = do
       InfoAction -> st
 
 updatedCommittee ::
-  Set.Set (Credential 'ColdCommitteeRole) ->
-  Map.Map (Credential 'ColdCommitteeRole) EpochNo ->
+  Set.Set (Credential ColdCommitteeRole) ->
+  Map.Map (Credential ColdCommitteeRole) EpochNo ->
   UnitInterval ->
   StrictMaybe (Committee era) ->
   Committee era

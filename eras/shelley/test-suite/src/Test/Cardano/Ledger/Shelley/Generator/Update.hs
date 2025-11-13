@@ -290,7 +290,7 @@ genPPUpdate ::
   EraGen era =>
   Constants ->
   PParams era ->
-  [KeyHash 'Genesis] ->
+  [KeyHash GenesisRole] ->
   Gen (ProposedPPUpdates era)
 genPPUpdate constants pp genesisKeys = do
   pps <- genEraPParamsUpdate @era constants pp
@@ -304,7 +304,7 @@ genUpdateForNodes ::
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [KeyPair 'Genesis] ->
+  [KeyPair GenesisRole] ->
   PParams era ->
   Gen (Maybe (Update era))
 genUpdateForNodes c s e coreKeys pp =
@@ -319,11 +319,11 @@ genUpdate ::
   EraGen era =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
+  [(GenesisKeyPair c, AllIssuerKeys c GenesisDelegate)] ->
+  Map (KeyHash GenesisDelegate) (AllIssuerKeys c GenesisDelegate) ->
   PParams era ->
   (UTxOState era, CertState era) ->
-  Gen (Maybe (Update era), [KeyPair 'Witness])
+  Gen (Maybe (Update era), [KeyPair Witness])
 genUpdate
   c@Constants {frequencyTxUpdates}
   s

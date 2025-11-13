@@ -90,7 +90,7 @@ assetName3 = "a3"
 -- == Test Values for Building Transactions ==
 -- ===========================================
 
-testGKeyHash :: KeyHash 'Genesis
+testGKeyHash :: KeyHash GenesisRole
 testGKeyHash = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0
 
 testAddrE :: Addr
@@ -100,10 +100,10 @@ testAddrE =
     (KeyHashObj . hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 1))
     StakeRefNull
 
-testKeyHash :: KeyHash 'Staking
+testKeyHash :: KeyHash Staking
 testKeyHash = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
 
-testStakeCred :: Credential 'Staking
+testStakeCred :: Credential Staking
 testStakeCred = KeyHashObj . hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 3)
 
 testUpdate ::
@@ -131,8 +131,8 @@ scriptGoldenTest ::
   ) =>
   TestTree
 scriptGoldenTest =
-  let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash 'Witness
-      kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness
+  let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash Witness
+      kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash Witness
    in checkEncodingCBORAnnotated
         (eraProtVerHigh @era)
         "timelock_script"

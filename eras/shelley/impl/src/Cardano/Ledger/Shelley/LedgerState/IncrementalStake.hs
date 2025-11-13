@@ -133,12 +133,12 @@ data FilteredRewards era = FilteredRewards
   { -- Only the first component is strict on purpose. The others are lazy because in most instances
     -- they are never used, so this keeps them from being evaluated.
 
-    frRegistered :: !(Map (Credential 'Staking) (Set Reward))
+    frRegistered :: !(Map (Credential Staking) (Set Reward))
   -- ^ These are registered, in the current Unified map of the CertState
-  , frShelleyIgnored :: Map (Credential 'Staking) (Set Reward)
+  , frShelleyIgnored :: Map (Credential Staking) (Set Reward)
   -- ^ These are registered, but ignored in the ShelleyEra because of backward
   --   compatibility in non-Shelley Eras, this field will be Map.empty
-  , frUnregistered :: Set (Credential 'Staking)
+  , frUnregistered :: Set (Credential Staking)
   -- ^ These are NOT registered in the current Unified map of the CertState
   , frTotalUnregistered :: Coin
   -- ^ Total Coin of the unregistered rewards. These will end up in the Treasury or Reserves.
@@ -155,7 +155,7 @@ instance NFData (FilteredRewards era) where
 --   'rs' is the rewards mapping of the RewardUpdate from that previous Epoch
 filterAllRewards' ::
   EraAccounts era =>
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential Staking) (Set Reward) ->
   ProtVer ->
   DState era ->
   FilteredRewards era
@@ -172,7 +172,7 @@ filterAllRewards' rewards protVer dState =
 
 filterAllRewards ::
   (EraGov era, EraCertState era) =>
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential Staking) (Set Reward) ->
   EpochState era ->
   FilteredRewards era
 filterAllRewards mp epochstate = filterAllRewards' mp prevPP dState

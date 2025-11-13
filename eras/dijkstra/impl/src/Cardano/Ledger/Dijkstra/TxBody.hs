@@ -381,7 +381,7 @@ instance (Typeable l, EraTxBody era) => DecCBOR (DijkstraTxBodyRaw l era) where
 
 encodeTxBodyRaw ::
   (EraTxBody era, EncCBOR (Tx SubTx era)) =>
-  DijkstraTxBodyRaw l era -> Encode ('Closed 'Sparse) (DijkstraTxBodyRaw l era)
+  DijkstraTxBodyRaw l era -> Encode (Closed Sparse) (DijkstraTxBodyRaw l era)
 encodeTxBodyRaw DijkstraTxBodyRaw {..} =
   let ValidityInterval bot top = dtbrVldt
    in Keyed

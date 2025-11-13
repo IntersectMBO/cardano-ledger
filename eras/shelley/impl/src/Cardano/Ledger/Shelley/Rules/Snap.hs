@@ -46,7 +46,7 @@ import Lens.Micro
 
 newtype SnapEvent era
   = StakeDistEvent
-      (Map (Credential 'Staking) (Coin, KeyHash 'StakePool))
+      (Map (Credential Staking) (Coin, KeyHash StakePool))
   deriving (Generic)
 
 deriving instance Eq (SnapEvent era)
@@ -83,16 +83,16 @@ snapTransition = do
       istakeSnap = snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL)
 
   tellEvent $
-    let stMap :: Map (Credential 'Staking) (CompactForm Coin)
+    let stMap :: Map (Credential Staking) (CompactForm Coin)
         stMap = VMap.toMap . unStake $ ssStake istakeSnap
 
-        stakeCoinMap :: Map (Credential 'Staking) Coin
+        stakeCoinMap :: Map (Credential Staking) Coin
         stakeCoinMap = fmap fromCompact stMap
 
-        stakePoolMap :: Map (Credential 'Staking) (KeyHash 'StakePool)
+        stakePoolMap :: Map (Credential Staking) (KeyHash StakePool)
         stakePoolMap = VMap.toMap $ ssDelegations istakeSnap
 
-        stakeMap :: Map (Credential 'Staking) (Coin, KeyHash 'StakePool)
+        stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
         stakeMap = Map.intersectionWith (,) stakeCoinMap stakePoolMap
      in StakeDistEvent stakeMap
 

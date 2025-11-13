@@ -75,11 +75,11 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 data ConwayUtxowPredFailure era
   = UtxoFailure (PredicateFailure (EraRule "UTXO" era))
   | InvalidWitnessesUTXOW
-      [VKey 'Witness]
+      [VKey Witness]
   | -- | witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
       -- | witnesses which were needed and not supplied
-      (Set (KeyHash 'Witness))
+      (Set (KeyHash Witness))
   | -- | missing scripts
     MissingScriptWitnessesUTXOW
       (Set ScriptHash)
@@ -93,7 +93,7 @@ data ConwayUtxowPredFailure era
     MissingTxMetadata
       TxAuxDataHash
   | ConflictingMetadataHash
-      (Mismatch 'RelEQ TxAuxDataHash)
+      (Mismatch RelEQ TxAuxDataHash)
   | -- | Contains out of range values (string`s too long)
     InvalidMetadata
   | -- | extraneous scripts
@@ -116,7 +116,7 @@ data ConwayUtxowPredFailure era
       -- | Set of acceptable supplemental data hashes
       (Set DataHash)
   | PPViewHashesDontMatch
-      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
+      (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
       -- TODO: Make this NonEmpty #4066
@@ -131,7 +131,7 @@ data ConwayUtxowPredFailure era
       (Set ScriptHash)
   | -- | The computed script integrity hash does not match the provided script integrity hash
     ScriptIntegrityHashMismatch
-      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
+      (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
       (StrictMaybe ByteString)
   deriving (Generic)
 

@@ -145,17 +145,17 @@ alwaysFailsHash n = hashScript @era $ never n
 alwaysSucceedsHash :: forall era. (ShelleyEraScript era, EraModel era) => Natural -> ScriptHash
 alwaysSucceedsHash n = hashScript @era $ always n
 
-someKeys :: KeyPair 'Payment
+someKeys :: KeyPair Payment
 someKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 someAddr :: Addr
-someAddr = mkAddr someKeys $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
+someAddr = mkAddr someKeys $ mkKeyPair' @Staking (RawSeed 0 0 0 0 2)
 
 -- Create an address with a given payment script.
 someScriptAddr :: forall era. EraScript era => Script era -> Addr
-someScriptAddr s = mkAddr (hashScript s) $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 0)
+someScriptAddr s = mkAddr (hashScript s) $ mkKeyPair' @Staking (RawSeed 0 0 0 0 0)
 
 timelockScript :: AllegraEraScript era => SlotNo -> Script era
 timelockScript s =
@@ -209,7 +209,7 @@ initUTxO =
     someOutput = mkBasicTxOut someAddr (inject $ Coin 1000)
     collateralOutput = mkBasicTxOut someAddr (inject $ Coin 5)
     timelockOut = mkBasicTxOut timelockAddr (inject $ Coin 1)
-    timelockAddr = mkAddr tlh $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
+    timelockAddr = mkAddr tlh $ mkKeyPair' @Staking (RawSeed 0 0 0 0 2)
       where
         tlh = hashScript @era $ tls 0
         tls s =
