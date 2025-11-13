@@ -136,40 +136,40 @@ treasuryWithdrawalsSpec =
       void $ enactTreasuryWithdrawals withdrawals drepC committeeCs
       checkNoWithdrawal initialTreasury withdrawals
 
-    it "Withdrawals exceeding treasury submitted in several proposals within the same epoch"
-      $ whenPostBootstrap
-      $ do
-        disableTreasuryExpansion
-        committeeCs <- registerInitialCommittee
-        (drepC, _, _) <- setupSingleDRep 1_000_000
-        donateToTreasury $ Coin 5_000_000
-        initialTreasury <- getsNES treasuryL
-        numWithdrawals <- choose (1, 10)
-        withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
+    it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $
+      whenPostBootstrap $
+        do
+          disableTreasuryExpansion
+          committeeCs <- registerInitialCommittee
+          (drepC, _, _) <- setupSingleDRep 1_000_000
+          donateToTreasury $ Coin 5_000_000
+          initialTreasury <- getsNES treasuryL
+          numWithdrawals <- choose (1, 10)
+          withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
 
-        impAnn "submit in individual proposals in the same epoch" $ do
-          traverse_
-            ( \w -> do
-                gaId <- submitTreasuryWithdrawals @era [w]
-                submitYesVote_ (DRepVoter drepC) gaId
-                submitYesVoteCCs_ committeeCs gaId
-            )
-            withdrawals
-          passNEpochs 2
+          impAnn "submit in individual proposals in the same epoch" $ do
+            traverse_
+              ( \w -> do
+                  gaId <- submitTreasuryWithdrawals @era [w]
+                  submitYesVote_ (DRepVoter drepC) gaId
+                  submitYesVoteCCs_ committeeCs gaId
+              )
+              withdrawals
+            passNEpochs 2
 
-          let expectedTreasury =
-                F.foldl'
-                  ( \acc (_, x) ->
-                      if acc >= x
-                        then acc <-> x
-                        else acc
-                  )
-                  initialTreasury
-                  withdrawals
+            let expectedTreasury =
+                  F.foldl'
+                    ( \acc (_, x) ->
+                        if acc >= x
+                          then acc <-> x
+                          else acc
+                    )
+                    initialTreasury
+                    withdrawals
 
-          getsNES treasuryL `shouldReturn` expectedTreasury
-          -- check that the sum of the rewards matches what was spent from the treasury
-          sumRewardAccounts withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
+            getsNES treasuryL `shouldReturn` expectedTreasury
+            -- check that the sum of the rewards matches what was spent from the treasury
+            sumRewardAccounts withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
   where
     sumRewardAccounts withdrawals = mconcat <$> traverse (getAccountBalance . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
