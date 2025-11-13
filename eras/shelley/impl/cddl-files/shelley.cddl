@@ -38,13 +38,17 @@ vrf_vkey = bytes .size 32
 vrf_cert = [bytes, bytes .size 80]
 
 operational_cert = 
-  ( hot_vkey        : kes_vkey    
-  , sequence_number : uint .size 8
-  , kes_period      : uint        
-  , sigma           : signature   
+  ( hot_vkey        : kes_vkey       
+  , sequence_number : sequence_number
+  , kes_period      : kes_period     
+  , sigma           : signature      
   )
 
 kes_vkey = bytes .size 32
+
+sequence_number = uint .size 8
+
+kes_period = uint .size 8
 
 signature = bytes .size 64
 
@@ -119,18 +123,18 @@ address =
 coin = uint
 
 certificate = 
-  [  stake_registration
-  // stake_deregistration
-  // stake_delegation
-  // pool_registration
-  // pool_retirement
-  // genesis_key_delegation
+  [  account_registration_cert
+  // account_unregistration_cert
+  // delegation_to_stake_pool_cert
+  // pool_registration_cert
+  // pool_retirement_cert
+  // genesis_delegation_cert
   // move_instantaneous_rewards_cert
   ]
 
 
-; This will be deprecated in a future era
-stake_registration = (0, stake_credential)
+; This certificate will be deprecated in a future era
+account_registration_cert = (0, stake_credential)
 
 stake_credential = credential
 
@@ -151,14 +155,14 @@ hash28 = bytes .size 28
 ;   "\x04" for Plutus V4 scripts
 script_hash = hash28
 
-; This will be deprecated in a future era
-stake_deregistration = (1, stake_credential)
+; This certificate will be deprecated in a future era
+account_unregistration_cert = (1, stake_credential)
 
-stake_delegation = (2, stake_credential, pool_keyhash)
+delegation_to_stake_pool_cert = (2, stake_credential, pool_keyhash)
 
 pool_keyhash = hash28
 
-pool_registration = (3, pool_params)
+pool_registration_cert = (3, pool_params)
 
 pool_params = 
   ( operator       : pool_keyhash      
@@ -217,11 +221,11 @@ pool_metadata = [url, bytes]
 
 url = text .size (0 .. 64)
 
-pool_retirement = (4, pool_keyhash, epoch)
+pool_retirement_cert = (4, pool_keyhash, epoch)
 
 epoch = uint .size 8
 
-genesis_key_delegation = (5, genesis_hash, genesis_delegate_hash, vrf_keyhash)
+genesis_delegation_cert = (5, genesis_hash, genesis_delegate_hash, vrf_keyhash)
 
 genesis_hash = hash28
 
@@ -276,7 +280,7 @@ positive_int = 1 .. max_word64
 
 max_word64 = 18446744073709551615
 
-nonce = [0// 1, bytes .size 32]
+nonce = [0// 1, hash32]
 
 auxiliary_data_hash = hash32
 
@@ -285,7 +289,7 @@ transaction_witness_set =
 
 vkeywitness = [vkey, signature]
 
-; Shelley-era native scripts support 4 operations:
+; Native scripts support 4 operations:
 ;   - Signature verification (script_pubkey)
 ;   - Conjunctions (script_all)
 ;   - Disjunctions (script_any)

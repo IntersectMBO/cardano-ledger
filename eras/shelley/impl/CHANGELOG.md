@@ -33,6 +33,11 @@
 
 ### `testlib`
 
+* Add CDDL certificate definitions: `account_registration_cert`, `account_unregistration_cert`, `delegation_to_stake_pool_cert`
+* Add CDDL pool certificate definitions via `mkPoolRules`: `pool_registration_cert`, `pool_retirement_cert`
+* Add CDDL legacy certificate definitions: `genesis_delegation_cert`, `genesis_hash`, `genesis_delegate_hash`, `move_instantaneous_rewards_cert`, `move_instantaneous_reward`, `delta_coin`
+* Remove old CDDL certificate definitions: `stake_registration`, `stake_deregistration`, `stake_delegation`, `pool_registration`, `pool_retirement`, `genesis_key_delegation`
+* Remove CDDL pool primitives (moved to core): `credential`, `stake_credential`, `pool_params`, `port`, `ipv4`, `ipv6`, `dns_name`, `single_host_addr`, `single_host_name`, `multi_host_name`, `relay`, `pool_metadata`, `url`
 * Rename `multisig_script` -> `shelley_native_script` in CDDL
 * Move `script_hash` to core CDDL
 * Move `transaction_metadatum_label`, `transaction_metadatum`, `transaction_index` and `metadata_hash` to core CDDL

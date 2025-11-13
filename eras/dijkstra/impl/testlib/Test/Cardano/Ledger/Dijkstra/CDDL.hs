@@ -22,9 +22,7 @@ import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
 import GHC.Num (Integer)
-import Test.Cardano.Ledger.Conway.CDDL hiding (
-
- )
+import Test.Cardano.Ledger.Conway.CDDL
 import Text.Heredoc
 
 dijkstraCDDL :: Huddle
@@ -36,25 +34,7 @@ dijkstraCDDL =
     , HIRule language
     , HIRule potential_languages
     , HIRule signkey_kes
-    , -- Certificates
-      HIRule certificate
-    , HIGroup stake_registration
-    , HIGroup stake_deregistration
-    , HIGroup stake_delegation
-    , HIGroup pool_registration
-    , HIGroup pool_retirement
-    , HIGroup reg_cert
-    , HIGroup unreg_cert
-    , HIGroup vote_deleg_cert
-    , HIGroup stake_vote_deleg_cert
-    , HIGroup stake_reg_deleg_cert
-    , HIGroup vote_reg_deleg_cert
-    , HIGroup stake_vote_reg_deleg_cert
-    , HIGroup auth_committee_hot_cert
-    , HIGroup resign_committee_cold_cert
-    , HIGroup reg_drep_cert
-    , HIGroup unreg_drep_cert
-    , HIGroup update_drep_cert
+    , HIRule certificate
     ]
 
 block :: Rule
@@ -111,6 +91,8 @@ header_body =
       , a (protocol_version @DijkstraEra)
       ]
 
+-- | Replaces required_signers (index 14) with guards supporting both keys and script credentials.
+-- Ref: CIP-112
 transaction_body :: Rule
 transaction_body =
   "transaction_body"
@@ -180,6 +162,7 @@ parameter_change_action =
       , a $ policy_hash / VNil
       ]
 
+-- | Uses dijkstra_script supporting Plutus V4 script references and dijkstra_native_script with guards.
 transaction_output :: Rule
 transaction_output =
   comment
@@ -190,6 +173,7 @@ transaction_output =
       =:= shelley_transaction_output
       / babbage_transaction_output dijkstra_script
 
+-- | Empty redeemers now use map format (A0) instead of array format (80).
 -- TODO: Update comment with Plutus v4 when necessary
 script_data_hash :: Rule
 script_data_hash =
@@ -263,28 +247,7 @@ script_data_hash =
         |]
     $ "script_data_hash" =:= hash32
 
--- TODO: adjust to changes in certificates
-certificate :: Rule
-certificate =
-  "certificate"
-    =:= arr [a stake_registration]
-    / arr [a stake_deregistration]
-    / arr [a stake_delegation]
-    / arr [a pool_registration]
-    / arr [a pool_retirement]
-    / arr [a reg_cert]
-    / arr [a unreg_cert]
-    / arr [a vote_deleg_cert]
-    / arr [a stake_vote_deleg_cert]
-    / arr [a stake_reg_deleg_cert]
-    / arr [a vote_reg_deleg_cert]
-    / arr [a stake_vote_reg_deleg_cert]
-    / arr [a auth_committee_hot_cert]
-    / arr [a resign_committee_cold_cert]
-    / arr [a reg_drep_cert]
-    / arr [a unreg_drep_cert]
-    / arr [a update_drep_cert]
-
+-- | Adds 5 reference script cost parameters (indices 33-37) for new pricing model.
 -- TODO: adjust with new params
 protocol_param_update :: Rule
 protocol_param_update =
@@ -326,6 +289,8 @@ protocol_param_update =
       , opt (idx 37 ==> positive_interval) //- "refScript cost multiplier"
       ]
 
+-- | Uses map format only; adds guarding (tag 6) redeemer purpose for guard scripts.
+-- Ref: CIP-112
 redeemers :: Rule -> Rule
 redeemers redeemer_tag =
   "redeemers"
@@ -340,6 +305,7 @@ redeemers redeemer_tag =
           ==> arr ["data" ==> plutus_data, "ex_units" ==> ex_units]
       ]
 
+-- | Uses maybe_tagged_nonempty_set for all witness arrays and dijkstra_native_script with guard support.
 -- TODO: add entry for Plutus v4
 transaction_witness_set :: Rule
 transaction_witness_set =
@@ -375,6 +341,7 @@ language =
     / int 1 -- Plutus v2
     / int 2 -- Plutus v3
 
+-- | Flexible schema supporting arbitrary language versions (keys 0-255) for future Plutus versions.
 -- TODO: add entry for Plutus v4
 cost_models :: Rule
 cost_models =
@@ -461,6 +428,7 @@ auxiliary_data_map =
           ]
       )
 
+-- | Adds Plutus V4 scripts (index 5) and uses dijkstra_native_script with guard support (index 1).
 auxiliary_data :: Rule
 auxiliary_data =
   comment

@@ -12,11 +12,13 @@
 module Test.Cardano.Ledger.Mary.CDDL (
   module Test.Cardano.Ledger.Allegra.CDDL,
   maryCDDL,
-  multiasset,
-  mint,
+
+  -- * Multi-asset support
   value,
+  multiasset,
   policy_id,
   asset_name,
+  mint,
 ) where
 
 import Cardano.Ledger.Core (Era)
@@ -67,6 +69,7 @@ transaction_body =
       , opt (idx 9 ==> mint)
       ]
 
+-- | Replaces coin with value.
 transaction_output :: Rule
 transaction_output = "transaction_output" =:= arr [a address, "amount" ==> value]
 

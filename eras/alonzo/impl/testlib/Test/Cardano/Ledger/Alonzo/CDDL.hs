@@ -11,15 +11,26 @@
 module Test.Cardano.Ledger.Alonzo.CDDL (
   module Test.Cardano.Ledger.Mary.CDDL,
   alonzoCDDL,
-  certificates,
-  required_signers,
-  network_id,
+
+  -- * Plutus V1 data types
+  big_int,
+  bounded_bytes,
+
+  -- * Plutus V1 scripts
   plutus_v1_script,
-  redeemers,
   constr,
+
+  -- * Execution units
   ex_unit_prices,
   ex_units,
   positive_interval,
+
+  -- * Redeemers
+  redeemers,
+
+  -- * Transaction
+  required_signers,
+  network_id,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -180,9 +191,6 @@ script_data_hash =
         |]
     $ "script_data_hash" =:= hash32
 
-certificates :: Rule
-certificates = "certificates" =:= arr [0 <+ a certificate]
-
 protocol_param_update :: Rule
 protocol_param_update =
   comment
@@ -244,9 +252,12 @@ proposed_protocol_parameter_updates =
   "proposed_protocol_parameter_updates"
     =:= mp [0 <+ asKey genesis_hash ==> protocol_param_update]
 
+-- | Adds Plutus protocol parameters: cost models, execution units, collateral settings (indices 16-24).
+-- Ref: CIP-28
 update :: Rule
 update = "update" =:= arr [a proposed_protocol_parameter_updates, a epoch]
 
+-- | Adds Plutus V1 scripts (index 3), datums (index 4), and redeemers (index 5) for smart contracts.
 transaction_witness_set :: Rule
 transaction_witness_set =
   comment
@@ -268,6 +279,31 @@ transaction_witness_set =
 
 redeemers :: Rule
 redeemers = "redeemers" =:= arr [0 <+ a redeemer]
+
+big_int :: Rule
+big_int = "big_int" =:= VInt / big_uint / big_nint
+
+big_uint :: Rule
+big_uint = "big_uint" =:= tag 2 bounded_bytes
+
+big_nint :: Rule
+big_nint = "big_nint" =:= tag 3 bounded_bytes
+
+bounded_bytes :: Rule
+bounded_bytes =
+  comment
+    [str|The real bounded_bytes does not have this limit. it instead has
+        |a different limit which cannot be expressed in CDDL.
+        |
+        |The limit is as follows:
+        | - bytes with a definite-length encoding are limited to size 0..64
+        | - for bytes with an indefinite-length CBOR encoding, each chunk is
+        |   limited to size 0..64
+        | ( reminder: in CBOR, the indefinite-length encoding of
+        | bytestrings consists of a token #2.31 followed by a sequence
+        | of definite-length encoded bytestrings and a stop code )
+        |]
+    $ "bounded_bytes" =:= VBytes `sized` (0 :: Word64, 64 :: Word64)
 
 plutus_v1_script :: Rule
 plutus_v1_script =
@@ -370,6 +406,7 @@ auxiliary_data_map =
           ]
       )
 
+-- | Adds auxiliary_data_map format (tag 259).
 auxiliary_data :: Rule
 auxiliary_data =
   comment
@@ -383,6 +420,7 @@ auxiliary_data =
       / auxiliary_data_array
       / auxiliary_data_map
 
+-- | Updates header_body to use Alonzo protocol_version.
 header :: Rule
 header = "header" =:= arr [a header_body, "body_signature" ==> kes_signature]
 

@@ -73,6 +73,20 @@ transaction =
 header :: Rule
 header = "header" =:= arr [a header_body, "body_signature" ==> kes_signature]
 
+-- IMPORTANT: Babbage changed operational_cert and protocol_version from 'grp'
+-- to 'arr' to match actual block serialization.
+--
+-- Semantic difference:
+--   grp (Named Group):
+--     fields are inlined directly into parent array
+--     -> header_body becomes 14-element flat array
+--   arr (Rule):
+--     fields are nested as separate sub-arrays
+--     -> header_body becomes 10-element array with nested structures
+--
+-- Pre-Babbage eras used 'grp' but actual Babbage+ blocks serialize with 'arr'.
+-- This change corrects the CDDL spec to match reality.
+-- Ref: PR #3762, issue #3559
 header_body :: Rule
 header_body =
   comment
@@ -93,29 +107,20 @@ header_body =
         , a (protocol_version @BabbageEra)
         ]
 
+-- | Changed from Named Group (grp) to Rule (arr) to match actual block serialization.
+-- Ref: PR #3762, Issue #3559
 operational_cert :: Rule
 operational_cert =
   "operational_cert"
     =:= arr
       [ "hot_vkey" ==> kes_vkey
-      , "sequence_number" ==> (VUInt `sized` (8 :: Word64))
-      , "kes_period" ==> VUInt
+      , "sequence_number" ==> sequence_number
+      , "kes_period" ==> kes_period
       , "sigma" ==> signature
       ]
 
--- IMPORTANT: Babbage changed operational_cert and protocol_version from 'grp'
--- to 'arr' to match actual block serialization (see PR #3762, issue #3559).
---
--- Semantic difference:
---   grp (Named Group):
---     fields are inlined directly into parent array
---     -> header_body becomes 14-element flat array
---   arr (Rule):
---     fields are nested as separate sub-arrays
---     -> header_body becomes 10-element array with nested structures
---
--- Pre-Babbage eras used 'grp' but actual Babbage+ blocks serialize with 'arr'.
--- This change corrects the CDDL spec to match reality.
+-- | Changed from Named Group (grp) to Rule (arr) to match actual block serialization.
+-- Ref: PR #3762, Issue #3559
 protocol_version :: forall era. Era era => Rule
 protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @era, a VUInt]
 
