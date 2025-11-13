@@ -62,7 +62,7 @@ instance TranslateEra AlonzoEra NewEpochState where
         }
 
 instance TranslateEra AlonzoEra PParams where
-  translateEra (AlonzoGenesisWrapper upgradeArgs) = pure . upgradePParams upgradeArgs
+  translateEra (AlonzoGenesisWrapper upgradeArgs _) = pure . upgradePParams upgradeArgs
 
 instance TranslateEra AlonzoEra FuturePParams where
   translateEra ctxt = \case
