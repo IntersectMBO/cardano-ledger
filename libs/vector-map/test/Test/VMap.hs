@@ -55,6 +55,11 @@ vMapTests =
           (\(m1, m2) -> VMap.unionWithKey (applyFun3 f) (VMap.fromMap m1) (VMap.fromMap m2))
           (uncurry (Map.unionWithKey (applyFun3 f)))
           (Map.fromList xs1, Map.fromList xs2)
+      prop "mappend" $ \xs1 xs2 ->
+        prop_AsMapFrom
+          (\(m1, m2) -> VMap.fromMap m1 <> VMap.fromMap m2)
+          (uncurry (<>))
+          (Map.fromList xs1, Map.fromList xs2)
       prop "toAscList" $ prop_AsMapTo VMap.toAscList Map.toAscList
       prop "foldMapWithKey" $ \f ->
         let f' k v = applyFun2 f k v :: String
