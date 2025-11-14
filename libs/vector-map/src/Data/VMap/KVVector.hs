@@ -34,6 +34,8 @@ module Data.VMap.KVVector (
   internKVVectorMaybe,
   normalize,
   normalizeM,
+  keepFirstDuplicate,
+  keepSecondDuplicate,
 ) where
 
 import Control.Applicative
