@@ -127,6 +127,7 @@
 
 ### `testlib`
 
+* Stop re-exporting QuickCheck's `NonZero` as it conflcicts with our internal type.
 * Rename `RewardAccount` to `AccountAddress`
   - `deserialiseRewardAccountOld` to `deserialiseAccountAddressOld`.
   - `registerRewardAccount` to `registerAccountAddress`
