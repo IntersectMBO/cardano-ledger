@@ -29,6 +29,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
+import Data.Coerce (coerce)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -274,14 +275,42 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoScr
       decodePlutus slang =
         SumD PlutusScript <! D (decodePlutusScript slang)
 
+-- | Decodes a set of `a`'s and maps a function over it to get key-value pairs.
+-- If the key-value pairs create a non-empty Map without duplicates, then that map is returned,
+-- otherwise fail
+noDuplicateNonEmptySetAsMapDecoder ::
+  (Ord k, DecCBOR a) =>
+  (a -> (k, v)) ->
+  Decoder s (Map k v)
+noDuplicateNonEmptySetAsMapDecoder toKV = do
+  allowTag setTag
+  vals <- decodeList decCBOR
+  go (Map.empty, 0) vals
+  where
+    go (m, n) []
+      | Map.null m = fail "Empty script Set is not allowed"
+      | length m /= n = fail "Duplicate elements in the scripts Set were encountered"
+      | otherwise = pure m
+    go (!m, !n) (x : xs) = do
+      let (k, v) = toKV x
+      go (Map.insert k v m, n + 1) xs
+
 instance Era era => DecCBOR (TxDatsRaw era) where
   decCBOR =
     ifDecoderVersionAtLeast
       (natVersion @9)
-      ( allowTag setTag
-          >> TxDatsRaw . Map.fromElems hashData . NE.toList <$> decodeNonEmptyList decCBOR
+      ( ifDecoderVersionAtLeast
+          (natVersion @12)
+          noDuplicatesDatsDecoder
+          ( allowTag setTag
+              >> TxDatsRaw . Map.fromElems hashData . NE.toList <$> decodeNonEmptyList decCBOR
+          )
       )
       (TxDatsRaw . Map.fromElems hashData <$> decodeList decCBOR)
+    where
+      noDuplicatesDatsDecoder :: Decoder s (TxDatsRaw era)
+      noDuplicatesDatsDecoder =
+        coerce . noDuplicateNonEmptySetAsMapDecoder $ \dat -> (hashData dat, dat)
   {-# INLINE decCBOR #-}
 
 deriving newtype instance Era era => DecCBOR (TxDats era)

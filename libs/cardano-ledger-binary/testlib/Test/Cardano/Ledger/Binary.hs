@@ -12,6 +12,9 @@ module Test.Cardano.Ledger.Binary (
 ) where
 
 import Cardano.Ledger.Binary
+import Codec.CBOR.Pretty (prettyHexEnc)
+import Codec.CBOR.Read (deserialiseFromBytes)
+import qualified Codec.CBOR.Term as C
 import Control.Monad (forM_)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Proxy
@@ -21,6 +24,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation)
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck hiding (label)
+import Text.Show.Pretty (ppShow)
 
 -- | Generates arbitrary values, encodes them, and verifies that
 -- decoding with `DecCBOR (Annotator)` produces the same result as decoding with `DecCBOR`.
@@ -76,4 +80,15 @@ decoderEquivalenceExpectation version bs = do
     (Left _, Left _) -> pure ()
     _ ->
       expectationFailure $
-        "Decoding result: " ++ show dec ++ " did not match the one via Annotator: " ++ show decAnn
+        unlines
+          [ "Decoding result:"
+          , ppShow dec
+          , "did not match the one via Annotator:"
+          , ppShow decAnn
+          , "CBOR:"
+          , hexDebug
+          ]
+      where
+        hexDebug = case deserialiseFromBytes C.decodeTerm bs of
+          Right (_, res) -> prettyHexEnc $ C.encodeTerm res
+          Left err -> "Failed to decode CBOR: " <> show err
