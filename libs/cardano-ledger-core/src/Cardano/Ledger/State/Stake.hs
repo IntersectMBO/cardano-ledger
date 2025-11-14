@@ -118,7 +118,8 @@ class
   -- TODO: This functionality will be removed and switched to use a pulser
 
   -- | Using known stake credential registrations and delegations resolve the instant stake into a
-  -- `Stake` that will be used for `SnapShot` creation by `snapShotFromInstantStake`.
+  -- `Stake` that will be used for `SnapShot` creation by
+  -- `Cardano.Ledger.State.snapShotFromInstantStake`.
   resolveInstantStake :: InstantStake era -> Accounts era -> Stake
 
 class CanGetInstantStake t where

@@ -385,7 +385,13 @@ mkPoolRewardInfo
                 , poolBlocks = blocksN
                 , poolLeaderReward = LeaderOnlyReward stakePoolId stakePoolOperatorReward
                 }
-         in assert (selfDelegatedOwnersStake == poolOwnerStakeOld) (Right $! rewardInfo)
+            showFailure =
+              error $
+                "OwnerStake is not the same:\nOld OwnerStake:\n"
+                  <> show selfDelegatedOwnersStake
+                  <> "\nNew wnerStake:\n"
+                  <> show poolOwnerStakeOld
+         in assert (selfDelegatedOwnersStake == poolOwnerStakeOld || showFailure) (Right $! rewardInfo)
     where
       pp_d = pp ^. ppDG
       pp_a0 = pp ^. ppA0L

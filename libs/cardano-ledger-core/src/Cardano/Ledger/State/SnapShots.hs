@@ -112,6 +112,7 @@ import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
 import Data.Word (Word16)
 import GHC.Generics (Generic)
+import GHC.Stack
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
@@ -388,32 +389,48 @@ emptySnapShots =
 snapShotFromInstantStake ::
   forall era. EraStake era => InstantStake era -> DState era -> PState era -> SnapShot
 snapShotFromInstantStake instantStake dState PState {psStakePools} =
-  SnapShot
-    { ssStake = activeStake
-    , ssTotalActiveStake = totalActiveStake
-    , ssDelegations = VMap.fromDistinctAscListN delegsCount delegsAscList
-    , ssPoolParams =
-        VMap.fromDistinctAscListN
-          (Map.size psStakePools)
-          [ (poolId, stakePoolStateToStakePoolParams poolId ps)
-          | (poolId, ps) <- Map.toAscList psStakePools
-          ]
-    , ssStakePoolsSnapShot =
-        Map.map (mkStakePoolSnapShot activeStake totalActiveStake) psStakePools
-    }
+  assert
+    ( delegatorsPerStakePool == Map.map spsDelegators psStakePools
+        || error
+          ( "Delegs:\n"
+              ++ show delegatorsPerStakePool
+              ++ "\n/=\n"
+              ++ show (Map.map spsDelegators psStakePools)
+          )
+    )
+    $ SnapShot
+      { ssStake = activeStake
+      , ssTotalActiveStake = totalActiveStake
+      , ssDelegations = delegs
+      , ssPoolParams = poolParams
+      , ssStakePoolsSnapShot = stakePoolSnapShot
+      }
   where
+    poolParams =
+      VMap.fromDistinctAscListN
+        (Map.size psStakePools)
+        [ (poolId, stakePoolStateToStakePoolParams poolId ps)
+        | (poolId, ps) <- Map.toAscList psStakePools
+        ]
+    stakePoolSnapShot = Map.map (mkStakePoolSnapShot activeStake totalActiveStake) psStakePools
     activeStake = resolveInstantStake instantStake accounts
     totalActiveStake = sumAllStake activeStake `nonZeroOr` knownNonZeroCoin @1
     accounts = dsAccounts dState
+    delegs = VMap.fromDistinctAscListN delegsCount delegsAscList
+    delegatorsPerStakePool =
+      VMap.foldlWithKey
+        (\acc cred poolId -> Map.insertWith (<>) poolId (Set.singleton cred) acc)
+        mempty
+        delegs
     keepAndCountDelegations ::
       Credential Staking ->
       AccountState era ->
       ([(Credential Staking, KeyHash StakePool)], Int) ->
       ([(Credential Staking, KeyHash StakePool)], Int)
-    keepAndCountDelegations cred accountState acc@(!delegs, !count) =
+    keepAndCountDelegations cred accountState acc@(!curDelegs, !curCount) =
       case accountState ^. stakePoolDelegationAccountStateL of
         Nothing -> acc
-        Just deleg -> ((cred, deleg) : delegs, count + 1)
+        Just deleg -> ((cred, deleg) : curDelegs, curCount + 1)
     (delegsAscList, delegsCount) =
       Map.foldrWithKey keepAndCountDelegations ([], 0) $ accounts ^. accountsMapL
 {-# INLINE snapShotFromInstantStake #-}
@@ -435,13 +452,12 @@ calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty 
            in Map.insertWith (<>) keyHash c ans
         else ans
 
-calculatePoolDistr :: SnapShot -> PoolDistr
+calculatePoolDistr :: HasCallStack => SnapShot -> PoolDistr
 calculatePoolDistr = calculatePoolDistr' (const True)
 
-calculatePoolDistr' :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
+calculatePoolDistr' :: HasCallStack => (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
 calculatePoolDistr' includeHash (SnapShot stake activeStake delegs poolParams stakePoolSnapShot) =
   let total = sumAllStakeCompact stake
-      -- total could be zero (in particular when shrinking)
       nonZeroTotal = fromCompactCoinNonZero $ total `nonZeroOr` knownNonZeroCompactCoin @1
       poolStakeMap = calculatePoolStake includeHash delegs stake
       oldPoolDistr =
@@ -471,7 +487,13 @@ calculatePoolDistr' includeHash (SnapShot stake activeStake delegs poolParams st
           { unPoolDistr = Map.mapMaybeWithKey toIndividualPoolStake stakePoolSnapShot
           , pdTotalActiveStake = activeStake
           }
-   in assert (oldPoolDistr == poolDistr) poolDistr
+      showFailure =
+        error $
+          "PoolDistr is not the same:\nOld PoolDistr:\n"
+            <> show oldPoolDistr
+            <> "\nNew PoolDistr:\n"
+            <> show poolDistr
+   in assert (oldPoolDistr == poolDistr || showFailure) poolDistr
 
 -- ======================================================
 -- Lenses

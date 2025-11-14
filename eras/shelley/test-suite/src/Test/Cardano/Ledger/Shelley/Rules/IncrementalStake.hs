@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Globals, nonZeroOr)
+import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -45,6 +45,7 @@ import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
@@ -200,17 +201,9 @@ stakeDistr ::
   PState era ->
   SnapShot
 stakeDistr u ds PState {psStakePools} =
-  SnapShot
-    { ssStake = activeStake
-    , ssTotalActiveStake = totalActiveStake
-    , ssDelegations = VMap.fromMap delegs
-    , ssPoolParams = VMap.fromMap $ Map.mapWithKey stakePoolStateToStakePoolParams psStakePools
-    , ssStakePoolsSnapShot =
-        Map.map (mkStakePoolSnapShot activeStake totalActiveStake) psStakePools
-    }
+  mkSnapShot activeStake (VMap.fromMap delegs) poolParams
   where
     activeStake = Stake $ VMap.fromMap (eval (dom activeDelegs ◁ stakeRelation))
-    totalActiveStake = sumAllStake activeStake `nonZeroOr` knownNonZeroCoin @1
     accountsMap = ds ^. accountsL . accountsMapL
     rewards' :: Map.Map (Credential Staking) (CompactForm Coin)
     rewards' = Map.map (^. balanceAccountStateL) accountsMap
@@ -221,6 +214,7 @@ stakeDistr u ds PState {psStakePools} =
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
     activeDelegs :: Map.Map (Credential Staking) (KeyHash StakePool)
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom psStakePools)
+    poolParams = VMap.fromMap $ Map.mapWithKey stakePoolStateToStakePoolParams psStakePools
 
 -- | Sum up all the Coin for each staking Credential. This function has an
 --   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'

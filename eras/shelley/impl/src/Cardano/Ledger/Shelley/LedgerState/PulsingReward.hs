@@ -218,16 +218,22 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           free
           (unStake stake)
           (RewardAns Map.empty Map.empty)
+      newStakePerPool =
+        Map.mapMaybe
+          ( \spss ->
+              let s = fromCompact $ spssStake spss
+               in s <$ guard (s /= mempty)
+          )
+          stakePoolSnapShots
+      showFailure =
+        error $
+          "StakePerPool does not match:\nOld StakePerPool:\n"
+            <> show stakePerPool
+            <> "\nNew StakePerPool:\n"
+            <> show newStakePerPool
    in assert
-        ( stakePerPool
-            == Map.mapMaybe
-              ( \spss ->
-                  let s = fromCompact $ spssStake spss
-                   in s <$ guard (s /= mempty)
-              )
-              stakePoolSnapShots
-        )
-        $ Pulsing rewsnap pulser
+        (stakePerPool == newStakePerPool || showFailure)
+        (Pulsing rewsnap pulser)
 
 -- Phase 2
 

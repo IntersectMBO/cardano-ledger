@@ -21,7 +21,7 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
-import Cardano.Ledger.Coin (CompactForm (CompactCoin))
+import Cardano.Ledger.Coin (knownNonZeroCoin)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -104,7 +104,9 @@ import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), 
 genRsTxAndModel ::
   forall era.
   EraGenericGen era =>
-  Int -> SlotNo -> GenRS era (Tx TopTx era)
+  Int ->
+  SlotNo ->
+  GenRS era (Tx TopTx era)
 genRsTxAndModel n slot = do
   (_, tx) <- genAlonzoTx slot
   modifyModel (\model -> applyTx n slot model tx)
@@ -165,7 +167,7 @@ initialMockChainState gstate =
         , nesBcur = BlocksMade Map.empty
         , nesEs = makeEpochState gstate ledgerstate
         , nesRu = SNothing
-        , nesPd = PoolDistr (gsInitialPoolDistr gstate) (CompactCoin 1)
+        , nesPd = PoolDistr (gsInitialPoolDistr gstate) (knownNonZeroCoin @1)
         , stashedAVVMAddresses = stashedAVVMAddressesZero (reify @era)
         }
 
