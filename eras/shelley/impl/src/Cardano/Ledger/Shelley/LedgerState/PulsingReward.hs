@@ -71,6 +71,7 @@ import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Ledger.State
 import Cardano.Ledger.Val ((<->))
 import Control.Exception (assert)
+import Control.Monad (guard)
 import Data.Group (invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -217,8 +218,16 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           free
           (unStake stake)
           (RewardAns Map.empty Map.empty)
-   in --assert (stakePerPool == Map.map (fromCompact . spssStake) stakePoolSnapShots) $
-        Pulsing rewsnap pulser
+   in assert
+        ( stakePerPool
+            == Map.mapMaybe
+              ( \spss ->
+                  let s = fromCompact $ spssStake spss
+                   in s <$ guard (s /= mempty)
+              )
+              stakePoolSnapShots
+        )
+        $ Pulsing rewsnap pulser
 
 -- Phase 2
 

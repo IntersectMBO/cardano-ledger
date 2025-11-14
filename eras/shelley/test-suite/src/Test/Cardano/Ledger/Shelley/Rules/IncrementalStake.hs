@@ -199,7 +199,7 @@ stakeDistr ::
   DState era ->
   PState era ->
   SnapShot
-stakeDistr u ds ps@PState {psStakePools} =
+stakeDistr u ds PState {psStakePools} =
   SnapShot
     { ssStake = activeStake
     , ssTotalActiveStake = totalActiveStake
