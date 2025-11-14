@@ -42,6 +42,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
+import Debug.Trace
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
@@ -65,6 +66,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce, testGlobals)
 import Test.Tasty (TestTree, testGroup)
@@ -276,7 +278,7 @@ blockEx3 =
 
 snapEx3 :: SnapShot
 snapEx3 =
-  emptySnapShot {ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]}
+  mkSnapShot def mempty [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
@@ -304,5 +306,5 @@ poolReRegExample =
     [ testCase "initial pool registration" $ testCHAINExample poolReReg1
     , testCase "early epoch re-registration" $ testCHAINExample poolReReg2A
     , testCase "late epoch re-registration" $ testCHAINExample poolReReg2B
-    , testCase "adopt new pool parameters" $ testCHAINExample poolReReg3
+    , testCase "adopt new pool parameters" $ traceShow poolReReg3 $ testCHAINExample poolReReg3
     ]

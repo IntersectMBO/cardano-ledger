@@ -60,6 +60,12 @@ newtype Stake = Stake
   }
   deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR)
 
+instance Monoid Stake where
+  mempty = Stake VMap.empty
+
+instance Semigroup Stake where
+  Stake s1 <> Stake s2 = Stake $ VMap.unionWith (<>) s1 s2
+
 instance DecShareCBOR Stake where
   type Share Stake = Share (VMap VB VP (Credential Staking) (CompactForm Coin))
   getShare = getShare . unStake

@@ -449,8 +449,8 @@ rewardOnePool
 
 -- | Get stake of one pool
 poolStake ::
-  KeyHash 'StakePool ->
-  VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
+  KeyHash StakePool ->
+  VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
   Stake ->
   Stake
 poolStake hk delegs (Stake stake) =
@@ -815,8 +815,8 @@ mkRewardAns
 -- | Adaptor that can construct new SnapShot representation from the old one
 mkSnapShot ::
   Stake ->
-  VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams ->
+  VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) StakePoolParams ->
   SnapShot
 mkSnapShot activeStake delegs stakePools =
   SnapShot
