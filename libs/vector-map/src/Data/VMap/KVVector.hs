@@ -316,7 +316,7 @@ normalizeM mv = sortAscKVMVector mv >> removeDuplicates keepFirstDuplicate mv
 {-# INLINE normalizeM #-}
 
 instance (VG.Vector kv k, VG.Vector vv v, Ord k) => Semigroup (KVVector kv vv (k, v)) where
-  (<>) v1 v2 = normalize (v1 VG.++ v2)
+  (<>) = unionWithKey keepFirstDuplicate
   {-# INLINE (<>) #-}
   sconcat = normalize . VG.concat . NE.toList
   {-# INLINE sconcat #-}
