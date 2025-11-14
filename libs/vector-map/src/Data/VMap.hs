@@ -24,6 +24,7 @@ module Data.VMap (
   foldlWithKey,
   foldMap,
   foldMapWithKey,
+  unionWithKey,
   fromMap,
   toMap,
   fromList,
@@ -136,6 +137,15 @@ findWithDefault ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => v -> k -> VMap kv vv k v -> v
 findWithDefault a k = fromMaybe a . lookup k
 {-# INLINE findWithDefault #-}
+
+unionWithKey ::
+  (Ord k, VG.Vector kv k, VG.Vector vv v) =>
+  (k -> v -> v -> v) ->
+  VMap kv vv k v ->
+  VMap kv vv k v ->
+  VMap kv vv k v
+unionWithKey f (VMap kv1) (VMap kv2) = VMap (KV.unionWithKey f kv1 kv2)
+{-# INLINE unionWithKey #-}
 
 fromMap :: (VG.Vector kv k, VG.Vector vv v) => Map.Map k v -> VMap kv vv k v
 fromMap = VMap . KV.fromMap

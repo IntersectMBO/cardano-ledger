@@ -1,8 +1,8 @@
 # Version history for `vector-map`
 
-## 1.1.0.2
+## 1.1.1.0
 
-*
+* Add `unionWithKey`
 
 ## 1.1.0.1
 

@@ -14,6 +14,7 @@ module Data.VMap.KVVector (
   VGM.MVector,
   KVVector (..),
   KVMVector,
+  unionWithKey,
   toMap,
   fromMap,
   fromAscList,
@@ -272,6 +273,34 @@ removeDuplicates f mv
       x0 <- VGM.read mv 0
       goUnmoved x0 1
 {-# INLINE removeDuplicates #-}
+
+unionWithKey ::
+  (VG.Vector kv k, VG.Vector vv v, Ord k) =>
+  (k -> v -> v -> v) -> KVVector kv vv (k, v) -> KVVector kv vv (k, v) -> KVVector kv vv (k, v)
+unionWithKey f kv1 kv2
+  | n1 == 0 = kv2
+  | n2 == 0 = kv1
+  | otherwise = VG.unfoldrN (n1 + n2) unionElements (0, 0)
+  where
+    n1 = VG.length kv1
+    n2 = VG.length kv2
+    unionElements (!i1, !i2)
+      | i1 == n1 =
+          if i2 == n2 then Nothing else Just (VG.unsafeIndex kv2 i2, (i1, i2 + 1))
+      | i2 == n2 =
+          if i1 == n1 then Nothing else Just (VG.unsafeIndex kv1 i1, (i1 + 1, i2))
+      | otherwise =
+          let
+            x1@(k1, v1) = VG.unsafeIndex kv1 i1
+            x2@(k2, v2) = VG.unsafeIndex kv2 i2
+           in
+            case k1 `compare` k2 of
+              LT -> Just (x1, (i1 + 1, i2))
+              GT -> Just (x2, (i1, i2 + 1))
+              EQ ->
+                let !v = f k1 v1 v2
+                 in Just ((k1, v), (i1 + 1, i2 + 1))
+{-# INLINE unionWithKey #-}
 
 normalize ::
   (VG.Vector kv k, VG.Vector vv v, Ord k) =>
