@@ -11,8 +11,8 @@
 module Test.Cardano.Ledger.Conway.SPORatifySpec (spec) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), nonZeroOr, unNonZero)
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
+import Cardano.Ledger.BaseTypes (NonZero, StrictMaybe (..), unNonZero)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin, toCoinNonZero)
 import Cardano.Ledger.Conway (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -40,6 +40,7 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromKeys)
 import Data.Ratio ((%))
 import Lens.Micro
+import Numeric.Natural
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Era
 
@@ -76,16 +77,21 @@ acceptedRatioProp = do
                 if unNonZero totalStake == stakeAbstain <+> stakeAlwaysAbstain
                   then 0
                   else case gas ^. gasActionL of
-                    HardForkInitiation _ _ -> unCoin stakeYes % unCoin (totalStake <-> stakeAbstain)
+                    HardForkInitiation _ _ -> unCoin stakeYes % unCoin (unNonZero totalStake <-> stakeAbstain)
                     action
                       | hardforkConwayBootstrapPhase protVer ->
                           unCoin stakeYes
-                            % unCoin (totalStake <-> stakeAbstain <-> stakeAlwaysAbstain <-> stakeNoConfidence)
+                            % unCoin
+                              ( unNonZero totalStake
+                                  <-> stakeAbstain
+                                  <-> stakeAlwaysAbstain
+                                  <-> stakeNoConfidence
+                              )
                       | NoConfidence {} <- action ->
                           unCoin (stakeYes <+> stakeNoConfidence)
-                            % unCoin (totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
+                            % unCoin (unNonZero totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
                       | otherwise ->
-                          unCoin stakeYes % unCoin (totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
+                          unCoin stakeYes % unCoin (unNonZero totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
             actual `shouldBe` expected
         )
 
@@ -200,15 +206,16 @@ genTestData ::
   Ratios ->
   Gen (TestData era)
 genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
-  totalStake <- arbitrary
-  let numPools = fromIntegral @Integer @Int $ unCoin $ unNonZero totalStake
-  pools <- vectorOf numPools (arbitrary @(KeyHash StakePool))
-  let (poolsYes, poolsNo, poolsAbstain, poolsAlwaysAbstain, poolsNoConfidence, rest) =
-        splitByPct yes no abstain alwaysAbstain noConfidence pools
+  numPools :: NonZero Natural <- arbitrary
+  pools <- vectorOf (fromIntegral (unNonZero numPools)) (arbitrary @(KeyHash StakePool))
+  let
+    totalStake = toCoinNonZero numPools
+    (poolsYes, poolsNo, poolsAbstain, poolsAlwaysAbstain, poolsNoConfidence, rest) =
+      splitByPct yes no abstain alwaysAbstain noConfidence pools
   distr <- do
     vrf <- arbitrary
     let
-      indivStake = IndividualPoolStake (1 / toRational totalStake) (CompactCoin 1) vrf
+      indivStake = IndividualPoolStake (1 % unCoin (unNonZero totalStake)) (CompactCoin 1) vrf
       distr =
         unionAllFromLists
           [ (poolsYes, indivStake)

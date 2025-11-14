@@ -340,8 +340,8 @@ mkPoolRewardInfo ::
   VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
   Coin ->
   NonZero Coin ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams -> -- TODO: remove
-  KeyHash 'StakePool ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) StakePoolParams -> -- TODO: remove
+  KeyHash StakePool ->
   StakePoolSnapShot ->
   Either StakeShare PoolRewardInfo
 mkPoolRewardInfo

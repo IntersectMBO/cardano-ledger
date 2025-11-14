@@ -674,7 +674,7 @@ instance Arbitrary SnapShot where
           ix <- chooseInt (0, VMap.size ssPoolParams - 1)
           pure (cred, fst $ VMap.elemAt ix ssPoolParams)
     deposit <- arbitrary
-    let delegationsPerStakePool :: Map (KeyHash 'StakePool) (Set (Credential 'Staking))
+    let delegationsPerStakePool :: Map (KeyHash StakePool) (Set (Credential Staking))
         delegationsPerStakePool =
           VMap.foldlWithKey
             ( \acc cred stakePool ->

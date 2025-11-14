@@ -412,7 +412,7 @@ calcNonMyopicMemberReward ::
   PParams era ->
   Coin ->
   -- | Stake pool id
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   -- | Stake pool cost
   Coin ->
   -- | Stake pool margin
@@ -420,7 +420,7 @@ calcNonMyopicMemberReward ::
   StakeShare ->
   StakeShare ->
   StakeShare ->
-  Set (KeyHash 'StakePool) ->
+  Set (KeyHash StakePool) ->
   PerformanceEstimate ->
   Coin
 calcNonMyopicMemberReward pp rPot poolId cost margin s sigma t topPools (PerformanceEstimate p) =

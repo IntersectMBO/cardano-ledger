@@ -168,19 +168,19 @@ data StakePoolSnapShot = StakePoolSnapShot
   { spssStake :: CompactForm Coin
   , spssStakeRatio :: Rational
   -- ^ Ratio of the stake pool stake `spssStake` over the total `ssTotalActiveStake` for that snapshot
-  , spssSelfDelegatedOwners :: !(Set (KeyHash 'Staking))
+  , spssSelfDelegatedOwners :: !(Set (KeyHash Staking))
   -- ^ Unlike owners that are specified in the `StakePoolParams`, the owners listed in this field
   -- are also ensured to be delegating to the stake pool they claim to own.
   , spssSelfDelegatedOwnersStake :: !Coin
   -- ^ Sum of all the stake that is associated with the owners of the pool listed in
   -- `spssSelfDelegatedOwners`
-  , spssVrf :: !(VRFVerKeyHash 'StakePoolVRF)
+  , spssVrf :: !(VRFVerKeyHash StakePoolVRF)
   , spssPledge :: !Coin
   , spssCost :: !Coin
   , spssMargin :: !UnitInterval
   , spssNumDelegators :: !Int
   -- ^ Number of delegators.
-  , spssAccount :: !(Credential 'Staking)
+  , spssAccount :: !(Credential Staking)
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs StakePoolSnapShot
@@ -253,7 +253,7 @@ instance EncCBOR StakePoolSnapShot where
           <> encCBOR spssAccount
 
 instance DecShareCBOR StakePoolSnapShot where
-  type Share StakePoolSnapShot = Interns (Credential 'Staking)
+  type Share StakePoolSnapShot = Interns (Credential Staking)
   decSharePlusCBOR = decodeRecordNamedT "StakePoolSnapShot" (const 10) $ do
     credInterns <- get
     spssStake <- lift decCBOR
