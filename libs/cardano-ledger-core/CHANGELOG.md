@@ -51,6 +51,11 @@
 * Modify `withdrawalsThatDoNotDrainAccounts` to return `Maybe (Withdrawals, Withdrawals)` where the `fst` are either missing accounts or in the wrong network and `snd` are incomplete withdrawals.
 * Add `FromJSON` instance for `PParamUpdate`
 
+### `cddl`
+
+* Add `HasCDDL` type class for era-polymorphic CDDL generation.
+* Add `huddleRule`, `huddleGroup`, and `huddleGRule` helper functions.
+
 ### `testlib`
 
 * Add `kes_period` and `sequence_number` CDDL definitions.
