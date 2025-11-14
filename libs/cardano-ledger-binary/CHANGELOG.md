@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `ofieldA` and `fieldAGuarded` to `Coders` module
 * Change `Density` type to only be available at the type level
 * Change `Wrapped` type to only be available at the type level
 * Make `decodeAnnSet` fail when there are duplicates, starting with protocol version `12`.
