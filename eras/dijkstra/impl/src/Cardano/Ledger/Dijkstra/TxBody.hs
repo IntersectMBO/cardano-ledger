@@ -67,7 +67,29 @@ module Cardano.Ledger.Dijkstra.TxBody (
   ),
   upgradeProposals,
   upgradeGovAction,
+  decodeGuards,
   DijkstraTxBodyRaw (..),
+  basicDijkstraTxBodyRaw,
+  inputsDijkstraTxBodyRawL,
+  outputsDijkstraTxBodyRawL,
+  feeDijkstraTxBodyRawL,
+  vldtDijkstraTxBodyRawL,
+  certsDijkstraTxBodyRawL,
+  withdrawalsDijkstraTxBodyRawL,
+  auxDataHashDijkstraTxBodyRawL,
+  mintDijkstraTxBodyRawL,
+  scriptIntegrityHashDijkstraTxBodyRawL,
+  collateralInputsDijkstraTxBodyRawL,
+  guardsDijkstraTxBodyRawL,
+  networkIdDijkstraTxBodyRawL,
+  collateralReturnDijkstraTxBodyRawL,
+  totalCollateralDijkstraTxBodyRawL,
+  referenceInputsDijkstraTxBodyRawL,
+  votingProceduresDijkstraTxBodyRawL,
+  proposalProceduresDijkstraTxBodyRawL,
+  currentTreasuryValueDijkstraTxBodyRawL,
+  treasuryDonationDijkstraTxBodyRawL,
+  subTransactionsDijkstraTxBodyRawL,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
@@ -357,7 +379,7 @@ instance
             (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
         23
           | STopTx <- sTxLevel ->
-              fieldAA (subTransactionsDijkstraTxBodyL .~) (D decodeSubTransactions)
+              fieldAA (subTransactionsDijkstraTxBodyRawL .~) (D decodeSubTransactions)
         n -> invalidField n
       decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
       decodeSubTransactions = do
@@ -377,93 +399,6 @@ instance
         STopTx -> [(0, "inputs"), (1, "outputs"), (2, "fee")]
         SSubTx -> [(0, "inputs"), (1, "outputs")]
 
-      emptyFailure fieldName requirement =
-        "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
-
-instance (Typeable l, EraTxBody era) => DecCBOR (DijkstraTxBodyRaw l era) where
-  decCBOR = withSTxBothLevels @l $ \sTxLevel ->
-    decode $
-      SparseKeyed
-        "TxBodyRaw"
-        (basicDijkstraTxBodyRaw sTxLevel)
-        (bodyFields sTxLevel)
-        requiredFields
-    where
-      bodyFields :: STxBothLevels l era -> Word -> Field (DijkstraTxBodyRaw l era)
-      bodyFields sTxLevel = \case
-        0 -> field (inputsDijkstraTxBodyRawL .~) From
-        1 -> field (outputsDijkstraTxBodyRawL .~) From
-        2 | STopTx <- sTxLevel -> field (feeDijkstraTxBodyRawL .~) From
-        3 -> ofield (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) From
-        4 ->
-          fieldGuarded
-            (emptyFailure "Certificates" "non-empty")
-            OSet.null
-            (certsDijkstraTxBodyRawL .~)
-            From
-        5 ->
-          fieldGuarded
-            (emptyFailure "Withdrawals" "non-empty")
-            (null . unWithdrawals)
-            (withdrawalsDijkstraTxBodyRawL .~)
-            From
-        7 -> ofield (auxDataHashDijkstraTxBodyRawL .~) From
-        8 -> ofield (vldtDijkstraTxBodyRawL . invalidBeforeL .~) From
-        9 ->
-          fieldGuarded
-            (emptyFailure "Mint" "non-empty")
-            (== mempty)
-            (mintDijkstraTxBodyRawL .~)
-            From
-        11 -> ofield (scriptIntegrityHashDijkstraTxBodyRawL .~) From
-        13
-          | STopTx <- sTxLevel ->
-              fieldGuarded
-                (emptyFailure "Collateral Inputs" "non-empty")
-                null
-                (collateralInputsDijkstraTxBodyRawL .~)
-                From
-        14 ->
-          ofield
-            (\x -> guardsDijkstraTxBodyRawL .~ fromSMaybe mempty x)
-            (D decodeGuards)
-        15 -> ofield (networkIdDijkstraTxBodyRawL .~) From
-        16
-          | STopTx <- sTxLevel ->
-              ofield (collateralReturnDijkstraTxBodyRawL .~) From
-        17
-          | STopTx <- sTxLevel ->
-              ofield (totalCollateralDijkstraTxBodyRawL .~) From
-        18 ->
-          fieldGuarded
-            (emptyFailure "Reference Inputs" "non-empty")
-            null
-            (referenceInputsDijkstraTxBodyRawL .~)
-            From
-        19 ->
-          fieldGuarded
-            (emptyFailure "VotingProcedures" "non-empty")
-            (null . unVotingProcedures)
-            (votingProceduresDijkstraTxBodyRawL .~)
-            From
-        20 ->
-          fieldGuarded
-            (emptyFailure "ProposalProcedures" "non-empty")
-            OSet.null
-            (proposalProceduresDijkstraTxBodyRawL .~)
-            From
-        21 -> ofield (currentTreasuryValueDijkstraTxBodyRawL .~) From
-        22 ->
-          ofield
-            (\x -> treasuryDonationDijkstraTxBodyRawL .~ fromSMaybe zero x)
-            (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
-        n -> invalidField n
-      requiredFields :: [(Word, String)]
-      requiredFields =
-        [ (0, "inputs")
-        , (1, "outputs")
-        , (2, "fee")
-        ]
       emptyFailure fieldName requirement =
         "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
 
@@ -1278,8 +1213,8 @@ guardsDijkstraTxBodyRawL =
         x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrGuards = y}
     )
 
-subTransactionsDijkstraTxBodyL :: Lens' (DijkstraTxBodyRaw TopTx era) (OMap TxId (Tx SubTx era))
-subTransactionsDijkstraTxBodyL = lens dtbrSubTransactions (\x y -> x {dtbrSubTransactions = y})
+subTransactionsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw TopTx era) (OMap TxId (Tx SubTx era))
+subTransactionsDijkstraTxBodyRawL = lens dtbrSubTransactions (\x y -> x {dtbrSubTransactions = y})
 
 instance
   ( NFData (Tx SubTx DijkstraEra)
@@ -1295,7 +1230,7 @@ instance
   guardsTxBodyL = memoRawTypeL @DijkstraEra . guardsDijkstraTxBodyRawL
 
   {-# INLINE subTransactionsTxBodyL #-}
-  subTransactionsTxBodyL = memoRawTypeL @DijkstraEra . subTransactionsDijkstraTxBodyL
+  subTransactionsTxBodyL = memoRawTypeL @DijkstraEra . subTransactionsDijkstraTxBodyRawL
 
 -- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
 -- the first element and if it's a credential, it decodes the rest of the
