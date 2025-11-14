@@ -14,6 +14,7 @@ module Data.VMap.KVVector (
   VGM.MVector,
   KVVector (..),
   KVMVector,
+  unionWithKey,
   toMap,
   fromMap,
   fromAscList,
@@ -33,6 +34,8 @@ module Data.VMap.KVVector (
   internKVVectorMaybe,
   normalize,
   normalizeM,
+  keepFirstDuplicate,
+  keepSecondDuplicate,
 ) where
 
 import Control.Applicative
@@ -80,7 +83,7 @@ fromList xs = VG.create $ do
   mv <- VGM.unsafeNew (Prelude.length xs)
   forM_ (Prelude.zip [0 ..] xs) (uncurry (VGM.unsafeWrite mv))
   sortAscKVMVector mv
-  removeDuplicates_ mv
+  removeDuplicates keepSecondDuplicate mv
 {-# INLINE fromList #-}
 
 -- | Convert a possibly unsorted assoc list into a KVVector.
@@ -92,7 +95,7 @@ fromListN ::
 fromListN n xs = VG.create $ do
   mv <- fillWithList xs =<< VGM.unsafeNew n
   sortAscKVMVector mv
-  removeDuplicates_ mv
+  removeDuplicates keepSecondDuplicate mv
 {-# INLINE fromListN #-}
 
 -- | Convert a sorted assoc list with distionct keys into a KVVector
@@ -130,7 +133,7 @@ fromAscListN ::
   Int ->
   [(k, v)] ->
   KVVector kv vv (k, v)
-fromAscListN n = fromAscListWithKeyN n selectDuplicate
+fromAscListN n = fromAscListWithKeyN n keepSecondDuplicate
 {-# INLINE fromAscListN #-}
 
 -- | Fill a mutable vector with elements from the list, slicing the vector if
@@ -165,7 +168,8 @@ fromAscListWithKeyN ::
   KVVector kv vv (k, v)
 fromAscListWithKeyN n f xs
   | n <= 0 = VG.empty
-  | otherwise = VG.create $ VGM.unsafeNew n >>= fillWithList xs >>= removeDuplicates f
+  | otherwise =
+      VG.create $ VGM.unsafeNew n >>= fillWithList xs >>= removeDuplicates (\k v1 v2 -> f k v2 v1)
 {-# INLINE fromAscListWithKeyN #-}
 
 mapValsKVVector ::
@@ -234,15 +238,13 @@ sortAscKVMVector ::
 sortAscKVMVector = sortBy (\(k1, _) (k2, _) -> compare k1 k2)
 {-# INLINE sortAscKVMVector #-}
 
-selectDuplicate :: k -> v -> v -> v
-selectDuplicate _ v _ = v
+keepFirstDuplicate :: k -> v -> v -> v
+keepFirstDuplicate _ v _ = v
+{-# INLINE keepFirstDuplicate #-}
 
-removeDuplicates_ ::
-  (VGM.MVector kmv k, VGM.MVector vmv v, Eq k, PrimMonad m) =>
-  KVMVector kmv vmv (PrimState m) (k, v) ->
-  m (KVMVector kmv vmv (PrimState m) (k, v))
-removeDuplicates_ = removeDuplicates selectDuplicate
-{-# INLINE removeDuplicates_ #-}
+keepSecondDuplicate :: k -> v -> v -> v
+keepSecondDuplicate _ _ v = v
+{-# INLINE keepSecondDuplicate #-}
 
 removeDuplicates ::
   (VGM.MVector kmv k, VGM.MVector vmv v, Eq k, PrimMonad m) =>
@@ -259,19 +261,47 @@ removeDuplicates f mv
               then do
                 cur@(ck, cv) <- VGM.read mv curIx
                 if ck == pk
-                  then goMoved lastIx (ck, f ck cv pv) (curIx + 1)
+                  then goMoved lastIx (ck, f ck pv cv) (curIx + 1)
                   else goMoved (lastIx + 1) cur (curIx + 1)
               else pure $ VGM.slice 0 (lastIx + 1) mv
           goUnmoved (pk, pv) curIx
             | curIx < n = do
                 cur@(ck, cv) <- VGM.read mv curIx
                 if ck == pk
-                  then goMoved (curIx - 1) (ck, f ck cv pv) (curIx + 1)
+                  then goMoved (curIx - 1) (ck, f ck pv cv) (curIx + 1)
                   else goUnmoved cur (curIx + 1)
             | otherwise = pure mv
       x0 <- VGM.read mv 0
       goUnmoved x0 1
 {-# INLINE removeDuplicates #-}
+
+unionWithKey ::
+  (VG.Vector kv k, VG.Vector vv v, Ord k) =>
+  (k -> v -> v -> v) -> KVVector kv vv (k, v) -> KVVector kv vv (k, v) -> KVVector kv vv (k, v)
+unionWithKey f kv1 kv2
+  | n1 == 0 = kv2
+  | n2 == 0 = kv1
+  | otherwise = VG.unfoldrN (n1 + n2) unionElements (0, 0)
+  where
+    n1 = VG.length kv1
+    n2 = VG.length kv2
+    unionElements (!i1, !i2)
+      | i1 == n1 =
+          if i2 == n2 then Nothing else Just (VG.unsafeIndex kv2 i2, (i1, i2 + 1))
+      | i2 == n2 =
+          if i1 == n1 then Nothing else Just (VG.unsafeIndex kv1 i1, (i1 + 1, i2))
+      | otherwise =
+          let
+            x1@(k1, v1) = VG.unsafeIndex kv1 i1
+            x2@(k2, v2) = VG.unsafeIndex kv2 i2
+           in
+            case k1 `compare` k2 of
+              LT -> Just (x1, (i1 + 1, i2))
+              GT -> Just (x2, (i1, i2 + 1))
+              EQ ->
+                let !v = f k1 v1 v2
+                 in Just ((k1, v), (i1 + 1, i2 + 1))
+{-# INLINE unionWithKey #-}
 
 normalize ::
   (VG.Vector kv k, VG.Vector vv v, Ord k) =>
@@ -284,11 +314,11 @@ normalizeM ::
   (Ord k, PrimMonad m, VG.Vector kv k, VG.Vector vv v) =>
   KVMVector (VG.Mutable kv) (VG.Mutable vv) (PrimState m) (k, v) ->
   m (KVMVector (VG.Mutable kv) (VG.Mutable vv) (PrimState m) (k, v))
-normalizeM mv = sortAscKVMVector mv >> removeDuplicates_ mv
+normalizeM mv = sortAscKVMVector mv >> removeDuplicates keepFirstDuplicate mv
 {-# INLINE normalizeM #-}
 
 instance (VG.Vector kv k, VG.Vector vv v, Ord k) => Semigroup (KVVector kv vv (k, v)) where
-  (<>) v1 v2 = normalize (v1 VG.++ v2)
+  (<>) = unionWithKey keepFirstDuplicate
   {-# INLINE (<>) #-}
   sconcat = normalize . VG.concat . NE.toList
   {-# INLINE sconcat #-}

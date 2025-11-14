@@ -142,7 +142,7 @@ library
     transformers,
     utf8-string,
     validation-selective,
-    vector-map ^>=1.1,
+    vector-map >=1.1,
 
   if flag(asserts)
     ghc-options: -fno-ignore-asserts

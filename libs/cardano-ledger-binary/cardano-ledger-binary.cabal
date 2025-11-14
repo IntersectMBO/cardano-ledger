@@ -79,7 +79,7 @@ library
     time,
     transformers >=0.5,
     vector,
-    vector-map ^>=1.1,
+    vector-map >=1.1,
 
 library testlib
   exposed-modules:

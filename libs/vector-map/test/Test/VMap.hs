@@ -39,6 +39,11 @@ vMapTests =
       prop "to/fromList" $ prop_Roundtrip VMap.toAscList VMap.fromList
       prop "to/fromMap" $ prop_Roundtrip VMap.toMap VMap.fromMap
     describe "asMap" $ do
+      prop "mapMaybeWithKey" $ \xs f ->
+        prop_AsMapFrom
+          (\m -> VMap.mapMaybeWithKey (applyFun2 f) (VMap.fromMap m))
+          (Map.mapMaybeWithKey (applyFun2 f) :: MapT -> MapT)
+          (Map.fromList xs)
       prop "fromList" $ prop_AsMapFrom VMap.fromList Map.fromList
       prop "fromAscListWithKey" $ \xs f ->
         prop_AsMapFrom
@@ -50,6 +55,16 @@ vMapTests =
           (VMap.fromAscListWithKeyN n (applyFun3 f))
           (Map.fromAscListWithKey (applyFun3 f) . take n)
           (List.sortOn fst xs)
+      prop "unionWithKey" $ \xs1 xs2 f ->
+        prop_AsMapFrom
+          (\(m1, m2) -> VMap.unionWithKey (applyFun3 f) (VMap.fromMap m1) (VMap.fromMap m2))
+          (uncurry (Map.unionWithKey (applyFun3 f)))
+          (Map.fromList xs1, Map.fromList xs2)
+      prop "mappend" $ \xs1 xs2 ->
+        prop_AsMapFrom
+          (\(m1, m2) -> VMap.fromMap m1 <> VMap.fromMap m2)
+          (uncurry (<>))
+          (Map.fromList xs1, Map.fromList xs2)
       prop "toAscList" $ prop_AsMapTo VMap.toAscList Map.toAscList
       prop "foldMapWithKey" $ \f ->
         let f' k v = applyFun2 f k v :: String

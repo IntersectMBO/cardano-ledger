@@ -17,6 +17,7 @@ module Data.VMap (
   notMember,
   map,
   mapMaybe,
+  mapMaybeWithKey,
   mapWithKey,
   filter,
   fold,
@@ -24,6 +25,9 @@ module Data.VMap (
   foldlWithKey,
   foldMap,
   foldMapWithKey,
+  union,
+  unionWith,
+  unionWithKey,
   fromMap,
   toMap,
   fromList,
@@ -137,6 +141,32 @@ findWithDefault ::
 findWithDefault a k = fromMaybe a . lookup k
 {-# INLINE findWithDefault #-}
 
+union ::
+  (Ord k, VG.Vector kv k, VG.Vector vv v) =>
+  VMap kv vv k v ->
+  VMap kv vv k v ->
+  VMap kv vv k v
+union = unionWithKey KV.keepFirstDuplicate
+{-# INLINE union #-}
+
+unionWith ::
+  (Ord k, VG.Vector kv k, VG.Vector vv v) =>
+  (v -> v -> v) ->
+  VMap kv vv k v ->
+  VMap kv vv k v ->
+  VMap kv vv k v
+unionWith f = unionWithKey (const f)
+{-# INLINE unionWith #-}
+
+unionWithKey ::
+  (Ord k, VG.Vector kv k, VG.Vector vv v) =>
+  (k -> v -> v -> v) ->
+  VMap kv vv k v ->
+  VMap kv vv k v ->
+  VMap kv vv k v
+unionWithKey f (VMap kv1) (VMap kv2) = VMap (KV.unionWithKey f kv1 kv2)
+{-# INLINE unionWithKey #-}
+
 fromMap :: (VG.Vector kv k, VG.Vector vv v) => Map.Map k v -> VMap kv vv k v
 fromMap = VMap . KV.fromMap
 {-# INLINE fromMap #-}
@@ -206,8 +236,16 @@ mapMaybe ::
   (a -> Maybe b) ->
   VMap kv vv k a ->
   VMap kv vv k b
-mapMaybe f (VMap vec) = VMap (VG.mapMaybe (\(k, x) -> (,) k <$> f x) vec)
+mapMaybe f = mapMaybeWithKey (const f)
 {-# INLINE mapMaybe #-}
+
+mapMaybeWithKey ::
+  (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
+  (k -> a -> Maybe b) ->
+  VMap kv vv k a ->
+  VMap kv vv k b
+mapMaybeWithKey f (VMap vec) = VMap (VG.mapMaybe (\(k, x) -> (,) k <$> f k x) vec)
+{-# INLINE mapMaybeWithKey #-}
 
 mapWithKey ::
   (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
