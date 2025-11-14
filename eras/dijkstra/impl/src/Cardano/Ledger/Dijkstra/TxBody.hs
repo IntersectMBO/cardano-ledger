@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -76,33 +78,8 @@ import Cardano.Ledger.Babbage.TxBody (
   babbageSpendableInputsTxBodyF,
  )
 import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), fromSMaybe)
-import Cardano.Ledger.Binary (
-  Annotator,
-  DecCBOR (..),
-  Decoder,
-  EncCBOR (..),
-  Sized (..),
-  ToCBOR,
-  TokenType (..),
-  liftST,
-  mkSized,
-  peekTokenType,
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Density (..),
-  Encode (..),
-  Field,
-  Wrapped (..),
-  decode,
-  encode,
-  encodeKeyedStrictMaybe,
-  field,
-  fieldGuarded,
-  invalidField,
-  ofield,
-  (!>),
- )
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin, decodePositiveCoin)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -200,6 +177,8 @@ instance
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   EqRaw (TxBody l DijkstraEra)
 
@@ -291,6 +270,115 @@ basicDijkstraTxBodyRaw SSubTx =
     mempty
     mempty
     mempty
+
+instance
+  ( Typeable l
+  , EraTxBody era
+  , DecCBOR (Annotator (Tx SubTx era))
+  , OMap.HasOKey TxId (Tx SubTx era)
+  ) =>
+  DecCBOR (Annotator (DijkstraTxBodyRaw l era))
+  where
+  decCBOR = withSTxBothLevels @l $ \sTxLevel ->
+    decode $
+      SparseKeyed
+        "TxBodyRaw"
+        (pure $ basicDijkstraTxBodyRaw sTxLevel)
+        (bodyFields sTxLevel)
+        (requiredFields sTxLevel)
+    where
+      bodyFields :: STxBothLevels l era -> Word -> Field (Annotator (DijkstraTxBodyRaw l era))
+      bodyFields sTxLevel = \case
+        0 -> fieldA (inputsDijkstraTxBodyRawL .~) From
+        1 -> fieldA (outputsDijkstraTxBodyRawL .~) From
+        2 | STopTx <- sTxLevel -> fieldA (feeDijkstraTxBodyRawL .~) From
+        3 -> ofieldA (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) From
+        4 ->
+          fieldAGuarded
+            (emptyFailure "Certificates" "non-empty")
+            OSet.null
+            (certsDijkstraTxBodyRawL .~)
+            From
+        5 ->
+          fieldAGuarded
+            (emptyFailure "Withdrawals" "non-empty")
+            (null . unWithdrawals)
+            (withdrawalsDijkstraTxBodyRawL .~)
+            From
+        7 -> ofieldA (auxDataHashDijkstraTxBodyRawL .~) From
+        8 -> ofieldA (vldtDijkstraTxBodyRawL . invalidBeforeL .~) From
+        9 ->
+          fieldAGuarded
+            (emptyFailure "Mint" "non-empty")
+            (== mempty)
+            (mintDijkstraTxBodyRawL .~)
+            From
+        11 -> ofieldA (scriptIntegrityHashDijkstraTxBodyRawL .~) From
+        13
+          | STopTx <- sTxLevel ->
+              fieldAGuarded
+                (emptyFailure "Collateral Inputs" "non-empty")
+                null
+                (collateralInputsDijkstraTxBodyRawL .~)
+                From
+        14 ->
+          ofieldA
+            (\x -> guardsDijkstraTxBodyRawL .~ fromSMaybe mempty x)
+            (D decodeGuards)
+        15 -> ofieldA (networkIdDijkstraTxBodyRawL .~) From
+        16
+          | STopTx <- sTxLevel ->
+              ofieldA (collateralReturnDijkstraTxBodyRawL .~) From
+        17
+          | STopTx <- sTxLevel ->
+              ofieldA (totalCollateralDijkstraTxBodyRawL .~) From
+        18 ->
+          fieldAGuarded
+            (emptyFailure "Reference Inputs" "non-empty")
+            null
+            (referenceInputsDijkstraTxBodyRawL .~)
+            From
+        19 ->
+          fieldAGuarded
+            (emptyFailure "VotingProcedures" "non-empty")
+            (null . unVotingProcedures)
+            (votingProceduresDijkstraTxBodyRawL .~)
+            From
+        20 ->
+          fieldAGuarded
+            (emptyFailure "ProposalProcedures" "non-empty")
+            OSet.null
+            (proposalProceduresDijkstraTxBodyRawL .~)
+            From
+        21 -> ofieldA (currentTreasuryValueDijkstraTxBodyRawL .~) From
+        22 ->
+          ofieldA
+            (\x -> treasuryDonationDijkstraTxBodyRawL .~ fromSMaybe zero x)
+            (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
+        23
+          | STopTx <- sTxLevel ->
+              fieldAA (subTransactionsDijkstraTxBodyL .~) (D decodeSubTransactions)
+        n -> invalidField n
+      decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
+      decodeSubTransactions = do
+        allowTag setTag
+        txAnns <- decodeList decCBOR
+        pure $ go (OMap.empty, 0) txAnns
+        where
+          go (m, n) []
+            | OMap.null m = fail "Empty list found, expected non-empty"
+            | OMap.size m /= n = fail "Duplicates found, expected no duplicates"
+            | otherwise = pure m
+          go (!m, !n) (x : xs) = do
+            v <- x
+            go (m OMap.|> v, n + 1) xs
+      requiredFields :: STxBothLevels l era -> [(Word, String)]
+      requiredFields = \case
+        STopTx -> [(0, "inputs"), (1, "outputs"), (2, "fee")]
+        SSubTx -> [(0, "inputs"), (1, "outputs")]
+
+      emptyFailure fieldName requirement =
+        "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
 
 instance (Typeable l, EraTxBody era) => DecCBOR (DijkstraTxBodyRaw l era) where
   decCBOR = withSTxBothLevels @l $ \sTxLevel ->
@@ -446,6 +534,8 @@ deriving instance
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   NoThunks (TxBody l DijkstraEra)
 
@@ -454,6 +544,8 @@ deriving instance
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   Eq (TxBody l DijkstraEra)
 
@@ -462,6 +554,8 @@ deriving newtype instance
   , Eq (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   NFData (TxBody l DijkstraEra)
 
@@ -470,6 +564,8 @@ deriving instance
   , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   Show (TxBody l DijkstraEra)
 
@@ -478,6 +574,8 @@ pattern DijkstraTxBody ::
   , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   Set TxIn ->
   Set TxIn ->
@@ -596,6 +694,8 @@ pattern DijkstraSubTxBody ::
   , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   Set TxIn ->
   Set TxIn ->
@@ -696,9 +796,6 @@ type instance MemoHashIndex (DijkstraTxBodyRaw l DijkstraEra) = EraIndependentTx
 instance HashAnnotated (TxBody l DijkstraEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
-instance (Typeable l, EraTxBody era) => DecCBOR (Annotator (DijkstraTxBodyRaw l era)) where
-  decCBOR = pure <$> decCBOR
-
 deriving via
   Mem (DijkstraTxBodyRaw l DijkstraEra)
   instance
@@ -707,6 +804,8 @@ deriving via
     , NFData (Tx SubTx DijkstraEra)
     , Show (Tx SubTx DijkstraEra)
     , EncCBOR (Tx SubTx DijkstraEra)
+    , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+    , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
     ) =>
     DecCBOR (Annotator (TxBody l DijkstraEra))
 
@@ -788,6 +887,8 @@ instance
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   EraTxBody DijkstraEra
   where
@@ -933,6 +1034,8 @@ instance
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   AllegraEraTxBody DijkstraEra
   where
@@ -956,6 +1059,8 @@ instance
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   MaryEraTxBody DijkstraEra
   where
@@ -996,6 +1101,8 @@ instance
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   AlonzoEraTxBody DijkstraEra
   where
@@ -1051,6 +1158,8 @@ instance
   , Eq (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   BabbageEraTxBody DijkstraEra
   where
@@ -1138,6 +1247,8 @@ instance
   , Eq (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   ConwayEraTxBody DijkstraEra
   where
@@ -1175,6 +1286,8 @@ instance
   , Eq (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   DijkstraEraTxBody DijkstraEra
   where
