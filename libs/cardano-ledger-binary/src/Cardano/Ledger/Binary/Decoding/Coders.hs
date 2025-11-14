@@ -161,17 +161,19 @@ invalidField n = field (flip $ const @t @Void) (Invalid n)
 
 -- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 -- A special case of 'field'
-fieldA :: (Typeable x, Applicative ann) => (x -> t -> t) -> Decode (Closed d) x -> Field (ann t)
-fieldA update dec = Field (liftA2 update) (pure <$> decode dec)
 {-# INLINE fieldA #-}
+fieldA :: (Typeable x, Applicative ann) => (x -> t -> t) -> Decode (Closed d) x -> Field (ann t)
+fieldA update = liftFieldA . field update
 
+{-# INLINE ofieldA #-}
 ofieldA ::
   (Typeable x, Applicative ann) =>
   (StrictMaybe x -> t -> t) ->
   Decode (Closed d) x ->
   Field (ann t)
-ofieldA update dec = Field (liftA2 update) (pure . SJust <$> decode dec)
+ofieldA update = liftFieldA . ofield update
 
+{-# INLINE fieldAGuarded #-}
 fieldAGuarded ::
   (Typeable x, Applicative ann) =>
   -- | The message to use if the condition fails
@@ -181,12 +183,8 @@ fieldAGuarded ::
   (x -> t -> t) ->
   Decode (Closed d) x ->
   Field (ann t)
-fieldAGuarded failMsg check update dec =
-  Field (liftA2 update) $
-    pure
-      <$> ( decode dec >>= \x ->
-              x <$ when (check x) (fail failMsg)
-          )
+fieldAGuarded failMsg check update =
+  liftFieldA . fieldGuarded failMsg check update
 
 -- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 fieldAA ::
@@ -196,6 +194,13 @@ fieldAA ::
   Field (ann t)
 fieldAA update dec = Field (liftA2 update) (decode dec)
 {-# INLINE fieldAA #-}
+
+liftFieldA ::
+  Applicative ann =>
+  Field t ->
+  Field (ann t)
+liftFieldA (Field update dec) =
+  Field (liftA2 update) (pure <$> dec)
 
 -- ==================================================================
 -- Decode
