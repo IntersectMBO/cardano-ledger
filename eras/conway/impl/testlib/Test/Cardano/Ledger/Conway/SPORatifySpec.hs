@@ -73,7 +73,7 @@ acceptedRatioProp = do
                   gas {gasStakePoolVotes = votes}
                   protVer
               expected =
-                if totalStake == stakeAbstain <+> stakeAlwaysAbstain
+                if unNonZero totalStake == stakeAbstain <+> stakeAlwaysAbstain
                   then 0
                   else case gas ^. gasActionL of
                     HardForkInitiation _ _ -> unCoin stakeYes % unCoin (totalStake <-> stakeAbstain)
@@ -138,24 +138,21 @@ noVotesProp =
 allYesProp :: forall era. ConwayEraTest era => Spec
 allYesProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> Property)
-    "If all vote yes, accepted ratio is 1 (unless there is no stake) "
-    ( \(re, rs, gas) ->
-        forAll
-          ( genTestData @era
-              (Ratios {yes = 100 % 100, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})
-          )
-          ( \TestData {..} ->
-              let acceptedRatio =
-                    spoAcceptedRatio
-                      @era
-                      re {reStakePoolDistr = distr}
-                      gas {gasStakePoolVotes = votes}
-                      (rs ^. rsEnactStateL . ensProtVerL)
-               in if totalStake == Coin 0
-                    then acceptedRatio `shouldBe` 0
-                    else acceptedRatio `shouldBe` 1
-          )
-    )
+    "If all vote yes, accepted ratio is 1"
+    $ \(re, rs, gas) ->
+      forAll
+        ( genTestData @era
+            (Ratios {yes = 100 % 100, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})
+        )
+        ( \TestData {..} ->
+            let acceptedRatio =
+                  spoAcceptedRatio
+                    @era
+                    re {reStakePoolDistr = distr}
+                    gas {gasStakePoolVotes = votes}
+                    (rs ^. rsEnactStateL . ensProtVerL)
+             in acceptedRatio `shouldBe` 1
+        )
 
 noConfidenceProp :: forall era. ConwayEraTest era => Spec
 noConfidenceProp =
@@ -176,7 +173,7 @@ noConfidenceProp =
 data TestData era = TestData
   { distr :: PoolDistr
   , votes :: Map (KeyHash StakePool) Vote
-  , totalStake :: Coin
+  , totalStake :: NonZero Coin
   , stakeYes :: Coin
   , stakeNo :: Coin
   , stakeAbstain :: Coin
@@ -203,25 +200,24 @@ genTestData ::
   Ratios ->
   Gen (TestData era)
 genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
-  pools <- listOf (arbitrary @(KeyHash StakePool))
+  totalStake <- arbitrary
+  let numPools = fromIntegral @Integer @Int $ unCoin $ unNonZero totalStake
+  pools <- vectorOf numPools (arbitrary @(KeyHash StakePool))
   let (poolsYes, poolsNo, poolsAbstain, poolsAlwaysAbstain, poolsNoConfidence, rest) =
         splitByPct yes no abstain alwaysAbstain noConfidence pools
-      totalStake = length pools
   distr <- do
     vrf <- arbitrary
     let
       indivStake = IndividualPoolStake (1 / toRational totalStake) (CompactCoin 1) vrf
-    pure $
-      PoolDistr
-        ( unionAllFromLists
-            [ (poolsYes, indivStake)
-            , (poolsNo, indivStake)
-            , (poolsAbstain, indivStake)
-            , (poolsAlwaysAbstain, indivStake)
-            , (poolsNoConfidence, indivStake)
-            ]
-        )
-        (Coin (toInteger totalStake) `nonZeroOr` knownNonZeroCoin @1)
+      distr =
+        unionAllFromLists
+          [ (poolsYes, indivStake)
+          , (poolsNo, indivStake)
+          , (poolsAbstain, indivStake)
+          , (poolsAlwaysAbstain, indivStake)
+          , (poolsNoConfidence, indivStake)
+          ]
+    pure $ PoolDistr distr totalStake
 
   poolStateAA <- genPoolState poolsAlwaysAbstain
   poolStateNC <- genPoolState poolsNoConfidence
@@ -234,7 +230,7 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
     TestData
       { distr
       , votes
-      , totalStake = unNonZero $ pdTotalActiveStake distr
+      , totalStake = pdTotalActiveStake distr
       , stakeYes = Coin . fromIntegral $ length poolsYes
       , stakeNo = Coin . fromIntegral $ length poolsNo
       , stakeAbstain = Coin . fromIntegral $ length poolsAbstain
