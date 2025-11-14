@@ -20,6 +20,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.TxIn (TxId)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
@@ -39,6 +40,7 @@ import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
+import Data.OMap.Strict (HasOKey)
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU
@@ -65,7 +67,7 @@ instance Arbitrary (TxBody SubTx DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary (TxBody TopTx DijkstraEra) where
+instance HasOKey TxId (Tx SubTx DijkstraEra) => Arbitrary (TxBody TopTx DijkstraEra) where
   arbitrary =
     DijkstraTxBody
       <$> arbitrary

@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -14,9 +15,10 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
   module Test.Cardano.Ledger.Conway.TreeDiff,
 ) where
 
+import Cardano.Ledger.TxIn (TxId)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Core (EraTx (..), EraTxBody (..), PlutusScript)
+import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams)
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript,
@@ -30,6 +32,8 @@ import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr)
 import Test.Cardano.Ledger.TreeDiff (ToExpr (..))
+import Data.OMap.Strict (HasOKey (..))
+
 
 instance
   (forall a b. (ToExpr a, ToExpr b) => ToExpr (f a b)) =>
@@ -45,7 +49,7 @@ instance ToExpr (DijkstraPParams Identity DijkstraEra)
 
 instance ToExpr (DijkstraPParams StrictMaybe DijkstraEra)
 
-instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
+instance HasOKey TxId (Tx SubTx DijkstraEra) => ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
   toExpr = \case
     txBody@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
       let DijkstraTxBodyRaw {..} = txBody
@@ -93,9 +97,9 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dstbrTreasuryDonation", toExpr dstbrTreasuryDonation)
               ]
 
-instance ToExpr (TxBody l DijkstraEra)
+instance HasOKey TxId (Tx SubTx DijkstraEra) => ToExpr (TxBody l DijkstraEra)
 
-instance ToExpr (DijkstraTx l DijkstraEra) where
+instance HasOKey TxId (Tx SubTx DijkstraEra) => ToExpr (DijkstraTx l DijkstraEra) where
   toExpr = \case
     txBody@(DijkstraTx _ _ _ _) ->
       let DijkstraTx {..} = txBody
@@ -115,7 +119,7 @@ instance ToExpr (DijkstraTx l DijkstraEra) where
               , ("dstAuxData", toExpr dstAuxData)
               ]
 
-deriving newtype instance ToExpr (Tx l DijkstraEra)
+deriving newtype instance HasOKey TxId (Tx SubTx DijkstraEra) => ToExpr (Tx l DijkstraEra)
 
 instance ToExpr DijkstraDelegCert
 
