@@ -40,6 +40,17 @@ module Cardano.Ledger.Conway.TxCert (
   conwayDRepRefundsTxCerts,
   conwayTotalDepositsTxCerts,
   conwayTotalRefundsTxCerts,
+#if __GLASGOW_HASKELL__ >= 914
+  data RegDepositTxCert,
+  data UnRegDepositTxCert,
+  data DelegTxCert,
+  data RegDepositDelegTxCert,
+  data AuthCommitteeHotKeyTxCert,
+  data ResignCommitteeColdTxCert,
+  data RegDRepTxCert,
+  data UnRegDRepTxCert,
+  data UpdateDRepTxCert,
+#else
   pattern RegDepositTxCert,
   pattern UnRegDepositTxCert,
   pattern DelegTxCert,
@@ -49,6 +60,7 @@ module Cardano.Ledger.Conway.TxCert (
   pattern RegDRepTxCert,
   pattern UnRegDRepTxCert,
   pattern UpdateDRepTxCert,
+#endif
 ) where
 
 import Cardano.Ledger.Babbage.Core
@@ -705,7 +717,13 @@ conwayTxCertDelegDecoder = \case
     {-# INLINE regDelegCertDecoder #-}
 {-# INLINE conwayTxCertDelegDecoder #-}
 
-instance (Era era, Val (Value era)) => ToCBOR (ConwayTxCert era) where
+instance (Era era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Val (Value era)
+#endif
+  ) => ToCBOR (ConwayTxCert era) where
   toCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
 
 instance Era era => EncCBOR (ConwayTxCert era) where
