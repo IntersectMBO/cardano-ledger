@@ -107,6 +107,7 @@
 
 ### `testlib`
 
+* Stop re-exporting QuickCheck's `NonZero` as it conflcicts with our internal type.
 * Added `Arbitrary` and `ToExpr` instances for `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Add `forEachEraVersion`
