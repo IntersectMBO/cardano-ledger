@@ -331,9 +331,7 @@ spec = do
       expectNotDelegatedVote cred
       expectNotDelegatedToAnyPool cred
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/917
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "Delegate vote and unregister after hardfork" $ do
+    it "Delegate vote and unregister after hardfork" $ do
       let
         bootstrapVer = ProtVer (natVersion @9) 0
         setProtVer pv = modifyNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ pv
@@ -382,9 +380,7 @@ spec = do
             .~ Withdrawals (Map.singleton rewardAccount withdrawalAmount)
       expectStakeCredNotRegistered cred
       expectNotDelegatedVote cred
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/916
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "Delegate vote and undelegate after delegating to some stake pools" $ do
+    it "Delegate vote and undelegate after delegating to some stake pools" $ do
       (khSPO, _, _) <- setupPoolWithStake $ Coin 1_000_000
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       cred <- KeyHashObj <$> freshKeyHash
@@ -412,9 +408,7 @@ spec = do
       expectStakeCredNotRegistered cred
       expectNotDelegatedVote cred
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/640
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "Delegate, retire and re-register pool" $ do
+    it "Delegate, retire and re-register pool" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       cred <- KeyHashObj <$> freshKeyHash
       poolKh <- freshKeyHash

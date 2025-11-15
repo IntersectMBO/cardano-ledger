@@ -24,6 +24,7 @@ import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
   EpochInterval (..),
   EpochNo (..),
   Network (..),
@@ -57,10 +58,13 @@ import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Control.Monad (forM)
 import Control.Monad.Except (throwError)
 import Data.Functor.Identity (Identity (..))
 import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import GHC.Natural (naturalToInteger)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
@@ -271,3 +275,12 @@ instance SpecTranslate ctx PoolDistr where
   type SpecRep PoolDistr = Agda.HSMap (SpecRep (KeyHash StakePool)) Agda.Coin
 
   toSpecRep (PoolDistr ps _) = toSpecRep ps
+
+instance SpecTranslate ctx BlocksMade where
+  type SpecRep BlocksMade = Agda.HSMap Integer Integer
+
+  toSpecRep (BlocksMade m) = do
+    xs <- forM (Map.toList m) $ \(k, v) -> do
+      k' <- toSpecRep k
+      pure (k', naturalToInteger v)
+    pure $ Agda.MkHSMap xs
