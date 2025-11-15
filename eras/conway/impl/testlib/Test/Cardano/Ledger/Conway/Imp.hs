@@ -42,6 +42,10 @@ spec ::
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , ToExpr (BlockBody era)
+  , NFData (BlockBody era)
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
+  , NFData (PredicateFailure (EraRule "BBODY" era))
   ) =>
   Spec
 spec = do
@@ -54,6 +58,10 @@ conwayEraGenericSpec ::
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , ToExpr (BlockBody era)
+  , NFData (BlockBody era)
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
+  , NFData (PredicateFailure (EraRule "BBODY" era))
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 conwayEraGenericSpec = do

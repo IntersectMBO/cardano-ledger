@@ -24,6 +24,10 @@ spec ::
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
+  , NFData (BlockBody era)
+  , ToExpr (BlockBody era)
+  , NFData (PredicateFailure (EraRule "BBODY" era))
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
   ) =>
   Spec
 spec = do
