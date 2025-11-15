@@ -48,8 +48,9 @@ emptyFieldsProps = do
   where
     emptyFieldProp :: Int -> Property
     emptyFieldProp k =
-      property $
-        expectDeserialiseFailureFromVersion @era
+      counterexample ("Key: " <> show k)
+        . property
+        $ expectDeserialiseFailureFromVersion @era
           (natVersion @9)
           (emptyEnc k)
           "Empty list"

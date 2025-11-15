@@ -80,6 +80,7 @@ import Cardano.Ledger.Binary (
   decodeMapLenOrIndef,
   decodeMapLikeEnforceNoDuplicates,
   decodeNonEmptyList,
+  decodeSetLikeEnforceNoDuplicates,
   encodeFoldableEncoder,
   encodeListLen,
   encodeTag,
@@ -118,6 +119,7 @@ import Cardano.Ledger.Shelley.TxWits (
 import Control.DeepSeq (NFData)
 import Control.Monad (when, (>=>))
 import Control.Monad.Trans.Fail (runFail)
+import Data.Coerce (coerce)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -308,16 +310,46 @@ unTxDatsL :: forall era. Era era => Lens' (TxDats era) (Map DataHash (Data era))
 unTxDatsL f = fmap TxDats . f . unTxDats
 {-# INLINE unTxDatsL #-}
 
+-- | Decodes a set of `a`'s and maps a function over it to get key-value pairs.
+-- If the key-value pairs create a non-empty Map without duplicates, then that map is returned,
+-- otherwise fail
+noDuplicateNonEmptySetAsMapDecoderAnn ::
+  (Ord k, DecCBOR (Annotator a)) =>
+  (a -> (k, v)) ->
+  Decoder s (Annotator (Map k v))
+noDuplicateNonEmptySetAsMapDecoderAnn toKV = do
+  allowTag setTag
+  vals <- decodeList decCBOR
+  pure $ go (Map.empty, 0) vals
+  where
+    go (m, n) []
+      | Map.null m = fail "Empty script Set is not allowed"
+      | length m /= n = fail "Duplicate elements in the scripts Set were encountered"
+      | otherwise = pure m
+    go (!m, !n) (x : xs) = do
+      (k, v) <- toKV <$> x
+      go (Map.insert k v m, n + 1) xs
+{-# INLINE noDuplicateNonEmptySetAsMapDecoderAnn #-}
+
 instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
   decCBOR =
     ifDecoderVersionAtLeast
       (natVersion @9)
-      ( allowTag setTag
-          >> mapTraverseableDecoderA
-            (decodeNonEmptyList decCBOR)
-            (TxDatsRaw . Map.fromElems hashData . NE.toList)
+      ( ifDecoderVersionAtLeast
+          (natVersion @12)
+          noDuplicatesDatsDecoder
+          ( allowTag setTag
+              >> mapTraverseableDecoderA
+                (decodeNonEmptyList decCBOR)
+                (TxDatsRaw . Map.fromElems hashData . NE.toList)
+          )
       )
       (mapTraverseableDecoderA (decodeList decCBOR) (TxDatsRaw . Map.fromElems hashData))
+    where
+      noDuplicatesDatsDecoder :: Decoder s (Annotator (TxDatsRaw era))
+      noDuplicatesDatsDecoder =
+        coerce . noDuplicateNonEmptySetAsMapDecoderAnn $ \dat -> (hashData dat, dat)
+      {-# INLINE noDuplicatesDatsDecoder #-}
   {-# INLINE decCBOR #-}
 
 -- | Note that 'TxDats' are based on 'MemoBytes' since we must preserve
@@ -579,6 +611,23 @@ instance
         txWitnessField
         []
     where
+      addrWitsSetDecoder :: (Ord a, DecCBOR a) => Decoder s (Annotator (Set a))
+      addrWitsSetDecoder =
+        pure <$> do
+          let
+            nonEmptyDecoder = do
+              allowTag setTag
+              Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
+            nonEmptyNoDuplicatesDecoder = do
+              s <- decodeSetLikeEnforceNoDuplicates Set.insert (\s -> (length s, s)) decCBOR
+              when (Set.null s) $ fail "Set cannot be empty"
+              pure s
+          ifDecoderVersionAtLeast
+            (natVersion @9)
+            (ifDecoderVersionAtLeast (natVersion @12) nonEmptyNoDuplicatesDecoder nonEmptyDecoder)
+            (Set.fromList <$> decodeList decCBOR)
+      {-# INLINE addrWitsSetDecoder #-}
+
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
       txWitnessField 0 =
         fieldAA
@@ -586,48 +635,48 @@ instance
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                ( allowTag setTag
-                    >> mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList)
-                )
+                addrWitsSetDecoder
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 1 =
-        fieldAA
-          addScriptsTxWitsRaw
-          (D nativeScriptsDecoder)
+        fieldAA addScriptsTxWitsRaw (D nativeScriptsDecoder)
       txWitnessField 2 =
         fieldAA
           (\x wits -> wits {atwrBootAddrTxWits = x})
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                ( allowTag setTag
-                    >> mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList)
-                )
+                addrWitsSetDecoder
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 3 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV1)
-      txWitnessField 4 =
-        fieldAA
-          (\x wits -> wits {atwrDatsTxWits = x})
-          From
+      txWitnessField 4 = fieldAA (\x wits -> wits {atwrDatsTxWits = x}) From
       txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
       txWitnessField 6 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV2)
       txWitnessField 7 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV3)
       txWitnessField n = invalidField n
       {-# INLINE txWitnessField #-}
 
+      hashedNativeSciptDecoder :: Decoder s (Annotator (ScriptHash, Script era))
+      hashedNativeSciptDecoder = fmap (asHashedScriptPair @era . fromNativeScript) <$> decCBOR
+      {-# INLINE hashedNativeSciptDecoder #-}
+
+      noDuplicateNativeScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
+      noDuplicateNativeScriptsDecoder =
+        noDuplicateNonEmptySetAsMapDecoderAnn
+          (\ns -> (hashScript $ fromNativeScript ns, fromNativeScript ns))
+      {-# INLINE noDuplicateNativeScriptsDecoder #-}
+
       nativeScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
       nativeScriptsDecoder =
         ifDecoderVersionAtLeast
-          (natVersion @9)
-          ( allowTag setTag
-              >> mapTraverseableDecoderA (decodeNonEmptyList pairDecoder) (Map.fromList . NE.toList)
+          (natVersion @12)
+          noDuplicateNativeScriptsDecoder
+          ( do
+              allowTag setTag
+              mapTraverseableDecoderA (decodeNonEmptyList hashedNativeSciptDecoder) (Map.fromList . NE.toList)
           )
-          (mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
-        where
-          pairDecoder :: Decoder s (Annotator (ScriptHash, Script era))
-          pairDecoder = fmap (asHashedScriptPair . fromNativeScript) <$> decCBOR
+      {-# INLINE nativeScriptsDecoder #-}
   {-# INLINE decCBOR #-}
 
 deriving via
