@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -107,8 +108,12 @@ instance
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Eq (PredicateFailure (ConwayNEWEPOCH era))
   , Show (PredicateFailure (ConwayNEWEPOCH era))
+#endif
   ) =>
   STS (ConwayNEWEPOCH era)
   where
@@ -150,8 +155,12 @@ newEpochTransition ::
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Eq (PredicateFailure (ConwayNEWEPOCH era))
   , Show (PredicateFailure (ConwayNEWEPOCH era))
+#endif
   ) =>
   TransitionRule (ConwayNEWEPOCH era)
 newEpochTransition = do

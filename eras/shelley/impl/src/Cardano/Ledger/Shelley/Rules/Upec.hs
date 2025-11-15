@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -43,7 +44,9 @@ import Control.State.Transition (
   judgmentContext,
   trans,
  )
+#if __GLASGOW_HASKELL__ < 914
 import Data.Default (Default)
+#endif
 import Data.Void (Void)
 
 data UpecState era = UpecState
@@ -59,7 +62,11 @@ deriving stock instance
 
 instance
   ( EraGov era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Default (PParams era)
+#endif
   , GovState era ~ ShelleyGovState era
   , AtMostEra "Babbage" era
   ) =>

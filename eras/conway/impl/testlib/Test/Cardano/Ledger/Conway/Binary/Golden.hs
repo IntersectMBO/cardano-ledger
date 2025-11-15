@@ -1,10 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unused-foralls #-}
 
@@ -18,7 +20,11 @@ module Test.Cardano.Ledger.Conway.Binary.Golden (
 import Cardano.Ledger.Alonzo.Core (
   AsIx (..),
   eraProtVerLow,
+#if __GLASGOW_HASKELL__ < 914
   pattern SpendingPurpose,
+#else
+  data SpendingPurpose,
+#endif
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), unRedeemers)
@@ -33,7 +39,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Plain (DecoderError (..), Tokens (..))
 import Cardano.Ledger.Plutus (Data (..))
 import qualified Data.Map as Map
-import Data.Typeable (Proxy (..), Typeable)
+import Data.Typeable (Proxy (..))
 import PlutusLedgerApi.Common (Data (..))
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
 import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation)
@@ -52,7 +58,7 @@ import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
 
 expectDecoderFailureAnn ::
   forall a.
-  (ToExpr a, DecCBOR (Annotator a), Typeable a, HasCallStack) =>
+  (ToExpr a, DecCBOR (Annotator a), HasCallStack) =>
   Version ->
   Enc ->
   DecoderError ->
