@@ -133,6 +133,53 @@ library
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
 
+library cddl
+  exposed-modules:
+    Cardano.Ledger.Shelley.CDDL
+
+  visibility: public
+  hs-source-dirs: cddl
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+  build-depends:
+    base,
+    cardano-ledger-core,
+    cardano-ledger-core:cddl,
+    cardano-ledger-shelley,
+    cuddle >=0.4,
+    heredoc,
+
+executable generate-cddl
+  main-is: Main.hs
+  hs-source-dirs: generate-cddl
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends:
+    base,
+    cardano-ledger-binary:testlib >=1.4,
+    cddl,
+    directory,
+    filepath,
+
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Shelley.Arbitrary

@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `cddl` library with `HasCDDL` type class instances for CDDL generation
 * Replace `StakePoolState` values in `psFutureStakePoolParams` with `StakePoolParams`
 * Remove `psFutureStakePoolsL`
 * Add `psFutureStakePoolParamsL`
@@ -30,6 +31,12 @@
   - Add `testIncompleteAndMissingWithdrawals`
 * Added `Generic` instance to `ShelleyTxOut`
 * Add `AtMostEra "Conway" era` constraint to `ShelleyEraTxCert`, effectively disabling it for Dijkstra onwards
+
+### `cddl`
+
+* Add `HasCDDL` type class instances for CDDL generation.
+* Add smart constructors: `mkTransactionWitnessSet`, `mkHeader`, `mkHeaderBody`, `mkUpdate`, `mkProposedProtocolParameterUpdates`, `mkProtocolParamUpdate`.
+* Export `untagged_set` helper function.
 
 ### `testlib`
 
