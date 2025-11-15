@@ -387,15 +387,16 @@ emptySnapShots =
   SnapShots emptySnapShot (calculatePoolDistr emptySnapShot) emptySnapShot emptySnapShot (Coin 0)
 
 snapShotFromInstantStake ::
-  forall era. EraStake era => InstantStake era -> DState era -> PState era -> SnapShot
+  forall era. (HasCallStack, EraStake era) => InstantStake era -> DState era -> PState era -> SnapShot
 snapShotFromInstantStake instantStake dState PState {psStakePools} =
   assert
-    ( delegatorsPerStakePool == Map.map spsDelegators psStakePools
+    ( delegatorsPerStakePool
+        == reverseDelegatorsPerStakePool
         || error
-          ( "Delegs:\n"
+          ( "Delegs:\n  "
               ++ show delegatorsPerStakePool
-              ++ "\n/=\n"
-              ++ show (Map.map spsDelegators psStakePools)
+              ++ "\n/=\nReverse Delegs:\n  "
+              ++ show reverseDelegatorsPerStakePool
           )
     )
     $ SnapShot
@@ -406,6 +407,10 @@ snapShotFromInstantStake instantStake dState PState {psStakePools} =
       , ssStakePoolsSnapShot = stakePoolSnapShot
       }
   where
+    reverseDelegatorsPerStakePool =
+      Map.mapMaybe
+        (\sps -> spsDelegators sps <$ guard (not (Set.null (spsDelegators sps))))
+        psStakePools
     poolParams =
       VMap.fromDistinctAscListN
         (Map.size psStakePools)
