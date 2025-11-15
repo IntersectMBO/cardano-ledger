@@ -76,6 +76,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Crypto
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Core (toProxy)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
@@ -168,7 +169,7 @@ instance Crypto c => NoThunks (BHBody c)
 
 instance Crypto c => EncCBOR (BHBody c) where
   encCBOR bhBody =
-    encodeListLen (9 + listLen oc + listLen pv)
+    encodeListLen (9 + listLen (toProxy oc) + listLen (toProxy pv))
       <> encCBOR (bheaderBlockNo bhBody)
       <> encCBOR (bheaderSlotNo bhBody)
       <> encCBOR (bheaderPrev bhBody)

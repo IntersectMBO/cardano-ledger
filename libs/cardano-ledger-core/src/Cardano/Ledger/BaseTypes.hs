@@ -225,7 +225,6 @@ instance EncCBORGroup ProtVer where
   encCBORGroup (ProtVer x y) = encCBOR x <> encCBOR y
 
   listLen _ = 2
-  listLenBound _ = 2
 
 instance DecCBORGroup ProtVer where
   decCBORGroup =
@@ -800,7 +799,6 @@ instance (DecCBOR a, Typeable r) => DecCBOR (Mismatch r a) where
 instance EncCBOR a => EncCBORGroup (Mismatch r a) where
   encCBORGroup Mismatch {..} = encCBOR mismatchSupplied <> encCBOR mismatchExpected
   listLen _ = 2
-  listLenBound _ = 2
 
 instance (Typeable r, DecCBOR a) => DecCBORGroup (Mismatch r a) where
   decCBORGroup = do

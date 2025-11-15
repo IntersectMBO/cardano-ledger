@@ -57,6 +57,7 @@ module Cardano.Ledger.Core (
   binaryUpgradeTxAuxData,
   fromStrictMaybeL,
   toStrictMaybeL,
+  toProxy,
 
   -- * Era
   module Cardano.Ledger.Core.Era,
@@ -683,3 +684,6 @@ fromStrictMaybeL = lens strictMaybeToMaybe (const maybeToStrictMaybe)
 
 instance EraTx era => HasOKey TxId (Tx l era) where
   toOKey = txIdTx
+
+toProxy :: forall a. a -> Proxy a
+toProxy _ = Proxy
