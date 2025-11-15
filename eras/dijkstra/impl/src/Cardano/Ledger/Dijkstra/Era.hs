@@ -91,7 +91,9 @@ type instance EraRule "UTXOW" DijkstraEra = ConwayUTXOW DijkstraEra
 
 type instance EraRule "UTXO" DijkstraEra = ConwayUTXO DijkstraEra
 
-type instance EraRule "BBODY" DijkstraEra = ConwayBBODY DijkstraEra
+data DijkstraBBODY era
+
+type instance EraRule "BBODY" DijkstraEra = DijkstraBBODY DijkstraEra
 
 type instance EraRule "MEMPOOL" DijkstraEra = ConwayMEMPOOL DijkstraEra
 
