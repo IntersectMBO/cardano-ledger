@@ -359,7 +359,7 @@ genAlonzoPParamsUpdate constants pp = do
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
-          , uappPlutusV1CostModel = SJust $ zeroTestingCostModel PlutusV1
+          , uappCostModels = SJust $ zeroTestingCostModel PlutusV1
           , uappPrices = prices
           , uappMaxTxExUnits = maxTxExUnits
           , uappMaxBlockExUnits = maxBlockExUnits
@@ -387,7 +387,7 @@ genAlonzoPParams constants = do
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
-          , uappPlutusV1CostModel = zeroTestingCostModel PlutusV1
+          , uappCostModels = zeroTestingCostModel PlutusV1
           , uappPrices = prices
           , uappMaxTxExUnits = maxTxExUnits
           , uappMaxBlockExUnits = maxBlockExUnits

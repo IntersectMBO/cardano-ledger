@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Alonzo.Examples (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Genesis (AlonzoExtraConfig (..), AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
@@ -210,12 +210,12 @@ exampleAlonzoGenesis :: AlonzoGenesis
 exampleAlonzoGenesis =
   AlonzoGenesis
     { agCoinsPerUTxOWord = CoinPerWord $ Coin 1
-    , agPlutusV1CostModel = zeroTestingCostModelV1
+    , agCostModels = zeroTestingCostModelV1
     , agPrices = Prices (unsafeBoundRational 90) (unsafeBoundRational 91)
     , agMaxTxExUnits = ExUnits 123 123
     , agMaxBlockExUnits = ExUnits 223 223
     , agMaxValSize = 1234
     , agCollateralPercentage = 20
     , agMaxCollateralInputs = 30
-    , agExtraConfig = AlonzoExtraConfig Nothing
+    , agExtraConfig = Nothing
     }

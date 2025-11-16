@@ -409,7 +409,7 @@ instance Ord OrdExUnits where
 -- | Parameters that were added in Alonzo
 data UpgradeAlonzoPParams f = UpgradeAlonzoPParams
   { uappCoinsPerUTxOWord :: !(HKD f CoinPerWord)
-  , uappPlutusV1CostModel :: !(HKD f CostModel)
+  , uappCostModels :: !(HKD f CostModel)
   , uappPrices :: !(HKD f Prices)
   , uappMaxTxExUnits :: !(HKD f ExUnits)
   , uappMaxBlockExUnits :: !(HKD f ExUnits)
@@ -443,7 +443,7 @@ instance Default (UpgradeAlonzoPParams StrictMaybe) where
   def =
     UpgradeAlonzoPParams
       { uappCoinsPerUTxOWord = SNothing
-      , uappPlutusV1CostModel = SNothing
+      , uappCostModels = SNothing
       , uappPrices = SNothing
       , uappMaxTxExUnits = SNothing
       , uappMaxBlockExUnits = SNothing
@@ -612,7 +612,7 @@ upgradeAlonzoPParams UpgradeAlonzoPParams {..} ShelleyPParams {..} =
     , appMinPoolCost = sppMinPoolCost
     , -- new in alonzo
       appCoinsPerUTxOWord = uappCoinsPerUTxOWord
-    , appCostModels = hkdMap (Proxy @f) (mkCostModels . Map.singleton PlutusV1) uappPlutusV1CostModel
+    , appCostModels = hkdMap (Proxy @f) (mkCostModels . Map.singleton PlutusV1) uappCostModels
     , appPrices = uappPrices
     , appMaxTxExUnits = hkdMap (Proxy @f) OrdExUnits uappMaxTxExUnits
     , appMaxBlockExUnits = hkdMap (Proxy @f) OrdExUnits uappMaxBlockExUnits

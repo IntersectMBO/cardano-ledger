@@ -2,10 +2,8 @@
 
 ## 1.15.0.0
 
-* Renamed `uappCostModels` to `uappPlutusV1CostModel`
-  and changed its type from `CostModels` to `CostModel`
-* Renamed `agCostModels` to `agPlutusV1CostModel`
-  and changed its type from `CostModels` to `CostModel`
+* Changed `uappCostModels` type from `CostModels` to `CostModel`
+* Changed `agCostModels` type from `CostModels` to `CostModel`
 * Updated `AlonzoGenesis` with `extraConfig` field
 * Added `AlonzoExtraConfig` and its instances
 * Remove deprecated functions `nullRedeemers`, `lookupRedeemers`, `nullDats`
