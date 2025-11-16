@@ -47,7 +47,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Genesis (AlonzoExtraConfig (..), AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
@@ -432,7 +432,7 @@ instance ShelleyEraImp AlonzoEra where
         , agMaxValSize = 5000
         , agCollateralPercentage = 150
         , agMaxCollateralInputs = 3
-        , agExtraConfig = AlonzoExtraConfig Nothing
+        , agExtraConfig = Nothing
         }
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript

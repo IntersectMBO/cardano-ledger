@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Alonzo.Examples (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Genesis (AlonzoExtraConfig (..), AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
@@ -217,5 +217,5 @@ exampleAlonzoGenesis =
     , agMaxValSize = 1234
     , agCollateralPercentage = 20
     , agMaxCollateralInputs = 30
-    , agExtraConfig = AlonzoExtraConfig Nothing
+    , agExtraConfig = Nothing
     }

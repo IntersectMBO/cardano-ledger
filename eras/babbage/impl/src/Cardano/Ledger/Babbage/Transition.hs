@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.Transition (TransitionConfig (..)) where
+module Cardano.Ledger.Babbage.Transition (TransitionConfig (..), alonzoInjectCostModels) where
 
 import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Transition
@@ -23,7 +23,7 @@ instance EraTransition BabbageEra where
 
   mkTransitionConfig NoGenesis = BabbageTransitionConfig
 
-  injectIntoTestState = shelleyRegisterInitialFundsThenStaking
+  injectIntoTestState cfg = shelleyRegisterInitialFundsThenStaking cfg . alonzoInjectCostModels (cfg ^. tcPreviousEraConfigL)
 
   tcPreviousEraConfigL =
     lens btcAlonzoTransitionConfig (\btc pc -> btc {btcAlonzoTransitionConfig = pc})

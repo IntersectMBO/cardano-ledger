@@ -4,14 +4,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Genesis (
@@ -43,9 +41,12 @@ import Cardano.Ledger.Alonzo.Scripts (
   CostModels,
   ExUnits (..),
   Prices (..),
+  costModelsValid,
   decodeCostModel,
   decodeCostModelsLenient,
   encodeCostModel,
+  flattenCostModels,
+  mkCostModels,
  )
 import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
@@ -59,12 +60,14 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis (..))
-import Cardano.Ledger.Plutus.CostModels (parseCostModelAsArray, parseCostModels)
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus (Language (PlutusV1))
+import Cardano.Ledger.Plutus.CostModels (parseCostModels)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
+import qualified Data.List as List
+import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
@@ -72,7 +75,7 @@ import Numeric.Natural (Natural)
 -- | All configuration that is necessary to bootstrap AlonzoEra from ShelleyGenesis
 data AlonzoGenesis = AlonzoGenesisWrapper
   { unAlonzoGenesisWrapper :: UpgradeAlonzoPParams Identity
-  , extraConfig :: AlonzoExtraConfig
+  , extraConfig :: Maybe AlonzoExtraConfig
   }
   deriving stock (Eq, Show, Generic)
   deriving (ToJSON) via KeyValuePairs AlonzoGenesis
@@ -123,7 +126,7 @@ pattern AlonzoGenesis ::
   Natural ->
   Natural ->
   Natural ->
-  AlonzoExtraConfig ->
+  Maybe AlonzoExtraConfig ->
   AlonzoGenesis
 pattern AlonzoGenesis
   { agCoinsPerUTxOWord
@@ -218,25 +221,34 @@ instance ToCBOR AlonzoGenesis where
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
     agCoinsPerUTxOWord <- o .: "lovelacePerUTxOWord"
-    agPlutusV1CostModel <- parseCostModelAsArray False PlutusV1 =<< o .: "plutusV1CostModel"
+    cms <- parseCostModels False =<< o .: "costModels"
     agPrices <- o .: "executionPrices"
     agMaxTxExUnits <- o .: "maxTxExUnits"
     agMaxBlockExUnits <- o .: "maxBlockExUnits"
     agMaxValSize <- o .: "maxValueSize"
     agCollateralPercentage <- o .: "collateralPercentage"
     agMaxCollateralInputs <- o .: "maxCollateralInputs"
-    agExtraConfig <- o .: "extraConfig"
+    agExtraConfig <- o .:? "extraConfig"
+    agPlutusV1CostModel <-
+      case Map.toList (costModelsValid cms) of
+        [] -> fail "Expected \"PlutusV1\" cost model to be supplied"
+        [(PlutusV1, pv1CostModel)] -> pure pv1CostModel
+        _ ->
+          fail $
+            "Only PlutusV1 CostModel is allowed in the AlonzoGenesis, but "
+              <> List.intercalate ", " (map show . Map.keys $ flattenCostModels cms)
+              <> " were supplied. Use \"extraConfig\" if you need to inject other cost models for testing."
     return AlonzoGenesis {..}
 
 instance ToKeyValuePairs AlonzoGenesis where
   toKeyValuePairs ag =
     [ "lovelacePerUTxOWord" .= agCoinsPerUTxOWord ag
-    , "plutusV1CostModel" .= agPlutusV1CostModel ag
+    , "costModels" .= mkCostModels (Map.singleton PlutusV1 $ agPlutusV1CostModel ag)
     , "executionPrices" .= agPrices ag
     , "maxTxExUnits" .= agMaxTxExUnits ag
     , "maxBlockExUnits" .= agMaxBlockExUnits ag
     , "maxValueSize" .= agMaxValSize ag
     , "collateralPercentage" .= agCollateralPercentage ag
     , "maxCollateralInputs" .= agMaxCollateralInputs ag
-    , "extraConfig" .= agExtraConfig ag
     ]
+      ++ ["extraConfig" .= extraConfig | Just extraConfig <- [agExtraConfig ag]]
