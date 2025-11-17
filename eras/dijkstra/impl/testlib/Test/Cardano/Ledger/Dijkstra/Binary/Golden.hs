@@ -19,21 +19,17 @@ import Cardano.Ledger.Binary (DecoderError (..), DeserialiseFailure (..), Tokens
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Dijkstra.Core (
-  EraTxBody (..),
-  EraTxOut (..),
-  EraTxWits (..),
-  TxLevel (..),
-  eraProtVerLow,
-  pattern DelegTxCert,
- )
+import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
+import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceedsLang)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
 import Test.Cardano.Ledger.Common (Spec, describe, it)
-import Test.Cardano.Ledger.Conway.Binary.Golden (expectDecoderFailureAnn, listRedeemersEnc)
+import Test.Cardano.Ledger.Conway.Binary.Golden
 import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash, mkKeyPair, mkWitnessVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Dijkstra.Era (DijkstraEraTest)
@@ -49,6 +45,7 @@ spec = describe "Golden" $ do
     goldenDuplicatePlutusScriptsDisallowed @era SPlutusV2
     goldenDuplicatePlutusScriptsDisallowed @era SPlutusV3
     goldenDuplicatePlutusDataDisallowed @era
+    goldenSubTransactions @era
 
 duplicateCertsTx :: forall era. DijkstraEraTest era => Version -> Enc
 duplicateCertsTx v =
@@ -221,3 +218,52 @@ goldenDuplicatePlutusDataDisallowed =
           "Annotator"
           "Duplicate elements in the scripts Set were encountered"
       )
+
+goldenSubTransactions :: forall era. DijkstraEraTest era => Spec
+goldenSubTransactions = do
+  it "TxBody with subtransactions decoded as expected" $
+    expectDecoderResultOn @(TxBody TopTx era)
+      (eraProtVerLow @era)
+      txBodySubTransactionsEnc
+      ( mkBasicTxBody @era @TopTx
+          & subTransactionsTxBodyL
+            .~ OMap.singleton
+              (mkBasicTx @era @SubTx (mkBasicTxBody @era @SubTx))
+      )
+      id
+  it "Subtransactions have to be non-empty if the field is present" $
+    expectDecoderFailureAnn @(TxBody TopTx era)
+      version
+      txBodyEmptySubTransactionsEnc
+      (DecoderErrorCustom "Annotator" "Empty list found, expected non-empty")
+  it "Subtransactions have to be distinct" $
+    expectDecoderFailureAnn @(TxBody TopTx era)
+      version
+      txBodyDuplicateSubTransactionsEnc
+      (DecoderErrorCustom "Annotator" "Duplicates found, expected no duplicates")
+  where
+    version = eraProtVerLow @era
+    txBodyEnc =
+      mconcat
+        [ E $ TkMapLen 4
+        , Em [E @Int 0, Ev version $ Set.empty @TxIn]
+        , Em [E @Int 1, Ev version $ [] @(TxOut era)]
+        , Em [E @Int 2, E $ Coin 0]
+        ]
+    txBodySubTransactionsEnc =
+      txBodyEnc <> Em [E @Int 23, E (TkListLen 1), subTxEnc]
+    txBodyEmptySubTransactionsEnc =
+      txBodyEnc <> Em [E @Int 23, E (TkListLen 0)]
+    txBodyDuplicateSubTransactionsEnc =
+      txBodyEnc <> Em [E @Int 23, E (TkListLen 2), subTxEnc, subTxEnc]
+    subTxEnc =
+      mconcat
+        [ E $ TkListLen 3
+        , mconcat
+            [ E $ TkMapLen 2
+            , Em [E @Int 0, Ev version $ Set.empty @TxIn]
+            , Em [E @Int 1, Ev version $ [] @(TxOut era)]
+            ]
+        , E (TkMapLen 0)
+        , E TkNull
+        ]
