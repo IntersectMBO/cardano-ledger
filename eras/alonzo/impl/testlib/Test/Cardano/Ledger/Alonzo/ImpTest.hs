@@ -427,8 +427,8 @@ instance ShelleyEraImp AlonzoEra where
               }
         , agMaxBlockExUnits =
             ExUnits
-              { exUnitsMem = 50_000_000
-              , exUnitsSteps = 40_000_000_000
+              { exUnitsMem = 200_000_000
+              , exUnitsSteps = 200_000_000_000
               }
         , agMaxValSize = 5000
         , agCollateralPercentage = 150
