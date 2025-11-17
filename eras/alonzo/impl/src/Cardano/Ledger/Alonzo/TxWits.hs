@@ -622,10 +622,7 @@ instance
               s <- decodeSetLikeEnforceNoDuplicates Set.insert (\s -> (length s, s)) decCBOR
               when (Set.null s) $ fail "Set cannot be empty"
               pure s
-          ifDecoderVersionAtLeast
-            (natVersion @9)
-            (ifDecoderVersionAtLeast (natVersion @12) nonEmptyNoDuplicatesDecoder nonEmptyDecoder)
-            (Set.fromList <$> decodeList decCBOR)
+          ifDecoderVersionAtLeast (natVersion @12) nonEmptyNoDuplicatesDecoder nonEmptyDecoder
       {-# INLINE addrWitsSetDecoder #-}
 
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
@@ -638,8 +635,7 @@ instance
                 addrWitsSetDecoder
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
-      txWitnessField 1 =
-        fieldAA addScriptsTxWitsRaw (D nativeScriptsDecoder)
+      txWitnessField 1 = fieldAA addScriptsTxWitsRaw (D nativeScriptsDecoder)
       txWitnessField 2 =
         fieldAA
           (\x wits -> wits {atwrBootAddrTxWits = x})
@@ -662,20 +658,25 @@ instance
       {-# INLINE hashedNativeSciptDecoder #-}
 
       noDuplicateNativeScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
-      noDuplicateNativeScriptsDecoder =
-        noDuplicateNonEmptySetAsMapDecoderAnn
-          (\ns -> (hashScript $ fromNativeScript ns, fromNativeScript ns))
+      noDuplicateNativeScriptsDecoder = noDuplicateNonEmptySetAsMapDecoderAnn (asHashedScriptPair . fromNativeScript)
       {-# INLINE noDuplicateNativeScriptsDecoder #-}
 
       nativeScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
       nativeScriptsDecoder =
         ifDecoderVersionAtLeast
-          (natVersion @12)
-          noDuplicateNativeScriptsDecoder
-          ( do
-              allowTag setTag
-              mapTraverseableDecoderA (decodeNonEmptyList hashedNativeSciptDecoder) (Map.fromList . NE.toList)
+          (natVersion @9)
+          ( ifDecoderVersionAtLeast
+              (natVersion @12)
+              noDuplicateNativeScriptsDecoder
+              ( do
+                  allowTag setTag
+                  mapTraverseableDecoderA (decodeNonEmptyList hashedNativeSciptDecoder) (Map.fromList . NE.toList)
+              )
           )
+          (mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
+        where
+          pairDecoder :: Decoder s (Annotator (ScriptHash, Script era))
+          pairDecoder = fmap (asHashedScriptPair . fromNativeScript) <$> decCBOR
       {-# INLINE nativeScriptsDecoder #-}
   {-# INLINE decCBOR #-}
 

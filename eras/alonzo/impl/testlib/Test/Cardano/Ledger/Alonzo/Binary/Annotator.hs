@@ -167,6 +167,23 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxW
           (Set.fromList <$> decodeList decCBOR)
       {-# INLINE setDecoder #-}
 
+      addrWitsSetDecoder :: (Ord a, DecCBOR a) => Decoder s (Set a)
+      addrWitsSetDecoder =
+        do
+          let
+            nonEmptyDecoder = do
+              allowTag setTag
+              Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
+            nonEmptyNoDuplicatesDecoder = do
+              s <- decodeSetLikeEnforceNoDuplicates Set.insert (\s -> (length s, s)) decCBOR
+              when (Set.null s) $ fail "Set cannot be empty"
+              pure s
+          ifDecoderVersionAtLeast
+            (natVersion @9)
+            (ifDecoderVersionAtLeast (natVersion @12) nonEmptyNoDuplicatesDecoder nonEmptyDecoder)
+            (Set.fromList <$> decodeList decCBOR)
+      {-# INLINE addrWitsSetDecoder #-}
+
       txWitnessField :: Word -> Field (AlonzoTxWitsRaw era)
       txWitnessField 0 =
         field
@@ -174,7 +191,7 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxW
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                setDecoder
+                addrWitsSetDecoder
                 (Set.fromList <$> decodeList decCBOR)
           )
       txWitnessField 1 = field addScriptsTxWitsRaw (D nativeScriptsDecoder)
@@ -195,25 +212,32 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxW
       txWitnessField n = invalidField n
       {-# INLINE txWitnessField #-}
 
-      pairDecoder :: Decoder s (ScriptHash, Script era)
-      pairDecoder = asHashedScriptPair @era . fromNativeScript <$> decCBOR
-      {-# INLINE pairDecoder #-}
+      noDuplicateNativeScriptsDecoder :: Decoder s (Map ScriptHash (Script era))
+      noDuplicateNativeScriptsDecoder =
+        noDuplicateNonEmptySetAsMapDecoder
+          (\ns -> (hashScript $ fromNativeScript ns, fromNativeScript ns))
+      {-# INLINE noDuplicateNativeScriptsDecoder #-}
 
-      mapDecoder :: Decoder s (Map ScriptHash (Script era))
-      mapDecoder =
-        allowTag setTag
-          >> ifDecoderVersionAtLeast
-            (natVersion @12)
-            (decodeSetLikeEnforceNoDuplicates (uncurry Map.insert) (\m -> (length m, m)) pairDecoder)
-            (Map.fromList . NE.toList <$> decodeNonEmptyList pairDecoder)
-      {-# INLINE mapDecoder #-}
+      hashedNativeSciptDecoder :: Decoder s (ScriptHash, Script era)
+      hashedNativeSciptDecoder = (\script -> (hashScript script, script)) . fromNativeScript @era <$> decCBOR
+      {-# INLINE hashedNativeSciptDecoder #-}
 
       nativeScriptsDecoder :: Decoder s (Map ScriptHash (Script era))
       nativeScriptsDecoder =
         ifDecoderVersionAtLeast
           (natVersion @9)
-          mapDecoder
+          ( ifDecoderVersionAtLeast
+              (natVersion @12)
+              noDuplicateNativeScriptsDecoder
+              ( do
+                  allowTag setTag
+                  Map.fromList . NE.toList <$> decodeNonEmptyList hashedNativeSciptDecoder
+              )
+          )
           (Map.fromList <$> decodeList pairDecoder)
+        where
+          pairDecoder :: Decoder s (ScriptHash, Script era)
+          pairDecoder = asHashedScriptPair . fromNativeScript <$> decCBOR
       {-# INLINE nativeScriptsDecoder #-}
 
 deriving newtype instance
