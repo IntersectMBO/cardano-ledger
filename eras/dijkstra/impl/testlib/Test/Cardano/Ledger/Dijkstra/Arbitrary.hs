@@ -33,6 +33,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Data.Functor.Identity (Identity)
+import qualified Data.OMap.Strict as OMap
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
@@ -87,7 +88,7 @@ instance Arbitrary (TxBody TopTx DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> (choose (0, 4) >>= \n -> OMap.fromFoldable <$> vectorOf n arbitrary)
 
 instance Arbitrary (UpgradeDijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU
