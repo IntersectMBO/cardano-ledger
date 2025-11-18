@@ -22,8 +22,6 @@ import Control.State.Transition.Extended (STS (..), TRC (..))
 import Data.Map.Strict qualified as Map
 import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), ForAllExecTypes, testConformance)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayCertExecContext (..))
-import Test.Cardano.Ledger.Conformance.Imp qualified as Imp (spec)
-import Test.Cardano.Ledger.Conformance.Imp.Ratify qualified as RatifyImp
 import Test.Cardano.Ledger.Constrained.Conway (genUtxoExecContext)
 import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   ConstrainedGeneratorBundle (..),
@@ -144,6 +142,3 @@ spec = do
       xprop "UTXOW" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
       xprop "LEDGER" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
       xprop "LEDGERS" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
-    describe "ImpTests" $ do
-      RatifyImp.spec
-      Imp.spec

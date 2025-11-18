@@ -4,11 +4,13 @@ module Main (main) where
 
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conformance.ConformanceSpec as ConformanceSpec
-import qualified Test.Cardano.Ledger.Conformance.Spec.Conway as Conway
+import qualified Test.Cardano.Ledger.Conformance.Spec.Conway as SpecConway
+import qualified Test.Cardano.Ledger.Conformance.Imp.Conway as ImpConway
 
 main :: IO ()
 main =
   ledgerTestMain $ do
-    describe "ConformanceSpec" $ ConformanceSpec.spec
-    describe "Conway" $ do
-      describe "Imp" Conway.spec
+    describe "Conformance" $ do
+      describe "Spec" $ ConformanceSpec.spec
+      SpecConway.spec
+      ImpConway.spec

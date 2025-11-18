@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -7,14 +6,12 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Test.Cardano.Ledger.Conformance.Imp (spec) where
+module Test.Cardano.Ledger.Conformance.Imp.Core where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
@@ -33,17 +30,6 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayLedgerExecCont
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Constrained.Conway
-import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as Bbody
-import Test.Cardano.Ledger.Conway.Imp.CertsSpec qualified as Certs
-import Test.Cardano.Ledger.Conway.Imp.DelegSpec qualified as Deleg
-import Test.Cardano.Ledger.Conway.Imp.EnactSpec qualified as Enact
-import Test.Cardano.Ledger.Conway.Imp.EpochSpec qualified as Epoch
-import Test.Cardano.Ledger.Conway.Imp.GovCertSpec qualified as GovCert
-import Test.Cardano.Ledger.Conway.Imp.GovSpec qualified as Gov
-import Test.Cardano.Ledger.Conway.Imp.LedgerSpec qualified as Ledger
-import Test.Cardano.Ledger.Conway.Imp.RatifySpec qualified as Ratify
-import Test.Cardano.Ledger.Conway.Imp.UtxoSpec qualified as Utxo
-import Test.Cardano.Ledger.Conway.Imp.UtxosSpec qualified as Utxos
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
@@ -163,27 +149,3 @@ epochBoundaryConformanceHook ::
 epochBoundaryConformanceHook globals trc res =
   conformanceHook @"NEWEPOCH" @era globals () trc $ Right (res, [])
 
-spec :: Spec
-spec =
-  withImpInit @(LedgerSpec ConwayEra) $
-    modifyImpInitProtVer @ConwayEra (natVersion @10) $
-      modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
-        modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
-          describe "Basic imp conformance" $ do
-            it "Submit constitution" $ do
-              _ <- submitConstitution @ConwayEra SNothing
-              passNEpochs 2
-            it "Can elect a basic committee" $ do
-              void $ evaluateDeep =<< electBasicCommittee
-          describe "Conway Imp conformance" $ do
-            describe "BBODY" Bbody.spec
-            describe "CERTS" Certs.spec
-            describe "DELEG" Deleg.spec
-            describe "ENACT" Enact.spec
-            describe "EPOCH" Epoch.spec
-            describe "GOV" Gov.spec
-            describe "GOVCERT" GovCert.spec
-            describe "LEDGER" Ledger.spec
-            describe "RATIFY" Ratify.spec
-            describe "UTXO" Utxo.spec
-            xdescribe "UTXOS" Utxos.spec
