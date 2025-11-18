@@ -148,4 +148,3 @@ epochBoundaryConformanceHook ::
   ImpM t ()
 epochBoundaryConformanceHook globals trc res =
   conformanceHook @"NEWEPOCH" @era globals () trc $ Right (res, [])
-

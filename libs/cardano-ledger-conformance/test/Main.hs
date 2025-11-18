@@ -1,9 +1,9 @@
 module Main (main) where
 
-import Test.Cardano.Ledger.Common (describe , ledgerTestMain)
+import Test.Cardano.Ledger.Common (describe, ledgerTestMain)
+import qualified Test.Cardano.Ledger.Conformance.Imp.Conway as ImpConway
 import qualified Test.Cardano.Ledger.Conformance.Spec.Base as SpecBase
 import qualified Test.Cardano.Ledger.Conformance.Spec.Conway as SpecConway
-import qualified Test.Cardano.Ledger.Conformance.Imp.Conway as ImpConway
 
 main :: IO ()
 main =

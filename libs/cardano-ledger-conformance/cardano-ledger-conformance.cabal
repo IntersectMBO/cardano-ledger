@@ -109,10 +109,10 @@ test-suite tests
   main-is: Main.hs
   hs-source-dirs: test
   other-modules:
-    Test.Cardano.Ledger.Conformance.ConformanceSpec
     Test.Cardano.Ledger.Conformance.Imp.Conway
     Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify
     Test.Cardano.Ledger.Conformance.Imp.Core
+    Test.Cardano.Ledger.Conformance.Spec.Base
     Test.Cardano.Ledger.Conformance.Spec.Conway
 
   default-language: Haskell2010
