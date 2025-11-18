@@ -50,6 +50,8 @@ spec =
     CommitteeRatify.spec @era
     SPORatifySpec.spec @era
     roundTripJsonEraSpec @era
+    forM_ (eraProtVersions @era) $ Golden.spec @era
+    Golden.goldenListRedeemers @era
     describe "Imp" $ do
       Imp.spec @era
     describe "CostModels" $ do
@@ -61,4 +63,3 @@ spec =
       BabbageTxInfo.spec @era
       describe "PlutusV3" $
         BabbageTxInfo.txInfoSpec @era SPlutusV3
-    describe "Golden" $ Golden.goldenListRedeemers @era
