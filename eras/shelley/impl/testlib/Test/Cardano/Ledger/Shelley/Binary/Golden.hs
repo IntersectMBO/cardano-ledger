@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -5,11 +6,16 @@
 
 module Test.Cardano.Ledger.Shelley.Binary.Golden (
   goldenNewEpochStateExpectation,
+  module Test.Cardano.Ledger.Core.Binary.Golden,
 ) where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..))
-import Cardano.Ledger.Binary (EncCBOR, lengthThreshold)
-import Cardano.Ledger.Binary.Plain
+import Cardano.Ledger.Binary (
+  EncCBOR,
+  ToCBOR (..),
+  Tokens (..),
+  lengthThreshold,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
@@ -18,6 +24,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import Test.Cardano.Ledger.Binary.Plain.Golden
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Binary.Golden
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 
 goldenNewEpochStateExpectation ::
