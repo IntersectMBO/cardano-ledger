@@ -7,6 +7,7 @@
 module Test.Cardano.Ledger.Core.Binary.Golden (
   decodeEnc,
   expectDecoderSuccessAnn,
+  expectDecoderSuccessAnnWith,
   expectDecoderFailureAnn,
   expectDecoderResultOn,
 ) where
@@ -27,6 +28,7 @@ import Test.Cardano.Ledger.Binary.Plain.Golden (Enc)
 import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation)
 import Test.Cardano.Ledger.Common (
   Expectation,
+  diffExprString,
   expectationFailure,
   shouldBe,
   shouldBeExpr,
@@ -39,17 +41,22 @@ decodeEnc version enc = decodeFullAnnotator @a version (Binary.label $ Proxy @(A
   where
     bytes = toLazyByteString $ toCBOR enc
 
-expectDecoderSuccessAnn ::
+expectDecoderSuccessAnnWith ::
   forall a.
-  (ToExpr a, DecCBOR (Annotator a), HasCallStack, Eq a) =>
+  (ToExpr a, DecCBOR (Annotator a), HasCallStack) =>
+  (a -> a -> Bool) ->
   Version ->
   Enc ->
   a ->
   Expectation
-expectDecoderSuccessAnn version enc expectedVal =
+expectDecoderSuccessAnnWith equals version enc expected =
   case decodeEnc @a version enc of
-    Right x -> x `shouldBeExpr` expectedVal
-    Left err -> expectationFailure $ "Expected a success, but got a failure:\n" <> show err
+    Right x | x `equals` expected -> pure ()
+    decResult -> expectationFailure $ diffExprString (Right expected) decResult
+
+expectDecoderSuccessAnn ::
+  (ToExpr a, DecCBOR (Annotator a), Eq a) => Version -> Enc -> a -> Expectation
+expectDecoderSuccessAnn = expectDecoderSuccessAnnWith (==)
 
 expectDecoderFailureAnn ::
   forall a.
@@ -60,7 +67,7 @@ expectDecoderFailureAnn ::
   Expectation
 expectDecoderFailureAnn version enc expectedErr =
   case decodeEnc @a version enc of
-    Left err -> err `shouldBe` expectedErr
+    Left err -> expectedErr `shouldBe` err
     Right x ->
       expectationFailure $
         "Expected a failure, but decoder succeeded:\n"
