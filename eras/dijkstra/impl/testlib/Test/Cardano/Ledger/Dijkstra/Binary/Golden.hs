@@ -168,13 +168,7 @@ goldenDuplicateVKeyWitsDisallowed =
     expectDecoderFailureAnn @(TxWits era)
       (eraProtVerLow @era)
       witsDuplicateVKeyWits
-      ( DecoderErrorDeserialiseFailure
-          "Annotator (MemoBytes (AlonzoTxWitsRaw DijkstraEra))"
-          ( DeserialiseFailure
-              208
-              "Final number of elements: 1 does not match the total count that was decoded: 2"
-          )
-      )
+      (DecoderErrorCustom "Annotator" "Duplicates found, expected no duplicates")
 
 goldenDuplicateNativeScriptsDisallowed :: forall era. DijkstraEraTest era => Spec
 goldenDuplicateNativeScriptsDisallowed =
@@ -184,7 +178,7 @@ goldenDuplicateNativeScriptsDisallowed =
       witsDuplicateNativeScripts
       ( DecoderErrorCustom
           "Annotator"
-          "Duplicate elements in the scripts Set were encountered"
+          "Duplicates found, expected no duplicates"
       )
   where
     version = eraProtVerLow @era
@@ -216,7 +210,7 @@ goldenDuplicatePlutusDataDisallowed =
       witsDuplicatePlutusData
       ( DecoderErrorCustom
           "Annotator"
-          "Duplicate elements in the scripts Set were encountered"
+          "Duplicates found, expected no duplicates"
       )
 
 goldenSubTransactions :: forall era. DijkstraEraTest era => Spec
@@ -235,7 +229,10 @@ goldenSubTransactions = do
     expectDecoderFailureAnn @(TxBody TopTx era)
       version
       txBodyEmptySubTransactionsEnc
-      (DecoderErrorCustom "Annotator" "Empty list found, expected non-empty")
+      ( DecoderErrorDeserialiseFailure
+          "Annotator (MemoBytes (DijkstraTxBodyRaw TopTx DijkstraEra))"
+          (DeserialiseFailure 12 "Empty list found, expected non-empty")
+      )
   it "Subtransactions have to be distinct" $
     expectDecoderFailureAnn @(TxBody TopTx era)
       version

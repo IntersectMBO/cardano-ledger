@@ -382,18 +382,10 @@ instance
               fieldAA (subTransactionsDijkstraTxBodyRawL .~) (D decodeSubTransactions)
         n -> invalidField n
       decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
-      decodeSubTransactions = do
-        allowTag setTag
-        txAnns <- decodeList decCBOR
-        pure $ go (OMap.empty, 0) txAnns
-        where
-          go (m, n) []
-            | OMap.null m = fail "Empty list found, expected non-empty"
-            | OMap.size m /= n = fail "Duplicates found, expected no duplicates"
-            | otherwise = pure m
-          go (!m, !n) (x : xs) = do
-            v <- x
-            go (m OMap.|> v, n + 1) xs
+      decodeSubTransactions =
+        decodeNonEmptySetLikeEnforceNoDuplicatesAnn
+          (flip (OMap.|>))
+          (\o -> (OMap.size o, o))
       requiredFields :: STxBothLevels l era -> [(Word, String)]
       requiredFields = \case
         STopTx -> [(0, "inputs"), (1, "outputs"), (2, "fee")]

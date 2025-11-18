@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `decodeNonEmptySetLikeEnforceNoDuplicatesAnn` to `Annotated` module
 * Add `ofieldA` and `fieldAGuarded` to `Coders` module
 * Change `Density` type to only be available at the type level
 * Change `Wrapped` type to only be available at the type level

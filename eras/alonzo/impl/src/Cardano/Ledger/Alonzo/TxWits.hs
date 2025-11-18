@@ -80,7 +80,7 @@ import Cardano.Ledger.Binary (
   decodeMapLenOrIndef,
   decodeMapLikeEnforceNoDuplicates,
   decodeNonEmptyList,
-  decodeSetLikeEnforceNoDuplicates,
+  decodeNonEmptySetLikeEnforceNoDuplicatesAnn,
   encodeFoldableEncoder,
   encodeListLen,
   encodeTag,
@@ -317,18 +317,10 @@ noDuplicateNonEmptySetAsMapDecoderAnn ::
   (Ord k, DecCBOR (Annotator a)) =>
   (a -> (k, v)) ->
   Decoder s (Annotator (Map k v))
-noDuplicateNonEmptySetAsMapDecoderAnn toKV = do
-  allowTag setTag
-  vals <- decodeList decCBOR
-  pure $ go (Map.empty, 0) vals
-  where
-    go (m, n) []
-      | Map.null m = fail "Empty script Set is not allowed"
-      | length m /= n = fail "Duplicate elements in the scripts Set were encountered"
-      | otherwise = pure m
-    go (!m, !n) (x : xs) = do
-      (k, v) <- toKV <$> x
-      go (Map.insert k v m, n + 1) xs
+noDuplicateNonEmptySetAsMapDecoderAnn toKV =
+  decodeNonEmptySetLikeEnforceNoDuplicatesAnn
+    (\x m -> let (k, v) = toKV x in Map.insert k v m)
+    (\m -> (Map.size m, m))
 {-# INLINE noDuplicateNonEmptySetAsMapDecoderAnn #-}
 
 instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
@@ -611,18 +603,21 @@ instance
         txWitnessField
         []
     where
-      addrWitsSetDecoder :: (Ord a, DecCBOR a) => Decoder s (Annotator (Set a))
-      addrWitsSetDecoder =
-        pure <$> do
-          let
-            nonEmptyDecoder = do
-              allowTag setTag
-              Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
-            nonEmptyNoDuplicatesDecoder = do
-              s <- decodeSetLikeEnforceNoDuplicates Set.insert (\s -> (length s, s)) decCBOR
-              when (Set.null s) $ fail "Set cannot be empty"
-              pure s
-          ifDecoderVersionAtLeast (natVersion @12) nonEmptyNoDuplicatesDecoder nonEmptyDecoder
+      addrWitsSetDecoder ::
+        (Ord a, DecCBOR (Annotator a), DecCBOR a) => Decoder s (Annotator (Set a))
+      addrWitsSetDecoder = do
+        let
+          nonEmptyDecoder = do
+            allowTag setTag
+            s <- Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
+            pure $ pure s
+
+          nonEmptyNoDuplicatesDecoder =
+            decodeNonEmptySetLikeEnforceNoDuplicatesAnn
+              Set.insert
+              (\s -> (Set.size s, s))
+
+        ifDecoderVersionAtLeast (natVersion @12) nonEmptyNoDuplicatesDecoder nonEmptyDecoder
       {-# INLINE addrWitsSetDecoder #-}
 
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
