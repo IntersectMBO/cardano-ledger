@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conformance.Imp.Ratify (spec) where
+module Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
