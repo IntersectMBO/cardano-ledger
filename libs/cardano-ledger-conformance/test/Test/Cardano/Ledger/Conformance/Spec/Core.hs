@@ -92,4 +92,3 @@ conformsToImplConstrained_ ::
   ConstrainedGeneratorBundle ctx rule era ->
   Property
 conformsToImplConstrained_ bundle = conformsToImplConstrained bundle $ \_ _ _ _ -> arbitrary
-

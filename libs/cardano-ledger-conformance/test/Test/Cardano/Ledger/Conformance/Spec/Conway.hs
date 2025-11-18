@@ -8,10 +8,11 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conformance.Spec.Conway ( spec ) where
+module Test.Cardano.Ledger.Conformance.Spec.Conway (spec) where
 
 import Data.Map.Strict qualified as Map
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayCertExecContext (..))
+import Test.Cardano.Ledger.Conformance.Spec.Core
 import Test.Cardano.Ledger.Constrained.Conway (genUtxoExecContext)
 import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   ConwayCertGenContext (..),
@@ -27,7 +28,6 @@ import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   constrainedUtxo,
  )
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Conformance.Spec.Core
 
 spec :: Spec
 spec = do
