@@ -98,6 +98,19 @@ instance ToExpr Version where
 
 instance ToExpr a => ToExpr (Sized a)
 
+instance ToExpr DeserialiseFailure where
+  toExpr (DeserialiseFailure x y) = App "DeserialiseFailure" [toExpr x, toExpr y]
+
+instance ToExpr DecoderError where
+  toExpr (DecoderErrorCanonicityViolation x) = App "DecoderErrorCanonicityViolation" [toExpr x]
+  toExpr (DecoderErrorCustom x y) = App "DecoderErrorCustom" [toExpr x, toExpr y]
+  toExpr (DecoderErrorDeserialiseFailure x y) = App "DecoderErrorDeserialiseFailure" [toExpr x, toExpr y]
+  toExpr (DecoderErrorEmptyList x) = App "DecoderErrorEmptyList" [toExpr x]
+  toExpr (DecoderErrorLeftover x y) = App "DecoderErrorLeftover" [toExpr x, toExpr y]
+  toExpr (DecoderErrorSizeMismatch x y z) = App "DecoderErrorSizeMismatch" [toExpr x, toExpr y, toExpr z]
+  toExpr (DecoderErrorUnknownTag x y) = App "DecoderErrorUnknownTag" [toExpr x, toExpr y]
+  toExpr DecoderErrorVoid = App "DecoderErrorVoid" []
+
 --------------------------------------------------------------------------------
 --  Diffing and pretty showing CBOR
 --------------------------------------------------------------------------------
