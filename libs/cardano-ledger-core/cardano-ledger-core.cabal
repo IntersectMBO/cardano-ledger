@@ -126,7 +126,7 @@ library
     microlens,
     mtl,
     non-integral >=1.0,
-    nothunks >=0.1.5 && <0.3,
+    nothunks >=0.1.5 && <0.4,
     partial-order,
     plutus-core,
     plutus-ledger-api,
