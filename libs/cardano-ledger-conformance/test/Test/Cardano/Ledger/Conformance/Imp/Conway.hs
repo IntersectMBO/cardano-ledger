@@ -6,6 +6,8 @@ module Test.Cardano.Ledger.Conformance.Imp.Conway (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway (ConwayEra)
+import Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify qualified as RatifySpec
+import Test.Cardano.Ledger.Conformance.Imp.Core
 import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as Bbody
 import Test.Cardano.Ledger.Conway.Imp.CertsSpec qualified as Certs
 import Test.Cardano.Ledger.Conway.Imp.DelegSpec qualified as Deleg
@@ -18,8 +20,6 @@ import Test.Cardano.Ledger.Conway.Imp.RatifySpec qualified as Ratify
 import Test.Cardano.Ledger.Conway.Imp.UtxoSpec qualified as Utxo
 import Test.Cardano.Ledger.Conway.Imp.UtxosSpec qualified as Utxos
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify qualified as RatifySpec
-import Test.Cardano.Ledger.Conformance.Imp.Core
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
 
