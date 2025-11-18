@@ -29,11 +29,9 @@ import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
 import Test.Cardano.Ledger.Common (
   Spec,
   describe,
-  diffExprString,
-  expectationFailure,
   it,
  )
-import Test.Cardano.Ledger.Shelley.Binary.Golden
+import Test.Cardano.Ledger.Shelley.Binary.Golden hiding (spec)
 
 witsEmptyField :: Int -> Enc
 witsEmptyField k =
@@ -52,12 +50,7 @@ spec version =
     describe "Empty fields allowed" $ do
       let
         expectSuccessOnEmptyFieldRaw k =
-          case decodeEnc version (witsEmptyField k) of
-            Right x
-              | x `eqRaw` expected -> pure ()
-            decResult -> expectationFailure $ diffExprString decResult (Right expected)
-          where
-            expected = mkBasicTxWits @era
+          expectDecoderSuccessAnnWith eqRaw version (witsEmptyField k) (mkBasicTxWits @era)
         expectFailureOnEmptyField k =
           expectDecoderFailureAnn @(TxWits era) version (witsEmptyField k)
       it "addrTxWits" $ expectSuccessOnEmptyFieldRaw 0
