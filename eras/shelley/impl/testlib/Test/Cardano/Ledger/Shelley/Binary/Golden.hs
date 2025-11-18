@@ -6,6 +6,7 @@
 
 module Test.Cardano.Ledger.Shelley.Binary.Golden (
   goldenNewEpochStateExpectation,
+  duplicateCertsTx,
   module Test.Cardano.Ledger.Core.Binary.Golden,
 ) where
 
@@ -14,18 +15,51 @@ import Cardano.Ledger.Binary (
   EncCBOR,
   ToCBOR (..),
   Tokens (..),
+  Version,
   lengthThreshold,
  )
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
+import Cardano.Ledger.TxIn (TxIn)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import Test.Cardano.Ledger.Binary.Plain.Golden
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.Golden
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
+import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
+import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
+
+duplicateCertsTx :: forall era. ShelleyEraTest era => Version -> Enc
+duplicateCertsTx v =
+  mconcat
+    [ E $ TkMapLen 4
+    , Em [E @Int 0, Ev v $ Set.empty @TxIn]
+    , Em [E @Int 1, Ev v $ [] @(TxOut era)]
+    , Em [E @Int 2, E $ Coin 0]
+    , Em
+        [ E @Int 4
+        , Em
+            [ E $ TkTag 258
+            , E $ TkListLen 2
+            , cert
+            , cert
+            ]
+        ]
+    ]
+  where
+    cert =
+      Em
+        [ E $ TkListLen 3
+        , E @Int 2
+        , E . KeyHashObj $ mkKeyHash @Staking 0
+        , E $ mkKeyHash @StakePool 1
+        ]
 
 goldenNewEpochStateExpectation ::
   forall era.
