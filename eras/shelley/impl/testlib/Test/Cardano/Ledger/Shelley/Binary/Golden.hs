@@ -6,11 +6,12 @@
 
 module Test.Cardano.Ledger.Shelley.Binary.Golden (
   goldenNewEpochStateExpectation,
-  duplicateCertsTx,
+  duplicateCertsShelleyTxBody,
+  spec,
   module Test.Cardano.Ledger.Core.Binary.Golden,
 ) where
 
-import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..))
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Binary (
   EncCBOR,
   ToCBOR (..),
@@ -21,32 +22,36 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Binary.Plain.Golden
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.Golden
+import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
-import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
 
-duplicateCertsTx :: forall era. ShelleyEraTest era => Version -> Enc
-duplicateCertsTx v =
+duplicateCertsShelleyTxBody :: forall era. ShelleyEraTest era => Version -> Enc
+duplicateCertsShelleyTxBody v =
   mconcat
-    [ E $ TkMapLen 4
+    [ E $ TkMapLen 5
     , Em [E @Int 0, Ev v $ Set.empty @TxIn]
     , Em [E @Int 1, Ev v $ [] @(TxOut era)]
     , Em [E @Int 2, E $ Coin 0]
+    , Em [E @Int 3, E @Int 300]
     , Em
         [ E @Int 4
         , Em
-            [ E $ TkTag 258
-            , E $ TkListLen 2
+            [ E $ TkListLen 2
             , cert
             , cert
             ]
@@ -126,3 +131,16 @@ goldenNewEpochStateExpectation
           , Ev ver ssDelegations
           , Ev ver ssPoolParams
           ]
+
+spec :: Spec
+spec =
+  describe "Golden" $ do
+    prop "NewEpochState" $ goldenNewEpochStateExpectation @ShelleyEra
+    describe "TxCerts" $ do
+      it "Decodes deleg cert successfully" $
+        forM_ (eraProtVersions @ShelleyEra) $ \version -> do
+          let testCert = DelegStakeTxCert @ShelleyEra (KeyHashObj $ mkKeyHash 0) (mkKeyHash 1)
+          expectDecoderSuccessAnnWith eqRaw version (duplicateCertsShelleyTxBody @ShelleyEra version) $
+            mkBasicTxBody @ShelleyEra @TopTx
+              & certsTxBodyL .~ SSeq.fromList [testCert, testCert]
+              & ttlTxBodyL .~ SlotNo 300
