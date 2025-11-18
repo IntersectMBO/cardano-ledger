@@ -113,7 +113,7 @@ conformsToImplConstrained_ bundle = conformsToImplConstrained bundle $ \_ _ _ _ 
 
 spec :: Spec
 spec = do
-  describe "Conformance with constrained generators" $ do
+  describe "Constrained Generators" $ do
     describe "Ticks transition graph" $ do
       prop "ENACT" $
         conformsToImplConstrained constrainedEnact $
