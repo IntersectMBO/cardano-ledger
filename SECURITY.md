@@ -25,7 +25,7 @@ Please include as many details as needed to clearly qualify the issue:
 
    a. **Rejection**: If the team rejects the report, detailed explanations will be provided by email or commenting on the relevant issue and the latter will be made public and closed as `Won't fix`.
 
-   b. **Acceptance**: If the team accepts the report, a CVE identifier will be requested through GitHub and a [private fork](https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/collaborating-in-a-temporary-private-fork-to-resolve-a-repository-security-vulnerability) opened to work on a fix to the issue.
+   b. **Acceptance**: If the team accepts the report, a CVE identifier will be requested through GitHub and a [private fork](https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/collaborating-in-a-temporary-private-fork-to-resolve-a-repository-security-vulnerability) will be opened to work on a fix to the issue.
 
 3. **Resolution**: The team works to resolve the vulnerability in a timely manner. The timeline for resolution will depend on the complexity and severity of the vulnerability, but we will strive to address critical vulnerabilities as quickly as possible.
 
@@ -37,11 +37,11 @@ Please include as many details as needed to clearly qualify the issue:
 
    b. **Fix**: When a fix is available and approved, it should be merged and made available as quickly as possible:
 
-   - All commits to the private repository are squashed into a single commit whose description _should not_ make any reference it relates to a security vulnerability
+   - All commits to the private repository are squashed into a single commit whose description _should not_ make any reference that it relates to a security vulnerability
    - A new Pull Request is created with this single commit
    - This PR's review and merging is expedited as all the work has already been done
 
-6. **Release**: The team creates and publishes a release that includes the fix
+6. **Release**: The team creates and publishes a release that includes the fix.
 
 7. **Announcement**: Concomitant to the release announcement, the team announces the security vulnerability by making the GitHub issue public. This is the first point that any information regarding the vulnerability is made public.
 
@@ -63,7 +63,7 @@ We will not pursue legal action against individuals who report security vulnerab
 
 ## Contact Information
 
-To report a security vulnerability, please use [GitHub form](https://github.com/IntersectMBO/cardano-ledger/security/advisories/new). Should you experience any issues reporting via GitHub or have other questions, please contact [Security](security@intersectmbo.org).
+To report a security vulnerability, please use the [GitHub security advisory form](https://github.com/IntersectMBO/cardano-ledger/security/advisories/new). Should you experience any issues reporting via GitHub or have other questions, please contact [security@intersectmbo.org](mailto:security@intersectmbo.org).
 
 ## Revision of Policy
 
