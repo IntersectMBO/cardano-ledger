@@ -154,6 +154,7 @@ library testlib
     Test.Cardano.Ledger.Alonzo.Binary.Annotator
     Test.Cardano.Ledger.Alonzo.Binary.Cddl
     Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec
+    Test.Cardano.Ledger.Alonzo.Binary.Golden
     Test.Cardano.Ledger.Alonzo.Binary.RoundTrip
     Test.Cardano.Ledger.Alonzo.Binary.Twiddle
     Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec
