@@ -114,6 +114,7 @@ test-suite tests
     Test.Cardano.Ledger.Conformance.Imp.Core
     Test.Cardano.Ledger.Conformance.Spec.Base
     Test.Cardano.Ledger.Conformance.Spec.Conway
+    Test.Cardano.Ledger.Conformance.Spec.Core
 
   default-language: Haskell2010
   ghc-options:
