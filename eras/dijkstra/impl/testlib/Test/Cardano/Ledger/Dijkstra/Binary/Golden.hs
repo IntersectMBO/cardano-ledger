@@ -19,12 +19,19 @@ import Cardano.Ledger.BaseTypes (Version)
 import Cardano.Ledger.Binary (Annotator, DecoderError (..), DeserialiseFailure (..), Tokens (..))
 import qualified Cardano.Ledger.Binary as Binary
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.TxCert (Delegatee (..))
-import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.Core (
+  EraTx (..),
+  EraTxBody (..),
+  EraTxOut (..),
+  EraTxWits (..),
+  TxLevel (..),
+  eraProtVerLow,
+  eraProtVersions,
+ )
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+import Data.Data (Proxy (..))
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import Lens.Micro
@@ -32,10 +39,9 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceedsLang)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
 import Test.Cardano.Ledger.Common (Spec, describe, forM_, it)
 import Test.Cardano.Ledger.Conway.Binary.Golden hiding (spec)
-import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash, mkKeyPair, mkWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkKeyPair, mkWitnessVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Dijkstra.Era (DijkstraEraTest)
-import Data.Proxy (Proxy(..))
 
 spec :: forall era. DijkstraEraTest era => Spec
 spec = describe "Golden" $ do
@@ -124,26 +130,6 @@ goldenEmptyFields version =
         DecoderErrorDeserialiseFailure
           (Binary.label $ Proxy @(Annotator (TxWits era)))
           (DeserialiseFailure 2 "An error occured while decoding (Int,Void) not a valid key:.\nError: 8")
-
-duplicateCertsTx :: forall era. DijkstraEraTest era => Version -> Enc
-duplicateCertsTx v =
-  mconcat
-    [ E $ TkMapLen 4
-    , Em [E @Int 0, Ev v $ Set.empty @TxIn]
-    , Em [E @Int 1, Ev v $ [] @(TxOut era)]
-    , Em [E @Int 2, E $ Coin 0]
-    , Em
-        [ E @Int 4
-        , Em
-            [ E $ TkTag 258
-            , E $ TkListLen 2
-            , Ev v cert
-            , Ev v cert
-            ]
-        ]
-    ]
-  where
-    cert = DelegTxCert @era (KeyHashObj (mkKeyHash 0)) (DelegStake (mkKeyHash 1))
 
 witsDuplicateVKeyWits :: Enc
 witsDuplicateVKeyWits =
