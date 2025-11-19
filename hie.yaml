@@ -3,6 +3,15 @@ cradle:
     - path: "eras/allegra/impl/src"
       component: "lib:cardano-ledger-allegra"
 
+    - path: "eras/allegra/impl/cddl/lib"
+      component: "cardano-ledger-allegra:lib:cddl"
+
+    - path: "eras/allegra/impl/cddl/exe/Main.hs"
+      component: "cardano-ledger-allegra:exe:generate-cddl"
+
+    - path: "eras/allegra/impl/cddl/exe/Paths_cardano_ledger_allegra.hs"
+      component: "cardano-ledger-allegra:exe:generate-cddl"
+
     - path: "eras/allegra/impl/testlib"
       component: "cardano-ledger-allegra:lib:testlib"
 
@@ -150,6 +159,15 @@ cradle:
     - path: "eras/shelley/impl/src"
       component: "lib:cardano-ledger-shelley"
 
+    - path: "eras/shelley/impl/cddl/lib"
+      component: "cardano-ledger-shelley:lib:cddl"
+
+    - path: "eras/shelley/impl/cddl/exe/Main.hs"
+      component: "cardano-ledger-shelley:exe:generate-cddl"
+
+    - path: "eras/shelley/impl/cddl/exe/Paths_cardano_ledger_shelley.hs"
+      component: "cardano-ledger-shelley:exe:generate-cddl"
+
     - path: "eras/shelley/impl/testlib"
       component: "cardano-ledger-shelley:lib:testlib"
 
@@ -230,6 +248,9 @@ cradle:
 
     - path: "libs/cardano-ledger-core/internal"
       component: "cardano-ledger-core:lib:internal"
+
+    - path: "libs/cardano-ledger-core/cddl"
+      component: "cardano-ledger-core:lib:cddl"
 
     - path: "libs/cardano-ledger-core/testlib"
       component: "cardano-ledger-core:lib:testlib"

@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `cddl` sub-library.
 * Remove deprecated type `Allegra`
 * Remove deprecated type `TimelockConstr`
 * Add `invalidBeforeL`, `invalidHereAfterL`
@@ -10,6 +11,12 @@
 * Add `HasEraTxLevel` instances for `Tx` and `TxBody`
 * Add `EraTxLevel` instance
 * Remove deprecated `timelockScriptsTxAuxDataL`
+
+### `cddl`
+
+* Add `HuddleSpec` module with `Huddle{Rule|Group}` instances for all types.
+* Add smart constructors `mkBlock` and `mkTransaction`.
+* Add `generate-cddl` executable target to test the generation of `.cddl` files against the existing `huddle-cddl` executable.
 
 ### `testlib`
 

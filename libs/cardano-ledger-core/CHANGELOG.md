@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `cddl` sub-library.
 * Limit `DecCBORGroup` decoding of `ProtVer` fields to `Word32` starting from protocol version `12`
 * Change `Relation` type to only be visible at the type level
 * Change `KeyRole` type to only be visible at the type level
@@ -51,6 +52,11 @@
 * Expose `dRepToText`
 * Modify `withdrawalsThatDoNotDrainAccounts` to return `Maybe (Withdrawals, Withdrawals)` where the `fst` are either missing accounts or in the wrong network and `snd` are incomplete withdrawals.
 * Add `FromJSON` instance for `PParamUpdate`
+
+### `cddl`
+
+* Add `HuddleRule`, `HuddleGroup` and `HuddleGRule` type class for era-polymorphic CDDL generation.
+* Add `HuddleSpec` for all common CDDL types.
 
 ### `testlib`
 

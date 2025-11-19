@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `cddl` sub-library.
 * Replace `StakePoolState` values in `psFutureStakePoolParams` with `StakePoolParams`
 * Remove `psFutureStakePoolsL`
 * Add `psFutureStakePoolParamsL`
@@ -30,6 +31,12 @@
   - Add `testIncompleteAndMissingWithdrawals`
 * Added `Generic` instance to `ShelleyTxOut`
 * Add `AtMostEra "Conway" era` constraint to `ShelleyEraTxCert`, effectively disabling it for Dijkstra onwards
+
+### `cddl`
+
+* Add `HuddleSpec` module with `Huddle{Rule|Group}` instances for all types.
+* Add and export smart constructors for transaction components, certificates, pool infrastructure, and block structures.
+* Add `generate-cddl` executable target to test the generation of `.cddl` files against the existing `huddle-cddl` executable.
 
 ### `testlib`
 
