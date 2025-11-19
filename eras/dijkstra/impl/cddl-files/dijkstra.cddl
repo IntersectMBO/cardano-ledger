@@ -115,6 +115,7 @@ transaction_body =
   , ? 20 : proposal_procedures             
   , ? 21 : coin                            
   , ? 22 : positive_coin                   
+  , ? 23 : sub_transactions                
   }
 
 
@@ -695,6 +696,31 @@ constitution = [anchor, script_hash/ nil]
 
 info_action = 6
 
+sub_transactions = nonempty_oset<sub_transaction>
+
+sub_transaction = 
+  [sub_transaction_body, transaction_witness_set, auxiliary_data/ nil]
+
+sub_transaction_body = 
+  {   0  : set<transaction_input>         
+  ,   1  : [* transaction_output]      
+  , ? 3  : slot                            
+  , ? 4  : certificates                    
+  , ? 5  : withdrawals                     
+  , ? 7  : auxiliary_data_hash             
+  , ? 8  : slot                            
+  , ? 9  : mint                            
+  , ? 11 : script_data_hash                
+  , ? 14 : guards                          
+  , ? 15 : network_id                      
+  , ? 18 : nonempty_set<transaction_input>
+  , ? 19 : voting_procedures               
+  , ? 20 : proposal_procedures             
+  , ? 21 : coin                            
+  , ? 22 : positive_coin                   
+  }
+
+
 transaction_witness_set = 
   { ? 0 : nonempty_set<vkeywitness>      
   , ? 1 : nonempty_set<native_script>    
@@ -735,8 +761,6 @@ redeemer_tag =
   / 5 ; proposing
   / 6 ; guarding 
 
-transaction_index = uint .size 2
-
 ; auxiliary_data supports three serialization formats:
 ;   1. metadata (raw) - Supported since Shelley
 ;   2. auxiliary_data_array - Array format, introduced in Allegra
@@ -772,4 +796,6 @@ auxiliary_data_map =
 
   )
 
+
+transaction_index = uint .size 2
 

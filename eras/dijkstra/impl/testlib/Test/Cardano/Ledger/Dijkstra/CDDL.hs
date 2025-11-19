@@ -117,6 +117,42 @@ transaction_body =
       , opt (idx 20 ==> proposal_procedures)
       , opt (idx 21 ==> coin)
       , opt (idx 22 ==> positive_coin)
+      , opt (idx 23 ==> sub_transactions)
+      ]
+
+sub_transactions :: Rule
+sub_transactions =
+  "sub_transactions" =:= maybe_tagged_nonempty_oset sub_transaction
+
+sub_transaction :: Rule
+sub_transaction =
+  "sub_transaction"
+    =:= arr
+      [ a sub_transaction_body
+      , a transaction_witness_set
+      , a (auxiliary_data / VNil)
+      ]
+
+sub_transaction_body :: Rule
+sub_transaction_body =
+  "sub_transaction_body"
+    =:= mp
+      [ idx 0 ==> maybe_tagged_set transaction_input
+      , idx 1 ==> arr [0 <+ a transaction_output]
+      , opt (idx 3 ==> slot)
+      , opt (idx 4 ==> certificates)
+      , opt (idx 5 ==> withdrawals)
+      , opt (idx 7 ==> auxiliary_data_hash)
+      , opt (idx 8 ==> slot)
+      , opt (idx 9 ==> mint)
+      , opt (idx 11 ==> script_data_hash)
+      , opt (idx 14 ==> guards)
+      , opt (idx 15 ==> network_id)
+      , opt (idx 18 ==> maybe_tagged_nonempty_set transaction_input)
+      , opt (idx 19 ==> voting_procedures)
+      , opt (idx 20 ==> proposal_procedures)
+      , opt (idx 21 ==> coin)
+      , opt (idx 22 ==> positive_coin)
       ]
 
 guards :: Rule
