@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Dijkstra.Binary.Golden (
   spec,
@@ -25,7 +27,11 @@ import Cardano.Ledger.Dijkstra.Core (
   EraTxWits (..),
   TxLevel (..),
   eraProtVerLow,
+#if __GLASGOW_HASKELL__ < 914
   pattern DelegTxCert,
+#else
+  data DelegTxCert,
+#endif
  )
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))

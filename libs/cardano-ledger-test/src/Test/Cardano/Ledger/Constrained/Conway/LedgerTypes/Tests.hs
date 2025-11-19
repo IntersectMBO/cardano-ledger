@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -35,7 +36,9 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
+#if __GLASGOW_HASKELL__ < 914
 import Test.Cardano.Ledger.Conway.Era
+#endif
 import Test.Hspec hiding (context)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (
@@ -121,7 +124,11 @@ soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ prop
 specSuite ::
   forall (era :: Type).
   ( era ~ ConwayEra
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , ShelleyEraTest era
+#endif
   ) =>
   Int -> Spec
 specSuite n = do

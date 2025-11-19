@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -14,10 +15,14 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow () where
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (EraTx (..))
+#if __GLASGOW_HASKELL__ < 914
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
+#endif
 import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+#if __GLASGOW_HASKELL__ < 914
 import Cardano.Ledger.TxIn (TxId)
+#endif
 import Control.State.Transition.Extended (TRC (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Coerce (coerce)
@@ -40,7 +45,11 @@ import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
 import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 
 instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   SpecTranslate TxId (ConwayTxCert ConwayEra) =>
+#endif
   ExecSpecRule "UTXOW" ConwayEra
   where
   type ExecContext "UTXOW" ConwayEra = UtxoExecContext ConwayEra

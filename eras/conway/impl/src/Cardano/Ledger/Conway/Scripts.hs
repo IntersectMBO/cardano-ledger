@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -21,8 +22,13 @@ module Cardano.Ledger.Conway.Scripts (
   PlutusScript (..),
   isPlutusScript,
   ConwayPlutusPurpose (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data VotingPurpose,
+  data ProposingPurpose,
+#else
   pattern VotingPurpose,
   pattern ProposingPurpose,
+#endif
 ) where
 
 import Cardano.Ledger.Address (RewardAccount)

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -12,7 +13,11 @@ module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid (spec, alonzoEraSpecificSp
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Allegra.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+#else
   pattern RequireTimeExpire,
+#endif
  )
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
@@ -29,8 +34,13 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireSignature,
+#endif
  )
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
