@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -36,6 +37,7 @@ import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   ConstrainedGeneratorBundle (..),
   constrainedRatify,
  )
+import Test.Cardano.Ledger.Conway.TreeDiff (tableDoc)
 import Test.Cardano.Ledger.Imp.Common
 
 conformsToImplAccepted ::
@@ -59,13 +61,22 @@ conformsToImplAccepted impl agda = property $ do
     conjoin $
       zipWith
         ( \ga sga ->
-            counterexample (prettify ratifyEnv ratifySt ga) $
-              impl ratifyEnv ratifySt ga == agda specEnv specSt sga
+            let implRes = impl ratifyEnv ratifySt ga
+                agdaRes = agda specEnv specSt sga
+             in counterexample (prettify ratifyEnv ratifySt ga implRes agdaRes) $
+                  implRes == agdaRes
         )
         govActions
         specGovActions
   where
-    prettify ratifyEnv ratifySt ga = ansiDocToString $ Pretty.vsep $ [ansiExpr ratifyEnv, ansiExpr ratifySt, ansiExpr ga]
+    prettify ratifyEnv ratifySt ga implRes agdaRes =
+      ansiDocToString $
+        Pretty.vsep $
+          tableDoc Nothing [("Impl:", showAccepted implRes), ("Spec:", showAccepted agdaRes)]
+            : [ansiExpr ratifyEnv, ansiExpr ratifySt, ansiExpr ga]
+
+    showAccepted True = Pretty.brackets "✓"
+    showAccepted False = Pretty.brackets "×"
 
 spec :: Spec
 spec = describe "RATIFY" $ do
