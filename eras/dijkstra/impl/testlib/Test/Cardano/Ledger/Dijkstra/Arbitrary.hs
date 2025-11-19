@@ -29,6 +29,7 @@ import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
+import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
@@ -137,3 +138,16 @@ instance Era era => Arbitrary (DijkstraTxCert era) where
 
 instance Arbitrary DijkstraDelegCert where
   arbitrary = DijkstraRegDelegCert <$> arbitrary <*> arbitrary <*> arbitrary
+
+instance
+  ( EraPParams era
+  , Arbitrary (PlutusPurpose AsItem era)
+  , Arbitrary (PlutusPurpose AsIx era)
+  , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  , Arbitrary (TxCert era)
+  , Arbitrary (TxOut era)
+  ) =>
+  Arbitrary (DijkstraContextError era)
+  where
+  arbitrary = genericArbitraryU
