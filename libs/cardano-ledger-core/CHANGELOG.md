@@ -87,6 +87,8 @@
 
 ### `testlib`
 
+* Add `forEachEraVersion`
+* Add `Test.Cardano.Ledger.Core.Binary.Golden`
 * Add `kes_period` and `sequence_number` CDDL definitions.
 * Add CDDL definitions for:
   - Credentials: `credential`, `stake_credential`

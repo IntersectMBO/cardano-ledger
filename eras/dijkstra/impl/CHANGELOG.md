@@ -53,6 +53,7 @@
 
 ### `testlib`
 
+* Re-export `Test.Cardano.Ledger.Conway.Binary.Golden`
 * Remove CDDL `certificate` redefinition to reuse from conway.
 * Add CDDL exports for `plutus_v4_script`, `dijkstra_native_script`, `script_require_guard`
 * Remove CDDL `protocol_version` redefinition
