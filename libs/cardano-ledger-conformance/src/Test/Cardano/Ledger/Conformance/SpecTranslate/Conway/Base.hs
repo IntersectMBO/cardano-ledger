@@ -397,7 +397,7 @@ instance
         \(cred, Coin amount) -> do
           agdaCred <- toSpecRep cred
           network <- toSpecRep Testnet -- TODO where should this really come from?
-          pure (Agda.RwdAddr network agdaCred, amount)
+          pure (Agda.RewardAddress network agdaCred, amount)
       transHashProtected x h = do
         committee <- toSpecRep x
         agdaLastId <- case h of
