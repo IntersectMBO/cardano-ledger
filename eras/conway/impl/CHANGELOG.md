@@ -40,6 +40,8 @@
 
 ### `testlib`
 
+* Add `witsEmptyFieldWithTag`
+* Add `conwayDecodeDuplicateDelegCertFails`
 * Add CDDL definitions:
   - Credentials: `drep_credential`, `committee_cold_credential`, `committee_hot_credential`
   - Governance primitives: `drep`, `anchor`

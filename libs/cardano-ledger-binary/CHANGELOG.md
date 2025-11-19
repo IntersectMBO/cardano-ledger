@@ -16,6 +16,7 @@
 
 ### `testlib`
 
+* Add `ToExpr` instances to `DeserialiseFailure` and `DecoderError`
 * Remove `assertExprEqualWithMessage`
 
 ## 1.7.0.0
