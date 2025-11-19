@@ -43,4 +43,4 @@ spec = do
     decoderEquivalenceEraSpec @AlonzoEra @(TxDats AlonzoEra)
     decoderEquivalenceEraSpec @AlonzoEra @(Redeemers AlonzoEra)
   Binary.txSizeSpec @AlonzoEra
-  Golden.spec @AlonzoEra (eraProtVerLow @AlonzoEra)
+  Golden.spec @AlonzoEra

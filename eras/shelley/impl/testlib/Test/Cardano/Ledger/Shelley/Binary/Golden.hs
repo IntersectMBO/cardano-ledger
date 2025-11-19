@@ -6,7 +6,7 @@
 
 module Test.Cardano.Ledger.Shelley.Binary.Golden (
   goldenNewEpochStateExpectation,
-  duplicateCertsShelleyTxBody,
+  duplicateDelegCertsTxBody,
   spec,
   module Test.Cardano.Ledger.Core.Binary.Golden,
 ) where
@@ -37,11 +37,12 @@ import Test.Cardano.Ledger.Binary.Plain.Golden
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.Golden
 import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
+import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
 
-duplicateCertsShelleyTxBody :: forall era. ShelleyEraTest era => Version -> Enc
-duplicateCertsShelleyTxBody v =
+duplicateDelegCertsTxBody :: forall era. ShelleyEraTest era => Version -> Enc
+duplicateDelegCertsTxBody v =
   mconcat
     [ E $ TkMapLen 5
     , Em [E @Int 0, Ev v $ Set.empty @TxIn]
@@ -132,15 +133,18 @@ goldenNewEpochStateExpectation
           , Ev ver ssPoolParams
           ]
 
+shelleyDecodeDuplicateDelegCertSucceeds :: Version -> Spec
+shelleyDecodeDuplicateDelegCertSucceeds version =
+  it "Decodes duplicate delegation certificates successfully" $ do
+    let testCert = DelegStakeTxCert @ShelleyEra (KeyHashObj $ mkKeyHash 0) (mkKeyHash 1)
+    expectDecoderSuccessAnnWith eqRaw version (duplicateDelegCertsTxBody @ShelleyEra version) $
+      mkBasicTxBody @ShelleyEra @TopTx
+        & certsTxBodyL .~ SSeq.fromList [testCert, testCert]
+        & ttlTxBodyL .~ SlotNo 300
+
 spec :: Spec
 spec =
   describe "Golden" $ do
     prop "NewEpochState" $ goldenNewEpochStateExpectation @ShelleyEra
     describe "TxCerts" $ do
-      it "Decodes deleg cert successfully" $
-        forM_ (eraProtVersions @ShelleyEra) $ \version -> do
-          let testCert = DelegStakeTxCert @ShelleyEra (KeyHashObj $ mkKeyHash 0) (mkKeyHash 1)
-          expectDecoderSuccessAnnWith eqRaw version (duplicateCertsShelleyTxBody @ShelleyEra version) $
-            mkBasicTxBody @ShelleyEra @TopTx
-              & certsTxBodyL .~ SSeq.fromList [testCert, testCert]
-              & ttlTxBodyL .~ SlotNo 300
+      forEachEraVersion @ShelleyEra shelleyDecodeDuplicateDelegCertSucceeds

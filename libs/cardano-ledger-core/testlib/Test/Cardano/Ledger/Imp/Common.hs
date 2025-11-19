@@ -1,7 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -80,8 +84,11 @@ module Test.Cardano.Ledger.Imp.Common (
   -- * Re-exports from ImpSpec
   withImpInit,
   modifyImpInit,
+  forEachEraVersion,
 ) where
 
+import Cardano.Ledger.Binary (Version)
+import Cardano.Ledger.Core (eraProtVersions)
 import Control.Monad.IO.Class
 import Data.List (isInfixOf)
 import qualified System.Random.Stateful as R
@@ -140,6 +147,7 @@ import Test.Cardano.Ledger.Common as X hiding (
   vectorOf,
  )
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkCredential)
+import Test.Cardano.Ledger.Era (EraTest)
 import Test.ImpSpec (modifyImpInit, withImpInit)
 import Test.ImpSpec.Expectations.Lifted
 import Test.ImpSpec.Random (
@@ -221,3 +229,7 @@ expectNothingExpr (Just x) =
   assertFailure $
     "Expected Nothing, got Just:\n" <> showExpr x
 expectNothingExpr Nothing = pure ()
+
+forEachEraVersion :: forall era. EraTest era => (Version -> Spec) -> Spec
+forEachEraVersion sv = forM_ (eraProtVersions @era) $
+  \version -> describe (show version) $ sv version
