@@ -1,22 +1,28 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.TxInfo (
   transPlutusPurposeV1V2,
   transPlutusPurposeV3,
+  DijkstraContextError (..),
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
@@ -29,7 +35,9 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
-import Cardano.Ledger.BaseTypes (Inject (..), ProtVer (..), strictMaybe)
+import Cardano.Ledger.BaseTypes (Inject (..), ProtVer (..), kindObject, strictMaybe)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
@@ -40,6 +48,7 @@ import Cardano.Ledger.Conway.TxInfo (
   transTxInInfoV3,
  )
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
+import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..), PlutusScript (..))
@@ -60,19 +69,105 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.State (StakePoolParams (..))
+import Control.DeepSeq (NFData)
 import Control.Monad (zipWithM)
+import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
+import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
+data DijkstraContextError era
+  = ConwayContextError !(ConwayContextError era)
+  | PointerPresentInOutput !(TxOut era)
+  deriving (Generic)
+
+deriving instance
+  ( AlonzoEraScript era
+  , EraTxCert era
+  , EraTxOut era
+  ) =>
+  Eq (DijkstraContextError era)
+
+deriving instance
+  ( AlonzoEraScript era
+  , EraTxCert era
+  , EraTxOut era
+  ) =>
+  Show (DijkstraContextError era)
+
+instance
+  ( AlonzoEraScript era
+  , EraTxCert era
+  , EraTxOut era
+  ) =>
+  NFData (DijkstraContextError era)
+
+instance
+  ( AlonzoEraScript era
+  , EraTxCert era
+  , EraTxOut era
+  ) =>
+  NoThunks (DijkstraContextError era)
+
+instance
+  ( ToJSON (TxCert era)
+  , ToJSON (PlutusPurpose AsIx era)
+  , ToJSON (PlutusPurpose AsItem era)
+  , ToJSON (TxOut era)
+  , EraPParams era
+  ) =>
+  ToJSON (DijkstraContextError era)
+  where
+  toJSON (ConwayContextError x) = toJSON x
+  toJSON (PointerPresentInOutput x) = kindObject "PointerPresentInOutput" ["txOut" .= toJSON x]
+
+instance
+  ( EraPParams era
+  , DecCBOR (TxCert era)
+  , DecCBOR (TxOut era)
+  , DecCBOR (PlutusPurpose AsIx era)
+  , DecCBOR (PlutusPurpose AsItem era)
+  ) =>
+  DecCBOR (DijkstraContextError era)
+  where
+  decCBOR = decode $ Summands "ContextError" $ \case
+    16 -> SumD ConwayContextError <! From
+    17 -> SumD PointerPresentInOutput <! From
+    k -> Invalid k
+
+instance
+  ( EraPParams era
+  , EncCBOR (TxCert era)
+  , EncCBOR (TxOut era)
+  , EncCBOR (PlutusPurpose AsIx era)
+  , EncCBOR (PlutusPurpose AsItem era)
+  ) =>
+  EncCBOR (DijkstraContextError era)
+  where
+  encCBOR =
+    encode . \case
+      ConwayContextError x -> Sum ConwayContextError 16 !> To x
+      PointerPresentInOutput x -> Sum PointerPresentInOutput 17 !> To x
+
+instance Inject (ConwayContextError era) (DijkstraContextError era) where
+  inject = ConwayContextError
+
+instance Inject (Babbage.BabbageContextError era) (DijkstraContextError era) where
+  inject = ConwayContextError . inject
+
+instance Inject (Alonzo.AlonzoContextError era) (DijkstraContextError era) where
+  inject = ConwayContextError . inject
+
 instance EraPlutusContext DijkstraEra where
-  type ContextError DijkstraEra = ConwayContextError DijkstraEra
+  type ContextError DijkstraEra = DijkstraContextError DijkstraEra
 
   data TxInfoResult DijkstraEra
     = DijkstraTxInfoResult -- Fields must be kept lazy
@@ -260,7 +355,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
     let
       commonInputs = txInputs `Set.intersection` refInputs
     case toList commonInputs of
-      (x : xs) -> Left $ ReferenceInputsNotDisjointFromInputs $ x :| xs
+      (x : xs) -> Left . inject $ ReferenceInputsNotDisjointFromInputs @DijkstraEra $ x :| xs
       _ -> Right ()
     outputs <-
       zipWithM
@@ -356,13 +451,21 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
     let
       commonInputs = txInputs `Set.intersection` refInputs
     case toList commonInputs of
-      (x : xs) -> Left $ ReferenceInputsNotDisjointFromInputs $ x :| xs
+      (x : xs) -> Left . inject $ ReferenceInputsNotDisjointFromInputs @DijkstraEra $ x :| xs
       _ -> Right ()
+    let ledgerOutputs = txBody ^. outputsTxBodyL
     outputs <-
       zipWithM
         (Babbage.transTxOutV2 . TxOutFromOutput)
         [minBound ..]
-        (F.toList (txBody ^. outputsTxBodyL))
+        (F.toList ledgerOutputs)
+    let
+      outputHasPtr txOut = case txOut ^. addrTxOutL of
+        Addr _ _ (StakeRefPtr _) -> True
+        _ -> False
+    case F.find outputHasPtr ledgerOutputs of
+      Nothing -> pure ()
+      Just output -> Left $ PointerPresentInOutput output
     txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
     plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx
     pure

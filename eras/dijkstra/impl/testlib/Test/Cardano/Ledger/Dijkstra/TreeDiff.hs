@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -16,7 +17,18 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
 
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Core (EraTx (..), EraTxBody (..), PlutusScript)
+import Cardano.Ledger.Dijkstra.Core (
+  AlonzoEraScript (..),
+  AsItem,
+  AsIx,
+  Era,
+  EraPParams (..),
+  EraTx (..),
+  EraTxBody (..),
+  EraTxCert (..),
+  EraTxOut (..),
+  PlutusScript,
+ )
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams)
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript,
@@ -26,6 +38,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw (..))
 import Cardano.Ledger.Dijkstra.TxCert
+import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr)
@@ -120,3 +133,13 @@ deriving newtype instance ToExpr (Tx l DijkstraEra)
 instance ToExpr DijkstraDelegCert
 
 instance ToExpr (DijkstraTxCert era)
+
+instance
+  ( Era era
+  , ToExpr (PParamsHKD StrictMaybe era)
+  , ToExpr (PlutusPurpose AsIx era)
+  , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (TxCert era)
+  , ToExpr (TxOut era)
+  ) =>
+  ToExpr (DijkstraContextError era)
