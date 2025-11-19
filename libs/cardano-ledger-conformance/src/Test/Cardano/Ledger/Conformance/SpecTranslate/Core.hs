@@ -166,9 +166,9 @@ instance SpecTranslate ctx ExUnits where
   toSpecRep (ExUnits a b) = pure (toInteger a, toInteger b)
 
 instance SpecTranslate ctx RewardAccount where
-  type SpecRep RewardAccount = Agda.RwdAddr
+  type SpecRep RewardAccount = Agda.RewardAddress
 
-  toSpecRep (RewardAccount n c) = Agda.RwdAddr <$> toSpecRep n <*> toSpecRep c
+  toSpecRep (RewardAccount n c) = Agda.RewardAddress <$> toSpecRep n <*> toSpecRep c
 
 instance
   ( SpecRep DataHash ~ Agda.DataHash

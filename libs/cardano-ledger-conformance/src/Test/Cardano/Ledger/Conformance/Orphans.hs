@@ -44,7 +44,7 @@ deriving instance Ord DrepThresholds
 
 deriving instance Ord PParamsUpdate
 
-deriving instance Ord RwdAddr
+deriving instance Ord RewardAddress
 
 deriving instance Ord GovAction
 
@@ -56,7 +56,7 @@ instance NFData a => NFData (HSSet a)
 
 instance NFData PParamsUpdate
 
-instance NFData RwdAddr
+instance NFData RewardAddress
 
 instance NFData GovAction
 
@@ -174,7 +174,7 @@ instance (ToExpr k, ToExpr v) => ToExpr (HSMap k v)
 
 instance ToExpr PParamsUpdate
 
-instance ToExpr RwdAddr
+instance ToExpr RewardAddress
 
 instance ToExpr GovAction
 
@@ -351,7 +351,7 @@ instance SpecNormalize Agda.Rational where
 
 instance SpecNormalize PParamsUpdate
 
-instance SpecNormalize RwdAddr
+instance SpecNormalize RewardAddress
 
 instance SpecNormalize GovAction
 
