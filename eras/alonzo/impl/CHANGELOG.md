@@ -38,6 +38,8 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Alonzo.Binary.Golden`
+* Add `witsEmptyField`
 * Add CDDL definitions for Plutus V1 types: `big_int`, `big_uint`, `big_nint`, `bounded_bytes`
 * Rename `plutus_script` -> `plutus_v1_script` in CDDL
 * Add `plutus_v1_script` to CDDL exports

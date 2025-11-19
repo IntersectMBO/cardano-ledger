@@ -22,4 +22,4 @@ main =
         Imp.spec @AllegraEra
       roundTripJsonEraSpec @AllegraEra
       roundTripJsonShelleyEraSpec @AllegraEra
-      Golden.spec
+      Golden.spec @AllegraEra
