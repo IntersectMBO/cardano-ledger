@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -13,12 +12,14 @@ module Test.Cardano.Ledger.Conway.Binary.Golden (
   listRedeemersEnc,
   goldenListRedeemers,
   witsEmptyFieldWithTag,
+  conwayDecodeDuplicateDelegCertFails,
   module Test.Cardano.Ledger.Alonzo.Binary.Golden,
 ) where
 
 import Cardano.Ledger.Alonzo.Core (
   AsIx (..),
   EraTxWits (..),
+  TxLevel (..),
   eraProtVerLow,
   pattern SpendingPurpose,
  )
@@ -27,6 +28,9 @@ import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), unRedeemers)
 import Cardano.Ledger.Binary (Annotator, DecoderError (..), DeserialiseFailure (..), Version)
 import qualified Cardano.Ledger.Binary as Binary
 import Cardano.Ledger.Binary.Plain (Tokens (..))
+import Cardano.Ledger.Conway.Core (
+  EraTxBody (..),
+ )
 import Cardano.Ledger.Plutus (Data (..))
 import qualified Data.Map as Map
 import Data.Proxy (Proxy (..))
@@ -40,6 +44,7 @@ import Test.Cardano.Ledger.Common (
   it,
  )
 import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
+import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
 
 -- | A simple redeemer encoded as a list
 listRedeemersEnc :: Enc
@@ -77,79 +82,93 @@ witsEmptyFieldWithTag k =
     , E @[Void] []
     ]
 
-spec :: forall era. ConwayEraTest era => Version -> Spec
-spec version =
+conwayDecodeDuplicateDelegCertFails ::
+  forall era. ConwayEraTest era => Version -> Spec
+conwayDecodeDuplicateDelegCertFails version =
+  it "Decoding duplicate delegation certs fails" $ do
+    expectDecoderFailureAnn @(TxBody TopTx era) version (duplicateDelegCertsTxBody @era version) $
+      DecoderErrorDeserialiseFailure
+        (Binary.label $ Proxy @(Annotator (TxBody TopTx era)))
+        ( DeserialiseFailure
+            144
+            "Final number of elements: 1 does not match the total count that was decoded: 2"
+        )
+
+spec :: forall era. ConwayEraTest era => Spec
+spec = do
   describe "TxWits" $
     describe "Empty fields not allowed" $ do
-      describe "Untagged" $ do
-        let
-          expectFailureOnEmptyField k =
-            expectDecoderFailureAnn @(TxWits era) version (witsEmptyField k)
-        it "addrTxWits" . expectFailureOnEmptyField 0 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 4 "Empty list found, expected non-empty")
-        it "nativeScripts" . expectFailureOnEmptyField 1 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 4 "Empty list found, expected non-empty")
-        it "bootstrapWitness" . expectFailureOnEmptyField 2 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 4 "Empty list found, expected non-empty")
-        it "plutusV1Script" . expectFailureOnEmptyField 3 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 4 "Empty list of scripts is not allowed")
-        it "plutusData" . expectFailureOnEmptyField 4 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 4 "Empty list found, expected non-empty")
-        it "redeemers" . expectFailureOnEmptyField 5 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 4 "Empty list found, expected non-empty")
-        it "plutusV2Script" . expectFailureOnEmptyField 6 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 4 "Empty list of scripts is not allowed")
-        it "plutusV3Script" . expectFailureOnEmptyField 7 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 4 "Empty list of scripts is not allowed")
-        it "8th field" . expectFailureOnEmptyField 8 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 2 "An error occured while decoding (Int,Void) not a valid key:.\nError: 8")
-      describe "Tagged" $ do
-        let
-          expectFailureOnEmptyField k =
-            expectDecoderFailureAnn @(TxWits era) version (witsEmptyFieldWithTag k)
-        it "addrTxWits" . expectFailureOnEmptyField 0 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 7 "Empty list found, expected non-empty")
-        it "nativeScripts" . expectFailureOnEmptyField 1 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 7 "Empty list found, expected non-empty")
-        it "bootstrapWitness" . expectFailureOnEmptyField 2 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 7 "Empty list found, expected non-empty")
-        it "plutusV1Script" . expectFailureOnEmptyField 3 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 7 "Empty list of scripts is not allowed")
-        it "plutusData" . expectFailureOnEmptyField 4 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 7 "Empty list found, expected non-empty")
-        it "plutusV2Script" . expectFailureOnEmptyField 6 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 7 "Empty list of scripts is not allowed")
-        it "plutusV3Script" . expectFailureOnEmptyField 7 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 7 "Empty list of scripts is not allowed")
+      forEachEraVersion @era $ \version -> do
+        describe "Untagged" $ do
+          let
+            expectFailureOnEmptyField k =
+              expectDecoderFailureAnn @(TxWits era) version (witsEmptyField k)
+          it "addrTxWits" . expectFailureOnEmptyField 0 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 4 "Empty list found, expected non-empty")
+          it "nativeScripts" . expectFailureOnEmptyField 1 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 4 "Empty list found, expected non-empty")
+          it "bootstrapWitness" . expectFailureOnEmptyField 2 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 4 "Empty list found, expected non-empty")
+          it "plutusV1Script" . expectFailureOnEmptyField 3 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 4 "Empty list of scripts is not allowed")
+          it "plutusData" . expectFailureOnEmptyField 4 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 4 "Empty list found, expected non-empty")
+          it "redeemers" . expectFailureOnEmptyField 5 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 4 "Empty list found, expected non-empty")
+          it "plutusV2Script" . expectFailureOnEmptyField 6 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 4 "Empty list of scripts is not allowed")
+          it "plutusV3Script" . expectFailureOnEmptyField 7 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 4 "Empty list of scripts is not allowed")
+          it "8th field" . expectFailureOnEmptyField 8 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 2 "An error occured while decoding (Int,Void) not a valid key:.\nError: 8")
+        describe "Tagged" $ do
+          let
+            expectFailureOnEmptyField k =
+              expectDecoderFailureAnn @(TxWits era) version (witsEmptyFieldWithTag k)
+          it "addrTxWits" . expectFailureOnEmptyField 0 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 7 "Empty list found, expected non-empty")
+          it "nativeScripts" . expectFailureOnEmptyField 1 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 7 "Empty list found, expected non-empty")
+          it "bootstrapWitness" . expectFailureOnEmptyField 2 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 7 "Empty list found, expected non-empty")
+          it "plutusV1Script" . expectFailureOnEmptyField 3 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 7 "Empty list of scripts is not allowed")
+          it "plutusData" . expectFailureOnEmptyField 4 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 7 "Empty list found, expected non-empty")
+          it "plutusV2Script" . expectFailureOnEmptyField 6 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 7 "Empty list of scripts is not allowed")
+          it "plutusV3Script" . expectFailureOnEmptyField 7 $
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure 7 "Empty list of scripts is not allowed")
+  describe "TxCerts" . forEachEraVersion @era $ conwayDecodeDuplicateDelegCertFails @era
