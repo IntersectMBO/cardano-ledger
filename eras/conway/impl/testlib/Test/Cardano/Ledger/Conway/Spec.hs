@@ -50,7 +50,7 @@ spec =
     CommitteeRatify.spec @era
     SPORatifySpec.spec @era
     roundTripJsonEraSpec @era
-    forM_ (eraProtVersions @era) $ Golden.spec @era
+    Golden.spec @era
     Golden.goldenListRedeemers @era
     describe "Imp" $ do
       Imp.spec @era

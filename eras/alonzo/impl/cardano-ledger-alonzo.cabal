@@ -191,7 +191,7 @@ library testlib
     base,
     bytestring,
     cardano-data:{cardano-data, testlib},
-    cardano-ledger-allegra,
+    cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
     cardano-ledger-alonzo,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
