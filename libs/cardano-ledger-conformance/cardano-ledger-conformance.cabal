@@ -144,6 +144,7 @@ test-suite tests
     microlens,
     microlens-mtl,
     mtl,
+    prettyprinter,
     small-steps,
     text,
     unliftio,

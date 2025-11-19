@@ -28,6 +28,7 @@ import Constrained.Generation
 import Data.Either (fromRight)
 import Lens.Micro
 import MAlonzo.Code.Ledger.Foreign.API qualified as Agda
+import Prettyprinter as Pretty
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
 import Test.Cardano.Ledger.Conformance.Spec.Core
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
@@ -44,18 +45,27 @@ conformsToImplAccepted ::
   Property
 conformsToImplAccepted impl agda = property $ do
   let ConstrainedGeneratorBundle {..} = constrainedRatify
+      fromSpecTransM = fromRight $ error "conformsToImplAccepted: translation error"
   govActions <- cgbContextGen
   ratifyEnv <- genFromSpec $ cgbEnvironmentSpec govActions
   ratifySt <- genFromSpec $ cgbStateSpec govActions ratifyEnv
-  let specEnv = fromRight (error "conformsToImplAccepted") $ runSpecTransM @Coin 0 $ toSpecRep ratifyEnv
+  let specEnv = fromSpecTransM $ runSpecTransM @Coin 0 $ toSpecRep ratifyEnv
       specSt =
-        fromRight (error "conformsToImplAccepted") $
+        fromSpecTransM $
           runSpecTransM govActions $
             toSpecRep (ratifySt ^. rsEnactStateL)
-      specGovActions = fromRight (error "conformsToImplAccepted") $ runSpecTransM () $ toSpecRep govActions
+      specGovActions = fromSpecTransM $ runSpecTransM () $ toSpecRep govActions
   return $
-    and $
-      zipWith (\ga sga -> impl ratifyEnv ratifySt ga == agda specEnv specSt sga) govActions specGovActions
+    conjoin $
+      zipWith
+        ( \ga sga ->
+            counterexample (prettify ratifyEnv ratifySt ga) $
+              impl ratifyEnv ratifySt ga == agda specEnv specSt sga
+        )
+        govActions
+        specGovActions
+  where
+    prettify ratifyEnv ratifySt ga = ansiDocToString $ Pretty.vsep $ [ansiExpr ratifyEnv, ansiExpr ratifySt, ansiExpr ga]
 
 spec :: Spec
 spec = describe "RATIFY" $ do
