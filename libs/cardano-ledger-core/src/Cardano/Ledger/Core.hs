@@ -683,3 +683,6 @@ fromStrictMaybeL = lens strictMaybeToMaybe (const maybeToStrictMaybe)
 
 instance EraTx era => HasOKey TxId (Tx l era) where
   toOKey = txIdTx
+
+instance EraTxBody era => HasOKey TxId (TxBody l era) where
+  toOKey = txIdTxBody
