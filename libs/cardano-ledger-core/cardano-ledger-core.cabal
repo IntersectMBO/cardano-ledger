@@ -163,6 +163,31 @@ library internal
   hs-source-dirs: internal
   default-language: Haskell2010
 
+library cddl
+  import: warnings
+  exposed-modules:
+    Cardano.Ledger.Core.HuddleSpec
+    Cardano.Ledger.Huddle
+
+  visibility: public
+  hs-source-dirs: cddl
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+  build-depends:
+    base,
+    cardano-ledger-core,
+    cuddle >=0.4,
+    heredoc,
+    text,
+
 library testlib
   import: warnings
   exposed-modules:
