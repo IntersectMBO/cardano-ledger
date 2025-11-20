@@ -259,7 +259,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, isNothing, mapMaybe)
-import Data.Ratio ((%))
+import Data.Ratio (denominator, numerator, (%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -1343,27 +1343,46 @@ passTick = do
   impLastTickL += 1
   impNESL .= nes
 
+-- | Win with supplied probability
+drawBoolWithProbability ::
+  HasStatefulGen g m =>
+  -- | Probability with which this action should produce `True`
+  UnitInterval ->
+  m Bool
+drawBoolWithProbability probability = do
+  let p = unboundRational probability
+  n <- uniformRM (1, denominator p)
+  pure (n <= numerator p)
+
 -- | Runs the TICK rule until the next epoch is reached
 passEpoch ::
   forall era.
   (ShelleyEraImp era, HasCallStack) =>
   ImpTestM era ()
 passEpoch = do
-  let
-    tickUntilNewEpoch curEpochNo = do
-      oldNES <- getsNES id
-      passTick @era
-      newEpochNo <- getsNES nesELL
-      if newEpochNo > curEpochNo
-        then do
-          globals <- use impGlobalsL
-          newNES <- getsNES id
-          asks itePostEpochBoundaryHook >>= (\f -> f globals (TRC ((), oldNES, newEpochNo)) newNES)
-        else tickUntilNewEpoch curEpochNo
+  globals <- use impGlobalsL
   preNES <- gets impNES
-  let startEpoch = preNES ^. nesELL
-  logDoc $ "Entering " <> ansiExpr (succ startEpoch)
-  tickUntilNewEpoch startEpoch
+  let
+    curEpochNo = preNES ^. nesELL
+    ticksPerSlot =
+      positiveUnitIntervalRelaxToUnitInterval (activeSlotVal (activeSlotCoeff globals))
+    tickUntilNewEpoch = do
+      tickHasBlock <- drawBoolWithProbability ticksPerSlot
+      if tickHasBlock
+        then do
+          oldNES <- getsNES id
+          passTick @era
+          newEpochNo <- getsNES nesELL
+          if newEpochNo > curEpochNo
+            then do
+              newNES <- getsNES id
+              asks itePostEpochBoundaryHook >>= (\f -> f globals (TRC ((), oldNES, newEpochNo)) newNES)
+            else tickUntilNewEpoch
+        else do
+          impLastTickL += 1
+          tickUntilNewEpoch
+  logDoc $ "Entering " <> ansiExpr (succ curEpochNo)
+  tickUntilNewEpoch
   gets impNES >>= epochBoundaryCheck preNES
 
 epochBoundaryCheck ::
@@ -1869,7 +1888,8 @@ whenMajorVersion ::
   , MinVersion <= v
   , v <= MaxVersion
   ) =>
-  ImpTestM era () -> ImpTestM era ()
+  ImpTestM era () ->
+  ImpTestM era ()
 whenMajorVersion a = do
   pv <- getProtVer
   when (pvMajor pv == natVersion @v) a
@@ -1881,7 +1901,8 @@ whenMajorVersionAtLeast ::
   , MinVersion <= v
   , v <= MaxVersion
   ) =>
-  ImpTestM era () -> ImpTestM era ()
+  ImpTestM era () ->
+  ImpTestM era ()
 whenMajorVersionAtLeast a = do
   pv <- getProtVer
   when (pvMajor pv >= natVersion @v) a
@@ -1893,7 +1914,8 @@ whenMajorVersionAtMost ::
   , MinVersion <= v
   , v <= MaxVersion
   ) =>
-  ImpTestM era () -> ImpTestM era ()
+  ImpTestM era () ->
+  ImpTestM era ()
 whenMajorVersionAtMost a = do
   pv <- getProtVer
   when (pvMajor pv <= natVersion @v) a
@@ -1905,7 +1927,8 @@ unlessMajorVersion ::
   , MinVersion <= v
   , v <= MaxVersion
   ) =>
-  ImpTestM era () -> ImpTestM era ()
+  ImpTestM era () ->
+  ImpTestM era ()
 unlessMajorVersion a = do
   pv <- getProtVer
   unless (pvMajor pv == natVersion @v) a
