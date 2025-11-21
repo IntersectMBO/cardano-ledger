@@ -22,6 +22,7 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Rules.Cert ()
+import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPOOL, ShelleyPoolPredFailure)
 import Control.State.Transition.Extended
 import GHC.Base (absurd)
@@ -41,7 +42,7 @@ instance InjectRuleFailure "CERTS" ConwayDelegPredFailure DijkstraEra where
 instance InjectRuleFailure "CERTS" ShelleyPoolPredFailure DijkstraEra where
   injectFailure = CertFailure . injectFailure
 
-instance InjectRuleFailure "CERTS" ConwayGovCertPredFailure DijkstraEra where
+instance InjectRuleFailure "CERTS" DijkstraGovCertPredFailure DijkstraEra where
   injectFailure = CertFailure . injectFailure
 
 instance

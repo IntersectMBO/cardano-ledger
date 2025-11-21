@@ -8,7 +8,13 @@
 
 module Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
+  DijkstraBBODY,
   DijkstraCERT,
+  DijkstraGOV,
+  DijkstraGOVCERT,
+  DijkstraLEDGER,
+  DijkstraUTXO,
+  DijkstraUTXOW,
 ) where
 
 import Cardano.Ledger.Conway.Core
@@ -61,7 +67,9 @@ type instance EraRuleEvent "DELEGS" DijkstraEra = VoidEraRule "DELEGS" DijkstraE
 
 type instance Value DijkstraEra = MaryValue
 
-type instance EraRule "GOV" DijkstraEra = ConwayGOV DijkstraEra
+data DijkstraGOV era
+
+type instance EraRule "GOV" DijkstraEra = DijkstraGOV DijkstraEra
 
 type instance EraRule "NEWEPOCH" DijkstraEra = ConwayNEWEPOCH DijkstraEra
 
@@ -71,7 +79,9 @@ type instance EraRule "ENACT" DijkstraEra = ConwayENACT DijkstraEra
 
 type instance EraRule "UTXOS" DijkstraEra = ConwayUTXOS DijkstraEra
 
-type instance EraRule "LEDGER" DijkstraEra = ConwayLEDGER DijkstraEra
+data DijkstraLEDGER era
+
+type instance EraRule "LEDGER" DijkstraEra = DijkstraLEDGER DijkstraEra
 
 type instance EraRule "TICKF" DijkstraEra = ConwayTICKF DijkstraEra
 
@@ -85,13 +95,21 @@ type instance EraRule "CERT" DijkstraEra = DijkstraCERT DijkstraEra
 
 type instance EraRule "DELEG" DijkstraEra = ConwayDELEG DijkstraEra
 
-type instance EraRule "GOVCERT" DijkstraEra = ConwayGOVCERT DijkstraEra
+data DijkstraGOVCERT era
 
-type instance EraRule "UTXOW" DijkstraEra = ConwayUTXOW DijkstraEra
+type instance EraRule "GOVCERT" DijkstraEra = DijkstraGOVCERT DijkstraEra
 
-type instance EraRule "UTXO" DijkstraEra = ConwayUTXO DijkstraEra
+data DijkstraUTXOW era
 
-type instance EraRule "BBODY" DijkstraEra = ConwayBBODY DijkstraEra
+type instance EraRule "UTXOW" DijkstraEra = DijkstraUTXOW DijkstraEra
+
+data DijkstraUTXO era
+
+type instance EraRule "UTXO" DijkstraEra = DijkstraUTXO DijkstraEra
+
+data DijkstraBBODY era
+
+type instance EraRule "BBODY" DijkstraEra = DijkstraBBODY DijkstraEra
 
 type instance EraRule "MEMPOOL" DijkstraEra = ConwayMEMPOOL DijkstraEra
 

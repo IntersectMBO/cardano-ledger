@@ -20,6 +20,7 @@ module Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGovCertPredFailure (..),
   ConwayGovCertEnv (..),
   computeDRepExpiry,
+  conwayGovCertTransition,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -153,6 +154,7 @@ instance
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , EraRule "GOVCERT" era ~ ConwayGOVCERT era
+  , InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure era
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
   , ConwayEraCertState era
@@ -169,10 +171,15 @@ instance
   transitionRules = [conwayGovCertTransition @era]
 
 conwayGovCertTransition ::
+  forall era.
   ( ConwayEraPParams era
   , ConwayEraCertState era
+  , InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure era
+  , State (EraRule "GOVCERT" era) ~ CertState era
+  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
+  , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   ) =>
-  TransitionRule (ConwayGOVCERT era)
+  TransitionRule (EraRule "GOVCERT" era)
 conwayGovCertTransition = do
   TRC
     ( ConwayGovCertEnv {cgcePParams, cgceCurrentEpoch, cgceCurrentCommittee, cgceCommitteeProposals}
@@ -189,7 +196,7 @@ conwayGovCertTransition = do
               Map.lookup coldCred csCommitteeCreds >>= \case
                 CommitteeMemberResigned {} -> Just coldCred
                 CommitteeHotCredential {} -> Nothing
-        failOnJust coldCredResigned ConwayCommitteeHasPreviouslyResigned
+        failOnJust coldCredResigned $ injectFailure . ConwayCommitteeHasPreviouslyResigned
         let isCurrentMember =
               strictMaybe False (Map.member coldCred . committeeMembers) cgceCurrentCommittee
             committeeUpdateContainsColdCred GovActionState {gasProposalProcedure} =
@@ -198,16 +205,17 @@ conwayGovCertTransition = do
                 _ -> False
             isPotentialFutureMember =
               any committeeUpdateContainsColdCred cgceCommitteeProposals
-        isCurrentMember || isPotentialFutureMember ?! ConwayCommitteeIsUnknown coldCred
+        isCurrentMember || isPotentialFutureMember ?! (injectFailure . ConwayCommitteeIsUnknown) coldCred
         pure $
           certState
             & certVStateL . vsCommitteeStateL . csCommitteeCredsL %~ Map.insert coldCred newMemberState
   case cert of
     ConwayRegDRep cred deposit mAnchor -> do
-      Map.notMember cred (certState ^. certVStateL . vsDRepsL) ?! ConwayDRepAlreadyRegistered cred
+      Map.notMember cred (certState ^. certVStateL . vsDRepsL)
+        ?! (injectFailure . ConwayDRepAlreadyRegistered) cred
       deposit
         == ppDRepDeposit
-          ?! ConwayDRepIncorrectDeposit
+          ?! (injectFailure . ConwayDRepIncorrectDeposit)
             Mismatch
               { mismatchSupplied = deposit
               , mismatchExpected = ppDRepDeposit
@@ -233,8 +241,8 @@ conwayGovCertTransition = do
             let paidDeposit = drepState ^. drepDepositL
             guard (refund /= paidDeposit)
             pure paidDeposit
-      isJust mDRepState ?! ConwayDRepNotRegistered cred
-      failOnJust drepRefundMismatch $ ConwayDRepIncorrectRefund . Mismatch refund
+      isJust mDRepState ?! (injectFailure . ConwayDRepNotRegistered) cred
+      failOnJust drepRefundMismatch $ injectFailure . ConwayDRepIncorrectRefund . Mismatch refund
       let
         certState' =
           certState & certVStateL . vsDRepsL %~ Map.delete cred
@@ -249,7 +257,8 @@ conwayGovCertTransition = do
                 %~ clearDRepDelegations (drepDelegs dRepState)
     -- Update a DRep expiry along with its anchor.
     ConwayUpdateDRep cred mAnchor -> do
-      Map.member cred (certState ^. certVStateL . vsDRepsL) ?! ConwayDRepNotRegistered cred
+      Map.member cred (certState ^. certVStateL . vsDRepsL)
+        ?! (injectFailure . ConwayDRepNotRegistered) cred
       pure $
         certState
           & certVStateL . vsDRepsL

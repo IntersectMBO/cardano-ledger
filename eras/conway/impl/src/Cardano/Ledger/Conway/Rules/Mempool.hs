@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -14,6 +16,7 @@
 
 module Cardano.Ledger.Conway.Rules.Mempool (
   ConwayMEMPOOL,
+  mempoolTransition,
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
@@ -66,7 +69,8 @@ instance
   , ConwayEraCertState era
   , EraStake era
   , EraCertState era
-  , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Eq (PredicateFailure (EraRule "CERTS" era))
   , Eq (PredicateFailure (EraRule "GOV" era))
@@ -74,8 +78,10 @@ instance
   , Show (PredicateFailure (EraRule "CERTS" era))
   , Show (PredicateFailure (EraRule "GOV" era))
   , Show (PredicateFailure (EraRule "UTXOW" era))
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
+  , Embed (EraRule "LEDGER" era) (EraRule "MEMPOOL" era)
+  , EraRule "MEMPOOL" era ~ ConwayMEMPOOL era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "MEMPOOL" ConwayLedgerPredFailure era
   ) =>
   STS (ConwayMEMPOOL era)
   where
@@ -94,12 +100,16 @@ mempoolTransition ::
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
-  , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
+  , Signal (EraRule "MEMPOOL" era) ~ Tx TopTx era
+  , State (EraRule "MEMPOOL" era) ~ LedgerState era
+  , Environment (EraRule "MEMPOOL" era) ~ LedgerEnv era
+  , InjectRuleFailure "MEMPOOL" ConwayLedgerPredFailure era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
+  , Embed (EraRule "LEDGER" era) (EraRule "MEMPOOL" era)
   ) =>
-  TransitionRule (ConwayMEMPOOL era)
+  TransitionRule (EraRule "MEMPOOL" era)
 mempoolTransition = do
   TRC trc@(ledgerEnv, ledgerState, tx) <-
     judgmentContext
@@ -113,7 +123,7 @@ mempoolTransition = do
     UTxO utxo = ledgerState ^. utxoG
     notAllSpent = any (`Map.member` utxo) inputs
   notAllSpent
-    ?! ConwayMempoolFailure
+    ?! (injectFailure . ConwayMempoolFailure @era)
       "All inputs are spent. Transaction has probably already been included"
 
   -- Skip all other checks if the transaction is probably a duplicate
@@ -131,7 +141,7 @@ mempoolTransition = do
                 (ledgerState ^. lsCertStateL . certVStateL . vsCommitteeStateL)
                 (tx ^. bodyTxL . votingProceduresTxBodyL)
             )
-            (ConwayMempoolFailure . addPrefix . T.pack . show . NE.toList)
+            (injectFailure . ConwayMempoolFailure . addPrefix . T.pack . show . NE.toList)
 
     -- Continue with LEDGER rules
     trans @(EraRule "LEDGER" era) $ TRC trc
@@ -143,9 +153,9 @@ instance
   , BaseM (EraRule "CERTS" era) ~ ShelleyBase
   , BaseM (EraRule "GOV" era) ~ ShelleyBase
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
-  , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
-  , Embed (EraRule "GOV" era) (ConwayLEDGER era)
-  , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
+  , Embed (EraRule "CERTS" era) (EraRule "LEDGER" era)
+  , Embed (EraRule "GOV" era) (EraRule "LEDGER" era)
+  , Embed (EraRule "UTXOW" era) (EraRule "LEDGER" era)
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
@@ -161,8 +171,9 @@ instance
   , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ ConwayLEDGER era
-  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
+  , EraRule "MEMPOOL" era ~ ConwayMEMPOOL era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   ) =>
   Embed (ConwayLEDGER era) (ConwayMEMPOOL era)
   where
