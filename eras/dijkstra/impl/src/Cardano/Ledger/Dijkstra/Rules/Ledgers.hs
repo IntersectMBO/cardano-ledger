@@ -16,16 +16,16 @@ import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure,
   ConwayCertsPredFailure,
   ConwayDelegPredFailure,
-  ConwayGovCertPredFailure,
   ConwayGovPredFailure,
-  ConwayLedgerPredFailure,
-  ConwayUtxoPredFailure,
   ConwayUtxosPredFailure,
-  ConwayUtxowPredFailure,
  )
 import Cardano.Ledger.Dijkstra.Core (EraRuleEvent, EraRuleFailure, InjectRuleFailure (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Rules.Ledger ()
+import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersEvent,
   ShelleyLedgersPredFailure (..),
@@ -40,10 +40,10 @@ type instance EraRuleEvent "LEDGERS" DijkstraEra = ShelleyLedgersEvent DijkstraE
 
 instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure DijkstraEra
 
-instance InjectRuleFailure "LEDGERS" ConwayLedgerPredFailure DijkstraEra where
+instance InjectRuleFailure "LEDGERS" DijkstraLedgerPredFailure DijkstraEra where
   injectFailure = LedgerFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayUtxowPredFailure DijkstraEra where
+instance InjectRuleFailure "LEDGERS" DijkstraUtxowPredFailure DijkstraEra where
   injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" BabbageUtxowPredFailure DijkstraEra where
@@ -55,7 +55,7 @@ instance InjectRuleFailure "LEDGERS" AlonzoUtxowPredFailure DijkstraEra where
 instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure DijkstraEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayUtxoPredFailure DijkstraEra where
+instance InjectRuleFailure "LEDGERS" DijkstraUtxoPredFailure DijkstraEra where
   injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" BabbageUtxoPredFailure DijkstraEra where
@@ -88,8 +88,11 @@ instance InjectRuleFailure "LEDGERS" ConwayDelegPredFailure DijkstraEra where
 instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure DijkstraEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayGovCertPredFailure DijkstraEra where
+instance InjectRuleFailure "LEDGERS" DijkstraGovCertPredFailure DijkstraEra where
   injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" ConwayGovPredFailure DijkstraEra where
+  injectFailure = LedgerFailure . injectFailure
+
+instance InjectRuleFailure "LEDGERS" DijkstraGovPredFailure DijkstraEra where
   injectFailure = LedgerFailure . injectFailure

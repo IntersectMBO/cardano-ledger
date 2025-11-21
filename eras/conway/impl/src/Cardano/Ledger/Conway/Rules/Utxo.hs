@@ -326,7 +326,7 @@ instance
     10 -> SumD OutputBootAddrAttrsTooBig <! From
     11 -> SumD OutputTooBigUTxO <! From
     12 -> SumD InsufficientCollateral <! From <! From
-    13 -> SumD ScriptsNotPaidUTxO <! D (UTxO <$> decCBOR)
+    13 -> SumD ScriptsNotPaidUTxO <! From
     14 -> SumD ExUnitsTooBigUTxO <! mapCoder unswapMismatch FromGroup
     15 -> SumD CollateralContainsNonADA <! From
     16 -> SumD WrongNetworkInTxBody <! mapCoder unswapMismatch FromGroup

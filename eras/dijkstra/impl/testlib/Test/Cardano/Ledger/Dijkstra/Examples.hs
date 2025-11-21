@@ -15,8 +15,9 @@ import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
-import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..), ConwayLEDGER)
+import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Rules (DijkstraLEDGER)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
@@ -66,7 +67,7 @@ ledgerExamples =
   mkLedgerExamples
     ( ApplyTxError $
         pure $
-          wrapFailed @(ConwayDELEG DijkstraEra) @(ConwayLEDGER DijkstraEra) $
+          wrapFailed @(ConwayDELEG DijkstraEra) @(DijkstraLEDGER DijkstraEra) $
             DelegateeStakePoolNotRegisteredDELEG @DijkstraEra (mkKeyHash 1)
     )
     exampleBabbageNewEpochState

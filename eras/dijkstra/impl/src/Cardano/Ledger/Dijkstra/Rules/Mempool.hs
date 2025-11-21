@@ -12,30 +12,32 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Rules.Mempool (
-  ConwayMEMPOOL,
+module Cardano.Ledger.Dijkstra.Rules.Mempool (
+  DijkstraMEMPOOL,
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (
-  ConwayLEDGER,
-  ConwayMEMPOOL,
-  hardforkConwayDisallowUnelectedCommitteeFromVoting,
- )
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
   ConwayGovState,
   Proposals,
-  committeeGovStateL,
  )
-import Cardano.Ledger.Conway.Rules.Certs (CertsEnv)
-import Cardano.Ledger.Conway.Rules.Gov (GovEnv, GovSignal, unelectedCommitteeVoters)
-import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerEvent, ConwayLedgerPredFailure (..))
-import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.Rules (
+  CertsEnv,
+  ConwayLedgerEvent,
+  ConwayLedgerPredFailure,
+  GovEnv,
+  GovSignal,
+ )
+import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.Era (
+  DijkstraLEDGER,
+  DijkstraMEMPOOL,
+ )
+import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure (..))
+import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLedgerPredFailure, UtxoEnv, ledgerPpL)
-import Control.Monad (unless)
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLedgerPredFailure, UtxoEnv)
 import Control.State.Transition (
   BaseM,
   Environment,
@@ -46,17 +48,14 @@ import Control.State.Transition (
   State,
   TRC (TRC),
   TransitionRule,
-  failOnNonEmpty,
   judgmentContext,
   transitionRules,
   whenFailureFreeDefault,
   (?!),
  )
 import Control.State.Transition.Extended (Embed (..), trans)
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
-import Data.Text as T (pack)
 import Lens.Micro ((^.))
 
 instance
@@ -66,7 +65,7 @@ instance
   , ConwayEraCertState era
   , EraStake era
   , EraCertState era
-  , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
+  , Embed (EraRule "LEDGER" era) (DijkstraMEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Eq (PredicateFailure (EraRule "CERTS" era))
   , Eq (PredicateFailure (EraRule "GOV" era))
@@ -77,31 +76,28 @@ instance
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
   ) =>
-  STS (ConwayMEMPOOL era)
+  STS (DijkstraMEMPOOL era)
   where
-  type State (ConwayMEMPOOL era) = LedgerState era
-  type Signal (ConwayMEMPOOL era) = Tx TopTx era
-  type Environment (ConwayMEMPOOL era) = LedgerEnv era
-  type BaseM (ConwayMEMPOOL era) = ShelleyBase
-  type PredicateFailure (ConwayMEMPOOL era) = ConwayLedgerPredFailure era
-  type Event (ConwayMEMPOOL era) = ConwayLedgerEvent era
+  type State (DijkstraMEMPOOL era) = LedgerState era
+  type Signal (DijkstraMEMPOOL era) = Tx TopTx era
+  type Environment (DijkstraMEMPOOL era) = LedgerEnv era
+  type BaseM (DijkstraMEMPOOL era) = ShelleyBase
+  type PredicateFailure (DijkstraMEMPOOL era) = DijkstraLedgerPredFailure era
+  type Event (DijkstraMEMPOOL era) = ConwayLedgerEvent era
 
   transitionRules = [mempoolTransition @era]
 
 mempoolTransition ::
   forall era.
   ( EraTx era
-  , ConwayEraTxBody era
-  , ConwayEraGov era
-  , ConwayEraCertState era
-  , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
+  , Embed (EraRule "LEDGER" era) (DijkstraMEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
   ) =>
-  TransitionRule (ConwayMEMPOOL era)
+  TransitionRule (DijkstraMEMPOOL era)
 mempoolTransition = do
-  TRC trc@(ledgerEnv, ledgerState, tx) <-
+  TRC trc@(_ledgerEnv, ledgerState, tx) <-
     judgmentContext
 
   -- This rule only gets invoked on transactions within the mempool.
@@ -113,27 +109,11 @@ mempoolTransition = do
     UTxO utxo = ledgerState ^. utxoG
     notAllSpent = any (`Map.member` utxo) inputs
   notAllSpent
-    ?! ConwayMempoolFailure
+    ?! DijkstraMempoolFailure
       "All inputs are spent. Transaction has probably already been included"
 
-  -- Skip all other checks if the transaction is probably a duplicate
+  -- Continue with LEDGER rules if the transaction is not a duplicate,
   whenFailureFreeDefault ledgerState $ do
-    let protVer = ledgerEnv ^. ledgerPpL . ppProtocolVersionL
-    unless (hardforkConwayDisallowUnelectedCommitteeFromVoting protVer) $
-      -- This check can completely be removed once mainnet switches to protocol
-      -- version 11, since the same check has been implemented in the GOV rule.
-      --
-      -- Disallow votes by unelected committee members
-      let addPrefix = ("Unelected committee members are not allowed to cast votes: " <>)
-       in failOnNonEmpty
-            ( unelectedCommitteeVoters
-                (ledgerState ^. lsUTxOStateL . utxosGovStateL . committeeGovStateL)
-                (ledgerState ^. lsCertStateL . certVStateL . vsCommitteeStateL)
-                (tx ^. bodyTxL . votingProceduresTxBodyL)
-            )
-            (ConwayMempoolFailure . addPrefix . T.pack . show . NE.toList)
-
-    -- Continue with LEDGER rules
     trans @(EraRule "LEDGER" era) $ TRC trc
 
 instance
@@ -143,9 +123,9 @@ instance
   , BaseM (EraRule "CERTS" era) ~ ShelleyBase
   , BaseM (EraRule "GOV" era) ~ ShelleyBase
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
-  , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
-  , Embed (EraRule "GOV" era) (ConwayLEDGER era)
-  , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
+  , Embed (EraRule "CERTS" era) (DijkstraLEDGER era)
+  , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
+  , Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
@@ -160,12 +140,13 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , ConwayEraCertState era
-  , EraRule "LEDGER" era ~ ConwayLEDGER era
-  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
+  , EraRule "LEDGER" era ~ DijkstraLEDGER era
+  , EraRuleFailure "LEDGER" era ~ DijkstraLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   ) =>
-  Embed (ConwayLEDGER era) (ConwayMEMPOOL era)
+  Embed (DijkstraLEDGER era) (DijkstraMEMPOOL era)
   where
   wrapFailed = id
   wrapEvent = id

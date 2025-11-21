@@ -27,6 +27,7 @@ module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGovEvent (..),
   ConwayGovPredFailure (..),
   unelectedCommitteeVoters,
+  conwayGovTransition,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount, raCredential, raNetwork)
@@ -345,7 +346,7 @@ instance
 
   initialRules = []
 
-  transitionRules = [govTransition @era]
+  transitionRules = [conwayGovTransition @era]
 
 checkVotesAreNotForExpiredActions ::
   EpochNo ->
@@ -429,7 +430,7 @@ checkBootstrapProposal pp proposal@ProposalProcedure {pProcGovAction}
       failureUnless (isBootstrapAction pProcGovAction) $ DisallowedProposalDuringBootstrap proposal
   | otherwise = pure ()
 
-govTransition ::
+conwayGovTransition ::
   forall era.
   ( ConwayEraTxCert era
   , ConwayEraPParams era
@@ -437,7 +438,6 @@ govTransition ::
   , STS (EraRule "GOV" era)
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era
   , Signal (EraRule "GOV" era) ~ GovSignal era
-  , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
   , BaseM (EraRule "GOV" era) ~ ShelleyBase
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , State (EraRule "GOV" era) ~ Proposals era
@@ -445,7 +445,7 @@ govTransition ::
   , ConwayEraCertState era
   ) =>
   TransitionRule (EraRule "GOV" era)
-govTransition = do
+conwayGovTransition = do
   TRC
     ( GovEnv txid currentEpoch pp constitutionPolicy certState committee
       , st
@@ -466,7 +466,7 @@ govTransition = do
   when (hardforkConwayDisallowUnelectedCommitteeFromVoting $ pp ^. ppProtocolVersionL) $
     failOnNonEmpty
       (unelectedCommitteeVoters committee committeeState gsVotingProcedures)
-      UnelectedCommitteeVoters
+      (injectFailure . UnelectedCommitteeVoters)
 
   let processProposal ps (idx, proposal@ProposalProcedure {..}) = do
         runTest $ checkBootstrapProposal pp proposal
@@ -486,7 +486,7 @@ govTransition = do
                         { mismatchSupplied = newProtVer
                         , mismatchExpected = prevProtVer
                         }
-        failOnJust badHardFork id
+        failOnJust badHardFork injectFailure
 
         -- PParamsUpdate well-formedness check
         runTest $ actionWellFormed (pp ^. ppProtocolVersionL) pProcGovAction
@@ -495,20 +495,22 @@ govTransition = do
           let refundAddress = proposal ^. pProcReturnAddrL
               govAction = proposal ^. pProcGovActionL
           isAccountRegistered (raCredential refundAddress) (certDState ^. accountsL)
-            ?! ProposalReturnAccountDoesNotExist refundAddress
+            ?! (injectFailure . ProposalReturnAccountDoesNotExist) refundAddress
           case govAction of
             TreasuryWithdrawals withdrawals _ -> do
               let nonRegisteredAccounts =
                     flip Map.filterWithKey withdrawals $ \withdrawalAddress _ ->
                       not $ isAccountRegistered (raCredential withdrawalAddress) (certDState ^. accountsL)
-              failOnNonEmpty (Map.keys nonRegisteredAccounts) TreasuryWithdrawalReturnAccountsDoNotExist
+              failOnNonEmpty
+                (Map.keys nonRegisteredAccounts)
+                (injectFailure . TreasuryWithdrawalReturnAccountsDoNotExist)
             _ -> pure ()
 
         -- Deposit check
         let expectedDeposit = pp ^. ppGovActionDepositL
          in pProcDeposit
               == expectedDeposit
-                ?! ProposalDepositIncorrect
+                ?! (injectFailure . ProposalDepositIncorrect)
                   Mismatch
                     { mismatchSupplied = pProcDeposit
                     , mismatchExpected = expectedDeposit
@@ -517,7 +519,7 @@ govTransition = do
         -- Return address network id check
         raNetwork pProcReturnAddr
           == expectedNetworkId
-            ?! ProposalProcedureNetworkIdMismatch pProcReturnAddr expectedNetworkId
+            ?! injectFailure (ProposalProcedureNetworkIdMismatch pProcReturnAddr expectedNetworkId)
 
         -- Treasury withdrawal return address and committee well-formedness checks
         case pProcGovAction of
@@ -525,20 +527,20 @@ govTransition = do
             let mismatchedAccounts =
                   Set.filter ((/= expectedNetworkId) . raNetwork) $ Map.keysSet wdrls
             Set.null mismatchedAccounts
-              ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
+              ?! injectFailure (TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId)
 
             -- Policy check
             runTest $ checkPolicy @era constitutionPolicy proposalPolicy
 
             unless (hardforkConwayBootstrapPhase $ pp ^. ppProtocolVersionL) $
               -- The sum of all withdrawals must be positive
-              F.fold wdrls /= mempty ?! ZeroTreasuryWithdrawals pProcGovAction
+              F.fold wdrls /= mempty ?! (injectFailure . ZeroTreasuryWithdrawals) pProcGovAction
           UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do
             let conflicting = Set.intersection (Map.keysSet membersToAdd) membersToRemove
-             in Set.null conflicting ?! ConflictingCommitteeUpdate conflicting
+             in Set.null conflicting ?! (injectFailure . ConflictingCommitteeUpdate) conflicting
 
             let invalidMembers = Map.filter (<= currentEpoch) membersToAdd
-             in Map.null invalidMembers ?! ExpirationEpochTooSmall invalidMembers
+             in Map.null invalidMembers ?! (injectFailure . ExpirationEpochTooSmall) invalidMembers
           ParameterChange _ _ proposalPolicy ->
             runTest $ checkPolicy @era constitutionPolicy proposalPolicy
           _ -> pure ()
@@ -548,7 +550,7 @@ govTransition = do
             actionState = mkGovActionState newGaid proposal expiry currentEpoch
          in case proposalsAddAction actionState ps of
               Just updatedPs -> pure updatedPs
-              Nothing -> ps <$ failBecause (InvalidPrevGovActionId proposal)
+              Nothing -> ps <$ failBecause (injectFailure $ InvalidPrevGovActionId proposal)
 
   proposals <-
     foldlM' processProposal st $
@@ -586,8 +588,8 @@ govTransition = do
             | (voter, votes) <- Map.toList (unVotingProcedures gsVotingProcedures)
             ]
 
-  failOnNonEmpty unknownVoters VotersDoNotExist
-  failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
+  failOnNonEmpty unknownVoters (injectFailure . VotersDoNotExist)
+  failOnNonEmpty unknownGovActionIds (injectFailure . GovActionsDoNotExist)
   runTest $ checkBootstrapVotes pp knownVotes
   runTest $ checkVotesAreNotForExpiredActions currentEpoch knownVotes
   runTest $ checkVotersAreValid currentEpoch committeeState knownVotes

@@ -2,6 +2,21 @@
 
 ## 0.2.0.0
 
+* Change some rule transitions to use Dijkstra's own rules instead of reusing Conway's:
+  - `DijkstraBBODY`
+  - `DijkstraGOV`
+  - `DijkstraGOVCERT`
+  - `DijkstraLEDGER`
+  - `DijkstraMEMPOOL`
+  - `DijkstraUTXO`
+  - `DijkstraUTXOW`
+* Change some rule predicate failures to use Dijkstra-era versions:
+  - `DijkstraBbodyPredFailure` for the BBODY rule
+  - `DijkstraGovPredFailure` for the GOV rule
+  - `DijkstraGovCertPredFailure` for the GOVCERT rule
+  - `DijkstraLedgerPredFailure` for the LEDGER rule
+  - `DijkstraUtxoPredFailure` for the UTXO rule
+  - `DijkstraUtxowPredFailure` for the UTXOW rule
 * Add `requiredTopLevelGuardsDijkstraTxBodyRawL`
 * Add `dstbRequiredTopLevelGuards` to `TxBody`
 * Add `dstbrRequiredTopLevelGuards` to `DijkstraSubTxBodyRaw`
