@@ -16,6 +16,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -49,12 +50,17 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getByronKeyPair,
   freshSafeHash,
   freshKeyHashVRF,
+  submitBlock,
+  submitBlock_,
   submitTx,
   submitTx_,
   submitTxAnn,
   submitTxAnn_,
+  submitFailingBlock,
+  submitFailingBlockM,
   submitFailingTx,
   submitFailingTxM,
+  trySubmitBlock,
   trySubmitTx,
   impShelleyExpectTxSuccess,
   modifyNES,
@@ -167,10 +173,10 @@ import Cardano.Ledger.Address (
   RewardAccount (..),
   bootstrapKeyHash,
  )
-import Cardano.Ledger.BHeaderView (BHeaderView)
+import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (Block)
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..), credToText)
@@ -209,7 +215,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   LedgerEnv (..),
-  ShelleyBbodyState,
+  ShelleyBbodyState (..),
   ShelleyDelegPredFailure,
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
@@ -234,7 +240,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
-import Control.Monad (forM)
+import Control.Monad (forM, (<=<))
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
 import Control.Monad.State.Strict (MonadState (..), evalStateT, get, gets, modify, put)
@@ -248,7 +254,7 @@ import Control.State.Transition.Extended (
   SingEP (..),
   ValidationPolicy (..),
  )
-import Data.Bifunctor (first)
+import Data.Bifunctor (bimap, first)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default (Default (..))
@@ -652,7 +658,7 @@ withEachEraVersion ::
 withEachEraVersion specWith =
   withImpInit @(LedgerSpec era) $ do
     forM_ (eraProtVersions @era) $ \protVer ->
-      describe (show protVer) $
+      describe ("Protocol " <> show protVer) $
         modifyImpInitProtVer protVer specWith
 
 shelleyModifyImpInitProtVer ::
@@ -1246,6 +1252,85 @@ submitFailingTxM tx mkExpectedFailures = do
   (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
   expectedFailures <- mkExpectedFailures fixedUpTx
   predFailures `shouldBeExpr` expectedFailures
+
+submitBlock_ ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
+  , NFData (Block BHeaderView era)
+  ) =>
+  [Tx TopTx era] -> ImpTestM era ()
+submitBlock_ = void . submitBlock
+
+submitBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
+  , NFData (Block BHeaderView era)
+  ) =>
+  [Tx TopTx era] -> ImpTestM era (Block BHeaderView era)
+submitBlock = expectRightDeepExpr . first fst <=< trySubmitBlock
+
+submitFailingBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
+  , NFData (PredicateFailure (EraRule "BBODY" era))
+  , ToExpr (Block BHeaderView era)
+  , NFData (Block BHeaderView era)
+  ) =>
+  [Tx TopTx era] ->
+  NonEmpty (PredicateFailure (EraRule "BBODY" era)) ->
+  ImpTestM era ()
+submitFailingBlock txs = submitFailingBlockM txs . const . pure
+
+submitFailingBlockM ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
+  , NFData (PredicateFailure (EraRule "BBODY" era))
+  , ToExpr (Block BHeaderView era)
+  , NFData (Block BHeaderView era)
+  ) =>
+  [Tx TopTx era] ->
+  (Block BHeaderView era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "BBODY" era)))) ->
+  ImpTestM era ()
+submitFailingBlockM txs mkExpectedFailures = do
+  (predFailures, block) <- expectLeftDeepExpr =<< trySubmitBlock txs
+  expectedFailures <- mkExpectedFailures block
+  predFailures `shouldBeExpr` expectedFailures
+
+trySubmitBlock ::
+  forall era.
+  ShelleyEraImp era =>
+  [Tx TopTx era] ->
+  ImpTestM
+    era
+    ( Either
+        (NonEmpty (PredicateFailure (EraRule "BBODY" era)), Block BHeaderView era)
+        (Block BHeaderView era)
+    )
+trySubmitBlock txs = do
+  let blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ SSeq.fromList txs
+  nes <- use impNESL
+  let ls = nes ^. nesEsL . esLStateL
+      pp = nes ^. nesEsL . curPParamsEpochStateL @era
+  kh <- freshKeyHash
+  slotNo <- use impLastTickG
+  let blockHeader =
+        BHeaderView
+          { bhviewID = kh
+          , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
+          , bhviewHSize = 0
+          , bhviewBHash = hashBlockBody blockBody
+          , bhviewSlot = slotNo
+          }
+      block = Block {blockHeader, blockBody}
+  bimap (,block) (const block)
+    <$> tryRunImpRule @"BBODY"
+      (BbodyEnv pp (nes ^. chainAccountStateL))
+      (BbodyState ls (BlocksMade Map.empty))
+      block
 
 tryRunImpRule ::
   forall rule era.
