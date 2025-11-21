@@ -49,6 +49,7 @@ library
     Cardano.Ledger.Dijkstra.UTxO
 
   other-modules:
+    Cardano.Ledger.Dijkstra.BlockBody.Internal
     Cardano.Ledger.Dijkstra.Rules.Bbody
     Cardano.Ledger.Dijkstra.Rules.Cert
     Cardano.Ledger.Dijkstra.Rules.Certs
