@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
@@ -29,10 +30,13 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   alignedValidFlags,
   mkBasicBlockBodyDijkstra,
   txSeqBlockBodyDijkstraL,
+  DijkstraEraBlockBody (..),
+  perasCertBlockBodyDijkstraL,
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.BaseTypes (PerasCert)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
@@ -53,7 +57,11 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
-import Data.Maybe.Strict (maybeToStrictMaybe, strictMaybeToMaybe)
+import Data.Maybe.Strict (
+  StrictMaybe (..),
+  maybeToStrictMaybe,
+  strictMaybeToMaybe,
+ )
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -74,6 +82,8 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 
 data DijkstraBlockBody era = DijkstraBlockBodyInternal
   { dbbTxs :: !(StrictSeq (Tx TopTx era))
+  , dbbPerasCert :: !(StrictMaybe PerasCert)
+  -- ^ Optional Peras certificate
   , dbbHash :: Hash.Hash HASH EraIndependentBlockBody
   -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
   , dbbTxsBodyBytes :: BSL.ByteString
@@ -102,7 +112,7 @@ mkBasicBlockBodyDijkstra ::
   , AlonzoEraTx era
   ) =>
   BlockBody era
-mkBasicBlockBodyDijkstra = DijkstraBlockBody mempty
+mkBasicBlockBodyDijkstra = DijkstraBlockBody mempty SNothing
 {-# INLINEABLE mkBasicBlockBodyDijkstra #-}
 
 txSeqBlockBodyDijkstraL ::
@@ -111,8 +121,26 @@ txSeqBlockBodyDijkstraL ::
   , AlonzoEraTx era
   ) =>
   Lens' (BlockBody era) (StrictSeq (Tx TopTx era))
-txSeqBlockBodyDijkstraL = lens dbbTxs (\_ s -> DijkstraBlockBody s)
+txSeqBlockBodyDijkstraL = lens dbbTxs (\_ s -> DijkstraBlockBody s SNothing)
 {-# INLINEABLE txSeqBlockBodyDijkstraL #-}
+
+-- | Dijkstra-specific extensions to 'EraBlockBody'
+class EraBlockBody era => DijkstraEraBlockBody era where
+  perasCertBlockBodyL :: Lens' (BlockBody era) (StrictMaybe PerasCert)
+  -- ^ Lens to access the optional Peras certificate in the block body
+
+perasCertBlockBodyDijkstraL ::
+  ( SafeToHash (TxWits era)
+  , BlockBody era ~ DijkstraBlockBody era
+  , AlonzoEraTx era
+  ) =>
+  Lens' (BlockBody era) (StrictMaybe PerasCert)
+perasCertBlockBodyDijkstraL =
+  lens dbbPerasCert (\_ s -> DijkstraBlockBody mempty s)
+{-# INLINEABLE perasCertBlockBodyDijkstraL #-}
+
+instance DijkstraEraBlockBody DijkstraEra where
+  perasCertBlockBodyL = perasCertBlockBodyDijkstraL
 
 pattern DijkstraBlockBody ::
   forall era.
@@ -120,11 +148,12 @@ pattern DijkstraBlockBody ::
   , SafeToHash (TxWits era)
   ) =>
   StrictSeq (Tx TopTx era) ->
+  StrictMaybe PerasCert ->
   DijkstraBlockBody era
-pattern DijkstraBlockBody xs <-
-  DijkstraBlockBodyInternal xs _ _ _ _ _
+pattern DijkstraBlockBody xs mbPerasCert <-
+  DijkstraBlockBodyInternal xs mbPerasCert _ _ _ _ _
   where
-    DijkstraBlockBody txns =
+    DijkstraBlockBody txns mbPerasCert =
       let version = eraProtVerLow @era
           serializeFoldablePreEncoded x =
             serialize version $
@@ -143,6 +172,7 @@ pattern DijkstraBlockBody xs <-
             serialize version $ encCBOR $ nonValidatingIndices txns
        in DijkstraBlockBodyInternal
             { dbbTxs = txns
+            , dbbPerasCert = mbPerasCert
             , dbbHash = hashDijkstraSegWits txSeqBodies txSeqWits txSeqAuxDatas txSeqIsValids
             , dbbTxsBodyBytes = txSeqBodies
             , dbbTxsWitsBytes = txSeqWits
@@ -173,7 +203,7 @@ deriving stock instance Eq (Tx TopTx era) => Eq (DijkstraBlockBody era)
 --------------------------------------------------------------------------------
 
 instance Era era => EncCBORGroup (DijkstraBlockBody era) where
-  encCBORGroup (DijkstraBlockBodyInternal _ _ bodyBytes witsBytes metadataBytes invalidBytes) =
+  encCBORGroup (DijkstraBlockBodyInternal _ _ _ bodyBytes witsBytes metadataBytes invalidBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes <> invalidBytes
@@ -243,9 +273,14 @@ instance
           sequenceA $
             StrictSeq.forceToStrict $
               Seq.zipWith4 dijkstraSegwitTx bodies wits validFlags auxData
+
+    let mbPerasCert =
+          pure SNothing
+
     pure $
       DijkstraBlockBodyInternal
         <$> txns
+        <*> mbPerasCert
         <*> (hashDijkstraSegWits <$> bodiesAnn <*> witsAnn <*> auxDataAnn <*> isValAnn)
         <*> bodiesAnn
         <*> witsAnn
@@ -298,6 +333,9 @@ dijkstraSegwitTx txBodyAnn txWitsAnn txIsValid txAuxDataAnn = Annotator $ \bytes
   txAuxData <- mapM (`runAnnotator` bytes) txAuxDataAnn
   pure $
     mkBasicTx txBody
-      & witsTxL .~ txWits
-      & auxDataTxL .~ maybeToStrictMaybe txAuxData
-      & isValidTxL .~ txIsValid
+      & witsTxL
+        .~ txWits
+      & auxDataTxL
+        .~ maybeToStrictMaybe txAuxData
+      & isValidTxL
+        .~ txIsValid
