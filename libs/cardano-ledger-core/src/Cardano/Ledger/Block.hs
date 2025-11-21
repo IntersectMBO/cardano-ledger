@@ -69,7 +69,7 @@ instance
   EncCBOR (Block h era)
   where
   encCBOR (Block h txns) =
-    encodeListLen (1 + listLen txns) <> encCBOR h <> encCBORGroup txns
+    encodeListLen (1 + listLen (toProxy txns)) <> encCBOR h <> encCBORGroup txns
 
 instance
   forall era h.

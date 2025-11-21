@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Remove `listLenBound` from `EncCBORGroup`
+* Change type of `listLen` in `EncCBORGroup` to accept a `Proxy` instead of a concrete value
 * Change `Density` type to only be available at the type level
 * Change `Wrapped` type to only be available at the type level
 * Make `decodeAnnSet` fail when there are duplicates, starting with protocol version `12`.
