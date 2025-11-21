@@ -37,6 +37,9 @@ module Cardano.Ledger.BaseTypes (
   PositiveUnitInterval,
   PositiveInterval,
   NonNegativeInterval,
+  positiveUnitIntervalRelaxToUnitInterval,
+  positiveUnitIntervalRelaxToPositiveInterval,
+  positiveIntervalRelaxToNonNegativeInterval,
   BoundedRational (..),
   fpPrecision,
   integralToBounded,
@@ -484,6 +487,15 @@ newtype PositiveUnitInterval
 instance Bounded (BoundedRatio PositiveUnitInterval Word64) where
   minBound = positiveIntervalEpsilon
   maxBound = BoundedRatio (1 % 1)
+
+positiveUnitIntervalRelaxToUnitInterval :: PositiveUnitInterval -> UnitInterval
+positiveUnitIntervalRelaxToUnitInterval = coerce
+
+positiveUnitIntervalRelaxToPositiveInterval :: PositiveUnitInterval -> PositiveInterval
+positiveUnitIntervalRelaxToPositiveInterval = coerce
+
+positiveIntervalRelaxToNonNegativeInterval :: PositiveInterval -> NonNegativeInterval
+positiveIntervalRelaxToNonNegativeInterval = coerce
 
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval
