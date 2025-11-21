@@ -41,6 +41,7 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
   EncCBORGroup (..),
+  decodeListLen,
   encCBOR,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
@@ -53,12 +54,15 @@ import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import Control.Monad (unless)
+import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
+import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (
   StrictMaybe (..),
+  isSJust,
   maybeToStrictMaybe,
   strictMaybeToMaybe,
  )
@@ -96,6 +100,8 @@ data DijkstraBlockBody era = DijkstraBlockBodyInternal
   , dbbTxsIsValidBytes :: BSL.ByteString
   -- ^ Bytes representing a set of integers. These are the indices of
   -- transactions with 'isValid' == False.
+  , dbbPerasCertBytes :: Maybe BSL.ByteString
+  -- ^ Bytes encoding the optional Peras certificate
   }
   deriving (Generic)
 
@@ -104,7 +110,7 @@ instance EraBlockBody DijkstraEra where
   mkBasicBlockBody = mkBasicBlockBodyDijkstra
   txSeqBlockBodyL = txSeqBlockBodyDijkstraL
   hashBlockBody = dbbHash
-  numSegComponents = 4
+  numSegComponents = 5
 
 mkBasicBlockBodyDijkstra ::
   ( SafeToHash (TxWits era)
@@ -151,7 +157,7 @@ pattern DijkstraBlockBody ::
   StrictMaybe PerasCert ->
   DijkstraBlockBody era
 pattern DijkstraBlockBody xs mbPerasCert <-
-  DijkstraBlockBodyInternal xs mbPerasCert _ _ _ _ _
+  DijkstraBlockBodyInternal xs mbPerasCert _ _ _ _ _ _
   where
     DijkstraBlockBody txns mbPerasCert =
       let version = eraProtVerLow @era
@@ -170,14 +176,23 @@ pattern DijkstraBlockBody xs mbPerasCert <-
               fmap originalBytes . view auxDataTxL <$> txns
           txSeqIsValids =
             serialize version $ encCBOR $ nonValidatingIndices txns
+          mbPerasCertBytes =
+            fmap (serialize version) (strictMaybeToMaybe mbPerasCert)
        in DijkstraBlockBodyInternal
             { dbbTxs = txns
             , dbbPerasCert = mbPerasCert
-            , dbbHash = hashDijkstraSegWits txSeqBodies txSeqWits txSeqAuxDatas txSeqIsValids
+            , dbbHash =
+                hashDijkstraSegWits
+                  txSeqBodies
+                  txSeqWits
+                  txSeqAuxDatas
+                  txSeqIsValids
+                  mbPerasCertBytes
             , dbbTxsBodyBytes = txSeqBodies
             , dbbTxsWitsBytes = txSeqWits
             , dbbTxsAuxDataBytes = txSeqAuxDatas
             , dbbTxsIsValidBytes = txSeqIsValids
+            , dbbPerasCertBytes = mbPerasCertBytes
             }
 
 {-# COMPLETE DijkstraBlockBody #-}
@@ -203,12 +218,18 @@ deriving stock instance Eq (Tx TopTx era) => Eq (DijkstraBlockBody era)
 --------------------------------------------------------------------------------
 
 instance Era era => EncCBORGroup (DijkstraBlockBody era) where
-  encCBORGroup (DijkstraBlockBodyInternal _ _ _ bodyBytes witsBytes metadataBytes invalidBytes) =
+  encCBORGroup blockBody =
     encodePreEncoded $
       BSL.toStrict $
-        bodyBytes <> witsBytes <> metadataBytes <> invalidBytes
-  listLen _ = 4
-  listLenBound _ = 4
+        dbbTxsBodyBytes blockBody
+          <> dbbTxsWitsBytes blockBody
+          <> dbbTxsAuxDataBytes blockBody
+          <> dbbTxsIsValidBytes blockBody
+          <> fromMaybe BSL.empty (dbbPerasCertBytes blockBody)
+  listLen blockBody =
+    4 + if isSJust (dbbPerasCert blockBody) then 1 else 0
+  listLenBound _ =
+    5
 
 hashDijkstraSegWits ::
   BSL.ByteString ->
@@ -219,13 +240,16 @@ hashDijkstraSegWits ::
   -- | Bytes for transaction auxiliary datas
   BSL.ByteString ->
   -- | Bytes for transaction isValid flags
+  Maybe BSL.ByteString ->
+  -- | Bytes for optional Peras certificate
   Hash HASH EraIndependentBlockBody
-hashDijkstraSegWits txSeqBodies txSeqWits txAuxData txSeqIsValids =
+hashDijkstraSegWits txSeqBodies txSeqWits txAuxData txSeqIsValids mbPerasCert =
   coerce . hashLazy . toLazyByteString $
     hashPart txSeqBodies
       <> hashPart txSeqWits
       <> hashPart txAuxData
       <> hashPart txSeqIsValids
+      <> maybe mempty hashPart mbPerasCert
   where
     hashLazy :: BSL.ByteString -> Hash HASH ByteString
     hashLazy = Hash.hashWith id . BSL.toStrict
@@ -244,6 +268,8 @@ instance
   DecCBOR (Annotator (DijkstraBlockBody era))
   where
   decCBOR = do
+    len <- decodeListLen
+
     (bodies, bodiesAnn) <- withSlice decCBOR
     (wits, witsAnn) <- withSlice decCBOR
     let bodiesLength = length bodies
@@ -274,18 +300,28 @@ instance
             StrictSeq.forceToStrict $
               Seq.zipWith4 dijkstraSegwitTx bodies wits validFlags auxData
 
-    let mbPerasCert =
-          pure SNothing
+    (mbPerasCert, mbPerasCertAnn) <-
+      case len of
+        4 -> return (pure SNothing, pure Nothing)
+        5 -> bimap (pure . SJust) (fmap Just) <$> withSlice decCBOR
+        _ -> fail $ "unexpected body length: " <> show len
 
     pure $
       DijkstraBlockBodyInternal
         <$> txns
         <*> mbPerasCert
-        <*> (hashDijkstraSegWits <$> bodiesAnn <*> witsAnn <*> auxDataAnn <*> isValAnn)
+        <*> ( hashDijkstraSegWits
+                <$> bodiesAnn
+                <*> witsAnn
+                <*> auxDataAnn
+                <*> isValAnn
+                <*> mbPerasCertAnn
+            )
         <*> bodiesAnn
         <*> witsAnn
         <*> auxDataAnn
         <*> isValAnn
+        <*> mbPerasCertAnn
 
 --------------------------------------------------------------------------------
 -- Internal utility functions
