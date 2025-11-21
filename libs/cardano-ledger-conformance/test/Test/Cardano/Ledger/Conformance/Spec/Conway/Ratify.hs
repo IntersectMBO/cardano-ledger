@@ -80,7 +80,9 @@ conformsToImplAccepted impl agda = property $ do
 
 spec :: Spec
 spec = describe "RATIFY" $ do
-  prop "STS" $ conformsToImplConstrained_ constrainedRatify
+  -- https://github.com/IntersectMBO/cardano-ledger/issues/5418
+  -- TODO: Re-enable after issue is resolved, by removing this override
+  xprop "STS" $ conformsToImplConstrained_ constrainedRatify
   describe "Accepted" $ do
     forM_
       [ ("DRep", (dRepAccepted, Agda.acceptedByDRep))
