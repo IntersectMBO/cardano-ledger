@@ -40,6 +40,8 @@
 
 ### `testlib`
 
+* Add `ToCBOR (StashedAVVMAddresses era)` superclass to `ShelleyEraTest`
+* Add `duplicateDelegCertsTxBody`
 * Add CDDL certificate definitions: `account_registration_cert`, `account_unregistration_cert`, `delegation_to_stake_pool_cert`
 * Add CDDL pool certificate definitions via `mkPoolRules`: `pool_registration_cert`, `pool_retirement_cert`
 * Add CDDL legacy certificate definitions: `genesis_delegation_cert`, `genesis_hash`, `genesis_delegate_hash`, `move_instantaneous_rewards_cert`, `move_instantaneous_reward`, `delta_coin`

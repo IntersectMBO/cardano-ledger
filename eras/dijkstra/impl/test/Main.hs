@@ -30,5 +30,4 @@ main =
         BabbageTxInfo.spec @DijkstraEra
         txInfoSpec @DijkstraEra SPlutusV3
         txInfoSpec @DijkstraEra SPlutusV4
-      describe "Golden" $ do
-        Golden.spec @DijkstraEra
+      Golden.spec @DijkstraEra

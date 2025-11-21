@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Shelley.Era (
   shelleyAccountsFromAccountsMap,
 ) where
 
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, ToCBOR)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
@@ -49,6 +49,7 @@ class
   , Default (StashedAVVMAddresses era)
   , Arbitrary (StashedAVVMAddresses era)
   , EncCBOR (StashedAVVMAddresses era)
+  , ToCBOR (StashedAVVMAddresses era)
   , DecCBOR (StashedAVVMAddresses era)
   , ToExpr (ScriptsNeeded era)
   , SafeToHash (TxWits era)
