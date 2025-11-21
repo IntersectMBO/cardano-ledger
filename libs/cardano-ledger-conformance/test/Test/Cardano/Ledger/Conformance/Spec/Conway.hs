@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Conformance.Spec.Conway (spec) where
 
 import Data.Map.Strict qualified as Map
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayCertExecContext (..))
+import Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify qualified as Ratify
 import Test.Cardano.Ledger.Conformance.Spec.Core
 import Test.Cardano.Ledger.Constrained.Conway (genUtxoExecContext)
 import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
@@ -24,7 +25,6 @@ import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   constrainedGov,
   constrainedGovCert,
   constrainedPool,
-  constrainedRatify,
   constrainedUtxo,
  )
 import Test.Cardano.Ledger.Imp.Common
@@ -36,7 +36,7 @@ spec = do
       prop "ENACT" $
         conformsToImplConstrained constrainedEnact $
           \curEpoch _ _ _ -> pure curEpoch
-      prop "RATIFY" $ conformsToImplConstrained_ constrainedRatify
+      Ratify.spec
       xprop "EPOCH" $ conformsToImplConstrained_ constrainedEpoch
       xprop "NEWEPOCH" $ conformsToImplConstrained_ constrainedEpoch
     describe "Blocks transition graph" $ do
