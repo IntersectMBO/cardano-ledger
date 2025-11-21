@@ -30,9 +30,13 @@ instance EraTransition AlonzoEra where
 
   mkTransitionConfig = AlonzoTransitionConfig
 
-  injectIntoTestState cfg = case agExtraConfig $ cfg ^. tcTranslationContextL of
-    Nothing -> shelleyRegisterInitialFundsThenStaking cfg
-    Just aec -> shelleyRegisterInitialFundsThenStaking cfg . overrideCostModels (aecCostModels aec)
+  injectIntoTestState cfg = 
+    shelleyRegisterInitialFundsThenStaking cfg . alonzoInjectCostModels cfg
+
+alonzoInjectCostModels cfg =
+  case agExtraConfig $ cfg ^. tcTranslationContextL of
+    Nothing -> id
+    Just aec -> overrideCostModels (aecCostModels aec)
 
   tcPreviousEraConfigL =
     lens atcMaryTransitionConfig (\atc pc -> atc {atcMaryTransitionConfig = pc})
@@ -48,4 +52,6 @@ overrideCostModels ::
   NewEpochState era ->
   NewEpochState era
 overrideCostModels Nothing nes = nes
-overrideCostModels (Just cms) nes = nes & nesEsL . curPParamsEpochStateL . ppCostModelsL %~ (<> cms)
+overrideCostModels = \case 
+  Nothing -> id 
+  Just cms -> nesEsL . curPParamsEpochStateL . ppCostModelsL %~ updateCostModels cms

@@ -229,7 +229,11 @@ instance FromJSON AlonzoGenesis where
     agCollateralPercentage <- o .: "collateralPercentage"
     agMaxCollateralInputs <- o .: "maxCollateralInputs"
     agExtraConfig <- o .:? "extraConfig"
-    let agCostModels = costModelsValid cms ! PlutusV1
+    agPlutusV1CostModel <- 
+      case Map.toList (costModelsValid cms) of
+        [] -> fail "Expected \"PlutusV1\" cost model to be supplied"
+        [(PlutusV1, pv1CostModel)] -> pure pv1CostModel
+        _ -> fail $ "Only PlutusV1 CostModel is allowed in the AlonzoGenesis, but " <> List.intercalate ", " (Map.keys cms) <> " were supplied. Use \"extraConfig\" if you need to inject other cost models for testing."
     return AlonzoGenesis {..}
 
 instance ToKeyValuePairs AlonzoGenesis where
@@ -243,4 +247,4 @@ instance ToKeyValuePairs AlonzoGenesis where
     , "collateralPercentage" .= agCollateralPercentage ag
     , "maxCollateralInputs" .= agMaxCollateralInputs ag
     ]
-      ++ ["extraConfig" .= agExtraConfig ag | isJust (agExtraConfig ag)]
+      ++ ["extraConfig" .= extraConfig | Just extraConfig <- [agExtraConfig ag]]
