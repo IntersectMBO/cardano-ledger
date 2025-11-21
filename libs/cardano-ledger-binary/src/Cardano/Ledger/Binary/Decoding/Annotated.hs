@@ -1,8 +1,10 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -26,6 +28,7 @@ module Cardano.Ledger.Binary.Decoding.Annotated (
   withSlice,
   FullByteString (..),
   decodeAnnSet,
+  decodeNonEmptySetLikeEnforceNoDuplicatesAnn,
 ) where
 
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (..))
@@ -34,6 +37,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder (
   DecoderError (..),
   allowTag,
   decodeList,
+  decodeNonEmptyList,
   decodeWithByteSpan,
   fromPlainDecoder,
   getDecoderVersion,
@@ -54,6 +58,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Function (on)
 import Data.Functor ((<&>))
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -240,6 +245,34 @@ decodeAnnSet dec = do
         const (Left $ DecoderErrorCustom "Set" "Duplicates detected")
     pure s
 {-# INLINE decodeAnnSet #-}
+
+decodeNonEmptySetLikeEnforceNoDuplicatesAnn ::
+  forall s a b c.
+  (Monoid b, DecCBOR (Annotator a)) =>
+  -- | Add an element into the decoded Set like data structure
+  (a -> b -> b) ->
+  -- | Get the final data structure and the number of elements it has.
+  (b -> (Int, c)) ->
+  Decoder s (Annotator c)
+decodeNonEmptySetLikeEnforceNoDuplicatesAnn insert getFinalWithLen = do
+  allowTag setTag
+  valAnns <- decodeNonEmptyList decCBOR
+  pure $ go mempty 0 valAnns
+  where
+    go :: b -> Int -> NonEmpty (Annotator a) -> Annotator c
+    go !m !n (x :| xs) = do
+      val <- x
+      case xs of
+        [] -> finish (insert val m) (n + 1)
+        (y : ys) -> go (insert val m) (n + 1) (y :| ys)
+    finish :: b -> Int -> Annotator c
+    finish m n
+      | finalLen /= n = fail "Duplicates found, expected no duplicates"
+      | otherwise = pure final
+      where
+        (finalLen, final) = getFinalWithLen m
+    {-# INLINE finish #-}
+{-# INLINE decodeNonEmptySetLikeEnforceNoDuplicatesAnn #-}
 
 instance DecCBOR (Annotator PV1.Data) where
   decCBOR = pure <$> fromPlainDecoder Serialise.decode

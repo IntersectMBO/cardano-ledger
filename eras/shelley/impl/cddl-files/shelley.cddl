@@ -164,7 +164,6 @@ pool_keyhash = hash28
 
 pool_registration_cert = (3, pool_params)
 
-; Pool parameters for stake pool registration
 pool_params = 
   ( operator       : pool_keyhash      
   , vrf_keyhash    : vrf_keyhash       

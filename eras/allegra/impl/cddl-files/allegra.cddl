@@ -166,7 +166,6 @@ pool_keyhash = hash28
 
 pool_registration_cert = (3, pool_params)
 
-; Pool parameters for stake pool registration
 pool_params = 
   ( operator       : pool_keyhash      
   , vrf_keyhash    : vrf_keyhash       
@@ -293,6 +292,8 @@ transaction_witness_set =
 vkeywitness = [vkey, signature]
 
 ; Allegra introduces timelock support for native scripts.
+; This is the 6-variant native script format used by
+; Allegra, Mary, Alonzo, Babbage, and Conway.
 ; 
 ; Timelock validity intervals are half-open intervals [a, b).
 ;   script_invalid_before: specifies the left (included) endpoint a.

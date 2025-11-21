@@ -40,6 +40,8 @@ module Cardano.Ledger.Binary.Decoding.Coders (
   fieldGuarded,
   fieldA,
   fieldAA,
+  ofieldA,
+  fieldAGuarded,
 
   -- * Using Duals
   decodeDual,
@@ -98,10 +100,8 @@ import Data.Void (Void)
 -- 3. get a (MemoBytes t)
 --
 -- The advantage of using Encode with a MemoBytes, is we don't have to make a EncCBOR
--- instance. Instead the "instance" is spread amongst the pattern constuctors by using
+-- instance. Instead the "instance" is spread amongst the pattern constructors by using
 -- (memoBytes encoding) in the where clause of the pattern contructor.
--- See some examples of this see the file Timelocks.hs
---
 
 -- ========================================================
 -- Subsidary classes and datatype used in the Coders scheme
@@ -161,9 +161,30 @@ invalidField n = field (flip $ const @t @Void) (Invalid n)
 
 -- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 -- A special case of 'field'
-fieldA :: (Typeable x, Applicative ann) => (x -> t -> t) -> Decode (Closed d) x -> Field (ann t)
-fieldA update dec = Field (liftA2 update) (pure <$> decode dec)
 {-# INLINE fieldA #-}
+fieldA :: (Typeable x, Applicative ann) => (x -> t -> t) -> Decode (Closed d) x -> Field (ann t)
+fieldA update = liftFieldA . field update
+
+{-# INLINE ofieldA #-}
+ofieldA ::
+  (Typeable x, Applicative ann) =>
+  (StrictMaybe x -> t -> t) ->
+  Decode (Closed d) x ->
+  Field (ann t)
+ofieldA update = liftFieldA . ofield update
+
+{-# INLINE fieldAGuarded #-}
+fieldAGuarded ::
+  (Typeable x, Applicative ann) =>
+  -- | The message to use if the condition fails
+  String ->
+  -- | The condition to guard against
+  (x -> Bool) ->
+  (x -> t -> t) ->
+  Decode (Closed d) x ->
+  Field (ann t)
+fieldAGuarded failMsg check update =
+  liftFieldA . fieldGuarded failMsg check update
 
 -- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 fieldAA ::
@@ -173,6 +194,13 @@ fieldAA ::
   Field (ann t)
 fieldAA update dec = Field (liftA2 update) (decode dec)
 {-# INLINE fieldAA #-}
+
+liftFieldA ::
+  Applicative ann =>
+  Field t ->
+  Field (ann t)
+liftFieldA (Field update dec) =
+  Field (liftA2 update) (pure <$> dec)
 
 -- ==================================================================
 -- Decode
@@ -319,8 +347,8 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 -- keyed sparse objects. The user supplies an initial value and field function, and a list
 -- of tags of the required fields. The initial value should have default values and
 -- any well type value in required fields. If the encode function (baz above) is
--- encoded properly the required fields in the initial value should always be over
--- overwritten. If it is not written properly, or a bad encoding comes from somewhere
+-- encoded properly the required fields in the initial value should always be overwritten.
+-- If it is not written properly, or a bad encoding comes from somewhere
 -- else, the intial values in the required fields might survive decoding. The list
 -- of required fields is checked.
 --
@@ -341,9 +369,9 @@ data Decode (w :: Wrapped) t where
   RecD :: t -> Decode (Closed Dense) t
   -- | Label the constructor of a Record-like datatype (one with multiple constructors) as an Decode.
   SumD :: t -> Decode Open t
-  -- | Lift a Word to Decode function into a DeCode for a type with multiple constructors.
+  -- | Lift a Word to Decode function into a Decode for a type with multiple constructors.
   Summands :: Text.Text -> (Word -> Decode Open t) -> Decode (Closed Dense) t
-  -- | Lift a Word to Field function into a DeCode for a type with 1 constructor stored sparsely
+  -- | Lift a Word to Field function into a Decode for a type with 1 constructor stored sparsely
   SparseKeyed ::
     Typeable t =>
     -- | Name of the Type (for error messages)
