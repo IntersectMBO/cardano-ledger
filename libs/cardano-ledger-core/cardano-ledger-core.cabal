@@ -52,7 +52,6 @@ library
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
     Cardano.Ledger.Credential
-    Cardano.Ledger.DRep
     Cardano.Ledger.Genesis
     Cardano.Ledger.HKD
     Cardano.Ledger.Hashes

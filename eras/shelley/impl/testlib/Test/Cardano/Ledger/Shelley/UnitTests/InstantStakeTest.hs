@@ -47,7 +47,7 @@ instantStakeIncludesRewards = do
         balance <- arbitrary
         let accounts' =
               addToBalanceAccounts (Map.singleton stakingCredential balance) $
-                registerTestAccount stakingCredential (Just ptr) deposit (Just poolId) Nothing accounts
+                registerTestAccount stakingCredential (Just ptr) deposit (Just poolId) accounts
         pure (stakingCredential, balance, accounts')
   (tom, tomBalance, accounts0) <- registerAccount poolId1 (def :: Accounts era)
   (john, johnBalance, accounts1) <- registerAccount poolId2 accounts0

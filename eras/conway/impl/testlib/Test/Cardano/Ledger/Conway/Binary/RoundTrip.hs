@@ -57,6 +57,8 @@ roundTripConwayEraTypesSpec = do
     roundTripShareEraTypeSpec @era @EnactState
     roundTripShareEraTypeSpec @era @GovActionState
     roundTripShareEraTypeSpec @era @Proposals
+    roundTripShareEraTypeSpec @era @Drep
+    roundTripShareEraTypeSpec @era @DrepState
     roundTripShareEraTypeSpec @era @DRepPulsingState
     roundTripShareEraTypeSpec @era @PulsingSnapshot
     roundTripShareEraTypeSpec @era @RatifyState

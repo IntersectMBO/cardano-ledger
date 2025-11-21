@@ -26,10 +26,10 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams)
+import Cardano.Ledger.Conway.State.DRep (DRepState)
 import Cardano.Ledger.Conway.TxCert (Delegatee)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (

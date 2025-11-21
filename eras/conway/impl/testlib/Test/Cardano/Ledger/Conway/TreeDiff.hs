@@ -354,3 +354,8 @@ instance
   ToExpr (ConwayBbodyPredFailure era)
 
 instance ToExpr (Tx TopTx ConwayEra)
+
+-- CertState
+instance ToExpr DRep
+
+instance ToExpr DRepState

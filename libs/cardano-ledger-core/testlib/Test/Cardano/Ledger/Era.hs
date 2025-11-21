@@ -99,7 +99,6 @@ class
     Maybe Ptr ->
     CompactForm Coin ->
     Maybe (KeyHash StakePool) ->
-    Maybe DRep ->
     AccountState era
 
   accountsFromAccountsMap :: Map.Map (Credential Staking) (AccountState era) -> Accounts era
@@ -111,8 +110,7 @@ registerTestAccount ::
   Maybe Ptr ->
   CompactForm Coin ->
   Maybe (KeyHash StakePool) ->
-  Maybe DRep ->
   Accounts era ->
   Accounts era
-registerTestAccount cred mPtr deposit mStakePool mDRep =
-  addAccountState cred (mkTestAccountState mPtr deposit mStakePool mDRep)
+registerTestAccount cred mPtr deposit mStakePool =
+  addAccountState cred (mkTestAccountState mPtr deposit mStakePool)

@@ -35,9 +35,9 @@ import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.State.Account
+import Cardano.Ledger.Conway.State.DRep (DRep (DRepCredential), DRepState, drepDelegs, drepDelegsL, drepDeposit, drepExpiry)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep (drepDelegsL)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData (..))

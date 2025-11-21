@@ -51,10 +51,10 @@ import Cardano.Ledger.Conway.State (
   ConwayAccounts (..),
   ShelleyAccountState,
  )
+import Cardano.Ledger.Conway.State.DRep (DRep (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (
   BootstrapWitness,
   GenDelegPair (..),

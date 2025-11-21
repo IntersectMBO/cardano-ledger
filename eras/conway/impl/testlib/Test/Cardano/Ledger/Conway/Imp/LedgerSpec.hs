@@ -23,8 +23,8 @@ import Cardano.Ledger.Conway.Rules (
   ConwayLedgerPredFailure (..),
   ConwayUtxoPredFailure (BadInputsUTxO),
  )
+import Cardano.Ledger.Conway.State.DRep
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError (..), applyTx, mkMempoolEnv)
 import Cardano.Ledger.Shelley.LedgerState

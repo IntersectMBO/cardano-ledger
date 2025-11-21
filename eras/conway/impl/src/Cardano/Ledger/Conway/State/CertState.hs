@@ -39,6 +39,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.State.Account (ConwayEraAccounts)
+import Cardano.Ledger.Conway.State.DRep (DRepState, drepDeposit)
 import Cardano.Ledger.Conway.State.VState
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))

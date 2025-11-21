@@ -8,6 +8,7 @@ import Cardano.Ledger.Plutus (SLanguage (..))
 import Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec)
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Conway.JSON (roundTripJsonConwayEraSpec)
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.Golden as Golden
@@ -24,6 +25,7 @@ main =
       Cddl.spec
       GoldenSpec.spec
       roundTripJsonShelleyEraSpec @DijkstraEra
+      roundTripJsonConwayEraSpec @DijkstraEra
       describe "Imp" $ do
         Imp.spec @DijkstraEra
       describe "TxInfo" $ do

@@ -34,6 +34,5 @@ spec = do
     roundTripJsonSpec @Addr
     roundTripJsonSpec @RewardAccount
     roundTripJsonSpec @(Credential Witness)
-    roundTripJsonSpec @DRep
     roundTripJsonSpec @Anchor
     roundTripJsonSpec @TxId

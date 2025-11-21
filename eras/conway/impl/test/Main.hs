@@ -11,6 +11,7 @@ import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
 import qualified Test.Cardano.Ledger.Conway.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Conway.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
+import Test.Cardano.Ledger.Conway.JSON (roundTripJsonConwayEraSpec)
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Conway.Spec as ConwaySpec
 import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
@@ -37,3 +38,4 @@ main = ledgerTestMain $ do
       map (tierRefScriptFee 1.5 step 15) [0, step .. 204800]
         `shouldBe` map Coin [0, 384000, 960000, 1824000, 3120000, 5064000, 7980000, 12354000, 18915000]
   roundTripJsonShelleyEraSpec @ConwayEra
+  roundTripJsonConwayEraSpec @ConwayEra

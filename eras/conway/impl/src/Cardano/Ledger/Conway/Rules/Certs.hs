@@ -63,7 +63,6 @@ import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, Con
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure, computeDRepExpiry)
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)

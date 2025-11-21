@@ -7,7 +7,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (EraIndependentData, SafeHash, ScriptHash)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.TxIn
@@ -54,8 +53,6 @@ spec = do
     roundTripCborSpec @TxId
     roundTripCborSpec @GenDelegPair
     roundTripCborSpec @GenDelegs
-    roundTripCborSpec @DRepState
-    roundTripCborSpec @DRep
     roundTripCborSpec @ScriptHash
     roundTripCborSpec @(SafeHash EraIndependentData)
 

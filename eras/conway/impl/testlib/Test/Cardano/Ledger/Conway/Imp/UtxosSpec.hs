@@ -25,10 +25,10 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.State.DRep
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))

@@ -892,3 +892,14 @@ instance Arbitrary (TransitionConfig ConwayEra) where
   arbitrary = ConwayTransitionConfig <$> arbitrary <*> arbitrary
 
 deriving newtype instance Arbitrary (Tx TopTx ConwayEra)
+
+instance Arbitrary DRep where
+  arbitrary =
+    oneof
+      [ DRepCredential <$> arbitrary
+      , pure DRepAlwaysAbstain
+      , pure DRepAlwaysNoConfidence
+      ]
+
+instance Arbitrary DRepState where
+  arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary

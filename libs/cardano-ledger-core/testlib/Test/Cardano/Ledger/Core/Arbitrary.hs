@@ -482,13 +482,6 @@ instance Arbitrary IndividualPoolStake where
   arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.DRepState --------------------------------------------------------------
-------------------------------------------------------------------------------------------
-
-instance Arbitrary DRepState where
-  arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-
-------------------------------------------------------------------------------------------
 -- Cardano.Ledger.State.UTxO -------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
@@ -501,18 +494,6 @@ deriving instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (UTxO era)
 deriving instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (PParams era)
 
 deriving instance (Era era, Arbitrary (PParamsHKD StrictMaybe era)) => Arbitrary (PParamsUpdate era)
-
-------------------------------------------------------------------------------------------
--- Cardano.Ledger.DRep -------------------------------------------------------------------
-------------------------------------------------------------------------------------------
-
-instance Arbitrary DRep where
-  arbitrary =
-    oneof
-      [ DRepCredential <$> arbitrary
-      , pure DRepAlwaysAbstain
-      , pure DRepAlwaysNoConfidence
-      ]
 
 instance (Arbitrary a, HasZero a) => Arbitrary (BaseTypes.NonZero a) where
   arbitrary = arbitrary `suchThatMap` BaseTypes.nonZero

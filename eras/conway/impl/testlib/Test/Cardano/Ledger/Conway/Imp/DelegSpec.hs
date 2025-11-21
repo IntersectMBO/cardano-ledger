@@ -27,10 +27,10 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.State.DRep
 import Cardano.Ledger.Conway.Transition (conwayRegisterInitialAccounts)
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (
   SLanguage (..),
   hashPlutusScript,

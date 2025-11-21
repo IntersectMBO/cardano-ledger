@@ -28,8 +28,8 @@ import Cardano.Ledger.Conway.Governance (
   Voter (StakePoolVoter),
  )
 import Cardano.Ledger.Conway.PParams (ppDRepActivityL)
+import Cardano.Ledger.Conway.State.DRep
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
-import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Data.Map.Strict as Map

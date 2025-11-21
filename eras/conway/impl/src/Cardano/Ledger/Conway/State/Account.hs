@@ -26,6 +26,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Era
+import Cardano.Ledger.Conway.State.DRep (DRep)
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Hashes

@@ -179,11 +179,6 @@ instance ToExpr TxId
 
 instance ToExpr ChainAccountState
 
--- CertState
-instance ToExpr DRep
-
-instance ToExpr DRepState
-
 -- Address
 instance ToExpr Addr
 

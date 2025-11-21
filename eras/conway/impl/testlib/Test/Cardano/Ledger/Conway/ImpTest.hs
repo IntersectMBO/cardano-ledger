@@ -182,9 +182,9 @@ import Cardano.Ledger.Conway.Rules (
   withdrawalCanWithdraw,
  )
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.State.DRep
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,

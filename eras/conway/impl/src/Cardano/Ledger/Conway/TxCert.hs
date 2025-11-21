@@ -70,13 +70,13 @@ import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL)
+import Cardano.Ledger.Conway.State.DRep (DRep)
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
   credKeyHashWitness,
   credScriptHash,
  )
-import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Internal.Era (DijkstraEra)
 import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),

@@ -70,15 +70,11 @@ mkShelleyTestAccountState ::
   Maybe Ptr ->
   CompactForm Coin ->
   Maybe (KeyHash StakePool) ->
-  Maybe DRep ->
   AccountState era
-mkShelleyTestAccountState mPtr deposit mStakePool mDRep =
+mkShelleyTestAccountState mPtr deposit mStakePool =
   case mPtr of
     Nothing -> error "When registering Account in Shelley through Babbage eras Ptr is required"
-    Just ptr ->
-      case mDRep of
-        Nothing -> mkShelleyAccountState ptr deposit & stakePoolDelegationAccountStateL .~ mStakePool
-        Just _ -> error "Delegation to DRep is not supported until Conway"
+    Just ptr -> mkShelleyAccountState ptr deposit & stakePoolDelegationAccountStateL .~ mStakePool
 
 shelleyAccountsFromAccountsMap ::
   ( Accounts era ~ ShelleyAccounts era
