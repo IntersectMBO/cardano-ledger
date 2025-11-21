@@ -81,7 +81,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   MemberStatus (..),
   NextEpochChange (..),
  )
-import Cardano.Ledger.BaseTypes (EpochNo, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (EpochNo, Network, strictMaybeToMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
@@ -457,10 +457,12 @@ instance DecCBOR QueryPoolStateResult where
 mkQueryPoolStateResult ::
   (forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x) ->
   PState era ->
+  Network ->
   QueryPoolStateResult
-mkQueryPoolStateResult f ps =
+mkQueryPoolStateResult f ps network =
   QueryPoolStateResult
-    { qpsrStakePoolParams = Map.mapWithKey stakePoolStateToStakePoolParams restrictedStakePools
+    { qpsrStakePoolParams =
+        Map.mapWithKey (`stakePoolStateToStakePoolParams` network) restrictedStakePools
     , qpsrFutureStakePoolParams = f $ psFutureStakePoolParams ps
     , qpsrRetiring = f $ psRetiring ps
     , qpsrDeposits = Map.map (fromCompact . spsDeposit) restrictedStakePools
@@ -472,21 +474,23 @@ mkQueryPoolStateResult f ps =
 -- representation used by Ledger and is intended to resemble how the internal
 -- representation used to be.
 queryPoolState ::
-  EraCertState era => NewEpochState era -> Maybe (Set (KeyHash StakePool)) -> QueryPoolStateResult
-queryPoolState nes mPoolKeys =
+  EraCertState era =>
+  NewEpochState era -> Maybe (Set (KeyHash StakePool)) -> Network -> QueryPoolStateResult
+queryPoolState nes mPoolKeys network =
   let pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
       f :: forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x
       f = case mPoolKeys of
         Nothing -> id
         Just keys -> (`Map.restrictKeys` keys)
-   in mkQueryPoolStateResult f pstate
+   in mkQueryPoolStateResult f pstate network
 
 -- | Query the current StakePoolParams.
 queryPoolParameters ::
   EraCertState era =>
+  Network ->
   NewEpochState era ->
   Set (KeyHash StakePool) ->
   Map (KeyHash StakePool) StakePoolParams
-queryPoolParameters nes poolKeys =
+queryPoolParameters network nes poolKeys =
   let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-   in Map.mapWithKey stakePoolStateToStakePoolParams $ Map.restrictKeys pools poolKeys
+   in Map.mapWithKey (`stakePoolStateToStakePoolParams` network) $ Map.restrictKeys pools poolKeys

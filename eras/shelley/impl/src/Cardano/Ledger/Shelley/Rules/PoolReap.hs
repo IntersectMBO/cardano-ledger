@@ -22,7 +22,6 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   PredicateFailure,
 ) where
 
-import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
@@ -183,7 +182,7 @@ poolReapTransition = do
     accountRefunds =
       Map.fromListWith
         (<>)
-        [(raCredential $ spsRewardAccount sps, spsDeposit sps) | sps <- Map.elems retiringPools]
+        [(spsRewardAccount sps, spsDeposit sps) | sps <- Map.elems retiringPools]
     accounts = ds ^. accountsL
     -- Deposits that can be refunded and those that are unclaimed (to be deposited into the treasury).
     refunds, unclaimedDeposits :: Map.Map (Credential Staking) (CompactForm Coin)
@@ -199,7 +198,7 @@ poolReapTransition = do
     let rewardAccountsWithPool =
           Map.foldrWithKey'
             ( \poolId sps ->
-                let cred = raCredential $ spsRewardAccount sps
+                let cred = spsRewardAccount sps
                  in Map.insertWith (Map.unionWith (<>)) cred (Map.singleton poolId (spsDeposit sps))
             )
             Map.empty
