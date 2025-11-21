@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -20,10 +21,12 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.Conway.Rules (PredicateFailure)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
+import Cardano.Ledger.Dijkstra.Rules (DijkstraBbodyPredFailure (..))
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
@@ -136,3 +139,11 @@ instance Era era => Arbitrary (DijkstraTxCert era) where
 
 instance Arbitrary DijkstraDelegCert where
   arbitrary = DijkstraRegDelegCert <$> arbitrary <*> arbitrary <*> arbitrary
+
+instance
+  ( Era era
+  , Arbitrary (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  Arbitrary (DijkstraBbodyPredFailure era)
+  where
+  arbitrary = DijkstraBbodyPredFailure <$> arbitrary
