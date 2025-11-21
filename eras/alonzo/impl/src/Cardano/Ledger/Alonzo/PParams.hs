@@ -8,6 +8,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -96,6 +97,7 @@ import Cardano.Ledger.Plutus.CostModels (
   emptyCostModels,
   getCostModelLanguage,
   getCostModelParams,
+  mkCostModels,
  )
 import Cardano.Ledger.Plutus.ExUnits (
   ExUnits (..),
@@ -106,10 +108,7 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
-import Data.Aeson as Aeson (
-  FromJSON,
-  ToJSON (..),
- )
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
@@ -410,7 +409,7 @@ instance Ord OrdExUnits where
 -- | Parameters that were added in Alonzo
 data UpgradeAlonzoPParams f = UpgradeAlonzoPParams
   { uappCoinsPerUTxOWord :: !(HKD f CoinPerWord)
-  , uappCostModels :: !(HKD f CostModels)
+  , uappCostModels :: !(HKD f CostModel)
   , uappPrices :: !(HKD f Prices)
   , uappMaxTxExUnits :: !(HKD f ExUnits)
   , uappMaxBlockExUnits :: !(HKD f ExUnits)
@@ -422,7 +421,15 @@ data UpgradeAlonzoPParams f = UpgradeAlonzoPParams
 
 emptyAlonzoUpgradePParamsUpdate :: UpgradeAlonzoPParams StrictMaybe
 emptyAlonzoUpgradePParamsUpdate =
-  UpgradeAlonzoPParams SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing
+  UpgradeAlonzoPParams
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
 
 deriving instance Eq (UpgradeAlonzoPParams Identity)
 
@@ -605,7 +612,7 @@ upgradeAlonzoPParams UpgradeAlonzoPParams {..} ShelleyPParams {..} =
     , appMinPoolCost = sppMinPoolCost
     , -- new in alonzo
       appCoinsPerUTxOWord = uappCoinsPerUTxOWord
-    , appCostModels = uappCostModels
+    , appCostModels = hkdMap (Proxy @f) (mkCostModels . Map.singleton PlutusV1) uappCostModels
     , appPrices = uappPrices
     , appMaxTxExUnits = hkdMap (Proxy @f) OrdExUnits uappMaxTxExUnits
     , appMaxBlockExUnits = hkdMap (Proxy @f) OrdExUnits uappMaxBlockExUnits

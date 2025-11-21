@@ -2,6 +2,10 @@
 
 ## 1.15.0.0
 
+* Changed `uappCostModels` type from `CostModels` to `CostModel`
+* Changed `agCostModels` type from `CostModels` to `CostModel`
+* Updated `AlonzoGenesis` with `extraConfig` field
+* Added `AlonzoExtraConfig` and its instances
 * Remove deprecated functions `nullRedeemers`, `lookupRedeemers`, `nullDats`
 * Remove deprecated type `AlonzoTxWits'` and its accessor functions:
   - `txwitsVKey'`
@@ -38,6 +42,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` instance for `AlonzoExtraConfig`
 * Add CDDL definitions for Plutus V1 types: `big_int`, `big_uint`, `big_nint`, `bounded_bytes`
 * Rename `plutus_script` -> `plutus_v1_script` in CDDL
 * Add `plutus_v1_script` to CDDL exports
