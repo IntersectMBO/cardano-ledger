@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -24,6 +25,7 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
+import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
@@ -32,6 +34,9 @@ import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
+ )
+import Control.State.Transition (
+  STS (..),
  )
 import Data.Functor.Identity (Identity)
 import qualified Data.OMap.Strict as OMap
@@ -150,5 +155,55 @@ instance
   , Arbitrary (TxOut era)
   ) =>
   Arbitrary (DijkstraContextError era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  ( Era era
+  , Arbitrary (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  Arbitrary (DijkstraBbodyPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  ( Era era
+  , Arbitrary (PredicateFailure (EraRule "UTXOW" era))
+  , Arbitrary (PredicateFailure (EraRule "CERTS" era))
+  , Arbitrary (PredicateFailure (EraRule "GOV" era))
+  ) =>
+  Arbitrary (DijkstraLedgerPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  ( EraTxOut era
+  , Arbitrary (Value era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (PredicateFailure (EraRule "UTXOS" era))
+  ) =>
+  Arbitrary (DijkstraUtxoPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  ( Era era
+  , Arbitrary (PredicateFailure (EraRule "UTXO" era))
+  , Arbitrary (TxCert era)
+  , Arbitrary (PlutusPurpose AsItem era)
+  , Arbitrary (PlutusPurpose AsIx era)
+  ) =>
+  Arbitrary (DijkstraUtxowPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance Era era => Arbitrary (DijkstraGovCertPredFailure era) where
+  arbitrary = genericArbitraryU
+
+instance
+  ( Era era
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  Arbitrary (DijkstraGovPredFailure era)
   where
   arbitrary = genericArbitraryU

@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Generalise and expose some rule transition functions: `conwayBbodyTransition`, `conwayGovTransition`, `conwayGovCertTransition`, `conwayLedgerTransition`
 * Change the field type of `ConwayIncompleteWithdrawals` to `Map RewardAccount (Mismatch RelEQ Coin)`
 * Make `ConwayAccountState` a pattern synonym
 * Remove deprecated type `Conway`

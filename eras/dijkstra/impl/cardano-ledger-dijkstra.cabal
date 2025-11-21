@@ -57,6 +57,7 @@ library
     Cardano.Ledger.Dijkstra.Rules.GovCert
     Cardano.Ledger.Dijkstra.Rules.Ledger
     Cardano.Ledger.Dijkstra.Rules.Ledgers
+    Cardano.Ledger.Dijkstra.Rules.Mempool
     Cardano.Ledger.Dijkstra.Rules.Pool
     Cardano.Ledger.Dijkstra.Rules.Utxo
     Cardano.Ledger.Dijkstra.Rules.Utxos
@@ -101,6 +102,7 @@ library
     nothunks,
     plutus-ledger-api,
     small-steps >=1.1.2,
+    text,
 
   if flag(asserts)
     ghc-options: -fno-ignore-asserts

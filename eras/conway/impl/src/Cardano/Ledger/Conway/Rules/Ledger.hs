@@ -19,6 +19,7 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   ConwayLedgerPredFailure (..),
   ConwayLedgerEvent (..),
   shelleyToConwayLedgerPredFailure,
+  conwayLedgerTransition,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -327,9 +328,9 @@ instance
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , ConwayEraCertState era
   , EraCertState era
-  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
   , EraRule "LEDGER" era ~ ConwayLEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   ) =>
   STS (ConwayLEDGER era)
   where
@@ -341,7 +342,7 @@ instance
   type Event (ConwayLEDGER era) = ConwayLedgerEvent era
 
   initialRules = []
-  transitionRules = [ledgerTransition @ConwayLEDGER]
+  transitionRules = [conwayLedgerTransition @ConwayLEDGER]
 
   renderAssertionViolation = renderDepositEqualsObligationViolation
 
@@ -349,7 +350,7 @@ instance
 
 -- =======================================
 
-ledgerTransition ::
+conwayLedgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( AlonzoEraTx era
   , ConwayEraTxBody era
@@ -358,7 +359,6 @@ ledgerTransition ::
   , Signal (someLEDGER era) ~ Tx TopTx era
   , State (someLEDGER era) ~ LedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
-  , PredicateFailure (someLEDGER era) ~ ConwayLedgerPredFailure era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "GOV" era) (someLEDGER era)
   , Embed (EraRule "CERTS" era) (someLEDGER era)
@@ -376,9 +376,10 @@ ledgerTransition ::
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ someLEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   ) =>
   TransitionRule (someLEDGER era)
-ledgerTransition = do
+conwayLedgerTransition = do
   TRC
     ( LedgerEnv slot mbCurEpochNo _txIx pp chainAccountState
       , LedgerState utxoState certState
@@ -398,7 +399,7 @@ ledgerTransition = do
           SJust submittedTreasuryValue ->
             submittedTreasuryValue
               == actualTreasuryValue
-                ?! ConwayTreasuryValueMismatch
+                ?! (injectFailure . ConwayTreasuryValueMismatch)
                   ( Mismatch
                       { mismatchSupplied = submittedTreasuryValue
                       , mismatchExpected = actualTreasuryValue
@@ -410,11 +411,12 @@ ledgerTransition = do
           maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
         totalRefScriptSize
           <= maxRefScriptSizePerTx
-            ?! ConwayTxRefScriptsSizeTooBig
-              ( Mismatch
-                  { mismatchSupplied = totalRefScriptSize
-                  , mismatchExpected = maxRefScriptSizePerTx
-                  }
+            ?! injectFailure
+              ( ConwayTxRefScriptsSizeTooBig
+                  Mismatch
+                    { mismatchSupplied = totalRefScriptSize
+                    , mismatchExpected = maxRefScriptSizePerTx
+                    }
               )
 
         let govState = utxoState ^. utxosGovStateL
@@ -438,7 +440,7 @@ ledgerTransition = do
                 accountState ^. dRepDelegationAccountStateL
               nonExistentDelegations =
                 filter isNotDRepDelegated wdrlsKeyHashes
-          failOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
+          failOnNonEmpty nonExistentDelegations (injectFailure . ConwayWdrlNotDelegatedToDRep)
 
         certState' <-
           if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule $ pp ^. ppProtocolVersionL
@@ -549,8 +551,6 @@ instance
   ( Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
   , Embed (EraRule "GOV" era) (ConwayLEDGER era)
-  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
-  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
   , ConwayEraGov era
   , AlonzoEraTx era
   , ConwayEraTxBody era
@@ -566,12 +566,13 @@ instance
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
   , EraRule "GOV" era ~ ConwayGOV era
-  , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ ConwayLEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
   ) =>
   Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
   where

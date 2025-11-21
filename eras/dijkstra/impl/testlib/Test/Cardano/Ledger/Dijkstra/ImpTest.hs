@@ -27,7 +27,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure (..),
   ConwayCertsPredFailure (..),
   ConwayDelegPredFailure (..),
-  ConwayLedgerPredFailure (..),
  )
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
@@ -35,6 +34,7 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
+import Cardano.Ledger.Dijkstra.Rules (DijkstraLedgerPredFailure (..))
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript,
   evalDijkstraNativeScript,
@@ -104,7 +104,7 @@ instance DijkstraEraImp DijkstraEra
 
 -- Partial implementation used for checking predicate failures
 instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure DijkstraEra where
-  injectFailure = ConwayCertsFailure . injectFailure
+  injectFailure = DijkstraCertsFailure . injectFailure
 
 instance InjectRuleFailure "CERTS" ShelleyDelegPredFailure DijkstraEra where
   injectFailure = CertFailure . injectFailure

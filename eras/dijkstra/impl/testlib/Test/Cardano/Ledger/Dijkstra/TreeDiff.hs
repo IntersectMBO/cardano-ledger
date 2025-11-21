@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -23,13 +24,22 @@ import Cardano.Ledger.Dijkstra.Core (
   AsIx,
   Era,
   EraPParams (..),
+  EraRule,
   EraTx (..),
   EraTxBody (..),
   EraTxCert (..),
   EraTxOut (..),
   PlutusScript,
+  Value,
  )
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams)
+import Cardano.Ledger.Dijkstra.Rules (
+  DijkstraGovCertPredFailure,
+  DijkstraGovPredFailure,
+  DijkstraLedgerPredFailure,
+  DijkstraUtxoPredFailure,
+  DijkstraUtxowPredFailure,
+ )
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript,
   DijkstraNativeScriptRaw,
@@ -39,6 +49,9 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Control.State.Transition (
+  STS (..),
+ )
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr)
@@ -144,3 +157,32 @@ instance
   , ToExpr (TxOut era)
   ) =>
   ToExpr (DijkstraContextError era)
+
+instance
+  ( Era era
+  , ToExpr (PredicateFailure (EraRule "UTXO" era))
+  , ToExpr (PlutusPurpose AsIx era)
+  , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (TxCert era)
+  ) =>
+  ToExpr (DijkstraUtxowPredFailure era)
+
+instance
+  ( ToExpr (PredicateFailure (EraRule "UTXOW" era))
+  , ToExpr (PredicateFailure (EraRule "GOV" era))
+  , ToExpr (PredicateFailure (EraRule "CERTS" era))
+  ) =>
+  ToExpr (DijkstraLedgerPredFailure era)
+
+instance
+  ( ToExpr (Value era)
+  , ToExpr (TxOut era)
+  , ToExpr (PredicateFailure (EraRule "UTXOS" era))
+  ) =>
+  ToExpr (DijkstraUtxoPredFailure era)
+
+instance
+  (EraPParams era, ToExpr (PParamsHKD StrictMaybe era)) =>
+  ToExpr (DijkstraGovPredFailure era)
+
+instance ToExpr (DijkstraGovCertPredFailure era)
