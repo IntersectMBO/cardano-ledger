@@ -1,6 +1,8 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -16,13 +18,19 @@ module Cardano.Ledger.Api.Tx.Cert (
   upgradeTxCert,
   getVKeyWitnessTxCert,
   getScriptWitnessTxCert,
+#if __GLASGOW_HASKELL__ < 914
   pattern RegPoolTxCert,
   pattern RetirePoolTxCert,
+#else
+  data RegPoolTxCert,
+  data RetirePoolTxCert,
+#endif
   isRegStakeTxCert,
   isUnRegStakeTxCert,
 
   -- * Any Era
   AnyEraTxCert (..),
+#if __GLASGOW_HASKELL__ < 914
   pattern AnyEraRegPoolTxCert,
   pattern AnyEraRetirePoolTxCert,
   pattern AnyEraRegTxCert,
@@ -38,7 +46,23 @@ module Cardano.Ledger.Api.Tx.Cert (
   pattern AnyEraRegDRepTxCert,
   pattern AnyEraUnRegDRepTxCert,
   pattern AnyEraUpdateDRepTxCert,
-
+#else
+  data AnyEraRegPoolTxCert,
+  data AnyEraRetirePoolTxCert,
+  data AnyEraRegTxCert,
+  data AnyEraUnRegTxCert,
+  data AnyEraMirTxCert,
+  data AnyEraGenesisDelegTxCert,
+  data AnyEraRegDepositTxCert,
+  data AnyEraUnRegDepositTxCert,
+  data AnyEraDelegTxCert,
+  data AnyEraRegDepositDelegTxCert,
+  data AnyEraAuthCommitteeHotKeyTxCert,
+  data AnyEraResignCommitteeColdTxCert,
+  data AnyEraRegDRepTxCert,
+  data AnyEraUnRegDRepTxCert,
+  data AnyEraUpdateDRepTxCert,
+#endif
   -- * Shelley Era
 
   -- | Complete set of patterns for Shelley through Babbage `TxCert`:
@@ -60,11 +84,19 @@ module Cardano.Ledger.Api.Tx.Cert (
     getGenesisDelegTxCert,
     getMirTxCert
   ),
+#if __GLASGOW_HASKELL__ < 914
   pattern MirTxCert,
   pattern GenesisDelegTxCert,
   pattern RegTxCert,
   pattern UnRegTxCert,
   pattern DelegStakeTxCert,
+#else
+  data MirTxCert,
+  data GenesisDelegTxCert,
+  data RegTxCert,
+  data UnRegTxCert,
+  data DelegStakeTxCert,
+#endif
 
   -- * Conway Era
 
@@ -98,6 +130,7 @@ module Cardano.Ledger.Api.Tx.Cert (
   getDelegateeTxCert,
   Delegatee (..),
   getStakePoolDelegatee,
+#if __GLASGOW_HASKELL__ < 914
   pattern RegDepositTxCert,
   pattern UnRegDepositTxCert,
   pattern DelegTxCert,
@@ -106,6 +139,16 @@ module Cardano.Ledger.Api.Tx.Cert (
   pattern ResignCommitteeColdTxCert,
   pattern RegDRepTxCert,
   pattern UnRegDRepTxCert,
+#else
+  data RegDepositTxCert,
+  data UnRegDepositTxCert,
+  data DelegTxCert,
+  data RegDepositDelegTxCert,
+  data AuthCommitteeHotKeyTxCert,
+  data ResignCommitteeColdTxCert,
+  data RegDRepTxCert,
+  data UnRegDRepTxCert,
+#endif
 ) where
 
 import Cardano.Ledger.Api.Era
@@ -126,6 +169,7 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
   getDelegateeTxCert,
   getStakePoolDelegatee,
+#if __GLASGOW_HASKELL__ < 914
   pattern AuthCommitteeHotKeyTxCert,
   pattern DelegTxCert,
   pattern RegDRepTxCert,
@@ -134,6 +178,16 @@ import Cardano.Ledger.Conway.TxCert (
   pattern ResignCommitteeColdTxCert,
   pattern UnRegDRepTxCert,
   pattern UnRegDepositTxCert,
+#else
+  data AuthCommitteeHotKeyTxCert,
+  data DelegTxCert,
+  data RegDRepTxCert,
+  data RegDepositDelegTxCert,
+  data RegDepositTxCert,
+  data ResignCommitteeColdTxCert,
+  data UnRegDRepTxCert,
+  data UnRegDepositTxCert,
+#endif
  )
 import Cardano.Ledger.Core (
   EraTxCert (
@@ -153,8 +207,13 @@ import Cardano.Ledger.Core (
   VRFVerKeyHash,
   isRegStakeTxCert,
   isUnRegStakeTxCert,
+#if __GLASGOW_HASKELL__ < 914
   pattern RegPoolTxCert,
   pattern RetirePoolTxCert,
+#else
+  data RegPoolTxCert,
+  data RetirePoolTxCert,
+#endif
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.TxCert (
@@ -167,11 +226,19 @@ import Cardano.Ledger.Shelley.TxCert (
     getRegTxCert,
     getUnRegTxCert
   ),
+#if __GLASGOW_HASKELL__ < 914
   pattern DelegStakeTxCert,
   pattern GenesisDelegTxCert,
   pattern MirTxCert,
   pattern RegTxCert,
   pattern UnRegTxCert,
+#else
+  data DelegStakeTxCert,
+  data GenesisDelegTxCert,
+  data MirTxCert,
+  data RegTxCert,
+  data UnRegTxCert,
+#endif
  )
 import Cardano.Ledger.State (StakePoolParams)
 

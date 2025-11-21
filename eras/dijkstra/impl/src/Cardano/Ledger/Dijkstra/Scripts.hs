@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -27,8 +28,13 @@ module Cardano.Ledger.Dijkstra.Scripts (
   DijkstraEraScript (..),
   DijkstraNativeScript (MkDijkstraNativeScript),
   DijkstraNativeScriptRaw (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data GuardingPurpose,
+  data RequireGuard,
+#else
   pattern GuardingPurpose,
   pattern RequireGuard,
+#endif
   evalDijkstraNativeScript,
   upgradeTimelock,
 ) where
