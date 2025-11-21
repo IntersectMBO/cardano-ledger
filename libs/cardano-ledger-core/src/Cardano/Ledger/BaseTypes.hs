@@ -1001,3 +1001,12 @@ instance ToKeyValuePairs a => ToJSON (KeyValuePairs a) where
 -- NOTE: The real type will be brought from 'cardano-base' once it's ready.
 data PerasCert = PerasCert
   deriving (Eq, Show, Generic, NoThunks)
+
+instance EncCBOR PerasCert where
+  encCBOR PerasCert =
+    encCBOR ()
+
+instance DecCBOR PerasCert where
+  decCBOR = do
+    () <- decCBOR
+    pure PerasCert
