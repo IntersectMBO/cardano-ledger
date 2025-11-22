@@ -85,6 +85,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Control.DeepSeq (NFData)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -107,6 +108,8 @@ data DijkstraBbodyPredFailure era
   | PrevEpochNonceNotPresent
   | PerasCertValidationFailed PerasCert Nonce
   deriving (Generic)
+
+instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (DijkstraBbodyPredFailure era)
 
 deriving instance
   (Era era, Show (PredicateFailure (EraRule "LEDGERS" era))) =>

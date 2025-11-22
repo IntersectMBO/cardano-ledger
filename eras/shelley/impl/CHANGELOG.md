@@ -51,6 +51,15 @@
 
 ### `testlib`
 
+* Add `NFData` and `ToExpr` constraints and instances for:
+  - `AlonzoBlockBody`
+  - `AlonzoBbodyPredFailure`
+  - `ConwayBbodyPredFailure`
+  - `ShelleyBlockBody`
+  - `ShelleyBbodyPredFailure`
+  - `BHeaderView`
+  - `Block`
+* Add a `Generic` instance for `BHeaderView`
 * Add `impEventsFrom`
 * Change type of `ImpTestState.impEvents` field from `[]` to `Seq`
 * Remove `huddle-cddl` and the `CDDL` modules.

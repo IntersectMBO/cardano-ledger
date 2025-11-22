@@ -424,6 +424,10 @@ class
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , ToExpr (Event (EraRule "BBODY" era))
+  , NFData (BlockBody era)
+  , ToExpr (BlockBody era)
+  , NFData (PredicateFailure (EraRule "BBODY" era))
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , -- For the LEDGER rule
     STS (EraRule "LEDGER" era)
