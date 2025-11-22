@@ -16,7 +16,9 @@ module Test.Cardano.Ledger.TreeDiff (
 ) where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.BHeaderView
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Block
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -251,3 +253,7 @@ instance ToExpr a => ToExpr (NonZero a) where
 
 instance ToExpr PositiveInterval where
   toExpr = toExpr . unboundRational
+
+instance ToExpr BHeaderView
+
+instance (ToExpr h, ToExpr (BlockBody era)) => ToExpr (Block h era)
