@@ -63,6 +63,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.Slot (SlotNo (..))
+import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
@@ -94,6 +95,8 @@ data ShelleyBlockBody era = ShelleyBlockBodyInternal
   -- 'SNothing' for metadata
   }
   deriving (Generic)
+
+instance NFData (Tx TopTx era) => NFData (ShelleyBlockBody era)
 
 instance EraBlockBody ShelleyEra where
   type BlockBody ShelleyEra = ShelleyBlockBody ShelleyEra
