@@ -11,6 +11,7 @@ module Cardano.Ledger.Huddle (
   HuddleRule (..),
   HuddleGroup (..),
   HuddleGRule (..),
+  Era,
 ) where
 
 import Cardano.Ledger.Core (Era)

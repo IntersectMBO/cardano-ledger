@@ -150,7 +150,6 @@ library cddl
 
   build-depends:
     base,
-    cardano-ledger-core,
     cardano-ledger-core:cddl,
     cardano-ledger-shelley,
     cuddle >=0.4,

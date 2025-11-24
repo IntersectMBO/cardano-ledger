@@ -64,6 +64,7 @@
 
 ### `cddl`
 
+* Export `Era` to reuse via the import chain of modules across eras.
 * Add `HuddleRule`, `HuddleGroup` and `HuddleGRule` type class for era-polymorphic CDDL generation.
 * Add `HuddleSpec` for all common CDDL types.
 
