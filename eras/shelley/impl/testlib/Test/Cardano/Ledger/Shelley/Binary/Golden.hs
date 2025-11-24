@@ -37,7 +37,6 @@ import Test.Cardano.Ledger.Binary.Plain.Golden
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.Golden
 import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
-import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
 

@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Conway.Binary.Golden (
   spec,
   listRedeemersEnc,
   goldenListRedeemers,
-  witsEmptyFieldWithTag,
+  witsEmptyFieldWithSetTag,
   conwayDecodeDuplicateDelegCertFails,
   module Test.Cardano.Ledger.Alonzo.Binary.Golden,
 ) where
@@ -73,8 +73,8 @@ goldenListRedeemers =
       (Redeemers $ Map.singleton (SpendingPurpose $ AsIx 10) (Data $ I 20, ExUnits 30 40))
       unRedeemers
 
-witsEmptyFieldWithTag :: Int -> Enc
-witsEmptyFieldWithTag k =
+witsEmptyFieldWithSetTag :: Int -> Enc
+witsEmptyFieldWithSetTag k =
   mconcat
     [ E $ TkMapLen 1
     , E k
@@ -142,7 +142,7 @@ spec = do
         describe "Tagged" $ do
           let
             expectFailureOnEmptyField k =
-              expectDecoderFailureAnn @(TxWits era) version (witsEmptyFieldWithTag k)
+              expectDecoderFailureAnn @(TxWits era) version (witsEmptyFieldWithSetTag k)
           it "addrTxWits" . expectFailureOnEmptyField 0 $
             DecoderErrorDeserialiseFailure
               (Binary.label $ Proxy @(Annotator (TxWits era)))

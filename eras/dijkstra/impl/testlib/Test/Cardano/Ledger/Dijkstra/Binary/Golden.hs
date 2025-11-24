@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -101,7 +100,7 @@ goldenEmptyFields version =
     describe "Tagged" $ do
       let
         expectFailureOnEmptyField k =
-          expectDecoderFailureAnn @(TxWits era) version (witsEmptyFieldWithTag k)
+          expectDecoderFailureAnn @(TxWits era) version (witsEmptyFieldWithSetTag k)
       it "addrTxWits" . expectFailureOnEmptyField 0 $
         DecoderErrorDeserialiseFailure
           (Binary.label $ Proxy @(Annotator (TxWits era)))

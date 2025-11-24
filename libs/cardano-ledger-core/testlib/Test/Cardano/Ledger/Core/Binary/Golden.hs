@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -31,10 +30,9 @@ import Test.Cardano.Ledger.Common (
   diffExprString,
   expectationFailure,
   shouldBe,
-  shouldBeExpr,
   showExpr,
  )
-import Test.Cardano.Ledger.TreeDiff (ToExpr)
+import Test.Cardano.Ledger.TreeDiff (ToExpr, expectExprEqualWithMessage)
 
 decodeEnc :: forall a. DecCBOR (Annotator a) => Version -> Enc -> Either DecoderError a
 decodeEnc version enc = decodeFullAnnotator @a version (Binary.label $ Proxy @(Annotator a)) decCBOR bytes
@@ -51,11 +49,12 @@ expectDecoderSuccessAnnWith ::
   Expectation
 expectDecoderSuccessAnnWith equals version enc expected =
   case decodeEnc @a version enc of
+    Left err -> expectationFailure $ "Unexpected decoder failure: " <> show err
     Right x | x `equals` expected -> pure ()
-    decResult -> expectationFailure $ diffExprString (Right expected) decResult
+    Right result -> expectationFailure $ diffExprString expected result
 
 expectDecoderSuccessAnn ::
-  (ToExpr a, DecCBOR (Annotator a), Eq a) => Version -> Enc -> a -> Expectation
+  (ToExpr a, DecCBOR (Annotator a), Eq a, HasCallStack) => Version -> Enc -> a -> Expectation
 expectDecoderSuccessAnn = expectDecoderSuccessAnnWith (==)
 
 expectDecoderFailureAnn ::
@@ -78,4 +77,8 @@ expectDecoderResultOn ::
   (ToExpr b, DecCBOR (Annotator a), Eq b, HasCallStack) =>
   Version -> Enc -> a -> (a -> b) -> Expectation
 expectDecoderResultOn version enc expected f =
-  embedTripAnnExpectation version version (\x _ -> f x `shouldBeExpr` f expected) enc
+  embedTripAnnExpectation
+    version
+    version
+    (\x _ -> expectExprEqualWithMessage "" (f x) (f expected))
+    enc

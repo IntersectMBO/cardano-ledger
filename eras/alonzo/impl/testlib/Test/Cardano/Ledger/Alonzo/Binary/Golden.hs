@@ -27,9 +27,11 @@ import Test.Cardano.Ledger.Allegra.Binary.Golden hiding (spec)
 import Test.Cardano.Ledger.Alonzo.Era (AlonzoEraTest)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
 import Test.Cardano.Ledger.Common (
+  NonNegative (..),
   Spec,
   describe,
   it,
+  prop,
  )
 import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
 
@@ -65,9 +67,13 @@ spec = do
         -- from there onwards
         it "plutusV2Script" $ expectSuccessOnEmptyFieldRaw 6
         it "plutusV3Script" $ expectSuccessOnEmptyFieldRaw 7
-        it "8th field" . expectFailureOnEmptyField 8 $
-          DecoderErrorDeserialiseFailure
-            (Binary.label $ Proxy @(Annotator (TxWits era)))
-            (DeserialiseFailure 2 "An error occured while decoding (Int,Void) not a valid key:.\nError: 8")
+        prop "Invalid field" $ \(NonNegative n) ->
+          let invalidTag = n + 8
+           in expectFailureOnEmptyField invalidTag $
+                DecoderErrorDeserialiseFailure
+                  (Binary.label $ Proxy @(Annotator (TxWits era)))
+                  ( DeserialiseFailure 2 $
+                      "An error occurred while decoding (Int,Void) not a valid key:.\nError: " <> show invalidTag
+                  )
   describe "TxCerts" $ do
     forEachEraVersion @era $ allegraDecodeDuplicateDelegCertSucceeds @era
