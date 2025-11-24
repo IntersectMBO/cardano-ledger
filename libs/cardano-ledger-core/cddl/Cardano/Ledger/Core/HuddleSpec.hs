@@ -13,7 +13,6 @@
 
 module Cardano.Ledger.Core.HuddleSpec where
 
-import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Huddle
 import Codec.CBOR.Cuddle.Huddle
 import qualified Data.Text as T

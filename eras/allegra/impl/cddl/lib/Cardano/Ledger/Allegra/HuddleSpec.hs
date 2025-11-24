@@ -11,9 +11,20 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra.HuddleSpec (
+  module Cardano.Ledger.Shelley.HuddleSpec,
   allegraCDDL,
   blockRule,
   transactionRule,
+  auxiliaryScriptsRule,
+  auxiliaryDataArrayRule,
+  auxiliaryDataRule,
+  minInt64Rule,
+  maxInt64Rule,
+  int64Rule,
+  nativeScriptRule,
+  scriptNOfKGroup,
+  scriptInvalidBeforeGroup,
+  scriptInvalidHereafterGroup,
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
@@ -69,6 +80,97 @@ transactionRule p =
       , a (huddleRule @"auxiliary_data" p / VNil)
       ]
 
+auxiliaryScriptsRule :: forall era. HuddleRule "native_script" era => Proxy era -> Rule
+auxiliaryScriptsRule p = "auxiliary_scripts" =:= arr [0 <+ a (huddleRule @"native_script" p)]
+
+auxiliaryDataArrayRule ::
+  forall era. HuddleRule "auxiliary_scripts" era => Proxy era -> Rule
+auxiliaryDataArrayRule p =
+  "auxiliary_data_array"
+    =:= arr
+      [ "transaction_metadata" ==> huddleRule @"metadata" p
+      , "auxiliary_scripts" ==> huddleRule @"auxiliary_scripts" p
+      ]
+
+auxiliaryDataRule ::
+  forall era. HuddleRule "auxiliary_data_array" era => Proxy era -> Rule
+auxiliaryDataRule p =
+  "auxiliary_data"
+    =:= huddleRule @"metadata" p
+    / huddleRule @"auxiliary_data_array" p
+
+minInt64Rule :: Rule
+minInt64Rule = "min_int64" =:= (-9223372036854775808 :: Integer)
+
+maxInt64Rule :: Rule
+maxInt64Rule = "max_int64" =:= (9223372036854775807 :: Integer)
+
+int64Rule ::
+  forall era. (HuddleRule "min_int64" era, HuddleRule "max_int64" era) => Proxy era -> Rule
+int64Rule p = "int64" =:= huddleRule @"min_int64" p ... huddleRule @"max_int64" p
+
+nativeScriptRule ::
+  forall era.
+  ( HuddleGroup "script_pubkey" era
+  , HuddleGroup "script_all" era
+  , HuddleGroup "script_any" era
+  , HuddleGroup "script_n_of_k" era
+  , HuddleGroup "script_invalid_before" era
+  , HuddleGroup "script_invalid_hereafter" era
+  ) =>
+  Proxy era ->
+  Rule
+nativeScriptRule p =
+  comment
+    [str|Allegra introduces timelock support for native scripts.
+        |
+        |Timelock validity intervals are half-open intervals [a, b).
+        |  script_invalid_before: specifies the left (included) endpoint a.
+        |  script_invalid_hereafter: specifies the right (excluded) endpoint b.
+        |
+        |Note: Allegra switched to int64 for script_n_of_k thresholds.
+        |]
+    $ "native_script"
+      =:= arr [a $ huddleGroup @"script_pubkey" p]
+      / arr [a $ huddleGroup @"script_all" p]
+      / arr [a $ huddleGroup @"script_any" p]
+      / arr [a $ huddleGroup @"script_n_of_k" p]
+      / arr [a $ huddleGroup @"script_invalid_before" p]
+      / arr [a $ huddleGroup @"script_invalid_hereafter" p]
+
+scriptNOfKGroup ::
+  forall era.
+  (HuddleRule "int64" era, HuddleRule "native_script" era) =>
+  Proxy era ->
+  Named Group
+scriptNOfKGroup p =
+  "script_n_of_k"
+    =:~ grp
+      [ 3
+      , "n" ==> huddleRule @"int64" p
+      , a $ arr [0 <+ a (huddleRule @"native_script" p)]
+      ]
+
+scriptInvalidBeforeGroup ::
+  forall era. Era era => Proxy era -> Named Group
+scriptInvalidBeforeGroup p =
+  comment
+    [str|Timelock validity intervals are half-open intervals [a, b).
+        |This field specifies the left (included) endpoint a.
+        |]
+    $ "script_invalid_before"
+      =:~ grp [4, a (huddleRule @"slot" p)]
+
+scriptInvalidHereafterGroup ::
+  forall era. Era era => Proxy era -> Named Group
+scriptInvalidHereafterGroup p =
+  comment
+    [str|Timelock validity intervals are half-open intervals [a, b).
+        |This field specifies the right (excluded) endpoint b.
+        |]
+    $ "script_invalid_hereafter"
+      =:~ grp [5, a (huddleRule @"slot" p)]
+
 instance HuddleRule "major_protocol_version" AllegraEra where
   huddleRule = majorProtocolVersionRule @AllegraEra
 
@@ -97,65 +199,31 @@ instance HuddleRule "header" AllegraEra where
   huddleRule = headerRule @AllegraEra
 
 instance HuddleRule "min_int64" AllegraEra where
-  huddleRule _ = "min_int64" =:= (-9223372036854775808 :: Integer)
+  huddleRule _ = minInt64Rule
 
 instance HuddleRule "max_int64" AllegraEra where
-  huddleRule _ = "max_int64" =:= (9223372036854775807 :: Integer)
+  huddleRule _ = maxInt64Rule
 
 instance HuddleRule "int64" AllegraEra where
-  huddleRule p = "int64" =:= huddleRule @"min_int64" p ... huddleRule @"max_int64" p
+  huddleRule = int64Rule @AllegraEra
 
 instance HuddleGroup "script_all" AllegraEra where
-  huddleGroup p = "script_all" =:~ grp [1, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
+  huddleGroup = scriptAllGroup @AllegraEra
 
 instance HuddleGroup "script_any" AllegraEra where
-  huddleGroup p = "script_any" =:~ grp [2, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
+  huddleGroup = scriptAnyGroup @AllegraEra
 
 instance HuddleGroup "script_n_of_k" AllegraEra where
-  huddleGroup p =
-    "script_n_of_k"
-      =:~ grp
-        [ 3
-        , "n" ==> huddleRule @"int64" p
-        , a $ arr [0 <+ a (huddleRule @"native_script" p)]
-        ]
+  huddleGroup = scriptNOfKGroup @AllegraEra
 
 instance HuddleGroup "script_invalid_before" AllegraEra where
-  huddleGroup p =
-    comment
-      [str|Timelock validity intervals are half-open intervals [a, b).
-          |This field specifies the left (included) endpoint a.
-          |]
-      $ "script_invalid_before"
-        =:~ grp [4, a (huddleRule @"slot" p)]
+  huddleGroup = scriptInvalidBeforeGroup @AllegraEra
 
 instance HuddleGroup "script_invalid_hereafter" AllegraEra where
-  huddleGroup p =
-    comment
-      [str|Timelock validity intervals are half-open intervals [a, b).
-          |This field specifies the right (excluded) endpoint b.
-          |]
-      $ "script_invalid_hereafter"
-        =:~ grp [5, a (huddleRule @"slot" p)]
+  huddleGroup = scriptInvalidHereafterGroup @AllegraEra
 
 instance HuddleRule "native_script" AllegraEra where
-  huddleRule p =
-    comment
-      [str|Allegra introduces timelock support for native scripts.
-          |
-          |Timelock validity intervals are half-open intervals [a, b).
-          |  script_invalid_before: specifies the left (included) endpoint a.
-          |  script_invalid_hereafter: specifies the right (excluded) endpoint b.
-          |
-          |Note: Allegra switched to int64 for script_n_of_k thresholds.
-          |]
-      $ "native_script"
-        =:= arr [a $ huddleGroup @"script_pubkey" p]
-        / arr [a $ huddleGroup @"script_all" p]
-        / arr [a $ huddleGroup @"script_any" p]
-        / arr [a $ huddleGroup @"script_n_of_k" p]
-        / arr [a $ huddleGroup @"script_invalid_before" p]
-        / arr [a $ huddleGroup @"script_invalid_hereafter" p]
+  huddleRule = nativeScriptRule @AllegraEra
 
 instance HuddleRule "vkeywitness" AllegraEra where
   huddleRule = vkeywitnessRule @AllegraEra
@@ -239,21 +307,13 @@ instance HuddleRule "withdrawals" AllegraEra where
   huddleRule = withdrawalsRule @AllegraEra
 
 instance HuddleRule "auxiliary_scripts" AllegraEra where
-  huddleRule p = "auxiliary_scripts" =:= arr [0 <+ a (huddleRule @"native_script" p)]
+  huddleRule = auxiliaryScriptsRule @AllegraEra
 
 instance HuddleRule "auxiliary_data_array" AllegraEra where
-  huddleRule p =
-    "auxiliary_data_array"
-      =:= arr
-        [ "transaction_metadata" ==> huddleRule @"metadata" p
-        , "auxiliary_scripts" ==> huddleRule @"auxiliary_scripts" p
-        ]
+  huddleRule = auxiliaryDataArrayRule @AllegraEra
 
 instance HuddleRule "auxiliary_data" AllegraEra where
-  huddleRule p =
-    "auxiliary_data"
-      =:= huddleRule @"metadata" p
-      / huddleRule @"auxiliary_data_array" p
+  huddleRule = auxiliaryDataRule @AllegraEra
 
 instance HuddleRule "transaction_body" AllegraEra where
   huddleRule p =

@@ -14,6 +14,11 @@
 
 ### `cddl`
 
+* Export for cross-era reuse:
+  - `auxiliaryScriptsRule`, `auxiliaryDataArrayRule`, `auxiliaryDataRule`
+  - `minInt64Rule`, `maxInt64Rule`, `int64Rule`
+  - `nativeScriptRule`
+  - `scriptNOfKGroup`, `scriptInvalidBeforeGroup`, `scriptInvalidHereafterGroup`
 * Add `HuddleSpec` module with `Huddle{Rule|Group}` instances for all types.
 * Add smart constructors `mkBlock` and `mkTransaction`.
 * Add `generate-cddl` executable target to test the generation of `.cddl` files against the existing `huddle-cddl` executable.
