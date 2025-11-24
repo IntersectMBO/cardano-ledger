@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Add `cddl` sub-library, and `generate-cddl` executable.
 * Remove deprecated functions `nullRedeemers`, `lookupRedeemers`, `nullDats`
 * Remove deprecated type `AlonzoTxWits'` and its accessor functions:
   - `txwitsVKey'`
@@ -35,6 +36,10 @@
 * Change `reqSignerHashesTxBodyL` and `reqSignerHashesTxBodyG` to return a set of `Guard` instead of `Witness`
 * Add `PlutusTxInInfo` type family
 * Add `toPlutusTxInInfo` method to `EraPlutusTxInfo`
+
+### `cddl`
+
+* Add full `HuddleSpec`.
 
 ### `testlib`
 

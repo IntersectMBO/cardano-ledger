@@ -18,7 +18,6 @@ block =
 
 header = [header_body, body_signature : kes_signature]
 
-;  block_body_size: merkle triple root
 header_body = 
   [ block_number      : block_number
   , slot              : slot       
@@ -27,7 +26,7 @@ header_body =
   , vrf_vkey          : vrf_vkey   
   , nonce_vrf         : vrf_cert   
   , leader_vrf        : vrf_cert   
-  , block_body_size   : uint       
+  , block_body_size   : uint        ; merkle triple root
   , block_body_hash   : hash32     
   , operational_cert
   , protocol_version
@@ -67,30 +66,21 @@ major_protocol_version = 0 .. 7
 
 kes_signature = bytes .size 448
 
-;  2: fee
-;  3: time to live
-;  8: validity interval start
-; 13: collateral
-; NEW:
-;   11: script_data_hash
-;   13: set transaction_input
-;   14: required_signers
-;   15: network_id
 transaction_body = 
   {   0  : set<transaction_input>   
   ,   1  : [* transaction_output]
-  ,   2  : coin                      
-  , ? 3  : slot                      
+  ,   2  : coin                       ; fee
+  , ? 3  : slot                       ; time to live
   , ? 4  : [* certificate]       
   , ? 5  : withdrawals               
   , ? 6  : update                    
   , ? 7  : auxiliary_data_hash       
-  , ? 8  : slot                      
+  , ? 8  : slot                       ; validity interval start
   , ? 9  : mint                      
-  , ? 11 : script_data_hash          
-  , ? 13 : set<transaction_input>   
-  , ? 14 : required_signers          
-  , ? 15 : network_id                
+  , ? 11 : script_data_hash           ; new
+  , ? 13 : set<transaction_input>    ; collateral
+  , ? 14 : required_signers           ; new
+  , ? 15 : network_id                 ; new
   }
 
 
@@ -100,9 +90,12 @@ transaction_input = [id : transaction_id, index : uint .size 2]
 
 transaction_id = hash32
 
-; NEW:
-;   datum_hash: $hash32
-transaction_output = [address, amount : value, ? datum_hash : hash32]
+transaction_output = 
+  [   address  
+  ,   amount     : value 
+  , ? datum_hash : hash32 ; new
+  ]
+
 
 ; address = bytes
 ; 
@@ -198,6 +191,7 @@ pool_keyhash = hash28
 
 pool_registration_cert = (3, pool_params)
 
+; Pool parameters for stake pool registration
 pool_params = 
   ( operator       : pool_keyhash      
   , vrf_keyhash    : vrf_keyhash       
@@ -285,55 +279,31 @@ update = [proposed_protocol_parameter_updates, epoch]
 
 proposed_protocol_parameter_updates = {* genesis_hash => protocol_param_update}
 
-;  0: minfee A
-;  1: minfee B
-;  2: max block body size
-;  3: max transaction size
-;  4: max block header size
-;  5: key deposit
-;  6: pool deposit
-;  7: maximum epoch
-;  8: n_opt: desired number of stake pools
-;  9: pool pledge influence
-; 10: expansion rate
-; 11: treasury growth rate
-; 12: d. decentralization constant
-; 13: extra entropy
-; 14: protocol version
-; 16: min pool cost ; NEW
-; 17: ada per utxo byte ; NEW
-; 18: cost models for script languages ; NEW
-; 19: execution costs ; NEW
-; 20: max tx ex units ; NEW
-; 21: max block ex units ; NEW
-; 22: max value size ; NEW
-; 23: collateral percentage ; NEW
-; 24: max collateral inputs ; NEW
 protocol_param_update = 
-  { ? 0  : uint                  
-  , ? 1  : uint                  
-  , ? 2  : uint .size 4          
-  , ? 3  : uint .size 4          
-  , ? 4  : uint .size 2          
-  , ? 5  : coin                  
-  , ? 6  : coin                  
-  , ? 7  : epoch_interval        
-  , ? 8  : uint .size 2          
-  , ? 9  : nonnegative_interval  
-  , ? 10 : unit_interval         
-  , ? 11 : unit_interval         
-  , ? 12 : unit_interval         
-  , ? 13 : nonce                 
-  , ? 14 : [protocol_version]
-  , ? 16 : coin                  
-  , ? 17 : coin                  
-  , ? 18 : cost_models           
-  , ? 19 : ex_unit_prices        
-  , ? 20 : ex_units              
-  , ? 21 : ex_units              
-  , ? 22 : uint                  
-  , ? 23 : uint                  
-  , ? 24 : uint                  
+  { ? 0  : uint                   ; minfee A
+  , ? 1  : uint                   ; minfee B
+  , ? 2  : uint .size 4           ; max block body size
+  , ? 3  : uint .size 4           ; max transaction size
+  , ? 4  : uint .size 2           ; max block header size
+  , ? 5  : coin                   ; key deposit
+  , ? 6  : coin                   ; pool deposit
+  , ? 7  : epoch_interval         ; maximum epoch
+  , ? 8  : uint .size 2           ; n_opt: desired number of stake pools
+  , ? 9  : nonnegative_interval   ; pool pledge influence
+  , ? 10 : unit_interval          ; expansion rate
+  , ? 11 : unit_interval          ; treasury growth rate
+  , ? 12 : unit_interval          ; d. decentralization constant
+  , ? 13 : nonce                  ; extra entropy
+  , ? 14 : [protocol_version] ; protocol version
+  , ? 16 : coin                   ; min pool cost
+  , ? 17 : coin                   ; ada per utxo byte
+  , ? 18 : cost_models            ; cost models for script languages
+  , ? 19 : ex_unit_prices         ; execution costs
+  , ? 20 : ex_units               ; max tx ex units
+  , ? 21 : ex_units               ; max block ex units
+  , ? 22 : uint                   ; max value size
+  , ? 23 : uint                   ; collateral percentage
+  , ? 24 : uint                   ; max collateral inputs
   }
 
 
@@ -429,36 +399,26 @@ mint = multiasset<int64>
 ;   [ 80 | datums | A0 ]
 ; 
 ; corresponding to a CBOR empty list and an empty map (our
-; apologies).,
-; 
-; NEW:
-;   script_data_hash
+; apologies).
 script_data_hash = hash32
 
 required_signers = set<addr_keyhash>
 
 network_id = 0/ 1
 
-; 
-; NEW:
-;   3: [* plutus_v1_script ]
-;   4: [* plutus_data ]
-;   5: redeemers
 transaction_witness_set = 
   { ? 0 : [* vkeywitness]      
   , ? 1 : [* native_script]    
   , ? 2 : [* bootstrap_witness]
-  , ? 3 : [* plutus_v1_script] 
-  , ? 4 : [* plutus_data]      
-  , ? 5 : redeemers                
+  , ? 3 : [* plutus_v1_script]  ; new
+  , ? 4 : [* plutus_data]       ; new
+  , ? 5 : redeemers                 ; new
   }
 
 
 vkeywitness = [vkey, signature]
 
 ; Allegra introduces timelock support for native scripts.
-; This is the 6-variant native script format used by
-; Allegra, Mary, Alonzo, Babbage, and Conway.
 ; 
 ; Timelock validity intervals are half-open intervals [a, b).
 ;   script_invalid_before: specifies the left (included) endpoint a.
@@ -513,7 +473,6 @@ distinct_bytes =
   / bytes .size 30
   / bytes .size 32
 
-; NEW
 plutus_data = 
   constr<plutus_data
   >              
@@ -553,7 +512,6 @@ big_nint = #6.3(bounded_bytes)
 
 redeemers = [* redeemer]
 
-; NEW
 redeemer = 
   [tag : redeemer_tag, index : uint, data : plutus_data, ex_units : ex_units]
 
