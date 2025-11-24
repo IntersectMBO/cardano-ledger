@@ -2,7 +2,7 @@
 
 ## 1.9.0.0
 
-* Add `cddl` sub-library.
+* Add `cddl` sub-library, and `generate-cddl` executable.
 * Remove deprecated type `Allegra`
 * Remove deprecated type `TimelockConstr`
 * Add `invalidBeforeL`, `invalidHereAfterL`

@@ -144,6 +144,15 @@ cradle:
     - path: "eras/mary/impl/src"
       component: "lib:cardano-ledger-mary"
 
+    - path: "eras/mary/impl/cddl/lib"
+      component: "cardano-ledger-mary:lib:cddl"
+
+    - path: "eras/mary/impl/cddl/exe/Main.hs"
+      component: "cardano-ledger-mary:exe:generate-cddl"
+
+    - path: "eras/mary/impl/cddl/exe/Paths_cardano_ledger_mary.hs"
+      component: "cardano-ledger-mary:exe:generate-cddl"
+
     - path: "eras/mary/impl/testlib"
       component: "cardano-ledger-mary:lib:testlib"
 
