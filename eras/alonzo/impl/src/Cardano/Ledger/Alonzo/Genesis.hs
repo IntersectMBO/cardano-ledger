@@ -112,7 +112,7 @@ instance FromJSON AlonzoExtraConfig where
   parseJSON = Aeson.withObject "Extra Config" $ \o ->
     o .:? "costModels" >>= \case
       Nothing -> pure $ AlonzoExtraConfig Nothing
-      Just val -> AlonzoExtraConfig . Just <$> parseCostModels True val
+      Just val -> AlonzoExtraConfig . Just <$> parseCostModels True [] val
 
 instance ToJSON AlonzoExtraConfig where
   toJSON (AlonzoExtraConfig cms) = Aeson.object ["costModels" .= cms]
@@ -221,7 +221,7 @@ instance ToCBOR AlonzoGenesis where
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
     agCoinsPerUTxOWord <- o .: "lovelacePerUTxOWord"
-    cms <- parseCostModels False =<< o .: "costModels"
+    cms <- parseCostModels False [PlutusV1] =<< o .: "costModels"
     agPrices <- o .: "executionPrices"
     agMaxTxExUnits <- o .: "maxTxExUnits"
     agMaxBlockExUnits <- o .: "maxBlockExUnits"

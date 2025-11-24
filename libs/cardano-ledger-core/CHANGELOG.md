@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Changed type of `parseCostModels` by adding `[Language]` argument
 * Add `HasOKey` instance for `TxId (TxBody l era)`
 * Add `cddl` sub-library.
 * Limit `DecCBORGroup` decoding of `ProtVer` fields to `Word32` starting from protocol version `12`
