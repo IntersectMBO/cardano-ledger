@@ -98,6 +98,50 @@ library
     transformers,
     validation-selective,
 
+library cddl
+  exposed-modules:
+    Cardano.Ledger.Babbage.HuddleSpec
+
+  visibility: public
+  hs-source-dirs: cddl/lib
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+  build-depends:
+    base,
+    cardano-ledger-alonzo:cddl,
+    cardano-ledger-babbage,
+    cuddle >=0.4,
+    heredoc,
+
+executable generate-cddl
+  main-is: Main.hs
+  hs-source-dirs: cddl/exe
+  other-modules: Paths_cardano_ledger_babbage
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+  build-depends:
+    base,
+    cardano-ledger-binary:testlib >=1.5,
+    cddl,
+    directory,
+    filepath,
+
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Babbage.Arbitrary
