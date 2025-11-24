@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Add `cddl` sub-library, and `generate-cddl` executable.
 * Remove deprecated functions `txOutData`, `txOutDataHash`, `txOutScript`
 * Remove deprecated type `Babbage`
 * Removed deprecated accessor functions:
@@ -25,6 +26,10 @@
 * Add `HasEraTxLevel` instances for `Tx` and `TxBody`
 * Add `EraTxLevel` instance
 * Add `mkCollateralTxIn`
+
+### `cddl`
+
+* Add full `HuddleSpec`.
 
 ### `testlib`
 

@@ -63,6 +63,15 @@ cradle:
     - path: "eras/babbage/impl/src"
       component: "lib:cardano-ledger-babbage"
 
+    - path: "eras/babbage/impl/cddl/lib"
+      component: "cardano-ledger-babbage:lib:cddl"
+
+    - path: "eras/babbage/impl/cddl/exe/Main.hs"
+      component: "cardano-ledger-babbage:exe:generate-cddl"
+
+    - path: "eras/babbage/impl/cddl/exe/Paths_cardano_ledger_babbage.hs"
+      component: "cardano-ledger-babbage:exe:generate-cddl"
+
     - path: "eras/babbage/impl/testlib"
       component: "cardano-ledger-babbage:lib:testlib"
 
