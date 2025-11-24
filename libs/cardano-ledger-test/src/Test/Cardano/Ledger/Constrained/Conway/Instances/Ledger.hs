@@ -260,6 +260,7 @@ instance Typeable index => HasSpec (SafeHash index) where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -439,6 +440,7 @@ instance HasSpec PV1.Data where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -542,6 +544,7 @@ instance
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -594,6 +597,7 @@ instance Typeable b => HasSpec (AbstractHash Blake2b_224 b) where
     bytes <- pureGen $ vectorOf 28 arbitrary
     pure $ fromJust $ abstractHashFromBytes (BS.pack bytes)
   shrinkWithTypeSpec _ _ = []
+  fixupWithTypeSpec _ _ = Nothing
   cardinalTypeSpec _ = TrueSpec
   conformsTo _ _ = True
   toPreds _ _ = assert True
@@ -652,6 +656,7 @@ instance Typeable r => HasSpec (VRFVerKeyHash r) where
   genFromTypeSpec _ = pureGen $ VRFVerKeyHash <$> genHashWithDuplicates
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -662,6 +667,7 @@ instance (HashAlgorithm a, Typeable b) => HasSpec (Hash a b) where
   genFromTypeSpec _ = pureGen genHashWithDuplicates
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -696,6 +702,7 @@ instance HasSpec StakePoolRelay where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -720,6 +727,7 @@ instance HasSpec Url where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -730,6 +738,7 @@ instance HasSpec Text where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -751,6 +760,7 @@ instance HasSpec ByteString where
     len <- genFromSpecT ls
     BS.pack <$> vectorOfT len (pureGen arbitrary)
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   cardinalTypeSpec _ = TrueSpec
   conformsTo bs (StringSpec ls) = BS.length bs `conformsToSpec` ls
   toPreds str (StringSpec len) = satisfies (strLen_ str) len
@@ -763,6 +773,7 @@ instance HasSpec ShortByteString where
     len <- genFromSpecT ls
     SBS.pack <$> vectorOfT len (pureGen arbitrary)
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   cardinalTypeSpec _ = TrueSpec
   conformsTo bs (StringSpec ls) = SBS.length bs `conformsToSpec` ls
   toPreds str (StringSpec len) = satisfies (strLen_ str) len
@@ -913,6 +924,7 @@ instance HasSpec Char where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -923,6 +935,7 @@ instance HasSpec CostModel where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -1728,6 +1741,7 @@ instance Typeable r => HasSpec (WitVKey r) where
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = TrueSpec
+  fixupWithTypeSpec _ _ = Nothing
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = assert True
@@ -1739,6 +1753,7 @@ instance HasSpec BootstrapWitness where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
