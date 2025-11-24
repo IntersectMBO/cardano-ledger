@@ -2,12 +2,17 @@
 
 ## 1.10.0.0
 
+* Add `cddl` sub-library, and `generate-cddl` executable.
 * Remove deprecated functions `insert`, `lookup`, `prune`
 * Remove deprecated type `Mary`
 * Add `burnedMultiAssets`
 * Add `TxLevel` argument to `Tx` and `TxBody`
 * Add `HasEraTxLevel` instances for `Tx` and `TxBody`
 * Add `EraTxLevel` instance
+
+### `cddl`
+
+* Add full `HuddleSpec`.
 
 ### `testlib`
 
