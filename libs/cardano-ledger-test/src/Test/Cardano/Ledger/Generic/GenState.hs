@@ -94,7 +94,7 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (Network (Testnet), inject)
 import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
-import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
+import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
@@ -265,7 +265,7 @@ data GenState era = GenState
       !(Map (KeyHash StakePool) IndividualPoolStake)
   , -- Stable fields are stable from initialization to the end of the generation process
     gsStablePools :: !(Set (KeyHash StakePool))
-  , gsStableDelegators :: !(Set StakeCredential)
+  , gsStableDelegators :: !(Set (Credential Staking))
   , gsAvoidCred :: !(Set (Credential Staking))
   , gsAvoidKey :: !(Set (KeyHash StakePool))
   , gsGenEnv :: !(GenEnv era)
@@ -435,7 +435,7 @@ modifyGenStateInitialPoolDistr ::
 modifyGenStateInitialPoolDistr f = modify (\gs -> gs {gsInitialPoolDistr = f (gsInitialPoolDistr gs)})
 
 modifyGenStateStableDelegators ::
-  (Set StakeCredential -> Set StakeCredential) ->
+  (Set (Credential Staking) -> Set (Credential Staking)) ->
   GenRS era ()
 modifyGenStateStableDelegators f = modify (\gs -> gs {gsStableDelegators = f (gsStableDelegators gs)})
 

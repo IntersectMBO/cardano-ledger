@@ -78,7 +78,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (
   Credential (..),
-  PaymentCredential,
   Ptr (..),
   SlotNo32 (..),
   StakeReference (..),
@@ -142,7 +141,7 @@ deserialiseRewardAccount = decodeRewardAccount
 -- Contents of Addr data type are intentionally left as lazy, otherwise
 -- operating on compact form of an address will result in redundant work.
 data Addr
-  = Addr Network PaymentCredential StakeReference
+  = Addr Network (Credential Payment) StakeReference
   | AddrBootstrap BootstrapAddress
   deriving (Show, Eq, Generic, NFData, Ord)
 
@@ -645,7 +644,7 @@ decodePaymentCredential ::
   (MonadFail m, AddressBuffer b) =>
   Header ->
   b ->
-  StateT Int m PaymentCredential
+  StateT Int m (Credential Payment)
 decodePaymentCredential header buf
   | headerIsPaymentScript header = ScriptHashObj <$> decodeScriptHash buf
   | otherwise = KeyHashObj <$> decodeKeyHash buf

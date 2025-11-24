@@ -72,7 +72,6 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL)
 import Cardano.Ledger.Credential (
   Credential (..),
-  StakeCredential,
   credKeyHashWitness,
   credScriptHash,
  )
@@ -169,21 +168,21 @@ instance ShelleyEraTxCert ConwayEra where
   getMirTxCert = const Nothing
 
 class EraTxCert era => ConwayEraTxCert era where
-  mkRegDepositTxCert :: StakeCredential -> Coin -> TxCert era
-  getRegDepositTxCert :: TxCert era -> Maybe (StakeCredential, Coin)
+  mkRegDepositTxCert :: Credential Staking -> Coin -> TxCert era
+  getRegDepositTxCert :: TxCert era -> Maybe (Credential Staking, Coin)
 
-  mkUnRegDepositTxCert :: StakeCredential -> Coin -> TxCert era
-  getUnRegDepositTxCert :: TxCert era -> Maybe (StakeCredential, Coin)
+  mkUnRegDepositTxCert :: Credential Staking -> Coin -> TxCert era
+  getUnRegDepositTxCert :: TxCert era -> Maybe (Credential Staking, Coin)
 
   mkDelegTxCert ::
-    StakeCredential -> Delegatee -> TxCert era
+    Credential Staking -> Delegatee -> TxCert era
   getDelegTxCert ::
-    TxCert era -> Maybe (StakeCredential, Delegatee)
+    TxCert era -> Maybe (Credential Staking, Delegatee)
 
   mkRegDepositDelegTxCert ::
-    StakeCredential -> Delegatee -> Coin -> TxCert era
+    Credential Staking -> Delegatee -> Coin -> TxCert era
   getRegDepositDelegTxCert ::
-    TxCert era -> Maybe (StakeCredential, Delegatee, Coin)
+    TxCert era -> Maybe (Credential Staking, Delegatee, Coin)
 
   mkAuthCommitteeHotKeyTxCert ::
     Credential ColdCommitteeRole ->
@@ -256,7 +255,7 @@ instance ConwayEraTxCert ConwayEra where
 
 pattern RegDepositTxCert ::
   ConwayEraTxCert era =>
-  StakeCredential ->
+  Credential Staking ->
   Coin ->
   TxCert era
 pattern RegDepositTxCert cred c <- (getRegDepositTxCert -> Just (cred, c))
@@ -265,7 +264,7 @@ pattern RegDepositTxCert cred c <- (getRegDepositTxCert -> Just (cred, c))
 
 pattern UnRegDepositTxCert ::
   ConwayEraTxCert era =>
-  StakeCredential ->
+  Credential Staking ->
   Coin ->
   TxCert era
 pattern UnRegDepositTxCert cred c <- (getUnRegDepositTxCert -> Just (cred, c))
@@ -274,7 +273,7 @@ pattern UnRegDepositTxCert cred c <- (getUnRegDepositTxCert -> Just (cred, c))
 
 pattern DelegTxCert ::
   ConwayEraTxCert era =>
-  StakeCredential ->
+  Credential Staking ->
   Delegatee ->
   TxCert era
 pattern DelegTxCert cred d <- (getDelegTxCert -> Just (cred, d))
@@ -283,7 +282,7 @@ pattern DelegTxCert cred d <- (getDelegTxCert -> Just (cred, d))
 
 pattern RegDepositDelegTxCert ::
   ConwayEraTxCert era =>
-  StakeCredential ->
+  Credential Staking ->
   Delegatee ->
   Coin ->
   TxCert era
@@ -456,16 +455,16 @@ instance NoThunks Delegatee
 data ConwayDelegCert
   = -- | Register staking credential. Deposit, when present, must match the expected deposit
     -- amount specified by `ppKeyDepositL` in the protocol parameters.
-    ConwayRegCert !StakeCredential !(StrictMaybe Coin)
+    ConwayRegCert !(Credential Staking) !(StrictMaybe Coin)
   | -- | De-Register the staking credential. Deposit, if present, must match the amount
     -- that was left as a deposit upon stake credential registration.
-    ConwayUnRegCert !StakeCredential !(StrictMaybe Coin)
+    ConwayUnRegCert !(Credential Staking) !(StrictMaybe Coin)
   | -- | Delegate staking credentials to a delegatee. Staking credential must already be registered.
-    ConwayDelegCert !StakeCredential !Delegatee
+    ConwayDelegCert !(Credential Staking) !Delegatee
   | -- | This is a new type of certificate, which allows to register staking credential
     -- and delegate within a single certificate. Deposit is required and must match the
     -- expected deposit amount specified by `ppKeyDepositL` in the protocol parameters.
-    ConwayRegDelegCert !StakeCredential !Delegatee !Coin
+    ConwayRegDelegCert !(Credential Staking) !Delegatee !Coin
   deriving (Show, Generic, Eq, Ord)
 
 instance EncCBOR ConwayDelegCert where

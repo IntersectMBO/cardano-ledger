@@ -20,7 +20,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (transValidityInterval)
-import Cardano.Ledger.Credential (StakeCredential)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Slot
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
@@ -40,7 +40,7 @@ spec = do
         transV9 = trans (ProtVer (natVersion @9) 0)
         transV10 = trans (ProtVer (natVersion @10) 0)
 
-    prop "Deposit in registration certs" $ \(cred :: StakeCredential) (coin :: Coin) -> do
+    prop "Deposit in registration certs" $ \(cred :: Credential Staking) (coin :: Coin) -> do
       expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayRegCert cred (SJust coin)
       expectNoDeposit $ transV9 $ RegDepositTxCert cred coin
       expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayRegCert cred SNothing
@@ -49,7 +49,7 @@ spec = do
       expectDeposit coin $ transV10 $ RegDepositTxCert cred coin
       expectNoDeposit $ transV10 $ ConwayTxCertDeleg $ ConwayRegCert cred SNothing
 
-    prop "Deposit in unregistration certs" $ \(cred :: StakeCredential) (coin :: Coin) -> do
+    prop "Deposit in unregistration certs" $ \(cred :: Credential Staking) (coin :: Coin) -> do
       expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayUnRegCert cred (SJust coin)
       expectNoDeposit $ transV9 $ UnRegDepositTxCert cred coin
       expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayUnRegCert cred SNothing

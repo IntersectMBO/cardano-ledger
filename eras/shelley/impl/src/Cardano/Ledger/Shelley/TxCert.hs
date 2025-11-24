@@ -97,7 +97,6 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
-  StakeCredential,
   credKeyHashWitness,
   credScriptHash,
  )
@@ -152,14 +151,14 @@ instance EraTxCert ShelleyEra where
 
 -- | All of the Shelley related certificate functionality that has been fully deprecated in Dijkstra.
 class (EraTxCert era, AtMostEra "Conway" era) => ShelleyEraTxCert era where
-  mkRegTxCert :: StakeCredential -> TxCert era
-  getRegTxCert :: TxCert era -> Maybe StakeCredential
+  mkRegTxCert :: Credential Staking -> TxCert era
+  getRegTxCert :: TxCert era -> Maybe (Credential Staking)
 
-  mkUnRegTxCert :: StakeCredential -> TxCert era
-  getUnRegTxCert :: TxCert era -> Maybe StakeCredential
+  mkUnRegTxCert :: Credential Staking -> TxCert era
+  getUnRegTxCert :: TxCert era -> Maybe (Credential Staking)
 
-  mkDelegStakeTxCert :: StakeCredential -> KeyHash StakePool -> TxCert era
-  getDelegStakeTxCert :: TxCert era -> Maybe (StakeCredential, KeyHash StakePool)
+  mkDelegStakeTxCert :: Credential Staking -> KeyHash StakePool -> TxCert era
+  getDelegStakeTxCert :: TxCert era -> Maybe (Credential Staking, KeyHash StakePool)
 
   mkGenesisDelegTxCert :: AtMostEra "Babbage" era => GenesisDelegCert -> TxCert era
   getGenesisDelegTxCert :: AtMostEra "Babbage" era => TxCert era -> Maybe GenesisDelegCert
@@ -193,19 +192,19 @@ instance ShelleyEraTxCert ShelleyEra where
   getMirTxCert (ShelleyTxCertMir c) = Just c
   getMirTxCert _ = Nothing
 
-pattern RegTxCert :: ShelleyEraTxCert era => StakeCredential -> TxCert era
+pattern RegTxCert :: ShelleyEraTxCert era => Credential Staking -> TxCert era
 pattern RegTxCert c <- (getRegTxCert -> Just c)
   where
     RegTxCert c = mkRegTxCert c
 
-pattern UnRegTxCert :: ShelleyEraTxCert era => StakeCredential -> TxCert era
+pattern UnRegTxCert :: ShelleyEraTxCert era => Credential Staking -> TxCert era
 pattern UnRegTxCert c <- (getUnRegTxCert -> Just c)
   where
     UnRegTxCert c = mkUnRegTxCert c
 
 pattern DelegStakeTxCert ::
   ShelleyEraTxCert era =>
-  StakeCredential ->
+  Credential Staking ->
   KeyHash StakePool ->
   TxCert era
 pattern DelegStakeTxCert c kh <- (getDelegStakeTxCert -> Just (c, kh))
@@ -516,11 +515,11 @@ poolTxCertDecoder = \case
 
 data ShelleyDelegCert
   = -- | A stake credential registration certificate.
-    ShelleyRegCert !StakeCredential
+    ShelleyRegCert !(Credential Staking)
   | -- | A stake credential deregistration certificate.
-    ShelleyUnRegCert !StakeCredential
+    ShelleyUnRegCert !(Credential Staking)
   | -- | A stake delegation certificate.
-    ShelleyDelegCert !StakeCredential !(KeyHash StakePool)
+    ShelleyDelegCert !(Credential Staking) !(KeyHash StakePool)
   deriving (Show, Generic, Eq, Ord)
 
 instance ToJSON ShelleyDelegCert where
@@ -630,7 +629,7 @@ shelleyTotalRefundsTxCerts ::
   (EraPParams era, Foldable f, EraTxCert era) =>
   PParams era ->
   -- | Function that can lookup current deposit, in case when the stake key is registered.
-  (StakeCredential -> Maybe Coin) ->
+  (Credential Staking -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
 shelleyTotalRefundsTxCerts pp lookupDeposit = snd . F.foldl' accum (mempty, Coin 0)

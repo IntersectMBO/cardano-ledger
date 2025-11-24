@@ -464,7 +464,7 @@ sourceUTxO =
 
 sourceWithSharingUTxO ::
   MonadResource m =>
-  Map.Map Credential.StakeCredential a ->
+  Map.Map (Credential.Credential Keys.Staking) a ->
   ConduitM () (TxIn.TxIn, TxOut CurrentEra) (ReaderT SqlBackend m) ()
 sourceWithSharingUTxO stakeCredentials =
   sourceUTxO .| mapC (fmap (internBabbageTxOut (`intern` stakeCredentials)))

@@ -76,7 +76,7 @@ import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..), fromCompact)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
@@ -217,13 +217,13 @@ instance ToJSON (Accounts era) => ToKeyValuePairs (DState era) where
         ]
 
 -- | Function that looks up the deposit for currently delegated staking credential
-lookupDepositDState :: EraAccounts era => DState era -> (StakeCredential -> Maybe Coin)
+lookupDepositDState :: EraAccounts era => DState era -> (Credential Staking -> Maybe Coin)
 lookupDepositDState DState {dsAccounts} cred = do
   accountState <- Map.lookup cred (dsAccounts ^. accountsMapL)
   Just $! fromCompact (accountState ^. depositAccountStateL)
 
 -- | Function that looks up curret reward for the delegated staking credential.
-lookupRewardDState :: EraAccounts era => DState era -> (StakeCredential -> Maybe Coin)
+lookupRewardDState :: EraAccounts era => DState era -> (Credential Staking -> Maybe Coin)
 lookupRewardDState DState {dsAccounts} cred = do
   accountState <- Map.lookup cred (dsAccounts ^. accountsMapL)
   Just $! fromCompact (accountState ^. balanceAccountStateL)

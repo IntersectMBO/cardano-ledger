@@ -56,7 +56,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (AlonzoEraTxOut (..), ScriptIntegrityHash)
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Plutus (Language)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Shelley.API (Block, LedgerEnv (..), UtxoEnv (..))
@@ -172,7 +172,7 @@ timelockHash ::
   ScriptHash
 timelockHash n = hashScript @era $ timelockScript n
 
-timelockStakeCred :: forall era. AllegraEraScript era => StakeCredential
+timelockStakeCred :: forall era. AllegraEraScript era => Credential Staking
 timelockStakeCred = ScriptHashObj (timelockHash @era 2)
 
 -- ======================================================================

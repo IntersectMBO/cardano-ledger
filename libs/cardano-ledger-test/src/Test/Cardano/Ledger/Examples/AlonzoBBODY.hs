@@ -35,7 +35,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeCredential)
+import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
@@ -601,10 +601,10 @@ makeNaiveBlock txs = Block {blockHeader = bhView, blockBody}
         }
     blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList txs
 
-scriptStakeCredFail :: forall era. (ShelleyEraScript era, EraModel era) => StakeCredential
+scriptStakeCredFail :: forall era. (ShelleyEraScript era, EraModel era) => Credential Staking
 scriptStakeCredFail = ScriptHashObj (alwaysFailsHash @era 1)
 
-scriptStakeCredSucceed :: forall era. (ShelleyEraScript era, EraModel era) => StakeCredential
+scriptStakeCredSucceed :: forall era. (ShelleyEraScript era, EraModel era) => Credential Staking
 scriptStakeCredSucceed = ScriptHashObj (alwaysSucceedsHash @era 2)
 
 -- | The deposit made when 'scriptStakeCredSucceed' was registered. It is also
