@@ -12,20 +12,22 @@
 
 module Cardano.Ledger.Shelley.HuddleSpec (
   module Cardano.Ledger.Huddle,
+  module Cardano.Ledger.Core.HuddleSpec,
   shelleyCDDL,
+  shelleyProtocolVersionGroup,
   headerRule,
   proposedProtocolParameterUpdatesRule,
   updateRule,
   protocolParamUpdateRule,
   headerBodyRule,
-  protocolVersionGroup,
-  majorProtocolVersionRule,
   transactionWitnessSetRule,
   vkeywitnessRule,
   bootstrapWitnessRule,
-  operationalCertGroup,
+  shelleyOperationalCertGroup,
   genesisHashRule,
   scriptPubkeyGroup,
+  scriptAllGroup,
+  scriptAnyGroup,
   transactionIdRule,
   transactionInputRule,
   transactionOutputRule,
@@ -52,9 +54,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   untaggedSet,
 ) where
 
-import Cardano.Ledger.BaseTypes (getVersion)
-import Cardano.Ledger.Core (ByronEra, Era, eraProtVerHigh, eraProtVerLow)
-import Cardano.Ledger.Core.HuddleSpec ()
+import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule)
 import Cardano.Ledger.Huddle
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Codec.CBOR.Cuddle.Comments ((//-))
@@ -71,6 +71,10 @@ shelleyCDDL =
     , HIRule $ huddleRule @"transaction" (Proxy @ShelleyEra)
     , HIRule $ huddleRule @"signkey_kes" (Proxy @ShelleyEra)
     ]
+
+shelleyProtocolVersionGroup ::
+  forall era. HuddleRule "major_protocol_version" era => Proxy era -> Named Group
+shelleyProtocolVersionGroup p = "protocol_version" =:~ grp [a $ huddleRule @"major_protocol_version" p, a VUInt]
 
 headerRule :: forall era. HuddleRule "header_body" era => Proxy era -> Rule
 headerRule p =
@@ -137,16 +141,6 @@ headerBodyRule p =
       , a (huddleGroup @"protocol_version" p)
       ]
 
-protocolVersionGroup ::
-  forall era. HuddleRule "major_protocol_version" era => Proxy era -> Named Group
-protocolVersionGroup p = "protocol_version" =:~ grp [a $ huddleRule @"major_protocol_version" p, a VUInt]
-
-majorProtocolVersionRule :: forall era. Era era => Proxy era -> Rule
-majorProtocolVersionRule _ =
-  "major_protocol_version"
-    =:= getVersion @Integer (eraProtVerLow @ByronEra)
-    ... succ (getVersion @Integer (eraProtVerHigh @era))
-
 transactionWitnessSetRule ::
   forall era.
   ( HuddleRule "vkeywitness" era
@@ -178,8 +172,8 @@ bootstrapWitnessRule p =
       , "attributes" ==> VBytes
       ]
 
-operationalCertGroup :: forall era. Era era => Proxy era -> Named Group
-operationalCertGroup p =
+shelleyOperationalCertGroup :: forall era. Era era => Proxy era -> Named Group
+shelleyOperationalCertGroup p =
   "operational_cert"
     =:~ grp
       [ "hot_vkey" ==> huddleRule @"kes_vkey" p
@@ -193,6 +187,12 @@ genesisHashRule p = "genesis_hash" =:= huddleRule @"hash28" p
 
 scriptPubkeyGroup :: forall era. Era era => Proxy era -> Named Group
 scriptPubkeyGroup p = "script_pubkey" =:~ grp [0, a $ huddleRule @"addr_keyhash" p]
+
+scriptAllGroup :: forall era. HuddleRule "native_script" era => Proxy era -> Named Group
+scriptAllGroup p = "script_all" =:~ grp [1, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
+
+scriptAnyGroup :: forall era. HuddleRule "native_script" era => Proxy era -> Named Group
+scriptAnyGroup p = "script_any" =:~ grp [2, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
 
 transactionIdRule :: forall era. Era era => Proxy era -> Rule
 transactionIdRule p = "transaction_id" =:= huddleRule @"hash32" p
@@ -392,6 +392,9 @@ certificateRule p =
     / arr [a $ huddleGroup @"genesis_delegation_cert" p]
     / arr [a $ huddleGroup @"move_instantaneous_rewards_cert" p]
 
+untaggedSet :: IsType0 a => a -> GRuleCall
+untaggedSet = binding $ \x -> "set" =:= arr [0 <+ a x]
+
 instance HuddleRule "dns_name" ShelleyEra where
   huddleRule _ = dnsNameRule
 
@@ -415,9 +418,6 @@ instance HuddleRule "relay" ShelleyEra where
 
 instance HuddleGroup "pool_params" ShelleyEra where
   huddleGroup = poolParamsGroup @ShelleyEra
-
-untaggedSet :: IsType0 a => a -> GRuleCall
-untaggedSet = binding $ \x -> "set" =:= arr [0 <+ a x]
 
 instance HuddleGroup "pool_registration_cert" ShelleyEra where
   huddleGroup = poolRegistrationCertGroup @ShelleyEra
@@ -462,7 +462,7 @@ instance HuddleRule "major_protocol_version" ShelleyEra where
   huddleRule = majorProtocolVersionRule @ShelleyEra
 
 instance HuddleGroup "protocol_version" ShelleyEra where
-  huddleGroup = protocolVersionGroup @ShelleyEra
+  huddleGroup = shelleyProtocolVersionGroup @ShelleyEra
 
 instance HuddleRule "protocol_param_update" ShelleyEra where
   huddleRule = protocolParamUpdateRule @ShelleyEra
@@ -474,7 +474,7 @@ instance HuddleRule "update" ShelleyEra where
   huddleRule = updateRule @ShelleyEra
 
 instance HuddleGroup "operational_cert" ShelleyEra where
-  huddleGroup = operationalCertGroup @ShelleyEra
+  huddleGroup = shelleyOperationalCertGroup @ShelleyEra
 
 instance HuddleRule "header_body" ShelleyEra where
   huddleRule = headerBodyRule @ShelleyEra
@@ -495,10 +495,10 @@ instance HuddleGroup "script_pubkey" ShelleyEra where
   huddleGroup = scriptPubkeyGroup @ShelleyEra
 
 instance HuddleGroup "script_all" ShelleyEra where
-  huddleGroup p = "script_all" =:~ grp [1, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
+  huddleGroup = scriptAllGroup @ShelleyEra
 
 instance HuddleGroup "script_any" ShelleyEra where
-  huddleGroup p = "script_any" =:~ grp [2, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
+  huddleGroup = scriptAnyGroup @ShelleyEra
 
 instance HuddleGroup "script_n_of_k" ShelleyEra where
   huddleGroup p =

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonoLocalBinds #-}
@@ -13,9 +14,11 @@
 
 module Cardano.Ledger.Core.HuddleSpec where
 
-import Cardano.Ledger.Core (Era)
+import Cardano.Ledger.BaseTypes (getVersion)
+import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
 import Cardano.Ledger.Huddle
 import Codec.CBOR.Cuddle.Huddle
+import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import Data.Word (Word64)
 import Text.Heredoc
@@ -263,3 +266,9 @@ instance Era era => HuddleRule "ipv4" era where
 
 instance Era era => HuddleRule "ipv6" era where
   huddleRule _ = "ipv6" =:= VBytes `sized` (16 :: Word64)
+
+majorProtocolVersionRule :: forall era. Era era => Proxy era -> Rule
+majorProtocolVersionRule _ =
+  "major_protocol_version"
+    =:= getVersion @Integer (eraProtVerLow @ByronEra)
+    ... succ (getVersion @Integer (eraProtVerHigh @era))
