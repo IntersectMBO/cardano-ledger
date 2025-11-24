@@ -27,6 +27,15 @@ cradle:
     - path: "eras/alonzo/impl/src"
       component: "lib:cardano-ledger-alonzo"
 
+    - path: "eras/alonzo/impl/cddl/lib"
+      component: "cardano-ledger-alonzo:lib:cddl"
+
+    - path: "eras/alonzo/impl/cddl/exe/Main.hs"
+      component: "cardano-ledger-alonzo:exe:generate-cddl"
+
+    - path: "eras/alonzo/impl/cddl/exe/Paths_cardano_ledger_alonzo.hs"
+      component: "cardano-ledger-alonzo:exe:generate-cddl"
+
     - path: "eras/alonzo/impl/testlib"
       component: "cardano-ledger-alonzo:lib:testlib"
 
