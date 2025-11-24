@@ -138,7 +138,7 @@ spec = do
           it "8th field" . expectFailureOnEmptyField 8 $
             DecoderErrorDeserialiseFailure
               (Binary.label $ Proxy @(Annotator (TxWits era)))
-              (DeserialiseFailure 2 "An error occured while decoding (Int,Void) not a valid key:.\nError: 8")
+              (DeserialiseFailure 2 "An error occurred while decoding (Int,Void) not a valid key:.\nError: 8")
         describe "Tagged" $ do
           let
             expectFailureOnEmptyField k =
