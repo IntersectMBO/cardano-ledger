@@ -10,22 +10,20 @@ block =
   , transaction_bodies       : [* transaction_body]                   
   , transaction_witness_sets : [* transaction_witness_set]            
   , auxiliary_data_set       : {* transaction_index => auxiliary_data}
-  , invalid_transactions     : [* transaction_index]                  
+  , invalid_transactions     : [* transaction_index]                   ; new
   ]
 
 
 header = [header_body, body_signature : kes_signature]
 
-;  block_body_size: merkle triple root
-;       vrf_result: NEW, replaces nonce_vrf and leader_vrf
 header_body = 
   [ block_number      : block_number
   , slot              : slot       
   , prev_hash         : hash32/ nil
   , issuer_vkey       : vkey       
   , vrf_vkey          : vrf_vkey   
-  , vrf_result        : vrf_cert   
-  , block_body_size   : uint       
+  , vrf_result        : vrf_cert    ; replaces nonce_vrf and leader_vrf
+  , block_body_size   : uint        ; merkle triple root
   , block_body_hash   : hash32     
   , operational_cert
   , protocol_version
@@ -66,32 +64,24 @@ major_protocol_version = 0 .. 9
 
 kes_signature = bytes .size 448
 
-;  2: fee
-;  3: time to live
-;  8: validity interval start
-; 13: collateral inputs
-; NEW:
-;   16: collateral return
-;   17: total collateral
-;   18: reference inputs
 transaction_body = 
   {   0  : set<transaction_input>   
   ,   1  : [* transaction_output]
-  ,   2  : coin                      
-  , ? 3  : slot                      
+  ,   2  : coin                       ; fee
+  , ? 3  : slot                       ; time to live
   , ? 4  : [* certificate]       
   , ? 5  : withdrawals               
   , ? 6  : update                    
   , ? 7  : auxiliary_data_hash       
-  , ? 8  : slot                      
+  , ? 8  : slot                       ; validity interval start
   , ? 9  : mint                      
   , ? 11 : script_data_hash          
-  , ? 13 : set<transaction_input>   
+  , ? 13 : set<transaction_input>    ; collateral
   , ? 14 : required_signers          
   , ? 15 : network_id                
-  , ? 16 : transaction_output        
-  , ? 17 : coin                      
-  , ? 18 : set<transaction_input>   
+  , ? 16 : transaction_output         ; collateral return
+  , ? 17 : coin                       ; total collateral
+  , ? 18 : set<transaction_input>    ; reference inputs
   }
 
 
@@ -103,8 +93,6 @@ transaction_id = hash32
 
 ; Both of the Alonzo and Babbage style TxOut formats are equally valid
 ; and can be used interchangeably.
-; NEW:
-;   babbage_transaction_output
 transaction_output = shelley_transaction_output/ babbage_transaction_output
 
 shelley_transaction_output = [address, amount : value, ? datum_hash : hash32]
@@ -174,11 +162,13 @@ hash28 = bytes .size 28
 
 asset_name = bytes .size (0 .. 32)
 
-; NEW starting with babbage
-;   datum_option
-;   script_ref
 babbage_transaction_output = 
-  {0 : address, 1 : value, ? 2 : datum_option, ? 3 : script_ref}
+  {   0 : address     
+  ,   1 : value       
+  , ? 2 : datum_option ; new
+  , ? 3 : script_ref   ; new
+  }
+
 
 datum_option = [0, hash32// 1, data]
 
@@ -230,8 +220,6 @@ script_ref = #6.24(bytes .cbor script)
 script = [0, native_script// 1, plutus_v1_script// 2, plutus_v2_script]
 
 ; Allegra introduces timelock support for native scripts.
-; This is the 6-variant native script format used by
-; Allegra, Mary, Alonzo, Babbage, and Conway.
 ; 
 ; Timelock validity intervals are half-open intervals [a, b).
 ;   script_invalid_before: specifies the left (included) endpoint a.
@@ -317,6 +305,7 @@ pool_keyhash = hash28
 
 pool_registration_cert = (3, pool_params)
 
+; Pool parameters for stake pool registration
 pool_params = 
   ( operator       : pool_keyhash      
   , vrf_keyhash    : vrf_keyhash       
@@ -404,51 +393,29 @@ update = [proposed_protocol_parameter_updates, epoch]
 
 proposed_protocol_parameter_updates = {* genesis_hash => protocol_param_update}
 
-;  0: minfee A
-;  1: minfee B
-;  2: max block body size
-;  3: max transaction size
-;  4: max block header size
-;  5: key deposit
-;  6: pool deposit
-;  7: maximum epoch
-;  8: n_opt: desired number of stake pools
-;  9: pool pledge influence
-; 10: expansion rate
-; 11: treasury growth rate
-; 14: protocol version
-; 16: min pool cost
-; 17: ada per utxo byte
-; 18: cost models for script languages
-; 19: execution costs
-; 20: max tx ex units
-; 21: max block ex units
-; 22: max value size
-; 23: collateral percentage
-; 24: max collateral inputs
 protocol_param_update = 
-  { ? 0  : uint                
-  , ? 1  : uint                
-  , ? 2  : uint .size 4        
-  , ? 3  : uint .size 4        
-  , ? 4  : uint .size 2        
-  , ? 5  : coin                
-  , ? 6  : coin                
-  , ? 7  : epoch_interval      
-  , ? 8  : uint .size 2        
-  , ? 9  : nonnegative_interval
-  , ? 10 : unit_interval       
-  , ? 11 : unit_interval       
-  , ? 14 : protocol_version    
-  , ? 16 : coin                
-  , ? 17 : coin                
-  , ? 18 : cost_models         
-  , ? 19 : ex_unit_prices      
-  , ? 20 : ex_units            
-  , ? 21 : ex_units            
-  , ? 22 : uint                
-  , ? 23 : uint                
-  , ? 24 : uint                
+  { ? 0  : uint                 ; minfee A
+  , ? 1  : uint                 ; minfee B
+  , ? 2  : uint .size 4         ; max block body size
+  , ? 3  : uint .size 4         ; max transaction size
+  , ? 4  : uint .size 2         ; max block header size
+  , ? 5  : coin                 ; key deposit
+  , ? 6  : coin                 ; pool deposit
+  , ? 7  : epoch_interval       ; maximum epoch
+  , ? 8  : uint .size 2         ; n_opt: desired number of stake pools
+  , ? 9  : nonnegative_interval ; pool pledge influence
+  , ? 10 : unit_interval        ; expansion rate
+  , ? 11 : unit_interval        ; treasury growth rate
+  , ? 14 : protocol_version     ; protocol version
+  , ? 16 : coin                 ; min pool cost
+  , ? 17 : coin                 ; ada per utxo byte
+  , ? 18 : cost_models          ; cost models for script languages
+  , ? 19 : ex_unit_prices       ; execution costs
+  , ? 20 : ex_units             ; max tx ex units
+  , ? 21 : ex_units             ; max block ex units
+  , ? 22 : uint                 ; max value size
+  , ? 23 : uint                 ; collateral percentage
+  , ? 24 : uint                 ; max collateral inputs
   }
 
 
@@ -460,8 +427,6 @@ positive_int = 1 .. max_word64
 
 max_word64 = 18446744073709551615
 
-; 0: Plutus v1
-; 1: Plutus v2
 cost_models = {? 0 : [166*166 int64], ? 1 : [175*175 int64]}
 
 ex_unit_prices = [mem_price : positive_interval, step_price : positive_interval]
@@ -541,9 +506,6 @@ required_signers = set<addr_keyhash>
 
 network_id = 0/ 1
 
-; 
-; NEW:
-;   6: [* plutus_v2_script]
 transaction_witness_set = 
   { ? 0 : [* vkeywitness]      
   , ? 1 : [* native_script]    
