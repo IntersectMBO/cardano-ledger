@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Add `cddl` sub-library, and `generate-cddl` executable.
 * Renamed `uappCostModels` to `uappPlutusV1CostModel`
   and changed its type from `CostModels` to `CostModel`
 * Renamed `agCostModels` to `agPlutusV1CostModel`
@@ -41,6 +42,10 @@
 * Change `reqSignerHashesTxBodyL` and `reqSignerHashesTxBodyG` to return a set of `Guard` instead of `Witness`
 * Add `PlutusTxInInfo` type family
 * Add `toPlutusTxInInfo` method to `EraPlutusTxInfo`
+
+### `cddl`
+
+* Add full `HuddleSpec`.
 
 ### `testlib`
 
