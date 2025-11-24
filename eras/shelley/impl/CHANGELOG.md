@@ -2,7 +2,7 @@
 
 ## 1.18.0.0
 
-* Add `cddl` sub-library.
+* Add `cddl` sub-library, and `generate-cddl` executable.
 * Replace `StakePoolState` values in `psFutureStakePoolParams` with `StakePoolParams`
 * Remove `psFutureStakePoolsL`
 * Add `psFutureStakePoolParamsL`
