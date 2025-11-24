@@ -185,7 +185,7 @@ class EraAccounts era => ShelleyEraAccounts era where
   -- | This is a getter for a `Ptr`. It is not a full lens, because it is not only unsafe to modify
   -- a pointer for an existing AccountState due to violation of an invariant in the
   -- `ShelleyAccounts`, but also because once account is registered pointer cannot change. Pointer
-  -- describes unique point on chain when registration has occured, which means it can't change.
+  -- describes unique point on chain when registration has occurred, which means it can't change.
   ptrAccountStateG :: SimpleGetter (AccountState era) Ptr
   default ptrAccountStateG ::
     AccountState era ~ ShelleyAccountState era =>
