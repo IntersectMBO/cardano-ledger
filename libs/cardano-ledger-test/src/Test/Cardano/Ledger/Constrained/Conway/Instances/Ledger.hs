@@ -1039,7 +1039,26 @@ instance Typeable era => HasSimpleRep (ShelleyAccounts era)
 
 instance Typeable era => HasSpec (ShelleyAccounts era)
 
-instance Typeable era => HasSimpleRep (ConwayAccountState era)
+type ConwayAccountStateTypes era =
+  '[ CompactForm Coin
+   , CompactForm Coin
+   , StrictMaybe (KeyHash StakePool)
+   , StrictMaybe DRep
+   ]
+
+instance HasSimpleRep (ConwayAccountState era) where
+  type TheSop (ConwayAccountState era) = '["ConwayAccountState" ::: ConwayAccountStateTypes era]
+  toSimpleRep (ConwayAccountState {..}) =
+    inject @"ConwayAccountState" @'["ConwayAccountState" ::: ConwayAccountStateTypes era]
+      casBalance
+      casDeposit
+      casStakePoolDelegation
+      casDRepDelegation
+  fromSimpleRep rep =
+    algebra @'["ConwayAccountState" ::: ConwayAccountStateTypes era]
+      rep
+      $ \casBalance casDeposit casStakePoolDelegation casDRepDelegation ->
+        ConwayAccountState {..}
 
 instance Typeable era => HasSpec (ConwayAccountState era)
 
