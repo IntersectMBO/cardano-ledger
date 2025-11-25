@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `generate-cddl` executable for generating Conway CDDL specification
 * Remove deprecated type `Conway`
 * Remove deprecated function `toConwayGenesisPairs`
 * Remove deprecated function `toUpgradeConwayPParamsUpdatePairs`

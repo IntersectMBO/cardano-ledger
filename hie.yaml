@@ -126,6 +126,15 @@ cradle:
     - path: "eras/conway/impl/src"
       component: "lib:cardano-ledger-conway"
 
+    - path: "eras/conway/impl/cddl/lib"
+      component: "cardano-ledger-conway:lib:cddl"
+
+    - path: "eras/conway/impl/cddl/exe/Main.hs"
+      component: "cardano-ledger-conway:exe:generate-cddl"
+
+    - path: "eras/conway/impl/cddl/exe/Paths_cardano_ledger_conway.hs"
+      component: "cardano-ledger-conway:exe:generate-cddl"
+
     - path: "eras/conway/impl/testlib"
       component: "cardano-ledger-conway:lib:testlib"
 
