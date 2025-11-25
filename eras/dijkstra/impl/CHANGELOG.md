@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Add `DijkstraContextError`
 * Add `dtbSubTransactions` to `TxBody`
 * Add `subTransactionsTxBodyL` method to `DijkstraEraTxBody` class
 * Add `DijkstraTx` type with `DijkstraTx` and `DijkstraSubTx` constructors
