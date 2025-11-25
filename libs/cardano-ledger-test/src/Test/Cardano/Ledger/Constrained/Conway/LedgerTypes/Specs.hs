@@ -524,7 +524,7 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
     markPoolParams :: VMap VB VB (KeyHash StakePool) StakePoolParams
     markPoolParams =
       VMap.fromMap $
-        Map.mapWithKey stakePoolStateToStakePoolParams $
+        Map.mapWithKey (`stakePoolStateToStakePoolParams` Testnet) $
           psStakePools $
             ls ^. lsCertStateL . certPStateL
 

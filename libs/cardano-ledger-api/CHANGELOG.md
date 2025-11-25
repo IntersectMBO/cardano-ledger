@@ -2,6 +2,10 @@
 
 ## 1.13.0.0
 
+* Changed the type of the following functions by adding `Network` argument:
+  - `queryPoolParameters`
+  - `queryPoolState`
+  - `mkQueryPoolStateResult`
 * Remove deprecated function `queryCommitteeState`
 * Add `TxLevel` argument to `Tx` and `TxBody`
 * Add `EraTxLevel` instance

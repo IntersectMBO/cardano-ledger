@@ -20,7 +20,7 @@ module Test.Cardano.Ledger.Generic.Trace where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
+import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (networkId))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -191,7 +191,7 @@ snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
   where
     pstate = certState ^. certPStateL
     dstate = certState ^. certDStateL
-    snap = stakeDistr u dstate pstate
+    snap = stakeDistr (networkId testGlobals) u dstate pstate
 
 -- ==============================================================================
 
