@@ -51,6 +51,8 @@
 
 ### `testlib`
 
+* Add `impEventsFrom`
+* Change type of `ImpTestState.impEvents` field from `[]` to `Seq`
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Add `ToCBOR (StashedAVVMAddresses era)` superclass to `ShelleyEraTest`
 * Add `duplicateDelegCertsTxBody`
