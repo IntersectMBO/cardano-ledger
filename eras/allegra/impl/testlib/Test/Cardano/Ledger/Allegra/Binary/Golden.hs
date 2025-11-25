@@ -27,7 +27,7 @@ import Test.Cardano.Ledger.Allegra.Era (AllegraEraTest)
 import Test.Cardano.Ledger.Common (Spec, describe, it, prop)
 import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
 import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
-import Test.Cardano.Ledger.Shelley.Binary.Golden hiding (spec)
+import Test.Cardano.Ledger.Shelley.Binary.Golden
 
 allegraDecodeDuplicateDelegCertSucceeds ::
   forall era. (AllegraEraTest era, ShelleyEraTxCert era) => Version -> Spec
