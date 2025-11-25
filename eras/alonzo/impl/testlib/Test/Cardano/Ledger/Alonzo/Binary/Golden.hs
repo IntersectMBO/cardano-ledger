@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Alonzo.Binary.Golden (
   spec,
   witsEmptyField,
   expectFailureOnTxWitsEmptyField,
+  txWitsDecodingFailsOnInvalidField,
   module Test.Cardano.Ledger.Allegra.Binary.Golden,
 ) where
 
@@ -30,11 +31,11 @@ import Test.Cardano.Ledger.Alonzo.Era (AlonzoEraTest)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
 import Test.Cardano.Ledger.Common (
   Expectation,
-  NonNegative (..),
   Spec,
   describe,
   it,
   prop,
+  (==>),
  )
 import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
 
@@ -65,6 +66,16 @@ expectSuccessOnEmptyFieldRaw ::
 expectSuccessOnEmptyFieldRaw version k =
   expectDecoderSuccessAnnWith eqRaw version (witsEmptyField k) (mkBasicTxWits @era)
 
+txWitsDecodingFailsOnInvalidField :: forall era. AlonzoEraTest era => Version -> [Int] -> Spec
+txWitsDecodingFailsOnInvalidField version validFields =
+  prop "Invalid field" $ \n ->
+    n `notElem` validFields ==> expectFailureOnTxWitsEmptyField @era version n $
+      DecoderErrorDeserialiseFailure
+        (Binary.label $ Proxy @(Annotator (TxWits era)))
+        ( DeserialiseFailure 2 $
+            "An error occurred while decoding (Int,Void) not a valid key:.\nError: " <> show n
+        )
+
 spec ::
   forall era.
   (AlonzoEraTest era, ShelleyEraTxCert era) =>
@@ -84,13 +95,5 @@ spec = do
         -- from there onwards
         it "plutusV2Script" $ expectSuccessOnEmptyFieldRaw @era version 6
         it "plutusV3Script" $ expectSuccessOnEmptyFieldRaw @era version 7
-        prop "Invalid field" $ \(NonNegative n) ->
-          let invalidTag = n + 8
-           in expectFailureOnTxWitsEmptyField @era version invalidTag $
-                DecoderErrorDeserialiseFailure
-                  (Binary.label $ Proxy @(Annotator (TxWits era)))
-                  ( DeserialiseFailure 2 $
-                      "An error occurred while decoding (Int,Void) not a valid key:.\nError: " <> show invalidTag
-                  )
   describe "TxCerts" $ do
     forEachEraVersion @era $ allegraDecodeDuplicateDelegCertSucceeds @era
