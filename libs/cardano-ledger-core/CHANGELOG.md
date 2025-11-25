@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `HasOKey` instance for `TxId (TxBody l era)`
 * Add `cddl` sub-library.
 * Limit `DecCBORGroup` decoding of `ProtVer` fields to `Word32` starting from protocol version `12`
 * Change `Relation` type to only be visible at the type level

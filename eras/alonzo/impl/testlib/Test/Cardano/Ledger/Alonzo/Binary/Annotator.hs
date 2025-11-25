@@ -141,6 +141,7 @@ instance
       auxDataField 2 = field (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
       auxDataField 3 = field (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
       auxDataField 4 = field (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
+      auxDataField 5 = field (addPlutusScripts PlutusV4) (D (guardPlutus PlutusV4 >> decCBOR))
       auxDataField n = invalidField n
 
 deriving newtype instance (Era era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxAuxData era)
