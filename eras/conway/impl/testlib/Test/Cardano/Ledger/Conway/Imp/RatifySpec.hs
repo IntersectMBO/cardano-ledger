@@ -236,6 +236,48 @@ spoAndCCVotingSpec = do
         logRatificationChecks constitutionActionId
         passNEpochs 2
         getConstitution `shouldNotReturn` newConstitution
+  -- https://github.com/IntersectMBO/cardano-ledger/issues/5418
+  -- TODO: Re-enable after issue is resolved, by removing this override
+  disableInConformanceIt "Committee proposals pass with inactive committee" $
+    whenPostBootstrap $ do
+      modifyPParams $ \pp ->
+        pp
+          & ppCommitteeMinSizeL .~ 2
+          & ppCommitteeMaxTermLengthL .~ EpochInterval 50
+      coldCommitteeActive <- KeyHashObj <$> freshKeyHash
+      coldCommitteeInactive <- KeyHashObj <$> freshKeyHash
+      startingEpoch <- getsNES nesELL
+      maxTermLength <- getsPParams ppCommitteeMaxTermLengthL
+      (drep, _, _) <- setupSingleDRep 1_000_000_000
+      (spo, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+      let
+        committeeMap =
+          [ (coldCommitteeActive, addEpochInterval startingEpoch maxTermLength)
+          , (coldCommitteeInactive, addEpochInterval startingEpoch $ EpochInterval 5)
+          ]
+      initialCommittee <- getCommitteeMembers
+      committeeActionId <-
+        impAnn "Submit committee update"
+          . submitGovAction
+          $ UpdateCommittee
+            SNothing
+            initialCommittee
+            committeeMap
+            (0 %! 1)
+      submitYesVote_ (DRepVoter drep) committeeActionId
+      submitYesVote_ (StakePoolVoter spo) committeeActionId
+      passNEpochs 5
+      getCommitteeMembers `shouldReturn` Map.keysSet committeeMap
+      committeeProposal <-
+        elements
+          [ NoConfidence (SJust (GovPurposeId committeeActionId))
+          , UpdateCommittee (SJust (GovPurposeId committeeActionId)) Set.empty [] (0 %! 1)
+          ]
+      committeeActionId2 <- submitGovAction committeeProposal
+      submitYesVote_ (DRepVoter drep) committeeActionId2
+      submitYesVote_ (StakePoolVoter spo) committeeActionId2
+      passNEpochs 2
+      getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId committeeActionId2)
 
 committeeExpiryResignationDiscountSpec ::
   forall era.
