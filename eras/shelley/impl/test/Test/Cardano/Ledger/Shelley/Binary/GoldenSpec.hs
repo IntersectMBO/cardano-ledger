@@ -8,7 +8,10 @@ import Paths_cardano_ledger_shelley (getDataFileName)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (goldenJsonPParamsSpec, goldenJsonPParamsUpdateSpec)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
-import qualified Test.Cardano.Ledger.Shelley.Binary.Golden as ShelleyGolden
+import Test.Cardano.Ledger.Shelley.Binary.Golden (
+  goldenNewEpochStateExpectation,
+  shelleyDecodeDuplicateDelegCertSucceeds,
+ )
 import Test.Cardano.Ledger.Shelley.Era ()
 
 spec :: Spec
@@ -18,4 +21,6 @@ spec =
       goldenJsonPParamsSpec @ShelleyEra
     beforeAll (getDataFileName "golden/pparams-update.json") $
       goldenJsonPParamsUpdateSpec @ShelleyEra
-    ShelleyGolden.spec
+    prop "NewEpochState" $ goldenNewEpochStateExpectation @ShelleyEra
+    describe "TxCerts" $ do
+      forEachEraVersion @ShelleyEra shelleyDecodeDuplicateDelegCertSucceeds
