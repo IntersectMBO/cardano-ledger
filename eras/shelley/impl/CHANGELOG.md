@@ -49,6 +49,8 @@
 
 ### `testlib`
 
+* Add `impEventsFrom`
+* Change type of `ImpTestState.impEvents` field from `[]` to `Seq`
 * Renamed `impLastTick` to `impCurSlotNo` and `impLastTickG` to `impCurSlotNoG`
 * Add CDDL certificate definitions: `account_registration_cert`, `account_unregistration_cert`, `delegation_to_stake_pool_cert`
 * Add CDDL pool certificate definitions via `mkPoolRules`: `pool_registration_cert`, `pool_retirement_cert`
