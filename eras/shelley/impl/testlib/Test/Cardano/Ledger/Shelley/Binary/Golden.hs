@@ -7,7 +7,7 @@
 module Test.Cardano.Ledger.Shelley.Binary.Golden (
   goldenNewEpochStateExpectation,
   duplicateDelegCertsTxBody,
-  spec,
+  shelleyDecodeDuplicateDelegCertSucceeds,
   module Test.Cardano.Ledger.Core.Binary.Golden,
 ) where
 
@@ -140,10 +140,3 @@ shelleyDecodeDuplicateDelegCertSucceeds version =
       mkBasicTxBody @ShelleyEra @TopTx
         & certsTxBodyL .~ SSeq.fromList [testCert, testCert]
         & ttlTxBodyL .~ SlotNo 300
-
-spec :: Spec
-spec =
-  describe "Golden" $ do
-    prop "NewEpochState" $ goldenNewEpochStateExpectation @ShelleyEra
-    describe "TxCerts" $ do
-      forEachEraVersion @ShelleyEra shelleyDecodeDuplicateDelegCertSucceeds
