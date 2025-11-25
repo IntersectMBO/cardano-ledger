@@ -25,9 +25,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (valueFromList)
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
-  CostModels,
   mkCostModel,
-  mkCostModels,
  )
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.ExUnits (
@@ -45,7 +43,6 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Either (fromRight)
 import Data.Int
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Sequence.Strict
 import GHC.Stack (HasCallStack)
@@ -367,30 +364,20 @@ expectedGenesis =
   AlonzoGenesis
     { agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
     , agPrices = Prices (fromJust $ boundRational 0.0577) (fromJust $ boundRational 0.0000721)
-    , agCostModels = expectedCostModels
+    , agPlutusV1CostModel = expectedCostModel
     , agMaxTxExUnits = ExUnits 10000000 10000000000
     , agMaxBlockExUnits = ExUnits 50000000 40000000000
     , agMaxValSize = 5000
     , agCollateralPercentage = 150
     , agMaxCollateralInputs = 3
+    , agExtraConfig = Nothing
     }
-
-expectedCostModels :: CostModels
-expectedCostModels =
-  mkCostModels
-    (Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)])
 
 expectedCostModel :: CostModel
 expectedCostModel =
   fromRight
     (error ("Error creating CostModel from known parameters" <> show expectedPParams))
     (mkCostModel PlutusV1 expectedPParams)
-
-expectedCostModelV2 :: CostModel
-expectedCostModelV2 =
-  fromRight
-    (error ("Error creating CostModel from known PlutusV2 parameters" <> show expectedPParams))
-    (mkCostModel PlutusV2 (expectedPParams ++ (replicate 9 0)))
 
 expectedPParams :: [Int64]
 expectedPParams =

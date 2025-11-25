@@ -112,7 +112,7 @@ import Test.Cardano.Ledger.Mary.ImpTest
 import Test.Cardano.Ledger.Plutus (
   PlutusArgs (..),
   ScriptTestContext (..),
-  testingCostModels,
+  testingCostModel,
  )
 import Test.Cardano.Ledger.Plutus.Examples
 import Test.Cardano.Ledger.Plutus.Guardrail (guardrailScript)
@@ -413,7 +413,7 @@ instance ShelleyEraImp AlonzoEra where
     pure
       AlonzoGenesis
         { agCoinsPerUTxOWord = CoinPerWord (Coin 34_482)
-        , agCostModels = testingCostModels [PlutusV1]
+        , agPlutusV1CostModel = testingCostModel PlutusV1
         , agPrices =
             Prices
               { prMem = 577 %! 10_000
@@ -432,6 +432,7 @@ instance ShelleyEraImp AlonzoEra where
         , agMaxValSize = 5000
         , agCollateralPercentage = 150
         , agMaxCollateralInputs = 3
+        , agExtraConfig = Nothing
         }
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript

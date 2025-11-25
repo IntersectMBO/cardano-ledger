@@ -3,93 +3,147 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Genesis (
   AlonzoGenesis (
     AlonzoGenesisWrapper,
     unAlonzoGenesisWrapper,
+    extraConfig,
     AlonzoGenesis,
     agCoinsPerUTxOWord,
-    agCostModels,
+    agPlutusV1CostModel,
     agPrices,
     agMaxTxExUnits,
     agMaxBlockExUnits,
     agMaxValSize,
     agCollateralPercentage,
-    agMaxCollateralInputs
+    agMaxCollateralInputs,
+    agExtraConfig
   ),
+  AlonzoExtraConfig (..),
 ) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (CoinPerWord, UpgradeAlonzoPParams (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices (..))
+import Cardano.Ledger.Alonzo.PParams (
+  CoinPerWord,
+  UpgradeAlonzoPParams (..),
+ )
+import Cardano.Ledger.Alonzo.Scripts (
+  CostModel,
+  CostModels,
+  ExUnits (..),
+  Prices (..),
+  costModelsValid,
+  decodeCostModel,
+  decodeCostModelsLenient,
+  encodeCostModel,
+  flattenCostModels,
+  mkCostModels,
+ )
 import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
-  DecCBOR,
-  EncCBOR,
+  DecCBOR (..),
+  EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
+  decodeNullMaybe,
+  encodeNullMaybe,
  )
-import Cardano.Ledger.Binary.Coders (
-  Decode (From, RecD),
-  Encode (Rec, To),
-  decode,
-  encode,
-  (!>),
-  (<!),
- )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis (..))
+import Cardano.Ledger.Plutus (Language (PlutusV1))
 import Cardano.Ledger.Plutus.CostModels (parseCostModels)
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
+import qualified Data.List as List
+import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 
 -- | All configuration that is necessary to bootstrap AlonzoEra from ShelleyGenesis
-newtype AlonzoGenesis = AlonzoGenesisWrapper
+data AlonzoGenesis = AlonzoGenesisWrapper
   { unAlonzoGenesisWrapper :: UpgradeAlonzoPParams Identity
+  , extraConfig :: Maybe AlonzoExtraConfig
   }
-  deriving stock (Eq, Generic)
-  deriving newtype (Show, NoThunks, NFData)
+  deriving stock (Eq, Show, Generic)
   deriving (ToJSON) via KeyValuePairs AlonzoGenesis
+
+instance NoThunks AlonzoGenesis
+
+instance NFData AlonzoGenesis
+
+newtype AlonzoExtraConfig = AlonzoExtraConfig
+  { aecCostModels :: Maybe CostModels
+  }
+  deriving (Eq)
+  deriving newtype (NFData, NoThunks, Show)
+
+instance DecCBOR AlonzoExtraConfig
+
+instance EncCBOR AlonzoExtraConfig
+
+instance FromCBOR AlonzoExtraConfig where
+  fromCBOR =
+    eraDecoder @AlonzoEra $
+      decode $
+        RecD AlonzoExtraConfig
+          <! D (decodeNullMaybe decodeCostModelsLenient)
+
+instance ToCBOR AlonzoExtraConfig where
+  toCBOR x@(AlonzoExtraConfig _) =
+    let AlonzoExtraConfig {..} = x
+     in toEraCBOR @AlonzoEra . encode $
+          Rec AlonzoExtraConfig
+            !> E (encodeNullMaybe encCBOR) aecCostModels
+
+instance FromJSON AlonzoExtraConfig where
+  parseJSON = Aeson.withObject "Extra Config" $ \o ->
+    o .:? "costModels" >>= \case
+      Nothing -> pure $ AlonzoExtraConfig Nothing
+      Just val -> AlonzoExtraConfig . Just <$> parseCostModels True [] val
+
+instance ToJSON AlonzoExtraConfig where
+  toJSON (AlonzoExtraConfig cms) = Aeson.object ["costModels" .= cms]
 
 pattern AlonzoGenesis ::
   CoinPerWord ->
-  CostModels ->
+  CostModel ->
   Prices ->
   ExUnits ->
   ExUnits ->
   Natural ->
   Natural ->
   Natural ->
+  Maybe AlonzoExtraConfig ->
   AlonzoGenesis
 pattern AlonzoGenesis
   { agCoinsPerUTxOWord
-  , agCostModels
+  , agPlutusV1CostModel
   , agPrices
   , agMaxTxExUnits
   , agMaxBlockExUnits
   , agMaxValSize
   , agCollateralPercentage
   , agMaxCollateralInputs
+  , agExtraConfig
   } <-
-  ( unAlonzoGenesisWrapper ->
+  AlonzoGenesisWrapper
+    { unAlonzoGenesisWrapper =
       UpgradeAlonzoPParams
         { uappCoinsPerUTxOWord = agCoinsPerUTxOWord
-        , uappCostModels = agCostModels
+        , uappPlutusV1CostModel = agPlutusV1CostModel
         , uappPrices = agPrices
         , uappMaxTxExUnits = agMaxTxExUnits
         , uappMaxBlockExUnits = agMaxBlockExUnits
@@ -97,7 +151,8 @@ pattern AlonzoGenesis
         , uappCollateralPercentage = agCollateralPercentage
         , uappMaxCollateralInputs = agMaxCollateralInputs
         }
-    )
+    , extraConfig = agExtraConfig
+    }
   where
     AlonzoGenesis
       coinsPerUTxOWord_
@@ -107,18 +162,21 @@ pattern AlonzoGenesis
       maxBlockExUnits_
       maxValSize_
       collateralPercentage_
-      maxCollateralInputs_ =
-        AlonzoGenesisWrapper $
-          UpgradeAlonzoPParams
-            { uappCoinsPerUTxOWord = coinsPerUTxOWord_
-            , uappCostModels = costModels_
-            , uappPrices = prices_
-            , uappMaxTxExUnits = maxTxExUnits_
-            , uappMaxBlockExUnits = maxBlockExUnits_
-            , uappMaxValSize = maxValSize_
-            , uappCollateralPercentage = collateralPercentage_
-            , uappMaxCollateralInputs = maxCollateralInputs_
-            }
+      maxCollateralInputs_
+      extraConfig_ =
+        AlonzoGenesisWrapper
+          ( UpgradeAlonzoPParams
+              { uappCoinsPerUTxOWord = coinsPerUTxOWord_
+              , uappPlutusV1CostModel = costModels_
+              , uappPrices = prices_
+              , uappMaxTxExUnits = maxTxExUnits_
+              , uappMaxBlockExUnits = maxBlockExUnits_
+              , uappMaxValSize = maxValSize_
+              , uappCollateralPercentage = collateralPercentage_
+              , uappMaxCollateralInputs = maxCollateralInputs_
+              }
+          )
+          extraConfig_
 
 {-# COMPLETE AlonzoGenesis #-}
 
@@ -136,6 +194,7 @@ instance FromCBOR AlonzoGenesis where
       decode $
         RecD AlonzoGenesis
           <! From
+          <! D (decodeCostModel PlutusV1)
           <! From
           <! From
           <! From
@@ -145,45 +204,46 @@ instance FromCBOR AlonzoGenesis where
           <! From
 
 instance ToCBOR AlonzoGenesis where
-  toCBOR
-    AlonzoGenesis
-      { agCoinsPerUTxOWord
-      , agCostModels
-      , agPrices
-      , agMaxTxExUnits
-      , agMaxBlockExUnits
-      , agMaxValSize
-      , agCollateralPercentage
-      , agMaxCollateralInputs
-      } =
-      toEraCBOR @AlonzoEra
-        . encode
-        $ Rec AlonzoGenesis
-          !> To agCoinsPerUTxOWord
-          !> To agCostModels
-          !> To agPrices
-          !> To agMaxTxExUnits
-          !> To agMaxBlockExUnits
-          !> To agMaxValSize
-          !> To agCollateralPercentage
-          !> To agMaxCollateralInputs
+  toCBOR x@(AlonzoGenesis _ _ _ _ _ _ _ _ _) =
+    let AlonzoGenesis {..} = x
+     in toEraCBOR @AlonzoEra . encode $
+          Rec AlonzoGenesis
+            !> To agCoinsPerUTxOWord
+            !> E encodeCostModel agPlutusV1CostModel
+            !> To agPrices
+            !> To agMaxTxExUnits
+            !> To agMaxBlockExUnits
+            !> To agMaxValSize
+            !> To agCollateralPercentage
+            !> To agMaxCollateralInputs
+            !> To agExtraConfig
 
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
     agCoinsPerUTxOWord <- o .: "lovelacePerUTxOWord"
-    agCostModels <- parseCostModels False =<< o .: "costModels"
+    cms <- parseCostModels False [PlutusV1] =<< o .: "costModels"
     agPrices <- o .: "executionPrices"
     agMaxTxExUnits <- o .: "maxTxExUnits"
     agMaxBlockExUnits <- o .: "maxBlockExUnits"
     agMaxValSize <- o .: "maxValueSize"
     agCollateralPercentage <- o .: "collateralPercentage"
     agMaxCollateralInputs <- o .: "maxCollateralInputs"
+    agExtraConfig <- o .:? "extraConfig"
+    agPlutusV1CostModel <-
+      case Map.toList (costModelsValid cms) of
+        [] -> fail "Expected \"PlutusV1\" cost model to be supplied"
+        [(PlutusV1, pv1CostModel)] -> pure pv1CostModel
+        _ ->
+          fail $
+            "Only PlutusV1 CostModel is allowed in the AlonzoGenesis, but "
+              <> List.intercalate ", " (map show . Map.keys $ flattenCostModels cms)
+              <> " were supplied. Use \"extraConfig\" if you need to inject other cost models for testing."
     return AlonzoGenesis {..}
 
 instance ToKeyValuePairs AlonzoGenesis where
   toKeyValuePairs ag =
     [ "lovelacePerUTxOWord" .= agCoinsPerUTxOWord ag
-    , "costModels" .= agCostModels ag
+    , "costModels" .= mkCostModels (Map.singleton PlutusV1 $ agPlutusV1CostModel ag)
     , "executionPrices" .= agPrices ag
     , "maxTxExUnits" .= agMaxTxExUnits ag
     , "maxBlockExUnits" .= agMaxBlockExUnits ag
@@ -191,3 +251,4 @@ instance ToKeyValuePairs AlonzoGenesis where
     , "collateralPercentage" .= agCollateralPercentage ag
     , "maxCollateralInputs" .= agMaxCollateralInputs ag
     ]
+      ++ ["extraConfig" .= extraConfig | Just extraConfig <- [agExtraConfig ag]]

@@ -20,7 +20,10 @@ module Cardano.Ledger.Conway.Transition (
 ) where
 
 import Cardano.Ledger.Babbage
-import Cardano.Ledger.Babbage.Transition (TransitionConfig (BabbageTransitionConfig))
+import Cardano.Ledger.Babbage.Transition (
+  TransitionConfig (BabbageTransitionConfig),
+  alonzoInjectCostModels,
+ )
 import Cardano.Ledger.Coin (compactCoinOrError)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -73,7 +76,9 @@ instance EraTransition ConwayEra where
 
   mkTransitionConfig = ConwayTransitionConfig
 
-  injectIntoTestState = conwayRegisterInitialFundsThenStaking
+  injectIntoTestState cfg =
+    conwayRegisterInitialFundsThenStaking cfg
+      . alonzoInjectCostModels (cfg ^. tcPreviousEraConfigL . tcPreviousEraConfigL)
 
   tcPreviousEraConfigL =
     lens ctcBabbageTransitionConfig (\ctc pc -> ctc {ctcBabbageTransitionConfig = pc})

@@ -104,7 +104,7 @@ import Test.Cardano.Ledger.Alonzo.ImpTest (computeScriptIntegrity)
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.Common (tracedDiscard)
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
-import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus, zeroTestingCostModels)
+import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus, zeroTestingCostModel)
 import Test.Cardano.Ledger.Plutus.Examples
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
@@ -359,7 +359,7 @@ genAlonzoPParamsUpdate constants pp = do
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
-          , uappCostModels = SJust $ zeroTestingCostModels [PlutusV1]
+          , uappPlutusV1CostModel = SJust $ zeroTestingCostModel PlutusV1
           , uappPrices = prices
           , uappMaxTxExUnits = maxTxExUnits
           , uappMaxBlockExUnits = maxBlockExUnits
@@ -387,7 +387,7 @@ genAlonzoPParams constants = do
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
-          , uappCostModels = zeroTestingCostModels [PlutusV1]
+          , uappPlutusV1CostModel = zeroTestingCostModel PlutusV1
           , uappPrices = prices
           , uappMaxTxExUnits = maxTxExUnits
           , uappMaxBlockExUnits = maxBlockExUnits
