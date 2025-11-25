@@ -92,10 +92,7 @@ goldenEmptyFields version =
           "Annotator (MemoBytes (AlonzoTxWitsRaw DijkstraEra))"
           (DeserialiseFailure 4 "Empty list of scripts is not allowed")
       -- TODO replace this with `plutusV4Script` once that is added
-      it "8th field" . expectFailureOnTxWitsEmptyField @era version 8 $
-        DecoderErrorDeserialiseFailure
-          (Binary.label $ Proxy @(Annotator (TxWits era)))
-          (DeserialiseFailure 2 "An error occurred while decoding (Int,Void) not a valid key:.\nError: 8")
+      txWitsDecodingFailsOnInvalidField @era version [0 .. 7]
     describe "Tagged" $ do
       let
       it "addrTxWits" . expectFailureOnTxWitsEmptyField @era version 0 $
