@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Shelley.Binary.Golden (
   goldenNewEpochStateExpectation,
   duplicateDelegCertsTxBody,
   shelleyDecodeDuplicateDelegCertSucceeds,
-  module Test.Cardano.Ledger.Core.Binary.Golden,
+  module Test.Cardano.Ledger.Binary.Golden,
 ) where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..), SlotNo (..))
@@ -33,9 +33,9 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import Lens.Micro ((&), (.~))
+import Test.Cardano.Ledger.Binary.Golden
 import Test.Cardano.Ledger.Binary.Plain.Golden
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Binary.Golden
 import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)

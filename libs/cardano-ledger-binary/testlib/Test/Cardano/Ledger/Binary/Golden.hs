@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Core.Binary.Golden (
+module Test.Cardano.Ledger.Binary.Golden (
   decodeEnc,
   expectDecoderSuccessAnn,
   expectDecoderSuccessAnnWith,
@@ -21,18 +21,12 @@ import Cardano.Ledger.Binary (
   toLazyByteString,
  )
 import qualified Cardano.Ledger.Binary as Binary
+import Data.TreeDiff (ToExpr (..))
 import Data.Typeable (Proxy (..))
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc)
 import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation)
-import Test.Cardano.Ledger.Common (
-  Expectation,
-  diffExprString,
-  expectationFailure,
-  shouldBe,
-  showExpr,
- )
-import Test.Cardano.Ledger.TreeDiff (ToExpr, expectExprEqualWithMessage)
+import Test.Hspec (Expectation, expectationFailure, shouldBe)
 
 decodeEnc :: forall a. DecCBOR (Annotator a) => Version -> Enc -> Either DecoderError a
 decodeEnc version enc = decodeFullAnnotator @a version (Binary.label $ Proxy @(Annotator a)) decCBOR bytes
@@ -41,7 +35,11 @@ decodeEnc version enc = decodeFullAnnotator @a version (Binary.label $ Proxy @(A
 
 expectDecoderSuccessAnnWith ::
   forall a.
-  (ToExpr a, DecCBOR (Annotator a), HasCallStack) =>
+  ( DecCBOR (Annotator a)
+  , HasCallStack
+  , Show a
+  , Eq a
+  ) =>
   (a -> a -> Bool) ->
   Version ->
   Enc ->
@@ -51,10 +49,15 @@ expectDecoderSuccessAnnWith equals version enc expected =
   case decodeEnc @a version enc of
     Left err -> expectationFailure $ "Unexpected decoder failure: " <> show err
     Right x | x `equals` expected -> pure ()
-    Right result -> expectationFailure $ diffExprString expected result
+    Right result -> result `shouldBe` expected
 
 expectDecoderSuccessAnn ::
-  (ToExpr a, DecCBOR (Annotator a), Eq a, HasCallStack) => Version -> Enc -> a -> Expectation
+  ( DecCBOR (Annotator a)
+  , Eq a
+  , HasCallStack
+  , Show a
+  ) =>
+  Version -> Enc -> a -> Expectation
 expectDecoderSuccessAnn = expectDecoderSuccessAnnWith (==)
 
 expectDecoderFailureAnn ::
@@ -69,16 +72,19 @@ expectDecoderFailureAnn version enc expectedErr =
     Left err -> expectedErr `shouldBe` err
     Right x ->
       expectationFailure $
-        "Expected a failure, but decoder succeeded:\n"
-          <> showExpr x
+        "Expected a failure, but decoder succeeded:\n" <> show (toExpr x)
 
 expectDecoderResultOn ::
   forall a b.
-  (ToExpr b, DecCBOR (Annotator a), Eq b, HasCallStack) =>
+  ( DecCBOR (Annotator a)
+  , Eq b
+  , HasCallStack
+  , Show b
+  ) =>
   Version -> Enc -> a -> (a -> b) -> Expectation
 expectDecoderResultOn version enc expected f =
   embedTripAnnExpectation
     version
     version
-    (\x _ -> expectExprEqualWithMessage "" (f x) (f expected))
+    (\x _ -> f x `shouldBe` f expected)
     enc
