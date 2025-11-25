@@ -23,7 +23,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (LedgerEnv)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.TxIn (TxIn (..))
-import Control.SetAlgebra (eval, (∩))
 import Control.State.Transition.Extended (BaseM, Environment, STS, Signal, State)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
@@ -114,7 +113,7 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
         } =
         property $
           hasFailedScripts tx
-            || Set.null (eval (txins @era (tx ^. bodyTxL) ∩ Map.keysSet u'))
+            || Set.null (Set.intersection (txins @era (tx ^. bodyTxL)) (Map.keysSet u'))
 
 -- | Collision-Freeness of new TxIds - checks that all new outputs of a Tx are
 -- included in the new UTxO and that all TxIds are new.

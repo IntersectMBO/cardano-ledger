@@ -80,7 +80,6 @@ import Cardano.Ledger.State (EraCertState (..), dsGenDelegs)
 import Control.DeepSeq
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, (∩))
 import Control.State.Transition (
   Embed,
   IRC (..),
@@ -473,7 +472,7 @@ validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKey
   let genDelegates =
         Set.fromList $ asWitness . genDelegKeyHash <$> Map.elems genMapping
       khAsSet = witsKeyHashes
-      genSig = eval (genDelegates ∩ khAsSet)
+      genSig = Set.intersection genDelegates khAsSet
       txBody = tx ^. bodyTxL
       mirCerts =
         StrictSeq.forceToStrict

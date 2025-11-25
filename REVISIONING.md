@@ -84,7 +84,6 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/non-integral/1.0.0.0"' \
    '.#"ghc96/small-steps/1.0.1.0"' \
    '.#"ghc96/cardano-data/1.2.0.0"' \
-   '.#"ghc96/set-algebra/1.1.0.2"' \
    '.#"ghc96/vector-map/1.1.0.0"'
    ```
    You could also run `nix build --override-input CHaP path:/home/lucsanszky/cardano-haskell-packages/_repo .#allSmokeTestPackages`
@@ -128,7 +127,6 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/non-integral/1.0.0.0"' \
    '.#"ghc96/small-steps/1.0.1.0"' \
    '.#"ghc96/cardano-data/1.2.0.0"' \
-   '.#"ghc96/set-algebra/1.1.0.2"' \
    '.#"ghc96/vector-map/1.1.0.0"'
    ```
    In our case, it should succeed this time. In general however, you might run into some more failures.
@@ -173,7 +171,6 @@ extra-packages:
   non-integral-1.0.0.0,
   small-steps-1.0.1.0,
   cardano-data-1.2.0.0,
-  set-algebra-1.1.0.2,
   vector-map-1.1.0.0
 ```
 
@@ -211,7 +208,6 @@ library
    non-integral \
    small-steps \
    cardano-data \
-   set-algebra \
    vector-map
    ```
 2. If all is right, the above should fail for `cardano-ledger-shelley-1.9.0.0` (or another version for that package), so you will have to add a revision for it in `cardano-haskell-packages` by running:
@@ -256,7 +252,6 @@ library
    non-integral \
    small-steps \
    cardano-data \
-   set-algebra \
    vector-map
    ```
    In our case, it should succeed this time. In general however, you might run into some more failures.

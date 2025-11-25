@@ -38,7 +38,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.State
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
-import Control.SetAlgebra (eval, (∪+))
 import Control.State.Transition (
   Assertion (..),
   STS (..),
@@ -121,7 +120,7 @@ mirTransition = do
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` deltaReserves (dsIRewards ds)
       availableTreasury = treasury `addDeltaCoin` deltaTreasury (dsIRewards ds)
-      update = eval (irwdR ∪+ irwdT) :: Map.Map (Credential Staking) Coin
+      update = Map.unionWith (<>) irwdR irwdT :: Map.Map (Credential Staking) Coin
 
   if totR <= availableReserves && totT <= availableTreasury
     then do

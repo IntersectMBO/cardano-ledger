@@ -60,7 +60,6 @@ import Cardano.Ledger.Slot (
 import Control.DeepSeq
 import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, range, singleton, (∉), (∪), (⨃))
 import Control.State.Transition
 import Data.Foldable (fold)
 import Data.Group (Group (..))
@@ -304,24 +303,25 @@ delegationTransition = do
       -- gkh ∈ dom genDelegs ?! GenesisKeyNotInMappingDELEG gkh
       isJust (Map.lookup gkh genDelegs) ?! GenesisKeyNotInMappingDELEG gkh
 
-      let cod = range $ Map.delete gkh genDelegs
+      let cod = Set.fromList $ Map.elems $ Map.delete gkh genDelegs
           fod =
-            range $
-              Map.filterWithKey (\(FutureGenDeleg _ g) _ -> g /= gkh) (dsFutureGenDelegs ds)
+            Set.fromList $
+              Map.elems $
+                Map.filterWithKey (\(FutureGenDeleg _ g) _ -> g /= gkh) (dsFutureGenDelegs ds)
           currentOtherColdKeyHashes = Set.map genDelegKeyHash cod
           currentOtherVrfKeyHashes = Set.map genDelegVrfHash cod
           futureOtherColdKeyHashes = Set.map genDelegKeyHash fod
           futureOtherVrfKeyHashes = Set.map genDelegVrfHash fod
 
-      eval (vkh ∉ (currentOtherColdKeyHashes ∪ futureOtherColdKeyHashes))
+      (Set.notMember vkh (Set.union currentOtherColdKeyHashes futureOtherColdKeyHashes))
         ?! DuplicateGenesisDelegateDELEG vkh
-      eval (vrf ∉ (currentOtherVrfKeyHashes ∪ futureOtherVrfKeyHashes))
+      (Set.notMember vrf (Set.union currentOtherVrfKeyHashes futureOtherVrfKeyHashes))
         ?! DuplicateGenesisVRFDELEG vrf
 
       pure $
         certState
           & certDStateL . dsFutureGenDelegsL
-            .~ eval (dsFutureGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
+            .~ Map.insert (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf) (dsFutureGenDelegs ds)
     RegPoolTxCert _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure certState

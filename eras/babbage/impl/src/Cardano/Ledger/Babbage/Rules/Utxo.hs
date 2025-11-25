@@ -78,7 +78,6 @@ import qualified Cardano.Ledger.Val as Val (inject, isAdaOnly, pointwise)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
@@ -206,9 +205,9 @@ feesOK ::
   Test (EraRuleFailure rule era)
 feesOK pp tx u@(UTxO utxo) =
   let txBody = tx ^. bodyTxL
-      collateral' = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
+      collateral = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
-      utxoCollateral = eval (collateral' ◁ utxo)
+      utxoCollateral = Map.restrictKeys utxo collateral
       theFee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
       minFee = getMinFeeTxUtxo pp tx u
    in sequenceA_

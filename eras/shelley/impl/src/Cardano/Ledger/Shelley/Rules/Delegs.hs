@@ -53,7 +53,6 @@ import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.DeepSeq
-import Control.SetAlgebra (dom, eval, (∈))
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -63,6 +62,7 @@ import Control.State.Transition (
   trans,
   validateTrans,
  )
+import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -229,7 +229,7 @@ validateStakePoolDelegateeRegistered ::
   Test (KeyHash StakePool)
 validateStakePoolDelegateeRegistered pState targetPool =
   let stPools = psStakePools pState
-   in failureUnless (eval (targetPool ∈ dom stPools)) targetPool
+   in failureUnless (Map.member targetPool stPools) targetPool
 
 instance
   ( Era era

@@ -214,7 +214,6 @@ jobs:
         - cardano-ledger-test
         - cardano-protocol-tpraos
         - non-integral
-        - set-algebra
         - small-steps
         - vector-map
         ghc: ["9.6.7", "9.8.4", "9.10.2", "9.12.2"]

@@ -189,9 +189,6 @@ cradle:
     - path: "eras/shelley/test-suite/bench/Main.hs"
       component: "cardano-ledger-shelley-test:bench:mainbench"
 
-    - path: "eras/shelley/test-suite/bench/BenchUTxOAggregate.hs"
-      component: "cardano-ledger-shelley-test:bench:mainbench"
-
     - path: "eras/shelley/test-suite/bench/BenchValidation.hs"
       component: "cardano-ledger-shelley-test:bench:mainbench"
 
@@ -344,12 +341,6 @@ cradle:
 
     - path: "libs/plutus-preprocessor/app/Main.hs"
       component: "plutus-preprocessor:exe:plutus-preprocessor"
-
-    - path: "libs/set-algebra/src"
-      component: "lib:set-algebra"
-
-    - path: "libs/set-algebra/test"
-      component: "set-algebra:test:tests"
 
     - path: "libs/small-steps/src"
       component: "lib:small-steps"

@@ -32,7 +32,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (Identity, LedgerEnv)
 import Cardano.Ledger.Shelley.State
 import Control.Monad.Reader (MonadReader (ask), ReaderT)
-import Control.SetAlgebra (dom, eval, (▷), (◁))
 import Control.State.Transition (STS (..))
 import Data.Foldable (fold)
 import Data.Map (Map)
@@ -206,7 +205,7 @@ stakeDistr ::
   SnapShot
 stakeDistr network u ds ps =
   SnapShot
-    (Stake $ VMap.fromMap (eval (dom activeDelegs ◁ stakeRelation)))
+    (Stake $ VMap.fromMap $ Map.intersection stakeRelation activeDelegs)
     (VMap.fromMap delegs)
     (VMap.fromMap $ Map.mapWithKey (`stakePoolStateToStakePoolParams` network) poolState)
   where
@@ -220,7 +219,7 @@ stakeDistr network u ds ps =
     stakeRelation :: Map (Credential Staking) (CompactForm Coin)
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
     activeDelegs :: Map.Map (Credential Staking) (KeyHash StakePool)
-    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolState)
+    activeDelegs = Map.filterWithKey (\k v -> Map.member k rewards' && Map.member v poolState) delegs
 
 -- | Sum up all the Coin for each staking Credential. This function has an
 --   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'

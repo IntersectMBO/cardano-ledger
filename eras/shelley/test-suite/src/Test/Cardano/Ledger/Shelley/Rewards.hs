@@ -103,7 +103,6 @@ import Cardano.Protocol.Crypto (VRF, hashVerKeyVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
-import Control.SetAlgebra (eval, (◁))
 import Data.Foldable as F (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -439,7 +438,7 @@ rewardOnePool
       potentialRewards' =
         if hardforkBabbageForgoRewardPrefilter pv
           then potentialRewards
-          else eval (addrsRew ◁ potentialRewards)
+          else Map.restrictKeys potentialRewards addrsRew
       rewards' = Map.filter (/= Coin 0) potentialRewards'
 
 rewardOld ::

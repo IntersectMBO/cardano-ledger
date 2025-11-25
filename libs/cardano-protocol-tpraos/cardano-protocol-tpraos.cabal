@@ -57,7 +57,6 @@ library
     non-integral,
     nothunks,
     quiet,
-    set-algebra,
     small-steps >=1.1,
     transformers,
 
