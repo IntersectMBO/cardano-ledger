@@ -56,7 +56,6 @@ import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo, SlotNo, getTheSlotOfNoReturn)
 import Cardano.Ledger.State (EraCertState (..), SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Control.DeepSeq (NFData)
-import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import Data.Void (Void)
@@ -134,7 +133,7 @@ adoptGenesisDelegs es slot = es'
     ds' =
       ds
         { dsFutureGenDelegs = fGenDelegs'
-        , dsGenDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
+        , dsGenDelegs = GenDelegs $ Map.union genDelegs' genDelegs
         }
     dp' = dp & certDStateL .~ ds'
     ls' = ls & lsCertStateL .~ dp'

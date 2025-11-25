@@ -19,7 +19,6 @@ import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, singleton, (⨃))
 import Control.State.Transition
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -105,4 +104,4 @@ ocertTransition =
         pure cs
       Just m -> do
         m <= n ?! CounterTooSmallOCERT m n
-        pure (eval (cs ⨃ singleton hk n))
+        pure (Map.insert hk n cs)

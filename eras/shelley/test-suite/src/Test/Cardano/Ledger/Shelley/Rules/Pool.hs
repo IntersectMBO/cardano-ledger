@@ -21,7 +21,6 @@ import Cardano.Ledger.Shelley.Rules (ShelleyPOOL)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.BHeader (bhbody, bheaderSlotNo)
-import Control.SetAlgebra (dom, eval, (∈), (∉))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro.Extras (view)
@@ -129,7 +128,7 @@ poolRegistrationProp
             conjoin
               [ counterexample
                   "Pre-existing StakePoolParams must still be registered in pParams"
-                  (eval (hk ∈ dom (psStakePools targetSt)) :: Bool)
+                  (Map.member hk (psStakePools targetSt) :: Bool)
               , counterexample
                   "New StakePoolParams are registered in future Params map"
                   ( Map.lookup hk (psFutureStakePoolParams targetSt)
@@ -137,7 +136,7 @@ poolRegistrationProp
                   )
               , counterexample
                   "StakePoolParams are removed in 'retiring'"
-                  (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
+                  (Map.notMember hk (psRetiring targetSt) :: Bool)
               ]
           Nothing ->
             -- first registration
@@ -149,10 +148,10 @@ poolRegistrationProp
                   )
               , counterexample
                   "StakePoolParams are not present in 'future pool params'"
-                  (eval (hk ∉ dom (psFutureStakePoolParams targetSt)) :: Bool)
+                  (Map.notMember hk (psFutureStakePoolParams targetSt) :: Bool)
               , counterexample
                   "StakePoolParams are removed in 'retiring'"
-                  (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
+                  (Map.notMember hk (psRetiring targetSt) :: Bool)
               ]
 poolRegistrationProp _ = property ()
 
@@ -171,13 +170,13 @@ poolRetirementProp
           (currentEpoch < e && e < EpochNo (ce + fromIntegral maxEpoch))
       , counterexample
           "hk must be in source stPools"
-          (eval (hk ∈ dom (psStakePools sourceSt)) :: Bool)
+          (Map.member hk (psStakePools sourceSt) :: Bool)
       , counterexample
           "hk must be in target stPools"
-          (eval (hk ∈ dom (psStakePools targetSt)) :: Bool)
+          (Map.member hk (psStakePools targetSt) :: Bool)
       , counterexample
           "hk must be in target's retiring"
-          (eval (hk ∈ dom (psRetiring targetSt)) :: Bool)
+          (Map.member hk (psRetiring targetSt) :: Bool)
       ]
 poolRetirementProp _ _ _ = property ()
 

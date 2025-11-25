@@ -99,7 +99,6 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
@@ -274,7 +273,7 @@ feesOK pp tx u@(UTxO utxo) =
   let txBody = tx ^. bodyTxL
       collateral = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
-      utxoCollateral = eval (collateral ◁ utxo)
+      utxoCollateral = Map.restrictKeys utxo collateral
       theFee = txBody ^. feeTxBodyL
       minFee = getMinFeeTxUtxo pp tx u
    in sequenceA_

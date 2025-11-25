@@ -34,7 +34,6 @@ import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Cardano.Protocol.Crypto (Crypto, hashVerKeyVRF)
 import Control.Monad (replicateM)
-import Control.SetAlgebra (dom, domain, eval, (∈))
 import Data.Foldable (fold)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
@@ -42,7 +41,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set ((\\))
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Numeric.Natural (Natural)
@@ -300,7 +298,7 @@ genDelegation
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred' . snd) scripts
       registeredPools = psStakePools (dpState ^. certPStateL)
-      availablePools = Set.toList $ domain registeredPools
+      availablePools = Map.keys registeredPools
 
 genGenesisDelegation ::
   forall era c.
@@ -332,7 +330,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
         , CoreKeyCred [gkey]
         )
     GenDelegs genDelegs_ = dpState ^. certDStateL . dsGenDelegsL
-    genesisDelegator k = eval (k ∈ dom genDelegs_)
+    genesisDelegator k = Map.member k genDelegs_
     genesisDelegators = filter (genesisDelegator . hashVKey) (fst <$> coreNodes)
     activeGenDelegsKeyHashSet =
       Set.fromList $ genDelegKeyHash <$> Map.elems genDelegs_
@@ -416,7 +414,7 @@ genRetirePool ::
   PState era ->
   SlotNo ->
   Gen (Maybe (TxCert era, CertCred era))
-genRetirePool _pp poolKeys pState slot =
+genRetirePool _pp poolKeys (PState {psStakePools, psRetiring}) slot =
   if null retireable
     then pure Nothing
     else
@@ -429,10 +427,7 @@ genRetirePool _pp poolKeys pState slot =
         <$> QC.elements retireable
         <*> (EpochNo <$> genWord64 epochLow epochHigh)
   where
-    stakePools = psStakePools pState
-    registered_ = eval (dom stakePools)
-    retiring_ = domain (psRetiring pState)
-    retireable = Set.toList (registered_ \\ retiring_)
+    retireable = Map.keys (Map.difference psStakePools psRetiring)
     lookupHash hk' =
       fromMaybe
         (error "genRetirePool: could not find keyHash")

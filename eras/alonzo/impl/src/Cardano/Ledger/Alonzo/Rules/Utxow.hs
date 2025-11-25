@@ -77,7 +77,6 @@ import Cardano.Ledger.State (
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (domain, eval, (➖))
 import Control.State.Transition.Extended
 import Data.ByteString (ByteString)
 import Data.Foldable (sequenceA_)
@@ -239,10 +238,10 @@ missingRequiredDatums utxo tx = do
   let txBody = tx ^. bodyTxL
       scriptsProvided = getScriptsProvided utxo tx
       (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptsProvided
-      txHashes = domain (tx ^. witsTxL . datsTxWitsL . unTxDatsL)
-      unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
+      txHashes = Map.keysSet (tx ^. witsTxL . datsTxWitsL . unTxDatsL)
+      unmatchedDatumHashes = Set.difference inputHashes txHashes
       allowedSupplementalDataHashes = getSupplementalDataHashes utxo txBody
-      supplimentalDatumHashes = eval (txHashes ➖ inputHashes)
+      supplimentalDatumHashes = Set.difference txHashes inputHashes
       (okSupplimentalDHs, notOkSupplimentalDHs) =
         Set.partition (`Set.member` allowedSupplementalDataHashes) supplimentalDatumHashes
   sequenceA_

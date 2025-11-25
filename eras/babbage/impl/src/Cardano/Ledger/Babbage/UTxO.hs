@@ -30,7 +30,6 @@ import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo, shelleyConsumed)
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Applicative
-import Control.SetAlgebra (eval, (◁))
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -153,6 +152,6 @@ getReferenceScriptsNonDistinct ::
   [(ScriptHash, Script era)]
 getReferenceScriptsNonDistinct (UTxO mp) inputs =
   [ (hashScript script, script)
-  | txOut <- Map.elems (eval (inputs ◁ mp))
+  | txOut <- Map.elems (Map.restrictKeys mp inputs)
   , SJust script <- [txOut ^. referenceScriptTxOutL]
   ]

@@ -72,7 +72,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Except (throwError)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, range)
 import Control.State.Transition
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
@@ -269,8 +268,8 @@ overlayTransition =
 
         let oce =
               OCertEnv
-                { ocertEnvStPools = eval (dom $ unPoolDistr pd)
-                , ocertEnvGenDelegs = Set.map genDelegKeyHash $ range genDelegs
+                { ocertEnvStPools = Map.keysSet $ unPoolDistr pd
+                , ocertEnvGenDelegs = Set.map genDelegKeyHash $ Set.fromList $ Map.elems genDelegs
                 }
 
         trans @(OCERT c) $ TRC (oce, cs, bh)

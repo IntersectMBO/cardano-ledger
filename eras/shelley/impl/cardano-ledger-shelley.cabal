@@ -122,7 +122,6 @@ library
     mtl,
     nothunks,
     quiet,
-    set-algebra >=1.0,
     small-steps >=1.1.1,
     text,
     time,

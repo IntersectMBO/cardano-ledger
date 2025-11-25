@@ -193,7 +193,6 @@
               })
             ({pkgs, ...}:
               lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
-                packages.set-algebra.components.tests.tests.buildable = lib.mkForce false;
                 packages.plutus-preprocessor.buildable = lib.mkForce false;
                 packages.cardano-ledger-test.buildable = lib.mkForce false;
                 packages.cardano-ledger-shelley.buildable = lib.mkForce false;

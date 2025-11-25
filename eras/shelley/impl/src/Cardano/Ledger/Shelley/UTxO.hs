@@ -76,7 +76,6 @@ import Cardano.Ledger.State as UTxO (
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
-import Control.SetAlgebra (eval, (◁))
 import Data.Foldable (Foldable (fold), foldr', toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -217,11 +216,7 @@ witsVKeyNeededGenDelegs txBody (GenDelegs genDelegs) =
     -- proposals.
     proposedUpdatesWitnesses = \case
       SNothing -> Set.empty
-      SJust (Update (ProposedPPUpdates pup) _) ->
-        Set.map asWitness . Set.fromList $ Map.elems updateKeys''
-        where
-          updateKeys' = eval (Map.keysSet pup ◁ genDelegs)
-          updateKeys'' = Map.map genDelegKeyHash updateKeys'
+      SJust (Update (ProposedPPUpdates pup) _) -> Set.fromList $ map (asWitness . genDelegKeyHash) $ Map.elems $ Map.intersection genDelegs pup
 
 -- | Extract witnesses from UTxO and TxBody. Does not enforce witnesses for governance
 -- related Keys, i.e. `GenDelegs`

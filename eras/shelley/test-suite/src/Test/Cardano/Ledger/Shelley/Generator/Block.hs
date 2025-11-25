@@ -36,7 +36,6 @@ import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad (unless)
-import Control.SetAlgebra (dom, eval)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.List as List (find)
@@ -151,7 +150,7 @@ genBlockWithTxGen
           currentIssueNo
             ( OCertEnv
                 (Set.fromList $ aikColdKeyHash <$> ksStakePools)
-                (eval (dom ksIndexedGenDelegates))
+                (Map.keysSet ksIndexedGenDelegates)
             )
             cs
             (coerceKeyRole . hashKey . vKey $ aikCold issuerKeys)

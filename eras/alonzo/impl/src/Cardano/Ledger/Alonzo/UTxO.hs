@@ -60,7 +60,6 @@ import Cardano.Ledger.State (
   getScriptHash,
  )
 import Cardano.Ledger.TxIn
-import Control.SetAlgebra (eval, (◁))
 import Data.Foldable as F (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe, isJust)
@@ -178,7 +177,7 @@ getInputDataHashesTxBody (UTxO utxo) txBody (ScriptsProvided scriptsProvided) =
       pure $ plutusScriptLanguage plutusScript
     isSpendingPlutusScript = isJust . spendingPlutusScriptLanguage
     spendInputs = txBody ^. inputsTxBodyL
-    spendUTxO = eval (spendInputs ◁ utxo)
+    spendUTxO = Map.restrictKeys utxo spendInputs
     accum ans@(!hashSet, !inputSet) txIn txOut =
       let addr = txOut ^. addrTxOutL
        in case txOut ^. datumTxOutF of

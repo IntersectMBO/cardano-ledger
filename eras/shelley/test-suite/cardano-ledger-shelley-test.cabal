@@ -92,7 +92,6 @@ library
     plutus-ledger-api,
     prettyprinter,
     serialise,
-    set-algebra,
     small-steps:{small-steps, testlib} >=1.1,
     text,
     transformers,
@@ -177,7 +176,6 @@ benchmark mainbench
   main-is: Main.hs
   hs-source-dirs: bench
   other-modules:
-    BenchUTxOAggregate
     BenchValidation
     Cardano.Ledger.Shelley.Bench.Gen
     Cardano.Ledger.Shelley.Bench.Rewards
@@ -198,7 +196,7 @@ benchmark mainbench
     QuickCheck,
     base,
     cardano-data,
-    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-core,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-test,
     cardano-protocol-tpraos,
@@ -208,5 +206,4 @@ benchmark mainbench
     criterion,
     deepseq,
     mtl,
-    set-algebra,
     small-steps:{small-steps, testlib} >=1.1,

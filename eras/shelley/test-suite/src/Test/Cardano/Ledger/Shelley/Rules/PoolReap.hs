@@ -11,7 +11,6 @@ module Test.Cardano.Ledger.Shelley.Rules.PoolReap (
 ) where
 
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   esLStateL,
@@ -24,7 +23,7 @@ import Cardano.Protocol.TPraos.BHeader (
   bhbody,
   bheaderSlotNo,
  )
-import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
@@ -88,18 +87,17 @@ removedAfterPoolreap ::
   PState era ->
   EpochNo ->
   Property
-removedAfterPoolreap p p' e =
+removedAfterPoolreap p p' epoch =
   property $
-    eval (retire ⊆ dom stp)
-      && Set.null (eval (retire ∩ dom stp'))
-      && Set.null (eval (retire ∩ dom retiring'))
+    (retire `Set.isSubsetOf` (Map.keysSet stp))
+      && Set.null (Set.intersection retire (Map.keysSet stp'))
+      && Set.null (Set.intersection retire (Map.keysSet retiring'))
   where
     stp = psStakePools p
     stp' = psStakePools p'
     retiring = psRetiring p
     retiring' = psRetiring p'
-    retire :: Set.Set (KeyHash StakePool) -- This declaration needed to disambiguate 'eval'
-    retire = eval (dom (retiring ▷ setSingleton e))
+    retire = Map.keysSet $ Map.filter (epoch ==) retiring
 
 sameEpoch ::
   forall era.

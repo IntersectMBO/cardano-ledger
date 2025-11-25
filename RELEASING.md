@@ -200,7 +200,6 @@ $ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <C
   libs/cardano-ledger-core \
   libs/cardano-protocol-tpraos \
   libs/non-integral \
-  libs/set-algebra \
   libs/small-steps \
   libs/vector-map
 ```

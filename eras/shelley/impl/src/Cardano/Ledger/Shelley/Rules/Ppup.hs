@@ -54,7 +54,6 @@ import Cardano.Ledger.Slot (
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
 import qualified Data.Foldable as F (find)
 import qualified Data.Map as Map
@@ -164,11 +163,11 @@ ppupTransitionNonEmpty = do
   case update of
     SNothing -> pure pps
     SJust (Update (ProposedPPUpdates pup) targetEpochNo) -> do
-      eval (dom pup ⊆ dom genDelegs)
+      Map.isSubmapOfBy (\_ _ -> True) pup genDelegs
         ?! NonGenesisUpdatePPUP
           Mismatch
-            { mismatchSupplied = eval $ dom pup
-            , mismatchExpected = eval $ dom genDelegs
+            { mismatchSupplied = Map.keysSet pup
+            , mismatchExpected = Map.keysSet genDelegs
             }
 
       let firstIllegalProtVerUpdate = do
@@ -185,7 +184,7 @@ ppupTransitionNonEmpty = do
         then do
           (curEpochNo == targetEpochNo)
             ?! PPUpdateWrongEpoch curEpochNo targetEpochNo VoteForThisEpoch
-          let curProposals = ProposedPPUpdates (eval (pupS ⨃ pup))
+          let curProposals = ProposedPPUpdates (Map.union pup pupS)
           !coreNodeQuorum <- liftSTS $ asks quorum
           pure $
             pps
@@ -200,7 +199,7 @@ ppupTransitionNonEmpty = do
           pure $
             pps
               { sgsCurProposals = ProposedPPUpdates pupS
-              , sgsFutureProposals = ProposedPPUpdates (eval (fpupS ⨃ pup))
+              , sgsFutureProposals = ProposedPPUpdates (Map.union pup fpupS)
               }
 
 -- | If at least @n@ nodes voted to change __the same__ protocol parameters to
