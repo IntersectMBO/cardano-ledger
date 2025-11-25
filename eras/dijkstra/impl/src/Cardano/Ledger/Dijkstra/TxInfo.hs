@@ -75,6 +75,7 @@ import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -86,7 +87,7 @@ import qualified PlutusLedgerApi.V3 as PV3
 
 data DijkstraContextError era
   = ConwayContextError !(ConwayContextError era)
-  | PointerPresentInOutput !(TxOut era)
+  | PointerPresentInOutput !(NonEmpty (TxOut era))
   deriving (Generic)
 
 deriving instance
@@ -463,9 +464,9 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
       outputHasPtr txOut = case txOut ^. addrTxOutL of
         Addr _ _ (StakeRefPtr _) -> True
         _ -> False
-    case F.find outputHasPtr ledgerOutputs of
+    case NE.nonEmpty (filter outputHasPtr $ toList ledgerOutputs) of
       Nothing -> pure ()
-      Just output -> Left $ PointerPresentInOutput output
+      Just ptrOutputs -> Left $ PointerPresentInOutput ptrOutputs
     txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
     plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx
     pure
