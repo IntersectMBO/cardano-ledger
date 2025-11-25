@@ -147,6 +147,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withNoFixup,
   withPostFixup,
   withPreFixup,
+  impEventsFrom,
   impNESL,
   impGlobalsL,
   impCurSlotNoG,
@@ -262,6 +263,8 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, isNothing, mapMaybe)
 import Data.Ratio (denominator, numerator, (%))
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -346,7 +349,7 @@ data ImpTestState era = ImpTestState
   , impNativeScripts :: !(Map ScriptHash (NativeScript era))
   , impCurSlotNo :: !SlotNo
   , impGlobals :: !Globals
-  , impEvents :: [SomeSTSEvent era]
+  , impEvents :: Seq (SomeSTSEvent era)
   }
 
 -- | This is a preliminary state that is used to prepare the actual `ImpTestState`
@@ -409,7 +412,7 @@ impNativeScriptsG ::
   SimpleGetter (ImpTestState era) (Map ScriptHash (NativeScript era))
 impNativeScriptsG = impNativeScriptsL
 
-impEventsL :: Lens' (ImpTestState era) [SomeSTSEvent era]
+impEventsL :: Lens' (ImpTestState era) (Seq (SomeSTSEvent era))
 impEventsL = lens impEvents (\x y -> x {impEvents = y})
 
 class
@@ -897,7 +900,7 @@ itePostEpochBoundaryHookL ::
     )
 itePostEpochBoundaryHookL = lens itePostEpochBoundaryHook (\x y -> x {itePostEpochBoundaryHook = y})
 
-instance MonadWriter [SomeSTSEvent era] (ImpTestM era) where
+instance MonadWriter (Seq (SomeSTSEvent era)) (ImpTestM era) where
   writer (x, evs) = (impEventsL %= (<> evs)) $> x
   listen act = do
     oldEvs <- use impEventsL
@@ -909,6 +912,11 @@ instance MonadWriter [SomeSTSEvent era] (ImpTestM era) where
   pass act = do
     ((a, f), evs) <- listen act
     writer (a, f evs)
+
+impEventsFrom ::
+  ImpTestM era () ->
+  ImpTestM era [SomeSTSEvent era]
+impEventsFrom = fmap (toList . snd) . listen
 
 runShelleyBase :: ShelleyBase a -> ImpTestM era a
 runShelleyBase act = do
@@ -1208,7 +1216,7 @@ trySubmitTx tx = do
           rootIndex
             | outsSize > 0 = outsSize - 1
             | otherwise = error ("Expected at least 1 output after submitting tx: " <> show txId)
-      tell $ fmap (SomeSTSEvent @era @"LEDGER") events
+      tell . Seq.fromList $ SomeSTSEvent @era @"LEDGER" <$> events
       modify $ impNESL . nesEsL . esLStateL .~ st'
       UTxO utxo <- getUTxO
       -- This TxIn is in the utxo, and thus can be the new root, only if the transaction
@@ -1328,7 +1336,7 @@ runImpRule env st sig = do
           unlines $
             ("Failed to run " <> ruleName <> ":") : map show (toList fs)
       Right res -> evaluateDeep res
-  tell $ fmap (SomeSTSEvent @era @rule) ev
+  tell . Seq.fromList $ SomeSTSEvent @era @rule <$> ev
   pure res
 
 -- | Runs the TICK rule once
