@@ -2,6 +2,23 @@
 
 ## 1.19.0.0
 
+* Changed name and type to `CompactForm Coin`:
+  - `hkdMinFeeAL` -> `hkdMinFeeACompactL`
+  - `hkdMinFeeBL` -> `hkdMinFeeBCompactL`
+  - `hkdKeyDepositL` -> `hkdKeyDepositCompactL`
+  - `hkdMinUTxOValueL` -> `hkdMinUTxOValueCompactL`
+  - `hkdMinPoolCostL` -> `hkdMinPoolCostCompactL`
+* Added:
+  - `ppMinFeeACompactL`,
+  - `ppMinFeeBCompactL`,
+  - `ppKeyDepositCompactL`,
+  - `ppMinUTxOValueCompactL`,
+  - `ppMinPoolCostCompactL`,
+  - `ppuMinFeeACompactL`,
+  - `ppuMinFeeBCompactL`,
+  - `ppuKeyDepositCompactL`,
+  - `ppuMinUTxOValueCompactL`,
+  - `ppuMinPoolCostCompactL`,
 * Change the return type of `withdrawalsThatDoNotDrainAccounts` to `Maybe (Withdrawals, Map RewardAccount (Mismatch RelEQ Coin))`
 * Deprecate `StakeCredential` and `PaymentCredential` type synonyms
 * Add `positiveUnitIntervalRelaxToUnitInterval`, `positiveUnitIntervalRelaxToPositiveInterval` and  `positiveIntervalRelaxToNonNegativeInterval`
