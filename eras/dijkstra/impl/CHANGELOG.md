@@ -2,6 +2,12 @@
 
 ## 0.2.0.0
 
+* Changed the type of the following fields to `CompactForm Coin` in `DijkstraPParams`:
+  - `dppMinFeeA`
+  - `dppMinFeeB`
+  - `dppKeyDeposit`
+  - `dppMinPoolCost`
+  - `dppGovActionDeposit`
 * Change some rule transitions to use Dijkstra's own rules instead of reusing Conway's:
   - `DijkstraBBODY`
   - `DijkstraGOV`

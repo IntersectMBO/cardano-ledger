@@ -78,9 +78,9 @@ import Numeric.Natural (Natural)
 -- * @refScriptCostStride@
 -- * @refScriptCostMultiplier@
 data DijkstraPParams f era = DijkstraPParams
-  { dppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin)
+  { dppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The linear factor for the minimum fee calculation
-  , dppMinFeeB :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin)
+  , dppMinFeeB :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , dppMaxBBSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
   -- ^ Maximal block body size
@@ -88,7 +88,7 @@ data DijkstraPParams f era = DijkstraPParams
   -- ^ Maximal transaction size
   , dppMaxBHSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word16)
   -- ^ Maximal block header size
-  , dppKeyDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
+  , dppKeyDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ The amount of a key registration deposit
   , dppPoolDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
@@ -105,7 +105,7 @@ data DijkstraPParams f era = DijkstraPParams
   -- ^ Treasury expansion
   , dppProtocolVersion :: !(HKDNoUpdate f ProtVer)
   -- ^ Protocol version
-  , dppMinPoolCost :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
+  , dppMinPoolCost :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ Minimum Stake Pool Cost
   , dppCoinsPerUTxOByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
   -- ^ Cost in lovelace per byte of UTxO storage
@@ -135,7 +135,7 @@ data DijkstraPParams f era = DijkstraPParams
   -- ^ The Constitutional Committee Term limit in number of Slots
   , dppGovActionLifetime :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ Gov action lifetime in number of Epochs
-  , dppGovActionDeposit :: !(THKD ('PPGroups 'GovGroup 'SecurityGroup) f Coin)
+  , dppGovActionDeposit :: !(THKD ('PPGroups 'GovGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The amount of the Gov Action deposit
   , dppDRepDeposit :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ The amount of a DRep registration deposit
@@ -381,12 +381,12 @@ instance EraPParams DijkstraEra where
   downgradePParamsHKD _ = downgradeDijkstraPParams
   emptyUpgradePParamsUpdate = emptyDijkstraUpgradePParamsUpdate
 
-  hkdMinFeeAL = lens (unTHKD . dppMinFeeA) $ \pp x -> pp {dppMinFeeA = THKD x}
-  hkdMinFeeBL = lens (unTHKD . dppMinFeeB) $ \pp x -> pp {dppMinFeeB = THKD x}
+  hkdMinFeeACompactL = lens (unTHKD . dppMinFeeA) $ \pp x -> pp {dppMinFeeA = THKD x}
+  hkdMinFeeBCompactL = lens (unTHKD . dppMinFeeB) $ \pp x -> pp {dppMinFeeB = THKD x}
   hkdMaxBBSizeL = lens (unTHKD . dppMaxBBSize) $ \pp x -> pp {dppMaxBBSize = THKD x}
   hkdMaxTxSizeL = lens (unTHKD . dppMaxTxSize) $ \pp x -> pp {dppMaxTxSize = THKD x}
   hkdMaxBHSizeL = lens (unTHKD . dppMaxBHSize) $ \pp x -> pp {dppMaxBHSize = THKD x}
-  hkdKeyDepositL = lens (unTHKD . dppKeyDeposit) $ \pp x -> pp {dppKeyDeposit = THKD x}
+  hkdKeyDepositCompactL = lens (unTHKD . dppKeyDeposit) $ \pp x -> pp {dppKeyDeposit = THKD x}
   hkdPoolDepositCompactL = lens (unTHKD . dppPoolDeposit) $ \pp x -> pp {dppPoolDeposit = THKD x}
   hkdEMaxL = lens (unTHKD . dppEMax) $ \pp x -> pp {dppEMax = THKD x}
   hkdNOptL = lens (unTHKD . dppNOpt) $ \pp x -> pp {dppNOpt = THKD x}
@@ -394,14 +394,14 @@ instance EraPParams DijkstraEra where
   hkdRhoL = lens (unTHKD . dppRho) $ \pp x -> pp {dppRho = THKD x}
   hkdTauL = lens (unTHKD . dppTau) $ \pp x -> pp {dppTau = THKD x}
   hkdProtocolVersionL = notSupportedInThisEraL
-  hkdMinPoolCostL = lens (unTHKD . dppMinPoolCost) $ \pp x -> pp {dppMinPoolCost = THKD x}
+  hkdMinPoolCostCompactL = lens (unTHKD . dppMinPoolCost) $ \pp x -> pp {dppMinPoolCost = THKD x}
   ppProtocolVersionL = ppLensHKD . lens dppProtocolVersion (\pp x -> pp {dppProtocolVersion = x})
 
   ppDG = to (const minBound)
   ppuProtocolVersionL = notSupportedInThisEraL
   hkdDL = notSupportedInThisEraL
   hkdExtraEntropyL = notSupportedInThisEraL
-  hkdMinUTxOValueL = notSupportedInThisEraL
+  hkdMinUTxOValueCompactL = notSupportedInThisEraL
   eraPParams =
     [ ppMinFeeA
     , ppMinFeeB
@@ -563,7 +563,7 @@ instance ConwayEraPParams DijkstraEra where
     lens (unTHKD . dppCommitteeMaxTermLength) $ \pp x -> pp {dppCommitteeMaxTermLength = THKD x}
   hkdGovActionLifetimeL =
     lens (unTHKD . dppGovActionLifetime) $ \pp x -> pp {dppGovActionLifetime = THKD x}
-  hkdGovActionDepositL =
+  hkdGovActionDepositCompactL =
     lens (unTHKD . dppGovActionDeposit) $ \pp x -> pp {dppGovActionDeposit = THKD x}
   hkdDRepDepositCompactL =
     lens (unTHKD . dppDRepDeposit) $ \pp x -> pp {dppDRepDeposit = THKD x}
@@ -580,12 +580,12 @@ instance ConwayEraPParams DijkstraEra where
 emptyDijkstraPParams :: forall era. Era era => DijkstraPParams Identity era
 emptyDijkstraPParams =
   DijkstraPParams
-    { dppMinFeeA = THKD (Coin 0)
-    , dppMinFeeB = THKD (Coin 0)
+    { dppMinFeeA = THKD (CompactCoin 0)
+    , dppMinFeeB = THKD (CompactCoin 0)
     , dppMaxBBSize = THKD 0
     , dppMaxTxSize = THKD 2048
     , dppMaxBHSize = THKD 0
-    , dppKeyDeposit = THKD (Coin 0)
+    , dppKeyDeposit = THKD (CompactCoin 0)
     , dppPoolDeposit = THKD (CompactCoin 0)
     , dppEMax = THKD (EpochInterval 0)
     , dppNOpt = THKD 100
@@ -607,7 +607,7 @@ emptyDijkstraPParams =
     , dppCommitteeMinSize = THKD 0
     , dppCommitteeMaxTermLength = THKD (EpochInterval 0)
     , dppGovActionLifetime = THKD (EpochInterval 0)
-    , dppGovActionDeposit = THKD (Coin 0)
+    , dppGovActionDeposit = THKD (CompactCoin 0)
     , dppDRepDeposit = THKD (CompactCoin 0)
     , dppDRepActivity = THKD (EpochInterval 0)
     , dppMinFeeRefScriptCostPerByte = THKD minBound
