@@ -63,6 +63,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dstbProposalProcedures,
     dstbCurrentTreasuryValue,
     dstbTreasuryDonation,
+    dstbRequiredTopLevelGuards,
     dstbGuards
   ),
   upgradeProposals,
@@ -132,10 +133,13 @@ import Cardano.Ledger.MemoBytes (
   memoRawTypeL,
   mkMemoizedEra,
  )
+import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq)
 import Data.Coerce (coerce)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.OMap.Strict (OMap)
 import qualified Data.OMap.Strict as OMap
 import Data.OSet.Strict (OSet, decodeOSet)
@@ -189,6 +193,7 @@ data DijkstraTxBodyRaw l era where
     , dstbrProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
     , dstbrCurrentTreasuryValue :: !(StrictMaybe Coin)
     , dstbrTreasuryDonation :: !Coin
+    , dstbrRequiredTopLevelGuards :: !(Map (Credential Guard) (StrictMaybe (Data era)))
     } ->
     DijkstraTxBodyRaw SubTx era
 
@@ -232,7 +237,7 @@ instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l e
                                           dtbrCurrentTreasuryValue `deepseq`
                                             dtbrTreasuryDonation `deepseq`
                                               rnf dtbrSubTransactions
-  rnf txBodyRaw@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
+  rnf txBodyRaw@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraSubTxBodyRaw {..} = txBodyRaw
      in dstbrSpendInputs `deepseq`
           dstbrReferenceInputs `deepseq`
@@ -248,7 +253,8 @@ instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l e
                               dstbrVotingProcedures `deepseq`
                                 dstbrProposalProcedures `deepseq`
                                   dstbrCurrentTreasuryValue `deepseq`
-                                    rnf dstbrTreasuryDonation
+                                    dstbrTreasuryDonation `deepseq`
+                                      rnf dstbrRequiredTopLevelGuards
 
 deriving instance (EraTxBody era, Show (Tx SubTx era)) => Show (DijkstraTxBodyRaw l era)
 
@@ -289,6 +295,7 @@ basicDijkstraTxBodyRaw SSubTx =
     SNothing
     SNothing
     (VotingProcedures mempty)
+    mempty
     mempty
     mempty
     mempty
@@ -380,6 +387,13 @@ instance
         23
           | STopTx <- sTxLevel ->
               fieldAA (subTransactionsDijkstraTxBodyRawL .~) (D decodeSubTransactions)
+        24
+          | SSubTx <- sTxLevel ->
+              fieldAGuarded
+                (emptyFailure "RequiredTopLevelGuards" "non-empty")
+                Map.null
+                (requiredTopLevelGuardsDijkstraTxBodyRawL .~)
+                (D (decodeMap decCBOR (decodeNullStrictMaybe decCBOR)))
         n -> invalidField n
       decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
       decodeSubTransactions =
@@ -446,6 +460,9 @@ encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
         !> Omit OSet.null (Key 20 (To dstbrProposalProcedures))
         !> encodeKeyedStrictMaybe 21 dstbrCurrentTreasuryValue
         !> Omit (== mempty) (Key 22 $ To dstbrTreasuryDonation)
+        !> Omit
+          (== mempty)
+          (Key 24 $ E (encodeMap encCBOR (encodeNullStrictMaybe encCBOR)) dstbrRequiredTopLevelGuards)
 
 instance
   ( EraTxBody era
@@ -639,6 +656,7 @@ pattern DijkstraSubTxBody ::
   OSet.OSet (ProposalProcedure DijkstraEra) ->
   StrictMaybe Coin ->
   Coin ->
+  Map (Credential Guard) (StrictMaybe (Data DijkstraEra)) ->
   TxBody SubTx DijkstraEra
 pattern DijkstraSubTxBody
   { dstbSpendInputs
@@ -656,6 +674,7 @@ pattern DijkstraSubTxBody
   , dstbProposalProcedures
   , dstbCurrentTreasuryValue
   , dstbTreasuryDonation
+  , dstbRequiredTopLevelGuards
   } <-
   ( getMemoRawType ->
       DijkstraSubTxBodyRaw
@@ -674,6 +693,7 @@ pattern DijkstraSubTxBody
         , dstbrProposalProcedures = dstbProposalProcedures
         , dstbrCurrentTreasuryValue = dstbCurrentTreasuryValue
         , dstbrTreasuryDonation = dstbTreasuryDonation
+        , dstbrRequiredTopLevelGuards = dstbRequiredTopLevelGuards
         }
     )
   where
@@ -692,7 +712,8 @@ pattern DijkstraSubTxBody
       votingProcedures
       proposalProcedures
       currentTreasuryValue
-      treasuryDonation =
+      treasuryDonation
+      requiredTopLevelGuards =
         mkMemoizedEra @DijkstraEra $
           DijkstraSubTxBodyRaw
             inputsX
@@ -710,6 +731,7 @@ pattern DijkstraSubTxBody
             proposalProcedures
             currentTreasuryValue
             treasuryDonation
+            requiredTopLevelGuards
 
 {-# COMPLETE DijkstraTxBody, DijkstraSubTxBody #-}
 
@@ -1193,6 +1215,9 @@ class ConwayEraTxBody era => DijkstraEraTxBody era where
 
   subTransactionsTxBodyL :: Lens' (TxBody TopTx era) (OMap TxId (Tx SubTx era))
 
+  requiredTopLevelGuardsL ::
+    Lens' (TxBody SubTx era) (Map (Credential Guard) (StrictMaybe (Data era)))
+
 guardsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw l era) (OSet (Credential Guard))
 guardsDijkstraTxBodyRawL =
   lens
@@ -1207,6 +1232,11 @@ guardsDijkstraTxBodyRawL =
 
 subTransactionsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw TopTx era) (OMap TxId (Tx SubTx era))
 subTransactionsDijkstraTxBodyRawL = lens dtbrSubTransactions (\x y -> x {dtbrSubTransactions = y})
+
+requiredTopLevelGuardsDijkstraTxBodyRawL ::
+  Lens' (DijkstraTxBodyRaw SubTx era) (Map (Credential Guard) (StrictMaybe (Data era)))
+requiredTopLevelGuardsDijkstraTxBodyRawL =
+  lens dstbrRequiredTopLevelGuards (\x y -> x {dstbrRequiredTopLevelGuards = y})
 
 instance
   ( NFData (Tx SubTx DijkstraEra)
@@ -1223,6 +1253,8 @@ instance
 
   {-# INLINE subTransactionsTxBodyL #-}
   subTransactionsTxBodyL = memoRawTypeL @DijkstraEra . subTransactionsDijkstraTxBodyRawL
+
+  requiredTopLevelGuardsL = memoRawTypeL @DijkstraEra . requiredTopLevelGuardsDijkstraTxBodyRawL
 
 -- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
 -- the first element and if it's a credential, it decodes the rest of the
