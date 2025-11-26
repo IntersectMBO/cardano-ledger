@@ -44,7 +44,7 @@ import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val ((<+>), (<->))
+import Cardano.Ledger.Val (Val (..), (<+>), (<->))
 import Cardano.Protocol.Crypto (StandardCrypto, VRF, hashVerKeyVRF)
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.DeepSeq (rnf)
@@ -559,7 +559,10 @@ testWithdrawalWrongAmt =
       rAccount = mkVKeyRewardAccount Testnet bobStake
       dpState' = addReward dpState (raCredential rAccount) (Coin 10)
       tx = MkShelleyTx $ ShelleyTx @ShelleyEra txb txwits SNothing
-      errs = [ShelleyIncompleteWithdrawals $ Withdrawals $ Map.singleton rAccount $ Coin 11]
+      errs =
+        [ ShelleyIncompleteWithdrawals
+            [(raCredential rAccount, Mismatch (Coin 11) (Coin 10))]
+        ]
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion

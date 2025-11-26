@@ -29,7 +29,7 @@ module Cardano.Ledger.State.Account (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
-import Cardano.Ledger.BaseTypes (Network)
+import Cardano.Ledger.BaseTypes (Mismatch (..), Network, Relation (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -201,23 +201,26 @@ withdrawalsThatDoNotDrainAccounts ::
   -- the wrong network.
   -- incomplete withdrawal = that which does not withdraw the exact account
   -- balance.
-  Maybe (Withdrawals, Withdrawals)
+  Maybe (Withdrawals, Map (Credential Staking) (Mismatch RelEQ Coin))
 withdrawalsThatDoNotDrainAccounts (Withdrawals withdrawals) networkId accounts
   -- @withdrawals@ is small and @accounts@ big, better to traverse the former than the latter.
   | Map.foldrWithKey checkBadWithdrawals True withdrawals = Nothing
   | otherwise =
       Just $
-        bimap Withdrawals Withdrawals $
+        first Withdrawals $
           Map.foldrWithKey collectBadWithdrawals (Map.empty, Map.empty) withdrawals
   where
     checkBadWithdrawals rewardAccount withdrawalAmount noBadWithdrawals =
       noBadWithdrawals && isGoodWithdrawal rewardAccount withdrawalAmount
-    collectBadWithdrawals rewardAccount withdrawalAmount accum@(!_, !_) =
+    collectBadWithdrawals rewardAccount@(RewardAccount _ cred) withdrawalAmount accum@(!_, !_) =
       case lookupAccount rewardAccount of
         Nothing -> first (Map.insert rewardAccount withdrawalAmount) accum
         Just account
           | isBalanceZero withdrawalAmount account -> accum
-          | otherwise -> second (Map.insert rewardAccount withdrawalAmount) accum
+          | otherwise ->
+              second
+                (Map.insert cred $ Mismatch withdrawalAmount (fromCompact $ account ^. balanceAccountStateL))
+                accum
     isGoodWithdrawal rewardAccount withdrawalAmount =
       maybe False (isBalanceZero withdrawalAmount) (lookupAccount rewardAccount)
     isBalanceZero withdrawalAmount accountState =
