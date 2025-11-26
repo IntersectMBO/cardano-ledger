@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Make `ConwayAccountState` a pattern synonym
 * Remove deprecated type `Conway`
 * Remove deprecated function `toConwayGenesisPairs`
 * Remove deprecated function `toUpgradeConwayPParamsUpdatePairs`
