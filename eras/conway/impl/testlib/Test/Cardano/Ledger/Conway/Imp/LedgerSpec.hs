@@ -215,7 +215,7 @@ spec = do
       submitFailingMempoolTx cause tx expectedFailures = do
         globals <- use impGlobalsL
         nes <- use impNESL
-        slotNo <- use impLastTickG
+        slotNo <- use impCurSlotNoG
         let
           mempoolEnv = mkMempoolEnv nes slotNo
           ls = nes ^. nesEsL . esLStateL

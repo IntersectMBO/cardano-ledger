@@ -269,7 +269,7 @@ spec = do
       let ls = nes ^. nesEsL . esLStateL
           pp = nes ^. nesEsL . curPParamsEpochStateL @era
       kh <- freshKeyHash
-      slotNo <- use impLastTickG
+      slotNo <- use impCurSlotNoG
       let bhView =
             BHeaderView
               { bhviewID = kh
