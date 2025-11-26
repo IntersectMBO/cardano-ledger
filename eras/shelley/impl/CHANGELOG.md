@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Change the field type of `ShelleyIncompleteWithdrawals` to `Map RewardAccount (Mismatch RelEQ Coin)`
 * Add `cddl` sub-library.
 * Replace `StakePoolState` values in `psFutureStakePoolParams` with `StakePoolParams`
 * Remove `psFutureStakePoolsL`

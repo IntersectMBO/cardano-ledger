@@ -10,7 +10,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.CertsSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule)
 import Cardano.Ledger.Conway.Core
@@ -105,11 +105,12 @@ spec = do
                   , (rwdAccount2, reward2)
                   ]
         )
-        [ ( if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
-              then injectFailure . ConwayIncompleteWithdrawals @era
-              else injectFailure . WithdrawalsNotInRewardsCERTS @era
-          )
-            $ Withdrawals [(rwdAccount1, reward1 <+> Coin 1)]
+        [ if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
+            then
+              injectFailure $
+                ConwayIncompleteWithdrawals @era [(rwdAccount1, Mismatch (reward1 <+> Coin 1) reward1)]
+            else
+              injectFailure . WithdrawalsNotInRewardsCERTS @era $ Withdrawals [(rwdAccount1, reward1 <+> Coin 1)]
         ]
 
       submitFailingTx
@@ -119,11 +120,10 @@ spec = do
                 .~ Withdrawals
                   [(rwdAccount1, zero)]
         )
-        [ ( if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
-              then injectFailure . ConwayIncompleteWithdrawals @era
-              else injectFailure . WithdrawalsNotInRewardsCERTS @era
-          )
-            $ Withdrawals [(rwdAccount1, zero)]
+        [ if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
+            then
+              injectFailure . ConwayIncompleteWithdrawals @era $ [(rwdAccount1, Mismatch zero reward1)]
+            else injectFailure . WithdrawalsNotInRewardsCERTS @era $ Withdrawals [(rwdAccount1, zero)]
         ]
   where
     setupRewardAccount = do

@@ -144,7 +144,7 @@ data ConwayLedgerPredFailure era
   | ConwayTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | ConwayMempoolFailure Text
   | ConwayWithdrawalsMissingAccounts Withdrawals
-  | ConwayIncompleteWithdrawals Withdrawals
+  | ConwayIncompleteWithdrawals (Map.Map RewardAccount (Mismatch RelEQ Coin))
   deriving (Generic)
 
 type instance EraRuleFailure "LEDGER" ConwayEra = ConwayLedgerPredFailure ConwayEra

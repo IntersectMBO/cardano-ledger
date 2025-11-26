@@ -31,6 +31,7 @@ import Cardano.Ledger.BaseTypes (
   EpochInterval,
   EpochNo (EpochNo),
   Globals (..),
+  Mismatch (..),
   ShelleyBase,
   StrictMaybe,
   binOpEpochNo,
@@ -234,7 +235,9 @@ conwayCertsTransition = do
           failOnJust
             (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
             ( \(invalid, incomplete) ->
-                WithdrawalsNotInRewardsCERTS $ Withdrawals $ unWithdrawals invalid <> unWithdrawals incomplete
+                WithdrawalsNotInRewardsCERTS $
+                  Withdrawals $
+                    unWithdrawals invalid <> fmap mismatchSupplied incomplete
             )
           pure $
             certState
