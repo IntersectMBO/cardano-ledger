@@ -2,6 +2,12 @@
 
 ## 1.15.0.0
 
+* Changed the type of `dappMinUTxOValue` to `CompactForm Coin` in `DowngradeAlonzoPParams`
+* Changed the type of the following fields to `CompactForm Coin` in `AlonzoPParams`:
+  - `appMinFeeA`
+  - `appMinFeeB`
+  - `appKeyDeposit`
+  - `appMinPoolCost`
 * Re-export `AlonzoBlockBody` from `Cardano.Ledger.Alonzo.Core`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Renamed `uappCostModels` to `uappPlutusV1CostModel`

@@ -59,7 +59,7 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (
@@ -347,7 +347,7 @@ genAlonzoPParamsUpdate ::
 genAlonzoPParamsUpdate constants pp = do
   maryPPUpdate <-
     genShelleyPParamsUpdate @MaryEra constants $
-      downgradePParams (DowngradeAlonzoPParams {dappMinUTxOValue = Coin 100}) pp
+      downgradePParams (DowngradeAlonzoPParams {dappMinUTxOValue = CompactCoin 100}) pp
   coinPerWord <- genM (CoinPerWord . Coin <$> choose (1, 5))
   let genPrice = unsafeBoundRational . (% 100) <$> choose (0, 200)
   prices <- genM (Prices <$> genPrice <*> genPrice)
