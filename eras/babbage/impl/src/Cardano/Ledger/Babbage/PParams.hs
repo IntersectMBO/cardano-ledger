@@ -101,9 +101,9 @@ ppuCoinsPerUTxOByteL = ppuLensHKD . hkdCoinsPerUTxOByteL @era @StrictMaybe
 -- | Babbage Protocol parameters. Ways in which parameters have changed from Alonzo: lack
 -- of @d@, @extraEntropy@ and replacement of @coinsPerUTxOWord@ with @coinsPerUTxOByte@
 data BabbagePParams f era = BabbagePParams
-  { bppMinFeeA :: !(HKD f Coin)
+  { bppMinFeeA :: !(HKD f (CompactForm Coin))
   -- ^ The linear factor for the minimum fee calculation
-  , bppMinFeeB :: !(HKD f Coin)
+  , bppMinFeeB :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , bppMaxBBSize :: !(HKD f Word32)
   -- ^ Maximal block body size
@@ -111,7 +111,7 @@ data BabbagePParams f era = BabbagePParams
   -- ^ Maximal transaction size
   , bppMaxBHSize :: !(HKD f Word16)
   -- ^ Maximal block header size
-  , bppKeyDeposit :: !(HKD f Coin)
+  , bppKeyDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a key registration deposit
   , bppPoolDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
@@ -128,7 +128,7 @@ data BabbagePParams f era = BabbagePParams
   -- ^ Treasury expansion
   , bppProtocolVersion :: !(HKD f ProtVer)
   -- ^ Protocol version
-  , bppMinPoolCost :: !(HKD f Coin)
+  , bppMinPoolCost :: !(HKD f (CompactForm Coin))
   -- ^ Minimum Stake Pool Cost
   , bppCoinsPerUTxOByte :: !(HKD f CoinPerByte)
   -- ^ Cost in lovelace per byte of UTxO storage (instead of bppCoinsPerUTxOByte)
@@ -186,12 +186,12 @@ instance EraPParams BabbageEra where
   upgradePParamsHKD () = upgradeBabbagePParams True
   downgradePParamsHKD = downgradeBabbagePParams
 
-  hkdMinFeeAL = lens bppMinFeeA $ \pp x -> pp {bppMinFeeA = x}
-  hkdMinFeeBL = lens bppMinFeeB $ \pp x -> pp {bppMinFeeB = x}
+  hkdMinFeeACompactL = lens bppMinFeeA $ \pp x -> pp {bppMinFeeA = x}
+  hkdMinFeeBCompactL = lens bppMinFeeB $ \pp x -> pp {bppMinFeeB = x}
   hkdMaxBBSizeL = lens bppMaxBBSize $ \pp x -> pp {bppMaxBBSize = x}
   hkdMaxTxSizeL = lens bppMaxTxSize $ \pp x -> pp {bppMaxTxSize = x}
   hkdMaxBHSizeL = lens bppMaxBHSize $ \pp x -> pp {bppMaxBHSize = x}
-  hkdKeyDepositL = lens bppKeyDeposit $ \pp x -> pp {bppKeyDeposit = x}
+  hkdKeyDepositCompactL = lens bppKeyDeposit $ \pp x -> pp {bppKeyDeposit = x}
   hkdPoolDepositCompactL = lens bppPoolDeposit $ \pp x -> pp {bppPoolDeposit = x}
   hkdEMaxL = lens bppEMax $ \pp x -> pp {bppEMax = x}
   hkdNOptL = lens bppNOpt $ \pp x -> pp {bppNOpt = x}
@@ -199,12 +199,12 @@ instance EraPParams BabbageEra where
   hkdRhoL = lens bppRho $ \pp x -> pp {bppRho = x}
   hkdTauL = lens bppTau $ \pp x -> pp {bppTau = x}
   hkdProtocolVersionL = lens bppProtocolVersion $ \pp x -> pp {bppProtocolVersion = x}
-  hkdMinPoolCostL = lens bppMinPoolCost $ \pp x -> pp {bppMinPoolCost = x}
+  hkdMinPoolCostCompactL = lens bppMinPoolCost $ \pp x -> pp {bppMinPoolCost = x}
 
   ppDG = to (const minBound)
   hkdDL = notSupportedInThisEraL
   hkdExtraEntropyL = notSupportedInThisEraL
-  hkdMinUTxOValueL = notSupportedInThisEraL
+  hkdMinUTxOValueCompactL = notSupportedInThisEraL
 
   eraPParams =
     [ ppMinFeeA
@@ -268,12 +268,12 @@ instance EraGov BabbageEra where
 emptyBabbagePParams :: forall era. Era era => BabbagePParams Identity era
 emptyBabbagePParams =
   BabbagePParams
-    { bppMinFeeA = Coin 0
-    , bppMinFeeB = Coin 0
+    { bppMinFeeA = CompactCoin 0
+    , bppMinFeeB = CompactCoin 0
     , bppMaxBBSize = 0
     , bppMaxTxSize = 2048
     , bppMaxBHSize = 0
-    , bppKeyDeposit = Coin 0
+    , bppKeyDeposit = CompactCoin 0
     , bppPoolDeposit = CompactCoin 0
     , bppEMax = EpochInterval 0
     , bppNOpt = 100
