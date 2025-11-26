@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `cddl` sub-library, and `generate-cddl` executable.
 * Changed the type of the following fields to `CompactForm Coin` in `ConwayPParams`:
   - `cppMinFeeA`
   - `cppMinFeeB`
@@ -31,6 +32,10 @@
   - Add `ConwayWithdrawalsMissingAccounts` and `ConwayIncompleteWithdrawals` to `ConwayLedgerPredFailure`.
   - Add `hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule` to `Conway.Era`.
   - Add `updateDormantDRepExpiries`  and `updateVotingDRepExpiries`
+
+### `cddl`
+
+* Add full `HuddleSpec`.
 
 ### `testlib`
 

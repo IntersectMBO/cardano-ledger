@@ -25,6 +25,7 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
   distinctBytesRule,
   plutusV1ScriptRule,
   plutusDataRule,
+  alonzoTransactionOutputRule,
   alonzoRedeemer,
   alonzoRedeemerTag,
 ) where
@@ -120,6 +121,19 @@ plutusDataRule p =
     / sarr [0 <+ a (huddleRule @"plutus_data" p)]
     / huddleRule @"big_int" p
     / huddleRule @"bounded_bytes" p
+
+alonzoTransactionOutputRule ::
+  forall era.
+  HuddleRule "value" era =>
+  Proxy era ->
+  Rule
+alonzoTransactionOutputRule p =
+  "transaction_output"
+    =:= arr
+      [ a (huddleRule @"address" p)
+      , "amount" ==> huddleRule @"value" p
+      , opt ("datum_hash" ==> huddleRule @"hash32" p)
+      ]
 
 instance HuddleGroup "operational_cert" AlonzoEra where
   huddleGroup = shelleyOperationalCertGroup @AlonzoEra
@@ -332,13 +346,7 @@ instance HuddleRule "transaction_body" AlonzoEra where
         ]
 
 instance HuddleRule "transaction_output" AlonzoEra where
-  huddleRule p =
-    "transaction_output"
-      =:= arr
-        [ a (huddleRule @"address" p)
-        , "amount" ==> huddleRule @"value" p
-        , opt ("datum_hash" ==> huddleRule @"hash32" p) //- "new"
-        ]
+  huddleRule = alonzoTransactionOutputRule @AlonzoEra
 
 instance HuddleRule "update" AlonzoEra where
   huddleRule p =
