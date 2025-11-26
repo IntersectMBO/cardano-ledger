@@ -31,6 +31,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Cardano.Ledger.Val (Val (..))
+import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
 import Data.Typeable (Typeable)
@@ -123,6 +124,13 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
                 OMap.null
                 (subTransactionsDijkstraTxBodyRawL .~)
                 (D $ allowTag setTag >> decCBOR)
+        24
+          | SSubTx <- sTxLevel ->
+              fieldGuarded
+                (emptyFailure "RequiredTopLevelGuards" "non-empty")
+                Map.null
+                (requiredTopLevelGuardsDijkstraTxBodyRawL .~)
+                (D (decodeMap decCBOR (decodeNullStrictMaybe decCBOR)))
         n -> invalidField n
       requiredFields :: STxBothLevels l DijkstraEra -> [(Word, String)]
       requiredFields sTxLevel

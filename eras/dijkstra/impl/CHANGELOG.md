@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Add `requiredTopLevelGuardsDijkstraTxBodyRawL`
 * Add `dstbRequiredTopLevelGuards` to `TxBody`
 * Add `dstbrRequiredTopLevelGuards` to `DijkstraSubTxBodyRaw`
 * Add `requiredTopLevelGuardsL` to `DijkstraEraTxBody` class

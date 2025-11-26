@@ -91,6 +91,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
   currentTreasuryValueDijkstraTxBodyRawL,
   treasuryDonationDijkstraTxBodyRawL,
   subTransactionsDijkstraTxBodyRawL,
+  requiredTopLevelGuardsDijkstraTxBodyRawL,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
