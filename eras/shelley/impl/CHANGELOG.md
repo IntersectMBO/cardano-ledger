@@ -2,6 +2,12 @@
 
 ## 1.18.0.0
 
+* Changed the type of the following fields to `CompactForm Coin` in `ShelleyPParams`:
+  - `sppMinFeeA`
+  - `sppMinFeeB`
+  - `sppKeyDeposit`
+  - `sppMinUTxOValue`
+  - `sppMinPoolCost`
 * Re-export `ShelleyBlockBody` from `Cardano.Ledger.Shelley.Core`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Change the field type of `ShelleyIncompleteWithdrawals` to `Map RewardAccount (Mismatch RelEQ Coin)`

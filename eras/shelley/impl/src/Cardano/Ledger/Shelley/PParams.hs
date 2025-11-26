@@ -90,9 +90,9 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Protocol parameters.
 data ShelleyPParams f era = ShelleyPParams
-  { sppMinFeeA :: !(HKD f Coin)
+  { sppMinFeeA :: !(HKD f (CompactForm Coin))
   -- ^ The linear factor for the minimum fee calculation
-  , sppMinFeeB :: !(HKD f Coin)
+  , sppMinFeeB :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , sppMaxBBSize :: !(HKD f Word32)
   -- ^ Maximal block body size
@@ -100,7 +100,7 @@ data ShelleyPParams f era = ShelleyPParams
   -- ^ Maximal transaction size
   , sppMaxBHSize :: !(HKD f Word16)
   -- ^ Maximal block header size
-  , sppKeyDeposit :: !(HKD f Coin)
+  , sppKeyDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a key registration deposit
   , sppPoolDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
@@ -120,9 +120,9 @@ data ShelleyPParams f era = ShelleyPParams
   -- ^ Extra entropy
   , sppProtocolVersion :: !(HKD f ProtVer)
   -- ^ Protocol version
-  , sppMinUTxOValue :: !(HKD f Coin)
+  , sppMinUTxOValue :: !(HKD f (CompactForm Coin))
   -- ^ Minimum UTxO value
-  , sppMinPoolCost :: !(HKD f Coin)
+  , sppMinPoolCost :: !(HKD f (CompactForm Coin))
   -- ^ Minimum Stake Pool Cost
   }
   deriving (Generic)
@@ -165,12 +165,12 @@ instance EraPParams ShelleyEra where
   downgradePParamsHKD = error "IMPOSSIBLE! There cannot be PParams that can be downgraded from Shelley"
   emptyUpgradePParamsUpdate = error "IMPOSSIBLE! There is no UpgradePParams in ShelleyEra"
 
-  hkdMinFeeAL = lens sppMinFeeA $ \pp x -> pp {sppMinFeeA = x}
-  hkdMinFeeBL = lens sppMinFeeB $ \pp x -> pp {sppMinFeeB = x}
+  hkdMinFeeACompactL = lens sppMinFeeA $ \pp x -> pp {sppMinFeeA = x}
+  hkdMinFeeBCompactL = lens sppMinFeeB $ \pp x -> pp {sppMinFeeB = x}
   hkdMaxBBSizeL = lens sppMaxBBSize $ \pp x -> pp {sppMaxBBSize = x}
   hkdMaxTxSizeL = lens sppMaxTxSize $ \pp x -> pp {sppMaxTxSize = x}
   hkdMaxBHSizeL = lens sppMaxBHSize $ \pp x -> pp {sppMaxBHSize = x}
-  hkdKeyDepositL = lens sppKeyDeposit $ \pp x -> pp {sppKeyDeposit = x}
+  hkdKeyDepositCompactL = lens sppKeyDeposit $ \pp x -> pp {sppKeyDeposit = x}
   hkdPoolDepositCompactL = lens sppPoolDeposit $ \pp x -> pp {sppPoolDeposit = x}
   hkdEMaxL = lens sppEMax $ \pp x -> pp {sppEMax = x}
   hkdNOptL = lens sppNOpt $ \pp x -> pp {sppNOpt = x}
@@ -180,20 +180,20 @@ instance EraPParams ShelleyEra where
   hkdDL = lens sppD $ \pp x -> pp {sppD = x}
   hkdExtraEntropyL = lens sppExtraEntropy $ \pp x -> pp {sppExtraEntropy = x}
   hkdProtocolVersionL = lens sppProtocolVersion $ \pp x -> pp {sppProtocolVersion = x}
-  hkdMinUTxOValueL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
-  hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
+  hkdMinUTxOValueCompactL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
+  hkdMinPoolCostCompactL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
   eraPParams = shelleyPParams
 
 emptyShelleyPParams :: forall era. Era era => ShelleyPParams Identity era
 emptyShelleyPParams =
   ShelleyPParams
-    { sppMinFeeA = Coin 0
-    , sppMinFeeB = Coin 0
+    { sppMinFeeA = CompactCoin 0
+    , sppMinFeeB = CompactCoin 0
     , sppMaxBBSize = 0
     , sppMaxTxSize = 2048
     , sppMaxBHSize = 0
-    , sppKeyDeposit = Coin 0
+    , sppKeyDeposit = CompactCoin 0
     , sppPoolDeposit = CompactCoin 0
     , sppEMax = EpochInterval 0
     , sppNOpt = 100
@@ -325,16 +325,16 @@ ppMinFeeA :: EraPParams era => PParam era
 ppMinFeeA =
   PParam
     { ppName = "txFeePerByte"
-    , ppLens = ppMinFeeAL
-    , ppUpdate = Just $ PParamUpdate 0 ppuMinFeeAL
+    , ppLens = ppMinFeeACompactL
+    , ppUpdate = Just $ PParamUpdate 0 ppuMinFeeACompactL
     }
 
 ppMinFeeB :: EraPParams era => PParam era
 ppMinFeeB =
   PParam
     { ppName = "txFeeFixed"
-    , ppLens = ppMinFeeBL
-    , ppUpdate = Just $ PParamUpdate 1 ppuMinFeeBL
+    , ppLens = ppMinFeeBCompactL
+    , ppUpdate = Just $ PParamUpdate 1 ppuMinFeeBCompactL
     }
 
 ppMaxBBSize :: EraPParams era => PParam era
@@ -365,8 +365,8 @@ ppKeyDeposit :: EraPParams era => PParam era
 ppKeyDeposit =
   PParam
     { ppName = "stakeAddressDeposit"
-    , ppLens = ppKeyDepositL
-    , ppUpdate = Just $ PParamUpdate 5 ppuKeyDepositL
+    , ppLens = ppKeyDepositCompactL
+    , ppUpdate = Just $ PParamUpdate 5 ppuKeyDepositCompactL
     }
 
 ppPoolDeposit :: EraPParams era => PParam era
@@ -445,16 +445,16 @@ ppMinUTxOValue :: (EraPParams era, AtMostEra "Mary" era) => PParam era
 ppMinUTxOValue =
   PParam
     { ppName = "minUTxOValue"
-    , ppLens = ppMinUTxOValueL
-    , ppUpdate = Just $ PParamUpdate 15 ppuMinUTxOValueL
+    , ppLens = ppMinUTxOValueCompactL
+    , ppUpdate = Just $ PParamUpdate 15 ppuMinUTxOValueCompactL
     }
 
 ppMinPoolCost :: EraPParams era => PParam era
 ppMinPoolCost =
   PParam
     { ppName = "minPoolCost"
-    , ppLens = ppMinPoolCostL
-    , ppUpdate = Just $ PParamUpdate 16 ppuMinPoolCostL
+    , ppLens = ppMinPoolCostCompactL
+    , ppUpdate = Just $ PParamUpdate 16 ppuMinPoolCostCompactL
     }
 
 shelleyPParams ::
