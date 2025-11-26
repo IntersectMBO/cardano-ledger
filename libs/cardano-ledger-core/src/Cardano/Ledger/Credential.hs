@@ -161,7 +161,11 @@ credToText :: Credential kr -> T.Text
 credToText (ScriptHashObj (ScriptHash hash)) = "scriptHash-" <> hashToTextAsHex hash
 credToText (KeyHashObj (KeyHash has)) = "keyHash-" <> hashToTextAsHex has
 
+{-# DEPRECATED PaymentCredential "In favor of `Credential Payment`" #-}
+
 type PaymentCredential = Credential Payment
+
+{-# DEPRECATED StakeCredential "In favor of `Credential Staking`" #-}
 
 type StakeCredential = Credential Staking
 
@@ -181,7 +185,7 @@ credScriptHash = \case
   KeyHashObj _ -> Nothing
 
 data StakeReference
-  = StakeRefBase !StakeCredential
+  = StakeRefBase !(Credential Staking)
   | StakeRefPtr !Ptr
   | StakeRefNull
   deriving (Show, Eq, Generic, Ord)

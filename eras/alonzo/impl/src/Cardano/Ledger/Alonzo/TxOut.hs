@@ -72,7 +72,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Plutus.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.Shelley.Core
@@ -260,7 +260,7 @@ deriving via InspectHeapNamed "AlonzoTxOut" (AlonzoTxOut era) instance NoThunks 
 
 encodeAddress28 ::
   Network ->
-  PaymentCredential ->
+  Credential Payment ->
   Addr28Extra
 encodeAddress28 network paymentCred = do
   let networkBit, payCredTypeBit :: Word64

@@ -30,7 +30,6 @@ import Cardano.Ledger.Binary (byronProtVer, decodeFull, decodeFull')
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
-  PaymentCredential,
   Ptr (..),
   SlotNo32 (..),
   StakeReference (..),
@@ -134,7 +133,7 @@ getHash = do
     Nothing -> fail "getHash: implausible hash length mismatch"
     Just !h -> pure h
 
-getPayCred :: Word8 -> Get PaymentCredential
+getPayCred :: Word8 -> Get (Credential Payment)
 getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash
@@ -283,7 +282,7 @@ getShortStakeReference header = case testBit header notBaseAddr of
     True -> StakeRefBase <$> getShortScriptHash
     False -> StakeRefBase <$> getShortKeyHash
 
-getShortPayCred :: Word8 -> GetShort PaymentCredential
+getShortPayCred :: Word8 -> GetShort (Credential Payment)
 getShortPayCred header = case testBit header payCredIsScript of
   True -> getShortScriptHash
   False -> getShortKeyHash

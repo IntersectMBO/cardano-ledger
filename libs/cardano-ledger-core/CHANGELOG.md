@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Deprecate `StakeCredential` and `PaymentCredential` type synonyms
 * Add `positiveUnitIntervalRelaxToUnitInterval`, `positiveUnitIntervalRelaxToPositiveInterval` and  `positiveIntervalRelaxToNonNegativeInterval`
 * Changed the type of the following functions by adding `Network` argument:
   - `stakePoolStateToStakePoolParams`

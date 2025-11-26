@@ -68,7 +68,7 @@ import Cardano.Ledger.Core (
   eraProtVerLow,
   fromEraCBOR,
  )
-import Cardano.Ledger.Credential (StakeCredential, credKeyHashWitness, credScriptHash)
+import Cardano.Ledger.Credential (Credential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Shelley.TxCert (
@@ -84,10 +84,10 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
 data DijkstraDelegCert
-  = DijkstraRegCert !StakeCredential !Coin
-  | DijkstraUnRegCert !StakeCredential !Coin
-  | DijkstraDelegCert !StakeCredential !Delegatee
-  | DijkstraRegDelegCert !StakeCredential !Delegatee !Coin
+  = DijkstraRegCert !(Credential Staking) !Coin
+  | DijkstraUnRegCert !(Credential Staking) !Coin
+  | DijkstraDelegCert !(Credential Staking) !Delegatee
+  | DijkstraRegDelegCert !(Credential Staking) !Delegatee !Coin
   deriving (Show, Generic, Eq, Ord)
 
 instance EncCBOR DijkstraDelegCert where

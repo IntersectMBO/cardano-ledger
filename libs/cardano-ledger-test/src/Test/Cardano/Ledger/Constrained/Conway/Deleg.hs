@@ -178,13 +178,13 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
           -- The weights on each 'branchW' case try to make it likely
           -- that each branch is choosen with similar frequency
 
-          -- ConwayRegCert !(StakeCredential c) !(StrictMaybe Coin)
+          -- ConwayRegCert !((Credential Staking) c) !(StrictMaybe Coin)
           ( branchW 2 $ \sc mc ->
               [ assert $ not_ (member_ sc (lit (Map.keysSet accountsMap)))
               , assert $ mc ==. lit (SJust (pp ^. ppKeyDepositL))
               ]
           )
-          -- ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
+          -- ConwayUnRegCert !((Credential Staking) c) !(StrictMaybe Coin)
           ( branchW 2 $ \sc mc ->
               [ -- You can only unregister things with 0 reward
                 assert $ elem_ sc $ lit (Map.keys $ Map.filter isZeroAccountBalance accountsMap)
@@ -192,13 +192,13 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
                 reify sc depositOf (==. mc)
               ]
           )
-          -- ConwayDelegCert !(StakeCredential c) !(Delegatee c)
+          -- ConwayDelegCert !((Credential Staking) c) !(Delegatee c)
           ( branchW 1 $ \sc delegatee ->
               [ assert . member_ sc $ lit (Map.keysSet accountsMap)
               , delegateeInPools delegatee
               ]
           )
-          -- ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
+          -- ConwayRegDelegCert !((Credential Staking) c) !(Delegatee c) !Coin
           ( branchW 1 $ \sc delegatee c ->
               [ assert $ c ==. lit (pp ^. ppKeyDepositL)
               , assert $ not_ (member_ sc (lit (Map.keysSet accountsMap)))
@@ -230,18 +230,18 @@ shelleyDelegCertSpec univ (ConwayDelegEnv _pp pools) ds =
           -- The weights on each 'branchW' case try to make it likely
           -- that each branch is choosen with similar frequency
 
-          -- ShelleyRegCert !(StakeCredential c)
+          -- ShelleyRegCert !((Credential Staking) c)
           ( branchW 2 $ \sc ->
               [witness univ sc, assert $ not_ (member_ sc (lit (Map.keysSet accountsMap)))]
           )
-          -- ShelleyUnRegCert !(StakeCredential c)
+          -- ShelleyUnRegCert !((Credential Staking) c)
           ( branchW 3 $ \sc ->
               [ -- You can only unregister credentials with 0 balance
                 assert $ member_ sc $ lit (Map.keysSet $ Map.filter isZeroAccountBalance accountsMap)
               , witness univ sc
               ]
           )
-          -- ShelleyDelegCert !(StakeCredential c) (KeyHash StakePool c)
+          -- ShelleyDelegCert !((Credential Staking) c) (KeyHash StakePool c)
           ( branchW 2 $ \sc kh ->
               [ dependsOn sc dc
               , dependsOn kh dc
