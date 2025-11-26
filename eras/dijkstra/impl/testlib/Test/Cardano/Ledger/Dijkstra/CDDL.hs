@@ -153,7 +153,13 @@ sub_transaction_body =
       , opt (idx 20 ==> proposal_procedures)
       , opt (idx 21 ==> coin)
       , opt (idx 22 ==> positive_coin)
+      , opt (idx 24 ==> required_top_level_guards)
       ]
+
+required_top_level_guards :: Rule
+required_top_level_guards =
+  "required_top_level_guards"
+    =:= mp [1 <+ asKey credential ==> (plutus_data / VNil)]
 
 guards :: Rule
 guards =
