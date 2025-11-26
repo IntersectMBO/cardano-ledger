@@ -147,7 +147,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withPreFixup,
   impNESL,
   impGlobalsL,
-  impLastTickG,
+  impCurSlotNoG,
   impKeyPairsG,
   impNativeScriptsG,
   produceScript,
@@ -342,7 +342,7 @@ data ImpTestState era = ImpTestState
   , impKeyPairs :: !(Map (KeyHash Witness) (KeyPair Witness))
   , impByronKeyPairs :: !(Map BootstrapAddress ByronKeyPair)
   , impNativeScripts :: !(Map ScriptHash (NativeScript era))
-  , impLastTick :: !SlotNo
+  , impCurSlotNo :: !SlotNo
   , impGlobals :: !Globals
   , impEvents :: [SomeSTSEvent era]
   }
@@ -385,11 +385,11 @@ impGlobalsL = lens impGlobals (\x y -> x {impGlobals = y})
 impNESL :: Lens' (ImpTestState era) (NewEpochState era)
 impNESL = lens impNES (\x y -> x {impNES = y})
 
-impLastTickL :: Lens' (ImpTestState era) SlotNo
-impLastTickL = lens impLastTick (\x y -> x {impLastTick = y})
+impCurSlotNoL :: Lens' (ImpTestState era) SlotNo
+impCurSlotNoL = lens impCurSlotNo (\x y -> x {impCurSlotNo = y})
 
-impLastTickG :: SimpleGetter (ImpTestState era) SlotNo
-impLastTickG = impLastTickL
+impCurSlotNoG :: SimpleGetter (ImpTestState era) SlotNo
+impCurSlotNoG = impCurSlotNoL
 
 impRootTxInL :: Lens' (ImpTestState era) TxIn
 impRootTxInL = lens impRootTxIn (\x y -> x {impRootTxIn = y})
@@ -639,7 +639,7 @@ defaultInitImpTestState nes = do
       , impKeyPairs = prepState ^. keyPairsL
       , impByronKeyPairs = prepState ^. keyPairsByronL
       , impNativeScripts = mempty
-      , impLastTick = slotNo
+      , impCurSlotNo = slotNo
       , impGlobals = globals
       , impEvents = mempty
       }
@@ -730,7 +730,7 @@ disableInConformanceIt s =
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
-  slotNo <- gets impLastTick
+  slotNo <- gets impCurSlotNo
   epochNo <- runShelleyBase $ epochFromSlot slotNo
   pure
     LedgerEnv
@@ -1337,10 +1337,10 @@ passTick ::
   ) =>
   ImpTestM era ()
 passTick = do
-  impLastTick <- gets impLastTick
+  impCurSlotNo <- gets impCurSlotNo
   curNES <- getsNES id
-  nes <- runImpRule @"TICK" () curNES impLastTick
-  impLastTickL += 1
+  nes <- runImpRule @"TICK" () curNES impCurSlotNo
+  impCurSlotNoL += 1
   impNESL .= nes
 
 -- | Win with supplied probability
@@ -1379,7 +1379,7 @@ passEpoch = do
               asks itePostEpochBoundaryHook >>= (\f -> f globals (TRC ((), oldNES, newEpochNo)) newNES)
             else tickUntilNewEpoch
         else do
-          impLastTickL += 1
+          impCurSlotNoL += 1
           tickUntilNewEpoch
   logDoc $ "Entering " <> ansiExpr (succ curEpochNo)
   tickUntilNewEpoch
@@ -1863,9 +1863,9 @@ produceScript scriptHash = do
 
 advanceToPointOfNoReturn :: ImpTestM era ()
 advanceToPointOfNoReturn = do
-  impLastTick <- gets impLastTick
-  (_, slotOfNoReturn, _) <- runShelleyBase $ getTheSlotOfNoReturn impLastTick
-  impLastTickL .= slotOfNoReturn
+  impCurSlotNo <- gets impCurSlotNo
+  (_, slotOfNoReturn, _) <- runShelleyBase $ getTheSlotOfNoReturn impCurSlotNo
+  impCurSlotNoL .= slotOfNoReturn
 
 -- | A legal ProtVer that differs in the minor Version
 minorFollow :: ProtVer -> ProtVer

@@ -156,7 +156,7 @@ alonzoEraSpecificSpec = do
         --  Process a transaction with a succeeding script in every place possible,
         --  and also with succeeding timelock scripts.
         it "Validating scripts everywhere" $ do
-          slotNo <- use impLastTickG
+          slotNo <- use impCurSlotNoG
           let
             timelockScriptHash i = do
               addr <- freshKeyHash

@@ -65,7 +65,7 @@ spec = describe "UTXOS" $ do
     $ do
       ei <- use $ impGlobalsL . to epochInfo
       ss@(SystemStart sysStart) <- use $ impGlobalsL . to systemStart
-      SlotNo currentSlot <- use impLastTickG
+      SlotNo currentSlot <- use impCurSlotNoG
       protVer <- getProtVer
       utxo <- getUTxO
       let txValidity = 7200
