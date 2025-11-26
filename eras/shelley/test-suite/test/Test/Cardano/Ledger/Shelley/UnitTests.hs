@@ -561,7 +561,7 @@ testWithdrawalWrongAmt =
       tx = MkShelleyTx $ ShelleyTx @ShelleyEra txb txwits SNothing
       errs =
         [ ShelleyIncompleteWithdrawals
-            [(raCredential rAccount, Mismatch (Coin 11) (Coin 10))]
+            [(rAccount, Mismatch (Coin 11) (Coin 10))]
         ]
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 

@@ -201,7 +201,7 @@ withdrawalsThatDoNotDrainAccounts ::
   -- the wrong network.
   -- incomplete withdrawal = that which does not withdraw the exact account
   -- balance.
-  Maybe (Withdrawals, Map (Credential Staking) (Mismatch RelEQ Coin))
+  Maybe (Withdrawals, Map RewardAccount (Mismatch RelEQ Coin))
 withdrawalsThatDoNotDrainAccounts (Withdrawals withdrawals) networkId accounts
   -- @withdrawals@ is small and @accounts@ big, better to traverse the former than the latter.
   | Map.foldrWithKey checkBadWithdrawals True withdrawals = Nothing
@@ -212,14 +212,14 @@ withdrawalsThatDoNotDrainAccounts (Withdrawals withdrawals) networkId accounts
   where
     checkBadWithdrawals rewardAccount withdrawalAmount noBadWithdrawals =
       noBadWithdrawals && isGoodWithdrawal rewardAccount withdrawalAmount
-    collectBadWithdrawals rewardAccount@(RewardAccount _ cred) withdrawalAmount accum@(!_, !_) =
+    collectBadWithdrawals rewardAccount withdrawalAmount accum@(!_, !_) =
       case lookupAccount rewardAccount of
         Nothing -> first (Map.insert rewardAccount withdrawalAmount) accum
         Just account
           | isBalanceZero withdrawalAmount account -> accum
           | otherwise ->
               second
-                (Map.insert cred $ Mismatch withdrawalAmount (fromCompact $ account ^. balanceAccountStateL))
+                (Map.insert rewardAccount $ Mismatch withdrawalAmount (fromCompact $ account ^. balanceAccountStateL))
                 accum
     isGoodWithdrawal rewardAccount withdrawalAmount =
       maybe False (isBalanceZero withdrawalAmount) (lookupAccount rewardAccount)

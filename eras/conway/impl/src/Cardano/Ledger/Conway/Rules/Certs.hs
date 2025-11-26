@@ -27,7 +27,6 @@ module Cardano.Ledger.Conway.Rules.Certs (
   updateVotingDRepExpiries,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval,
   EpochNo (EpochNo),
@@ -233,13 +232,12 @@ conwayCertsTransition = do
           network <- liftSTS $ asks networkId
           let accounts = certState ^. certDStateL . accountsL
               withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
-              incompleteToWithdrawalsMap = fmap mismatchSupplied . Map.mapKeys (RewardAccount network)
           failOnJust
             (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
             ( \(invalid, incomplete) ->
                 WithdrawalsNotInRewardsCERTS $
                   Withdrawals $
-                    unWithdrawals invalid <> incompleteToWithdrawalsMap incomplete
+                    unWithdrawals invalid <> fmap mismatchSupplied incomplete
             )
           pure $
             certState

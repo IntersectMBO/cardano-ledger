@@ -34,6 +34,7 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   testIncompleteAndMissingWithdrawals,
 ) where
 
+import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.BaseTypes (Mismatch, Relation (..), ShelleyBase, TxIx, invalidKey, networkId)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -43,7 +44,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGER)
@@ -131,7 +131,7 @@ data ShelleyLedgerPredFailure era
   = UtxowFailure (PredicateFailure (EraRule "UTXOW" era)) -- Subtransition Failures
   | DelegsFailure (PredicateFailure (EraRule "DELEGS" era)) -- Subtransition Failures
   | ShelleyWithdrawalsMissingAccounts Withdrawals
-  | ShelleyIncompleteWithdrawals (Map (Credential Staking) (Mismatch RelEQ Coin))
+  | ShelleyIncompleteWithdrawals (Map RewardAccount (Mismatch RelEQ Coin))
   deriving (Generic)
 
 ledgerSlotNoL :: Lens' (LedgerEnv era) SlotNo
