@@ -394,17 +394,11 @@ instance HuddleRule "transaction_output" BabbageEra where
           |and can be used interchangeably.
           |]
       $ "transaction_output"
-        =:= huddleRule @"shelley_transaction_output" p
+        =:= huddleRule @"alonzo_transaction_output" p
         / babbageTransactionOutput p (huddleRule @"script" p)
 
-instance HuddleRule "shelley_transaction_output" BabbageEra where
-  huddleRule p =
-    "shelley_transaction_output"
-      =:= arr
-        [ a (huddleRule @"address" p)
-        , "amount" ==> huddleRule @"value" p
-        , opt ("datum_hash" ==> huddleRule @"hash32" p)
-        ]
+instance HuddleRule "alonzo_transaction_output" BabbageEra where
+  huddleRule p = "alonzo_transaction_output" =:= alonzoTransactionOutputRule @BabbageEra p
 
 babbageTransactionOutput ::
   forall era.
