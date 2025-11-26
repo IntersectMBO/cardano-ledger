@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Change the field type of `ConwayIncompleteWithdrawals` to `Map RewardAccount (Mismatch RelEQ Coin)`
 * Make `ConwayAccountState` a pattern synonym
 * Remove deprecated type `Conway`
 * Remove deprecated function `toConwayGenesisPairs`
