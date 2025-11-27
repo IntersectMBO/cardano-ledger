@@ -16,7 +16,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), ledgerSlotNoL)
+import Cardano.Ledger.Shelley.Rules (ledgerSlotNoL)
 import Cardano.Ledger.TxIn (TxId)
 import Control.State.Transition
 import Data.Bifunctor (Bifunctor (..))
