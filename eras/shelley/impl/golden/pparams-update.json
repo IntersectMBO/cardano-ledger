@@ -3,14 +3,14 @@
     "extraPraosEntropy": null,
     "maxBlockBodySize": 292445202,
     "maxBlockHeaderSize": 53249,
-    "minPoolCost": 18,
+    "minPoolCost": 794548,
     "monetaryExpansion": 0.8855156,
     "poolPledgeInfluence": 3.8777413926852632e7,
     "poolRetireMaxEpoch": 2414041002,
-    "stakeAddressDeposit": 12,
+    "stakeAddressDeposit": 9604294329594137974,
     "stakePoolDeposit": 4729380140346080457,
     "stakePoolTargetNum": 52993,
     "treasuryCut": 0.3,
-    "txFeeFixed": 2,
+    "txFeeFixed": 29,
     "txFeePerByte": 360044
 }
