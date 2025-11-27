@@ -23,14 +23,13 @@ import Cardano.Ledger.Binary (
 import qualified Cardano.Ledger.Binary as Binary
 import Data.Typeable (Proxy (..))
 import GHC.Stack (HasCallStack)
+import Test.Cardano.Ledger.Binary.Golden (expectDecoderFailureAnn)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc)
 import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation)
 import Test.Cardano.Ledger.Common (
   Expectation,
   diffExprString,
   expectationFailure,
-  shouldBe,
-  showExpr,
  )
 import Test.Cardano.Ledger.TreeDiff (ToExpr, expectExprEqualWithMessage)
 
@@ -56,21 +55,6 @@ expectDecoderSuccessAnnWith equals version enc expected =
 expectDecoderSuccessAnn ::
   (ToExpr a, DecCBOR (Annotator a), Eq a, HasCallStack) => Version -> Enc -> a -> Expectation
 expectDecoderSuccessAnn = expectDecoderSuccessAnnWith (==)
-
-expectDecoderFailureAnn ::
-  forall a.
-  (ToExpr a, DecCBOR (Annotator a), HasCallStack) =>
-  Version ->
-  Enc ->
-  DecoderError ->
-  Expectation
-expectDecoderFailureAnn version enc expectedErr =
-  case decodeEnc @a version enc of
-    Left err -> expectedErr `shouldBe` err
-    Right x ->
-      expectationFailure $
-        "Expected a failure, but decoder succeeded:\n"
-          <> showExpr x
 
 expectDecoderResultOn ::
   forall a b.

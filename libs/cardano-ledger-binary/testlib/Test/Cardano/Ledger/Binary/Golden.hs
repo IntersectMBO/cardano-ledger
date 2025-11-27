@@ -69,7 +69,7 @@ expectDecoderFailureAnn ::
   Expectation
 expectDecoderFailureAnn version enc expectedErr =
   case decodeEnc @a version enc of
-    Left err -> expectedErr `shouldBe` err
+    Left err -> err `shouldBe` expectedErr
     Right x ->
       expectationFailure $
         "Expected a failure, but decoder succeeded:\n" <> show (toExpr x)
