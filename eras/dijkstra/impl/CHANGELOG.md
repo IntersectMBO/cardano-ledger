@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec`
 * Add `DijkstraUtxoPredFailure`
 * Add `DijkstraUTXO`
 * Changed the type of the following fields to `CompactForm Coin` in `DijkstraPParams`:
