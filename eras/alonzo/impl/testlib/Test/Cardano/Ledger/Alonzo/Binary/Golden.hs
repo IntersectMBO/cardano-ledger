@@ -69,12 +69,21 @@ expectSuccessOnEmptyFieldRaw version k =
 txWitsDecodingFailsOnInvalidField :: forall era. AlonzoEraTest era => Version -> [Int] -> Spec
 txWitsDecodingFailsOnInvalidField version validFields =
   prop "Invalid field" $ \n ->
-    n `notElem` validFields ==> expectFailureOnTxWitsEmptyField @era version n $
-      DecoderErrorDeserialiseFailure
-        (Binary.label $ Proxy @(Annotator (TxWits era)))
-        ( DeserialiseFailure 2 $
-            "An error occurred while decoding (Int,Void) not a valid key:.\nError: " <> show n
-        )
+    n
+      `notElem` validFields
+        ==> expectFailureOnTxWitsEmptyField @era version n
+      $ if n >= 0
+        then
+          DecoderErrorDeserialiseFailure
+            lbl
+            ( DeserialiseFailure (if n >= 24 then 3 else 2) $
+                -- TODO fix the `occured` typo in the produced value
+                "An error occured while decoding (Int,Void) not a valid key:.\nError: " <> show n
+            )
+        else
+          DecoderErrorDeserialiseFailure lbl (DeserialiseFailure 1 "expected word")
+  where
+    lbl = Binary.label $ Proxy @(Annotator (TxWits era))
 
 spec ::
   forall era.
@@ -82,7 +91,7 @@ spec ::
   Spec
 spec = do
   describe "TxWits" $ do
-    forEachEraVersion @era $ \version ->
+    forEachEraVersion @era $ \version -> do
       describe "Empty fields allowed" $ do
         it "addrTxWits" $ expectSuccessOnEmptyFieldRaw @era version 0
         it "nativeScripts" $ expectSuccessOnEmptyFieldRaw @era version 1
@@ -95,5 +104,6 @@ spec = do
         -- from there onwards
         it "plutusV2Script" $ expectSuccessOnEmptyFieldRaw @era version 6
         it "plutusV3Script" $ expectSuccessOnEmptyFieldRaw @era version 7
+      txWitsDecodingFailsOnInvalidField @era version [0 .. 7]
   describe "TxCerts" $ do
     forEachEraVersion @era $ allegraDecodeDuplicateDelegCertSucceeds @era
