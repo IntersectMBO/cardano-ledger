@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -21,7 +22,7 @@ module Cardano.Ledger.Dijkstra.Rules.Utxo (
 ) where
 
 import Cardano.Ledger.Address (
-  Addr,
+  Addr (..),
   RewardAccount,
  )
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
@@ -34,9 +35,7 @@ import Cardano.Ledger.Alonzo.Rules (
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
- )
-import qualified Cardano.Ledger.Babbage.Rules as Babbage (
-  utxoTransition,
+  babbageUtxoTests,
  )
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -44,6 +43,7 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   SlotNo,
+  StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -63,14 +63,18 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUTXOS,
   ConwayUtxoPredFailure,
   ConwayUtxosPredFailure (..),
+  UtxoEnv,
   allegraToConwayUtxoPredFailure,
   alonzoToConwayUtxoPredFailure,
   babbageToConwayUtxoPredFailure,
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Plutus (ExUnits)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
@@ -83,13 +87,23 @@ import Cardano.Ledger.State (
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
-import Control.State.Transition.Extended (Embed (..), STS (..))
+import Control.State.Transition.Extended (
+  Embed (..),
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  trans,
+ )
+import Data.Coerce (coerce)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
+import Lens.Micro ((^.))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
+import Validation (failure)
 
 -- ======================================================
 
@@ -158,6 +172,7 @@ data DijkstraUtxoPredFailure era
     BabbageOutputTooSmallUTxO [(TxOut era, Coin)]
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs (NonEmpty TxIn)
+  | PtrPresentInCollateral (TxOut era)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" DijkstraEra = DijkstraUtxoPredFailure DijkstraEra
@@ -183,7 +198,7 @@ instance InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure DijkstraEra whe
   injectFailure = conwayToDijkstraUtxoPredFailure . allegraToConwayUtxoPredFailure
 
 instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure DijkstraEra where
-  injectFailure = UtxosFailure
+  injectFailure = injectFailure . UtxosFailure
 
 instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure DijkstraEra where
   injectFailure =
@@ -229,6 +244,45 @@ instance
 -- DijkstraUTXO STS
 --------------------------------------------------------------------------------
 
+validateNoPtrInCollateral ::
+  EraTxOut era => StrictMaybe (TxOut era) -> Test (DijkstraUtxoPredFailure era)
+validateNoPtrInCollateral mbyCollateralOutput
+  | SJust collateralOutput <- mbyCollateralOutput
+  , Addr _ _ (StakeRefPtr {}) <- collateralOutput ^. addrTxOutL =
+      failure $ PtrPresentInCollateral collateralOutput
+  | otherwise = pure ()
+
+utxoTransition ::
+  forall era.
+  ( EraUTxO era
+  , EraCertState era
+  , BabbageEraTxBody era
+  , AlonzoEraTxWits era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , BaseM (EraRule "UTXO" era) ~ ShelleyBase
+  , STS (EraRule "UTXO" era)
+  , -- In this function we we call the UTXOS rule, so we need some assumptions
+    Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
+  ) =>
+  TransitionRule (EraRule "UTXO" era)
+utxoTransition = do
+  TRC (_, _, tx) <- judgmentContext
+  _ <- babbageUtxoTests
+
+  runTest $ validateNoPtrInCollateral $ tx ^. bodyTxL . collateralReturnTxBodyL
+
+  trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
+
 instance
   forall era.
   ( EraTx era
@@ -242,12 +296,18 @@ instance
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXO" ConwayUtxoPredFailure era
   , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
-  , Embed (EraRule "UTXOS" era) (DijkstraUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , BaseM (EraRule "UTXO" era) ~ ShelleyBase
+  , STS (EraRule "UTXO" era)
+  , -- In this function we we call the UTXOS rule, so we need some assumptions
+    Embed (EraRule "UTXOS" era) (DijkstraUTXO era)
+  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
-  , PredicateFailure (EraRule "UTXO" era) ~ DijkstraUtxoPredFailure era
   , EraCertState era
+  , EraRule "UTXO" era ~ DijkstraUTXO era
   , SafeToHash (TxWits era)
   ) =>
   STS (DijkstraUTXO era)
@@ -261,7 +321,7 @@ instance
 
   initialRules = []
 
-  transitionRules = [Babbage.utxoTransition @era]
+  transitionRules = [utxoTransition @era]
 
   assertions = [Shelley.validSizeComputationCheck]
 
@@ -313,6 +373,7 @@ instance
       IncorrectTotalCollateralField c1 c2 -> Sum IncorrectTotalCollateralField 20 !> To c1 !> To c2
       BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 21 !> To x
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 22 !> To x
+      PtrPresentInCollateral x -> Sum PtrPresentInCollateral 23 !> To x
 
 instance
   ( Era era
@@ -347,6 +408,7 @@ instance
     20 -> SumD IncorrectTotalCollateralField <! From <! From
     21 -> SumD BabbageOutputTooSmallUTxO <! From
     22 -> SumD BabbageNonDisjointRefInputs <! From
+    23 -> SumD PtrPresentInCollateral <! From
     n -> Invalid n
 
 -- =====================================================

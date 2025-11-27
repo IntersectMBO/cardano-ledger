@@ -20,6 +20,7 @@ module Cardano.Ledger.Conway.Rules.Utxo (
   babbageToConwayUtxoPredFailure,
   alonzoToConwayUtxoPredFailure,
   ConwayUtxoPredFailure (..),
+  UtxoEnv (..),
 ) where
 
 import Cardano.Ledger.Address (Addr, RewardAccount)
@@ -66,7 +67,7 @@ import Cardano.Ledger.Conway.Rules.Utxos (
  )
 import Cardano.Ledger.Plutus (ExUnits)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (UtxoEnv, validSizeComputationCheck)
 import Cardano.Ledger.State (EraCertState (..), EraUTxO, UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)

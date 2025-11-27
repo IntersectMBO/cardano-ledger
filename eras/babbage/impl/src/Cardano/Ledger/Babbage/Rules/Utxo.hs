@@ -19,6 +19,7 @@
 module Cardano.Ledger.Babbage.Rules.Utxo (
   BabbageUTXO,
   BabbageUtxoPredFailure (..),
+  babbageUtxoTests,
   utxoTransition,
   feesOK,
   validateTotalCollateral,
@@ -346,8 +347,7 @@ validateOutputTooSmallUTxO pp outs =
         )
         outs'
 
--- | The UTxO transition rule for the Babbage eras.
-utxoTransition ::
+babbageUtxoTests ::
   forall era.
   ( EraUTxO era
   , BabbageEraTxBody era
@@ -362,14 +362,10 @@ utxoTransition ::
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
   , -- In this function we we call the UTXOS rule, so we need some assumptions
-    Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
-  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
-  , EraCertState era
+    EraCertState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
-utxoTransition = do
+babbageUtxoTests = do
   TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let utxo = utxosUtxo utxos
 
@@ -439,7 +435,33 @@ utxoTransition = do
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
+  pure utxos
 
+-- | The UTxO transition rule for the Babbage eras.
+utxoTransition ::
+  forall era.
+  ( EraUTxO era
+  , BabbageEraTxBody era
+  , AlonzoEraTxWits era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , BaseM (EraRule "UTXO" era) ~ ShelleyBase
+  , STS (EraRule "UTXO" era)
+  , -- In this function we we call the UTXOS rule, so we need some assumptions
+    Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
+  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , EraCertState era
+  ) =>
+  TransitionRule (EraRule "UTXO" era)
+utxoTransition = do
+  _ <- babbageUtxoTests
   trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 
 --------------------------------------------------------------------------------
