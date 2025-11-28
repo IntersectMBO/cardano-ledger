@@ -103,7 +103,6 @@ library
     nothunks,
     plutus-ledger-api,
     small-steps >=1.1.2,
-    text,
 
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
@@ -154,6 +153,7 @@ library testlib
     cardano-strict-containers,
     containers,
     cuddle >=0.4,
+    data-default,
     generic-random,
     heredoc,
     microlens,

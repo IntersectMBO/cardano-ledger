@@ -38,12 +38,7 @@ module Cardano.Ledger.Shelley.API.Mempool (
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -51,7 +46,7 @@ import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.Rules ()
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, ShelleyLedgerPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 import Cardano.Ledger.Shelley.State ()
 import Cardano.Ledger.Slot (SlotNo)
@@ -59,7 +54,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Except (Except)
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (Bifunctor (first))
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
@@ -103,6 +98,8 @@ class
   ) =>
   ApplyTx era
   where
+  data ApplyTxError era
+
   -- | Validate a transaction against a mempool state and for given STS options,
   -- and return the new mempool state, a "validated" 'TxInBlock' and,
   -- depending on the passed options, the emitted events.
@@ -121,14 +118,13 @@ ruleApplyTxValidation ::
   , Environment (EraRule rule era) ~ LedgerEnv era
   , State (EraRule rule era) ~ MempoolState era
   , Signal (EraRule rule era) ~ Tx TopTx era
-  , PredicateFailure (EraRule rule era) ~ PredicateFailure (EraRule "LEDGER" era)
   ) =>
   ValidationPolicy ->
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
   Tx TopTx era ->
-  Either (ApplyTxError era) (MempoolState era, Validated (Tx TopTx era))
+  Either (NonEmpty (PredicateFailure (EraRule rule era))) (MempoolState era, Validated (Tx TopTx era))
 ruleApplyTxValidation validationPolicy globals env state tx =
   let opts =
         ApplySTSOpts
@@ -140,10 +136,15 @@ ruleApplyTxValidation validationPolicy globals env state tx =
         flip runReader globals
           . applySTSOptsEither @(EraRule rule era) opts
           $ TRC (env, state, tx)
-   in bimap ApplyTxError (,Validated tx) result
+   in fmap (,Validated tx) result
 
 instance ApplyTx ShelleyEra where
-  applyTxValidation = ruleApplyTxValidation @"LEDGER"
+  newtype ApplyTxError ShelleyEra = ShelleyApplyTxError (NonEmpty (ShelleyLedgerPredFailure ShelleyEra))
+    deriving (Eq, Show)
+    deriving newtype (EncCBOR, DecCBOR)
+  applyTxValidation validationPolicy globals env state tx =
+    first ShelleyApplyTxError $
+      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
 
 type MempoolEnv era = Ledger.LedgerEnv era
 
@@ -187,44 +188,6 @@ mkMempoolEnv
 --   a new block).
 mkMempoolState :: NewEpochState era -> MempoolState era
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} = LedgerState.esLState nesEs
-
-newtype ApplyTxError era = ApplyTxError (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
-
-deriving stock instance
-  Eq (PredicateFailure (EraRule "LEDGER" era)) =>
-  Eq (ApplyTxError era)
-
-deriving stock instance
-  Show (PredicateFailure (EraRule "LEDGER" era)) =>
-  Show (ApplyTxError era)
-
-deriving newtype instance
-  ( Era era
-  , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
-  ) =>
-  EncCBOR (ApplyTxError era)
-
-deriving newtype instance
-  ( Era era
-  , DecCBOR (PredicateFailure (EraRule "LEDGER" era))
-  ) =>
-  DecCBOR (ApplyTxError era)
-
-instance
-  ( Era era
-  , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
-  ) =>
-  ToCBOR (ApplyTxError era)
-  where
-  toCBOR = toEraCBOR @era
-
-instance
-  ( Era era
-  , DecCBOR (PredicateFailure (EraRule "LEDGER" era))
-  ) =>
-  FromCBOR (ApplyTxError era)
-  where
-  fromCBOR = fromEraCBOR @era
 
 -- | Transform a function over mempool states to one over the full
 -- 'NewEpochState'.

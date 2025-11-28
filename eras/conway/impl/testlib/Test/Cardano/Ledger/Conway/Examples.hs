@@ -28,7 +28,6 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (..),
   RewardAccount (..),
   TxId (..),
  )
@@ -60,13 +59,12 @@ import Test.Cardano.Ledger.Shelley.Examples (
   mkKeyHash,
  )
 
-ledgerExamples :: LedgerExamples ConwayEra
+ledgerExamples :: LedgerExamples "LEDGER" ConwayEra
 ledgerExamples =
   mkLedgerExamples
-    ( ApplyTxError $
-        pure $
-          wrapFailed @(ConwayDELEG ConwayEra) @(ConwayLEDGER ConwayEra) $
-            DelegateeStakePoolNotRegisteredDELEG @ConwayEra (mkKeyHash 1)
+    ( pure $
+        wrapFailed @(ConwayDELEG ConwayEra) @(ConwayLEDGER ConwayEra) $
+          DelegateeStakePoolNotRegisteredDELEG @ConwayEra (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
     exampleTxConway
