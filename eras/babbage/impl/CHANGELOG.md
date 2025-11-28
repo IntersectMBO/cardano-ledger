@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Add `BabbageApplyTxError` constructor for `ApplyTxError era`
 * Renamed:
   - `bppMinFeeA` -> `bppTxFeePerByte`
   - `bppMinFeeB` -> `bppTxFeeFixed`

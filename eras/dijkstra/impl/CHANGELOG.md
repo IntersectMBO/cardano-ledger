@@ -2,6 +2,9 @@
 
 ## 0.2.0.0
 
+* Move the `DijkstraMempoolFailure` constructor from `DijkstraLedgerPredFailure` to `DijkstraMempoolPredFailure`
+* Add the `DijkstraMempoolPredFailure` predicate failure for the MEMPOOL rule
+* Add `DijkstraApplyTxError` constructor for `ApplyTxError era`
 * Renamed:
   - `dppMinFeeA` -> `dppTxFeePerByte`
   - `dppMinFeeB` -> `dppTxFeeFixed`

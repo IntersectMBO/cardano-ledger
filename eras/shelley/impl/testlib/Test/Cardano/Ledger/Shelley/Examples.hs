@@ -103,7 +103,7 @@ deriving instance
   , Eq (PParamsUpdate era)
   , EraGov era
   , Eq (Tx TopTx era)
-  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Eq (ApplyTxError era)
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
   , Eq (CertState era)
@@ -114,6 +114,9 @@ deriving instance
 ledgerExamples :: LedgerExamples ShelleyEra
 ledgerExamples =
   mkLedgerExamples
+    ( ShelleyApplyTxError . pure . DelegsFailure $
+        DelegateeNotRegisteredDELEG @ShelleyEra (mkKeyHash 1)
+    )
     (mkWitnessesPreAlonzo (Proxy @ShelleyEra))
     exampleCoin
     exampleTxBodyShelley
@@ -126,11 +129,10 @@ mkLedgerExamples ::
   , EraGov era
   , EraStake era
   , EraCertState era
-  , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
-  , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
   , Default (StashedAVVMAddresses era)
   , AtMostEra "Mary" era
   ) =>
+  ApplyTxError era ->
   (TxBody TopTx era -> [KeyPair Witness] -> TxWits era) ->
   Value era ->
   TxBody TopTx era ->
@@ -138,6 +140,7 @@ mkLedgerExamples ::
   TranslationContext era ->
   LedgerExamples era
 mkLedgerExamples
+  applyTxError
   mkWitnesses
   value
   txBody
@@ -145,9 +148,7 @@ mkLedgerExamples
   translationContext =
     LedgerExamples
       { leTx = tx
-      , leApplyTxError =
-          ApplyTxError . pure . DelegsFailure $
-            DelegateeNotRegisteredDELEG @era (mkKeyHash 1)
+      , leApplyTxError = applyTxError
       , lePParams = def
       , leProposedPPUpdates =
           ProposedPPUpdates $

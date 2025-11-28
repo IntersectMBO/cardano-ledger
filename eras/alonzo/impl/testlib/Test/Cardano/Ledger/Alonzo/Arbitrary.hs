@@ -32,7 +32,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   genAlonzoPlutusPurposePointer,
 ) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
+import Cardano.Ledger.Alonzo (AlonzoEra, ApplyTxError (..), Tx (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoExtraConfig (..), AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (
@@ -467,6 +467,8 @@ instance Arbitrary (TransitionConfig AlonzoEra) where
   arbitrary = AlonzoTransitionConfig <$> arbitrary <*> arbitrary
 
 deriving newtype instance Arbitrary (Tx TopTx AlonzoEra)
+
+deriving newtype instance Arbitrary (ApplyTxError AlonzoEra)
 
 instance
   ( EraBlockBody era

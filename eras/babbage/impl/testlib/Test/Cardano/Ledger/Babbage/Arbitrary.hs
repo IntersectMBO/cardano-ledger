@@ -148,3 +148,5 @@ instance Arbitrary (TxBody TopTx BabbageEra) where
 deriving newtype instance Arbitrary (TransitionConfig BabbageEra)
 
 deriving newtype instance Arbitrary (Tx TopTx BabbageEra)
+
+deriving newtype instance Arbitrary (ApplyTxError BabbageEra)

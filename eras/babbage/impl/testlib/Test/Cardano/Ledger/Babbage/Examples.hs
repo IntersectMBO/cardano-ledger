@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Babbage.Examples (
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
 import Cardano.Ledger.Alonzo.Translation ()
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage (ApplyTxError (BabbageApplyTxError), BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -27,7 +27,6 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (..),
   Network (..),
   NewEpochState (..),
   ProposedPPUpdates (..),
@@ -62,7 +61,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
 ledgerExamples :: LedgerExamples BabbageEra
 ledgerExamples =
   mkLedgerExamples
-    ( ApplyTxError $
+    ( BabbageApplyTxError $
         pure $
           DelegsFailure $
             DelegateeNotRegisteredDELEG @BabbageEra (mkKeyHash 1)
