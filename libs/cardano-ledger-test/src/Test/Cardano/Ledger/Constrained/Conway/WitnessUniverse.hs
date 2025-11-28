@@ -151,6 +151,7 @@ instance
   genFromTypeSpec _ = pureGen $ genNestedMultiSig 2
   cardinalTypeSpec _ = trueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 

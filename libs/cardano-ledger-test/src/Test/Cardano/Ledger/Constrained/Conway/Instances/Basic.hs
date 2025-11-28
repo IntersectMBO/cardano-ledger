@@ -132,6 +132,7 @@ instance HasSpec UnitInterval where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = trueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -142,6 +143,7 @@ instance HasSpec NonNegativeInterval where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = trueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -154,6 +156,7 @@ instance HasSpec CostModels where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = trueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
@@ -199,6 +202,7 @@ instance HasSpec VersionRep where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
@@ -236,6 +240,7 @@ instance Typeable r => HasSpec (KeyHash r) where
   genFromTypeSpec _ = pureGen arbitrary
   cardinalTypeSpec _ = trueSpec
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
