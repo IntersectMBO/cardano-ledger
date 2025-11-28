@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Add `BabbageApplyTxError` constructor for `ApplyTxError era`
 * Change all lists into `NonEmpty` for `BabbageUtxoPredFailure`
 * Add `babbageUtxoValidation`
 * Add `babbageUtxoTests`

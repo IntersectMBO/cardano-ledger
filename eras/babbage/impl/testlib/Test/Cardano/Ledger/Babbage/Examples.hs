@@ -27,7 +27,6 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (..),
   Network (..),
   NewEpochState (..),
   ProposedPPUpdates (..),
@@ -59,13 +58,12 @@ import Test.Cardano.Ledger.Shelley.Examples (
   mkKeyHash,
  )
 
-ledgerExamples :: LedgerExamples BabbageEra
+ledgerExamples :: LedgerExamples "LEDGER" BabbageEra
 ledgerExamples =
   mkLedgerExamples
-    ( ApplyTxError $
-        pure $
-          DelegsFailure $
-            DelegateeNotRegisteredDELEG @BabbageEra (mkKeyHash 1)
+    ( pure $
+        DelegsFailure $
+          DelegateeNotRegisteredDELEG @BabbageEra (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
     exampleTxBabbage

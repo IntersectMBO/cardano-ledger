@@ -61,6 +61,7 @@ import Cardano.Slotting.EpochInfo
 import qualified Data.ByteString as Strict
 import Data.Coerce (coerce)
 import Data.Default
+import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -77,10 +78,10 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, unsafeBoundRational)
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 
-data LedgerExamples era = LedgerExamples
+data LedgerExamples rule era = LedgerExamples
   { -- tx
     leTx :: Tx TopTx era
-  , leApplyTxError :: ApplyTxError era
+  , leApplyTxError :: NonEmpty (PredicateFailure (EraRule rule era))
   , -- protocol parameters
     lePParams :: PParams era
   , leProposedPPUpdates :: ProposedPPUpdates era
@@ -103,15 +104,15 @@ deriving instance
   , Eq (PParamsUpdate era)
   , EraGov era
   , Eq (Tx TopTx era)
-  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Eq (PredicateFailure (EraRule rule era))
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
   , Eq (CertState era)
   , Eq (InstantStake era)
   ) =>
-  Eq (LedgerExamples era)
+  Eq (LedgerExamples rule era)
 
-ledgerExamples :: LedgerExamples ShelleyEra
+ledgerExamples :: LedgerExamples "LEDGER" ShelleyEra
 ledgerExamples =
   mkLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @ShelleyEra))
@@ -136,7 +137,7 @@ mkLedgerExamples ::
   TxBody TopTx era ->
   TxAuxData era ->
   TranslationContext era ->
-  LedgerExamples era
+  LedgerExamples "LEDGER" era
 mkLedgerExamples
   mkWitnesses
   value
@@ -146,7 +147,7 @@ mkLedgerExamples
     LedgerExamples
       { leTx = tx
       , leApplyTxError =
-          ApplyTxError . pure . DelegsFailure $
+          pure . DelegsFailure $
             DelegateeNotRegisteredDELEG @era (mkKeyHash 1)
       , lePParams = def
       , leProposedPPUpdates =

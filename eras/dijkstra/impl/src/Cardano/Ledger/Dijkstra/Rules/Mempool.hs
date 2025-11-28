@@ -1,11 +1,14 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -14,9 +17,20 @@
 
 module Cardano.Ledger.Dijkstra.Rules.Mempool (
   DijkstraMEMPOOL,
+  DijkstraMempoolPredFailure (..),
+  DijkstraMempoolEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
   ConwayGovState,
@@ -24,13 +38,13 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules (
   CertsEnv,
-  ConwayLedgerEvent,
   ConwayLedgerPredFailure,
   GovEnv,
   GovSignal,
  )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (
+  DijkstraEra,
   DijkstraLEDGER,
   DijkstraMEMPOOL,
  )
@@ -38,6 +52,7 @@ import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure (..))
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLedgerPredFailure, UtxoEnv)
+import Control.DeepSeq (NFData)
 import Control.State.Transition (
   BaseM,
   Environment,
@@ -56,7 +71,61 @@ import Control.State.Transition (
 import Control.State.Transition.Extended (Embed (..), trans)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
+import GHC.Generics (Generic (..))
 import Lens.Micro ((^.))
+
+data DijkstraMempoolPredFailure era
+  = LedgerFailure (PredicateFailure (EraRule "LEDGER" era))
+  | AllInputsAreSpent
+  deriving (Generic)
+
+type instance EraRuleFailure "MEMPOOL" DijkstraEra = DijkstraMempoolPredFailure DijkstraEra
+
+type instance EraRuleEvent "MEMPOOL" DijkstraEra = DijkstraMempoolEvent DijkstraEra
+
+instance InjectRuleFailure "MEMPOOL" DijkstraMempoolPredFailure DijkstraEra
+
+deriving instance
+  Eq (PredicateFailure (EraRule "LEDGER" era)) =>
+  Eq (DijkstraMempoolPredFailure era)
+
+deriving instance
+  Show (PredicateFailure (EraRule "LEDGER" era)) =>
+  Show (DijkstraMempoolPredFailure era)
+
+instance
+  ( Era era
+  , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  EncCBOR (DijkstraMempoolPredFailure era)
+  where
+  encCBOR =
+    encode . \case
+      LedgerFailure x -> Sum (LedgerFailure @era) 1 !> To x
+      AllInputsAreSpent -> Sum AllInputsAreSpent 2
+
+instance
+  ( Era era
+  , DecCBOR (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  DecCBOR (DijkstraMempoolPredFailure era)
+  where
+  decCBOR = decode . Summands "DijkstraMempoolPredFailure" $ \case
+    1 -> SumD (LedgerFailure @era) <! From
+    2 -> SumD AllInputsAreSpent
+    n -> Invalid n
+
+data DijkstraMempoolEvent era
+  = LedgerEvent (Event (EraRule "LEDGER" era))
+  deriving (Generic)
+
+deriving instance
+  Eq (Event (EraRule "LEDGER" era)) =>
+  Eq (DijkstraMempoolEvent era)
+
+instance
+  NFData (Event (EraRule "LEDGER" era)) =>
+  NFData (DijkstraMempoolEvent era)
 
 instance
   ( EraTx era
@@ -82,8 +151,8 @@ instance
   type Signal (DijkstraMEMPOOL era) = Tx TopTx era
   type Environment (DijkstraMEMPOOL era) = LedgerEnv era
   type BaseM (DijkstraMEMPOOL era) = ShelleyBase
-  type PredicateFailure (DijkstraMEMPOOL era) = DijkstraLedgerPredFailure era
-  type Event (DijkstraMEMPOOL era) = ConwayLedgerEvent era
+  type PredicateFailure (DijkstraMEMPOOL era) = DijkstraMempoolPredFailure era
+  type Event (DijkstraMEMPOOL era) = DijkstraMempoolEvent era
 
   transitionRules = [mempoolTransition @era]
 
@@ -109,8 +178,7 @@ mempoolTransition = do
     UTxO utxo = ledgerState ^. utxoG
     notAllSpent = any (`Map.member` utxo) inputs
   notAllSpent
-    ?! DijkstraMempoolFailure
-      "All inputs are spent. Transaction has probably already been included"
+    ?! AllInputsAreSpent
 
   -- Continue with LEDGER rules if the transaction is not a duplicate,
   whenFailureFreeDefault ledgerState $ do
@@ -148,5 +216,5 @@ instance
   ) =>
   Embed (DijkstraLEDGER era) (DijkstraMEMPOOL era)
   where
-  wrapFailed = id
-  wrapEvent = id
+  wrapFailed = LedgerFailure
+  wrapEvent = LedgerEvent

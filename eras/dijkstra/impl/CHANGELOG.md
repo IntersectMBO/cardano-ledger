@@ -2,6 +2,9 @@
 
 ## 0.2.0.0
 
+* Move the `DijkstraMempoolFailure` constructor from `DijkstraLedgerPredFailure` to `DijkstraMempoolPredFailure`
+* Add the `DijkstraMempoolPredFailure` predicate failure for the MEMPOOL rule
+* Add `DijkstraApplyTxError` constructor for `ApplyTxError era`
 * Change Dijkstra BBODY rule to validate Peras certificates when present
 * Add new block body predicate falures for Dijkstra:
   - `PrevEpochNonceNotPresent` for missing optional nonce needed for validation
