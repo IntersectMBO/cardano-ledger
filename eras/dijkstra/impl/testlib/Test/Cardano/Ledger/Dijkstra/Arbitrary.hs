@@ -66,6 +66,7 @@ instance Arbitrary (TxBody SubTx DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary (TxBody TopTx DijkstraEra) where
   arbitrary =

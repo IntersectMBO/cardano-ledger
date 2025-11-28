@@ -718,8 +718,11 @@ sub_transaction_body =
   , ? 20 : proposal_procedures             
   , ? 21 : coin                            
   , ? 22 : positive_coin                   
+  , ? 24 : required_top_level_guards       
   }
 
+
+required_top_level_guards = {+ credential => plutus_data/ nil}
 
 transaction_witness_set = 
   { ? 0 : nonempty_set<vkeywitness>      
