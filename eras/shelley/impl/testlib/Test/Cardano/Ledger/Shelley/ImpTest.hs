@@ -1492,23 +1492,20 @@ freshKeyPair = do
 
 -- | Generate a random `Addr` that uses a `KeyHash`, and add the corresponding `KeyPair`
 -- to the known keys in the Imp state.
-freshKeyAddr_ :: EraGov era => ImpTestM era Addr
+freshKeyAddr_ ::
+  (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) => m Addr
 freshKeyAddr_ = snd <$> freshKeyAddr
 
 -- | Generate a random `Addr` that uses a `KeyHash`, add the corresponding `KeyPair`
 -- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
-freshKeyAddr :: EraGov era => ImpTestM era (KeyHash Payment, Addr)
+freshKeyAddr ::
+  (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =>
+  m (KeyHash Payment, Addr)
 freshKeyAddr = do
-  ProtVer pv _ <- getProtVer
   paymentKeyHash <- freshKeyHash @Payment
   stakingKeyHash <-
-    oneof $
-      [ Just . mkStakeRef <$> freshKeyHash @Staking
-      , pure Nothing
-      ]
-        <> [ Just . mkStakeRef @Ptr <$> arbitrary
-           | pv < natVersion @12
-           ]
+    oneof
+      [Just . mkStakeRef <$> freshKeyHash @Staking, Just . mkStakeRef @Ptr <$> arbitrary, pure Nothing]
   pure (paymentKeyHash, mkAddr paymentKeyHash stakingKeyHash)
 
 -- | Looks up the keypair corresponding to the `BootstrapAddress`. The `BootstrapAddress`
