@@ -124,7 +124,7 @@ instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where
         Ann (RecD DijkstraTx)
           <*! From
           <*! From
-          <*! Ann From
+          <*! Ann (D (pure (IsValid True)))
           <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
     SSubTx ->
       decode $
@@ -323,7 +323,7 @@ toCBORForMempoolSubmission = \case
       Rec DijkstraTx
         !> To dtBody
         !> To dtWits
-        !> To dtIsValid
+        !> OmitC dtIsValid
         !> E (encodeNullStrictMaybe encCBOR) dtAuxData
   DijkstraSubTx {dstBody, dstWits, dstAuxData} ->
     encode $

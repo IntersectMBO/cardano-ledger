@@ -63,7 +63,6 @@ transaction =
     =:= arr
       [ a transaction_body
       , a transaction_witness_set
-      , a VBool
       , a (auxiliary_data / VNil)
       ]
 
