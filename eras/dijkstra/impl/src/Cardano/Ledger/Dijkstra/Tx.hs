@@ -36,6 +36,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   Encoding,
   ToCBOR (..),
+  decodeListLen,
   decodeNullStrictMaybe,
   encodeListLen,
   encodeNullStrictMaybe,
@@ -119,13 +120,35 @@ instance EraTx era => EncCBOR (DijkstraTx l era) where
 
 instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where
   decCBOR = withSTxBothLevels @l $ \case
-    STopTx ->
-      decode $
-        Ann (RecD DijkstraTx)
-          <*! From
-          <*! From
-          <*! Ann From
-          <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
+    STopTx -> do
+      decodeListLen >>= \case
+        4 -> do
+          bodyAnn <- decCBOR
+          witsAnn <- decCBOR
+          isValid <-
+            decCBOR
+              >>= \case
+                True -> pure (IsValid True)
+                False -> fail "value `false` not allowed for `isValid`"
+          auxAnn <- decodeNullStrictMaybe decCBOR
+          pure $
+            DijkstraTx
+              <$> bodyAnn
+              <*> witsAnn
+              <*> pure isValid
+              <*> sequence auxAnn
+        3 -> do
+          bodyAnn <- decCBOR
+          witsAnn <- decCBOR
+          auxAnn <- decodeNullStrictMaybe decCBOR
+          pure $
+            DijkstraTx
+              <$> bodyAnn
+              <*> witsAnn
+              <*> pure (IsValid True)
+              <*> sequence auxAnn
+        n ->
+          fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
     SSubTx ->
       decode $
         Ann (RecD DijkstraSubTx)
@@ -323,7 +346,7 @@ toCBORForMempoolSubmission = \case
       Rec DijkstraTx
         !> To dtBody
         !> To dtWits
-        !> To dtIsValid
+        !> OmitC dtIsValid
         !> E (encodeNullStrictMaybe encCBOR) dtAuxData
   DijkstraSubTx {dstBody, dstWits, dstAuxData} ->
     encode $
