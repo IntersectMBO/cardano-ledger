@@ -35,7 +35,7 @@ import Cardano.Ledger.Alonzo.Rules (
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
-  babbageUtxoTests,
+  babbageUtxoValidation,
  )
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -73,7 +73,7 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Plutus (ExUnits)
-import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
+import Cardano.Ledger.Rules.ValidationMode (failOnJustStatic)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
@@ -89,6 +89,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Embed (..),
+  Rule,
   STS (..),
   TRC (..),
   TransitionRule,
@@ -103,7 +104,6 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import Lens.Micro ((^.))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
-import Validation (failure)
 
 -- ======================================================
 
@@ -172,7 +172,7 @@ data DijkstraUtxoPredFailure era
     BabbageOutputTooSmallUTxO [(TxOut era, Coin)]
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs (NonEmpty TxIn)
-  | PtrPresentInCollateral (TxOut era)
+  | PtrPresentInCollateralReturn (TxOut era)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" DijkstraEra = DijkstraUtxoPredFailure DijkstraEra
@@ -198,7 +198,7 @@ instance InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure DijkstraEra whe
   injectFailure = conwayToDijkstraUtxoPredFailure . allegraToConwayUtxoPredFailure
 
 instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure DijkstraEra where
-  injectFailure = injectFailure . UtxosFailure
+  injectFailure = UtxosFailure
 
 instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure DijkstraEra where
   injectFailure =
@@ -244,13 +244,18 @@ instance
 -- DijkstraUTXO STS
 --------------------------------------------------------------------------------
 
-validateNoPtrInCollateral ::
-  EraTxOut era => StrictMaybe (TxOut era) -> Test (DijkstraUtxoPredFailure era)
-validateNoPtrInCollateral mbyCollateralOutput
-  | SJust collateralOutput <- mbyCollateralOutput
-  , Addr _ _ (StakeRefPtr {}) <- collateralOutput ^. addrTxOutL =
-      failure $ PtrPresentInCollateral collateralOutput
-  | otherwise = pure ()
+validateNoPtrInCollateralReturn ::
+  ( BabbageEraTxBody era
+  , InjectRuleFailure rule DijkstraUtxoPredFailure era
+  ) =>
+  TxBody TopTx era ->
+  Rule (EraRule rule era) ctx ()
+validateNoPtrInCollateralReturn txBody = do
+  let hasCollateralTxOut = do
+        SJust collateralReturn <- pure $ txBody ^. collateralReturnTxBodyL
+        Addr _ _ (StakeRefPtr {}) <- pure $ collateralReturn ^. addrTxOutL
+        Just collateralReturn
+  failOnJustStatic hasCollateralTxOut (injectFailure . PtrPresentInCollateralReturn)
 
 utxoTransition ::
   forall era.
@@ -277,9 +282,9 @@ utxoTransition ::
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
   TRC (_, _, tx) <- judgmentContext
-  _ <- babbageUtxoTests
+  _ <- babbageUtxoValidation
 
-  runTest $ validateNoPtrInCollateral $ tx ^. bodyTxL . collateralReturnTxBodyL
+  validateNoPtrInCollateralReturn $ tx ^. bodyTxL
 
   trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 
@@ -373,7 +378,7 @@ instance
       IncorrectTotalCollateralField c1 c2 -> Sum IncorrectTotalCollateralField 20 !> To c1 !> To c2
       BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 21 !> To x
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 22 !> To x
-      PtrPresentInCollateral x -> Sum PtrPresentInCollateral 23 !> To x
+      PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 23 !> To x
 
 instance
   ( Era era
@@ -408,7 +413,7 @@ instance
     20 -> SumD IncorrectTotalCollateralField <! From <! From
     21 -> SumD BabbageOutputTooSmallUTxO <! From
     22 -> SumD BabbageNonDisjointRefInputs <! From
-    23 -> SumD PtrPresentInCollateral <! From
+    23 -> SumD PtrPresentInCollateralReturn <! From
     n -> Invalid n
 
 -- =====================================================

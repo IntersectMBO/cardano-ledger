@@ -47,4 +47,4 @@ spec =
         tx =
           mkBasicTx mkBasicTxBody
             & bodyTxL . collateralReturnTxBodyL .~ SJust ptrOutput
-      submitFailingTx tx [injectFailure $ PtrPresentInCollateral ptrOutput]
+      submitFailingTx tx [injectFailure $ PtrPresentInCollateralReturn ptrOutput]

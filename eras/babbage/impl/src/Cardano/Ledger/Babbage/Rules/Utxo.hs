@@ -19,7 +19,7 @@
 module Cardano.Ledger.Babbage.Rules.Utxo (
   BabbageUTXO,
   BabbageUtxoPredFailure (..),
-  babbageUtxoTests,
+  babbageUtxoValidation,
   utxoTransition,
   feesOK,
   validateTotalCollateral,
@@ -347,7 +347,7 @@ validateOutputTooSmallUTxO pp outs =
         )
         outs'
 
-babbageUtxoTests ::
+babbageUtxoValidation ::
   forall era.
   ( EraUTxO era
   , BabbageEraTxBody era
@@ -361,11 +361,10 @@ babbageUtxoTests ::
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
-  , -- In this function we we call the UTXOS rule, so we need some assumptions
-    EraCertState era
+  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
-babbageUtxoTests = do
+babbageUtxoValidation = do
   TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let utxo = utxosUtxo utxos
 
@@ -452,7 +451,7 @@ utxoTransition ::
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
-  , -- In this function we we call the UTXOS rule, so we need some assumptions
+  , -- In this function we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
@@ -461,7 +460,7 @@ utxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
-  _ <- babbageUtxoTests
+  _ <- babbageUtxoValidation
   trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 
 --------------------------------------------------------------------------------

@@ -25,6 +25,7 @@ module Cardano.Ledger.Rules.ValidationMode (
   Test,
   runTest,
   runTestOnSignal,
+  failOnJustStatic,
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
@@ -86,3 +87,7 @@ runTest = validateTrans injectFailure
 
 runTestOnSignal :: InjectRuleFailure rule f era => Test (f era) -> Rule (EraRule rule era) ctx ()
 runTestOnSignal = validateTransLabeled injectFailure $ lblStatic NE.:| []
+
+failOnJustStatic :: Maybe a -> (a -> PredicateFailure sts) -> Rule sts ctx ()
+failOnJustStatic cond onJust =
+  validateTransLabeled id (lblStatic NE.:| []) $ failureOnJust cond onJust
