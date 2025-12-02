@@ -243,10 +243,10 @@ instance HuddleRule "value" AlonzoEra where
   huddleRule p =
     "value"
       =:= huddleRule @"coin" p
-      / sarr [a $ huddleRule @"coin" p, a $ multiasset p VUInt]
+      / sarr [a $ huddleRule @"coin" p, a $ maryMultiasset p VUInt]
 
 instance HuddleRule "mint" AlonzoEra where
-  huddleRule p = "mint" =:= multiasset p (huddleRule @"int64" p)
+  huddleRule p = "mint" =:= maryMultiasset p (huddleRule @"int64" p)
 
 instance HuddleRule "block" AlonzoEra where
   huddleRule p =
