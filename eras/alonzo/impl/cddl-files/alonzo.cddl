@@ -561,7 +561,7 @@ redeemer =
 ; 1: mint
 ; 2: cert
 ; 3: reward
-redeemer_tag = 0/ 1/ 2/ 3
+redeemer_tag = 0 .. 3
 
 transaction_index = uint .size 2
 

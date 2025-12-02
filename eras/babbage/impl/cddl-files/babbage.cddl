@@ -575,7 +575,7 @@ redeemer =
 ; 1: mint
 ; 2: cert
 ; 3: reward
-redeemer_tag = 0/ 1/ 2/ 3
+redeemer_tag = 0 .. 3
 
 transaction_index = uint .size 2
 
@@ -618,7 +618,7 @@ transaction =
 
 ; 0: Plutus v1
 ; 1: Plutus v2
-language = 0/ 1
+language = 0 .. 1
 
 signkey_kes = bytes .size 64
 
