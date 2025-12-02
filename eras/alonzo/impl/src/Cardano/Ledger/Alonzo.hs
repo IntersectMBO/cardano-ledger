@@ -17,6 +17,7 @@ module Cardano.Ledger.Alonzo (
   Tx (..),
 ) where
 
+import Cardano.Ledger.Alonzo.BlockBody ()
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Plutus.TxInfo ()

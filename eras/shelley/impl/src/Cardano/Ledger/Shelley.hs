@@ -12,6 +12,7 @@ module Cardano.Ledger.Shelley (
   hardforkBabbageForgoRewardPrefilter,
 ) where
 
+import Cardano.Ledger.Shelley.BlockBody ()
 import Cardano.Ledger.Shelley.Era (
   ShelleyEra,
   hardforkAllegraAggregatedRewards,

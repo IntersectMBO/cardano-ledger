@@ -22,22 +22,19 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
-import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoBBODY, AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import Cardano.Ledger.Alonzo.Rules.Ledgers ()
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (totExUnits)
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
@@ -179,7 +176,6 @@ alonzoBbodyTransition ::
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , EraBlockBody era
   , AlonzoEraTxWits era
-  , BlockBody era ~ AlonzoBlockBody era
   , AlonzoEraPParams era
   ) =>
   TransitionRule (EraRule "BBODY" era)
@@ -262,19 +258,14 @@ instance
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
-  , BlockBody era ~ AlonzoBlockBody era
   , EraBlockBody era
   , AlonzoEraPParams era
   ) =>
   STS (AlonzoBBODY era)
   where
-  type
-    State (AlonzoBBODY era) =
-      ShelleyBbodyState era
+  type State (AlonzoBBODY era) = ShelleyBbodyState era
 
-  type
-    Signal (AlonzoBBODY era) =
-      (Block BHeaderView era)
+  type Signal (AlonzoBBODY era) = Block BHeaderView era
 
   type Environment (AlonzoBBODY era) = BbodyEnv era
 

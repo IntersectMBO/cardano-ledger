@@ -33,7 +33,6 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
-import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody (AlonzoBlockBody))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoExtraConfig (..), AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (
