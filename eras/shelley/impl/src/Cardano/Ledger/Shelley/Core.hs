@@ -1,6 +1,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 module Cardano.Ledger.Shelley.Core (
+  ShelleyBlockBody (..),
   ShelleyEraTxBody (..),
   Withdrawals (..),
   ShelleyEraTxCert (..),
@@ -29,6 +30,7 @@ import Cardano.Ledger.Core (
   ),
  )
 import Cardano.Ledger.Core hiding (EraPParams (..))
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))

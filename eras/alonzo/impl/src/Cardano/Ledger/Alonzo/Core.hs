@@ -1,6 +1,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 module Cardano.Ledger.Alonzo.Core (
+  AlonzoBlockBody (..),
   AlonzoEraTx (..),
   IsValid (..),
   AlonzoEraTxOut (..),
@@ -37,6 +38,7 @@ module Cardano.Ledger.Alonzo.Core (
   module Cardano.Ledger.Mary.Core,
 ) where
 
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody (..))
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoEraPParams,
   CoinPerWord (..),

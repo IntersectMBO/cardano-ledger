@@ -26,7 +26,6 @@ module Cardano.Ledger.Conway.Rules.Bbody (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
-import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody)
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoBbodyEvent (..),
@@ -246,7 +245,6 @@ instance
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
-  , BlockBody era ~ AlonzoBlockBody era
   , EraBlockBody era
   , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
@@ -279,7 +277,6 @@ conwayBbodyTransition ::
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , BlockBody era ~ AlonzoBlockBody era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , AlonzoEraTx era

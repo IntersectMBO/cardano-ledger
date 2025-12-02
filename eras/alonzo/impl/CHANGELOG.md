@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Re-export `AlonzoBlockBody` from `Cardano.Ledger.Alonzo.Core`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Renamed `uappCostModels` to `uappPlutusV1CostModel`
   and changed its type from `CostModels` to `CostModel`

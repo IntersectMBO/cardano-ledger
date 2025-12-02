@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Re-export `ShelleyBlockBody` from `Cardano.Ledger.Shelley.Core`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Change the field type of `ShelleyIncompleteWithdrawals` to `Map RewardAccount (Mismatch RelEQ Coin)`
 * Replace `StakePoolState` values in `psFutureStakePoolParams` with `StakePoolParams`

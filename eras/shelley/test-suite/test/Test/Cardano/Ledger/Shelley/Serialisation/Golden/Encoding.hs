@@ -71,7 +71,6 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
-import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
