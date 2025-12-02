@@ -157,10 +157,10 @@ instance HuddleRule "value" BabbageEra where
   huddleRule p =
     "value"
       =:= huddleRule @"coin" p
-      / sarr [a $ huddleRule @"coin" p, a $ multiasset p VUInt]
+      / sarr [a $ huddleRule @"coin" p, a $ maryMultiasset p VUInt]
 
 instance HuddleRule "mint" BabbageEra where
-  huddleRule p = "mint" =:= multiasset p (huddleRule @"int64" p)
+  huddleRule p = "mint" =:= maryMultiasset p (huddleRule @"int64" p)
 
 instance HuddleRule "proposed_protocol_parameter_updates" BabbageEra where
   huddleRule = proposedProtocolParameterUpdatesRule @BabbageEra

@@ -13,7 +13,7 @@
 module Cardano.Ledger.Mary.HuddleSpec (
   module Cardano.Ledger.Allegra.HuddleSpec,
   maryCDDL,
-  multiasset,
+  maryMultiasset,
 ) where
 
 import Cardano.Ledger.Allegra.HuddleSpec
@@ -194,10 +194,10 @@ instance HuddleRule "transaction_output" MaryEra where
         , "amount" ==> huddleRule @"value" p
         ]
 
-multiasset ::
+maryMultiasset ::
   forall era a.
   (HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) => Proxy era -> a -> GRuleCall
-multiasset p =
+maryMultiasset p =
   binding $ \x ->
     "multiasset"
       =:= mp
@@ -210,7 +210,7 @@ instance HuddleRule "value" MaryEra where
   huddleRule p =
     "value"
       =:= huddleRule @"coin" p
-      / sarr [a $ huddleRule @"coin" p, a $ multiasset p VUInt]
+      / sarr [a $ huddleRule @"coin" p, a $ maryMultiasset p VUInt]
 
 instance HuddleRule "policy_id" MaryEra where
   huddleRule p = "policy_id" =:= huddleRule @"script_hash" p
@@ -219,7 +219,7 @@ instance HuddleRule "asset_name" MaryEra where
   huddleRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "mint" MaryEra where
-  huddleRule p = "mint" =:= multiasset p (huddleRule @"int64" p)
+  huddleRule p = "mint" =:= maryMultiasset p (huddleRule @"int64" p)
 
 instance HuddleRule "auxiliary_data" MaryEra where
   huddleRule = auxiliaryDataRule @MaryEra
