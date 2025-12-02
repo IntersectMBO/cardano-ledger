@@ -197,23 +197,10 @@ instance HuddleRule "redeemer" BabbageEra where
     comment
       [str|NEW
           |]
-      $ "redeemer"
-        =:= arr
-          [ "tag" ==> huddleRule @"redeemer_tag" p
-          , "index" ==> VUInt
-          , "data" ==> huddleRule @"plutus_data" p
-          , "ex_units" ==> huddleRule @"ex_units" p
-          ]
+      $ alonzoRedeemer p
 
 instance HuddleRule "redeemer_tag" BabbageEra where
-  huddleRule _ =
-    comment
-      [str|0: spend
-          |1: mint
-          |2: cert
-          |3: reward
-          |]
-      $ "redeemer_tag" =:= int 0 / int 1 / int 2 / int 3
+  huddleRule _ = alonzoRedeemerTag
 
 instance HuddleRule "ex_units" BabbageEra where
   huddleRule _ = exUnitsRule
@@ -515,7 +502,7 @@ instance HuddleRule "language" BabbageEra where
       [str|0: Plutus v1
           |1: Plutus v2
           |]
-      $ "language" =:= int 0 / int 1
+      $ "language" =:= (0 :: Integer) ... (1 :: Integer)
 
 instance HuddleRule "cost_models" BabbageEra where
   huddleRule p =

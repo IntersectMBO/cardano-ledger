@@ -25,6 +25,8 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
   distinctBytesRule,
   plutusV1ScriptRule,
   plutusDataRule,
+  alonzoRedeemer,
+  alonzoRedeemerTag,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -525,25 +527,38 @@ constr =
 instance HuddleRule "redeemers" AlonzoEra where
   huddleRule p = "redeemers" =:= arr [0 <+ a (huddleRule @"redeemer" p)]
 
+alonzoRedeemer ::
+  forall era.
+  ( HuddleRule "redeemer_tag" era
+  , HuddleRule "plutus_data" era
+  , HuddleRule "ex_units" era
+  ) =>
+  Proxy era ->
+  Rule
+alonzoRedeemer p =
+  "redeemer"
+    =:= arr
+      [ "tag" ==> huddleRule @"redeemer_tag" p
+      , "index" ==> VUInt
+      , "data" ==> huddleRule @"plutus_data" p
+      , "ex_units" ==> huddleRule @"ex_units" p
+      ]
+
 instance HuddleRule "redeemer" AlonzoEra where
-  huddleRule p =
-    "redeemer"
-      =:= arr
-        [ "tag" ==> huddleRule @"redeemer_tag" p
-        , "index" ==> VUInt
-        , "data" ==> huddleRule @"plutus_data" p
-        , "ex_units" ==> huddleRule @"ex_units" p
-        ]
+  huddleRule = alonzoRedeemer @AlonzoEra
+
+alonzoRedeemerTag :: Rule
+alonzoRedeemerTag =
+  comment
+    [str|0: spend
+        |1: mint
+        |2: cert
+        |3: reward
+        |]
+    $ "redeemer_tag" =:= (0 :: Integer) ... (3 :: Integer)
 
 instance HuddleRule "redeemer_tag" AlonzoEra where
-  huddleRule _ =
-    comment
-      [str|0: spend
-          |1: mint
-          |2: cert
-          |3: reward
-          |]
-      $ "redeemer_tag" =:= int 0 / int 1 / int 2 / int 3
+  huddleRule _ = alonzoRedeemerTag
 
 instance HuddleRule "ex_units" AlonzoEra where
   huddleRule _ = exUnitsRule
