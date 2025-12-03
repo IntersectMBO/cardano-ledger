@@ -153,7 +153,7 @@ instance HuddleGroup "move_instantaneous_rewards_cert" AlonzoEra where
   huddleGroup = moveInstantaneousRewardsCertGroup @AlonzoEra
 
 instance HuddleRule "withdrawals" AlonzoEra where
-  huddleRule = withdrawalsRule @AlonzoEra
+  huddleRule = shelleyWithdrawalsRule @AlonzoEra
 
 instance HuddleRule "genesis_hash" AlonzoEra where
   huddleRule = genesisHashRule @AlonzoEra
@@ -240,13 +240,10 @@ instance HuddleRule "native_script" AlonzoEra where
   huddleRule = nativeScriptRule @AlonzoEra
 
 instance HuddleRule "value" AlonzoEra where
-  huddleRule p =
-    "value"
-      =:= huddleRule @"coin" p
-      / sarr [a $ huddleRule @"coin" p, a $ maryMultiasset p VUInt]
+  huddleRule = maryValueRule @AlonzoEra
 
 instance HuddleRule "mint" AlonzoEra where
-  huddleRule p = "mint" =:= maryMultiasset p (huddleRule @"int64" p)
+  huddleRule = maryMintRule @AlonzoEra
 
 instance HuddleRule "block" AlonzoEra where
   huddleRule p =

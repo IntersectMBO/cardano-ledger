@@ -31,7 +31,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   transactionIdRule,
   transactionInputRule,
   transactionOutputRule,
-  withdrawalsRule,
+  shelleyWithdrawalsRule,
   dnsNameRule,
   urlRule,
   poolMetadataRule,
@@ -210,8 +210,8 @@ transactionOutputRule p =
   "transaction_output"
     =:= arr [a $ huddleRule @"address" p, "amount" ==> huddleRule @"coin" p]
 
-withdrawalsRule :: forall era. Era era => Proxy era -> Rule
-withdrawalsRule p =
+shelleyWithdrawalsRule :: forall era. Era era => Proxy era -> Rule
+shelleyWithdrawalsRule p =
   "withdrawals"
     =:= mp [0 <+ asKey (huddleRule @"reward_account" p) ==> huddleRule @"coin" p]
 
@@ -456,7 +456,7 @@ instance HuddleRule "certificate" ShelleyEra where
   huddleRule = certificateRule @ShelleyEra
 
 instance HuddleRule "withdrawals" ShelleyEra where
-  huddleRule = withdrawalsRule @ShelleyEra
+  huddleRule = shelleyWithdrawalsRule @ShelleyEra
 
 instance HuddleRule "major_protocol_version" ShelleyEra where
   huddleRule = majorProtocolVersionRule @ShelleyEra
