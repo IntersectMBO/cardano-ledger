@@ -1019,24 +1019,19 @@ initStableFields :: forall era. Reflect era => GenRS era ()
 initStableFields = do
   GenEnv {geSize} <- ask
   hashes <- replicateM (maxStablePools geSize) $ do
-    pp <- asks gePParams
     (kh, stakePoolParams, ips) <- genNewPool
     modifyGenStateStablePools (Set.insert kh)
     modifyGenStateInitialStakePoolParams (Map.insert kh stakePoolParams)
     modifyGenStateInitialPoolDistr (Map.insert kh ips)
-    modifyModelStakePools
-      (Map.insert kh $ mkStakePoolState (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
     return kh
 
   -- This incantation gets a list of fresh (not previously generated) Credential
   credentials <- replicateM (maxStablePools geSize) $ do
-    old' <- gets (Map.keysSet . gsInitialAccounts)
+    old <- gets (Map.keysSet . gsInitialAccounts)
     prev <- gets gsAvoidCred
-    cred <- genFreshCredential 100 Rewarding (Set.union old' prev)
+    cred <- genFreshCredential 100 Rewarding (Set.union old prev)
     return cred
-  let registerNewAccount' cred poolId = do
-        registerNewAccount cred (Just poolId)
-  zipWithM_ registerNewAccount' credentials hashes
+  zipWithM_ (\cred poolId -> registerNewAccount cred (Just poolId)) credentials hashes
   modifyGenStateStableDelegators (Set.union (Set.fromList credentials))
 
 registerNewAccount ::
