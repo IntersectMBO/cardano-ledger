@@ -14,6 +14,8 @@ module Cardano.Ledger.Mary.HuddleSpec (
   module Cardano.Ledger.Allegra.HuddleSpec,
   maryCDDL,
   maryMultiasset,
+  maryValueRule,
+  maryMintRule,
 ) where
 
 import Cardano.Ledger.Allegra.HuddleSpec
@@ -31,6 +33,35 @@ maryCDDL =
     , HIRule $ huddleRule @"policy_id" (Proxy @MaryEra)
     , HIRule $ huddleRule @"asset_name" (Proxy @MaryEra)
     ]
+
+maryMultiasset ::
+  forall era a.
+  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) => Proxy era -> a -> GRuleCall
+maryMultiasset p =
+  binding $ \x ->
+    "multiasset"
+      =:= mp
+        [ 0
+            <+ asKey (huddleRule @"policy_id" p)
+            ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
+        ]
+
+maryValueRule ::
+  forall era.
+  (HuddleRule "policy_id" era, HuddleRule "asset_name" era) =>
+  Proxy era ->
+  Rule
+maryValueRule p =
+  "value"
+    =:= huddleRule @"coin" p
+    / sarr [a $ huddleRule @"coin" p, a $ maryMultiasset p VUInt]
+
+maryMintRule ::
+  forall era.
+  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, HuddleRule "int64" era) =>
+  Proxy era ->
+  Rule
+maryMintRule p = "mint" =:= maryMultiasset p (huddleRule @"int64" p)
 
 instance HuddleRule "block" MaryEra where
   huddleRule = blockRule @MaryEra
@@ -78,7 +109,7 @@ instance HuddleRule "transaction_witness_set" MaryEra where
   huddleRule = transactionWitnessSetRule @MaryEra
 
 instance HuddleRule "withdrawals" MaryEra where
-  huddleRule = withdrawalsRule @MaryEra
+  huddleRule = shelleyWithdrawalsRule @MaryEra
 
 instance HuddleRule "certificate" MaryEra where
   huddleRule = certificateRule @MaryEra
@@ -194,23 +225,8 @@ instance HuddleRule "transaction_output" MaryEra where
         , "amount" ==> huddleRule @"value" p
         ]
 
-maryMultiasset ::
-  forall era a.
-  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) => Proxy era -> a -> GRuleCall
-maryMultiasset p =
-  binding $ \x ->
-    "multiasset"
-      =:= mp
-        [ 0
-            <+ asKey (huddleRule @"policy_id" p)
-            ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
-        ]
-
 instance HuddleRule "value" MaryEra where
-  huddleRule p =
-    "value"
-      =:= huddleRule @"coin" p
-      / sarr [a $ huddleRule @"coin" p, a $ maryMultiasset p VUInt]
+  huddleRule = maryValueRule @MaryEra
 
 instance HuddleRule "policy_id" MaryEra where
   huddleRule p = "policy_id" =:= huddleRule @"script_hash" p
@@ -219,7 +235,7 @@ instance HuddleRule "asset_name" MaryEra where
   huddleRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "mint" MaryEra where
-  huddleRule p = "mint" =:= maryMultiasset p (huddleRule @"int64" p)
+  huddleRule = maryMintRule @MaryEra
 
 instance HuddleRule "auxiliary_data" MaryEra where
   huddleRule = auxiliaryDataRule @MaryEra
