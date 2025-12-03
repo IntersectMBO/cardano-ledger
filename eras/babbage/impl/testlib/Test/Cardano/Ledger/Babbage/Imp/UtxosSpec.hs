@@ -136,7 +136,7 @@ spec = describe "UTXOS" $ do
         mkBasicTx $
           mkBasicTxBody & outputsTxBodyL .~ [txOut]
     let txIn = txInAt 0 tx
-    addr <- freshKeyAddr_
+    addr <- freshKeyAddrNoPtr_
     coll <- sendCoinTo addr $ Coin 5_000_000
     let
       collReturn = mkBasicTxOut addr . inject $ Coin 2_000_000
