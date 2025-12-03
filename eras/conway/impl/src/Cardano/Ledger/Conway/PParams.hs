@@ -33,6 +33,7 @@ module Cardano.Ledger.Conway.PParams (
   ppDRepDepositCompactL,
   ppDRepVotingThresholds,
   ppGovActionDeposit,
+  ppGovActionDepositCompactL,
   ppGovActionLifetime,
   ppGovProtocolVersion,
   ppMinFeeRefScriptCostPerByte,
@@ -52,6 +53,7 @@ module Cardano.Ledger.Conway.PParams (
   ppuCommitteeMaxTermLengthL,
   ppuGovActionLifetimeL,
   ppuGovActionDepositL,
+  ppuGovActionDepositCompactL,
   ppuDRepDepositL,
   ppuDRepActivityL,
   ppuMinFeeRefScriptCostPerByteL,
@@ -182,7 +184,7 @@ class BabbageEraPParams era => ConwayEraPParams era where
   hkdCommitteeMinSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
   hkdCommitteeMaxTermLengthL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
   hkdGovActionLifetimeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
-  hkdGovActionDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdGovActionDepositCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
   hkdDRepDepositCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
   hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
   hkdMinFeeRefScriptCostPerByteL ::
@@ -233,8 +235,12 @@ ppCommitteeMaxTermLengthL = ppLensHKD . hkdCommitteeMaxTermLengthL @era @Identit
 ppGovActionLifetimeL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
 ppGovActionLifetimeL = ppLensHKD . hkdGovActionLifetimeL @era @Identity
 
-ppGovActionDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
-ppGovActionDepositL = ppLensHKD . hkdGovActionDepositL @era @Identity
+ppGovActionDepositCompactL ::
+  forall era. ConwayEraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppGovActionDepositCompactL = ppLensHKD . hkdGovActionDepositCompactL @era @Identity
+
+ppGovActionDepositL :: forall era. (ConwayEraPParams era, HasCallStack) => Lens' (PParams era) Coin
+ppGovActionDepositL = ppGovActionDepositCompactL . partialCompactCoinL
 
 ppDRepDepositCompactL :: forall era. ConwayEraPParams era => Lens' (PParams era) (CompactForm Coin)
 ppDRepDepositCompactL = ppLensHKD . hkdDRepDepositCompactL @era @Identity
@@ -269,9 +275,13 @@ ppuGovActionLifetimeL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
 ppuGovActionLifetimeL = ppuLensHKD . hkdGovActionLifetimeL @era @StrictMaybe
 
+ppuGovActionDepositCompactL ::
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuGovActionDepositCompactL = ppuLensHKD . hkdGovActionDepositCompactL @era @StrictMaybe
+
 ppuGovActionDepositL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuGovActionDepositL = ppuLensHKD . hkdGovActionDepositL @era @StrictMaybe
+  forall era. (ConwayEraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuGovActionDepositL = ppuGovActionDepositCompactL . partialCompactFL
 
 ppuDRepDepositCompactL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
@@ -629,9 +639,9 @@ ppGroup = \case
 -- * @dRepDeposit@
 -- * @dRepActivity@
 data ConwayPParams f era = ConwayPParams
-  { cppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin)
+  { cppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The linear factor for the minimum fee calculation
-  , cppMinFeeB :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin)
+  , cppMinFeeB :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , cppMaxBBSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
   -- ^ Maximal block body size
@@ -639,7 +649,7 @@ data ConwayPParams f era = ConwayPParams
   -- ^ Maximal transaction size
   , cppMaxBHSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word16)
   -- ^ Maximal block header size
-  , cppKeyDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
+  , cppKeyDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ The amount of a key registration deposit
   , cppPoolDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
@@ -656,7 +666,7 @@ data ConwayPParams f era = ConwayPParams
   -- ^ Treasury expansion
   , cppProtocolVersion :: !(HKDNoUpdate f ProtVer)
   -- ^ Protocol version
-  , cppMinPoolCost :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
+  , cppMinPoolCost :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ Minimum Stake Pool Cost
   , cppCoinsPerUTxOByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
   -- ^ Cost in lovelace per byte of UTxO storage
@@ -686,7 +696,7 @@ data ConwayPParams f era = ConwayPParams
   -- ^ The Constitutional Committee Term limit in number of Slots
   , cppGovActionLifetime :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ Gov action lifetime in number of Epochs
-  , cppGovActionDeposit :: !(THKD ('PPGroups 'GovGroup 'SecurityGroup) f Coin)
+  , cppGovActionDeposit :: !(THKD ('PPGroups 'GovGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The amount of the Gov Action deposit
   , cppDRepDeposit :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ The amount of a DRep registration deposit
@@ -812,12 +822,12 @@ instance EraPParams ConwayEra where
   upgradePParamsHKD = upgradeConwayPParams
   downgradePParamsHKD () = downgradeConwayPParams
 
-  hkdMinFeeAL = lens (unTHKD . cppMinFeeA) $ \pp x -> pp {cppMinFeeA = THKD x}
-  hkdMinFeeBL = lens (unTHKD . cppMinFeeB) $ \pp x -> pp {cppMinFeeB = THKD x}
+  hkdMinFeeACompactL = lens (unTHKD . cppMinFeeA) $ \pp x -> pp {cppMinFeeA = THKD x}
+  hkdMinFeeBCompactL = lens (unTHKD . cppMinFeeB) $ \pp x -> pp {cppMinFeeB = THKD x}
   hkdMaxBBSizeL = lens (unTHKD . cppMaxBBSize) $ \pp x -> pp {cppMaxBBSize = THKD x}
   hkdMaxTxSizeL = lens (unTHKD . cppMaxTxSize) $ \pp x -> pp {cppMaxTxSize = THKD x}
   hkdMaxBHSizeL = lens (unTHKD . cppMaxBHSize) $ \pp x -> pp {cppMaxBHSize = THKD x}
-  hkdKeyDepositL = lens (unTHKD . cppKeyDeposit) $ \pp x -> pp {cppKeyDeposit = THKD x}
+  hkdKeyDepositCompactL = lens (unTHKD . cppKeyDeposit) $ \pp x -> pp {cppKeyDeposit = THKD x}
   hkdPoolDepositCompactL = lens (unTHKD . cppPoolDeposit) $ \pp x -> pp {cppPoolDeposit = THKD x}
   hkdEMaxL = lens (unTHKD . cppEMax) $ \pp x -> pp {cppEMax = THKD x}
   hkdNOptL = lens (unTHKD . cppNOpt) $ \pp x -> pp {cppNOpt = THKD x}
@@ -825,14 +835,14 @@ instance EraPParams ConwayEra where
   hkdRhoL = lens (unTHKD . cppRho) $ \pp x -> pp {cppRho = THKD x}
   hkdTauL = lens (unTHKD . cppTau) $ \pp x -> pp {cppTau = THKD x}
   hkdProtocolVersionL = notSupportedInThisEraL
-  hkdMinPoolCostL = lens (unTHKD . cppMinPoolCost) $ \pp x -> pp {cppMinPoolCost = THKD x}
+  hkdMinPoolCostCompactL = lens (unTHKD . cppMinPoolCost) $ \pp x -> pp {cppMinPoolCost = THKD x}
   ppProtocolVersionL = ppLensHKD . lens cppProtocolVersion (\pp x -> pp {cppProtocolVersion = x})
 
   ppDG = L.to (const minBound)
   ppuProtocolVersionL = notSupportedInThisEraL
   hkdDL = notSupportedInThisEraL
   hkdExtraEntropyL = notSupportedInThisEraL
-  hkdMinUTxOValueL = notSupportedInThisEraL
+  hkdMinUTxOValueCompactL = notSupportedInThisEraL
 
   eraPParams =
     [ ppMinFeeA
@@ -927,8 +937,8 @@ instance ConwayEraPParams ConwayEra where
       , isValid (/= EpochInterval 0) ppuGovActionLifetimeL
       , -- Coins
         isValid (/= CompactCoin 0) ppuPoolDepositCompactL
-      , isValid (/= zero) ppuGovActionDepositL
-      , isValid (/= zero) ppuDRepDepositL
+      , isValid (/= CompactCoin 0) ppuGovActionDepositCompactL
+      , isValid (/= CompactCoin 0) ppuDRepDepositCompactL
       , hardforkConwayBootstrapPhase pv
           || isValid ((/= zero) . unCoinPerByte) ppuCoinsPerUTxOByteL
       , ppu /= emptyPParamsUpdate
@@ -955,7 +965,7 @@ instance ConwayEraPParams ConwayEra where
     lens (unTHKD . cppCommitteeMaxTermLength) $ \pp x -> pp {cppCommitteeMaxTermLength = THKD x}
   hkdGovActionLifetimeL =
     lens (unTHKD . cppGovActionLifetime) $ \pp x -> pp {cppGovActionLifetime = THKD x}
-  hkdGovActionDepositL =
+  hkdGovActionDepositCompactL =
     lens (unTHKD . cppGovActionDeposit) $ \pp x -> pp {cppGovActionDeposit = THKD x}
   hkdDRepDepositCompactL =
     lens (unTHKD . cppDRepDeposit) $ \pp x -> pp {cppDRepDeposit = THKD x}
@@ -972,12 +982,12 @@ instance ConwayEraPParams ConwayEra where
 emptyConwayPParams :: forall era. Era era => ConwayPParams Identity era
 emptyConwayPParams =
   ConwayPParams
-    { cppMinFeeA = THKD (Coin 0)
-    , cppMinFeeB = THKD (Coin 0)
+    { cppMinFeeA = THKD (CompactCoin 0)
+    , cppMinFeeB = THKD (CompactCoin 0)
     , cppMaxBBSize = THKD 0
     , cppMaxTxSize = THKD 2048
     , cppMaxBHSize = THKD 0
-    , cppKeyDeposit = THKD (Coin 0)
+    , cppKeyDeposit = THKD (CompactCoin 0)
     , cppPoolDeposit = THKD (CompactCoin 0)
     , cppEMax = THKD (EpochInterval 0)
     , cppNOpt = THKD 100
@@ -1000,7 +1010,7 @@ emptyConwayPParams =
     , cppCommitteeMinSize = THKD 0
     , cppCommitteeMaxTermLength = THKD (EpochInterval 0)
     , cppGovActionLifetime = THKD (EpochInterval 0)
-    , cppGovActionDeposit = THKD (Coin 0)
+    , cppGovActionDeposit = THKD (CompactCoin 0)
     , cppDRepDeposit = THKD (CompactCoin 0)
     , cppDRepActivity = THKD (EpochInterval 0)
     , cppMinFeeRefScriptCostPerByte = THKD minBound
@@ -1128,7 +1138,7 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
     , cppCommitteeMinSize = THKD ucppCommitteeMinSize
     , cppCommitteeMaxTermLength = THKD ucppCommitteeMaxTermLength
     , cppGovActionLifetime = THKD ucppGovActionLifetime
-    , cppGovActionDeposit = THKD ucppGovActionDeposit
+    , cppGovActionDeposit = THKD $ asCompactCoinHKD @f ucppGovActionDeposit
     , cppDRepDeposit = THKD $ asCompactCoinHKD @f ucppDRepDeposit
     , cppDRepActivity = THKD ucppDRepActivity
     , cppMinFeeRefScriptCostPerByte = THKD ucppMinFeeRefScriptCostPerByte
@@ -1313,16 +1323,16 @@ ppGovActionDeposit :: ConwayEraPParams era => PParam era
 ppGovActionDeposit =
   PParam
     { ppName = "govActionDeposit"
-    , ppLens = ppGovActionDepositL
-    , ppUpdate = Just $ PParamUpdate 30 ppuGovActionDepositL
+    , ppLens = ppGovActionDepositCompactL
+    , ppUpdate = Just $ PParamUpdate 30 ppuGovActionDepositCompactL
     }
 
 ppDRepDeposit :: ConwayEraPParams era => PParam era
 ppDRepDeposit =
   PParam
     { ppName = "dRepDeposit"
-    , ppLens = ppDRepDepositL
-    , ppUpdate = Just $ PParamUpdate 31 ppuDRepDepositL
+    , ppLens = ppDRepDepositCompactL
+    , ppUpdate = Just $ PParamUpdate 31 ppuDRepDepositCompactL
     }
 
 ppDRepActivity :: ConwayEraPParams era => PParam era

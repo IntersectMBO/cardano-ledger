@@ -578,7 +578,7 @@
         "treasuryWithdrawal": 0.855772775525917,
         "updateToConstitution": 0.3023
     },
-    "govActionDeposit": 99,
+    "govActionDeposit": 78,
     "govActionLifetime": 3278451994,
     "maxBlockBodySize": 938825652,
     "maxBlockExecutionUnits": {
@@ -594,7 +594,7 @@
     },
     "maxTxSize": 1863034707,
     "minFeeRefScriptCostPerByte": 2.151370872170713514e12,
-    "minPoolCost": 93,
+    "minPoolCost": 1.2077579731671774558e19,
     "monetaryExpansion": 0.78,
     "poolRetireMaxEpoch": 3903347188,
     "poolVotingThresholds": {
@@ -608,6 +608,6 @@
     "stakePoolDeposit": 751882,
     "stakePoolTargetNum": 31910,
     "treasuryCut": 2.3e-3,
-    "txFeePerByte": 384161,
+    "txFeePerByte": 4197483115719285921,
     "utxoCostPerByte": 116926
 }

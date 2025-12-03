@@ -32,11 +32,14 @@ module Cardano.Ledger.Core.PParams (
 
   -- * PParams lens
   ppMinFeeAL,
+  ppMinFeeACompactL,
   ppMinFeeBL,
+  ppMinFeeBCompactL,
   ppMaxBBSizeL,
   ppMaxTxSizeL,
   ppMaxBHSizeL,
   ppKeyDepositL,
+  ppKeyDepositCompactL,
   ppPoolDepositL,
   ppPoolDepositCompactL,
   ppEMaxL,
@@ -47,15 +50,20 @@ module Cardano.Ledger.Core.PParams (
   ppDL,
   ppExtraEntropyL,
   ppMinUTxOValueL,
+  ppMinUTxOValueCompactL,
   ppMinPoolCostL,
+  ppMinPoolCostCompactL,
 
   -- * PParamsUpdate lens
   ppuMinFeeAL,
+  ppuMinFeeACompactL,
   ppuMinFeeBL,
+  ppuMinFeeBCompactL,
   ppuMaxBBSizeL,
   ppuMaxTxSizeL,
   ppuMaxBHSizeL,
   ppuKeyDepositL,
+  ppuKeyDepositCompactL,
   ppuPoolDepositL,
   ppuPoolDepositCompactL,
   ppuEMaxL,
@@ -66,7 +74,9 @@ module Cardano.Ledger.Core.PParams (
   ppuDL,
   ppuExtraEntropyL,
   ppuMinUTxOValueL,
+  ppuMinUTxOValueCompactL,
   ppuMinPoolCostL,
+  ppuMinPoolCostCompactL,
 
   -- * Utility
   ppLensHKD,
@@ -367,10 +377,10 @@ class
   -- HKD Versions of lenses
 
   -- | The linear factor for the minimum fee calculation
-  hkdMinFeeAL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdMinFeeACompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | The constant factor for the minimum fee calculation
-  hkdMinFeeBL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdMinFeeBCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | Maximal block body size
   hkdMaxBBSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word32)
@@ -382,7 +392,7 @@ class
   hkdMaxBHSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word16)
 
   -- | The amount of a key registration deposit
-  hkdKeyDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdKeyDepositCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | The amount of a pool registration deposit
   hkdPoolDepositCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
@@ -426,10 +436,11 @@ class
   ppuProtocolVersionL = ppuLensHKD . hkdProtocolVersionL @era @StrictMaybe
 
   -- | Minimum UTxO value
-  hkdMinUTxOValueL :: (HKDFunctor f, AtMostEra "Mary" era) => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdMinUTxOValueCompactL ::
+    (HKDFunctor f, AtMostEra "Mary" era) => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | Minimum Stake Pool Cost
-  hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdMinPoolCostCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   eraPParams :: [PParam era]
 
@@ -448,12 +459,20 @@ ppuLensHKD = lens (\(PParamsUpdate x) -> x) (\_ pp -> PParamsUpdate pp)
 -- PParams versions of lenses
 
 -- | The linear factor for the minimum fee calculation
-ppMinFeeAL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppMinFeeAL = ppLensHKD . hkdMinFeeAL @era @Identity
+ppMinFeeAL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
+ppMinFeeAL = ppMinFeeACompactL . partialCompactCoinL
+
+-- | The linear factor for the minimum fee calculation in compacted form
+ppMinFeeACompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppMinFeeACompactL = ppLensHKD . hkdMinFeeACompactL @era @Identity
 
 -- | The constant factor for the minimum fee calculation
-ppMinFeeBL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppMinFeeBL = ppLensHKD . hkdMinFeeBL @era @Identity
+ppMinFeeBL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
+ppMinFeeBL = ppMinFeeBCompactL . partialCompactCoinL
+
+-- | The constant factor for the minimum fee calculation in compacted form
+ppMinFeeBCompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppMinFeeBCompactL = ppLensHKD . hkdMinFeeBCompactL @era @Identity
 
 -- | Maximal block body size
 ppMaxBBSizeL :: forall era. EraPParams era => Lens' (PParams era) Word32
@@ -468,8 +487,12 @@ ppMaxBHSizeL :: forall era. EraPParams era => Lens' (PParams era) Word16
 ppMaxBHSizeL = ppLensHKD . hkdMaxBHSizeL @era @Identity
 
 -- | The amount of a key registration deposit
-ppKeyDepositL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppKeyDepositL = ppLensHKD . hkdKeyDepositL @era @Identity
+ppKeyDepositL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
+ppKeyDepositL = ppKeyDepositCompactL . partialCompactCoinL
+
+-- | The amount of a key registration deposit in compacted form
+ppKeyDepositCompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppKeyDepositCompactL = ppLensHKD . hkdKeyDepositCompactL @era @Identity
 
 -- | The amount of a pool registration deposit
 ppPoolDepositL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
@@ -508,22 +531,44 @@ ppExtraEntropyL :: forall era. (EraPParams era, AtMostEra "Alonzo" era) => Lens'
 ppExtraEntropyL = ppLensHKD . hkdExtraEntropyL @era @Identity
 
 -- | Minimum UTxO value
-ppMinUTxOValueL :: forall era. (EraPParams era, AtMostEra "Mary" era) => Lens' (PParams era) Coin
-ppMinUTxOValueL = ppLensHKD . hkdMinUTxOValueL @era @Identity
+ppMinUTxOValueL ::
+  forall era. (EraPParams era, AtMostEra "Mary" era, HasCallStack) => Lens' (PParams era) Coin
+ppMinUTxOValueL = ppMinUTxOValueCompactL . partialCompactCoinL
+
+-- | Minimum UTxO value in compacted form
+ppMinUTxOValueCompactL ::
+  forall era. (EraPParams era, AtMostEra "Mary" era) => Lens' (PParams era) (CompactForm Coin)
+ppMinUTxOValueCompactL = ppLensHKD . hkdMinUTxOValueCompactL @era @Identity
 
 -- | Minimum Stake Pool Cost
-ppMinPoolCostL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppMinPoolCostL = ppLensHKD . hkdMinPoolCostL @era @Identity
+ppMinPoolCostL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
+ppMinPoolCostL = ppMinPoolCostCompactL . partialCompactCoinL
+
+-- | Minimum Stake Pool Cost in compacted form
+ppMinPoolCostCompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppMinPoolCostCompactL = ppLensHKD . hkdMinPoolCostCompactL @era @Identity
 
 -- PParamsUpdate versions of lenses
 
 -- | The linear factor for the minimum fee calculation
-ppuMinFeeAL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinFeeAL = ppuLensHKD . hkdMinFeeAL @era @StrictMaybe
+ppuMinFeeAL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuMinFeeAL = ppuLensHKD . hkdMinFeeACompactL @era @StrictMaybe . partialCompactFL
+
+-- | The linear factor for the minimum fee calculation in compacted form
+ppuMinFeeACompactL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuMinFeeACompactL = ppuLensHKD . hkdMinFeeACompactL @era @StrictMaybe
 
 -- | The constant factor for the minimum fee calculation
-ppuMinFeeBL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinFeeBL = ppuLensHKD . hkdMinFeeBL @era @StrictMaybe
+ppuMinFeeBL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuMinFeeBL = ppuLensHKD . hkdMinFeeBCompactL @era @StrictMaybe . partialCompactFL
+
+-- | The constant factor for the minimum fee calculation in compacted form
+ppuMinFeeBCompactL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuMinFeeBCompactL = ppuLensHKD . hkdMinFeeBCompactL @era @StrictMaybe
 
 -- | Maximal block body size
 ppuMaxBBSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
@@ -538,8 +583,14 @@ ppuMaxBHSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (Strict
 ppuMaxBHSizeL = ppuLensHKD . hkdMaxBHSizeL @era @StrictMaybe
 
 -- | The amount of a key registration deposit
-ppuKeyDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuKeyDepositL = ppuLensHKD . hkdKeyDepositL @era @StrictMaybe
+ppuKeyDepositL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuKeyDepositL = ppuLensHKD . hkdKeyDepositCompactL @era @StrictMaybe . partialCompactFL
+
+-- | The amount of a key registration deposit
+ppuKeyDepositCompactL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuKeyDepositCompactL = ppuLensHKD . hkdKeyDepositCompactL @era @StrictMaybe
 
 -- | The amount of a pool registration deposit. The value must be small enough
 -- to fit into a Word64.
@@ -589,13 +640,26 @@ ppuExtraEntropyL = ppuLensHKD . hkdExtraEntropyL @era @StrictMaybe
 -- | Minimum UTxO value
 ppuMinUTxOValueL ::
   forall era.
-  (EraPParams era, AtMostEra "Mary" era) =>
+  (EraPParams era, AtMostEra "Mary" era, HasCallStack) =>
   Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinUTxOValueL = ppuLensHKD . hkdMinUTxOValueL @era @StrictMaybe
+ppuMinUTxOValueL = ppuLensHKD . hkdMinUTxOValueCompactL @era @StrictMaybe . partialCompactFL
+
+-- | Minimum UTxO value in compacted form
+ppuMinUTxOValueCompactL ::
+  forall era.
+  (EraPParams era, AtMostEra "Mary" era) =>
+  Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuMinUTxOValueCompactL = ppuLensHKD . hkdMinUTxOValueCompactL @era @StrictMaybe
 
 -- | Minimum Stake Pool Cost
-ppuMinPoolCostL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinPoolCostL = ppuLensHKD . hkdMinPoolCostL @era @StrictMaybe
+ppuMinPoolCostL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuMinPoolCostL = ppuLensHKD . hkdMinPoolCostCompactL @era @StrictMaybe . partialCompactFL
+
+-- | Minimum Stake Pool Cost in compacted form
+ppuMinPoolCostCompactL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuMinPoolCostCompactL = ppuLensHKD . hkdMinPoolCostCompactL @era @StrictMaybe
 
 instance EraPParams era => ToKeyValuePairs (PParams era) where
   toKeyValuePairs pp =

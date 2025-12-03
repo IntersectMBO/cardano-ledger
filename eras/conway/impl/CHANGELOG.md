@@ -2,6 +2,17 @@
 
 ## 1.21.0.0
 
+* Changed the type of the following fields to `CompactForm Coin` in `ConwayPParams`:
+  - `cppMinFeeA`
+  - `cppMinFeeB`
+  - `cppKeyDeposit`
+  - `cppMinPoolCost`
+  - `cppGovActionDeposit`
+* Added:
+  - `ppGovActionDepositCompactL`
+  - `ppuGovActionDepositCompactL`
+* Changed name and type to `CompactForm Coin`:
+  - `hkdGovActionDepositL` -> `hkdGovActionDepositCompactL`
 * Generalise and expose some rule transition functions: `conwayBbodyTransition`, `conwayGovTransition`, `conwayGovCertTransition`, `conwayLedgerTransition`
 * Change the field type of `ConwayIncompleteWithdrawals` to `Map RewardAccount (Mismatch RelEQ Coin)`
 * Make `ConwayAccountState` a pattern synonym

@@ -827,7 +827,7 @@
         "priceMemory": 456411.0245701989455,
         "priceSteps": 8.244625910634850235e14
     },
-    "govActionDeposit": 2,
+    "govActionDeposit": 29,
     "maxBlockBodySize": 1193023799,
     "maxBlockExecutionUnits": {
         "memory": 5823152866589440656,
@@ -851,10 +851,10 @@
         "motionNoConfidence": 0.631973357,
         "ppSecurityGroup": 0.4
     },
-    "stakeAddressDeposit": 23,
+    "stakeAddressDeposit": 1.0124690807669371467e19,
     "stakePoolDeposit": 5863692308783077770,
     "treasuryCut": 0.5,
-    "txFeeFixed": 66,
-    "txFeePerByte": 67,
+    "txFeeFixed": 86,
+    "txFeePerByte": 39,
     "utxoCostPerByte": 11
 }

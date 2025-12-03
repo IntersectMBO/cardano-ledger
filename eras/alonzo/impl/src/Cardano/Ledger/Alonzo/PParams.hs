@@ -223,9 +223,9 @@ ppuMaxCollateralInputsL = ppuLensHKD . hkdMaxCollateralInputsL @era @StrictMaybe
 -- | Protocol parameters.
 -- Shelley parameters + additional ones
 data AlonzoPParams f era = AlonzoPParams
-  { appMinFeeA :: !(HKD f Coin)
+  { appMinFeeA :: !(HKD f (CompactForm Coin))
   -- ^ The linear factor for the minimum fee calculation
-  , appMinFeeB :: !(HKD f Coin)
+  , appMinFeeB :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , appMaxBBSize :: !(HKD f Word32)
   -- ^ Maximal block body size
@@ -233,7 +233,7 @@ data AlonzoPParams f era = AlonzoPParams
   -- ^ Maximal transaction size
   , appMaxBHSize :: !(HKD f Word16)
   -- ^ Maximal block header size
-  , appKeyDeposit :: !(HKD f Coin)
+  , appKeyDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a key registration deposit
   , appPoolDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
@@ -256,7 +256,7 @@ data AlonzoPParams f era = AlonzoPParams
   -- ^ Extra entropy
   , appProtocolVersion :: !(HKD f BT.ProtVer)
   -- ^ Protocol version
-  , appMinPoolCost :: !(HKD f Coin)
+  , appMinPoolCost :: !(HKD f (CompactForm Coin))
   -- ^ Minimum Stake Pool Cost
   , -- new/updated for alonzo
 
@@ -312,12 +312,12 @@ instance EraPParams AlonzoEra where
   downgradePParamsHKD = downgradeAlonzoPParams
   emptyUpgradePParamsUpdate = emptyAlonzoUpgradePParamsUpdate
 
-  hkdMinFeeAL = lens appMinFeeA $ \pp x -> pp {appMinFeeA = x}
-  hkdMinFeeBL = lens appMinFeeB $ \pp x -> pp {appMinFeeB = x}
+  hkdMinFeeACompactL = lens appMinFeeA $ \pp x -> pp {appMinFeeA = x}
+  hkdMinFeeBCompactL = lens appMinFeeB $ \pp x -> pp {appMinFeeB = x}
   hkdMaxBBSizeL = lens appMaxBBSize $ \pp x -> pp {appMaxBBSize = x}
   hkdMaxTxSizeL = lens appMaxTxSize $ \pp x -> pp {appMaxTxSize = x}
   hkdMaxBHSizeL = lens appMaxBHSize $ \pp x -> pp {appMaxBHSize = x}
-  hkdKeyDepositL = lens appKeyDeposit $ \pp x -> pp {appKeyDeposit = x}
+  hkdKeyDepositCompactL = lens appKeyDeposit $ \pp x -> pp {appKeyDeposit = x}
   hkdPoolDepositCompactL = lens appPoolDeposit $ \pp x -> pp {appPoolDeposit = x}
   hkdEMaxL = lens appEMax $ \pp x -> pp {appEMax = x}
   hkdNOptL = lens appNOpt $ \pp x -> pp {appNOpt = x}
@@ -327,8 +327,8 @@ instance EraPParams AlonzoEra where
   hkdDL = lens appD $ \pp x -> pp {appD = x}
   hkdExtraEntropyL = lens appExtraEntropy $ \pp x -> pp {appExtraEntropy = x}
   hkdProtocolVersionL = lens appProtocolVersion $ \pp x -> pp {appProtocolVersion = x}
-  hkdMinUTxOValueL = notSupportedInThisEraL
-  hkdMinPoolCostL = lens appMinPoolCost $ \pp x -> pp {appMinPoolCost = x}
+  hkdMinUTxOValueCompactL = notSupportedInThisEraL
+  hkdMinPoolCostCompactL = lens appMinPoolCost $ \pp x -> pp {appMinPoolCost = x}
 
   eraPParams =
     [ ppMinFeeA
@@ -454,7 +454,7 @@ instance Default (UpgradeAlonzoPParams StrictMaybe) where
 
 -- | Parameters that were removed in Alonzo
 newtype DowngradeAlonzoPParams f = DowngradeAlonzoPParams
-  { dappMinUTxOValue :: HKD f Coin
+  { dappMinUTxOValue :: HKD f (CompactForm Coin)
   }
   deriving (Generic)
 
@@ -470,12 +470,12 @@ instance NFData (DowngradeAlonzoPParams Identity)
 emptyAlonzoPParams :: forall era. Era era => AlonzoPParams Identity era
 emptyAlonzoPParams =
   AlonzoPParams
-    { appMinFeeA = Coin 0
-    , appMinFeeB = Coin 0
+    { appMinFeeA = CompactCoin 0
+    , appMinFeeB = CompactCoin 0
     , appMaxBBSize = 0
     , appMaxTxSize = 2048
     , appMaxBHSize = 0
-    , appKeyDeposit = Coin 0
+    , appKeyDeposit = CompactCoin 0
     , appPoolDeposit = CompactCoin 0
     , appEMax = EpochInterval 0
     , appNOpt = 100

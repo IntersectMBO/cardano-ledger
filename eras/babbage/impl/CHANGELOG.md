@@ -2,6 +2,11 @@
 
 ## 1.13.0.0
 
+* Changed the type of the following fields to `CompactForm Coin` in `BabbagePParams`:
+  - `bppMinFeeA`
+  - `bppMinFeeB`
+  - `bppKeyDeposit`
+  - `bppMinPoolCost`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Remove deprecated functions `txOutData`, `txOutDataHash`, `txOutScript`
 * Remove deprecated type `Babbage`
