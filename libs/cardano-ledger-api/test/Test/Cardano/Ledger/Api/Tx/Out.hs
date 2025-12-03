@@ -16,6 +16,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Lazy as BSL
+import Data.Default (Default (def))
 import Data.Functor.Identity
 import Data.Word (Word64)
 import Lens.Micro
@@ -45,19 +46,18 @@ genCompactCoin txOut =
 propSetShelleyMinTxOut ::
   forall era.
   ( EraTxOut era
-  , Arbitrary (PParamsHKD Identity era)
   , Arbitrary (TxOut era)
   , AtMostEra "Mary" era
   ) =>
   Spec
 propSetShelleyMinTxOut =
-  prop "setShelleyMinTxOut" $ \(pp0 :: PParams era) (txOut0 :: TxOut era) ->
+  prop "setShelleyMinTxOut" $ \(txOut0 :: TxOut era) ->
     genCompactCoin txOut0 $ \cc ->
       within 1000000 $ -- just in case if there is a problem with termination
-        let pp1 = pp0 & ppMinUTxOValueCompactL .~ cc
-            txOut1 = setMinCoinTxOut pp1 txOut0
+        let pp = def & ppMinUTxOValueCompactL .~ cc
+            txOut1 = setMinCoinTxOut pp txOut0
             val = txOut1 ^. valueTxOutL
-            minUTxOValue = unCoin $ pp1 ^. ppMinUTxOValueL
+            minUTxOValue = unCoin $ pp ^. ppMinUTxOValueL
             minVal
               | Val.isAdaOnly val = 0
               | otherwise = (27 + Val.size val) * (minUTxOValue `quot` 27)
@@ -118,18 +118,14 @@ propSetEnsureMinTxOut ::
   ) =>
   Spec
 propSetEnsureMinTxOut =
-  prop "setEnsureMinTxOut" $ \(pp :: PParams era) (txOut :: TxOut era) ->
-    propSetEnsureMinTxOutWith pp txOut
+  prop "setEnsureMinTxOut" $ propSetEnsureMinTxOutWith @era
 
-propSetMaryEnsureMinTxOut ::
-  forall era.
-  era ~ MaryEra =>
-  Spec
+propSetMaryEnsureMinTxOut :: Spec
 propSetMaryEnsureMinTxOut =
-  prop "setMaryEnsureMinTxOut" $ \(pp0 :: PParams era) (txOut :: TxOut era) ->
+  prop "setMaryEnsureMinTxOut" $ \(txOut :: TxOut MaryEra) ->
     genCompactCoin txOut $ \cc -> do
-      let pp1 = pp0 & ppMinUTxOValueCompactL .~ cc
-      propSetEnsureMinTxOutWith pp1 txOut
+      let pp = def & ppMinUTxOValueCompactL .~ cc
+      propSetEnsureMinTxOutWith pp txOut
 
 spec :: Spec
 spec =
