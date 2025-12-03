@@ -141,14 +141,9 @@ transaction_id = hash32
 
 ; Both of the Alonzo and Babbage style TxOut formats are equally valid
 ; and can be used interchangeably
-transaction_output = shelley_transaction_output/ babbage_transaction_output
+transaction_output = alonzo_transaction_output/ babbage_transaction_output
 
-shelley_transaction_output = 
-  [   address
-  ,   amount  : value    
-  , ? hash32 ; datum_hash
-  ]
-
+alonzo_transaction_output = [address, amount : value, ? datum_hash : hash32]
 
 ; address = bytes
 ; 
