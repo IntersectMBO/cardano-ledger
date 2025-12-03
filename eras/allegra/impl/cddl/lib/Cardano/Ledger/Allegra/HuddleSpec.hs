@@ -304,7 +304,7 @@ instance HuddleRule "certificate" AllegraEra where
   huddleRule = certificateRule @AllegraEra
 
 instance HuddleRule "withdrawals" AllegraEra where
-  huddleRule = withdrawalsRule @AllegraEra
+  huddleRule = shelleyWithdrawalsRule @AllegraEra
 
 instance HuddleRule "auxiliary_scripts" AllegraEra where
   huddleRule = auxiliaryScriptsRule @AllegraEra

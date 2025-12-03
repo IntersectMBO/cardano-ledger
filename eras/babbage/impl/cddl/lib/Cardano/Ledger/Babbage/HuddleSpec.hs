@@ -88,7 +88,7 @@ instance HuddleRule "certificate" BabbageEra where
   huddleRule = certificateRule @BabbageEra
 
 instance HuddleRule "withdrawals" BabbageEra where
-  huddleRule = withdrawalsRule @BabbageEra
+  huddleRule = shelleyWithdrawalsRule @BabbageEra
 
 instance HuddleRule "genesis_hash" BabbageEra where
   huddleRule = genesisHashRule @BabbageEra
@@ -154,13 +154,10 @@ instance HuddleRule "asset_name" BabbageEra where
   huddleRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "value" BabbageEra where
-  huddleRule p =
-    "value"
-      =:= huddleRule @"coin" p
-      / sarr [a $ huddleRule @"coin" p, a $ maryMultiasset p VUInt]
+  huddleRule = maryValueRule @BabbageEra
 
 instance HuddleRule "mint" BabbageEra where
-  huddleRule p = "mint" =:= maryMultiasset p (huddleRule @"int64" p)
+  huddleRule = maryMintRule @BabbageEra
 
 instance HuddleRule "proposed_protocol_parameter_updates" BabbageEra where
   huddleRule = proposedProtocolParameterUpdatesRule @BabbageEra
