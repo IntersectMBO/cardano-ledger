@@ -282,7 +282,7 @@ utxoTransition ::
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
   TRC (_, _, tx) <- judgmentContext
-  _ <- babbageUtxoValidation
+  babbageUtxoValidation
 
   validateNoPtrInCollateralReturn $ tx ^. bodyTxL
 

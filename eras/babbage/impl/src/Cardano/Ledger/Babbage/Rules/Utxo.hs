@@ -81,6 +81,8 @@ import Control.Monad (unless, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
+  Rule,
+  RuleType (..),
   STS (..),
   TRC (..),
   TransitionRule,
@@ -363,7 +365,7 @@ babbageUtxoValidation ::
   , STS (EraRule "UTXO" era)
   , EraCertState era
   ) =>
-  TransitionRule (EraRule "UTXO" era)
+  Rule (EraRule "UTXO" era) 'Transition ()
 babbageUtxoValidation = do
   TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let utxo = utxosUtxo utxos
@@ -434,7 +436,6 @@ babbageUtxoValidation = do
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
-  pure utxos
 
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::
@@ -460,7 +461,7 @@ utxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
-  _ <- babbageUtxoValidation
+  babbageUtxoValidation
   trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 
 --------------------------------------------------------------------------------
