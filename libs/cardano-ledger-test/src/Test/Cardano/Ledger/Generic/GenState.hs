@@ -123,7 +123,7 @@ import Control.Monad.Trans.RWS.Strict (RWST (..), ask, asks, get, gets, modify)
 import Data.Default (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
@@ -667,10 +667,27 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         Map.empty
         genDelegsZero
         instantaneousRewardsZero
+    accountsMap = gsInitialAccounts gstate
+    delegatorsPerStakePool =
+      Map.foldlWithKey'
+        ( \acc cred accountState ->
+            case accountState ^. stakePoolDelegationAccountStateL of
+              Nothing -> acc
+              Just poolId -> Map.insertWith (<>) poolId (Set.singleton cred) acc
+        )
+        mempty
+        accountsMap
     pstate =
       PState
         Map.empty
-        (mkStakePoolState poolDeposit mempty <$> pools)
+        ( Map.mapWithKey
+            ( \poolId sps ->
+                let mbDelegs = Map.lookup poolId delegatorsPerStakePool
+                    delegs = fromMaybe mempty mbDelegs
+                 in mkStakePoolState poolDeposit delegs sps
+            )
+            pools
+        )
         Map.empty
         Map.empty
     -- In a wellformed LedgerState the deposited equals the obligation
