@@ -121,8 +121,12 @@ spec = describe "Invalid" $ do
                 mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
                   & datumTxOutL .~ DatumHash datumHash
               tx = mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [txOut]
+          ProtVer pv _ <- getProtVer
           txIn <- txInAt 0 <$> submitTx tx
-          addr <- freshKeyAddr_
+          addr <-
+            if pv < natVersion @12
+              then freshKeyAddr_
+              else freshKeyAddrNoPtr_
           coll <- sendCoinTo addr $ Coin 5_000_000
           let collReturn = mkBasicTxOut addr . inject $ Coin 2_000_000
           submitPhase2Invalid_ $

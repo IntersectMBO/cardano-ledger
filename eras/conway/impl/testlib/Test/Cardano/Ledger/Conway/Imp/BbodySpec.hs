@@ -236,8 +236,12 @@ spec = do
     let scriptSize = originalBytesSize script
 
     -- prepare a txout with the succeeding script as reference script
+    ProtVer pv _ <- getProtVer
     collRefScriptTxOut <- do
-      addr <- freshKeyAddr_
+      addr <-
+        if pv < natVersion @12
+          then freshKeyAddr_
+          else freshKeyAddrNoPtr_
       pure $ mkBasicTxOut addr mempty & referenceScriptTxOutL .~ pure (fromNativeScript script)
 
     (txs :: [Tx TopTx era]) <- simulateThenRestore $ do

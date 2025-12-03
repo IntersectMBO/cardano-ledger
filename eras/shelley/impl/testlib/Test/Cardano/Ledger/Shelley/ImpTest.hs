@@ -41,6 +41,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   passTick,
   freshKeyAddr,
   freshKeyAddr_,
+  freshKeyAddrNoPtr,
+  freshKeyAddrNoPtr_,
   freshKeyHash,
   freshKeyPair,
   getKeyPair,
@@ -1498,15 +1500,35 @@ freshKeyAddr_ = snd <$> freshKeyAddr
 
 -- | Generate a random `Addr` that uses a `KeyHash`, add the corresponding `KeyPair`
 -- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
+freshKeyAddrPtr ::
+  (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =>
+  Bool ->
+  m (KeyHash Payment, Addr)
+freshKeyAddrPtr ptrAllowed = do
+  paymentKeyHash <- freshKeyHash @Payment
+  stakingKeyHash <-
+    oneof $
+      [Just . mkStakeRef <$> freshKeyHash @Staking, pure Nothing]
+        <> [Just . mkStakeRef @Ptr <$> arbitrary | ptrAllowed]
+  pure (paymentKeyHash, mkAddr paymentKeyHash stakingKeyHash)
+
 freshKeyAddr ::
   (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =>
   m (KeyHash Payment, Addr)
-freshKeyAddr = do
-  paymentKeyHash <- freshKeyHash @Payment
-  stakingKeyHash <-
-    oneof
-      [Just . mkStakeRef <$> freshKeyHash @Staking, Just . mkStakeRef @Ptr <$> arbitrary, pure Nothing]
-  pure (paymentKeyHash, mkAddr paymentKeyHash stakingKeyHash)
+freshKeyAddr = freshKeyAddrPtr True
+
+-- | Generate a random `Addr` that uses a `KeyHash`, add the corresponding `KeyPair`
+-- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
+-- It will never generate a Ptr stake reference.
+freshKeyAddrNoPtr ::
+  (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =>
+  m (KeyHash Payment, Addr)
+freshKeyAddrNoPtr = freshKeyAddrPtr False
+
+freshKeyAddrNoPtr_ ::
+  (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =>
+  m Addr
+freshKeyAddrNoPtr_ = snd <$> freshKeyAddrNoPtr
 
 -- | Looks up the keypair corresponding to the `BootstrapAddress`. The `BootstrapAddress`
 -- must be created with `freshBootstrapAddess` for this to work.
