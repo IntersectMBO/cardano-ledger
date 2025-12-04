@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Added `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Add mocked-up `PerasKey` type
 * Add mocked-up `validatePerasCert` validation function
 * Changed name and type to `CompactForm Coin`:
@@ -90,6 +91,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` and `ToExpr` instances for `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Add `forEachEraVersion`
 * Add `Test.Cardano.Ledger.Core.Binary.Golden`

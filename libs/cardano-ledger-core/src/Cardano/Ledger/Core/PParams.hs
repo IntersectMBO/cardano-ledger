@@ -29,6 +29,7 @@ module Cardano.Ledger.Core.PParams (
   PParamsUpdate (..),
   emptyPParamsUpdate,
   genericApplyPPUpdates,
+  CoinPerByte (..),
 
   -- * PParams lens
   ppMinFeeAL,
@@ -111,7 +112,7 @@ import Cardano.Ledger.Binary (
   encodeWord,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Field, decode, field, invalidField)
-import Cardano.Ledger.Coin (Coin (..), partialCompactCoinL)
+import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), partialCompactCoinL)
 import Cardano.Ledger.Compactible (Compactible (..), partialCompactFL)
 import Cardano.Ledger.Core.Era (AtMostEra, Era (..), PreviousEra, fromEraCBOR, toEraCBOR)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))

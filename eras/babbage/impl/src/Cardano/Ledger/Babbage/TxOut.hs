@@ -64,7 +64,6 @@ import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (
   BabbageEraPParams (..),
-  CoinPerByte (..),
   ppCoinsPerUTxOByteL,
  )
 import Cardano.Ledger.Babbage.Scripts ()

@@ -175,6 +175,8 @@ deriving newtype instance
 deriving newtype instance
   ToExpr (PParamsHKD StrictMaybe era) => ToExpr (PParamsUpdate era)
 
+deriving newtype instance ToExpr CoinPerByte
+
 instance ToExpr TxIn
 
 instance ToExpr TxId

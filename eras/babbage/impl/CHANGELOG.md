@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Moved `CoinPerByte` to `cardano-ledger-core`
 * Change sets containing errors into `NonEmptySet` for `BabbageUtxowPredFailure`
 * Change all lists into `NonEmpty` for `BabbageUtxoPredFailure`
 * Add `babbageUtxoValidation`
@@ -44,6 +45,7 @@
 
 ### `testlib`
 
+* Moved `Arbitrary` and `ToExpr` instances of `CoinPerByte` to `cardano-ledger-core`
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Add `plutus_v2_script` to CDDL exports
 * Hide Shelley CDDL `protocol_version` and re-export a new one for Babbage

@@ -14,6 +14,7 @@ module Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (..),
   DeltaCoin (..),
+  CoinPerByte (..),
   word64ToCoin,
   coinToRational,
   rationalToCoinViaFloor,
@@ -181,6 +182,10 @@ addCompactCoin (CompactCoin x) (CompactCoin y) = CompactCoin (x + y)
 
 sumCompactCoin :: Foldable t => t (CompactForm Coin) -> CompactForm Coin
 sumCompactCoin = F.foldl' addCompactCoin (CompactCoin 0)
+
+newtype CoinPerByte = CoinPerByte {unCoinPerByte :: Coin}
+  deriving stock (Eq, Ord)
+  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
 
 -- ================================
 

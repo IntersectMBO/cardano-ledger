@@ -22,7 +22,6 @@
 -- | This module contains the type of protocol parameters and EraPParams instance
 module Cardano.Ledger.Babbage.PParams (
   BabbageEraPParams (..),
-  CoinPerByte (..),
   ppCoinsPerUTxOByteL,
   ppuCoinsPerUTxOByteL,
   BabbagePParams (..),
@@ -56,21 +55,12 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
  )
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
- )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
-import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
-import Data.Aeson as Aeson (
-  FromJSON (..),
-  ToJSON (..),
- )
 import Data.Functor.Identity (Identity (..))
 import Data.Proxy (Proxy (Proxy))
 import Data.Word (Word16, Word32)
@@ -78,14 +68,6 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-
-newtype CoinPerByte = CoinPerByte {unCoinPerByte :: Coin}
-  deriving stock (Eq, Ord)
-  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
-
-instance ToPlutusData CoinPerByte where
-  toPlutusData (CoinPerByte c) = toPlutusData @Coin c
-  fromPlutusData x = CoinPerByte <$> fromPlutusData @Coin x
 
 class AlonzoEraPParams era => BabbageEraPParams era where
   hkdCoinsPerUTxOByteL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f CoinPerByte)
