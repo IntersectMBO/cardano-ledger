@@ -44,11 +44,11 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
-  ChainAccountState,
   LedgerState (..),
   UTxOState (..),
   utxosDepositedL,
@@ -67,16 +67,10 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochFromSlot)
-import Cardano.Ledger.State (
-  Accounts,
-  EraAccounts,
-  EraCertState (..),
-  accountsL,
-  drainAccounts,
-  withdrawalsThatDoNotDrainAccounts,
- )
 import Control.DeepSeq (NFData (..))
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Assertion (PostCondition),
@@ -92,8 +86,10 @@ import Control.State.Transition (
   trans,
  )
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -270,6 +266,12 @@ shelleyLedgerAssertions =
       ( \(TRC (_, _, _))
          (LedgerState utxoSt dpstate) -> potEqualsObligation dpstate utxoSt
       )
+  , PostCondition
+      "Reverse stake pool delegations must match"
+      ( \(TRC (_, _, _))
+         (LedgerState _ certState) ->
+            uncurry (==) $ calculateDelegatorsPerStakePool certState
+      )
   ]
 
 instance
@@ -404,25 +406,58 @@ renderDepositEqualsObligationViolation
   AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ _ pp _, _, tx), avState} =
     case avState of
       Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
-      Just lstate ->
-        let certstate = lsCertState lstate
-            utxoSt = lsUTxOState lstate
-            utxo = utxosUtxo utxoSt
-            txb = tx ^. bodyTxL
-            pot = utxoSt ^. utxosDepositedL
-         in "\n\nAssertionViolation ("
-              <> avSTS
-              <> ")\n\n  "
-              <> avMsg
-              <> "\n\nCERTS\n"
-              <> showTxCerts txb
-              <> "\n(slot,keyDeposit,poolDeposit) "
-              <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
-              <> "\nThe Pot (utxosDeposited) = "
-              <> show pot
-              <> "\n"
-              <> show (allObligations certstate (utxosGovState utxoSt))
-              <> "\nConsumed = "
-              <> show (consumedTxBody txb pp certstate utxo)
-              <> "\nProduced = "
-              <> show (producedTxBody txb pp certstate)
+      Just lstate
+        | avMsg == "Deposit pot must equal obligation (LEDGER)" ->
+            let certstate = lsCertState lstate
+                utxoSt = lsUTxOState lstate
+                utxo = utxosUtxo utxoSt
+                txb = tx ^. bodyTxL
+                pot = utxoSt ^. utxosDepositedL
+             in "\n\nAssertionViolation ("
+                  <> avSTS
+                  <> ")\n\n  "
+                  <> avMsg
+                  <> "\n\nCERTS\n"
+                  <> showTxCerts txb
+                  <> "\n(slot,keyDeposit,poolDeposit) "
+                  <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
+                  <> "\nThe Pot (utxosDeposited) = "
+                  <> show pot
+                  <> "\n"
+                  <> show (allObligations certstate (utxosGovState utxoSt))
+                  <> "\nConsumed = "
+                  <> show (consumedTxBody txb pp certstate utxo)
+                  <> "\nProduced = "
+                  <> show (producedTxBody txb pp certstate)
+        | avMsg == "Reverse stake pool delegations must match" ->
+            case calculateDelegatorsPerStakePool (lsCertState lstate) of
+              (reverseDelegatorsPerStakePool, delegatorsPerStakePool) ->
+                avMsg
+                  <> "\nReverse Delegations: \n  "
+                  <> show reverseDelegatorsPerStakePool
+                  <> "\nForward Delegations:\n  "
+                  <> show delegatorsPerStakePool
+        | otherwise -> error $ "Unexpected assertion message: " <> avMsg
+
+calculateDelegatorsPerStakePool ::
+  EraCertState era =>
+  CertState era ->
+  ( Map (KeyHash StakePool) (Set.Set (Credential Staking))
+  , Map (KeyHash StakePool) (Set.Set (Credential Staking))
+  )
+calculateDelegatorsPerStakePool certState =
+  let accountsMap = certState ^. certDStateL . accountsL . accountsMapL
+      delegatorsPerStakePool =
+        Map.foldlWithKey'
+          ( \acc cred accountState ->
+              case accountState ^. stakePoolDelegationAccountStateL of
+                Nothing -> acc
+                Just poolId -> Map.insertWith (<>) poolId (Set.singleton cred) acc
+          )
+          mempty
+          accountsMap
+      reverseDelegatorsPerStakePool =
+        Map.mapMaybe
+          (\sps -> spsDelegators sps <$ guard (not (Set.null (spsDelegators sps))))
+          (certState ^. certPStateL . psStakePoolsL)
+   in (reverseDelegatorsPerStakePool, delegatorsPerStakePool)

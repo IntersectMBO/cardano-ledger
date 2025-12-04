@@ -17,6 +17,7 @@ import Data.Default (def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MonoTuple (TupleN)
+import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import Lens.Micro
 import Test.Cardano.Ledger.Common
@@ -40,20 +41,32 @@ instantStakeIncludesRewards = do
   let
     poolId1 = pool1 ^. sppIdL
     poolId2 = pool2 ^. sppIdL
-  let registerAccount poolId accounts = do
-        stakingCredential <- arbitrary
-        ptr <- arbitrary
-        deposit <- arbitrary
-        balance <- arbitrary
-        let accounts' =
-              addToBalanceAccounts (Map.singleton stakingCredential balance) $
-                registerTestAccount stakingCredential (Just ptr) deposit (Just poolId) Nothing accounts
-        pure (stakingCredential, balance, accounts')
-  (tom, tomBalance, accounts0) <- registerAccount poolId1 (def :: Accounts era)
-  (john, johnBalance, accounts1) <- registerAccount poolId2 accounts0
-  (ann, annBalance, accounts2) <- registerAccount poolId2 accounts1
-  (ron, ronBalance, accounts3) <- registerAccount poolId1 accounts2
-  (mary, maryBalance, accounts) <- registerAccount poolId2 accounts3
+    poolParamsMap = Map.fromList [(poolId1, pool1), (poolId2, pool2)]
+  pState <- arbitraryLens psStakePoolsL $ mkStakePoolState mempty mempty <$> poolParamsMap
+  let
+    initCertState :: CertState era
+    initCertState = def & certPStateL .~ pState
+    registerAccount poolId certState = do
+      stakingCredential <- arbitrary
+      ptr <- arbitrary
+      deposit <- arbitrary
+      balance <- arbitrary
+      let accounts :: Accounts era
+          accounts =
+            addToBalanceAccounts (Map.singleton stakingCredential balance) $
+              registerTestAccount stakingCredential (Just ptr) deposit (Just poolId) Nothing $
+                certState ^. certDStateL . accountsL
+          certState' =
+            certState
+              & certDStateL . accountsL .~ accounts
+              & certPStateL . psStakePoolsL
+                %~ Map.adjust (spsDelegatorsL %~ Set.insert stakingCredential) poolId
+      pure (stakingCredential, balance, certState')
+  (tom, tomBalance, certState0) <- registerAccount poolId1 initCertState
+  (john, johnBalance, certState1) <- registerAccount poolId2 certState0
+  (ann, annBalance, certState2) <- registerAccount poolId2 certState1
+  (ron, ronBalance, certState3) <- registerAccount poolId1 certState2
+  (mary, maryBalance, certState) <- registerAccount poolId2 certState3
   (tomPay, johnPay, annPay, ronPay) <- arbitrary @(TupleN 4 (Credential Payment))
 
   let tomAddr = mkAddr tomPay StakeRefNull
@@ -81,13 +94,10 @@ instantStakeIncludesRewards = do
             -- Note Mary does not have a UTxO entry, but her rewards are still counted
             ]
         )
-    dState = def & accountsL .~ accounts
-
     instantStake = addInstantStake utxo1 mempty
-    poolparamMap = Map.fromList [(poolId1, pool1), (poolId2, pool2)]
-  pState <- arbitraryLens psStakePoolsL $ mkStakePoolState mempty mempty <$> poolparamMap
   network <- arbitrary
-  let snapShot = snapShotFromInstantStake instantStake dState pState network
+  let snapShot =
+        snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL) network
       computedStakeDistr = VMap.toMap (unStake (ssStake snapShot))
 
       expectedStakeDistr :: Map (Credential Staking) (CompactForm Coin)

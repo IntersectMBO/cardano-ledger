@@ -123,7 +123,7 @@ import Control.Monad.Trans.RWS.Strict (RWST (..), ask, asks, get, gets, modify)
 import Data.Default (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
@@ -667,10 +667,27 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         Map.empty
         genDelegsZero
         instantaneousRewardsZero
+    accountsMap = gsInitialAccounts gstate
+    delegatorsPerStakePool =
+      Map.foldlWithKey'
+        ( \acc cred accountState ->
+            case accountState ^. stakePoolDelegationAccountStateL of
+              Nothing -> acc
+              Just poolId -> Map.insertWith (<>) poolId (Set.singleton cred) acc
+        )
+        mempty
+        accountsMap
     pstate =
       PState
         Map.empty
-        (mkStakePoolState poolDeposit mempty <$> pools)
+        ( Map.mapWithKey
+            ( \poolId sps ->
+                let mbDelegs = Map.lookup poolId delegatorsPerStakePool
+                    delegs = fromMaybe mempty mbDelegs
+                 in mkStakePoolState poolDeposit delegs sps
+            )
+            pools
+        )
         Map.empty
         Map.empty
     -- In a wellformed LedgerState the deposited equals the obligation
@@ -1002,24 +1019,19 @@ initStableFields :: forall era. Reflect era => GenRS era ()
 initStableFields = do
   GenEnv {geSize} <- ask
   hashes <- replicateM (maxStablePools geSize) $ do
-    pp <- asks gePParams
     (kh, stakePoolParams, ips) <- genNewPool
     modifyGenStateStablePools (Set.insert kh)
     modifyGenStateInitialStakePoolParams (Map.insert kh stakePoolParams)
     modifyGenStateInitialPoolDistr (Map.insert kh ips)
-    modifyModelStakePools
-      (Map.insert kh $ mkStakePoolState (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
     return kh
 
   -- This incantation gets a list of fresh (not previously generated) Credential
   credentials <- replicateM (maxStablePools geSize) $ do
-    old' <- gets (Map.keysSet . gsInitialAccounts)
+    old <- gets (Map.keysSet . gsInitialAccounts)
     prev <- gets gsAvoidCred
-    cred <- genFreshCredential 100 Rewarding (Set.union old' prev)
+    cred <- genFreshCredential 100 Rewarding (Set.union old prev)
     return cred
-  let registerNewAccount' cred poolId = do
-        registerNewAccount cred (Just poolId)
-  zipWithM_ registerNewAccount' credentials hashes
+  zipWithM_ (\cred poolId -> registerNewAccount cred (Just poolId)) credentials hashes
   modifyGenStateStableDelegators (Set.union (Set.fromList credentials))
 
 registerNewAccount ::
