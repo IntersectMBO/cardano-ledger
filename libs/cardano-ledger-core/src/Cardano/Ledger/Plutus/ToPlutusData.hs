@@ -21,7 +21,7 @@ import Cardano.Ledger.BaseTypes (
   (%.),
  )
 import Cardano.Ledger.Binary.Version (Version, getVersion, mkVersion)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Plutus.CostModels (
   CostModels,
@@ -109,6 +109,10 @@ instance ToPlutusData (CompactForm Coin) where
   toPlutusData = toPlutusData . fromCompact
   fromPlutusData (I i) = toCompact (Coin i)
   fromPlutusData _ = Nothing
+
+instance ToPlutusData CoinPerByte where
+  toPlutusData (CoinPerByte c) = toPlutusData @Coin c
+  fromPlutusData x = CoinPerByte <$> fromPlutusData @Coin x
 
 instance ToPlutusData Word32 where
   toPlutusData w32 = I (toInteger @Word32 w32)

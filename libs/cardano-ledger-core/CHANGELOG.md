@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Added `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Changed name and type to `CompactForm Coin`:
   - `hkdMinFeeAL` -> `hkdMinFeeACompactL`
   - `hkdMinFeeBL` -> `hkdMinFeeBCompactL`
@@ -87,6 +88,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` and `ToExpr` instances for `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Add `kes_period` and `sequence_number` CDDL definitions.
 * Add CDDL definitions for:
   - Credentials: `credential`, `stake_credential`

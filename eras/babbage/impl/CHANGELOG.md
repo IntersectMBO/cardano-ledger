@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Moved `CoinPerByte` to `cardano-ledger-core`
 * Add `babbageUtxoValidation`
 * Add `babbageUtxoTests`
 * Changed the type of the following fields to `CompactForm Coin` in `BabbagePParams`:
@@ -40,6 +41,7 @@
 
 ### `testlib`
 
+* Moved `Arbitrary` and `ToExpr` instances of `CoinPerByte` to `cardano-ledger-core`
 * Add `plutus_v2_script` to CDDL exports
 * Hide Shelley CDDL `protocol_version` and re-export a new one for Babbage
 * Use fixed-sized `uint .size 8` for `slot` and `block_number` in CDDL for header
