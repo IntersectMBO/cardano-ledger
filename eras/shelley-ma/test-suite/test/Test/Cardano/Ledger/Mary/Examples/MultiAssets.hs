@@ -88,7 +88,7 @@ initUTxO =
 pp :: PParams MaryEra
 pp =
   emptyPParams
-    & ppMinFeeAL .~ Coin 0
+    & ppMinFeeAL .~ CoinPerByte (Coin 0)
     & ppMinFeeBL .~ Coin 1
     & ppMaxTxSizeL .~ 16384
     & ppMinUTxOValueL .~ Coin 100

@@ -405,7 +405,7 @@ uLiftConway pps pp =
 -- ============================================================================
 -- Term Selectors for SimplePParams
 
-minFeeA_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
+minFeeA_ :: EraSpecPParams era => Term (SimplePParams era) -> Term CoinPerByte
 minFeeA_ simplepp = sel @0 simplepp
 
 minFeeB_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin

@@ -734,7 +734,7 @@ votingSpec =
       passEpoch
       logAcceptedRatio gaidThreshold
       passEpoch
-      let newMinFeeA = Coin 1000
+      let newMinFeeA = CoinPerByte $ Coin 1000
       gaidMinFee <- do
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
         impAnn "Security group threshold should be 1/2" $
@@ -950,7 +950,8 @@ votingSpec =
           (drep1, _, committeeGovId) <- electBasicCommittee
           (_, drep2Staking, _) <- setupSingleDRep 1_000_000
 
-          paramChangeGovId <- submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 1000)
+          paramChangeGovId <-
+            submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (CoinPerByte $ Coin 1000)
           submitYesVote_ (DRepVoter drep1) paramChangeGovId
 
           passEpoch

@@ -435,7 +435,7 @@ actionPrioritySpec =
 
     -- distinct constitutional values for minFee
     let genMinFeeVals =
-          (\x y z -> (Coin x, Coin y, Coin z))
+          (\x y z -> (CoinPerByte $ Coin x, CoinPerByte $ Coin y, CoinPerByte $ Coin z))
             <$> uniformRM (30, 330)
             <*> uniformRM (330, 660)
             <*> uniformRM (660, 1000)

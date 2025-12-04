@@ -2,12 +2,12 @@
 
 ## 1.21.0.0
 
+* Changed type of `cppMinFeeA` to `CoinPerByte`
 * Change sets containing errors into `NonEmptySet` for `ConwayGovPredFailure`, `ConwayUtxoPredFailure`, `ConwayUtxowPredFailure`
 * Change all lists into `NonEmpty` for `ConwayUtxoPredFailure`, `ConwayUtxosPredFailure`, `ConwayUtxowPredFailure`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Re-export `UtxoEnv` from `Cardano.Ledger.Conway.Rules.Utxo`
 * Changed the type of the following fields to `CompactForm Coin` in `ConwayPParams`:
-  - `cppMinFeeA`
   - `cppMinFeeB`
   - `cppKeyDeposit`
   - `cppMinPoolCost`

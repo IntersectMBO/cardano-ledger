@@ -639,7 +639,7 @@ ppGroup = \case
 -- * @dRepDeposit@
 -- * @dRepActivity@
 data ConwayPParams f era = ConwayPParams
-  { cppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
+  { cppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
   , cppMinFeeB :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
@@ -822,7 +822,7 @@ instance EraPParams ConwayEra where
   upgradePParamsHKD = upgradeConwayPParams
   downgradePParamsHKD () = downgradeConwayPParams
 
-  hkdMinFeeACompactL = lens (unTHKD . cppMinFeeA) $ \pp x -> pp {cppMinFeeA = THKD x}
+  hkdMinFeeAL = lens (unTHKD . cppMinFeeA) $ \pp x -> pp {cppMinFeeA = THKD x}
   hkdMinFeeBCompactL = lens (unTHKD . cppMinFeeB) $ \pp x -> pp {cppMinFeeB = THKD x}
   hkdMaxBBSizeL = lens (unTHKD . cppMaxBBSize) $ \pp x -> pp {cppMaxBBSize = THKD x}
   hkdMaxTxSizeL = lens (unTHKD . cppMaxTxSize) $ \pp x -> pp {cppMaxTxSize = THKD x}
@@ -982,7 +982,7 @@ instance ConwayEraPParams ConwayEra where
 emptyConwayPParams :: forall era. Era era => ConwayPParams Identity era
 emptyConwayPParams =
   ConwayPParams
-    { cppMinFeeA = THKD (CompactCoin 0)
+    { cppMinFeeA = THKD (CoinPerByte $ Coin 0)
     , cppMinFeeB = THKD (CompactCoin 0)
     , cppMaxBBSize = THKD 0
     , cppMaxTxSize = THKD 2048

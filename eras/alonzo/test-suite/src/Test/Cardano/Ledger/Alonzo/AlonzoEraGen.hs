@@ -548,7 +548,7 @@ sumCollateral tx utxo =
   sumCoinUTxO $ txInsFilter utxo $ tx ^. bodyTxL . collateralInputsTxBodyL
 
 storageCost :: forall era t. (EraPParams era, EncCBOR t) => Integer -> PParams era -> t -> Coin
-storageCost extra pp x = (extra + encodedLen @era x) <×> pp ^. ppMinFeeAL
+storageCost extra pp x = (extra + encodedLen @era x) <×> unCoinPerByte (pp ^. ppMinFeeAL)
 
 addRedeemMap ::
   (P.Data, Natural, Natural) ->

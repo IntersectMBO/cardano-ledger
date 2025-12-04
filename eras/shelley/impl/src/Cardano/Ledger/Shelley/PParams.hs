@@ -90,7 +90,7 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Protocol parameters.
 data ShelleyPParams f era = ShelleyPParams
-  { sppMinFeeA :: !(HKD f (CompactForm Coin))
+  { sppMinFeeA :: !(HKD f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
   , sppMinFeeB :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
@@ -165,7 +165,7 @@ instance EraPParams ShelleyEra where
   downgradePParamsHKD = error "IMPOSSIBLE! There cannot be PParams that can be downgraded from Shelley"
   emptyUpgradePParamsUpdate = error "IMPOSSIBLE! There is no UpgradePParams in ShelleyEra"
 
-  hkdMinFeeACompactL = lens sppMinFeeA $ \pp x -> pp {sppMinFeeA = x}
+  hkdMinFeeAL = lens sppMinFeeA $ \pp x -> pp {sppMinFeeA = x}
   hkdMinFeeBCompactL = lens sppMinFeeB $ \pp x -> pp {sppMinFeeB = x}
   hkdMaxBBSizeL = lens sppMaxBBSize $ \pp x -> pp {sppMaxBBSize = x}
   hkdMaxTxSizeL = lens sppMaxTxSize $ \pp x -> pp {sppMaxTxSize = x}
@@ -188,7 +188,7 @@ instance EraPParams ShelleyEra where
 emptyShelleyPParams :: forall era. Era era => ShelleyPParams Identity era
 emptyShelleyPParams =
   ShelleyPParams
-    { sppMinFeeA = CompactCoin 0
+    { sppMinFeeA = CoinPerByte $ Coin 0
     , sppMinFeeB = CompactCoin 0
     , sppMaxBBSize = 0
     , sppMaxTxSize = 2048
@@ -325,8 +325,8 @@ ppMinFeeA :: EraPParams era => PParam era
 ppMinFeeA =
   PParam
     { ppName = "txFeePerByte"
-    , ppLens = ppMinFeeACompactL
-    , ppUpdate = Just $ PParamUpdate 0 ppuMinFeeACompactL
+    , ppLens = ppMinFeeAL
+    , ppUpdate = Just $ PParamUpdate 0 ppuMinFeeAL
     }
 
 ppMinFeeB :: EraPParams era => PParam era

@@ -2,22 +2,23 @@
 
 ## 1.19.0.0
 
+* Changed type to `CoinPerByte`:
+  - `hkdMinFeeAL`
+  - `ppMinFeeAL`
+  - `ppuMinFeeAL`
 * Added `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Add mocked-up `PerasKey` type
 * Add mocked-up `validatePerasCert` validation function
 * Changed name and type to `CompactForm Coin`:
-  - `hkdMinFeeAL` -> `hkdMinFeeACompactL`
   - `hkdMinFeeBL` -> `hkdMinFeeBCompactL`
   - `hkdKeyDepositL` -> `hkdKeyDepositCompactL`
   - `hkdMinUTxOValueL` -> `hkdMinUTxOValueCompactL`
   - `hkdMinPoolCostL` -> `hkdMinPoolCostCompactL`
 * Added:
-  - `ppMinFeeACompactL`,
   - `ppMinFeeBCompactL`,
   - `ppKeyDepositCompactL`,
   - `ppMinUTxOValueCompactL`,
   - `ppMinPoolCostCompactL`,
-  - `ppuMinFeeACompactL`,
   - `ppuMinFeeBCompactL`,
   - `ppuKeyDepositCompactL`,
   - `ppuMinUTxOValueCompactL`,

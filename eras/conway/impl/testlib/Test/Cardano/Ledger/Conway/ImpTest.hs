@@ -887,7 +887,7 @@ mkMinFeeUpdateGovAction ::
   ImpTestM era (GovAction era)
 mkMinFeeUpdateGovAction p = do
   minFeeValue <- uniformRM (30, 1000)
-  mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin minFeeValue))
+  mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (CoinPerByte $ Coin minFeeValue))
 
 getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe ScriptHash)
 getGovPolicy =

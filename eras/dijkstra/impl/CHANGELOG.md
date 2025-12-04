@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Changed type of `dppMinFeeA` to `CoinPerByte`
 * Change sets containing errors into `NonEmptySet` for `DijkstraGovPredFailure`, `DijkstraUtxoPredFailure`, `DijkstraUtxowPredFailure`
 * Change Dijkstra BBODY rule to validate Peras certificates when present
 * Add new block body predicate falures for Dijkstra:
@@ -21,7 +22,6 @@
 * Add `DijkstraUtxoPredFailure`
 * Add `DijkstraUTXO`
 * Changed the type of the following fields to `CompactForm Coin` in `DijkstraPParams`:
-  - `dppMinFeeA`
   - `dppMinFeeB`
   - `dppKeyDeposit`
   - `dppMinPoolCost`

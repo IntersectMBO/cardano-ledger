@@ -83,7 +83,7 @@ ppuCoinsPerUTxOByteL = ppuLensHKD . hkdCoinsPerUTxOByteL @era @StrictMaybe
 -- | Babbage Protocol parameters. Ways in which parameters have changed from Alonzo: lack
 -- of @d@, @extraEntropy@ and replacement of @coinsPerUTxOWord@ with @coinsPerUTxOByte@
 data BabbagePParams f era = BabbagePParams
-  { bppMinFeeA :: !(HKD f (CompactForm Coin))
+  { bppMinFeeA :: !(HKD f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
   , bppMinFeeB :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
@@ -168,7 +168,7 @@ instance EraPParams BabbageEra where
   upgradePParamsHKD () = upgradeBabbagePParams True
   downgradePParamsHKD = downgradeBabbagePParams
 
-  hkdMinFeeACompactL = lens bppMinFeeA $ \pp x -> pp {bppMinFeeA = x}
+  hkdMinFeeAL = lens bppMinFeeA $ \pp x -> pp {bppMinFeeA = x}
   hkdMinFeeBCompactL = lens bppMinFeeB $ \pp x -> pp {bppMinFeeB = x}
   hkdMaxBBSizeL = lens bppMaxBBSize $ \pp x -> pp {bppMaxBBSize = x}
   hkdMaxTxSizeL = lens bppMaxTxSize $ \pp x -> pp {bppMaxTxSize = x}
@@ -250,7 +250,7 @@ instance EraGov BabbageEra where
 emptyBabbagePParams :: forall era. Era era => BabbagePParams Identity era
 emptyBabbagePParams =
   BabbagePParams
-    { bppMinFeeA = CompactCoin 0
+    { bppMinFeeA = CoinPerByte $ Coin 0
     , bppMinFeeB = CompactCoin 0
     , bppMaxBBSize = 0
     , bppMaxTxSize = 2048

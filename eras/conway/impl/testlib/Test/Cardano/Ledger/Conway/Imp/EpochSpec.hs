@@ -355,8 +355,8 @@ dRepVotingSpec =
       let getParamValue = getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
       initialParamValue <- getParamValue
 
-      let proposedValue = initialParamValue <+> Coin 300
-      let proposedUpdate = def & ppuMinFeeAL .~ SJust proposedValue
+      let proposedValue = unCoinPerByte initialParamValue <+> Coin 300
+      let proposedUpdate = def & ppuMinFeeAL .~ SJust (CoinPerByte proposedValue)
 
       -- Submit NewConstitution proposal two epoch too early to check that the action
       -- doesn't expire prematurely (ppGovActionLifetimeL is set to two epochs)
@@ -387,7 +387,7 @@ dRepVotingSpec =
       logRatificationChecks gid
       getParamValue `shouldReturn` initialParamValue
       passEpoch
-      getParamValue `shouldReturn` proposedValue
+      getParamValue `shouldReturn` CoinPerByte proposedValue
 
 treasurySpec ::
   forall era.

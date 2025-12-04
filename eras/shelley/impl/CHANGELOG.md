@@ -2,10 +2,10 @@
 
 ## 1.18.0.0
 
+* Changed type of `sppMinFeeA` to `CoinPerByte`:
 * Change sets containing errors into `NonEmptySet` for `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`
 * Change all lists into `NonEmpty` for `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`
 * Changed the type of the following fields to `CompactForm Coin` in `ShelleyPParams`:
-  - `sppMinFeeA`
   - `sppMinFeeB`
   - `sppKeyDeposit`
   - `sppMinUTxOValue`
