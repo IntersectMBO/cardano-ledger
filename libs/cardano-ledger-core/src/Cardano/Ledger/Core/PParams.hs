@@ -29,6 +29,7 @@ module Cardano.Ledger.Core.PParams (
   PParamsUpdate (..),
   emptyPParamsUpdate,
   genericApplyPPUpdates,
+  CoinPerByte (..),
 
   -- * PParams lens
   ppMinFeeAL,
@@ -312,6 +313,14 @@ genericApplyPPUpdates ::
   PParams era
 genericApplyPPUpdates (PParams a) (PParamsUpdate u) =
   PParams . to $ applyUpdate (from @_ @a a) (from @_ @u u)
+
+newtype CoinPerByte = CoinPerByte {unCoinPerByte :: Coin}
+  deriving stock (Eq, Ord)
+  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
+
+instance ToPlutusData CoinPerByte where
+  toPlutusData (CoinPerByte c) = toPlutusData @Coin c
+  fromPlutusData x = CoinPerByte <$> fromPlutusData @Coin x
 
 class
   ( Era era
