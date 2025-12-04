@@ -126,7 +126,7 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
   minPoolCost <- genMinPoolCost
   pure $
     emptyPParams
-      & ppMinFeeAL .~ Coin minFeeA
+      & ppMinFeeAL .~ CoinPerByte (Coin minFeeA)
       & ppMinFeeBL .~ Coin minFeeB
       & ppMaxBBSizeL .~ maxBBSize
       & ppMaxTxSizeL .~ maxTxSize
@@ -265,7 +265,7 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   minPoolCost <- genM genMinPoolCost
   pure $
     emptyPParamsUpdate
-      & ppuMinFeeAL .~ fmap Coin minFeeA
+      & ppuMinFeeAL .~ fmap (CoinPerByte . Coin) minFeeA
       & ppuMinFeeBL .~ fmap Coin minFeeB
       & ppuMaxBBSizeL .~ maxBBSize
       & ppuMaxTxSizeL .~ maxTxSize

@@ -105,6 +105,14 @@ instance NumLike Coin
 instance Foldy Coin where
   noNegativeValues = True
 
+instance HasSimpleRep CoinPerByte where
+  -- TODO: consider `SimpleRep Coin` instead if this is annoying
+  type SimpleRep CoinPerByte = Coin
+  fromSimpleRep = CoinPerByte
+  toSimpleRep = unCoinPerByte
+
+instance HasSpec CoinPerByte
+
 -- TODO: This is hack to get around the need for `Num` in `NumLike`. We should possibly split
 -- this up so that `NumLike` has its own addition etc. instead?
 deriving via Integer instance Num Coin
@@ -254,7 +262,7 @@ instance Typeable r => HasSpec (KeyHash r) where
 --   encode PParams in EVERY Era. The EraPParams instances remove the fields
 --   that do not appear in that Era.
 data SimplePParams era = SimplePParams
-  { minFeeA :: Coin
+  { minFeeA :: CoinPerByte
   , minFeeB :: Coin
   , maxBBSize :: Word32
   , maxTxSize :: Word32
@@ -313,7 +321,7 @@ instance
 
 -- | Use this as the SimpleRep of (PParamsUpdate era)
 data SimplePPUpdate = SimplePPUpdate
-  { uminFeeA :: StrictMaybe Coin
+  { uminFeeA :: StrictMaybe CoinPerByte
   , uminFeeB :: StrictMaybe Coin
   , umaxBBSize :: StrictMaybe Word32
   , umaxTxSize :: StrictMaybe Word32

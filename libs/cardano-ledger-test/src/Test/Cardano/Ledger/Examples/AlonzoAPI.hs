@@ -38,7 +38,14 @@ import Cardano.Ledger.Conway.Core (
   ppMinFeeAL,
   pattern SpendingPurpose,
  )
-import Cardano.Ledger.Core (EraScript (..), EraTx (..), EraTxBody (..), EraTxWits (..), hashScript)
+import Cardano.Ledger.Core (
+  CoinPerByte (..),
+  EraScript (..),
+  EraTx (..),
+  EraTxBody (..),
+  EraTxWits (..),
+  hashScript,
+ )
 import Cardano.Ledger.Hashes (hashAnnotated)
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
@@ -90,7 +97,7 @@ testEstimateMinFee =
   where
     pparams =
       defaultPPs emptyPParams
-        & ppMinFeeAL .~ Coin 1
+        & ppMinFeeAL .~ CoinPerByte (Coin 1)
     dat = Data (PV1.I 123)
     dataMap = Map.singleton (hashData dat) dat
     script = fromNativeScript $ RequireAllOf mempty

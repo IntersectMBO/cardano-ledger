@@ -625,7 +625,7 @@ tests =
             shelleyProtVer
             "pparams_update_all"
             ( emptyPParamsUpdate @ShelleyEra
-                & ppuMinFeeAL .~ SJust minfeea
+                & ppuMinFeeAL .~ SJust (CoinPerByte minfeea)
                 & ppuMinFeeBL .~ SJust minfeeb
                 & ppuMaxBBSizeL .~ SJust maxbbsize
                 & ppuMaxTxSizeL .~ SJust maxtxsize
