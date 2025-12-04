@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -197,8 +198,10 @@ deriving instance
   , Show (Value era)
   , Show (PredicateFailure (EraRule "UTXOS" era))
   , Show (TxOut era)
+#if __GLASGOW_HASKELL__ < 914
   , Show (Script era)
   , Show TxIn
+#endif
   ) =>
   Show (DijkstraUtxoPredFailure era)
 
@@ -207,8 +210,10 @@ deriving instance
   , Eq (Value era)
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Eq (TxOut era)
+#if __GLASGOW_HASKELL__ < 914
   , Eq (Script era)
   , Eq TxIn
+#endif
   ) =>
   Eq (DijkstraUtxoPredFailure era)
 
@@ -317,7 +322,9 @@ instance
 instance
   ( Era era
   , DecCBOR (TxOut era)
+#if __GLASGOW_HASKELL__ < 914
   , EncCBOR (Value era)
+#endif
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>

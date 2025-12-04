@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -40,7 +41,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
   totalObligation,
   utxosGovStateL,
+#if __GLASGOW_HASKELL__ >= 914
+  data EpochState,
+#else
   pattern EpochState,
+#endif
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rewards ()

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -34,8 +35,13 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireSignature,
+#endif
  )
 import Cardano.Ledger.Shelley.TxBody (Withdrawals)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))

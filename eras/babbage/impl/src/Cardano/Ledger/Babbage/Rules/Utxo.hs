@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -97,7 +98,9 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+#if __GLASGOW_HASKELL__ < 914
 import Data.Typeable (Typeable)
+#endif
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
@@ -148,20 +151,28 @@ instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure BabbageEra where
 deriving instance
   ( Era era
   , Show (AlonzoUtxoPredFailure era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Show (PredicateFailure (EraRule "UTXO" era))
-  , Show (TxOut era)
   , Show (Script era)
   , Show TxIn
+#endif
+  , Show (TxOut era)
   ) =>
   Show (BabbageUtxoPredFailure era)
 
 deriving instance
   ( Era era
   , Eq (AlonzoUtxoPredFailure era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Eq (PredicateFailure (EraRule "UTXO" era))
-  , Eq (TxOut era)
   , Eq (Script era)
   , Eq TxIn
+#endif
+  , Eq (TxOut era)
   ) =>
   Eq (BabbageUtxoPredFailure era)
 
@@ -497,7 +508,11 @@ instance
   , EncCBOR (TxOut era)
   , EncCBOR (Value era)
   , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , EncCBOR TxIn
+#endif
   ) =>
   EncCBOR (BabbageUtxoPredFailure era)
   where
@@ -511,12 +526,16 @@ instance
 instance
   ( Era era
   , DecCBOR (TxOut era)
-  , EncCBOR (Value era)
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
+  , EncCBOR (Value era)
   , Typeable (Script era)
   , Typeable (TxAuxData era)
+#endif
   ) =>
   DecCBOR (BabbageUtxoPredFailure era)
   where

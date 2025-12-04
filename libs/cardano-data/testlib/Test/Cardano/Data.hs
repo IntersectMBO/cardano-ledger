@@ -4,8 +4,8 @@ module Test.Cardano.Data (
 ) where
 
 import Control.Monad
-import qualified Data.Map.Internal.Debug as Map
-import qualified Data.Map.Strict as Map hiding (showTree)
+import qualified Data.Map.Internal.Debug as MapDebug
+import qualified Data.Map.Strict as Map
 import Test.Hspec
 import Test.QuickCheck
 
@@ -15,10 +15,10 @@ expectValidMap m =
     expectationFailure $
       unlines
         [ "Interal strucutre of a map is invalid:"
-        , "Keys are ordered: " ++ show (Map.ordered m)
-        , "Tree is balanced: " ++ show (Map.balanced m)
-        , "Sizes are valid: " ++ show (Map.validsize m)
-        , Map.showTree m
+        , "Keys are ordered: " ++ show (MapDebug.ordered m)
+        , "Tree is balanced: " ++ show (MapDebug.balanced m)
+        , "Sizes are valid: " ++ show (MapDebug.validsize m)
+        , MapDebug.showTree m
         ]
 
 genNonEmptyMap :: Ord k => Gen k -> Gen v -> Gen (Map.Map k v)

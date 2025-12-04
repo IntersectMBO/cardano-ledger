@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -22,7 +23,11 @@ module Test.Cardano.Ledger.Shelley.Generator.Core (
   TwoPhase2ArgInfo (..),
   ScriptInfo,
   KeySpace (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data KeySpace,
+#else
   pattern KeySpace,
+#endif
   NatNonce (..),
   findPayKeyPairAddr,
   findPayKeyPairCred,
@@ -63,10 +68,17 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data KeyHashObj,
+  data ScriptHashObj,
+  data StakeRefBase,
+  data StakeRefPtr,
+#else
   pattern KeyHashObj,
   pattern ScriptHashObj,
   pattern StakeRefBase,
   pattern StakeRefPtr,
+#endif
  )
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (VKey, asWitness)

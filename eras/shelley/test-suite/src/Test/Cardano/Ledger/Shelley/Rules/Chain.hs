@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -35,7 +36,9 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
  )
+#if __GLASGOW_HASKELL__ < 914
 import Cardano.Ledger.Binary (EncCBORGroup)
+#endif
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Chain (
   ChainPredicateFailure (..),
@@ -157,7 +160,11 @@ data ChainEvent era
 deriving stock instance
   ( Era era
   , Show (PredicateFailure (EraRule "BBODY" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Show (PredicateFailure (EraRule "TICK" era))
+#endif
   , Show (PredicateFailure (EraRule "TICKN" era))
   ) =>
   Show (TestChainPredicateFailure era)
@@ -165,7 +172,11 @@ deriving stock instance
 deriving stock instance
   ( Era era
   , Eq (PredicateFailure (EraRule "BBODY" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Eq (PredicateFailure (EraRule "TICK" era))
+#endif
   , Eq (PredicateFailure (EraRule "TICKN" era))
   ) =>
   Eq (TestChainPredicateFailure era)
@@ -173,7 +184,11 @@ deriving stock instance
 instance
   ( Era era
   , NoThunks (PredicateFailure (EraRule "BBODY" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , NoThunks (PredicateFailure (EraRule "TICK" era))
+#endif
   , NoThunks (PredicateFailure (EraRule "TICKN" era))
   ) =>
   NoThunks (TestChainPredicateFailure era)
@@ -264,7 +279,11 @@ instance
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL MockCrypto) (CHAIN era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , EncCBORGroup (BlockBody era)
+#endif
   , AtMostEra "Alonzo" era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraCertState era

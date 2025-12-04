@@ -218,10 +218,17 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireAnyOf,
+  data RequireMOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
   pattern RequireSignature,
+#endif
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -25,16 +26,29 @@ import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),
   Timelock (..),
   ValidityInterval (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.Allegra.Transition
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Allegra.TxBody (data AllegraTxBody)
+#else
 import Cardano.Ledger.Allegra.TxBody (pattern AllegraTxBody)
+#endif
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ShelleyTxAuxData (ShelleyTxAuxData))
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireSignature,
+#else
   pattern RequireSignature,
+#endif
  )
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Generic.Random (genericArbitraryU)
@@ -69,7 +83,11 @@ instance
   forall era.
   ( AllegraEraScript era
   , Arbitrary (NativeScript era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Arbitrary (Script era)
+#endif
   , Era era
   ) =>
   Arbitrary (AllegraTxAuxData era)
