@@ -2,9 +2,9 @@
 
 ## 1.15.0.0
 
+* Changed type of `appMinFeeA` to `CoinPerByte`
 * Changed the type of `dappMinUTxOValue` to `CompactForm Coin` in `DowngradeAlonzoPParams`
 * Changed the type of the following fields to `CompactForm Coin` in `AlonzoPParams`:
-  - `appMinFeeA`
   - `appMinFeeB`
   - `appKeyDeposit`
   - `appMinPoolCost`

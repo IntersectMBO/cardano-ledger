@@ -2,11 +2,11 @@
 
 ## 1.13.0.0
 
+* Changed type of `bppMinFeeA` to `CoinPerByte`
 * Moved `CoinPerByte` to `cardano-ledger-core`
 * Add `babbageUtxoValidation`
 * Add `babbageUtxoTests`
 * Changed the type of the following fields to `CompactForm Coin` in `BabbagePParams`:
-  - `bppMinFeeA`
   - `bppMinFeeB`
   - `bppKeyDeposit`
   - `bppMinPoolCost`

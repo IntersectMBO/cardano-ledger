@@ -223,7 +223,7 @@ ppuMaxCollateralInputsL = ppuLensHKD . hkdMaxCollateralInputsL @era @StrictMaybe
 -- | Protocol parameters.
 -- Shelley parameters + additional ones
 data AlonzoPParams f era = AlonzoPParams
-  { appMinFeeA :: !(HKD f (CompactForm Coin))
+  { appMinFeeA :: !(HKD f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
   , appMinFeeB :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
@@ -312,7 +312,7 @@ instance EraPParams AlonzoEra where
   downgradePParamsHKD = downgradeAlonzoPParams
   emptyUpgradePParamsUpdate = emptyAlonzoUpgradePParamsUpdate
 
-  hkdMinFeeACompactL = lens appMinFeeA $ \pp x -> pp {appMinFeeA = x}
+  hkdMinFeeAL = lens appMinFeeA $ \pp x -> pp {appMinFeeA = x}
   hkdMinFeeBCompactL = lens appMinFeeB $ \pp x -> pp {appMinFeeB = x}
   hkdMaxBBSizeL = lens appMaxBBSize $ \pp x -> pp {appMaxBBSize = x}
   hkdMaxTxSizeL = lens appMaxTxSize $ \pp x -> pp {appMaxTxSize = x}
@@ -470,7 +470,7 @@ instance NFData (DowngradeAlonzoPParams Identity)
 emptyAlonzoPParams :: forall era. Era era => AlonzoPParams Identity era
 emptyAlonzoPParams =
   AlonzoPParams
-    { appMinFeeA = CompactCoin 0
+    { appMinFeeA = CoinPerByte $ Coin 0
     , appMinFeeB = CompactCoin 0
     , appMaxBBSize = 0
     , appMaxTxSize = 2048

@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Changed type of `dppMinFeeA` to `CoinPerByte`
 * Add `DijkstraBlockBody` type and pattern
 * Add `mkBasicBlockBodyDijkstra`
 * Add `DijkstraEraBlockBody` class and instance for `DijkstraEraBlockBody`
@@ -11,7 +12,6 @@
 * Add `DijkstraUtxoPredFailure`
 * Add `DijkstraUTXO`
 * Changed the type of the following fields to `CompactForm Coin` in `DijkstraPParams`:
-  - `dppMinFeeA`
   - `dppMinFeeB`
   - `dppKeyDeposit`
   - `dppMinPoolCost`

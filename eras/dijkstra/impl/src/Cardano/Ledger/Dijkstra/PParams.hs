@@ -78,7 +78,7 @@ import Numeric.Natural (Natural)
 -- * @refScriptCostStride@
 -- * @refScriptCostMultiplier@
 data DijkstraPParams f era = DijkstraPParams
-  { dppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
+  { dppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
   , dppMinFeeB :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
@@ -381,7 +381,7 @@ instance EraPParams DijkstraEra where
   downgradePParamsHKD _ = downgradeDijkstraPParams
   emptyUpgradePParamsUpdate = emptyDijkstraUpgradePParamsUpdate
 
-  hkdMinFeeACompactL = lens (unTHKD . dppMinFeeA) $ \pp x -> pp {dppMinFeeA = THKD x}
+  hkdMinFeeAL = lens (unTHKD . dppMinFeeA) $ \pp x -> pp {dppMinFeeA = THKD x}
   hkdMinFeeBCompactL = lens (unTHKD . dppMinFeeB) $ \pp x -> pp {dppMinFeeB = THKD x}
   hkdMaxBBSizeL = lens (unTHKD . dppMaxBBSize) $ \pp x -> pp {dppMaxBBSize = THKD x}
   hkdMaxTxSizeL = lens (unTHKD . dppMaxTxSize) $ \pp x -> pp {dppMaxTxSize = THKD x}
@@ -580,7 +580,7 @@ instance ConwayEraPParams DijkstraEra where
 emptyDijkstraPParams :: forall era. Era era => DijkstraPParams Identity era
 emptyDijkstraPParams =
   DijkstraPParams
-    { dppMinFeeA = THKD (CompactCoin 0)
+    { dppMinFeeA = THKD (CoinPerByte $ Coin 0)
     , dppMinFeeB = THKD (CompactCoin 0)
     , dppMaxBBSize = THKD 0
     , dppMaxTxSize = THKD 2048

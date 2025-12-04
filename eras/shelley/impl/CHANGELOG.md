@@ -2,8 +2,8 @@
 
 ## 1.18.0.0
 
+* Changed type of `sppMinFeeA` to `CoinPerByte`:
 * Changed the type of the following fields to `CompactForm Coin` in `ShelleyPParams`:
-  - `sppMinFeeA`
   - `sppMinFeeB`
   - `sppKeyDeposit`
   - `sppMinUTxOValue`
