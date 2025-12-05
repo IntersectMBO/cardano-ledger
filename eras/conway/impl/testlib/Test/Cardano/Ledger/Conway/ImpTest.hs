@@ -1049,7 +1049,8 @@ ccShouldNotBeExpired ::
 ccShouldNotBeExpired coldC = do
   curEpochNo <- getsNES nesELL
   ccExpiryEpochNo <- getCCExpiry coldC
-  curEpochNo `shouldSatisfy` (<= ccExpiryEpochNo)
+  impAnn "ccShouldNotBeExpired" $
+    curEpochNo `shouldSatisfy` (<= ccExpiryEpochNo)
 
 ccShouldBeExpired ::
   (HasCallStack, ConwayEraGov era) =>
@@ -1058,7 +1059,8 @@ ccShouldBeExpired ::
 ccShouldBeExpired coldC = do
   curEpochNo <- getsNES nesELL
   ccExpiryEpochNo <- getCCExpiry coldC
-  curEpochNo `shouldSatisfy` (> ccExpiryEpochNo)
+  impAnn "ccShouldBeExpired" $
+    curEpochNo `shouldSatisfy` (> ccExpiryEpochNo)
 
 getCCExpiry ::
   (HasCallStack, ConwayEraGov era) =>
