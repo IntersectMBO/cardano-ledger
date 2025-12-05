@@ -18,6 +18,7 @@ module Cardano.Ledger.Babbage.HuddleSpec (
   babbageProtocolVersionRule,
   babbageTransactionOutput,
   babbageScript,
+  plutusV2ScriptRule,
 ) where
 
 import Cardano.Ledger.Alonzo.HuddleSpec hiding (
@@ -62,6 +63,14 @@ babbageOperationalCertRule p =
       , "kes_period" ==> huddleRule @"kes_period" p
       , "sigma" ==> huddleRule @"signature" p
       ]
+
+plutusV2ScriptRule :: forall era. HuddleRule "distinct_bytes" era => Proxy era -> Rule
+plutusV2ScriptRule p =
+  comment
+    [str|Babbage introduces Plutus V2 with improved cost model
+        |and additional builtins.
+        |]
+    $ "plutus_v2_script" =:= huddleRule @"distinct_bytes" p
 
 instance HuddleGroup "account_registration_cert" BabbageEra where
   huddleGroup = accountRegistrationCertGroup @BabbageEra
@@ -461,12 +470,7 @@ instance HuddleRule "plutus_data" BabbageEra where
   huddleRule = plutusDataRule
 
 instance HuddleRule "plutus_v2_script" BabbageEra where
-  huddleRule p =
-    comment
-      [str|Babbage introduces Plutus V2 with improved cost model
-          |and additional builtins.
-          |]
-      $ "plutus_v2_script" =:= huddleRule @"distinct_bytes" p
+  huddleRule = plutusV2ScriptRule @BabbageEra
 
 instance HuddleRule "script" BabbageEra where
   huddleRule = babbageScript

@@ -28,6 +28,13 @@ module Cardano.Ledger.Conway.HuddleSpec (
   negativeInt64Rule,
   positiveInt64Rule,
   nonzeroInt64Rule,
+  plutusV3ScriptRule,
+  dnsNameRule,
+  urlRule,
+  voteRule,
+  drepCredentialRule,
+  committeeHotCredentialRule,
+  committeeColdCredentialRule,
   accountRegistrationDepositCertGroup,
   accountUnregistrationDepositCertGroup,
   delegationToDrepCertGroup,
@@ -64,10 +71,12 @@ module Cardano.Ledger.Conway.HuddleSpec (
 import Cardano.Ledger.Babbage.HuddleSpec hiding (
   alonzoRedeemer,
   alonzoRedeemerTag,
+  dnsNameRule,
   maryMintRule,
   maryMultiasset,
   maryValueRule,
   shelleyWithdrawalsRule,
+  urlRule,
  )
 import Cardano.Ledger.Conway (ConwayEra)
 import Codec.CBOR.Cuddle.Comments ((//-))
@@ -149,6 +158,35 @@ nonzeroInt64Rule p =
   "nonzero_int64"
     =:= huddleRule @"negative_int64" p
     / huddleRule @"positive_int64" p
+
+plutusV3ScriptRule :: forall era. HuddleRule "distinct_bytes" era => Proxy era -> Rule
+plutusV3ScriptRule p =
+  comment
+    [str|Conway introduces Plutus V3 with support for new governance features.
+        |
+        |Note: distinct VBytes ensures uniqueness in test generation.
+        |The cddl tool we use for roundtrip testing doesn't generate
+        |distinct collections, so we use sized variants to ensure uniqueness.
+        |]
+    $ "plutus_v3_script" =:= huddleRule @"distinct_bytes" p
+
+dnsNameRule :: Proxy era -> Rule
+dnsNameRule _ = "dns_name" =:= VText `sized` (0 :: Word64, 128 :: Word64)
+
+urlRule :: Proxy era -> Rule
+urlRule _ = "url" =:= VText `sized` (0 :: Word64, 128 :: Word64)
+
+voteRule :: Proxy era -> Rule
+voteRule _ = "vote" =:= (0 :: Integer) ... (2 :: Integer)
+
+drepCredentialRule :: forall era. HuddleRule "credential" era => Proxy era -> Rule
+drepCredentialRule p = "drep_credential" =:= huddleRule @"credential" p
+
+committeeHotCredentialRule :: forall era. HuddleRule "credential" era => Proxy era -> Rule
+committeeHotCredentialRule p = "committee_hot_credential" =:= huddleRule @"credential" p
+
+committeeColdCredentialRule :: forall era. HuddleRule "credential" era => Proxy era -> Rule
+committeeColdCredentialRule p = "committee_cold_credential" =:= huddleRule @"credential" p
 
 accountRegistrationDepositCertGroup ::
   forall era.
@@ -608,10 +646,10 @@ instance HuddleRule "network_id" ConwayEra where
   huddleRule _ = networkIdRule
 
 instance HuddleRule "dns_name" ConwayEra where
-  huddleRule _ = "dns_name" =:= VText `sized` (0 :: Word64, 128 :: Word64)
+  huddleRule = dnsNameRule @ConwayEra
 
 instance HuddleRule "url" ConwayEra where
-  huddleRule _ = "url" =:= VText `sized` (0 :: Word64, 128 :: Word64)
+  huddleRule = urlRule @ConwayEra
 
 instance HuddleRule "major_protocol_version" ConwayEra where
   huddleRule = majorProtocolVersionRule @ConwayEra
@@ -638,22 +676,22 @@ instance HuddleRule "positive_interval" ConwayEra where
   huddleRule = positiveIntervalRule
 
 instance HuddleRule "vote" ConwayEra where
-  huddleRule _ = "vote" =:= (0 :: Integer) ... (2 :: Integer)
+  huddleRule = voteRule @ConwayEra
 
 instance HuddleRule "asset_name" ConwayEra where
-  huddleRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
+  huddleRule = assetNameRule @ConwayEra
 
 instance HuddleRule "plutus_data" ConwayEra where
   huddleRule = plutusDataRule
 
 instance HuddleRule "drep_credential" ConwayEra where
-  huddleRule p = "drep_credential" =:= huddleRule @"credential" p
+  huddleRule = drepCredentialRule @ConwayEra
 
 instance HuddleRule "committee_cold_credential" ConwayEra where
-  huddleRule p = "committee_cold_credential" =:= huddleRule @"credential" p
+  huddleRule = committeeColdCredentialRule @ConwayEra
 
 instance HuddleRule "committee_hot_credential" ConwayEra where
-  huddleRule p = "committee_hot_credential" =:= huddleRule @"credential" p
+  huddleRule = committeeHotCredentialRule @ConwayEra
 
 instance HuddleRule "anchor" ConwayEra where
   huddleRule = anchorRule @ConwayEra
@@ -685,15 +723,7 @@ instance HuddleRule "plutus_v2_script" ConwayEra where
       $ "plutus_v2_script" =:= huddleRule @"distinct_bytes" p
 
 instance HuddleRule "plutus_v3_script" ConwayEra where
-  huddleRule p =
-    comment
-      [str|Conway introduces Plutus V3 with support for new governance features.
-          |
-          |Note: distinct VBytes ensures uniqueness in test generation.
-          |The cddl tool we use for roundtrip testing doesn't generate
-          |distinct collections, so we use sized variants to ensure uniqueness.
-          |]
-      $ "plutus_v3_script" =:= huddleRule @"distinct_bytes" p
+  huddleRule = plutusV3ScriptRule @ConwayEra
 
 instance HuddleRule "negative_int64" ConwayEra where
   huddleRule = negativeInt64Rule @ConwayEra

@@ -88,12 +88,7 @@ transaction_input = [id : transaction_id, index : uint .size 2]
 
 transaction_id = hash32
 
-transaction_output = 
-  [   address  
-  ,   amount     : value 
-  , ? datum_hash : hash32 ; new
-  ]
-
+transaction_output = [address, amount : value, ? datum_hash : hash32]
 
 ; address = bytes
 ; 

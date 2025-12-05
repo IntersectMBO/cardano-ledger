@@ -143,7 +143,15 @@ transaction_id = hash32
 ; and can be used interchangeably
 transaction_output = alonzo_transaction_output/ babbage_transaction_output
 
-alonzo_transaction_output = [address, amount : value, ? datum_hash : hash32]
+alonzo_transaction_output = transaction_output
+
+babbage_transaction_output = 
+  {   0 : address     
+  ,   1 : value       
+  , ? 2 : datum_option ; new
+  , ? 3 : script_ref   ; new
+  }
+
 
 ; address = bytes
 ; 
@@ -209,14 +217,6 @@ hash28 = bytes .size 28
 positive_coin = 1 .. max_word64
 
 max_word64 = 18446744073709551615
-
-babbage_transaction_output = 
-  {   0 : address     
-  ,   1 : value       
-  , ? 2 : datum_option ; new
-  , ? 3 : script_ref   ; new
-  }
-
 
 datum_option = [0, hash32// 1, data]
 

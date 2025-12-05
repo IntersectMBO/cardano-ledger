@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Add `cddl` sub-library, and `generate-cddl` executable.
 * Changed the type of the following fields to `CompactForm Coin` in `DijkstraPParams`:
   - `dppMinFeeA`
   - `dppMinFeeB`
@@ -42,6 +43,10 @@
 * Add `validateDijkstraNativeScript` to `Tx` module
 * Add `RequireGuard` pattern to `Scripts` module
 * Add `ConwayEraScript` constraint to `DijkstraEraScript`
+
+### `cddl`
+
+* Add full `HuddleSpec`.
 
 ### `testlib`
 
