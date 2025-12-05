@@ -20,7 +20,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.BaseTypes (PerasCert (..), StrictMaybe)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
@@ -207,3 +207,16 @@ instance
   Arbitrary (DijkstraGovPredFailure era)
   where
   arbitrary = genericArbitraryU
+
+instance Arbitrary PerasCert where
+  arbitrary = pure PerasCert
+
+instance
+  ( EraBlockBody era
+  , AlonzoEraTx era
+  , Arbitrary (Tx TopTx era)
+  , SafeToHash (TxWits era)
+  ) =>
+  Arbitrary (DijkstraBlockBody era)
+  where
+  arbitrary = DijkstraBlockBody <$> arbitrary <*> arbitrary
