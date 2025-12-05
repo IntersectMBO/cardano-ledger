@@ -263,7 +263,7 @@ spoAndCCVotingSpec = do
             SNothing
             initialCommittee
             committeeMap
-            (0 %! 1)
+            (1 %! 1)
       submitYesVote_ (DRepVoter drep) committeeActionId
       submitYesVote_ (StakePoolVoter spo) committeeActionId
       passNEpochs 5
