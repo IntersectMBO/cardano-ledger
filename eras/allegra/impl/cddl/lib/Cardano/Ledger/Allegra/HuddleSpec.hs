@@ -18,9 +18,6 @@ module Cardano.Ledger.Allegra.HuddleSpec (
   auxiliaryScriptsRule,
   auxiliaryDataArrayRule,
   auxiliaryDataRule,
-  minInt64Rule,
-  maxInt64Rule,
-  int64Rule,
   nativeScriptRule,
   scriptNOfKGroup,
   scriptInvalidBeforeGroup,
@@ -99,16 +96,6 @@ auxiliaryDataRule p =
     =:= huddleRule @"metadata" p
     / huddleRule @"auxiliary_data_array" p
 
-minInt64Rule :: Rule
-minInt64Rule = "min_int64" =:= (-9223372036854775808 :: Integer)
-
-maxInt64Rule :: Rule
-maxInt64Rule = "max_int64" =:= (9223372036854775807 :: Integer)
-
-int64Rule ::
-  forall era. (HuddleRule "min_int64" era, HuddleRule "max_int64" era) => Proxy era -> Rule
-int64Rule p = "int64" =:= huddleRule @"min_int64" p ... huddleRule @"max_int64" p
-
 nativeScriptRule ::
   forall era.
   ( HuddleGroup "script_pubkey" era
@@ -140,7 +127,7 @@ nativeScriptRule p =
 
 scriptNOfKGroup ::
   forall era.
-  (HuddleRule "int64" era, HuddleRule "native_script" era) =>
+  HuddleRule "native_script" era =>
   Proxy era ->
   Named Group
 scriptNOfKGroup p =
@@ -198,14 +185,14 @@ instance HuddleRule "header_body" AllegraEra where
 instance HuddleRule "header" AllegraEra where
   huddleRule = headerRule @AllegraEra
 
-instance HuddleRule "min_int64" AllegraEra where
-  huddleRule _ = minInt64Rule
+instance Era era => HuddleRule "min_int64" era where
+  huddleRule _ = "min_int64" =:= (-9223372036854775808 :: Integer)
 
-instance HuddleRule "max_int64" AllegraEra where
-  huddleRule _ = maxInt64Rule
+instance Era era => HuddleRule "max_int64" era where
+  huddleRule _ = "max_int64" =:= (9223372036854775807 :: Integer)
 
-instance HuddleRule "int64" AllegraEra where
-  huddleRule = int64Rule @AllegraEra
+instance Era era => HuddleRule "int64" era where
+  huddleRule p = "int64" =:= huddleRule @"min_int64" p ... huddleRule @"max_int64" p
 
 instance HuddleGroup "script_all" AllegraEra where
   huddleGroup = scriptAllGroup @AllegraEra
