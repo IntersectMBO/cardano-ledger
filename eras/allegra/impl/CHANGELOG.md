@@ -14,6 +14,7 @@
 
 ### `cddl`
 
+* Make `max_int64`, `min_int64` and `int64` era generic.
 * Export for cross-era reuse:
   - `auxiliaryScriptsRule`, `auxiliaryDataArrayRule`, `auxiliaryDataRule`
   - `minInt64Rule`, `maxInt64Rule`, `int64Rule`

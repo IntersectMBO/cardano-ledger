@@ -25,9 +25,6 @@ module Cardano.Ledger.Conway.HuddleSpec (
   drepRule,
   voterRule,
   govActionIdRule,
-  negativeInt64Rule,
-  positiveInt64Rule,
-  nonzeroInt64Rule,
   accountRegistrationDepositCertGroup,
   accountUnregistrationDepositCertGroup,
   delegationToDrepCertGroup,
@@ -127,28 +124,6 @@ govActionIdRule p =
       [ "transaction_id" ==> huddleRule @"transaction_id" p
       , "gov_action_index" ==> (VUInt `sized` (2 :: Word64))
       ]
-
-negativeInt64Rule :: forall era. HuddleRule "min_int64" era => Proxy era -> Rule
-negativeInt64Rule p =
-  "negative_int64"
-    =:= huddleRule @"min_int64" p
-    ... (-1 :: Integer)
-
-positiveInt64Rule :: forall era. HuddleRule "max_int64" era => Proxy era -> Rule
-positiveInt64Rule p =
-  "positive_int64"
-    =:= (1 :: Integer)
-    ... huddleRule @"max_int64" p
-
-nonzeroInt64Rule ::
-  forall era.
-  (HuddleRule "negative_int64" era, HuddleRule "positive_int64" era) =>
-  Proxy era ->
-  Rule
-nonzeroInt64Rule p =
-  "nonzero_int64"
-    =:= huddleRule @"negative_int64" p
-    / huddleRule @"positive_int64" p
 
 accountRegistrationDepositCertGroup ::
   forall era.
@@ -580,15 +555,6 @@ conwayRedeemer p =
       , "ex_units" ==> huddleRule @"ex_units" p
       ]
 
-instance HuddleRule "min_int64" ConwayEra where
-  huddleRule _ = minInt64Rule
-
-instance HuddleRule "max_int64" ConwayEra where
-  huddleRule _ = maxInt64Rule
-
-instance HuddleRule "int64" ConwayEra where
-  huddleRule = int64Rule @ConwayEra
-
 instance HuddleRule "bounded_bytes" ConwayEra where
   huddleRule _ = boundedBytesRule
 
@@ -695,14 +661,23 @@ instance HuddleRule "plutus_v3_script" ConwayEra where
           |]
       $ "plutus_v3_script" =:= huddleRule @"distinct_bytes" p
 
-instance HuddleRule "negative_int64" ConwayEra where
-  huddleRule = negativeInt64Rule @ConwayEra
+instance Era era => HuddleRule "negative_int64" era where
+  huddleRule p =
+    "negative_int64"
+      =:= huddleRule @"min_int64" p
+      ... (-1 :: Integer)
 
-instance HuddleRule "positive_int64" ConwayEra where
-  huddleRule = positiveInt64Rule @ConwayEra
+instance Era era => HuddleRule "positive_int64" era where
+  huddleRule p =
+    "positive_int64"
+      =:= (1 :: Integer)
+      ... huddleRule @"max_int64" p
 
-instance HuddleRule "nonzero_int64" ConwayEra where
-  huddleRule = nonzeroInt64Rule @ConwayEra
+instance Era era => HuddleRule "nonzero_int64" era where
+  huddleRule p =
+    "nonzero_int64"
+      =:= huddleRule @"negative_int64" p
+      / huddleRule @"positive_int64" p
 
 instance HuddleRule "policy_id" ConwayEra where
   huddleRule p = "policy_id" =:= huddleRule @"script_hash" p

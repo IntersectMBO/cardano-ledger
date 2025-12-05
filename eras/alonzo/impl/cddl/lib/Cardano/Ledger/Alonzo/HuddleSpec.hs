@@ -219,15 +219,6 @@ instance HuddleRule "auxiliary_scripts" AlonzoEra where
 instance HuddleRule "auxiliary_data_array" AlonzoEra where
   huddleRule = auxiliaryDataArrayRule @AlonzoEra
 
-instance HuddleRule "int64" AlonzoEra where
-  huddleRule = int64Rule @AlonzoEra
-
-instance HuddleRule "min_int64" AlonzoEra where
-  huddleRule _ = minInt64Rule
-
-instance HuddleRule "max_int64" AlonzoEra where
-  huddleRule _ = maxInt64Rule
-
 instance HuddleGroup "script_pubkey" AlonzoEra where
   huddleGroup = scriptPubkeyGroup @AlonzoEra
 

@@ -58,7 +58,7 @@ maryValueRule p =
 
 maryMintRule ::
   forall era.
-  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, HuddleRule "int64" era) =>
+  (HuddleRule "policy_id" era, HuddleRule "asset_name" era) =>
   Proxy era ->
   Rule
 maryMintRule p = "mint" =:= maryMultiasset p (huddleRule @"int64" p)
@@ -80,15 +80,6 @@ instance HuddleGroup "protocol_version" MaryEra where
 
 instance HuddleRule "major_protocol_version" MaryEra where
   huddleRule = majorProtocolVersionRule @MaryEra
-
-instance HuddleRule "int64" MaryEra where
-  huddleRule = int64Rule @MaryEra
-
-instance HuddleRule "min_int64" MaryEra where
-  huddleRule _ = minInt64Rule
-
-instance HuddleRule "max_int64" MaryEra where
-  huddleRule _ = maxInt64Rule
 
 instance HuddleRule "transaction_id" MaryEra where
   huddleRule = transactionIdRule @MaryEra
