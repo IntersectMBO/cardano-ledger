@@ -819,7 +819,7 @@ instance
           , sgMaxLovelaceSupply = 45_000_000_000_000_000
           , sgProtocolParams =
               emptyPParams
-                & ppMinFeeAL .~ CoinPerByte (Coin 44)
+                & ppMinFeeFactorL .~ CoinPerByte (Coin 44)
                 & ppMinFeeBL .~ Coin 155_381
                 & ppMaxBBSizeL .~ 65_536
                 & ppMaxTxSizeL .~ 16_384

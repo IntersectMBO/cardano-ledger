@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Renamed `dppMinFeeA` to `dppMinFeeFactor`
 * Changed type of `dppMinFeeA` to `CoinPerByte`
 * Change sets containing errors into `NonEmptySet` for `DijkstraGovPredFailure`, `DijkstraUtxoPredFailure`, `DijkstraUtxowPredFailure`
 * Change Dijkstra BBODY rule to validate Peras certificates when present

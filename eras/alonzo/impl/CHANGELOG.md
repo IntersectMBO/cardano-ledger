@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Renamed `appMinFeeA` to `appMinFeeFactor`
 * Changed type of `appMinFeeA` to `CoinPerByte`
 * Change sets containing errors into `NonEmptySet` for `AlonzoUtxoPredFailure`, `AlonzoUtxowPredFailure`
 * Change all lists into `NonEmpty` for `AlonzoUtxoPredFailure`, `AlonzoUtxosPredFailure`, `AlonzoUtxowPredFailure`

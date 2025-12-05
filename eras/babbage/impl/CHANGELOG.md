@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Renamed `bppMinFeeA` to `bppMinFeeFactor`
 * Changed type of `bppMinFeeA` to `CoinPerByte`
 * Moved `CoinPerByte` to `cardano-ledger-core`
 * Change sets containing errors into `NonEmptySet` for `BabbageUtxowPredFailure`

@@ -450,15 +450,15 @@ actionPrioritySpec =
       pGai0 <-
         submitParameterChange
           SNothing
-          $ def & ppuMinFeeAL .~ SJust val1
+          $ def & ppuMinFeeFactorL .~ SJust val1
       pGai1 <-
         submitParameterChange
           (SJust pGai0)
-          $ def & ppuMinFeeAL .~ SJust val2
+          $ def & ppuMinFeeFactorL .~ SJust val2
       pGai2 <-
         submitParameterChange
           (SJust pGai1)
-          $ def & ppuMinFeeAL .~ SJust val3
+          $ def & ppuMinFeeFactorL .~ SJust val3
       traverse_ @[]
         ( \gaid -> do
             submitYesVote_ (StakePoolVoter spoC) gaid
@@ -469,7 +469,7 @@ actionPrioritySpec =
       getLastEnactedParameterChange
         `shouldReturn` SJust (GovPurposeId pGai2)
       expectNoCurrentProposals
-      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
+      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeFactorL)
         `shouldReturn` val3
 
     it "only the first action of a transaction gets enacted" $ do
@@ -485,15 +485,15 @@ actionPrioritySpec =
           NE.fromList
             [ ParameterChange
                 SNothing
-                (def & ppuMinFeeAL .~ SJust val1)
+                (def & ppuMinFeeFactorL .~ SJust val1)
                 policy
             , ParameterChange
                 SNothing
-                (def & ppuMinFeeAL .~ SJust val2)
+                (def & ppuMinFeeFactorL .~ SJust val2)
                 policy
             , ParameterChange
                 SNothing
-                (def & ppuMinFeeAL .~ SJust val3)
+                (def & ppuMinFeeFactorL .~ SJust val3)
                 policy
             ]
       traverse_
@@ -503,7 +503,7 @@ actionPrioritySpec =
         )
         gaids
       passNEpochs 2
-      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
+      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeFactorL)
         `shouldReturn` val1
       expectNoCurrentProposals
 

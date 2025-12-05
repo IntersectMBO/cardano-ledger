@@ -84,7 +84,7 @@ data Constants = Constants
   -- ^ Maximal slot for CHAIN trace generation.
   , frequencyLowMaxEpoch :: Word64
   -- ^ Lower bound of the MaxEpoch protocol parameter
-  , maxMinFeeA :: Coin
+  , maxMinFeeFactor :: Coin
   , maxMinFeeB :: Coin
   , numCoreNodes :: Word64
   , minTreasury :: Integer
@@ -135,7 +135,7 @@ defaultConstants =
     , minSlotTrace = 1000
     , maxSlotTrace = 5000
     , frequencyLowMaxEpoch = 200
-    , maxMinFeeA = Coin 100
+    , maxMinFeeFactor = Coin 100
     , maxMinFeeB = Coin 2
     , numCoreNodes = 7
     , minTreasury = 1000000

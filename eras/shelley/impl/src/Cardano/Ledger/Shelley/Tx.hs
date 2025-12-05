@@ -255,4 +255,4 @@ instance
 -- | Minimum fee calculation
 shelleyMinFeeTx :: EraTx era => PParams era -> Tx l era -> Coin
 shelleyMinFeeTx pp tx =
-  (tx ^. sizeTxF <×> unCoinPerByte (pp ^. ppMinFeeAL)) <+> pp ^. ppMinFeeBL
+  (tx ^. sizeTxF <×> unCoinPerByte (pp ^. ppMinFeeFactorL)) <+> pp ^. ppMinFeeBL

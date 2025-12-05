@@ -35,6 +35,9 @@ module Cardano.Ledger.Babbage.PParams (
   coinsPerUTxOWordToCoinsPerUTxOByte,
   coinsPerUTxOByteToCoinsPerUTxOWord,
   ppCoinsPerUTxOByte,
+
+  -- * Deprecated
+  bppMinFeeA,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -83,7 +86,7 @@ ppuCoinsPerUTxOByteL = ppuLensHKD . hkdCoinsPerUTxOByteL @era @StrictMaybe
 -- | Babbage Protocol parameters. Ways in which parameters have changed from Alonzo: lack
 -- of @d@, @extraEntropy@ and replacement of @coinsPerUTxOWord@ with @coinsPerUTxOByte@
 data BabbagePParams f era = BabbagePParams
-  { bppMinFeeA :: !(HKD f CoinPerByte)
+  { bppMinFeeFactor :: !(HKD f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
   , bppMinFeeB :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
@@ -132,6 +135,10 @@ data BabbagePParams f era = BabbagePParams
   }
   deriving (Generic)
 
+bppMinFeeA :: BabbagePParams f era -> HKD f CoinPerByte
+bppMinFeeA = bppMinFeeFactor
+{-# DEPRECATED bppMinFeeA "In favor of `bppMinFeeFactor`" #-}
+
 deriving instance Eq (BabbagePParams Identity era)
 
 deriving instance Ord (BabbagePParams Identity era)
@@ -168,7 +175,7 @@ instance EraPParams BabbageEra where
   upgradePParamsHKD () = upgradeBabbagePParams True
   downgradePParamsHKD = downgradeBabbagePParams
 
-  hkdMinFeeAL = lens bppMinFeeA $ \pp x -> pp {bppMinFeeA = x}
+  hkdMinFeeFactorL = lens bppMinFeeFactor $ \pp x -> pp {bppMinFeeFactor = x}
   hkdMinFeeBCompactL = lens bppMinFeeB $ \pp x -> pp {bppMinFeeB = x}
   hkdMaxBBSizeL = lens bppMaxBBSize $ \pp x -> pp {bppMaxBBSize = x}
   hkdMaxTxSizeL = lens bppMaxTxSize $ \pp x -> pp {bppMaxTxSize = x}
@@ -189,7 +196,7 @@ instance EraPParams BabbageEra where
   hkdMinUTxOValueCompactL = notSupportedInThisEraL
 
   eraPParams =
-    [ ppMinFeeA
+    [ ppMinFeeFactor
     , ppMinFeeB
     , ppMaxBBSize
     , ppMaxTxSize
@@ -250,7 +257,7 @@ instance EraGov BabbageEra where
 emptyBabbagePParams :: forall era. Era era => BabbagePParams Identity era
 emptyBabbagePParams =
   BabbagePParams
-    { bppMinFeeA = CoinPerByte $ Coin 0
+    { bppMinFeeFactor = CoinPerByte $ Coin 0
     , bppMinFeeB = CompactCoin 0
     , bppMaxBBSize = 0
     , bppMaxTxSize = 2048
@@ -277,7 +284,7 @@ emptyBabbagePParams =
 emptyBabbagePParamsUpdate :: BabbagePParams StrictMaybe era
 emptyBabbagePParamsUpdate =
   BabbagePParams
-    { bppMinFeeA = SNothing
+    { bppMinFeeFactor = SNothing
     , bppMinFeeB = SNothing
     , bppMaxBBSize = SNothing
     , bppMaxTxSize = SNothing
@@ -309,7 +316,7 @@ upgradeBabbagePParams ::
   BabbagePParams f BabbageEra
 upgradeBabbagePParams updateCoinsPerUTxOWord AlonzoPParams {..} =
   BabbagePParams
-    { bppMinFeeA = appMinFeeA
+    { bppMinFeeFactor = appMinFeeFactor
     , bppMinFeeB = appMinFeeB
     , bppMaxBBSize = appMaxBBSize
     , bppMaxTxSize = appMaxTxSize
@@ -348,7 +355,7 @@ downgradeBabbagePParams ::
   PParamsHKD f AlonzoEra
 downgradeBabbagePParams DowngradeBabbagePParams {..} BabbagePParams {..} =
   AlonzoPParams
-    { appMinFeeA = bppMinFeeA
+    { appMinFeeFactor = bppMinFeeFactor
     , appMinFeeB = bppMinFeeB
     , appMaxBBSize = bppMaxBBSize
     , appMaxTxSize = bppMaxTxSize

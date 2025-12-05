@@ -35,7 +35,7 @@ import Cardano.Ledger.Conway.Core (
   ppMaxBlockExUnitsL,
   ppMaxTxExUnitsL,
   ppMaxValSizeL,
-  ppMinFeeAL,
+  ppMinFeeFactorL,
   pattern SpendingPurpose,
  )
 import Cardano.Ledger.Core (
@@ -97,7 +97,7 @@ testEstimateMinFee =
   where
     pparams =
       defaultPPs emptyPParams
-        & ppMinFeeAL .~ CoinPerByte (Coin 1)
+        & ppMinFeeFactorL .~ CoinPerByte (Coin 1)
     dat = Data (PV1.I 123)
     dataMap = Map.singleton (hashData dat) dat
     script = fromNativeScript $ RequireAllOf mempty

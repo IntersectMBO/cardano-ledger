@@ -369,7 +369,7 @@ alonzoMinFeeTx ::
   Tx l era ->
   Coin
 alonzoMinFeeTx pp tx =
-  (tx ^. sizeTxF <×> unCoinPerByte (pp ^. ppMinFeeAL))
+  (tx ^. sizeTxF <×> unCoinPerByte (pp ^. ppMinFeeFactorL))
     <+> (pp ^. ppMinFeeBL)
     <+> txscriptfee (pp ^. ppPricesL) allExunits
   where

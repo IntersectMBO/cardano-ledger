@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Renamed `cppMinFeeA` to `cppMinFeeFactor`
 * Changed type of `cppMinFeeA` to `CoinPerByte`
 * Change sets containing errors into `NonEmptySet` for `ConwayGovPredFailure`, `ConwayUtxoPredFailure`, `ConwayUtxowPredFailure`
 * Change all lists into `NonEmpty` for `ConwayUtxoPredFailure`, `ConwayUtxosPredFailure`, `ConwayUtxowPredFailure`

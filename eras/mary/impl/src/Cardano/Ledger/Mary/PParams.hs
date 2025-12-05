@@ -29,7 +29,7 @@ instance EraPParams MaryEra where
   upgradePParamsHKD () = coerce
   downgradePParamsHKD () = coerce
 
-  hkdMinFeeAL = lens sppMinFeeA $ \pp x -> pp {sppMinFeeA = x}
+  hkdMinFeeFactorL = lens sppMinFeeFactor $ \pp x -> pp {sppMinFeeFactor = x}
   hkdMinFeeBCompactL = lens sppMinFeeB $ \pp x -> pp {sppMinFeeB = x}
   hkdMaxBBSizeL = lens sppMaxBBSize $ \pp x -> pp {sppMaxBBSize = x}
   hkdMaxTxSizeL = lens sppMaxTxSize $ \pp x -> pp {sppMaxTxSize = x}

@@ -709,7 +709,7 @@ votingSpec =
       ccCreds <- registerInitialCommittee
       (drep, _, _) <- setupSingleDRep 1_000_000
       (khPool, _, _) <- setupPoolWithStake $ Coin 42_000_000
-      initMinFeeA <- getsNES $ nesEsL . curPParamsEpochStateL . ppMinFeeAL
+      initMinFeeFactor <- getsNES $ nesEsL . curPParamsEpochStateL . ppMinFeeFactorL
       gaidThreshold <- impAnn "Update StakePool thresholds" $ do
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
         (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` (51 %! 100)
@@ -734,7 +734,7 @@ votingSpec =
       passEpoch
       logAcceptedRatio gaidThreshold
       passEpoch
-      let newMinFeeA = CoinPerByte $ Coin 1000
+      let newMinFeeFactor = CoinPerByte $ Coin 1000
       gaidMinFee <- do
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
         impAnn "Security group threshold should be 1/2" $
@@ -742,7 +742,7 @@ votingSpec =
         ga <-
           mkParameterChangeGovAction
             (SJust gaidThreshold)
-            (emptyPParamsUpdate & ppuMinFeeAL .~ SJust newMinFeeA)
+            (emptyPParamsUpdate & ppuMinFeeFactorL .~ SJust newMinFeeFactor)
         gaidMinFee <- mkProposal ga >>= submitProposal
         submitYesVote_ (DRepVoter drep) gaidMinFee
         submitYesVoteCCs_ ccCreds gaidMinFee
@@ -752,7 +752,7 @@ votingSpec =
       passEpoch
       do
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
-        (pp ^. ppMinFeeAL) `shouldBe` initMinFeeA
+        (pp ^. ppMinFeeFactorL) `shouldBe` initMinFeeFactor
         submitYesVote_ (StakePoolVoter khPool) gaidMinFee
       passEpoch
       logInstantStake
@@ -760,7 +760,7 @@ votingSpec =
       logRatificationChecks gaidMinFee
       passEpoch
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
-      (pp ^. ppMinFeeAL) `shouldBe` newMinFeeA
+      (pp ^. ppMinFeeFactorL) `shouldBe` newMinFeeFactor
     describe "Active voting stake" $ do
       describe "DRep" $ do
         it "UTxOs contribute to active voting stake" $ whenPostBootstrap $ do
@@ -951,7 +951,7 @@ votingSpec =
           (_, drep2Staking, _) <- setupSingleDRep 1_000_000
 
           paramChangeGovId <-
-            submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (CoinPerByte $ Coin 1000)
+            submitParameterChange SNothing $ def & ppuMinFeeFactorL .~ SJust (CoinPerByte $ Coin 1000)
           submitYesVote_ (DRepVoter drep1) paramChangeGovId
 
           passEpoch

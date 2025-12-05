@@ -2,6 +2,10 @@
 
 ## 1.19.0.0
 
+* Renamed:
+  - `hkdMinFeeAL` -> `hkdMinFeeFactorL`
+  - `ppMinFeeAL` -> `ppMinFeeFactorL`
+  - `ppuMinFeeAL` -> `ppuMinFeeFactorL`
 * Changed type to `CoinPerByte`:
   - `hkdMinFeeAL`
   - `ppMinFeeAL`

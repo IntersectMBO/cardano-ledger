@@ -17,11 +17,11 @@ module Cardano.Ledger.Api.PParams (
 
   -- | Protocol parameters introduced in Shelley era
 
-  -- ** @MinFeeA@
+  -- ** @MinFeeFactor@
 
   -- | Min fee factor
-  ppMinFeeAL,
-  ppuMinFeeAL,
+  ppMinFeeFactorL,
+  ppuMinFeeFactorL,
 
   -- ** @MinFeeB@
 
@@ -266,8 +266,8 @@ import Cardano.Ledger.Core (
   ppMaxBBSizeL,
   ppMaxBHSizeL,
   ppMaxTxSizeL,
-  ppMinFeeAL,
   ppMinFeeBL,
+  ppMinFeeFactorL,
   ppMinPoolCostL,
   ppMinUTxOValueL,
   ppNOptL,
@@ -283,8 +283,8 @@ import Cardano.Ledger.Core (
   ppuMaxBBSizeL,
   ppuMaxBHSizeL,
   ppuMaxTxSizeL,
-  ppuMinFeeAL,
   ppuMinFeeBL,
+  ppuMinFeeFactorL,
   ppuMinPoolCostL,
   ppuMinUTxOValueL,
   ppuNOptL,
