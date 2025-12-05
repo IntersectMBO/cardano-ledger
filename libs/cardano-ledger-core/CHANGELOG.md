@@ -2,10 +2,16 @@
 
 ## 1.19.0.0
 
+* Added:
+  - `ppMinFeeConstantCompactL`,
+  - `ppuMinFeeConstantCompactL`,
 * Renamed:
   - `hkdMinFeeAL` -> `hkdMinFeeFactorL`
   - `ppMinFeeAL` -> `ppMinFeeFactorL`
   - `ppuMinFeeAL` -> `ppuMinFeeFactorL`
+  - `hkdMinFeeBL` -> `hkdMinFeeConstantL`
+  - `ppMinFeeBL` -> `ppMinFeeConstantL`
+  - `ppuMinFeeBL` -> `ppuMinFeeConstantL`
 * Changed type to `CoinPerByte`:
   - `hkdMinFeeAL`
   - `ppMinFeeAL`
@@ -14,16 +20,13 @@
 * Add mocked-up `PerasKey` type
 * Add mocked-up `validatePerasCert` validation function
 * Changed name and type to `CompactForm Coin`:
-  - `hkdMinFeeBL` -> `hkdMinFeeBCompactL`
   - `hkdKeyDepositL` -> `hkdKeyDepositCompactL`
   - `hkdMinUTxOValueL` -> `hkdMinUTxOValueCompactL`
   - `hkdMinPoolCostL` -> `hkdMinPoolCostCompactL`
 * Added:
-  - `ppMinFeeBCompactL`,
   - `ppKeyDepositCompactL`,
   - `ppMinUTxOValueCompactL`,
   - `ppMinPoolCostCompactL`,
-  - `ppuMinFeeBCompactL`,
   - `ppuKeyDepositCompactL`,
   - `ppuMinUTxOValueCompactL`,
   - `ppuMinPoolCostCompactL`,

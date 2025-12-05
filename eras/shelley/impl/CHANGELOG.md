@@ -5,6 +5,8 @@
 * Renamed:
   - `sppMinFeeA` -> `sppMinFeeFactor`
   - `ppMinFeeA` -> `ppMinFeeFactor`
+  - `sppMinFeeB` -> `sppMinFeeConstant`
+  - `ppMinFeeB` -> `ppMinFeeConstant`
 * Changed type of `sppMinFeeA` to `CoinPerByte`:
 * Change sets containing errors into `NonEmptySet` for `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`
 * Change all lists into `NonEmpty` for `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`
@@ -56,7 +58,9 @@
 
 ### `testlib`
 
-* Renamed `maxMinFeeA` to `maxMinFeeFactor`
+* Renamed:
+  - `maxMinFeeA` -> `maxMinFeeFactor`
+  - `maxMinFeeB` -> `maxMinFeeConstant`
 * Add:
   - `submitBlock_`
   - `submitBlock`

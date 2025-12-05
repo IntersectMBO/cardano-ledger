@@ -23,7 +23,7 @@ instance EraPParams AllegraEra where
   downgradePParamsHKD () = coerce
 
   hkdMinFeeFactorL = lens sppMinFeeFactor $ \pp x -> pp {sppMinFeeFactor = x}
-  hkdMinFeeBCompactL = lens sppMinFeeB $ \pp x -> pp {sppMinFeeB = x}
+  hkdMinFeeConstantCompactL = lens sppMinFeeConstant $ \pp x -> pp {sppMinFeeConstant = x}
   hkdMaxBBSizeL = lens sppMaxBBSize $ \pp x -> pp {sppMaxBBSize = x}
   hkdMaxTxSizeL = lens sppMaxTxSize $ \pp x -> pp {sppMaxTxSize = x}
   hkdMaxBHSizeL = lens sppMaxBHSize $ \pp x -> pp {sppMaxBHSize = x}

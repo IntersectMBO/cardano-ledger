@@ -23,11 +23,11 @@ module Cardano.Ledger.Api.PParams (
   ppMinFeeFactorL,
   ppuMinFeeFactorL,
 
-  -- ** @MinFeeB@
+  -- ** @MinFeeConstant@
 
   -- | Min fee constant
-  ppMinFeeBL,
-  ppuMinFeeBL,
+  ppMinFeeConstantL,
+  ppuMinFeeConstantL,
 
   -- ** @MaxBBSize@
 
@@ -266,7 +266,7 @@ import Cardano.Ledger.Core (
   ppMaxBBSizeL,
   ppMaxBHSizeL,
   ppMaxTxSizeL,
-  ppMinFeeBL,
+  ppMinFeeConstantL,
   ppMinFeeFactorL,
   ppMinPoolCostL,
   ppMinUTxOValueL,
@@ -283,7 +283,7 @@ import Cardano.Ledger.Core (
   ppuMaxBBSizeL,
   ppuMaxBHSizeL,
   ppuMaxTxSizeL,
-  ppuMinFeeBL,
+  ppuMinFeeConstantL,
   ppuMinFeeFactorL,
   ppuMinPoolCostL,
   ppuMinUTxOValueL,

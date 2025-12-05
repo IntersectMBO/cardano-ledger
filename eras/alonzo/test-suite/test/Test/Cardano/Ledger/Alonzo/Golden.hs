@@ -299,7 +299,7 @@ goldenMinFee =
           pp =
             emptyPParams
               & ppMinFeeFactorL .~ CoinPerByte (Coin 44)
-              & ppMinFeeBL .~ Coin 155381
+              & ppMinFeeConstantL .~ Coin 155381
               & ppPricesL .~ pricesParam
 
       Coin 1006053 `shouldBe` alonzoMinFeeTx pp firstTx

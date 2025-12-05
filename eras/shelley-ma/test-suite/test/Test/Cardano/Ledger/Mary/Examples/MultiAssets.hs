@@ -89,7 +89,7 @@ pp :: PParams MaryEra
 pp =
   emptyPParams
     & ppMinFeeFactorL .~ CoinPerByte (Coin 0)
-    & ppMinFeeBL .~ Coin 1
+    & ppMinFeeConstantL .~ Coin 1
     & ppMaxTxSizeL .~ 16384
     & ppMinUTxOValueL .~ Coin 100
 

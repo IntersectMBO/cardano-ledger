@@ -263,7 +263,7 @@ instance Typeable r => HasSpec (KeyHash r) where
 --   that do not appear in that Era.
 data SimplePParams era = SimplePParams
   { minFeeFactor :: CoinPerByte
-  , minFeeB :: Coin
+  , minFeeConstant :: Coin
   , maxBBSize :: Word32
   , maxTxSize :: Word32
   , maxBHSize :: Word32 -- Need to be downsized inside reify to Word16
@@ -322,7 +322,7 @@ instance
 -- | Use this as the SimpleRep of (PParamsUpdate era)
 data SimplePPUpdate = SimplePPUpdate
   { uminFeeFactor :: StrictMaybe CoinPerByte
-  , uminFeeB :: StrictMaybe Coin
+  , uminFeeConstant :: StrictMaybe Coin
   , umaxBBSize :: StrictMaybe Word32
   , umaxTxSize :: StrictMaybe Word32
   , umaxBHSize :: StrictMaybe Word32 -- Need to be downsized inside reify to Word16
