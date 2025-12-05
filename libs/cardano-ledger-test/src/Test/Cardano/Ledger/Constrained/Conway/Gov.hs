@@ -469,7 +469,7 @@ wfPParamsUpdateSpec =
     -- Note that ppupdate :: SimplePPUpdate
     match ppupdate $
       \_minFeeFactor
-       _minFeeB
+       _minFeeConstant
        maxBBSize
        maxTxSize
        maxBHSize

@@ -211,7 +211,7 @@ instance
 
   toSpecRep cpp@ConwayPParams {..} = do
     ppA <- toSpecRep cppMinFeeFactor
-    ppB <- toSpecRep cppMinFeeB
+    ppB <- toSpecRep cppMinFeeConstant
     ppA0 <- toSpecRep cppA0
     ppMinFeeRefScriptCoinsPerByte <- toSpecRep cppMinFeeRefScriptCostPerByte
     ppCollateralPercentage <- toSpecRep cppCollateralPercentage
@@ -445,7 +445,7 @@ instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
 
   toSpecRep (ConwayPParams {..}) = do
     ppuA <- toSpecRep cppMinFeeFactor
-    ppuB <- toSpecRep cppMinFeeB
+    ppuB <- toSpecRep cppMinFeeConstant
     ppuA0 <- toSpecRep cppA0
     ppuMinFeeRefScriptCoinsPerByte <- toSpecRep cppMinFeeRefScriptCostPerByte
     ppuCollateralPercentage <- toSpecRep cppCollateralPercentage

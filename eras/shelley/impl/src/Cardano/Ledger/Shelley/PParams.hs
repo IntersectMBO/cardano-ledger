@@ -38,7 +38,7 @@ module Cardano.Ledger.Shelley.PParams (
   ppMaxBBSize,
   ppKeyDeposit,
   ppMinFeeFactor,
-  ppMinFeeB,
+  ppMinFeeConstant,
   ppMinPoolCost,
   ppMaxBHSize,
   ppMaxTxSize,
@@ -50,7 +50,9 @@ module Cardano.Ledger.Shelley.PParams (
 
   -- * Deprecated
   sppMinFeeA,
+  sppMinFeeB,
   ppMinFeeA,
+  ppMinFeeB,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -96,7 +98,7 @@ import NoThunks.Class (NoThunks (..))
 data ShelleyPParams f era = ShelleyPParams
   { sppMinFeeFactor :: !(HKD f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
-  , sppMinFeeB :: !(HKD f (CompactForm Coin))
+  , sppMinFeeConstant :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , sppMaxBBSize :: !(HKD f Word32)
   -- ^ Maximal block body size
@@ -134,6 +136,10 @@ data ShelleyPParams f era = ShelleyPParams
 sppMinFeeA :: ShelleyPParams f era -> HKD f CoinPerByte
 sppMinFeeA = sppMinFeeFactor
 {-# DEPRECATED sppMinFeeA "In favor of `sppMinFeeFactor`" #-}
+
+sppMinFeeB :: ShelleyPParams f era -> HKD f (CompactForm Coin)
+sppMinFeeB = sppMinFeeConstant
+{-# DEPRECATED sppMinFeeB "In favor of `sppMinFeeConstant`" #-}
 
 deriving instance Eq (ShelleyPParams Identity era)
 
@@ -174,7 +180,7 @@ instance EraPParams ShelleyEra where
   emptyUpgradePParamsUpdate = error "IMPOSSIBLE! There is no UpgradePParams in ShelleyEra"
 
   hkdMinFeeFactorL = lens sppMinFeeFactor $ \pp x -> pp {sppMinFeeFactor = x}
-  hkdMinFeeBCompactL = lens sppMinFeeB $ \pp x -> pp {sppMinFeeB = x}
+  hkdMinFeeConstantCompactL = lens sppMinFeeConstant $ \pp x -> pp {sppMinFeeConstant = x}
   hkdMaxBBSizeL = lens sppMaxBBSize $ \pp x -> pp {sppMaxBBSize = x}
   hkdMaxTxSizeL = lens sppMaxTxSize $ \pp x -> pp {sppMaxTxSize = x}
   hkdMaxBHSizeL = lens sppMaxBHSize $ \pp x -> pp {sppMaxBHSize = x}
@@ -197,7 +203,7 @@ emptyShelleyPParams :: forall era. Era era => ShelleyPParams Identity era
 emptyShelleyPParams =
   ShelleyPParams
     { sppMinFeeFactor = CoinPerByte $ Coin 0
-    , sppMinFeeB = CompactCoin 0
+    , sppMinFeeConstant = CompactCoin 0
     , sppMaxBBSize = 0
     , sppMaxTxSize = 2048
     , sppMaxBHSize = 0
@@ -219,7 +225,7 @@ emptyShelleyPParamsUpdate :: ShelleyPParams StrictMaybe era
 emptyShelleyPParamsUpdate =
   ShelleyPParams
     { sppMinFeeFactor = SNothing
-    , sppMinFeeB = SNothing
+    , sppMinFeeConstant = SNothing
     , sppMaxBBSize = SNothing
     , sppMaxTxSize = SNothing
     , sppMaxBHSize = SNothing
@@ -341,13 +347,17 @@ ppMinFeeA :: EraPParams era => PParam era
 ppMinFeeA = ppMinFeeFactor
 {-# DEPRECATED ppMinFeeA "In favor of `ppMinFeeFactor`" #-}
 
-ppMinFeeB :: EraPParams era => PParam era
-ppMinFeeB =
+ppMinFeeConstant :: EraPParams era => PParam era
+ppMinFeeConstant =
   PParam
     { ppName = "txFeeFixed"
-    , ppLens = ppMinFeeBCompactL
-    , ppUpdate = Just $ PParamUpdate 1 ppuMinFeeBCompactL
+    , ppLens = ppMinFeeConstantCompactL
+    , ppUpdate = Just $ PParamUpdate 1 ppuMinFeeConstantCompactL
     }
+
+ppMinFeeB :: EraPParams era => PParam era
+ppMinFeeB = ppMinFeeConstant
+{-# DEPRECATED ppMinFeeB "In favor of `ppMinFeeConstant`" #-}
 
 ppMaxBBSize :: EraPParams era => PParam era
 ppMaxBBSize =
@@ -478,7 +488,7 @@ shelleyPParams ::
   [PParam era]
 shelleyPParams =
   [ ppMinFeeFactor
-  , ppMinFeeB
+  , ppMinFeeConstant
   , ppMaxBBSize
   , ppMaxTxSize
   , ppMaxBHSize

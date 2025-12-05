@@ -290,7 +290,7 @@ shelleyGenesis =
       \    \"maxBlockBodySize\": 65536,\
       \    \"maxBlockHeaderSize\": 1100,\
       \    \"minFeeFactor\": 44,\
-      \    \"minFeeB\": 155381,\
+      \    \"minFeeConstant\": 155381,\
       \    \"minUTxOValue\": 1000000,\
       \    \"poolDeposit\": 500000000,\
       \    \"minPoolCost\": 340000000,\

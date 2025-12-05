@@ -118,7 +118,7 @@ ppsBench =
     & ppMaxBHSizeL .~ 10000
     & ppMaxTxSizeL .~ 1000000000
     & ppMinFeeFactorL .~ CoinPerByte (Coin 0)
-    & ppMinFeeBL .~ Coin 0
+    & ppMinFeeConstantL .~ Coin 0
     & ppMinUTxOValueL .~ Coin 10
     & ppPoolDepositL .~ Coin 0
     & ppRhoL .~ unsafeBoundRational 0.0021

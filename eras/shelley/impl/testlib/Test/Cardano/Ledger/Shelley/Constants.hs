@@ -85,7 +85,7 @@ data Constants = Constants
   , frequencyLowMaxEpoch :: Word64
   -- ^ Lower bound of the MaxEpoch protocol parameter
   , maxMinFeeFactor :: Coin
-  , maxMinFeeB :: Coin
+  , maxMinFeeConstant :: Coin
   , numCoreNodes :: Word64
   , minTreasury :: Integer
   , maxTreasury :: Integer
@@ -136,7 +136,7 @@ defaultConstants =
     , maxSlotTrace = 5000
     , frequencyLowMaxEpoch = 200
     , maxMinFeeFactor = Coin 100
-    , maxMinFeeB = Coin 2
+    , maxMinFeeConstant = Coin 2
     , numCoreNodes = 7
     , minTreasury = 1000000
     , maxTreasury = 10000000
