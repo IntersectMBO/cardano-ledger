@@ -92,7 +92,7 @@ module Cardano.Ledger.BaseTypes (
   ToKeyValuePairs (..),
 
   -- * Peras-specific types
-  PerasCert,
+  PerasCert (..),
 ) where
 
 import Cardano.Crypto.Hash
