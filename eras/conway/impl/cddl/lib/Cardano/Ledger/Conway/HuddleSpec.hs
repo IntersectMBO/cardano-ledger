@@ -636,14 +636,6 @@ instance HuddleRule "operational_cert" ConwayEra where
 instance HuddleRule "protocol_version" ConwayEra where
   huddleRule = babbageProtocolVersionRule @ConwayEra
 
-instance HuddleRule "plutus_v2_script" ConwayEra where
-  huddleRule p =
-    comment
-      [str|Babbage introduces Plutus V2 with improved cost model
-          |and additional builtins.
-          |]
-      $ "plutus_v2_script" =:= huddleRule @"distinct_bytes" p
-
 instance HuddleRule "plutus_v3_script" ConwayEra where
   huddleRule p =
     comment

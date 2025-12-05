@@ -9,6 +9,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage.HuddleSpec (
@@ -451,7 +452,7 @@ instance HuddleGroup "script_invalid_before" BabbageEra where
 instance HuddleGroup "script_invalid_hereafter" BabbageEra where
   huddleGroup = scriptInvalidHereafterGroup @BabbageEra
 
-instance HuddleRule "plutus_v2_script" BabbageEra where
+instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v2_script" era where
   huddleRule p =
     comment
       [str|Babbage introduces Plutus V2 with improved cost model
