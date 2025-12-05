@@ -143,6 +143,48 @@ spoAndCCVotingSpec = do
 
       getLastEnactedParameterChange `shouldReturn` SNothing
       getsPParams ppMinFeeRefScriptCostPerByteL `shouldReturn` initialRefScriptBaseFee
+    -- https://github.com/IntersectMBO/cardano-ledger/issues/5418
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "Committee proposals pass" $
+      whenPostBootstrap $ do
+        modifyPParams $ \pp ->
+          pp
+            & ppCommitteeMinSizeL .~ 2
+            & ppCommitteeMaxTermLengthL .~ EpochInterval 50
+        coldCommitteeActive <- KeyHashObj <$> freshKeyHash
+        coldCommitteeInactive <- KeyHashObj <$> freshKeyHash
+        startingEpoch <- getsNES nesELL
+        maxTermLength <- getsPParams ppCommitteeMaxTermLengthL
+        (drep, _, _) <- setupSingleDRep 1_000_000_000
+        (spo, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+        let
+          committeeMap =
+            [ (coldCommitteeActive, addEpochInterval startingEpoch maxTermLength)
+            , (coldCommitteeInactive, addEpochInterval startingEpoch $ EpochInterval 5)
+            ]
+        initialCommittee <- getCommitteeMembers
+        committeeActionId <-
+          impAnn "Submit committee update"
+            . submitGovAction
+            $ UpdateCommittee
+              SNothing
+              initialCommittee
+              committeeMap
+              (1 %! 1)
+        submitYesVote_ (DRepVoter drep) committeeActionId
+        submitYesVote_ (StakePoolVoter spo) committeeActionId
+        passNEpochs 5
+        getCommitteeMembers `shouldReturn` Map.keysSet committeeMap
+        committeeProposal <-
+          elements
+            [ NoConfidence (SJust (GovPurposeId committeeActionId))
+            , UpdateCommittee (SJust (GovPurposeId committeeActionId)) Set.empty [] (0 %! 1)
+            ]
+        committeeActionId2 <- submitGovAction committeeProposal
+        submitYesVote_ (DRepVoter drep) committeeActionId2
+        submitYesVote_ (StakePoolVoter spo) committeeActionId2
+        passNEpochs 2
+        getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId committeeActionId2)
   describe "When CC threshold is 0" $ do
     -- During the bootstrap phase, proposals that modify the committee are not allowed,
     -- hence we need to directly set the threshold for the initial members
@@ -234,50 +276,154 @@ spoAndCCVotingSpec = do
         newConstitution <- arbitrary
         constitutionActionId <- submitGovAction $ NewConstitution SNothing newConstitution
         logRatificationChecks constitutionActionId
+        passEpoch
+        ccShouldBeExpired coldCommitteeInactive
+        passEpoch
+        ccShouldNotBeExpired coldCommitteeActive
+        getConstitution `shouldNotReturn` newConstitution
+    -- https://github.com/IntersectMBO/cardano-ledger/issues/5418
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt
+      "Constitution cannot be changed if committee is not active because it doesn't have registered hot credentials"
+      $ whenPostBootstrap
+      $ do
+        modifyPParams $ \pp ->
+          pp
+            & ppCommitteeMinSizeL .~ 2
+        modifyCommittee $ fmap (committeeThresholdL .~ 0 %! 1)
+        (drep, _, _) <- setupSingleDRep 1_000_000_000
+        SJust committee <- getCommittee
+        committeeThreshold committee `shouldBe` 0 %! 1
+        Map.size (committeeMembers committee) `shouldBe` 2
+        forM_ (Map.keys $ committeeMembers committee) ccShouldNotBeExpired
+        oldConstitution <- getConstitution
+        (proposal, _) <- mkConstitutionProposal SNothing
+        gaiConstitution <- submitProposal proposal
+        submitYesVote_ (DRepVoter drep) gaiConstitution
+        passNEpochs 2
+        getConstitution `shouldReturn` oldConstitution
+    it
+      "Constitution can be changed when an active committee doesn't vote"
+      $ whenPostBootstrap
+      $ do
+        modifyPParams $ \pp ->
+          pp
+            & ppCommitteeMinSizeL .~ 2
+        modifyCommittee $ fmap (committeeThresholdL .~ 0 %! 1)
+        (drep, _, _) <- setupSingleDRep 1_000_000_000
+        SJust committee <- getCommittee
+        committeeThreshold committee `shouldBe` 0 %! 1
+        Map.size (committeeMembers committee) `shouldBe` 2
+        forM_ (Map.keys $ committeeMembers committee) ccShouldNotBeExpired
+        (proposal, newConstitution) <- mkConstitutionProposal SNothing
+        gaiConstitution <- submitProposal proposal
+        submitYesVote_ (DRepVoter drep) gaiConstitution
+        mapM_ registerCommitteeHotKey (Map.keys $ committeeMembers committee)
+        passNEpochs 2
+        getConstitution `shouldReturn` newConstitution
+    it
+      "Constitution can be changed regardless of active committee votes"
+      $ whenPostBootstrap
+      $ do
+        modifyPParams $ \pp ->
+          pp
+            & ppCommitteeMinSizeL .~ 2
+        modifyCommittee $ fmap (committeeThresholdL .~ 0 %! 1)
+        (drep, _, _) <- setupSingleDRep 1_000_000_000
+        SJust committee <- getCommittee
+        committeeThreshold committee `shouldBe` 0 %! 1
+        Map.size (committeeMembers committee) `shouldBe` 2
+        forM_ (Map.keys $ committeeMembers committee) ccShouldNotBeExpired
+        (proposal, newConstitution) <- mkConstitutionProposal SNothing
+        gaiConstitution <- submitProposal proposal
+        submitYesVote_ (DRepVoter drep) gaiConstitution
+        hotKeys <- mapM registerCommitteeHotKey (Map.keys $ committeeMembers committee)
+        forM_ hotKeys $ \c ->
+          oneof
+            [ return ()
+            , submitYesVote_ (CommitteeVoter c) gaiConstitution
+            , submitVote_ VoteNo (CommitteeVoter c) gaiConstitution
+            ]
+        passNEpochs 2
+        getConstitution `shouldReturn` newConstitution
+    it
+      "Constitution can be changed if min committee size is 0"
+      . whenPostBootstrap
+      $ do
+        modifyPParams $ \pp ->
+          pp
+            & ppDRepVotingThresholdsL . dvtUpdateToConstitutionL .~ (0 %! 1)
+            & ppCommitteeMinSizeL .~ 0
+            & ppCommitteeMaxTermLengthL .~ EpochInterval 50
+        coldCommitteeActive <- KeyHashObj <$> freshKeyHash
+        coldCommitteeInactive <- KeyHashObj <$> freshKeyHash
+        startingEpoch <- getsNES nesELL
+        maxTermLength <- getsPParams ppCommitteeMaxTermLengthL
+        (dRep, _, _) <- setupSingleDRep 1_000_000_000
+        (spo, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+        let
+          committeeMap =
+            [ (coldCommitteeActive, addEpochInterval startingEpoch maxTermLength)
+            , (coldCommitteeInactive, addEpochInterval startingEpoch $ EpochInterval 5)
+            ]
+        initialCommittee <- getCommitteeMembers
+        committeeActionId <-
+          impAnn "Submit committee update"
+            . submitGovAction
+            $ UpdateCommittee
+              SNothing
+              initialCommittee
+              committeeMap
+              (0 %! 1)
+        submitYesVote_ (DRepVoter dRep) committeeActionId
+        submitYesVote_ (StakePoolVoter spo) committeeActionId
+        passNEpochs 2
+        getCommitteeMembers `shouldReturn` Map.keysSet committeeMap
+        passNEpochs 3
+        newConstitution <- arbitrary
+        constitutionActionId <- submitGovAction $ NewConstitution SNothing newConstitution
+        logRatificationChecks constitutionActionId
+        passNEpochs 2
+        getConstitution `shouldReturn` newConstitution
+  describe "When CC threshold is not 0" $ do
+    it "Constitution cannot be changed if min committee size is 0"
+      . whenPostBootstrap
+      $ do
+        modifyPParams $ \pp ->
+          pp
+            & ppDRepVotingThresholdsL . dvtUpdateToConstitutionL .~ (0 %! 1)
+            & ppCommitteeMinSizeL .~ 0
+            & ppCommitteeMaxTermLengthL .~ EpochInterval 50
+        coldCommitteeActive <- KeyHashObj <$> freshKeyHash
+        coldCommitteeInactive <- KeyHashObj <$> freshKeyHash
+        startingEpoch <- getsNES nesELL
+        maxTermLength <- getsPParams ppCommitteeMaxTermLengthL
+        (dRep, _, _) <- setupSingleDRep 1_000_000_000
+        (spo, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+        let
+          committeeMap =
+            [ (coldCommitteeActive, addEpochInterval startingEpoch maxTermLength)
+            , (coldCommitteeInactive, addEpochInterval startingEpoch $ EpochInterval 5)
+            ]
+        initialCommittee <- getCommitteeMembers
+        committeeActionId <-
+          impAnn "Submit committee update"
+            . submitGovAction
+            $ UpdateCommittee
+              SNothing
+              initialCommittee
+              committeeMap
+              (1 %! 1)
+        submitYesVote_ (DRepVoter dRep) committeeActionId
+        submitYesVote_ (StakePoolVoter spo) committeeActionId
+        passNEpochs 2
+        getCommitteeMembers `shouldReturn` Map.keysSet committeeMap
+        passNEpochs 3
+        newConstitution <- arbitrary
+        constitutionActionId <- submitGovAction $ NewConstitution SNothing newConstitution
+        logRatificationChecks constitutionActionId
         passNEpochs 2
         getConstitution `shouldNotReturn` newConstitution
-  -- https://github.com/IntersectMBO/cardano-ledger/issues/5418
-  -- TODO: Re-enable after issue is resolved, by removing this override
-  disableInConformanceIt "Committee proposals pass with inactive committee" $
-    whenPostBootstrap $ do
-      modifyPParams $ \pp ->
-        pp
-          & ppCommitteeMinSizeL .~ 2
-          & ppCommitteeMaxTermLengthL .~ EpochInterval 50
-      coldCommitteeActive <- KeyHashObj <$> freshKeyHash
-      coldCommitteeInactive <- KeyHashObj <$> freshKeyHash
-      startingEpoch <- getsNES nesELL
-      maxTermLength <- getsPParams ppCommitteeMaxTermLengthL
-      (drep, _, _) <- setupSingleDRep 1_000_000_000
-      (spo, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
-      let
-        committeeMap =
-          [ (coldCommitteeActive, addEpochInterval startingEpoch maxTermLength)
-          , (coldCommitteeInactive, addEpochInterval startingEpoch $ EpochInterval 5)
-          ]
-      initialCommittee <- getCommitteeMembers
-      committeeActionId <-
-        impAnn "Submit committee update"
-          . submitGovAction
-          $ UpdateCommittee
-            SNothing
-            initialCommittee
-            committeeMap
-            (1 %! 1)
-      submitYesVote_ (DRepVoter drep) committeeActionId
-      submitYesVote_ (StakePoolVoter spo) committeeActionId
-      passNEpochs 5
-      getCommitteeMembers `shouldReturn` Map.keysSet committeeMap
-      committeeProposal <-
-        elements
-          [ NoConfidence (SJust (GovPurposeId committeeActionId))
-          , UpdateCommittee (SJust (GovPurposeId committeeActionId)) Set.empty [] (0 %! 1)
-          ]
-      committeeActionId2 <- submitGovAction committeeProposal
-      submitYesVote_ (DRepVoter drep) committeeActionId2
-      submitYesVote_ (StakePoolVoter spo) committeeActionId2
-      passNEpochs 2
-      getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId committeeActionId2)
 
 committeeExpiryResignationDiscountSpec ::
   forall era.
