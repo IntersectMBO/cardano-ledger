@@ -626,7 +626,7 @@ tests =
             "pparams_update_all"
             ( emptyPParamsUpdate @ShelleyEra
                 & ppuMinFeeFactorL .~ SJust (CoinPerByte minfeea)
-                & ppuMinFeeBL .~ SJust minfeeb
+                & ppuMinFeeConstantL .~ SJust minfeeb
                 & ppuMaxBBSizeL .~ SJust maxbbsize
                 & ppuMaxTxSizeL .~ SJust maxtxsize
                 & ppuMaxBHSizeL .~ SJust maxbhsize

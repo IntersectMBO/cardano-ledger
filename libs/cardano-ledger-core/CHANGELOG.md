@@ -2,26 +2,29 @@
 
 ## 1.19.0.0
 
+* Added:
+  - `ppMinFeeConstantCompactL`,
+  - `ppuMinFeeConstantCompactL`,
 * Renamed:
   - `hkdMinFeeAL` -> `hkdMinFeeFactorL`
   - `ppMinFeeAL` -> `ppMinFeeFactorL`
   - `ppuMinFeeAL` -> `ppuMinFeeFactorL`
+  - `hkdMinFeeBL` -> `hkdMinFeeConstantL`
+  - `ppMinFeeBL` -> `ppMinFeeConstantL`
+  - `ppuMinFeeBL` -> `ppuMinFeeConstantL`
 * Changed type to `CoinPerByte`:
   - `hkdMinFeeAL`
   - `ppMinFeeAL`
   - `ppuMinFeeAL`
 * Added `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Changed name and type to `CompactForm Coin`:
-  - `hkdMinFeeBL` -> `hkdMinFeeBCompactL`
   - `hkdKeyDepositL` -> `hkdKeyDepositCompactL`
   - `hkdMinUTxOValueL` -> `hkdMinUTxOValueCompactL`
   - `hkdMinPoolCostL` -> `hkdMinPoolCostCompactL`
 * Added:
-  - `ppMinFeeBCompactL`,
   - `ppKeyDepositCompactL`,
   - `ppMinUTxOValueCompactL`,
   - `ppMinPoolCostCompactL`,
-  - `ppuMinFeeBCompactL`,
   - `ppuKeyDepositCompactL`,
   - `ppuMinUTxOValueCompactL`,
   - `ppuMinPoolCostCompactL`,

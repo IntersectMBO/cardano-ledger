@@ -75,7 +75,7 @@ shelleyGenPParams = do
   pure $
     emptyPParams
       & ppMinFeeFactorL .~ minfeeA
-      & ppMinFeeBL .~ minfeeB
+      & ppMinFeeConstantL .~ minfeeB
       & ppMaxTxSizeL .~ fromIntegral (maxBound :: Int)
       & ppProtocolVersionL .~ ProtVer (eraProtVerLow @ShelleyEra) 0
       & ppPoolDepositL .~ Coin 5

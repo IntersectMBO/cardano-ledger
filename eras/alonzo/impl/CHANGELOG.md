@@ -2,7 +2,9 @@
 
 ## 1.15.0.0
 
-* Renamed `appMinFeeA` to `appMinFeeFactor`
+* Renamed:
+  - `appMinFeeA` -> `appMinFeeFactor`
+  - `appMinFeeB` -> `appMinFeeConstant`
 * Changed type of `appMinFeeA` to `CoinPerByte`
 * Changed the type of `dappMinUTxOValue` to `CompactForm Coin` in `DowngradeAlonzoPParams`
 * Changed the type of the following fields to `CompactForm Coin` in `AlonzoPParams`:

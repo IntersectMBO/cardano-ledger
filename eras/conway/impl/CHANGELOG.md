@@ -2,7 +2,9 @@
 
 ## 1.21.0.0
 
-* Renamed `cppMinFeeA` to `cppMinFeeFactor`
+* Renamed:
+  - `cppMinFeeA` -> `cppMinFeeFactor`
+  - `cppMinFeeB` -> `cppMinFeeConstant`
 * Changed type of `cppMinFeeA` to `CoinPerByte`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Re-export `UtxoEnv` from `Cardano.Ledger.Conway.Rules.Utxo`
