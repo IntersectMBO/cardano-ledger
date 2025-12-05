@@ -120,6 +120,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Era
     Test.Cardano.Ledger.Dijkstra.Examples
     Test.Cardano.Ledger.Dijkstra.Imp
+    Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -157,6 +158,8 @@ library testlib
     generic-random,
     heredoc,
     microlens,
+    microlens-mtl,
+    mtl,
     small-steps,
     tree-diff,
 
