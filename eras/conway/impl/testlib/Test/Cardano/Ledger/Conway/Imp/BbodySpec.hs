@@ -281,6 +281,7 @@ spec = do
               , bhviewHSize = 0
               , bhviewBHash = hashBlockBody blockBody
               , bhviewSlot = slotNo
+              , bhviewPrevEpochNonce = Nothing
               }
       tryRunImpRule @"BBODY"
         (BbodyEnv pp (nes ^. chainAccountStateL))

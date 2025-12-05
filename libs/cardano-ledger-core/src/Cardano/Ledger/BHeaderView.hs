@@ -3,7 +3,7 @@
 
 module Cardano.Ledger.BHeaderView where
 
-import Cardano.Ledger.BaseTypes (BoundedRational (..), UnitInterval)
+import Cardano.Ledger.BaseTypes (BoundedRational (..), Nonce, UnitInterval)
 import Cardano.Ledger.Hashes (EraIndependentBlockBody, HASH, Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.Slot (SlotNo (..), (-*))
 import Data.Word (Word32)
@@ -29,6 +29,9 @@ data BHeaderView = BHeaderView
   -- ^ The purported hash of the block body.
   , bhviewSlot :: SlotNo
   -- ^ The slot for which this block was submitted to the chain.
+  , bhviewPrevEpochNonce :: Maybe Nonce
+  -- ^ The previous epoch nonce, needed to validate Peras certificates
+  -- contained in blocks.
   }
 
 -- | Determine if the given slot is reserved for the overlay schedule.
