@@ -74,7 +74,7 @@ shelleyGenPParams = do
   minfeeB <- Coin <$> choose (0, 10000)
   pure $
     emptyPParams
-      & ppMinFeeAL .~ minfeeA
+      & ppMinFeeFactorL .~ minfeeA
       & ppMinFeeBL .~ minfeeB
       & ppMaxTxSizeL .~ fromIntegral (maxBound :: Int)
       & ppProtocolVersionL .~ ProtVer (eraProtVerLow @ShelleyEra) 0

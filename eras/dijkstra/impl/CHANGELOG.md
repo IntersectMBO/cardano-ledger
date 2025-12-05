@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Renamed `dppMinFeeA` to `dppMinFeeFactor`
 * Changed type of `dppMinFeeA` to `CoinPerByte`
 * Add `DijkstraBlockBody` type and pattern
 * Add `mkBasicBlockBodyDijkstra`

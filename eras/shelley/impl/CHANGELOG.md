@@ -2,6 +2,9 @@
 
 ## 1.18.0.0
 
+* Renamed:
+  - `sppMinFeeA` -> `sppMinFeeFactor`
+  - `ppMinFeeA` -> `ppMinFeeFactor`
 * Changed type of `sppMinFeeA` to `CoinPerByte`:
 * Changed the type of the following fields to `CompactForm Coin` in `ShelleyPParams`:
   - `sppMinFeeB`
@@ -49,6 +52,7 @@
 
 ### `testlib`
 
+* Renamed `maxMinFeeA` to `maxMinFeeFactor`
 * Renamed `impLastTick` to `impCurSlotNo` and `impLastTickG` to `impCurSlotNoG`
 * Add CDDL certificate definitions: `account_registration_cert`, `account_unregistration_cert`, `delegation_to_stake_pool_cert`
 * Add CDDL pool certificate definitions via `mkPoolRules`: `pool_registration_cert`, `pool_retirement_cert`

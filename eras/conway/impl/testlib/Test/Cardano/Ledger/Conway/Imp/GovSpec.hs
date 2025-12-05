@@ -292,7 +292,7 @@ proposalsSpec = do
                          , Node SNothing []
                          ]
       it "Subtrees are pruned when proposals expire over multiple rounds" $ do
-        let ppupdate = def & ppuMinFeeAL .~ SJust (CoinPerByte $ Coin 1000)
+        let ppupdate = def & ppuMinFeeFactorL .~ SJust (CoinPerByte $ Coin 1000)
         let submitInitialProposal = submitParameterChange SNothing ppupdate
         let submitChildProposal parent = submitParameterChange (SJust parent) ppupdate
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
@@ -733,7 +733,7 @@ proposalsSpec = do
     submitParameterChangeForest = submitGovActionForest $ paramAction >=> submitGovAction
     submitParameterChangeTree = submitGovActionTree (paramAction >=> submitGovAction)
     submitConstitutionForest = submitGovActionForest $ submitConstitution . fmap GovPurposeId
-    paramAction p = mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (CoinPerByte $ Coin 500))
+    paramAction p = mkParameterChangeGovAction p (def & ppuMinFeeFactorL .~ SJust (CoinPerByte $ Coin 500))
 
 votingSpec ::
   forall era.
@@ -886,7 +886,7 @@ votingSpec =
       gaId <-
         submitParameterChange SNothing $
           def
-            & ppuMinFeeAL .~ SJust (CoinPerByte $ Coin 100)
+            & ppuMinFeeFactorL .~ SJust (CoinPerByte $ Coin 100)
       submitVote_ @era VoteYes (StakePoolVoter spoHash) gaId
 
 constitutionSpec ::

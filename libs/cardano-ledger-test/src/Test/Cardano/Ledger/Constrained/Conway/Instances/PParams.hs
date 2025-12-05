@@ -18,7 +18,7 @@
 --   and `HasSimpleRep` for the components of PParams. It hides
 --   the fact that (PParams era) can have different underlying 'data' types
 --   in each era, and provides Term selector functions
---   (e.g. minFeeA_, minFeeB_, etc.) for every PParam field (in every era).
+--   (e.g. minFeeFactor_, minFeeB_, etc.) for every PParam field (in every era).
 --   The class EraSpecPParams provides this era parametric abstraction.
 --   and instances of EraSpecPParams are defined here.
 module Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
@@ -29,7 +29,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   cSNothing_,
   cSJust_,
   succV_,
-  minFeeA_,
+  minFeeFactor_,
   minFeeB_,
   maxBBSize_,
   maxTxSize_,
@@ -158,7 +158,7 @@ dropAtMost4 pp x =
 dropShelley :: EraPParams era => PParams era -> SimplePParams era
 dropShelley pp =
   SimplePParams
-    { minFeeA = pp ^. ppMinFeeAL
+    { minFeeFactor = pp ^. ppMinFeeFactorL
     , minFeeB = pp ^. ppMinFeeBL
     , maxBBSize = pp ^. ppMaxBBSizeL
     , maxTxSize = pp ^. ppMaxTxSizeL
@@ -231,7 +231,7 @@ dropConway pp psub =
 liftShelley :: EraPParams era => SimplePParams era -> PParams era
 liftShelley pps =
   emptyPParams
-    & ppMinFeeAL .~ (minFeeA pps)
+    & ppMinFeeFactorL .~ (minFeeFactor pps)
     & ppMinFeeBL .~ (minFeeB pps)
     & ppMaxBBSizeL .~ (maxBBSize pps)
     & ppMaxTxSizeL .~ (maxTxSize pps)
@@ -280,7 +280,7 @@ liftConway pps pp =
 uDropShelley :: EraPParams era => PParamsUpdate era -> SimplePPUpdate
 uDropShelley pp =
   SimplePPUpdate
-    { uminFeeA = pp ^. ppuMinFeeAL
+    { uminFeeFactor = pp ^. ppuMinFeeFactorL
     , uminFeeB = pp ^. ppuMinFeeBL
     , umaxBBSize = pp ^. ppuMaxBBSizeL
     , umaxTxSize = pp ^. ppuMaxTxSizeL
@@ -355,7 +355,7 @@ uDropConway pp psub =
 uLiftShelley :: EraPParams era => SimplePPUpdate -> PParamsUpdate era
 uLiftShelley pps =
   emptyPParamsUpdate
-    & ppuMinFeeAL .~ (uminFeeA pps)
+    & ppuMinFeeFactorL .~ (uminFeeFactor pps)
     & ppuMinFeeBL .~ (uminFeeB pps)
     & ppuMaxBBSizeL .~ (umaxBBSize pps)
     & ppuMaxTxSizeL .~ (umaxTxSize pps)
@@ -405,8 +405,8 @@ uLiftConway pps pp =
 -- ============================================================================
 -- Term Selectors for SimplePParams
 
-minFeeA_ :: EraSpecPParams era => Term (SimplePParams era) -> Term CoinPerByte
-minFeeA_ simplepp = sel @0 simplepp
+minFeeFactor_ :: EraSpecPParams era => Term (SimplePParams era) -> Term CoinPerByte
+minFeeFactor_ simplepp = sel @0 simplepp
 
 minFeeB_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 minFeeB_ simplepp = sel @1 simplepp

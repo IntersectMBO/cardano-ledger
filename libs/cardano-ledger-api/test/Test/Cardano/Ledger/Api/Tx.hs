@@ -90,12 +90,12 @@ txSpec = describe (eraName @era) $ do
         -- size of the transaction, which in turn affects the overestimation. For this
         -- reason we can only check `>=`
         let
-          overestimatedMinFeeA = toInteger (sum overestimations) <×> unCoinPerByte (pp ^. ppMinFeeAL)
+          overestimatedMinFeeFactor = toInteger (sum overestimations) <×> unCoinPerByte (pp ^. ppMinFeeFactorL)
           estimation = estimateMinFeeTx pp tx (Map.size keyPairs) (Map.size byronKeyPairs) 0
           actual = setMinFeeTx pp txSigned 0 ^. bodyTxL . feeTxBodyL
          in
           tabulate "Attrs overestimation in bytes" (map show overestimations) $
-            estimation >= actual <> overestimatedMinFeeA
+            estimation >= actual <> overestimatedMinFeeFactor
 
 spec :: Spec
 spec = do
