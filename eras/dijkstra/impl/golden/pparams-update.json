@@ -608,6 +608,6 @@
     "stakePoolDeposit": 751882,
     "stakePoolTargetNum": 31910,
     "treasuryCut": 2.3e-3,
-    "txFeePerByte": 4197483115719285921,
+    "txFeePerByte": 384161,
     "utxoCostPerByte": 116926
 }
