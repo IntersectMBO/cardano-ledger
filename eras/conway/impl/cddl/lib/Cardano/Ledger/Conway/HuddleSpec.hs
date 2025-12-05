@@ -609,9 +609,6 @@ instance HuddleRule "vote" ConwayEra where
 instance HuddleRule "asset_name" ConwayEra where
   huddleRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
-instance HuddleRule "plutus_data" ConwayEra where
-  huddleRule = plutusDataRule
-
 instance HuddleRule "drep_credential" ConwayEra where
   huddleRule p = "drep_credential" =:= huddleRule @"credential" p
 
@@ -638,9 +635,6 @@ instance HuddleRule "operational_cert" ConwayEra where
 
 instance HuddleRule "protocol_version" ConwayEra where
   huddleRule = babbageProtocolVersionRule @ConwayEra
-
-instance HuddleRule "plutus_v1_script" ConwayEra where
-  huddleRule = plutusV1ScriptRule
 
 instance HuddleRule "plutus_v2_script" ConwayEra where
   huddleRule p =
@@ -873,7 +867,13 @@ instance HuddleRule "datum_option" ConwayEra where
       / arr [1, a (huddleRule @"data" p)]
 
 instance HuddleRule "alonzo_transaction_output" ConwayEra where
-  huddleRule p = "alonzo_transaction_output" =:= alonzoTransactionOutputRule @ConwayEra p
+  huddleRule p =
+    "alonzo_transaction_output"
+      =:= arr
+        [ a (huddleRule @"address" p)
+        , "amount" ==> huddleRule @"value" p
+        , opt ("datum_hash" ==> huddleRule @"hash32" p)
+        ]
 
 instance HuddleRule "transaction_output" ConwayEra where
   huddleRule p =

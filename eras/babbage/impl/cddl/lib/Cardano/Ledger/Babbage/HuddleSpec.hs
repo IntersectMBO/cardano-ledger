@@ -177,9 +177,6 @@ instance HuddleRule "big_int" BabbageEra where
 instance HuddleRule "distinct_bytes" BabbageEra where
   huddleRule _ = distinctBytesRule
 
-instance HuddleRule "plutus_v1_script" BabbageEra where
-  huddleRule = plutusV1ScriptRule
-
 instance HuddleRule "redeemers" BabbageEra where
   huddleRule p = "redeemers" =:= arr [0 <+ a (huddleRule @"redeemer" p)]
 
@@ -389,7 +386,13 @@ instance HuddleRule "transaction_output" BabbageEra where
         / babbageTransactionOutput p (huddleRule @"script" p)
 
 instance HuddleRule "alonzo_transaction_output" BabbageEra where
-  huddleRule p = "alonzo_transaction_output" =:= alonzoTransactionOutputRule @BabbageEra p
+  huddleRule p =
+    "alonzo_transaction_output"
+      =:= arr
+        [ a (huddleRule @"address" p)
+        , "amount" ==> huddleRule @"value" p
+        , opt ("datum_hash" ==> huddleRule @"hash32" p)
+        ]
 
 babbageTransactionOutput ::
   forall era.
@@ -447,9 +450,6 @@ instance HuddleGroup "script_invalid_before" BabbageEra where
 
 instance HuddleGroup "script_invalid_hereafter" BabbageEra where
   huddleGroup = scriptInvalidHereafterGroup @BabbageEra
-
-instance HuddleRule "plutus_data" BabbageEra where
-  huddleRule = plutusDataRule
 
 instance HuddleRule "plutus_v2_script" BabbageEra where
   huddleRule p =

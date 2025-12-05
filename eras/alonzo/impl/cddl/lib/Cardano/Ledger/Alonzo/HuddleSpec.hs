@@ -2,12 +2,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.HuddleSpec (
@@ -23,9 +25,6 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
   scriptDataHashRule,
   boundedBytesRule,
   distinctBytesRule,
-  plutusV1ScriptRule,
-  plutusDataRule,
-  alonzoTransactionOutputRule,
   alonzoRedeemer,
   alonzoRedeemerTag,
 ) where
@@ -101,39 +100,6 @@ distinctBytesRule =
       / (VBytes `sized` (24 :: Word64))
       / (VBytes `sized` (30 :: Word64))
       / (VBytes `sized` (32 :: Word64))
-
-plutusV1ScriptRule :: forall era. HuddleRule "distinct_bytes" era => Proxy era -> Rule
-plutusV1ScriptRule p =
-  comment
-    [str|Alonzo introduces Plutus smart contracts.
-        |Plutus V1 scripts are opaque bytestrings.
-        |]
-    $ "plutus_v1_script" =:= huddleRule @"distinct_bytes" p
-
-plutusDataRule ::
-  forall era.
-  (HuddleRule "plutus_data" era, HuddleRule "bounded_bytes" era, HuddleRule "big_int" era) =>
-  Proxy era -> Rule
-plutusDataRule p =
-  "plutus_data"
-    =:= constr (huddleRule @"plutus_data" p)
-    / smp [0 <+ asKey (huddleRule @"plutus_data" p) ==> huddleRule @"plutus_data" p]
-    / sarr [0 <+ a (huddleRule @"plutus_data" p)]
-    / huddleRule @"big_int" p
-    / huddleRule @"bounded_bytes" p
-
-alonzoTransactionOutputRule ::
-  forall era.
-  HuddleRule "value" era =>
-  Proxy era ->
-  Rule
-alonzoTransactionOutputRule p =
-  "transaction_output"
-    =:= arr
-      [ a (huddleRule @"address" p)
-      , "amount" ==> huddleRule @"value" p
-      , opt ("datum_hash" ==> huddleRule @"hash32" p)
-      ]
 
 instance HuddleGroup "operational_cert" AlonzoEra where
   huddleGroup = shelleyOperationalCertGroup @AlonzoEra
@@ -337,7 +303,13 @@ instance HuddleRule "transaction_body" AlonzoEra where
         ]
 
 instance HuddleRule "transaction_output" AlonzoEra where
-  huddleRule = alonzoTransactionOutputRule @AlonzoEra
+  huddleRule p =
+    "transaction_output"
+      =:= arr
+        [ a (huddleRule @"address" p)
+        , "amount" ==> huddleRule @"value" p
+        , opt ("datum_hash" ==> huddleRule @"hash32" p)
+        ]
 
 instance HuddleRule "update" AlonzoEra where
   huddleRule p =
@@ -489,8 +461,13 @@ instance HuddleRule "required_signers" AlonzoEra where
 instance HuddleRule "network_id" AlonzoEra where
   huddleRule _ = networkIdRule
 
-instance HuddleRule "plutus_v1_script" AlonzoEra where
-  huddleRule = plutusV1ScriptRule
+instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v1_script" era where
+  huddleRule p =
+    comment
+      [str|Alonzo introduces Plutus smart contracts.
+          |Plutus V1 scripts are opaque bytestrings.
+          |]
+      $ "plutus_v1_script" =:= huddleRule @"distinct_bytes" p
 
 instance HuddleRule "distinct_bytes" AlonzoEra where
   huddleRule _ = distinctBytesRule
@@ -507,8 +484,14 @@ instance HuddleRule "big_nint" AlonzoEra where
 instance HuddleRule "big_int" AlonzoEra where
   huddleRule = bigIntRule
 
-instance HuddleRule "plutus_data" AlonzoEra where
-  huddleRule = plutusDataRule
+instance (Era era, HuddleRule "big_int" era, HuddleRule "bounded_bytes" era) => HuddleRule "plutus_data" era where
+  huddleRule p =
+    "plutus_data"
+      =:= constr (huddleRule @"plutus_data" p)
+      / smp [0 <+ asKey (huddleRule @"plutus_data" p) ==> huddleRule @"plutus_data" p]
+      / sarr [0 <+ a (huddleRule @"plutus_data" p)]
+      / huddleRule @"big_int" p
+      / huddleRule @"bounded_bytes" p
 
 constr :: IsType0 a => a -> GRuleCall
 constr =
