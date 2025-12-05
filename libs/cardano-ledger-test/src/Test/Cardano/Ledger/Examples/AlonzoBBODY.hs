@@ -598,6 +598,7 @@ makeNaiveBlock txs = Block {blockHeader = bhView, blockBody}
         , bhviewHSize = 0
         , bhviewBHash = hashBlockBody blockBody
         , bhviewSlot = SlotNo 0
+        , bhviewPrevEpochNonce = Nothing
         }
     blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList txs
 

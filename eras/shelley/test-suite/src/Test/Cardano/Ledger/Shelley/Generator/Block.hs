@@ -173,7 +173,7 @@ genBlockWithTxGen
         -- e.g. the KES period in which this key starts to be valid.
         <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
         <*> pure oCert
-    let hView = makeHeaderView (blockHeader theBlock)
+    let hView = makeHeaderView (blockHeader theBlock) Nothing
     unless (bhviewBSize hView <= pp ^. ppMaxBBSizeL) $
       tracedDiscard $
         "genBlockWithTxGen: bhviewBSize too large"

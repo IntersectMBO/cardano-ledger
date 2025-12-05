@@ -326,7 +326,7 @@ chainTransition =
 
         let pp = nes ^. nesEpochStateL . curPParamsEpochStateL
             chainChecksData = pparamsToChainChecksPParams pp
-            bhView = makeHeaderView bh
+            bhView = makeHeaderView bh Nothing
 
         -- We allow one protocol version higher than the current era's maximum, because
         -- that is the way we can get out of the current era into the next one. We test
