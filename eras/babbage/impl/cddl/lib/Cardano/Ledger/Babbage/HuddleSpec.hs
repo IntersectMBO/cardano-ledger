@@ -138,15 +138,6 @@ instance HuddleRule "vkeywitness" BabbageEra where
 instance HuddleRule "bootstrap_witness" BabbageEra where
   huddleRule = bootstrapWitnessRule @BabbageEra
 
-instance HuddleRule "int64" BabbageEra where
-  huddleRule = int64Rule @BabbageEra
-
-instance HuddleRule "min_int64" BabbageEra where
-  huddleRule _ = minInt64Rule
-
-instance HuddleRule "max_int64" BabbageEra where
-  huddleRule _ = maxInt64Rule
-
 instance HuddleRule "policy_id" BabbageEra where
   huddleRule p = "policy_id" =:= huddleRule @"script_hash" p
 
