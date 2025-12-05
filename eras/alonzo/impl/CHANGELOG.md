@@ -52,6 +52,7 @@
 
 ### `cddl`
 
+* Make `plutus_v1_script` and `plutus_data` era generic.
 * Add full `HuddleSpec`.
 
 ### `testlib`
