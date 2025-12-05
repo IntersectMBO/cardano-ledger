@@ -2,6 +2,11 @@
 
 ## 0.2.0.0
 
+* Add `DijkstraBlockBody` type and pattern
+* Add `mkBasicBlockBodyDijkstra`
+* Add `DijkstraEraBlockBody` class and instance for `DijkstraEraBlockBody`
+* Add `EraBlockBody` instance for `DijkstraEra`
+* Re-export `DijkstraBlockBody` from `Cardano.Ledger.Dijkstra.Core`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec`
 * Add `DijkstraUtxoPredFailure`
 * Add `DijkstraUTXO`

@@ -90,6 +90,9 @@ module Cardano.Ledger.BaseTypes (
   -- * Aeson helpers
   KeyValuePairs (..),
   ToKeyValuePairs (..),
+
+  -- * Peras-specific types
+  PerasCert,
 ) where
 
 import Cardano.Crypto.Hash
@@ -988,3 +991,22 @@ newtype KeyValuePairs a = KeyValuePairs {unKeyValuePairs :: a}
 instance ToKeyValuePairs a => ToJSON (KeyValuePairs a) where
   toJSON = object . toKeyValuePairs . unKeyValuePairs
   toEncoding = pairs . mconcat . toKeyValuePairs . unKeyValuePairs
+
+--------------------------------------------------------------------------------
+-- Peras-related types
+--------------------------------------------------------------------------------
+
+-- | Placeholder for Peras certificates
+--
+-- NOTE: The real type will be brought from 'cardano-base' once it's ready.
+data PerasCert = PerasCert
+  deriving (Eq, Show, Generic, NoThunks)
+
+instance EncCBOR PerasCert where
+  encCBOR PerasCert =
+    encCBOR ()
+
+instance DecCBOR PerasCert where
+  decCBOR = do
+    () <- decCBOR
+    pure PerasCert
