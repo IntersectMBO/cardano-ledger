@@ -11,6 +11,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Alonzo.ChainTrace as ChainTrace
+import qualified Test.Cardano.Ledger.Alonzo.Golden as Golden
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley
@@ -28,6 +29,7 @@ defaultTests :: Spec
 defaultTests =
   describe "Alonzo tests" $ do
     AdaPreservation.tests @AlonzoEra 50
+    Golden.tests
 
 nightlyTests :: Spec
 nightlyTests =
