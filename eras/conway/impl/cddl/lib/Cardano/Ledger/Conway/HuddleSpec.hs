@@ -10,6 +10,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.HuddleSpec (
@@ -24,7 +25,6 @@ module Cardano.Ledger.Conway.HuddleSpec (
   anchorRule,
   drepRule,
   voterRule,
-  govActionIdRule,
   accountRegistrationDepositCertGroup,
   accountUnregistrationDepositCertGroup,
   delegationToDrepCertGroup,
@@ -54,7 +54,6 @@ module Cardano.Ledger.Conway.HuddleSpec (
   drepVotingThresholdsRule,
   maybeTaggedSet,
   maybeTaggedNonemptySet,
-  maybeTaggedOset,
   maybeTaggedNonemptyOset,
 ) where
 
@@ -116,14 +115,6 @@ voterRule p =
     / arr [2, a (huddleRule @"addr_keyhash" p)]
     / arr [3, a (huddleRule @"script_hash" p)]
     / arr [4, a (huddleRule @"addr_keyhash" p)]
-
-govActionIdRule :: forall era. HuddleRule "transaction_id" era => Proxy era -> Rule
-govActionIdRule p =
-  "gov_action_id"
-    =:= arr
-      [ "transaction_id" ==> huddleRule @"transaction_id" p
-      , "gov_action_index" ==> (VUInt `sized` (2 :: Word64))
-      ]
 
 accountRegistrationDepositCertGroup ::
   forall era.
@@ -627,8 +618,13 @@ instance HuddleRule "drep" ConwayEra where
 instance HuddleRule "voter" ConwayEra where
   huddleRule = voterRule @ConwayEra
 
-instance HuddleRule "gov_action_id" ConwayEra where
-  huddleRule = govActionIdRule @ConwayEra
+instance (Era era, HuddleRule "transaction_id" era) => HuddleRule "gov_action_id" era where
+  huddleRule p =
+    "gov_action_id"
+      =:= arr
+        [ "transaction_id" ==> huddleRule @"transaction_id" p
+        , "gov_action_index" ==> (VUInt `sized` (2 :: Word64))
+        ]
 
 instance HuddleRule "operational_cert" ConwayEra where
   huddleRule = babbageOperationalCertRule @ConwayEra
@@ -636,7 +632,7 @@ instance HuddleRule "operational_cert" ConwayEra where
 instance HuddleRule "protocol_version" ConwayEra where
   huddleRule = babbageProtocolVersionRule @ConwayEra
 
-instance HuddleRule "plutus_v3_script" ConwayEra where
+instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v3_script" era where
   huddleRule p =
     comment
       [str|Conway introduces Plutus V3 with support for new governance features.
@@ -1215,9 +1211,6 @@ maybeTaggedSet = mkMaybeTaggedSet "set" 0
 
 maybeTaggedNonemptySet :: IsType0 a => a -> GRuleCall
 maybeTaggedNonemptySet = mkMaybeTaggedSet "nonempty_set" 1
-
-maybeTaggedOset :: IsType0 a => a -> GRuleCall
-maybeTaggedOset = mkMaybeTaggedSet "oset" 0
 
 maybeTaggedNonemptyOset :: IsType0 a => a -> GRuleCall
 maybeTaggedNonemptyOset = mkMaybeTaggedSet "nonempty_oset" 1
