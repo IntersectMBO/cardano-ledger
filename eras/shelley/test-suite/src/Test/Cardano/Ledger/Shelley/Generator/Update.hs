@@ -106,10 +106,10 @@ genPParams ::
   (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) =>
   Constants ->
   Gen (PParams era)
-genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
+genPParams c@Constants {maxMinFeeFactor, maxMinFeeB} = do
   let lowMajorPV = eraProtVerLow @era
       highMajorPV = eraProtVerHigh @era
-  minFeeA <- genInteger 0 (unCoin maxMinFeeA)
+  minFeeFactor <- genInteger 0 (unCoin maxMinFeeFactor)
   minFeeB <- genInteger 0 (unCoin maxMinFeeB)
   (maxBBSize, maxTxSize, maxBHSize) <- szGen
   keyDeposit <- genKeyDeposit
@@ -126,7 +126,7 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
   minPoolCost <- genMinPoolCost
   pure $
     emptyPParams
-      & ppMinFeeAL .~ CoinPerByte (Coin minFeeA)
+      & ppMinFeeFactorL .~ CoinPerByte (Coin minFeeFactor)
       & ppMinFeeBL .~ Coin minFeeB
       & ppMaxBBSizeL .~ maxBBSize
       & ppMaxTxSizeL .~ maxTxSize
@@ -242,10 +242,10 @@ genShelleyPParamsUpdate ::
   Constants ->
   PParams era ->
   Gen (PParamsUpdate era)
-genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
+genShelleyPParamsUpdate c@Constants {maxMinFeeFactor, maxMinFeeB} pp = do
   let highMajorPV = succ (eraProtVerHigh @era)
   -- TODO generate Maybe types so not all updates are full
-  minFeeA <- genM $ genInteger 0 (unCoin maxMinFeeA)
+  minFeeFactor <- genM $ genInteger 0 (unCoin maxMinFeeFactor)
   minFeeB <- genM $ genInteger 0 (unCoin maxMinFeeB)
   maxBBSize <- genM $ choose (low, hi)
   maxTxSize <- genM $ choose (low, hi)
@@ -265,7 +265,7 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   minPoolCost <- genM genMinPoolCost
   pure $
     emptyPParamsUpdate
-      & ppuMinFeeAL .~ fmap (CoinPerByte . Coin) minFeeA
+      & ppuMinFeeFactorL .~ fmap (CoinPerByte . Coin) minFeeFactor
       & ppuMinFeeBL .~ fmap Coin minFeeB
       & ppuMaxBBSizeL .~ maxBBSize
       & ppuMaxTxSizeL .~ maxTxSize

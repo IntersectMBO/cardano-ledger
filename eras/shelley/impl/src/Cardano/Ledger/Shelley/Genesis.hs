@@ -340,7 +340,7 @@ instance ToJSON LegacyJSONPParams where
   toJSON
     ( LegacyJSONPParams
         ( ShelleyPParams
-            { sppMinFeeA
+            { sppMinFeeFactor
             , sppMinFeeB
             , sppMaxBBSize
             , sppMaxTxSize
@@ -361,7 +361,7 @@ instance ToJSON LegacyJSONPParams where
           )
       ) =
       Aeson.object
-        [ "minFeeA" .= sppMinFeeA
+        [ "minFeeA" .= sppMinFeeFactor
         , "minFeeB" .= sppMinFeeB
         , "maxBlockBodySize" .= sppMaxBBSize
         , "maxTxSize" .= sppMaxTxSize

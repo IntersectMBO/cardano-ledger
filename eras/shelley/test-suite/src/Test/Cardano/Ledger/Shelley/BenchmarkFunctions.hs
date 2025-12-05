@@ -117,7 +117,7 @@ ppsBench =
     & ppKeyDepositL .~ Coin 0
     & ppMaxBHSizeL .~ 10000
     & ppMaxTxSizeL .~ 1000000000
-    & ppMinFeeAL .~ CoinPerByte (Coin 0)
+    & ppMinFeeFactorL .~ CoinPerByte (Coin 0)
     & ppMinFeeBL .~ Coin 0
     & ppMinUTxOValueL .~ Coin 10
     & ppPoolDepositL .~ Coin 0

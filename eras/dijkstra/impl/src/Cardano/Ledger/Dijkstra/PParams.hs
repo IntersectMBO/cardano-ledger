@@ -27,6 +27,9 @@ module Cardano.Ledger.Dijkstra.PParams (
   ppuRefScriptCostStrideL,
   ppuMaxRefScriptSizePerTxL,
   ppuMaxRefScriptSizePerBlockL,
+
+  -- * Deprecated
+  dppMinFeeA,
 ) where
 
 import Cardano.Ledger.Alonzo.PParams
@@ -78,7 +81,7 @@ import Numeric.Natural (Natural)
 -- * @refScriptCostStride@
 -- * @refScriptCostMultiplier@
 data DijkstraPParams f era = DijkstraPParams
-  { dppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
+  { dppMinFeeFactor :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
   , dppMinFeeB :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
@@ -155,6 +158,10 @@ data DijkstraPParams f era = DijkstraPParams
   }
   deriving (Generic)
 
+dppMinFeeA :: DijkstraPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte
+dppMinFeeA = dppMinFeeFactor
+{-# DEPRECATED dppMinFeeA "In favor of `dppMinFeeFactor`" #-}
+
 dijkstraApplyPPUpdates ::
   forall era.
   DijkstraPParams Identity era ->
@@ -162,7 +169,7 @@ dijkstraApplyPPUpdates ::
   DijkstraPParams Identity era
 dijkstraApplyPPUpdates pp ppu = do
   DijkstraPParams
-    { dppMinFeeA = ppApplyUpdate dppMinFeeA
+    { dppMinFeeFactor = ppApplyUpdate dppMinFeeFactor
     , dppMinFeeB = ppApplyUpdate dppMinFeeB
     , dppMaxBBSize = ppApplyUpdate dppMaxBBSize
     , dppMaxTxSize = ppApplyUpdate dppMaxTxSize
@@ -293,7 +300,7 @@ upgradeDijkstraPParams ::
   DijkstraPParams f DijkstraEra
 upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
   DijkstraPParams
-    { dppMinFeeA = cppMinFeeA
+    { dppMinFeeFactor = cppMinFeeFactor
     , dppMinFeeB = cppMinFeeB
     , dppMaxBBSize = cppMaxBBSize
     , dppMaxTxSize = cppMaxTxSize
@@ -333,7 +340,7 @@ upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
 downgradeDijkstraPParams :: DijkstraPParams f DijkstraEra -> ConwayPParams f ConwayEra
 downgradeDijkstraPParams DijkstraPParams {..} =
   ConwayPParams
-    { cppMinFeeA = dppMinFeeA
+    { cppMinFeeFactor = dppMinFeeFactor
     , cppMinFeeB = dppMinFeeB
     , cppMaxBBSize = dppMaxBBSize
     , cppMaxTxSize = dppMaxTxSize
@@ -381,7 +388,7 @@ instance EraPParams DijkstraEra where
   downgradePParamsHKD _ = downgradeDijkstraPParams
   emptyUpgradePParamsUpdate = emptyDijkstraUpgradePParamsUpdate
 
-  hkdMinFeeAL = lens (unTHKD . dppMinFeeA) $ \pp x -> pp {dppMinFeeA = THKD x}
+  hkdMinFeeFactorL = lens (unTHKD . dppMinFeeFactor) $ \pp x -> pp {dppMinFeeFactor = THKD x}
   hkdMinFeeBCompactL = lens (unTHKD . dppMinFeeB) $ \pp x -> pp {dppMinFeeB = THKD x}
   hkdMaxBBSizeL = lens (unTHKD . dppMaxBBSize) $ \pp x -> pp {dppMaxBBSize = THKD x}
   hkdMaxTxSizeL = lens (unTHKD . dppMaxTxSize) $ \pp x -> pp {dppMaxTxSize = THKD x}
@@ -403,7 +410,7 @@ instance EraPParams DijkstraEra where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueCompactL = notSupportedInThisEraL
   eraPParams =
-    [ ppMinFeeA
+    [ ppMinFeeFactor
     , ppMinFeeB
     , ppMaxBBSize
     , ppMaxTxSize
@@ -580,7 +587,7 @@ instance ConwayEraPParams DijkstraEra where
 emptyDijkstraPParams :: forall era. Era era => DijkstraPParams Identity era
 emptyDijkstraPParams =
   DijkstraPParams
-    { dppMinFeeA = THKD (CoinPerByte $ Coin 0)
+    { dppMinFeeFactor = THKD (CoinPerByte $ Coin 0)
     , dppMinFeeB = THKD (CompactCoin 0)
     , dppMaxBBSize = THKD 0
     , dppMaxTxSize = THKD 2048
@@ -620,7 +627,7 @@ emptyDijkstraPParams =
 emptyDijkstraPParamsUpdate :: DijkstraPParams StrictMaybe era
 emptyDijkstraPParamsUpdate =
   DijkstraPParams
-    { dppMinFeeA = THKD SNothing
+    { dppMinFeeFactor = THKD SNothing
     , dppMinFeeB = THKD SNothing
     , dppMaxBBSize = THKD SNothing
     , dppMaxTxSize = THKD SNothing
