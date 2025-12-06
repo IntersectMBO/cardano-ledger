@@ -12,6 +12,7 @@
 
 ### `cddl`
 
+* Rename 'multiasset' to `maryMultiasset`
 * Add full `HuddleSpec`.
 
 ### `testlib`

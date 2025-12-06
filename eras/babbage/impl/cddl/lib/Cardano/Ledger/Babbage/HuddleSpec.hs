@@ -9,6 +9,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage.HuddleSpec (
@@ -88,7 +89,7 @@ instance HuddleRule "certificate" BabbageEra where
   huddleRule = certificateRule @BabbageEra
 
 instance HuddleRule "withdrawals" BabbageEra where
-  huddleRule = withdrawalsRule @BabbageEra
+  huddleRule = shelleyWithdrawalsRule @BabbageEra
 
 instance HuddleRule "genesis_hash" BabbageEra where
   huddleRule = genesisHashRule @BabbageEra
@@ -138,15 +139,6 @@ instance HuddleRule "vkeywitness" BabbageEra where
 instance HuddleRule "bootstrap_witness" BabbageEra where
   huddleRule = bootstrapWitnessRule @BabbageEra
 
-instance HuddleRule "int64" BabbageEra where
-  huddleRule = int64Rule @BabbageEra
-
-instance HuddleRule "min_int64" BabbageEra where
-  huddleRule _ = minInt64Rule
-
-instance HuddleRule "max_int64" BabbageEra where
-  huddleRule _ = maxInt64Rule
-
 instance HuddleRule "policy_id" BabbageEra where
   huddleRule p = "policy_id" =:= huddleRule @"script_hash" p
 
@@ -154,13 +146,10 @@ instance HuddleRule "asset_name" BabbageEra where
   huddleRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "value" BabbageEra where
-  huddleRule p =
-    "value"
-      =:= huddleRule @"coin" p
-      / sarr [a $ huddleRule @"coin" p, a $ multiasset p VUInt]
+  huddleRule = maryValueRule @BabbageEra
 
 instance HuddleRule "mint" BabbageEra where
-  huddleRule p = "mint" =:= multiasset p (huddleRule @"int64" p)
+  huddleRule = maryMintRule @BabbageEra
 
 instance HuddleRule "proposed_protocol_parameter_updates" BabbageEra where
   huddleRule = proposedProtocolParameterUpdatesRule @BabbageEra
@@ -189,9 +178,6 @@ instance HuddleRule "big_int" BabbageEra where
 instance HuddleRule "distinct_bytes" BabbageEra where
   huddleRule _ = distinctBytesRule
 
-instance HuddleRule "plutus_v1_script" BabbageEra where
-  huddleRule = plutusV1ScriptRule
-
 instance HuddleRule "redeemers" BabbageEra where
   huddleRule p = "redeemers" =:= arr [0 <+ a (huddleRule @"redeemer" p)]
 
@@ -200,23 +186,10 @@ instance HuddleRule "redeemer" BabbageEra where
     comment
       [str|NEW
           |]
-      $ "redeemer"
-        =:= arr
-          [ "tag" ==> huddleRule @"redeemer_tag" p
-          , "index" ==> VUInt
-          , "data" ==> huddleRule @"plutus_data" p
-          , "ex_units" ==> huddleRule @"ex_units" p
-          ]
+      $ alonzoRedeemer p
 
 instance HuddleRule "redeemer_tag" BabbageEra where
-  huddleRule _ =
-    comment
-      [str|0: spend
-          |1: mint
-          |2: cert
-          |3: reward
-          |]
-      $ "redeemer_tag" =:= int 0 / int 1 / int 2 / int 3
+  huddleRule _ = alonzoRedeemerTag
 
 instance HuddleRule "ex_units" BabbageEra where
   huddleRule _ = exUnitsRule
@@ -410,12 +383,12 @@ instance HuddleRule "transaction_output" BabbageEra where
           |and can be used interchangeably.
           |]
       $ "transaction_output"
-        =:= huddleRule @"shelley_transaction_output" p
+        =:= huddleRule @"alonzo_transaction_output" p
         / babbageTransactionOutput p (huddleRule @"script" p)
 
-instance HuddleRule "shelley_transaction_output" BabbageEra where
+instance HuddleRule "alonzo_transaction_output" BabbageEra where
   huddleRule p =
-    "shelley_transaction_output"
+    "alonzo_transaction_output"
       =:= arr
         [ a (huddleRule @"address" p)
         , "amount" ==> huddleRule @"value" p
@@ -479,10 +452,7 @@ instance HuddleGroup "script_invalid_before" BabbageEra where
 instance HuddleGroup "script_invalid_hereafter" BabbageEra where
   huddleGroup = scriptInvalidHereafterGroup @BabbageEra
 
-instance HuddleRule "plutus_data" BabbageEra where
-  huddleRule = plutusDataRule
-
-instance HuddleRule "plutus_v2_script" BabbageEra where
+instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v2_script" era where
   huddleRule p =
     comment
       [str|Babbage introduces Plutus V2 with improved cost model
@@ -518,7 +488,7 @@ instance HuddleRule "language" BabbageEra where
       [str|0: Plutus v1
           |1: Plutus v2
           |]
-      $ "language" =:= int 0 / int 1
+      $ "language" =:= (0 :: Integer) ... (1 :: Integer)
 
 instance HuddleRule "cost_models" BabbageEra where
   huddleRule p =

@@ -2,12 +2,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.HuddleSpec (
@@ -23,8 +25,8 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
   scriptDataHashRule,
   boundedBytesRule,
   distinctBytesRule,
-  plutusV1ScriptRule,
-  plutusDataRule,
+  alonzoRedeemer,
+  alonzoRedeemerTag,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -99,26 +101,6 @@ distinctBytesRule =
       / (VBytes `sized` (30 :: Word64))
       / (VBytes `sized` (32 :: Word64))
 
-plutusV1ScriptRule :: forall era. HuddleRule "distinct_bytes" era => Proxy era -> Rule
-plutusV1ScriptRule p =
-  comment
-    [str|Alonzo introduces Plutus smart contracts.
-        |Plutus V1 scripts are opaque bytestrings.
-        |]
-    $ "plutus_v1_script" =:= huddleRule @"distinct_bytes" p
-
-plutusDataRule ::
-  forall era.
-  (HuddleRule "plutus_data" era, HuddleRule "bounded_bytes" era, HuddleRule "big_int" era) =>
-  Proxy era -> Rule
-plutusDataRule p =
-  "plutus_data"
-    =:= constr (huddleRule @"plutus_data" p)
-    / smp [0 <+ asKey (huddleRule @"plutus_data" p) ==> huddleRule @"plutus_data" p]
-    / sarr [0 <+ a (huddleRule @"plutus_data" p)]
-    / huddleRule @"big_int" p
-    / huddleRule @"bounded_bytes" p
-
 instance HuddleGroup "operational_cert" AlonzoEra where
   huddleGroup = shelleyOperationalCertGroup @AlonzoEra
 
@@ -153,7 +135,7 @@ instance HuddleGroup "move_instantaneous_rewards_cert" AlonzoEra where
   huddleGroup = moveInstantaneousRewardsCertGroup @AlonzoEra
 
 instance HuddleRule "withdrawals" AlonzoEra where
-  huddleRule = withdrawalsRule @AlonzoEra
+  huddleRule = shelleyWithdrawalsRule @AlonzoEra
 
 instance HuddleRule "genesis_hash" AlonzoEra where
   huddleRule = genesisHashRule @AlonzoEra
@@ -203,15 +185,6 @@ instance HuddleRule "auxiliary_scripts" AlonzoEra where
 instance HuddleRule "auxiliary_data_array" AlonzoEra where
   huddleRule = auxiliaryDataArrayRule @AlonzoEra
 
-instance HuddleRule "int64" AlonzoEra where
-  huddleRule = int64Rule @AlonzoEra
-
-instance HuddleRule "min_int64" AlonzoEra where
-  huddleRule _ = minInt64Rule
-
-instance HuddleRule "max_int64" AlonzoEra where
-  huddleRule _ = maxInt64Rule
-
 instance HuddleGroup "script_pubkey" AlonzoEra where
   huddleGroup = scriptPubkeyGroup @AlonzoEra
 
@@ -240,13 +213,10 @@ instance HuddleRule "native_script" AlonzoEra where
   huddleRule = nativeScriptRule @AlonzoEra
 
 instance HuddleRule "value" AlonzoEra where
-  huddleRule p =
-    "value"
-      =:= huddleRule @"coin" p
-      / sarr [a $ huddleRule @"coin" p, a $ multiasset p VUInt]
+  huddleRule = maryValueRule @AlonzoEra
 
 instance HuddleRule "mint" AlonzoEra where
-  huddleRule p = "mint" =:= multiasset p (huddleRule @"int64" p)
+  huddleRule = maryMintRule @AlonzoEra
 
 instance HuddleRule "block" AlonzoEra where
   huddleRule p =
@@ -338,7 +308,7 @@ instance HuddleRule "transaction_output" AlonzoEra where
       =:= arr
         [ a (huddleRule @"address" p)
         , "amount" ==> huddleRule @"value" p
-        , opt ("datum_hash" ==> huddleRule @"hash32" p) //- "new"
+        , opt ("datum_hash" ==> huddleRule @"hash32" p)
         ]
 
 instance HuddleRule "update" AlonzoEra where
@@ -491,8 +461,13 @@ instance HuddleRule "required_signers" AlonzoEra where
 instance HuddleRule "network_id" AlonzoEra where
   huddleRule _ = networkIdRule
 
-instance HuddleRule "plutus_v1_script" AlonzoEra where
-  huddleRule = plutusV1ScriptRule
+instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v1_script" era where
+  huddleRule p =
+    comment
+      [str|Alonzo introduces Plutus smart contracts.
+          |Plutus V1 scripts are opaque bytestrings.
+          |]
+      $ "plutus_v1_script" =:= huddleRule @"distinct_bytes" p
 
 instance HuddleRule "distinct_bytes" AlonzoEra where
   huddleRule _ = distinctBytesRule
@@ -509,8 +484,14 @@ instance HuddleRule "big_nint" AlonzoEra where
 instance HuddleRule "big_int" AlonzoEra where
   huddleRule = bigIntRule
 
-instance HuddleRule "plutus_data" AlonzoEra where
-  huddleRule = plutusDataRule
+instance (Era era, HuddleRule "big_int" era, HuddleRule "bounded_bytes" era) => HuddleRule "plutus_data" era where
+  huddleRule p =
+    "plutus_data"
+      =:= constr (huddleRule @"plutus_data" p)
+      / smp [0 <+ asKey (huddleRule @"plutus_data" p) ==> huddleRule @"plutus_data" p]
+      / sarr [0 <+ a (huddleRule @"plutus_data" p)]
+      / huddleRule @"big_int" p
+      / huddleRule @"bounded_bytes" p
 
 constr :: IsType0 a => a -> GRuleCall
 constr =
@@ -528,25 +509,38 @@ constr =
 instance HuddleRule "redeemers" AlonzoEra where
   huddleRule p = "redeemers" =:= arr [0 <+ a (huddleRule @"redeemer" p)]
 
+alonzoRedeemer ::
+  forall era.
+  ( HuddleRule "redeemer_tag" era
+  , HuddleRule "plutus_data" era
+  , HuddleRule "ex_units" era
+  ) =>
+  Proxy era ->
+  Rule
+alonzoRedeemer p =
+  "redeemer"
+    =:= arr
+      [ "tag" ==> huddleRule @"redeemer_tag" p
+      , "index" ==> VUInt
+      , "data" ==> huddleRule @"plutus_data" p
+      , "ex_units" ==> huddleRule @"ex_units" p
+      ]
+
 instance HuddleRule "redeemer" AlonzoEra where
-  huddleRule p =
-    "redeemer"
-      =:= arr
-        [ "tag" ==> huddleRule @"redeemer_tag" p
-        , "index" ==> VUInt
-        , "data" ==> huddleRule @"plutus_data" p
-        , "ex_units" ==> huddleRule @"ex_units" p
-        ]
+  huddleRule = alonzoRedeemer @AlonzoEra
+
+alonzoRedeemerTag :: Rule
+alonzoRedeemerTag =
+  comment
+    [str|0: spend
+        |1: mint
+        |2: cert
+        |3: reward
+        |]
+    $ "redeemer_tag" =:= (0 :: Integer) ... (3 :: Integer)
 
 instance HuddleRule "redeemer_tag" AlonzoEra where
-  huddleRule _ =
-    comment
-      [str|0: spend
-          |1: mint
-          |2: cert
-          |3: reward
-          |]
-      $ "redeemer_tag" =:= int 0 / int 1 / int 2 / int 3
+  huddleRule _ = alonzoRedeemerTag
 
 instance HuddleRule "ex_units" AlonzoEra where
   huddleRule _ = exUnitsRule
