@@ -51,6 +51,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
+import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString (ByteString)
@@ -101,6 +102,8 @@ data DijkstraBlockBody era = DijkstraBlockBodyInternal
   -- ^ Bytes encoding the optional Peras certificate
   }
   deriving (Generic)
+
+instance (NFData (Tx TopTx era), NFData PerasCert) => NFData (DijkstraBlockBody era)
 
 instance EraBlockBody DijkstraEra where
   type BlockBody DijkstraEra = DijkstraBlockBody DijkstraEra
