@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `AllegraApplyTxError` constructor for `ApplyTxError era`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Remove deprecated type `Allegra`
 * Remove deprecated type `TimelockConstr`

@@ -41,7 +41,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
   mkWitnessesPreAlonzo,
  )
 
-ledgerExamples :: LedgerExamples AllegraEra
+ledgerExamples :: LedgerExamples "LEDGER" AllegraEra
 ledgerExamples =
   mkLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @AllegraEra))

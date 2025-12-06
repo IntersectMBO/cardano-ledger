@@ -103,7 +103,6 @@ library
     nothunks,
     plutus-ledger-api,
     small-steps >=1.1.2,
-    text,
 
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
@@ -121,6 +120,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Era
     Test.Cardano.Ledger.Dijkstra.Examples
     Test.Cardano.Ledger.Dijkstra.Imp
+    Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -154,9 +154,12 @@ library testlib
     cardano-strict-containers,
     containers,
     cuddle >=0.4,
+    data-default,
     generic-random,
     heredoc,
     microlens,
+    microlens-mtl,
+    mtl,
     small-steps,
     tree-diff,
 

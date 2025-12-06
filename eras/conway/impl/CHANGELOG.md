@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `ConwayApplyTxError` constructor for `ApplyTxError era`
 * Re-export `UtxoEnv` from `Cardano.Ledger.Conway.Rules.Utxo`
 * Changed the type of the following fields to `CompactForm Coin` in `ConwayPParams`:
   - `cppMinFeeA`

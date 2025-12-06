@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Main where
@@ -11,6 +12,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Rules (
   ConwayLedgerPredFailure (ConwayUtxowFailure),
   ConwayUtxowPredFailure (InvalidWitnessesUTXOW),
@@ -78,8 +80,9 @@ main = do
       toMempoolState NewEpochState {nesEs = EpochState {esLState}} = esLState
       !globals = mkGlobals genesis
       !slotNo = SlotNo 55733343
+      -- restrictError :: forall era. Era era => NonEmpty (ConwayLedgerPredFailure era) -> ()
       restrictError = \case
-        ApplyTxError (ConwayUtxowFailure (InvalidWitnessesUTXOW [_]) :| []) -> ()
+        ConwayApplyTxError (ConwayUtxowFailure (InvalidWitnessesUTXOW [_]) :| []) -> ()
         otherErr -> error . show $ otherErr
       applyTx' mempoolEnv mempoolState =
         -- TODO: revert this to `either (error . show) seqTuple` after tx's are fixed

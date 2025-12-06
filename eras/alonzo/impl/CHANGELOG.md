@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Add `AlonzoApplyTxError` constructor for `ApplyTxError era`
 * Changed the type of `dappMinUTxOValue` to `CompactForm Coin` in `DowngradeAlonzoPParams`
 * Changed the type of the following fields to `CompactForm Coin` in `AlonzoPParams`:
   - `appMinFeeA`

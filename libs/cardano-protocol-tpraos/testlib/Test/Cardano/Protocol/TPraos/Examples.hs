@@ -72,7 +72,7 @@ data ProtocolLedgerExamples bh era = ProtocolLedgerExamples
   { pleHashHeader :: HashHeader
   , pleBlockHeader :: bh
   , pleChainDepState :: ChainDepState
-  , pleLedgerExamples :: LedgerExamples era
+  , pleLedgerExamples :: LedgerExamples "LEDGER" era
   , pleBlock :: Block bh era
   }
 
@@ -106,7 +106,7 @@ ledgerExamplesAlonzo = ledgerExamplesTPraos Alonzo.ledgerExamples
 ledgerExamplesTPraos ::
   forall era.
   EraBlockBody era =>
-  LedgerExamples era ->
+  LedgerExamples "LEDGER" era ->
   ProtocolLedgerExamples (BHeader StandardCrypto) era
 ledgerExamplesTPraos =
   mkProtocolLedgerExamples
@@ -178,7 +178,7 @@ mkProtocolLedgerExamples ::
   HashHeader ->
   (Hash HASH EraIndependentBlockBody -> bh) ->
   ChainDepState ->
-  LedgerExamples era ->
+  LedgerExamples "LEDGER" era ->
   ProtocolLedgerExamples bh era
 mkProtocolLedgerExamples pleHashHeader toBlockHeader pleChainDepState pleLedgerExamples =
   ProtocolLedgerExamples {..}

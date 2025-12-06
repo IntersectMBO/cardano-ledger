@@ -149,6 +149,7 @@ library testlib
     Test.Cardano.Ledger.Conway.Imp.GovSpec
     Test.Cardano.Ledger.Conway.Imp.HardForkSpec
     Test.Cardano.Ledger.Conway.Imp.LedgerSpec
+    Test.Cardano.Ledger.Conway.Imp.MempoolSpec
     Test.Cardano.Ledger.Conway.Imp.RatifySpec
     Test.Cardano.Ledger.Conway.Imp.UtxoSpec
     Test.Cardano.Ledger.Conway.Imp.UtxosSpec
