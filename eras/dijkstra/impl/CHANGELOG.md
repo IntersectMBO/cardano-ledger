@@ -2,6 +2,9 @@
 
 ## 0.2.0.0
 
+* Add `bhviewPrevEpochNonce` to `BHeaderView`
+* Change `makeHeaderView` to expect an additional `Maybe Nonce`
+* Add `dijkstraBbodyTransition` to the BBODY rule
 * Add `DijkstraBlockBody` type and pattern
 * Add `mkBasicBlockBodyDijkstra`
 * Add `DijkstraEraBlockBody` class and instance for `DijkstraEraBlockBody`

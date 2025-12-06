@@ -82,7 +82,11 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition (
   Embed (..),
   STS (..),
+  TransitionRule,
+  judgmentContext,
  )
+import Control.State.Transition.Extended (TRC (..), (?!))
+import Data.Maybe (isNothing)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -94,6 +98,7 @@ data DijkstraBbodyPredFailure era
     LedgersFailure (PredicateFailure (EraRule "LEDGERS" era))
   | TooManyExUnits (Mismatch RelLTEQ ExUnits)
   | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
+  | PrevEpochNonceNotPresent
   deriving (Generic)
 
 deriving instance
@@ -121,6 +126,7 @@ instance
       LedgersFailure x -> Sum (LedgersFailure @era) 2 !> To x
       TooManyExUnits mm -> Sum TooManyExUnits 3 !> To mm
       BodyRefScriptsSizeTooBig mm -> Sum BodyRefScriptsSizeTooBig 4 !> To mm
+      PrevEpochNonceNotPresent -> Sum PrevEpochNonceNotPresent 5
 
 instance
   ( Era era
@@ -134,6 +140,7 @@ instance
     2 -> SumD LedgersFailure <! From
     3 -> SumD TooManyExUnits <! From
     4 -> SumD BodyRefScriptsSizeTooBig <! From
+    5 -> SumD PrevEpochNonceNotPresent
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" DijkstraEra = DijkstraBbodyPredFailure DijkstraEra
@@ -297,6 +304,7 @@ instance
   , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , EraRule "BBODY" era ~ DijkstraBBODY era
   , AlonzoEraTx era
   , BabbageEraTxBody era
@@ -317,7 +325,31 @@ instance
   type Event (DijkstraBBODY era) = AlonzoBbodyEvent era
 
   initialRules = []
-  transitionRules = [Conway.conwayBbodyTransition @era >> alonzoBbodyTransition @era]
+  transitionRules =
+    [ dijkstraBbodyTransition @era
+        >> Conway.conwayBbodyTransition @era
+        >> alonzoBbodyTransition @era
+    ]
+
+dijkstraBbodyTransition ::
+  forall era.
+  ( Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
+  ) =>
+  TransitionRule (EraRule "BBODY" era)
+dijkstraBbodyTransition = do
+  judgmentContext
+    >>= \( TRC
+             ( _
+               , state
+               , Block bh _
+               )
+           ) -> do
+        -- Check that the previous epoch nonce is present
+        isNothing (bhviewPrevEpochNonce bh)
+          ?! injectFailure PrevEpochNonceNotPresent
+        pure state
 
 conwayToDijkstraBbodyPredFailure ::
   forall era. ConwayBbodyPredFailure era -> DijkstraBbodyPredFailure era
