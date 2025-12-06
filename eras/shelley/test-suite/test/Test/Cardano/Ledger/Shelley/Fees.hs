@@ -507,8 +507,8 @@ testEstimateMinFee =
   where
     pp =
       emptyPParams
-        & ppMinFeeAL .~ Coin 1
-        & ppMinFeeBL .~ Coin 1
+        & ppMinFeeFactorL .~ CoinPerByte (Coin 1)
+        & ppMinFeeConstantL .~ Coin 1
 
     txSimpleUTxONoWit =
       mkBasicTx txbSimpleUTxO

@@ -34,7 +34,7 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (
   Constants (
     maxGenesisUTxOouts,
-    maxMinFeeA,
+    maxMinFeeFactor,
     minGenesisUTxOouts
   ),
   defaultConstants,
@@ -70,7 +70,7 @@ genChainState n ge =
           , -- We are using real crypto types here, which can be larger than
             -- those expected by the mock fee calculations. Since this is
             -- unimportant for now, we set the A part of the fee to 0
-            maxMinFeeA = Coin 0
+            maxMinFeeFactor = Coin 0
           }
       ge' = GenEnv (geKeySpace ge) (ScriptSpace [] [] Map.empty Map.empty) cs
    in fromRight (error "genChainState failed")

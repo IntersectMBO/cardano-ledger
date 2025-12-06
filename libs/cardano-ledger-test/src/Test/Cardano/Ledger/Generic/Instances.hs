@@ -70,12 +70,12 @@ import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 shelleyGenPParams :: EraPParams era => Gen (PParams era)
 shelleyGenPParams = do
-  minfeeA <- Coin <$> choose (0, 1000)
+  minfeeA <- CoinPerByte . Coin <$> choose (0, 1000)
   minfeeB <- Coin <$> choose (0, 10000)
   pure $
     emptyPParams
-      & ppMinFeeAL .~ minfeeA
-      & ppMinFeeBL .~ minfeeB
+      & ppMinFeeFactorL .~ minfeeA
+      & ppMinFeeConstantL .~ minfeeB
       & ppMaxTxSizeL .~ fromIntegral (maxBound :: Int)
       & ppProtocolVersionL .~ ProtVer (eraProtVerLow @ShelleyEra) 0
       & ppPoolDepositL .~ Coin 5

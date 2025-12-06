@@ -29,12 +29,12 @@ module Cardano.Ledger.Core.PParams (
   PParamsUpdate (..),
   emptyPParamsUpdate,
   genericApplyPPUpdates,
+  CoinPerByte (..),
 
   -- * PParams lens
-  ppMinFeeAL,
-  ppMinFeeACompactL,
-  ppMinFeeBL,
-  ppMinFeeBCompactL,
+  ppMinFeeFactorL,
+  ppMinFeeConstantL,
+  ppMinFeeConstantCompactL,
   ppMaxBBSizeL,
   ppMaxTxSizeL,
   ppMaxBHSizeL,
@@ -55,10 +55,9 @@ module Cardano.Ledger.Core.PParams (
   ppMinPoolCostCompactL,
 
   -- * PParamsUpdate lens
-  ppuMinFeeAL,
-  ppuMinFeeACompactL,
-  ppuMinFeeBL,
-  ppuMinFeeBCompactL,
+  ppuMinFeeFactorL,
+  ppuMinFeeConstantL,
+  ppuMinFeeConstantCompactL,
   ppuMaxBBSizeL,
   ppuMaxTxSizeL,
   ppuMaxBHSizeL,
@@ -87,6 +86,14 @@ module Cardano.Ledger.Core.PParams (
   downgradePParams,
   upgradePParamsUpdate,
   downgradePParamsUpdate,
+
+  -- * Deprecated
+  hkdMinFeeAL,
+  hkdMinFeeBL,
+  ppMinFeeAL,
+  ppMinFeeBL,
+  ppuMinFeeAL,
+  ppuMinFeeBL,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -313,6 +320,14 @@ genericApplyPPUpdates ::
 genericApplyPPUpdates (PParams a) (PParamsUpdate u) =
   PParams . to $ applyUpdate (from @_ @a a) (from @_ @u u)
 
+newtype CoinPerByte = CoinPerByte {unCoinPerByte :: Coin}
+  deriving stock (Eq, Ord)
+  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
+
+instance ToPlutusData CoinPerByte where
+  toPlutusData (CoinPerByte c) = toPlutusData @Coin c
+  fromPlutusData x = CoinPerByte <$> fromPlutusData @Coin x
+
 class
   ( Era era
   , Eq (PParamsHKD Identity era)
@@ -377,10 +392,10 @@ class
   -- HKD Versions of lenses
 
   -- | The linear factor for the minimum fee calculation
-  hkdMinFeeACompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
+  hkdMinFeeFactorL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f CoinPerByte)
 
   -- | The constant factor for the minimum fee calculation
-  hkdMinFeeBCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
+  hkdMinFeeConstantCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | Maximal block body size
   hkdMaxBBSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word32)
@@ -444,6 +459,16 @@ class
 
   eraPParams :: [PParam era]
 
+hkdMinFeeAL ::
+  forall era f. (EraPParams era, HKDFunctor f) => Lens' (PParamsHKD f era) (HKD f CoinPerByte)
+hkdMinFeeAL = hkdMinFeeFactorL @era @f
+{-# DEPRECATED hkdMinFeeAL "In favor of `hkdMinFeeFactorL`" #-}
+
+hkdMinFeeBL ::
+  forall era f. (EraPParams era, HKDFunctor f) => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
+hkdMinFeeBL = hkdMinFeeConstantCompactL @era @f
+{-# DEPRECATED hkdMinFeeBL "In favor of `hkdMinFeeConstantCompactL`" #-}
+
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
 
@@ -459,20 +484,24 @@ ppuLensHKD = lens (\(PParamsUpdate x) -> x) (\_ pp -> PParamsUpdate pp)
 -- PParams versions of lenses
 
 -- | The linear factor for the minimum fee calculation
-ppMinFeeAL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
-ppMinFeeAL = ppMinFeeACompactL . partialCompactCoinL
+ppMinFeeFactorL :: forall era. EraPParams era => Lens' (PParams era) CoinPerByte
+ppMinFeeFactorL = ppLensHKD . hkdMinFeeFactorL @era @Identity
 
--- | The linear factor for the minimum fee calculation in compacted form
-ppMinFeeACompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
-ppMinFeeACompactL = ppLensHKD . hkdMinFeeACompactL @era @Identity
+ppMinFeeAL :: forall era. EraPParams era => Lens' (PParams era) CoinPerByte
+ppMinFeeAL = ppMinFeeFactorL
+{-# DEPRECATED ppMinFeeAL "In favor of `ppMinFeeFactorL`" #-}
 
 -- | The constant factor for the minimum fee calculation
-ppMinFeeBL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
-ppMinFeeBL = ppMinFeeBCompactL . partialCompactCoinL
+ppMinFeeConstantL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
+ppMinFeeConstantL = ppMinFeeConstantCompactL . partialCompactCoinL
+
+ppMinFeeBL :: forall era. EraPParams era => Lens' (PParams era) Coin
+ppMinFeeBL = ppMinFeeConstantL
+{-# DEPRECATED ppMinFeeBL "In favor of `ppMinFeeConstantL`" #-}
 
 -- | The constant factor for the minimum fee calculation in compacted form
-ppMinFeeBCompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
-ppMinFeeBCompactL = ppLensHKD . hkdMinFeeBCompactL @era @Identity
+ppMinFeeConstantCompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppMinFeeConstantCompactL = ppLensHKD . hkdMinFeeConstantCompactL @era @Identity
 
 -- | Maximal block body size
 ppMaxBBSizeL :: forall era. EraPParams era => Lens' (PParams era) Word32
@@ -551,24 +580,27 @@ ppMinPoolCostCompactL = ppLensHKD . hkdMinPoolCostCompactL @era @Identity
 -- PParamsUpdate versions of lenses
 
 -- | The linear factor for the minimum fee calculation
-ppuMinFeeAL ::
-  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinFeeAL = ppuLensHKD . hkdMinFeeACompactL @era @StrictMaybe . partialCompactFL
+ppuMinFeeFactorL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe CoinPerByte)
+ppuMinFeeFactorL = ppuLensHKD . hkdMinFeeFactorL @era @StrictMaybe
 
--- | The linear factor for the minimum fee calculation in compacted form
-ppuMinFeeACompactL ::
-  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
-ppuMinFeeACompactL = ppuLensHKD . hkdMinFeeACompactL @era @StrictMaybe
+ppuMinFeeAL :: forall era. EraPParams era => Lens' (PParams era) CoinPerByte
+ppuMinFeeAL = ppMinFeeFactorL
+{-# DEPRECATED ppuMinFeeAL "In favor of `ppuMinFeeFactorL`" #-}
 
 -- | The constant factor for the minimum fee calculation
-ppuMinFeeBL ::
+ppuMinFeeConstantL ::
   forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinFeeBL = ppuLensHKD . hkdMinFeeBCompactL @era @StrictMaybe . partialCompactFL
+ppuMinFeeConstantL = ppuLensHKD . hkdMinFeeConstantCompactL @era @StrictMaybe . partialCompactFL
+
+ppuMinFeeBL :: forall era. EraPParams era => Lens' (PParams era) Coin
+ppuMinFeeBL = ppMinFeeConstantL
+{-# DEPRECATED ppuMinFeeBL "In favor of `ppuMinFeeConstantL`" #-}
 
 -- | The constant factor for the minimum fee calculation in compacted form
-ppuMinFeeBCompactL ::
+ppuMinFeeConstantCompactL ::
   forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
-ppuMinFeeBCompactL = ppuLensHKD . hkdMinFeeBCompactL @era @StrictMaybe
+ppuMinFeeConstantCompactL = ppuLensHKD . hkdMinFeeConstantCompactL @era @StrictMaybe
 
 -- | Maximal block body size
 ppuMaxBBSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)

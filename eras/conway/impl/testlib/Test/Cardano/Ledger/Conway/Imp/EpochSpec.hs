@@ -89,7 +89,7 @@ proposalsSpec =
           & ppGovActionDepositL .~ deposit
       rewardAccount <- registerRewardAccount
 
-      initialValue <- getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
+      initialValue <- getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeFactorL)
 
       parameterChangeAction <- mkMinFeeUpdateGovAction SNothing
       govActionId <-
@@ -101,7 +101,7 @@ proposalsSpec =
       passNEpochs 3
       expectMissingGovActionId govActionId
 
-      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL) `shouldReturn` initialValue
+      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeFactorL) `shouldReturn` initialValue
       getAccountBalance rewardAccount `shouldReturn` deposit
 
     it "Proposals are expired and removed as expected" $ whenPostBootstrap $ do
@@ -353,11 +353,11 @@ dRepVotingSpec =
     -- so we can only run this test post-bootstrap
     it "proposal is accepted after two epochs" $ whenPostBootstrap $ do
       modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ 1 %! 1
-      let getParamValue = getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
+      let getParamValue = getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeFactorL)
       initialParamValue <- getParamValue
 
-      let proposedValue = initialParamValue <+> Coin 300
-      let proposedUpdate = def & ppuMinFeeAL .~ SJust proposedValue
+      let proposedValue = unCoinPerByte initialParamValue <+> Coin 300
+      let proposedUpdate = def & ppuMinFeeFactorL .~ SJust (CoinPerByte proposedValue)
 
       -- Submit NewConstitution proposal two epoch too early to check that the action
       -- doesn't expire prematurely (ppGovActionLifetimeL is set to two epochs)
@@ -388,7 +388,7 @@ dRepVotingSpec =
       logRatificationChecks gid
       getParamValue `shouldReturn` initialParamValue
       passEpoch
-      getParamValue `shouldReturn` proposedValue
+      getParamValue `shouldReturn` CoinPerByte proposedValue
 
 treasurySpec ::
   forall era.
