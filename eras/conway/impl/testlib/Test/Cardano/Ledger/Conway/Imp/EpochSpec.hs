@@ -25,7 +25,6 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
 import Cardano.Ledger.Val
-import Control.Monad.Writer (listen)
 import Data.Default (Default (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -528,7 +527,7 @@ eventsSpec = describe "Events" $ do
           | Just (TickNewEpochEvent (EpochEvent (GovInfoEvent {})) :: ShelleyTickEvent era) <- cast ev = True
         isGovInfoEvent _ = False
         passEpochWithNoDroppedActions = do
-          (_, evs) <- listen passEpoch
+          evs <- impEventsFrom passEpoch
           filter isGovInfoEvent evs
             `shouldBeExpr` [ SomeSTSEvent @era @"TICK" . injectEvent $
                                GovInfoEvent mempty mempty mempty mempty
@@ -545,7 +544,7 @@ eventsSpec = describe "Events" $ do
           & bodyTxL . certsTxBodyL
             .~ SSeq.singleton (UnRegDepositTxCert rewardCred keyDeposit)
       passEpochWithNoDroppedActions
-      (_, evs) <- listen passEpoch
+      evs <- impEventsFrom passEpoch
       checkProposedParameterA
       let
         filteredEvs = filter isGovInfoEvent evs

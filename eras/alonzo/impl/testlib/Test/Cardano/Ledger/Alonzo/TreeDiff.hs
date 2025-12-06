@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Alonzo.TreeDiff (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.BlockBody
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Plutus.Context
@@ -121,6 +122,8 @@ instance ToExpr (AlonzoTxBodyRaw TopTx AlonzoEra) where
         ]
 
 instance ToExpr (TxBody TopTx AlonzoEra)
+
+instance ToExpr (Tx TopTx era) => ToExpr (AlonzoBlockBody era)
 
 -- Tx
 instance ToExpr IsValid
