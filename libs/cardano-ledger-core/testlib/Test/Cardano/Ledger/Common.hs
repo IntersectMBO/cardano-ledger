@@ -1,3 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Test.Cardano.Ledger.Common (
   module X,
   ledgerTestMain,
@@ -47,8 +52,11 @@ module Test.Cardano.Ledger.Common (
 
   -- * Miscellanous helpers
   tracedDiscard,
+  forEachEraVersion,
 ) where
 
+import Cardano.Ledger.Binary (Version)
+import Cardano.Ledger.Core (Era, eraProtVersions)
 import Control.DeepSeq (NFData)
 import Control.Monad as X (forM_, replicateM, replicateM_, unless, void, when, (>=>))
 import qualified Debug.Trace as Debug
@@ -136,3 +144,7 @@ runGen ::
   Gen a ->
   a
 runGen seed size gen = unGen gen (mkQCGen seed) size
+
+forEachEraVersion :: forall era. (Era era, HasCallStack) => (Version -> Spec) -> Spec
+forEachEraVersion sv = forM_ (eraProtVersions @era) $
+  \version -> describe (show version) $ sv version

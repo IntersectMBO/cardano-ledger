@@ -2,70 +2,103 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Dijkstra.Binary.Golden (
   spec,
+  module Test.Cardano.Ledger.Conway.Binary.Golden,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, SupportedLanguage (..))
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptBinary)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.BaseTypes (Version)
-import Cardano.Ledger.Binary (DecoderError (..), DeserialiseFailure (..), Tokens (..))
+import Cardano.Ledger.Binary (Annotator, DecoderError (..), DeserialiseFailure (..), Tokens (..))
+import qualified Cardano.Ledger.Binary as Binary
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.TxCert (Delegatee (..))
-import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.Core (
+  EraTx (..),
+  EraTxBody (..),
+  EraTxOut (..),
+  EraTxWits (..),
+  TxLevel (..),
+  eraProtVerLow,
+ )
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+import Data.Data (Proxy (..))
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceedsLang)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
 import Test.Cardano.Ledger.Common (Spec, describe, it)
-import Test.Cardano.Ledger.Conway.Binary.Golden
-import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash, mkKeyPair, mkWitnessVKey)
+import Test.Cardano.Ledger.Conway.Binary.Golden hiding (spec)
+import Test.Cardano.Ledger.Core.KeyPair (mkKeyPair, mkWitnessVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Dijkstra.Era (DijkstraEraTest)
+import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
 
 spec :: forall era. DijkstraEraTest era => Spec
-spec = describe "Golden" $ do
-  goldenListRedeemersDisallowed @era
-  goldenDuplicateCertsDisallowed @era
+spec = describe "Golden" . forEachEraVersion @era $ \version -> do
+  describe "Redeemers" $ do
+    goldenListRedeemersDisallowed @era version
+  describe "TxCert" $ do
+    conwayDecodeDuplicateDelegCertFails @era version
   describe "TxWits" $ do
-    goldenDuplicateVKeyWitsDisallowed @era
-    goldenDuplicateNativeScriptsDisallowed @era
-    goldenDuplicatePlutusScriptsDisallowed @era SPlutusV1
-    goldenDuplicatePlutusScriptsDisallowed @era SPlutusV2
-    goldenDuplicatePlutusScriptsDisallowed @era SPlutusV3
-    goldenDuplicatePlutusDataDisallowed @era
+    goldenDuplicateVKeyWitsDisallowed @era version
+    goldenDuplicateNativeScriptsDisallowed @era version
+    goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV1
+    goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV2
+    goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV3
+    goldenDuplicatePlutusDataDisallowed @era version
     goldenSubTransactions @era
+    goldenEmptyFields @era version
 
-duplicateCertsTx :: forall era. DijkstraEraTest era => Version -> Enc
-duplicateCertsTx v =
-  mconcat
-    [ E $ TkMapLen 4
-    , Em [E @Int 0, Ev v $ Set.empty @TxIn]
-    , Em [E @Int 1, Ev v $ [] @(TxOut era)]
-    , Em [E @Int 2, E $ Coin 0]
-    , Em
-        [ E @Int 4
-        , Em
-            [ E $ TkTag 258
-            , E $ TkListLen 2
-            , Ev v cert
-            , Ev v cert
-            ]
-        ]
-    ]
-  where
-    cert = DelegTxCert @era (KeyHashObj (mkKeyHash 0)) (DelegStake (mkKeyHash 1))
+goldenEmptyFields :: forall era. DijkstraEraTest era => Version -> Spec
+goldenEmptyFields version =
+  describe "Empty fields not allowed" $ do
+    let
+      decoderFailure n msg =
+        DecoderErrorDeserialiseFailure
+          (Binary.label $ Proxy @(Annotator (TxWits era)))
+          (DeserialiseFailure n msg)
+    describe "Untagged" $ do
+      it "addrTxWits" . expectFailureOnTxWitsEmptyField @era version 0 $
+        decoderFailure 4 "Empty list found, expected non-empty"
+      it "nativeScripts" . expectFailureOnTxWitsEmptyField @era version 1 $
+        decoderFailure 4 "Empty list found, expected non-empty"
+      it "bootstrapWitness" . expectFailureOnTxWitsEmptyField @era version 2 $
+        decoderFailure 4 "Empty list found, expected non-empty"
+      it "plutusV1Script" . expectFailureOnTxWitsEmptyField @era version 3 $
+        decoderFailure 4 "Empty list of scripts is not allowed"
+      it "plutusData" . expectFailureOnTxWitsEmptyField @era version 4 $
+        decoderFailure 4 "Empty list found, expected non-empty"
+      it "redeemers" . expectFailureOnTxWitsEmptyField @era version 5 $
+        decoderFailure 2 "List encoding of redeemers not supported starting with PV 12"
+      it "plutusV2Script" . expectFailureOnTxWitsEmptyField @era version 6 $
+        decoderFailure 4 "Empty list of scripts is not allowed"
+      it "plutusV3Script" . expectFailureOnTxWitsEmptyField @era version 7 $
+        decoderFailure 4 "Empty list of scripts is not allowed"
+    describe "Tagged" $ do
+      it "addrTxWits" . expectFailureOnTxWitsEmptyFieldWithTag @era version 0 $
+        decoderFailure 7 "Empty list found, expected non-empty"
+      it "nativeScripts" . expectFailureOnTxWitsEmptyFieldWithTag @era version 1 $
+        decoderFailure 7 "Empty list found, expected non-empty"
+      it "bootstrapWitness" . expectFailureOnTxWitsEmptyFieldWithTag @era version 2 $
+        decoderFailure 7 "Empty list found, expected non-empty"
+      it "plutusV1Script" . expectFailureOnTxWitsEmptyFieldWithTag @era version 3 $
+        decoderFailure 7 "Empty list of scripts is not allowed"
+      it "plutusData" . expectFailureOnTxWitsEmptyFieldWithTag @era version 4 $
+        decoderFailure 7 "Empty list found, expected non-empty"
+      it "plutusV2Script" . expectFailureOnTxWitsEmptyFieldWithTag @era version 6 $
+        decoderFailure 7 "Empty list of scripts is not allowed"
+      it "plutusV3Script" . expectFailureOnTxWitsEmptyFieldWithTag @era version 7 $
+        decoderFailure 7 "Empty list of scripts is not allowed"
+    txWitsDecodingFailsOnInvalidField @era version [0 .. 7]
 
 witsDuplicateVKeyWits :: Enc
 witsDuplicateVKeyWits =
@@ -135,43 +168,27 @@ witsDuplicatePlutusData =
   where
     dat = E @Int 0
 
-goldenListRedeemersDisallowed :: forall era. DijkstraEraTest era => Spec
-goldenListRedeemersDisallowed =
+goldenListRedeemersDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
+goldenListRedeemersDisallowed version =
   it "Decoding Redeemers encoded as a list fails" $
     expectDecoderFailureAnn @(Redeemers era)
-      (eraProtVerLow @era)
+      version
       listRedeemersEnc
       ( DecoderErrorDeserialiseFailure
           "Annotator (MemoBytes (RedeemersRaw DijkstraEra))"
           (DeserialiseFailure 0 "List encoding of redeemers not supported starting with PV 12")
       )
 
-goldenDuplicateCertsDisallowed :: forall era. DijkstraEraTest era => Spec
-goldenDuplicateCertsDisallowed =
-  it "Decoding a transaction body with duplicate certificates fails" $
-    expectDecoderFailureAnn @(TxBody TopTx era)
-      version
-      (duplicateCertsTx @era version)
-      ( DecoderErrorDeserialiseFailure
-          "Annotator (MemoBytes (DijkstraTxBodyRaw TopTx DijkstraEra))"
-          ( DeserialiseFailure
-              143
-              "Final number of elements: 1 does not match the total count that was decoded: 2"
-          )
-      )
-  where
-    version = eraProtVerLow @era
-
-goldenDuplicateVKeyWitsDisallowed :: forall era. DijkstraEraTest era => Spec
-goldenDuplicateVKeyWitsDisallowed =
+goldenDuplicateVKeyWitsDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
+goldenDuplicateVKeyWitsDisallowed version =
   it "Decoding a TxWits with duplicate VKeyWits fails" $
     expectDecoderFailureAnn @(TxWits era)
-      (eraProtVerLow @era)
+      version
       witsDuplicateVKeyWits
       (DecoderErrorCustom "Annotator" "Duplicates found, expected no duplicates")
 
-goldenDuplicateNativeScriptsDisallowed :: forall era. DijkstraEraTest era => Spec
-goldenDuplicateNativeScriptsDisallowed =
+goldenDuplicateNativeScriptsDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
+goldenDuplicateNativeScriptsDisallowed version =
   it "Decoding a TxWits with duplicate native scripts fails" $
     expectDecoderFailureAnn @(TxWits era)
       version
@@ -180,19 +197,17 @@ goldenDuplicateNativeScriptsDisallowed =
           "Annotator"
           "Duplicates found, expected no duplicates"
       )
-  where
-    version = eraProtVerLow @era
 
 goldenDuplicatePlutusScriptsDisallowed ::
   forall era l.
   ( DijkstraEraTest era
   , EraPlutusTxInfo l era
   ) =>
-  SLanguage l -> Spec
-goldenDuplicatePlutusScriptsDisallowed slang =
+  Version -> SLanguage l -> Spec
+goldenDuplicatePlutusScriptsDisallowed version slang =
   it ("Decoding a TxWits with duplicate " <> show slang <> " scripts fails") $
     expectDecoderFailureAnn @(TxWits era)
-      (eraProtVerLow @era)
+      version
       (witsDuplicatePlutus @era slang)
       ( DecoderErrorDeserialiseFailure
           "Annotator (MemoBytes (AlonzoTxWitsRaw DijkstraEra))"
@@ -202,11 +217,11 @@ goldenDuplicatePlutusScriptsDisallowed slang =
           )
       )
 
-goldenDuplicatePlutusDataDisallowed :: forall era. DijkstraEraTest era => Spec
-goldenDuplicatePlutusDataDisallowed =
+goldenDuplicatePlutusDataDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
+goldenDuplicatePlutusDataDisallowed version =
   it "Decoding a TxWits with duplicate plutus data fails" $
     expectDecoderFailureAnn @(TxWits era)
-      (eraProtVerLow @era)
+      version
       witsDuplicatePlutusData
       ( DecoderErrorCustom
           "Annotator"

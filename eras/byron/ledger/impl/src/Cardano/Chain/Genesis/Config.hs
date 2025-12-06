@@ -163,7 +163,7 @@ data ConfigurationError
     ConfigurationGenesisDataError GenesisDataError
   | -- | The GenesisData canonical JSON hash is different than expected
     GenesisHashMismatch GenesisHash (Hash Raw)
-  | -- | An error occured while decoding the genesis hash.
+  | -- | An error occurred while decoding the genesis hash.
     GenesisHashDecodeError Text
   deriving (Show)
 

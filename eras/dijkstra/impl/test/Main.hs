@@ -35,5 +35,4 @@ main =
         txInfoSpec @DijkstraEra SPlutusV3
         txInfoSpec @DijkstraEra SPlutusV4
         DijkstraTxInfoSpec.spec @DijkstraEra
-      describe "Golden" $ do
-        Golden.spec @DijkstraEra
+      Golden.spec @DijkstraEra

@@ -640,7 +640,7 @@ applyRuleInternal ::
   -- | We need to know if the current STS incurred at least one
   -- PredicateFailure.  This is necessary because `applyRuleInternal` is called
   -- recursively through the @goSTS@ argument, which will not have access to any
-  -- of the predicate failures occured in other branches of STS rule execusion tree.
+  -- of the predicate failures occurred in other branches of STS rule execusion tree.
   IsFailing ->
   SingEP ep ->
   ValidationPolicy ->

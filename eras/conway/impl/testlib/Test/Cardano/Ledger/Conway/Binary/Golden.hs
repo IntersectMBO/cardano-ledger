@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -9,71 +8,52 @@
 {-# OPTIONS_GHC -Wno-unused-foralls #-}
 
 module Test.Cardano.Ledger.Conway.Binary.Golden (
-  expectDecoderResultOn,
-  expectDecoderFailureAnn,
+  spec,
   listRedeemersEnc,
   goldenListRedeemers,
+  witsEmptyFieldWithSetTag,
+  conwayDecodeDuplicateDelegCertFails,
+  expectFailureOnTxWitsEmptyFieldWithTag,
+  module Test.Cardano.Ledger.Alonzo.Binary.Golden,
 ) where
 
 import Cardano.Ledger.Alonzo.Core (
   AsIx (..),
+  EraTxWits (..),
+  TxLevel (..),
   eraProtVerLow,
   pattern SpendingPurpose,
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), unRedeemers)
-import Cardano.Ledger.BaseTypes (Version)
 import Cardano.Ledger.Binary (
-  Annotator (..),
-  DecCBOR (..),
-  ToCBOR (..),
-  decodeFullAnnotator,
-  toLazyByteString,
+  Annotator,
+  DecCBOR,
+  DecoderError (..),
+  DeserialiseFailure (..),
+  Version,
  )
-import Cardano.Ledger.Binary.Plain (DecoderError (..), Tokens (..))
+import qualified Cardano.Ledger.Binary as Binary
+import Cardano.Ledger.Binary.Plain (Tokens (..))
+import Cardano.Ledger.Conway.Core (
+  EraTxBody (..),
+ )
 import Cardano.Ledger.Plutus (Data (..))
 import qualified Data.Map as Map
-import Data.Typeable (Proxy (..), Typeable)
+import Data.Proxy (Proxy (..))
+import Data.Void (Void)
 import PlutusLedgerApi.Common (Data (..))
+import Test.Cardano.Ledger.Alonzo.Binary.Golden hiding (spec)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
-import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation)
 import Test.Cardano.Ledger.Common (
   Expectation,
-  HasCallStack,
   Spec,
   ToExpr,
-  expectationFailure,
+  describe,
   it,
-  shouldBe,
-  shouldBeExpr,
-  showExpr,
  )
 import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
-
-expectDecoderFailureAnn ::
-  forall a.
-  (ToExpr a, DecCBOR (Annotator a), Typeable a, HasCallStack) =>
-  Version ->
-  Enc ->
-  DecoderError ->
-  Expectation
-expectDecoderFailureAnn version enc expectedErr =
-  case result of
-    Left err -> err `shouldBe` expectedErr
-    Right x ->
-      expectationFailure $
-        "Expected a failure, but decoder succeeded:\n"
-          <> showExpr x
-  where
-    bytes = toLazyByteString $ toCBOR enc
-    result = decodeFullAnnotator @a version (label $ Proxy @(Annotator a)) decCBOR bytes
-
-expectDecoderResultOn ::
-  forall a b.
-  (ToExpr b, DecCBOR (Annotator a), Eq b, HasCallStack) =>
-  Version -> Enc -> a -> (a -> b) -> Expectation
-expectDecoderResultOn version enc expected f =
-  embedTripAnnExpectation version version (\x _ -> f x `shouldBeExpr` f expected) enc
+import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
 
 -- | A simple redeemer encoded as a list
 listRedeemersEnc :: Enc
@@ -101,3 +81,78 @@ goldenListRedeemers =
       listRedeemersEnc
       (Redeemers $ Map.singleton (SpendingPurpose $ AsIx 10) (Data $ I 20, ExUnits 30 40))
       unRedeemers
+
+witsEmptyFieldWithSetTag :: Int -> Enc
+witsEmptyFieldWithSetTag k =
+  mconcat
+    [ E $ TkMapLen 1
+    , E k
+    , E $ TkTag 258
+    , E @[Void] []
+    ]
+
+expectFailureOnTxWitsEmptyFieldWithTag ::
+  forall era.
+  ( ToExpr (TxWits era)
+  , DecCBOR (Annotator (TxWits era))
+  ) =>
+  Version -> Int -> DecoderError -> Expectation
+expectFailureOnTxWitsEmptyFieldWithTag version k =
+  expectDecoderFailureAnn @(TxWits era) version (witsEmptyFieldWithSetTag k)
+
+conwayDecodeDuplicateDelegCertFails ::
+  forall era. ConwayEraTest era => Version -> Spec
+conwayDecodeDuplicateDelegCertFails version =
+  it "Decoding duplicate delegation certs fails" $ do
+    expectDecoderFailureAnn @(TxBody TopTx era) version (duplicateDelegCertsTxBody @era version) $
+      DecoderErrorDeserialiseFailure
+        (Binary.label $ Proxy @(Annotator (TxBody TopTx era)))
+        ( DeserialiseFailure
+            144
+            "Final number of elements: 1 does not match the total count that was decoded: 2"
+        )
+
+spec :: forall era. ConwayEraTest era => Spec
+spec = do
+  describe "TxWits" $
+    describe "Empty fields not allowed" $ do
+      forEachEraVersion @era $ \version -> do
+        let
+          decoderFailure n msg =
+            DecoderErrorDeserialiseFailure
+              (Binary.label $ Proxy @(Annotator (TxWits era)))
+              (DeserialiseFailure n msg)
+        describe "Untagged" $ do
+          it "addrTxWits" . expectFailureOnTxWitsEmptyField @era version 0 $
+            decoderFailure 4 "Empty list found, expected non-empty"
+          it "nativeScripts" . expectFailureOnTxWitsEmptyField @era version 1 $
+            decoderFailure 4 "Empty list found, expected non-empty"
+          it "bootstrapWitness" . expectFailureOnTxWitsEmptyField @era version 2 $
+            decoderFailure 4 "Empty list found, expected non-empty"
+          it "plutusV1Script" . expectFailureOnTxWitsEmptyField @era version 3 $
+            decoderFailure 4 "Empty list of scripts is not allowed"
+          it "plutusData" . expectFailureOnTxWitsEmptyField @era version 4 $
+            decoderFailure 4 "Empty list found, expected non-empty"
+          it "redeemers" . expectFailureOnTxWitsEmptyField @era version 5 $
+            decoderFailure 4 "Empty list found, expected non-empty"
+          it "plutusV2Script" . expectFailureOnTxWitsEmptyField @era version 6 $
+            decoderFailure 4 "Empty list of scripts is not allowed"
+          it "plutusV3Script" . expectFailureOnTxWitsEmptyField @era version 7 $
+            decoderFailure 4 "Empty list of scripts is not allowed"
+        describe "Tagged" $ do
+          it "addrTxWits" . expectFailureOnTxWitsEmptyFieldWithTag @era version 0 $
+            decoderFailure 7 "Empty list found, expected non-empty"
+          it "nativeScripts" . expectFailureOnTxWitsEmptyFieldWithTag @era version 1 $
+            decoderFailure 7 "Empty list found, expected non-empty"
+          it "bootstrapWitness" . expectFailureOnTxWitsEmptyFieldWithTag @era version 2 $
+            decoderFailure 7 "Empty list found, expected non-empty"
+          it "plutusV1Script" . expectFailureOnTxWitsEmptyFieldWithTag @era version 3 $
+            decoderFailure 7 "Empty list of scripts is not allowed"
+          it "plutusData" . expectFailureOnTxWitsEmptyFieldWithTag @era version 4 $
+            decoderFailure 7 "Empty list found, expected non-empty"
+          it "plutusV2Script" . expectFailureOnTxWitsEmptyFieldWithTag @era version 6 $
+            decoderFailure 7 "Empty list of scripts is not allowed"
+          it "plutusV3Script" . expectFailureOnTxWitsEmptyFieldWithTag @era version 7 $
+            decoderFailure 7 "Empty list of scripts is not allowed"
+        txWitsDecodingFailsOnInvalidField @era version [0 .. 7]
+  describe "TxCerts" . forEachEraVersion @era $ conwayDecodeDuplicateDelegCertFails @era
