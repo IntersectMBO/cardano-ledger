@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -45,7 +46,9 @@ import Data.Default
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map (extract)
+#if __GLASGOW_HASKELL__ < 914
 import Data.Typeable
+#endif
 import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -124,7 +127,13 @@ instance EncCBOR (ConwayAccountState era) where
           <> encodeNullStrictMaybe encCBOR casStakePoolDelegation
           <> encodeNullStrictMaybe encCBOR casDRepDelegation
 
-instance Typeable era => DecShareCBOR (ConwayAccountState era) where
+instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable era =>
+#endif
+  DecShareCBOR (ConwayAccountState era) where
   type
     Share (ConwayAccountState era) =
       (Interns (KeyHash StakePool), Interns (Credential DRepRole))
@@ -154,7 +163,13 @@ newtype ConwayAccounts era = ConwayAccounts
   }
   deriving (Show, Eq, Generic, EncCBOR, NoThunks, NFData, Default, ToJSON)
 
-instance Typeable era => DecShareCBOR (ConwayAccounts era) where
+instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable era =>
+#endif
+  DecShareCBOR (ConwayAccounts era) where
   type
     Share (ConwayAccounts era) =
       (Interns (Credential Staking), Interns (KeyHash StakePool), Interns (Credential DRepRole))

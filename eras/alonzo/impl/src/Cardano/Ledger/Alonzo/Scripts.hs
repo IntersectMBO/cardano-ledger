@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -44,10 +45,17 @@ module Cardano.Ledger.Alonzo.Scripts (
   lookupPlutusScript,
 
   -- ** Plutus Purpose
+#if __GLASGOW_HASKELL__ >= 914
+  data SpendingPurpose,
+  data MintingPurpose,
+  data CertifyingPurpose,
+  data RewardingPurpose,
+#else
   pattern SpendingPurpose,
   pattern MintingPurpose,
   pattern CertifyingPurpose,
   pattern RewardingPurpose,
+#endif
   AlonzoPlutusPurpose (..),
   AsItem (..),
   AsIx (..),

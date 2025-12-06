@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -54,7 +55,11 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
+#if __GLASGOW_HASKELL__ >= 914
+import Data.Aeson (ToJSON (..), (.=), data String)
+#else
 import Data.Aeson (ToJSON (..), (.=), pattern String)
+#endif
 import Data.Bifunctor (first)
 import Data.List (intercalate)
 import Data.Map.Strict (Map)
@@ -272,7 +277,11 @@ data TransactionScriptFailure era
 
 deriving instance
   ( Era era
+#if __GLASGOW_HASKELL__ < 914
+  -- This constraint is REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Eq (TxCert era)
+#endif
   , Eq (PlutusScript era)
   , Eq (ContextError era)
   , Eq (PlutusPurpose AsIx era)
@@ -282,7 +291,11 @@ deriving instance
 
 deriving instance
   ( Era era
+#if __GLASGOW_HASKELL__ < 914
+  -- This constraint is REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Show (TxCert era)
+#endif
   , Show (ContextError era)
   , Show (PlutusScript era)
   , Show (PlutusPurpose AsIx era)

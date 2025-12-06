@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -149,7 +150,11 @@ instance
   ( EraStake era
   , EraPParams era
   , ConwayEraAccounts era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , ToExpr (DRepPulsingState era)
+#endif
   , ToExpr (RatifyState era)
   , ToExpr (PParamsHKD StrictMaybe era)
   ) =>

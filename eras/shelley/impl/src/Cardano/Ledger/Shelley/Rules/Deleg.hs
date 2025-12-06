@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -66,7 +67,9 @@ import Data.Group (Group (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import qualified Data.Set as Set
+#if __GLASGOW_HASKELL__ < 914
 import Data.Typeable (Typeable)
+#endif
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -194,7 +197,12 @@ instance Era era => EncCBOR (ShelleyDelegPredFailure era) where
         <> encCBOR amt
 
 instance
-  (Era era, Typeable (Script era)) =>
+  (Era era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc
+  , Typeable (Script era)
+#endif
+  ) =>
   DecCBOR (ShelleyDelegPredFailure era)
   where
   decCBOR = decodeRecordSum "ShelleyDelegPredFailure" $

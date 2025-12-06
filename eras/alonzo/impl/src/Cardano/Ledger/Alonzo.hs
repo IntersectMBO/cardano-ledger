@@ -1,9 +1,11 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -11,7 +13,11 @@ module Cardano.Ledger.Alonzo (
   AlonzoEra,
   AlonzoTxOut,
   MaryValue,
+#if __GLASGOW_HASKELL__ >= 914
+  data AlonzoTxBody,
+#else
   pattern AlonzoTxBody,
+#endif
   AlonzoScript,
   AlonzoTxAuxData,
   Tx (..),

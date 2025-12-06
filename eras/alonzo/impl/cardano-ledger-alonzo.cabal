@@ -208,6 +208,7 @@ library testlib
     microlens-mtl,
     mtl,
     plutus-ledger-api,
+    plutus-tx,
     serialise,
     text,
     time,

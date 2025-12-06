@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -106,7 +107,13 @@ instance (ToJSON v, ToJSONKey k) => ToJSON (ListMap k v) where
   toJSON = J.toJSON1
   toEncoding = J.toEncoding1
 
-instance (FromJSON k, FromJSONKey k) => FromJSON1 (ListMap k) where
+instance (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  FromJSON k,
+#endif
+  FromJSONKey k) => FromJSON1 (ListMap k) where
   liftParseJSON _ parser _ = J.withObject "ListMap" $ \obj -> do
     let kv = KM.toList obj
     res <- forM kv $ \(k, v) -> do
@@ -121,7 +128,13 @@ instance (FromJSON k, FromJSONKey k) => FromJSON1 (ListMap k) where
       return (k', v')
     return $ ListMap res
 
-instance (FromJSON v, FromJSON k, FromJSONKey k) => FromJSON (ListMap k v) where
+instance (FromJSON v,
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  FromJSON k,
+#endif
+  FromJSONKey k) => FromJSON (ListMap k v) where
   parseJSON = J.parseJSON1
 
 instance NFData k => NFData1 (ListMap k)

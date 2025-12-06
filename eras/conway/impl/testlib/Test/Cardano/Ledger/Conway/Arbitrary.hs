@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -85,7 +86,13 @@ instance
   arbitrary = PulsingSnapshot <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance
-  (Arbitrary (InstantStake era), Arbitrary (PParams era), Arbitrary (PParamsUpdate era), Era era) =>
+  (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+    Arbitrary (InstantStake era),
+#endif
+  Arbitrary (PParams era), Arbitrary (PParamsUpdate era), Era era) =>
   Arbitrary (DRepPulsingState era)
   where
   arbitrary = DRComplete <$> arbitrary <*> arbitrary
@@ -180,7 +187,11 @@ deriving instance Arbitrary (ConwayInstantStake era)
 
 instance
   ( EraPParams era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Arbitrary (InstantStake era)
+#endif
   , Arbitrary (PParams era)
   , Arbitrary (PParamsHKD StrictMaybe era)
   ) =>
@@ -269,7 +280,11 @@ instance
 instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Arbitrary (TxCert era)
+#endif
   , Arbitrary (PlutusPurpose AsItem era)
   , Arbitrary (PlutusPurpose AsIx era)
   ) =>
@@ -299,7 +314,13 @@ data ProposalsForEnactment era
   deriving (Show, Eq)
 
 instance
-  (EraPParams era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
+  (EraPParams era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Arbitrary (PParamsUpdate era)
+#endif
+  , Arbitrary (PParamsHKD StrictMaybe era)) =>
   Arbitrary (ProposalsForEnactment era)
   where
   arbitrary = do
@@ -374,7 +395,13 @@ data ProposalsNewActions era = ProposalsNewActions (Proposals era) [GovActionSta
   deriving (Show, Eq)
 
 instance
-  (EraPParams era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
+  (EraPParams era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Arbitrary (PParamsUpdate era)
+#endif
+  , Arbitrary (PParamsHKD StrictMaybe era)) =>
   Arbitrary (ProposalsNewActions era)
   where
   arbitrary = do

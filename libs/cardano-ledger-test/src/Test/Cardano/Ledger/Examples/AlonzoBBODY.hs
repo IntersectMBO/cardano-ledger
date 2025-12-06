@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -18,7 +19,11 @@
 module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Allegra.Scripts (data RequireTimeStart)
+#else
 import Cardano.Ledger.Allegra.Scripts (pattern RequireTimeStart)
+#endif
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), hashDataTxWitsL)
@@ -53,8 +58,13 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireSignature,
+#endif
  )
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))

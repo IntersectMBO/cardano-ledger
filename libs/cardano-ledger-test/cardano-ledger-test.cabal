@@ -75,8 +75,10 @@ library
     -Wunused-packages
 
   build-depends:
+    -- QuickCheck version 2.16 inrtroduces the Some type which needs to
+    -- be hidden to prevent name clashes with other packages.
     FailT,
-    QuickCheck,
+    QuickCheck >=2.16,
     base >=4.18 && <5,
     bytestring,
     cardano-crypto,
