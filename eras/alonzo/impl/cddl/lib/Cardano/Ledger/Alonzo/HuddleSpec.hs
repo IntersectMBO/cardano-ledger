@@ -27,6 +27,8 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
   distinctBytesRule,
   alonzoRedeemer,
   alonzoRedeemerTag,
+  exUnitPricesRule,
+  requiredSignersRule,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -100,6 +102,17 @@ distinctBytesRule =
       / (VBytes `sized` (24 :: Word64))
       / (VBytes `sized` (30 :: Word64))
       / (VBytes `sized` (32 :: Word64))
+
+exUnitPricesRule :: forall era. HuddleRule "positive_interval" era => Proxy era -> Rule
+exUnitPricesRule p =
+  "ex_unit_prices"
+    =:= arr
+      [ "mem_price" ==> huddleRule @"positive_interval" p
+      , "step_price" ==> huddleRule @"positive_interval" p
+      ]
+
+requiredSignersRule :: forall era. HuddleRule "addr_keyhash" era => Proxy era -> Rule
+requiredSignersRule p = "required_signers" =:= untaggedSet (huddleRule @"addr_keyhash" p)
 
 instance HuddleGroup "operational_cert" AlonzoEra where
   huddleGroup = shelleyOperationalCertGroup @AlonzoEra
@@ -456,7 +469,7 @@ instance HuddleRule "script_data_hash" AlonzoEra where
       $ scriptDataHashRule p
 
 instance HuddleRule "required_signers" AlonzoEra where
-  huddleRule p = "required_signers" =:= untaggedSet (huddleRule @"addr_keyhash" p)
+  huddleRule = requiredSignersRule @AlonzoEra
 
 instance HuddleRule "network_id" AlonzoEra where
   huddleRule _ = networkIdRule
@@ -546,12 +559,7 @@ instance HuddleRule "ex_units" AlonzoEra where
   huddleRule _ = exUnitsRule
 
 instance HuddleRule "ex_unit_prices" AlonzoEra where
-  huddleRule p =
-    "ex_unit_prices"
-      =:= arr
-        [ "mem_price" ==> huddleRule @"positive_interval" p
-        , "step_price" ==> huddleRule @"positive_interval" p
-        ]
+  huddleRule = exUnitPricesRule @AlonzoEra
 
 instance HuddleRule "positive_interval" AlonzoEra where
   huddleRule = positiveIntervalRule
