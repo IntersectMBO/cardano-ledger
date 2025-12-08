@@ -36,6 +36,7 @@
 
 ### `cddl`
 
+* Export `alonzoTransactionOutputRule`, `dataRule`, `datumOptionRule` for reuse.
 * Add full `HuddleSpec`.
 
 ### `testlib`
