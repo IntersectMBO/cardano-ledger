@@ -16,6 +16,7 @@ module Cardano.Ledger.Mary.HuddleSpec (
   maryMultiasset,
   maryValueRule,
   maryMintRule,
+  assetNameRule,
 ) where
 
 import Cardano.Ledger.Allegra.HuddleSpec
@@ -62,6 +63,9 @@ maryMintRule ::
   Proxy era ->
   Rule
 maryMintRule p = "mint" =:= maryMultiasset p (huddleRule @"int64" p)
+
+assetNameRule :: Proxy era -> Rule
+assetNameRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "block" MaryEra where
   huddleRule = blockRule @MaryEra
@@ -223,7 +227,7 @@ instance HuddleRule "policy_id" MaryEra where
   huddleRule p = "policy_id" =:= huddleRule @"script_hash" p
 
 instance HuddleRule "asset_name" MaryEra where
-  huddleRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
+  huddleRule = assetNameRule @MaryEra
 
 instance HuddleRule "mint" MaryEra where
   huddleRule = maryMintRule @MaryEra
