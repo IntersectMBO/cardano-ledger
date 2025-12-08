@@ -80,16 +80,12 @@ conformsToImplAccepted impl agda = property $ do
 
 spec :: Spec
 spec = describe "RATIFY" $ do
-  -- https://github.com/IntersectMBO/cardano-ledger/issues/5418
-  -- TODO: Re-enable after issue is resolved, by removing this override
-  xprop "STS" $ conformsToImplConstrained_ constrainedRatify
+  prop "STS" $ conformsToImplConstrained_ constrainedRatify
   describe "Accepted" $ do
     forM_
       [ ("DRep", (dRepAccepted, Agda.acceptedByDRep))
       , ("SPO", (spoAccepted, Agda.acceptedBySPO))
+      , ("CC", (committeeAccepted, Agda.acceptedByCC))
       ]
       $ \(l, (impl, agda)) ->
         prop l $ conformsToImplAccepted impl agda
-    -- https://github.com/IntersectMBO/cardano-ledger/issues/5418
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    xprop "CC" $ conformsToImplAccepted committeeAccepted Agda.acceptedByCC
