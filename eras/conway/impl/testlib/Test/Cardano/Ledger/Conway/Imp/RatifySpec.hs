@@ -1119,9 +1119,7 @@ votingSpec =
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
-        -- TODO: Re-enable after issue is resolved, by removing this override
-        disableInConformanceIt "Rewards contribute to active voting stake even in the absence of StakeDistr" $
+        it "Rewards contribute to active voting stake even in the absence of StakeDistr" $
           whenPostBootstrap $ do
             let govActionLifetime = 5
                 govActionDeposit = Coin 1_000_000
