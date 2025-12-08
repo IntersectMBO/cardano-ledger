@@ -284,7 +284,7 @@ spoAndCCVotingSpec = do
           getConstitution `shouldNotReturn` newConstitution
       -- https://github.com/IntersectMBO/cardano-ledger/issues/5418
       -- TODO: Re-enable after issue is resolved, by removing this override
-      it
+      disableInConformanceIt
         "Constitution cannot be changed if committee is not active because it doesn't have registered hot credentials"
         $ whenPostBootstrap
         $ do
