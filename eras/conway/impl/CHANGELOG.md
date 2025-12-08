@@ -36,6 +36,7 @@
 
 ### `cddl`
 
+* Export for `dnsNameRule`, `urlRule`, `voteRule` among others for reuse.
 * Add full `HuddleSpec`.
 
 ### `testlib`
