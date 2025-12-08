@@ -58,6 +58,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
@@ -97,6 +98,8 @@ data ShelleyBbodyPredFailure era
     InvalidBodyHashBBODY (Mismatch RelEQ (Hash HASH EraIndependentBlockBody))
   | LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
+
+instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (ShelleyBbodyPredFailure era)
 
 type instance EraRuleFailure "BBODY" ShelleyEra = ShelleyBbodyPredFailure ShelleyEra
 
@@ -156,6 +159,10 @@ instance
 newtype ShelleyBbodyEvent era
   = LedgersEvent (Event (EraRule "LEDGERS" era))
   deriving (Generic)
+
+deriving instance
+  Eq (Event (EraRule "LEDGERS" era)) =>
+  Eq (ShelleyBbodyEvent era)
 
 deriving stock instance
   ( Era era
