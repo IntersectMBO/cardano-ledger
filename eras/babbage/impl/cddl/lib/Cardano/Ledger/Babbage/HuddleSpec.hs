@@ -19,6 +19,9 @@ module Cardano.Ledger.Babbage.HuddleSpec (
   babbageProtocolVersionRule,
   babbageTransactionOutput,
   babbageScript,
+  alonzoTransactionOutputRule,
+  dataRule,
+  datumOptionRule,
 ) where
 
 import Cardano.Ledger.Alonzo.HuddleSpec hiding (
@@ -63,6 +66,30 @@ babbageOperationalCertRule p =
       , "kes_period" ==> huddleRule @"kes_period" p
       , "sigma" ==> huddleRule @"signature" p
       ]
+
+alonzoTransactionOutputRule ::
+  forall era.
+  (HuddleRule "address" era, HuddleRule "value" era, HuddleRule "hash32" era) =>
+  Proxy era -> Rule
+alonzoTransactionOutputRule p =
+  "alonzo_transaction_output"
+    =:= arr
+      [ a (huddleRule @"address" p)
+      , "amount" ==> huddleRule @"value" p
+      , opt ("datum_hash" ==> huddleRule @"hash32" p)
+      ]
+
+dataRule :: forall era. HuddleRule "plutus_data" era => Proxy era -> Rule
+dataRule p = "data" =:= tag 24 (VBytes `cbor` huddleRule @"plutus_data" p)
+
+datumOptionRule ::
+  forall era.
+  (HuddleRule "hash32" era, HuddleRule "data" era) =>
+  Proxy era -> Rule
+datumOptionRule p =
+  "datum_option"
+    =:= arr [0, a (huddleRule @"hash32" p)]
+    / arr [1, a (huddleRule @"data" p)]
 
 instance HuddleGroup "account_registration_cert" BabbageEra where
   huddleGroup = accountRegistrationCertGroup @BabbageEra
@@ -158,7 +185,7 @@ instance HuddleRule "update" BabbageEra where
   huddleRule = updateRule @BabbageEra
 
 instance HuddleRule "required_signers" BabbageEra where
-  huddleRule p = "required_signers" =:= untaggedSet (huddleRule @"addr_keyhash" p)
+  huddleRule = requiredSignersRule @BabbageEra
 
 instance HuddleRule "network_id" BabbageEra where
   huddleRule _ = networkIdRule
@@ -195,12 +222,7 @@ instance HuddleRule "ex_units" BabbageEra where
   huddleRule _ = exUnitsRule
 
 instance HuddleRule "ex_unit_prices" BabbageEra where
-  huddleRule p =
-    "ex_unit_prices"
-      =:= arr
-        [ "mem_price" ==> huddleRule @"positive_interval" p
-        , "step_price" ==> huddleRule @"positive_interval" p
-        ]
+  huddleRule = exUnitPricesRule @BabbageEra
 
 instance HuddleRule "positive_interval" BabbageEra where
   huddleRule = positiveIntervalRule
@@ -387,13 +409,7 @@ instance HuddleRule "transaction_output" BabbageEra where
         / babbageTransactionOutput p (huddleRule @"script" p)
 
 instance HuddleRule "alonzo_transaction_output" BabbageEra where
-  huddleRule p =
-    "alonzo_transaction_output"
-      =:= arr
-        [ a (huddleRule @"address" p)
-        , "amount" ==> huddleRule @"value" p
-        , opt ("datum_hash" ==> huddleRule @"hash32" p)
-        ]
+  huddleRule = alonzoTransactionOutputRule @BabbageEra
 
 babbageTransactionOutput ::
   forall era.
@@ -409,14 +425,10 @@ babbageTransactionOutput p script =
       ]
 
 instance HuddleRule "datum_option" BabbageEra where
-  huddleRule p =
-    "datum_option"
-      =:= arr [0, a (huddleRule @"hash32" p)]
-      / arr [1, a (huddleRule @"data" p)]
+  huddleRule = datumOptionRule @BabbageEra
 
 instance HuddleRule "data" BabbageEra where
-  huddleRule p =
-    "data" =:= tag 24 (VBytes `cbor` huddleRule @"plutus_data" p)
+  huddleRule = dataRule @BabbageEra
 
 instance HuddleRule "transaction_witness_set" BabbageEra where
   huddleRule p =
