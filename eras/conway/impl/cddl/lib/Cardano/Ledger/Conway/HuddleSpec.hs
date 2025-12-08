@@ -25,6 +25,12 @@ module Cardano.Ledger.Conway.HuddleSpec (
   anchorRule,
   drepRule,
   voterRule,
+  dnsNameRule,
+  urlRule,
+  voteRule,
+  drepCredentialRule,
+  committeeHotCredentialRule,
+  committeeColdCredentialRule,
   accountRegistrationDepositCertGroup,
   accountUnregistrationDepositCertGroup,
   delegationToDrepCertGroup,
@@ -55,15 +61,21 @@ module Cardano.Ledger.Conway.HuddleSpec (
   maybeTaggedSet,
   maybeTaggedNonemptySet,
   maybeTaggedNonemptyOset,
+  policyHashRule,
+  potentialLanguagesRule,
+  conwayCertificateRule,
+  certificatesRule,
 ) where
 
 import Cardano.Ledger.Babbage.HuddleSpec hiding (
   alonzoRedeemer,
   alonzoRedeemerTag,
+  dnsNameRule,
   maryMintRule,
   maryMultiasset,
   maryValueRule,
   shelleyWithdrawalsRule,
+  urlRule,
  )
 import Cardano.Ledger.Conway (ConwayEra)
 import Codec.CBOR.Cuddle.Comments ((//-))
@@ -115,6 +127,77 @@ voterRule p =
     / arr [2, a (huddleRule @"addr_keyhash" p)]
     / arr [3, a (huddleRule @"script_hash" p)]
     / arr [4, a (huddleRule @"addr_keyhash" p)]
+
+dnsNameRule :: Proxy era -> Rule
+dnsNameRule _ = "dns_name" =:= VText `sized` (0 :: Word64, 128 :: Word64)
+
+urlRule :: Proxy era -> Rule
+urlRule _ = "url" =:= VText `sized` (0 :: Word64, 128 :: Word64)
+
+voteRule :: Proxy era -> Rule
+voteRule _ = "vote" =:= (0 :: Integer) ... (2 :: Integer)
+
+drepCredentialRule :: forall era. HuddleRule "credential" era => Proxy era -> Rule
+drepCredentialRule p = "drep_credential" =:= huddleRule @"credential" p
+
+committeeHotCredentialRule :: forall era. HuddleRule "credential" era => Proxy era -> Rule
+committeeHotCredentialRule p = "committee_hot_credential" =:= huddleRule @"credential" p
+
+committeeColdCredentialRule :: forall era. HuddleRule "credential" era => Proxy era -> Rule
+committeeColdCredentialRule p = "committee_cold_credential" =:= huddleRule @"credential" p
+
+policyHashRule :: forall era. HuddleRule "script_hash" era => Proxy era -> Rule
+policyHashRule p = "policy_hash" =:= huddleRule @"script_hash" p
+
+potentialLanguagesRule :: Proxy era -> Rule
+potentialLanguagesRule _ = "potential_languages" =:= (0 :: Integer) ... (255 :: Integer)
+
+conwayCertificateRule ::
+  forall era.
+  ( HuddleGroup "account_registration_cert" era
+  , HuddleGroup "account_unregistration_cert" era
+  , HuddleGroup "delegation_to_stake_pool_cert" era
+  , HuddleGroup "pool_registration_cert" era
+  , HuddleGroup "pool_retirement_cert" era
+  , HuddleGroup "account_registration_deposit_cert" era
+  , HuddleGroup "account_unregistration_deposit_cert" era
+  , HuddleGroup "delegation_to_drep_cert" era
+  , HuddleGroup "delegation_to_stake_pool_and_drep_cert" era
+  , HuddleGroup "account_registration_delegation_to_stake_pool_cert" era
+  , HuddleGroup "account_registration_delegation_to_drep_cert" era
+  , HuddleGroup "account_registration_delegation_to_stake_pool_and_drep_cert" era
+  , HuddleGroup "committee_authorization_cert" era
+  , HuddleGroup "committee_resignation_cert" era
+  , HuddleGroup "drep_registration_cert" era
+  , HuddleGroup "drep_unregistration_cert" era
+  , HuddleGroup "drep_update_cert" era
+  ) =>
+  Proxy era ->
+  Rule
+conwayCertificateRule p =
+  "certificate"
+    =:= arr [a $ huddleGroup @"account_registration_cert" p]
+    / arr [a $ huddleGroup @"account_unregistration_cert" p]
+    / arr [a $ huddleGroup @"delegation_to_stake_pool_cert" p]
+    / arr [a $ huddleGroup @"pool_registration_cert" p]
+    / arr [a $ huddleGroup @"pool_retirement_cert" p]
+    / arr [a $ huddleGroup @"account_registration_deposit_cert" p]
+    / arr [a $ huddleGroup @"account_unregistration_deposit_cert" p]
+    / arr [a $ huddleGroup @"delegation_to_drep_cert" p]
+    / arr [a $ huddleGroup @"delegation_to_stake_pool_and_drep_cert" p]
+    / arr [a $ huddleGroup @"account_registration_delegation_to_stake_pool_cert" p]
+    / arr [a $ huddleGroup @"account_registration_delegation_to_drep_cert" p]
+    / arr [a $ huddleGroup @"account_registration_delegation_to_stake_pool_and_drep_cert" p]
+    / arr [a $ huddleGroup @"committee_authorization_cert" p]
+    / arr [a $ huddleGroup @"committee_resignation_cert" p]
+    / arr [a $ huddleGroup @"drep_registration_cert" p]
+    / arr [a $ huddleGroup @"drep_unregistration_cert" p]
+    / arr [a $ huddleGroup @"drep_update_cert" p]
+
+certificatesRule :: forall era. HuddleRule "certificate" era => Proxy era -> Rule
+certificatesRule p =
+  "certificates"
+    =:= maybeTaggedNonemptyOset (huddleRule @"certificate" p)
 
 accountRegistrationDepositCertGroup ::
   forall era.
@@ -565,10 +648,10 @@ instance HuddleRule "network_id" ConwayEra where
   huddleRule _ = networkIdRule
 
 instance HuddleRule "dns_name" ConwayEra where
-  huddleRule _ = "dns_name" =:= VText `sized` (0 :: Word64, 128 :: Word64)
+  huddleRule = dnsNameRule @ConwayEra
 
 instance HuddleRule "url" ConwayEra where
-  huddleRule _ = "url" =:= VText `sized` (0 :: Word64, 128 :: Word64)
+  huddleRule = urlRule @ConwayEra
 
 instance HuddleRule "major_protocol_version" ConwayEra where
   huddleRule = majorProtocolVersionRule @ConwayEra
@@ -595,19 +678,19 @@ instance HuddleRule "positive_interval" ConwayEra where
   huddleRule = positiveIntervalRule
 
 instance HuddleRule "vote" ConwayEra where
-  huddleRule _ = "vote" =:= (0 :: Integer) ... (2 :: Integer)
+  huddleRule = voteRule @ConwayEra
 
 instance HuddleRule "asset_name" ConwayEra where
-  huddleRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
+  huddleRule = assetNameRule @ConwayEra
 
 instance HuddleRule "drep_credential" ConwayEra where
-  huddleRule p = "drep_credential" =:= huddleRule @"credential" p
+  huddleRule = drepCredentialRule @ConwayEra
 
 instance HuddleRule "committee_cold_credential" ConwayEra where
-  huddleRule p = "committee_cold_credential" =:= huddleRule @"credential" p
+  huddleRule = committeeColdCredentialRule @ConwayEra
 
 instance HuddleRule "committee_hot_credential" ConwayEra where
-  huddleRule p = "committee_hot_credential" =:= huddleRule @"credential" p
+  huddleRule = committeeHotCredentialRule @ConwayEra
 
 instance HuddleRule "anchor" ConwayEra where
   huddleRule = anchorRule @ConwayEra
@@ -665,7 +748,7 @@ instance HuddleRule "policy_id" ConwayEra where
   huddleRule p = "policy_id" =:= huddleRule @"script_hash" p
 
 instance HuddleRule "policy_hash" ConwayEra where
-  huddleRule p = "policy_hash" =:= huddleRule @"script_hash" p
+  huddleRule = policyHashRule @ConwayEra
 
 instance HuddleGroup "script_pubkey" ConwayEra where
   huddleGroup = scriptPubkeyGroup @ConwayEra
@@ -758,30 +841,10 @@ instance HuddleGroup "drep_update_cert" ConwayEra where
   huddleGroup = drepUpdateCertGroup @ConwayEra
 
 instance HuddleRule "certificate" ConwayEra where
-  huddleRule p =
-    "certificate"
-      =:= arr [a $ huddleGroup @"account_registration_cert" p]
-      / arr [a $ huddleGroup @"account_unregistration_cert" p]
-      / arr [a $ huddleGroup @"delegation_to_stake_pool_cert" p]
-      / arr [a $ huddleGroup @"pool_registration_cert" p]
-      / arr [a $ huddleGroup @"pool_retirement_cert" p]
-      / arr [a $ huddleGroup @"account_registration_deposit_cert" p]
-      / arr [a $ huddleGroup @"account_unregistration_deposit_cert" p]
-      / arr [a $ huddleGroup @"delegation_to_drep_cert" p]
-      / arr [a $ huddleGroup @"delegation_to_stake_pool_and_drep_cert" p]
-      / arr [a $ huddleGroup @"account_registration_delegation_to_stake_pool_cert" p]
-      / arr [a $ huddleGroup @"account_registration_delegation_to_drep_cert" p]
-      / arr [a $ huddleGroup @"account_registration_delegation_to_stake_pool_and_drep_cert" p]
-      / arr [a $ huddleGroup @"committee_authorization_cert" p]
-      / arr [a $ huddleGroup @"committee_resignation_cert" p]
-      / arr [a $ huddleGroup @"drep_registration_cert" p]
-      / arr [a $ huddleGroup @"drep_unregistration_cert" p]
-      / arr [a $ huddleGroup @"drep_update_cert" p]
+  huddleRule = conwayCertificateRule @ConwayEra
 
 instance HuddleRule "certificates" ConwayEra where
-  huddleRule p =
-    "certificates"
-      =:= maybeTaggedNonemptyOset (huddleRule @"certificate" p)
+  huddleRule = certificatesRule @ConwayEra
 
 instance HuddleRule "voting_procedure" ConwayEra where
   huddleRule = votingProcedureRule @ConwayEra
@@ -898,7 +961,7 @@ instance HuddleRule "language" ConwayEra where
       $ "language" =:= (0 :: Integer) ... (2 :: Integer)
 
 instance HuddleRule "potential_languages" ConwayEra where
-  huddleRule _ = "potential_languages" =:= (0 :: Integer) ... (255 :: Integer)
+  huddleRule = potentialLanguagesRule
 
 instance HuddleRule "cost_models" ConwayEra where
   huddleRule p =
