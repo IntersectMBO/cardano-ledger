@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Add `cddl` sub-library, and `generate-cddl` executable.
 * Add `bhviewPrevEpochNonce` to `BHeaderView`
 * Change `makeHeaderView` to expect an additional `Maybe Nonce`
 * Add `dijkstraBbodyTransition` to the BBODY rule
@@ -53,6 +54,10 @@
 * Add `validateDijkstraNativeScript` to `Tx` module
 * Add `RequireGuard` pattern to `Scripts` module
 * Add `ConwayEraScript` constraint to `DijkstraEraScript`
+
+### `cddl`
+
+* Add full `HuddleSpec`.
 
 ### `testlib`
 
