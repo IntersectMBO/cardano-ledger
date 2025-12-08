@@ -12,6 +12,7 @@
 
 ### `cddl`
 
+* Export `assetNameRule` for reuse.
 * Rename 'multiasset' to `maryMultiasset`
 * Add full `HuddleSpec`.
 
