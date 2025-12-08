@@ -80,6 +80,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logCurPParams,
   submitCommitteeElection,
   electBasicCommittee,
+  setupActiveInactiveCCMembers,
   proposalsShowDebug,
   getGovPolicy,
   submitFailingGovAction,
@@ -1376,6 +1377,47 @@ electBasicCommittee = do
       committeeMembers `shouldSatisfy` Set.member coldCommitteeC
     hotCommitteeC <- registerCommitteeHotKey coldCommitteeC
     pure (drep, hotCommitteeC, GovPurposeId gaidCommitteeProp)
+
+setupActiveInactiveCCMembers ::
+  forall era.
+  ( HasCallStack
+  , ConwayEraImp era
+  ) =>
+  -- | Number of active committee members
+  Int ->
+  -- | Number of inactive committee members
+  Int ->
+  -- | Threshold
+  UnitInterval ->
+  ImpTestM era GovActionId
+setupActiveInactiveCCMembers nActive nInactive threshold = do
+  coldCommitteeActive <- replicateM nActive (KeyHashObj <$> freshKeyHash)
+  coldCommitteeInactive <- replicateM nInactive (KeyHashObj <$> freshKeyHash)
+  startingEpoch <- getsNES nesELL
+  maxTermLength <- getsPParams ppCommitteeMaxTermLengthL
+  (drep, _, _) <- setupSingleDRep 1_000_000_000
+  (spo, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+  let
+    committeeMap =
+      Map.fromList $
+        map (,addEpochInterval startingEpoch maxTermLength) coldCommitteeActive
+          ++ map (,addEpochInterval startingEpoch $ EpochInterval 5) coldCommitteeInactive
+  initialCommittee <- getCommitteeMembers
+  committeeActionId <-
+    impAnn "Submit committee update"
+      . submitGovAction
+      $ UpdateCommittee
+        SNothing
+        initialCommittee
+        committeeMap
+        threshold
+  submitYesVote_ (DRepVoter drep) committeeActionId
+  submitYesVote_ (StakePoolVoter spo) committeeActionId
+  passNEpochs 6
+  getCommitteeMembers `shouldReturn` Map.keysSet committeeMap
+  forM_ coldCommitteeActive ccShouldNotBeExpired
+  forM_ coldCommitteeInactive ccShouldBeExpired
+  return committeeActionId
 
 logCurPParams ::
   ( EraGov era
