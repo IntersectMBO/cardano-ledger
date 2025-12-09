@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Change all lists into `NonEmpty` for `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`
 * Changed the type of the following fields to `CompactForm Coin` in `ShelleyPParams`:
   - `sppMinFeeA`
   - `sppMinFeeB`
