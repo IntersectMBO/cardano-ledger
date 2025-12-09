@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Alonzo.Imp where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxCert)
+import qualified Test.Cardano.Ledger.Alonzo.Imp.BbodySpec as Bbody
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
@@ -27,6 +28,7 @@ spec ::
 spec = do
   MaryImp.spec @era
   describe "AlonzoImpSpec" . withEachEraVersion @era $ do
+    Bbody.spec
     Utxo.spec
     Utxos.spec
     Utxow.spec

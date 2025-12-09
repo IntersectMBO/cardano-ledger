@@ -82,6 +82,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyBbodyPredFailure (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), txouts, unUTxO)
+import Control.DeepSeq (NFData)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -118,6 +119,10 @@ deriving instance
 deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
   Eq (ConwayBbodyPredFailure era)
+
+deriving anyclass instance
+  (Era era, NFData (PredicateFailure (EraRule "LEDGERS" era))) =>
+  NFData (ConwayBbodyPredFailure era)
 
 deriving anyclass instance
   (Era era, NoThunks (PredicateFailure (EraRule "LEDGERS" era))) =>

@@ -43,7 +43,6 @@ library
     Test.Cardano.Ledger.Constrained.Conway.Utxo
     Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
     Test.Cardano.Ledger.Examples.AlonzoAPI
-    Test.Cardano.Ledger.Examples.AlonzoBBODY
     Test.Cardano.Ledger.Examples.AlonzoCollectInputs
     Test.Cardano.Ledger.Examples.STSTestUtils
     Test.Cardano.Ledger.Generic.AggPropTests
@@ -95,7 +94,6 @@ library
     cardano-ledger-mary,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-test,
-    cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
     cardano-slotting:{cardano-slotting, testlib},
     cardano-strict-containers,
     constrained-generators,
