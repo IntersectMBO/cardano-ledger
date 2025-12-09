@@ -502,6 +502,8 @@ deriving instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (P
 
 deriving instance (Era era, Arbitrary (PParamsHKD StrictMaybe era)) => Arbitrary (PParamsUpdate era)
 
+deriving instance Arbitrary CoinPerByte
+
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.DRep -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------

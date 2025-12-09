@@ -210,8 +210,8 @@ instance
   type SpecRep (ConwayPParams Identity era) = Agda.PParams
 
   toSpecRep cpp@ConwayPParams {..} = do
-    ppA <- toSpecRep cppMinFeeA
-    ppB <- toSpecRep cppMinFeeB
+    ppA <- toSpecRep cppMinFeeFactor
+    ppB <- toSpecRep cppMinFeeConstant
     ppA0 <- toSpecRep cppA0
     ppMinFeeRefScriptCoinsPerByte <- toSpecRep cppMinFeeRefScriptCostPerByte
     ppCollateralPercentage <- toSpecRep cppCollateralPercentage
@@ -444,8 +444,8 @@ instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
   type SpecRep (ConwayPParams StrictMaybe era) = Agda.PParamsUpdate
 
   toSpecRep (ConwayPParams {..}) = do
-    ppuA <- toSpecRep cppMinFeeA
-    ppuB <- toSpecRep cppMinFeeB
+    ppuA <- toSpecRep cppMinFeeFactor
+    ppuB <- toSpecRep cppMinFeeConstant
     ppuA0 <- toSpecRep cppA0
     ppuMinFeeRefScriptCoinsPerByte <- toSpecRep cppMinFeeRefScriptCostPerByte
     ppuCollateralPercentage <- toSpecRep cppCollateralPercentage

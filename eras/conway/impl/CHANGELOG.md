@@ -2,10 +2,13 @@
 
 ## 1.21.0.0
 
+* Renamed:
+  - `cppMinFeeA` -> `cppMinFeeFactor`
+  - `cppMinFeeB` -> `cppMinFeeConstant`
+* Changed type of `cppMinFeeA` to `CoinPerByte`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Re-export `UtxoEnv` from `Cardano.Ledger.Conway.Rules.Utxo`
 * Changed the type of the following fields to `CompactForm Coin` in `ConwayPParams`:
-  - `cppMinFeeA`
   - `cppMinFeeB`
   - `cppKeyDeposit`
   - `cppMinPoolCost`

@@ -2,20 +2,29 @@
 
 ## 1.19.0.0
 
+* Added:
+  - `ppMinFeeConstantCompactL`,
+  - `ppuMinFeeConstantCompactL`,
+* Renamed:
+  - `hkdMinFeeAL` -> `hkdMinFeeFactorL`
+  - `ppMinFeeAL` -> `ppMinFeeFactorL`
+  - `ppuMinFeeAL` -> `ppuMinFeeFactorL`
+  - `hkdMinFeeBL` -> `hkdMinFeeConstantL`
+  - `ppMinFeeBL` -> `ppMinFeeConstantL`
+  - `ppuMinFeeBL` -> `ppuMinFeeConstantL`
+* Changed type to `CoinPerByte`:
+  - `hkdMinFeeAL`
+  - `ppMinFeeAL`
+  - `ppuMinFeeAL`
+* Added `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Changed name and type to `CompactForm Coin`:
-  - `hkdMinFeeAL` -> `hkdMinFeeACompactL`
-  - `hkdMinFeeBL` -> `hkdMinFeeBCompactL`
   - `hkdKeyDepositL` -> `hkdKeyDepositCompactL`
   - `hkdMinUTxOValueL` -> `hkdMinUTxOValueCompactL`
   - `hkdMinPoolCostL` -> `hkdMinPoolCostCompactL`
 * Added:
-  - `ppMinFeeACompactL`,
-  - `ppMinFeeBCompactL`,
   - `ppKeyDepositCompactL`,
   - `ppMinUTxOValueCompactL`,
   - `ppMinPoolCostCompactL`,
-  - `ppuMinFeeACompactL`,
-  - `ppuMinFeeBCompactL`,
   - `ppuKeyDepositCompactL`,
   - `ppuMinUTxOValueCompactL`,
   - `ppuMinPoolCostCompactL`,
@@ -87,6 +96,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` and `ToExpr` instances for `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Add `kes_period` and `sequence_number` CDDL definitions.
 * Add CDDL definitions for:
   - Credentials: `credential`, `stake_credential`

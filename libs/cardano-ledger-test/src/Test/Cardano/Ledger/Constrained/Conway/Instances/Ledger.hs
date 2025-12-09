@@ -909,14 +909,6 @@ instance HasSimpleRep (ConwayPParams Identity era)
 
 instance Era era => HasSpec (ConwayPParams Identity era)
 
-instance HasSimpleRep CoinPerByte where
-  -- TODO: consider `SimpleRep Coin` instead if this is annoying
-  type SimpleRep CoinPerByte = Coin
-  fromSimpleRep = CoinPerByte
-  toSimpleRep = unCoinPerByte
-
-instance HasSpec CoinPerByte
-
 instance HasSpec Char where
   type TypeSpec Char = ()
   emptySpec = ()
