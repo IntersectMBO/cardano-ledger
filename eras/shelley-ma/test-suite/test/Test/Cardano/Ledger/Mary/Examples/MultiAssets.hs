@@ -122,7 +122,7 @@ policyFailure p =
 outTooBigFailure ::
   ShelleyTxOut MaryEra -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra)
 outTooBigFailure out =
-  Left . pure . UtxowFailure . UtxoFailure $ OutputTooBigUTxO [out]
+  Left . pure . UtxowFailure . UtxoFailure $ OutputTooBigUTxO $ pure out
 
 ----------------------------------------------------
 -- Introduce a new Token Bundle, Purple Tokens

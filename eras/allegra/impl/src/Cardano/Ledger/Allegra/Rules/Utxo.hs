@@ -58,6 +58,7 @@ import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Foldable (toList)
 import Data.Int (Int64)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Word (Word32)
@@ -84,12 +85,12 @@ data AllegraUtxoPredFailure era
       Network -- the expected network id
       (Set RewardAccount) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      [TxOut era] -- list of supplied transaction outputs that are too small
+      (NonEmpty (TxOut era)) -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
-      [TxOut era] -- list of supplied bad transaction outputs
+      (NonEmpty (TxOut era)) -- list of supplied bad transaction outputs
   | OutputTooBigUTxO
-      [TxOut era] -- list of supplied bad transaction outputs
+      (NonEmpty (TxOut era)) -- list of supplied bad transaction outputs
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" AllegraEra = AllegraUtxoPredFailure AllegraEra
@@ -257,7 +258,7 @@ validateOutputTooBigUTxO ::
   UTxO era ->
   Test (AllegraUtxoPredFailure era)
 validateOutputTooBigUTxO pp (UTxO outputs) =
-  failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
+  failureOnNonEmpty outputsTooBig OutputTooBigUTxO
   where
     version = pvMajor (pp ^. ppProtocolVersionL)
     maxValSize = 4000 :: Int64
@@ -278,7 +279,7 @@ validateOutputTooSmallUTxO ::
   UTxO era ->
   Test (AllegraUtxoPredFailure era)
 validateOutputTooSmallUTxO pp (UTxO outputs) =
-  failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  failureOnNonEmpty outputsTooSmall OutputTooSmallUTxO
   where
     outputsTooSmall =
       filter

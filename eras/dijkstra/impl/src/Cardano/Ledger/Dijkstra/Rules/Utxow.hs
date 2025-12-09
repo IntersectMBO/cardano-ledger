@@ -82,6 +82,7 @@ import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
  )
+import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import NoThunks.Class (
@@ -94,7 +95,7 @@ import NoThunks.Class (
 -- | Predicate failure type for the Conway Era
 data DijkstraUtxowPredFailure era
   = UtxoFailure (PredicateFailure (EraRule "UTXO" era))
-  | InvalidWitnessesUTXOW [VKey Witness]
+  | InvalidWitnessesUTXOW (NonEmpty (VKey Witness))
   | -- | witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
       -- | witnesses which were needed and not supplied
@@ -112,7 +113,7 @@ data DijkstraUtxowPredFailure era
     InvalidMetadata
   | -- | extraneous scripts
     ExtraneousScriptWitnessesUTXOW (Set ScriptHash)
-  | MissingRedeemers [(PlutusPurpose AsItem era, ScriptHash)]
+  | MissingRedeemers (NonEmpty (PlutusPurpose AsItem era, ScriptHash))
   | MissingRequiredDatums
       -- TODO: Make this NonEmpty #4066
 
@@ -134,7 +135,7 @@ data DijkstraUtxowPredFailure era
       -- TODO: Make this NonEmpty #4066
       (Set TxIn)
   | -- | List of redeemers not needed
-    ExtraRedeemers [PlutusPurpose AsIx era]
+    ExtraRedeemers (NonEmpty (PlutusPurpose AsIx era))
   | -- | Embed UTXO rule failures
     MalformedScriptWitnesses (Set ScriptHash)
   | -- | the set of malformed script witnesses

@@ -33,6 +33,7 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Shelley.LedgerState (epochStateStakePoolsL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import Data.Sequence.Strict (StrictSeq ((:<|)))
@@ -214,7 +215,7 @@ spec = describe "Invalid transactions" $ do
                 txFixed <- fixupTx tx
                 -- The `Ix` of the redeemer may have been changed by `fixupRedeemerIndices`
                 let fixedRedeemers = txFixed ^. witsTxL . rdmrsTxWitsL . unRedeemersL
-                    extraRedeemers = Map.keys $ Map.filter (== redeemer) fixedRedeemers
+                    extraRedeemers = NonEmpty.fromList $ Map.keys $ Map.filter (== redeemer) fixedRedeemers
                 withNoFixup $
                   submitFailingTx
                     txFixed

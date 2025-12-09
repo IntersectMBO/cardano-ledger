@@ -79,7 +79,7 @@ main = do
       !globals = mkGlobals genesis
       !slotNo = SlotNo 55733343
       restrictError = \case
-        ApplyTxError (ConwayUtxowFailure (InvalidWitnessesUTXOW [_]) :| []) -> ()
+        ApplyTxError (ConwayUtxowFailure (InvalidWitnessesUTXOW _) :| []) -> ()
         otherErr -> error . show $ otherErr
       applyTx' mempoolEnv mempoolState =
         -- TODO: revert this to `either (error . show) seqTuple` after tx's are fixed

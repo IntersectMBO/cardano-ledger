@@ -81,7 +81,7 @@ data ConwayUtxosPredFailure era
     -- consequences of not detecting this means scripts get dropped, so things
     -- might validate that shouldn't. So we double check in the function
     -- collectTwoPhaseScriptInputs, it should find data for every Script.
-    CollectErrors [CollectError era]
+    CollectErrors (NonEmpty (CollectError era))
   deriving
     (Generic)
 

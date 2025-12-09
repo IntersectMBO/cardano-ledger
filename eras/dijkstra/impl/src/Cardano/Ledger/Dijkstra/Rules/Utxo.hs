@@ -136,11 +136,11 @@ data DijkstraUtxoPredFailure era
       -- | the set of reward addresses with incorrect network IDs
       (Set RewardAccount)
   | -- | list of supplied transaction outputs that are too small
-    OutputTooSmallUTxO [TxOut era]
+    OutputTooSmallUTxO (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction outputs
-    OutputBootAddrAttrsTooBig [TxOut era]
+    OutputBootAddrAttrsTooBig (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
-    OutputTooBigUTxO [(Int, Int, TxOut era)]
+    OutputTooBigUTxO (NonEmpty (Int, Int, TxOut era))
   | InsufficientCollateral
       -- | balance computed
       DeltaCoin
@@ -169,7 +169,7 @@ data DijkstraUtxoPredFailure era
       Coin
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
-    BabbageOutputTooSmallUTxO [(TxOut era, Coin)]
+    BabbageOutputTooSmallUTxO (NonEmpty (TxOut era, Coin))
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs (NonEmpty TxIn)
   | PtrPresentInCollateralReturn (TxOut era)

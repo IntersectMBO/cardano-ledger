@@ -86,6 +86,7 @@ import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
+  failureOnNonEmpty,
   judgmentContext,
   liftSTS,
   tellEvent,
@@ -94,6 +95,7 @@ import Control.State.Transition (
   wrapFailed,
  )
 import Data.Foldable as F (foldl', toList)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Set (Set)
@@ -184,10 +186,10 @@ data ShelleyUtxoPredFailure era
       Network -- the expected network id
       (Set RewardAccount) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      [TxOut era] -- list of supplied transaction outputs that are too small
+      (NonEmpty (TxOut era)) -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
-      [TxOut era] -- list of supplied bad transaction outputs
+      (NonEmpty (TxOut era)) -- list of supplied bad transaction outputs
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" ShelleyEra = ShelleyUtxoPredFailure ShelleyEra
@@ -534,7 +536,7 @@ validateOutputTooSmallUTxO ::
   f (TxOut era) ->
   Test (ShelleyUtxoPredFailure era)
 validateOutputTooSmallUTxO pp outputs =
-  failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  failureOnNonEmpty outputsTooSmall OutputTooSmallUTxO
   where
     -- minUTxOValue deposit comparison done as Coin because this rule is correct
     -- strictly in the Shelley era (in ShelleyMA we additionally check that all
@@ -553,7 +555,7 @@ validateOutputBootAddrAttrsTooBig ::
   f (TxOut era) ->
   Test (ShelleyUtxoPredFailure era)
 validateOutputBootAddrAttrsTooBig outputs =
-  failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
+  failureOnNonEmpty outputsAttrsTooBig OutputBootAddrAttrsTooBig
   where
     outputsAttrsTooBig =
       filter
