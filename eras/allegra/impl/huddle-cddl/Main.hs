@@ -5,4 +5,4 @@ import Test.Cardano.Ledger.Allegra.CDDL (allegraCDDL)
 import Test.Cardano.Ledger.Binary.Cuddle (writeSpec)
 
 main :: IO ()
-main = writeSpec allegraCDDL =<< getDataFileName "cddl-files/allegra.cddl"
+main = writeSpec allegraCDDL =<< getDataFileName "cddl/data/allegra.cddl"

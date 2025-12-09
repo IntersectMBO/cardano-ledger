@@ -49,6 +49,8 @@ import qualified Data.Text.Lazy as LT
 import GHC.Stack (HasCallStack)
 import Prettyprinter (Pretty (pretty), vsep)
 import Prettyprinter.Render.Text (hPutDoc)
+import System.Directory (createDirectoryIfMissing)
+import System.FilePath (takeDirectory)
 import System.IO (IOMode (..), hPutStrLn, withFile)
 import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
 import Test.Cardano.Ledger.Binary.RoundTrip (
@@ -284,11 +286,14 @@ huddleRoundTripArbitraryValidate version ruleName =
 
 -- | Write a Huddle specification to a file at the given path
 writeSpec :: Cuddle.Huddle -> FilePath -> IO ()
-writeSpec hddl path =
-  let cddl = Cuddle.toCDDLNoRoot hddl
-      preface = "; This file was auto-generated from huddle. Please do not modify it directly!\n"
-   in withFile path WriteMode $ \h -> do
-        hPutStrLn h preface
-        hPutDoc h (pretty cddl)
-        -- Write an empty line at the end of the file
-        hPutStrLn h ""
+writeSpec hddl path = do
+  createDirectoryIfMissing True (takeDirectory path)
+  withFile path WriteMode $ \h -> do
+    hPutStrLn
+      h
+      "; This file was auto-generated using generate-cddl. Please do not modify it directly!\n"
+    hPutDoc h $ pretty $ Cuddle.toCDDLNoRoot hddl
+    -- Write an empty line at the end of the file
+    hPutStrLn h ""
+  -- Write log to stdout
+  putStrLn $ "Generated CDDL file at: " <> path

@@ -8,7 +8,7 @@ import Paths_cardano_ledger_dijkstra
 
 readDijkstraCddlFileNames :: IO [FilePath]
 readDijkstraCddlFileNames = do
-  base <- getDataFileName "cddl-files/dijkstra.cddl"
+  base <- getDataFileName "cddl/data/dijkstra.cddl"
   pure [base]
 
 readDijkstraCddlFiles :: IO [BSL.ByteString]

@@ -5,4 +5,4 @@ import Test.Cardano.Ledger.Binary.Cuddle (writeSpec)
 import Test.Cardano.Ledger.Dijkstra.CDDL (dijkstraCDDL)
 
 main :: IO ()
-main = writeSpec dijkstraCDDL =<< getDataFileName "cddl-files/dijkstra.cddl"
+main = writeSpec dijkstraCDDL =<< getDataFileName "cddl/data/dijkstra.cddl"

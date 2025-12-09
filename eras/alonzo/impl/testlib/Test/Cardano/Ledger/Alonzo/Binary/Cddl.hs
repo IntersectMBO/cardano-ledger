@@ -8,7 +8,7 @@ import Paths_cardano_ledger_alonzo
 
 readAlonzoCddlFileNames :: IO [FilePath]
 readAlonzoCddlFileNames = do
-  base <- getDataFileName "cddl-files/alonzo.cddl"
+  base <- getDataFileName "cddl/data/alonzo.cddl"
   pure [base]
 
 readAlonzoCddlFiles :: IO [BSL.ByteString]

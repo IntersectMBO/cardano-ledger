@@ -133,7 +133,7 @@ Using the current date should ensure that this is the case.
 ## CDDL files
 
 For each era, the serialization protocol is defined by a corresponding cddl file,
-located at: `eras/<era>/impl/cddl-files/<era>.cddl`.
+located at: `eras/<era>/impl/cddl/data/<era>.cddl`.
 
 These files are generated using [cuddle](https://github.com/input-output-hk/cuddle),
 based on the Haskell definitions in: `eras/<era>/impl/testlib/Test/Cardano/Ledger/<era>/CDDL.hs`.

@@ -42,6 +42,7 @@
 
 ### `cddl`
 
+* Move `cddl-files` to `cddl/data`.
 * Export `scriptAllGroup` and `scriptAnyGroup`.
 * Add `HuddleSpec` module with `Huddle{Rule|Group}` instances for all types.
 * Add and export smart constructors for transaction components, certificates, pool infrastructure, and block structures.

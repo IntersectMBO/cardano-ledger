@@ -12,7 +12,7 @@ description:
 category: Network
 build-type: Simple
 data-files:
-  cddl-files/dijkstra.cddl
+  cddl/data/dijkstra.cddl
   golden/*.json
 
 extra-source-files: CHANGELOG.md
@@ -202,8 +202,6 @@ executable generate-cddl
     base,
     cardano-ledger-binary:testlib,
     cardano-ledger-dijkstra:cddl,
-    directory,
-    filepath,
 
 executable huddle-cddl
   main-is: Main.hs

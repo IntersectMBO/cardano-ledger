@@ -11,7 +11,7 @@ description:
 
 category: Network
 build-type: Simple
-data-files: cddl-files/allegra.cddl
+data-files: cddl/data/allegra.cddl
 extra-source-files: CHANGELOG.md
 
 source-repository head
@@ -125,8 +125,6 @@ executable generate-cddl
     base,
     cardano-ledger-binary:testlib >=1.4,
     cddl,
-    directory,
-    filepath,
 
 library testlib
   exposed-modules:
