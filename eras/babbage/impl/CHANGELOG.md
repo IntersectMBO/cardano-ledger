@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Change all lists into `NonEmpty` for `BabbageUtxoPredFailure`
 * Add `babbageUtxoValidation`
 * Add `babbageUtxoTests`
 * Changed the type of the following fields to `CompactForm Coin` in `BabbagePParams`:

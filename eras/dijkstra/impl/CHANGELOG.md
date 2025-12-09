@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Change all lists into `NonEmpty` for `DijkstraUtxoPredFailure`, `DijkstraUtxowPredFailure`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Add `bhviewPrevEpochNonce` to `BHeaderView`
 * Change `makeHeaderView` to expect an additional `Maybe Nonce`
