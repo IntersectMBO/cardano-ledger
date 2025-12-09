@@ -13,7 +13,7 @@ description:
 category: Network
 build-type: Simple
 data-files:
-  cddl-files/alonzo.cddl
+  cddl/data/alonzo.cddl
   golden/*.cbor
   golden/*.json
 
@@ -145,8 +145,6 @@ executable generate-cddl
     base,
     cardano-ledger-binary:testlib >=1.5,
     cddl,
-    directory,
-    filepath,
 
 library testlib
   exposed-modules:

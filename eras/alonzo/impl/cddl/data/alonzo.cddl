@@ -1,4 +1,4 @@
-; This file was auto-generated from huddle. Please do not modify it directly!
+; This file was auto-generated using generate-cddl. Please do not modify it directly!
 
 ; Valid blocks must also satisfy the following two constraints:
 ;   1) the length of transaction_bodies and transaction_witness_sets must be

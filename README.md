@@ -21,12 +21,12 @@ following links:
 Era | Design Documents | Formal Specification | CDDL
 ----|------------------|----------------------|-----
 Byron | | [Chain Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-blockchain.pdf "Specification of the Blockchain Layer"), [Ledger Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-ledger.pdf "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/byron/ledger/impl/cddl-spec/byron.cddl), [PDF](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-binary.pdf)
-Shelley | [Design](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-delegation.pdf "Design Specification for Delegation and Incentives in Cardano") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/shelley/impl/cddl-files)
-Allegra | Same as Mary era below | Same as Mary era below | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/allegra/impl/cddl-files)
-Mary | [Multi-Currency](https://eprint.iacr.org/2020/895 "Multi-Currency Ledgers"), [UTXOma](https://iohk.io/en/research/library/papers/utxoma-utxo-with-multi-asset-support/ "UTXOma:UTXO with Multi-Asset Support") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/mary-ledger.pdf "A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/mary/impl/cddl-files)
-Alonzo | [eUTXO](https://iohk.io/en/research/library/papers/the-extended-utxo-model/ "The Extended UTXO Model")| [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf "A Formal Specification of the Cardano Ledger integrating Plutus Core") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/alonzo/impl/cddl-files)
-Babbage | [batch-verification](https://iohk.io/en/research/library/papers/on-uc-secure-range-extension-and-batch-verification-for-ecvrf/ "On UC-Secure Range Extension and Batch Verification for ECVRF"), [CIP-31](https://github.com/cardano-foundation/CIPs/pull/159 "Reference inputs"), [CIP-32](https://github.com/cardano-foundation/CIPs/pull/160 "Inline datums"), [CIP-33](https://github.com/cardano-foundation/CIPs/pull/161 "Reference scripts") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/babbage-ledger.pdf "Formal Specification of the Cardano Ledger for the Babbage era") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/babbage/impl/cddl-files)
-Conway | [CIP-1694](https://github.com/cardano-foundation/CIPs/tree/master/CIP-1694) | [Spec (WIP)](https://github.com/intersectmbo/formal-ledger-specifications) | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/conway/impl/cddl-files)
+Shelley | [Design](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-delegation.pdf "Design Specification for Delegation and Incentives in Cardano") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/shelley/impl/cddl/data)
+Allegra | Same as Mary era below | Same as Mary era below | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/allegra/impl/cddl/data)
+Mary | [Multi-Currency](https://eprint.iacr.org/2020/895 "Multi-Currency Ledgers"), [UTXOma](https://iohk.io/en/research/library/papers/utxoma-utxo-with-multi-asset-support/ "UTXOma:UTXO with Multi-Asset Support") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/mary-ledger.pdf "A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/mary/impl/cddl/data)
+Alonzo | [eUTXO](https://iohk.io/en/research/library/papers/the-extended-utxo-model/ "The Extended UTXO Model")| [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf "A Formal Specification of the Cardano Ledger integrating Plutus Core") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/alonzo/impl/cddl/data)
+Babbage | [batch-verification](https://iohk.io/en/research/library/papers/on-uc-secure-range-extension-and-batch-verification-for-ecvrf/ "On UC-Secure Range Extension and Batch Verification for ECVRF"), [CIP-31](https://github.com/cardano-foundation/CIPs/pull/159 "Reference inputs"), [CIP-32](https://github.com/cardano-foundation/CIPs/pull/160 "Inline datums"), [CIP-33](https://github.com/cardano-foundation/CIPs/pull/161 "Reference scripts") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/babbage-ledger.pdf "Formal Specification of the Cardano Ledger for the Babbage era") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/babbage/impl/cddl/data)
+Conway | [CIP-1694](https://github.com/cardano-foundation/CIPs/tree/master/CIP-1694) | [Spec (WIP)](https://github.com/intersectmbo/formal-ledger-specifications) | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/conway/impl/cddl/data)
 
 
 Other Documents:
@@ -58,7 +58,7 @@ The directory structure of this repository is as follows:
   - [formal-spec](./eras/shelley/formal-spec)
   - [implementation](./eras/shelley/impl)
   - [tests](./eras/shelley/test-suite)
-  - [cddl](./eras/shelley/impl/cddl-files)
+  - [cddl](./eras/shelley/impl/cddl/data)
 - [Allegra - Timelocks](./eras/allegra)
   - [formal-spec](./eras/shelley-ma/formal-spec)
   - [implementation](./eras/allegra/impl)
@@ -70,17 +70,17 @@ The directory structure of this repository is as follows:
 - [Alonzo - Smart Contracts](./eras/alonzo)
   - [formal-spec](./eras/alonzo/formal-spec)
   - [implementation](./eras/alonzo/impl)
-  - [cddl](./eras/alonzo/impl/cddl-files)
+  - [cddl](./eras/alonzo/impl/cddl/data)
   - [tests](./eras/alonzo/test-suite)
 - [Babbage](./eras/babbage)
   - [formal-spec](./eras/babbage/formal-spec)
   - [implementation](./eras/babbage/impl)
-  - [cddl](./eras/babbage/impl/cddl-files)
+  - [cddl](./eras/babbage/impl/cddl/data)
   - [tests](./eras/babbage/impl/test)
 - [Conway - Governance](./eras/conway)
   - [formal-spec](./eras/conway/formal-spec)
   - [implementation](./eras/conway/impl)
-  - [cddl](./eras/conway/impl/cddl-files)
+  - [cddl](./eras/conway/impl/cddl/data)
   - [tests](./eras/conway/impl/test)
 - [Libraries](./libs)
 

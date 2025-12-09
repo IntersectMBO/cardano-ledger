@@ -125,6 +125,8 @@ library testlib
     cborg,
     containers,
     cuddle >=0.4,
+    directory,
+    filepath,
     formatting,
     half,
     hedgehog,

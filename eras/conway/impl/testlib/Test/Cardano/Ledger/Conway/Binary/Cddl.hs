@@ -8,7 +8,7 @@ import Paths_cardano_ledger_conway
 
 readConwayCddlFileNames :: IO [FilePath]
 readConwayCddlFileNames = do
-  base <- getDataFileName "cddl-files/conway.cddl"
+  base <- getDataFileName "cddl/data/conway.cddl"
   pure [base]
 
 readConwayCddlFiles :: IO [BSL.ByteString]

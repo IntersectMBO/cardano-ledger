@@ -5,4 +5,4 @@ import Test.Cardano.Ledger.Binary.Cuddle (writeSpec)
 import Test.Cardano.Ledger.Mary.CDDL (maryCDDL)
 
 main :: IO ()
-main = writeSpec maryCDDL =<< getDataFileName "cddl-files/mary.cddl"
+main = writeSpec maryCDDL =<< getDataFileName "cddl/data/mary.cddl"

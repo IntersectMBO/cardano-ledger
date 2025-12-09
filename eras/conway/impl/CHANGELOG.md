@@ -36,6 +36,7 @@
 
 ### `cddl`
 
+* Move `cddl-files` to `cddl/data`.
 * Export for `dnsNameRule`, `urlRule`, `voteRule` among others for reuse.
 * Add full `HuddleSpec`.
 

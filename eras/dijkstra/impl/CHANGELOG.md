@@ -57,6 +57,7 @@
 
 ### `cddl`
 
+* Move `cddl-files` to `cddl/data`.
 * Add full `HuddleSpec`.
 
 ### `testlib`

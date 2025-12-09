@@ -7,7 +7,7 @@ author: IOHK
 synopsis: Shelley Ledger Executable Model
 build-type: Simple
 data-files:
-  cddl-files/shelley.cddl
+  cddl/data/shelley.cddl
   golden/*.json
 
 extra-source-files: CHANGELOG.md
@@ -174,8 +174,6 @@ executable generate-cddl
     base,
     cardano-ledger-binary:testlib >=1.4,
     cddl,
-    directory,
-    filepath,
 
 library testlib
   exposed-modules:

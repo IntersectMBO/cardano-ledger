@@ -5,4 +5,4 @@ import Test.Cardano.Ledger.Binary.Cuddle (writeSpec)
 import Test.Cardano.Ledger.Conway.CDDL (conwayCDDL)
 
 main :: IO ()
-main = writeSpec conwayCDDL =<< getDataFileName "cddl-files/conway.cddl"
+main = writeSpec conwayCDDL =<< getDataFileName "cddl/data/conway.cddl"

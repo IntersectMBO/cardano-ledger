@@ -1,10 +1,10 @@
-; This file was auto-generated from huddle. Please do not modify it directly!
+; This file was auto-generated using generate-cddl. Please do not modify it directly!
 
 block = 
   [ header                 
-  , transaction_bodies       : [* transaction_body]             
-  , transaction_witness_sets : [* transaction_witness_set]      
-  , transaction_metadata_set : {* transaction_index => metadata}
+  , transaction_bodies       : [* transaction_body]                   
+  , transaction_witness_sets : [* transaction_witness_set]            
+  , auxiliary_data_set       : {* transaction_index => auxiliary_data}
   ]
 
 
@@ -54,7 +54,7 @@ signature = bytes .size 64
 
 protocol_version = (major_protocol_version, uint)
 
-major_protocol_version = 0 .. 3
+major_protocol_version = 0 .. 5
 
 kes_signature = bytes .size 448
 
@@ -62,11 +62,13 @@ transaction_body =
   {   0 : set<transaction_input>   
   ,   1 : [* transaction_output]
   ,   2 : coin                      
-  ,   3 : slot                      
+  , ? 3 : slot                      
   , ? 4 : [* certificate]       
   , ? 5 : withdrawals               
   , ? 6 : update                    
   , ? 7 : auxiliary_data_hash       
+  , ? 8 : slot                      
+  , ? 9 : mint                      
   }
 
 
@@ -76,7 +78,7 @@ transaction_input = [id : transaction_id, index : uint .size 2]
 
 transaction_id = hash32
 
-transaction_output = [address, amount : coin]
+transaction_output = [address, amount : value]
 
 ; address = bytes
 ; 
@@ -120,7 +122,28 @@ address =
   / h'6070000000000000000000000000000000000000000000000000000000'                                                        
   / h'7080000000000000000000000000000000000000000000000000000000'                                                        
 
+value = coin/ [coin, multiasset<uint>]
+
 coin = uint
+
+multiasset<a0> = {* policy_id => {+ asset_name => a0}}
+
+policy_id = script_hash
+
+; To compute a script hash, note that you must prepend
+; a tag to the bytes of the script before hashing.
+; The tag is determined by the language.
+; The tags are:
+;   "\x00" for multisig/native scripts
+;   "\x01" for Plutus V1 scripts
+;   "\x02" for Plutus V2 scripts
+;   "\x03" for Plutus V3 scripts
+;   "\x04" for Plutus V4 scripts
+script_hash = hash28
+
+hash28 = bytes .size 28
+
+asset_name = bytes .size (0 .. 32)
 
 certificate = 
   [  account_registration_cert
@@ -141,19 +164,6 @@ stake_credential = credential
 credential = [0, addr_keyhash// 1, script_hash]
 
 addr_keyhash = hash28
-
-hash28 = bytes .size 28
-
-; To compute a script hash, note that you must prepend
-; a tag to the bytes of the script before hashing.
-; The tag is determined by the language.
-; The tags are:
-;   "\x00" for multisig/native scripts
-;   "\x01" for Plutus V1 scripts
-;   "\x02" for Plutus V2 scripts
-;   "\x03" for Plutus V3 scripts
-;   "\x04" for Plutus V4 scripts
-script_hash = hash28
 
 ; This certificate will be deprecated in a future era
 account_unregistration_cert = (1, stake_credential)
@@ -285,19 +295,35 @@ nonce = [0// 1, hash32]
 
 auxiliary_data_hash = hash32
 
+mint = multiasset<int64>
+
+int64 = min_int64 .. max_int64
+
+min_int64 = -9223372036854775808
+
+max_int64 = 9223372036854775807
+
 transaction_witness_set = 
   {? 0 : [* vkeywitness], ? 1 : [* native_script], ? 2 : [* bootstrap_witness]}
 
 vkeywitness = [vkey, signature]
 
-; Native scripts support 4 operations:
-;   - Signature verification (script_pubkey)
-;   - Conjunctions (script_all)
-;   - Disjunctions (script_any)
-;   - M-of-N thresholds (script_n_of_k)
+; Allegra introduces timelock support for native scripts.
 ; 
-; Note: Shelley uses VUInt for the threshold in script_n_of_k.
-native_script = [script_pubkey// script_all// script_any// script_n_of_k]
+; Timelock validity intervals are half-open intervals [a, b).
+;   script_invalid_before: specifies the left (included) endpoint a.
+;   script_invalid_hereafter: specifies the right (excluded) endpoint b.
+; 
+; Note: Allegra switched to int64 for script_n_of_k thresholds.
+native_script = 
+  [  script_pubkey
+  // script_all
+  // script_any
+  // script_n_of_k
+  // script_invalid_before
+  // script_invalid_hereafter
+  ]
+
 
 script_pubkey = (0, addr_keyhash)
 
@@ -305,7 +331,15 @@ script_all = (1, [* native_script])
 
 script_any = (2, [* native_script])
 
-script_n_of_k = (3, n : uint, [* native_script])
+script_n_of_k = (3, n : int64, [* native_script])
+
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the left (included) endpoint a.
+script_invalid_before = (4, slot)
+
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the right (excluded) endpoint b.
+script_invalid_hereafter = (5, slot)
 
 bootstrap_witness = 
   [ public_key : vkey          
@@ -316,6 +350,8 @@ bootstrap_witness =
 
 
 transaction_index = uint .size 2
+
+auxiliary_data = metadata/ auxiliary_data_array
 
 metadata = {* metadatum_label => metadatum}
 
@@ -328,7 +364,10 @@ metadatum =
   / bytes .size (0 .. 64)
   / text .size (0 .. 64) 
 
-transaction = [transaction_body, transaction_witness_set, metadata/ nil]
+auxiliary_data_array = 
+  [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
 
-signkey_kes = bytes .size 64
+auxiliary_scripts = [* native_script]
+
+transaction = [transaction_body, transaction_witness_set, auxiliary_data/ nil]
 

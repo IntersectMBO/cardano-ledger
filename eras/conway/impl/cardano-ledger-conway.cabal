@@ -12,7 +12,7 @@ description:
 category: Network
 build-type: Simple
 data-files:
-  cddl-files/conway.cddl
+  cddl/data/conway.cddl
   golden/*.cbor
   golden/*.json
   test/data/*.json
@@ -164,8 +164,6 @@ executable generate-cddl
     base,
     cardano-ledger-binary:testlib >=1.5,
     cddl,
-    directory,
-    filepath,
 
 library testlib
   exposed-modules:

@@ -52,6 +52,7 @@
 
 ### `cddl`
 
+* Move `cddl-files` to `cddl/data`.
 * Export `exUnitPricesRule` and `requiredSignersRule` for reuse.
 * Make `plutus_v1_script` and `plutus_data` era generic.
 * Add full `HuddleSpec`.
