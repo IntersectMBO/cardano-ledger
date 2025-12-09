@@ -55,6 +55,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   evalTxExUnits,
  )
 import Cardano.Ledger.Alonzo.Rules (
+  AlonzoBbodyPredFailure,
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure (..),
   AlonzoUtxowPredFailure,
@@ -128,6 +129,7 @@ class
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   ) =>
   AlonzoEraImp era
   where
