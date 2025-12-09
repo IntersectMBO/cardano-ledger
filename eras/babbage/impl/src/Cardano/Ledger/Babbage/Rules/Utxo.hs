@@ -120,7 +120,7 @@ data BabbageUtxoPredFailure era
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO
-      [(TxOut era, Coin)]
+      (NonEmpty (TxOut era, Coin))
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs
       (NonEmpty TxIn)
@@ -333,7 +333,7 @@ validateOutputTooSmallUTxO ::
   f (Sized (TxOut era)) ->
   Test (BabbageUtxoPredFailure era)
 validateOutputTooSmallUTxO pp outs =
-  failureUnless (null outputsTooSmall) $ BabbageOutputTooSmallUTxO outputsTooSmall
+  failureOnNonEmpty outputsTooSmall BabbageOutputTooSmallUTxO
   where
     outs' = map (\out -> (sizedValue out, getMinCoinSizedTxOut pp out)) (toList outs)
     outputsTooSmall =

@@ -87,6 +87,7 @@ import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
+  failureOnNonEmpty,
   judgmentContext,
   liftSTS,
   trans,
@@ -94,6 +95,7 @@ import Control.State.Transition (
   wrapFailed,
  )
 import Data.Foldable (sequenceA_)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -109,8 +111,7 @@ import Validation
 -- =========================================
 
 data ShelleyUtxowPredFailure era
-  = InvalidWitnessesUTXOW
-      [VKey Witness]
+  = InvalidWitnessesUTXOW (NonEmpty (VKey Witness))
   | -- witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
       (Set (KeyHash Witness)) -- witnesses which were needed and not supplied
@@ -399,9 +400,7 @@ validateMissingScripts (ShelleyScriptsNeeded sNeeded) scriptsprovided =
 -- | Determine if the UTxO witnesses in a given transaction are correct.
 validateVerifiedWits :: EraTx era => Tx l era -> Test (ShelleyUtxowPredFailure era)
 validateVerifiedWits tx =
-  case failed <> failedBootstrap of
-    [] -> pure ()
-    nonEmpty -> failure $ InvalidWitnessesUTXOW nonEmpty
+  failureOnNonEmpty (failed <> failedBootstrap) InvalidWitnessesUTXOW
   where
     txBody = tx ^. bodyTxL
     txBodyHash = extractHash (hashAnnotated txBody)

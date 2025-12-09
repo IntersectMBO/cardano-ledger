@@ -88,6 +88,7 @@ import qualified Data.ByteString.Base64 as B64
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..), nonEmpty)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.List.NonEmpty as NonEmpty
 import Data.MapExtras (extractKeys)
 import Data.Text (Text)
 import qualified Debug.Trace as Debug
@@ -221,11 +222,8 @@ scriptsTransition slot pp tx utxo action = do
   case collectPlutusScriptsWithContext (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
     Right sLst ->
       when2Phase $ action $ evalPlutusScripts sLst
-    Left info
-      | alonzoFailures <- filter isNotBadTranslation info
-      , not (null alonzoFailures) ->
-          failBecause (CollectErrors alonzoFailures)
-      | otherwise -> pure ()
+    Left info ->
+      failOnNonEmpty (NonEmpty.filter isNotBadTranslation info) CollectErrors
   where
     -- BadTranslation was introduced in Babbage, thus we need to filter those failures out.
     isNotBadTranslation = \case
@@ -402,7 +400,7 @@ data AlonzoUtxosPredFailure era
     --         consequences of not detecting this means scripts get dropped, so things
     --         might validate that shouldn't. So we double check in the function
     --         collectTwoPhaseScriptInputs, it should find data for every Script.
-    CollectErrors [CollectError era]
+    CollectErrors (NonEmpty (CollectError era))
   | UpdateFailure (EraRuleFailure "PPUP" era)
   deriving
     (Generic)

@@ -113,13 +113,13 @@ data ConwayUtxoPredFailure era
       (Set RewardAccount)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
-      [TxOut era]
+      (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction outputs
     OutputBootAddrAttrsTooBig
-      [TxOut era]
+      (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
     OutputTooBigUTxO
-      [(Int, Int, TxOut era)]
+      (NonEmpty (Int, Int, TxOut era))
   | InsufficientCollateral
       -- | balance computed
       DeltaCoin
@@ -151,7 +151,7 @@ data ConwayUtxoPredFailure era
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO
-      [(TxOut era, Coin)]
+      (NonEmpty (TxOut era, Coin))
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs
       (NonEmpty TxIn)
@@ -395,7 +395,7 @@ allegraToConwayUtxoPredFailure = \case
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Allegra.UpdateFailure x -> absurdEraRule @"PPUP" @era x
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
-  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)
+  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (fmap (0,0,) xs)
 
 instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure ConwayEra where
   injectFailure = UtxosFailure

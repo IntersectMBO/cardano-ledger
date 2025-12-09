@@ -53,6 +53,7 @@ import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
@@ -175,7 +176,7 @@ collectInputs ::
   PParams era ->
   Tx TopTx era ->
   UTxO era ->
-  Either [CollectError era] [PlutusWithContext]
+  Either (NonEmpty (CollectError era)) [PlutusWithContext]
 collectInputs = collectPlutusScriptsWithContext
 
 testEpochInfo :: EpochInfo (Either Text)

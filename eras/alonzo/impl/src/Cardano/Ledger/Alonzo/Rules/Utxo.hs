@@ -104,6 +104,7 @@ import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
 import Data.Either (isRight)
 import Data.Foldable as F (foldl', sequenceA_, toList)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -142,15 +143,15 @@ data AlonzoUtxoPredFailure era
       (Set RewardAccount)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
-      [TxOut era]
+      (NonEmpty (TxOut era))
   | -- | Subtransition Failures
     UtxosFailure (PredicateFailure (EraRule "UTXOS" era))
   | -- | list of supplied bad transaction outputs
     OutputBootAddrAttrsTooBig
-      [TxOut era]
+      (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
     OutputTooBigUTxO
-      [(Int, Int, TxOut era)]
+      (NonEmpty (Int, Int, TxOut era))
   | InsufficientCollateral
       -- | balance computed
       DeltaCoin
@@ -379,7 +380,7 @@ validateOutputTooSmallUTxO ::
   f (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateOutputTooSmallUTxO pp outputs =
-  failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  failureOnNonEmpty outputsTooSmall OutputTooSmallUTxO
   where
     outputsTooSmall =
       filter
@@ -404,7 +405,7 @@ validateOutputTooBigUTxO ::
   f (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateOutputTooBigUTxO pp outputs =
-  failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
+  failureOnNonEmpty outputsTooBig OutputTooBigUTxO
   where
     maxValSize = pp ^. ppMaxValSizeL
     protVer = pp ^. ppProtocolVersionL
@@ -725,4 +726,4 @@ allegraToAlonzoUtxoPredFailure = \case
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Allegra.UpdateFailure x -> UtxosFailure (injectFailure @"UTXOS" @t x)
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
-  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)
+  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (fmap (0,0,) xs)

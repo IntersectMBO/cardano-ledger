@@ -80,6 +80,7 @@ import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.ByteString (ByteString)
 import Data.Foldable (sequenceA_)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -97,7 +98,7 @@ data AlonzoUtxowPredFailure era
   = ShelleyInAlonzoUtxowPredFailure (ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
-      [(PlutusPurpose AsItem era, ScriptHash)]
+      (NonEmpty (PlutusPurpose AsItem era, ScriptHash))
   | MissingRequiredDatums
       -- TODO: Make this NonEmpty #4066
 
@@ -120,7 +121,7 @@ data AlonzoUtxowPredFailure era
       (Set TxIn)
   | -- | List of redeemers not needed
     ExtraRedeemers
-      [PlutusPurpose AsIx era]
+      (NonEmpty (PlutusPurpose AsIx era))
   | -- | The computed script integrity hash does not match the provided script integrity hash
     ScriptIntegrityHashMismatch
       (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
@@ -280,8 +281,8 @@ hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded
           redeemersNeeded
           fst
   sequenceA_
-    [ failureUnless (null extraRdmrs) (ExtraRedeemers extraRdmrs)
-    , failureUnless (null missingRdmrs) (MissingRedeemers (map snd missingRdmrs))
+    [ failureOnNonEmpty extraRdmrs ExtraRedeemers
+    , failureOnNonEmpty (map snd missingRdmrs) MissingRedeemers
     ]
 
 -- =======================
