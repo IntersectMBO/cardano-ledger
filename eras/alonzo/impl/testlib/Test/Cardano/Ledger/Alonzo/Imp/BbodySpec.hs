@@ -9,15 +9,18 @@
 module Test.Cardano.Ledger.Alonzo.Imp.BbodySpec (spec) where
 
 import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (TooManyExUnits))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
   StrictMaybe (..),
   textToUrl,
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Plutus (
   Data (..),
+  ExUnits (..),
   hashPlutusScript,
   withSLanguage,
  )
@@ -27,6 +30,7 @@ import Cardano.Ledger.State (PoolMetadata (..), sppMetadataL)
 import Control.Monad.Reader (asks)
 import Control.Monad.State.Strict (get)
 import qualified Data.ByteString as BS
+import Data.Foldable (for_)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Lens.Micro
@@ -91,6 +95,36 @@ spec = describe "BBODY" $ do
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . certsTxBodyL .~ [txCert]
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert cPurpose (dex 0)
+
+        it "enforces ppMaxBlockExUnits" $ do
+          maxBlockUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxBlockExUnitsL
+          maxTxUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
+
+          let
+            ExUnits bMem bSteps = maxBlockUnits
+            ExUnits tMem tSteps = maxTxUnits
+            txCount = 1 + max (bMem `div` tMem) (bSteps `div` tSteps)
+            mismatch =
+              Mismatch
+                { mismatchExpected = maxBlockUnits
+                , mismatchSupplied = ExUnits (txCount * tMem) (txCount * tSteps)
+                }
+
+          txIns <- replicateM (fromIntegral txCount) $ produceScript alwaysSucceedsWithDatumHash
+
+          let
+            purpose = mkSpendingPurpose (AsIx 0)
+            dex = (Data (P.I 0), maxTxUnits)
+            buildTxs =
+              for_ txIns $ \txIn ->
+                submitTx_ $
+                  mkBasicTx mkBasicTxBody
+                    & bodyTxL . inputsTxBodyL .~ [txIn]
+                    & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert purpose dex
+
+          withTxsInFailingBlock
+            buildTxs
+            [injectFailure $ TooManyExUnits mismatch]
 
         it "fails with bad pool MD hash in Tx" $ do
           let
