@@ -40,6 +40,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
  )
 import Cardano.Ledger.Shelley.Transition
+import Control.DeepSeq (NFData, force)
 import Data.Aeson (KeyValue (..))
 import Data.ListMap (ListMap)
 import qualified Data.ListMap as ListMap
@@ -104,14 +105,15 @@ toConwayTransitionConfigPairs = toKeyValuePairs
 {-# DEPRECATED toConwayTransitionConfigPairs "In favor of `toKeyValuePairs`" #-}
 
 conwayRegisterInitialFundsThenStaking ::
-  ConwayEraTransition era =>
+  (ConwayEraTransition era, NFData (NewEpochState era)) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
 conwayRegisterInitialFundsThenStaking cfg =
   -- We must first register the initial funds, because the stake
   -- information depends on it.
-  resetStakeDistribution
+  force
+    . resetStakeDistribution
     . registerDRepsThenDelegs cfg
     . conwayRegisterInitialAccounts (cfg ^. tcInitialStakingL)
     . registerInitialStakePools (cfg ^. tcInitialStakingL)
