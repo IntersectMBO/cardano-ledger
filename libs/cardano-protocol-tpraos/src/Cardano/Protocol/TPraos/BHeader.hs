@@ -454,11 +454,12 @@ lastAppliedHash (At lab) = BlockHash $ labHash lab
 bnonce :: BHBody c -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
-makeHeaderView :: Crypto c => BHeader c -> BHeaderView
-makeHeaderView bh@(BHeader bhb _) =
+makeHeaderView :: Crypto c => BHeader c -> Maybe Nonce -> BHeaderView
+makeHeaderView bh@(BHeader bhb _) nonce =
   BHeaderView
     (hashKey . bheaderVk $ bhb)
     (bsize bhb)
     (originalBytesSize bh)
     (bhash bhb)
     (bheaderSlotNo bhb)
+    nonce
