@@ -2,6 +2,8 @@
 
 ## 1.19.0.0
 
+* Add mocked-up `PerasKey` type
+* Add mocked-up `validatePerasCert` validation function
 * Changed name and type to `CompactForm Coin`:
   - `hkdMinFeeAL` -> `hkdMinFeeACompactL`
   - `hkdMinFeeBL` -> `hkdMinFeeBCompactL`
