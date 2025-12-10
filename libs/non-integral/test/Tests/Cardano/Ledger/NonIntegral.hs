@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -42,10 +43,22 @@ newtype Normalized a = Norm (a, a) deriving (Show)
 
 newtype UnitInterval a = Unit a deriving (Show)
 
-instance (Fractional a, Arbitrary a) => Arbitrary (Normalized a) where
+instance (Fractional a
+#if __GLASGOW_HASKELL__ < 914
+    -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+    -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Arbitrary a
+#endif
+  ) => Arbitrary (Normalized a) where
   arbitrary = return . Norm . normalize =<< arbitrary
 
-instance (Fractional a, Arbitrary a) => Arbitrary (UnitInterval a) where
+instance (Fractional a
+#if __GLASGOW_HASKELL__ < 914
+    -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+    -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Arbitrary a
+#endif
+  ) => Arbitrary (UnitInterval a) where
   arbitrary = return . Unit . toUnit =<< arbitrary
 
 type NonNegInts = (NonNegative Integer, Positive Integer)

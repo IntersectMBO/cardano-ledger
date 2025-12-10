@@ -91,7 +91,206 @@ benchmarks: true
 -- The only sensible test display option
 test-show-details: streaming
 
-if impl(ghc >=9.12)
+allow-newer:
+  -- https://github.com/phadej/vec/issues/121
+  , ral:QuickCheck
+  , fin:QuickCheck
+  , bin:QuickCheck
+
+if impl(ghc >=9.14)
+  source-repository-package
+    type: git
+    -- https://github.com/snowleopard/alga/issues/322
+    location: https://github.com/snowleopard/alga/
+    tag: d4e43fb42db05413459fb2df493361d5a666588a
+
+  source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/plutus
+    tag: 908b6a21daf2d2c8499b3160eaf215ab04363b15
+    subdir:
+      plutus-core
+      plutus-tx
+      plutus-ledger-api
+
+if impl (ghc >= 9.14)
+  constraints:
+    , containers > 0.7
+    , foldl >= 1.4.18
+    , microlens ^>= 0.4
+    , microlens-th ^>= 0.4
+    -- Newest version causes Arbitrary instance clashes in quickcheck-instances.
+    , QuickCheck < 2.17.0.0
+
+-- cabal-allow-newer
+if impl (ghc >= 9.14)
   allow-newer:
-    -- Unique: https://github.com/kapralVV/Unique/issues/11
-    , Unique:hashable
+    , OneTuple:base
+    , aeson:base
+    , aeson:bytestring
+    , aeson:containers
+    , aeson:deepseq
+    , aeson:ghc-prim
+    , aeson:template-haskell
+    , aeson:text-short
+    , aeson:time
+    , aeson:time-compat
+    , aeson:witherable
+    , assoc:base
+    , async:base
+    , base64-bytestring-type:base
+    , base64-bytestring-type:http-api-data
+    , bifunctors:containers
+    , bifunctors:template-haskell
+    , bin:base
+    , binary-orphans:base
+    , boring:base
+    , brick:base
+    , canonical-json:containers
+    , cborg:base
+    , cborg:containers
+    , constraints:boring
+    , constraints:hashable
+    , constraints-extras:base
+    , constraints-extras:template-haskell
+    , containers:base
+    , containers:deepseq
+    , containers:template-haskell
+    , cuddle:foldable1-classes-compat
+    , cuddle:megaparsec
+    , data-default:containers
+    , data-default-class:data-default
+    , data-fix:base
+    , dec:base
+    , deepseq:base
+    , deepseq:ghc-prim
+    , dependent-map:constraints-extras
+    , dependent-map:containers
+    , deriving-compat:containers
+    , deriving-compat:template-haskell
+    , dictionary-sharing:containers
+    , directory:base
+    , directory:time
+    , filepath:base
+    , filepath:bytestring
+    , filepath:template-haskell
+    , fin:base
+    , fin:universe-base
+    , foldable1-classes-compat:base
+    , foldl:containers
+    , free:containers
+    , free:template-haskell
+    , free:transformers
+    , generically:base
+    , hashable:base
+    , hashable:bytestring
+    , hashable:containers
+    , hashable:ghc-bignum
+    , hashable:ghc-prim
+    , hedgehog:async
+    , hedgehog:containers
+    , hedgehog:template-haskell
+    , hedgehog:time
+    , hsc2hs:base
+    , http-api-data:base
+    , http-api-data:containers
+    , indexed-traversable:base
+    , indexed-traversable:containers
+    , indexed-traversable-instances:base
+    , integer-conversion:base
+    , integer-logarithms:base
+    , integer-logarithms:ghc-bignum
+    , io-classes:base
+    , ledger-state:persistent
+    , lens:containers
+    , lens:parallel
+    , lens:template-haskell
+    , megaparsec:containers
+    , microlens-th:containers
+    , microlens-th:template-haskell
+    , microstache:base
+    , microstache:containers
+    , monoidal-containers:base
+    , monoidal-containers:containers
+    , nonempty-vector:base
+    , nothunks:time
+    , nothunks:wherefrom-compat
+    , optics-core:containers
+    , ordered-containers:containers
+    , parallel:base
+    , persistent:template-haskell
+    , persistent-sqlite:persistent
+    , plutus-core:dependent-map
+    , primitive:base
+    , process:base
+    , quickcheck-instances:base
+    , quickcheck-instances:containers
+    , quickcheck-instances:data-fix
+    , quickcheck-instances:time-compat
+    , ral:base
+    , recursion-schemes:containers
+    , recursion-schemes:template-haskell
+    , scientific:base
+    , scientific:containers
+    , scientific:template-haskell
+    , semialign:base
+    , semialign:containers
+    , semialign:indexed-traversable
+    , semialign:indexed-traversable-instances
+    , semigroupoids:bifunctors
+    , serialise:base
+    , serialise:containers
+    , serialise:ghc-prim
+    , serialise:these
+    , serialise:time
+    , singletons:base
+    , singletons-th:base
+    , singletons-th:singletons
+    , singletons-th:template-haskell
+    , singletons-th:th-desugar
+    , singletons-th:th-orphans
+    , size-based:template-haskell
+    , some:base
+    , splitmix:base
+    , tagged:template-haskell
+    , tasty-hedgehog:base
+    , text:bytestring
+    , text-iso8601:time
+    , text-short:base
+    , text-short:ghc-prim
+    , text-short:template-haskell
+    , th-abstraction:containers
+    , th-abstraction:template-haskell
+    , th-compat:template-haskell
+    , th-desugar:template-haskell
+    , th-expand-syns:base
+    , th-expand-syns:containers
+    , th-expand-syns:template-haskell
+    , th-lift:template-haskell
+    , th-lift-instances:th-lift
+    , th-orphans:template-haskell
+    , these:assoc
+    , these:base
+    , time-compat:base
+    , time-compat:time
+    , transformers:base
+    , tree-diff:aeson
+    , tree-diff:base
+    , tree-diff:containers
+    , tree-diff:scientific
+    , tree-diff:semialign
+    , tree-diff:time
+    , tree-diff:unordered-containers
+    , universe-base:base
+    , universe-base:containers
+    , unordered-containers:base
+    , unordered-containers:template-haskell
+    , uuid-types:deepseq
+    , uuid-types:template-haskell
+    , validation-selective:base
+    , vault:base
+    , vault:containers
+    , vector-th-unbox:base
+    , vector-th-unbox:template-haskell
+    , wherefrom-compat:base
+    , witherable:containers

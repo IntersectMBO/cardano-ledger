@@ -26,11 +26,19 @@
 
 module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data MirTxCert,
+  data GenesisDelegTxCert,
+  data RegTxCert,
+  data UnRegTxCert,
+  data DelegStakeTxCert,
+#else
   pattern MirTxCert,
   pattern GenesisDelegTxCert,
   pattern RegTxCert,
   pattern UnRegTxCert,
   pattern DelegStakeTxCert,
+#endif
   ShelleyDelegCert (..),
   getVKeyWitnessShelleyTxCert,
   getScriptWitnessShelleyTxCert,
@@ -67,8 +75,13 @@ module Cardano.Ledger.Shelley.TxCert (
 
   -- * Re-exports
   EraTxCert (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data RegPoolTxCert,
+  data RetirePoolTxCert,
+#else
   pattern RegPoolTxCert,
   pattern RetirePoolTxCert,
+#endif
   PoolCert (..),
   isRegStakeTxCert,
   isUnRegStakeTxCert,
