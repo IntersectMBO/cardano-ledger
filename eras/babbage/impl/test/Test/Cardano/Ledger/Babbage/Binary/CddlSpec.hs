@@ -7,11 +7,11 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.HuddleSpec (babbageCDDL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
 import Test.Cardano.Ledger.Babbage.Binary.Cddl (readBabbageCddlFiles)
-import Test.Cardano.Ledger.Babbage.CDDL (babbageCDDL)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
   cddlDecoderEquivalenceSpec,

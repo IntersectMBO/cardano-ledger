@@ -15,6 +15,7 @@ import Cardano.Ledger.Shelley.API (
   ProposedPPUpdates,
   Update,
  )
+import Cardano.Ledger.Shelley.HuddleSpec (shelleyCDDL)
 import Cardano.Ledger.State (StakePoolRelay)
 import Cardano.Ledger.TxIn (TxIn)
 import Test.Cardano.Ledger.Binary.Cddl (
@@ -33,7 +34,6 @@ import Test.Cardano.Ledger.Binary.Cuddle (
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.Binary.Cddl (readShelleyCddlFiles)
-import Test.Cardano.Ledger.Shelley.CDDL (shelleyCDDL)
 
 spec :: Spec
 spec =

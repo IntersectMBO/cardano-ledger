@@ -230,6 +230,7 @@ test-suite tests
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-mary,
+    cardano-ledger-mary:cddl,
     cardano-ledger-shelley:testlib,
     containers,
     testlib,
