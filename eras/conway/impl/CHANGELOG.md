@@ -42,6 +42,7 @@
 
 ### `testlib`
 
+* Remove `huddle-cddl` and the `CDDL` modules.
 * Add `witsEmptyFieldWithTag`
 * Add `conwayDecodeDuplicateDelegCertFails`
 * Add CDDL definitions:

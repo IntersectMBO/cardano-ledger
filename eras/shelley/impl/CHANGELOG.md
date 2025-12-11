@@ -50,6 +50,7 @@
 
 ### `testlib`
 
+* Remove `huddle-cddl` and the `CDDL` modules.
 * Add `ToCBOR (StashedAVVMAddresses era)` superclass to `ShelleyEraTest`
 * Add `duplicateDelegCertsTxBody`
 * Renamed `impLastTick` to `impCurSlotNo` and `impLastTickG` to `impCurSlotNoG`
