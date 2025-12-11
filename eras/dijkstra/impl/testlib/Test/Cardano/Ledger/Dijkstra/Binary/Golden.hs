@@ -18,14 +18,7 @@ import Cardano.Ledger.BaseTypes (Version)
 import Cardano.Ledger.Binary (Annotator, DecoderError (..), DeserialiseFailure (..), Tokens (..))
 import qualified Cardano.Ledger.Binary as Binary
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Dijkstra.Core (
-  EraTx (..),
-  EraTxBody (..),
-  EraTxOut (..),
-  EraTxWits (..),
-  TxLevel (..),
-  eraProtVerLow,
- )
+import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -55,8 +48,11 @@ spec = describe "Golden" . forEachEraVersion @era $ \version -> do
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV2
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV3
     goldenDuplicatePlutusDataDisallowed @era version
-    goldenSubTransactions @era
     goldenEmptyFields @era version
+  describe "Subtransactions" $ do
+    goldenSubTransactions @era
+  describe "IsValid flag" $ do
+    goldenIsValidFlag @era
 
 goldenEmptyFields :: forall era. DijkstraEraTest era => Version -> Spec
 goldenEmptyFields version =
@@ -278,4 +274,60 @@ goldenSubTransactions = do
             ]
         , E (TkMapLen 0)
         , E TkNull
+        ]
+
+goldenIsValidFlag :: forall era. DijkstraEraTest era => Spec
+goldenIsValidFlag = do
+  it "Deserialize transactions with missing `isValid` flag" $
+    expectDecoderResultOn @(Tx TopTx era)
+      version
+      txWithoutFlagEnc
+      basicValidTx
+      id
+  it "Deserialize transactions with `isValid` flag set to true" $
+    expectDecoderResultOn @(Tx TopTx era)
+      version
+      txWithFlagTrueEnc
+      basicValidTx
+      id
+  it "Fail to deserialize transactions with `isValid` flag set to false" $
+    expectDecoderFailureAnn @(Tx TopTx era)
+      version
+      txWithFlagFalseEnc
+      ( DecoderErrorDeserialiseFailure
+          "Annotator (Tx TopTx DijkstraEra)"
+          (DeserialiseFailure 13 "value `false` not allowed for `isValid`")
+      )
+  where
+    version = eraProtVerLow @era
+    basicValidTx = mkBasicTx @era @TopTx (mkBasicTxBody @era @TopTx) & isValidTxL .~ IsValid True
+    txWithoutFlagEnc =
+      mconcat
+        [ E $ TkListLen 3
+        , txBodyEnc
+        , E (TkMapLen 0)
+        , E TkNull
+        ]
+    txWithFlagTrueEnc =
+      mconcat
+        [ E $ TkListLen 4
+        , txBodyEnc
+        , E (TkMapLen 0)
+        , E (TkBool True)
+        , E TkNull
+        ]
+    txWithFlagFalseEnc =
+      mconcat
+        [ E $ TkListLen 4
+        , txBodyEnc
+        , E (TkMapLen 0)
+        , E (TkBool False)
+        , E TkNull
+        ]
+    txBodyEnc =
+      mconcat
+        [ E $ TkMapLen 3
+        , Em [E @Int 0, Ev version $ Set.empty @TxIn]
+        , Em [E @Int 1, Ev version $ [] @(TxOut era)]
+        , Em [E @Int 2, E $ Coin 0]
         ]
