@@ -17,6 +17,7 @@ module Test.Cardano.Ledger.Dijkstra.Binary.Annotator (
 
 import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
@@ -165,12 +166,24 @@ instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   decCBOR =
     withSTxBothLevels @l $ \case
       STopTx ->
-        decode $
-          RecD DijkstraTx
-            <! From
-            <! From
-            <! From
-            <! D (decodeNullStrictMaybe decCBOR)
+        decodeListLen >>= \case
+          4 -> do
+            body <- decCBOR
+            wits <- decCBOR
+            isValid <-
+              decCBOR
+                >>= \case
+                  True -> pure (IsValid True)
+                  False -> fail "value `false` not allowed for `isValid`"
+            aux <- decodeNullStrictMaybe decCBOR
+            pure $ DijkstraTx body wits isValid aux
+          3 -> do
+            DijkstraTx
+              <$> decCBOR
+              <*> decCBOR
+              <*> pure (IsValid True)
+              <*> decodeNullStrictMaybe decCBOR
+          n -> fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
       SSubTx ->
         decode $
           RecD DijkstraSubTx
