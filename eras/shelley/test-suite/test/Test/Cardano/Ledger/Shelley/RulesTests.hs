@@ -21,7 +21,7 @@ import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..), Withdrawals (..))
 import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Examples.Chain (testCHAINExample)
@@ -123,7 +123,7 @@ testAliceDoesntSign =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay, asWitness Cast.dariaPay]
-    wits = Set.singleton $ hashScript @ShelleyEra aliceOnly
+    wits = NES.singleton $ hashScript @ShelleyEra aliceOnly
 
 testEverybodySigns :: Assertion
 testEverybodySigns =
@@ -192,7 +192,7 @@ testAliceAndBob' =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay]
-    wits = Set.singleton $ hashScript @ShelleyEra aliceAndBob
+    wits = NES.singleton $ hashScript @ShelleyEra aliceAndBob
 
 testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
@@ -205,7 +205,7 @@ testAliceAndBob'' =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay]
-    wits = Set.singleton $ hashScript @ShelleyEra aliceAndBob
+    wits = NES.singleton $ hashScript @ShelleyEra aliceAndBob
 
 testAliceAndBobOrCarl :: Assertion
 testAliceAndBobOrCarl =
@@ -332,7 +332,7 @@ testTwoScripts' =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay]
-    wits = Set.singleton $ hashScript @ShelleyEra aliceAndBob
+    wits = NES.singleton $ hashScript @ShelleyEra aliceAndBob
 
 -- script and skey locked
 
@@ -360,7 +360,7 @@ testScriptAndSKey' =
         (Withdrawals Map.empty)
         (Coin 1000)
         [asWitness Cast.bobPay]
-    wits = Set.singleton $ asWitness $ hashKey $ vKey Cast.alicePay
+    wits = NES.singleton $ asWitness $ hashKey $ vKey Cast.alicePay
 
 testScriptAndSKey'' :: Assertion
 testScriptAndSKey'' =
@@ -430,7 +430,7 @@ testRwdAliceSignsAlone' =
         )
         (Coin 0)
         [asWitness Cast.alicePay]
-    wits = Set.singleton $ hashScript @ShelleyEra bobOnly
+    wits = NES.singleton $ hashScript @ShelleyEra bobOnly
 
 testRwdAliceSignsAlone'' :: Assertion
 testRwdAliceSignsAlone'' =
@@ -469,4 +469,4 @@ testRwdAliceSignsAlone''' =
         )
         (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
-    wits = Set.singleton $ hashScript @ShelleyEra bobOnly
+    wits = NES.singleton $ hashScript @ShelleyEra bobOnly

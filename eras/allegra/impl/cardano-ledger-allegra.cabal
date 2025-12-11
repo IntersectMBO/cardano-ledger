@@ -69,6 +69,7 @@ library
     aeson,
     base >=4.18 && <5,
     bytestring,
+    cardano-data,
     cardano-ledger-binary >=1.4,
     cardano-ledger-core:{cardano-ledger-core, internal} >=1.19,
     cardano-ledger-shelley ^>=1.18,

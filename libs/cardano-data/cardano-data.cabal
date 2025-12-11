@@ -24,6 +24,7 @@ library
     Data.OMap.Strict
     Data.OSet.Strict
     Data.Pulse
+    Data.Set.NonEmpty
     Data.Universe
 
   hs-source-dirs: src
@@ -37,6 +38,7 @@ library
     -Wunused-packages
 
   build-depends:
+    QuickCheck,
     aeson >=2.2,
     base >=4.18 && <5,
     cardano-ledger-binary >=1.8,

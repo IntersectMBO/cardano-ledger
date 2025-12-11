@@ -59,6 +59,7 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Data.Word (Word64)
 import GHC.Stack
 import Lens.Micro
@@ -329,7 +330,7 @@ testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
     [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO $ Mismatch (Coin 0) (Coin 10000)))
-    , UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ mkGenesisTxIn 42))
+    , UtxowFailure (UtxoFailure $ BadInputsUTxO (NES.singleton $ mkGenesisTxIn 42))
     ]
     $ aliceGivesBobLovelace
     $ AliceToBob
@@ -360,7 +361,7 @@ testWitnessNotIncluded =
           SNothing
           SNothing
       tx = ShelleyTx @ShelleyEra txbody mempty SNothing
-      txwits = Set.singleton (asWitness $ hashKey $ vKey alicePay)
+      txwits = NES.singleton (asWitness $ hashKey $ vKey alicePay)
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW txwits
@@ -381,7 +382,7 @@ testSpendNotOwnedUTxO =
           SNothing
       aliceWit = mkWitnessVKey (hashAnnotated txbody) alicePay
       tx = MkShelleyTx $ ShelleyTx @ShelleyEra txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
-      txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
+      txwits = NES.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW txwits
@@ -412,7 +413,7 @@ testWitnessWrongUTxO =
           SNothing
       aliceWit = mkWitnessVKey (hashAnnotated tx2body) alicePay
       tx = ShelleyTx @ShelleyEra txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
-      txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
+      txwits = NES.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
             InvalidWitnessesUTXOW
@@ -526,7 +527,7 @@ testWithdrawalNoWit =
       txwits :: ShelleyTxWits ShelleyEra
       txwits = mempty {addrWits = Set.singleton $ mkWitnessVKey (hashAnnotated txb) alicePay}
       tx = ShelleyTx @ShelleyEra txb txwits SNothing
-      missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
+      missing = NES.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
         [ UtxowFailure $ MissingVKeyWitnessesUTXOW missing
         ]

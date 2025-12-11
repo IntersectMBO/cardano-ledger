@@ -72,6 +72,7 @@ import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
   TransitionRule,
+  failureOnNonEmptySet,
   judgmentContext,
   liftSTS,
   trans,
@@ -83,12 +84,12 @@ import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
 import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
-import Validation (failureUnless)
 
 data BabbageUtxowPredFailure era
   = AlonzoInBabbageUtxowPredFailure (AlonzoUtxowPredFailure era) -- TODO: embed and translate
@@ -96,10 +97,10 @@ data BabbageUtxowPredFailure era
     UtxoFailure (PredicateFailure (EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
     MalformedScriptWitnesses
-      (Set ScriptHash)
+      (NonEmptySet ScriptHash)
   | -- | the set of malformed script witnesses
     MalformedReferenceScripts
-      (Set ScriptHash)
+      (NonEmptySet ScriptHash)
   | -- | The computed script integrity hash does not match the provided script integrity hash
     ScriptIntegrityHashMismatch
       (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
@@ -217,8 +218,8 @@ babbageMissingScripts ::
   Test (ShelleyUtxowPredFailure era)
 babbageMissingScripts _ sNeeded sRefs sReceived =
   sequenceA_
-    [ failureUnless (Set.null extra) $ Shelley.ExtraneousScriptWitnessesUTXOW extra
-    , failureUnless (Set.null missing) $ Shelley.MissingScriptWitnessesUTXOW missing
+    [ failureOnNonEmptySet extra Shelley.ExtraneousScriptWitnessesUTXOW
+    , failureOnNonEmptySet missing Shelley.MissingScriptWitnessesUTXOW
     ]
   where
     neededNonRefs = sNeeded `Set.difference` sRefs
@@ -244,9 +245,7 @@ validateFailedBabbageScripts tx (ScriptsProvided scriptsProvided) neededHashes =
                    in scriptIsNeeded && scriptDoesNotValidate
           )
           scriptsProvided
-   in failureUnless
-        (Map.null failedScripts)
-        (Shelley.ScriptWitnessNotValidatingUTXOW $ Map.keysSet failedScripts)
+   in failureOnNonEmptySet (Map.keysSet failedScripts) Shelley.ScriptWitnessNotValidatingUTXOW
 
 {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ ⋃ ( , ,d,s)∈txouts tx{s, d},
                        x ∈ Script ∪ Datum ⇒ isWellFormed x
@@ -261,9 +260,8 @@ validateScriptsWellFormed ::
   Test (BabbageUtxowPredFailure era)
 validateScriptsWellFormed pp tx =
   sequenceA_
-    [ failureUnless (Map.null invalidScriptWits) $
-        MalformedScriptWitnesses (Map.keysSet invalidScriptWits)
-    , failureUnless (null invalidRefScripts) $ MalformedReferenceScripts invalidRefScriptHashes
+    [ failureOnNonEmptySet (Map.keysSet invalidScriptWits) MalformedScriptWitnesses
+    , failureOnNonEmptySet invalidRefScriptHashes MalformedReferenceScripts
     ]
   where
     scriptWits = tx ^. witsTxL . scriptTxWitsL

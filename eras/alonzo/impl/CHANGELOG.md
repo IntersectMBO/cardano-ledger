@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Change sets containing errors into `NonEmptySet` for `AlonzoUtxoPredFailure`, `AlonzoUtxowPredFailure`
 * Change all lists into `NonEmpty` for `AlonzoUtxoPredFailure`, `AlonzoUtxosPredFailure`, `AlonzoUtxowPredFailure`
 * Change `collectPlutusScriptsWithContext` to return a `NonEmpty` list of failures
 * Changed the type of `dappMinUTxOValue` to `CompactForm Coin` in `DowngradeAlonzoPParams`

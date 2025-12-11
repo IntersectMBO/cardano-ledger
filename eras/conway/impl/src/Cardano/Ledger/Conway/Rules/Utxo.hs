@@ -74,7 +74,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (Embed (..), STS (..))
 import Data.List.NonEmpty (NonEmpty)
-import Data.Set (Set)
+import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
@@ -88,7 +88,7 @@ data ConwayUtxoPredFailure era
     UtxosFailure (PredicateFailure (EraRule "UTXOS" era))
   | -- | The bad transaction inputs
     BadInputsUTxO
-      (Set TxIn)
+      (NonEmptySet TxIn)
   | OutsideValidityIntervalUTxO
       -- | transaction's validity interval
       ValidityInterval
@@ -105,12 +105,12 @@ data ConwayUtxoPredFailure era
       -- | the expected network id
       Network
       -- | the set of addresses with incorrect network IDs
-      (Set Addr)
+      (NonEmptySet Addr)
   | WrongNetworkWithdrawal
       -- | the expected network id
       Network
       -- | the set of reward addresses with incorrect network IDs
-      (Set RewardAccount)
+      (NonEmptySet RewardAccount)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
       (NonEmpty (TxOut era))
