@@ -185,7 +185,7 @@ library cddl
   build-depends:
     base,
     cardano-ledger-core,
-    cuddle >=0.4,
+    cuddle >=1.1,
     heredoc,
     text,
 
