@@ -174,7 +174,6 @@ library testlib
     Test.Cardano.Ledger.Conway.Binary.Regression
     Test.Cardano.Ledger.Conway.Binary.RoundTrip
     Test.Cardano.Ledger.Conway.BinarySpec
-    Test.Cardano.Ledger.Conway.CDDL
     Test.Cardano.Ledger.Conway.CommitteeRatifySpec
     Test.Cardano.Ledger.Conway.DRepRatifySpec
     Test.Cardano.Ledger.Conway.Era
@@ -236,11 +235,9 @@ library testlib
     cardano-slotting:{cardano-slotting, testlib},
     cardano-strict-containers,
     containers,
-    cuddle >=0.4,
     data-default,
     deepseq,
     generic-random,
-    heredoc,
     microlens,
     microlens-mtl,
     mtl,
@@ -250,28 +247,6 @@ library testlib
     text,
     time,
     tree-diff,
-
-executable huddle-cddl
-  main-is: Main.hs
-  hs-source-dirs: huddle-cddl
-  other-modules: Paths_cardano_ledger_conway
-  default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
-  build-depends:
-    base,
-    cardano-ledger-binary:testlib >=1.5,
-    testlib,
 
 executable gen-golden
   main-is: GenerateGoldenFileMain.hs
