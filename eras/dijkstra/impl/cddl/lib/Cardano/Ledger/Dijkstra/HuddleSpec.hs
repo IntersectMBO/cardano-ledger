@@ -169,7 +169,7 @@ requiredTopLevelGuardsRule p =
           ==> (huddleRule @"plutus_data" p / VNil)
       ]
 
-scriptRequireGuardGroup :: forall era. HuddleRule "credential" era => Proxy era -> Named Group
+scriptRequireGuardGroup :: forall era. HuddleRule "credential" era => Proxy era -> GroupDef
 scriptRequireGuardGroup p =
   comment
     [str|Dijkstra adds guard scripts for enhanced security.
@@ -624,7 +624,12 @@ instance HuddleRule "transaction" DijkstraEra where
       =:= arr
         [ a $ huddleRule @"transaction_body" p
         , a $ huddleRule @"transaction_witness_set" p
-        , a VBool
+        , a $ (bool True)
+        , a (huddleRule @"auxiliary_data" p / VNil)
+        ]
+      / arr
+        [ a $ huddleRule @"transaction_body" p
+        , a $ huddleRule @"transaction_witness_set" p
         , a (huddleRule @"auxiliary_data" p / VNil)
         ]
 
