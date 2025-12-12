@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Change the type `ApplyTxError era` to be a data family of the `ApplyTx era` class, with its constructor renamed to `ShelleyApplyTxError` for the Shelley era
 * Change all lists into `NonEmpty` for `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`
 * Changed the type of the following fields to `CompactForm Coin` in `ShelleyPParams`:
   - `sppMinFeeA`

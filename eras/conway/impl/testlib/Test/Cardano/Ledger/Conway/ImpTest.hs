@@ -140,6 +140,7 @@ import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
+  Inject,
   ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
@@ -186,6 +187,7 @@ import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.Shelley.API (ApplyTxError)
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   epochStateGovStateL,
@@ -367,6 +369,7 @@ class
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , InjectRuleEvent "TICK" ConwayHardForkEvent era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Inject (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (ApplyTxError era)
   ) =>
   ConwayEraImp era
 

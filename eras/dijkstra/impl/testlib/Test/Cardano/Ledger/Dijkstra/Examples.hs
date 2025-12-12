@@ -4,6 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Examples (
   ledgerExamples,
@@ -17,7 +18,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Rules (DijkstraLEDGER)
+import Cardano.Ledger.Dijkstra.Rules (DijkstraLEDGER, DijkstraMEMPOOL)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
@@ -28,23 +29,29 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (..),
   Credential (..),
+  NewEpochState,
+  ProposedPPUpdates (ProposedPPUpdates),
   RewardAccount (..),
   TxId (..),
  )
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (mkTxInPartial)
-import Control.State.Transition.Extended (Embed (..))
+import Control.State.Transition.Extended (
+  Embed (..),
+  STS (..),
+ )
+import Data.Default (def)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Examples (
   exampleDatum,
   exampleTx,
-  mkLedgerExamples,
  )
 import Test.Cardano.Ledger.Babbage.Examples (exampleBabbageNewEpochState, exampleCollateralOutput)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
@@ -54,25 +61,63 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
+  exampleNonMyopicRewards,
   examplePayKey,
+  examplePoolDistr,
   exampleStakeKey,
   exampleStakePoolParams,
   keyToCredential,
   mkKeyHash,
   mkScriptHash,
+  testShelleyGenesis,
  )
 
-ledgerExamples :: LedgerExamples DijkstraEra
+ledgerExamples :: LedgerExamples "MEMPOOL" DijkstraEra
 ledgerExamples =
   mkLedgerExamples
-    ( ApplyTxError $
-        pure $
+    ( pure $
+        wrapFailed @(DijkstraLEDGER DijkstraEra) @(DijkstraMEMPOOL DijkstraEra) $
           wrapFailed @(ConwayDELEG DijkstraEra) @(DijkstraLEDGER DijkstraEra) $
             DelegateeStakePoolNotRegisteredDELEG @DijkstraEra (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
     exampleTxDijkstra
     exampleDijkstraGenesis
+
+mkLedgerExamples ::
+  forall era.
+  AlonzoEraPParams era =>
+  NonEmpty (PredicateFailure (EraRule "MEMPOOL" era)) ->
+  NewEpochState era ->
+  Tx TopTx era ->
+  TranslationContext era ->
+  LedgerExamples "MEMPOOL" era
+mkLedgerExamples
+  applyTxError
+  newEpochState
+  tx
+  translationContext =
+    LedgerExamples
+      { leTx = tx
+      , leApplyTxError = applyTxError
+      , lePParams = def
+      , leProposedPPUpdates =
+          ProposedPPUpdates $
+            Map.singleton
+              (mkKeyHash 0)
+              (emptyPParamsUpdate & ppuCollateralPercentageL .~ SJust 150)
+      , leNewEpochState = newEpochState
+      , lePoolDistr = examplePoolDistr
+      , leRewardsCredentials =
+          Set.fromList
+            [ Left (Coin 100)
+            , Right (ScriptHashObj (mkScriptHash 1))
+            , Right (KeyHashObj (mkKeyHash 2))
+            ]
+      , leNonMyopicRewards = exampleNonMyopicRewards
+      , leTranslationContext = translationContext
+      , leShelleyGenesis = testShelleyGenesis
+      }
 
 exampleTxDijkstra :: Tx TopTx DijkstraEra
 exampleTxDijkstra =

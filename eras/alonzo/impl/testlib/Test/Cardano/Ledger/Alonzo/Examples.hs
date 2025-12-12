@@ -33,7 +33,6 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (..),
   Credential (..),
   Network (..),
   NewEpochState (..),
@@ -42,11 +41,16 @@ import Cardano.Ledger.Shelley.API (
   TxId (..),
   Update (..),
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
+import Cardano.Ledger.Shelley.Rules (
+  PredicateFailure,
+  ShelleyDelegsPredFailure (..),
+  ShelleyLedgerPredFailure (..),
+ )
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.Default (def)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -72,13 +76,12 @@ import Test.Cardano.Ledger.Shelley.Examples (
   testShelleyGenesis,
  )
 
-ledgerExamples :: LedgerExamples AlonzoEra
+ledgerExamples :: LedgerExamples "LEDGER" AlonzoEra
 ledgerExamples =
   mkLedgerExamples
-    ( ApplyTxError $
-        pure $
-          DelegsFailure $
-            DelegateeNotRegisteredDELEG @AlonzoEra (mkKeyHash 1)
+    ( pure $
+        DelegsFailure $
+          DelegateeNotRegisteredDELEG @AlonzoEra (mkKeyHash 1)
     )
     exampleAlonzoNewEpochState
     exampleTxAlonzo
@@ -87,11 +90,11 @@ ledgerExamples =
 mkLedgerExamples ::
   forall era.
   AlonzoEraPParams era =>
-  ApplyTxError era ->
+  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   NewEpochState era ->
   Tx TopTx era ->
   TranslationContext era ->
-  LedgerExamples era
+  LedgerExamples "LEDGER" era
 mkLedgerExamples
   applyTxError
   newEpochState

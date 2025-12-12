@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `ConwayApplyTxError` constructor for `ApplyTxError era`
 * Change all lists into `NonEmpty` for `ConwayUtxoPredFailure`, `ConwayUtxosPredFailure`, `ConwayUtxowPredFailure`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Re-export `UtxoEnv` from `Cardano.Ledger.Conway.Rules.Utxo`
