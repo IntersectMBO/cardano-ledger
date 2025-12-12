@@ -29,6 +29,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Shelley.HuddleSpec
 import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
+import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -40,17 +41,19 @@ allegraCDDL =
     ]
 
 blockRule ::
-  forall era.
-  ( HuddleRule "header" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "header" era
   , HuddleRule "transaction_body" era
   , HuddleRule "transaction_witness_set" era
   , HuddleRule "auxiliary_data" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-blockRule p =
-  "block"
-    =:= arr
+blockRule pname p =
+  pname
+    =.= arr
       [ a $ huddleRule @"header" p
       , "transaction_bodies" ==> arr [0 <+ a (huddleRule @"transaction_body" p)]
       , "transaction_witness_sets" ==> arr [0 <+ a (huddleRule @"transaction_witness_set" p)]
@@ -63,52 +66,57 @@ blockRule p =
       ]
 
 transactionRule ::
-  forall era.
-  ( HuddleRule "transaction_body" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "transaction_body" era
   , HuddleRule "transaction_witness_set" era
   , HuddleRule "auxiliary_data" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-transactionRule p =
-  "transaction"
-    =:= arr
+transactionRule pname p =
+  pname
+    =.= arr
       [ a $ huddleRule @"transaction_body" p
       , a $ huddleRule @"transaction_witness_set" p
       , a (huddleRule @"auxiliary_data" p / VNil)
       ]
 
-auxiliaryScriptsRule :: forall era. HuddleRule "native_script" era => Proxy era -> Rule
-auxiliaryScriptsRule p = "auxiliary_scripts" =:= arr [0 <+ a (huddleRule @"native_script" p)]
+auxiliaryScriptsRule ::
+  forall name era. (KnownSymbol name, HuddleRule "native_script" era) => Proxy name -> Proxy era -> Rule
+auxiliaryScriptsRule pname p = pname =.= arr [0 <+ a (huddleRule @"native_script" p)]
 
 auxiliaryDataArrayRule ::
-  forall era. HuddleRule "auxiliary_scripts" era => Proxy era -> Rule
-auxiliaryDataArrayRule p =
-  "auxiliary_data_array"
-    =:= arr
+  forall name era. (KnownSymbol name, HuddleRule "auxiliary_scripts" era) => Proxy name -> Proxy era -> Rule
+auxiliaryDataArrayRule pname p =
+  pname
+    =.= arr
       [ "transaction_metadata" ==> huddleRule @"metadata" p
       , "auxiliary_scripts" ==> huddleRule @"auxiliary_scripts" p
       ]
 
 auxiliaryDataRule ::
-  forall era. HuddleRule "auxiliary_data_array" era => Proxy era -> Rule
-auxiliaryDataRule p =
-  "auxiliary_data"
-    =:= huddleRule @"metadata" p
+  forall name era. (KnownSymbol name, HuddleRule "auxiliary_data_array" era) => Proxy name -> Proxy era -> Rule
+auxiliaryDataRule pname p =
+  pname
+    =.= huddleRule @"metadata" p
     / huddleRule @"auxiliary_data_array" p
 
 nativeScriptRule ::
-  forall era.
-  ( HuddleGroup "script_pubkey" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleGroup "script_pubkey" era
   , HuddleGroup "script_all" era
   , HuddleGroup "script_any" era
   , HuddleGroup "script_n_of_k" era
   , HuddleGroup "script_invalid_before" era
   , HuddleGroup "script_invalid_hereafter" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-nativeScriptRule p =
+nativeScriptRule pname p =
   comment
     [str|Allegra introduces timelock support for native scripts.
         |
@@ -118,8 +126,8 @@ nativeScriptRule p =
         |
         |Note: Allegra switched to int64 for script_n_of_k thresholds.
         |]
-    $ "native_script"
-      =:= arr [a $ huddleGroup @"script_pubkey" p]
+    $ pname
+      =.= arr [a $ huddleGroup @"script_pubkey" p]
       / arr [a $ huddleGroup @"script_all" p]
       / arr [a $ huddleGroup @"script_any" p]
       / arr [a $ huddleGroup @"script_n_of_k" p]
@@ -127,189 +135,190 @@ nativeScriptRule p =
       / arr [a $ huddleGroup @"script_invalid_hereafter" p]
 
 scriptNOfKGroup ::
-  forall era.
-  HuddleRule "native_script" era =>
+  forall name era.
+  (KnownSymbol name, HuddleRule "native_script" era) =>
+  Proxy name ->
   Proxy era ->
   Named Group
-scriptNOfKGroup p =
-  "script_n_of_k"
-    =:~ grp
+scriptNOfKGroup pname p =
+  pname
+    =.~ grp
       [ 3
       , "n" ==> huddleRule @"int64" p
       , a $ arr [0 <+ a (huddleRule @"native_script" p)]
       ]
 
 scriptInvalidBeforeGroup ::
-  forall era. Era era => Proxy era -> Named Group
-scriptInvalidBeforeGroup p =
+  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Named Group
+scriptInvalidBeforeGroup pname p =
   comment
     [str|Timelock validity intervals are half-open intervals [a, b).
         |This field specifies the left (included) endpoint a.
         |]
-    $ "script_invalid_before"
-      =:~ grp [4, a (huddleRule @"slot" p)]
+    $ pname
+      =.~ grp [4, a (huddleRule @"slot" p)]
 
 scriptInvalidHereafterGroup ::
-  forall era. Era era => Proxy era -> Named Group
-scriptInvalidHereafterGroup p =
+  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Named Group
+scriptInvalidHereafterGroup pname p =
   comment
     [str|Timelock validity intervals are half-open intervals [a, b).
         |This field specifies the right (excluded) endpoint b.
         |]
-    $ "script_invalid_hereafter"
-      =:~ grp [5, a (huddleRule @"slot" p)]
+    $ pname
+      =.~ grp [5, a (huddleRule @"slot" p)]
 
 instance HuddleRule "major_protocol_version" AllegraEra where
-  huddleRule = majorProtocolVersionRule @AllegraEra
+  huddleRuleNamed pname p = majorProtocolVersionRule pname p
 
 instance HuddleGroup "protocol_version" AllegraEra where
-  huddleGroup = shelleyProtocolVersionGroup @AllegraEra
+  huddleGroupNamed pname p = shelleyProtocolVersionGroup pname p
 
 instance HuddleRule "protocol_param_update" AllegraEra where
-  huddleRule = protocolParamUpdateRule @AllegraEra
+  huddleRuleNamed pname p = protocolParamUpdateRule pname p
 
 instance HuddleRule "proposed_protocol_parameter_updates" AllegraEra where
-  huddleRule = proposedProtocolParameterUpdatesRule @AllegraEra
+  huddleRuleNamed pname p = proposedProtocolParameterUpdatesRule pname p
 
 instance HuddleRule "update" AllegraEra where
-  huddleRule = updateRule @AllegraEra
+  huddleRuleNamed pname p = updateRule pname p
 
 instance HuddleRule "genesis_hash" AllegraEra where
-  huddleRule = genesisHashRule @AllegraEra
+  huddleRuleNamed pname p = genesisHashRule pname p
 
 instance HuddleGroup "operational_cert" AllegraEra where
-  huddleGroup = shelleyOperationalCertGroup @AllegraEra
+  huddleGroupNamed pname p = shelleyOperationalCertGroup pname p
 
 instance HuddleRule "header_body" AllegraEra where
-  huddleRule = headerBodyRule @AllegraEra
+  huddleRuleNamed pname p = headerBodyRule pname p
 
 instance HuddleRule "header" AllegraEra where
-  huddleRule = headerRule @AllegraEra
+  huddleRuleNamed pname p = headerRule pname p
 
 instance Era era => HuddleRule "min_int64" era where
-  huddleRule _ = "min_int64" =:= (-9223372036854775808 :: Integer)
+  huddleRuleNamed pname _ = pname =.= (-9223372036854775808 :: Integer)
 
 instance Era era => HuddleRule "max_int64" era where
-  huddleRule _ = "max_int64" =:= (9223372036854775807 :: Integer)
+  huddleRuleNamed pname _ = pname =.= (9223372036854775807 :: Integer)
 
 instance Era era => HuddleRule "int64" era where
-  huddleRule p = "int64" =:= huddleRule @"min_int64" p ... huddleRule @"max_int64" p
+  huddleRuleNamed pname p = pname =.= huddleRule @"min_int64" p ... huddleRule @"max_int64" p
 
 instance HuddleGroup "script_all" AllegraEra where
-  huddleGroup = scriptAllGroup @AllegraEra
+  huddleGroupNamed pname p = scriptAllGroup pname p
 
 instance HuddleGroup "script_any" AllegraEra where
-  huddleGroup = scriptAnyGroup @AllegraEra
+  huddleGroupNamed pname p = scriptAnyGroup pname p
 
 instance HuddleGroup "script_n_of_k" AllegraEra where
-  huddleGroup = scriptNOfKGroup @AllegraEra
+  huddleGroupNamed pname p = scriptNOfKGroup pname p
 
 instance HuddleGroup "script_invalid_before" AllegraEra where
-  huddleGroup = scriptInvalidBeforeGroup @AllegraEra
+  huddleGroupNamed pname p = scriptInvalidBeforeGroup pname p
 
 instance HuddleGroup "script_invalid_hereafter" AllegraEra where
-  huddleGroup = scriptInvalidHereafterGroup @AllegraEra
+  huddleGroupNamed pname p = scriptInvalidHereafterGroup pname p
 
 instance HuddleRule "native_script" AllegraEra where
-  huddleRule = nativeScriptRule @AllegraEra
+  huddleRuleNamed pname p = nativeScriptRule pname p
 
 instance HuddleRule "vkeywitness" AllegraEra where
-  huddleRule = vkeywitnessRule @AllegraEra
+  huddleRuleNamed pname p = vkeywitnessRule pname p
 
 instance HuddleRule "bootstrap_witness" AllegraEra where
-  huddleRule = bootstrapWitnessRule @AllegraEra
+  huddleRuleNamed pname p = bootstrapWitnessRule pname p
 
 instance HuddleRule "transaction_witness_set" AllegraEra where
-  huddleRule = transactionWitnessSetRule @AllegraEra
+  huddleRuleNamed pname p = transactionWitnessSetRule pname p
 
 instance HuddleGroup "script_pubkey" AllegraEra where
-  huddleGroup = scriptPubkeyGroup @AllegraEra
+  huddleGroupNamed pname p = scriptPubkeyGroup pname p
 
 instance HuddleRule "transaction_id" AllegraEra where
-  huddleRule = transactionIdRule @AllegraEra
+  huddleRuleNamed pname p = transactionIdRule pname p
 
 instance HuddleRule "transaction_input" AllegraEra where
-  huddleRule = transactionInputRule @AllegraEra
+  huddleRuleNamed pname p = transactionInputRule pname p
 
 instance HuddleRule "transaction_output" AllegraEra where
-  huddleRule = transactionOutputRule @AllegraEra
+  huddleRuleNamed pname p = transactionOutputRule pname p
 
 instance HuddleRule "dns_name" AllegraEra where
-  huddleRule _ = dnsNameRule
+  huddleRuleNamed pname _ = dnsNameRule pname
 
 instance HuddleRule "url" AllegraEra where
-  huddleRule _ = urlRule
+  huddleRuleNamed pname _ = urlRule pname
 
 instance HuddleRule "pool_metadata" AllegraEra where
-  huddleRule = poolMetadataRule @AllegraEra
+  huddleRuleNamed pname p = poolMetadataRule pname p
 
 instance HuddleGroup "single_host_addr" AllegraEra where
-  huddleGroup = singleHostAddrGroup @AllegraEra
+  huddleGroupNamed pname p = singleHostAddrGroup pname p
 
 instance HuddleGroup "single_host_name" AllegraEra where
-  huddleGroup = singleHostNameGroup @AllegraEra
+  huddleGroupNamed pname p = singleHostNameGroup pname p
 
 instance HuddleGroup "multi_host_name" AllegraEra where
-  huddleGroup = multiHostNameGroup @AllegraEra
+  huddleGroupNamed pname p = multiHostNameGroup pname p
 
 instance HuddleRule "relay" AllegraEra where
-  huddleRule = relayRule @AllegraEra
+  huddleRuleNamed pname p = relayRule pname p
 
 instance HuddleGroup "pool_params" AllegraEra where
-  huddleGroup = poolParamsGroup @AllegraEra
+  huddleGroupNamed pname p = poolParamsGroup pname p
 
 instance HuddleGroup "pool_registration_cert" AllegraEra where
-  huddleGroup = poolRegistrationCertGroup @AllegraEra
+  huddleGroupNamed pname p = poolRegistrationCertGroup pname p
 
 instance HuddleGroup "pool_retirement_cert" AllegraEra where
-  huddleGroup = poolRetirementCertGroup @AllegraEra
+  huddleGroupNamed pname p = poolRetirementCertGroup pname p
 
 instance HuddleRule "genesis_delegate_hash" AllegraEra where
-  huddleRule = genesisDelegateHashRule @AllegraEra
+  huddleRuleNamed pname p = genesisDelegateHashRule pname p
 
 instance HuddleGroup "genesis_delegation_cert" AllegraEra where
-  huddleGroup = genesisDelegationCertGroup @AllegraEra
+  huddleGroupNamed pname p = genesisDelegationCertGroup pname p
 
 instance HuddleRule "delta_coin" AllegraEra where
-  huddleRule _ = deltaCoinRule
+  huddleRuleNamed pname _ = deltaCoinRule pname
 
 instance HuddleRule "move_instantaneous_reward" AllegraEra where
-  huddleRule = moveInstantaneousRewardRule @AllegraEra
+  huddleRuleNamed pname p = moveInstantaneousRewardRule pname p
 
 instance HuddleGroup "move_instantaneous_rewards_cert" AllegraEra where
-  huddleGroup = moveInstantaneousRewardsCertGroup @AllegraEra
+  huddleGroupNamed pname p = moveInstantaneousRewardsCertGroup pname p
 
 instance HuddleGroup "account_registration_cert" AllegraEra where
-  huddleGroup = accountRegistrationCertGroup @AllegraEra
+  huddleGroupNamed pname p = accountRegistrationCertGroup pname p
 
 instance HuddleGroup "account_unregistration_cert" AllegraEra where
-  huddleGroup = accountUnregistrationCertGroup @AllegraEra
+  huddleGroupNamed pname p = accountUnregistrationCertGroup pname p
 
 instance HuddleGroup "delegation_to_stake_pool_cert" AllegraEra where
-  huddleGroup = delegationToStakePoolCertGroup @AllegraEra
+  huddleGroupNamed pname p = delegationToStakePoolCertGroup pname p
 
 instance HuddleRule "certificate" AllegraEra where
-  huddleRule = certificateRule @AllegraEra
+  huddleRuleNamed pname p = certificateRule pname p
 
 instance HuddleRule "withdrawals" AllegraEra where
-  huddleRule = shelleyWithdrawalsRule @AllegraEra
+  huddleRuleNamed pname p = shelleyWithdrawalsRule pname p
 
 instance HuddleRule "auxiliary_scripts" AllegraEra where
-  huddleRule = auxiliaryScriptsRule @AllegraEra
+  huddleRuleNamed pname p = auxiliaryScriptsRule pname p
 
 instance HuddleRule "auxiliary_data_array" AllegraEra where
-  huddleRule = auxiliaryDataArrayRule @AllegraEra
+  huddleRuleNamed pname p = auxiliaryDataArrayRule pname p
 
 instance HuddleRule "auxiliary_data" AllegraEra where
-  huddleRule = auxiliaryDataRule @AllegraEra
+  huddleRuleNamed pname p = auxiliaryDataRule pname p
 
 instance HuddleRule "transaction_body" AllegraEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|Allegra transaction body adds the validity interval start at index 8
           |]
-      $ "transaction_body"
-        =:= mp
+      $ pname
+        =.= mp
           [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
           , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
           , idx 2 ==> huddleRule @"coin" p
@@ -322,16 +331,16 @@ instance HuddleRule "transaction_body" AllegraEra where
           ]
 
 instance HuddleRule "transaction" AllegraEra where
-  huddleRule = transactionRule @AllegraEra
+  huddleRuleNamed pname p = transactionRule pname p
 
 instance HuddleRule "block" AllegraEra where
-  huddleRule = blockRule @AllegraEra
+  huddleRuleNamed pname p = blockRule pname p
 
 instance HuddleRule1 "set" AllegraEra where
-  huddleRule1 _ = huddleRule1 @"set" (Proxy @ShelleyEra)
+  huddleRule1Named _ _ = huddleRule1 @"set" (Proxy @ShelleyEra)
 
 instance HuddleRule1 "nonempty_set" AllegraEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ShelleyEra)
+  huddleRule1Named _ _ = huddleRule1 @"nonempty_set" (Proxy @ShelleyEra)
 
 instance HuddleRule1 "nonempty_oset" AllegraEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ShelleyEra)
+  huddleRule1Named _ _ = huddleRule1 @"nonempty_oset" (Proxy @ShelleyEra)
