@@ -129,7 +129,7 @@ scriptNOfKGroup ::
   forall era.
   HuddleRule "native_script" era =>
   Proxy era ->
-  Named Group
+  GroupDef
 scriptNOfKGroup p =
   "script_n_of_k"
     =:~ grp
@@ -139,7 +139,7 @@ scriptNOfKGroup p =
       ]
 
 scriptInvalidBeforeGroup ::
-  forall era. Era era => Proxy era -> Named Group
+  forall era. Era era => Proxy era -> GroupDef
 scriptInvalidBeforeGroup p =
   comment
     [str|Timelock validity intervals are half-open intervals [a, b).
@@ -149,7 +149,7 @@ scriptInvalidBeforeGroup p =
       =:~ grp [4, a (huddleRule @"slot" p)]
 
 scriptInvalidHereafterGroup ::
-  forall era. Era era => Proxy era -> Named Group
+  forall era. Era era => Proxy era -> GroupDef
 scriptInvalidHereafterGroup p =
   comment
     [str|Timelock validity intervals are half-open intervals [a, b).

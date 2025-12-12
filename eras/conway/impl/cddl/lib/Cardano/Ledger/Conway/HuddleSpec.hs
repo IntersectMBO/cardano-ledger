@@ -78,10 +78,10 @@ import Cardano.Ledger.Babbage.HuddleSpec hiding (
   urlRule,
  )
 import Cardano.Ledger.Conway (ConwayEra)
+import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
-import Data.Text qualified as T
 import Data.Word (Word64)
 import Text.Heredoc
 import Prelude hiding ((/))
@@ -203,7 +203,7 @@ accountRegistrationDepositCertGroup ::
   forall era.
   (HuddleRule "stake_credential" era, HuddleRule "coin" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 accountRegistrationDepositCertGroup p =
   "account_registration_deposit_cert"
     =:~ grp [7, a (huddleRule @"stake_credential" p), a (huddleRule @"coin" p)]
@@ -212,7 +212,7 @@ accountUnregistrationDepositCertGroup ::
   forall era.
   (HuddleRule "stake_credential" era, HuddleRule "coin" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 accountUnregistrationDepositCertGroup p =
   "account_unregistration_deposit_cert"
     =:~ grp [8, a (huddleRule @"stake_credential" p), a (huddleRule @"coin" p)]
@@ -221,7 +221,7 @@ delegationToDrepCertGroup ::
   forall era.
   (HuddleRule "stake_credential" era, HuddleRule "drep" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 delegationToDrepCertGroup p =
   "delegation_to_drep_cert"
     =:~ grp [9, a (huddleRule @"stake_credential" p), a (huddleRule @"drep" p)]
@@ -230,7 +230,7 @@ delegationToStakePoolAndDrepCertGroup ::
   forall era.
   (HuddleRule "stake_credential" era, HuddleRule "pool_keyhash" era, HuddleRule "drep" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 delegationToStakePoolAndDrepCertGroup p =
   "delegation_to_stake_pool_and_drep_cert"
     =:~ grp
@@ -244,7 +244,7 @@ accountRegistrationDelegationToStakePoolCertGroup ::
   forall era.
   (HuddleRule "stake_credential" era, HuddleRule "pool_keyhash" era, HuddleRule "coin" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 accountRegistrationDelegationToStakePoolCertGroup p =
   "account_registration_delegation_to_stake_pool_cert"
     =:~ grp
@@ -258,7 +258,7 @@ accountRegistrationDelegationToDrepCertGroup ::
   forall era.
   (HuddleRule "stake_credential" era, HuddleRule "drep" era, HuddleRule "coin" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 accountRegistrationDelegationToDrepCertGroup p =
   "account_registration_delegation_to_drep_cert"
     =:~ grp
@@ -276,7 +276,7 @@ accountRegistrationDelegationToStakePoolAndDrepCertGroup ::
   , HuddleRule "coin" era
   ) =>
   Proxy era ->
-  Named Group
+  GroupDef
 accountRegistrationDelegationToStakePoolAndDrepCertGroup p =
   "account_registration_delegation_to_stake_pool_and_drep_cert"
     =:~ grp
@@ -293,7 +293,7 @@ committeeAuthorizationCertGroup ::
   , HuddleRule "committee_hot_credential" era
   ) =>
   Proxy era ->
-  Named Group
+  GroupDef
 committeeAuthorizationCertGroup p =
   "committee_authorization_cert"
     =:~ grp
@@ -306,7 +306,7 @@ committeeResignationCertGroup ::
   forall era.
   (HuddleRule "committee_cold_credential" era, HuddleRule "anchor" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 committeeResignationCertGroup p =
   "committee_resignation_cert"
     =:~ grp [15, a (huddleRule @"committee_cold_credential" p), a (huddleRule @"anchor" p / VNil)]
@@ -315,7 +315,7 @@ drepRegistrationCertGroup ::
   forall era.
   (HuddleRule "drep_credential" era, HuddleRule "coin" era, HuddleRule "anchor" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 drepRegistrationCertGroup p =
   "drep_registration_cert"
     =:~ grp
@@ -329,7 +329,7 @@ drepUnregistrationCertGroup ::
   forall era.
   (HuddleRule "drep_credential" era, HuddleRule "coin" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 drepUnregistrationCertGroup p =
   "drep_unregistration_cert"
     =:~ grp [17, a (huddleRule @"drep_credential" p), a (huddleRule @"coin" p)]
@@ -338,7 +338,7 @@ drepUpdateCertGroup ::
   forall era.
   (HuddleRule "drep_credential" era, HuddleRule "anchor" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 drepUpdateCertGroup p =
   "drep_update_cert"
     =:~ grp [18, a (huddleRule @"drep_credential" p), a (huddleRule @"anchor" p / VNil)]
@@ -387,7 +387,7 @@ parameterChangeActionGroup ::
   , HuddleRule "policy_hash" era
   ) =>
   Proxy era ->
-  Named Group
+  GroupDef
 parameterChangeActionGroup p =
   "parameter_change_action"
     =:~ grp
@@ -401,7 +401,7 @@ hardForkInitiationActionGroup ::
   forall era.
   (HuddleRule "gov_action_id" era, HuddleRule "protocol_version" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 hardForkInitiationActionGroup p =
   "hard_fork_initiation_action"
     =:~ grp [1, a $ huddleRule @"gov_action_id" p / VNil, a $ huddleRule @"protocol_version" p]
@@ -410,7 +410,7 @@ treasuryWithdrawalsActionGroup ::
   forall era.
   (HuddleRule "reward_account" era, HuddleRule "coin" era, HuddleRule "policy_hash" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 treasuryWithdrawalsActionGroup p =
   "treasury_withdrawals_action"
     =:~ grp
@@ -424,7 +424,7 @@ treasuryWithdrawalsActionGroup p =
       , a $ huddleRule @"policy_hash" p / VNil
       ]
 
-noConfidenceGroup :: forall era. HuddleRule "gov_action_id" era => Proxy era -> Named Group
+noConfidenceGroup :: forall era. HuddleRule "gov_action_id" era => Proxy era -> GroupDef
 noConfidenceGroup p =
   "no_confidence"
     =:~ grp [3, a $ huddleRule @"gov_action_id" p / VNil]
@@ -437,7 +437,7 @@ updateCommitteeGroup ::
   , HuddleRule "unit_interval" era
   ) =>
   Proxy era ->
-  Named Group
+  GroupDef
 updateCommitteeGroup p =
   "update_committee"
     =:~ grp
@@ -457,7 +457,7 @@ newConstitutionGroup ::
   forall era.
   (HuddleRule "gov_action_id" era, HuddleRule "constitution" era) =>
   Proxy era ->
-  Named Group
+  GroupDef
 newConstitutionGroup p =
   "new_constitution"
     =:~ grp
@@ -1266,7 +1266,7 @@ instance HuddleRule "auxiliary_data" ConwayEra where
         / huddleRule @"auxiliary_data_array" p
         / huddleRule @"auxiliary_data_map" p
 
-mkMaybeTaggedSet :: IsType0 a => T.Text -> Word64 -> a -> GRuleCall
+mkMaybeTaggedSet :: IsType0 a => Name -> Word64 -> a -> GRuleCall
 mkMaybeTaggedSet label n = binding $ \x -> label =:= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
 
 maybeTaggedSet :: IsType0 a => a -> GRuleCall
