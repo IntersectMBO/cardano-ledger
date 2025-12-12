@@ -14,6 +14,7 @@
 
 module Cardano.Ledger.Babbage.HuddleSpec (
   module Cardano.Ledger.Alonzo.HuddleSpec,
+  BabbageEra,
   babbageCDDL,
   babbageOperationalCertRule,
   babbageProtocolVersionRule,
@@ -312,7 +313,7 @@ instance HuddleRule "transaction_body" BabbageEra where
   huddleRule p =
     "transaction_body"
       =:= mp
-        [ idx 0 ==> untaggedSet (huddleRule @"transaction_input" p)
+        [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p //- "fee"
         , opt (idx 3 ==> huddleRule @"slot" p) //- "time to live"
@@ -323,12 +324,12 @@ instance HuddleRule "transaction_body" BabbageEra where
         , opt (idx 8 ==> huddleRule @"slot" p) //- "validity interval start"
         , opt (idx 9 ==> huddleRule @"mint" p)
         , opt (idx 11 ==> huddleRule @"script_data_hash" p)
-        , opt (idx 13 ==> untaggedSet (huddleRule @"transaction_input" p)) //- "collateral"
+        , opt (idx 13 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)) //- "collateral"
         , opt (idx 14 ==> huddleRule @"required_signers" p)
         , opt (idx 15 ==> huddleRule @"network_id" p)
         , opt (idx 16 ==> huddleRule @"transaction_output" p) //- "collateral return"
         , opt (idx 17 ==> huddleRule @"coin" p) //- "total collateral"
-        , opt (idx 18 ==> untaggedSet (huddleRule @"transaction_input" p)) //- "reference inputs"
+        , opt (idx 18 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)) //- "reference inputs"
         ]
 
 instance HuddleRule "script_data_hash" BabbageEra where
@@ -571,3 +572,12 @@ instance HuddleRule "auxiliary_data_map" BabbageEra where
             , opt (idx 3 ==> arr [0 <+ a (huddleRule @"plutus_v2_script" p)])
             ]
         )
+
+instance HuddleRule1 "set" BabbageEra where
+  huddleRule1 _ = huddleRule1 @"set" (Proxy @ShelleyEra)
+
+instance HuddleRule1 "nonempty_set" BabbageEra where
+  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ShelleyEra)
+
+instance HuddleRule1 "nonempty_oset" BabbageEra where
+  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ShelleyEra)

@@ -14,6 +14,7 @@
 
 module Cardano.Ledger.Alonzo.HuddleSpec (
   module Cardano.Ledger.Mary.HuddleSpec,
+  AlonzoEra,
   alonzoCDDL,
   constr,
   exUnitsRule,
@@ -111,8 +112,9 @@ exUnitPricesRule p =
       , "step_price" ==> huddleRule @"positive_interval" p
       ]
 
-requiredSignersRule :: forall era. HuddleRule "addr_keyhash" era => Proxy era -> Rule
-requiredSignersRule p = "required_signers" =:= untaggedSet (huddleRule @"addr_keyhash" p)
+requiredSignersRule ::
+  forall era. (HuddleRule "addr_keyhash" era, HuddleRule1 "set" era) => Proxy era -> Rule
+requiredSignersRule p = "required_signers" =:= huddleRule1 @"set" p (huddleRule @"addr_keyhash" p)
 
 instance HuddleGroup "operational_cert" AlonzoEra where
   huddleGroup = shelleyOperationalCertGroup @AlonzoEra
@@ -299,7 +301,7 @@ instance HuddleRule "transaction_body" AlonzoEra where
   huddleRule p =
     "transaction_body"
       =:= mp
-        [ idx 0 ==> untaggedSet (huddleRule @"transaction_input" p)
+        [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p //- "fee"
         , opt (idx 3 ==> huddleRule @"slot" p) //- "time to live"
@@ -310,7 +312,7 @@ instance HuddleRule "transaction_body" AlonzoEra where
         , opt (idx 8 ==> huddleRule @"slot" p) //- "validity interval start"
         , opt (idx 9 ==> huddleRule @"mint" p)
         , opt (idx 11 ==> huddleRule @"script_data_hash" p) //- "new"
-        , opt (idx 13 ==> untaggedSet (huddleRule @"transaction_input" p)) //- "collateral"
+        , opt (idx 13 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)) //- "collateral"
         , opt (idx 14 ==> huddleRule @"required_signers" p) //- "new"
         , opt (idx 15 ==> huddleRule @"network_id" p) //- "new"
         ]
@@ -587,3 +589,12 @@ instance HuddleRule "cost_model" AlonzoEra where
           |  See Plutus' `ParamName` for parameter ordering
           |]
       $ "cost_model" =:= arr [166 <+ a (huddleRule @"int64" p) +> 166]
+
+instance HuddleRule1 "set" AlonzoEra where
+  huddleRule1 _ = huddleRule1 @"set" (Proxy @ShelleyEra)
+
+instance HuddleRule1 "nonempty_set" AlonzoEra where
+  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ShelleyEra)
+
+instance HuddleRule1 "nonempty_oset" AlonzoEra where
+  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ShelleyEra)

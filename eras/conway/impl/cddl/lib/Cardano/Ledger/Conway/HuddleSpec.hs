@@ -15,6 +15,7 @@
 
 module Cardano.Ledger.Conway.HuddleSpec (
   module Cardano.Ledger.Babbage.HuddleSpec,
+  ConwayEra,
   conwayCDDL,
   conwayMintRule,
   conwayWithdrawalsRule,
@@ -56,9 +57,6 @@ module Cardano.Ledger.Conway.HuddleSpec (
   proposalProceduresRule,
   poolVotingThresholdsRule,
   drepVotingThresholdsRule,
-  maybeTaggedSet,
-  maybeTaggedNonemptySet,
-  maybeTaggedNonemptyOset,
   policyHashRule,
   potentialLanguagesRule,
   conwayCertificateRule,
@@ -192,10 +190,11 @@ conwayCertificateRule p =
     / arr [a $ huddleGroup @"drep_unregistration_cert" p]
     / arr [a $ huddleGroup @"drep_update_cert" p]
 
-certificatesRule :: forall era. HuddleRule "certificate" era => Proxy era -> Rule
+certificatesRule ::
+  forall era. (HuddleRule "certificate" era, HuddleRule1 "nonempty_oset" era) => Proxy era -> Rule
 certificatesRule p =
   "certificates"
-    =:= maybeTaggedNonemptyOset (huddleRule @"certificate" p)
+    =:= huddleRule1 @"nonempty_oset" p (huddleRule @"certificate" p)
 
 accountRegistrationDepositCertGroup ::
   forall era.
@@ -433,6 +432,7 @@ updateCommitteeGroup ::
   , HuddleRule "committee_cold_credential" era
   , HuddleRule "epoch" era
   , HuddleRule "unit_interval" era
+  , HuddleRule1 "set" era
   ) =>
   Proxy era ->
   GroupDef
@@ -441,7 +441,7 @@ updateCommitteeGroup p =
     =:~ grp
       [ 4
       , a $ huddleRule @"gov_action_id" p / VNil
-      , a $ maybeTaggedSet (huddleRule @"committee_cold_credential" p)
+      , a $ huddleRule1 @"set" p (huddleRule @"committee_cold_credential" p)
       , a $
           mp
             [ 0
@@ -509,12 +509,14 @@ proposalProcedureRule p =
 
 proposalProceduresRule ::
   forall era.
-  HuddleRule "proposal_procedure" era =>
+  ( HuddleRule "proposal_procedure" era
+  , HuddleRule1 "nonempty_oset" era
+  ) =>
   Proxy era ->
   Rule
 proposalProceduresRule p =
   "proposal_procedures"
-    =:= maybeTaggedNonemptyOset (huddleRule @"proposal_procedure" p)
+    =:= huddleRule1 @"nonempty_oset" p (huddleRule @"proposal_procedure" p)
 
 poolVotingThresholdsRule :: forall era. HuddleRule "unit_interval" era => Proxy era -> Rule
 poolVotingThresholdsRule p =
@@ -894,7 +896,7 @@ instance HuddleRule "transaction_input" ConwayEra where
 instance HuddleRule "required_signers" ConwayEra where
   huddleRule p =
     "required_signers"
-      =:= maybeTaggedNonemptySet (huddleRule @"addr_keyhash" p)
+      =:= huddleRule1 @"nonempty_set" p (huddleRule @"addr_keyhash" p)
 
 instance HuddleRule "value" ConwayEra where
   huddleRule = conwayValueRule @ConwayEra
@@ -1086,7 +1088,7 @@ instance HuddleRule "transaction_body" ConwayEra where
   huddleRule p =
     "transaction_body"
       =:= mp
-        [ idx 0 ==> maybeTaggedSet (huddleRule @"transaction_input" p)
+        [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p //- "fee"
         , opt (idx 3 ==> huddleRule @"slot" p) //- "time to live"
@@ -1096,12 +1098,13 @@ instance HuddleRule "transaction_body" ConwayEra where
         , opt (idx 8 ==> huddleRule @"slot" p) //- "validity interval start"
         , opt (idx 9 ==> huddleRule @"mint" p)
         , opt (idx 11 ==> huddleRule @"script_data_hash" p)
-        , opt (idx 13 ==> maybeTaggedNonemptySet (huddleRule @"transaction_input" p)) //- "collateral"
+        , opt (idx 13 ==> huddleRule1 @"nonempty_set" p (huddleRule @"transaction_input" p)) //- "collateral"
         , opt (idx 14 ==> huddleRule @"required_signers" p)
         , opt (idx 15 ==> huddleRule @"network_id" p)
         , opt (idx 16 ==> huddleRule @"transaction_output" p) //- "collateral return"
         , opt (idx 17 ==> huddleRule @"coin" p) //- "total collateral"
-        , opt (idx 18 ==> maybeTaggedNonemptySet (huddleRule @"transaction_input" p)) //- "reference inputs"
+        , opt (idx 18 ==> huddleRule1 @"nonempty_set" p (huddleRule @"transaction_input" p))
+            //- "reference inputs"
         , opt (idx 19 ==> huddleRule @"voting_procedures" p)
         , opt (idx 20 ==> huddleRule @"proposal_procedures" p)
         , opt (idx 21 ==> huddleRule @"coin" p) //- "current treasury value"
@@ -1112,14 +1115,14 @@ instance HuddleRule "transaction_witness_set" ConwayEra where
   huddleRule p =
     "transaction_witness_set"
       =:= mp
-        [ opt $ idx 0 ==> maybeTaggedNonemptySet (huddleRule @"vkeywitness" p)
-        , opt $ idx 1 ==> maybeTaggedNonemptySet (huddleRule @"native_script" p)
-        , opt $ idx 2 ==> maybeTaggedNonemptySet (huddleRule @"bootstrap_witness" p)
-        , opt $ idx 3 ==> maybeTaggedNonemptySet (huddleRule @"plutus_v1_script" p)
-        , opt $ idx 4 ==> maybeTaggedNonemptySet (huddleRule @"plutus_data" p)
+        [ opt $ idx 0 ==> huddleRule1 @"nonempty_set" p (huddleRule @"vkeywitness" p)
+        , opt $ idx 1 ==> huddleRule1 @"nonempty_set" p (huddleRule @"native_script" p)
+        , opt $ idx 2 ==> huddleRule1 @"nonempty_set" p (huddleRule @"bootstrap_witness" p)
+        , opt $ idx 3 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v1_script" p)
+        , opt $ idx 4 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_data" p)
         , opt $ idx 5 ==> huddleRule @"redeemers" p
-        , opt $ idx 6 ==> maybeTaggedNonemptySet (huddleRule @"plutus_v2_script" p)
-        , opt $ idx 7 ==> maybeTaggedNonemptySet (huddleRule @"plutus_v3_script" p)
+        , opt $ idx 6 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v2_script" p)
+        , opt $ idx 7 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v3_script" p)
         ]
 
 instance HuddleRule "transaction" ConwayEra where
@@ -1275,3 +1278,12 @@ maybeTaggedNonemptySet = mkMaybeTaggedSet "nonempty_set" 1
 
 maybeTaggedNonemptyOset :: IsType0 a => a -> GRuleCall
 maybeTaggedNonemptyOset = mkMaybeTaggedSet "nonempty_oset" 1
+
+instance HuddleRule1 "set" ConwayEra where
+  huddleRule1 _ = maybeTaggedSet
+
+instance HuddleRule1 "nonempty_set" ConwayEra where
+  huddleRule1 _ = maybeTaggedNonemptySet
+
+instance HuddleRule1 "nonempty_oset" ConwayEra where
+  huddleRule1 _ = maybeTaggedNonemptyOset
