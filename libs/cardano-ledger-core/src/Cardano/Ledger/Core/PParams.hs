@@ -479,7 +479,7 @@ ppuLensHKD = lens (\(PParamsUpdate x) -> x) (\_ pp -> PParamsUpdate pp)
 ppMinFeeFactorL :: forall era. EraPParams era => Lens' (PParams era) CoinPerByte
 ppMinFeeFactorL = ppLensHKD . hkdMinFeeFactorL @era @Identity
 
-ppMinFeeAL :: forall era. EraPParams era => Lens' (PParams era) CoinPerByte
+ppMinFeeAL :: forall era. EraPParams era => Lens' (PParams era) Coin
 ppMinFeeAL = ppMinFeeFactorL
 {-# DEPRECATED ppMinFeeAL "In favor of `ppMinFeeFactorL`" #-}
 

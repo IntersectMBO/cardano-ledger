@@ -336,7 +336,7 @@ upgradeProposedPPUpdates args (ProposedPPUpdates ppus) =
   ProposedPPUpdates $ upgradePParamsUpdate args <$> ppus
 
 ppMinFeeFactor :: EraPParams era => PParam era
-ppMinFeeFactor =
+ppTxFeePerByte =
   PParam
     { ppName = "txFeePerByte"
     , ppLens = ppMinFeeFactorL
@@ -348,7 +348,7 @@ ppMinFeeA = ppMinFeeFactor
 {-# DEPRECATED ppMinFeeA "In favor of `ppMinFeeFactor`" #-}
 
 ppMinFeeConstant :: EraPParams era => PParam era
-ppMinFeeConstant =
+ppTxFeeFixed =
   PParam
     { ppName = "txFeeFixed"
     , ppLens = ppMinFeeConstantCompactL
