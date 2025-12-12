@@ -40,6 +40,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -74,7 +75,7 @@ spec = do
           else
             submitFailingTx
               tx
-              [ injectFailure $ UnspendableUTxONoDatumHash [txIn]
+              [ injectFailure $ UnspendableUTxONoDatumHash $ NES.singleton txIn
               ]
 
 datumAndReferenceInputsSpec ::
@@ -422,7 +423,7 @@ govPolicySpec = do
               mkBasicTx mkBasicTxBody
                 & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
                 & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing SNothing
-        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
+        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
       impAnn "TreasuryWithdrawals" $ do
         rewardAccount <- registerRewardAccount
@@ -433,7 +434,7 @@ govPolicySpec = do
               mkBasicTx mkBasicTxBody
                 & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
                 & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing SNothing
-        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
+        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
     it "alwaysSucceeds Plutus govPolicy validates" $ whenPostBootstrap $ do
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV3)

@@ -34,6 +34,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Data.Tree
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -142,7 +143,7 @@ predicateFailuresSpec =
               (Set.singleton committeeC)
               (Map.singleton committeeC (addEpochInterval curEpochNo (EpochInterval 1)))
               (1 %! 1)
-      let expectedFailure = injectFailure $ ConflictingCommitteeUpdate $ Set.singleton committeeC
+      let expectedFailure = injectFailure $ ConflictingCommitteeUpdate $ NES.singleton committeeC
       proposal <- mkProposal action
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrapAndPostBootstrap $
@@ -1089,7 +1090,7 @@ withdrawalsSpec =
         mkTreasuryWithdrawalsGovAction [(badRewardAccount, Coin 100_000_000)] >>= mkProposal
       let idMismatch =
             injectFailure $
-              TreasuryWithdrawalsNetworkIdMismatch (Set.singleton badRewardAccount) Testnet
+              TreasuryWithdrawalsNetworkIdMismatch (NES.singleton badRewardAccount) Testnet
           returnAddress =
             injectFailure $
               TreasuryWithdrawalReturnAccountsDoNotExist [badRewardAccount]

@@ -32,6 +32,7 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (ExtraneousScriptWitnessesUTXOW))
 import qualified Data.Map.Strict as Map
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.ImpTest
@@ -68,7 +69,8 @@ spec = describe "Invalid" $ do
           submitFailingTx
             tx
             [ injectFailure $
-                MalformedScriptWitnesses [scriptHash]
+                MalformedScriptWitnesses $
+                  NES.singleton scriptHash
             ]
 
         it "MalformedReferenceScripts" $ do
@@ -84,7 +86,8 @@ spec = describe "Invalid" $ do
           submitFailingTx
             tx
             [ injectFailure $
-                MalformedReferenceScripts [scriptHash]
+                MalformedReferenceScripts $
+                  NES.singleton scriptHash
             ]
 
         -- There's already an ExtraRedeemers test for PlutusV1 in Alonzo, thus it's OK to start with PlutusV2
@@ -162,7 +165,8 @@ spec = describe "Invalid" $ do
                 & witsTxL . hashScriptTxWitsL .~ [script]
             )
             [ injectFailure $
-                ExtraneousScriptWitnessesUTXOW [scriptHash]
+                ExtraneousScriptWitnessesUTXOW $
+                  NES.singleton scriptHash
             ]
 
         it "Inline datum with redundant datum witness" $ do
@@ -179,7 +183,7 @@ spec = describe "Invalid" $ do
                 & witsTxL . hashDataTxWitsL .~ [redundantDatum]
             )
             [ injectFailure $
-                NotAllowedSupplementalDatums [hashData redundantDatum] mempty
+                NotAllowedSupplementalDatums (NES.singleton $ hashData redundantDatum) mempty
             ]
 
         -- There is no such thing as a "reference datum". In other words, you cannot
@@ -213,5 +217,5 @@ spec = describe "Invalid" $ do
                 & bodyTxL . inputsTxBodyL .~ [txInHash]
             )
             [ injectFailure $
-                MissingRequiredDatums [datumHash] mempty
+                MissingRequiredDatums (NES.singleton datumHash) mempty
             ]

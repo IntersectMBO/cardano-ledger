@@ -84,6 +84,7 @@ import Control.State.Transition.Extended (
  )
 import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
+import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import NoThunks.Class (
   InspectHeapNamed (..),
@@ -99,11 +100,11 @@ data DijkstraUtxowPredFailure era
   | -- | witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
       -- | witnesses which were needed and not supplied
-      (Set (KeyHash Witness))
+      (NonEmptySet (KeyHash Witness))
   | -- | missing scripts
-    MissingScriptWitnessesUTXOW (Set ScriptHash)
+    MissingScriptWitnessesUTXOW (NonEmptySet ScriptHash)
   | -- | failed scripts
-    ScriptWitnessNotValidatingUTXOW (Set ScriptHash)
+    ScriptWitnessNotValidatingUTXOW (NonEmptySet ScriptHash)
   | -- | hash of the full metadata
     MissingTxBodyMetadataHash TxAuxDataHash
   | -- | hash of the metadata included in the transaction body
@@ -112,34 +113,29 @@ data DijkstraUtxowPredFailure era
   | -- | Contains out of range values (string`s too long)
     InvalidMetadata
   | -- | extraneous scripts
-    ExtraneousScriptWitnessesUTXOW (Set ScriptHash)
+    ExtraneousScriptWitnessesUTXOW (NonEmptySet ScriptHash)
   | MissingRedeemers (NonEmpty (PlutusPurpose AsItem era, ScriptHash))
   | MissingRequiredDatums
-      -- TODO: Make this NonEmpty #4066
-
       -- | Set of missing data hashes
-      (Set DataHash)
+      (NonEmptySet DataHash)
       -- | Set of received data hashes
       (Set DataHash)
   | NotAllowedSupplementalDatums
-      -- TODO: Make this NonEmpty #4066
-
       -- | Set of unallowed data hashes.
-      (Set DataHash)
+      (NonEmptySet DataHash)
       -- | Set of acceptable supplemental data hashes
       (Set DataHash)
   | PPViewHashesDontMatch
       (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
-      -- TODO: Make this NonEmpty #4066
-      (Set TxIn)
+      (NonEmptySet TxIn)
   | -- | List of redeemers not needed
     ExtraRedeemers (NonEmpty (PlutusPurpose AsIx era))
   | -- | Embed UTXO rule failures
-    MalformedScriptWitnesses (Set ScriptHash)
+    MalformedScriptWitnesses (NonEmptySet ScriptHash)
   | -- | the set of malformed script witnesses
-    MalformedReferenceScripts (Set ScriptHash)
+    MalformedReferenceScripts (NonEmptySet ScriptHash)
   | -- | The computed script integrity hash does not match the provided script integrity hash
     ScriptIntegrityHashMismatch
       (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))

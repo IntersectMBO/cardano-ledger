@@ -118,6 +118,7 @@ import Control.State.Transition.Extended (
   failBecause,
   failOnJust,
   failOnNonEmpty,
+  failOnNonEmptySet,
   failureOnNonEmpty,
   judgmentContext,
   liftSTS,
@@ -134,6 +135,7 @@ import Data.Pulse (foldlM')
 import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
 import qualified Lens.Micro as L
@@ -172,7 +174,7 @@ data ConwayGovPredFailure era
   = GovActionsDoNotExist (NonEmpty GovActionId)
   | MalformedProposal (GovAction era)
   | ProposalProcedureNetworkIdMismatch RewardAccount Network
-  | TreasuryWithdrawalsNetworkIdMismatch (Set.Set RewardAccount) Network
+  | TreasuryWithdrawalsNetworkIdMismatch (NonEmptySet RewardAccount) Network
   | ProposalDepositIncorrect (Mismatch RelEQ Coin)
   | -- | Some governance actions are not allowed to be voted on by certain types of
     -- Voters. This failure lists all governance action ids with their respective voters
@@ -180,7 +182,7 @@ data ConwayGovPredFailure era
     DisallowedVoters (NonEmpty (Voter, GovActionId))
   | ConflictingCommitteeUpdate
       -- | Credentials that are mentioned as members to be both removed and added
-      (Set.Set (Credential ColdCommitteeRole))
+      (NonEmptySet (Credential ColdCommitteeRole))
   | ExpirationEpochTooSmall
       -- | Members for which the expiration epoch has already been reached
       (Map.Map (Credential ColdCommitteeRole) EpochNo)
@@ -526,8 +528,9 @@ conwayGovTransition = do
           TreasuryWithdrawals wdrls proposalPolicy -> do
             let mismatchedAccounts =
                   Set.filter ((/= expectedNetworkId) . raNetwork) $ Map.keysSet wdrls
-            Set.null mismatchedAccounts
-              ?! injectFailure (TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId)
+            failOnNonEmptySet
+              mismatchedAccounts
+              (\mismatched -> injectFailure (TreasuryWithdrawalsNetworkIdMismatch mismatched expectedNetworkId))
 
             -- Policy check
             runTest $ checkPolicy @era constitutionPolicy proposalPolicy
@@ -537,7 +540,7 @@ conwayGovTransition = do
               F.fold wdrls /= mempty ?! (injectFailure . ZeroTreasuryWithdrawals) pProcGovAction
           UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do
             let conflicting = Set.intersection (Map.keysSet membersToAdd) membersToRemove
-             in Set.null conflicting ?! (injectFailure . ConflictingCommitteeUpdate) conflicting
+             in failOnNonEmptySet conflicting (injectFailure . ConflictingCommitteeUpdate)
 
             let invalidMembers = Map.filter (<= currentEpoch) membersToAdd
              in Map.null invalidMembers ?! (injectFailure . ExpirationEpochTooSmall) invalidMembers

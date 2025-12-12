@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Change sets containing errors into `NonEmptySet` for `BabbageUtxowPredFailure`
 * Change all lists into `NonEmpty` for `BabbageUtxoPredFailure`
 * Add `babbageUtxoValidation`
 * Add `babbageUtxoTests`
