@@ -16,8 +16,6 @@
 module Cardano.Ledger.Conway.HuddleSpec (
   module Cardano.Ledger.Babbage.HuddleSpec,
   conwayCDDL,
-  conwayMultiasset,
-  conwayValueRule,
   conwayMintRule,
   conwayWithdrawalsRule,
   conwayRedeemer,

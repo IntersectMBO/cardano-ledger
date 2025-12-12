@@ -16,6 +16,8 @@
 module Cardano.Ledger.Dijkstra.HuddleSpec (
   module Cardano.Ledger.Conway.HuddleSpec,
   dijkstraCDDL,
+  dijkstraMultiasset,
+  dijkstraValueRule,
   guardsRule,
   subTransactionsRule,
   subTransactionRule,
@@ -265,6 +267,34 @@ auxiliaryDataMapRule p =
           ]
       )
 
+dijkstraValueRule ::
+  forall era.
+  ( HuddleRule "policy_id" era
+  , HuddleRule "asset_name" era
+  , HuddleRule "positive_coin" era
+  ) =>
+  Proxy era ->
+  Rule
+dijkstraValueRule p =
+  "value"
+    =:= huddleRule @"coin" p
+    / sarr [a $ huddleRule @"coin" p, a $ dijkstraMultiasset p (huddleRule @"positive_coin" p)]
+
+dijkstraMultiasset ::
+  forall era a.
+  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) =>
+  Proxy era ->
+  a ->
+  GRuleCall
+dijkstraMultiasset p =
+  binding $ \x ->
+    "multiasset"
+      =:= mp
+        [ 1
+            <+ asKey (huddleRule @"policy_id" p)
+            ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
+        ]
+
 instance HuddleRule "bounded_bytes" DijkstraEra where
   huddleRule _ = boundedBytesRule
 
@@ -495,7 +525,7 @@ instance HuddleRule "required_signers" DijkstraEra where
       =:= maybeTaggedNonemptySet (huddleRule @"addr_keyhash" p)
 
 instance HuddleRule "value" DijkstraEra where
-  huddleRule = conwayValueRule @DijkstraEra
+  huddleRule = dijkstraValueRule @DijkstraEra
 
 instance HuddleRule "mint" DijkstraEra where
   huddleRule = conwayMintRule @DijkstraEra
