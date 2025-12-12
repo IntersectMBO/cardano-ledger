@@ -43,6 +43,7 @@
 
 ### `cddl`
 
+* Add `HuddleRule1` instances for sets.
 * Move `cddl-files` to `cddl/data`.
 * Export `scriptAllGroup` and `scriptAnyGroup`.
 * Add `HuddleSpec` module with `Huddle{Rule|Group}` instances for all types.

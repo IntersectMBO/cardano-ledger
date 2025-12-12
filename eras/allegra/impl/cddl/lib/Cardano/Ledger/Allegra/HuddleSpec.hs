@@ -12,6 +12,7 @@
 
 module Cardano.Ledger.Allegra.HuddleSpec (
   module Cardano.Ledger.Shelley.HuddleSpec,
+  AllegraEra,
   allegraCDDL,
   blockRule,
   transactionRule,
@@ -309,7 +310,7 @@ instance HuddleRule "transaction_body" AllegraEra where
           |]
       $ "transaction_body"
         =:= mp
-          [ idx 0 ==> untaggedSet (huddleRule @"transaction_input" p)
+          [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
           , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
           , idx 2 ==> huddleRule @"coin" p
           , opt (idx 3 ==> huddleRule @"slot" p)
@@ -325,3 +326,12 @@ instance HuddleRule "transaction" AllegraEra where
 
 instance HuddleRule "block" AllegraEra where
   huddleRule = blockRule @AllegraEra
+
+instance HuddleRule1 "set" AllegraEra where
+  huddleRule1 _ = huddleRule1 @"set" (Proxy @ShelleyEra)
+
+instance HuddleRule1 "nonempty_set" AllegraEra where
+  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ShelleyEra)
+
+instance HuddleRule1 "nonempty_oset" AllegraEra where
+  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ShelleyEra)
