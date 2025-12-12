@@ -181,7 +181,7 @@ value = coin/ [coin, multiasset<positive_coin>]
 
 coin = uint
 
-multiasset<a0> = {* policy_id => {+ asset_name => a0}}
+multiasset<a0> = {+ policy_id => {+ asset_name => a0}}
 
 policy_id = script_hash
 
