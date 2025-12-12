@@ -144,7 +144,6 @@ library cddl
     cardano-ledger-conway,
     cuddle >=1.1,
     heredoc,
-    text,
 
 executable generate-cddl
   main-is: Main.hs

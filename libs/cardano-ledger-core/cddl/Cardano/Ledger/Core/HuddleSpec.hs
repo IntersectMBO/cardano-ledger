@@ -17,6 +17,7 @@ module Cardano.Ledger.Core.HuddleSpec where
 import Cardano.Ledger.BaseTypes (getVersion)
 import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
 import Cardano.Ledger.Huddle
+import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
@@ -75,7 +76,7 @@ distinct x =
           |The type parameter must support .size, for example: bytes or uint
           |]
     $ "distinct_"
-      <> show' x
+      <> Name (show' x)
         =:= (x `sized` (8 :: Word64))
         / (x `sized` (16 :: Word64))
         / (x `sized` (20 :: Word64))

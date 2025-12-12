@@ -29,20 +29,20 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Decoding (label)
 import qualified Codec.CBOR.Cuddle.CBOR.Gen as Cuddle
-import Codec.CBOR.Cuddle.CBOR.Validator (CBORTermResult (..), CDDLResult (..), validateCBOR')
+import Codec.CBOR.Cuddle.CBOR.Validator (CBORTermResult (..), CDDLResult (..), validateCBOR)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import qualified Codec.CBOR.Cuddle.CDDL as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.CTree as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
-import Codec.CBOR.Cuddle.Pretty ()
+import Codec.CBOR.Cuddle.IndexMappable
+import Codec.CBOR.Cuddle.Pretty (PrettyStage)
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
 import qualified Codec.CBOR.Write as CBOR
 import Data.Data (Proxy (..))
 import Data.Foldable (Foldable (..), traverse_)
-import Data.Functor.Identity (Identity)
 import Data.List (unfoldr)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
@@ -76,7 +76,7 @@ import Test.QuickCheck.Random (QCGen, mkQCGen)
 import Text.Pretty.Simple (pShow)
 
 data CuddleData = CuddleData
-  { cddl :: !(Cuddle.CTreeRoot' Identity Cuddle.MonoRef)
+  { cddl :: !(Cuddle.CTreeRoot Cuddle.MonoReferenced)
   , numExamples :: !Int
   }
 
@@ -103,7 +103,7 @@ huddleDecoderEquivalenceSpec version ruleName =
   let lbl = label $ Proxy @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName mempty) $ \term -> do
+          withGenTerm cddlData (Cuddle.Name ruleName) $ \term -> do
             let encoding = CBOR.encodeTerm term
                 initCborBytes = CBOR.toLazyByteString encoding
             decoderEquivalenceExpectation @a version initCborBytes
@@ -122,7 +122,7 @@ huddleRoundTripCborSpec version ruleName =
    in describe "Generate bytestring from CDDL and decode/encode" $
         it (T.unpack ruleName <> ": " <> T.unpack lbl) $
           \cddlData ->
-            withGenTerm cddlData (Cuddle.Name ruleName mempty) $
+            withGenTerm cddlData (Cuddle.Name ruleName) $
               roundTripExample lbl version version trip
 
 huddleRoundTripAnnCborSpec ::
@@ -138,14 +138,14 @@ huddleRoundTripAnnCborSpec version ruleName =
       trip = cborTrip @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName mempty) $
+          withGenTerm cddlData (Cuddle.Name ruleName) $
             roundTripAnnExample lbl version version trip
 
 specWithHuddle :: Cuddle.Huddle -> Int -> SpecWith CuddleData -> Spec
 specWithHuddle h numExamples =
   beforeAll $
     let cddl = Cuddle.toCDDL h
-        rCddl = Cuddle.fullResolveCDDL cddl
+        rCddl = Cuddle.fullResolveCDDL (mapCDDLDropExt cddl)
      in case rCddl of
           Right ct ->
             pure $
@@ -254,7 +254,7 @@ huddleRoundTripArbitraryValidate version ruleName =
         $ \CuddleData {cddl} -> property $ \(val :: a) -> do
           let
             bs = serialize' version val
-            res = validateCBOR' bs (Name ruleName mempty) cddl
+            res = validateCBOR bs (Name ruleName) (mapIndex cddl)
           case res of
             CBORTermResult _ (Valid _) -> pure ()
             CBORTermResult term err ->
@@ -287,12 +287,13 @@ huddleRoundTripArbitraryValidate version ruleName =
 -- | Write a Huddle specification to a file at the given path
 writeSpec :: Cuddle.Huddle -> FilePath -> IO ()
 writeSpec hddl path = do
+  let cddl = Cuddle.toCDDLNoRoot hddl
   createDirectoryIfMissing True (takeDirectory path)
   withFile path WriteMode $ \h -> do
     hPutStrLn
       h
       "; This file was auto-generated using generate-cddl. Please do not modify it directly!\n"
-    hPutDoc h $ pretty $ Cuddle.toCDDLNoRoot hddl
+    hPutDoc h (pretty (mapIndex @_ @_ @PrettyStage cddl))
     -- Write an empty line at the end of the file
     hPutStrLn h ""
   -- Write log to stdout
