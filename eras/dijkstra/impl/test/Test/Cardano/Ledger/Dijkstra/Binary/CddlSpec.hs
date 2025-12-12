@@ -13,6 +13,7 @@ import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
@@ -31,7 +32,6 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Cddl (readDijkstraCddlFiles)
-import Test.Cardano.Ledger.Dijkstra.CDDL (dijkstraCDDL)
 
 spec :: Spec
 spec = do

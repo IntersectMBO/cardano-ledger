@@ -132,7 +132,6 @@ library testlib
     Test.Cardano.Ledger.Allegra.Binary.Annotator
     Test.Cardano.Ledger.Allegra.Binary.Cddl
     Test.Cardano.Ledger.Allegra.Binary.Golden
-    Test.Cardano.Ledger.Allegra.CDDL
     Test.Cardano.Ledger.Allegra.Era
     Test.Cardano.Ledger.Allegra.Examples
     Test.Cardano.Ledger.Allegra.Imp
@@ -164,35 +163,11 @@ library testlib
     cardano-slotting,
     cardano-strict-containers,
     containers,
-    cuddle >=0.4,
     generic-random,
-    heredoc,
     microlens,
     small-steps,
     text,
     tree-diff,
-
-executable huddle-cddl
-  main-is: Main.hs
-  hs-source-dirs: huddle-cddl
-  other-modules: Paths_cardano_ledger_allegra
-  default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
-  build-depends:
-    base,
-    cardano-ledger-binary:testlib >=1.3.4.0,
-    testlib,
 
 test-suite tests
   type: exitcode-stdio-1.0
@@ -218,6 +193,7 @@ test-suite tests
   build-depends:
     base,
     cardano-ledger-allegra,
+    cardano-ledger-allegra:cddl,
     cardano-ledger-binary:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:testlib,

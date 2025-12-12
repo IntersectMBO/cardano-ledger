@@ -197,7 +197,6 @@ library testlib
     Test.Cardano.Ledger.Core.Arbitrary
     Test.Cardano.Ledger.Core.Binary
     Test.Cardano.Ledger.Core.Binary.Annotator
-    Test.Cardano.Ledger.Core.Binary.CDDL
     Test.Cardano.Ledger.Core.Binary.RoundTrip
     Test.Cardano.Ledger.Core.JSON
     Test.Cardano.Ledger.Core.KeyPair
@@ -232,12 +231,10 @@ library testlib
     cardano-ledger-core,
     cardano-slotting,
     containers,
-    cuddle >=0.4,
     deepseq,
     generic-random,
     genvalidity,
     hedgehog-quickcheck,
-    heredoc,
     hspec,
     microlens,
     mtl,

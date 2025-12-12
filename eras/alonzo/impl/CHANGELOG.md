@@ -59,6 +59,7 @@
 
 ### `testlib`
 
+* Remove `huddle-cddl` and the `CDDL` modules.
 * Add `Test.Cardano.Ledger.Alonzo.Binary.Golden`
 * Add `witsEmptyField`
 * Added `Arbitrary` instance for `AlonzoExtraConfig`

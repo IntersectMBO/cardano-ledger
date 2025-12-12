@@ -42,6 +42,7 @@
 
 ### `testlib`
 
+* Remove `huddle-cddl` and the `CDDL` modules.
 * Add `plutus_v2_script` to CDDL exports
 * Hide Shelley CDDL `protocol_version` and re-export a new one for Babbage
 * Use fixed-sized `uint .size 8` for `slot` and `block_number` in CDDL for header

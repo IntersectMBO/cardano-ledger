@@ -117,7 +117,6 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Binary.Cddl
     Test.Cardano.Ledger.Dijkstra.Binary.Golden
     Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip
-    Test.Cardano.Ledger.Dijkstra.CDDL
     Test.Cardano.Ledger.Dijkstra.Era
     Test.Cardano.Ledger.Dijkstra.Examples
     Test.Cardano.Ledger.Dijkstra.Imp
@@ -153,9 +152,7 @@ library testlib
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-strict-containers,
     containers,
-    cuddle >=0.4,
     generic-random,
-    heredoc,
     microlens,
     small-steps,
     tree-diff,
@@ -203,28 +200,6 @@ executable generate-cddl
     cardano-ledger-binary:testlib,
     cardano-ledger-dijkstra:cddl,
 
-executable huddle-cddl
-  main-is: Main.hs
-  hs-source-dirs: huddle-cddl
-  other-modules: Paths_cardano_ledger_dijkstra
-  default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
-  build-depends:
-    base,
-    cardano-ledger-binary:testlib >=1.5,
-    testlib,
-
 test-suite tests
   type: exitcode-stdio-1.0
   main-is: Main.hs
@@ -255,5 +230,5 @@ test-suite tests
     cardano-ledger-binary:testlib,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
+    cardano-ledger-dijkstra:{cardano-ledger-dijkstra, cddl, testlib},
     cardano-ledger-shelley:testlib,

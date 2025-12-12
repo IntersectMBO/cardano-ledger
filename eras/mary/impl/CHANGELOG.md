@@ -19,6 +19,7 @@
 
 ### `testlib`
 
+* Remove `huddle-cddl` and the `CDDL` modules.
 * Use fixed-sized `uint .size 8` for `slot` in CDDL for transaction validity intervals
 
 ## 1.9.0.0

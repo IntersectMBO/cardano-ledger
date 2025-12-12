@@ -5,6 +5,7 @@ module Test.Cardano.Ledger.Mary.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary.HuddleSpec (maryCDDL)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
   cddlDecoderEquivalenceSpec,
@@ -15,7 +16,6 @@ import Test.Cardano.Ledger.Binary.Cuddle
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 import Test.Cardano.Ledger.Mary.Binary.Cddl (readMaryCddlFiles)
-import Test.Cardano.Ledger.Mary.CDDL (maryCDDL)
 
 spec :: Spec
 spec =

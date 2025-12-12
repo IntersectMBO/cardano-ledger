@@ -87,6 +87,7 @@
 
 ### `testlib`
 
+* Remove `huddle-cddl` and the `CDDL` modules.
 * Add `forEachEraVersion`
 * Add `Test.Cardano.Ledger.Core.Binary.Golden`
 * Add `kes_period` and `sequence_number` CDDL definitions.

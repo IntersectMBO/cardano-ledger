@@ -12,6 +12,7 @@ import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingProcedure)
+import Cardano.Ledger.Conway.HuddleSpec (conwayCDDL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Test.Cardano.Ledger.Binary.Cddl (
@@ -31,7 +32,6 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 import Test.Cardano.Ledger.Conway.Binary.Cddl (readConwayCddlFiles)
-import Test.Cardano.Ledger.Conway.CDDL (conwayCDDL)
 
 spec :: Spec
 spec = do
