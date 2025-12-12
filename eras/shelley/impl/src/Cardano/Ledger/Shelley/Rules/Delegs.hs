@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -64,7 +65,9 @@ import Control.State.Transition (
  )
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
+#if __GLASGOW_HASKELL__ < 914
 import Data.Typeable (Typeable)
+#endif
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -173,7 +176,11 @@ instance
 instance
   ( Era era
   , DecCBOR (PredicateFailure (EraRule "DELPL" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Typeable (Script era)
+#endif
   ) =>
   DecCBOR (ShelleyDelegsPredFailure era)
   where

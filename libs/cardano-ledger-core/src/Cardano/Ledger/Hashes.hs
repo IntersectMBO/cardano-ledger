@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -392,7 +393,13 @@ instance SafeToHash ByteString where
   originalBytes x = x
 
 -- | Hash of a hash. Hash is always safe to hash. Do you even hash?
-instance Hash.HashAlgorithm h => SafeToHash (Hash.Hash h i) where
+instance
+#if __GLASGOW_HASKELL__ < 914
+   -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+   -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+   Hash.HashAlgorithm h =>
+#endif
+   SafeToHash (Hash.Hash h i) where
   originalBytes = Hash.hashToBytes
 
 -- | Types that are 'SafeToHash' AND have the type uniquely determines the 'index' type

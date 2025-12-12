@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -84,7 +85,9 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+#if __GLASGOW_HASKELL__ < 914
 import Data.Typeable (Typeable)
+#endif
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class
@@ -152,14 +155,22 @@ instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure AlonzoEra where
 
 deriving instance
   ( AlonzoEraScript era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Show (TxCert era)
+#endif
   , Show (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Show (AlonzoUtxowPredFailure era)
 
 deriving instance
   ( AlonzoEraScript era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Eq (TxCert era)
+#endif
   , Eq (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Eq (AlonzoUtxowPredFailure era)
@@ -205,9 +216,13 @@ instance NFData (Event (EraRule "UTXO" era)) => NFData (AlonzoUtxowEvent era)
 
 instance
   ( AlonzoEraScript era
-  , DecCBOR (TxCert era)
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , DecCBOR (TxCert era)
   , Typeable (TxAuxData era)
+#endif
   ) =>
   DecCBOR (AlonzoUtxowPredFailure era)
   where

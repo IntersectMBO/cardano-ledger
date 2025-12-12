@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -84,7 +85,11 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (forM, guard)
+#if __GLASGOW_HASKELL__ >= 914
+import Data.Aeson (ToJSON (..), data String)
+#else
 import Data.Aeson (ToJSON (..), pattern String)
+#endif
 import Data.ByteString.Short as SBS (fromShort)
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map

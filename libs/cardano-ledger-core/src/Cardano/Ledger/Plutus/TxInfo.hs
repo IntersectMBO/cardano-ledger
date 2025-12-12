@@ -81,6 +81,7 @@ import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 (SatInt, fromSatInt)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusTx.Ratio as PlutusTx
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
@@ -115,8 +116,8 @@ txOutSourceToText = \case
   TxOutFromInput txIn -> "Input: " <> txInToText txIn
   TxOutFromOutput txIx -> "Output: " <> T.pack (show txIx)
 
-transBoundedRational :: BoundedRational r => r -> PV3.Rational
-transBoundedRational = PV3.fromGHC . unboundRational
+transBoundedRational :: BoundedRational r => r -> PlutusTx.Rational
+transBoundedRational = PV3.fromHaskellRatio . unboundRational
 
 transDataHash :: DataHash -> PV1.DatumHash
 transDataHash safe = PV1.DatumHash (transSafeHash safe)

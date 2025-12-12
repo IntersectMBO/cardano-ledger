@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -104,8 +105,10 @@ instance
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure era
   , EraRule "GOVCERT" era ~ DijkstraGOVCERT era
+#if __GLASGOW_HASKELL__ < 914
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
+#endif
   , ConwayEraCertState era
   ) =>
   STS (DijkstraGOVCERT era)

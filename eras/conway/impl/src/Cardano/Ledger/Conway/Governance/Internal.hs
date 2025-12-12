@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -123,7 +124,9 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
 import qualified Data.Set as Set
+#if __GLASGOW_HASKELL__ < 914
 import Data.Typeable
+#endif
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..), allNoThunks)
@@ -609,7 +612,13 @@ instance (Default (InstantStake era), Default (Accounts era)) => Default (Ratify
       Map.empty
 
 instance
-  (Typeable era, NoThunks (InstantStake era), NoThunks (Accounts era)) =>
+  (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable era, 
+#endif
+  NoThunks (InstantStake era), NoThunks (Accounts era)) =>
   NoThunks (RatifyEnv era)
   where
   showTypeOf _ = "RatifyEnv"

@@ -131,6 +131,7 @@ library
     partial-order,
     plutus-core,
     plutus-ledger-api,
+    plutus-tx,
     prettyprinter,
     primitive,
     quiet,

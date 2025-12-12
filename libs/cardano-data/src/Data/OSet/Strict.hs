@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -112,7 +113,13 @@ decodeOSet = decodeSetLikeEnforceNoDuplicates (flip snoc) (\oset -> (size oset, 
 instance EncCBOR a => EncCBOR (OSet a) where
   encCBOR (OSet seq _set) = encodeTag setTag <> encodeStrictSeq encCBOR seq
 
-instance (Show a, Ord a, DecCBOR a) => DecCBOR (OSet a) where
+instance (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Show a,
+#endif
+  Ord a, DecCBOR a) => DecCBOR (OSet a) where
   decCBOR = decodeOSet decCBOR
 
 instance ToJSON a => ToJSON (OSet a) where
