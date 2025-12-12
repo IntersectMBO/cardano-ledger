@@ -5,17 +5,20 @@
 ;      the same
 ;   2) every transaction_index must be strictly smaller than the length of
 ;      transaction_bodies
-block = 
-  [ header                 
-  , transaction_bodies       : [* transaction_body]                   
-  , transaction_witness_sets : [* transaction_witness_set]            
+block =
+  [ header
+  , transaction_bodies       : [* transaction_body]
+  , transaction_witness_sets : [* transaction_witness_set]
   , auxiliary_data_set       : {* transaction_index => auxiliary_data}
-  , invalid_transactions     : [* transaction_index]                  
+  , invalid_transactions     : [* transaction_index]
   ]
 
 
-transaction = 
-  [transaction_body, transaction_witness_set, bool, auxiliary_data/ nil]
+transaction =
+  [  transaction_body, transaction_witness_set, true, auxiliary_data/ nil
+  // transaction_body, transaction_witness_set, auxiliary_data/ nil
+  ]
+
 
 kes_signature = bytes .size 448
 
@@ -29,7 +32,7 @@ potential_languages = 0 .. 255
 
 signkey_kes = bytes .size 64
 
-certificate = 
+certificate =
   [  account_registration_cert
   // account_unregistration_cert
   // delegation_to_stake_pool_cert
@@ -52,13 +55,13 @@ certificate =
 
 header = [header_body, body_signature : kes_signature]
 
-header_body = 
+header_body =
   [ block_number      : block_number
-  , slot              : slot        
-  , prev_hash         : hash32/ nil 
-  , issuer_vkey       : vkey        
-  , vrf_vkey          : vrf_vkey    
-  , vrf_result        : vrf_cert    
+  , slot              : slot
+  , prev_hash         : hash32/ nil
+  , issuer_vkey       : vkey
+  , vrf_vkey          : vrf_vkey
+  , vrf_result        : vrf_cert
   , block_body_size   : uint .size 4
   , block_body_hash   : hash32       ; merkle triple root
   , operational_cert
@@ -78,11 +81,11 @@ vrf_vkey = bytes .size 32
 
 vrf_cert = [bytes, bytes .size 80]
 
-operational_cert = 
-  [ hot_vkey        : kes_vkey       
+operational_cert =
+  [ hot_vkey        : kes_vkey
   , sequence_number : sequence_number
-  , kes_period      : kes_period     
-  , sigma           : signature      
+  , kes_period      : kes_period
+  , sigma           : signature
   ]
 
 
@@ -98,25 +101,25 @@ protocol_version = [major_protocol_version, uint]
 
 major_protocol_version = 0 .. 13
 
-transaction_body = 
-  {   0  : set<transaction_input>         
-  ,   1  : [* transaction_output]      
+transaction_body =
+  {   0  : set<transaction_input>
+  ,   1  : [* transaction_output]
   ,   2  : coin                             ; fee
   , ? 3  : slot                             ; time to live
-  , ? 4  : certificates                    
-  , ? 5  : withdrawals                     
-  , ? 7  : auxiliary_data_hash             
+  , ? 4  : certificates
+  , ? 5  : withdrawals
+  , ? 7  : auxiliary_data_hash
   , ? 8  : slot                             ; validity interval start
-  , ? 9  : mint                            
-  , ? 11 : script_data_hash                
+  , ? 9  : mint
+  , ? 11 : script_data_hash
   , ? 13 : nonempty_set<transaction_input> ; collateral
   , ? 14 : guards                           ; guards (replaces required_signers)
-  , ? 15 : network_id                      
+  , ? 15 : network_id
   , ? 16 : transaction_output               ; collateral return
   , ? 17 : coin                             ; total collateral
   , ? 18 : nonempty_set<transaction_input> ; reference inputs
-  , ? 19 : voting_procedures               
-  , ? 20 : proposal_procedures             
+  , ? 19 : voting_procedures
+  , ? 20 : proposal_procedures
   , ? 21 : coin                             ; current treasury value
   , ? 22 : positive_coin                    ; donation
   , ? 23 : sub_transactions                 ; sub-transactions (NEW)
@@ -136,25 +139,25 @@ transaction_output = alonzo_transaction_output/ babbage_transaction_output
 alonzo_transaction_output = [address, amount : value, ? datum_hash : hash32]
 
 ; address = bytes
-; 
+;
 ; address format:
 ;   [ 8 bit header | payload ];
-; 
+;
 ; shelley payment addresses:
 ;      bit 7: 0
 ;      bit 6: base/other
 ;      bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
 ;      bit 4: payment cred is keyhash/scripthash
 ;   bits 3-0: network id
-; 
+;
 ; reward addresses:
 ;   bits 7-5: 111
 ;      bit 4: credential is keyhash/scripthash
 ;   bits 3-0: network id
-; 
+;
 ; byron addresses:
 ;   bits 7-4: 1000
-; 
+;
 ;      0000: base address: keyhash28,keyhash28
 ;      0001: base address: scripthash28,keyhash28
 ;      0010: base address: keyhash28,scripthash28
@@ -167,15 +170,15 @@ alonzo_transaction_output = [address, amount : value, ? datum_hash : hash32]
 ;      1110: reward account: keyhash28
 ;      1111: reward account: scripthash28
 ; 1001-1101: future formats
-address = 
+address =
   h'001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000'
   / h'102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000'
   / h'203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000'
   / h'304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000'
-  / h'405000000000000000000000000000000000000000000000000000000087680203'                                                
-  / h'506000000000000000000000000000000000000000000000000000000087680203'                                                
-  / h'6070000000000000000000000000000000000000000000000000000000'                                                        
-  / h'7080000000000000000000000000000000000000000000000000000000'                                                        
+  / h'405000000000000000000000000000000000000000000000000000000087680203'
+  / h'506000000000000000000000000000000000000000000000000000000087680203'
+  / h'6070000000000000000000000000000000000000000000000000000000'
+  / h'7080000000000000000000000000000000000000000000000000000000'
 
 value = coin/ [coin, multiasset<positive_coin>]
 
@@ -204,9 +207,9 @@ positive_coin = 1 .. max_word64
 
 max_word64 = 18446744073709551615
 
-babbage_transaction_output = 
-  {   0 : address     
-  ,   1 : value       
+babbage_transaction_output =
+  {   0 : address
+  ,   1 : value
   , ? 2 : datum_option ; new
   , ? 3 : script_ref   ; new
   }
@@ -216,23 +219,23 @@ datum_option = [0, hash32// 1, data]
 
 data = #6.24(bytes .cbor plutus_data)
 
-plutus_data = 
+plutus_data =
   constr<plutus_data
-  >              
+  >
   / {* plutus_data => plutus_data}
-  / [* plutus_data]               
-  / big_int                           
-  / bounded_bytes                     
+  / [* plutus_data]
+  / big_int
+  / bounded_bytes
 
 constr<a0
-> = 
-  #6.121([* a0])                   
-  / #6.122([* a0])                   
-  / #6.123([* a0])                   
-  / #6.124([* a0])                   
-  / #6.125([* a0])                   
-  / #6.126([* a0])                   
-  / #6.127([* a0])                   
+> =
+  #6.121([* a0])
+  / #6.122([* a0])
+  / #6.123([* a0])
+  / #6.124([* a0])
+  / #6.125([* a0])
+  / #6.126([* a0])
+  / #6.127([* a0])
   / #6.102([uint, [* a0]])
 
 big_int = int/ big_uint/ big_nint
@@ -241,7 +244,7 @@ big_uint = #6.2(bounded_bytes)
 
 ; The real bounded_bytes does not have this limit. it instead has
 ; a different limit which cannot be expressed in CDDL.
-; 
+;
 ; The limit is as follows:
 ;  - bytes with a definite-length encoding are limited to size 0..64
 ;  - for bytes with an indefinite-length CBOR encoding, each chunk is
@@ -261,7 +264,7 @@ script_ref = #6.24(bytes .cbor script)
 ;   2: Plutus V2 scripts
 ;   3: Plutus V3 scripts
 ;   4: Plutus V4 scripts (NEW)
-script = 
+script =
   [  0, native_script
   // 1, plutus_v1_script
   // 2, plutus_v2_script
@@ -272,7 +275,7 @@ script =
 
 ; Dijkstra native scripts extend Allegra's 6-variant format
 ; with a 7th variant for guard scripts.
-native_script = 
+native_script =
   [  script_pubkey
   // script_all
   // script_any
@@ -319,8 +322,8 @@ plutus_v1_script = distinct_bytes
 
 ; A type for distinct values.
 ; The type parameter must support .size, for example: bytes or uint
-distinct_bytes = 
-  bytes .size 8 
+distinct_bytes =
+  bytes .size 8
   / bytes .size 16
   / bytes .size 20
   / bytes .size 24
@@ -332,14 +335,14 @@ distinct_bytes =
 plutus_v2_script = distinct_bytes
 
 ; Conway introduces Plutus V3 with support for new governance features.
-; 
+;
 ; Note: distinct VBytes ensures uniqueness in test generation.
 ; The cddl tool we use for roundtrip testing doesn't generate
 ; distinct collections, so we use sized variants to ensure uniqueness.
 plutus_v3_script = distinct_bytes
 
 ; Dijkstra introduces Plutus V4.
-; 
+;
 ; Note: distinct VBytes ensures uniqueness in test generation.
 plutus_v4_script = distinct_bytes
 
@@ -362,27 +365,27 @@ pool_keyhash = hash28
 pool_registration_cert = (3, pool_params)
 
 ; Pool parameters for stake pool registration
-pool_params = 
-  ( operator       : pool_keyhash      
-  , vrf_keyhash    : vrf_keyhash       
-  , pledge         : coin              
-  , cost           : coin              
-  , margin         : unit_interval     
-  , reward_account : reward_account    
+pool_params =
+  ( operator       : pool_keyhash
+  , vrf_keyhash    : vrf_keyhash
+  , pledge         : coin
+  , cost           : coin
+  , margin         : unit_interval
+  , reward_account : reward_account
   , pool_owners    : set<addr_keyhash>
-  , relays         : [* relay]     
+  , relays         : [* relay]
   , pool_metadata  : pool_metadata/ nil
   )
 
 vrf_keyhash = hash32
 
 ; The real unit_interval is: #6.30([uint, uint])
-; 
+;
 ; A unit interval is a number in the range between 0 and 1, which
 ; means there are two extra constraints:
 ;   1. numerator <= denominator
 ;   2. denominator > 0
-; 
+;
 ; The relation between numerator and denominator can be
 ; expressed in CDDL, but we have a limitation currently
 ; (see: https://github.com/input-output-hk/cuddle/issues/30)
@@ -393,7 +396,7 @@ vrf_keyhash = hash32
 unit_interval = #6.30([1, 2])
 
 ; reward_account = bytes
-reward_account = 
+reward_account =
   h'e090000000000000000000000000000000000000000000000000000000'
   / h'f0a0000000000000000000000000000000000000000000000000000000'
 
@@ -431,19 +434,19 @@ delegation_to_drep_cert = (9, stake_credential, drep)
 
 drep = [0, addr_keyhash// 1, script_hash// 2// 3]
 
-delegation_to_stake_pool_and_drep_cert = 
+delegation_to_stake_pool_and_drep_cert =
   (10, stake_credential, pool_keyhash, drep)
 
-account_registration_delegation_to_stake_pool_cert = 
+account_registration_delegation_to_stake_pool_cert =
   (11, stake_credential, pool_keyhash, coin)
 
-account_registration_delegation_to_drep_cert = 
+account_registration_delegation_to_drep_cert =
   (12, stake_credential, drep, coin)
 
-account_registration_delegation_to_stake_pool_and_drep_cert = 
+account_registration_delegation_to_stake_pool_and_drep_cert =
   (13, stake_credential, pool_keyhash, drep, coin)
 
-committee_authorization_cert = 
+committee_authorization_cert =
   (14, committee_cold_credential, committee_hot_credential)
 
 committee_cold_credential = credential
@@ -481,19 +484,19 @@ positive_int64 = 1 .. max_int64
 ;   - The value in the cost_models map corresponding to the script's language
 ;     (in field 18 of protocol_param_update.)
 ; (In the future it may contain additional protocol parameters.)
-; 
+;
 ; Since this data does not exist in contiguous form inside a transaction, it needs
 ; to be independently constructed by each recipient.
-; 
+;
 ; The bytestring which is hashed is the concatenation of three things:
 ;   redeemers || datums || language views
 ; The redeemers are exactly the data present in the transaction witness set.
 ; Similarly for the datums, if present. If no datums are provided, the middle
 ; field is omitted (i.e. it is the empty/null bytestring).
-; 
+;
 ; language views CDDL:
 ; { * language => script_integrity_data }
-; 
+;
 ; This must be encoded canonically, using the same scheme as in
 ; RFC7049 section 3.9:
 ;  - Maps, strings, and bytestrings must use a definite-length encoding
@@ -504,7 +507,7 @@ positive_int64 = 1 .. max_int64
 ;     -  If two keys have different lengths, the shorter one sorts earlier.
 ;     -  If two keys have the same length, the one with the lower value
 ;        in (byte-wise) lexical order sorts earlier.
-; 
+;
 ; For PlutusV1 (language id 0), the language view is the following:
 ;   - the value of cost_models map at key 0 (in other words, the script_integrity_data)
 ;     is encoded as an indefinite length list and the result is encoded as a bytestring.
@@ -526,11 +529,11 @@ positive_int64 = 1 .. max_int64
 ;     01 in hex.
 ; For PlutusV3 (language id 2), the language view is the following:
 ;   - the value of cost_models map at key 2 is encoded as a definite length list.
-; 
+;
 ; Note that each Plutus language represented inside a transaction must have
 ; a cost model in the cost_models protocol parameter in order to execute,
 ; regardless of what the script integrity data is.
-; 
+;
 ; Finally, note that in the case that a transaction includes datums but does not
 ; include the redeemers field, the script data format becomes (in hex):
 ; [ A0 | datums | A0 ]
@@ -550,7 +553,7 @@ network_id = 0/ 1
 
 voting_procedures = {+ voter => {+ gov_action_id => voting_procedure}}
 
-voter = 
+voter =
   [  0, addr_keyhash
   // 1, script_hash
   // 2, addr_keyhash
@@ -559,7 +562,7 @@ voter =
   ]
 
 
-gov_action_id = 
+gov_action_id =
   [transaction_id : transaction_id, gov_action_index : uint .size 2]
 
 voting_procedure = [vote, anchor/ nil]
@@ -570,7 +573,7 @@ proposal_procedures = nonempty_oset<proposal_procedure>
 
 proposal_procedure = [deposit : coin, reward_account, gov_action, anchor]
 
-gov_action = 
+gov_action =
   [  parameter_change_action
   // hard_fork_initiation_action
   // treasury_withdrawals_action
@@ -581,10 +584,10 @@ gov_action =
   ]
 
 
-parameter_change_action = 
+parameter_change_action =
   (0, gov_action_id/ nil, protocol_param_update, policy_hash/ nil)
 
-protocol_param_update = 
+protocol_param_update =
   { ? 0  : coin                   ; minfeeA
   , ? 1  : coin                   ; minfeeB
   , ? 2  : uint .size 4           ; max block body size
@@ -630,28 +633,28 @@ positive_int = 1 .. max_word64
 
 ; The format for cost_models is flexible enough to allow adding
 ; Plutus built-ins and language versions in the future.
-; 
+;
 ; Plutus v1: only 166 integers are used, but more are accepted (and ignored)
 ; Plutus v2: only 175 integers are used, but more are accepted (and ignored)
 ; Plutus v3: only 223 integers are used, but more are accepted (and ignored)
 ; Plutus v4: TBD integers are used (NEW)
-; 
+;
 ; Any 8-bit unsigned number can be used as a key.
-cost_models = 
-  { ? 0        : [* int64] 
-  , ? 1        : [* int64] 
-  , ? 2        : [* int64] 
-  , ? 3        : [* int64] 
+cost_models =
+  { ? 0        : [* int64]
+  , ? 1        : [* int64]
+  , ? 2        : [* int64]
+  , ? 3        : [* int64]
   , * 4 .. 255 => [* int64]
   }
 
 
-ex_unit_prices = 
+ex_unit_prices =
   [mem_price : nonnegative_interval, step_price : nonnegative_interval]
 
 ex_units = [mem : uint, steps : uint]
 
-pool_voting_thresholds = 
+pool_voting_thresholds =
   [ unit_interval ; motion no confidence
   , unit_interval ; committee normal
   , unit_interval ; committee no confidence
@@ -660,7 +663,7 @@ pool_voting_thresholds =
   ]
 
 
-drep_voting_thresholds = 
+drep_voting_thresholds =
   [ unit_interval ; motion no confidence
   , unit_interval ; committee normal
   , unit_interval ; committee no confidence
@@ -688,12 +691,12 @@ treasury_withdrawals_action = (2, {* reward_account => coin}, policy_hash/ nil)
 
 no_confidence = (3, gov_action_id/ nil)
 
-update_committee = 
-  ( 4                                         
-  , gov_action_id/ nil                        
-  , set<committee_cold_credential>           
+update_committee =
+  ( 4
+  , gov_action_id/ nil
+  , set<committee_cold_credential>
   , {* committee_cold_credential => epoch}
-  , unit_interval                             
+  , unit_interval
   )
 
 new_constitution = (5, gov_action_id/ nil, constitution)
@@ -704,57 +707,57 @@ info_action = 6
 
 sub_transactions = nonempty_oset<sub_transaction>
 
-sub_transaction = 
+sub_transaction =
   [sub_transaction_body, transaction_witness_set, auxiliary_data/ nil]
 
-sub_transaction_body = 
-  {   0  : set<transaction_input>         
-  ,   1  : [* transaction_output]      
-  , ? 3  : slot                            
-  , ? 4  : certificates                    
-  , ? 5  : withdrawals                     
-  , ? 7  : auxiliary_data_hash             
-  , ? 8  : slot                            
-  , ? 9  : mint                            
-  , ? 11 : script_data_hash                
-  , ? 14 : guards                          
-  , ? 15 : network_id                      
+sub_transaction_body =
+  {   0  : set<transaction_input>
+  ,   1  : [* transaction_output]
+  , ? 3  : slot
+  , ? 4  : certificates
+  , ? 5  : withdrawals
+  , ? 7  : auxiliary_data_hash
+  , ? 8  : slot
+  , ? 9  : mint
+  , ? 11 : script_data_hash
+  , ? 14 : guards
+  , ? 15 : network_id
   , ? 18 : nonempty_set<transaction_input>
-  , ? 19 : voting_procedures               
-  , ? 20 : proposal_procedures             
-  , ? 21 : coin                            
-  , ? 22 : positive_coin                   
-  , ? 24 : required_top_level_guards       
+  , ? 19 : voting_procedures
+  , ? 20 : proposal_procedures
+  , ? 21 : coin
+  , ? 22 : positive_coin
+  , ? 24 : required_top_level_guards
   }
 
 
 required_top_level_guards = {+ credential => plutus_data/ nil}
 
-transaction_witness_set = 
-  { ? 0 : nonempty_set<vkeywitness>      
-  , ? 1 : nonempty_set<native_script>    
+transaction_witness_set =
+  { ? 0 : nonempty_set<vkeywitness>
+  , ? 1 : nonempty_set<native_script>
   , ? 2 : nonempty_set<bootstrap_witness>
-  , ? 3 : nonempty_set<plutus_v1_script> 
-  , ? 4 : nonempty_set<plutus_data>      
-  , ? 5 : redeemers                       
-  , ? 6 : nonempty_set<plutus_v2_script> 
-  , ? 7 : nonempty_set<plutus_v3_script> 
+  , ? 3 : nonempty_set<plutus_v1_script>
+  , ? 4 : nonempty_set<plutus_data>
+  , ? 5 : redeemers
+  , ? 6 : nonempty_set<plutus_v2_script>
+  , ? 7 : nonempty_set<plutus_v3_script>
   }
 
 
 vkeywitness = [vkey, signature]
 
-bootstrap_witness = 
-  [ public_key : vkey          
-  , signature  : signature     
+bootstrap_witness =
+  [ public_key : vkey
+  , signature  : signature
   , chain_code : bytes .size 32
-  , attributes : bytes         
+  , attributes : bytes
   ]
 
 
 ; Dijkstra uses map format only for redeemers.
 ; The flat array format has been removed.
-redeemers = 
+redeemers =
   { + [tag : redeemer_tag, index : uint .size 4] => [ data     : plutus_data
                                                     , ex_units : ex_units
                                                     ]
@@ -763,14 +766,14 @@ redeemers =
   }
 
 
-redeemer_tag = 
-  0 ; spend    
-  / 1 ; mint     
-  / 2 ; cert     
-  / 3 ; reward   
-  / 4 ; voting   
+redeemer_tag =
+  0 ; spend
+  / 1 ; mint
+  / 2 ; cert
+  / 3 ; reward
+  / 4 ; voting
   / 5 ; proposing
-  / 6 ; guarding 
+  / 6 ; guarding
 
 ; auxiliary_data supports three serialization formats:
 ;   1. metadata (raw) - Supported since Shelley
@@ -783,22 +786,22 @@ metadata = {* metadatum_label => metadatum}
 
 metadatum_label = uint .size 8
 
-metadatum = 
+metadatum =
   {* metadatum => metadatum}
-  / [* metadatum]       
-  / int                     
+  / [* metadatum]
+  / int
   / bytes .size (0 .. 64)
-  / text .size (0 .. 64) 
+  / text .size (0 .. 64)
 
-auxiliary_data_array = 
+auxiliary_data_array =
   [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
 
 auxiliary_scripts = [* native_script]
 
-auxiliary_data_map = 
+auxiliary_data_map =
   #6.259(
-    { ? 0 : metadata                
-    , ? 1 : [* native_script]   
+    { ? 0 : metadata
+    , ? 1 : [* native_script]
     , ? 2 : [* plutus_v1_script]
     , ? 3 : [* plutus_v2_script]
     , ? 4 : [* plutus_v3_script]
