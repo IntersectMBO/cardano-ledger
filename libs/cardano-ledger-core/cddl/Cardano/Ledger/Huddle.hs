@@ -11,6 +11,7 @@ module Cardano.Ledger.Huddle (
   HuddleRule (..),
   HuddleGroup (..),
   HuddleGRule (..),
+  HuddleRule1 (..),
   Era,
 ) where
 
@@ -27,3 +28,6 @@ class (KnownSymbol name, Era era) => HuddleGroup (name :: Symbol) era where
 
 class (KnownSymbol name, Era era) => HuddleGRule (name :: Symbol) era where
   huddleGRule :: Proxy era -> GRuleDef
+
+class (KnownSymbol name, Era era) => HuddleRule1 (name :: Symbol) era where
+  huddleRule1 :: IsType0 a => Proxy era -> a -> GRuleCall

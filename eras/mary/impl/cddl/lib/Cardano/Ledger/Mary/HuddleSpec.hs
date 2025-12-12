@@ -12,6 +12,7 @@
 
 module Cardano.Ledger.Mary.HuddleSpec (
   module Cardano.Ledger.Allegra.HuddleSpec,
+  MaryEra,
   maryCDDL,
   maryMultiasset,
   maryValueRule,
@@ -200,7 +201,7 @@ instance HuddleRule "transaction_body" MaryEra where
   huddleRule p =
     "transaction_body"
       =:= mp
-        [ idx 0 ==> untaggedSet (huddleRule @"transaction_input" p)
+        [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p
         , opt (idx 3 ==> huddleRule @"slot" p)
@@ -240,3 +241,12 @@ instance HuddleRule "auxiliary_data_array" MaryEra where
 
 instance HuddleRule "auxiliary_scripts" MaryEra where
   huddleRule = auxiliaryScriptsRule @MaryEra
+
+instance HuddleRule1 "set" MaryEra where
+  huddleRule1 _ = huddleRule1 @"set" (Proxy @ShelleyEra)
+
+instance HuddleRule1 "nonempty_set" MaryEra where
+  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ShelleyEra)
+
+instance HuddleRule1 "nonempty_oset" MaryEra where
+  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ShelleyEra)
