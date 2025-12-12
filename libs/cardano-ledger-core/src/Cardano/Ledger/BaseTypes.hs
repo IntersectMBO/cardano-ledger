@@ -93,6 +93,8 @@ module Cardano.Ledger.BaseTypes (
 
   -- * Peras-specific types
   PerasCert (..),
+  PerasKey (..),
+  validatePerasCert,
 ) where
 
 import Cardano.Crypto.Hash
@@ -1010,3 +1012,16 @@ instance DecCBOR PerasCert where
   decCBOR = do
     () <- decCBOR
     pure PerasCert
+
+-- | Placeholder for Peras public keys
+--
+-- NOTE: The real type will be brought from 'cardano-base' once it's ready.
+data PerasKey = PerasKey
+  deriving (Eq, Show, Generic, NoThunks)
+
+-- | Mocked-up Peras certificate validation routine
+--
+-- NOTE: this function will be replaced with the real implementation from
+-- 'cardano-base' once it's ready.
+validatePerasCert :: Nonce -> PerasKey -> PerasCert -> Bool
+validatePerasCert _ _ _ = True

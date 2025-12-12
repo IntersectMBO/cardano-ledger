@@ -2,6 +2,10 @@
 
 ## 0.2.0.0
 
+* Change Dijkstra BBODY rule to validate Peras certificates when present
+* Add new block body predicate falures for Dijkstra:
+  - `PrevEpochNonceNotPresent` for missing optional nonce needed for validation
+  - `PerasCertValidationFailed` for certification validation failures
 * Change all lists into `NonEmpty` for `DijkstraUtxoPredFailure`, `DijkstraUtxowPredFailure`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Add `bhviewPrevEpochNonce` to `BHeaderView`
