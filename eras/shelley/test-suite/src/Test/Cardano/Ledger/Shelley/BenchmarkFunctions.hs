@@ -32,7 +32,7 @@ import Cardano.Ledger.BaseTypes (
   inject,
   mkTxIxPartial,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -117,8 +117,8 @@ ppsBench =
     & ppKeyDepositL .~ Coin 0
     & ppMaxBHSizeL .~ 10000
     & ppMaxTxSizeL .~ 1000000000
-    & ppMinFeeFactorL .~ CoinPerByte (Coin 0)
-    & ppMinFeeConstantL .~ Coin 0
+    & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 0)
+    & ppTxFeeFixedL .~ Coin 0
     & ppMinUTxOValueL .~ Coin 10
     & ppPoolDepositL .~ Coin 0
     & ppRhoL .~ unsafeBoundRational 0.0021

@@ -19,7 +19,7 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
@@ -507,8 +507,8 @@ testEstimateMinFee =
   where
     pp =
       emptyPParams
-        & ppMinFeeFactorL .~ CoinPerByte (Coin 1)
-        & ppMinFeeConstantL .~ Coin 1
+        & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 1)
+        & ppTxFeeFixedL .~ Coin 1
 
     txSimpleUTxONoWit =
       mkBasicTx txbSimpleUTxO

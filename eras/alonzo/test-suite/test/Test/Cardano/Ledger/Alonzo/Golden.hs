@@ -21,7 +21,7 @@ import Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Block (Block (Block))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Mary.Value (valueFromList)
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
@@ -298,8 +298,8 @@ goldenMinFee =
           pricesParam = Prices priceMem priceSteps
           pp =
             emptyPParams
-              & ppMinFeeFactorL .~ CoinPerByte (Coin 44)
-              & ppMinFeeConstantL .~ Coin 155381
+              & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 44)
+              & ppTxFeeFixedL .~ Coin 155381
               & ppPricesL .~ pricesParam
 
       Coin 1006053 `shouldBe` alonzoMinFeeTx pp firstTx

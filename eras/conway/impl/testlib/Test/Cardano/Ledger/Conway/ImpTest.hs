@@ -152,7 +152,7 @@ import Cardano.Ledger.BaseTypes (
   inject,
   textToUrl,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Core
@@ -887,7 +887,9 @@ mkMinFeeUpdateGovAction ::
   ImpTestM era (GovAction era)
 mkMinFeeUpdateGovAction p = do
   minFeeValue <- uniformRM (30, 1000)
-  mkParameterChangeGovAction p (def & ppuMinFeeFactorL .~ SJust (CoinPerByte $ Coin minFeeValue))
+  mkParameterChangeGovAction
+    p
+    (def & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin minFeeValue))
 
 getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe ScriptHash)
 getGovPolicy =

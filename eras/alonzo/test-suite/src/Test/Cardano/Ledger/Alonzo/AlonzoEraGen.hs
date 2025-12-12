@@ -60,6 +60,7 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (
@@ -548,7 +549,7 @@ sumCollateral tx utxo =
   sumCoinUTxO $ txInsFilter utxo $ tx ^. bodyTxL . collateralInputsTxBodyL
 
 storageCost :: forall era t. (EraPParams era, EncCBOR t) => Integer -> PParams era -> t -> Coin
-storageCost extra pp x = (extra + encodedLen @era x) <×> unCoinPerByte (pp ^. ppMinFeeFactorL)
+storageCost extra pp x = (extra + encodedLen @era x) <×> fromCompact (unCoinPerByte $ pp ^. ppTxFeePerByteL)
 
 addRedeemMap ::
   (P.Data, Natural, Natural) ->

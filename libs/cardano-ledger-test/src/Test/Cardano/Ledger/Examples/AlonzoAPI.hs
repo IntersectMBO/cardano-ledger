@@ -20,7 +20,7 @@ module Test.Cardano.Ledger.Examples.AlonzoAPI (tests, defaultPParams) where
 import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx, hashData)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), TxDats (..), unTxDatsL)
 import Cardano.Ledger.BaseTypes (ProtVer (..), inject)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Conway.Core (
   AlonzoEraPParams,
   AlonzoEraTxBody (..),
@@ -35,7 +35,7 @@ import Cardano.Ledger.Conway.Core (
   ppMaxBlockExUnitsL,
   ppMaxTxExUnitsL,
   ppMaxValSizeL,
-  ppMinFeeFactorL,
+  ppTxFeePerByteL,
   pattern SpendingPurpose,
  )
 import Cardano.Ledger.Core (
@@ -97,7 +97,7 @@ testEstimateMinFee =
   where
     pparams =
       defaultPPs emptyPParams
-        & ppMinFeeFactorL .~ CoinPerByte (Coin 1)
+        & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 1)
     dat = Data (PV1.I 123)
     dataMap = Map.singleton (hashData dat) dat
     script = fromNativeScript $ RequireAllOf mempty

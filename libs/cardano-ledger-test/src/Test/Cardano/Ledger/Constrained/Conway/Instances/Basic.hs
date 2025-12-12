@@ -40,6 +40,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (Compactible (..), toCompactPartial)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Plutus.CostModels (CostModels)
@@ -108,8 +109,8 @@ instance Foldy Coin where
 instance HasSimpleRep CoinPerByte where
   -- TODO: consider `SimpleRep Coin` instead if this is annoying
   type SimpleRep CoinPerByte = Coin
-  fromSimpleRep = CoinPerByte
-  toSimpleRep = unCoinPerByte
+  fromSimpleRep = CoinPerByte . toCompactPartial
+  toSimpleRep = fromCompact . unCoinPerByte
 
 instance HasSpec CoinPerByte
 
@@ -262,7 +263,7 @@ instance Typeable r => HasSpec (KeyHash r) where
 --   encode PParams in EVERY Era. The EraPParams instances remove the fields
 --   that do not appear in that Era.
 data SimplePParams era = SimplePParams
-  { minFeeFactor :: CoinPerByte
+  { minFeeFactor :: Coin
   , minFeeConstant :: Coin
   , maxBBSize :: Word32
   , maxTxSize :: Word32
@@ -321,7 +322,7 @@ instance
 
 -- | Use this as the SimpleRep of (PParamsUpdate era)
 data SimplePPUpdate = SimplePPUpdate
-  { uminFeeFactor :: StrictMaybe CoinPerByte
+  { uminFeeFactor :: StrictMaybe Coin
   , uminFeeConstant :: StrictMaybe Coin
   , umaxBBSize :: StrictMaybe Word32
   , umaxTxSize :: StrictMaybe Word32

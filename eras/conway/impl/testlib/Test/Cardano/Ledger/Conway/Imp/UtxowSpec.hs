@@ -17,7 +17,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   TxIx (..),
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core (
   AlonzoEraTxBody (..),
   AlonzoEraTxWits (..),
@@ -92,7 +92,7 @@ setupBadPPViewHashTx ::
   ConwayEraImp era =>
   ImpTestM era (Tx TopTx era)
 setupBadPPViewHashTx = do
-  modifyPParams $ ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
+  modifyPParams $ ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 1)
   someKeyHash <- arbitrary @StakeReference
   let scriptTxOut =
         mkBasicTxOut

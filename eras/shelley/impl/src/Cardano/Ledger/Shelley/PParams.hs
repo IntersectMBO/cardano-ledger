@@ -37,8 +37,8 @@ module Cardano.Ledger.Shelley.PParams (
   ppExtraEntropy,
   ppMaxBBSize,
   ppKeyDeposit,
-  ppMinFeeFactor,
-  ppMinFeeConstant,
+  ppTxFeePerByte,
+  ppTxFeeFixed,
   ppMinPoolCost,
   ppMaxBHSize,
   ppMaxTxSize,
@@ -96,9 +96,9 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Protocol parameters.
 data ShelleyPParams f era = ShelleyPParams
-  { sppMinFeeFactor :: !(HKD f CoinPerByte)
+  { sppTxFeePerByte :: !(HKD f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
-  , sppMinFeeConstant :: !(HKD f (CompactForm Coin))
+  , sppTxFeeFixed :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , sppMaxBBSize :: !(HKD f Word32)
   -- ^ Maximal block body size
@@ -134,12 +134,12 @@ data ShelleyPParams f era = ShelleyPParams
   deriving (Generic)
 
 sppMinFeeA :: ShelleyPParams f era -> HKD f CoinPerByte
-sppMinFeeA = sppMinFeeFactor
-{-# DEPRECATED sppMinFeeA "In favor of `sppMinFeeFactor`" #-}
+sppMinFeeA = sppTxFeePerByte
+{-# DEPRECATED sppMinFeeA "In favor of `sppTxFeePerByte`" #-}
 
 sppMinFeeB :: ShelleyPParams f era -> HKD f (CompactForm Coin)
-sppMinFeeB = sppMinFeeConstant
-{-# DEPRECATED sppMinFeeB "In favor of `sppMinFeeConstant`" #-}
+sppMinFeeB = sppTxFeeFixed
+{-# DEPRECATED sppMinFeeB "In favor of `sppTxFeeFixed`" #-}
 
 deriving instance Eq (ShelleyPParams Identity era)
 
@@ -179,8 +179,8 @@ instance EraPParams ShelleyEra where
   downgradePParamsHKD = error "IMPOSSIBLE! There cannot be PParams that can be downgraded from Shelley"
   emptyUpgradePParamsUpdate = error "IMPOSSIBLE! There is no UpgradePParams in ShelleyEra"
 
-  hkdMinFeeFactorL = lens sppMinFeeFactor $ \pp x -> pp {sppMinFeeFactor = x}
-  hkdMinFeeConstantCompactL = lens sppMinFeeConstant $ \pp x -> pp {sppMinFeeConstant = x}
+  hkdTxFeePerByteL = lens sppTxFeePerByte $ \pp x -> pp {sppTxFeePerByte = x}
+  hkdTxFeeFixedCompactL = lens sppTxFeeFixed $ \pp x -> pp {sppTxFeeFixed = x}
   hkdMaxBBSizeL = lens sppMaxBBSize $ \pp x -> pp {sppMaxBBSize = x}
   hkdMaxTxSizeL = lens sppMaxTxSize $ \pp x -> pp {sppMaxTxSize = x}
   hkdMaxBHSizeL = lens sppMaxBHSize $ \pp x -> pp {sppMaxBHSize = x}
@@ -202,8 +202,8 @@ instance EraPParams ShelleyEra where
 emptyShelleyPParams :: forall era. Era era => ShelleyPParams Identity era
 emptyShelleyPParams =
   ShelleyPParams
-    { sppMinFeeFactor = CoinPerByte $ Coin 0
-    , sppMinFeeConstant = CompactCoin 0
+    { sppTxFeePerByte = CoinPerByte $ CompactCoin 0
+    , sppTxFeeFixed = CompactCoin 0
     , sppMaxBBSize = 0
     , sppMaxTxSize = 2048
     , sppMaxBHSize = 0
@@ -224,8 +224,8 @@ emptyShelleyPParams =
 emptyShelleyPParamsUpdate :: ShelleyPParams StrictMaybe era
 emptyShelleyPParamsUpdate =
   ShelleyPParams
-    { sppMinFeeFactor = SNothing
-    , sppMinFeeConstant = SNothing
+    { sppTxFeePerByte = SNothing
+    , sppTxFeeFixed = SNothing
     , sppMaxBBSize = SNothing
     , sppMaxTxSize = SNothing
     , sppMaxBHSize = SNothing
@@ -335,29 +335,29 @@ upgradeProposedPPUpdates ::
 upgradeProposedPPUpdates args (ProposedPPUpdates ppus) =
   ProposedPPUpdates $ upgradePParamsUpdate args <$> ppus
 
-ppMinFeeFactor :: EraPParams era => PParam era
-ppMinFeeFactor =
+ppTxFeePerByte :: EraPParams era => PParam era
+ppTxFeePerByte =
   PParam
     { ppName = "txFeePerByte"
-    , ppLens = ppMinFeeFactorL
-    , ppUpdate = Just $ PParamUpdate 0 ppuMinFeeFactorL
+    , ppLens = ppTxFeePerByteL
+    , ppUpdate = Just $ PParamUpdate 0 ppuTxFeePerByteL
     }
 
 ppMinFeeA :: EraPParams era => PParam era
-ppMinFeeA = ppMinFeeFactor
-{-# DEPRECATED ppMinFeeA "In favor of `ppMinFeeFactor`" #-}
+ppMinFeeA = ppTxFeePerByte
+{-# DEPRECATED ppMinFeeA "In favor of `ppTxFeePerByte`" #-}
 
-ppMinFeeConstant :: EraPParams era => PParam era
-ppMinFeeConstant =
+ppTxFeeFixed :: EraPParams era => PParam era
+ppTxFeeFixed =
   PParam
     { ppName = "txFeeFixed"
-    , ppLens = ppMinFeeConstantCompactL
-    , ppUpdate = Just $ PParamUpdate 1 ppuMinFeeConstantCompactL
+    , ppLens = ppTxFeeFixedCompactL
+    , ppUpdate = Just $ PParamUpdate 1 ppuTxFeeFixedCompactL
     }
 
 ppMinFeeB :: EraPParams era => PParam era
-ppMinFeeB = ppMinFeeConstant
-{-# DEPRECATED ppMinFeeB "In favor of `ppMinFeeConstant`" #-}
+ppMinFeeB = ppTxFeeFixed
+{-# DEPRECATED ppMinFeeB "In favor of `ppTxFeeFixed`" #-}
 
 ppMaxBBSize :: EraPParams era => PParam era
 ppMaxBBSize =
@@ -487,8 +487,8 @@ shelleyPParams ::
   ) =>
   [PParam era]
 shelleyPParams =
-  [ ppMinFeeFactor
-  , ppMinFeeConstant
+  [ ppTxFeePerByte
+  , ppTxFeeFixed
   , ppMaxBBSize
   , ppMaxTxSize
   , ppMaxBHSize

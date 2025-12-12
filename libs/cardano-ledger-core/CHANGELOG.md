@@ -3,15 +3,15 @@
 ## 1.19.0.0
 
 * Added:
-  - `ppMinFeeConstantCompactL`,
-  - `ppuMinFeeConstantCompactL`,
+  - `ppTxFeeFixedCompactL`,
+  - `ppuTxFeeFixedCompactL`,
 * Renamed:
-  - `hkdMinFeeAL` -> `hkdMinFeeFactorL`
-  - `ppMinFeeAL` -> `ppMinFeeFactorL`
-  - `ppuMinFeeAL` -> `ppuMinFeeFactorL`
-  - `hkdMinFeeBL` -> `hkdMinFeeConstantL`
-  - `ppMinFeeBL` -> `ppMinFeeConstantL`
-  - `ppuMinFeeBL` -> `ppuMinFeeConstantL`
+  - `hkdMinFeeAL` -> `hkdTxFeePerByteL`
+  - `ppMinFeeAL` -> `ppTxFeePerByteL`
+  - `ppuMinFeeAL` -> `ppuTxFeePerByteL`
+  - `hkdMinFeeBL` -> `hkdTxFeeFixedL`
+  - `ppMinFeeBL` -> `ppTxFeeFixedL`
+  - `ppuMinFeeBL` -> `ppuTxFeeFixedL`
 * Changed type to `CoinPerByte`:
   - `hkdMinFeeAL`
   - `ppMinFeeAL`

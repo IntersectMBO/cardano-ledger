@@ -17,17 +17,23 @@ module Cardano.Ledger.Api.PParams (
 
   -- | Protocol parameters introduced in Shelley era
 
-  -- ** @MinFeeFactor@
+  -- ** @TxFeePerByte@
 
   -- | Min fee factor
-  ppMinFeeFactorL,
-  ppuMinFeeFactorL,
+  ppTxFeePerByteL,
+  ppuTxFeePerByteL,
+  -- | Deprecated
+  ppMinFeeAL,
+  ppuMinFeeAL,
 
-  -- ** @MinFeeConstant@
+  -- ** @TxFeeFixed@
 
   -- | Min fee constant
-  ppMinFeeConstantL,
-  ppuMinFeeConstantL,
+  ppTxFeeFixedL,
+  ppuTxFeeFixedL,
+  -- | Deprecated
+  ppMinFeeBL,
+  ppuMinFeeBL,
 
   -- ** @MaxBBSize@
 
@@ -266,8 +272,8 @@ import Cardano.Ledger.Core (
   ppMaxBBSizeL,
   ppMaxBHSizeL,
   ppMaxTxSizeL,
-  ppMinFeeConstantL,
-  ppMinFeeFactorL,
+  ppMinFeeAL,
+  ppMinFeeBL,
   ppMinPoolCostL,
   ppMinUTxOValueL,
   ppNOptL,
@@ -275,6 +281,8 @@ import Cardano.Ledger.Core (
   ppProtocolVersionL,
   ppRhoL,
   ppTauL,
+  ppTxFeeFixedL,
+  ppTxFeePerByteL,
   ppuA0L,
   ppuDL,
   ppuEMaxL,
@@ -283,8 +291,8 @@ import Cardano.Ledger.Core (
   ppuMaxBBSizeL,
   ppuMaxBHSizeL,
   ppuMaxTxSizeL,
-  ppuMinFeeConstantL,
-  ppuMinFeeFactorL,
+  ppuMinFeeAL,
+  ppuMinFeeBL,
   ppuMinPoolCostL,
   ppuMinUTxOValueL,
   ppuNOptL,
@@ -292,6 +300,8 @@ import Cardano.Ledger.Core (
   ppuProtocolVersionL,
   ppuRhoL,
   ppuTauL,
+  ppuTxFeeFixedL,
+  ppuTxFeePerByteL,
   upgradePParams,
   upgradePParamsUpdate,
  )

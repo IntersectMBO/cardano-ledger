@@ -111,8 +111,8 @@ instance ToPlutusData (CompactForm Coin) where
   fromPlutusData _ = Nothing
 
 instance ToPlutusData CoinPerByte where
-  toPlutusData (CoinPerByte c) = toPlutusData @Coin c
-  fromPlutusData x = CoinPerByte <$> fromPlutusData @Coin x
+  toPlutusData (CoinPerByte c) = toPlutusData @(CompactForm Coin) c
+  fromPlutusData x = CoinPerByte <$> fromPlutusData @(CompactForm Coin) x
 
 instance ToPlutusData Word32 where
   toPlutusData w32 = I (toInteger @Word32 w32)

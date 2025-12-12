@@ -127,7 +127,7 @@ import Cardano.Ledger.Binary (
   natVersion,
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin (Coin), CompactForm (..), compactCoinOrError, partialCompactCoinL)
+import Cardano.Ledger.Coin (Coin, CompactForm (..), compactCoinOrError, partialCompactCoinL)
 import Cardano.Ledger.Compactible (partialCompactFL)
 import Cardano.Ledger.Conway.Era (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Core (EraPParams (..))
@@ -147,7 +147,6 @@ import Cardano.Ledger.Plutus.CostModels (
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.PParams
-import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson hiding (Encoding, Value, decode, encode)
 import qualified Data.Aeson as Aeson
@@ -643,9 +642,9 @@ ppGroup = \case
 -- * @dRepDeposit@
 -- * @dRepActivity@
 data ConwayPParams f era = ConwayPParams
-  { cppMinFeeFactor :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
+  { cppTxFeePerByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
-  , cppMinFeeConstant :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
+  , cppTxFeeFixed :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , cppMaxBBSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
   -- ^ Maximal block body size
@@ -713,13 +712,13 @@ data ConwayPParams f era = ConwayPParams
   deriving (Generic)
 
 cppMinFeeA :: ConwayPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte
-cppMinFeeA = cppMinFeeFactor
-{-# DEPRECATED cppMinFeeA "In favor of `cppMinFeeFactor`" #-}
+cppMinFeeA = cppTxFeePerByte
+{-# DEPRECATED cppMinFeeA "In favor of `cppTxFeePerByte`" #-}
 
 cppMinFeeB ::
   ConwayPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin)
-cppMinFeeB = cppMinFeeConstant
-{-# DEPRECATED cppMinFeeB "In favor of `cppMinFeeConstant`" #-}
+cppMinFeeB = cppTxFeeFixed
+{-# DEPRECATED cppMinFeeB "In favor of `cppTxFeeFixed`" #-}
 
 deriving instance Eq (ConwayPParams Identity era)
 
@@ -835,8 +834,8 @@ instance EraPParams ConwayEra where
   upgradePParamsHKD = upgradeConwayPParams
   downgradePParamsHKD () = downgradeConwayPParams
 
-  hkdMinFeeFactorL = lens (unTHKD . cppMinFeeFactor) $ \pp x -> pp {cppMinFeeFactor = THKD x}
-  hkdMinFeeConstantCompactL = lens (unTHKD . cppMinFeeConstant) $ \pp x -> pp {cppMinFeeConstant = THKD x}
+  hkdTxFeePerByteL = lens (unTHKD . cppTxFeePerByte) $ \pp x -> pp {cppTxFeePerByte = THKD x}
+  hkdTxFeeFixedCompactL = lens (unTHKD . cppTxFeeFixed) $ \pp x -> pp {cppTxFeeFixed = THKD x}
   hkdMaxBBSizeL = lens (unTHKD . cppMaxBBSize) $ \pp x -> pp {cppMaxBBSize = THKD x}
   hkdMaxTxSizeL = lens (unTHKD . cppMaxTxSize) $ \pp x -> pp {cppMaxTxSize = THKD x}
   hkdMaxBHSizeL = lens (unTHKD . cppMaxBHSize) $ \pp x -> pp {cppMaxBHSize = THKD x}
@@ -858,8 +857,8 @@ instance EraPParams ConwayEra where
   hkdMinUTxOValueCompactL = notSupportedInThisEraL
 
   eraPParams =
-    [ ppMinFeeFactor
-    , ppMinFeeConstant
+    [ ppTxFeePerByte
+    , ppTxFeeFixed
     , ppMaxBBSize
     , ppMaxTxSize
     , ppMaxBHSize
@@ -953,7 +952,7 @@ instance ConwayEraPParams ConwayEra where
       , isValid (/= CompactCoin 0) ppuGovActionDepositCompactL
       , isValid (/= CompactCoin 0) ppuDRepDepositCompactL
       , hardforkConwayBootstrapPhase pv
-          || isValid ((/= zero) . unCoinPerByte) ppuCoinsPerUTxOByteL
+          || isValid ((/= CompactCoin 0) . unCoinPerByte) ppuCoinsPerUTxOByteL
       , ppu /= emptyPParamsUpdate
       , pvMajor pv < natVersion @11
           || isValid (/= 0) ppuNOptL
@@ -995,8 +994,8 @@ instance ConwayEraPParams ConwayEra where
 emptyConwayPParams :: forall era. Era era => ConwayPParams Identity era
 emptyConwayPParams =
   ConwayPParams
-    { cppMinFeeFactor = THKD (CoinPerByte $ Coin 0)
-    , cppMinFeeConstant = THKD (CompactCoin 0)
+    { cppTxFeePerByte = THKD (CoinPerByte $ CompactCoin 0)
+    , cppTxFeeFixed = THKD (CompactCoin 0)
     , cppMaxBBSize = THKD 0
     , cppMaxTxSize = THKD 2048
     , cppMaxBHSize = THKD 0
@@ -1009,7 +1008,7 @@ emptyConwayPParams =
     , cppTau = THKD minBound
     , cppProtocolVersion = ProtVer (eraProtVerLow @era) 0
     , cppMinPoolCost = THKD mempty
-    , cppCoinsPerUTxOByte = THKD (CoinPerByte $ Coin 0)
+    , cppCoinsPerUTxOByte = THKD (CoinPerByte $ CompactCoin 0)
     , cppCostModels = THKD emptyCostModels
     , cppPrices = THKD (Prices minBound minBound)
     , cppMaxTxExUnits = THKD (OrdExUnits $ ExUnits 0 0)
@@ -1032,8 +1031,8 @@ emptyConwayPParams =
 emptyConwayPParamsUpdate :: ConwayPParams StrictMaybe era
 emptyConwayPParamsUpdate =
   ConwayPParams
-    { cppMinFeeFactor = THKD SNothing
-    , cppMinFeeConstant = THKD SNothing
+    { cppTxFeePerByte = THKD SNothing
+    , cppTxFeeFixed = THKD SNothing
     , cppMaxBBSize = THKD SNothing
     , cppMaxTxSize = THKD SNothing
     , cppMaxBHSize = THKD SNothing
@@ -1110,8 +1109,8 @@ upgradeConwayPParams ::
   ConwayPParams f ConwayEra
 upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
   ConwayPParams
-    { cppMinFeeFactor = THKD bppMinFeeFactor
-    , cppMinFeeConstant = THKD bppMinFeeConstant
+    { cppTxFeePerByte = THKD bppTxFeePerByte
+    , cppTxFeeFixed = THKD bppTxFeeFixed
     , cppMaxBBSize = THKD bppMaxBBSize
     , cppMaxTxSize = THKD bppMaxTxSize
     , cppMaxBHSize = THKD bppMaxBHSize
@@ -1164,8 +1163,8 @@ downgradeConwayPParams ::
   PParamsHKD f BabbageEra
 downgradeConwayPParams ConwayPParams {..} =
   BabbagePParams
-    { bppMinFeeFactor = unTHKD cppMinFeeFactor
-    , bppMinFeeConstant = unTHKD cppMinFeeConstant
+    { bppTxFeePerByte = unTHKD cppTxFeePerByte
+    , bppTxFeeFixed = unTHKD cppTxFeeFixed
     , bppMaxBBSize = unTHKD cppMaxBBSize
     , bppMaxTxSize = unTHKD cppMaxTxSize
     , bppMaxBHSize = unTHKD cppMaxBHSize
@@ -1198,8 +1197,8 @@ conwayApplyPPUpdates ::
   ConwayPParams Identity era
 conwayApplyPPUpdates pp ppu =
   ConwayPParams
-    { cppMinFeeFactor = ppApplyUpdate cppMinFeeFactor
-    , cppMinFeeConstant = ppApplyUpdate cppMinFeeConstant
+    { cppTxFeePerByte = ppApplyUpdate cppTxFeePerByte
+    , cppTxFeeFixed = ppApplyUpdate cppTxFeeFixed
     , cppMaxBBSize = ppApplyUpdate cppMaxBBSize
     , cppMaxTxSize = ppApplyUpdate cppMaxTxSize
     , cppMaxBHSize = ppApplyUpdate cppMaxBHSize

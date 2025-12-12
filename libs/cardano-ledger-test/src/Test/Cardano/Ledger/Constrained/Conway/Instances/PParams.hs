@@ -71,6 +71,7 @@ import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (Compactible (fromCompact), toCompactPartial)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.PParams
@@ -158,8 +159,8 @@ dropAtMost4 pp x =
 dropShelley :: EraPParams era => PParams era -> SimplePParams era
 dropShelley pp =
   SimplePParams
-    { minFeeFactor = pp ^. ppMinFeeFactorL
-    , minFeeConstant = pp ^. ppMinFeeConstantL
+    { minFeeFactor = fromCompact . unCoinPerByte $ pp ^. ppTxFeePerByteL
+    , minFeeConstant = pp ^. ppTxFeeFixedL
     , maxBBSize = pp ^. ppMaxBBSizeL
     , maxTxSize = pp ^. ppMaxTxSizeL
     , maxBHSize = fromIntegral (pp ^. ppMaxBHSizeL)
@@ -210,7 +211,7 @@ dropAlonzo pp psub =
 
 dropBabbage :: BabbageEraPParams era => PParams era -> SimplePParams era -> SimplePParams era
 dropBabbage pp psub =
-  psub {coinsPerUTxOByte = unCoinPerByte (pp ^. ppCoinsPerUTxOByteL)}
+  psub {coinsPerUTxOByte = fromCompact . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL}
 
 dropConway :: ConwayEraPParams era => PParams era -> SimplePParams era -> SimplePParams era
 dropConway pp psub =
@@ -231,8 +232,8 @@ dropConway pp psub =
 liftShelley :: EraPParams era => SimplePParams era -> PParams era
 liftShelley pps =
   emptyPParams
-    & ppMinFeeFactorL .~ (minFeeFactor pps)
-    & ppMinFeeConstantL .~ (minFeeConstant pps)
+    & ppTxFeePerByteL .~ (CoinPerByte . toCompactPartial $ minFeeFactor pps)
+    & ppTxFeeFixedL .~ (minFeeConstant pps)
     & ppMaxBBSizeL .~ (maxBBSize pps)
     & ppMaxTxSizeL .~ (maxTxSize pps)
     & ppMaxBHSizeL .~ (fromIntegral (maxBHSize pps))
@@ -260,7 +261,7 @@ liftAlonzo pps pp =
     & ppMaxCollateralInputsL .~ (maxCollateralInputs pps)
 
 liftBabbage :: BabbageEraPParams era => SimplePParams era -> PParams era -> PParams era
-liftBabbage pps pp = pp & ppCoinsPerUTxOByteL .~ CoinPerByte (coinsPerUTxOByte pps)
+liftBabbage pps pp = pp & ppCoinsPerUTxOByteL .~ CoinPerByte (toCompactPartial $ coinsPerUTxOByte pps)
 
 liftConway :: ConwayEraPParams era => SimplePParams era -> PParams era -> PParams era
 liftConway pps pp =
@@ -280,8 +281,8 @@ liftConway pps pp =
 uDropShelley :: EraPParams era => PParamsUpdate era -> SimplePPUpdate
 uDropShelley pp =
   SimplePPUpdate
-    { uminFeeFactor = pp ^. ppuMinFeeFactorL
-    , uminFeeConstant = pp ^. ppuMinFeeConstantL
+    { uminFeeFactor = fromCompact . unCoinPerByte <$> pp ^. ppuTxFeePerByteL
+    , uminFeeConstant = pp ^. ppuTxFeeFixedL
     , umaxBBSize = pp ^. ppuMaxBBSizeL
     , umaxTxSize = pp ^. ppuMaxTxSizeL
     , umaxBHSize = fromIntegral <$> (pp ^. ppuMaxBHSizeL)
@@ -336,7 +337,7 @@ uDropAlonzo pp psub =
 
 uDropBabbage :: BabbageEraPParams era => PParamsUpdate era -> SimplePPUpdate -> SimplePPUpdate
 uDropBabbage pp psub =
-  psub {ucoinsPerUTxOByte = unCoinPerByte <$> (pp ^. ppuCoinsPerUTxOByteL)}
+  psub {ucoinsPerUTxOByte = fromCompact . unCoinPerByte <$> (pp ^. ppuCoinsPerUTxOByteL)}
 
 uDropConway :: ConwayEraPParams era => PParamsUpdate era -> SimplePPUpdate -> SimplePPUpdate
 uDropConway pp psub =
@@ -355,8 +356,8 @@ uDropConway pp psub =
 uLiftShelley :: EraPParams era => SimplePPUpdate -> PParamsUpdate era
 uLiftShelley pps =
   emptyPParamsUpdate
-    & ppuMinFeeFactorL .~ (uminFeeFactor pps)
-    & ppuMinFeeConstantL .~ (uminFeeConstant pps)
+    & ppuTxFeePerByteL .~ (CoinPerByte . toCompactPartial <$> uminFeeFactor pps)
+    & ppuTxFeeFixedL .~ (uminFeeConstant pps)
     & ppuMaxBBSizeL .~ (umaxBBSize pps)
     & ppuMaxTxSizeL .~ (umaxTxSize pps)
     & ppuMaxBHSizeL .~ (fromIntegral <$> (umaxBHSize pps))
@@ -387,7 +388,7 @@ uLiftAlonzo pps pp =
     & ppuMaxCollateralInputsL .~ (umaxCollateralInputs pps)
 
 uLiftBabbage :: BabbageEraPParams era => SimplePPUpdate -> PParamsUpdate era -> PParamsUpdate era
-uLiftBabbage pps pp = pp & ppuCoinsPerUTxOByteL .~ (CoinPerByte <$> (ucoinsPerUTxOByte pps))
+uLiftBabbage pps pp = pp & ppuCoinsPerUTxOByteL .~ (CoinPerByte . toCompactPartial <$> ucoinsPerUTxOByte pps)
 
 uLiftConway :: ConwayEraPParams era => SimplePPUpdate -> PParamsUpdate era -> PParamsUpdate era
 uLiftConway pps pp =
@@ -405,7 +406,7 @@ uLiftConway pps pp =
 -- ============================================================================
 -- Term Selectors for SimplePParams
 
-minFeeFactor_ :: EraSpecPParams era => Term (SimplePParams era) -> Term CoinPerByte
+minFeeFactor_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 minFeeFactor_ simplepp = sel @0 simplepp
 
 minFeeConstant_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin

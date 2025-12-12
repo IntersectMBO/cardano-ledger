@@ -34,6 +34,7 @@ module Cardano.Ledger.Coin (
   toCoinNonZero,
   fromCompactCoinNonZero,
   compactCoinNonZero,
+  partialCoinPerByteL,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -183,7 +184,7 @@ addCompactCoin (CompactCoin x) (CompactCoin y) = CompactCoin (x + y)
 sumCompactCoin :: Foldable t => t (CompactForm Coin) -> CompactForm Coin
 sumCompactCoin = F.foldl' addCompactCoin (CompactCoin 0)
 
-newtype CoinPerByte = CoinPerByte {unCoinPerByte :: Coin}
+newtype CoinPerByte = CoinPerByte {unCoinPerByte :: CompactForm Coin}
   deriving stock (Eq, Ord)
   deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
 
@@ -228,3 +229,6 @@ compactCoinNonZero = unsafeNonZero . CompactCoin . unNonZero
 
 partialCompactCoinL :: HasCallStack => Lens' (CompactForm Coin) Coin
 partialCompactCoinL = lens fromCompact $ const compactCoinOrError
+
+partialCoinPerByteL :: HasCallStack => Lens' CoinPerByte Coin
+partialCoinPerByteL = lens (fromCompact . unCoinPerByte) $ const (CoinPerByte . compactCoinOrError)

@@ -90,7 +90,7 @@ propSetBabbageMinTxOut =
       let txOut' = setMinCoinTxOut pp txOut
           sz = toInteger (BSL.length (serialize (pvMajor (pp ^. ppProtocolVersionL)) txOut'))
        in (txOut' ^. coinTxOutL)
-            `shouldBe` Coin ((160 + sz) * unCoin (unCoinPerByte (pp ^. ppCoinsPerUTxOByteL)))
+            `shouldBe` Coin ((160 + sz) * (fromIntegral . unCompactCoin . unCoinPerByte) (pp ^. ppCoinsPerUTxOByteL))
 
 propSetEnsureMinTxOutWith ::
   forall era.
