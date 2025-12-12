@@ -23,7 +23,7 @@ class (KnownSymbol name, Era era) => HuddleRule (name :: Symbol) era where
   huddleRule :: Proxy era -> Rule
 
 class (KnownSymbol name, Era era) => HuddleGroup (name :: Symbol) era where
-  huddleGroup :: Proxy era -> Named Group
+  huddleGroup :: Proxy era -> GroupDef
 
 class (KnownSymbol name, Era era) => HuddleGRule (name :: Symbol) era where
   huddleGRule :: Proxy era -> GRuleDef

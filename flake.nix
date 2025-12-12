@@ -133,7 +133,7 @@
             # and from nixpkgs or other inputs
             nativeBuildInputs = with nixpkgs;
               [
-                (python3.withPackages (ps: with ps; [sphinx sphinx_rtd_theme recommonmark sphinx-markdown-tables sphinxemoji]))
+                (python3.withPackages (ps: with ps; [sphinx sphinx-rtd-theme recommonmark sphinx-markdown-tables sphinxemoji]))
                 haskellPackages.implicit-hie
                 shellcheck
                 cardano-ledger-release-tool

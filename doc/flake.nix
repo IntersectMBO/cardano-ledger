@@ -8,7 +8,7 @@
             src = lib.sourceFilesBySuffices ./. [".py" ".rst" ".hs" ".png"];
             buildInputs = with python3Packages; [
               sphinx
-              sphinx_rtd_theme
+              sphinx-rtd-theme
               sphinx-markdown-tables
               sphinxemoji
               recommonmark

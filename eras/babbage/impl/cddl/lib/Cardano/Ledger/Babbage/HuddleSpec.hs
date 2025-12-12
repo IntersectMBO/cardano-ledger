@@ -46,7 +46,7 @@ babbageCDDL =
     , HIRule $ huddleRule @"signkey_kes" (Proxy @BabbageEra)
     ]
 
--- | Babbage changed protocol_version from Named Group to Rule to match actual block
+-- | Babbage changed protocol_version from GroupDef to Rule to match actual block
 -- serialization. See 'header_body' instance for full explanation.
 -- Ref: PR #3762, Issue #3559
 babbageProtocolVersionRule ::
@@ -54,7 +54,7 @@ babbageProtocolVersionRule ::
 babbageProtocolVersionRule p =
   "protocol_version" =:= arr [a $ huddleRule @"major_protocol_version" p, a VUInt]
 
--- | Babbage changed operational_cert from Named Group to Rule to match actual block
+-- | Babbage changed operational_cert from GroupDef to Rule to match actual block
 -- serialization. See 'header_body' instance for full explanation.
 -- Ref: PR #3762, Issue #3559
 babbageOperationalCertRule :: forall era. Era era => Proxy era -> Rule
@@ -267,16 +267,16 @@ instance HuddleRule "header" BabbageEra where
         , "body_signature" ==> huddleRule @"kes_signature" p
         ]
 
--- IMPORTANT: Babbage changed operational_cert and protocol_version from Named Group
+-- IMPORTANT: Babbage changed operational_cert and protocol_version from GroupDef
 -- (grp) to Rule (arr) to match actual block serialization.
 --
 -- Semantic difference:
---   * Named Group (grp): Fields are inlined directly into parent array.
+--   * GroupDef (grp): Fields are inlined directly into parent array.
 --     -> header_body becomes a 14-element flat array
 --   * Rule (arr): Fields are nested as separate sub-arrays.
 --     -> header_body becomes a 10-element array with nested structures
 --
--- Pre-Babbage eras (Shelley through Alonzo) used Named Group, but actual Babbage+
+-- Pre-Babbage eras (Shelley through Alonzo) used GroupDef, but actual Babbage+
 -- blocks serialize with Rule (nested arrays). This change corrects the CDDL spec to
 -- match the actual CBOR serialization.
 --

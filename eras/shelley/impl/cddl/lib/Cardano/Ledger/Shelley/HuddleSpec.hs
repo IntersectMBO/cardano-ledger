@@ -73,7 +73,7 @@ shelleyCDDL =
     ]
 
 shelleyProtocolVersionGroup ::
-  forall era. HuddleRule "major_protocol_version" era => Proxy era -> Named Group
+  forall era. HuddleRule "major_protocol_version" era => Proxy era -> GroupDef
 shelleyProtocolVersionGroup p = "protocol_version" =:~ grp [a $ huddleRule @"major_protocol_version" p, a VUInt]
 
 headerRule :: forall era. HuddleRule "header_body" era => Proxy era -> Rule
@@ -172,7 +172,7 @@ bootstrapWitnessRule p =
       , "attributes" ==> VBytes
       ]
 
-shelleyOperationalCertGroup :: forall era. Era era => Proxy era -> Named Group
+shelleyOperationalCertGroup :: forall era. Era era => Proxy era -> GroupDef
 shelleyOperationalCertGroup p =
   "operational_cert"
     =:~ grp
@@ -185,13 +185,13 @@ shelleyOperationalCertGroup p =
 genesisHashRule :: forall era. Era era => Proxy era -> Rule
 genesisHashRule p = "genesis_hash" =:= huddleRule @"hash28" p
 
-scriptPubkeyGroup :: forall era. Era era => Proxy era -> Named Group
+scriptPubkeyGroup :: forall era. Era era => Proxy era -> GroupDef
 scriptPubkeyGroup p = "script_pubkey" =:~ grp [0, a $ huddleRule @"addr_keyhash" p]
 
-scriptAllGroup :: forall era. HuddleRule "native_script" era => Proxy era -> Named Group
+scriptAllGroup :: forall era. HuddleRule "native_script" era => Proxy era -> GroupDef
 scriptAllGroup p = "script_all" =:~ grp [1, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
 
-scriptAnyGroup :: forall era. HuddleRule "native_script" era => Proxy era -> Named Group
+scriptAnyGroup :: forall era. HuddleRule "native_script" era => Proxy era -> GroupDef
 scriptAnyGroup p = "script_any" =:~ grp [2, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
 
 transactionIdRule :: forall era. Era era => Proxy era -> Rule
@@ -226,7 +226,7 @@ poolMetadataRule p =
   "pool_metadata"
     =:= arr [a $ huddleRule @"url" p, a VBytes]
 
-singleHostAddrGroup :: forall era. Era era => Proxy era -> Named Group
+singleHostAddrGroup :: forall era. Era era => Proxy era -> GroupDef
 singleHostAddrGroup p =
   "single_host_addr"
     =:~ grp
@@ -236,7 +236,7 @@ singleHostAddrGroup p =
       , a $ huddleRule @"ipv6" p / VNil
       ]
 
-singleHostNameGroup :: forall era. HuddleRule "dns_name" era => Proxy era -> Named Group
+singleHostNameGroup :: forall era. HuddleRule "dns_name" era => Proxy era -> GroupDef
 singleHostNameGroup p =
   comment
     "dns_name: An A or AAAA DNS record"
@@ -247,7 +247,7 @@ singleHostNameGroup p =
         , a $ huddleRule @"dns_name" p
         ]
 
-multiHostNameGroup :: forall era. HuddleRule "dns_name" era => Proxy era -> Named Group
+multiHostNameGroup :: forall era. HuddleRule "dns_name" era => Proxy era -> GroupDef
 multiHostNameGroup p =
   comment
     "dns_name: An SRV DNS record"
@@ -274,7 +274,7 @@ poolParamsGroup ::
   , HuddleRule "pool_metadata" era
   ) =>
   Proxy era ->
-  Named Group
+  GroupDef
 poolParamsGroup p =
   comment
     "Pool parameters for stake pool registration"
@@ -291,10 +291,10 @@ poolParamsGroup p =
         , "pool_metadata" ==> huddleRule @"pool_metadata" p / VNil
         ]
 
-poolRegistrationCertGroup :: forall era. HuddleGroup "pool_params" era => Proxy era -> Named Group
+poolRegistrationCertGroup :: forall era. HuddleGroup "pool_params" era => Proxy era -> GroupDef
 poolRegistrationCertGroup p = "pool_registration_cert" =:~ grp [3, a $ huddleGroup @"pool_params" p]
 
-poolRetirementCertGroup :: forall era. Era era => Proxy era -> Named Group
+poolRetirementCertGroup :: forall era. Era era => Proxy era -> GroupDef
 poolRetirementCertGroup p =
   "pool_retirement_cert"
     =:~ grp [4, a $ huddleRule @"pool_keyhash" p, a $ huddleRule @"epoch" p]
@@ -308,7 +308,7 @@ genesisDelegationCertGroup ::
   , HuddleRule "genesis_delegate_hash" era
   ) =>
   Proxy era ->
-  Named Group
+  GroupDef
 genesisDelegationCertGroup p =
   "genesis_delegation_cert"
     =:~ grp
@@ -346,26 +346,26 @@ moveInstantaneousRewardRule p =
         ]
 
 moveInstantaneousRewardsCertGroup ::
-  forall era. HuddleRule "move_instantaneous_reward" era => Proxy era -> Named Group
+  forall era. HuddleRule "move_instantaneous_reward" era => Proxy era -> GroupDef
 moveInstantaneousRewardsCertGroup p =
   "move_instantaneous_rewards_cert"
     =:~ grp [6, a $ huddleRule @"move_instantaneous_reward" p]
 
-accountRegistrationCertGroup :: forall era. Era era => Proxy era -> Named Group
+accountRegistrationCertGroup :: forall era. Era era => Proxy era -> GroupDef
 accountRegistrationCertGroup p =
   comment
     "This certificate will be deprecated in a future era"
     $ "account_registration_cert"
       =:~ grp [0, a $ huddleRule @"stake_credential" p]
 
-accountUnregistrationCertGroup :: forall era. Era era => Proxy era -> Named Group
+accountUnregistrationCertGroup :: forall era. Era era => Proxy era -> GroupDef
 accountUnregistrationCertGroup p =
   comment
     "This certificate will be deprecated in a future era"
     $ "account_unregistration_cert"
       =:~ grp [1, a $ huddleRule @"stake_credential" p]
 
-delegationToStakePoolCertGroup :: forall era. Era era => Proxy era -> Named Group
+delegationToStakePoolCertGroup :: forall era. Era era => Proxy era -> GroupDef
 delegationToStakePoolCertGroup p =
   "delegation_to_stake_pool_cert"
     =:~ grp [2, a $ huddleRule @"stake_credential" p, a $ huddleRule @"pool_keyhash" p]
