@@ -13,6 +13,7 @@
 module Cardano.Ledger.Shelley.HuddleSpec (
   module Cardano.Ledger.Huddle,
   module Cardano.Ledger.Core.HuddleSpec,
+  ShelleyEra,
   shelleyCDDL,
   shelleyProtocolVersionGroup,
   headerRule,
@@ -51,7 +52,6 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   accountUnregistrationCertGroup,
   delegationToStakePoolCertGroup,
   certificateRule,
-  untaggedSet,
 ) where
 
 import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule)
@@ -272,6 +272,7 @@ poolParamsGroup ::
   forall era.
   ( HuddleRule "relay" era
   , HuddleRule "pool_metadata" era
+  , HuddleRule1 "set" era
   ) =>
   Proxy era ->
   GroupDef
@@ -286,7 +287,7 @@ poolParamsGroup p =
         , "cost" ==> huddleRule @"coin" p
         , "margin" ==> huddleRule @"unit_interval" p
         , "reward_account" ==> huddleRule @"reward_account" p
-        , "pool_owners" ==> untaggedSet (huddleRule @"addr_keyhash" p)
+        , "pool_owners" ==> huddleRule1 @"set" p (huddleRule @"addr_keyhash" p)
         , "relays" ==> arr [0 <+ a (huddleRule @"relay" p)]
         , "pool_metadata" ==> huddleRule @"pool_metadata" p / VNil
         ]
@@ -535,7 +536,7 @@ instance HuddleRule "transaction_body" ShelleyEra where
   huddleRule p =
     "transaction_body"
       =:= mp
-        [ idx 0 ==> untaggedSet (huddleRule @"transaction_input" p)
+        [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p
         , idx 3 ==> huddleRule @"slot" p
@@ -566,3 +567,12 @@ instance HuddleRule "block" ShelleyEra where
               [ 0 <+ asKey (huddleRule @"transaction_index" p) ==> huddleRule @"metadata" p
               ]
         ]
+
+instance HuddleRule1 "set" ShelleyEra where
+  huddleRule1 _ = untaggedSet
+
+instance HuddleRule1 "nonempty_set" ShelleyEra where
+  huddleRule1 _ = untaggedSet
+
+instance HuddleRule1 "nonempty_oset" ShelleyEra where
+  huddleRule1 _ = untaggedSet

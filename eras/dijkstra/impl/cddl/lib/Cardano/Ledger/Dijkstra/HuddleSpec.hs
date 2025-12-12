@@ -15,6 +15,7 @@
 
 module Cardano.Ledger.Dijkstra.HuddleSpec (
   module Cardano.Ledger.Conway.HuddleSpec,
+  DijkstraEra,
   dijkstraCDDL,
   dijkstraMultiasset,
   dijkstraValueRule,
@@ -53,11 +54,18 @@ dijkstraCDDL =
     ]
 
 guardsRule ::
-  forall era. (HuddleRule "addr_keyhash" era, HuddleRule "credential" era) => Proxy era -> Rule
+  forall era.
+  ( HuddleRule "addr_keyhash" era
+  , HuddleRule "credential" era
+  , HuddleRule1 "nonempty_set" era
+  , HuddleRule1 "nonempty_oset" era
+  ) =>
+  Proxy era ->
+  Rule
 guardsRule p =
   "guards"
-    =:= maybeTaggedNonemptySet (huddleRule @"addr_keyhash" p)
-    / maybeTaggedNonemptyOset (huddleRule @"credential" p)
+    =:= huddleRule1 @"nonempty_set" p (huddleRule @"addr_keyhash" p)
+    / huddleRule1 @"nonempty_oset" p (huddleRule @"credential" p)
 
 subTransactionsRule ::
   forall era.
@@ -78,11 +86,14 @@ subTransactionsRule ::
   , HuddleRule "plutus_data" era
   , HuddleRule "transaction_witness_set" era
   , HuddleRule "auxiliary_data" era
+  , HuddleRule1 "set" era
+  , HuddleRule1 "nonempty_set" era
+  , HuddleRule1 "nonempty_oset" era
   ) =>
   Proxy era ->
   Rule
 subTransactionsRule p =
-  "sub_transactions" =:= maybeTaggedNonemptyOset (subTransactionRule p)
+  "sub_transactions" =:= huddleRule1 @"nonempty_oset" p (subTransactionRule p)
 
 subTransactionRule ::
   forall era.
@@ -103,6 +114,9 @@ subTransactionRule ::
   , HuddleRule "plutus_data" era
   , HuddleRule "transaction_witness_set" era
   , HuddleRule "auxiliary_data" era
+  , HuddleRule1 "set" era
+  , HuddleRule1 "nonempty_set" era
+  , HuddleRule1 "nonempty_oset" era
   ) =>
   Proxy era ->
   Rule
@@ -131,13 +145,16 @@ subTransactionBodyRule ::
   , HuddleRule "positive_coin" era
   , HuddleRule "credential" era
   , HuddleRule "plutus_data" era
+  , HuddleRule1 "set" era
+  , HuddleRule1 "nonempty_set" era
+  , HuddleRule1 "nonempty_oset" era
   ) =>
   Proxy era ->
   Rule
 subTransactionBodyRule p =
   "sub_transaction_body"
     =:= mp
-      [ idx 0 ==> maybeTaggedSet (huddleRule @"transaction_input" p)
+      [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
       , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
       , opt (idx 3 ==> huddleRule @"slot" p)
       , opt (idx 4 ==> huddleRule @"certificates" p)
@@ -148,7 +165,7 @@ subTransactionBodyRule p =
       , opt (idx 11 ==> huddleRule @"script_data_hash" p)
       , opt (idx 14 ==> guardsRule p)
       , opt (idx 15 ==> huddleRule @"network_id" p)
-      , opt (idx 18 ==> maybeTaggedNonemptySet (huddleRule @"transaction_input" p))
+      , opt (idx 18 ==> huddleRule1 @"nonempty_set" p (huddleRule @"transaction_input" p))
       , opt (idx 19 ==> huddleRule @"voting_procedures" p)
       , opt (idx 20 ==> huddleRule @"proposal_procedures" p)
       , opt (idx 21 ==> huddleRule @"coin" p)
@@ -522,7 +539,7 @@ instance HuddleRule "transaction_input" DijkstraEra where
 instance HuddleRule "required_signers" DijkstraEra where
   huddleRule p =
     "required_signers"
-      =:= maybeTaggedNonemptySet (huddleRule @"addr_keyhash" p)
+      =:= huddleRule1 @"nonempty_set" p (huddleRule @"addr_keyhash" p)
 
 instance HuddleRule "value" DijkstraEra where
   huddleRule = dijkstraValueRule @DijkstraEra
@@ -770,7 +787,7 @@ instance HuddleRule "transaction_body" DijkstraEra where
   huddleRule p =
     "transaction_body"
       =:= mp
-        [ idx 0 ==> maybeTaggedSet (huddleRule @"transaction_input" p)
+        [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p //- "fee"
         , opt (idx 3 ==> huddleRule @"slot" p) //- "time to live"
@@ -780,12 +797,13 @@ instance HuddleRule "transaction_body" DijkstraEra where
         , opt (idx 8 ==> huddleRule @"slot" p) //- "validity interval start"
         , opt (idx 9 ==> huddleRule @"mint" p)
         , opt (idx 11 ==> huddleRule @"script_data_hash" p)
-        , opt (idx 13 ==> maybeTaggedNonemptySet (huddleRule @"transaction_input" p)) //- "collateral"
+        , opt (idx 13 ==> huddleRule1 @"nonempty_set" p (huddleRule @"transaction_input" p)) //- "collateral"
         , opt (idx 14 ==> guardsRule p) //- "guards (replaces required_signers)"
         , opt (idx 15 ==> huddleRule @"network_id" p)
         , opt (idx 16 ==> huddleRule @"transaction_output" p) //- "collateral return"
         , opt (idx 17 ==> huddleRule @"coin" p) //- "total collateral"
-        , opt (idx 18 ==> maybeTaggedNonemptySet (huddleRule @"transaction_input" p)) //- "reference inputs"
+        , opt (idx 18 ==> huddleRule1 @"nonempty_set" p (huddleRule @"transaction_input" p))
+            //- "reference inputs"
         , opt (idx 19 ==> huddleRule @"voting_procedures" p)
         , opt (idx 20 ==> huddleRule @"proposal_procedures" p)
         , opt (idx 21 ==> huddleRule @"coin" p) //- "current treasury value"
@@ -797,14 +815,14 @@ instance HuddleRule "transaction_witness_set" DijkstraEra where
   huddleRule p =
     "transaction_witness_set"
       =:= mp
-        [ opt $ idx 0 ==> maybeTaggedNonemptySet (huddleRule @"vkeywitness" p)
-        , opt $ idx 1 ==> maybeTaggedNonemptySet (huddleRule @"native_script" p)
-        , opt $ idx 2 ==> maybeTaggedNonemptySet (huddleRule @"bootstrap_witness" p)
-        , opt $ idx 3 ==> maybeTaggedNonemptySet (huddleRule @"plutus_v1_script" p)
-        , opt $ idx 4 ==> maybeTaggedNonemptySet (huddleRule @"plutus_data" p)
+        [ opt $ idx 0 ==> huddleRule1 @"nonempty_set" p (huddleRule @"vkeywitness" p)
+        , opt $ idx 1 ==> huddleRule1 @"nonempty_set" p (huddleRule @"native_script" p)
+        , opt $ idx 2 ==> huddleRule1 @"nonempty_set" p (huddleRule @"bootstrap_witness" p)
+        , opt $ idx 3 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v1_script" p)
+        , opt $ idx 4 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_data" p)
         , opt $ idx 5 ==> huddleRule @"redeemers" p
-        , opt $ idx 6 ==> maybeTaggedNonemptySet (huddleRule @"plutus_v2_script" p)
-        , opt $ idx 7 ==> maybeTaggedNonemptySet (huddleRule @"plutus_v3_script" p)
+        , opt $ idx 6 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v2_script" p)
+        , opt $ idx 7 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v3_script" p)
         -- TODO: Add plutus_v4_script at index 8 once AlonzoTxWitsRaw encoder/decoder supports it
         ]
 
@@ -886,3 +904,12 @@ instance HuddleRule "cost_models" DijkstraEra where
           , opt $ idx 3 ==> arr [0 <+ a (huddleRule @"int64" p)]
           , 0 <+ asKey ((4 :: Integer) ... (255 :: Integer)) ==> arr [0 <+ a (huddleRule @"int64" p)]
           ]
+
+instance HuddleRule1 "set" DijkstraEra where
+  huddleRule1 _ = huddleRule1 @"set" (Proxy @ConwayEra)
+
+instance HuddleRule1 "nonempty_set" DijkstraEra where
+  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ConwayEra)
+
+instance HuddleRule1 "nonempty_oset" DijkstraEra where
+  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ConwayEra)
