@@ -248,6 +248,81 @@ library testlib
     time,
     tree-diff,
 
+library scls
+  exposed-modules:
+    Cardano.Ledger.Conway.SCLS
+    Cardano.Ledger.Conway.SCLS.Common
+    Cardano.Ledger.Conway.SCLS.LedgerCBOR
+    Cardano.Ledger.Conway.SCLS.Namespace.Blocks
+    Cardano.Ledger.Conway.SCLS.Namespace.GovCommittee
+    Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution
+    Cardano.Ledger.Conway.SCLS.Namespace.GovPParams
+    Cardano.Ledger.Conway.SCLS.Namespace.GovProposals
+    Cardano.Ledger.Conway.SCLS.Namespace.PoolStake
+    Cardano.Ledger.Conway.SCLS.Namespace.Pots
+    Cardano.Ledger.Conway.SCLS.Namespace.Snapshots
+    Cardano.Ledger.Conway.SCLS.Namespace.UTxO
+
+  visibility: public
+  hs-source-dirs: scls/src
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+    -Werror
+
+  build-depends:
+    base,
+    bytestring,
+    cardano-ledger-allegra,
+    cardano-ledger-alonzo,
+    cardano-ledger-babbage,
+    cardano-ledger-binary,
+    cardano-ledger-conway,
+    cardano-ledger-core,
+    cardano-ledger-mary,
+    cardano-ledger-shelley,
+    cardano-slotting,
+    cardano-strict-containers,
+    cborg,
+    containers,
+    mempack,
+    mempack-scls,
+    scls-cardano,
+    scls-cbor,
+    scls-core,
+    text,
+
+library scls-testlib
+  exposed-modules:
+    Cardano.Ledger.Conway.SCLS.Arbitrary
+
+  visibility: public
+  hs-source-dirs: scls/testlib
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+    -Werror
+
+  build-depends:
+    QuickCheck,
+    base,
+    cardano-ledger-babbage:testlib,
+    cardano-ledger-conway:{scls, testlib},
+    cardano-ledger-core:testlib,
+    generic-random,
+
 executable gen-golden
   main-is: GenerateGoldenFileMain.hs
   hs-source-dirs: test
@@ -268,7 +343,7 @@ executable gen-golden
     cardano-ledger-conway,
     testlib,
 
-test-suite tests
+test-suite testtestss
   type: exitcode-stdio-1.0
   main-is: Main.hs
   hs-source-dirs: test
@@ -277,6 +352,7 @@ test-suite tests
     Test.Cardano.Ledger.Conway.Binary.CddlSpec
     Test.Cardano.Ledger.Conway.GoldenSpec
     Test.Cardano.Ledger.Conway.GoldenTranslation
+    Test.Cardano.Ledger.Conway.Scls
 
   default-language: Haskell2010
   ghc-options:
@@ -296,9 +372,11 @@ test-suite tests
     base,
     cardano-ledger-allegra,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
+    cardano-ledger-babbage,
     cardano-ledger-binary:testlib,
-    cardano-ledger-conway,
-    cardano-ledger-conway:cddl,
+    cardano-ledger-conway:{cardano-ledger-conway, cddl, scls, scls-testlib, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-shelley:testlib,
+    cardano-ledger-mary,
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    scls-cardano:testlib,
     testlib,
