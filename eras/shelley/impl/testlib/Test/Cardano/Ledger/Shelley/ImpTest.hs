@@ -33,6 +33,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp (..),
   PlutusArgs,
   ScriptTestContext,
+  iteFixupL,
+  itePostSubmitTxHookL,
+  itePostEpochBoundaryHookL,
   impWitsVKeyNeeded,
   modifyPrevPParams,
   passEpoch,
@@ -58,6 +61,16 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   submitFailingTx,
   submitFailingTxM,
   trySubmitTx,
+  submitBlock_,
+  submitBlock,
+  submitFailingBlock,
+  submitFailingBlockM,
+  withTxsInBlock_,
+  withTxsInBlock,
+  withTxsInFailingBlock,
+  withTxsInFailingBlockM,
+  withTxsInBlockEither,
+  tryTxsInBlock,
   impShelleyExpectTxSuccess,
   modifyNES,
   getProtVer,
@@ -147,6 +160,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withNoFixup,
   withPostFixup,
   withPreFixup,
+  impEventsFrom,
+  impTransactionsFrom,
+  impWithoutRecordingTxs,
   impNESL,
   impGlobalsL,
   impCurSlotNoG,
@@ -169,10 +185,10 @@ import Cardano.Ledger.Address (
   RewardAccount (..),
   bootstrapKeyHash,
  )
-import Cardano.Ledger.BHeaderView (BHeaderView)
+import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (Block)
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..), credToText)
@@ -186,6 +202,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation (translateToShelleyLedgerStateFromUtxo)
+import Cardano.Ledger.Shelley.API.Validation (BlockTransitionError (..), applyBlockEither)
 import Cardano.Ledger.Shelley.AdaPots (sumAdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Genesis (
@@ -211,7 +228,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   LedgerEnv (..),
-  ShelleyBbodyState,
+  ShelleyBbodyState (..),
   ShelleyDelegPredFailure,
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
@@ -236,10 +253,10 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
-import Control.Monad (forM)
+import Control.Monad (forM, (<=<))
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
-import Control.Monad.State.Strict (MonadState (..), evalStateT, get, gets, modify, put)
+import Control.Monad.State.Strict (MonadState (..), evalStateT, get, gets, modify, modify', put)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Writer.Class (MonadWriter (..))
@@ -254,7 +271,7 @@ import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default (Default (..))
-import Data.Foldable (toList, traverse_)
+import Data.Foldable (fold, toList, traverse_)
 import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))
 import Data.List.NonEmpty (NonEmpty)
@@ -262,6 +279,8 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, isNothing, mapMaybe)
 import Data.Ratio (denominator, numerator, (%))
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -346,7 +365,10 @@ data ImpTestState era = ImpTestState
   , impNativeScripts :: !(Map ScriptHash (NativeScript era))
   , impCurSlotNo :: !SlotNo
   , impGlobals :: !Globals
-  , impEvents :: [SomeSTSEvent era]
+  , impEvents :: Seq (SomeSTSEvent era)
+  , impRecordedTransactions :: !(StrictMaybe (StrictSeq (Tx TopTx era)))
+  -- ^ When this is set to `SNothing` transactions are not being recorded.
+  -- This should never be switched to `Just` outside of simulations.
   }
 
 -- | This is a preliminary state that is used to prepare the actual `ImpTestState`
@@ -409,18 +431,33 @@ impNativeScriptsG ::
   SimpleGetter (ImpTestState era) (Map ScriptHash (NativeScript era))
 impNativeScriptsG = impNativeScriptsL
 
-impEventsL :: Lens' (ImpTestState era) [SomeSTSEvent era]
+impEventsL :: Lens' (ImpTestState era) (Seq (SomeSTSEvent era))
 impEventsL = lens impEvents (\x y -> x {impEvents = y})
+
+impRecordedTransactionsL :: Lens' (ImpTestState era) (StrictMaybe (StrictSeq (Tx TopTx era)))
+impRecordedTransactionsL = lens impRecordedTransactions (\x y -> x {impRecordedTransactions = y})
 
 class
   ( ShelleyEraTest era
-  , -- For BBODY rule
+  , -- For the BBODY rule
     STS (EraRule "BBODY" era)
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  , Eq (Event (EraRule "BBODY" era))
   , ToExpr (Event (EraRule "BBODY" era))
+  , Typeable (Event (EraRule "BBODY" era))
+  , NFData (BlockBody era)
+  , ToExpr (BlockBody era)
+  , NFData (PredicateFailure (EraRule "BBODY" era))
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
+  , EncCBOR (PredicateFailure (EraRule "BBODY" era))
+  , DecCBOR (PredicateFailure (EraRule "BBODY" era))
+  , -- For the LEDGERS rule
+    Eq (Event (EraRule "LEDGERS" era))
+  , ToExpr (Event (EraRule "LEDGERS" era))
+  , Typeable (Event (EraRule "LEDGERS" era))
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , -- For the LEDGER rule
     STS (EraRule "LEDGER" era)
@@ -461,6 +498,7 @@ class
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
+  , InjectRuleFailure "BBODY" ShelleyPoolPredFailure era
   ) =>
   ShelleyEraImp era
   where
@@ -644,6 +682,7 @@ defaultInitImpTestState nes = do
       , impCurSlotNo = slotNo
       , impGlobals = globals
       , impEvents = mempty
+      , impRecordedTransactions = mempty
       }
 
 withEachEraVersion ::
@@ -654,7 +693,7 @@ withEachEraVersion ::
 withEachEraVersion specWith =
   withImpInit @(LedgerSpec era) $ do
     forM_ (eraProtVersions @era) $ \protVer ->
-      describe (show protVer) $
+      describe ("Protocol " <> show protVer) $
         modifyImpInitProtVer protVer specWith
 
 shelleyModifyImpInitProtVer ::
@@ -897,7 +936,7 @@ itePostEpochBoundaryHookL ::
     )
 itePostEpochBoundaryHookL = lens itePostEpochBoundaryHook (\x y -> x {itePostEpochBoundaryHook = y})
 
-instance MonadWriter [SomeSTSEvent era] (ImpTestM era) where
+instance MonadWriter (Seq (SomeSTSEvent era)) (ImpTestM era) where
   writer (x, evs) = (impEventsL %= (<> evs)) $> x
   listen act = do
     oldEvs <- use impEventsL
@@ -909,6 +948,30 @@ instance MonadWriter [SomeSTSEvent era] (ImpTestM era) where
   pass act = do
     ((a, f), evs) <- listen act
     writer (a, f evs)
+
+impEventsFrom ::
+  ImpTestM era () ->
+  ImpTestM era [SomeSTSEvent era]
+impEventsFrom = fmap (toList . snd) . listen
+
+impTransactionsFrom ::
+  ImpTestM era () ->
+  ImpTestM era (StrictSeq (Tx TopTx era))
+impTransactionsFrom act = do
+  mTxsPrev <- use impRecordedTransactionsL
+  impRecordedTransactionsL .= SJust mempty
+  act
+  mTxsDuring <- use impRecordedTransactionsL
+  impRecordedTransactionsL .= liftA2 (<>) mTxsPrev mTxsDuring
+  pure $ fold mTxsDuring
+
+impWithoutRecordingTxs :: ImpTestM era a -> ImpTestM era a
+impWithoutRecordingTxs act = do
+  prev <- use impRecordedTransactionsL
+  impRecordedTransactionsL .= SNothing
+  res <- act
+  impRecordedTransactionsL .= prev
+  pure res
 
 runShelleyBase :: ShelleyBase a -> ImpTestM era a
 runShelleyBase act = do
@@ -1169,6 +1232,8 @@ logFeeMismatch tx = do
     logDoc $
       "Estimated fee " <> ansiExpr feeUsed <> " while required fee is " <> ansiExpr feeMin
 
+-- * Submitting transactions
+
 submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era ()
 submitTx_ = void . submitTx
 
@@ -1187,14 +1252,14 @@ trySubmitTx ::
 trySubmitTx tx = do
   txFixed <- asks iteFixup >>= ($ tx)
   logToExpr txFixed
+
   st <- gets impNES
   lEnv <- impLedgerEnv st
-  ImpTestState {impRootTxIn} <- get
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
-  globals <- use impGlobalsL
-  let trc = TRC (lEnv, st ^. nesEsL . esLStateL, txFixed)
 
   -- Check for conformance
+  globals <- use impGlobalsL
+  let trc = TRC (lEnv, st ^. nesEsL . esLStateL, txFixed)
   asks itePostSubmitTxHook >>= (\f -> f globals trc res)
 
   case res of
@@ -1202,25 +1267,32 @@ trySubmitTx tx = do
       -- Verify that produced predicate failures are ready for the node-to-client protocol
       liftIO $ forM_ predFailures $ roundTripEraExpectation @era
       pure $ Left (predFailures, txFixed)
-    Right (st', events) -> do
-      let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
-          outsSize = SSeq.length $ txFixed ^. bodyTxL . outputsTxBodyL
-          rootIndex
-            | outsSize > 0 = outsSize - 1
-            | otherwise = error ("Expected at least 1 output after submitting tx: " <> show txId)
-      tell $ fmap (SomeSTSEvent @era @"LEDGER") events
-      modify $ impNESL . nesEsL . esLStateL .~ st'
+    Right (newState, events) -> do
+      impNESL . nesEsL . esLStateL .= newState
+      tell . Seq.fromList $ SomeSTSEvent @era @"LEDGER" <$> events
+
+      modify' $ impRecordedTransactionsL %~ fmap (SSeq.|> txFixed)
+
+      ImpTestState {impRootTxIn} <- get
       UTxO utxo <- getUTxO
-      -- This TxIn is in the utxo, and thus can be the new root, only if the transaction
-      -- was phase2-valid.  Otherwise, no utxo with this id would have been created, and
-      -- so we need to set the new root to what it was before the submission.
-      let assumedNewRoot = TxIn txId (mkTxIxPartial (fromIntegral rootIndex))
-      let newRoot
-            | Map.member assumedNewRoot utxo = assumedNewRoot
-            | Map.member impRootTxIn utxo = impRootTxIn
-            | otherwise = error "Root not found in UTxO"
+      let
+        txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
+        outsSize = SSeq.length $ txFixed ^. bodyTxL . outputsTxBodyL
+        rootIndex
+          | outsSize > 0 = outsSize - 1
+          | otherwise = error ("Expected at least 1 output after submitting tx: " <> show txId)
+        -- This TxIn is in the utxo, and thus can be the new root, only if the transaction
+        -- was phase2-valid.  Otherwise, no utxo with this id would have been created, and
+        -- so we need to set the new root to what it was before the submission.
+        assumedNewRoot = TxIn txId (mkTxIxPartial (fromIntegral rootIndex))
+        newRoot
+          | Map.member assumedNewRoot utxo = assumedNewRoot
+          | Map.member impRootTxIn utxo = impRootTxIn
+          | otherwise = error "Root not found in UTxO"
       impRootTxInL .= newRoot
+
       expectTxSuccess txFixed
+
       pure $ Right txFixed
 
 -- | Submit a transaction that is expected to be rejected with the given predicate failures.
@@ -1248,6 +1320,168 @@ submitFailingTxM tx mkExpectedFailures = do
   (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
   expectedFailures <- mkExpectedFailures fixedUpTx
   predFailures `shouldBeExpr` expectedFailures
+
+-- * Submitting blocks
+
+-- | Submit a list of transactions as a block that's expected to succeed.
+-- The inputs and outputs are automatically balanced.
+submitBlock_ ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  [Tx TopTx era] ->
+  ImpTestM era ()
+submitBlock_ = withTxsInBlock_ . traverse_ submitTx_
+
+-- | Submit a list of transactions as a block that's expected to succeed.
+-- The inputs and outputs are automatically balanced.
+submitBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  [Tx TopTx era] ->
+  ImpTestM era (Block BHeaderView era)
+submitBlock = withTxsInBlock . traverse_ submitTx_
+
+-- | Submit a list of transactions as a block that's expected to fail
+-- with the given predicate failures.
+-- The inputs and outputs are automatically balanced.
+submitFailingBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  [Tx TopTx era] ->
+  NonEmpty (PredicateFailure (EraRule "BBODY" era)) ->
+  ImpTestM era ()
+submitFailingBlock = withTxsInFailingBlock . traverse_ submitTx_
+
+-- | Submit a list of transactions as a block that's expected to be rejected,
+-- and compute the expected predicate failures from the created block using the supplied action.
+-- The inputs and outputs are automatically balanced.
+submitFailingBlockM ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  [Tx TopTx era] ->
+  (Block BHeaderView era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "BBODY" era)))) ->
+  ImpTestM era ()
+submitFailingBlockM = withTxsInFailingBlockM . traverse_ submitTx_
+
+-- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to succeed.
+withTxsInBlock_ ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  ImpTestM era a ->
+  ImpTestM era ()
+withTxsInBlock_ = void . withTxsInBlock . void
+
+-- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to succeed.
+withTxsInBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  ImpTestM era () ->
+  ImpTestM era (Block BHeaderView era)
+withTxsInBlock = expectRightDeepExpr <=< withTxsInBlockEither
+
+-- | Gather all the txs submitted by @act@ and resubmit them as a block
+-- that's expected to fail with the given predicate failures.
+withTxsInFailingBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  ImpTestM era () ->
+  NonEmpty (PredicateFailure (EraRule "BBODY" era)) ->
+  ImpTestM era ()
+withTxsInFailingBlock act = withTxsInFailingBlockM act . const . pure
+
+-- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to fail
+-- and compute the expected predicate failures from the created block using the supplied action.
+withTxsInFailingBlockM ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  ImpTestM era () ->
+  (Block BHeaderView era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "BBODY" era)))) ->
+  ImpTestM era ()
+withTxsInFailingBlockM act mkExpectedFailures = do
+  (predFailures, block) <- expectLeftDeepExpr <=< withTxsInBlockEither $ act
+  expectedFailures <- mkExpectedFailures block
+  predFailures `shouldBeExpr` expectedFailures
+
+-- | Given an action that submits transactions, try to resubmit the transactions as a block.
+-- Return the block that was created using the transactions and any predicate
+-- failures that are produced.
+withTxsInBlockEither ::
+  forall era.
+  ShelleyEraImp era =>
+  ImpTestM era () ->
+  ImpTestM
+    era
+    ( Either
+        (NonEmpty (PredicateFailure (EraRule "BBODY" era)), Block BHeaderView era)
+        (Block BHeaderView era)
+    )
+withTxsInBlockEither act = do
+  stateBefore <- get
+  txs <- impTransactionsFrom act
+  stateAfter <- get
+  put stateBefore
+  tryTxsInBlock txs stateAfter
+
+-- | Given a sequence of fixed-up transactions and an expected final test state,
+-- try to submit the transactions as a block.
+-- Return the block that was created using the transactions and any predicate
+-- failures that are produced.
+tryTxsInBlock ::
+  forall era.
+  ShelleyEraImp era =>
+  StrictSeq (Tx TopTx era) ->
+  ImpTestState era ->
+  ImpTestM
+    era
+    ( Either
+        (NonEmpty (PredicateFailure (EraRule "BBODY" era)), Block BHeaderView era)
+        (Block BHeaderView era)
+    )
+tryTxsInBlock txs finalState = do
+  blockIssuer <- freshKeyHash
+  slotNo <- use impCurSlotNoG
+
+  let
+    blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ txs
+    blockHeader =
+      BHeaderView
+        { bhviewID = blockIssuer
+        , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
+        , bhviewHSize = 0
+        , bhviewBHash = hashBlockBody blockBody
+        , bhviewSlot = slotNo
+        , bhviewPrevEpochNonce = Nothing
+        }
+    block = Block {blockHeader, blockBody}
+
+  globals <- use impGlobalsL
+  nes <- use impNESL
+
+  let res = applyBlockEither EPReturn ValidateAll globals nes block
+
+  case res of
+    Left (BlockTransitionError predFailures) -> do
+      -- Verify that produced predicate failures are ready for the node-to-client protocol
+      liftIO $ forM_ predFailures $ roundTripEraExpectation @era
+      pure $ Left (predFailures, block)
+    Right (blockNes, events) -> do
+      previousEvents <- use impEventsL
+      let newEvents = SomeSTSEvent @era @"BBODY" <$> Seq.fromList events
+          blockEvents = previousEvents <> newEvents
+      put $
+        finalState
+          & impNESL .~ blockNes
+          & impEventsL .~ blockEvents
+
+      pure $ Right block
 
 tryRunImpRule ::
   forall rule era.
@@ -1328,7 +1562,7 @@ runImpRule env st sig = do
           unlines $
             ("Failed to run " <> ruleName <> ":") : map show (toList fs)
       Right res -> evaluateDeep res
-  tell $ fmap (SomeSTSEvent @era @rule) ev
+  tell . Seq.fromList $ SomeSTSEvent @era @rule <$> ev
   pure res
 
 -- | Runs the TICK rule once
@@ -1990,4 +2224,4 @@ shelleyDelegStakeTxCert ::
   Credential Staking ->
   KeyHash StakePool ->
   TxCert era
-shelleyDelegStakeTxCert cred pool = DelegStakeTxCert cred pool
+shelleyDelegStakeTxCert = DelegStakeTxCert

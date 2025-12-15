@@ -1004,6 +1004,8 @@ instance ToKeyValuePairs a => ToJSON (KeyValuePairs a) where
 data PerasCert = PerasCert
   deriving (Eq, Show, Generic, NoThunks)
 
+instance NFData PerasCert
+
 instance EncCBOR PerasCert where
   encCBOR PerasCert =
     encCBOR ()

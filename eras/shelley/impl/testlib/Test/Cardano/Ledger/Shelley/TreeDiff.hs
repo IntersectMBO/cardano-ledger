@@ -14,6 +14,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots)
+import Cardano.Ledger.Shelley.BlockBody
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -105,6 +106,9 @@ instance ToExpr (ShelleyTxBodyRaw TopTx ShelleyEra) where
         ]
 
 instance ToExpr (TxBody TopTx ShelleyEra)
+
+-- BlockBody
+instance ToExpr (Tx TopTx era) => ToExpr (ShelleyBlockBody era)
 
 -- PoolRank
 instance ToExpr Likelihood

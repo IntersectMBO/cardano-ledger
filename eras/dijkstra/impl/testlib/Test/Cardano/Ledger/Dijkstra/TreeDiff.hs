@@ -16,12 +16,13 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
   module Test.Cardano.Ledger.Conway.TreeDiff,
 ) where
 
-import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.BaseTypes (PerasCert, StrictMaybe)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core (
   AlonzoEraScript (..),
   AsItem,
   AsIx,
+  DijkstraBlockBody,
   Era,
   EraPParams (..),
   EraRule,
@@ -30,10 +31,12 @@ import Cardano.Ledger.Dijkstra.Core (
   EraTxCert (..),
   EraTxOut (..),
   PlutusScript,
+  TopTx,
   Value,
  )
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams)
 import Cardano.Ledger.Dijkstra.Rules (
+  DijkstraBbodyPredFailure,
   DijkstraGovCertPredFailure,
   DijkstraGovPredFailure,
   DijkstraLedgerPredFailure,
@@ -122,6 +125,10 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
 
 instance ToExpr (TxBody l DijkstraEra)
 
+instance ToExpr PerasCert
+
+instance (ToExpr (Tx TopTx era), ToExpr PerasCert) => ToExpr (DijkstraBlockBody era)
+
 instance ToExpr (DijkstraTx l DijkstraEra) where
   toExpr = \case
     txBody@(DijkstraTx _ _ _ _) ->
@@ -186,3 +193,7 @@ instance
   ToExpr (DijkstraGovPredFailure era)
 
 instance ToExpr (DijkstraGovCertPredFailure era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
+  ToExpr (DijkstraBbodyPredFailure era)

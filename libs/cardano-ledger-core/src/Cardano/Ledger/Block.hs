@@ -32,6 +32,7 @@ import Cardano.Ledger.Binary (
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
+import Control.DeepSeq (NFData)
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -60,6 +61,8 @@ deriving anyclass instance
   , NoThunks h
   ) =>
   NoThunks (Block h era)
+
+instance (NFData h, NFData (BlockBody era)) => NFData (Block h era)
 
 instance
   forall era h.
