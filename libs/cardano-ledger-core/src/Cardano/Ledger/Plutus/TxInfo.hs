@@ -116,7 +116,7 @@ txOutSourceToText = \case
   TxOutFromOutput txIx -> "Output: " <> T.pack (show txIx)
 
 transBoundedRational :: BoundedRational r => r -> PV3.Rational
-transBoundedRational = PV3.fromGHC . unboundRational
+transBoundedRational = PV3.fromHaskellRatio . unboundRational
 
 transDataHash :: DataHash -> PV1.DatumHash
 transDataHash safe = PV1.DatumHash (transSafeHash safe)
