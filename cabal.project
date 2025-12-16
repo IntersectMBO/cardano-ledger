@@ -99,11 +99,12 @@ if impl(ghc >=9.12)
 source-repository-package
   type: git
   subdir:
-    - merkle-tree-incremental
-    - scls-core
-    - scls-format
-    - scls-cbor
-    - scls-cardano
-    - mempack-scls
-  location: https://github.com/tweag/cardano-canonical-ledger.git
+    merkle-tree-incremental
+    scls-core
+    scls-format
+    scls-cbor
+    scls-cardano
+    mempack-scls
+
+  location: https://github.com/tweag/cardano-cls.git
   tag: 177d9ed4b35f656a51200fd5e4a9518780fb0e10
