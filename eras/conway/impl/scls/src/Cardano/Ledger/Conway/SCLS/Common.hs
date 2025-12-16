@@ -14,9 +14,9 @@ module Cardano.Ledger.Conway.SCLS.Common () where
 import Cardano.Ledger.BaseTypes (Anchor, EpochNo, NonNegativeInterval, ProtVer, UnitInterval)
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import qualified Cardano.Ledger.Coin as Coin
-import Cardano.Ledger.Conway.SCLS.LedgerCBOR
-import Cardano.Ledger.Credential
-import Cardano.Ledger.Hashes
+import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Hashes (KeyHash, ScriptHash, VRFVerKeyHash)
 import Cardano.Ledger.Plutus.ExUnits (Prices)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
@@ -28,7 +28,7 @@ import Cardano.SCLS.CDDL ()
 import Cardano.SCLS.Versioned (Versioned (..))
 import Cardano.Slotting.Slot (EpochInterval, SlotNo (..))
 import qualified Codec.CBOR.Decoding as D
-import Data.Maybe.Strict
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)

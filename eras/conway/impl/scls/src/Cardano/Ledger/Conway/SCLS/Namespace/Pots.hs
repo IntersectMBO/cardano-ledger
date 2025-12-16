@@ -18,13 +18,18 @@ import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.SCLS.Common ()
 import Cardano.Ledger.Conway.SCLS.Namespace.UTxO ()
-import Cardano.SCLS.CBOR.Canonical.Decoder
-import Cardano.SCLS.CBOR.Canonical.Encoder
-import Cardano.SCLS.Entry.IsKey
-import Cardano.SCLS.NamespaceCodec
+import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), decodeMapLenCanonicalOf)
+import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..), encodeAsMap, mkEncodablePair)
+import Cardano.SCLS.Entry.IsKey (IsKey (..))
+import Cardano.SCLS.NamespaceCodec (
+  CanonicalCBOREntryDecoder (..),
+  CanonicalCBOREntryEncoder (..),
+  KnownNamespace (..),
+  namespaceKeySize,
+ )
 import Cardano.SCLS.Versioned (Versioned (..))
-import Data.MemPack.ByteOrdered
-import Data.Proxy
+import Data.MemPack.ByteOrdered (packWord64beM, unpackBigEndianM)
+import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import GHC.Generics (Generic)
 

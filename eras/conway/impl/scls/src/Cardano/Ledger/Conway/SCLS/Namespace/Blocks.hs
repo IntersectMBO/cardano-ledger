@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,15 +12,20 @@ module Cardano.Ledger.Conway.SCLS.Namespace.Blocks (
 
 import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Conway.SCLS.Common ()
-import Cardano.Ledger.Keys
+import Cardano.Ledger.Keys (KeyHash, StakePool)
 import Cardano.SCLS.CBOR.Canonical.Decoder as D
-import Cardano.SCLS.CBOR.Canonical.Encoder
-import Cardano.SCLS.Entry.IsKey
-import Cardano.SCLS.NamespaceCodec
-import Data.MemPack
-import Data.MemPack.ByteOrdered
-import Data.Proxy
-import GHC.Num.Natural
+import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
+import Cardano.SCLS.Entry.IsKey (IsKey (..))
+import Cardano.SCLS.NamespaceCodec (
+  CanonicalCBOREntryDecoder (..),
+  CanonicalCBOREntryEncoder (..),
+  KnownNamespace (..),
+  namespaceKeySize,
+ )
+import Data.MemPack (MemPack (..))
+import Data.MemPack.ByteOrdered (packWord64beM, unpackBigEndianM)
+import Data.Proxy (Proxy (..))
+import GHC.Num.Natural (Natural)
 
 instance KnownNamespace "blocks/v0" where
   type NamespaceKey "blocks/v0" = BlockIn

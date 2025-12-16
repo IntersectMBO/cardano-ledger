@@ -29,18 +29,24 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Conway.SCLS.Common ()
 import Cardano.Ledger.Conway.SCLS.LedgerCBOR
 import Cardano.Ledger.Core (PParams (..), PParamsUpdate (..))
-import Cardano.Ledger.HKD
+import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Plutus.CostModels (CostModels, flattenCostModels, mkCostModelsLenient)
-import Cardano.SCLS.CBOR.Canonical
-import Cardano.SCLS.CBOR.Canonical.Decoder
-import Cardano.SCLS.CBOR.Canonical.Encoder
-import Cardano.SCLS.Entry.IsKey
-import Cardano.SCLS.NamespaceCodec
+import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder (..))
+import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), decodeMapLenCanonicalOf)
+import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..), encodeAsMap, mkEncodablePair)
+import Cardano.SCLS.Entry.IsKey (IsKey (..))
+import Cardano.SCLS.NamespaceCodec (
+  CanonicalCBOREntryDecoder (..),
+  CanonicalCBOREntryEncoder (..),
+  KnownNamespace (..),
+  NamespaceKeySize,
+  namespaceKeySize,
+ )
 import Cardano.SCLS.Versioned (Versioned (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
-import Data.MemPack
-import Data.Proxy
+import Data.MemPack (packByteStringM, unpackByteStringM)
+import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text as T
 

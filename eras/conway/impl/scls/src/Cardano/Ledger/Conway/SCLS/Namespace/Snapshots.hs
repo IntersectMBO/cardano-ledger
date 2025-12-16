@@ -28,16 +28,25 @@ import Cardano.Ledger.Conway.SCLS.LedgerCBOR
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys
 import Cardano.Ledger.State (PoolMetadata (..), StakePoolParams (..), StakePoolRelay (..))
-import Cardano.SCLS.CBOR.Canonical
-import Cardano.SCLS.CBOR.Canonical.Decoder
-import Cardano.SCLS.CBOR.Canonical.Encoder
-import Cardano.SCLS.Entry.IsKey
-import Cardano.SCLS.NamespaceCodec
+import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
+import Cardano.SCLS.CBOR.Canonical.Decoder (
+  FromCanonicalCBOR (..),
+  decodeListLenCanonicalOf,
+  decodeMapLenCanonicalOf,
+ )
+import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..), encodeAsMap, mkEncodablePair)
+import Cardano.SCLS.Entry.IsKey (IsKey (..))
+import Cardano.SCLS.NamespaceCodec (
+  CanonicalCBOREntryDecoder (..),
+  CanonicalCBOREntryEncoder (..),
+  KnownNamespace (..),
+  namespaceKeySize,
+ )
 import Cardano.SCLS.Versioned (Versioned (..))
 import Control.Monad (unless)
 import Data.Foldable (toList)
-import Data.MemPack
-import Data.Proxy
+import Data.MemPack (MemPack (..))
+import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Text (Text)
 import qualified Data.Text as T

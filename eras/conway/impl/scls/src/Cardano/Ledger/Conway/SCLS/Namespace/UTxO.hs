@@ -31,16 +31,16 @@ import Cardano.Ledger.Binary (
   toPlainDecoder,
   toPlainEncoding,
  )
-import Cardano.Ledger.Compactible
+import Cardano.Ledger.Compactible (CompactForm (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.SCLS.Common ()
-import Cardano.Ledger.Conway.SCLS.LedgerCBOR
+import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..), LedgerCBORSafe (..))
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Hashes
+import Cardano.Ledger.Hashes (originalBytes)
 import Cardano.Ledger.Mary (MaryValue)
-import Cardano.Ledger.MemoBytes
+import Cardano.Ledger.MemoBytes (mkMemoizedEra)
 import Cardano.Ledger.Plutus.Data (BinaryData, Datum (..))
-import Cardano.Ledger.Plutus.Language
+import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import qualified Cardano.Ledger.Shelley.TxOut as Shelley
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.SCLS.CBOR.Canonical (
@@ -59,12 +59,17 @@ import Cardano.SCLS.CBOR.Canonical.Encoder (
   encodeAsMap,
   mkEncodablePair,
  )
-import Cardano.SCLS.Entry.IsKey
-import Cardano.SCLS.NamespaceCodec
+import Cardano.SCLS.Entry.IsKey (IsKey (..))
+import Cardano.SCLS.NamespaceCodec (
+  CanonicalCBOREntryDecoder (..),
+  CanonicalCBOREntryEncoder (..),
+  KnownNamespace (..),
+  namespaceKeySize,
+ )
 import Cardano.SCLS.Versioned (Versioned (..))
-import Data.Maybe.Strict
-import Data.MemPack
-import Data.Proxy
+import Data.Maybe.Strict (StrictMaybe (..))
+import Data.MemPack (MemPack (..), packByteStringM)
+import Data.Proxy (Proxy (..))
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 

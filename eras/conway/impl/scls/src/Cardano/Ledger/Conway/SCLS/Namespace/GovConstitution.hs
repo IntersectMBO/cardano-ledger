@@ -20,13 +20,18 @@ import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Constitution (..))
 import Cardano.Ledger.Conway.SCLS.Common ()
-import Cardano.SCLS.CBOR.Canonical.Decoder
-import Cardano.SCLS.CBOR.Canonical.Encoder
-import Cardano.SCLS.Entry.IsKey
-import Cardano.SCLS.NamespaceCodec
+import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..))
+import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
+import Cardano.SCLS.Entry.IsKey (IsKey (..))
+import Cardano.SCLS.NamespaceCodec (
+  CanonicalCBOREntryDecoder (..),
+  CanonicalCBOREntryEncoder (..),
+  KnownNamespace (..),
+  namespaceKeySize,
+ )
 import Cardano.SCLS.Versioned (Versioned (..))
-import Data.MemPack.ByteOrdered
-import Data.Proxy
+import Data.MemPack.ByteOrdered (packWord64beM, unpackBigEndianM)
+import Data.Proxy (Proxy (..))
 
 data GovConstitutionIn = GovConstitutionIn EpochNo
   deriving (Eq, Ord, Show)

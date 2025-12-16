@@ -21,14 +21,19 @@ import Cardano.Ledger.Conway.SCLS.Common ()
 import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution ()
 import Cardano.Ledger.Conway.SCLS.Namespace.GovPParams ()
 import Cardano.Ledger.Conway.SCLS.Namespace.Snapshots ()
-import Cardano.Ledger.State
-import Cardano.SCLS.CBOR.Canonical.Decoder
-import Cardano.SCLS.CBOR.Canonical.Encoder
-import Cardano.SCLS.Entry.IsKey
-import Cardano.SCLS.NamespaceCodec
+import Cardano.Ledger.State (CommitteeAuthorization (..), CommitteeState (..))
+import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), decodeListLenCanonicalOf)
+import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
+import Cardano.SCLS.Entry.IsKey (IsKey (..))
+import Cardano.SCLS.NamespaceCodec (
+  CanonicalCBOREntryDecoder (..),
+  CanonicalCBOREntryEncoder (..),
+  KnownNamespace (..),
+  namespaceKeySize,
+ )
 import Cardano.SCLS.Versioned (Versioned (..))
-import Data.MemPack.ByteOrdered
-import Data.Proxy
+import Data.MemPack.ByteOrdered (packWord64beM, unpackBigEndianM)
+import Data.Proxy (Proxy (..))
 import Data.Word (Word8)
 
 instance KnownNamespace "gov/committee/v0" where

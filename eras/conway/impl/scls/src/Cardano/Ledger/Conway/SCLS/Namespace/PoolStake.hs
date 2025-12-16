@@ -17,14 +17,19 @@ module Cardano.Ledger.Conway.SCLS.Namespace.PoolStake (
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.SCLS.Common ()
-import Cardano.Ledger.Keys
-import Cardano.SCLS.CBOR.Canonical.Decoder
-import Cardano.SCLS.CBOR.Canonical.Encoder
-import Cardano.SCLS.Entry.IsKey
-import Cardano.SCLS.NamespaceCodec
+import Cardano.Ledger.Keys (KeyHash, StakePool (..), StakePoolVRF (..), VRFVerKeyHash)
+import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), decodeMapLenCanonicalOf)
+import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..), encodeAsMap, mkEncodablePair)
+import Cardano.SCLS.Entry.IsKey (IsKey (..))
+import Cardano.SCLS.NamespaceCodec (
+  CanonicalCBOREntryDecoder (..),
+  CanonicalCBOREntryEncoder (..),
+  KnownNamespace (..),
+  namespaceKeySize,
+ )
 import Cardano.SCLS.Versioned (Versioned (..))
-import Data.MemPack
-import Data.Proxy
+import Data.MemPack (MemPack (..))
+import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import GHC.Generics (Generic)
 

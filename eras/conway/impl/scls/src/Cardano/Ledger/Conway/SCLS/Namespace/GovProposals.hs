@@ -31,23 +31,34 @@ import Cardano.Ledger.Conway.Governance (
   Vote (..),
  )
 import Cardano.Ledger.Conway.SCLS.Common ()
-import Cardano.Ledger.Conway.SCLS.LedgerCBOR
+import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))
 import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution ()
 import Cardano.Ledger.Conway.SCLS.Namespace.GovPParams ()
 import Cardano.Ledger.Conway.SCLS.Namespace.Snapshots ()
-import Cardano.Ledger.Credential
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys
 import Cardano.SCLS.CBOR.Canonical
-import Cardano.SCLS.CBOR.Canonical.Decoder
-import Cardano.SCLS.CBOR.Canonical.Encoder
+import Cardano.SCLS.CBOR.Canonical.Decoder (
+  FromCanonicalCBOR (..),
+  decodeListLenCanonical,
+  decodeMapLenCanonicalOf,
+  decodeWord8Canonical,
+ )
+import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..), encodeAsMap, mkEncodablePair)
 import Cardano.SCLS.Entry.IsKey
-import Cardano.SCLS.NamespaceCodec
+import Cardano.SCLS.NamespaceCodec (
+  CanonicalCBOREntryDecoder (..),
+  CanonicalCBOREntryEncoder (..),
+  KnownNamespace (..),
+  NamespaceKeySize,
+  namespaceKeySize,
+ )
 import Cardano.SCLS.Versioned (Versioned (..))
 import Control.Monad (unless)
 import Data.Map (Map)
 import Data.MemPack
 import Data.MemPack.ByteOrdered
-import Data.Proxy
+import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
