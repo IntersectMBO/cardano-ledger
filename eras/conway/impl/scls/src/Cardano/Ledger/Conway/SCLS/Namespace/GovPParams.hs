@@ -77,34 +77,34 @@ instance FromCanonicalCBOR v CostModels where
     Versioned v <- fromCanonicalCBOR
     Versioned <$> mkCostModelsLenient v
 
-deriving via (LedgerCBOR v (PoolVotingThresholds)) instance ToCanonicalCBOR v (PoolVotingThresholds)
+deriving via LedgerCBOR v PoolVotingThresholds instance ToCanonicalCBOR v PoolVotingThresholds
 
 deriving via
-  (LedgerCBOR v (PoolVotingThresholds))
+  LedgerCBOR v PoolVotingThresholds
   instance
-    FromCanonicalCBOR v (PoolVotingThresholds)
+    FromCanonicalCBOR v PoolVotingThresholds
 
-deriving via (LedgerCBOR v (DRepVotingThresholds)) instance ToCanonicalCBOR v (DRepVotingThresholds)
+deriving via LedgerCBOR v DRepVotingThresholds instance ToCanonicalCBOR v DRepVotingThresholds
 
 deriving via
-  (LedgerCBOR v (DRepVotingThresholds))
+  LedgerCBOR v DRepVotingThresholds
   instance
-    FromCanonicalCBOR v (DRepVotingThresholds)
+    FromCanonicalCBOR v DRepVotingThresholds
 
-deriving via (LedgerCBOR v (CoinPerByte)) instance ToCanonicalCBOR v (CoinPerByte)
+deriving via LedgerCBOR v CoinPerByte instance ToCanonicalCBOR v CoinPerByte
 
-deriving via (LedgerCBOR v (CoinPerByte)) instance FromCanonicalCBOR v (CoinPerByte)
+deriving via LedgerCBOR v CoinPerByte instance FromCanonicalCBOR v CoinPerByte
 
-deriving via (LedgerCBOR v (OrdExUnits)) instance ToCanonicalCBOR v (OrdExUnits)
+deriving via LedgerCBOR v OrdExUnits instance ToCanonicalCBOR v OrdExUnits
 
-deriving via (LedgerCBOR v (OrdExUnits)) instance FromCanonicalCBOR v (OrdExUnits)
+deriving via LedgerCBOR v OrdExUnits instance FromCanonicalCBOR v OrdExUnits
 
 newtype GovPParamsOut = GovPParamsOut (PParams ConwayEra)
   deriving (Eq, Show)
 
-deriving newtype instance ToCanonicalCBOR v (GovPParamsOut)
+deriving newtype instance ToCanonicalCBOR v GovPParamsOut
 
-deriving newtype instance FromCanonicalCBOR v (GovPParamsOut)
+deriving newtype instance FromCanonicalCBOR v GovPParamsOut
 
 instance ToCanonicalCBOR v (PParams ConwayEra) where
   toCanonicalCBOR v (PParams ConwayPParams {..}) =

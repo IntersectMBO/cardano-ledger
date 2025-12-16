@@ -51,7 +51,7 @@ data PotsOut = PotsOut
   deriving (Generic)
 
 instance ToCanonicalCBOR "pots/v0" PotsOut where
-  toCanonicalCBOR v (PotsOut {..}) =
+  toCanonicalCBOR v PotsOut {..} =
     encodeAsMap
       [ mkEncodablePair v ("fee" :: Text) poFee
       , mkEncodablePair v ("deposit" :: Text) poDeposit

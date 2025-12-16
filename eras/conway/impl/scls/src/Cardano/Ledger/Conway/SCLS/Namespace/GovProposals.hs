@@ -76,14 +76,14 @@ instance IsKey GovProposalIn where
     gaidGovActionIx <- unpackM
     return $ GovProposalIn GovActionId {..}
 
-newtype GovProposalOut = GovProposalOut (GovActionState')
+newtype GovProposalOut = GovProposalOut GovActionState'
   deriving (Eq, Show)
 
-deriving newtype instance ToCanonicalCBOR v (GovProposalOut)
+deriving newtype instance ToCanonicalCBOR v GovProposalOut
 
-deriving newtype instance FromCanonicalCBOR v (GovProposalOut)
+deriving newtype instance FromCanonicalCBOR v GovProposalOut
 
-instance ToCanonicalCBOR v (GovActionState') where
+instance ToCanonicalCBOR v GovActionState' where
   toCanonicalCBOR v GovActionState' {..} =
     encodeAsMap
       [ mkEncodablePair v ("drep_votes" :: Text) gasDRepVotes
@@ -117,7 +117,7 @@ data GovActionState' = GovActionState'
   deriving (Eq, Show)
   deriving (Generic)
 
-instance FromCanonicalCBOR v (GovActionState') where
+instance FromCanonicalCBOR v GovActionState' where
   fromCanonicalCBOR = do
     decodeMapLenCanonicalOf 6
     Versioned gasDRepVotes <- decodeField "drep_votes"
@@ -198,16 +198,16 @@ instance FromCanonicalCBOR v (GovAction ConwayEra) where
         pure $ Versioned InfoAction
       _ -> fail $ "Unknown GovAction tag: " ++ show tag
 
-deriving via (LedgerCBOR v (GovPurposeId purpose)) instance ToCanonicalCBOR v (GovPurposeId purpose)
+deriving via LedgerCBOR v (GovPurposeId purpose) instance ToCanonicalCBOR v (GovPurposeId purpose)
 
 deriving via
-  (LedgerCBOR v (GovPurposeId purpose))
+  LedgerCBOR v (GovPurposeId purpose)
   instance
     Typeable purpose => FromCanonicalCBOR v (GovPurposeId purpose)
 
-deriving via (LedgerCBOR v (Vote)) instance ToCanonicalCBOR v (Vote)
+deriving via LedgerCBOR v Vote instance ToCanonicalCBOR v Vote
 
-deriving via (LedgerCBOR v (Vote)) instance FromCanonicalCBOR v (Vote)
+deriving via LedgerCBOR v Vote instance FromCanonicalCBOR v Vote
 
 type instance NamespaceKeySize "gov/proposals/v0" = 34
 

@@ -43,9 +43,9 @@ instance IsKey GovConstitutionIn where
 newtype GovConstitutionOut = GovConstitutionOut (Constitution ConwayEra)
   deriving (Eq, Show)
 
-deriving newtype instance ToCanonicalCBOR v (GovConstitutionOut)
+deriving newtype instance ToCanonicalCBOR v GovConstitutionOut
 
-deriving newtype instance FromCanonicalCBOR v (GovConstitutionOut)
+deriving newtype instance FromCanonicalCBOR v GovConstitutionOut
 
 instance ToCanonicalCBOR v (Constitution ConwayEra) where
   toCanonicalCBOR v Constitution {..} =

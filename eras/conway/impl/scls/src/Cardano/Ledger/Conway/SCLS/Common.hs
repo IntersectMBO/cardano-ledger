@@ -41,10 +41,10 @@ instance ToCanonicalCBOR v (CompactForm Coin) where
 instance FromCanonicalCBOR v (CompactForm Coin) where
   fromCanonicalCBOR = fmap Coin.CompactCoin <$> fromCanonicalCBOR
 
-instance ToCanonicalCBOR v (Coin) where
+instance ToCanonicalCBOR v Coin where
   toCanonicalCBOR v (Coin.Coin ci) = toCanonicalCBOR v ci
 
-instance FromCanonicalCBOR v (Coin) where
+instance FromCanonicalCBOR v Coin where
   fromCanonicalCBOR = fmap Coin.Coin <$> fromCanonicalCBOR
 
 instance ToCanonicalCBOR v (Credential kr) where
@@ -60,13 +60,13 @@ instance Typeable kr => FromCanonicalCBOR v (Credential kr) where
       1 -> fmap KeyHashObj <$> fromCanonicalCBOR
       _ -> fail "Invalid Credential tag"
 
-deriving via (LedgerCBOR v (ScriptHash)) instance ToCanonicalCBOR v ScriptHash
+deriving via LedgerCBOR v ScriptHash instance ToCanonicalCBOR v ScriptHash
 
-deriving via (LedgerCBOR v (ScriptHash)) instance FromCanonicalCBOR v ScriptHash
+deriving via LedgerCBOR v ScriptHash instance FromCanonicalCBOR v ScriptHash
 
-deriving via (LedgerCBOR v (KeyHash kr)) instance ToCanonicalCBOR v (KeyHash kr)
+deriving via LedgerCBOR v (KeyHash kr) instance ToCanonicalCBOR v (KeyHash kr)
 
-deriving via (LedgerCBOR v (KeyHash kr)) instance Typeable kr => FromCanonicalCBOR v (KeyHash kr)
+deriving via LedgerCBOR v (KeyHash kr) instance Typeable kr => FromCanonicalCBOR v (KeyHash kr)
 
 instance ToCanonicalCBOR v a => ToCanonicalCBOR v (StrictMaybe a) where
   toCanonicalCBOR v SNothing = toCanonicalCBOR v ()
@@ -81,44 +81,44 @@ instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictMaybe a) where
         pure (Versioned SNothing)
       _ -> fmap SJust <$> fromCanonicalCBOR
 
-deriving via (LedgerCBOR v (VRFVerKeyHash kr)) instance ToCanonicalCBOR v (VRFVerKeyHash kr)
+deriving via LedgerCBOR v (VRFVerKeyHash kr) instance ToCanonicalCBOR v (VRFVerKeyHash kr)
 
 deriving via
-  (LedgerCBOR v (VRFVerKeyHash kr))
+  LedgerCBOR v (VRFVerKeyHash kr)
   instance
     Typeable kr => FromCanonicalCBOR v (VRFVerKeyHash kr)
 
-deriving via (LedgerCBOR v (NonNegativeInterval)) instance ToCanonicalCBOR v (NonNegativeInterval)
+deriving via LedgerCBOR v NonNegativeInterval instance ToCanonicalCBOR v NonNegativeInterval
 
-deriving via (LedgerCBOR v (NonNegativeInterval)) instance FromCanonicalCBOR v (NonNegativeInterval)
+deriving via LedgerCBOR v NonNegativeInterval instance FromCanonicalCBOR v NonNegativeInterval
 
-deriving via (LedgerCBOR v (UnitInterval)) instance ToCanonicalCBOR v (UnitInterval)
+deriving via LedgerCBOR v UnitInterval instance ToCanonicalCBOR v UnitInterval
 
-deriving via (LedgerCBOR v (UnitInterval)) instance FromCanonicalCBOR v (UnitInterval)
+deriving via LedgerCBOR v UnitInterval instance FromCanonicalCBOR v UnitInterval
 
-deriving via (LedgerCBOR v (Prices)) instance ToCanonicalCBOR v (Prices)
+deriving via LedgerCBOR v Prices instance ToCanonicalCBOR v Prices
 
-deriving via (LedgerCBOR v (Prices)) instance FromCanonicalCBOR v (Prices)
+deriving via LedgerCBOR v Prices instance FromCanonicalCBOR v Prices
 
-deriving via (LedgerCBOR v (EpochInterval)) instance ToCanonicalCBOR v (EpochInterval)
+deriving via LedgerCBOR v EpochInterval instance ToCanonicalCBOR v EpochInterval
 
-deriving via (LedgerCBOR v (EpochInterval)) instance FromCanonicalCBOR v (EpochInterval)
+deriving via LedgerCBOR v EpochInterval instance FromCanonicalCBOR v EpochInterval
 
-deriving via (LedgerCBOR v (ProtVer)) instance ToCanonicalCBOR v (ProtVer)
+deriving via LedgerCBOR v ProtVer instance ToCanonicalCBOR v ProtVer
 
-deriving via (LedgerCBOR v (ProtVer)) instance FromCanonicalCBOR v (ProtVer)
+deriving via LedgerCBOR v ProtVer instance FromCanonicalCBOR v ProtVer
 
-deriving via (LedgerCBOR v (Anchor)) instance ToCanonicalCBOR v (Anchor)
+deriving via LedgerCBOR v Anchor instance ToCanonicalCBOR v Anchor
 
-deriving via (LedgerCBOR v (Anchor)) instance FromCanonicalCBOR v (Anchor)
+deriving via LedgerCBOR v Anchor instance FromCanonicalCBOR v Anchor
 
-deriving via (LedgerCBOR v (EpochNo)) instance ToCanonicalCBOR v (EpochNo)
+deriving via LedgerCBOR v EpochNo instance ToCanonicalCBOR v EpochNo
 
-deriving via (LedgerCBOR v (EpochNo)) instance FromCanonicalCBOR v (EpochNo)
+deriving via LedgerCBOR v EpochNo instance FromCanonicalCBOR v EpochNo
 
-deriving newtype instance ToCanonicalCBOR v (SlotNo)
+deriving newtype instance ToCanonicalCBOR v SlotNo
 
-deriving newtype instance FromCanonicalCBOR v (SlotNo)
+deriving newtype instance FromCanonicalCBOR v SlotNo
 
 instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictSeq a) where
   fromCanonicalCBOR = do

@@ -87,7 +87,7 @@ data UtxoKey
   deriving (Generic)
 
 instance Eq UtxoKey where
-  (UtxoKeyIn txIn1) == (UtxoKeyIn txIn2) = txIn1 == txIn2
+  UtxoKeyIn txIn1 == UtxoKeyIn txIn2 = txIn1 == txIn2
 
 instance Ord UtxoKey where
   compare (UtxoKeyIn txIn1) (UtxoKeyIn txIn2) = compare txIn1 txIn2
@@ -169,17 +169,17 @@ instance FromCanonicalCBOR "utxo/v0" (Babbage.BabbageTxOut ConwayEra) where
     return $ Versioned (Babbage.BabbageTxOut (decompactAddr cAddr) vl datum refScript)
 
 deriving via
-  (LedgerCBORSafe v (Shelley.ShelleyTxOut ConwayEra))
+  LedgerCBORSafe v (Shelley.ShelleyTxOut ConwayEra)
   instance
     ToCanonicalCBOR v (Shelley.ShelleyTxOut ConwayEra)
 
 deriving via
-  (LedgerCBORSafe v (Shelley.ShelleyTxOut ConwayEra))
+  LedgerCBORSafe v (Shelley.ShelleyTxOut ConwayEra)
   instance
     FromCanonicalCBOR v (Shelley.ShelleyTxOut ConwayEra)
 
 deriving via
-  (LedgerCBOR v (AlonzoScript ConwayEra))
+  LedgerCBOR v (AlonzoScript ConwayEra)
   instance
     ToCanonicalCBOR v (AlonzoScript ConwayEra)
 
@@ -240,20 +240,20 @@ instance FromCanonicalCBOR version (CompactForm MaryValue) where
     Just v' <- pure (toCompact v)
     pure $ Versioned v'
 
-deriving via (MemPackCBOR CompactAddr) instance ToCanonicalCBOR "utxo/v0" CompactAddr
+deriving via MemPackCBOR CompactAddr instance ToCanonicalCBOR "utxo/v0" CompactAddr
 
-deriving via (MemPackCBOR CompactAddr) instance FromCanonicalCBOR "utxo/v0" CompactAddr
+deriving via MemPackCBOR CompactAddr instance FromCanonicalCBOR "utxo/v0" CompactAddr
 
-deriving via (LedgerCBOR v (Timelock ConwayEra)) instance ToCanonicalCBOR v (Timelock ConwayEra)
+deriving via LedgerCBOR v (Timelock ConwayEra) instance ToCanonicalCBOR v (Timelock ConwayEra)
 
-deriving via (LedgerCBOR v (Datum ConwayEra)) instance ToCanonicalCBOR v (Datum ConwayEra)
+deriving via LedgerCBOR v (Datum ConwayEra) instance ToCanonicalCBOR v (Datum ConwayEra)
 
-deriving via (LedgerCBOR v (Datum ConwayEra)) instance FromCanonicalCBOR v (Datum ConwayEra)
+deriving via LedgerCBOR v (Datum ConwayEra) instance FromCanonicalCBOR v (Datum ConwayEra)
 
-deriving via (LedgerCBOR v (BinaryData ConwayEra)) instance ToCanonicalCBOR v (BinaryData ConwayEra)
+deriving via LedgerCBOR v (BinaryData ConwayEra) instance ToCanonicalCBOR v (BinaryData ConwayEra)
 
 deriving via
-  (LedgerCBOR v (BinaryData ConwayEra))
+  LedgerCBOR v (BinaryData ConwayEra)
   instance
     FromCanonicalCBOR v (BinaryData ConwayEra)
 

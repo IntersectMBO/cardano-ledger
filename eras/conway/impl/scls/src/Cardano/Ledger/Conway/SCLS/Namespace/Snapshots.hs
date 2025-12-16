@@ -175,15 +175,15 @@ decodeField fieldName = do
         "Expected field name " <> fieldName <> " but got " <> s
   fromCanonicalCBOR
 
-deriving via (LedgerCBOR v RewardAccount) instance ToCanonicalCBOR v RewardAccount
+deriving via LedgerCBOR v RewardAccount instance ToCanonicalCBOR v RewardAccount
 
-deriving via (LedgerCBOR v RewardAccount) instance FromCanonicalCBOR v RewardAccount
+deriving via LedgerCBOR v RewardAccount instance FromCanonicalCBOR v RewardAccount
 
-deriving via (LedgerCBOR v PoolMetadata) instance FromCanonicalCBOR v PoolMetadata
+deriving via LedgerCBOR v PoolMetadata instance FromCanonicalCBOR v PoolMetadata
 
-deriving via (LedgerCBOR v StakePoolRelay) instance ToCanonicalCBOR v StakePoolRelay
+deriving via LedgerCBOR v StakePoolRelay instance ToCanonicalCBOR v StakePoolRelay
 
-deriving via (LedgerCBOR v StakePoolRelay) instance FromCanonicalCBOR v StakePoolRelay
+deriving via LedgerCBOR v StakePoolRelay instance FromCanonicalCBOR v StakePoolRelay
 
 instance ToCanonicalCBOR v PoolMetadata where
   toCanonicalCBOR v PoolMetadata {..} = toCanonicalCBOR v (pmUrl, pmHash)
