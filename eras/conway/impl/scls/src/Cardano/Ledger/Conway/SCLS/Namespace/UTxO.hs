@@ -231,10 +231,10 @@ deriving via (LedgerCBORSafe v MaryValue) instance ToCanonicalCBOR v MaryValue
 
 deriving via (LedgerCBORSafe v MaryValue) instance FromCanonicalCBOR v MaryValue
 
-instance {-# OVERLAPPING #-} ToCanonicalCBOR version (CompactForm MaryValue) where
+instance ToCanonicalCBOR version (CompactForm MaryValue) where
   toCanonicalCBOR version v = toCanonicalCBOR version (fromCompact v)
 
-instance {-# OVERLAPPING #-} FromCanonicalCBOR version (CompactForm MaryValue) where
+instance FromCanonicalCBOR version (CompactForm MaryValue) where
   fromCanonicalCBOR = do
     Versioned v <- fromCanonicalCBOR
     Just v' <- pure (toCompact v)

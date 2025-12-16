@@ -35,16 +35,16 @@ import Data.Sequence.Strict qualified as StrictSeq
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 
-instance {-# OVERLAPPING #-} ToCanonicalCBOR v (CompactForm Coin) where
+instance ToCanonicalCBOR v (CompactForm Coin) where
   toCanonicalCBOR v (Coin.CompactCoin ci) = toCanonicalCBOR v ci
 
-instance {-# OVERLAPPING #-} FromCanonicalCBOR v (CompactForm Coin) where
+instance FromCanonicalCBOR v (CompactForm Coin) where
   fromCanonicalCBOR = fmap Coin.CompactCoin <$> fromCanonicalCBOR
 
-instance {-# OVERLAPPING #-} ToCanonicalCBOR v (Coin) where
+instance ToCanonicalCBOR v (Coin) where
   toCanonicalCBOR v (Coin.Coin ci) = toCanonicalCBOR v ci
 
-instance {-# OVERLAPPING #-} FromCanonicalCBOR v (Coin) where
+instance FromCanonicalCBOR v (Coin) where
   fromCanonicalCBOR = fmap Coin.Coin <$> fromCanonicalCBOR
 
 instance ToCanonicalCBOR v (Credential kr) where
