@@ -42,6 +42,7 @@ import Cardano.Ledger.Dijkstra.Rules (
   DijkstraLedgerPredFailure,
   DijkstraMempoolEvent,
   DijkstraMempoolPredFailure,
+  DijkstraSubLedgersPredFailure,
   DijkstraUtxoPredFailure,
   DijkstraUtxowPredFailure,
  )
@@ -207,3 +208,5 @@ instance
 instance
   ToExpr (Event (EraRule "LEDGER" era)) =>
   ToExpr (DijkstraMempoolEvent era)
+
+instance ToExpr (DijkstraSubLedgersPredFailure era)

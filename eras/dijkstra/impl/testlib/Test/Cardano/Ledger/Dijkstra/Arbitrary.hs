@@ -207,6 +207,9 @@ instance
   where
   arbitrary = genericArbitraryU
 
+instance Arbitrary (DijkstraSubLedgersPredFailure era) where
+  arbitrary = pure DijkstraSubLedgersPredFailure
+
 instance Arbitrary PerasCert where
   arbitrary = pure PerasCert
 
