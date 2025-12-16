@@ -73,32 +73,26 @@ shelleyCDDL =
     ]
 
 shelleyProtocolVersionGroup ::
-  forall era. HuddleRule "major_protocol_version" era => Proxy era -> Named Group
-shelleyProtocolVersionGroup p = "protocol_version" =:~ grp [a $ huddleRule @"major_protocol_version" p, a VUInt]
+  forall era. HuddleRule "major_protocol_version" era => Proxy era -> Group
+shelleyProtocolVersionGroup p = grp [a $ huddleRule @"major_protocol_version" p, a VUInt]
 
-headerRule :: forall era. HuddleRule "header_body" era => Proxy era -> Rule
-headerRule p =
-  "header"
-    =:= arr [a $ huddleRule @"header_body" p, "body_signature" ==> huddleRule @"kes_signature" p]
+headerRule :: forall era. HuddleRule "header_body" era => Proxy era -> Type0
+headerRule p = Type0 $ arr [a $ huddleRule @"header_body" p, "body_signature" ==> huddleRule @"kes_signature" p]
 
 proposedProtocolParameterUpdatesRule ::
   forall era.
-  (HuddleRule "genesis_hash" era, HuddleRule "protocol_param_update" era) => Proxy era -> Rule
-proposedProtocolParameterUpdatesRule p =
-  "proposed_protocol_parameter_updates"
-    =:= mp [0 <+ asKey (huddleRule @"genesis_hash" p) ==> huddleRule @"protocol_param_update" p]
+  (HuddleRule "genesis_hash" era, HuddleRule "protocol_param_update" era) => Proxy era -> Type0
+proposedProtocolParameterUpdatesRule p = Type0 $ mp [0 <+ asKey (huddleRule @"genesis_hash" p) ==> huddleRule @"protocol_param_update" p]
 
 updateRule ::
-  forall era. HuddleRule "proposed_protocol_parameter_updates" era => Proxy era -> Rule
-updateRule p =
-  "update"
-    =:= arr [a $ huddleRule @"proposed_protocol_parameter_updates" p, a $ huddleRule @"epoch" p]
+  forall era. HuddleRule "proposed_protocol_parameter_updates" era => Proxy era -> Type0
+updateRule p = Type0 $ arr [a $ huddleRule @"proposed_protocol_parameter_updates" p, a $ huddleRule @"epoch" p]
 
 protocolParamUpdateRule ::
-  forall era. HuddleGroup "protocol_version" era => Proxy era -> Rule
+  forall era. HuddleGroup "protocol_version" era => Proxy era -> Type0
 protocolParamUpdateRule p =
-  "protocol_param_update"
-    =:= mp
+  Type0 $
+    mp
       [ opt (idx 0 ==> VUInt) //- "minfee A"
       , opt (idx 1 ==> VUInt) //- "minfee B"
       , opt (idx 2 ==> VUInt) //- "max block body size"
@@ -124,10 +118,10 @@ headerBodyRule ::
   , HuddleGroup "protocol_version" era
   ) =>
   Proxy era ->
-  Rule
+  Type0
 headerBodyRule p =
-  "header_body"
-    =:= arr
+  Type0 $
+    arr
       [ "block_number" ==> huddleRule @"block_number" p
       , "slot" ==> huddleRule @"slot" p
       , "prev_hash" ==> huddleRule @"hash32" p / VNil
@@ -148,111 +142,94 @@ transactionWitnessSetRule ::
   , HuddleRule "bootstrap_witness" era
   ) =>
   Proxy era ->
-  Rule
+  Type0
 transactionWitnessSetRule p =
-  "transaction_witness_set"
-    =:= mp
+  Type0 $
+    mp
       [ opt $ idx 0 ==> arr [0 <+ a (huddleRule @"vkeywitness" p)]
       , opt $ idx 1 ==> arr [0 <+ a (huddleRule @"native_script" p)]
       , opt $ idx 2 ==> arr [0 <+ a (huddleRule @"bootstrap_witness" p)]
       ]
 
-vkeywitnessRule :: forall era. Era era => Proxy era -> Rule
-vkeywitnessRule p =
-  "vkeywitness"
-    =:= arr [a $ huddleRule @"vkey" p, a $ huddleRule @"signature" p]
+vkeywitnessRule :: forall era. Era era => Proxy era -> Type0
+vkeywitnessRule p = Type0 $ arr [a $ huddleRule @"vkey" p, a $ huddleRule @"signature" p]
 
-bootstrapWitnessRule :: forall era. Era era => Proxy era -> Rule
+bootstrapWitnessRule :: forall era. Era era => Proxy era -> Type0
 bootstrapWitnessRule p =
-  "bootstrap_witness"
-    =:= arr
+  Type0 $
+    arr
       [ "public_key" ==> huddleRule @"vkey" p
       , "signature" ==> huddleRule @"signature" p
       , "chain_code" ==> VBytes `sized` (32 :: Word64)
       , "attributes" ==> VBytes
       ]
 
-shelleyOperationalCertGroup :: forall era. Era era => Proxy era -> Named Group
+shelleyOperationalCertGroup :: forall era. Era era => Proxy era -> Group
 shelleyOperationalCertGroup p =
-  "operational_cert"
-    =:~ grp
-      [ "hot_vkey" ==> huddleRule @"kes_vkey" p
-      , "sequence_number" ==> huddleRule @"sequence_number" p
-      , "kes_period" ==> huddleRule @"kes_period" p
-      , "sigma" ==> huddleRule @"signature" p
-      ]
+  grp
+    [ "hot_vkey" ==> huddleRule @"kes_vkey" p
+    , "sequence_number" ==> huddleRule @"sequence_number" p
+    , "kes_period" ==> huddleRule @"kes_period" p
+    , "sigma" ==> huddleRule @"signature" p
+    ]
 
-genesisHashRule :: forall era. Era era => Proxy era -> Rule
-genesisHashRule p = "genesis_hash" =:= huddleRule @"hash28" p
+genesisHashRule :: forall era. Era era => Proxy era -> Type0
+genesisHashRule p = Type0 $ huddleRule @"hash28" p
 
-scriptPubkeyGroup :: forall era. Era era => Proxy era -> Named Group
-scriptPubkeyGroup p = "script_pubkey" =:~ grp [0, a $ huddleRule @"addr_keyhash" p]
+scriptPubkeyGroup :: forall era. Era era => Proxy era -> Group
+scriptPubkeyGroup p = grp [0, a $ huddleRule @"addr_keyhash" p]
 
-scriptAllGroup :: forall era. HuddleRule "native_script" era => Proxy era -> Named Group
-scriptAllGroup p = "script_all" =:~ grp [1, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
+scriptAllGroup :: forall era. HuddleRule "native_script" era => Proxy era -> Group
+scriptAllGroup p = grp [1, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
 
-scriptAnyGroup :: forall era. HuddleRule "native_script" era => Proxy era -> Named Group
-scriptAnyGroup p = "script_any" =:~ grp [2, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
+scriptAnyGroup :: forall era. HuddleRule "native_script" era => Proxy era -> Group
+scriptAnyGroup p = grp [2, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
 
-transactionIdRule :: forall era. Era era => Proxy era -> Rule
-transactionIdRule p = "transaction_id" =:= huddleRule @"hash32" p
+transactionIdRule :: forall era. Era era => Proxy era -> Type0
+transactionIdRule p = Type0 $ huddleRule @"hash32" p
 
-transactionInputRule :: forall era. HuddleRule "transaction_id" era => Proxy era -> Rule
+transactionInputRule :: forall era. HuddleRule "transaction_id" era => Proxy era -> Type0
 transactionInputRule p =
-  "transaction_input"
-    =:= arr
+  Type0 $
+    arr
       [ "id" ==> huddleRule @"transaction_id" p
       , "index" ==> VUInt `sized` (2 :: Word64)
       ]
 
-transactionOutputRule :: forall era. Era era => Proxy era -> Rule
-transactionOutputRule p =
-  "transaction_output"
-    =:= arr [a $ huddleRule @"address" p, "amount" ==> huddleRule @"coin" p]
+transactionOutputRule :: forall era. Era era => Proxy era -> Type0
+transactionOutputRule p = Type0 $ arr [a $ huddleRule @"address" p, "amount" ==> huddleRule @"coin" p]
 
-shelleyWithdrawalsRule :: forall era. Era era => Proxy era -> Rule
-shelleyWithdrawalsRule p =
-  "withdrawals"
-    =:= mp [0 <+ asKey (huddleRule @"reward_account" p) ==> huddleRule @"coin" p]
+shelleyWithdrawalsRule :: forall era. Era era => Proxy era -> Type0
+shelleyWithdrawalsRule p = Type0 $ mp [0 <+ asKey (huddleRule @"reward_account" p) ==> huddleRule @"coin" p]
 
-dnsNameRule :: Rule
-dnsNameRule = "dns_name" =:= VText `sized` (0 :: Word64, 64 :: Word64)
+dnsNameRule :: Type0
+dnsNameRule = Type0 $ VText `sized` (0 :: Word64, 64 :: Word64)
 
-urlRule :: Rule
-urlRule = "url" =:= VText `sized` (0 :: Word64, 64 :: Word64)
+urlRule :: Type0
+urlRule = Type0 $ VText `sized` (0 :: Word64, 64 :: Word64)
 
-poolMetadataRule :: forall era. HuddleRule "url" era => Proxy era -> Rule
-poolMetadataRule p =
-  "pool_metadata"
-    =:= arr [a $ huddleRule @"url" p, a VBytes]
+poolMetadataRule :: forall era. HuddleRule "url" era => Proxy era -> Type0
+poolMetadataRule p = Type0 $ arr [a $ huddleRule @"url" p, a VBytes]
 
-singleHostAddrGroup :: forall era. Era era => Proxy era -> Named Group
+singleHostAddrGroup :: forall era. Era era => Proxy era -> Group
 singleHostAddrGroup p =
-  "single_host_addr"
-    =:~ grp
-      [ 0
-      , a $ huddleRule @"port" p / VNil
-      , a $ huddleRule @"ipv4" p / VNil
-      , a $ huddleRule @"ipv6" p / VNil
-      ]
+  grp
+    [ 0
+    , a $ huddleRule @"port" p / VNil
+    , a $ huddleRule @"ipv4" p / VNil
+    , a $ huddleRule @"ipv6" p / VNil
+    ]
 
-singleHostNameGroup :: forall era. HuddleRule "dns_name" era => Proxy era -> Named Group
+singleHostNameGroup :: forall era. HuddleRule "dns_name" era => Proxy era -> Group
 singleHostNameGroup p =
-  comment
-    "dns_name: An A or AAAA DNS record"
-    $ "single_host_name"
-      =:~ grp
-        [ 1
-        , a $ huddleRule @"port" p / VNil
-        , a $ huddleRule @"dns_name" p
-        ]
+  grp
+    [ 1
+    , a $ huddleRule @"port" p / VNil
+    , a $ huddleRule @"dns_name" p
+    ]
 
-multiHostNameGroup :: forall era. HuddleRule "dns_name" era => Proxy era -> Named Group
-multiHostNameGroup p =
-  comment
-    "dns_name: An SRV DNS record"
-    $ "multi_host_name"
-      =:~ grp [2, a $ huddleRule @"dns_name" p]
+multiHostNameGroup :: forall era. HuddleRule "dns_name" era => Proxy era -> Group
+multiHostNameGroup p = grp [2, a $ huddleRule @"dns_name" p]
 
 relayRule ::
   forall era.
@@ -261,12 +238,12 @@ relayRule ::
   , HuddleGroup "multi_host_name" era
   ) =>
   Proxy era ->
-  Rule
+  Type0
 relayRule p =
-  "relay"
-    =:= arr [a $ huddleGroup @"single_host_addr" p]
-    / arr [a $ huddleGroup @"single_host_name" p]
-    / arr [a $ huddleGroup @"multi_host_name" p]
+  Type0 $
+    arr [a $ huddleGroup @"single_host_addr" p]
+      / arr [a $ huddleGroup @"single_host_name" p]
+      / arr [a $ huddleGroup @"multi_host_name" p]
 
 poolParamsGroup ::
   forall era.
@@ -274,33 +251,28 @@ poolParamsGroup ::
   , HuddleRule "pool_metadata" era
   ) =>
   Proxy era ->
-  Named Group
+  Group
 poolParamsGroup p =
-  comment
-    "Pool parameters for stake pool registration"
-    $ "pool_params"
-      =:~ grp
-        [ "operator" ==> huddleRule @"pool_keyhash" p
-        , "vrf_keyhash" ==> huddleRule @"vrf_keyhash" p
-        , "pledge" ==> huddleRule @"coin" p
-        , "cost" ==> huddleRule @"coin" p
-        , "margin" ==> huddleRule @"unit_interval" p
-        , "reward_account" ==> huddleRule @"reward_account" p
-        , "pool_owners" ==> untaggedSet (huddleRule @"addr_keyhash" p)
-        , "relays" ==> arr [0 <+ a (huddleRule @"relay" p)]
-        , "pool_metadata" ==> huddleRule @"pool_metadata" p / VNil
-        ]
+  grp
+    [ "operator" ==> huddleRule @"pool_keyhash" p
+    , "vrf_keyhash" ==> huddleRule @"vrf_keyhash" p
+    , "pledge" ==> huddleRule @"coin" p
+    , "cost" ==> huddleRule @"coin" p
+    , "margin" ==> huddleRule @"unit_interval" p
+    , "reward_account" ==> huddleRule @"reward_account" p
+    , "pool_owners" ==> untaggedSet (huddleRule @"addr_keyhash" p)
+    , "relays" ==> arr [0 <+ a (huddleRule @"relay" p)]
+    , "pool_metadata" ==> huddleRule @"pool_metadata" p / VNil
+    ]
 
-poolRegistrationCertGroup :: forall era. HuddleGroup "pool_params" era => Proxy era -> Named Group
-poolRegistrationCertGroup p = "pool_registration_cert" =:~ grp [3, a $ huddleGroup @"pool_params" p]
+poolRegistrationCertGroup :: forall era. HuddleGroup "pool_params" era => Proxy era -> Group
+poolRegistrationCertGroup p = grp [3, a $ huddleGroup @"pool_params" p]
 
-poolRetirementCertGroup :: forall era. Era era => Proxy era -> Named Group
-poolRetirementCertGroup p =
-  "pool_retirement_cert"
-    =:~ grp [4, a $ huddleRule @"pool_keyhash" p, a $ huddleRule @"epoch" p]
+poolRetirementCertGroup :: forall era. Era era => Proxy era -> Group
+poolRetirementCertGroup p = grp [4, a $ huddleRule @"pool_keyhash" p, a $ huddleRule @"epoch" p]
 
-genesisDelegateHashRule :: forall era. Era era => Proxy era -> Rule
-genesisDelegateHashRule p = "genesis_delegate_hash" =:= huddleRule @"hash28" p
+genesisDelegateHashRule :: forall era. Era era => Proxy era -> Type0
+genesisDelegateHashRule p = Type0 $ huddleRule @"hash28" p
 
 genesisDelegationCertGroup ::
   forall era.
@@ -308,67 +280,42 @@ genesisDelegationCertGroup ::
   , HuddleRule "genesis_delegate_hash" era
   ) =>
   Proxy era ->
-  Named Group
+  Group
 genesisDelegationCertGroup p =
-  "genesis_delegation_cert"
-    =:~ grp
-      [ 5
-      , a $ huddleRule @"genesis_hash" p
-      , a $ huddleRule @"genesis_delegate_hash" p
-      , a $ huddleRule @"vrf_keyhash" p
+  grp
+    [ 5
+    , a $ huddleRule @"genesis_hash" p
+    , a $ huddleRule @"genesis_delegate_hash" p
+    , a $ huddleRule @"vrf_keyhash" p
+    ]
+
+deltaCoinRule :: Type0
+deltaCoinRule = Type0 VInt
+
+moveInstantaneousRewardRule :: forall era. HuddleRule "delta_coin" era => Proxy era -> Type0
+moveInstantaneousRewardRule p =
+  Type0 $
+    arr
+      [ a (int 0 / int 1)
+      , a
+          ( smp
+              [0 <+ asKey (huddleRule @"stake_credential" p) ==> huddleRule @"delta_coin" p]
+              / huddleRule @"coin" p
+          )
       ]
 
-deltaCoinRule :: Rule
-deltaCoinRule =
-  comment
-    "This too has been introduced in Shelley as a backport from Alonzo."
-    $ "delta_coin" =:= VInt
-
-moveInstantaneousRewardRule :: forall era. HuddleRule "delta_coin" era => Proxy era -> Rule
-moveInstantaneousRewardRule p =
-  comment
-    [str|The first field determines where the funds are drawn from.
-        |  0 denotes the reserves,
-        |  1 denotes the treasury.
-        |If the second field is a map, funds are moved to stake credentials.
-        |Otherwise, the funds are given to the other accounting pot.
-        |NOTE:
-        |  This has been safely backported to Shelley from Alonzo.
-        |]
-    $ "move_instantaneous_reward"
-      =:= arr
-        [ a (int 0 / int 1)
-        , a
-            ( smp
-                [0 <+ asKey (huddleRule @"stake_credential" p) ==> huddleRule @"delta_coin" p]
-                / huddleRule @"coin" p
-            )
-        ]
-
 moveInstantaneousRewardsCertGroup ::
-  forall era. HuddleRule "move_instantaneous_reward" era => Proxy era -> Named Group
-moveInstantaneousRewardsCertGroup p =
-  "move_instantaneous_rewards_cert"
-    =:~ grp [6, a $ huddleRule @"move_instantaneous_reward" p]
+  forall era. HuddleRule "move_instantaneous_reward" era => Proxy era -> Group
+moveInstantaneousRewardsCertGroup p = grp [6, a $ huddleRule @"move_instantaneous_reward" p]
 
-accountRegistrationCertGroup :: forall era. Era era => Proxy era -> Named Group
-accountRegistrationCertGroup p =
-  comment
-    "This certificate will be deprecated in a future era"
-    $ "account_registration_cert"
-      =:~ grp [0, a $ huddleRule @"stake_credential" p]
+accountRegistrationCertGroup :: forall era. Era era => Proxy era -> Group
+accountRegistrationCertGroup p = grp [0, a $ huddleRule @"stake_credential" p]
 
-accountUnregistrationCertGroup :: forall era. Era era => Proxy era -> Named Group
-accountUnregistrationCertGroup p =
-  comment
-    "This certificate will be deprecated in a future era"
-    $ "account_unregistration_cert"
-      =:~ grp [1, a $ huddleRule @"stake_credential" p]
+accountUnregistrationCertGroup :: forall era. Era era => Proxy era -> Group
+accountUnregistrationCertGroup p = grp [1, a $ huddleRule @"stake_credential" p]
 
-delegationToStakePoolCertGroup :: forall era. Era era => Proxy era -> Named Group
-delegationToStakePoolCertGroup p =
-  "delegation_to_stake_pool_cert"
-    =:~ grp [2, a $ huddleRule @"stake_credential" p, a $ huddleRule @"pool_keyhash" p]
+delegationToStakePoolCertGroup :: forall era. Era era => Proxy era -> Group
+delegationToStakePoolCertGroup p = grp [2, a $ huddleRule @"stake_credential" p, a $ huddleRule @"pool_keyhash" p]
 
 certificateRule ::
   forall era.
@@ -381,133 +328,153 @@ certificateRule ::
   , HuddleGroup "move_instantaneous_rewards_cert" era
   ) =>
   Proxy era ->
-  Rule
+  Type0
 certificateRule p =
-  "certificate"
-    =:= arr [a $ huddleGroup @"account_registration_cert" p]
-    / arr [a $ huddleGroup @"account_unregistration_cert" p]
-    / arr [a $ huddleGroup @"delegation_to_stake_pool_cert" p]
-    / arr [a $ huddleGroup @"pool_registration_cert" p]
-    / arr [a $ huddleGroup @"pool_retirement_cert" p]
-    / arr [a $ huddleGroup @"genesis_delegation_cert" p]
-    / arr [a $ huddleGroup @"move_instantaneous_rewards_cert" p]
+  Type0 $
+    arr [a $ huddleGroup @"account_registration_cert" p]
+      / arr [a $ huddleGroup @"account_unregistration_cert" p]
+      / arr [a $ huddleGroup @"delegation_to_stake_pool_cert" p]
+      / arr [a $ huddleGroup @"pool_registration_cert" p]
+      / arr [a $ huddleGroup @"pool_retirement_cert" p]
+      / arr [a $ huddleGroup @"genesis_delegation_cert" p]
+      / arr [a $ huddleGroup @"move_instantaneous_rewards_cert" p]
 
 untaggedSet :: IsType0 a => a -> GRuleCall
 untaggedSet = binding $ \x -> "set" =:= arr [0 <+ a x]
 
 instance HuddleRule "dns_name" ShelleyEra where
-  huddleRule _ = dnsNameRule
+  huddleRuleBody _ = dnsNameRule
 
 instance HuddleRule "url" ShelleyEra where
-  huddleRule _ = urlRule
+  huddleRuleBody _ = urlRule
 
 instance HuddleRule "pool_metadata" ShelleyEra where
-  huddleRule = poolMetadataRule @ShelleyEra
+  huddleRuleBody = poolMetadataRule @ShelleyEra
 
 instance HuddleGroup "single_host_addr" ShelleyEra where
-  huddleGroup = singleHostAddrGroup @ShelleyEra
+  huddleGroupBody = singleHostAddrGroup @ShelleyEra
 
 instance HuddleGroup "single_host_name" ShelleyEra where
-  huddleGroup = singleHostNameGroup @ShelleyEra
+  huddleGroupBody = singleHostNameGroup @ShelleyEra
+  huddleGroupComment _ = Just "dns_name: An A or AAAA DNS record"
 
 instance HuddleGroup "multi_host_name" ShelleyEra where
-  huddleGroup = multiHostNameGroup @ShelleyEra
+  huddleGroupBody = multiHostNameGroup @ShelleyEra
+  huddleGroupComment _ = Just "dns_name: An SRV DNS record"
 
 instance HuddleRule "relay" ShelleyEra where
-  huddleRule = relayRule @ShelleyEra
+  huddleRuleBody = relayRule @ShelleyEra
 
 instance HuddleGroup "pool_params" ShelleyEra where
-  huddleGroup = poolParamsGroup @ShelleyEra
+  huddleGroupBody = poolParamsGroup @ShelleyEra
+  huddleGroupComment _ = Just "Pool parameters for stake pool registration"
 
 instance HuddleGroup "pool_registration_cert" ShelleyEra where
-  huddleGroup = poolRegistrationCertGroup @ShelleyEra
+  huddleGroupBody = poolRegistrationCertGroup @ShelleyEra
 
 instance HuddleGroup "pool_retirement_cert" ShelleyEra where
-  huddleGroup = poolRetirementCertGroup @ShelleyEra
+  huddleGroupBody = poolRetirementCertGroup @ShelleyEra
 
 instance HuddleRule "genesis_hash" ShelleyEra where
-  huddleRule = genesisHashRule @ShelleyEra
+  huddleRuleBody = genesisHashRule @ShelleyEra
 
 instance HuddleRule "genesis_delegate_hash" ShelleyEra where
-  huddleRule = genesisDelegateHashRule @ShelleyEra
+  huddleRuleBody = genesisDelegateHashRule @ShelleyEra
 
 instance HuddleGroup "genesis_delegation_cert" ShelleyEra where
-  huddleGroup = genesisDelegationCertGroup @ShelleyEra
+  huddleGroupBody = genesisDelegationCertGroup @ShelleyEra
 
 instance HuddleRule "delta_coin" ShelleyEra where
-  huddleRule _ = deltaCoinRule
+  huddleRuleBody _ = deltaCoinRule
+  huddleRuleComment _ = Just "This too has been introduced in Shelley as a backport from Alonzo."
 
 instance HuddleRule "move_instantaneous_reward" ShelleyEra where
-  huddleRule = moveInstantaneousRewardRule @ShelleyEra
+  huddleRuleBody = moveInstantaneousRewardRule @ShelleyEra
+  huddleRuleComment _ =
+    Just
+      [str|The first field determines where the funds are drawn from.
+          |  0 denotes the reserves,
+          |  1 denotes the treasury.
+          |If the second field is a map, funds are moved to stake credentials.
+          |Otherwise, the funds are given to the other accounting pot.
+          |NOTE:
+          |  This has been safely backported to Shelley from Alonzo.
+          |]
 
 instance HuddleGroup "move_instantaneous_rewards_cert" ShelleyEra where
-  huddleGroup = moveInstantaneousRewardsCertGroup @ShelleyEra
+  huddleGroupBody = moveInstantaneousRewardsCertGroup @ShelleyEra
 
 instance HuddleGroup "account_registration_cert" ShelleyEra where
-  huddleGroup = accountRegistrationCertGroup @ShelleyEra
+  huddleGroupBody = accountRegistrationCertGroup @ShelleyEra
+  huddleGroupComment _ = Just "This certificate will be deprecated in a future era"
 
 instance HuddleGroup "account_unregistration_cert" ShelleyEra where
-  huddleGroup = accountUnregistrationCertGroup @ShelleyEra
+  huddleGroupBody = accountUnregistrationCertGroup @ShelleyEra
+  huddleGroupComment _ = Just "This certificate will be deprecated in a future era"
 
 instance HuddleGroup "delegation_to_stake_pool_cert" ShelleyEra where
-  huddleGroup = delegationToStakePoolCertGroup @ShelleyEra
+  huddleGroupBody = delegationToStakePoolCertGroup @ShelleyEra
 
 instance HuddleRule "certificate" ShelleyEra where
-  huddleRule = certificateRule @ShelleyEra
+  huddleRuleBody = certificateRule @ShelleyEra
 
 instance HuddleRule "withdrawals" ShelleyEra where
-  huddleRule = shelleyWithdrawalsRule @ShelleyEra
+  huddleRuleBody = shelleyWithdrawalsRule @ShelleyEra
 
 instance HuddleRule "major_protocol_version" ShelleyEra where
-  huddleRule = majorProtocolVersionRule @ShelleyEra
+  huddleRuleBody _ = majorProtocolVersionRule (Proxy @ShelleyEra)
 
 instance HuddleGroup "protocol_version" ShelleyEra where
-  huddleGroup = shelleyProtocolVersionGroup @ShelleyEra
+  huddleGroupBody = shelleyProtocolVersionGroup @ShelleyEra
 
 instance HuddleRule "protocol_param_update" ShelleyEra where
-  huddleRule = protocolParamUpdateRule @ShelleyEra
+  huddleRuleBody = protocolParamUpdateRule @ShelleyEra
 
 instance HuddleRule "proposed_protocol_parameter_updates" ShelleyEra where
-  huddleRule = proposedProtocolParameterUpdatesRule @ShelleyEra
+  huddleRuleBody = proposedProtocolParameterUpdatesRule @ShelleyEra
 
 instance HuddleRule "update" ShelleyEra where
-  huddleRule = updateRule @ShelleyEra
+  huddleRuleBody = updateRule @ShelleyEra
 
 instance HuddleGroup "operational_cert" ShelleyEra where
-  huddleGroup = shelleyOperationalCertGroup @ShelleyEra
+  huddleGroupBody = shelleyOperationalCertGroup @ShelleyEra
 
 instance HuddleRule "header_body" ShelleyEra where
-  huddleRule = headerBodyRule @ShelleyEra
+  huddleRuleBody = headerBodyRule @ShelleyEra
 
 instance HuddleRule "header" ShelleyEra where
-  huddleRule = headerRule @ShelleyEra
+  huddleRuleBody = headerRule @ShelleyEra
 
 instance HuddleRule "transaction_id" ShelleyEra where
-  huddleRule = transactionIdRule @ShelleyEra
+  huddleRuleBody = transactionIdRule @ShelleyEra
 
 instance HuddleRule "transaction_input" ShelleyEra where
-  huddleRule = transactionInputRule @ShelleyEra
+  huddleRuleBody = transactionInputRule @ShelleyEra
 
 instance HuddleRule "transaction_output" ShelleyEra where
-  huddleRule = transactionOutputRule @ShelleyEra
+  huddleRuleBody = transactionOutputRule @ShelleyEra
 
 instance HuddleGroup "script_pubkey" ShelleyEra where
-  huddleGroup = scriptPubkeyGroup @ShelleyEra
+  huddleGroupBody = scriptPubkeyGroup @ShelleyEra
 
 instance HuddleGroup "script_all" ShelleyEra where
-  huddleGroup = scriptAllGroup @ShelleyEra
+  huddleGroupBody = scriptAllGroup @ShelleyEra
 
 instance HuddleGroup "script_any" ShelleyEra where
-  huddleGroup = scriptAnyGroup @ShelleyEra
+  huddleGroupBody = scriptAnyGroup @ShelleyEra
 
 instance HuddleGroup "script_n_of_k" ShelleyEra where
-  huddleGroup p =
-    "script_n_of_k"
-      =:~ grp [3, "n" ==> VUInt, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
+  huddleGroupBody p = grp [3, "n" ==> VUInt, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
 
 instance HuddleRule "native_script" ShelleyEra where
-  huddleRule p =
-    comment
+  huddleRuleBody p =
+    Type0 $
+      arr [a $ huddleGroup @"script_pubkey" p]
+        / arr [a $ huddleGroup @"script_all" p]
+        / arr [a $ huddleGroup @"script_any" p]
+        / arr [a $ huddleGroup @"script_n_of_k" p]
+  huddleRuleComment _ =
+    Just
       [str|Native scripts support 4 operations:
           |  - Signature verification (script_pubkey)
           |  - Conjunctions (script_all)
@@ -516,25 +483,20 @@ instance HuddleRule "native_script" ShelleyEra where
           |
           |Note: Shelley uses VUInt for the threshold in script_n_of_k.
           |]
-      $ "native_script"
-        =:= arr [a $ huddleGroup @"script_pubkey" p]
-        / arr [a $ huddleGroup @"script_all" p]
-        / arr [a $ huddleGroup @"script_any" p]
-        / arr [a $ huddleGroup @"script_n_of_k" p]
 
 instance HuddleRule "vkeywitness" ShelleyEra where
-  huddleRule = vkeywitnessRule @ShelleyEra
+  huddleRuleBody = vkeywitnessRule @ShelleyEra
 
 instance HuddleRule "bootstrap_witness" ShelleyEra where
-  huddleRule = bootstrapWitnessRule @ShelleyEra
+  huddleRuleBody = bootstrapWitnessRule @ShelleyEra
 
 instance HuddleRule "transaction_witness_set" ShelleyEra where
-  huddleRule = transactionWitnessSetRule @ShelleyEra
+  huddleRuleBody = transactionWitnessSetRule @ShelleyEra
 
 instance HuddleRule "transaction_body" ShelleyEra where
-  huddleRule p =
-    "transaction_body"
-      =:= mp
+  huddleRuleBody p =
+    Type0 $
+      mp
         [ idx 0 ==> untaggedSet (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p
@@ -546,18 +508,18 @@ instance HuddleRule "transaction_body" ShelleyEra where
         ]
 
 instance HuddleRule "transaction" ShelleyEra where
-  huddleRule p =
-    "transaction"
-      =:= arr
+  huddleRuleBody p =
+    Type0 $
+      arr
         [ a $ huddleRule @"transaction_body" p
         , a $ huddleRule @"transaction_witness_set" p
         , a $ huddleRule @"metadata" p / VNil
         ]
 
 instance HuddleRule "block" ShelleyEra where
-  huddleRule p =
-    "block"
-      =:= arr
+  huddleRuleBody p =
+    Type0 $
+      arr
         [ a $ huddleRule @"header" p
         , "transaction_bodies" ==> arr [0 <+ a (huddleRule @"transaction_body" p)]
         , "transaction_witness_sets" ==> arr [0 <+ a (huddleRule @"transaction_witness_set" p)]
