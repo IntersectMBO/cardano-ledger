@@ -169,7 +169,7 @@ requiredTopLevelGuardsRule p =
           ==> (huddleRule @"plutus_data" p / VNil)
       ]
 
-scriptRequireGuardGroup :: forall era. HuddleRule "credential" era => Proxy era -> Named Group
+scriptRequireGuardGroup :: forall era. HuddleRule "credential" era => Proxy era -> GroupDef
 scriptRequireGuardGroup p =
   comment
     [str|Dijkstra adds guard scripts for enhanced security.
