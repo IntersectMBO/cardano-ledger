@@ -90,7 +90,7 @@ import Cardano.Ledger.Binary (
   encodePreEncoded,
   serialize',
  )
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Mary.Core
@@ -284,12 +284,12 @@ data AlonzoPParams f era = AlonzoPParams
   }
   deriving (Generic)
 
-appMinFeeA :: AlonzoPParams f era -> HKD f CoinPerByte
-appMinFeeA = appTxFeePerByte
+appMinFeeA :: forall era f. HKDFunctor f => AlonzoPParams f era -> HKD f Coin
+appMinFeeA p = appTxFeePerByte p ^. hkdCoinPerByteL @f . hkdPartialCompactCoinL @f
 {-# DEPRECATED appMinFeeA "In favor of `appTxFeePerByte`" #-}
 
-appMinFeeB :: AlonzoPParams f era -> HKD f (CompactForm Coin)
-appMinFeeB = appTxFeeFixed
+appMinFeeB :: forall era f. HKDFunctor f => AlonzoPParams f era -> HKD f Coin
+appMinFeeB p = appTxFeeFixed p ^. hkdPartialCompactCoinL @f
 {-# DEPRECATED appMinFeeB "In favor of `appTxFeeFixed`" #-}
 
 deriving instance Eq (AlonzoPParams Identity era)

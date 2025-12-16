@@ -121,8 +121,10 @@ import Cardano.Ledger.Binary.Coders (Decode (..), Field, decode, field, invalidF
 import Cardano.Ledger.Coin (
   Coin (..),
   CoinPerByte (..),
-  compactCoinOrError,
-  partialCoinPerByteL,
+  coinPerByteFL,
+  coinPerByteL,
+  hkdCoinPerByteL,
+  hkdPartialCompactCoinL,
   partialCompactCoinL,
  )
 import Cardano.Ledger.Compactible (Compactible (..), partialCompactFL)
@@ -459,18 +461,12 @@ class
 
 hkdMinFeeAL ::
   forall era f. (EraPParams era, HKDFunctor f) => Lens' (PParamsHKD f era) (HKD f Coin)
-hkdMinFeeAL =
-  hkdTxFeePerByteL @era @f
-    . lens
-      (hkdMap (Proxy @f) (fromCompact . unCoinPerByte))
-      (\_cpb -> hkdMap (Proxy @f) (CoinPerByte . compactCoinOrError))
+hkdMinFeeAL = hkdTxFeePerByteL @era @f . hkdCoinPerByteL @f . hkdPartialCompactCoinL @f
 {-# DEPRECATED hkdMinFeeAL "In favor of `hkdTxFeePerByteL`" #-}
 
 hkdMinFeeBL ::
   forall era f. (EraPParams era, HKDFunctor f) => Lens' (PParamsHKD f era) (HKD f Coin)
-hkdMinFeeBL =
-  hkdTxFeeFixedCompactL @era @f
-    . lens (hkdMap (Proxy @f) (fromCompact @Coin)) (\_compact -> hkdMap (Proxy @f) compactCoinOrError)
+hkdMinFeeBL = hkdTxFeeFixedCompactL @era @f . hkdPartialCompactCoinL @f
 {-# DEPRECATED hkdMinFeeBL "In favor of `hkdTxFeeFixedCompactL`" #-}
 
 emptyPParams :: EraPParams era => PParams era
@@ -492,7 +488,7 @@ ppTxFeePerByteL :: forall era. EraPParams era => Lens' (PParams era) CoinPerByte
 ppTxFeePerByteL = ppLensHKD . hkdTxFeePerByteL @era @Identity
 
 ppMinFeeAL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppMinFeeAL = ppTxFeePerByteL . partialCoinPerByteL
+ppMinFeeAL = ppTxFeePerByteL . coinPerByteL . partialCompactCoinL
 {-# DEPRECATED ppMinFeeAL "In favor of `ppTxFeePerByteL`" #-}
 
 -- | The constant factor for the minimum fee calculation
@@ -588,8 +584,9 @@ ppuTxFeePerByteL ::
   forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe CoinPerByte)
 ppuTxFeePerByteL = ppuLensHKD . hkdTxFeePerByteL @era @StrictMaybe
 
-ppuMinFeeAL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe CoinPerByte)
-ppuMinFeeAL = ppuTxFeePerByteL
+ppuMinFeeAL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuMinFeeAL = ppuTxFeePerByteL . coinPerByteFL . partialCompactFL
 {-# DEPRECATED ppuMinFeeAL "In favor of `ppuTxFeePerByteL`" #-}
 
 -- | The constant factor for the minimum fee calculation

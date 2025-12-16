@@ -49,7 +49,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Core
@@ -159,13 +159,18 @@ data DijkstraPParams f era = DijkstraPParams
   }
   deriving (Generic)
 
-dppMinFeeA :: DijkstraPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte
-dppMinFeeA = dppTxFeePerByte
+dppMinFeeA ::
+  forall era f.
+  HKDFunctor f =>
+  DijkstraPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin
+dppMinFeeA p = THKD $ unTHKD (dppTxFeePerByte p) ^. hkdCoinPerByteL @f . hkdPartialCompactCoinL @f
 {-# DEPRECATED dppMinFeeA "In favor of `dppTxFeePerByte`" #-}
 
 dppMinFeeB ::
-  DijkstraPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin)
-dppMinFeeB = dppTxFeeFixed
+  forall era f.
+  HKDFunctor f =>
+  DijkstraPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin
+dppMinFeeB p = THKD $ unTHKD (dppTxFeeFixed p) ^. hkdPartialCompactCoinL @f
 {-# DEPRECATED dppMinFeeB "In favor of `dppTxFeeFixed`" #-}
 
 dijkstraApplyPPUpdates ::

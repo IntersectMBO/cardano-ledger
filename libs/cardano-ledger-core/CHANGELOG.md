@@ -3,8 +3,12 @@
 ## 1.19.0.0
 
 * Added:
-  - `ppTxFeeFixedCompactL`,
-  - `ppuTxFeeFixedCompactL`,
+  - `ppTxFeeFixedCompactL`
+  - `ppuTxFeeFixedCompactL`
+  - `coinPerByteL`
+  - `coinPerByteFL`
+  - `hkdPartialCompactCoinL`
+  - `hkdCoinPerByteL`
 * Renamed:
   - `hkdMinFeeAL` -> `hkdTxFeePerByteL`
   - `ppMinFeeAL` -> `ppTxFeePerByteL`

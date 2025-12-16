@@ -59,7 +59,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
  )
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
@@ -136,12 +136,12 @@ data BabbagePParams f era = BabbagePParams
   }
   deriving (Generic)
 
-bppMinFeeA :: BabbagePParams f era -> HKD f CoinPerByte
-bppMinFeeA = bppTxFeePerByte
+bppMinFeeA :: forall era f. HKDFunctor f => BabbagePParams f era -> HKD f Coin
+bppMinFeeA p = bppTxFeePerByte p ^. hkdCoinPerByteL @f . hkdPartialCompactCoinL @f
 {-# DEPRECATED bppMinFeeA "In favor of `bppTxFeePerByte`" #-}
 
-bppMinFeeB :: BabbagePParams f era -> HKD f (CompactForm Coin)
-bppMinFeeB = bppTxFeeFixed
+bppMinFeeB :: forall era f. HKDFunctor f => BabbagePParams f era -> HKD f Coin
+bppMinFeeB p = bppTxFeeFixed p ^. hkdPartialCompactCoinL @f
 {-# DEPRECATED bppMinFeeB "In favor of `bppTxFeeFixed`" #-}
 
 deriving instance Eq (BabbagePParams Identity era)

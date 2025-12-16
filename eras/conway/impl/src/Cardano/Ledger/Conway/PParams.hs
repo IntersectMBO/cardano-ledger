@@ -127,7 +127,7 @@ import Cardano.Ledger.Binary (
   natVersion,
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin, CompactForm (..), compactCoinOrError, partialCompactCoinL)
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (partialCompactFL)
 import Cardano.Ledger.Conway.Era (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Core (EraPParams (..))
@@ -711,13 +711,17 @@ data ConwayPParams f era = ConwayPParams
   }
   deriving (Generic)
 
-cppMinFeeA :: ConwayPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte
-cppMinFeeA = cppTxFeePerByte
+cppMinFeeA ::
+  forall era f.
+  HKDFunctor f => ConwayPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin
+cppMinFeeA p = THKD $ unTHKD (cppTxFeePerByte p) ^. hkdCoinPerByteL @f . hkdPartialCompactCoinL @f
 {-# DEPRECATED cppMinFeeA "In favor of `cppTxFeePerByte`" #-}
 
 cppMinFeeB ::
-  ConwayPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin)
-cppMinFeeB = cppTxFeeFixed
+  forall era f.
+  HKDFunctor f =>
+  ConwayPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin
+cppMinFeeB p = THKD $ unTHKD (cppTxFeeFixed p) ^. hkdPartialCompactCoinL @f
 {-# DEPRECATED cppMinFeeB "In favor of `cppTxFeeFixed`" #-}
 
 deriving instance Eq (ConwayPParams Identity era)

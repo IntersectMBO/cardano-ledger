@@ -72,10 +72,9 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
-import Cardano.Ledger.HKD (HKD)
+import Cardano.Ledger.HKD (HKD, HKDFunctor)
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -133,12 +132,12 @@ data ShelleyPParams f era = ShelleyPParams
   }
   deriving (Generic)
 
-sppMinFeeA :: ShelleyPParams f era -> HKD f CoinPerByte
-sppMinFeeA = sppTxFeePerByte
+sppMinFeeA :: forall era f. HKDFunctor f => ShelleyPParams f era -> HKD f Coin
+sppMinFeeA p = sppTxFeePerByte p ^. hkdCoinPerByteL @f . hkdPartialCompactCoinL @f
 {-# DEPRECATED sppMinFeeA "In favor of `sppTxFeePerByte`" #-}
 
-sppMinFeeB :: ShelleyPParams f era -> HKD f (CompactForm Coin)
-sppMinFeeB = sppTxFeeFixed
+sppMinFeeB :: forall era f. HKDFunctor f => ShelleyPParams f era -> HKD f Coin
+sppMinFeeB p = sppTxFeeFixed p ^. hkdPartialCompactCoinL @f
 {-# DEPRECATED sppMinFeeB "In favor of `sppTxFeeFixed`" #-}
 
 deriving instance Eq (ShelleyPParams Identity era)
