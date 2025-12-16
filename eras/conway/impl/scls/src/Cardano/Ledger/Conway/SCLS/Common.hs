@@ -2,7 +2,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -14,7 +13,7 @@ module Cardano.Ledger.Conway.SCLS.Common () where
 
 import Cardano.Ledger.BaseTypes (Anchor, EpochNo, NonNegativeInterval, ProtVer, UnitInterval)
 import Cardano.Ledger.Coin (Coin, CompactForm)
-import Cardano.Ledger.Coin qualified as Coin
+import qualified Cardano.Ledger.Coin as Coin
 import Cardano.Ledger.Conway.SCLS.LedgerCBOR
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Hashes
@@ -28,10 +27,10 @@ import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.CDDL ()
 import Cardano.SCLS.Versioned (Versioned (..))
 import Cardano.Slotting.Slot (EpochInterval, SlotNo (..))
-import Codec.CBOR.Decoding qualified as D
+import qualified Codec.CBOR.Decoding as D
 import Data.Maybe.Strict
 import Data.Sequence.Strict (StrictSeq)
-import Data.Sequence.Strict qualified as StrictSeq
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 

@@ -2,7 +2,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -43,7 +42,7 @@ import Data.ByteString (ByteString)
 import Data.MemPack
 import Data.Proxy
 import Data.Text (Text)
-import Data.Text qualified as T
+import qualified Data.Text as T
 
 data GovPParamsIn
   = GovPParamsInPrev

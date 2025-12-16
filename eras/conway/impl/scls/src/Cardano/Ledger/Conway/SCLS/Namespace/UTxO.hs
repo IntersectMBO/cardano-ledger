@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -24,7 +23,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   decodePlutusScript,
  )
-import Cardano.Ledger.Babbage.TxOut qualified as Babbage
+import qualified Cardano.Ledger.Babbage.TxOut as Babbage
 import Cardano.Ledger.Binary (
   decodeMemPack,
   encodeMemPack,
@@ -42,7 +41,7 @@ import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.Data (BinaryData, Datum (..))
 import Cardano.Ledger.Plutus.Language
-import Cardano.Ledger.Shelley.TxOut qualified as Shelley
+import qualified Cardano.Ledger.Shelley.TxOut as Shelley
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.SCLS.CBOR.Canonical (
   assumeCanonicalDecoder,
