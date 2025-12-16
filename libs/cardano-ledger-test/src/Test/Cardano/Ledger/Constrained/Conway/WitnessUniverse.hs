@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -34,8 +35,13 @@ import Cardano.Ledger.Address (BootstrapAddress (..), RewardAccount (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), AsIx (..), PlutusPurpose)
@@ -209,7 +215,13 @@ wbMap :: WitBlock t era -> Map t (ProofType t era)
 wbMap (WitBlock _ y) = y
 
 -- | when we print a WitBlock, we are only interested in the hashes, not the witnesses
-instance (Show t, ToExpr t) => Show (WitBlock t era) where
+instance (Show t
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , ToExpr t
+#endif
+  ) => Show (WitBlock t era) where
   show (WitBlock hashset _) = unlines (map show (Set.toList hashset))
 
 instance NFData (WitBlock t era) where

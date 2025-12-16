@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -110,7 +111,13 @@ instance Twiddle Int where
   -- This is not possible with the CBOR AST provided by cborg
   twiddle _ = pure . TInt
 
-instance (Twiddle a, Arbitrary a, EncCBOR a) => Arbitrary (Twiddler a) where
+instance (Twiddle a, Arbitrary a
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , EncCBOR a
+#endif
+  ) => Arbitrary (Twiddler a) where
   arbitrary = do
     x <- arbitrary
     v <- arbitrary

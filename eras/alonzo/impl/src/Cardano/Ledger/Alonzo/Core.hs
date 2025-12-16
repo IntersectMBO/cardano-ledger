@@ -1,4 +1,6 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Alonzo.Core (
   AlonzoBlockBody (..),
@@ -9,10 +11,17 @@ module Cardano.Ledger.Alonzo.Core (
   AsIx (..),
   AsItem (..),
   AsIxItem (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data SpendingPurpose,
+  data MintingPurpose,
+  data CertifyingPurpose,
+  data RewardingPurpose,
+#else
   pattern SpendingPurpose,
   pattern MintingPurpose,
   pattern CertifyingPurpose,
   pattern RewardingPurpose,
+#endif
   ScriptIntegrityHash,
   AlonzoEraTxBody (..),
   AlonzoEraTxWits (..),
@@ -64,10 +73,17 @@ import Cardano.Ledger.Alonzo.Scripts (
   AsItem (..),
   AsIx (..),
   AsIxItem (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data CertifyingPurpose,
+  data MintingPurpose,
+  data RewardingPurpose,
+  data SpendingPurpose,
+#else
   pattern CertifyingPurpose,
   pattern MintingPurpose,
   pattern RewardingPurpose,
   pattern SpendingPurpose,
+#endif
  )
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoEraTxAuxData (..))

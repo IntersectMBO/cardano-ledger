@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -28,7 +29,11 @@ import Cardano.Ledger.Alonzo.Scripts (
   AsIx (..),
   AsIxItem (..),
   PlutusPurpose,
+#if __GLASGOW_HASKELL__ >= 914
+  data SpendingPurpose,
+#else
   pattern SpendingPurpose,
+#endif
  )
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE TypeApplications #-}
@@ -16,5 +17,9 @@ instance (Arbitrary a, Ord a) => Arbitrary (OSet.OSet a) where
 genOSet :: Ord a => Gen a -> Gen (OSet.OSet a)
 genOSet = fmap OSet.fromFoldable . listOf
 
-instance (Arbitrary v, OMap.HasOKey k v, Arbitrary k) => Arbitrary (OMap.OMap k v) where
+instance (Arbitrary v, OMap.HasOKey k v
+#if __GLASGOW_HASKELL__ < 914
+    , Arbitrary k
+#endif
+    ) => Arbitrary (OMap.OMap k v) where
   arbitrary = OMap.fromFoldable @[] <$> arbitrary

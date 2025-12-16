@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -188,8 +189,12 @@ deriving instance
   , Show (Value era)
   , Show (PredicateFailure (EraRule "UTXOS" era))
   , Show (TxOut era)
-  , Show (Script era)
-  , Show TxIn
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Eq (Script era)
+  , Eq TxIn
+#endif
   ) =>
   Show (ConwayUtxoPredFailure era)
 
@@ -198,8 +203,12 @@ deriving instance
   , Eq (Value era)
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Eq (TxOut era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Eq (Script era)
   , Eq TxIn
+#endif
   ) =>
   Eq (ConwayUtxoPredFailure era)
 

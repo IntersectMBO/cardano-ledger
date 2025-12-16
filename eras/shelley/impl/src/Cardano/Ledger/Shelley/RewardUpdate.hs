@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -309,9 +310,21 @@ instance Pulsable RewardPulser where
   completeM (RSLP _ free balance (clearRecent -> ans)) =
     pure $ VMap.foldlWithKey (rewardStakePoolMember free) ans balance
 
-deriving instance Eq ans => Eq (RewardPulser m ans)
+deriving instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Eq ans =>
+#endif
+  Eq (RewardPulser m ans)
 
-deriving instance Show ans => Show (RewardPulser m ans)
+deriving instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Show ans =>
+#endif
+  Show (RewardPulser m ans)
 
 instance NoThunks Pulser where
   showTypeOf _ = "RewardPulser"

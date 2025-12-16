@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -14,7 +15,11 @@ module Test.Cardano.Ledger.Shelley.RulesTests (
 import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashScript)
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Credential (data ScriptHashObj)
+#else
 import Cardano.Ledger.Credential (pattern ScriptHashObj)
+#endif
 import Cardano.Ledger.Keys (asWitness, hashKey)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))

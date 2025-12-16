@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -233,8 +234,10 @@ instance
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+#if __GLASGOW_HASKELL__ < 914
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
+#endif
   ) =>
   STS (DijkstraUTXOW era)
   where
