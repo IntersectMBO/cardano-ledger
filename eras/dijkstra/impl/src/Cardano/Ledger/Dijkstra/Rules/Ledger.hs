@@ -100,6 +100,7 @@ import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
+  TransitionRule,
  )
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
@@ -296,11 +297,38 @@ instance
   type Event (DijkstraLEDGER era) = ConwayLedgerEvent era
 
   initialRules = []
-  transitionRules = [conwayLedgerTransition @DijkstraLEDGER]
+  transitionRules = [dijkstraLedgerTransition]
 
   renderAssertionViolation = renderDepositEqualsObligationViolation
 
   assertions = shelleyLedgerAssertions @era @DijkstraLEDGER
+
+dijkstraLedgerTransition ::
+  forall era.
+  ( AlonzoEraTx era
+  , ConwayEraCertState era
+  , ConwayEraGov era
+  , ConwayEraTxBody era
+  , GovState era ~ ConwayGovState era
+  , Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
+  , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
+  , Embed (EraRule "CERTS" era) (DijkstraLEDGER era)
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "CERTS" era) ~ CertState era
+  , State (EraRule "GOV" era) ~ Proposals era
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Environment (EraRule "GOV" era) ~ GovEnv era
+  , Environment (EraRule "CERTS" era) ~ CertsEnv era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
+  , Signal (EraRule "GOV" era) ~ GovSignal era
+  , STS (DijkstraLEDGER era)
+  , EraRule "LEDGER" era ~ DijkstraLEDGER era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  ) =>
+  TransitionRule (DijkstraLEDGER era)
+dijkstraLedgerTransition = conwayLedgerTransition @(DijkstraLEDGER)
 
 instance
   ( AlonzoEraTx era
