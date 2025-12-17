@@ -170,6 +170,7 @@ instance
   , Arbitrary (PredicateFailure (EraRule "UTXOW" era))
   , Arbitrary (PredicateFailure (EraRule "CERTS" era))
   , Arbitrary (PredicateFailure (EraRule "GOV" era))
+  , Arbitrary (PredicateFailure (EraRule "SUBLEDGERS" era))
   ) =>
   Arbitrary (DijkstraLedgerPredFailure era)
   where

@@ -181,6 +181,7 @@ instance
   ( ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , ToExpr (PredicateFailure (EraRule "GOV" era))
   , ToExpr (PredicateFailure (EraRule "CERTS" era))
+  , ToExpr (PredicateFailure (EraRule "SUBLEDGERS" era))
   ) =>
   ToExpr (DijkstraLedgerPredFailure era)
 

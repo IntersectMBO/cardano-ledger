@@ -47,13 +47,16 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraLEDGER,
   DijkstraMEMPOOL,
+  DijkstraSUBLEDGERS,
  )
 import Cardano.Ledger.Dijkstra.Rules.Ledger (
   DijkstraLedgerPredFailure (..),
   conwayToDijkstraLedgerPredFailure,
  )
+import Cardano.Ledger.Dijkstra.Rules.SubLedgers (DijkstraSubLedgersPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.State
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLedgerPredFailure, UtxoEnv)
 import Control.DeepSeq (NFData)
@@ -156,11 +159,14 @@ instance
   , Eq (PredicateFailure (EraRule "CERTS" era))
   , Eq (PredicateFailure (EraRule "GOV" era))
   , Eq (PredicateFailure (EraRule "UTXOW" era))
+  , Eq (PredicateFailure (EraRule "SUBLEDGERS" era))
   , Show (PredicateFailure (EraRule "CERTS" era))
   , Show (PredicateFailure (EraRule "GOV" era))
   , Show (PredicateFailure (EraRule "UTXOW" era))
+  , Show (PredicateFailure (EraRule "SUBLEDGERS" era))
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
+  , EraRuleFailure "SUBLEDGERS" era ~ DijkstraSubLedgersPredFailure era
   ) =>
   STS (DijkstraMEMPOOL era)
   where
@@ -204,7 +210,7 @@ mempoolTransition = do
 instance
   ( AlonzoEraTx era
   , ConwayEraCertState era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "CERTS" era) (DijkstraLEDGER era)
@@ -220,6 +226,7 @@ instance
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , EraRule "LEDGER" era ~ DijkstraLEDGER era
+  , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
