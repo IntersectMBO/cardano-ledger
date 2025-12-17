@@ -31,6 +31,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad.Reader (asks)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import qualified Data.Text as T
 import Data.Word (Word32)
 import GHC.Exts (fromList)
@@ -237,6 +238,9 @@ spec = do
           sendCoinTo addr amount
 
       inputsCommon <- replicateM 5 newInput
+      inputsCommonNES <- case NES.fromFoldable inputsCommon of
+        Nothing -> error "Impossible empty set"
+        Just nes -> pure nes
       inputs1 <- replicateM 2 newInput
       inputs2 <- replicateM 3 newInput
 
@@ -256,7 +260,7 @@ spec = do
         submitFailingMempoolTx_
           "overlapping transaction"
           txOverlap
-          [injectFailure $ BadInputsUTxO $ fromList inputsCommon]
+          [injectFailure $ BadInputsUTxO inputsCommonNES]
 
     it "Unelected Committee voting" $ whenPostBootstrap $ do
       _ <- registerInitialCommittee

@@ -92,6 +92,7 @@ import qualified Data.Text.Encoding as T (encodeUtf8)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
+import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
