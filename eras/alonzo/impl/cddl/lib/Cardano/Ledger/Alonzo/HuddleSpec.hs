@@ -591,10 +591,4 @@ instance HuddleRule "cost_model" AlonzoEra where
       $ "cost_model" =:= arr [166 <+ a (huddleRule @"int64" p) +> 166]
 
 instance HuddleRule1 "set" AlonzoEra where
-  huddleRule1 _ = huddleRule1 @"set" (Proxy @ShelleyEra)
-
-instance HuddleRule1 "nonempty_set" AlonzoEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ShelleyEra)
-
-instance HuddleRule1 "nonempty_oset" AlonzoEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ShelleyEra)
+  huddleRule1 _ = untaggedSet

@@ -574,10 +574,4 @@ instance HuddleRule "auxiliary_data_map" BabbageEra where
         )
 
 instance HuddleRule1 "set" BabbageEra where
-  huddleRule1 _ = huddleRule1 @"set" (Proxy @ShelleyEra)
-
-instance HuddleRule1 "nonempty_set" BabbageEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ShelleyEra)
-
-instance HuddleRule1 "nonempty_oset" BabbageEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ShelleyEra)
+  huddleRule1 _ = untaggedSet

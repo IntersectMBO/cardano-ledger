@@ -52,6 +52,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   accountUnregistrationCertGroup,
   delegationToStakePoolCertGroup,
   certificateRule,
+  untaggedSet,
 ) where
 
 import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule)
@@ -569,10 +570,4 @@ instance HuddleRule "block" ShelleyEra where
         ]
 
 instance HuddleRule1 "set" ShelleyEra where
-  huddleRule1 _ = untaggedSet
-
-instance HuddleRule1 "nonempty_set" ShelleyEra where
-  huddleRule1 _ = untaggedSet
-
-instance HuddleRule1 "nonempty_oset" ShelleyEra where
   huddleRule1 _ = untaggedSet
