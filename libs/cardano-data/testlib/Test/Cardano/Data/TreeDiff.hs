@@ -9,6 +9,8 @@ import Data.Foldable (Foldable (..))
 import Data.Foldable qualified as F
 import Data.OMap.Strict
 import Data.OSet.Strict
+import Data.Set.NonEmpty (NonEmptySet)
+import Data.Set.NonEmpty qualified as NES
 import Test.Cardano.Ledger.Binary.TreeDiff (Expr (..), ToExpr (..))
 
 instance ToExpr a => ToExpr (OSet a) where
@@ -17,3 +19,6 @@ instance ToExpr a => ToExpr (OSet a) where
 instance (HasOKey k v, ToExpr v) => ToExpr (OMap k v) where
   listToExpr = listToExpr . F.toList
   toExpr = toExpr . F.toList
+
+instance ToExpr a => ToExpr (NonEmptySet a) where
+  toExpr = toExpr . NES.toList

@@ -2,6 +2,7 @@
 
 ## 1.3.0.0
 
+* Add `Data.Set.NonEmpty`
 * Add `lookupInternMap`
 * Replace `okeyL` with `toOKey`
 

@@ -5,8 +5,12 @@
 
 module Test.Cardano.Data.Arbitrary (genOSet) where
 
+import Data.Maybe (fromJust)
 import Data.OMap.Strict qualified as OMap
 import Data.OSet.Strict qualified as OSet
+import Data.Set qualified as Set
+import Data.Set.NonEmpty (NonEmptySet)
+import Data.Set.NonEmpty qualified as NES
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.QuickCheck
 
@@ -18,3 +22,14 @@ genOSet = fmap OSet.fromFoldable . listOf
 
 instance (Arbitrary v, OMap.HasOKey k v, Arbitrary k) => Arbitrary (OMap.OMap k v) where
   arbitrary = OMap.fromFoldable @[] <$> arbitrary
+
+instance (Arbitrary a, Ord a) => Arbitrary (NonEmptySet a) where
+  arbitrary = do
+    el <- arbitrary
+    fromJust . NES.fromSet . Set.insert el <$> arbitrary
+
+  shrink nes =
+    [ fromJust $ NES.fromSet xs'
+    | xs' <- shrink $ NES.toSet nes
+    , not (Set.null xs')
+    ]
