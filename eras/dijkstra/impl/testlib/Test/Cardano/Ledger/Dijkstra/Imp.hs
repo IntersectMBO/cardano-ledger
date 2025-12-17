@@ -15,6 +15,7 @@ import Cardano.Ledger.Dijkstra.Rules (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Shelley.Rules
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as Cert
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -40,6 +41,7 @@ dijkstraEraGenericSpec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 dijkstraEraGenericSpec = do
+  describe "CERTS" Cert.spec
   describe "UTXOW" Utxow.spec
   describe "UTXO" Utxo.spec
 
