@@ -243,10 +243,4 @@ instance HuddleRule "auxiliary_scripts" MaryEra where
   huddleRule = auxiliaryScriptsRule @MaryEra
 
 instance HuddleRule1 "set" MaryEra where
-  huddleRule1 _ = huddleRule1 @"set" (Proxy @ShelleyEra)
-
-instance HuddleRule1 "nonempty_set" MaryEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ShelleyEra)
-
-instance HuddleRule1 "nonempty_oset" MaryEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ShelleyEra)
+  huddleRule1 _ = untaggedSet

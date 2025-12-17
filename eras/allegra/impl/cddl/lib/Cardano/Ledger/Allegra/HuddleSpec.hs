@@ -325,13 +325,7 @@ instance HuddleRule "transaction" AllegraEra where
   huddleRule = transactionRule @AllegraEra
 
 instance HuddleRule "block" AllegraEra where
-  huddleRule = blockRule @AllegraEra
+  huddleRule = blockRule
 
 instance HuddleRule1 "set" AllegraEra where
-  huddleRule1 _ = huddleRule1 @"set" (Proxy @ShelleyEra)
-
-instance HuddleRule1 "nonempty_set" AllegraEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ShelleyEra)
-
-instance HuddleRule1 "nonempty_oset" AllegraEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ShelleyEra)
+  huddleRule1 _ = untaggedSet

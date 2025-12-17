@@ -33,6 +33,7 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
 
 import Cardano.Ledger.Conway.HuddleSpec hiding ()
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
@@ -905,11 +906,23 @@ instance HuddleRule "cost_models" DijkstraEra where
           , 0 <+ asKey ((4 :: Integer) ... (255 :: Integer)) ==> arr [0 <+ a (huddleRule @"int64" p)]
           ]
 
+mkMaybeTaggedSet :: IsType0 a => Name -> Word64 -> a -> GRuleCall
+mkMaybeTaggedSet label n = binding $ \x -> label =:= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
+
+maybeTaggedSet :: IsType0 a => a -> GRuleCall
+maybeTaggedSet = mkMaybeTaggedSet "set" 0
+
+maybeTaggedNonemptySet :: IsType0 a => a -> GRuleCall
+maybeTaggedNonemptySet = mkMaybeTaggedSet "nonempty_set" 1
+
+maybeTaggedNonemptyOset :: IsType0 a => a -> GRuleCall
+maybeTaggedNonemptyOset = mkMaybeTaggedSet "nonempty_oset" 1
+
 instance HuddleRule1 "set" DijkstraEra where
-  huddleRule1 _ = huddleRule1 @"set" (Proxy @ConwayEra)
+  huddleRule1 _ = maybeTaggedSet
 
 instance HuddleRule1 "nonempty_set" DijkstraEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_set" (Proxy @ConwayEra)
+  huddleRule1 _ = maybeTaggedNonemptySet
 
 instance HuddleRule1 "nonempty_oset" DijkstraEra where
-  huddleRule1 _ = huddleRule1 @"nonempty_oset" (Proxy @ConwayEra)
+  huddleRule1 _ = maybeTaggedNonemptyOset
