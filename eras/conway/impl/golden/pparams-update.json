@@ -855,6 +855,6 @@
     "stakePoolDeposit": 5863692308783077770,
     "treasuryCut": 0.5,
     "txFeeFixed": 86,
-    "txFeePerByte": 67,
-    "utxoCostPerByte": 11
+    "txFeePerByte": 39,
+    "utxoCostPerByte": 40
 }

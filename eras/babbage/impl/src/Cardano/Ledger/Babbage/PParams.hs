@@ -60,6 +60,7 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (toCompactPartial)
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
@@ -388,11 +389,11 @@ downgradeBabbagePParams DowngradeBabbagePParams {..} BabbagePParams {..} =
 
 -- | A word is 8 bytes, so convert from coinsPerUTxOWord to coinsPerUTxOByte, rounding down.
 coinsPerUTxOWordToCoinsPerUTxOByte :: CoinPerWord -> CoinPerByte
-coinsPerUTxOWordToCoinsPerUTxOByte (CoinPerWord (Coin c)) = CoinPerByte $ CompactCoin $ fromIntegral $ c `div` 8
+coinsPerUTxOWordToCoinsPerUTxOByte (CoinPerWord (Coin c)) = CoinPerByte . CompactCoin $ fromIntegral (c `div` 8)
 
 -- | A word is 8 bytes, so convert from coinsPerUTxOByte to coinsPerUTxOWord.
 coinsPerUTxOByteToCoinsPerUTxOWord :: CoinPerByte -> CoinPerWord
-coinsPerUTxOByteToCoinsPerUTxOWord (CoinPerByte (CompactCoin c)) = CoinPerWord $ Coin $ fromIntegral $ c * 8
+coinsPerUTxOByteToCoinsPerUTxOWord (CoinPerByte (CompactCoin c)) = CoinPerWord . Coin $ fromIntegral c * 8
 
 -- | Naively convert coins per UTxO word to coins per byte. This function only
 -- exists to support the very unusual case of translating a transaction
@@ -400,7 +401,7 @@ coinsPerUTxOByteToCoinsPerUTxOWord (CoinPerByte (CompactCoin c)) = CoinPerWord $
 -- not do the translation above, since this would render the transaction
 -- invalid.
 coinsPerUTxOWordToCoinsPerUTxOByteInTx :: CoinPerWord -> CoinPerByte
-coinsPerUTxOWordToCoinsPerUTxOByteInTx (CoinPerWord (Coin c)) = CoinPerByte $ CompactCoin $ fromIntegral c
+coinsPerUTxOWordToCoinsPerUTxOByteInTx (CoinPerWord (Coin c)) = CoinPerByte . toCompactPartial $ Coin c
 
 ppCoinsPerUTxOByte :: BabbageEraPParams era => PParam era
 ppCoinsPerUTxOByte =
