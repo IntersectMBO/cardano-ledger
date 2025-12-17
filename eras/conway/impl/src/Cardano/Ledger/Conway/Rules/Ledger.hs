@@ -79,7 +79,6 @@ import Cardano.Ledger.Conway.Rules.Certs (
  )
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (
-  ConwayGovEvent (..),
   ConwayGovPredFailure,
   GovEnv (..),
   GovSignal (..),
@@ -327,7 +326,6 @@ instance
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , ConwayEraCertState era
-  , EraCertState era
   , EraRule "LEDGER" era ~ ConwayLEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
@@ -503,8 +501,7 @@ conwayLedgerTransition = do
   pure $ LedgerState utxoState'' certStateAfterCERTS
 
 instance
-  ( BaseM (ConwayUTXOW era) ~ ShelleyBase
-  , AlonzoEraTx era
+  ( AlonzoEraTx era
   , EraUTxO era
   , BabbageEraTxBody era
   , Embed (EraRule "UTXO" era) (ConwayUTXOW era)
@@ -534,12 +531,9 @@ instance
   , State (EraRule "CERT" era) ~ CertState era
   , Environment (EraRule "CERT" era) ~ CertEnv era
   , Signal (EraRule "CERT" era) ~ TxCert era
-  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
   , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
   , EraRuleFailure "CERT" era ~ ConwayCertPredFailure era
-  , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
   , EraRule "CERTS" era ~ ConwayCERTS era
-  , EraCertState era
   , ConwayEraCertState era
   ) =>
   Embed (ConwayCERTS era) (ConwayLEDGER era)
@@ -558,16 +552,11 @@ instance
   , GovState era ~ ConwayGovState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
-  , Environment (EraRule "GOV" era) ~ GovEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "GOV" era) ~ GovSignal era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ Proposals era
   , EraRule "GOV" era ~ ConwayGOV era
-  , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
-  , EraGov era
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ ConwayLEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
@@ -583,12 +572,8 @@ instance
   ( ConwayEraTxCert era
   , ConwayEraPParams era
   , ConwayEraGov era
-  , BaseM (ConwayLEDGER era) ~ ShelleyBase
-  , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
-  , Event (EraRule "GOV" era) ~ ConwayGovEvent era
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
-  , EraCertState era
   , ConwayEraCertState era
   ) =>
   Embed (ConwayGOV era) (ConwayLEDGER era)
@@ -603,7 +588,6 @@ instance
   , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
   , Event (EraRule "CERT" era) ~ ConwayCertEvent era
-  , EraCertState era
   , ConwayEraCertState era
   ) =>
   Embed (ConwayDELEG era) (ConwayLEDGER era)
