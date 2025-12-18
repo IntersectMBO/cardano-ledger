@@ -96,6 +96,7 @@
 
 ### `cddl`
 
+* Change `HuddleRule` and related typeclasses to imply their name using the type-level string via a `Proxy`.
 * Add `HuddleRule1` typeclass.
 * Export `Era` to reuse via the import chain of modules across eras.
 * Add `HuddleRule`, `HuddleGroup` and `HuddleGRule` type class for era-polymorphic CDDL generation.

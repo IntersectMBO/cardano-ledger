@@ -22,29 +22,30 @@ import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import Data.Word (Word64)
+import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
 import Prelude hiding ((/))
 
 instance Era era => HuddleRule "hash28" era where
-  huddleRule _ = "hash28" =:= VBytes `sized` (28 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (28 :: Word64)
 
 instance Era era => HuddleRule "hash32" era where
-  huddleRule _ = "hash32" =:= VBytes `sized` (32 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (32 :: Word64)
 
 instance Era era => HuddleRule "max_word64" era where
-  huddleRule _ = "max_word64" =:= (18446744073709551615 :: Integer)
+  huddleRuleNamed pname _ = pname =.= (18446744073709551615 :: Integer)
 
 instance Era era => HuddleRule "positive_int" era where
-  huddleRule p = "positive_int" =:= (1 :: Integer) ... huddleRule @"max_word64" p
+  huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word64" p
 
 instance Era era => HuddleRule "max_word32" era where
-  huddleRule _ = "max_word32" =:= (4294967295 :: Integer)
+  huddleRuleNamed pname _ = pname =.= (4294967295 :: Integer)
 
 instance Era era => HuddleRule "positive_word32" era where
-  huddleRule p = "positive_word32" =:= (1 :: Integer) ... huddleRule @"max_word32" p
+  huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word32" p
 
 instance Era era => HuddleRule "unit_interval" era where
-  huddleRule _ =
+  huddleRuleNamed pname _ =
     comment
       [str|The real unit_interval is: #6.30([uint, uint])
           |
@@ -61,12 +62,12 @@ instance Era era => HuddleRule "unit_interval" era where
           |our encoders/decoders. Which means we cannot use the actual
           |definition here and we hard code the value to 1/2
           |]
-      $ "unit_interval"
-        =:= tag 30 (arr [1, 2])
+      $ pname
+        =.= tag 30 (arr [1, 2])
 
 instance Era era => HuddleRule "nonnegative_interval" era where
-  huddleRule p =
-    "nonnegative_interval" =:= tag 30 (arr [a VUInt, a (huddleRule @"positive_int" p)])
+  huddleRuleNamed pname p =
+    pname =.= tag 30 (arr [a VUInt, a (huddleRule @"positive_int" p)])
 
 distinct :: IsSizeable s => Value s -> HuddleItem
 distinct x =
@@ -91,64 +92,64 @@ distinct x =
       _ -> error "Unsupported Value for `distinct`"
 
 instance Era era => HuddleRule "nonce" era where
-  huddleRule p = "nonce" =:= arr [0] / arr [1, a (huddleRule @"hash32" p)]
+  huddleRuleNamed pname p = pname =.= arr [0] / arr [1, a (huddleRule @"hash32" p)]
 
 instance Era era => HuddleRule "epoch" era where
-  huddleRule _ = "epoch" =:= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
 
 instance Era era => HuddleRule "epoch_interval" era where
-  huddleRule _ = "epoch_interval" =:= VUInt `sized` (4 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `sized` (4 :: Word64)
 
 instance Era era => HuddleRule "slot" era where
-  huddleRule _ = "slot" =:= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
 
 instance Era era => HuddleRule "block_number" era where
-  huddleRule _ = "block_number" =:= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
 
 instance Era era => HuddleRule "addr_keyhash" era where
-  huddleRule p = "addr_keyhash" =:= huddleRule @"hash28" p
+  huddleRuleNamed pname p = pname =.= huddleRule @"hash28" p
 
 instance Era era => HuddleRule "pool_keyhash" era where
-  huddleRule p = "pool_keyhash" =:= huddleRule @"hash28" p
+  huddleRuleNamed pname p = pname =.= huddleRule @"hash28" p
 
 instance Era era => HuddleRule "vrf_keyhash" era where
-  huddleRule p = "vrf_keyhash" =:= huddleRule @"hash32" p
+  huddleRuleNamed pname p = pname =.= huddleRule @"hash32" p
 
 instance Era era => HuddleRule "vkey" era where
-  huddleRule _ = "vkey" =:= VBytes `sized` (32 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (32 :: Word64)
 
 instance Era era => HuddleRule "vrf_vkey" era where
-  huddleRule _ = "vrf_vkey" =:= VBytes `sized` (32 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (32 :: Word64)
 
 instance Era era => HuddleRule "vrf_cert" era where
-  huddleRule _ = "vrf_cert" =:= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
 
 instance Era era => HuddleRule "kes_vkey" era where
-  huddleRule _ = "kes_vkey" =:= VBytes `sized` (32 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (32 :: Word64)
 
 instance Era era => HuddleRule "kes_signature" era where
-  huddleRule _ = "kes_signature" =:= VBytes `sized` (448 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (448 :: Word64)
 
 instance Era era => HuddleRule "signkey_kes" era where
-  huddleRule _ = "signkey_kes" =:= VBytes `sized` (64 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (64 :: Word64)
 
 instance Era era => HuddleRule "sequence_number" era where
-  huddleRule _ = "sequence_number" =:= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
 
 instance Era era => HuddleRule "kes_period" era where
-  huddleRule _ = "kes_period" =:= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
 
 instance Era era => HuddleRule "signature" era where
-  huddleRule _ = "signature" =:= VBytes `sized` (64 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (64 :: Word64)
 
 instance Era era => HuddleRule "coin" era where
-  huddleRule _ = "coin" =:= VUInt
+  huddleRuleNamed pname _ = pname =.= VUInt
 
 instance Era era => HuddleRule "positive_coin" era where
-  huddleRule p = "positive_coin" =:= (1 :: Integer) ... huddleRule @"max_word64" p
+  huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word64" p
 
 instance Era era => HuddleRule "address" era where
-  huddleRule _ =
+  huddleRuleNamed pname _ =
     comment
       [str|address = bytes
           |
@@ -183,8 +184,8 @@ instance Era era => HuddleRule "address" era where
           |     1111: reward account: scripthash28
           |1001-1101: future formats
           |]
-      $ "address"
-        =:= bstr
+      $ pname
+        =.= bstr
           "001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000"
         / bstr
           "102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000"
@@ -198,23 +199,23 @@ instance Era era => HuddleRule "address" era where
         / bstr "7080000000000000000000000000000000000000000000000000000000"
 
 instance Era era => HuddleRule "reward_account" era where
-  huddleRule _ =
+  huddleRuleNamed pname _ =
     comment
       "reward_account = bytes"
-      $ "reward_account"
-        =:= bstr "E090000000000000000000000000000000000000000000000000000000"
+      $ pname
+        =.= bstr "E090000000000000000000000000000000000000000000000000000000"
         / bstr "F0A0000000000000000000000000000000000000000000000000000000"
 
 instance Era era => HuddleRule "transaction_index" era where
-  huddleRule _ = "transaction_index" =:= VUInt `sized` (2 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `sized` (2 :: Word64)
 
 instance Era era => HuddleRule "metadatum_label" era where
-  huddleRule _ = "metadatum_label" =:= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
 
 instance Era era => HuddleRule "metadatum" era where
-  huddleRule p =
-    "metadatum"
-      =:= smp
+  huddleRuleNamed pname p =
+    pname
+      =.= smp
         [ 0 <+ asKey (huddleRule @"metadatum" p) ==> huddleRule @"metadatum" p
         ]
       / sarr [0 <+ a (huddleRule @"metadatum" p)]
@@ -223,19 +224,19 @@ instance Era era => HuddleRule "metadatum" era where
       / (VText `sized` (0 :: Word64, 64 :: Word64))
 
 instance Era era => HuddleRule "metadata" era where
-  huddleRule p =
-    "metadata"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ 0
             <+ asKey (huddleRule @"metadatum_label" p)
             ==> huddleRule @"metadatum" p
         ]
 
 instance Era era => HuddleRule "auxiliary_data_hash" era where
-  huddleRule p = "auxiliary_data_hash" =:= huddleRule @"hash32" p
+  huddleRuleNamed pname p = pname =.= huddleRule @"hash32" p
 
 instance Era era => HuddleRule "script_hash" era where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|To compute a script hash, note that you must prepend
           |a tag to the bytes of the script before hashing.
@@ -247,29 +248,30 @@ instance Era era => HuddleRule "script_hash" era where
           |  "\x03" for Plutus V3 scripts
           |  "\x04" for Plutus V4 scripts
           |]
-      $ "script_hash"
-        =:= huddleRule @"hash28" p
+      $ pname
+        =.= huddleRule @"hash28" p
 
 instance Era era => HuddleRule "credential" era where
-  huddleRule p =
-    "credential"
-      =:= arr [0, a (huddleRule @"addr_keyhash" p)]
+  huddleRuleNamed pname p =
+    pname
+      =.= arr [0, a (huddleRule @"addr_keyhash" p)]
       / arr [1, a (huddleRule @"script_hash" p)]
 
 instance Era era => HuddleRule "stake_credential" era where
-  huddleRule p = "stake_credential" =:= huddleRule @"credential" p
+  huddleRuleNamed pname p = pname =.= huddleRule @"credential" p
 
 instance Era era => HuddleRule "port" era where
-  huddleRule _ = "port" =:= VUInt `le` 65535
+  huddleRuleNamed pname _ = pname =.= VUInt `le` 65535
 
 instance Era era => HuddleRule "ipv4" era where
-  huddleRule _ = "ipv4" =:= VBytes `sized` (4 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (4 :: Word64)
 
 instance Era era => HuddleRule "ipv6" era where
-  huddleRule _ = "ipv6" =:= VBytes `sized` (16 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (16 :: Word64)
 
-majorProtocolVersionRule :: forall era. Era era => Proxy era -> Rule
-majorProtocolVersionRule _ =
-  "major_protocol_version"
-    =:= getVersion @Integer (eraProtVerLow @ByronEra)
+majorProtocolVersionRule ::
+  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Rule
+majorProtocolVersionRule pname _ =
+  pname
+    =.= getVersion @Integer (eraProtVerLow @ByronEra)
     ... succ (getVersion @Integer (eraProtVerHigh @era))
