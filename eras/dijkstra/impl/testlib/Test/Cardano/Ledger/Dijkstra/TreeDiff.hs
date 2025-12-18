@@ -214,7 +214,9 @@ instance
   ToExpr (DijkstraMempoolEvent era)
 
 instance
-  ToExpr (PredicateFailure (EraRule "SUBGOV" era)) =>
+  ( ToExpr (PredicateFailure (EraRule "SUBGOV" era))
+  , ToExpr (PredicateFailure (EraRule "SUBUTXOW" era))
+  ) =>
   ToExpr (DijkstraSubLedgerPredFailure era)
 
 instance

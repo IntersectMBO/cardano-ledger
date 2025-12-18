@@ -50,6 +50,9 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBGOV,
   DijkstraSUBLEDGER,
   DijkstraSUBLEDGERS,
+  DijkstraSUBUTXO,
+  DijkstraSUBUTXOS,
+  DijkstraSUBUTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.Ledger (
   DijkstraLedgerPredFailure (..),
@@ -231,6 +234,9 @@ instance
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
+  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
+  , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era

@@ -33,6 +33,9 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBGOV,
   DijkstraSUBLEDGER,
   DijkstraSUBLEDGERS,
+  DijkstraSUBUTXO,
+  DijkstraSUBUTXOS,
+  DijkstraSUBUTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubLedger (DijkstraSubLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.LedgerState
@@ -128,6 +131,9 @@ instance
   , ConwayEraCertState era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
+  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
+  , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   ) =>
   Embed (DijkstraSUBLEDGER era) (DijkstraSUBLEDGERS era)
   where
