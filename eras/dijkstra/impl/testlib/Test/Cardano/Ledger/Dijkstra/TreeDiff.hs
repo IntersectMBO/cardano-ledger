@@ -222,6 +222,8 @@ instance
 
 instance ToExpr (DijkstraSubGovPredFailure era)
 
-instance ToExpr (DijkstraSubUtxoPredFailure era)
+instance
+  ToExpr (PredicateFailure (EraRule "SUBUTXOS" era)) =>
+  ToExpr (DijkstraSubUtxoPredFailure era)
 
 instance ToExpr (DijkstraSubUtxosPredFailure era)

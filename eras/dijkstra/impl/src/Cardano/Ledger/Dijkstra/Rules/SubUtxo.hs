@@ -1,10 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -28,40 +30,50 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXO,
+  DijkstraSUBUTXOS,
  )
+import Cardano.Ledger.Dijkstra.Rules.SubUtxos (DijkstraSubUtxosPredFailure)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv)
 import Control.DeepSeq (NFData)
-import Control.State.Transition.Extended (
-  BaseM,
-  Environment,
-  Event,
-  PredicateFailure,
-  STS,
-  Signal,
-  State,
-  TRC (TRC),
-  TransitionRule,
-  judgmentContext,
-  transitionRules,
- )
-import Data.Typeable (Typeable)
-import Data.Void (Void)
+import Control.State.Transition.Extended
+import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data DijkstraSubUtxoPredFailure era = DijkstraSubUtxoPredFailure
-  deriving (Show, Eq, Generic)
+data DijkstraSubUtxoPredFailure era
+  = SubUtxosFailure (PredicateFailure (EraRule "SUBUTXOS" era))
+  deriving (Generic)
 
-instance NoThunks (DijkstraSubUtxoPredFailure era)
+deriving stock instance
+  Eq (PredicateFailure (EraRule "SUBUTXOS" era)) => Eq (DijkstraSubUtxoPredFailure era)
 
-instance NFData (DijkstraSubUtxoPredFailure era)
+deriving stock instance
+  Show (PredicateFailure (EraRule "SUBUTXOS" era)) => Show (DijkstraSubUtxoPredFailure era)
 
-instance Era era => EncCBOR (DijkstraSubUtxoPredFailure era) where
-  encCBOR _ = encCBOR ()
+instance
+  NoThunks (PredicateFailure (EraRule "SUBUTXOS" era)) =>
+  NoThunks (DijkstraSubUtxoPredFailure era)
 
-instance Typeable era => DecCBOR (DijkstraSubUtxoPredFailure era) where
-  decCBOR = decCBOR @() *> pure DijkstraSubUtxoPredFailure
+instance
+  NFData (PredicateFailure (EraRule "SUBUTXOS" era)) =>
+  NFData (DijkstraSubUtxoPredFailure era)
+
+instance
+  ( Era era
+  , EncCBOR (PredicateFailure (EraRule "SUBUTXOS" era))
+  ) =>
+  EncCBOR (DijkstraSubUtxoPredFailure era)
+  where
+  encCBOR (SubUtxosFailure e) = encCBOR e
+
+instance
+  ( Era era
+  , DecCBOR (PredicateFailure (EraRule "SUBUTXOS" era))
+  ) =>
+  DecCBOR (DijkstraSubUtxoPredFailure era)
+  where
+  decCBOR = SubUtxosFailure <$> decCBOR
 
 type instance EraRuleFailure "SUBUTXO" DijkstraEra = DijkstraSubUtxoPredFailure DijkstraEra
 
@@ -69,9 +81,14 @@ type instance EraRuleEvent "SUBUTXO" DijkstraEra = VoidEraRule "SUBUTXO" Dijkstr
 
 instance InjectRuleFailure "SUBUTXO" DijkstraSubUtxoPredFailure DijkstraEra
 
+instance InjectRuleFailure "SUBUTXO" DijkstraSubUtxosPredFailure DijkstraEra where
+  injectFailure = SubUtxosFailure
+
 instance
   ( ConwayEraGov era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
+  , Embed (EraRule "SUBUTXOS" era) (DijkstraSUBUTXO era)
   ) =>
   STS (DijkstraSUBUTXO era)
   where
@@ -84,7 +101,23 @@ instance
 
   transitionRules = [dijkstraSubUtxoTransition @era]
 
-dijkstraSubUtxoTransition :: TransitionRule (EraRule "SUBUTXO" era)
+dijkstraSubUtxoTransition ::
+  forall era.
+  ( EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
+  , Embed (EraRule "SUBUTXOS" era) (DijkstraSUBUTXO era)
+  ) =>
+  TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (_, st, _) <- judgmentContext
-  pure st
+  TRC (env, state, signal) <- judgmentContext
+  trans @(EraRule "SUBUTXOS" era) $
+    TRC (env, state, signal)
+
+instance
+  ( ConwayEraGov era
+  , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
+  ) =>
+  Embed (DijkstraSUBUTXOS era) (DijkstraSUBUTXO era)
+  where
+  wrapFailed = SubUtxosFailure
+  wrapEvent = absurd
