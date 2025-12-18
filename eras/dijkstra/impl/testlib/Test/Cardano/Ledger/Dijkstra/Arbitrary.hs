@@ -208,8 +208,14 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance Arbitrary (DijkstraSubLedgersPredFailure era) where
-  arbitrary = pure DijkstraSubLedgersPredFailure
+instance
+  Arbitrary (PredicateFailure (EraRule "SUBLEDGER" era)) =>
+  Arbitrary (DijkstraSubLedgersPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary (DijkstraSubLedgerPredFailure era) where
+  arbitrary = pure DijkstraSubLedgerPredFailure
 
 instance Arbitrary PerasCert where
   arbitrary = pure PerasCert

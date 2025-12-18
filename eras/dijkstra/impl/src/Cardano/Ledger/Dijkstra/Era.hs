@@ -14,6 +14,7 @@ module Cardano.Ledger.Dijkstra.Era (
   DijkstraGOVCERT,
   DijkstraLEDGER,
   DijkstraMEMPOOL,
+  DijkstraSUBLEDGER,
   DijkstraSUBLEDGERS,
   DijkstraUTXO,
   DijkstraUTXOW,
@@ -72,6 +73,10 @@ type instance Value DijkstraEra = MaryValue
 data DijkstraSUBLEDGERS era
 
 type instance EraRule "SUBLEDGERS" DijkstraEra = DijkstraSUBLEDGERS DijkstraEra
+
+data DijkstraSUBLEDGER era
+
+type instance EraRule "SUBLEDGER" DijkstraEra = DijkstraSUBLEDGER DijkstraEra
 
 data DijkstraGOV era
 
