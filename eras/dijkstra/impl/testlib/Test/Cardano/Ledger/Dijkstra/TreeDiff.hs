@@ -42,6 +42,7 @@ import Cardano.Ledger.Dijkstra.Rules (
   DijkstraLedgerPredFailure,
   DijkstraMempoolEvent,
   DijkstraMempoolPredFailure,
+  DijkstraSubGovPredFailure,
   DijkstraSubLedgerPredFailure,
   DijkstraSubLedgersPredFailure,
   DijkstraUtxoPredFailure,
@@ -56,9 +57,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
-import Control.State.Transition (
-  STS (..),
- )
+import Control.State.Transition (STS (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr)
@@ -216,3 +215,5 @@ instance ToExpr (DijkstraSubLedgerPredFailure era)
 instance
   ToExpr (PredicateFailure (EraRule "SUBLEDGER" era)) =>
   ToExpr (DijkstraSubLedgersPredFailure era)
+
+instance ToExpr (DijkstraSubGovPredFailure era)
