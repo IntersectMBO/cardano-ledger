@@ -13,6 +13,7 @@ module Cardano.Ledger.Dijkstra.Rules (
   module Cardano.Ledger.Dijkstra.Rules.SubGov,
   module Cardano.Ledger.Dijkstra.Rules.SubLedger,
   module Cardano.Ledger.Dijkstra.Rules.SubLedgers,
+  module Cardano.Ledger.Dijkstra.Rules.SubUtxos,
   module Cardano.Ledger.Dijkstra.Rules.Utxo,
   module Cardano.Ledger.Dijkstra.Rules.Utxow,
   module Control.State.Transition.Extended,
@@ -38,6 +39,7 @@ import Cardano.Ledger.Dijkstra.Rules.Pool ()
 import Cardano.Ledger.Dijkstra.Rules.SubGov
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
+import Cardano.Ledger.Dijkstra.Rules.SubUtxos
 import Cardano.Ledger.Dijkstra.Rules.Utxo
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.Rules.Utxow
