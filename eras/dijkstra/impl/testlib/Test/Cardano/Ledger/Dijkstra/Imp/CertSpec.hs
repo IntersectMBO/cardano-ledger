@@ -18,9 +18,11 @@ import Cardano.Ledger.Dijkstra.Core (
   pattern UnRegDepositTxCert,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import qualified Data.List.NonEmpty as NE
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Dijkstra.ImpTest (
   DijkstraEraImp,
@@ -28,23 +30,26 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest (
   LedgerSpec,
   expectStakeCredNotRegistered,
   expectStakeCredRegistered,
+  freshKeyAddr,
   freshKeyHash,
   getsPParams,
   impAnn,
   passNEpochs,
   registerInitialCommittee,
   registerStakeCredential,
+  sendCoinTo,
   setupSingleDRep,
+  submitFailingTx,
   submitParameterChange,
   submitTx_,
   submitYesVoteCCs_,
   submitYesVote_,
  )
-import Test.Cardano.Ledger.Imp.Common (SpecWith, it, shouldReturn)
+import Test.Cardano.Ledger.Imp.Common (SpecWith, arbitrary, shouldReturn, xit)
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = do
-  it "Subtransaction consumes correct refund after keyDeposit is changed" $ do
+  xit "Subtransaction consumes correct refund after keyDeposit is changed" $ do
     stakingCred <- KeyHashObj <$> freshKeyHash
     _ <- registerStakeCredential stakingCred
 
@@ -75,5 +80,26 @@ spec = do
           & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTransaction
       expectStakeCredNotRegistered stakingCred
 
-  -- it "Multiple subtransactions cannot get the same refund" $ do
-  --   undefined
+  xit "Multiple subtransactions cannot get the same refund" $ do
+    stakingCred <- KeyHashObj <$> freshKeyHash
+    _ <- registerStakeCredential stakingCred
+    keyDeposit <- getsPParams ppKeyDepositL
+    value1 <- arbitrary
+    (_, addr1) <- freshKeyAddr
+    input1 <- sendCoinTo addr1 value1
+    value2 <- arbitrary
+    (_, addr2) <- freshKeyAddr
+    input2 <- sendCoinTo addr2 value2
+    let
+      subTx1 =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . inputsTxBodyL .~ Set.singleton input1
+          & bodyTxL . certsTxBodyL .~ SSeq.singleton (UnRegDepositTxCert stakingCred keyDeposit)
+      subTx2 =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . inputsTxBodyL .~ Set.singleton input2
+          & bodyTxL . certsTxBodyL .~ SSeq.singleton (UnRegDepositTxCert stakingCred keyDeposit)
+      tx =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable [subTx1, subTx2]
+    submitFailingTx tx . NE.singleton $ error "TODO: predicate failure not yet implemented"
