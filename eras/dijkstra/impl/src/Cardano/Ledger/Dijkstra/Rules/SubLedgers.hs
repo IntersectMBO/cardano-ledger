@@ -28,7 +28,12 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraSUBLEDGER, DijkstraSUBLEDGERS)
+import Cardano.Ledger.Dijkstra.Era (
+  DijkstraEra,
+  DijkstraSUBGOV,
+  DijkstraSUBLEDGER,
+  DijkstraSUBLEDGERS,
+ )
 import Cardano.Ledger.Dijkstra.Rules.SubLedger (DijkstraSubLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (LedgerEnv)
@@ -117,9 +122,12 @@ dijkstraSubLedgersTransition = do
     subTxs
 
 instance
-  ( ConwayEraGov era
+  ( EraTx era
+  , ConwayEraTxBody era
+  , ConwayEraGov era
   , ConwayEraCertState era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
+  , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
   ) =>
   Embed (DijkstraSUBLEDGER era) (DijkstraSUBLEDGERS era)
   where

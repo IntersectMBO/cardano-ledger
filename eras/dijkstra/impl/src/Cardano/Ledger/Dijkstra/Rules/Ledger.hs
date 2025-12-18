@@ -73,7 +73,13 @@ import Cardano.Ledger.Conway.Rules (
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraGOV, DijkstraLEDGER, DijkstraUTXOW)
+import Cardano.Ledger.Dijkstra.Era (
+  DijkstraEra,
+  DijkstraGOV,
+  DijkstraLEDGER,
+  DijkstraSUBGOV,
+  DijkstraUTXOW,
+ )
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
@@ -395,6 +401,7 @@ instance
   , EraRule "LEDGER" era ~ DijkstraLEDGER era
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
+  , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
@@ -474,10 +481,13 @@ instance
   wrapEvent = CertsEvent . CertEvent . DelegEvent
 
 instance
-  ( ConwayEraGov era
+  ( EraTx era
+  , ConwayEraTxBody era
+  , ConwayEraGov era
   , ConwayEraCertState era
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
+  , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)
   where

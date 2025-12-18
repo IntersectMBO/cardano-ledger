@@ -210,7 +210,9 @@ instance
   ToExpr (Event (EraRule "LEDGER" era)) =>
   ToExpr (DijkstraMempoolEvent era)
 
-instance ToExpr (DijkstraSubLedgerPredFailure era)
+instance
+  ToExpr (PredicateFailure (EraRule "SUBGOV" era)) =>
+  ToExpr (DijkstraSubLedgerPredFailure era)
 
 instance
   ToExpr (PredicateFailure (EraRule "SUBLEDGER" era)) =>

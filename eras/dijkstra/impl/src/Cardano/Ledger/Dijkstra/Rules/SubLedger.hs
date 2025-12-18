@@ -1,10 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -25,13 +27,26 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules (
+  GovEnv (..),
+  GovSignal (..),
+  gsCertificates,
+  gsProposalProcedures,
+  gsVotingProcedures,
+ )
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraSUBLEDGER)
+import Cardano.Ledger.Dijkstra.Era (
+  DijkstraEra,
+  DijkstraSUBGOV,
+  DijkstraSUBLEDGER,
+ )
+import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovPredFailure (..))
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv)
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), epochFromSlot)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
+  Embed (..),
   Environment,
   Event,
   PredicateFailure,
@@ -41,25 +56,46 @@ import Control.State.Transition.Extended (
   TRC (TRC),
   TransitionRule,
   judgmentContext,
+  liftSTS,
+  trans,
   transitionRules,
  )
-import Data.Typeable (Typeable)
-import Data.Void (Void)
+import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
-data DijkstraSubLedgerPredFailure era = DijkstraSubLedgerPredFailure
-  deriving (Show, Eq, Generic)
+data DijkstraSubLedgerPredFailure era
+  = SubGovFailure (PredicateFailure (EraRule "SUBGOV" era))
+  deriving (Generic)
 
-instance NoThunks (DijkstraSubLedgerPredFailure era)
+deriving stock instance
+  Eq (PredicateFailure (EraRule "SUBGOV" era)) => Eq (DijkstraSubLedgerPredFailure era)
 
-instance NFData (DijkstraSubLedgerPredFailure era)
+deriving stock instance
+  Show (PredicateFailure (EraRule "SUBGOV" era)) => Show (DijkstraSubLedgerPredFailure era)
 
-instance Era era => EncCBOR (DijkstraSubLedgerPredFailure era) where
-  encCBOR _ = encCBOR ()
+instance
+  NoThunks (PredicateFailure (EraRule "SUBGOV" era)) =>
+  NoThunks (DijkstraSubLedgerPredFailure era)
 
-instance Typeable era => DecCBOR (DijkstraSubLedgerPredFailure era) where
-  decCBOR = decCBOR @() *> pure DijkstraSubLedgerPredFailure
+instance NFData (PredicateFailure (EraRule "SUBGOV" era)) => NFData (DijkstraSubLedgerPredFailure era)
+
+instance
+  ( Era era
+  , EncCBOR (PredicateFailure (EraRule "SUBGOV" era))
+  ) =>
+  EncCBOR (DijkstraSubLedgerPredFailure era)
+  where
+  encCBOR (SubGovFailure e) = encCBOR e
+
+instance
+  ( Era era
+  , DecCBOR (PredicateFailure (EraRule "SUBGOV" era))
+  ) =>
+  DecCBOR (DijkstraSubLedgerPredFailure era)
+  where
+  decCBOR = SubGovFailure <$> decCBOR
 
 type instance EraRuleFailure "SUBLEDGER" DijkstraEra = DijkstraSubLedgerPredFailure DijkstraEra
 
@@ -67,11 +103,17 @@ type instance EraRuleEvent "SUBLEDGER" DijkstraEra = VoidEraRule "SUBLEDGER" Dij
 
 instance InjectRuleFailure "SUBLEDGER" DijkstraSubLedgerPredFailure DijkstraEra
 
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubGovPredFailure DijkstraEra where
+  injectFailure = SubGovFailure
+
 instance
-  ( Era era
+  ( EraTx era
+  , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
+  , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
+  , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
   ) =>
   STS (DijkstraSUBLEDGER era)
   where
@@ -84,7 +126,57 @@ instance
 
   transitionRules = [dijkstraSubLedgersTransition @era]
 
-dijkstraSubLedgersTransition :: TransitionRule (EraRule "SUBLEDGER" era)
+dijkstraSubLedgersTransition ::
+  forall era.
+  ( EraTx era
+  , ConwayEraTxBody era
+  , ConwayEraGov era
+  , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
+  , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
+  , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
+  , STS (EraRule "SUBLEDGER" era)
+  ) =>
+  TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
-  TRC (_, st, _) <- judgmentContext
-  pure st
+  TRC
+    ( LedgerEnv slot mbCurEpochNo _ pp _
+      , ledgerState
+      , tx
+      ) <-
+    judgmentContext
+
+  curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
+  let txBody = tx ^. bodyTxL
+  let govState = ledgerState ^. lsUTxOStateL . utxosGovStateL
+  let govEnv =
+        GovEnv
+          (txIdTxBody txBody)
+          curEpochNo
+          pp
+          (govState ^. constitutionGovStateL . constitutionGuardrailsScriptHashL)
+          (ledgerState ^. lsCertStateL)
+          (govState ^. committeeGovStateL)
+  let govSignal =
+        GovSignal
+          { gsVotingProcedures = txBody ^. votingProceduresTxBodyL
+          , gsProposalProcedures = txBody ^. proposalProceduresTxBodyL
+          , gsCertificates = txBody ^. certsTxBodyL
+          }
+  proposals <-
+    trans @(EraRule "SUBGOV" era) $
+      TRC
+        ( govEnv
+        , govState ^. proposalsGovStateL
+        , govSignal
+        )
+  pure $ ledgerState & lsUTxOStateL . utxosGovStateL . proposalsGovStateL .~ proposals
+
+instance
+  ( ConwayEraGov era
+  , ConwayEraCertState era
+  , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
+  ) =>
+  Embed (DijkstraSUBGOV era) (DijkstraSUBLEDGER era)
+  where
+  wrapFailed = SubGovFailure
+  wrapEvent = absurd
