@@ -76,7 +76,7 @@
   - `BHeaderView`
   - `Block`
 * Add a `Generic` instance for `BHeaderView`
-* Add `impEventsFrom`, `impTransactionsFrom`
+* Add `impEventsFrom`, `impRecordSubmittedTxs`
 * Change type of `ImpTestState.impEvents` field from `[]` to `Seq`
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Add `ToCBOR (StashedAVVMAddresses era)` superclass to `ShelleyEraTest`

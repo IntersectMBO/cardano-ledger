@@ -161,8 +161,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withPostFixup,
   withPreFixup,
   impEventsFrom,
-  impTransactionsFrom,
-  impWithoutRecordingTxs,
+  impRecordSubmittedTxs,
   impNESL,
   impGlobalsL,
   impCurSlotNoG,
@@ -366,7 +365,7 @@ data ImpTestState era = ImpTestState
   , impCurSlotNo :: !SlotNo
   , impGlobals :: !Globals
   , impEvents :: Seq (SomeSTSEvent era)
-  , impRecordedTransactions :: !(StrictMaybe (StrictSeq (Tx TopTx era)))
+  , impRecordedTxs :: !(StrictMaybe (StrictSeq (Tx TopTx era)))
   -- ^ When this is set to `SNothing` transactions are not being recorded.
   -- This should never be switched to `Just` outside of simulations.
   }
@@ -434,8 +433,8 @@ impNativeScriptsG = impNativeScriptsL
 impEventsL :: Lens' (ImpTestState era) (Seq (SomeSTSEvent era))
 impEventsL = lens impEvents (\x y -> x {impEvents = y})
 
-impRecordedTransactionsL :: Lens' (ImpTestState era) (StrictMaybe (StrictSeq (Tx TopTx era)))
-impRecordedTransactionsL = lens impRecordedTransactions (\x y -> x {impRecordedTransactions = y})
+impRecordedTxsL :: Lens' (ImpTestState era) (StrictMaybe (StrictSeq (Tx TopTx era)))
+impRecordedTxsL = lens impRecordedTxs (\x y -> x {impRecordedTxs = y})
 
 class
   ( ShelleyEraTest era
@@ -682,7 +681,7 @@ defaultInitImpTestState nes = do
       , impCurSlotNo = slotNo
       , impGlobals = globals
       , impEvents = mempty
-      , impRecordedTransactions = mempty
+      , impRecordedTxs = mempty
       }
 
 withEachEraVersion ::
@@ -954,24 +953,22 @@ impEventsFrom ::
   ImpTestM era [SomeSTSEvent era]
 impEventsFrom = fmap (toList . snd) . listen
 
-impTransactionsFrom ::
+-- | Returns fixed up versions of all transactions that have been submitted by the supplied action.
+-- Will result in a runtime exception if invoked again anywhere within the supplied action.
+impRecordSubmittedTxs ::
+  ShelleyEraImp era =>
   ImpTestM era () ->
   ImpTestM era (StrictSeq (Tx TopTx era))
-impTransactionsFrom act = do
-  mTxsPrev <- use impRecordedTransactionsL
-  impRecordedTransactionsL .= SJust mempty
+impRecordSubmittedTxs act = do
+  mTxsPrev <- use impRecordedTxsL
+  forM_ mTxsPrev $ \txsPrev -> do
+    logToExpr txsPrev
+    assertFailure "Detected a recursive attempt to record transactions"
+  impRecordedTxsL .= SJust mempty
   act
-  mTxsDuring <- use impRecordedTransactionsL
-  impRecordedTransactionsL .= liftA2 (<>) mTxsPrev mTxsDuring
+  mTxsDuring <- use impRecordedTxsL
+  impRecordedTxsL .= mTxsPrev
   pure $ fold mTxsDuring
-
-impWithoutRecordingTxs :: ImpTestM era a -> ImpTestM era a
-impWithoutRecordingTxs act = do
-  prev <- use impRecordedTransactionsL
-  impRecordedTransactionsL .= SNothing
-  res <- act
-  impRecordedTransactionsL .= prev
-  pure res
 
 runShelleyBase :: ShelleyBase a -> ImpTestM era a
 runShelleyBase act = do
@@ -1271,7 +1268,7 @@ trySubmitTx tx = do
       impNESL . nesEsL . esLStateL .= newState
       tell . Seq.fromList $ SomeSTSEvent @era @"LEDGER" <$> events
 
-      modify' $ impRecordedTransactionsL %~ fmap (SSeq.|> txFixed)
+      modify' $ impRecordedTxsL %~ fmap (SSeq.|> txFixed)
 
       ImpTestState {impRootTxIn} <- get
       UTxO utxo <- getUTxO
@@ -1425,7 +1422,7 @@ withTxsInBlockEither ::
     )
 withTxsInBlockEither act = do
   stateBefore <- get
-  txs <- impTransactionsFrom act
+  txs <- impRecordSubmittedTxs act
   stateAfter <- get
   put stateBefore
   tryTxsInBlock txs stateAfter
