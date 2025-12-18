@@ -103,3 +103,19 @@ source-repository-package
   subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
   --sha256: 1sprdlsgj0b4s9fw0hybl19yfnqdahkskkmw9mq5ng23f80qwbvs
   tag: 55d9af32aab35909a4f083797876d3e802835225
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  --sha256: sha256-L+HRKg20a5GtxeF4+IXf2vIhTpsCwIWqUViGykjYuLE=
+  tag: 1338d1f5bd4f8c8a73f0a69b22de1e878cbff036
+  subdir:
+    base-deriving-via
+    cardano-base
+    cardano-binary
+    cardano-crypto-class
+    cardano-crypto-praos
+    cardano-slotting
+    cardano-strict-containers
+    heapwords
+    measures
