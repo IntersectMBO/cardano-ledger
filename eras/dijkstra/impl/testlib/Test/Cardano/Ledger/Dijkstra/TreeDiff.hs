@@ -45,6 +45,7 @@ import Cardano.Ledger.Dijkstra.Rules (
   DijkstraSubGovPredFailure,
   DijkstraSubLedgerPredFailure,
   DijkstraSubLedgersPredFailure,
+  DijkstraSubUtxoPredFailure,
   DijkstraSubUtxosPredFailure,
   DijkstraUtxoPredFailure,
   DijkstraUtxowPredFailure,
@@ -220,5 +221,7 @@ instance
   ToExpr (DijkstraSubLedgersPredFailure era)
 
 instance ToExpr (DijkstraSubGovPredFailure era)
+
+instance ToExpr (DijkstraSubUtxoPredFailure era)
 
 instance ToExpr (DijkstraSubUtxosPredFailure era)
