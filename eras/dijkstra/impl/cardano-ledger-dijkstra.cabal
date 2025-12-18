@@ -65,6 +65,7 @@ library
     Cardano.Ledger.Dijkstra.Rules.SubLedgers
     Cardano.Ledger.Dijkstra.Rules.SubUtxo
     Cardano.Ledger.Dijkstra.Rules.SubUtxos
+    Cardano.Ledger.Dijkstra.Rules.SubUtxow
     Cardano.Ledger.Dijkstra.Rules.Utxo
     Cardano.Ledger.Dijkstra.Rules.Utxos
     Cardano.Ledger.Dijkstra.Rules.Utxow
