@@ -95,3 +95,19 @@ if impl(ghc >=9.12)
   allow-newer:
     -- Unique: https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  --sha256: sha256-wRqAU/CBzQCrRNrBo8wTtwoVacYi8DTxbjkiuNCS5bE=
+  tag: 6974b7053907594becec12ba49b2352c9b73b42f
+  subdir:
+    base-deriving-via
+    cardano-base
+    cardano-binary
+    cardano-crypto-class
+    cardano-crypto-praos
+    cardano-slotting
+    cardano-strict-containers
+    heapwords
+    measures
