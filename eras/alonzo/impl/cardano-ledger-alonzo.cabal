@@ -159,6 +159,7 @@ library testlib
     Test.Cardano.Ledger.Alonzo.Era
     Test.Cardano.Ledger.Alonzo.Examples
     Test.Cardano.Ledger.Alonzo.Imp
+    Test.Cardano.Ledger.Alonzo.Imp.BbodySpec
     Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec
     Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec
     Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec

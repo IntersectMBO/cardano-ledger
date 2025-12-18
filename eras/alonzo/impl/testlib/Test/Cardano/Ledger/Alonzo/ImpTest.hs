@@ -55,6 +55,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   evalTxExUnits,
  )
 import Cardano.Ledger.Alonzo.Rules (
+  AlonzoBbodyPredFailure,
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure (..),
   AlonzoUtxowPredFailure,
@@ -128,6 +129,7 @@ class
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   ) =>
   AlonzoEraImp era
   where
@@ -427,8 +429,8 @@ instance ShelleyEraImp AlonzoEra where
               }
         , agMaxBlockExUnits =
             ExUnits
-              { exUnitsMem = 50_000_000
-              , exUnitsSteps = 40_000_000_000
+              { exUnitsMem = 200_000_000
+              , exUnitsSteps = 200_000_000_000
               }
         , agMaxValSize = 5000
         , agCollateralPercentage = 150
