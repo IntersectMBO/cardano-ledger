@@ -232,8 +232,11 @@ instance
 instance Arbitrary (DijkstraSubUtxosPredFailure era) where
   arbitrary = pure DijkstraSubUtxosPredFailure
 
-instance Arbitrary (DijkstraSubUtxowPredFailure era) where
-  arbitrary = pure DijkstraSubUtxowPredFailure
+instance
+  Arbitrary (PredicateFailure (EraRule "SUBUTXO" era)) =>
+  Arbitrary (DijkstraSubUtxowPredFailure era)
+  where
+  arbitrary = genericArbitraryU
 
 instance Arbitrary PerasCert where
   arbitrary = pure PerasCert
