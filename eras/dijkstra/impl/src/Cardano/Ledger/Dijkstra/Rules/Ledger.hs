@@ -77,6 +77,7 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraGOV, DijkstraLEDGER, Di
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
@@ -393,6 +394,7 @@ instance
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ DijkstraLEDGER era
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
+  , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
@@ -475,6 +477,7 @@ instance
   ( ConwayEraGov era
   , ConwayEraCertState era
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
+  , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)
   where
