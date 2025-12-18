@@ -24,6 +24,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer,
   SlotNo,
   UnitInterval,
+  Nonce
  )
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
@@ -35,6 +36,7 @@ import Cardano.Ledger.Conway.Governance (
   Vote (..),
  )
 import Cardano.Ledger.Conway.PParams
+import qualified Cardano.Ledger.Hashes as H
 import Cardano.Ledger.Conway.SCLS
 import Cardano.Ledger.Conway.SCLS.Arbitrary ()
 import Cardano.Ledger.Core
@@ -129,6 +131,9 @@ spec = do
       validateType @"gov/committee/v0" @(Anchor) "anchor"
       validateType @"gov/proposals/v0" @(EpochNo) "epoch_no"
       validateType @"utxo/v0" @(SlotNo) "slot_no"
+    describe "nonces/v0" $ do
+      validateType @"nonces/v0" @(Nonce) "nonce"
+      validateType @"nonces/v0" @(H.Hash H.HASH Nonce) "hash32"
 
 isCanonical ::
   forall ns a. (KnownSymbol ns, ToCanonicalCBOR ns a, Typeable a, Arbitrary a, Show a) => Spec

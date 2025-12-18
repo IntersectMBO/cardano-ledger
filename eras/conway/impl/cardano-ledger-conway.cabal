@@ -258,6 +258,7 @@ library scls
     Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution
     Cardano.Ledger.Conway.SCLS.Namespace.GovPParams
     Cardano.Ledger.Conway.SCLS.Namespace.GovProposals
+    Cardano.Ledger.Conway.SCLS.Namespace.Nonces
     Cardano.Ledger.Conway.SCLS.Namespace.PoolStake
     Cardano.Ledger.Conway.SCLS.Namespace.Pots
     Cardano.Ledger.Conway.SCLS.Namespace.Snapshots
@@ -279,6 +280,8 @@ library scls
   build-depends:
     base,
     bytestring,
+    -- cardano-crypto-wrapper,
+    cardano-crypto-class,
     cardano-ledger-allegra,
     cardano-ledger-alonzo,
     cardano-ledger-babbage,
