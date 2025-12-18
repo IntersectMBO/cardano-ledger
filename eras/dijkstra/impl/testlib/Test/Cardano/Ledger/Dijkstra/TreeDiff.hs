@@ -198,6 +198,10 @@ instance
   ToExpr (Event (EraRule "LEDGER" era)) =>
   ToExpr (DijkstraMempoolEvent era)
 
+instance ToExpr (DijkstraSubCertPredFailure era)
+
+instance ToExpr (DijkstraSubCertsPredFailure era)
+
 instance ToExpr (DijkstraSubDelegPredFailure era)
 
 instance

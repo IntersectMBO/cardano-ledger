@@ -222,6 +222,12 @@ instance
   where
   arbitrary = genericArbitraryU
 
+instance Arbitrary (DijkstraSubCertPredFailure era) where
+  arbitrary = pure DijkstraSubCertPredFailure
+
+instance Arbitrary (DijkstraSubCertsPredFailure era) where
+  arbitrary = pure DijkstraSubCertsPredFailure
+
 instance Arbitrary (DijkstraSubDelegPredFailure era) where
   arbitrary = pure DijkstraSubDelegPredFailure
 

@@ -60,6 +60,8 @@ library
     Cardano.Ledger.Dijkstra.Rules.Ledgers
     Cardano.Ledger.Dijkstra.Rules.Mempool
     Cardano.Ledger.Dijkstra.Rules.Pool
+    Cardano.Ledger.Dijkstra.Rules.SubCert
+    Cardano.Ledger.Dijkstra.Rules.SubCerts
     Cardano.Ledger.Dijkstra.Rules.SubDeleg
     Cardano.Ledger.Dijkstra.Rules.SubGov
     Cardano.Ledger.Dijkstra.Rules.SubGovCert

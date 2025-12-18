@@ -14,6 +14,8 @@ module Cardano.Ledger.Dijkstra.Era (
   DijkstraGOVCERT,
   DijkstraLEDGER,
   DijkstraMEMPOOL,
+  DijkstraSUBCERT,
+  DijkstraSUBCERTS,
   DijkstraSUBDELEG,
   DijkstraSUBGOV,
   DijkstraSUBGOVCERT,
@@ -84,6 +86,14 @@ type instance EraRule "SUBLEDGERS" DijkstraEra = DijkstraSUBLEDGERS DijkstraEra
 data DijkstraSUBLEDGER era
 
 type instance EraRule "SUBLEDGER" DijkstraEra = DijkstraSUBLEDGER DijkstraEra
+
+data DijkstraSUBCERTS era
+
+type instance EraRule "SUBCERTS" DijkstraEra = DijkstraSUBCERTS DijkstraEra
+
+data DijkstraSUBCERT era
+
+type instance EraRule "SUBCERT" DijkstraEra = DijkstraSUBCERT DijkstraEra
 
 data DijkstraSUBDELEG era
 
