@@ -35,22 +35,7 @@ import Cardano.Ledger.Dijkstra.Core (
   Value,
  )
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams)
-import Cardano.Ledger.Dijkstra.Rules (
-  DijkstraBbodyPredFailure,
-  DijkstraGovCertPredFailure,
-  DijkstraGovPredFailure,
-  DijkstraLedgerPredFailure,
-  DijkstraMempoolEvent,
-  DijkstraMempoolPredFailure,
-  DijkstraSubGovPredFailure,
-  DijkstraSubLedgerPredFailure,
-  DijkstraSubLedgersPredFailure,
-  DijkstraSubUtxoPredFailure,
-  DijkstraSubUtxosPredFailure,
-  DijkstraSubUtxowPredFailure,
-  DijkstraUtxoPredFailure,
-  DijkstraUtxowPredFailure,
- )
+import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript,
   DijkstraNativeScriptRaw,
@@ -213,6 +198,8 @@ instance
   ToExpr (Event (EraRule "LEDGER" era)) =>
   ToExpr (DijkstraMempoolEvent era)
 
+instance ToExpr (DijkstraSubDelegPredFailure era)
+
 instance
   ( ToExpr (PredicateFailure (EraRule "SUBGOV" era))
   , ToExpr (PredicateFailure (EraRule "SUBUTXOW" era))
@@ -224,6 +211,10 @@ instance
   ToExpr (DijkstraSubLedgersPredFailure era)
 
 instance ToExpr (DijkstraSubGovPredFailure era)
+
+instance ToExpr (DijkstraSubGovCertPredFailure era)
+
+instance ToExpr (DijkstraSubPoolPredFailure era)
 
 instance
   ToExpr (PredicateFailure (EraRule "SUBUTXOS" era)) =>

@@ -10,9 +10,12 @@ module Cardano.Ledger.Dijkstra.Rules (
   module Cardano.Ledger.Dijkstra.Rules.GovCert,
   module Cardano.Ledger.Dijkstra.Rules.Ledger,
   module Cardano.Ledger.Dijkstra.Rules.Mempool,
+  module Cardano.Ledger.Dijkstra.Rules.SubDeleg,
+  module Cardano.Ledger.Dijkstra.Rules.SubGovCert,
   module Cardano.Ledger.Dijkstra.Rules.SubGov,
   module Cardano.Ledger.Dijkstra.Rules.SubLedger,
   module Cardano.Ledger.Dijkstra.Rules.SubLedgers,
+  module Cardano.Ledger.Dijkstra.Rules.SubPool,
   module Cardano.Ledger.Dijkstra.Rules.SubUtxo,
   module Cardano.Ledger.Dijkstra.Rules.SubUtxos,
   module Cardano.Ledger.Dijkstra.Rules.SubUtxow,
@@ -38,9 +41,12 @@ import Cardano.Ledger.Dijkstra.Rules.Ledger
 import Cardano.Ledger.Dijkstra.Rules.Ledgers ()
 import Cardano.Ledger.Dijkstra.Rules.Mempool
 import Cardano.Ledger.Dijkstra.Rules.Pool ()
+import Cardano.Ledger.Dijkstra.Rules.SubDeleg
 import Cardano.Ledger.Dijkstra.Rules.SubGov
+import Cardano.Ledger.Dijkstra.Rules.SubGovCert
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
+import Cardano.Ledger.Dijkstra.Rules.SubPool
 import Cardano.Ledger.Dijkstra.Rules.SubUtxo
 import Cardano.Ledger.Dijkstra.Rules.SubUtxos
 import Cardano.Ledger.Dijkstra.Rules.SubUtxow
