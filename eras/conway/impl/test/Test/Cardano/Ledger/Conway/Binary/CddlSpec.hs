@@ -81,7 +81,8 @@ spec = do
       -- TxBody
       huddleRoundTripAnnCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(TxBody TopTx ConwayEra) v "transaction_body"
+      xdescribe "fix certs" $
+        huddleRoundTripArbitraryValidate @(TxBody TopTx ConwayEra) v "transaction_body"
       huddleRoundTripCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
       -- AuxData
       huddleRoundTripAnnCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
@@ -119,7 +120,7 @@ spec = do
       -- PParamsUpdate
       huddleRoundTripCborSpec @(PParamsUpdate ConwayEra) v "protocol_param_update"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $
+      xdescribe "fix unit_interval" $
         huddleRoundTripArbitraryValidate @(PParamsUpdate ConwayEra) v "protocol_param_update"
       -- CostModels
       huddleRoundTripCborSpec @CostModels v "cost_models"
@@ -132,7 +133,8 @@ spec = do
       -- Tx
       huddleRoundTripAnnCborSpec @(Tx TopTx ConwayEra) v "transaction"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(Tx TopTx ConwayEra) v "transaction"
+      xdescribe "fix transaction_body" $
+        huddleRoundTripArbitraryValidate @(Tx TopTx ConwayEra) v "transaction"
       huddleRoundTripCborSpec @(Tx TopTx ConwayEra) v "transaction"
       -- VotingProcedure
       huddleRoundTripCborSpec @(VotingProcedure ConwayEra) v "voting_procedure"
@@ -145,7 +147,8 @@ spec = do
       -- GovAction
       huddleRoundTripCborSpec @(GovAction ConwayEra) v "gov_action"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(GovAction ConwayEra) v "gov_action"
+      xdescribe "fix protocol_param_update" $
+        huddleRoundTripArbitraryValidate @(GovAction ConwayEra) v "gov_action"
       -- TxCert
       huddleRoundTripCborSpec @(TxCert ConwayEra) v "certificate"
       -- TODO this fails because of the hard-coded `unit_interval` in the CDDL

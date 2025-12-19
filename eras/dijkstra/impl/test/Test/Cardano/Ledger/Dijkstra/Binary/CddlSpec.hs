@@ -91,7 +91,7 @@ spec = do
         huddleRoundTripAnnCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleRoundTripCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $
+      xdescribe "fix certificate" $
         huddleRoundTripArbitraryValidate @(TxBody TopTx DijkstraEra) v "transaction_body"
       huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
       -- TODO fails because of plutus scripts
@@ -126,7 +126,7 @@ spec = do
         huddleRoundTripArbitraryValidate @(TxWits DijkstraEra) v "transaction_witness_set"
       huddleRoundTripCborSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ do
+      xdescribe "fix unit_interval" $
         huddleRoundTripArbitraryValidate @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       huddleRoundTripCborSpec @CostModels v "cost_models"
       huddleRoundTripArbitraryValidate @CostModels v "cost_models"
@@ -138,7 +138,8 @@ spec = do
         huddleRoundTripAnnCborSpec @(Tx TopTx DijkstraEra) v "transaction"
         huddleRoundTripCborSpec @(Tx TopTx DijkstraEra) v "transaction"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(Tx TopTx DijkstraEra) v "transaction"
+      xdescribe "fix transaction_body" $
+        huddleRoundTripArbitraryValidate @(Tx TopTx DijkstraEra) v "transaction"
       huddleRoundTripCborSpec @(VotingProcedure DijkstraEra) v "voting_procedure"
       huddleRoundTripArbitraryValidate @(VotingProcedure DijkstraEra) v "voting_procedure"
       huddleRoundTripCborSpec @(ProposalProcedure DijkstraEra) v "proposal_procedure"
@@ -147,7 +148,8 @@ spec = do
         huddleRoundTripArbitraryValidate @(ProposalProcedure DijkstraEra) v "proposal_procedure"
       huddleRoundTripCborSpec @(GovAction DijkstraEra) v "gov_action"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(GovAction DijkstraEra) v "gov_action"
+      describe "fix protocol_param_update" $
+        huddleRoundTripArbitraryValidate @(GovAction DijkstraEra) v "gov_action"
       xdescribe "fix TxCert" $ do
         huddleRoundTripCborSpec @(TxCert DijkstraEra) v "certificate"
       -- TODO this fails because of the hard-coded `unit_interval` in the CDDL
