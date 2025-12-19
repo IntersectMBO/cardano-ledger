@@ -30,14 +30,20 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
+  DijkstraSUBCERT,
+  DijkstraSUBCERTS,
+  DijkstraSUBDELEG,
   DijkstraSUBGOV,
+  DijkstraSUBGOVCERT,
   DijkstraSUBLEDGER,
   DijkstraSUBLEDGERS,
+  DijkstraSUBPOOL,
   DijkstraSUBUTXO,
   DijkstraSUBUTXOS,
   DijkstraSUBUTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubLedger (DijkstraSubLedgerPredFailure (..))
+import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (LedgerEnv)
 import Cardano.Ledger.TxIn (TxId)
@@ -134,6 +140,12 @@ instance
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
+  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
+  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
+  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
+  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
+  , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGER era) (DijkstraSUBLEDGERS era)
   where

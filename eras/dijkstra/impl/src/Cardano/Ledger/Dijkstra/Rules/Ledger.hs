@@ -77,7 +77,12 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraGOV,
   DijkstraLEDGER,
+  DijkstraSUBCERT,
+  DijkstraSUBCERTS,
+  DijkstraSUBDELEG,
   DijkstraSUBGOV,
+  DijkstraSUBGOVCERT,
+  DijkstraSUBPOOL,
   DijkstraSUBUTXO,
   DijkstraSUBUTXOS,
   DijkstraSUBUTXOW,
@@ -91,6 +96,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedgers
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody
+import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -408,10 +414,16 @@ instance
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
+  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
+  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
+  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
+  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubLedgersPredFailure era
+  , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (ShelleyLEDGERS era)
   where
@@ -497,6 +509,12 @@ instance
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
+  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
+  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
+  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
+  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
+  , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)
   where

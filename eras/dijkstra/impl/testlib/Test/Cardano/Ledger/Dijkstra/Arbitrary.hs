@@ -216,6 +216,7 @@ instance
 
 instance
   ( Arbitrary (PredicateFailure (EraRule "SUBGOV" era))
+  , Arbitrary (PredicateFailure (EraRule "SUBCERTS" era))
   , Arbitrary (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   Arbitrary (DijkstraSubLedgerPredFailure era)

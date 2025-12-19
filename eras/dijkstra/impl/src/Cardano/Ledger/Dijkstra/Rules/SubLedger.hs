@@ -40,14 +40,21 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
+  DijkstraSUBCERT,
+  DijkstraSUBCERTS,
+  DijkstraSUBDELEG,
   DijkstraSUBGOV,
+  DijkstraSUBGOVCERT,
   DijkstraSUBLEDGER,
+  DijkstraSUBPOOL,
   DijkstraSUBUTXO,
   DijkstraSUBUTXOS,
   DijkstraSUBUTXOW,
  )
+import Cardano.Ledger.Dijkstra.Rules.SubCerts (DijkstraSubCertsPredFailure (..), SubCertsEnv (..))
 import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure (..))
+import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -71,6 +78,7 @@ import Control.State.Transition.Extended (
   trans,
   transitionRules,
  )
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -78,29 +86,34 @@ import NoThunks.Class (NoThunks (..))
 
 data DijkstraSubLedgerPredFailure era
   = SubUtxowFailure (PredicateFailure (EraRule "SUBUTXOW" era))
+  | SubCertsFailure (PredicateFailure (EraRule "SUBCERTS" era))
   | SubGovFailure (PredicateFailure (EraRule "SUBGOV" era))
   deriving (Generic)
 
 deriving stock instance
   ( Eq (PredicateFailure (EraRule "SUBGOV" era))
+  , Eq (PredicateFailure (EraRule "SUBCERTS" era))
   , Eq (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   Eq (DijkstraSubLedgerPredFailure era)
 
 deriving stock instance
   ( Show (PredicateFailure (EraRule "SUBGOV" era))
+  , Show (PredicateFailure (EraRule "SUBCERTS" era))
   , Show (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   Show (DijkstraSubLedgerPredFailure era)
 
 instance
   ( NoThunks (PredicateFailure (EraRule "SUBGOV" era))
+  , NoThunks (PredicateFailure (EraRule "SUBCERTS" era))
   , NoThunks (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   NoThunks (DijkstraSubLedgerPredFailure era)
 
 instance
   ( NFData (PredicateFailure (EraRule "SUBGOV" era))
+  , NFData (PredicateFailure (EraRule "SUBCERTS" era))
   , NFData (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   NFData (DijkstraSubLedgerPredFailure era)
@@ -108,6 +121,7 @@ instance
 instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "SUBGOV" era))
+  , EncCBOR (PredicateFailure (EraRule "SUBCERTS" era))
   , EncCBOR (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   EncCBOR (DijkstraSubLedgerPredFailure era)
@@ -116,10 +130,12 @@ instance
     encode . \case
       SubUtxowFailure e -> Sum (SubUtxowFailure @era) 1 !> To e
       SubGovFailure e -> Sum (SubGovFailure @era) 2 !> To e
+      SubCertsFailure e -> Sum (SubCertsFailure @era) 3 !> To e
 
 instance
   ( Era era
   , DecCBOR (PredicateFailure (EraRule "SUBGOV" era))
+  , DecCBOR (PredicateFailure (EraRule "SUBCERTS" era))
   , DecCBOR (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   DecCBOR (DijkstraSubLedgerPredFailure era)
@@ -127,6 +143,7 @@ instance
   decCBOR = decode . Summands "DijkstraSubLedgerPredFailure" $ \case
     1 -> SumD SubUtxowFailure <! From
     2 -> SumD SubGovFailure <! From
+    3 -> SumD SubCertsFailure <! From
     n -> Invalid n
 
 type instance EraRuleFailure "SUBLEDGER" DijkstraEra = DijkstraSubLedgerPredFailure DijkstraEra
@@ -141,6 +158,9 @@ instance InjectRuleFailure "SUBLEDGER" DijkstraSubGovPredFailure DijkstraEra whe
 instance InjectRuleFailure "SUBLEDGER" DijkstraSubUtxowPredFailure DijkstraEra where
   injectFailure = SubUtxowFailure
 
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubCertsPredFailure DijkstraEra where
+  injectFailure = SubCertsFailure
+
 instance
   ( EraTx era
   , ConwayEraTxBody era
@@ -151,8 +171,15 @@ instance
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
+  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
+  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
+  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
+  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
   , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
   , Embed (EraRule "SUBUTXOW" era) (DijkstraSUBLEDGER era)
+  , Embed (EraRule "SUBCERTS" era) (DijkstraSUBCERTS era)
+  , TxCert era ~ DijkstraTxCert era
   ) =>
   STS (DijkstraSUBLEDGER era)
   where
@@ -170,12 +197,19 @@ dijkstraSubLedgersTransition ::
   ( EraTx era
   , ConwayEraTxBody era
   , ConwayEraGov era
+  , ConwayEraCertState era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
+  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
+  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
+  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
+  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
   , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
   , Embed (EraRule "SUBUTXOW" era) (DijkstraSUBLEDGER era)
   , STS (EraRule "SUBLEDGER" era)
+  , TxCert era ~ DijkstraTxCert era
   ) =>
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
@@ -189,25 +223,34 @@ dijkstraSubLedgersTransition = do
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
   let txBody = tx ^. bodyTxL
   let govState = ledgerState ^. lsUTxOStateL . utxosGovStateL
+  let committee = govState ^. committeeGovStateL
+  let proposals = govState ^. proposalsGovStateL
+  certStateAfterSubCerts <-
+    trans @(EraRule "SUBCERTS" era) $
+      TRC
+        ( SubCertsEnv tx pp curEpochNo committee (proposalsWithPurpose grCommitteeL proposals)
+        , ledgerState ^. lsCertStateL
+        , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+        )
   let govEnv =
         GovEnv
           (txIdTxBody txBody)
           curEpochNo
           pp
           (govState ^. constitutionGovStateL . constitutionGuardrailsScriptHashL)
-          (ledgerState ^. lsCertStateL)
-          (govState ^. committeeGovStateL)
+          certStateAfterSubCerts
+          committee
   let govSignal =
         GovSignal
           { gsVotingProcedures = txBody ^. votingProceduresTxBodyL
           , gsProposalProcedures = txBody ^. proposalProceduresTxBodyL
           , gsCertificates = txBody ^. certsTxBodyL
           }
-  proposals <-
+  proposalsState <-
     trans @(EraRule "SUBGOV" era) $
       TRC
         ( govEnv
-        , govState ^. proposalsGovStateL
+        , proposals
         , govSignal
         )
 
@@ -221,7 +264,8 @@ dijkstraSubLedgersTransition = do
   pure $
     ledgerState
       & lsUTxOStateL .~ utxoStateAfterSubUtxow
-      & lsUTxOStateL . utxosGovStateL . proposalsGovStateL .~ proposals
+      & lsUTxOStateL . utxosGovStateL . proposalsGovStateL .~ proposalsState
+      & lsCertStateL .~ certStateAfterSubCerts
 
 instance
   ( ConwayEraGov era
@@ -243,4 +287,19 @@ instance
   Embed (DijkstraSUBUTXOW era) (DijkstraSUBLEDGER era)
   where
   wrapFailed = SubUtxowFailure
+  wrapEvent = absurd
+
+instance
+  ( ConwayEraGov era
+  , ConwayEraCertState era
+  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
+  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
+  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
+  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
+  , TxCert era ~ DijkstraTxCert era
+  ) =>
+  Embed (DijkstraSUBCERTS era) (DijkstraSUBLEDGER era)
+  where
+  wrapFailed = SubCertsFailure
   wrapEvent = absurd

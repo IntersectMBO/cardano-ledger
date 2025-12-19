@@ -213,6 +213,7 @@ instance ToExpr (DijkstraSubDelegPredFailure era)
 
 instance
   ( ToExpr (PredicateFailure (EraRule "SUBGOV" era))
+  , ToExpr (PredicateFailure (EraRule "SUBCERTS" era))
   , ToExpr (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   ToExpr (DijkstraSubLedgerPredFailure era)
