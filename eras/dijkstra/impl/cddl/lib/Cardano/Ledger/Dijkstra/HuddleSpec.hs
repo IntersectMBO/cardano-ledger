@@ -33,12 +33,12 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
 
 import Cardano.Ledger.Conway.HuddleSpec hiding ()
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import Data.Text ()
 import Data.Word (Word64)
+import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -55,83 +55,55 @@ dijkstraCDDL =
     ]
 
 guardsRule ::
-  forall era.
-  ( HuddleRule "addr_keyhash" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "addr_keyhash" era
   , HuddleRule "credential" era
   , HuddleRule1 "nonempty_set" era
   , HuddleRule1 "nonempty_oset" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-guardsRule p =
-  "guards"
-    =:= huddleRule1 @"nonempty_set" p (huddleRule @"addr_keyhash" p)
+guardsRule pname p =
+  pname
+    =.= huddleRule1 @"nonempty_set" p (huddleRule @"addr_keyhash" p)
     / huddleRule1 @"nonempty_oset" p (huddleRule @"credential" p)
 
 subTransactionsRule ::
-  forall era.
-  ( HuddleRule "transaction_input" era
-  , HuddleRule "transaction_output" era
-  , HuddleRule "slot" era
-  , HuddleRule "certificates" era
-  , HuddleRule "withdrawals" era
-  , HuddleRule "auxiliary_data_hash" era
-  , HuddleRule "mint" era
-  , HuddleRule "script_data_hash" era
-  , HuddleRule "network_id" era
-  , HuddleRule "voting_procedures" era
-  , HuddleRule "proposal_procedures" era
-  , HuddleRule "coin" era
-  , HuddleRule "positive_coin" era
-  , HuddleRule "credential" era
-  , HuddleRule "plutus_data" era
-  , HuddleRule "transaction_witness_set" era
-  , HuddleRule "auxiliary_data" era
-  , HuddleRule1 "set" era
-  , HuddleRule1 "nonempty_set" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "sub_transaction" era
   , HuddleRule1 "nonempty_oset" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-subTransactionsRule p =
-  "sub_transactions" =:= huddleRule1 @"nonempty_oset" p (subTransactionRule p)
+subTransactionsRule pname p =
+  pname =.= huddleRule1 @"nonempty_oset" p (huddleRule @"sub_transaction" p)
 
 subTransactionRule ::
-  forall era.
-  ( HuddleRule "transaction_input" era
-  , HuddleRule "transaction_output" era
-  , HuddleRule "slot" era
-  , HuddleRule "certificates" era
-  , HuddleRule "withdrawals" era
-  , HuddleRule "auxiliary_data_hash" era
-  , HuddleRule "mint" era
-  , HuddleRule "script_data_hash" era
-  , HuddleRule "network_id" era
-  , HuddleRule "voting_procedures" era
-  , HuddleRule "proposal_procedures" era
-  , HuddleRule "coin" era
-  , HuddleRule "positive_coin" era
-  , HuddleRule "credential" era
-  , HuddleRule "plutus_data" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "sub_transaction_body" era
   , HuddleRule "transaction_witness_set" era
   , HuddleRule "auxiliary_data" era
-  , HuddleRule1 "set" era
-  , HuddleRule1 "nonempty_set" era
-  , HuddleRule1 "nonempty_oset" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-subTransactionRule p =
-  "sub_transaction"
-    =:= arr
-      [ a (subTransactionBodyRule p)
+subTransactionRule pname p =
+  pname
+    =.= arr
+      [ a (huddleRule @"sub_transaction_body" p)
       , a (huddleRule @"transaction_witness_set" p)
       , a (huddleRule @"auxiliary_data" p / VNil)
       ]
 
 subTransactionBodyRule ::
-  forall era.
-  ( HuddleRule "transaction_input" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "transaction_input" era
   , HuddleRule "transaction_output" era
   , HuddleRule "slot" era
   , HuddleRule "certificates" era
@@ -144,17 +116,17 @@ subTransactionBodyRule ::
   , HuddleRule "proposal_procedures" era
   , HuddleRule "coin" era
   , HuddleRule "positive_coin" era
-  , HuddleRule "credential" era
-  , HuddleRule "plutus_data" era
+  , HuddleRule "guards" era
+  , HuddleRule "required_top_level_guards" era
   , HuddleRule1 "set" era
   , HuddleRule1 "nonempty_set" era
-  , HuddleRule1 "nonempty_oset" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-subTransactionBodyRule p =
-  "sub_transaction_body"
-    =:= mp
+subTransactionBodyRule pname p =
+  pname
+    =.= mp
       [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
       , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
       , opt (idx 3 ==> huddleRule @"slot" p)
@@ -164,76 +136,84 @@ subTransactionBodyRule p =
       , opt (idx 8 ==> huddleRule @"slot" p)
       , opt (idx 9 ==> huddleRule @"mint" p)
       , opt (idx 11 ==> huddleRule @"script_data_hash" p)
-      , opt (idx 14 ==> guardsRule p)
+      , opt (idx 14 ==> huddleRule @"guards" p)
       , opt (idx 15 ==> huddleRule @"network_id" p)
       , opt (idx 18 ==> huddleRule1 @"nonempty_set" p (huddleRule @"transaction_input" p))
       , opt (idx 19 ==> huddleRule @"voting_procedures" p)
       , opt (idx 20 ==> huddleRule @"proposal_procedures" p)
       , opt (idx 21 ==> huddleRule @"coin" p)
       , opt (idx 22 ==> huddleRule @"positive_coin" p)
-      , opt (idx 24 ==> requiredTopLevelGuardsRule p)
+      , opt (idx 24 ==> huddleRule @"required_top_level_guards" p)
       ]
 
 requiredTopLevelGuardsRule ::
-  forall era.
-  ( HuddleRule "credential" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "credential" era
   , HuddleRule "plutus_data" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-requiredTopLevelGuardsRule p =
-  "required_top_level_guards"
-    =:= mp
+requiredTopLevelGuardsRule pname p =
+  pname
+    =.= mp
       [ 1
           <+ asKey (huddleRule @"credential" p)
           ==> (huddleRule @"plutus_data" p / VNil)
       ]
 
-scriptRequireGuardGroup :: forall era. HuddleRule "credential" era => Proxy era -> GroupDef
-scriptRequireGuardGroup p =
+scriptRequireGuardGroup ::
+  forall name era.
+  (KnownSymbol name, HuddleRule "credential" era) => Proxy name -> Proxy era -> GroupDef
+scriptRequireGuardGroup pname p =
   comment
     [str|Dijkstra adds guard scripts for enhanced security.
         |A guard script requires a credential to authorize execution.
         |]
-    $ "script_require_guard" =:~ grp [6, a (huddleRule @"credential" p)]
+    $ pname =.~ grp [6, a (huddleRule @"credential" p)]
 
 dijkstraNativeScriptRule ::
-  forall era.
-  ( HuddleGroup "script_pubkey" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleGroup "script_pubkey" era
   , HuddleGroup "script_all" era
   , HuddleGroup "script_any" era
   , HuddleGroup "script_n_of_k" era
   , HuddleGroup "script_invalid_before" era
   , HuddleGroup "script_invalid_hereafter" era
-  , HuddleRule "credential" era
+  , HuddleGroup "script_require_guard" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-dijkstraNativeScriptRule p =
+dijkstraNativeScriptRule pname p =
   comment
     [str|Dijkstra native scripts extend Allegra's 6-variant format
         |with a 7th variant for guard scripts.
         |]
-    $ "native_script"
-      =:= arr [a (huddleGroup @"script_pubkey" p)]
+    $ pname
+      =.= arr [a (huddleGroup @"script_pubkey" p)]
       / arr [a (huddleGroup @"script_all" p)]
       / arr [a (huddleGroup @"script_any" p)]
       / arr [a (huddleGroup @"script_n_of_k" p)]
       / arr [a (huddleGroup @"script_invalid_before" p)]
       / arr [a (huddleGroup @"script_invalid_hereafter" p)]
-      / arr [a (scriptRequireGuardGroup p)]
+      / arr [a (huddleGroup @"script_require_guard" p)]
 
 dijkstraScriptRule ::
-  forall era.
-  ( HuddleRule "native_script" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "native_script" era
   , HuddleRule "plutus_v1_script" era
   , HuddleRule "plutus_v2_script" era
   , HuddleRule "plutus_v3_script" era
   , HuddleRule "plutus_v4_script" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-dijkstraScriptRule p =
+dijkstraScriptRule pname p =
   comment
     [str|Dijkstra supports five script types:
         |  0: Native scripts with guard support (7 variants)
@@ -242,17 +222,17 @@ dijkstraScriptRule p =
         |  3: Plutus V3 scripts
         |  4: Plutus V4 scripts (NEW)
         |]
-    $ "script"
-      =:= arr [0, a (huddleRule @"native_script" p)]
+    $ pname
+      =.= arr [0, a (huddleRule @"native_script" p)]
       / arr [1, a (huddleRule @"plutus_v1_script" p)]
       / arr [2, a (huddleRule @"plutus_v2_script" p)]
       / arr [3, a (huddleRule @"plutus_v3_script" p)]
       / arr [4, a (huddleRule @"plutus_v4_script" p)]
 
-dijkstraRedeemerTagRule :: Proxy era -> Rule
-dijkstraRedeemerTagRule _ =
-  "redeemer_tag"
-    =:= (int 0 //- "spend")
+dijkstraRedeemerTagRule :: forall name. KnownSymbol name => Proxy name -> Rule
+dijkstraRedeemerTagRule pname =
+  pname
+    =.= (int 0 //- "spend")
     / (int 1 //- "mint")
     / (int 2 //- "cert")
     / (int 3 //- "reward")
@@ -261,19 +241,21 @@ dijkstraRedeemerTagRule _ =
     / (int 6 //- "guarding")
 
 auxiliaryDataMapRule ::
-  forall era.
-  ( HuddleRule "metadata" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "metadata" era
   , HuddleRule "native_script" era
   , HuddleRule "plutus_v1_script" era
   , HuddleRule "plutus_v2_script" era
   , HuddleRule "plutus_v3_script" era
   , HuddleRule "plutus_v4_script" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-auxiliaryDataMapRule p =
-  "auxiliary_data_map"
-    =:= tag
+auxiliaryDataMapRule pname p =
+  pname
+    =.= tag
       259
       ( mp
           [ opt (idx 0 ==> huddleRule @"metadata" p)
@@ -286,306 +268,335 @@ auxiliaryDataMapRule p =
       )
 
 dijkstraValueRule ::
-  forall era.
-  ( HuddleRule "policy_id" era
-  , HuddleRule "asset_name" era
+  forall name era.
+  ( KnownSymbol name
   , HuddleRule "positive_coin" era
+  , HuddleRule1 "multiasset" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-dijkstraValueRule p =
-  "value"
-    =:= huddleRule @"coin" p
-    / sarr [a $ huddleRule @"coin" p, a $ dijkstraMultiasset p (huddleRule @"positive_coin" p)]
+dijkstraValueRule pname p =
+  pname
+    =.= huddleRule @"coin" p
+    / sarr
+      [ a $ huddleRule @"coin" p
+      , a $ huddleRule1 @"multiasset" p (huddleRule @"positive_coin" p)
+      ]
 
 dijkstraMultiasset ::
-  forall era a.
-  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) =>
+  forall name era a.
+  (KnownSymbol name, HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) =>
+  Proxy name ->
   Proxy era ->
   a ->
   GRuleCall
-dijkstraMultiasset p =
+dijkstraMultiasset pname p =
   binding $ \x ->
-    "multiasset"
-      =:= mp
+    pname
+      =.= mp
         [ 1
             <+ asKey (huddleRule @"policy_id" p)
             ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
         ]
 
 instance HuddleRule "bounded_bytes" DijkstraEra where
-  huddleRule _ = boundedBytesRule
+  huddleRuleNamed pname _ = boundedBytesRule pname
 
 instance HuddleRule "distinct_bytes" DijkstraEra where
-  huddleRule _ = distinctBytesRule
+  huddleRuleNamed pname _ = distinctBytesRule pname
 
 instance HuddleRule "big_uint" DijkstraEra where
-  huddleRule = bigUintRule
+  huddleRuleNamed = bigUintRule
 
 instance HuddleRule "big_nint" DijkstraEra where
-  huddleRule = bigNintRule
+  huddleRuleNamed = bigNintRule
 
 instance HuddleRule "big_int" DijkstraEra where
-  huddleRule = bigIntRule
+  huddleRuleNamed = bigIntRule
 
 instance HuddleRule "network_id" DijkstraEra where
-  huddleRule _ = networkIdRule
+  huddleRuleNamed pname _ = networkIdRule pname
 
 instance HuddleRule "dns_name" DijkstraEra where
-  huddleRule = dnsNameRule @DijkstraEra
+  huddleRuleNamed pname _ = dnsNameRule pname
 
 instance HuddleRule "url" DijkstraEra where
-  huddleRule = urlRule @DijkstraEra
+  huddleRuleNamed pname _ = urlRule pname
 
 instance HuddleRule "major_protocol_version" DijkstraEra where
-  huddleRule = majorProtocolVersionRule @DijkstraEra
+  huddleRuleNamed = majorProtocolVersionRule
 
 instance HuddleRule "genesis_hash" DijkstraEra where
-  huddleRule = genesisHashRule @DijkstraEra
+  huddleRuleNamed = genesisHashRule
 
 instance HuddleRule "genesis_delegate_hash" DijkstraEra where
-  huddleRule = genesisDelegateHashRule @DijkstraEra
+  huddleRuleNamed = genesisDelegateHashRule
 
 instance HuddleRule "transaction_id" DijkstraEra where
-  huddleRule = transactionIdRule @DijkstraEra
+  huddleRuleNamed = transactionIdRule
 
 instance HuddleRule "vkeywitness" DijkstraEra where
-  huddleRule = vkeywitnessRule @DijkstraEra
+  huddleRuleNamed = vkeywitnessRule
 
 instance HuddleRule "bootstrap_witness" DijkstraEra where
-  huddleRule = bootstrapWitnessRule @DijkstraEra
+  huddleRuleNamed = bootstrapWitnessRule
 
 instance HuddleRule "ex_units" DijkstraEra where
-  huddleRule _ = exUnitsRule
+  huddleRuleNamed pname _ = exUnitsRule pname
 
 instance HuddleRule "positive_interval" DijkstraEra where
-  huddleRule = positiveIntervalRule
+  huddleRuleNamed = positiveIntervalRule
 
 instance HuddleRule "vote" DijkstraEra where
-  huddleRule = voteRule @DijkstraEra
+  huddleRuleNamed pname _ = voteRule pname
 
 instance HuddleRule "asset_name" DijkstraEra where
-  huddleRule = assetNameRule @DijkstraEra
+  huddleRuleNamed pname _ = assetNameRule pname
 
 instance HuddleRule "drep_credential" DijkstraEra where
-  huddleRule = drepCredentialRule @DijkstraEra
+  huddleRuleNamed = drepCredentialRule
 
 instance HuddleRule "committee_cold_credential" DijkstraEra where
-  huddleRule = committeeColdCredentialRule @DijkstraEra
+  huddleRuleNamed = committeeColdCredentialRule
 
 instance HuddleRule "committee_hot_credential" DijkstraEra where
-  huddleRule = committeeHotCredentialRule @DijkstraEra
+  huddleRuleNamed = committeeHotCredentialRule
 
 instance HuddleRule "anchor" DijkstraEra where
-  huddleRule = anchorRule @DijkstraEra
+  huddleRuleNamed = anchorRule
 
 instance HuddleRule "drep" DijkstraEra where
-  huddleRule = drepRule @DijkstraEra
+  huddleRuleNamed = drepRule
 
 instance HuddleRule "voter" DijkstraEra where
-  huddleRule = voterRule @DijkstraEra
+  huddleRuleNamed = voterRule
 
 instance HuddleRule "operational_cert" DijkstraEra where
-  huddleRule = babbageOperationalCertRule @DijkstraEra
+  huddleRuleNamed = babbageOperationalCertRule
 
 instance HuddleRule "protocol_version" DijkstraEra where
-  huddleRule = babbageProtocolVersionRule @DijkstraEra
+  huddleRuleNamed = babbageProtocolVersionRule
 
 instance HuddleRule "policy_id" DijkstraEra where
-  huddleRule p = "policy_id" =:= huddleRule @"script_hash" p
+  huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p
 
 instance HuddleRule "policy_hash" DijkstraEra where
-  huddleRule = policyHashRule @DijkstraEra
+  huddleRuleNamed = policyHashRule
 
 instance HuddleGroup "script_pubkey" DijkstraEra where
-  huddleGroup = scriptPubkeyGroup @DijkstraEra
+  huddleGroupNamed = scriptPubkeyGroup
 
 instance HuddleGroup "script_all" DijkstraEra where
-  huddleGroup = scriptAllGroup @DijkstraEra
+  huddleGroupNamed = scriptAllGroup
 
 instance HuddleGroup "script_any" DijkstraEra where
-  huddleGroup = scriptAnyGroup @DijkstraEra
+  huddleGroupNamed = scriptAnyGroup
 
 instance HuddleGroup "script_n_of_k" DijkstraEra where
-  huddleGroup = scriptNOfKGroup @DijkstraEra
+  huddleGroupNamed = scriptNOfKGroup
 
 instance HuddleGroup "script_invalid_before" DijkstraEra where
-  huddleGroup = scriptInvalidBeforeGroup @DijkstraEra
+  huddleGroupNamed = scriptInvalidBeforeGroup
 
 instance HuddleGroup "script_invalid_hereafter" DijkstraEra where
-  huddleGroup = scriptInvalidHereafterGroup @DijkstraEra
+  huddleGroupNamed = scriptInvalidHereafterGroup
+
+instance HuddleGroup "script_require_guard" DijkstraEra where
+  huddleGroupNamed = scriptRequireGuardGroup
 
 instance HuddleGroup "single_host_addr" DijkstraEra where
-  huddleGroup = singleHostAddrGroup @DijkstraEra
+  huddleGroupNamed = singleHostAddrGroup
 
 instance HuddleGroup "single_host_name" DijkstraEra where
-  huddleGroup = singleHostNameGroup @DijkstraEra
+  huddleGroupNamed = singleHostNameGroup
 
 instance HuddleGroup "multi_host_name" DijkstraEra where
-  huddleGroup = multiHostNameGroup @DijkstraEra
+  huddleGroupNamed = multiHostNameGroup
 
 instance HuddleRule "relay" DijkstraEra where
-  huddleRule = relayRule @DijkstraEra
+  huddleRuleNamed = relayRule
 
 instance HuddleRule "pool_metadata" DijkstraEra where
-  huddleRule = poolMetadataRule @DijkstraEra
+  huddleRuleNamed = poolMetadataRule
 
 instance HuddleGroup "pool_params" DijkstraEra where
-  huddleGroup = poolParamsGroup @DijkstraEra
+  huddleGroupNamed = poolParamsGroup
 
 instance HuddleGroup "account_registration_cert" DijkstraEra where
-  huddleGroup = accountRegistrationCertGroup @DijkstraEra
+  huddleGroupNamed = accountRegistrationCertGroup
 
 instance HuddleGroup "account_unregistration_cert" DijkstraEra where
-  huddleGroup = accountUnregistrationCertGroup @DijkstraEra
+  huddleGroupNamed = accountUnregistrationCertGroup
 
 instance HuddleGroup "delegation_to_stake_pool_cert" DijkstraEra where
-  huddleGroup = delegationToStakePoolCertGroup @DijkstraEra
+  huddleGroupNamed = delegationToStakePoolCertGroup
 
 instance HuddleGroup "pool_registration_cert" DijkstraEra where
-  huddleGroup = poolRegistrationCertGroup @DijkstraEra
+  huddleGroupNamed = poolRegistrationCertGroup
 
 instance HuddleGroup "pool_retirement_cert" DijkstraEra where
-  huddleGroup = poolRetirementCertGroup @DijkstraEra
+  huddleGroupNamed = poolRetirementCertGroup
 
 instance HuddleGroup "account_registration_deposit_cert" DijkstraEra where
-  huddleGroup = accountRegistrationDepositCertGroup @DijkstraEra
+  huddleGroupNamed = accountRegistrationDepositCertGroup
 
 instance HuddleGroup "account_unregistration_deposit_cert" DijkstraEra where
-  huddleGroup = accountUnregistrationDepositCertGroup @DijkstraEra
+  huddleGroupNamed = accountUnregistrationDepositCertGroup
 
 instance HuddleGroup "delegation_to_drep_cert" DijkstraEra where
-  huddleGroup = delegationToDrepCertGroup @DijkstraEra
+  huddleGroupNamed = delegationToDrepCertGroup
 
 instance HuddleGroup "delegation_to_stake_pool_and_drep_cert" DijkstraEra where
-  huddleGroup = delegationToStakePoolAndDrepCertGroup @DijkstraEra
+  huddleGroupNamed = delegationToStakePoolAndDrepCertGroup
 
 instance HuddleGroup "account_registration_delegation_to_stake_pool_cert" DijkstraEra where
-  huddleGroup = accountRegistrationDelegationToStakePoolCertGroup @DijkstraEra
+  huddleGroupNamed = accountRegistrationDelegationToStakePoolCertGroup
 
 instance HuddleGroup "account_registration_delegation_to_drep_cert" DijkstraEra where
-  huddleGroup = accountRegistrationDelegationToDrepCertGroup @DijkstraEra
+  huddleGroupNamed = accountRegistrationDelegationToDrepCertGroup
 
 instance HuddleGroup "account_registration_delegation_to_stake_pool_and_drep_cert" DijkstraEra where
-  huddleGroup = accountRegistrationDelegationToStakePoolAndDrepCertGroup @DijkstraEra
+  huddleGroupNamed = accountRegistrationDelegationToStakePoolAndDrepCertGroup
 
 instance HuddleGroup "committee_authorization_cert" DijkstraEra where
-  huddleGroup = committeeAuthorizationCertGroup @DijkstraEra
+  huddleGroupNamed = committeeAuthorizationCertGroup
 
 instance HuddleGroup "committee_resignation_cert" DijkstraEra where
-  huddleGroup = committeeResignationCertGroup @DijkstraEra
+  huddleGroupNamed = committeeResignationCertGroup
 
 instance HuddleGroup "drep_registration_cert" DijkstraEra where
-  huddleGroup = drepRegistrationCertGroup @DijkstraEra
+  huddleGroupNamed = drepRegistrationCertGroup
 
 instance HuddleGroup "drep_unregistration_cert" DijkstraEra where
-  huddleGroup = drepUnregistrationCertGroup @DijkstraEra
+  huddleGroupNamed = drepUnregistrationCertGroup
 
 instance HuddleGroup "drep_update_cert" DijkstraEra where
-  huddleGroup = drepUpdateCertGroup @DijkstraEra
+  huddleGroupNamed = drepUpdateCertGroup
 
 instance HuddleRule "certificate" DijkstraEra where
-  huddleRule = conwayCertificateRule @DijkstraEra
+  huddleRuleNamed = conwayCertificateRule
 
 instance HuddleRule "certificates" DijkstraEra where
-  huddleRule = certificatesRule @DijkstraEra
+  huddleRuleNamed = certificatesRule
 
 instance HuddleRule "voting_procedure" DijkstraEra where
-  huddleRule = votingProcedureRule @DijkstraEra
+  huddleRuleNamed = votingProcedureRule
 
 instance HuddleRule "voting_procedures" DijkstraEra where
-  huddleRule = votingProceduresRule @DijkstraEra
+  huddleRuleNamed = votingProceduresRule
 
 instance HuddleRule "constitution" DijkstraEra where
-  huddleRule = constitutionRule @DijkstraEra
+  huddleRuleNamed = constitutionRule
 
 instance HuddleGroup "parameter_change_action" DijkstraEra where
-  huddleGroup = parameterChangeActionGroup @DijkstraEra
+  huddleGroupNamed = parameterChangeActionGroup
 
 instance HuddleGroup "hard_fork_initiation_action" DijkstraEra where
-  huddleGroup = hardForkInitiationActionGroup @DijkstraEra
+  huddleGroupNamed = hardForkInitiationActionGroup
 
 instance HuddleGroup "treasury_withdrawals_action" DijkstraEra where
-  huddleGroup = treasuryWithdrawalsActionGroup @DijkstraEra
+  huddleGroupNamed = treasuryWithdrawalsActionGroup
 
 instance HuddleGroup "no_confidence" DijkstraEra where
-  huddleGroup = noConfidenceGroup @DijkstraEra
+  huddleGroupNamed = noConfidenceGroup
 
 instance HuddleGroup "update_committee" DijkstraEra where
-  huddleGroup = updateCommitteeGroup @DijkstraEra
+  huddleGroupNamed = updateCommitteeGroup
 
 instance HuddleGroup "new_constitution" DijkstraEra where
-  huddleGroup = newConstitutionGroup @DijkstraEra
+  huddleGroupNamed = newConstitutionGroup
 
 instance HuddleRule "info_action" DijkstraEra where
-  huddleRule _ = infoActionRule
+  huddleRuleNamed pname _ = infoActionRule pname
 
 instance HuddleRule "gov_action" DijkstraEra where
-  huddleRule = govActionRule @DijkstraEra
+  huddleRuleNamed = govActionRule
 
 instance HuddleRule "proposal_procedure" DijkstraEra where
-  huddleRule = proposalProcedureRule @DijkstraEra
+  huddleRuleNamed = proposalProcedureRule
 
 instance HuddleRule "proposal_procedures" DijkstraEra where
-  huddleRule = proposalProceduresRule @DijkstraEra
+  huddleRuleNamed = proposalProceduresRule
 
 instance HuddleRule "transaction_input" DijkstraEra where
-  huddleRule p =
-    "transaction_input"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ "transaction_id" ==> huddleRule @"transaction_id" p
-        , "index" ==> (VUInt `sized` (2 :: Word64))
+        , "index" ==> VUInt `sized` (2 :: Word64)
         ]
 
 instance HuddleRule "required_signers" DijkstraEra where
-  huddleRule p =
-    "required_signers"
-      =:= huddleRule1 @"nonempty_set" p (huddleRule @"addr_keyhash" p)
+  huddleRuleNamed pname p =
+    pname
+      =.= huddleRule1 @"nonempty_set" p (huddleRule @"addr_keyhash" p)
 
 instance HuddleRule "value" DijkstraEra where
-  huddleRule = dijkstraValueRule @DijkstraEra
+  huddleRuleNamed = dijkstraValueRule
 
 instance HuddleRule "mint" DijkstraEra where
-  huddleRule = conwayMintRule @DijkstraEra
+  huddleRuleNamed = conwayMintRule
 
 instance HuddleRule "withdrawals" DijkstraEra where
-  huddleRule = conwayWithdrawalsRule @DijkstraEra
+  huddleRuleNamed = conwayWithdrawalsRule
 
 instance HuddleRule "data" DijkstraEra where
-  huddleRule = dataRule @DijkstraEra
+  huddleRuleNamed = dataRule
 
 instance HuddleRule "datum_option" DijkstraEra where
-  huddleRule = datumOptionRule @DijkstraEra
+  huddleRuleNamed = datumOptionRule
+
+instance HuddleRule "script_ref" DijkstraEra where
+  huddleRuleNamed = scriptRefRule
 
 instance HuddleRule "alonzo_transaction_output" DijkstraEra where
-  huddleRule = alonzoTransactionOutputRule @DijkstraEra
+  huddleRuleNamed = alonzoTransactionOutputRule
+
+instance HuddleRule "babbage_transaction_output" DijkstraEra where
+  huddleRuleNamed = babbageTransactionOutput
 
 instance HuddleRule "transaction_output" DijkstraEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|Both of the Alonzo and Babbage style TxOut formats are equally valid
           |and can be used interchangeably
           |]
-      $ "transaction_output"
-        =:= huddleRule @"alonzo_transaction_output" p
-        / babbageTransactionOutput p (huddleRule @"script" p)
+      $ pname
+        =.= huddleRule @"alonzo_transaction_output" p
+        / huddleRule @"babbage_transaction_output" p
+
+instance HuddleRule "sub_transaction_body" DijkstraEra where
+  huddleRuleNamed = subTransactionBodyRule
+
+instance HuddleRule "sub_transaction" DijkstraEra where
+  huddleRuleNamed = subTransactionRule
+
+instance HuddleRule "sub_transactions" DijkstraEra where
+  huddleRuleNamed = subTransactionsRule
+
+instance HuddleRule "guards" DijkstraEra where
+  huddleRuleNamed = guardsRule
+
+instance HuddleRule "required_top_level_guards" DijkstraEra where
+  huddleRuleNamed = requiredTopLevelGuardsRule
 
 instance HuddleRule "potential_languages" DijkstraEra where
-  huddleRule = potentialLanguagesRule
+  huddleRuleNamed pname _ = potentialLanguagesRule pname
 
 instance HuddleRule "redeemers" DijkstraEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|Dijkstra uses map format only for redeemers.
           |The flat array format has been removed.
           |]
-      $ "redeemers"
-        =:= mp
+      $ pname
+        =.= mp
           [ 1
               <+ asKey
                 ( arr
                     [ "tag" ==> huddleRule @"redeemer_tag" p
-                    , "index" ==> (VUInt `sized` (4 :: Word64))
+                    , "index" ==> VUInt `sized` (4 :: Word64)
                     ]
                 )
               ==> arr
@@ -595,7 +606,7 @@ instance HuddleRule "redeemers" DijkstraEra where
           ]
 
 instance HuddleRule "script_data_hash" DijkstraEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|This is a hash of data which may affect evaluation of a script.
           |This data consists of:
@@ -664,12 +675,12 @@ instance HuddleRule "script_data_hash" DijkstraEra where
           |therefore there is no way to override this behavior by providing a custom
           |representation for empty redeemers.
           |]
-      $ scriptDataHashRule p
+      $ scriptDataHashRule pname p
 
 instance HuddleRule "transaction" DijkstraEra where
-  huddleRule p =
-    "transaction"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ a $ huddleRule @"transaction_body" p
         , a $ huddleRule @"transaction_witness_set" p
         , a $ (bool True)
@@ -682,28 +693,28 @@ instance HuddleRule "transaction" DijkstraEra where
         ]
 
 instance HuddleRule "ex_unit_prices" DijkstraEra where
-  huddleRule p =
-    "ex_unit_prices"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ "mem_price" ==> huddleRule @"nonnegative_interval" p
         , "step_price" ==> huddleRule @"nonnegative_interval" p
         ]
 
 instance HuddleRule "pool_voting_thresholds" DijkstraEra where
-  huddleRule = poolVotingThresholdsRule @DijkstraEra
+  huddleRuleNamed = poolVotingThresholdsRule
 
 instance HuddleRule "drep_voting_thresholds" DijkstraEra where
-  huddleRule = drepVotingThresholdsRule @DijkstraEra
+  huddleRuleNamed = drepVotingThresholdsRule
 
 instance HuddleRule "protocol_param_update" DijkstraEra where
-  huddleRule p =
-    "protocol_param_update"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ opt (idx 0 ==> huddleRule @"coin" p) //- "minfeeA"
         , opt (idx 1 ==> huddleRule @"coin" p) //- "minfeeB"
-        , opt (idx 2 ==> (VUInt `sized` (4 :: Word64))) //- "max block body size"
-        , opt (idx 3 ==> (VUInt `sized` (4 :: Word64))) //- "max transaction size"
-        , opt (idx 4 ==> (VUInt `sized` (2 :: Word64))) //- "max block header size"
+        , opt (idx 2 ==> VUInt `sized` (4 :: Word64)) //- "max block body size"
+        , opt (idx 3 ==> VUInt `sized` (4 :: Word64)) //- "max transaction size"
+        , opt (idx 4 ==> VUInt `sized` (2 :: Word64)) //- "max block header size"
         , opt (idx 5 ==> huddleRule @"coin" p) //- "key deposit"
         , opt (idx 6 ==> huddleRule @"coin" p) //- "pool deposit"
         , opt (idx 7 ==> huddleRule @"epoch_interval" p) //- "maximum epoch"
@@ -717,51 +728,51 @@ instance HuddleRule "protocol_param_update" DijkstraEra where
         , opt (idx 19 ==> huddleRule @"ex_unit_prices" p) //- "execution costs"
         , opt (idx 20 ==> huddleRule @"ex_units" p) //- "max tx ex units"
         , opt (idx 21 ==> huddleRule @"ex_units" p) //- "max block ex units"
-        , opt (idx 22 ==> (VUInt `sized` (4 :: Word64))) //- "max value size"
-        , opt (idx 23 ==> (VUInt `sized` (2 :: Word64))) //- "collateral percentage"
-        , opt (idx 24 ==> (VUInt `sized` (2 :: Word64))) //- "max collateral inputs"
+        , opt (idx 22 ==> VUInt `sized` (4 :: Word64)) //- "max value size"
+        , opt (idx 23 ==> VUInt `sized` (2 :: Word64)) //- "collateral percentage"
+        , opt (idx 24 ==> VUInt `sized` (2 :: Word64)) //- "max collateral inputs"
         , opt (idx 25 ==> huddleRule @"pool_voting_thresholds" p) //- "pool voting thresholds"
         , opt (idx 26 ==> huddleRule @"drep_voting_thresholds" p) //- "drep voting thresholds"
-        , opt (idx 27 ==> (VUInt `sized` (2 :: Word64))) //- "min committee size"
+        , opt (idx 27 ==> VUInt `sized` (2 :: Word64)) //- "min committee size"
         , opt (idx 28 ==> huddleRule @"epoch_interval" p) //- "committee term limit"
         , opt (idx 29 ==> huddleRule @"epoch_interval" p) //- "goveranance action validity period"
         , opt (idx 30 ==> huddleRule @"coin" p) //- "governance action deposit"
         , opt (idx 31 ==> huddleRule @"coin" p) //- "drep deposit"
         , opt (idx 32 ==> huddleRule @"epoch_interval" p) //- "drep inactivity period"
         , opt (idx 33 ==> huddleRule @"nonnegative_interval" p) //- "minfee refScript coins per byte"
-        , opt (idx 34 ==> (VUInt `sized` (4 :: Word64))) //- "max refScript size per block"
-        , opt (idx 35 ==> (VUInt `sized` (4 :: Word64))) //- "max refScript size per tx"
+        , opt (idx 34 ==> VUInt `sized` (4 :: Word64)) //- "max refScript size per block"
+        , opt (idx 35 ==> VUInt `sized` (4 :: Word64)) //- "max refScript size per tx"
         , opt (idx 36 ==> huddleRule @"positive_word32" p) //- "refScript cost stride"
         , opt (idx 37 ==> huddleRule @"positive_interval" p) //- "refScript cost multiplier"
         ]
 
 instance HuddleRule "proposed_protocol_parameter_updates" DijkstraEra where
-  huddleRule = proposedProtocolParameterUpdatesRule @DijkstraEra
+  huddleRuleNamed = proposedProtocolParameterUpdatesRule
 
 instance HuddleRule "update" DijkstraEra where
-  huddleRule = updateRule @DijkstraEra
+  huddleRuleNamed = updateRule
 
 instance HuddleRule "header_body" DijkstraEra where
-  huddleRule p =
-    "header_body"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ "block_number" ==> huddleRule @"block_number" p
         , "slot" ==> huddleRule @"slot" p
         , "prev_hash" ==> (huddleRule @"hash32" p / VNil)
         , "issuer_vkey" ==> huddleRule @"vkey" p
         , "vrf_vkey" ==> huddleRule @"vrf_vkey" p
         , "vrf_result" ==> huddleRule @"vrf_cert" p
-        , "block_body_size" ==> (VUInt `sized` (4 :: Word64))
+        , "block_body_size" ==> VUInt `sized` (4 :: Word64)
         , "block_body_hash" ==> huddleRule @"hash32" p //- "merkle triple root"
         , a $ huddleRule @"operational_cert" p
         , a $ huddleRule @"protocol_version" p
         ]
 
 instance HuddleRule "header" DijkstraEra where
-  huddleRule = headerRule @DijkstraEra
+  huddleRuleNamed = headerRule
 
 instance HuddleRule "block" DijkstraEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|Valid blocks must also satisfy the following two constraints:
           |  1) the length of transaction_bodies and transaction_witness_sets must be
@@ -769,8 +780,8 @@ instance HuddleRule "block" DijkstraEra where
           |  2) every transaction_index must be strictly smaller than the length of
           |     transaction_bodies
           |]
-      $ "block"
-        =:= arr
+      $ pname
+        =.= arr
           [ a $ huddleRule @"header" p
           , "transaction_bodies" ==> arr [0 <+ a (huddleRule @"transaction_body" p)]
           , "transaction_witness_sets" ==> arr [0 <+ a (huddleRule @"transaction_witness_set" p)]
@@ -784,15 +795,15 @@ instance HuddleRule "block" DijkstraEra where
           ]
 
 instance HuddleRule "auxiliary_scripts" DijkstraEra where
-  huddleRule = auxiliaryScriptsRule @DijkstraEra
+  huddleRuleNamed = auxiliaryScriptsRule
 
 instance HuddleRule "auxiliary_data_array" DijkstraEra where
-  huddleRule = auxiliaryDataArrayRule @DijkstraEra
+  huddleRuleNamed = auxiliaryDataArrayRule
 
 instance HuddleRule "transaction_body" DijkstraEra where
-  huddleRule p =
-    "transaction_body"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p //- "fee"
@@ -804,7 +815,7 @@ instance HuddleRule "transaction_body" DijkstraEra where
         , opt (idx 9 ==> huddleRule @"mint" p)
         , opt (idx 11 ==> huddleRule @"script_data_hash" p)
         , opt (idx 13 ==> huddleRule1 @"nonempty_set" p (huddleRule @"transaction_input" p)) //- "collateral"
-        , opt (idx 14 ==> guardsRule p) //- "guards (replaces required_signers)"
+        , opt (idx 14 ==> huddleRule @"guards" p) //- "guards (replaces required_signers)"
         , opt (idx 15 ==> huddleRule @"network_id" p)
         , opt (idx 16 ==> huddleRule @"transaction_output" p) //- "collateral return"
         , opt (idx 17 ==> huddleRule @"coin" p) //- "total collateral"
@@ -814,13 +825,13 @@ instance HuddleRule "transaction_body" DijkstraEra where
         , opt (idx 20 ==> huddleRule @"proposal_procedures" p)
         , opt (idx 21 ==> huddleRule @"coin" p) //- "current treasury value"
         , opt (idx 22 ==> huddleRule @"positive_coin" p) //- "donation"
-        , opt (idx 23 ==> subTransactionsRule p) //- "sub-transactions (NEW)"
+        , opt (idx 23 ==> huddleRule @"sub_transactions" p) //- "sub-transactions (NEW)"
         ]
 
 instance HuddleRule "transaction_witness_set" DijkstraEra where
-  huddleRule p =
-    "transaction_witness_set"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ opt $ idx 0 ==> huddleRule1 @"nonempty_set" p (huddleRule @"vkeywitness" p)
         , opt $ idx 1 ==> huddleRule1 @"nonempty_set" p (huddleRule @"native_script" p)
         , opt $ idx 2 ==> huddleRule1 @"nonempty_set" p (huddleRule @"bootstrap_witness" p)
@@ -833,25 +844,25 @@ instance HuddleRule "transaction_witness_set" DijkstraEra where
         ]
 
 instance HuddleRule "native_script" DijkstraEra where
-  huddleRule = dijkstraNativeScriptRule @DijkstraEra
+  huddleRuleNamed = dijkstraNativeScriptRule
 
 instance HuddleRule "script" DijkstraEra where
-  huddleRule = dijkstraScriptRule @DijkstraEra
+  huddleRuleNamed = dijkstraScriptRule
 
 instance HuddleRule "redeemer_tag" DijkstraEra where
-  huddleRule _ = dijkstraRedeemerTagRule (Proxy @DijkstraEra)
+  huddleRuleNamed pname _ = dijkstraRedeemerTagRule pname
 
 instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v4_script" era where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|Dijkstra introduces Plutus V4.
           |
           |Note: distinct VBytes ensures uniqueness in test generation.
           |]
-      $ "plutus_v4_script" =:= huddleRule @"distinct_bytes" p
+      $ pname =.= huddleRule @"distinct_bytes" p
 
 instance HuddleRule "auxiliary_data" DijkstraEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|auxiliary_data supports three serialization formats:
           |  1. metadata (raw) - Supported since Shelley
@@ -859,15 +870,15 @@ instance HuddleRule "auxiliary_data" DijkstraEra where
           |  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
           |     Dijkstra adds plutus_v4_script support at index 5
           |]
-      $ "auxiliary_data"
-        =:= huddleRule @"metadata" p
+      $ pname
+        =.= huddleRule @"metadata" p
         / huddleRule @"auxiliary_data_array" p
-        / auxiliaryDataMapRule p
+        / huddleRule @"auxiliary_data_map" p
 
 instance HuddleRule "auxiliary_data_map" DijkstraEra where
-  huddleRule p =
-    "auxiliary_data_map"
-      =:= tag
+  huddleRuleNamed pname p =
+    pname
+      =.= tag
         259
         ( mp
             [ opt (idx 0 ==> huddleRule @"metadata" p)
@@ -880,17 +891,17 @@ instance HuddleRule "auxiliary_data_map" DijkstraEra where
         )
 
 instance HuddleRule "language" DijkstraEra where
-  huddleRule _ =
+  huddleRuleNamed pname _ =
     comment
       [str|0: Plutus v1
           |1: Plutus v2
           |2: Plutus v3
           |3: Plutus v4 (NEW)
           |]
-      $ "language" =:= (0 :: Integer) ... (3 :: Integer)
+      $ pname =.= (0 :: Integer) ... (3 :: Integer)
 
 instance HuddleRule "cost_models" DijkstraEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|The format for cost_models is flexible enough to allow adding
           |Plutus built-ins and language versions in the future.
@@ -902,8 +913,8 @@ instance HuddleRule "cost_models" DijkstraEra where
           |
           |Any 8-bit unsigned number can be used as a key.
           |]
-      $ "cost_models"
-        =:= mp
+      $ pname
+        =.= mp
           [ opt $ idx 0 ==> arr [0 <+ a (huddleRule @"int64" p)]
           , opt $ idx 1 ==> arr [0 <+ a (huddleRule @"int64" p)]
           , opt $ idx 2 ==> arr [0 <+ a (huddleRule @"int64" p)]
@@ -911,23 +922,14 @@ instance HuddleRule "cost_models" DijkstraEra where
           , 0 <+ asKey ((4 :: Integer) ... (255 :: Integer)) ==> arr [0 <+ a (huddleRule @"int64" p)]
           ]
 
-mkMaybeTaggedSet :: IsType0 a => Name -> Word64 -> a -> GRuleCall
-mkMaybeTaggedSet label n = binding $ \x -> label =:= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
-
-maybeTaggedSet :: IsType0 a => a -> GRuleCall
-maybeTaggedSet = mkMaybeTaggedSet "set" 0
-
-maybeTaggedNonemptySet :: IsType0 a => a -> GRuleCall
-maybeTaggedNonemptySet = mkMaybeTaggedSet "nonempty_set" 1
-
-maybeTaggedNonemptyOset :: IsType0 a => a -> GRuleCall
-maybeTaggedNonemptyOset = mkMaybeTaggedSet "nonempty_oset" 1
-
 instance HuddleRule1 "set" DijkstraEra where
-  huddleRule1 _ = maybeTaggedSet
+  huddleRule1Named pname _ = maybeTaggedSet pname
 
 instance HuddleRule1 "nonempty_set" DijkstraEra where
-  huddleRule1 _ = maybeTaggedNonemptySet
+  huddleRule1Named pname _ = maybeTaggedNonemptySet pname
 
 instance HuddleRule1 "nonempty_oset" DijkstraEra where
-  huddleRule1 _ = maybeTaggedNonemptyOset
+  huddleRule1Named pname _ = maybeTaggedNonemptyOset pname
+
+instance HuddleRule1 "multiasset" DijkstraEra where
+  huddleRule1Named = dijkstraMultiasset
