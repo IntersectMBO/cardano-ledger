@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `conwayLedgerTransitionTRC`
 * Deprecate
   - `constitutionScriptL` in favor of new `constitutionGuardrailsScriptHashL`
   - `InvalidPolicyHash` in favor of new `InvalidGuardrailsScriptHash`
