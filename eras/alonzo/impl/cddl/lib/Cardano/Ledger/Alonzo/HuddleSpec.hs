@@ -34,8 +34,6 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Mary.HuddleSpec
-import Codec.CBOR.Cuddle.Comments ((//-))
-import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)

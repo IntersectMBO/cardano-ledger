@@ -78,8 +78,6 @@ import Cardano.Ledger.Babbage.HuddleSpec hiding (
   urlRule,
  )
 import Cardano.Ledger.Conway (ConwayEra)
-import Codec.CBOR.Cuddle.Comments ((//-))
-import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)

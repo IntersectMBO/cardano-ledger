@@ -22,7 +22,6 @@ module Cardano.Ledger.Mary.HuddleSpec (
 
 import Cardano.Ledger.Allegra.HuddleSpec
 import Cardano.Ledger.Mary (MaryEra)
-import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)

@@ -27,7 +27,6 @@ module Cardano.Ledger.Allegra.HuddleSpec (
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Shelley.HuddleSpec
-import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc

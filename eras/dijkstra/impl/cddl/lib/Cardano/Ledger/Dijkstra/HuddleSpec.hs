@@ -33,8 +33,6 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
 
 import Cardano.Ledger.Conway.HuddleSpec hiding ()
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Codec.CBOR.Cuddle.Comments ((//-))
-import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import Data.Text ()
 import Data.Word (Word64)

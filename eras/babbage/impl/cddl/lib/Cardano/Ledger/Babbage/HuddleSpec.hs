@@ -31,8 +31,6 @@ import Cardano.Ledger.Alonzo.HuddleSpec hiding (
   shelleyProtocolVersionGroup,
  )
 import Cardano.Ledger.Babbage (BabbageEra)
-import Codec.CBOR.Cuddle.Comments ((//-))
-import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)

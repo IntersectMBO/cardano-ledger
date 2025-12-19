@@ -8,6 +8,8 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Huddle (
+  module Huddle,
+  (//-),
   HuddleRule (..),
   HuddleGroup (..),
   HuddleGRule (..),
@@ -23,7 +25,9 @@ module Cardano.Ledger.Huddle (
 
 import Cardano.Ledger.Core (Era)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
+import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
+import qualified Codec.CBOR.Cuddle.Huddle as Huddle hiding ((=:=), (=:~))
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)

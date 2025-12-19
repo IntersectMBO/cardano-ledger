@@ -58,8 +58,6 @@ module Cardano.Ledger.Shelley.HuddleSpec (
 import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule)
 import Cardano.Ledger.Huddle
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Codec.CBOR.Cuddle.Comments ((//-))
-import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)
