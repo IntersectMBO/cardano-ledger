@@ -38,6 +38,7 @@ import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
+import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -51,31 +52,45 @@ alonzoCDDL =
     , HIRule $ huddleRule @"signkey_kes" (Proxy @AlonzoEra)
     ]
 
-exUnitsRule :: Rule
-exUnitsRule = "ex_units" =:= arr ["mem" ==> VUInt, "steps" ==> VUInt]
+exUnitsRule :: forall name. KnownSymbol name => Proxy name -> Rule
+exUnitsRule pname = pname =.= arr ["mem" ==> VUInt, "steps" ==> VUInt]
 
-networkIdRule :: Rule
-networkIdRule = "network_id" =:= int 0 / int 1
+networkIdRule :: forall name. KnownSymbol name => Proxy name -> Rule
+networkIdRule pname = pname =.= int 0 / int 1
 
-positiveIntervalRule :: forall era. Era era => Proxy era -> Rule
-positiveIntervalRule p =
-  "positive_interval"
-    =:= tag 30 (arr [a (huddleRule @"positive_int" p), a (huddleRule @"positive_int" p)])
+positiveIntervalRule ::
+  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Rule
+positiveIntervalRule pname p =
+  pname
+    =.= tag 30 (arr [a (huddleRule @"positive_int" p), a (huddleRule @"positive_int" p)])
 
-bigUintRule :: forall era. HuddleRule "bounded_bytes" era => Proxy era -> Rule
-bigUintRule p = "big_uint" =:= tag 2 (huddleRule @"bounded_bytes" p)
+bigUintRule ::
+  forall name era.
+  (KnownSymbol name, HuddleRule "bounded_bytes" era) => Proxy name -> Proxy era -> Rule
+bigUintRule pname p = pname =.= tag 2 (huddleRule @"bounded_bytes" p)
 
-bigNintRule :: forall era. HuddleRule "bounded_bytes" era => Proxy era -> Rule
-bigNintRule p = "big_nint" =:= tag 3 (huddleRule @"bounded_bytes" p)
+bigNintRule ::
+  forall name era.
+  (KnownSymbol name, HuddleRule "bounded_bytes" era) => Proxy name -> Proxy era -> Rule
+bigNintRule pname p = pname =.= tag 3 (huddleRule @"bounded_bytes" p)
 
-bigIntRule :: forall era. HuddleRule "bounded_bytes" era => Proxy era -> Rule
-bigIntRule p = "big_int" =:= VInt / bigUintRule p / bigNintRule p
+bigIntRule ::
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "big_uint" era
+  , HuddleRule "big_nint" era
+  ) =>
+  Proxy name ->
+  Proxy era ->
+  Rule
+bigIntRule pname p = pname =.= VInt / huddleRule @"big_uint" p / huddleRule @"big_nint" p
 
-scriptDataHashRule :: forall era. Era era => Proxy era -> Rule
-scriptDataHashRule p = "script_data_hash" =:= huddleRule @"hash32" p
+scriptDataHashRule ::
+  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Rule
+scriptDataHashRule pname p = pname =.= huddleRule @"hash32" p
 
-boundedBytesRule :: Rule
-boundedBytesRule =
+boundedBytesRule :: forall name. KnownSymbol name => Proxy name -> Rule
+boundedBytesRule pname =
   comment
     [str|The real bounded_bytes does not have this limit. it instead has
         |a different limit which cannot be expressed in CDDL.
@@ -88,153 +103,170 @@ boundedBytesRule =
         | bytestrings consists of a token #2.31 followed by a sequence
         | of definite-length encoded bytestrings and a stop code )
         |]
-    $ "bounded_bytes" =:= VBytes `sized` (0 :: Word64, 64 :: Word64)
+    $ pname =.= VBytes `sized` (0 :: Word64, 64 :: Word64)
 
-distinctBytesRule :: Rule
-distinctBytesRule =
+distinctBytesRule :: forall name. KnownSymbol name => Proxy name -> Rule
+distinctBytesRule pname =
   comment
     [str|A type for distinct values.
         |The type parameter must support .size, for example: bytes or uint
         |]
-    $ "distinct_bytes"
-      =:= (VBytes `sized` (8 :: Word64))
+    $ pname
+      =.= (VBytes `sized` (8 :: Word64))
       / (VBytes `sized` (16 :: Word64))
       / (VBytes `sized` (20 :: Word64))
       / (VBytes `sized` (24 :: Word64))
       / (VBytes `sized` (30 :: Word64))
       / (VBytes `sized` (32 :: Word64))
 
-exUnitPricesRule :: forall era. HuddleRule "positive_interval" era => Proxy era -> Rule
-exUnitPricesRule p =
-  "ex_unit_prices"
-    =:= arr
+exUnitPricesRule ::
+  forall name era.
+  (KnownSymbol name, HuddleRule "positive_interval" era) => Proxy name -> Proxy era -> Rule
+exUnitPricesRule pname p =
+  pname
+    =.= arr
       [ "mem_price" ==> huddleRule @"positive_interval" p
       , "step_price" ==> huddleRule @"positive_interval" p
       ]
 
 requiredSignersRule ::
-  forall era. (HuddleRule "addr_keyhash" era, HuddleRule1 "set" era) => Proxy era -> Rule
-requiredSignersRule p = "required_signers" =:= huddleRule1 @"set" p (huddleRule @"addr_keyhash" p)
+  forall name era.
+  (KnownSymbol name, HuddleRule "addr_keyhash" era, HuddleRule1 "set" era) =>
+  Proxy name -> Proxy era -> Rule
+requiredSignersRule pname p = pname =.= huddleRule1 @"set" p (huddleRule @"addr_keyhash" p)
+
+constr :: (KnownSymbol name, IsType0 a) => Proxy name -> a -> GRuleCall
+constr pname =
+  binding $ \x ->
+    pname
+      =.= tag 121 (arr [0 <+ a x])
+      / tag 122 (arr [0 <+ a x])
+      / tag 123 (arr [0 <+ a x])
+      / tag 124 (arr [0 <+ a x])
+      / tag 125 (arr [0 <+ a x])
+      / tag 126 (arr [0 <+ a x])
+      / tag 127 (arr [0 <+ a x])
+      / tag 102 (arr [a VUInt, a $ arr [0 <+ a x]])
 
 instance HuddleGroup "operational_cert" AlonzoEra where
-  huddleGroup = shelleyOperationalCertGroup @AlonzoEra
+  huddleGroupNamed = shelleyOperationalCertGroup
 
 instance HuddleRule "transaction_id" AlonzoEra where
-  huddleRule = transactionIdRule @AlonzoEra
+  huddleRuleNamed = transactionIdRule
 
 instance HuddleRule "transaction_input" AlonzoEra where
-  huddleRule = transactionInputRule @AlonzoEra
+  huddleRuleNamed = transactionInputRule
 
 instance HuddleRule "certificate" AlonzoEra where
-  huddleRule = certificateRule @AlonzoEra
+  huddleRuleNamed = certificateRule
 
 instance HuddleGroup "account_registration_cert" AlonzoEra where
-  huddleGroup = accountRegistrationCertGroup @AlonzoEra
+  huddleGroupNamed = accountRegistrationCertGroup
 
 instance HuddleGroup "account_unregistration_cert" AlonzoEra where
-  huddleGroup = accountUnregistrationCertGroup @AlonzoEra
+  huddleGroupNamed = accountUnregistrationCertGroup
 
 instance HuddleGroup "delegation_to_stake_pool_cert" AlonzoEra where
-  huddleGroup = delegationToStakePoolCertGroup @AlonzoEra
+  huddleGroupNamed = delegationToStakePoolCertGroup
 
 instance HuddleGroup "pool_registration_cert" AlonzoEra where
-  huddleGroup = poolRegistrationCertGroup @AlonzoEra
+  huddleGroupNamed = poolRegistrationCertGroup
 
 instance HuddleGroup "pool_retirement_cert" AlonzoEra where
-  huddleGroup = poolRetirementCertGroup @AlonzoEra
+  huddleGroupNamed = poolRetirementCertGroup
 
 instance HuddleGroup "genesis_delegation_cert" AlonzoEra where
-  huddleGroup = genesisDelegationCertGroup @AlonzoEra
+  huddleGroupNamed = genesisDelegationCertGroup
 
 instance HuddleGroup "move_instantaneous_rewards_cert" AlonzoEra where
-  huddleGroup = moveInstantaneousRewardsCertGroup @AlonzoEra
+  huddleGroupNamed = moveInstantaneousRewardsCertGroup
 
 instance HuddleRule "withdrawals" AlonzoEra where
-  huddleRule = shelleyWithdrawalsRule @AlonzoEra
+  huddleRuleNamed = shelleyWithdrawalsRule
 
 instance HuddleRule "genesis_hash" AlonzoEra where
-  huddleRule = genesisHashRule @AlonzoEra
+  huddleRuleNamed = genesisHashRule
 
 instance HuddleRule "genesis_delegate_hash" AlonzoEra where
-  huddleRule = genesisDelegateHashRule @AlonzoEra
+  huddleRuleNamed = genesisDelegateHashRule
 
 instance HuddleGroup "pool_params" AlonzoEra where
-  huddleGroup = poolParamsGroup @AlonzoEra
+  huddleGroupNamed = poolParamsGroup
 
 instance HuddleRule "pool_metadata" AlonzoEra where
-  huddleRule = poolMetadataRule @AlonzoEra
+  huddleRuleNamed = poolMetadataRule
 
 instance HuddleRule "dns_name" AlonzoEra where
-  huddleRule _ = dnsNameRule
+  huddleRuleNamed pname _ = dnsNameRule pname
 
 instance HuddleRule "url" AlonzoEra where
-  huddleRule _ = urlRule
+  huddleRuleNamed pname _ = urlRule pname
 
 instance HuddleGroup "single_host_addr" AlonzoEra where
-  huddleGroup = singleHostAddrGroup @AlonzoEra
+  huddleGroupNamed = singleHostAddrGroup
 
 instance HuddleGroup "single_host_name" AlonzoEra where
-  huddleGroup = singleHostNameGroup @AlonzoEra
+  huddleGroupNamed = singleHostNameGroup
 
 instance HuddleGroup "multi_host_name" AlonzoEra where
-  huddleGroup = multiHostNameGroup @AlonzoEra
+  huddleGroupNamed = multiHostNameGroup
 
 instance HuddleRule "relay" AlonzoEra where
-  huddleRule = relayRule @AlonzoEra
+  huddleRuleNamed = relayRule
 
 instance HuddleRule "move_instantaneous_reward" AlonzoEra where
-  huddleRule = moveInstantaneousRewardRule @AlonzoEra
+  huddleRuleNamed = moveInstantaneousRewardRule
 
 instance HuddleRule "delta_coin" AlonzoEra where
-  huddleRule _ = deltaCoinRule
+  huddleRuleNamed pname _ = deltaCoinRule pname
 
 instance HuddleRule "vkeywitness" AlonzoEra where
-  huddleRule = vkeywitnessRule @AlonzoEra
+  huddleRuleNamed = vkeywitnessRule
 
 instance HuddleRule "bootstrap_witness" AlonzoEra where
-  huddleRule = bootstrapWitnessRule @AlonzoEra
+  huddleRuleNamed = bootstrapWitnessRule
 
 instance HuddleRule "auxiliary_scripts" AlonzoEra where
-  huddleRule = auxiliaryScriptsRule @AlonzoEra
+  huddleRuleNamed = auxiliaryScriptsRule
 
 instance HuddleRule "auxiliary_data_array" AlonzoEra where
-  huddleRule = auxiliaryDataArrayRule @AlonzoEra
+  huddleRuleNamed = auxiliaryDataArrayRule
 
 instance HuddleGroup "script_pubkey" AlonzoEra where
-  huddleGroup = scriptPubkeyGroup @AlonzoEra
+  huddleGroupNamed = scriptPubkeyGroup
 
 instance HuddleGroup "script_all" AlonzoEra where
-  huddleGroup = scriptAllGroup @AlonzoEra
+  huddleGroupNamed = scriptAllGroup
 
 instance HuddleGroup "script_any" AlonzoEra where
-  huddleGroup = scriptAnyGroup @AlonzoEra
+  huddleGroupNamed = scriptAnyGroup
 
 instance HuddleGroup "script_n_of_k" AlonzoEra where
-  huddleGroup = scriptNOfKGroup @AlonzoEra
+  huddleGroupNamed = scriptNOfKGroup
 
 instance HuddleGroup "script_invalid_before" AlonzoEra where
-  huddleGroup = scriptInvalidBeforeGroup @AlonzoEra
+  huddleGroupNamed = scriptInvalidBeforeGroup
 
 instance HuddleGroup "script_invalid_hereafter" AlonzoEra where
-  huddleGroup = scriptInvalidHereafterGroup @AlonzoEra
+  huddleGroupNamed = scriptInvalidHereafterGroup
 
 instance HuddleRule "policy_id" AlonzoEra where
-  huddleRule p = "policy_id" =:= huddleRule @"script_hash" p
+  huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p
 
 instance HuddleRule "asset_name" AlonzoEra where
-  huddleRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "native_script" AlonzoEra where
-  huddleRule = nativeScriptRule @AlonzoEra
+  huddleRuleNamed = nativeScriptRule
 
 instance HuddleRule "value" AlonzoEra where
-  huddleRule = maryValueRule @AlonzoEra
+  huddleRuleNamed = maryValueRule
 
 instance HuddleRule "mint" AlonzoEra where
-  huddleRule = maryMintRule @AlonzoEra
+  huddleRuleNamed = maryMintRule
 
 instance HuddleRule "block" AlonzoEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|Valid blocks must also satisfy the following two constraints:
           |  1) the length of transaction_bodies and transaction_witness_sets must be
@@ -242,8 +274,8 @@ instance HuddleRule "block" AlonzoEra where
           |  2) every transaction_index must be strictly smaller than the length of
           |     transaction_bodies
           |]
-      $ "block"
-        =:= arr
+      $ pname
+        =.= arr
           [ a $ huddleRule @"header" p
           , "transaction_bodies" ==> arr [0 <+ a (huddleRule @"transaction_body" p)]
           , "transaction_witness_sets" ==> arr [0 <+ a (huddleRule @"transaction_witness_set" p)]
@@ -257,17 +289,17 @@ instance HuddleRule "block" AlonzoEra where
           ]
 
 instance HuddleRule "header" AlonzoEra where
-  huddleRule p =
-    "header"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ a $ huddleRule @"header_body" p
         , "body_signature" ==> huddleRule @"kes_signature" p
         ]
 
 instance HuddleRule "header_body" AlonzoEra where
-  huddleRule p =
-    "header_body"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ "block_number" ==> huddleRule @"block_number" p
         , "slot" ==> huddleRule @"slot" p
         , "prev_hash" ==> (huddleRule @"hash32" p / VNil)
@@ -282,15 +314,15 @@ instance HuddleRule "header_body" AlonzoEra where
         ]
 
 instance HuddleGroup "protocol_version" AlonzoEra where
-  huddleGroup = shelleyProtocolVersionGroup @AlonzoEra
+  huddleGroupNamed = shelleyProtocolVersionGroup
 
 instance HuddleRule "major_protocol_version" AlonzoEra where
-  huddleRule = majorProtocolVersionRule @AlonzoEra
+  huddleRuleNamed = majorProtocolVersionRule
 
 instance HuddleRule "transaction" AlonzoEra where
-  huddleRule p =
-    "transaction"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ a $ huddleRule @"transaction_body" p
         , a $ huddleRule @"transaction_witness_set" p
         , a VBool
@@ -298,9 +330,9 @@ instance HuddleRule "transaction" AlonzoEra where
         ]
 
 instance HuddleRule "transaction_body" AlonzoEra where
-  huddleRule p =
-    "transaction_body"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p //- "fee"
@@ -318,35 +350,35 @@ instance HuddleRule "transaction_body" AlonzoEra where
         ]
 
 instance HuddleRule "transaction_output" AlonzoEra where
-  huddleRule p =
-    "transaction_output"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ a (huddleRule @"address" p)
         , "amount" ==> huddleRule @"value" p
         , opt ("datum_hash" ==> huddleRule @"hash32" p)
         ]
 
 instance HuddleRule "update" AlonzoEra where
-  huddleRule p =
-    "update"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ a (huddleRule @"proposed_protocol_parameter_updates" p)
         , a (huddleRule @"epoch" p)
         ]
 
 instance HuddleRule "proposed_protocol_parameter_updates" AlonzoEra where
-  huddleRule p =
-    "proposed_protocol_parameter_updates"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ 0
             <+ asKey (huddleRule @"genesis_hash" p)
             ==> huddleRule @"protocol_param_update" p
         ]
 
 instance HuddleRule "protocol_param_update" AlonzoEra where
-  huddleRule p =
-    "protocol_param_update"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ opt (idx 0 ==> VUInt) //- "minfee A"
         , opt (idx 1 ==> VUInt) //- "minfee B"
         , opt (idx 2 ==> VUInt `sized` (4 :: Word64)) //- "max block body size"
@@ -374,9 +406,9 @@ instance HuddleRule "protocol_param_update" AlonzoEra where
         ]
 
 instance HuddleRule "transaction_witness_set" AlonzoEra where
-  huddleRule p =
-    "transaction_witness_set"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ opt $ idx 0 ==> arr [0 <+ a (huddleRule @"vkeywitness" p)]
         , opt $ idx 1 ==> arr [0 <+ a (huddleRule @"native_script" p)]
         , opt $ idx 2 ==> arr [0 <+ a (huddleRule @"bootstrap_witness" p)]
@@ -386,22 +418,22 @@ instance HuddleRule "transaction_witness_set" AlonzoEra where
         ]
 
 instance HuddleRule "auxiliary_data" AlonzoEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|auxiliary_data supports three serialization formats:
           |  1. metadata (raw) - Supported since Shelley
           |  2. auxiliary_data_array - Array format, introduced in Allegra
           |  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
           |]
-      $ "auxiliary_data"
-        =:= huddleRule @"metadata" p
+      $ pname
+        =.= huddleRule @"metadata" p
         / huddleRule @"auxiliary_data_array" p
         / huddleRule @"auxiliary_data_map" p
 
 instance HuddleRule "auxiliary_data_map" AlonzoEra where
-  huddleRule p =
-    "auxiliary_data_map"
-      =:= tag
+  huddleRuleNamed pname p =
+    pname
+      =.= tag
         259
         ( mp
             [ opt (idx 0 ==> huddleRule @"metadata" p)
@@ -411,7 +443,7 @@ instance HuddleRule "auxiliary_data_map" AlonzoEra where
         )
 
 instance HuddleRule "script_data_hash" AlonzoEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|This is a hash of data which may affect evaluation of a script.
           |
@@ -468,73 +500,68 @@ instance HuddleRule "script_data_hash" AlonzoEra where
           |corresponding to a CBOR empty list and an empty map (our
           |apologies).
           |]
-      $ scriptDataHashRule p
+      $ scriptDataHashRule pname p
 
 instance HuddleRule "required_signers" AlonzoEra where
-  huddleRule = requiredSignersRule @AlonzoEra
+  huddleRuleNamed = requiredSignersRule
 
 instance HuddleRule "network_id" AlonzoEra where
-  huddleRule _ = networkIdRule
+  huddleRuleNamed pname _ = networkIdRule pname
 
 instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v1_script" era where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|Alonzo introduces Plutus smart contracts.
           |Plutus V1 scripts are opaque bytestrings.
           |]
-      $ "plutus_v1_script" =:= huddleRule @"distinct_bytes" p
+      $ pname =.= huddleRule @"distinct_bytes" p
 
 instance HuddleRule "distinct_bytes" AlonzoEra where
-  huddleRule _ = distinctBytesRule
+  huddleRuleNamed pname _ = distinctBytesRule pname
 
 instance HuddleRule "bounded_bytes" AlonzoEra where
-  huddleRule _ = boundedBytesRule
+  huddleRuleNamed pname _ = boundedBytesRule pname
 
 instance HuddleRule "big_uint" AlonzoEra where
-  huddleRule = bigUintRule
+  huddleRuleNamed = bigUintRule
 
 instance HuddleRule "big_nint" AlonzoEra where
-  huddleRule = bigNintRule
+  huddleRuleNamed = bigNintRule
 
 instance HuddleRule "big_int" AlonzoEra where
-  huddleRule = bigIntRule
+  huddleRuleNamed = bigIntRule
 
-instance (Era era, HuddleRule "big_int" era, HuddleRule "bounded_bytes" era) => HuddleRule "plutus_data" era where
-  huddleRule p =
-    "plutus_data"
-      =:= constr (huddleRule @"plutus_data" p)
+instance
+  (Era era, HuddleRule "big_int" era, HuddleRule "bounded_bytes" era, HuddleRule1 "constr" era) =>
+  HuddleRule "plutus_data" era
+  where
+  huddleRuleNamed pname p =
+    pname
+      =.= huddleRule1 @"constr" p (huddleRule @"plutus_data" p)
       / smp [0 <+ asKey (huddleRule @"plutus_data" p) ==> huddleRule @"plutus_data" p]
       / sarr [0 <+ a (huddleRule @"plutus_data" p)]
       / huddleRule @"big_int" p
       / huddleRule @"bounded_bytes" p
 
-constr :: IsType0 a => a -> GRuleCall
-constr =
-  binding $ \x ->
-    "constr"
-      =:= tag 121 (arr [0 <+ a x])
-      / tag 122 (arr [0 <+ a x])
-      / tag 123 (arr [0 <+ a x])
-      / tag 124 (arr [0 <+ a x])
-      / tag 125 (arr [0 <+ a x])
-      / tag 126 (arr [0 <+ a x])
-      / tag 127 (arr [0 <+ a x])
-      / tag 102 (arr [a VUInt, a $ arr [0 <+ a x]])
+instance Era era => HuddleRule1 "constr" era where
+  huddleRule1Named pname _ = constr pname
 
 instance HuddleRule "redeemers" AlonzoEra where
-  huddleRule p = "redeemers" =:= arr [0 <+ a (huddleRule @"redeemer" p)]
+  huddleRuleNamed pname p = pname =.= arr [0 <+ a (huddleRule @"redeemer" p)]
 
 alonzoRedeemer ::
-  forall era.
-  ( HuddleRule "redeemer_tag" era
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "redeemer_tag" era
   , HuddleRule "plutus_data" era
   , HuddleRule "ex_units" era
   ) =>
+  Proxy name ->
   Proxy era ->
   Rule
-alonzoRedeemer p =
-  "redeemer"
-    =:= arr
+alonzoRedeemer pname p =
+  pname
+    =.= arr
       [ "tag" ==> huddleRule @"redeemer_tag" p
       , "index" ==> VUInt
       , "data" ==> huddleRule @"plutus_data" p
@@ -542,45 +569,45 @@ alonzoRedeemer p =
       ]
 
 instance HuddleRule "redeemer" AlonzoEra where
-  huddleRule = alonzoRedeemer @AlonzoEra
+  huddleRuleNamed = alonzoRedeemer
 
-alonzoRedeemerTag :: Rule
-alonzoRedeemerTag =
+alonzoRedeemerTag :: forall name. KnownSymbol name => Proxy name -> Rule
+alonzoRedeemerTag pname =
   comment
     [str|0: spend
         |1: mint
         |2: cert
         |3: reward
         |]
-    $ "redeemer_tag" =:= (0 :: Integer) ... (3 :: Integer)
+    $ pname =.= (0 :: Integer) ... (3 :: Integer)
 
 instance HuddleRule "redeemer_tag" AlonzoEra where
-  huddleRule _ = alonzoRedeemerTag
+  huddleRuleNamed pname _ = alonzoRedeemerTag pname
 
 instance HuddleRule "ex_units" AlonzoEra where
-  huddleRule _ = exUnitsRule
+  huddleRuleNamed pname _ = exUnitsRule pname
 
 instance HuddleRule "ex_unit_prices" AlonzoEra where
-  huddleRule = exUnitPricesRule @AlonzoEra
+  huddleRuleNamed = exUnitPricesRule
 
 instance HuddleRule "positive_interval" AlonzoEra where
-  huddleRule = positiveIntervalRule
+  huddleRuleNamed = positiveIntervalRule
 
 instance HuddleRule "language" AlonzoEra where
-  huddleRule _ =
+  huddleRuleNamed pname _ =
     comment
       [str|NOTE: NEW
           |  This is an enumeration. for now there's only one value. Plutus V1
           |]
-      $ "language" =:= int 0
+      $ pname =.= int 0
 
 instance HuddleRule "cost_models" AlonzoEra where
-  huddleRule p =
-    "cost_models"
-      =:= mp [0 <+ asKey (huddleRule @"language" p) ==> huddleRule @"cost_model" p]
+  huddleRuleNamed pname p =
+    pname
+      =.= mp [0 <+ asKey (huddleRule @"language" p) ==> huddleRule @"cost_model" p]
 
 instance HuddleRule "cost_model" AlonzoEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|NOTE: NEW
           |  The keys to the cost model map are not present in the serialization.
@@ -588,7 +615,10 @@ instance HuddleRule "cost_model" AlonzoEra where
           |  lexicographically by their correpsonding key value.
           |  See Plutus' `ParamName` for parameter ordering
           |]
-      $ "cost_model" =:= arr [166 <+ a (huddleRule @"int64" p) +> 166]
+      $ pname =.= arr [166 <+ a (huddleRule @"int64" p) +> 166]
 
 instance HuddleRule1 "set" AlonzoEra where
-  huddleRule1 _ = untaggedSet
+  huddleRule1Named pname _ = untaggedSet pname
+
+instance HuddleRule1 "multiasset" AlonzoEra where
+  huddleRule1Named = maryMultiasset
