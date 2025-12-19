@@ -198,7 +198,12 @@ instance
   ToExpr (Event (EraRule "LEDGER" era)) =>
   ToExpr (DijkstraMempoolEvent era)
 
-instance ToExpr (DijkstraSubCertPredFailure era)
+instance
+  ( ToExpr (PredicateFailure (EraRule "SUBDELEG" era))
+  , ToExpr (PredicateFailure (EraRule "SUBPOOL" era))
+  , ToExpr (PredicateFailure (EraRule "SUBGOVCERT" era))
+  ) =>
+  ToExpr (DijkstraSubCertPredFailure era)
 
 instance ToExpr (DijkstraSubCertsPredFailure era)
 
