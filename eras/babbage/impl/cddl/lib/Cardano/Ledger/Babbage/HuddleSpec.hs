@@ -23,6 +23,7 @@ module Cardano.Ledger.Babbage.HuddleSpec (
   alonzoTransactionOutputRule,
   dataRule,
   datumOptionRule,
+  scriptRefRule,
 ) where
 
 import Cardano.Ledger.Alonzo.HuddleSpec hiding (
@@ -34,6 +35,7 @@ import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
+import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -51,17 +53,19 @@ babbageCDDL =
 -- serialization. See 'header_body' instance for full explanation.
 -- Ref: PR #3762, Issue #3559
 babbageProtocolVersionRule ::
-  forall era. HuddleRule "major_protocol_version" era => Proxy era -> Rule
-babbageProtocolVersionRule p =
-  "protocol_version" =:= arr [a $ huddleRule @"major_protocol_version" p, a VUInt]
+  forall name era.
+  (KnownSymbol name, HuddleRule "major_protocol_version" era) => Proxy name -> Proxy era -> Rule
+babbageProtocolVersionRule pname p =
+  pname =.= arr [a $ huddleRule @"major_protocol_version" p, a VUInt]
 
 -- | Babbage changed operational_cert from GroupDef to Rule to match actual block
 -- serialization. See 'header_body' instance for full explanation.
 -- Ref: PR #3762, Issue #3559
-babbageOperationalCertRule :: forall era. Era era => Proxy era -> Rule
-babbageOperationalCertRule p =
-  "operational_cert"
-    =:= arr
+babbageOperationalCertRule ::
+  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Rule
+babbageOperationalCertRule pname p =
+  pname
+    =.= arr
       [ "hot_vkey" ==> huddleRule @"kes_vkey" p
       , "sequence_number" ==> huddleRule @"sequence_number" p
       , "kes_period" ==> huddleRule @"kes_period" p
@@ -69,176 +73,231 @@ babbageOperationalCertRule p =
       ]
 
 alonzoTransactionOutputRule ::
-  forall era.
-  (HuddleRule "address" era, HuddleRule "value" era, HuddleRule "hash32" era) =>
-  Proxy era -> Rule
-alonzoTransactionOutputRule p =
-  "alonzo_transaction_output"
-    =:= arr
+  forall name era.
+  (KnownSymbol name, HuddleRule "address" era, HuddleRule "value" era, HuddleRule "hash32" era) =>
+  Proxy name ->
+  Proxy era ->
+  Rule
+alonzoTransactionOutputRule pname p =
+  pname
+    =.= arr
       [ a (huddleRule @"address" p)
       , "amount" ==> huddleRule @"value" p
       , opt ("datum_hash" ==> huddleRule @"hash32" p)
       ]
 
-dataRule :: forall era. HuddleRule "plutus_data" era => Proxy era -> Rule
-dataRule p = "data" =:= tag 24 (VBytes `cbor` huddleRule @"plutus_data" p)
+dataRule ::
+  forall name era. (KnownSymbol name, HuddleRule "plutus_data" era) => Proxy name -> Proxy era -> Rule
+dataRule pname p = pname =.= tag 24 (VBytes `cbor` huddleRule @"plutus_data" p)
 
 datumOptionRule ::
-  forall era.
-  (HuddleRule "hash32" era, HuddleRule "data" era) =>
-  Proxy era -> Rule
-datumOptionRule p =
-  "datum_option"
-    =:= arr [0, a (huddleRule @"hash32" p)]
+  forall name era.
+  (KnownSymbol name, HuddleRule "hash32" era, HuddleRule "data" era) =>
+  Proxy name ->
+  Proxy era ->
+  Rule
+datumOptionRule pname p =
+  pname
+    =.= arr [0, a (huddleRule @"hash32" p)]
     / arr [1, a (huddleRule @"data" p)]
 
+scriptRefRule ::
+  forall name era.
+  (KnownSymbol name, HuddleRule "script" era) =>
+  Proxy name ->
+  Proxy era ->
+  Rule
+scriptRefRule pname p = pname =.= tag 24 (VBytes `cbor` huddleRule @"script" p)
+
+babbageTransactionOutput ::
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "address" era
+  , HuddleRule "value" era
+  , HuddleRule "datum_option" era
+  , HuddleRule "script_ref" era
+  ) =>
+  Proxy name ->
+  Proxy era ->
+  Rule
+babbageTransactionOutput pname p =
+  pname
+    =.= mp
+      [ idx 0 ==> huddleRule @"address" p
+      , idx 1 ==> huddleRule @"value" p
+      , opt $ idx 2 ==> huddleRule @"datum_option" p //- "new"
+      , opt $ idx 3 ==> huddleRule @"script_ref" p //- "new"
+      ]
+
+babbageScript ::
+  forall name era.
+  ( KnownSymbol name
+  , HuddleRule "native_script" era
+  , HuddleRule "plutus_v1_script" era
+  , HuddleRule "plutus_v2_script" era
+  ) =>
+  Proxy name ->
+  Proxy era ->
+  Rule
+babbageScript pname p =
+  comment
+    [str|Babbage supports three script types:
+        |  0: Native scripts (timelock)
+        |  1: Plutus V1 scripts
+        |  2: Plutus V2 scripts
+        |]
+    $ pname
+      =.= arr [0, a (huddleRule @"native_script" p)]
+      / arr [1, a (huddleRule @"plutus_v1_script" p)]
+      / arr [2, a (huddleRule @"plutus_v2_script" p)]
+
 instance HuddleGroup "account_registration_cert" BabbageEra where
-  huddleGroup = accountRegistrationCertGroup @BabbageEra
+  huddleGroupNamed = accountRegistrationCertGroup
 
 instance HuddleGroup "account_unregistration_cert" BabbageEra where
-  huddleGroup = accountUnregistrationCertGroup @BabbageEra
+  huddleGroupNamed = accountUnregistrationCertGroup
 
 instance HuddleGroup "delegation_to_stake_pool_cert" BabbageEra where
-  huddleGroup = delegationToStakePoolCertGroup @BabbageEra
+  huddleGroupNamed = delegationToStakePoolCertGroup
 
 instance HuddleGroup "pool_registration_cert" BabbageEra where
-  huddleGroup = poolRegistrationCertGroup @BabbageEra
+  huddleGroupNamed = poolRegistrationCertGroup
 
 instance HuddleGroup "pool_retirement_cert" BabbageEra where
-  huddleGroup = poolRetirementCertGroup @BabbageEra
+  huddleGroupNamed = poolRetirementCertGroup
 
 instance HuddleGroup "genesis_delegation_cert" BabbageEra where
-  huddleGroup = genesisDelegationCertGroup @BabbageEra
+  huddleGroupNamed = genesisDelegationCertGroup
 
 instance HuddleGroup "move_instantaneous_rewards_cert" BabbageEra where
-  huddleGroup = moveInstantaneousRewardsCertGroup @BabbageEra
+  huddleGroupNamed = moveInstantaneousRewardsCertGroup
 
 instance HuddleRule "certificate" BabbageEra where
-  huddleRule = certificateRule @BabbageEra
+  huddleRuleNamed = certificateRule
 
 instance HuddleRule "withdrawals" BabbageEra where
-  huddleRule = shelleyWithdrawalsRule @BabbageEra
+  huddleRuleNamed = shelleyWithdrawalsRule
 
 instance HuddleRule "genesis_hash" BabbageEra where
-  huddleRule = genesisHashRule @BabbageEra
+  huddleRuleNamed = genesisHashRule
 
 instance HuddleRule "genesis_delegate_hash" BabbageEra where
-  huddleRule = genesisDelegateHashRule @BabbageEra
+  huddleRuleNamed = genesisDelegateHashRule
 
 instance HuddleGroup "pool_params" BabbageEra where
-  huddleGroup = poolParamsGroup @BabbageEra
+  huddleGroupNamed = poolParamsGroup
 
 instance HuddleRule "pool_metadata" BabbageEra where
-  huddleRule = poolMetadataRule @BabbageEra
+  huddleRuleNamed = poolMetadataRule
 
 instance HuddleRule "dns_name" BabbageEra where
-  huddleRule _ = dnsNameRule
+  huddleRuleNamed pname _ = dnsNameRule pname
 
 instance HuddleRule "url" BabbageEra where
-  huddleRule _ = urlRule
+  huddleRuleNamed pname _ = urlRule pname
 
 instance HuddleGroup "single_host_addr" BabbageEra where
-  huddleGroup = singleHostAddrGroup @BabbageEra
+  huddleGroupNamed = singleHostAddrGroup
 
 instance HuddleGroup "single_host_name" BabbageEra where
-  huddleGroup = singleHostNameGroup @BabbageEra
+  huddleGroupNamed = singleHostNameGroup
 
 instance HuddleGroup "multi_host_name" BabbageEra where
-  huddleGroup = multiHostNameGroup @BabbageEra
+  huddleGroupNamed = multiHostNameGroup
 
 instance HuddleRule "relay" BabbageEra where
-  huddleRule = relayRule @BabbageEra
+  huddleRuleNamed = relayRule
 
 instance HuddleRule "move_instantaneous_reward" BabbageEra where
-  huddleRule = moveInstantaneousRewardRule @BabbageEra
+  huddleRuleNamed = moveInstantaneousRewardRule
 
 instance HuddleRule "delta_coin" BabbageEra where
-  huddleRule _ = deltaCoinRule
+  huddleRuleNamed pname _ = deltaCoinRule pname
 
 instance HuddleRule "transaction_id" BabbageEra where
-  huddleRule = transactionIdRule @BabbageEra
+  huddleRuleNamed = transactionIdRule
 
 instance HuddleRule "transaction_input" BabbageEra where
-  huddleRule = transactionInputRule @BabbageEra
+  huddleRuleNamed = transactionInputRule
 
 instance HuddleRule "vkeywitness" BabbageEra where
-  huddleRule = vkeywitnessRule @BabbageEra
+  huddleRuleNamed = vkeywitnessRule
 
 instance HuddleRule "bootstrap_witness" BabbageEra where
-  huddleRule = bootstrapWitnessRule @BabbageEra
+  huddleRuleNamed = bootstrapWitnessRule
 
 instance HuddleRule "policy_id" BabbageEra where
-  huddleRule p = "policy_id" =:= huddleRule @"script_hash" p
+  huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p
 
 instance HuddleRule "asset_name" BabbageEra where
-  huddleRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "value" BabbageEra where
-  huddleRule = maryValueRule @BabbageEra
+  huddleRuleNamed = maryValueRule
 
 instance HuddleRule "mint" BabbageEra where
-  huddleRule = maryMintRule @BabbageEra
+  huddleRuleNamed = maryMintRule
 
 instance HuddleRule "proposed_protocol_parameter_updates" BabbageEra where
-  huddleRule = proposedProtocolParameterUpdatesRule @BabbageEra
+  huddleRuleNamed = proposedProtocolParameterUpdatesRule
 
 instance HuddleRule "update" BabbageEra where
-  huddleRule = updateRule @BabbageEra
+  huddleRuleNamed = updateRule
 
 instance HuddleRule "required_signers" BabbageEra where
-  huddleRule = requiredSignersRule @BabbageEra
+  huddleRuleNamed = requiredSignersRule
 
 instance HuddleRule "network_id" BabbageEra where
-  huddleRule _ = networkIdRule
+  huddleRuleNamed pname _ = networkIdRule pname
 
 instance HuddleRule "bounded_bytes" BabbageEra where
-  huddleRule _ = boundedBytesRule
+  huddleRuleNamed pname _ = boundedBytesRule pname
 
 instance HuddleRule "big_uint" BabbageEra where
-  huddleRule = bigUintRule
+  huddleRuleNamed = bigUintRule
 
 instance HuddleRule "big_nint" BabbageEra where
-  huddleRule = bigNintRule
+  huddleRuleNamed = bigNintRule
 
 instance HuddleRule "big_int" BabbageEra where
-  huddleRule = bigIntRule
+  huddleRuleNamed = bigIntRule
 
 instance HuddleRule "distinct_bytes" BabbageEra where
-  huddleRule _ = distinctBytesRule
+  huddleRuleNamed pname _ = distinctBytesRule pname
 
 instance HuddleRule "redeemers" BabbageEra where
-  huddleRule p = "redeemers" =:= arr [0 <+ a (huddleRule @"redeemer" p)]
+  huddleRuleNamed pname p = pname =.= arr [0 <+ a (huddleRule @"redeemer" p)]
 
 instance HuddleRule "redeemer" BabbageEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|NEW
           |]
-      $ alonzoRedeemer p
+      $ alonzoRedeemer pname p
 
 instance HuddleRule "redeemer_tag" BabbageEra where
-  huddleRule _ = alonzoRedeemerTag
+  huddleRuleNamed pname _ = alonzoRedeemerTag pname
 
 instance HuddleRule "ex_units" BabbageEra where
-  huddleRule _ = exUnitsRule
+  huddleRuleNamed pname _ = exUnitsRule pname
 
 instance HuddleRule "ex_unit_prices" BabbageEra where
-  huddleRule = exUnitPricesRule @BabbageEra
+  huddleRuleNamed = exUnitPricesRule
 
 instance HuddleRule "positive_interval" BabbageEra where
-  huddleRule = positiveIntervalRule
+  huddleRuleNamed = positiveIntervalRule
 
 instance HuddleRule "operational_cert" BabbageEra where
-  huddleRule = babbageOperationalCertRule @BabbageEra
+  huddleRuleNamed = babbageOperationalCertRule
 
 instance HuddleRule "protocol_version" BabbageEra where
-  huddleRule = babbageProtocolVersionRule @BabbageEra
+  huddleRuleNamed = babbageProtocolVersionRule
 
 instance HuddleRule "major_protocol_version" BabbageEra where
-  huddleRule = majorProtocolVersionRule @BabbageEra
+  huddleRuleNamed = majorProtocolVersionRule
 
 instance HuddleRule "block" BabbageEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|Valid blocks must also satisfy the following two constraints:
           |  1) the length of transaction_bodies and transaction_witness_sets must be
@@ -246,8 +305,8 @@ instance HuddleRule "block" BabbageEra where
           |  2) every transaction_index must be strictly smaller than the length of
           |     transaction_bodies
           |]
-      $ "block"
-        =:= arr
+      $ pname
+        =.= arr
           [ a $ huddleRule @"header" p
           , "transaction_bodies" ==> arr [0 <+ a (huddleRule @"transaction_body" p)]
           , "transaction_witness_sets" ==> arr [0 <+ a (huddleRule @"transaction_witness_set" p)]
@@ -261,9 +320,9 @@ instance HuddleRule "block" BabbageEra where
           ]
 
 instance HuddleRule "header" BabbageEra where
-  huddleRule p =
-    "header"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ a $ huddleRule @"header_body" p
         , "body_signature" ==> huddleRule @"kes_signature" p
         ]
@@ -284,9 +343,9 @@ instance HuddleRule "header" BabbageEra where
 -- See 'babbageProtocolVersionRule' and 'operational_cert' instance for details.
 -- References: PR #3762, Issue #3559
 instance HuddleRule "header_body" BabbageEra where
-  huddleRule p =
-    "header_body"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ "block_number" ==> huddleRule @"block_number" p
         , "slot" ==> huddleRule @"slot" p
         , "prev_hash" ==> (huddleRule @"hash32" p / VNil)
@@ -300,9 +359,9 @@ instance HuddleRule "header_body" BabbageEra where
         ]
 
 instance HuddleRule "transaction" BabbageEra where
-  huddleRule p =
-    "transaction"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ a $ huddleRule @"transaction_body" p
         , a $ huddleRule @"transaction_witness_set" p
         , a VBool
@@ -310,9 +369,9 @@ instance HuddleRule "transaction" BabbageEra where
         ]
 
 instance HuddleRule "transaction_body" BabbageEra where
-  huddleRule p =
-    "transaction_body"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p //- "fee"
@@ -333,7 +392,7 @@ instance HuddleRule "transaction_body" BabbageEra where
         ]
 
 instance HuddleRule "script_data_hash" BabbageEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|This is a hash of data which may affect evaluation of a script.
           |This data consists of:
@@ -397,44 +456,37 @@ instance HuddleRule "script_data_hash" BabbageEra where
           |Note that a transaction might include the redeemers field and set it to the
           |empty map, in which case the user supplied encoding of the empty map is used.
           |]
-      $ scriptDataHashRule p
+      $ scriptDataHashRule pname p
 
 instance HuddleRule "transaction_output" BabbageEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|Both of the Alonzo and Babbage style TxOut formats are equally valid
           |and can be used interchangeably.
           |]
-      $ "transaction_output"
-        =:= huddleRule @"alonzo_transaction_output" p
-        / babbageTransactionOutput p (huddleRule @"script" p)
+      $ pname
+        =.= huddleRule @"alonzo_transaction_output" p
+        / huddleRule @"babbage_transaction_output" p
 
 instance HuddleRule "alonzo_transaction_output" BabbageEra where
-  huddleRule = alonzoTransactionOutputRule @BabbageEra
+  huddleRuleNamed = alonzoTransactionOutputRule
 
-babbageTransactionOutput ::
-  forall era.
-  (HuddleRule "address" era, HuddleRule "value" era, HuddleRule "datum_option" era) =>
-  Proxy era -> Rule -> Rule
-babbageTransactionOutput p script =
-  "babbage_transaction_output"
-    =:= mp
-      [ idx 0 ==> huddleRule @"address" p
-      , idx 1 ==> huddleRule @"value" p
-      , opt $ idx 2 ==> huddleRule @"datum_option" p //- "new"
-      , opt $ idx 3 ==> ("script_ref" =:= tag 24 (VBytes `cbor` script)) //- "new"
-      ]
+instance HuddleRule "babbage_transaction_output" BabbageEra where
+  huddleRuleNamed = babbageTransactionOutput
 
 instance HuddleRule "datum_option" BabbageEra where
-  huddleRule = datumOptionRule @BabbageEra
+  huddleRuleNamed = datumOptionRule
 
 instance HuddleRule "data" BabbageEra where
-  huddleRule = dataRule @BabbageEra
+  huddleRuleNamed = dataRule
+
+instance HuddleRule "script_ref" BabbageEra where
+  huddleRuleNamed = scriptRefRule
 
 instance HuddleRule "transaction_witness_set" BabbageEra where
-  huddleRule p =
-    "transaction_witness_set"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ opt $ idx 0 ==> arr [0 <+ a (huddleRule @"vkeywitness" p)]
         , opt $ idx 1 ==> arr [0 <+ a (huddleRule @"native_script" p)]
         , opt $ idx 2 ==> arr [0 <+ a (huddleRule @"bootstrap_witness" p)]
@@ -445,81 +497,62 @@ instance HuddleRule "transaction_witness_set" BabbageEra where
         ]
 
 instance HuddleRule "native_script" BabbageEra where
-  huddleRule = nativeScriptRule @BabbageEra
+  huddleRuleNamed = nativeScriptRule
 
 instance HuddleGroup "script_pubkey" BabbageEra where
-  huddleGroup = scriptPubkeyGroup @BabbageEra
+  huddleGroupNamed = scriptPubkeyGroup
 
 instance HuddleGroup "script_all" BabbageEra where
-  huddleGroup = scriptAllGroup @BabbageEra
+  huddleGroupNamed = scriptAllGroup
 
 instance HuddleGroup "script_any" BabbageEra where
-  huddleGroup = scriptAnyGroup @BabbageEra
+  huddleGroupNamed = scriptAnyGroup
 
 instance HuddleGroup "script_n_of_k" BabbageEra where
-  huddleGroup = scriptNOfKGroup @BabbageEra
+  huddleGroupNamed = scriptNOfKGroup
 
 instance HuddleGroup "script_invalid_before" BabbageEra where
-  huddleGroup = scriptInvalidBeforeGroup @BabbageEra
+  huddleGroupNamed = scriptInvalidBeforeGroup
 
 instance HuddleGroup "script_invalid_hereafter" BabbageEra where
-  huddleGroup = scriptInvalidHereafterGroup @BabbageEra
+  huddleGroupNamed = scriptInvalidHereafterGroup
 
 instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v2_script" era where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|Babbage introduces Plutus V2 with improved cost model
           |and additional builtins.
           |]
-      $ "plutus_v2_script" =:= huddleRule @"distinct_bytes" p
+      $ pname =.= huddleRule @"distinct_bytes" p
 
 instance HuddleRule "script" BabbageEra where
-  huddleRule = babbageScript
-
-babbageScript ::
-  forall era.
-  ( HuddleRule "native_script" era
-  , HuddleRule "plutus_v1_script" era
-  , HuddleRule "plutus_v2_script" era
-  ) =>
-  Proxy era -> Rule
-babbageScript p =
-  comment
-    [str|Babbage supports three script types:
-        |  0: Native scripts (timelock)
-        |  1: Plutus V1 scripts
-        |  2: Plutus V2 scripts
-        |]
-    $ "script"
-      =:= arr [0, a (huddleRule @"native_script" p)]
-      / arr [1, a (huddleRule @"plutus_v1_script" p)]
-      / arr [2, a (huddleRule @"plutus_v2_script" p)]
+  huddleRuleNamed = babbageScript
 
 instance HuddleRule "language" BabbageEra where
-  huddleRule _ =
+  huddleRuleNamed pname _ =
     comment
       [str|0: Plutus v1
           |1: Plutus v2
           |]
-      $ "language" =:= (0 :: Integer) ... (1 :: Integer)
+      $ pname =.= (0 :: Integer) ... (1 :: Integer)
 
 instance HuddleRule "cost_models" BabbageEra where
-  huddleRule p =
-    "cost_models"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ opt $ idx 0 ==> arr [166 <+ a (huddleRule @"int64" p) +> 166]
         , opt $ idx 1 ==> arr [175 <+ a (huddleRule @"int64" p) +> 175]
         ]
 
 instance HuddleRule "protocol_param_update" BabbageEra where
-  huddleRule p =
-    "protocol_param_update"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ opt (idx 0 ==> VUInt) //- "minfee A"
         , opt (idx 1 ==> VUInt) //- "minfee B"
-        , opt (idx 2 ==> (VUInt `sized` (4 :: Word64))) //- "max block body size"
-        , opt (idx 3 ==> (VUInt `sized` (4 :: Word64))) //- "max transaction size"
-        , opt (idx 4 ==> (VUInt `sized` (2 :: Word64))) //- "max block header size"
+        , opt (idx 2 ==> VUInt `sized` (4 :: Word64)) //- "max block body size"
+        , opt (idx 3 ==> VUInt `sized` (4 :: Word64)) //- "max transaction size"
+        , opt (idx 4 ==> VUInt `sized` (2 :: Word64)) //- "max block header size"
         , opt (idx 5 ==> huddleRule @"coin" p) //- "key deposit"
         , opt (idx 6 ==> huddleRule @"coin" p) //- "pool deposit"
         , opt (idx 7 ==> huddleRule @"epoch_interval" p) //- "maximum epoch"
@@ -540,7 +573,7 @@ instance HuddleRule "protocol_param_update" BabbageEra where
         ]
 
 instance HuddleRule "auxiliary_data" BabbageEra where
-  huddleRule p =
+  huddleRuleNamed pname p =
     comment
       [str|auxiliary_data supports three serialization formats:
           |  1. metadata (raw) - Supported since Shelley
@@ -548,22 +581,22 @@ instance HuddleRule "auxiliary_data" BabbageEra where
           |  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
           |     Babbage adds plutus_v2_script support at index 3
           |]
-      $ "auxiliary_data"
-        =:= huddleRule @"metadata" p
+      $ pname
+        =.= huddleRule @"metadata" p
         / huddleRule @"auxiliary_data_array" p
         / huddleRule @"auxiliary_data_map" p
 
 instance HuddleRule "auxiliary_data_array" BabbageEra where
-  huddleRule = auxiliaryDataArrayRule @BabbageEra
+  huddleRuleNamed = auxiliaryDataArrayRule
 
 instance HuddleRule "auxiliary_scripts" BabbageEra where
-  huddleRule p =
-    "auxiliary_scripts" =:= arr [0 <+ a (huddleRule @"native_script" p)]
+  huddleRuleNamed pname p =
+    pname =.= arr [0 <+ a (huddleRule @"native_script" p)]
 
 instance HuddleRule "auxiliary_data_map" BabbageEra where
-  huddleRule p =
-    "auxiliary_data_map"
-      =:= tag
+  huddleRuleNamed pname p =
+    pname
+      =.= tag
         259
         ( mp
             [ opt (idx 0 ==> huddleRule @"metadata" p)
@@ -574,4 +607,7 @@ instance HuddleRule "auxiliary_data_map" BabbageEra where
         )
 
 instance HuddleRule1 "set" BabbageEra where
-  huddleRule1 _ = untaggedSet
+  huddleRule1Named pname _ = untaggedSet pname
+
+instance HuddleRule1 "multiasset" BabbageEra where
+  huddleRule1Named = maryMultiasset
