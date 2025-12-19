@@ -36,6 +36,7 @@ import Cardano.Ledger.TxIn
 import Data.Functor.Identity
 import Data.TreeDiff.OMap
 import GHC.TypeLits
+import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.Binary.TreeDiff
 import Test.Data.VMap.TreeDiff ()
 

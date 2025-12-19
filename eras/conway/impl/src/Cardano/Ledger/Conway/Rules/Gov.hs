@@ -122,6 +122,7 @@ import Control.State.Transition.Extended (
   failBecause,
   failOnJust,
   failOnNonEmpty,
+  failOnNonEmptyMap,
   failOnNonEmptySet,
   failureOnNonEmpty,
   judgmentContext,
@@ -133,6 +134,7 @@ import Data.Bifunctor (bimap)
 import Data.Either (partitionEithers)
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import Data.Pulse (foldlM')
@@ -189,7 +191,7 @@ data ConwayGovPredFailure era
       (NonEmptySet (Credential ColdCommitteeRole))
   | ExpirationEpochTooSmall
       -- | Members for which the expiration epoch has already been reached
-      (Map.Map (Credential ColdCommitteeRole) EpochNo)
+      (NonEmptyMap (Credential ColdCommitteeRole) EpochNo)
   | InvalidPrevGovActionId (ProposalProcedure era)
   | VotingOnExpiredGovAction (NonEmpty (Voter, GovActionId))
   | ProposalCantFollow
@@ -559,7 +561,7 @@ conwayGovTransition = do
              in failOnNonEmptySet conflicting (injectFailure . ConflictingCommitteeUpdate)
 
             let invalidMembers = Map.filter (<= currentEpoch) membersToAdd
-             in Map.null invalidMembers ?! (injectFailure . ExpirationEpochTooSmall) invalidMembers
+             in failOnNonEmptyMap invalidMembers (injectFailure . ExpirationEpochTooSmall)
           ParameterChange _ _ proposalPolicy ->
             runTest $ checkGuardrailsScriptHash @era constitutionPolicy proposalPolicy
           _ -> pure ()

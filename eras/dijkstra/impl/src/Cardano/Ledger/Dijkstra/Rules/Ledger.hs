@@ -117,7 +117,7 @@ import Cardano.Ledger.Shelley.Rules (
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.Map.Strict as Map
+import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Sequence (Seq)
 import Data.Void (absurd)
 import GHC.Generics (Generic (..))
@@ -132,7 +132,7 @@ data DijkstraLedgerPredFailure era
   | DijkstraTreasuryValueMismatch (Mismatch RelEQ Coin)
   | DijkstraTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | DijkstraWithdrawalsMissingAccounts Withdrawals
-  | DijkstraIncompleteWithdrawals (Map.Map RewardAccount (Mismatch RelEQ Coin))
+  | DijkstraIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
   | DijkstraSubLedgersFailure (PredicateFailure (EraRule "SUBLEDGERS" era))
   deriving (Generic)
 

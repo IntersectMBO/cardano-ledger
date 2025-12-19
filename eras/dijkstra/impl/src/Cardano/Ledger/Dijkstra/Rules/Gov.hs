@@ -76,7 +76,7 @@ import Control.State.Transition.Extended (
   STS (..),
  )
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.Map.Strict as Map
+import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -96,7 +96,7 @@ data DijkstraGovPredFailure era
       (NonEmptySet (Credential ColdCommitteeRole))
   | ExpirationEpochTooSmall
       -- | Members for which the expiration epoch has already been reached
-      (Map.Map (Credential ColdCommitteeRole) EpochNo)
+      (NonEmptyMap (Credential ColdCommitteeRole) EpochNo)
   | InvalidPrevGovActionId (ProposalProcedure era)
   | VotingOnExpiredGovAction (NonEmpty (Voter, GovActionId))
   | ProposalCantFollow
