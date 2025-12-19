@@ -5,6 +5,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,19 +16,19 @@
 
 module Cardano.Ledger.Dijkstra.Rules.SubCerts (
   DijkstraSUBCERTS,
+  SubCertsEnv (..),
   DijkstraSubCertsPredFailure (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (
-  ShelleyBase,
- )
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
  )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (ConwayEraGov)
-import Cardano.Ledger.Conway.Rules (CertEnv (..), CertsEnv (..))
+import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules (CertEnv (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -41,6 +42,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubCert (DijkstraSubCertPredFailure)
 import Cardano.Ledger.Dijkstra.TxCert
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
+import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
@@ -100,7 +102,7 @@ instance
   where
   type State (DijkstraSUBCERTS era) = CertState era
   type Signal (DijkstraSUBCERTS era) = Seq (TxCert era)
-  type Environment (DijkstraSUBCERTS era) = CertsEnv era
+  type Environment (DijkstraSUBCERTS era) = SubCertsEnv era
   type BaseM (DijkstraSUBCERTS era) = ShelleyBase
   type PredicateFailure (DijkstraSUBCERTS era) = DijkstraSubCertsPredFailure era
   type Event (DijkstraSUBCERTS era) = Void
@@ -118,7 +120,7 @@ dijkstraSubCertsTransition ::
   TransitionRule (EraRule "SUBCERTS" era)
 dijkstraSubCertsTransition = do
   TRC
-    ( env@(CertsEnv _tx pp currentEpoch committee committeeProposals)
+    ( env@(SubCertsEnv _tx pp currentEpoch committee committeeProposals)
       , certState
       , certificates
       ) <-
@@ -145,3 +147,31 @@ instance
   where
   wrapFailed = SubCertFailure
   wrapEvent = absurd
+
+-- TODO: instead of duplicating this, parameterize on TxLevel
+data SubCertsEnv era = SubCertsEnv
+  { certsTx :: Tx SubTx era
+  , certsPParams :: PParams era
+  , certsCurrentEpoch :: EpochNo
+  -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
+  , certsCurrentCommittee :: StrictMaybe (Committee era)
+  , certsCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
+  }
+  deriving (Generic)
+
+instance EraTx era => EncCBOR (SubCertsEnv era) where
+  encCBOR x@(SubCertsEnv _ _ _ _ _) =
+    let SubCertsEnv {..} = x
+     in encode $
+          Rec SubCertsEnv
+            !> To certsTx
+            !> To certsPParams
+            !> To certsCurrentEpoch
+            !> To certsCurrentCommittee
+            !> To certsCommitteeProposals
+
+deriving instance (EraPParams era, Eq (Tx SubTx era)) => Eq (SubCertsEnv era)
+
+deriving instance (EraPParams era, Show (Tx SubTx era)) => Show (SubCertsEnv era)
+
+instance (EraPParams era, NFData (Tx SubTx era)) => NFData (SubCertsEnv era)
