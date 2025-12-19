@@ -38,6 +38,7 @@
   - `dppMinFeeB` -> `dppTxFeeFixed`
 * Changed type of `dppMinFeeA` to `CoinPerByte`
 * Change sets containing errors into `NonEmptySet` for `DijkstraGovPredFailure`, `DijkstraUtxoPredFailure`, `DijkstraUtxowPredFailure`
+* Change all maps into `NonEmptyMap` for `DijkstraGovPredFailure` and `DijkstraLedgerPredFailure`
 * Change Dijkstra BBODY rule to validate Peras certificates when present
 * Add new block body predicate falures for Dijkstra:
   - `PrevEpochNonceNotPresent` for missing optional nonce needed for validation

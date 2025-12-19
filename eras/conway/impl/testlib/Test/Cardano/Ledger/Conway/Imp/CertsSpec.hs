@@ -18,6 +18,7 @@ import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPre
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Val (Val (..))
+import qualified Data.Map.NonEmpty as NEM
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -108,7 +109,9 @@ spec = do
         [ if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
             then
               injectFailure $
-                ConwayIncompleteWithdrawals @era [(rwdAccount1, Mismatch (reward1 <+> Coin 1) reward1)]
+                ConwayIncompleteWithdrawals @era $
+                  NEM.singleton rwdAccount1 $
+                    Mismatch (reward1 <+> Coin 1) reward1
             else
               injectFailure . WithdrawalsNotInRewardsCERTS @era $ Withdrawals [(rwdAccount1, reward1 <+> Coin 1)]
         ]
@@ -122,7 +125,7 @@ spec = do
         )
         [ if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
             then
-              injectFailure . ConwayIncompleteWithdrawals @era $ [(rwdAccount1, Mismatch zero reward1)]
+              injectFailure . ConwayIncompleteWithdrawals @era $ NEM.singleton rwdAccount1 $ Mismatch zero reward1
             else injectFailure . WithdrawalsNotInRewardsCERTS @era $ Withdrawals [(rwdAccount1, zero)]
         ]
   where

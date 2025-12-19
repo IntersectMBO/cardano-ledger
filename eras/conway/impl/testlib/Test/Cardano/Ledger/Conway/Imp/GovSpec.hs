@@ -30,6 +30,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Val (zero, (<->))
 import Data.Default (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
@@ -106,7 +107,7 @@ predicateFailuresSpec =
               (0 %! 1)
       passEpoch
       let expectedFailure =
-            injectFailure $ ExpirationEpochTooSmall $ Map.singleton committeeC expiration
+            injectFailure $ ExpirationEpochTooSmall $ NEM.singleton committeeC expiration
       proposal <- mkProposal action
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrapAndPostBootstrap
