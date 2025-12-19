@@ -1,10 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -24,44 +26,59 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (CertsEnv)
+import Cardano.Ledger.Conway.Governance (ConwayEraGov)
+import Cardano.Ledger.Conway.Rules (CertEnv (..), CertsEnv (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
+  DijkstraSUBCERT,
   DijkstraSUBCERTS,
+  DijkstraSUBDELEG,
+  DijkstraSUBGOVCERT,
+  DijkstraSUBPOOL,
  )
+import Cardano.Ledger.Dijkstra.Rules.SubCert (DijkstraSubCertPredFailure)
+import Cardano.Ledger.Dijkstra.TxCert
 import Control.DeepSeq (NFData)
-import Control.State.Transition.Extended (
-  BaseM,
-  Environment,
-  Event,
-  PredicateFailure,
-  STS,
-  Signal,
-  State,
-  TRC (TRC),
-  TransitionRule,
-  judgmentContext,
-  transitionRules,
- )
+import Control.State.Transition.Extended
 import Data.Sequence (Seq (..))
-import Data.Typeable (Typeable)
-import Data.Void (Void)
+import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data DijkstraSubCertsPredFailure era = DijkstraSubCertsPredFailure
-  deriving (Show, Eq, Generic)
+data DijkstraSubCertsPredFailure era
+  = SubCertFailure (PredicateFailure (EraRule "SUBCERT" era))
+  deriving (Generic)
 
-instance NoThunks (DijkstraSubCertsPredFailure era)
+deriving stock instance
+  Eq (PredicateFailure (EraRule "SUBCERT" era)) => Eq (DijkstraSubCertsPredFailure era)
 
-instance NFData (DijkstraSubCertsPredFailure era)
+deriving stock instance
+  Show (PredicateFailure (EraRule "SUBCERT" era)) => Show (DijkstraSubCertsPredFailure era)
 
-instance Era era => EncCBOR (DijkstraSubCertsPredFailure era) where
-  encCBOR _ = encCBOR ()
+instance
+  NoThunks (PredicateFailure (EraRule "SUBCERT" era)) =>
+  NoThunks (DijkstraSubCertsPredFailure era)
 
-instance Typeable era => DecCBOR (DijkstraSubCertsPredFailure era) where
-  decCBOR = decCBOR @() *> pure DijkstraSubCertsPredFailure
+instance
+  NFData (PredicateFailure (EraRule "SUBCERT" era)) =>
+  NFData (DijkstraSubCertsPredFailure era)
+
+instance
+  ( Era era
+  , EncCBOR (PredicateFailure (EraRule "SUBCERT" era))
+  ) =>
+  EncCBOR (DijkstraSubCertsPredFailure era)
+  where
+  encCBOR (SubCertFailure e) = encCBOR e
+
+instance
+  ( Era era
+  , DecCBOR (PredicateFailure (EraRule "SUBCERT" era))
+  ) =>
+  DecCBOR (DijkstraSubCertsPredFailure era)
+  where
+  decCBOR = SubCertFailure <$> decCBOR
 
 type instance EraRuleFailure "SUBCERTS" DijkstraEra = DijkstraSubCertsPredFailure DijkstraEra
 
@@ -69,10 +86,15 @@ type instance EraRuleEvent "SUBCERTS" DijkstraEra = VoidEraRule "SUBCERTS" Dijks
 
 instance InjectRuleFailure "SUBCERTS" DijkstraSubCertsPredFailure DijkstraEra
 
+instance InjectRuleFailure "SUBCERTS" DijkstraSubCertPredFailure DijkstraEra where
+  injectFailure = SubCertFailure
+
 instance
-  ( EraGov era
-  , EraCertState era
+  ( ConwayEraGov era
+  , ConwayEraCertState era
   , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
+  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
+  , Embed (EraRule "SUBCERT" era) (DijkstraSUBCERTS era)
   ) =>
   STS (DijkstraSUBCERTS era)
   where
@@ -85,7 +107,41 @@ instance
 
   transitionRules = [dijkstraSubCertsTransition @era]
 
-dijkstraSubCertsTransition :: TransitionRule (EraRule "SUBCERTS" era)
+dijkstraSubCertsTransition ::
+  forall era.
+  ( ConwayEraGov era
+  , ConwayEraCertState era
+  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
+  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
+  , Embed (EraRule "SUBCERT" era) (DijkstraSUBCERTS era)
+  ) =>
+  TransitionRule (EraRule "SUBCERTS" era)
 dijkstraSubCertsTransition = do
-  TRC (_, st, _) <- judgmentContext
-  pure st
+  TRC
+    ( env@(CertsEnv _tx pp currentEpoch committee committeeProposals)
+      , certState
+      , certificates
+      ) <-
+    judgmentContext
+  case certificates of
+    Empty -> pure certState
+    gamma :|> txCert -> do
+      certStateRest <-
+        trans @(DijkstraSUBCERTS era) $ TRC (env, certState, gamma)
+      trans @(EraRule "SUBCERT" era) $
+        TRC (CertEnv pp currentEpoch committee committeeProposals, certStateRest, txCert)
+
+instance
+  ( ConwayEraGov era
+  , ConwayEraCertState era
+  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
+  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
+  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
+  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
+  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , TxCert era ~ DijkstraTxCert era
+  ) =>
+  Embed (DijkstraSUBCERT era) (DijkstraSUBCERTS era)
+  where
+  wrapFailed = SubCertFailure
+  wrapEvent = absurd

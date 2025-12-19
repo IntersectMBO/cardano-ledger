@@ -205,7 +205,9 @@ instance
   ) =>
   ToExpr (DijkstraSubCertPredFailure era)
 
-instance ToExpr (DijkstraSubCertsPredFailure era)
+instance
+  ToExpr (PredicateFailure (EraRule "SUBCERT" era)) =>
+  ToExpr (DijkstraSubCertsPredFailure era)
 
 instance ToExpr (DijkstraSubDelegPredFailure era)
 
