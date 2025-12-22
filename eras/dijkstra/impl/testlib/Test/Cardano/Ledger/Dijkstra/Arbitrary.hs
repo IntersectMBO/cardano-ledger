@@ -131,7 +131,9 @@ sizedDijkstraNativeScript n =
 instance (Arbitrary (TxBody l DijkstraEra), Typeable l) => Arbitrary (Tx l DijkstraEra) where
   arbitrary =
     fmap MkDijkstraTx . withSTxBothLevels @l $ \case
-      STopTx -> DijkstraTx <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+      -- Per CIP-0167, Dijkstra transactions should always have isValid = True
+      -- The isValid flag is omitted in serialization and defaults to True
+      STopTx -> DijkstraTx <$> arbitrary <*> arbitrary <*> pure (IsValid True) <*> arbitrary
       SSubTx -> DijkstraSubTx <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance Era era => Arbitrary (DijkstraTxCert era) where
