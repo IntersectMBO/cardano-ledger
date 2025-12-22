@@ -1078,9 +1078,9 @@ getCCExpiry coldC = do
         Just epochNo -> pure epochNo
 
 getCCAuthorization ::
-  ConwayEraCertState era
-  => Credential ColdCommitteeRole
-  -> ImpTestM era (Maybe CommitteeAuthorization)
+  ConwayEraCertState era =>
+  Credential ColdCommitteeRole ->
+  ImpTestM era (Maybe CommitteeAuthorization)
 getCCAuthorization coldK = do
   committeeCreds <-
     getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
@@ -1398,9 +1398,12 @@ setupActiveInactiveCCMembers ::
   ( HasCallStack
   , ConwayEraImp era
   ) =>
-  Int -> -- ^ Number of active committee members
-  Int -> -- ^ Number of inactive committee members
-  UnitInterval -> -- ^ Threshold
+  -- | Number of active committee members
+  Int ->
+  -- | Number of inactive committee members
+  Int ->
+  -- | Threshold
+  UnitInterval ->
   ImpTestM era GovActionId
 setupActiveInactiveCCMembers nActive nInactive threshold = do
   coldCommitteeActive <- replicateM nActive (KeyHashObj <$> freshKeyHash)
@@ -1429,9 +1432,11 @@ setupActiveInactiveCCMembers nActive nInactive threshold = do
   getCommitteeMembers `shouldReturn` Map.keysSet committeeMap
   forM_ coldCommitteeActive registerCommitteeHotKey
   impAnn "Verifying active committee members" $
-    forM_ coldCommitteeActive $ \coldK -> ccShouldNotBeExpired coldK >> ccShouldNotBeResigned coldK
+    forM_ coldCommitteeActive $
+      \coldK -> ccShouldNotBeExpired coldK >> ccShouldNotBeResigned coldK
   impAnn "Verifying inactive committee members" $
-    forM_ coldCommitteeInactive $ \coldK -> ccShouldBeExpired coldK >> ccShouldNotHaveHotKey coldK
+    forM_ coldCommitteeInactive $
+      \coldK -> ccShouldBeExpired coldK >> ccShouldNotHaveHotKey coldK
   return committeeActionId
 
 logCurPParams ::
