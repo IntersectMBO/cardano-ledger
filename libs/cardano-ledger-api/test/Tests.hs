@@ -49,7 +49,10 @@ apiSpec =
       Upgrade.spec @AlonzoEra (BinaryUpgradeOpts False False)
       Upgrade.spec @BabbageEra def
       Upgrade.spec @ConwayEra def
-      Upgrade.spec @DijkstraEra def
+      -- Transactions with isValid=False cannot be binary-upgraded due to CIP-0167,
+      -- which removes the isValid flag from mempool transactions. They are still
+      -- upgradeable via the translateEra method at the hard fork boundary.
+      Upgrade.spec @DijkstraEra (BinaryUpgradeOpts True False)
 
 main :: IO ()
 main = ledgerTestMain apiSpec

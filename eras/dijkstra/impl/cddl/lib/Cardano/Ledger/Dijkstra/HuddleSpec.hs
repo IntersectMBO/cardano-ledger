@@ -672,7 +672,12 @@ instance HuddleRule "transaction" DijkstraEra where
       =:= arr
         [ a $ huddleRule @"transaction_body" p
         , a $ huddleRule @"transaction_witness_set" p
-        , a VBool
+        , a $ (bool True)
+        , a (huddleRule @"auxiliary_data" p / VNil)
+        ]
+      / arr
+        [ a $ huddleRule @"transaction_body" p
+        , a $ huddleRule @"transaction_witness_set" p
         , a (huddleRule @"auxiliary_data" p / VNil)
         ]
 

@@ -15,7 +15,10 @@ block =
 
 
 transaction = 
-  [transaction_body, transaction_witness_set, bool, auxiliary_data/ nil]
+  [  transaction_body, transaction_witness_set, true, auxiliary_data/ nil
+  // transaction_body, transaction_witness_set, auxiliary_data/ nil
+  ]
+
 
 kes_signature = bytes .size 448
 
