@@ -247,7 +247,7 @@ spoAndCCVotingSpec = do
           SJust committee <- getCommittee
           committeeThreshold committee `shouldBe` 0 %! 1
           Map.size (committeeMembers committee) `shouldBe` 2
-          forM_ (Map.keys $ committeeMembers committee) ccShouldNotBeExpired
+          forM_ (Map.keys $ committeeMembers committee) $ \coldK -> ccShouldNotBeExpired coldK >> ccShouldNotHaveHotKey coldK
           oldConstitution <- getConstitution
           (proposal, _) <- mkConstitutionProposal SNothing
           gaiConstitution <- submitProposal proposal
@@ -264,13 +264,13 @@ spoAndCCVotingSpec = do
           modifyCommittee $ fmap (committeeThresholdL .~ 0 %! 1)
           (drep, _, _) <- setupSingleDRep 1_000_000_000
           SJust committee <- getCommittee
-          committeeThreshold committee `shouldBe` 0 %! 1
-          Map.size (committeeMembers committee) `shouldBe` 2
-          forM_ (Map.keys $ committeeMembers committee) ccShouldNotBeExpired
           (proposal, newConstitution) <- mkConstitutionProposal SNothing
           gaiConstitution <- submitProposal proposal
           submitYesVote_ (DRepVoter drep) gaiConstitution
+          committeeThreshold committee `shouldBe` 0 %! 1
+          Map.size (committeeMembers committee) `shouldBe` 2
           mapM_ registerCommitteeHotKey (Map.keys $ committeeMembers committee)
+          forM_ (Map.keys $ committeeMembers committee) $ \coldK -> ccShouldNotBeExpired coldK >> ccShouldNotBeResigned coldK
           passNEpochs 2
           getConstitution `shouldReturn` newConstitution
       it
@@ -283,13 +283,13 @@ spoAndCCVotingSpec = do
           modifyCommittee $ fmap (committeeThresholdL .~ 0 %! 1)
           (drep, _, _) <- setupSingleDRep 1_000_000_000
           SJust committee <- getCommittee
-          committeeThreshold committee `shouldBe` 0 %! 1
-          Map.size (committeeMembers committee) `shouldBe` 2
-          forM_ (Map.keys $ committeeMembers committee) ccShouldNotBeExpired
           (proposal, newConstitution) <- mkConstitutionProposal SNothing
           gaiConstitution <- submitProposal proposal
           submitYesVote_ (DRepVoter drep) gaiConstitution
+          committeeThreshold committee `shouldBe` 0 %! 1
+          Map.size (committeeMembers committee) `shouldBe` 2
           hotKeys <- mapM registerCommitteeHotKey (Map.keys $ committeeMembers committee)
+          forM_ (Map.keys $ committeeMembers committee) $ \coldK -> ccShouldNotBeExpired coldK >> ccShouldNotBeResigned coldK
           forM_ hotKeys $ \c ->
             oneof
               [ return ()
@@ -324,7 +324,7 @@ spoAndCCVotingSpec = do
               & ppDRepVotingThresholdsL . dvtUpdateToConstitutionL .~ (0 %! 1)
           modifyCommittee $ fmap (committeeThresholdL .~ 0 %! 1)
           SJust committee <- getCommittee
-          forM_ (Map.keys $ committeeMembers committee) ccShouldNotBeExpired
+          forM_ (Map.keys $ committeeMembers committee) $ \coldK -> ccShouldNotBeExpired coldK >> ccShouldNotHaveHotKey coldK
           newConstitution <- arbitrary
           constitutionActionId <- submitGovAction $ NewConstitution SNothing newConstitution
           logRatificationChecks constitutionActionId
