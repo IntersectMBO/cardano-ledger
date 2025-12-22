@@ -94,6 +94,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   ccShouldNotBeExpired,
   ccShouldBeResigned,
   ccShouldNotBeResigned,
+  ccShouldNotHaveHotKey,
   getLastEnactedCommittee,
   getLastEnactedConstitution,
   submitParameterChange,
@@ -1076,21 +1077,35 @@ getCCExpiry coldC = do
         Nothing -> assertFailure $ "Committee not found for cold credential: " <> show coldC
         Just epochNo -> pure epochNo
 
+getCCAuthorization ::
+  ConwayEraCertState era
+  => Credential ColdCommitteeRole
+  -> ImpTestM era (Maybe CommitteeAuthorization)
+getCCAuthorization coldK = do
+  committeeCreds <-
+    getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
+  return $ Map.lookup coldK committeeCreds
+
 -- | Test the resignation status for a CC cold key to be resigned
 ccShouldBeResigned ::
   (HasCallStack, ConwayEraCertState era) => Credential ColdCommitteeRole -> ImpTestM era ()
-ccShouldBeResigned coldK = do
-  committeeCreds <-
-    getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
-  authHk <$> Map.lookup coldK committeeCreds `shouldBe` Just Nothing
+ccShouldBeResigned coldK =
+  impAnn "ccShouldBeResigned" $
+    (authHk <$>) <$> getCCAuthorization coldK `shouldReturn` Just Nothing
 
 -- | Test the resignation status for a CC cold key to not be resigned
 ccShouldNotBeResigned ::
   (HasCallStack, ConwayEraCertState era) => Credential ColdCommitteeRole -> ImpTestM era ()
-ccShouldNotBeResigned coldK = do
-  committeeCreds <-
-    getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
-  (Map.lookup coldK committeeCreds >>= authHk) `shouldSatisfy` isJust
+ccShouldNotBeResigned coldK =
+  impAnn "ccShouldNotBeResigned" $
+    getCCAuthorization coldK >>= \hotK -> (hotK >>= authHk) `shouldSatisfy` isJust
+
+-- | Test the status for a CC cold key to not have an associated hot key
+ccShouldNotHaveHotKey ::
+  (HasCallStack, ConwayEraCertState era) => Credential ColdCommitteeRole -> ImpTestM era ()
+ccShouldNotHaveHotKey coldK =
+  impAnn "ccShouldNotHaveHotKey" $
+    getCCAuthorization coldK `shouldReturn` Nothing
 
 authHk :: CommitteeAuthorization -> Maybe (Credential HotCommitteeRole)
 authHk (CommitteeHotCredential hk) = Just hk
@@ -1383,12 +1398,9 @@ setupActiveInactiveCCMembers ::
   ( HasCallStack
   , ConwayEraImp era
   ) =>
-  -- | Number of active committee members
-  Int ->
-  -- | Number of inactive committee members
-  Int ->
-  -- | Threshold
-  UnitInterval ->
+  Int -> -- ^ Number of active committee members
+  Int -> -- ^ Number of inactive committee members
+  UnitInterval -> -- ^ Threshold
   ImpTestM era GovActionId
 setupActiveInactiveCCMembers nActive nInactive threshold = do
   coldCommitteeActive <- replicateM nActive (KeyHashObj <$> freshKeyHash)
@@ -1415,8 +1427,11 @@ setupActiveInactiveCCMembers nActive nInactive threshold = do
   submitYesVote_ (StakePoolVoter spo) committeeActionId
   passNEpochs 6
   getCommitteeMembers `shouldReturn` Map.keysSet committeeMap
-  forM_ coldCommitteeActive ccShouldNotBeExpired
-  forM_ coldCommitteeInactive ccShouldBeExpired
+  forM_ coldCommitteeActive registerCommitteeHotKey
+  impAnn "Verifying active committee members" $
+    forM_ coldCommitteeActive $ \coldK -> ccShouldNotBeExpired coldK >> ccShouldNotBeResigned coldK
+  impAnn "Verifying inactive committee members" $
+    forM_ coldCommitteeInactive $ \coldK -> ccShouldBeExpired coldK >> ccShouldNotHaveHotKey coldK
   return committeeActionId
 
 logCurPParams ::
