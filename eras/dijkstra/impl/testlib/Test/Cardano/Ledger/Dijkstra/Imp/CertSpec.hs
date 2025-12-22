@@ -9,14 +9,7 @@ module Test.Cardano.Ledger.Dijkstra.Imp.CertSpec (spec) where
 
 import Cardano.Ledger.Conway.Governance (Voter (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Dijkstra.Core (
-  EraTx (..),
-  EraTxBody (..),
-  emptyPParamsUpdate,
-  ppKeyDepositL,
-  ppuKeyDepositL,
-  pattern UnRegDepositTxCert,
- )
+import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -24,28 +17,8 @@ import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
-import Test.Cardano.Ledger.Dijkstra.ImpTest (
-  DijkstraEraImp,
-  ImpInit,
-  LedgerSpec,
-  expectStakeCredNotRegistered,
-  expectStakeCredRegistered,
-  freshKeyAddr,
-  freshKeyHash,
-  getsPParams,
-  impAnn,
-  passNEpochs,
-  registerInitialCommittee,
-  registerStakeCredential,
-  sendCoinTo,
-  setupSingleDRep,
-  submitFailingTx,
-  submitParameterChange,
-  submitTx_,
-  submitYesVoteCCs_,
-  submitYesVote_,
- )
-import Test.Cardano.Ledger.Imp.Common (SpecWith, arbitrary, shouldReturn, xit)
+import Test.Cardano.Ledger.Dijkstra.ImpTest
+import Test.Cardano.Ledger.Imp.Common
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = do

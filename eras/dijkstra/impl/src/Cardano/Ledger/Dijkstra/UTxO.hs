@@ -46,7 +46,7 @@ import Lens.Micro.Extras (view)
 getConsumedDijkstraValue ::
   forall era l.
   ( DijkstraEraTxBody era
-  , EraTx era
+  , EraUTxO era
   , Value era ~ MaryValue
   , STxLevel l era ~ STxBothLevels l era
   ) =>
@@ -57,22 +57,24 @@ getConsumedDijkstraValue ::
   TxBody l era ->
   Value era
 getConsumedDijkstraValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
-  getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody
-    <> subTransactionsConsumedValue
+  withBothTxLevels
+    txBody
+    ( \topTxBody -> 
+       txBodyConsumedValue topTxBody <> subTransactionsConsumedValue pp utxo topTxBody
+    )
+    txBodyConsumedValue
   where
-    subTransactionsConsumedValue =
-      withBothTxLevels
-        txBody
-        ( \topTxBody ->
-            foldMap
-              (getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo . view bodyTxL)
-              $ topTxBody ^. subTransactionsTxBodyL
-        )
-        (const zero)
+    txBodyConsumedValue :: (MaryEraTxBody era, Value era ~ MaryValue) => TxBody l era -> Value era
+    txBodyConsumedValue = 
+      getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo
+    subTransactionsConsumedValue pp utxo topTxBody = 
+      foldMap'
+        (getConsumedValue pp lookupStakingDeposit lookupDRepDeposit utxo . view bodyTxL)
+        (topTxBody ^. subTransactionsTxBodyL)
 
 dijkstraProducedValue ::
   ( DijkstraEraTxBody era
-  , EraTx era
+  , EraUTxO era
   , Value era ~ MaryValue
   ) =>
   PParams era ->
@@ -81,14 +83,14 @@ dijkstraProducedValue ::
   MaryValue
 dijkstraProducedValue pp isRegPoolId txBody =
   conwayProducedValue pp isRegPoolId txBody
-    <> foldMap
-      (dijkstraSubTxProducedValue pp isRegPoolId . view bodyTxL)
+    <> foldMap'
+      (getProducedValue pp isRegPoolId . view bodyTxL)
       (txBody ^. subTransactionsTxBodyL)
 
 getProducedDijkstraValue ::
   ( STxLevel l era ~ STxBothLevels l era
   , DijkstraEraTxBody era
-  , EraTx era
+  , EraUTxO era
   , Value era ~ MaryValue
   ) =>
   PParams era ->
