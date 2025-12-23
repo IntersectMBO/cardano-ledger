@@ -87,6 +87,7 @@ import Control.State.Transition (
   TRC (..),
   TransitionRule,
   failureOnNonEmpty,
+  failureOnNonEmptySet,
   judgmentContext,
   liftSTS,
   tellEvent,
@@ -100,6 +101,7 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
 import Data.Typeable
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -169,7 +171,7 @@ instance (Era era, NFData (Event (EraRule "PPUP" era)), NFData (TxOut era)) => N
 
 data ShelleyUtxoPredFailure era
   = BadInputsUTxO
-      (Set TxIn) -- The bad transaction inputs
+      (NonEmptySet TxIn) -- The bad transaction inputs
   | ExpiredUTxO
       (Mismatch RelLTEQ SlotNo)
   | MaxTxSizeUTxO
@@ -181,10 +183,10 @@ data ShelleyUtxoPredFailure era
       (Mismatch RelEQ (Value era))
   | WrongNetwork
       Network -- the expected network id
-      (Set Addr) -- the set of addresses with incorrect network IDs
+      (NonEmptySet Addr) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       Network -- the expected network id
-      (Set RewardAccount) -- the set of reward addresses with incorrect network IDs
+      (NonEmptySet RewardAccount) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       (NonEmpty (TxOut era)) -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
@@ -472,7 +474,7 @@ validateBadInputsUTxO ::
   Set TxIn ->
   Test (ShelleyUtxoPredFailure era)
 validateBadInputsUTxO utxo inputs =
-  failureUnless (Set.null badInputs) $ BadInputsUTxO badInputs
+  failureOnNonEmptySet badInputs BadInputsUTxO
   where
     {- inputs ➖ dom utxo -}
     badInputs = Set.filter (`Map.notMember` unUTxO utxo) inputs
@@ -486,7 +488,7 @@ validateWrongNetwork ::
   f (TxOut era) ->
   Test (ShelleyUtxoPredFailure era)
 validateWrongNetwork netId outputs =
-  failureUnless (null addrsWrongNetwork) $ WrongNetwork netId (Set.fromList addrsWrongNetwork)
+  failureOnNonEmptySet addrsWrongNetwork (WrongNetwork netId)
   where
     addrsWrongNetwork =
       filter
@@ -502,8 +504,7 @@ validateWrongNetworkWithdrawal ::
   TxBody t era ->
   Test (ShelleyUtxoPredFailure era)
 validateWrongNetworkWithdrawal netId txb =
-  failureUnless (null withdrawalsWrongNetwork) $
-    WrongNetworkWithdrawal netId (Set.fromList withdrawalsWrongNetwork)
+  failureOnNonEmptySet withdrawalsWrongNetwork (WrongNetworkWithdrawal netId)
   where
     withdrawalsWrongNetwork =
       filter

@@ -75,7 +75,7 @@ import Control.State.Transition.Extended (
  )
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -83,7 +83,7 @@ data DijkstraGovPredFailure era
   = GovActionsDoNotExist (NonEmpty GovActionId)
   | MalformedProposal (GovAction era)
   | ProposalProcedureNetworkIdMismatch RewardAccount Network
-  | TreasuryWithdrawalsNetworkIdMismatch (Set.Set RewardAccount) Network
+  | TreasuryWithdrawalsNetworkIdMismatch (NonEmptySet RewardAccount) Network
   | ProposalDepositIncorrect (Mismatch RelEQ Coin)
   | -- | Some governance actions are not allowed to be voted on by certain types of
     -- Voters. This failure lists all governance action ids with their respective voters
@@ -91,7 +91,7 @@ data DijkstraGovPredFailure era
     DisallowedVoters (NonEmpty (Voter, GovActionId))
   | ConflictingCommitteeUpdate
       -- | Credentials that are mentioned as members to be both removed and added
-      (Set.Set (Credential ColdCommitteeRole))
+      (NonEmptySet (Credential ColdCommitteeRole))
   | ExpirationEpochTooSmall
       -- | Members for which the expiration epoch has already been reached
       (Map.Map (Credential ColdCommitteeRole) EpochNo)

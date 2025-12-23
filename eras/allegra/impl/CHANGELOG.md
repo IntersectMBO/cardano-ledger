@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Change sets containing errors into `NonEmptySet` for `AllegraUtxoPredFailure`
 * Change all lists into `NonEmpty` for `AllegraUtxoPredFailure`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Remove deprecated type `Allegra`

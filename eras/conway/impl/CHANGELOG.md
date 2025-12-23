@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Change sets containing errors into `NonEmptySet` for `ConwayGovPredFailure`, `ConwayUtxoPredFailure`, `ConwayUtxowPredFailure`
 * Change all lists into `NonEmpty` for `ConwayUtxoPredFailure`, `ConwayUtxosPredFailure`, `ConwayUtxowPredFailure`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Re-export `UtxoEnv` from `Cardano.Ledger.Conway.Rules.Utxo`

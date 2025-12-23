@@ -106,8 +106,8 @@ import Data.Either (isRight)
 import Data.Foldable as F (foldl', sequenceA_, toList)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -120,7 +120,7 @@ import Validation
 data AlonzoUtxoPredFailure era
   = -- | The bad transaction inputs
     BadInputsUTxO
-      (Set TxIn)
+      (NonEmptySet TxIn)
   | OutsideValidityIntervalUTxO
       -- | transaction's validity interval
       ValidityInterval
@@ -135,12 +135,12 @@ data AlonzoUtxoPredFailure era
       -- | the expected network id
       Network
       -- | the set of addresses with incorrect network IDs
-      (Set Addr)
+      (NonEmptySet Addr)
   | WrongNetworkWithdrawal
       -- | the expected network id
       Network
       -- | the set of reward addresses with incorrect network IDs
-      (Set RewardAccount)
+      (NonEmptySet RewardAccount)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
       (NonEmpty (TxOut era))

@@ -24,6 +24,7 @@ library
     Data.OMap.Strict
     Data.OSet.Strict
     Data.Pulse
+    Data.Set.NonEmpty
     Data.Universe
 
   hs-source-dirs: src
