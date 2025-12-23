@@ -211,7 +211,7 @@
           cabalProject.flake (
             lib.optionalAttrs (system == "x86_64-linux") {
               # on linux, build/test other supported compilers
-              variants = lib.genAttrs ["ghc967" "ghc9121"] (compiler-nix-name: {
+              variants = lib.genAttrs ["ghc967" "ghc9122"] (compiler-nix-name: {
                 inherit compiler-nix-name;
               });
             }
@@ -292,7 +292,7 @@
             };
           in
             mkDevShells cabalProject
-            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc9121`
+            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc9122`
             // lib.mapAttrs (compiler-nix-name: _: let
               p = cabalProject.appendModule {inherit compiler-nix-name;};
             in
