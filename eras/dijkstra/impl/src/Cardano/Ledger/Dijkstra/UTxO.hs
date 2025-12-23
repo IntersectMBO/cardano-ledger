@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -38,7 +39,7 @@ import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
-import Cardano.Ledger.Val (Val (..))
+import Data.Foldable (Foldable (..))
 import Data.Maybe (catMaybes)
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
@@ -59,15 +60,14 @@ getConsumedDijkstraValue ::
 getConsumedDijkstraValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
   withBothTxLevels
     txBody
-    ( \topTxBody -> 
-       txBodyConsumedValue topTxBody <> subTransactionsConsumedValue pp utxo topTxBody
+    ( \topTxBody ->
+        txBodyConsumedValue topTxBody <> subTransactionsConsumedValue topTxBody
     )
     txBodyConsumedValue
   where
-    txBodyConsumedValue :: (MaryEraTxBody era, Value era ~ MaryValue) => TxBody l era -> Value era
-    txBodyConsumedValue = 
-      getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo
-    subTransactionsConsumedValue pp utxo topTxBody = 
+    txBodyConsumedValue :: forall m. TxBody m era -> Value era
+    txBodyConsumedValue = getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo
+    subTransactionsConsumedValue topTxBody =
       foldMap'
         (getConsumedValue pp lookupStakingDeposit lookupDRepDeposit utxo . view bodyTxL)
         (topTxBody ^. subTransactionsTxBodyL)
