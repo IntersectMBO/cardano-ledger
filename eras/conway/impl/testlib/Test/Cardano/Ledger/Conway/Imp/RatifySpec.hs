@@ -143,9 +143,7 @@ spoAndCCVotingSpec = do
 
       getLastEnactedParameterChange `shouldReturn` SNothing
       getsPParams ppMinFeeRefScriptCostPerByteL `shouldReturn` initialRefScriptBaseFee
-    -- https://github.com/IntersectMBO/cardano-ledger/issues/5418
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "Committee proposals pass" $
+    it "Committee proposals pass" $
       whenPostBootstrap $ do
         modifyPParams $ \pp ->
           pp
@@ -233,9 +231,7 @@ spoAndCCVotingSpec = do
           constitutionActionId <- submitGovAction $ NewConstitution SNothing newConstitution
           logRatificationChecks constitutionActionId
           getConstitution `shouldNotReturn` newConstitution
-      -- https://github.com/IntersectMBO/cardano-ledger/issues/5418
-      -- TODO: Re-enable after issue is resolved, by removing this override
-      disableInConformanceIt
+      it
         "Constitution cannot be changed if committee is not active because it doesn't have registered hot credentials"
         $ whenPostBootstrap
         $ do
@@ -1123,9 +1119,7 @@ votingSpec =
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
-        -- TODO: Re-enable after issue is resolved, by removing this override
-        disableInConformanceIt "Rewards contribute to active voting stake even in the absence of StakeDistr" $
+        it "Rewards contribute to active voting stake even in the absence of StakeDistr" $
           whenPostBootstrap $ do
             let govActionLifetime = 5
                 govActionDeposit = Coin 1_000_000
