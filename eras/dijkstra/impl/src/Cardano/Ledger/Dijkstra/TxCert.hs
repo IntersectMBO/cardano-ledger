@@ -79,6 +79,7 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue ((.=)), ToJSON (..))
+import Data.Foldable (Foldable (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
