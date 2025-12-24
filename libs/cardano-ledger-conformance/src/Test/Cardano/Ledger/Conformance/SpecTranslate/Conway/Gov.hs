@@ -45,7 +45,7 @@ instance
       <$> toSpecRep geTxId
       <*> toSpecRep geEpoch
       <*> toSpecRep gePParams
-      <*> toSpecRep gePPolicy
+      <*> toSpecRep geGuardrailsScriptHash
       <*> toSpecRep enactState
       <*> toSpecRep geCertState
       <*> toSpecRep rewardAccounts
