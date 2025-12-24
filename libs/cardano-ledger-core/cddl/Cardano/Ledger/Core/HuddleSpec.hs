@@ -22,7 +22,6 @@ import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import Data.Word (Word64)
-import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -270,7 +269,7 @@ instance Era era => HuddleRule "ipv6" era where
   huddleRuleNamed pname _ = pname =.= VBytes `sized` (16 :: Word64)
 
 majorProtocolVersionRule ::
-  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Rule
+  forall era. Era era => Proxy "major_protocol_version" -> Proxy era -> Rule
 majorProtocolVersionRule pname _ =
   pname
     =.= getVersion @Integer (eraProtVerLow @ByronEra)
