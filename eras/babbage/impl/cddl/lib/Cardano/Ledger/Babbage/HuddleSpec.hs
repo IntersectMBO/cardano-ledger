@@ -33,7 +33,6 @@ import Cardano.Ledger.Alonzo.HuddleSpec hiding (
 import Cardano.Ledger.Babbage (BabbageEra)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
-import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -51,8 +50,8 @@ babbageCDDL =
 -- serialization. See 'header_body' instance for full explanation.
 -- Ref: PR #3762, Issue #3559
 babbageProtocolVersionRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "major_protocol_version" era) => Proxy name -> Proxy era -> Rule
+  forall era.
+  HuddleRule "major_protocol_version" era => Proxy "protocol_version" -> Proxy era -> Rule
 babbageProtocolVersionRule pname p =
   pname =.= arr [a $ huddleRule @"major_protocol_version" p, a VUInt]
 
@@ -60,7 +59,7 @@ babbageProtocolVersionRule pname p =
 -- serialization. See 'header_body' instance for full explanation.
 -- Ref: PR #3762, Issue #3559
 babbageOperationalCertRule ::
-  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Rule
+  forall era. Era era => Proxy "operational_cert" -> Proxy era -> Rule
 babbageOperationalCertRule pname p =
   pname
     =.= arr
@@ -71,9 +70,9 @@ babbageOperationalCertRule pname p =
       ]
 
 alonzoTransactionOutputRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "address" era, HuddleRule "value" era, HuddleRule "hash32" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "address" era, HuddleRule "value" era, HuddleRule "hash32" era) =>
+  Proxy "alonzo_transaction_output" ->
   Proxy era ->
   Rule
 alonzoTransactionOutputRule pname p =
@@ -85,13 +84,13 @@ alonzoTransactionOutputRule pname p =
       ]
 
 dataRule ::
-  forall name era. (KnownSymbol name, HuddleRule "plutus_data" era) => Proxy name -> Proxy era -> Rule
+  forall era. HuddleRule "plutus_data" era => Proxy "data" -> Proxy era -> Rule
 dataRule pname p = pname =.= tag 24 (VBytes `cbor` huddleRule @"plutus_data" p)
 
 datumOptionRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "hash32" era, HuddleRule "data" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "hash32" era, HuddleRule "data" era) =>
+  Proxy "datum_option" ->
   Proxy era ->
   Rule
 datumOptionRule pname p =
@@ -100,22 +99,21 @@ datumOptionRule pname p =
     / arr [1, a (huddleRule @"data" p)]
 
 scriptRefRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "script" era) =>
-  Proxy name ->
+  forall era.
+  HuddleRule "script" era =>
+  Proxy "script_ref" ->
   Proxy era ->
   Rule
 scriptRefRule pname p = pname =.= tag 24 (VBytes `cbor` huddleRule @"script" p)
 
 babbageTransactionOutput ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "address" era
+  forall era.
+  ( HuddleRule "address" era
   , HuddleRule "value" era
   , HuddleRule "datum_option" era
   , HuddleRule "script_ref" era
   ) =>
-  Proxy name ->
+  Proxy "babbage_transaction_output" ->
   Proxy era ->
   Rule
 babbageTransactionOutput pname p =
@@ -128,13 +126,12 @@ babbageTransactionOutput pname p =
       ]
 
 babbageScript ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "native_script" era
+  forall era.
+  ( HuddleRule "native_script" era
   , HuddleRule "plutus_v1_script" era
   , HuddleRule "plutus_v2_script" era
   ) =>
-  Proxy name ->
+  Proxy "script" ->
   Proxy era ->
   Rule
 babbageScript pname p =
