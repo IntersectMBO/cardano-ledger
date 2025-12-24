@@ -36,7 +36,6 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Data.Proxy (Proxy (..))
 import Data.Text ()
 import Data.Word (Word64)
-import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -53,14 +52,13 @@ dijkstraCDDL =
     ]
 
 guardsRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "addr_keyhash" era
+  forall era.
+  ( HuddleRule "addr_keyhash" era
   , HuddleRule "credential" era
   , HuddleRule1 "nonempty_set" era
   , HuddleRule1 "nonempty_oset" era
   ) =>
-  Proxy name ->
+  Proxy "guards" ->
   Proxy era ->
   Rule
 guardsRule pname p =
@@ -69,25 +67,23 @@ guardsRule pname p =
     / huddleRule1 @"nonempty_oset" p (huddleRule @"credential" p)
 
 subTransactionsRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "sub_transaction" era
+  forall era.
+  ( HuddleRule "sub_transaction" era
   , HuddleRule1 "nonempty_oset" era
   ) =>
-  Proxy name ->
+  Proxy "sub_transactions" ->
   Proxy era ->
   Rule
 subTransactionsRule pname p =
   pname =.= huddleRule1 @"nonempty_oset" p (huddleRule @"sub_transaction" p)
 
 subTransactionRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "sub_transaction_body" era
+  forall era.
+  ( HuddleRule "sub_transaction_body" era
   , HuddleRule "transaction_witness_set" era
   , HuddleRule "auxiliary_data" era
   ) =>
-  Proxy name ->
+  Proxy "sub_transaction" ->
   Proxy era ->
   Rule
 subTransactionRule pname p =
@@ -99,9 +95,8 @@ subTransactionRule pname p =
       ]
 
 subTransactionBodyRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "transaction_input" era
+  forall era.
+  ( HuddleRule "transaction_input" era
   , HuddleRule "transaction_output" era
   , HuddleRule "slot" era
   , HuddleRule "certificates" era
@@ -119,7 +114,7 @@ subTransactionBodyRule ::
   , HuddleRule1 "set" era
   , HuddleRule1 "nonempty_set" era
   ) =>
-  Proxy name ->
+  Proxy "sub_transaction_body" ->
   Proxy era ->
   Rule
 subTransactionBodyRule pname p =
@@ -145,12 +140,11 @@ subTransactionBodyRule pname p =
       ]
 
 requiredTopLevelGuardsRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "credential" era
+  forall era.
+  ( HuddleRule "credential" era
   , HuddleRule "plutus_data" era
   ) =>
-  Proxy name ->
+  Proxy "required_top_level_guards" ->
   Proxy era ->
   Rule
 requiredTopLevelGuardsRule pname p =
@@ -162,8 +156,8 @@ requiredTopLevelGuardsRule pname p =
       ]
 
 scriptRequireGuardGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "credential" era) => Proxy name -> Proxy era -> GroupDef
+  forall era.
+  HuddleRule "credential" era => Proxy "script_require_guard" -> Proxy era -> GroupDef
 scriptRequireGuardGroup pname p =
   comment
     [str|Dijkstra adds guard scripts for enhanced security.
@@ -172,9 +166,8 @@ scriptRequireGuardGroup pname p =
     $ pname =.~ grp [6, a (huddleRule @"credential" p)]
 
 dijkstraNativeScriptRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleGroup "script_pubkey" era
+  forall era.
+  ( HuddleGroup "script_pubkey" era
   , HuddleGroup "script_all" era
   , HuddleGroup "script_any" era
   , HuddleGroup "script_n_of_k" era
@@ -182,7 +175,7 @@ dijkstraNativeScriptRule ::
   , HuddleGroup "script_invalid_hereafter" era
   , HuddleGroup "script_require_guard" era
   ) =>
-  Proxy name ->
+  Proxy "native_script" ->
   Proxy era ->
   Rule
 dijkstraNativeScriptRule pname p =
@@ -200,15 +193,14 @@ dijkstraNativeScriptRule pname p =
       / arr [a (huddleGroup @"script_require_guard" p)]
 
 dijkstraScriptRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "native_script" era
+  forall era.
+  ( HuddleRule "native_script" era
   , HuddleRule "plutus_v1_script" era
   , HuddleRule "plutus_v2_script" era
   , HuddleRule "plutus_v3_script" era
   , HuddleRule "plutus_v4_script" era
   ) =>
-  Proxy name ->
+  Proxy "script" ->
   Proxy era ->
   Rule
 dijkstraScriptRule pname p =
@@ -227,7 +219,7 @@ dijkstraScriptRule pname p =
       / arr [3, a (huddleRule @"plutus_v3_script" p)]
       / arr [4, a (huddleRule @"plutus_v4_script" p)]
 
-dijkstraRedeemerTagRule :: forall name. KnownSymbol name => Proxy name -> Rule
+dijkstraRedeemerTagRule :: Proxy "redeemer_tag" -> Rule
 dijkstraRedeemerTagRule pname =
   pname
     =.= (int 0 //- "spend")
@@ -239,16 +231,15 @@ dijkstraRedeemerTagRule pname =
     / (int 6 //- "guarding")
 
 auxiliaryDataMapRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "metadata" era
+  forall era.
+  ( HuddleRule "metadata" era
   , HuddleRule "native_script" era
   , HuddleRule "plutus_v1_script" era
   , HuddleRule "plutus_v2_script" era
   , HuddleRule "plutus_v3_script" era
   , HuddleRule "plutus_v4_script" era
   ) =>
-  Proxy name ->
+  Proxy "auxiliary_data_map" ->
   Proxy era ->
   Rule
 auxiliaryDataMapRule pname p =
@@ -266,12 +257,11 @@ auxiliaryDataMapRule pname p =
       )
 
 dijkstraValueRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "positive_coin" era
+  forall era.
+  ( HuddleRule "positive_coin" era
   , HuddleRule1 "multiasset" era
   ) =>
-  Proxy name ->
+  Proxy "value" ->
   Proxy era ->
   Rule
 dijkstraValueRule pname p =
@@ -283,9 +273,9 @@ dijkstraValueRule pname p =
       ]
 
 dijkstraMultiasset ::
-  forall name era a.
-  (KnownSymbol name, HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) =>
-  Proxy name ->
+  forall era a.
+  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) =>
+  Proxy "multiasset" ->
   Proxy era ->
   a ->
   GRuleCall
