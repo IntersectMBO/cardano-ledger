@@ -468,8 +468,8 @@ wfPParamsUpdateSpec =
   constrained' $ \ppupdate ->
     -- Note that ppupdate :: SimplePPUpdate
     match ppupdate $
-      \_minFeeFactor
-       _minFeeConstant
+      \_txFeePerByte
+       _txFeeFixed
        maxBBSize
        maxTxSize
        maxBHSize

@@ -263,8 +263,8 @@ instance Typeable r => HasSpec (KeyHash r) where
 --   encode PParams in EVERY Era. The EraPParams instances remove the fields
 --   that do not appear in that Era.
 data SimplePParams era = SimplePParams
-  { minFeeFactor :: Coin
-  , minFeeConstant :: Coin
+  { txFeePerByte :: Coin
+  , txFeeFixed :: Coin
   , maxBBSize :: Word32
   , maxTxSize :: Word32
   , maxBHSize :: Word32 -- Need to be downsized inside reify to Word16
@@ -322,8 +322,8 @@ instance
 
 -- | Use this as the SimpleRep of (PParamsUpdate era)
 data SimplePPUpdate = SimplePPUpdate
-  { uminFeeFactor :: StrictMaybe Coin
-  , uminFeeConstant :: StrictMaybe Coin
+  { utxFeePerByte :: StrictMaybe Coin
+  , utxFeeFixed :: StrictMaybe Coin
   , umaxBBSize :: StrictMaybe Word32
   , umaxTxSize :: StrictMaybe Word32
   , umaxBHSize :: StrictMaybe Word32 -- Need to be downsized inside reify to Word16

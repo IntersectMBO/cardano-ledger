@@ -29,8 +29,8 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   cSNothing_,
   cSJust_,
   succV_,
-  minFeeFactor_,
-  minFeeConstant_,
+  txFeePerByte_,
+  txFeeFixed_,
   maxBBSize_,
   maxTxSize_,
   maxBHSize_,
@@ -159,8 +159,8 @@ dropAtMost4 pp x =
 dropShelley :: EraPParams era => PParams era -> SimplePParams era
 dropShelley pp =
   SimplePParams
-    { minFeeFactor = fromCompact . unCoinPerByte $ pp ^. ppTxFeePerByteL
-    , minFeeConstant = pp ^. ppTxFeeFixedL
+    { txFeePerByte = fromCompact . unCoinPerByte $ pp ^. ppTxFeePerByteL
+    , txFeeFixed = pp ^. ppTxFeeFixedL
     , maxBBSize = pp ^. ppMaxBBSizeL
     , maxTxSize = pp ^. ppMaxTxSizeL
     , maxBHSize = fromIntegral (pp ^. ppMaxBHSizeL)
@@ -232,8 +232,8 @@ dropConway pp psub =
 liftShelley :: EraPParams era => SimplePParams era -> PParams era
 liftShelley pps =
   emptyPParams
-    & ppTxFeePerByteL .~ (CoinPerByte . toCompactPartial $ minFeeFactor pps)
-    & ppTxFeeFixedL .~ (minFeeConstant pps)
+    & ppTxFeePerByteL .~ (CoinPerByte . toCompactPartial $ txFeePerByte pps)
+    & ppTxFeeFixedL .~ (txFeeFixed pps)
     & ppMaxBBSizeL .~ (maxBBSize pps)
     & ppMaxTxSizeL .~ (maxTxSize pps)
     & ppMaxBHSizeL .~ (fromIntegral (maxBHSize pps))
@@ -281,8 +281,8 @@ liftConway pps pp =
 uDropShelley :: EraPParams era => PParamsUpdate era -> SimplePPUpdate
 uDropShelley pp =
   SimplePPUpdate
-    { uminFeeFactor = fromCompact . unCoinPerByte <$> pp ^. ppuTxFeePerByteL
-    , uminFeeConstant = pp ^. ppuTxFeeFixedL
+    { utxFeePerByte = fromCompact . unCoinPerByte <$> pp ^. ppuTxFeePerByteL
+    , utxFeeFixed = pp ^. ppuTxFeeFixedL
     , umaxBBSize = pp ^. ppuMaxBBSizeL
     , umaxTxSize = pp ^. ppuMaxTxSizeL
     , umaxBHSize = fromIntegral <$> (pp ^. ppuMaxBHSizeL)
@@ -356,8 +356,8 @@ uDropConway pp psub =
 uLiftShelley :: EraPParams era => SimplePPUpdate -> PParamsUpdate era
 uLiftShelley pps =
   emptyPParamsUpdate
-    & ppuTxFeePerByteL .~ (CoinPerByte . toCompactPartial <$> uminFeeFactor pps)
-    & ppuTxFeeFixedL .~ (uminFeeConstant pps)
+    & ppuTxFeePerByteL .~ (CoinPerByte . toCompactPartial <$> utxFeePerByte pps)
+    & ppuTxFeeFixedL .~ (utxFeeFixed pps)
     & ppuMaxBBSizeL .~ (umaxBBSize pps)
     & ppuMaxTxSizeL .~ (umaxTxSize pps)
     & ppuMaxBHSizeL .~ (fromIntegral <$> (umaxBHSize pps))
@@ -406,11 +406,11 @@ uLiftConway pps pp =
 -- ============================================================================
 -- Term Selectors for SimplePParams
 
-minFeeFactor_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
-minFeeFactor_ simplepp = sel @0 simplepp
+txFeePerByte_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
+txFeePerByte_ simplepp = sel @0 simplepp
 
-minFeeConstant_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
-minFeeConstant_ simplepp = sel @1 simplepp
+txFeeFixed_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
+txFeeFixed_ simplepp = sel @1 simplepp
 
 maxBBSize_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Word32
 maxBBSize_ simplepp = sel @2 simplepp
