@@ -28,7 +28,6 @@ module Cardano.Ledger.Allegra.HuddleSpec (
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Shelley.HuddleSpec
 import Data.Proxy (Proxy (..))
-import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -40,14 +39,13 @@ allegraCDDL =
     ]
 
 blockRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "header" era
+  forall era.
+  ( HuddleRule "header" era
   , HuddleRule "transaction_body" era
   , HuddleRule "transaction_witness_set" era
   , HuddleRule "auxiliary_data" era
   ) =>
-  Proxy name ->
+  Proxy "block" ->
   Proxy era ->
   Rule
 blockRule pname p =
@@ -65,13 +63,12 @@ blockRule pname p =
       ]
 
 transactionRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "transaction_body" era
+  forall era.
+  ( HuddleRule "transaction_body" era
   , HuddleRule "transaction_witness_set" era
   , HuddleRule "auxiliary_data" era
   ) =>
-  Proxy name ->
+  Proxy "transaction" ->
   Proxy era ->
   Rule
 transactionRule pname p =
@@ -83,13 +80,13 @@ transactionRule pname p =
       ]
 
 auxiliaryScriptsRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "native_script" era) => Proxy name -> Proxy era -> Rule
+  forall era.
+  HuddleRule "native_script" era => Proxy "auxiliary_scripts" -> Proxy era -> Rule
 auxiliaryScriptsRule pname p = pname =.= arr [0 <+ a (huddleRule @"native_script" p)]
 
 auxiliaryDataArrayRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "auxiliary_scripts" era) => Proxy name -> Proxy era -> Rule
+  forall era.
+  HuddleRule "auxiliary_scripts" era => Proxy "auxiliary_data_array" -> Proxy era -> Rule
 auxiliaryDataArrayRule pname p =
   pname
     =.= arr
@@ -98,24 +95,23 @@ auxiliaryDataArrayRule pname p =
       ]
 
 auxiliaryDataRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "auxiliary_data_array" era) => Proxy name -> Proxy era -> Rule
+  forall era.
+  HuddleRule "auxiliary_data_array" era => Proxy "auxiliary_data" -> Proxy era -> Rule
 auxiliaryDataRule pname p =
   pname
     =.= huddleRule @"metadata" p
     / huddleRule @"auxiliary_data_array" p
 
 nativeScriptRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleGroup "script_pubkey" era
+  forall era.
+  ( HuddleGroup "script_pubkey" era
   , HuddleGroup "script_all" era
   , HuddleGroup "script_any" era
   , HuddleGroup "script_n_of_k" era
   , HuddleGroup "script_invalid_before" era
   , HuddleGroup "script_invalid_hereafter" era
   ) =>
-  Proxy name ->
+  Proxy "native_script" ->
   Proxy era ->
   Rule
 nativeScriptRule pname p =
@@ -137,9 +133,9 @@ nativeScriptRule pname p =
       / arr [a $ huddleGroup @"script_invalid_hereafter" p]
 
 scriptNOfKGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "native_script" era) =>
-  Proxy name ->
+  forall era.
+  HuddleRule "native_script" era =>
+  Proxy "script_n_of_k" ->
   Proxy era ->
   GroupDef
 scriptNOfKGroup pname p =
@@ -151,7 +147,7 @@ scriptNOfKGroup pname p =
       ]
 
 scriptInvalidBeforeGroup ::
-  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> GroupDef
+  forall era. Era era => Proxy "script_invalid_before" -> Proxy era -> GroupDef
 scriptInvalidBeforeGroup pname p =
   comment
     [str|Timelock validity intervals are half-open intervals [a, b).
@@ -161,7 +157,7 @@ scriptInvalidBeforeGroup pname p =
       =.~ grp [4, a (huddleRule @"slot" p)]
 
 scriptInvalidHereafterGroup ::
-  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> GroupDef
+  forall era. Era era => Proxy "script_invalid_hereafter" -> Proxy era -> GroupDef
 scriptInvalidHereafterGroup pname p =
   comment
     [str|Timelock validity intervals are half-open intervals [a, b).
