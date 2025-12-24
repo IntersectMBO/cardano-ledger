@@ -36,7 +36,6 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Mary.HuddleSpec
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
-import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -50,44 +49,43 @@ alonzoCDDL =
     , HIRule $ huddleRule @"signkey_kes" (Proxy @AlonzoEra)
     ]
 
-exUnitsRule :: forall name. KnownSymbol name => Proxy name -> Rule
+exUnitsRule :: Proxy "ex_units" -> Rule
 exUnitsRule pname = pname =.= arr ["mem" ==> VUInt, "steps" ==> VUInt]
 
-networkIdRule :: forall name. KnownSymbol name => Proxy name -> Rule
+networkIdRule :: Proxy "network_id" -> Rule
 networkIdRule pname = pname =.= int 0 / int 1
 
 positiveIntervalRule ::
-  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Rule
+  forall era. Era era => Proxy "positive_interval" -> Proxy era -> Rule
 positiveIntervalRule pname p =
   pname
     =.= tag 30 (arr [a (huddleRule @"positive_int" p), a (huddleRule @"positive_int" p)])
 
 bigUintRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "bounded_bytes" era) => Proxy name -> Proxy era -> Rule
+  forall era.
+  HuddleRule "bounded_bytes" era => Proxy "big_uint" -> Proxy era -> Rule
 bigUintRule pname p = pname =.= tag 2 (huddleRule @"bounded_bytes" p)
 
 bigNintRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "bounded_bytes" era) => Proxy name -> Proxy era -> Rule
+  forall era.
+  HuddleRule "bounded_bytes" era => Proxy "big_nint" -> Proxy era -> Rule
 bigNintRule pname p = pname =.= tag 3 (huddleRule @"bounded_bytes" p)
 
 bigIntRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "big_uint" era
+  forall era.
+  ( HuddleRule "big_uint" era
   , HuddleRule "big_nint" era
   ) =>
-  Proxy name ->
+  Proxy "big_int" ->
   Proxy era ->
   Rule
 bigIntRule pname p = pname =.= VInt / huddleRule @"big_uint" p / huddleRule @"big_nint" p
 
 scriptDataHashRule ::
-  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Rule
+  forall era. Era era => Proxy "script_data_hash" -> Proxy era -> Rule
 scriptDataHashRule pname p = pname =.= huddleRule @"hash32" p
 
-boundedBytesRule :: forall name. KnownSymbol name => Proxy name -> Rule
+boundedBytesRule :: Proxy "bounded_bytes" -> Rule
 boundedBytesRule pname =
   comment
     [str|The real bounded_bytes does not have this limit. it instead has
@@ -103,7 +101,7 @@ boundedBytesRule pname =
         |]
     $ pname =.= VBytes `sized` (0 :: Word64, 64 :: Word64)
 
-distinctBytesRule :: forall name. KnownSymbol name => Proxy name -> Rule
+distinctBytesRule :: Proxy "distinct_bytes" -> Rule
 distinctBytesRule pname =
   comment
     [str|A type for distinct values.
@@ -118,8 +116,8 @@ distinctBytesRule pname =
       / (VBytes `sized` (32 :: Word64))
 
 exUnitPricesRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "positive_interval" era) => Proxy name -> Proxy era -> Rule
+  forall era.
+  HuddleRule "positive_interval" era => Proxy "ex_unit_prices" -> Proxy era -> Rule
 exUnitPricesRule pname p =
   pname
     =.= arr
@@ -128,12 +126,12 @@ exUnitPricesRule pname p =
       ]
 
 requiredSignersRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "addr_keyhash" era, HuddleRule1 "set" era) =>
-  Proxy name -> Proxy era -> Rule
+  forall era.
+  (HuddleRule "addr_keyhash" era, HuddleRule1 "set" era) =>
+  Proxy "required_signers" -> Proxy era -> Rule
 requiredSignersRule pname p = pname =.= huddleRule1 @"set" p (huddleRule @"addr_keyhash" p)
 
-constr :: (KnownSymbol name, IsType0 a) => Proxy name -> a -> GRuleCall
+constr :: IsType0 a => Proxy "constr" -> a -> GRuleCall
 constr pname =
   binding $ \x ->
     pname
@@ -548,13 +546,12 @@ instance HuddleRule "redeemers" AlonzoEra where
   huddleRuleNamed pname p = pname =.= arr [0 <+ a (huddleRule @"redeemer" p)]
 
 alonzoRedeemer ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "redeemer_tag" era
+  forall era.
+  ( HuddleRule "redeemer_tag" era
   , HuddleRule "plutus_data" era
   , HuddleRule "ex_units" era
   ) =>
-  Proxy name ->
+  Proxy "redeemer" ->
   Proxy era ->
   Rule
 alonzoRedeemer pname p =
@@ -569,7 +566,7 @@ alonzoRedeemer pname p =
 instance HuddleRule "redeemer" AlonzoEra where
   huddleRuleNamed = alonzoRedeemer
 
-alonzoRedeemerTag :: forall name. KnownSymbol name => Proxy name -> Rule
+alonzoRedeemerTag :: Proxy "redeemer_tag" -> Rule
 alonzoRedeemerTag pname =
   comment
     [str|0: spend
