@@ -100,8 +100,8 @@ conwayCDDL =
     ]
 
 anchorRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "url" era, HuddleRule "hash32" era) => Proxy name -> Proxy era -> Rule
+  forall era.
+  (HuddleRule "url" era, HuddleRule "hash32" era) => Proxy "anchor" -> Proxy era -> Rule
 anchorRule pname p =
   pname
     =.= arr
@@ -110,9 +110,9 @@ anchorRule pname p =
       ]
 
 drepRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "addr_keyhash" era, HuddleRule "script_hash" era) =>
-  Proxy name -> Proxy era -> Rule
+  forall era.
+  (HuddleRule "addr_keyhash" era, HuddleRule "script_hash" era) =>
+  Proxy "drep" -> Proxy era -> Rule
 drepRule pname p =
   pname
     =.= arr [0, a (huddleRule @"addr_keyhash" p)]
@@ -121,9 +121,9 @@ drepRule pname p =
     / arr [3]
 
 voterRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "addr_keyhash" era, HuddleRule "script_hash" era) =>
-  Proxy name -> Proxy era -> Rule
+  forall era.
+  (HuddleRule "addr_keyhash" era, HuddleRule "script_hash" era) =>
+  Proxy "voter" -> Proxy era -> Rule
 voterRule pname p =
   pname
     =.= arr [0, a (huddleRule @"addr_keyhash" p)]
@@ -132,38 +132,37 @@ voterRule pname p =
     / arr [3, a (huddleRule @"script_hash" p)]
     / arr [4, a (huddleRule @"addr_keyhash" p)]
 
-dnsNameRule :: forall name. KnownSymbol name => Proxy name -> Rule
+dnsNameRule :: Proxy "dns_name" -> Rule
 dnsNameRule pname = pname =.= VText `sized` (0 :: Word64, 128 :: Word64)
 
-urlRule :: forall name. KnownSymbol name => Proxy name -> Rule
+urlRule :: Proxy "url" -> Rule
 urlRule pname = pname =.= VText `sized` (0 :: Word64, 128 :: Word64)
 
-voteRule :: forall name. KnownSymbol name => Proxy name -> Rule
+voteRule :: Proxy "vote" -> Rule
 voteRule pname = pname =.= (0 :: Integer) ... (2 :: Integer)
 
 drepCredentialRule ::
-  forall name era. (KnownSymbol name, HuddleRule "credential" era) => Proxy name -> Proxy era -> Rule
+  forall era. HuddleRule "credential" era => Proxy "drep_credential" -> Proxy era -> Rule
 drepCredentialRule pname p = pname =.= huddleRule @"credential" p
 
 committeeHotCredentialRule ::
-  forall name era. (KnownSymbol name, HuddleRule "credential" era) => Proxy name -> Proxy era -> Rule
+  forall era. HuddleRule "credential" era => Proxy "committee_hot_credential" -> Proxy era -> Rule
 committeeHotCredentialRule pname p = pname =.= huddleRule @"credential" p
 
 committeeColdCredentialRule ::
-  forall name era. (KnownSymbol name, HuddleRule "credential" era) => Proxy name -> Proxy era -> Rule
+  forall era. HuddleRule "credential" era => Proxy "committee_cold_credential" -> Proxy era -> Rule
 committeeColdCredentialRule pname p = pname =.= huddleRule @"credential" p
 
 policyHashRule ::
-  forall name era. (KnownSymbol name, HuddleRule "script_hash" era) => Proxy name -> Proxy era -> Rule
+  forall era. HuddleRule "script_hash" era => Proxy "policy_hash" -> Proxy era -> Rule
 policyHashRule pname p = pname =.= huddleRule @"script_hash" p
 
-potentialLanguagesRule :: forall name. KnownSymbol name => Proxy name -> Rule
+potentialLanguagesRule :: Proxy "potential_languages" -> Rule
 potentialLanguagesRule pname = pname =.= (0 :: Integer) ... (255 :: Integer)
 
 conwayCertificateRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleGroup "account_registration_cert" era
+  forall era.
+  ( HuddleGroup "account_registration_cert" era
   , HuddleGroup "account_unregistration_cert" era
   , HuddleGroup "delegation_to_stake_pool_cert" era
   , HuddleGroup "pool_registration_cert" era
@@ -181,7 +180,7 @@ conwayCertificateRule ::
   , HuddleGroup "drep_unregistration_cert" era
   , HuddleGroup "drep_update_cert" era
   ) =>
-  Proxy name ->
+  Proxy "certificate" ->
   Proxy era ->
   Rule
 conwayCertificateRule pname p =
@@ -205,17 +204,17 @@ conwayCertificateRule pname p =
     / arr [a $ huddleGroup @"drep_update_cert" p]
 
 certificatesRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "certificate" era, HuddleRule1 "nonempty_oset" era) =>
-  Proxy name -> Proxy era -> Rule
+  forall era.
+  (HuddleRule "certificate" era, HuddleRule1 "nonempty_oset" era) =>
+  Proxy "certificates" -> Proxy era -> Rule
 certificatesRule pname p =
   pname
     =.= huddleRule1 @"nonempty_oset" p (huddleRule @"certificate" p)
 
 accountRegistrationDepositCertGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "stake_credential" era, HuddleRule "coin" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "stake_credential" era, HuddleRule "coin" era) =>
+  Proxy "account_registration_deposit_cert" ->
   Proxy era ->
   GroupDef
 accountRegistrationDepositCertGroup pname p =
@@ -223,9 +222,9 @@ accountRegistrationDepositCertGroup pname p =
     =.~ grp [7, a (huddleRule @"stake_credential" p), a (huddleRule @"coin" p)]
 
 accountUnregistrationDepositCertGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "stake_credential" era, HuddleRule "coin" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "stake_credential" era, HuddleRule "coin" era) =>
+  Proxy "account_unregistration_deposit_cert" ->
   Proxy era ->
   GroupDef
 accountUnregistrationDepositCertGroup pname p =
@@ -233,9 +232,9 @@ accountUnregistrationDepositCertGroup pname p =
     =.~ grp [8, a (huddleRule @"stake_credential" p), a (huddleRule @"coin" p)]
 
 delegationToDrepCertGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "stake_credential" era, HuddleRule "drep" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "stake_credential" era, HuddleRule "drep" era) =>
+  Proxy "delegation_to_drep_cert" ->
   Proxy era ->
   GroupDef
 delegationToDrepCertGroup pname p =
@@ -243,13 +242,12 @@ delegationToDrepCertGroup pname p =
     =.~ grp [9, a (huddleRule @"stake_credential" p), a (huddleRule @"drep" p)]
 
 delegationToStakePoolAndDrepCertGroup ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "stake_credential" era
+  forall era.
+  ( HuddleRule "stake_credential" era
   , HuddleRule "pool_keyhash" era
   , HuddleRule "drep" era
   ) =>
-  Proxy name ->
+  Proxy "delegation_to_stake_pool_and_drep_cert" ->
   Proxy era ->
   GroupDef
 delegationToStakePoolAndDrepCertGroup pname p =
@@ -262,13 +260,12 @@ delegationToStakePoolAndDrepCertGroup pname p =
       ]
 
 accountRegistrationDelegationToStakePoolCertGroup ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "stake_credential" era
+  forall era.
+  ( HuddleRule "stake_credential" era
   , HuddleRule "pool_keyhash" era
   , HuddleRule "coin" era
   ) =>
-  Proxy name ->
+  Proxy "account_registration_delegation_to_stake_pool_cert" ->
   Proxy era ->
   GroupDef
 accountRegistrationDelegationToStakePoolCertGroup pname p =
@@ -281,9 +278,9 @@ accountRegistrationDelegationToStakePoolCertGroup pname p =
       ]
 
 accountRegistrationDelegationToDrepCertGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "stake_credential" era, HuddleRule "drep" era, HuddleRule "coin" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "stake_credential" era, HuddleRule "drep" era, HuddleRule "coin" era) =>
+  Proxy "account_registration_delegation_to_drep_cert" ->
   Proxy era ->
   GroupDef
 accountRegistrationDelegationToDrepCertGroup pname p =
@@ -296,14 +293,13 @@ accountRegistrationDelegationToDrepCertGroup pname p =
       ]
 
 accountRegistrationDelegationToStakePoolAndDrepCertGroup ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "stake_credential" era
+  forall era.
+  ( HuddleRule "stake_credential" era
   , HuddleRule "pool_keyhash" era
   , HuddleRule "drep" era
   , HuddleRule "coin" era
   ) =>
-  Proxy name ->
+  Proxy "account_registration_delegation_to_stake_pool_and_drep_cert" ->
   Proxy era ->
   GroupDef
 accountRegistrationDelegationToStakePoolAndDrepCertGroup pname p =
@@ -317,12 +313,11 @@ accountRegistrationDelegationToStakePoolAndDrepCertGroup pname p =
       ]
 
 committeeAuthorizationCertGroup ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "committee_cold_credential" era
+  forall era.
+  ( HuddleRule "committee_cold_credential" era
   , HuddleRule "committee_hot_credential" era
   ) =>
-  Proxy name ->
+  Proxy "committee_authorization_cert" ->
   Proxy era ->
   GroupDef
 committeeAuthorizationCertGroup pname p =
@@ -334,9 +329,9 @@ committeeAuthorizationCertGroup pname p =
       ]
 
 committeeResignationCertGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "committee_cold_credential" era, HuddleRule "anchor" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "committee_cold_credential" era, HuddleRule "anchor" era) =>
+  Proxy "committee_resignation_cert" ->
   Proxy era ->
   GroupDef
 committeeResignationCertGroup pname p =
@@ -344,9 +339,9 @@ committeeResignationCertGroup pname p =
     =.~ grp [15, a (huddleRule @"committee_cold_credential" p), a (huddleRule @"anchor" p / VNil)]
 
 drepRegistrationCertGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "drep_credential" era, HuddleRule "coin" era, HuddleRule "anchor" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "drep_credential" era, HuddleRule "coin" era, HuddleRule "anchor" era) =>
+  Proxy "drep_registration_cert" ->
   Proxy era ->
   GroupDef
 drepRegistrationCertGroup pname p =
@@ -359,9 +354,9 @@ drepRegistrationCertGroup pname p =
       ]
 
 drepUnregistrationCertGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "drep_credential" era, HuddleRule "coin" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "drep_credential" era, HuddleRule "coin" era) =>
+  Proxy "drep_unregistration_cert" ->
   Proxy era ->
   GroupDef
 drepUnregistrationCertGroup pname p =
@@ -369,9 +364,9 @@ drepUnregistrationCertGroup pname p =
     =.~ grp [17, a (huddleRule @"drep_credential" p), a (huddleRule @"coin" p)]
 
 drepUpdateCertGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "drep_credential" era, HuddleRule "anchor" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "drep_credential" era, HuddleRule "anchor" era) =>
+  Proxy "drep_update_cert" ->
   Proxy era ->
   GroupDef
 drepUpdateCertGroup pname p =
@@ -379,9 +374,9 @@ drepUpdateCertGroup pname p =
     =.~ grp [18, a (huddleRule @"drep_credential" p), a (huddleRule @"anchor" p / VNil)]
 
 votingProcedureRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "vote" era, HuddleRule "anchor" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "vote" era, HuddleRule "anchor" era) =>
+  Proxy "voting_procedure" ->
   Proxy era ->
   Rule
 votingProcedureRule pname p =
@@ -389,13 +384,12 @@ votingProcedureRule pname p =
     =.= arr [a (huddleRule @"vote" p), a (huddleRule @"anchor" p / VNil)]
 
 votingProceduresRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "voter" era
+  forall era.
+  ( HuddleRule "voter" era
   , HuddleRule "gov_action_id" era
   , HuddleRule "voting_procedure" era
   ) =>
-  Proxy name ->
+  Proxy "voting_procedures" ->
   Proxy era ->
   Rule
 votingProceduresRule pname p =
@@ -407,9 +401,9 @@ votingProceduresRule pname p =
       ]
 
 constitutionRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "anchor" era, HuddleRule "script_hash" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "anchor" era, HuddleRule "script_hash" era) =>
+  Proxy "constitution" ->
   Proxy era ->
   Rule
 constitutionRule pname p =
@@ -420,13 +414,12 @@ constitutionRule pname p =
       ]
 
 parameterChangeActionGroup ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "gov_action_id" era
+  forall era.
+  ( HuddleRule "gov_action_id" era
   , HuddleRule "protocol_param_update" era
   , HuddleRule "policy_hash" era
   ) =>
-  Proxy name ->
+  Proxy "parameter_change_action" ->
   Proxy era ->
   GroupDef
 parameterChangeActionGroup pname p =
@@ -439,9 +432,9 @@ parameterChangeActionGroup pname p =
       ]
 
 hardForkInitiationActionGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "gov_action_id" era, HuddleRule "protocol_version" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "gov_action_id" era, HuddleRule "protocol_version" era) =>
+  Proxy "hard_fork_initiation_action" ->
   Proxy era ->
   GroupDef
 hardForkInitiationActionGroup pname p =
@@ -449,13 +442,12 @@ hardForkInitiationActionGroup pname p =
     =.~ grp [1, a $ huddleRule @"gov_action_id" p / VNil, a $ huddleRule @"protocol_version" p]
 
 treasuryWithdrawalsActionGroup ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "reward_account" era
+  forall era.
+  ( HuddleRule "reward_account" era
   , HuddleRule "coin" era
   , HuddleRule "policy_hash" era
   ) =>
-  Proxy name ->
+  Proxy "treasury_withdrawals_action" ->
   Proxy era ->
   GroupDef
 treasuryWithdrawalsActionGroup pname p =
@@ -472,22 +464,21 @@ treasuryWithdrawalsActionGroup pname p =
       ]
 
 noConfidenceGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "gov_action_id" era) => Proxy name -> Proxy era -> GroupDef
+  forall era.
+  HuddleRule "gov_action_id" era => Proxy "no_confidence" -> Proxy era -> GroupDef
 noConfidenceGroup pname p =
   pname
     =.~ grp [3, a $ huddleRule @"gov_action_id" p / VNil]
 
 updateCommitteeGroup ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "gov_action_id" era
+  forall era.
+  ( HuddleRule "gov_action_id" era
   , HuddleRule "committee_cold_credential" era
   , HuddleRule "epoch" era
   , HuddleRule "unit_interval" era
   , HuddleRule1 "set" era
   ) =>
-  Proxy name ->
+  Proxy "update_committee" ->
   Proxy era ->
   GroupDef
 updateCommitteeGroup pname p =
@@ -506,9 +497,9 @@ updateCommitteeGroup pname p =
       ]
 
 newConstitutionGroup ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "gov_action_id" era, HuddleRule "constitution" era) =>
-  Proxy name ->
+  forall era.
+  (HuddleRule "gov_action_id" era, HuddleRule "constitution" era) =>
+  Proxy "new_constitution" ->
   Proxy era ->
   GroupDef
 newConstitutionGroup pname p =
@@ -519,13 +510,12 @@ newConstitutionGroup pname p =
       , a $ huddleRule @"constitution" p
       ]
 
-infoActionRule :: forall name. KnownSymbol name => Proxy name -> Rule
+infoActionRule :: Proxy "info_action" -> Rule
 infoActionRule pname = pname =.= int 6
 
 govActionRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleGroup "parameter_change_action" era
+  forall era.
+  ( HuddleGroup "parameter_change_action" era
   , HuddleGroup "hard_fork_initiation_action" era
   , HuddleGroup "treasury_withdrawals_action" era
   , HuddleGroup "no_confidence" era
@@ -533,7 +523,7 @@ govActionRule ::
   , HuddleGroup "new_constitution" era
   , HuddleRule "info_action" era
   ) =>
-  Proxy name ->
+  Proxy "gov_action" ->
   Proxy era ->
   Rule
 govActionRule pname p =
@@ -547,14 +537,13 @@ govActionRule pname p =
     / arr [a (huddleRule @"info_action" p)]
 
 proposalProcedureRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "coin" era
+  forall era.
+  ( HuddleRule "coin" era
   , HuddleRule "reward_account" era
   , HuddleRule "gov_action" era
   , HuddleRule "anchor" era
   ) =>
-  Proxy name ->
+  Proxy "proposal_procedure" ->
   Proxy era ->
   Rule
 proposalProcedureRule pname p =
@@ -567,12 +556,11 @@ proposalProcedureRule pname p =
       ]
 
 proposalProceduresRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "proposal_procedure" era
+  forall era.
+  ( HuddleRule "proposal_procedure" era
   , HuddleRule1 "nonempty_oset" era
   ) =>
-  Proxy name ->
+  Proxy "proposal_procedures" ->
   Proxy era ->
   Rule
 proposalProceduresRule pname p =
@@ -580,8 +568,8 @@ proposalProceduresRule pname p =
     =.= huddleRule1 @"nonempty_oset" p (huddleRule @"proposal_procedure" p)
 
 poolVotingThresholdsRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "unit_interval" era) => Proxy name -> Proxy era -> Rule
+  forall era.
+  HuddleRule "unit_interval" era => Proxy "pool_voting_thresholds" -> Proxy era -> Rule
 poolVotingThresholdsRule pname p =
   pname
     =.= arr
@@ -593,8 +581,8 @@ poolVotingThresholdsRule pname p =
       ]
 
 drepVotingThresholdsRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule "unit_interval" era) => Proxy name -> Proxy era -> Rule
+  forall era.
+  HuddleRule "unit_interval" era => Proxy "drep_voting_thresholds" -> Proxy era -> Rule
 drepVotingThresholdsRule pname p =
   pname
     =.= arr
@@ -611,9 +599,9 @@ drepVotingThresholdsRule pname p =
       ]
 
 conwayMultiasset ::
-  forall name era a.
-  (KnownSymbol name, HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) =>
-  Proxy name ->
+  forall era a.
+  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) =>
+  Proxy "multiasset" ->
   Proxy era ->
   a ->
   GRuleCall
@@ -627,12 +615,11 @@ conwayMultiasset pname p =
         ]
 
 conwayValueRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "positive_coin" era
+  forall era.
+  ( HuddleRule "positive_coin" era
   , HuddleRule1 "multiasset" era
   ) =>
-  Proxy name ->
+  Proxy "value" ->
   Proxy era ->
   Rule
 conwayValueRule pname p =
@@ -644,13 +631,12 @@ conwayValueRule pname p =
       ]
 
 conwayMintRule ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "policy_id" era
+  forall era.
+  ( HuddleRule "policy_id" era
   , HuddleRule "asset_name" era
   , HuddleRule "nonzero_int64" era
   ) =>
-  Proxy name ->
+  Proxy "mint" ->
   Proxy era ->
   Rule
 conwayMintRule pname p =
@@ -662,7 +648,7 @@ conwayMintRule pname p =
       ]
 
 conwayWithdrawalsRule ::
-  forall name era. (KnownSymbol name, Era era) => Proxy name -> Proxy era -> Rule
+  forall era. Era era => Proxy "withdrawals" -> Proxy era -> Rule
 conwayWithdrawalsRule pname p =
   pname
     =.= mp
@@ -671,7 +657,7 @@ conwayWithdrawalsRule pname p =
           ==> huddleRule @"coin" p
       ]
 
-conwayRedeemerTag :: forall name. KnownSymbol name => Proxy name -> Rule
+conwayRedeemerTag :: Proxy "redeemer_tag" -> Rule
 conwayRedeemerTag pname =
   comment
     [str|0: spend
@@ -686,13 +672,12 @@ conwayRedeemerTag pname =
       ... (5 :: Integer)
 
 conwayRedeemer ::
-  forall name era.
-  ( KnownSymbol name
-  , HuddleRule "redeemer_tag" era
+  forall era.
+  ( HuddleRule "redeemer_tag" era
   , HuddleRule "plutus_data" era
   , HuddleRule "ex_units" era
   ) =>
-  Proxy name ->
+  Proxy "redeemer" ->
   Proxy era ->
   Rule
 conwayRedeemer pname p =
@@ -704,16 +689,17 @@ conwayRedeemer pname p =
       , "ex_units" ==> huddleRule @"ex_units" p
       ]
 
-mkMaybeTaggedSet :: (KnownSymbol name, IsType0 a) => Proxy name -> Word64 -> a -> GRuleCall
+mkMaybeTaggedSet ::
+  forall name a. (KnownSymbol name, IsType0 a) => Proxy name -> Word64 -> a -> GRuleCall
 mkMaybeTaggedSet pname n = binding $ \x -> pname =.= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
 
-maybeTaggedSet :: (KnownSymbol name, IsType0 a) => Proxy name -> a -> GRuleCall
+maybeTaggedSet :: IsType0 a => Proxy "set" -> a -> GRuleCall
 maybeTaggedSet pname = mkMaybeTaggedSet pname 0
 
-maybeTaggedNonemptySet :: (KnownSymbol name, IsType0 a) => Proxy name -> a -> GRuleCall
+maybeTaggedNonemptySet :: IsType0 a => Proxy "nonempty_set" -> a -> GRuleCall
 maybeTaggedNonemptySet pname = mkMaybeTaggedSet pname 1
 
-maybeTaggedNonemptyOset :: (KnownSymbol name, IsType0 a) => Proxy name -> a -> GRuleCall
+maybeTaggedNonemptyOset :: IsType0 a => Proxy "nonempty_oset" -> a -> GRuleCall
 maybeTaggedNonemptyOset pname = mkMaybeTaggedSet pname 1
 
 instance HuddleRule "bounded_bytes" ConwayEra where
