@@ -369,8 +369,8 @@ instance HuddleRule "protocol_version" DijkstraEra where
 instance HuddleRule "policy_id" DijkstraEra where
   huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p
 
-instance HuddleRule "policy_hash" DijkstraEra where
-  huddleRuleNamed = policyHashRule
+instance HuddleRule "guardrails_script_hash" DijkstraEra where
+  huddleRuleNamed = guardrailsScriptHashRule
 
 instance HuddleGroup "script_pubkey" DijkstraEra where
   huddleGroupNamed = scriptPubkeyGroup

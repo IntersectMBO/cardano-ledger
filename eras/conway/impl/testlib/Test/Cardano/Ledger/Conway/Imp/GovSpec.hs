@@ -859,7 +859,7 @@ votingSpec =
           NewConstitution
             SNothing
             Constitution
-              { constitutionScript = SNothing
+              { constitutionGuardrailsScriptHash = SNothing
               , constitutionAnchor = anchor
               }
       submitYesVote_ (DRepVoter dRepCred) constitutionChangeId
@@ -1007,7 +1007,7 @@ policySpec =
         mkProposal (ParameterChange SNothing pparamsUpdate (SJust wrongScriptHash))
           >>= flip
             submitFailingProposal
-            [injectFailure $ InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)]
+            [injectFailure $ InvalidGuardrailsScriptHash (SJust wrongScriptHash) (SJust scriptHash)]
 
       impAnn "TreasuryWithdrawals with invalid policy fails" $ do
         rewardAccount <- registerRewardAccount
@@ -1015,7 +1015,7 @@ policySpec =
         mkProposal (TreasuryWithdrawals withdrawals (SJust wrongScriptHash))
           >>= flip
             submitFailingProposal
-            [injectFailure $ InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)]
+            [injectFailure $ InvalidGuardrailsScriptHash (SJust wrongScriptHash) (SJust scriptHash)]
 
 networkIdSpec ::
   forall era.

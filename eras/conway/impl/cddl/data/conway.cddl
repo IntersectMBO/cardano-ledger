@@ -581,7 +581,7 @@ gov_action =
 
 
 parameter_change_action = 
-  (0, gov_action_id/ nil, protocol_param_update, policy_hash/ nil)
+  (0, gov_action_id/ nil, protocol_param_update, guardrails_script_hash/ nil)
 
 protocol_param_update = 
   { ? 0  : coin                   ; minfeeA
@@ -662,11 +662,12 @@ drep_voting_thresholds =
   ]
 
 
-policy_hash = script_hash
+guardrails_script_hash = script_hash
 
 hard_fork_initiation_action = (1, gov_action_id/ nil, protocol_version)
 
-treasury_withdrawals_action = (2, {* reward_account => coin}, policy_hash/ nil)
+treasury_withdrawals_action = 
+  (2, {* reward_account => coin}, guardrails_script_hash/ nil)
 
 no_confidence = (3, gov_action_id/ nil)
 
@@ -680,7 +681,7 @@ update_committee =
 
 new_constitution = (5, gov_action_id/ nil, constitution)
 
-constitution = [anchor, script_hash/ nil]
+constitution = [anchor, guardrails_script_hash/ nil]
 
 info_action = 6
 

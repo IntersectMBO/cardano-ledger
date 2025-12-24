@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Deprecate `InvalidPolicyHash` in favor of new `InvalidGuardrailsScriptHash`
 * Move the `DijkstraMempoolFailure` constructor from `DijkstraLedgerPredFailure` to `DijkstraMempoolPredFailure`
 * Add the `DijkstraMempoolPredFailure` predicate failure for the MEMPOOL rule
 * Add `DijkstraApplyTxError` constructor for `ApplyTxError era`
@@ -69,6 +70,7 @@
 
 ### `cddl`
 
+* Renamed `policy_hash` to `guardrails_script_hash` in governance actions to avoid confusion with multi-asset policy IDs
 * Move `cddl-files` to `cddl/data`.
 * Add full `HuddleSpec`.
 
