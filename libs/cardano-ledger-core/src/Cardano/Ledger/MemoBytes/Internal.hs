@@ -111,7 +111,7 @@ import Prelude hiding (span)
 --   serializations.
 data MemoBytes t = MemoBytes
   { mbRawType :: !t
-  , mbBytes :: ShortByteString
+  , mbBytes :: !ShortByteString
   , mbHash :: SafeHash (MemoHashIndex t)
   }
   deriving (Generic)
