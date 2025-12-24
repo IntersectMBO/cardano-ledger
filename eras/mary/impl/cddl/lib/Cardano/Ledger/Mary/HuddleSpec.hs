@@ -24,7 +24,6 @@ import Cardano.Ledger.Allegra.HuddleSpec
 import Cardano.Ledger.Mary (MaryEra)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
-import GHC.TypeLits (KnownSymbol)
 import Prelude hiding ((/))
 
 maryCDDL :: Huddle
@@ -37,9 +36,9 @@ maryCDDL =
     ]
 
 maryMultiasset ::
-  forall name era a.
-  (KnownSymbol name, HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) =>
-  Proxy name ->
+  forall era a.
+  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) =>
+  Proxy "multiasset" ->
   Proxy era ->
   a ->
   GRuleCall
@@ -53,9 +52,9 @@ maryMultiasset pname p =
         ]
 
 maryValueRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule1 "multiasset" era) =>
-  Proxy name ->
+  forall era.
+  HuddleRule1 "multiasset" era =>
+  Proxy "value" ->
   Proxy era ->
   Rule
 maryValueRule pname p =
@@ -64,14 +63,14 @@ maryValueRule pname p =
     / sarr [a $ huddleRule @"coin" p, a $ huddleRule1 @"multiasset" p VUInt]
 
 maryMintRule ::
-  forall name era.
-  (KnownSymbol name, HuddleRule1 "multiasset" era) =>
-  Proxy name ->
+  forall era.
+  HuddleRule1 "multiasset" era =>
+  Proxy "mint" ->
   Proxy era ->
   Rule
 maryMintRule pname p = pname =.= huddleRule1 @"multiasset" p (huddleRule @"int64" p)
 
-assetNameRule :: forall name. KnownSymbol name => Proxy name -> Rule
+assetNameRule :: Proxy "asset_name" -> Rule
 assetNameRule pname = pname =.= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "block" MaryEra where
