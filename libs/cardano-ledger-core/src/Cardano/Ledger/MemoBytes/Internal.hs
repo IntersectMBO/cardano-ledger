@@ -112,7 +112,7 @@ import Prelude hiding (span)
 data MemoBytes t = MemoBytes
   { mbRawType :: !t
   , mbBytes :: !ShortByteString
-  , mbHash :: SafeHash (MemoHashIndex t)
+  , mbHash :: !(SafeHash (MemoHashIndex t))
   }
   deriving (Generic)
   deriving (NoThunks) via AllowThunksIn '["mbBytes", "mbHash"] (MemoBytes t)
