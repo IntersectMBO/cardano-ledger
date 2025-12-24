@@ -2,10 +2,9 @@
 
 module Test.Cardano.Ledger.Conway.Plutus.PlutusSpec (spec) where
 
-import Cardano.Ledger.Babbage.PParams (CoinPerByte)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams (DRepVotingThresholds, PoolVotingThresholds)
-import Cardano.Ledger.Core (PParamsUpdate)
+import Cardano.Ledger.Core (CoinPerByte, PParamsUpdate)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()

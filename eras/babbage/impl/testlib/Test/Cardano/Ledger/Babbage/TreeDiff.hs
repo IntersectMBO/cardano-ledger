@@ -27,9 +27,6 @@ import Cardano.Ledger.Shelley.Rules
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Alonzo.TreeDiff
 
--- Core
-deriving newtype instance ToExpr CoinPerByte
-
 -- Scripts
 instance ToExpr (PlutusScript BabbageEra)
 

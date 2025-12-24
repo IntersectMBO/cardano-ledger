@@ -109,6 +109,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Tx (..))
 import Cardano.Ledger.MemoBytes (EqRaw (..))
@@ -369,8 +370,8 @@ alonzoMinFeeTx ::
   Tx l era ->
   Coin
 alonzoMinFeeTx pp tx =
-  (tx ^. sizeTxF <×> pp ^. ppMinFeeAL)
-    <+> (pp ^. ppMinFeeBL)
+  (tx ^. sizeTxF <×> (fromCompact . unCoinPerByte) (pp ^. ppTxFeePerByteL))
+    <+> (pp ^. ppTxFeeFixedL)
     <+> txscriptfee (pp ^. ppPricesL) allExunits
   where
     allExunits = totExUnits tx

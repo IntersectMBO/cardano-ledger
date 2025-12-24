@@ -23,7 +23,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   mkTxIxPartial,
  )
-import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), compactCoinOrError)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -70,12 +70,12 @@ import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 shelleyGenPParams :: EraPParams era => Gen (PParams era)
 shelleyGenPParams = do
-  minfeeA <- Coin <$> choose (0, 1000)
+  minfeeA <- CoinPerByte . CompactCoin <$> choose (0, 1000)
   minfeeB <- Coin <$> choose (0, 10000)
   pure $
     emptyPParams
-      & ppMinFeeAL .~ minfeeA
-      & ppMinFeeBL .~ minfeeB
+      & ppTxFeePerByteL .~ minfeeA
+      & ppTxFeeFixedL .~ minfeeB
       & ppMaxTxSizeL .~ fromIntegral (maxBound :: Int)
       & ppProtocolVersionL .~ ProtVer (eraProtVerLow @ShelleyEra) 0
       & ppPoolDepositL .~ Coin 5

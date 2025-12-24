@@ -19,7 +19,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary (MaryEra, Tx (..))
 import Cardano.Ledger.Mary.Core
@@ -88,8 +88,8 @@ initUTxO =
 pp :: PParams MaryEra
 pp =
   emptyPParams
-    & ppMinFeeAL .~ Coin 0
-    & ppMinFeeBL .~ Coin 1
+    & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 0)
+    & ppTxFeeFixedL .~ Coin 1
     & ppMaxTxSizeL .~ 16384
     & ppMinUTxOValueL .~ Coin 100
 

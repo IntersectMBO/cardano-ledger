@@ -2,22 +2,35 @@
 
 ## 1.19.0.0
 
+* Added:
+  - `ppTxFeeFixedCompactL`
+  - `ppuTxFeeFixedCompactL`
+  - `coinPerByteL`
+  - `coinPerByteFL`
+  - `hkdPartialCompactCoinL`
+  - `hkdCoinPerByteL`
+* Renamed:
+  - `hkdMinFeeAL` -> `hkdTxFeePerByteL`
+  - `ppMinFeeAL` -> `ppTxFeePerByteL`
+  - `ppuMinFeeAL` -> `ppuTxFeePerByteL`
+  - `hkdMinFeeBL` -> `hkdTxFeeFixedL`
+  - `ppMinFeeBL` -> `ppTxFeeFixedL`
+  - `ppuMinFeeBL` -> `ppuTxFeeFixedL`
+* Changed type to `CoinPerByte`:
+  - `hkdMinFeeAL`
+  - `ppMinFeeAL`
+  - `ppuMinFeeAL`
+* Added `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Add mocked-up `PerasKey` type
 * Add mocked-up `validatePerasCert` validation function
 * Changed name and type to `CompactForm Coin`:
-  - `hkdMinFeeAL` -> `hkdMinFeeACompactL`
-  - `hkdMinFeeBL` -> `hkdMinFeeBCompactL`
   - `hkdKeyDepositL` -> `hkdKeyDepositCompactL`
   - `hkdMinUTxOValueL` -> `hkdMinUTxOValueCompactL`
   - `hkdMinPoolCostL` -> `hkdMinPoolCostCompactL`
 * Added:
-  - `ppMinFeeACompactL`,
-  - `ppMinFeeBCompactL`,
   - `ppKeyDepositCompactL`,
   - `ppMinUTxOValueCompactL`,
   - `ppMinPoolCostCompactL`,
-  - `ppuMinFeeACompactL`,
-  - `ppuMinFeeBCompactL`,
   - `ppuKeyDepositCompactL`,
   - `ppuMinUTxOValueCompactL`,
   - `ppuMinPoolCostCompactL`,
@@ -90,6 +103,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` and `ToExpr` instances for `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Add `forEachEraVersion`
 * Add `Test.Cardano.Ledger.Core.Binary.Golden`

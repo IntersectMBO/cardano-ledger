@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Conway.Imp.GovSpec (spec) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (hardforkConwayDisallowUnelectedCommitteeFromVoting)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -293,7 +293,7 @@ proposalsSpec = do
                          , Node SNothing []
                          ]
       it "Subtrees are pruned when proposals expire over multiple rounds" $ do
-        let ppupdate = def & ppuMinFeeAL .~ SJust (Coin 1000)
+        let ppupdate = def & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 1000)
         let submitInitialProposal = submitParameterChange SNothing ppupdate
         let submitChildProposal parent = submitParameterChange (SJust parent) ppupdate
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
@@ -734,7 +734,7 @@ proposalsSpec = do
     submitParameterChangeForest = submitGovActionForest $ paramAction >=> submitGovAction
     submitParameterChangeTree = submitGovActionTree (paramAction >=> submitGovAction)
     submitConstitutionForest = submitGovActionForest $ submitConstitution . fmap GovPurposeId
-    paramAction p = mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin 500))
+    paramAction p = mkParameterChangeGovAction p (def & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 500))
 
 votingSpec ::
   forall era.
@@ -887,7 +887,7 @@ votingSpec =
       gaId <-
         submitParameterChange SNothing $
           def
-            & ppuMinFeeAL .~ SJust (Coin 100)
+            & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 100)
       submitVote_ @era VoteYes (StakePoolVoter spoHash) gaId
 
 constitutionSpec ::

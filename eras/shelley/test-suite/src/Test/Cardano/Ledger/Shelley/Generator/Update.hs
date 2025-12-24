@@ -36,7 +36,7 @@ import Cardano.Ledger.BaseTypes (
   succVersion,
   unsafeNonZero,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -106,11 +106,11 @@ genPParams ::
   (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) =>
   Constants ->
   Gen (PParams era)
-genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
+genPParams c@Constants {maxTxFeePerByte, maxTxFeeFixed} = do
   let lowMajorPV = eraProtVerLow @era
       highMajorPV = eraProtVerHigh @era
-  minFeeA <- genInteger 0 (unCoin maxMinFeeA)
-  minFeeB <- genInteger 0 (unCoin maxMinFeeB)
+  minFeeFactor <- genInteger 0 (unCoin maxTxFeePerByte)
+  minFeeConstant <- genInteger 0 (unCoin maxTxFeeFixed)
   (maxBBSize, maxTxSize, maxBHSize) <- szGen
   keyDeposit <- genKeyDeposit
   poolDeposit <- genPoolDeposit
@@ -126,8 +126,8 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
   minPoolCost <- genMinPoolCost
   pure $
     emptyPParams
-      & ppMinFeeAL .~ Coin minFeeA
-      & ppMinFeeBL .~ Coin minFeeB
+      & ppTxFeePerByteL .~ CoinPerByte (CompactCoin $ fromIntegral minFeeFactor)
+      & ppTxFeeFixedL .~ Coin minFeeConstant
       & ppMaxBBSizeL .~ maxBBSize
       & ppMaxTxSizeL .~ maxTxSize
       & ppMaxBHSizeL .~ maxBHSize
@@ -242,11 +242,11 @@ genShelleyPParamsUpdate ::
   Constants ->
   PParams era ->
   Gen (PParamsUpdate era)
-genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
+genShelleyPParamsUpdate c@Constants {maxTxFeePerByte, maxTxFeeFixed} pp = do
   let highMajorPV = succ (eraProtVerHigh @era)
   -- TODO generate Maybe types so not all updates are full
-  minFeeA <- genM $ genInteger 0 (unCoin maxMinFeeA)
-  minFeeB <- genM $ genInteger 0 (unCoin maxMinFeeB)
+  minFeeFactor <- genM $ genInteger 0 (unCoin maxTxFeePerByte)
+  minFeeConstant <- genM $ genInteger 0 (unCoin maxTxFeeFixed)
   maxBBSize <- genM $ choose (low, hi)
   maxTxSize <- genM $ choose (low, hi)
   -- Must stay in the range of Word16, but can't be too small
@@ -265,8 +265,8 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   minPoolCost <- genM genMinPoolCost
   pure $
     emptyPParamsUpdate
-      & ppuMinFeeAL .~ fmap Coin minFeeA
-      & ppuMinFeeBL .~ fmap Coin minFeeB
+      & ppuTxFeePerByteL .~ fmap (CoinPerByte . CompactCoin . fromIntegral) minFeeFactor
+      & ppuTxFeeFixedL .~ fmap Coin minFeeConstant
       & ppuMaxBBSizeL .~ maxBBSize
       & ppuMaxTxSizeL .~ maxTxSize
       & ppuMaxBHSizeL .~ maxBHSize

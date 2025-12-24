@@ -40,6 +40,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (Compactible (..), toCompactPartial)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Plutus.CostModels (CostModels)
@@ -104,6 +105,14 @@ instance NumLike Coin
 
 instance Foldy Coin where
   noNegativeValues = True
+
+instance HasSimpleRep CoinPerByte where
+  -- TODO: consider `SimpleRep Coin` instead if this is annoying
+  type SimpleRep CoinPerByte = Coin
+  fromSimpleRep = CoinPerByte . toCompactPartial
+  toSimpleRep = fromCompact . unCoinPerByte
+
+instance HasSpec CoinPerByte
 
 -- TODO: This is hack to get around the need for `Num` in `NumLike`. We should possibly split
 -- this up so that `NumLike` has its own addition etc. instead?
@@ -254,8 +263,8 @@ instance Typeable r => HasSpec (KeyHash r) where
 --   encode PParams in EVERY Era. The EraPParams instances remove the fields
 --   that do not appear in that Era.
 data SimplePParams era = SimplePParams
-  { minFeeA :: Coin
-  , minFeeB :: Coin
+  { txFeePerByte :: Coin
+  , txFeeFixed :: Coin
   , maxBBSize :: Word32
   , maxTxSize :: Word32
   , maxBHSize :: Word32 -- Need to be downsized inside reify to Word16
@@ -313,8 +322,8 @@ instance
 
 -- | Use this as the SimpleRep of (PParamsUpdate era)
 data SimplePPUpdate = SimplePPUpdate
-  { uminFeeA :: StrictMaybe Coin
-  , uminFeeB :: StrictMaybe Coin
+  { utxFeePerByte :: StrictMaybe Coin
+  , utxFeeFixed :: StrictMaybe Coin
   , umaxBBSize :: StrictMaybe Word32
   , umaxTxSize :: StrictMaybe Word32
   , umaxBHSize :: StrictMaybe Word32 -- Need to be downsized inside reify to Word16
