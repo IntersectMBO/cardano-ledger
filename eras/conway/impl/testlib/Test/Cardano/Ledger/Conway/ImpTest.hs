@@ -897,7 +897,7 @@ mkMinFeeUpdateGovAction p = do
 getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe ScriptHash)
 getGovPolicy =
   getsNES $
-    nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionScriptL
+    nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionGuardrailsScriptHashL
 
 submitFailingGovAction ::
   forall era.

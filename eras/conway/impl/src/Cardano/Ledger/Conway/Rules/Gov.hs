@@ -9,6 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -26,8 +27,11 @@ module Cardano.Ledger.Conway.Rules.Gov (
   GovSignal (..),
   ConwayGovEvent (..),
   ConwayGovPredFailure (..),
+  pattern InvalidPolicyHash,
   unelectedCommitteeVoters,
   conwayGovTransition,
+  checkGuardrailsScriptHash,
+  checkPolicy,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount, raCredential, raNetwork)
@@ -146,7 +150,7 @@ data GovEnv era = GovEnv
   { geTxId :: TxId
   , geEpoch :: EpochNo
   , gePParams :: PParams era
-  , gePPolicy :: StrictMaybe ScriptHash
+  , geGuardrailsScriptHash :: StrictMaybe ScriptHash
   , geCertState :: CertState era
   , geCommittee :: StrictMaybe (Committee era)
   }
@@ -160,7 +164,7 @@ instance (EraGov era, EraPParams era, EraCertState era) => EncCBOR (GovEnv era) 
             !> To geTxId
             !> To geEpoch
             !> To gePParams
-            !> To gePPolicy
+            !> To geGuardrailsScriptHash
             !> To geCertState
             !> To geCommittee
 
@@ -193,10 +197,10 @@ data ConwayGovPredFailure era
       (StrictMaybe (GovPurposeId 'HardForkPurpose))
       -- | Its protocol version and the protocal version of the previous gov-action pointed to by the proposal
       (Mismatch RelGT ProtVer)
-  | InvalidPolicyHash
-      -- | The policy script hash in the proposal
+  | InvalidGuardrailsScriptHash
+      -- | The guardrails script hash in the proposal
       (StrictMaybe ScriptHash)
-      -- | The policy script hash of the current constitution
+      -- | The guardrails script hash of the current constitution
       (StrictMaybe ScriptHash)
   | DisallowedProposalDuringBootstrap (ProposalProcedure era)
   | DisallowedVotesDuringBootstrap
@@ -212,6 +216,11 @@ data ConwayGovPredFailure era
   | -- | Disallow votes by unelected committee members
     UnelectedCommitteeVoters (NonEmpty (Credential HotCommitteeRole))
   deriving (Eq, Show, Generic)
+
+{-# DEPRECATED InvalidPolicyHash "In favor of `InvalidGuardrailsScriptHash`" #-}
+pattern InvalidPolicyHash ::
+  StrictMaybe ScriptHash -> StrictMaybe ScriptHash -> ConwayGovPredFailure era
+pattern InvalidPolicyHash got expected = InvalidGuardrailsScriptHash got expected
 
 type instance EraRuleFailure "GOV" ConwayEra = ConwayGovPredFailure ConwayEra
 
@@ -236,7 +245,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     8 -> SumD InvalidPrevGovActionId <! From
     9 -> SumD VotingOnExpiredGovAction <! From
     10 -> SumD ProposalCantFollow <! From <! FromGroup
-    11 -> SumD InvalidPolicyHash <! From <! From
+    11 -> SumD InvalidGuardrailsScriptHash <! From <! From
     12 -> SumD DisallowedProposalDuringBootstrap <! From
     13 -> SumD DisallowedVotesDuringBootstrap <! From
     14 -> SumD VotersDoNotExist <! From
@@ -271,8 +280,8 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum VotingOnExpiredGovAction 9 !> To ga
       ProposalCantFollow prevgaid mm ->
         Sum ProposalCantFollow 10 !> To prevgaid !> ToGroup mm
-      InvalidPolicyHash got expected ->
-        Sum InvalidPolicyHash 11 !> To got !> To expected
+      InvalidGuardrailsScriptHash got expected ->
+        Sum InvalidGuardrailsScriptHash 11 !> To got !> To expected
       DisallowedProposalDuringBootstrap proposal ->
         Sum DisallowedProposalDuringBootstrap 12 !> To proposal
       DisallowedVotesDuringBootstrap votes ->
@@ -414,13 +423,20 @@ mkGovActionState actionId proposal expiryInterval curEpoch =
     , gasExpiresAfter = addEpochInterval curEpoch expiryInterval
     }
 
+checkGuardrailsScriptHash ::
+  StrictMaybe ScriptHash ->
+  StrictMaybe ScriptHash ->
+  Test (ConwayGovPredFailure era)
+checkGuardrailsScriptHash expectedHash actualHash =
+  failureUnless (actualHash == expectedHash) $
+    InvalidGuardrailsScriptHash actualHash expectedHash
+
+{-# DEPRECATED checkPolicy "In favor of `checkGuardrailsScriptHash`" #-}
 checkPolicy ::
   StrictMaybe ScriptHash ->
   StrictMaybe ScriptHash ->
   Test (ConwayGovPredFailure era)
-checkPolicy expectedPolicyHash actualPolicyHash =
-  failureUnless (actualPolicyHash == expectedPolicyHash) $
-    InvalidPolicyHash actualPolicyHash expectedPolicyHash
+checkPolicy = checkGuardrailsScriptHash
 
 checkBootstrapProposal ::
   EraPParams era =>
@@ -532,8 +548,8 @@ conwayGovTransition = do
               mismatchedAccounts
               (\mismatched -> injectFailure (TreasuryWithdrawalsNetworkIdMismatch mismatched expectedNetworkId))
 
-            -- Policy check
-            runTest $ checkPolicy @era constitutionPolicy proposalPolicy
+            -- Guardrails script hash check
+            runTest $ checkGuardrailsScriptHash @era constitutionPolicy proposalPolicy
 
             unless (hardforkConwayBootstrapPhase $ pp ^. ppProtocolVersionL) $
               -- The sum of all withdrawals must be positive
@@ -545,7 +561,7 @@ conwayGovTransition = do
             let invalidMembers = Map.filter (<= currentEpoch) membersToAdd
              in Map.null invalidMembers ?! (injectFailure . ExpirationEpochTooSmall) invalidMembers
           ParameterChange _ _ proposalPolicy ->
-            runTest $ checkPolicy @era constitutionPolicy proposalPolicy
+            runTest $ checkGuardrailsScriptHash @era constitutionPolicy proposalPolicy
           _ -> pure ()
 
         -- Ancestry checks and accept proposal

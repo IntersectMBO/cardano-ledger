@@ -57,7 +57,7 @@ module Cardano.Ledger.Conway.HuddleSpec (
   proposalProceduresRule,
   poolVotingThresholdsRule,
   drepVotingThresholdsRule,
-  policyHashRule,
+  guardrailsScriptHashRule,
   potentialLanguagesRule,
   conwayCertificateRule,
   certificatesRule,
@@ -153,9 +153,9 @@ committeeColdCredentialRule ::
   forall era. HuddleRule "credential" era => Proxy "committee_cold_credential" -> Proxy era -> Rule
 committeeColdCredentialRule pname p = pname =.= huddleRule @"credential" p
 
-policyHashRule ::
-  forall era. HuddleRule "script_hash" era => Proxy "policy_hash" -> Proxy era -> Rule
-policyHashRule pname p = pname =.= huddleRule @"script_hash" p
+guardrailsScriptHashRule ::
+  forall era. HuddleRule "script_hash" era => Proxy "guardrails_script_hash" -> Proxy era -> Rule
+guardrailsScriptHashRule pname p = pname =.= huddleRule @"script_hash" p
 
 potentialLanguagesRule :: Proxy "potential_languages" -> Rule
 potentialLanguagesRule pname = pname =.= (0 :: Integer) ... (255 :: Integer)
@@ -402,7 +402,7 @@ votingProceduresRule pname p =
 
 constitutionRule ::
   forall era.
-  (HuddleRule "anchor" era, HuddleRule "script_hash" era) =>
+  (HuddleRule "anchor" era, HuddleRule "guardrails_script_hash" era) =>
   Proxy "constitution" ->
   Proxy era ->
   Rule
@@ -410,14 +410,14 @@ constitutionRule pname p =
   pname
     =.= arr
       [ a (huddleRule @"anchor" p)
-      , a (huddleRule @"script_hash" p / VNil)
+      , a (huddleRule @"guardrails_script_hash" p / VNil)
       ]
 
 parameterChangeActionGroup ::
   forall era.
   ( HuddleRule "gov_action_id" era
   , HuddleRule "protocol_param_update" era
-  , HuddleRule "policy_hash" era
+  , HuddleRule "guardrails_script_hash" era
   ) =>
   Proxy "parameter_change_action" ->
   Proxy era ->
@@ -428,7 +428,7 @@ parameterChangeActionGroup pname p =
       [ 0
       , a $ huddleRule @"gov_action_id" p / VNil
       , a $ huddleRule @"protocol_param_update" p
-      , a $ huddleRule @"policy_hash" p / VNil
+      , a $ huddleRule @"guardrails_script_hash" p / VNil
       ]
 
 hardForkInitiationActionGroup ::
@@ -445,7 +445,7 @@ treasuryWithdrawalsActionGroup ::
   forall era.
   ( HuddleRule "reward_account" era
   , HuddleRule "coin" era
-  , HuddleRule "policy_hash" era
+  , HuddleRule "guardrails_script_hash" era
   ) =>
   Proxy "treasury_withdrawals_action" ->
   Proxy era ->
@@ -460,7 +460,7 @@ treasuryWithdrawalsActionGroup pname p =
                 <+ asKey (huddleRule @"reward_account" p)
                 ==> huddleRule @"coin" p
             ]
-      , a $ huddleRule @"policy_hash" p / VNil
+      , a $ huddleRule @"guardrails_script_hash" p / VNil
       ]
 
 noConfidenceGroup ::
@@ -820,8 +820,8 @@ instance Era era => HuddleRule "nonzero_int64" era where
 instance HuddleRule "policy_id" ConwayEra where
   huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p
 
-instance HuddleRule "policy_hash" ConwayEra where
-  huddleRuleNamed = policyHashRule
+instance HuddleRule "guardrails_script_hash" ConwayEra where
+  huddleRuleNamed = guardrailsScriptHashRule
 
 instance HuddleGroup "script_pubkey" ConwayEra where
   huddleGroupNamed pname = scriptPubkeyGroup pname

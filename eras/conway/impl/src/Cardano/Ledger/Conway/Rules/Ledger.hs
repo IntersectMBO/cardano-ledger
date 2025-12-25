@@ -63,7 +63,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState,
   Proposals,
-  constitutionScriptL,
+  constitutionGuardrailsScriptHashL,
   grCommitteeL,
   proposalsGovStateL,
   proposalsWithPurpose,
@@ -476,7 +476,7 @@ conwayLedgerTransition = do
                   (txIdTxBody txBody)
                   curEpochNo
                   pp
-                  (govState ^. constitutionGovStateL . constitutionScriptL)
+                  (govState ^. constitutionGovStateL . constitutionGuardrailsScriptHashL)
                   certStateAfterCERTS
                   (govState ^. committeeGovStateL)
               , proposals

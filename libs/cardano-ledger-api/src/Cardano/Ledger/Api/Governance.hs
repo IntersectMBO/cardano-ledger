@@ -20,6 +20,7 @@ module Cardano.Ledger.Api.Governance (
   -- ** Constitution
   Constitution (..),
   constitutionAnchorL,
+  constitutionGuardrailsScriptHashL,
   constitutionScriptL,
 
   -- ** Governance State
@@ -71,6 +72,7 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
   cgsProposalsL,
   constitutionAnchorL,
+  constitutionGuardrailsScriptHashL,
   constitutionScriptL,
   govActionIdToText,
   hoistGovRelation,

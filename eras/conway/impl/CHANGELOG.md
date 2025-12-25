@@ -2,6 +2,11 @@
 
 ## 1.21.0.0
 
+* Deprecate
+  - `constitutionScriptL` in favor of new `constitutionGuardrailsScriptHashL`
+  - `InvalidPolicyHash` in favor of new `InvalidGuardrailsScriptHash`
+  - `checkPolicy` in favor of new `checkGuardrailsScriptHash`
+* Rename `gePPolicy` to `geGuardrailsScriptHash`
 * Add `ConwayApplyTxError` constructor for `ApplyTxError era`
 * Renamed:
   - `cppMinFeeA` -> `cppTxFeePerByte`
@@ -42,6 +47,7 @@
 
 ### `cddl`
 
+* Renamed `policy_hash` to `guardrails_script_hash` in governance actions to avoid confusion with multi-asset policy IDs
 * Add `HuddleRule1` instances for sets.
 * Move `cddl-files` to `cddl/data`.
 * Export for `dnsNameRule`, `urlRule`, `voteRule` among others for reuse.

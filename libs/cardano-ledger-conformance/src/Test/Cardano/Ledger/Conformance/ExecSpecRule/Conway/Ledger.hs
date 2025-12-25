@@ -50,14 +50,14 @@ import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 
 data ConwayLedgerExecContext era
   = ConwayLedgerExecContext
-  { clecPolicyHash :: StrictMaybe ScriptHash
+  { clecGuardrailsScriptHash :: StrictMaybe ScriptHash
   , clecEnactState :: EnactState era
   , clecUtxoExecContext :: UtxoExecContext era
   }
   deriving (Generic)
 
 instance Inject (ConwayLedgerExecContext era) (StrictMaybe ScriptHash) where
-  inject = clecPolicyHash
+  inject = clecGuardrailsScriptHash
 
 instance Inject (ConwayLedgerExecContext ConwayEra) (EnactState ConwayEra) where
   inject = clecEnactState
@@ -95,7 +95,7 @@ instance
   encCBOR ConwayLedgerExecContext {..} =
     encode $
       Rec ConwayLedgerExecContext
-        !> To clecPolicyHash
+        !> To clecGuardrailsScriptHash
         !> To clecEnactState
         !> To clecUtxoExecContext
 

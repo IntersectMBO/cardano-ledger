@@ -97,8 +97,8 @@ getConwayScriptsNeeded utxo txBody =
       where
         getProposalScriptHash ProposalProcedure {pProcGovAction} =
           case pProcGovAction of
-            ParameterChange _ _ (SJust govPolicyHash) -> Just govPolicyHash
-            TreasuryWithdrawals _ (SJust govPolicyHash) -> Just govPolicyHash
+            ParameterChange _ _ (SJust guardrailsScriptHash) -> Just guardrailsScriptHash
+            TreasuryWithdrawals _ (SJust guardrailsScriptHash) -> Just guardrailsScriptHash
             _ -> Nothing
 
 conwayConsumed ::

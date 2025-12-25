@@ -37,10 +37,10 @@ instance
   toSpecRep LedgersEnv {..} = do
     enactState <- askCtx @(EnactState era)
     let
-      pPolicy = constitutionScript $ ensConstitution enactState
+      guardrailsScriptHash = constitutionGuardrailsScriptHash $ ensConstitution enactState
     Agda.MkLEnv
       <$> toSpecRep ledgersSlotNo
-      <*> toSpecRep pPolicy
+      <*> toSpecRep guardrailsScriptHash
       <*> toSpecRep ledgersPp
       <*> toSpecRep enactState
       <*> toSpecRep (casTreasury ledgersAccount)
