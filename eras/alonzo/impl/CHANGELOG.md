@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Add `AlonzoApplyTxError` constructor for `ApplyTxError era`
 * Renamed:
   - `appMinFeeA` -> `appTxFeePerByte`
   - `appMinFeeB` -> `appTxFeeFixed`

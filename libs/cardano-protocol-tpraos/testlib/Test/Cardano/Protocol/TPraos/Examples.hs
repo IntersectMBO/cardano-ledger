@@ -22,7 +22,7 @@ module Test.Cardano.Protocol.TPraos.Examples (
 import Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra (AllegraEra, ApplyTxError)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Block (Block (..))
@@ -83,7 +83,7 @@ deriving instance
   , Eq (PParamsHKD StrictMaybe era)
   , EraGov era
   , Eq (BlockBody era)
-  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Eq (ApplyTxError era)
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
   , Eq (CertState era)

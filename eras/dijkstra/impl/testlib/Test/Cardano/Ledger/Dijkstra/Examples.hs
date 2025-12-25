@@ -4,6 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Examples (
   ledgerExamples,
@@ -16,8 +17,8 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..))
-import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Rules (DijkstraLEDGER)
+import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
+import Cardano.Ledger.Dijkstra.Rules (DijkstraLEDGER, DijkstraMEMPOOL)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
@@ -28,14 +29,15 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (..),
   Credential (..),
   RewardAccount (..),
   TxId (..),
  )
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (mkTxInPartial)
-import Control.State.Transition.Extended (Embed (..))
+import Control.State.Transition.Extended (
+  Embed (..),
+ )
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as StrictSeq
@@ -65,10 +67,11 @@ import Test.Cardano.Ledger.Shelley.Examples (
 ledgerExamples :: LedgerExamples DijkstraEra
 ledgerExamples =
   mkLedgerExamples
-    ( ApplyTxError $
+    ( DijkstraApplyTxError $
         pure $
-          wrapFailed @(ConwayDELEG DijkstraEra) @(DijkstraLEDGER DijkstraEra) $
-            DelegateeStakePoolNotRegisteredDELEG @DijkstraEra (mkKeyHash 1)
+          wrapFailed @(DijkstraLEDGER DijkstraEra) @(DijkstraMEMPOOL DijkstraEra) $
+            wrapFailed @(ConwayDELEG DijkstraEra) @(DijkstraLEDGER DijkstraEra) $
+              DelegateeStakePoolNotRegisteredDELEG @DijkstraEra (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
     exampleTxDijkstra

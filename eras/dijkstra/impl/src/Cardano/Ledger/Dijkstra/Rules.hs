@@ -12,6 +12,7 @@ module Cardano.Ledger.Dijkstra.Rules (
   module Cardano.Ledger.Dijkstra.Rules.Mempool,
   module Cardano.Ledger.Dijkstra.Rules.Utxo,
   module Cardano.Ledger.Dijkstra.Rules.Utxow,
+  module Control.State.Transition.Extended,
 ) where
 
 import Cardano.Ledger.Conway.Rules (
@@ -35,6 +36,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.Rules.Utxow
 import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent (..))
+import Control.State.Transition.Extended (STS (PredicateFailure))
 
 type instance EraRuleEvent "TICK" DijkstraEra = ShelleyTickEvent DijkstraEra
 

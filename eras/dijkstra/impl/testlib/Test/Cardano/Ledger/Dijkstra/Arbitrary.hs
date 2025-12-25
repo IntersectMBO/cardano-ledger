@@ -35,9 +35,6 @@ import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
-import Control.State.Transition (
-  STS (..),
- )
 import Data.Functor.Identity (Identity)
 import qualified Data.OMap.Strict as OMap
 import Data.Typeable (Typeable)

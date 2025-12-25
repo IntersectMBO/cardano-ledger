@@ -1,7 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -10,6 +13,7 @@ module Cardano.Ledger.Babbage (
   BabbageTxOut,
   TxBody (BabbageTxBody),
   Tx (..),
+  ApplyTxError (..),
   AlonzoScript,
   AlonzoTxAuxData,
 ) where
@@ -26,11 +30,20 @@ import Cardano.Ledger.Babbage.Tx (Tx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut, TxBody (BabbageTxBody))
 import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure)
+import Data.Bifunctor (Bifunctor (first))
+import Data.List.NonEmpty (NonEmpty)
 
 -- =====================================================
 
 instance ApplyTx BabbageEra where
-  applyTxValidation = ruleApplyTxValidation @"LEDGER"
+  newtype ApplyTxError BabbageEra = BabbageApplyTxError (NonEmpty (ShelleyLedgerPredFailure BabbageEra))
+    deriving (Eq, Show)
+    deriving newtype (EncCBOR, DecCBOR)
+  applyTxValidation validationPolicy globals env state tx =
+    first BabbageApplyTxError $
+      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
 
 instance ApplyBlock BabbageEra

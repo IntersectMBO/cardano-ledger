@@ -17,6 +17,7 @@
 module Cardano.Ledger.Dijkstra.Rules.Ledger (
   DijkstraLEDGER,
   DijkstraLedgerPredFailure (..),
+  shelleyToDijkstraLedgerPredFailure,
   conwayToDijkstraLedgerPredFailure,
 ) where
 
@@ -70,7 +71,6 @@ import Cardano.Ledger.Conway.Rules (
   GovEnv (..),
   GovSignal (..),
   conwayLedgerTransition,
-  shelleyToConwayLedgerPredFailure,
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
@@ -105,7 +105,6 @@ import Control.State.Transition.Extended (
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
-import Data.Text (Text)
 import GHC.Generics (Generic (..))
 import NoThunks.Class (NoThunks (..))
 
@@ -116,7 +115,6 @@ data DijkstraLedgerPredFailure era
   | DijkstraWdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
   | DijkstraTreasuryValueMismatch (Mismatch RelEQ Coin)
   | DijkstraTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
-  | DijkstraMempoolFailure Text
   | DijkstraWithdrawalsMissingAccounts Withdrawals
   | DijkstraIncompleteWithdrawals (Map.Map RewardAccount (Mismatch RelEQ Coin))
   deriving (Generic)
@@ -131,7 +129,7 @@ instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraLedgerPredFailure
 
 instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure DijkstraEra where
-  injectFailure = conwayToDijkstraLedgerPredFailure . shelleyToConwayLedgerPredFailure
+  injectFailure = shelleyToDijkstraLedgerPredFailure
 
 instance InjectRuleFailure "LEDGER" DijkstraUtxowPredFailure DijkstraEra where
   injectFailure = DijkstraUtxowFailure
@@ -244,9 +242,8 @@ instance
       DijkstraWdrlNotDelegatedToDRep x -> Sum (DijkstraWdrlNotDelegatedToDRep @era) 4 !> To x
       DijkstraTreasuryValueMismatch mm -> Sum (DijkstraTreasuryValueMismatch @era) 5 !> To mm
       DijkstraTxRefScriptsSizeTooBig mm -> Sum DijkstraTxRefScriptsSizeTooBig 6 !> To mm
-      DijkstraMempoolFailure t -> Sum DijkstraMempoolFailure 7 !> To t
-      DijkstraWithdrawalsMissingAccounts w -> Sum DijkstraWithdrawalsMissingAccounts 8 !> To w
-      DijkstraIncompleteWithdrawals w -> Sum DijkstraIncompleteWithdrawals 9 !> To w
+      DijkstraWithdrawalsMissingAccounts w -> Sum DijkstraWithdrawalsMissingAccounts 7 !> To w
+      DijkstraIncompleteWithdrawals w -> Sum DijkstraIncompleteWithdrawals 8 !> To w
 
 instance
   ( Era era
@@ -263,9 +260,8 @@ instance
     4 -> SumD DijkstraWdrlNotDelegatedToDRep <! From
     5 -> SumD DijkstraTreasuryValueMismatch <! From
     6 -> SumD DijkstraTxRefScriptsSizeTooBig <! From
-    7 -> SumD DijkstraMempoolFailure <! From
-    8 -> SumD DijkstraWithdrawalsMissingAccounts <! From
-    9 -> SumD DijkstraIncompleteWithdrawals <! From
+    7 -> SumD DijkstraWithdrawalsMissingAccounts <! From
+    8 -> SumD DijkstraIncompleteWithdrawals <! From
     n -> Invalid n
 
 instance
@@ -390,9 +386,17 @@ conwayToDijkstraLedgerPredFailure = \case
   Conway.ConwayWdrlNotDelegatedToDRep kh -> DijkstraWdrlNotDelegatedToDRep kh
   Conway.ConwayTreasuryValueMismatch mm -> DijkstraTreasuryValueMismatch mm
   Conway.ConwayTxRefScriptsSizeTooBig mm -> DijkstraTxRefScriptsSizeTooBig mm
-  Conway.ConwayMempoolFailure f -> DijkstraMempoolFailure f
+  Conway.ConwayMempoolFailure _ -> error "Impossible: MempoolFailure has been moved to MEMPOOL rule in Dijkstra"
   Conway.ConwayWithdrawalsMissingAccounts ws -> DijkstraWithdrawalsMissingAccounts ws
   Conway.ConwayIncompleteWithdrawals ws -> DijkstraIncompleteWithdrawals ws
+
+shelleyToDijkstraLedgerPredFailure ::
+  forall era. ShelleyLedgerPredFailure era -> DijkstraLedgerPredFailure era
+shelleyToDijkstraLedgerPredFailure = \case
+  UtxowFailure x -> DijkstraUtxowFailure x
+  DelegsFailure _ -> error "Impossible: DELEGS has ben removed in Dijkstra"
+  ShelleyWithdrawalsMissingAccounts x -> DijkstraWithdrawalsMissingAccounts x
+  ShelleyIncompleteWithdrawals x -> DijkstraIncompleteWithdrawals x
 
 instance
   ( EraTx era

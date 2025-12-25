@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Alonzo.Examples (
   exampleAlonzoGenesis,
 ) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra, ApplyTxError (AlonzoApplyTxError))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
@@ -33,7 +33,6 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (..),
   Credential (..),
   Network (..),
   NewEpochState (..),
@@ -42,7 +41,10 @@ import Cardano.Ledger.Shelley.API (
   TxId (..),
   Update (..),
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelegsPredFailure (..),
+  ShelleyLedgerPredFailure (..),
+ )
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
@@ -75,7 +77,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
 ledgerExamples :: LedgerExamples AlonzoEra
 ledgerExamples =
   mkLedgerExamples
-    ( ApplyTxError $
+    ( AlonzoApplyTxError $
         pure $
           DelegsFailure $
             DelegateeNotRegisteredDELEG @AlonzoEra (mkKeyHash 1)

@@ -26,7 +26,7 @@ import Cardano.Crypto.Hash.Class (castHash, hashWith)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.Mary (MaryEra, Tx (..), TxBody (MaryTxBody))
+import Cardano.Ledger.Mary (ApplyTxError (..), MaryEra, Tx (..), TxBody (MaryTxBody))
 import Cardano.Ledger.Mary.Transition
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -245,3 +245,5 @@ hashOfDigitByteStrings = castHash . hashWith id <$> digitByteStrings
 deriving newtype instance Arbitrary (TransitionConfig MaryEra)
 
 deriving newtype instance Arbitrary (Tx TopTx MaryEra)
+
+deriving newtype instance Arbitrary (ApplyTxError MaryEra)

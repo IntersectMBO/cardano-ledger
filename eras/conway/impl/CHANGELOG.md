@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `ConwayApplyTxError` constructor for `ApplyTxError era`
 * Renamed:
   - `cppMinFeeA` -> `cppTxFeePerByte`
   - `cppMinFeeB` -> `cppTxFeeFixed`

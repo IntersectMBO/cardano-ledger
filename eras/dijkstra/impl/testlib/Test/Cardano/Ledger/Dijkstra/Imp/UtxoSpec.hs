@@ -31,9 +31,7 @@ import Test.Cardano.Ledger.Imp.Common (SpecWith, arbitrary, describe, it)
 
 spec ::
   forall era.
-  ( DijkstraEraImp era
-  , InjectRuleFailure "LEDGER" DijkstraUtxoPredFailure era
-  ) =>
+  DijkstraEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec =
   describe "Collaterals" $ do
