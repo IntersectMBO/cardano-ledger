@@ -35,16 +35,7 @@ import Cardano.Ledger.Dijkstra.Core (
   Value,
  )
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams)
-import Cardano.Ledger.Dijkstra.Rules (
-  DijkstraBbodyPredFailure,
-  DijkstraGovCertPredFailure,
-  DijkstraGovPredFailure,
-  DijkstraLedgerPredFailure,
-  DijkstraMempoolEvent,
-  DijkstraMempoolPredFailure,
-  DijkstraUtxoPredFailure,
-  DijkstraUtxowPredFailure,
- )
+import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript,
   DijkstraNativeScriptRaw,
@@ -54,9 +45,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
-import Control.State.Transition (
-  STS (..),
- )
+import Control.State.Transition (STS (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr)
@@ -180,6 +169,7 @@ instance
   ( ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , ToExpr (PredicateFailure (EraRule "GOV" era))
   , ToExpr (PredicateFailure (EraRule "CERTS" era))
+  , ToExpr (PredicateFailure (EraRule "SUBLEDGERS" era))
   ) =>
   ToExpr (DijkstraLedgerPredFailure era)
 
@@ -207,3 +197,43 @@ instance
 instance
   ToExpr (Event (EraRule "LEDGER" era)) =>
   ToExpr (DijkstraMempoolEvent era)
+
+instance
+  ( ToExpr (PredicateFailure (EraRule "SUBDELEG" era))
+  , ToExpr (PredicateFailure (EraRule "SUBPOOL" era))
+  , ToExpr (PredicateFailure (EraRule "SUBGOVCERT" era))
+  ) =>
+  ToExpr (DijkstraSubCertPredFailure era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "SUBCERT" era)) =>
+  ToExpr (DijkstraSubCertsPredFailure era)
+
+instance ToExpr (DijkstraSubDelegPredFailure era)
+
+instance
+  ( ToExpr (PredicateFailure (EraRule "SUBGOV" era))
+  , ToExpr (PredicateFailure (EraRule "SUBCERTS" era))
+  , ToExpr (PredicateFailure (EraRule "SUBUTXOW" era))
+  ) =>
+  ToExpr (DijkstraSubLedgerPredFailure era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "SUBLEDGER" era)) =>
+  ToExpr (DijkstraSubLedgersPredFailure era)
+
+instance ToExpr (DijkstraSubGovPredFailure era)
+
+instance ToExpr (DijkstraSubGovCertPredFailure era)
+
+instance ToExpr (DijkstraSubPoolPredFailure era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "SUBUTXOS" era)) =>
+  ToExpr (DijkstraSubUtxoPredFailure era)
+
+instance ToExpr (DijkstraSubUtxosPredFailure era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "SUBUTXO" era)) =>
+  ToExpr (DijkstraSubUtxowPredFailure era)

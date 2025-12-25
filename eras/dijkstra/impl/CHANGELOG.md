@@ -2,6 +2,33 @@
 
 ## 0.2.0.0
 
+* Add:
+  - `DijkstraSUBCERT`
+  - `DijkstraSUBCERTS`
+  - `DijkstraSUBDELEG`
+  - `DijkstraSUBGOV`
+  - `DijkstraSUBGOVCERT`
+  - `DijkstraSUBLEDGER`
+  - `DijkstraSUBLEDGERS`
+  - `DijkstraSUBPOOL`
+  - `DijkstraSUBUTXOS`
+  - `DijkstraSUBUTXOW`
+  - `DijkstraSUBUTXO`
+    and `STS` instances for them
+* Add:
+  - `DijkstraSubCertPredFailure`
+  - `DijkstraSubCertsPredFailure`
+  - `DijkstraSubDelegPredFailure`
+  - `DijkstraSubGovPredFailure`
+  - `DijkstraSubGovCertPredFailure`
+  - `DijkstraSubLedgerPredFailure`
+  - `DijkstraSubLedgersPredFailure`
+  - `DijkstraSubPoolPredFailure`
+  - `DijkstraSubUtxoPredFailure`
+  - `DijkstraSubUtxosPredFailure`
+  - `DijkstraSubUtxowPredFailure`
+* Add `DijkstraSubLedgersFailure` to `DijkstraLedgerPredFailure`
+* Add `SubCertsEnv`
 * Deprecate `InvalidPolicyHash` in favor of new `InvalidGuardrailsScriptHash`
 * Move the `DijkstraMempoolFailure` constructor from `DijkstraLedgerPredFailure` to `DijkstraMempoolPredFailure`
 * Add the `DijkstraMempoolPredFailure` predicate failure for the MEMPOOL rule
@@ -25,7 +52,6 @@
 * Add `DijkstraEraBlockBody` class and instance for `DijkstraEraBlockBody`
 * Add `EraBlockBody` instance for `DijkstraEra`
 * Re-export `DijkstraBlockBody` from `Cardano.Ledger.Dijkstra.Core`
-* Add `Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec`
 * Add `DijkstraUtxoPredFailure`
 * Add `DijkstraUTXO`
 * Changed the type of the following fields to `CompactForm Coin` in `DijkstraPParams`:
@@ -76,6 +102,7 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec`
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Re-export `Test.Cardano.Ledger.Conway.Binary.Golden`
 * Remove CDDL `certificate` redefinition to reuse from conway.

@@ -170,6 +170,7 @@ instance
   , Arbitrary (PredicateFailure (EraRule "UTXOW" era))
   , Arbitrary (PredicateFailure (EraRule "CERTS" era))
   , Arbitrary (PredicateFailure (EraRule "GOV" era))
+  , Arbitrary (PredicateFailure (EraRule "SUBLEDGERS" era))
   ) =>
   Arbitrary (DijkstraLedgerPredFailure era)
   where
@@ -204,6 +205,63 @@ instance
   , Arbitrary (PParamsHKD StrictMaybe era)
   ) =>
   Arbitrary (DijkstraGovPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  Arbitrary (PredicateFailure (EraRule "SUBLEDGER" era)) =>
+  Arbitrary (DijkstraSubLedgersPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  ( Arbitrary (PredicateFailure (EraRule "SUBGOV" era))
+  , Arbitrary (PredicateFailure (EraRule "SUBCERTS" era))
+  , Arbitrary (PredicateFailure (EraRule "SUBUTXOW" era))
+  ) =>
+  Arbitrary (DijkstraSubLedgerPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  ( Arbitrary (PredicateFailure (EraRule "SUBDELEG" era))
+  , Arbitrary (PredicateFailure (EraRule "SUBPOOL" era))
+  , Arbitrary (PredicateFailure (EraRule "SUBGOVCERT" era))
+  ) =>
+  Arbitrary (DijkstraSubCertPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  Arbitrary (PredicateFailure (EraRule "SUBCERT" era)) =>
+  Arbitrary (DijkstraSubCertsPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary (DijkstraSubDelegPredFailure era) where
+  arbitrary = pure DijkstraSubDelegPredFailure
+
+instance Arbitrary (DijkstraSubGovPredFailure era) where
+  arbitrary = pure DijkstraSubGovPredFailure
+
+instance Arbitrary (DijkstraSubGovCertPredFailure era) where
+  arbitrary = pure DijkstraSubGovCertPredFailure
+
+instance Arbitrary (DijkstraSubPoolPredFailure era) where
+  arbitrary = pure DijkstraSubPoolPredFailure
+
+instance
+  Arbitrary (PredicateFailure (EraRule "SUBUTXOS" era)) =>
+  Arbitrary (DijkstraSubUtxoPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary (DijkstraSubUtxosPredFailure era) where
+  arbitrary = pure DijkstraSubUtxosPredFailure
+
+instance
+  Arbitrary (PredicateFailure (EraRule "SUBUTXO" era)) =>
+  Arbitrary (DijkstraSubUtxowPredFailure era)
   where
   arbitrary = genericArbitraryU
 
