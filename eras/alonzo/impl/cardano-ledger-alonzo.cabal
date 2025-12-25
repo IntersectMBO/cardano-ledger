@@ -124,7 +124,6 @@ library cddl
     base,
     cardano-ledger-alonzo,
     cardano-ledger-mary:cddl,
-    cuddle >=1.1,
     heredoc,
 
 executable generate-cddl

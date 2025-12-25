@@ -22,7 +22,6 @@ module Cardano.Ledger.Mary.HuddleSpec (
 
 import Cardano.Ledger.Allegra.HuddleSpec
 import Cardano.Ledger.Mary (MaryEra)
-import Codec.CBOR.Cuddle.Huddle
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Prelude hiding ((/))
@@ -38,11 +37,15 @@ maryCDDL =
 
 maryMultiasset ::
   forall era a.
-  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) => Proxy era -> a -> GRuleCall
-maryMultiasset p =
+  (HuddleRule "policy_id" era, HuddleRule "asset_name" era, IsType0 a) =>
+  Proxy "multiasset" ->
+  Proxy era ->
+  a ->
+  GRuleCall
+maryMultiasset pname p =
   binding $ \x ->
-    "multiasset"
-      =:= mp
+    pname
+      =.= mp
         [ 0
             <+ asKey (huddleRule @"policy_id" p)
             ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
@@ -50,157 +53,159 @@ maryMultiasset p =
 
 maryValueRule ::
   forall era.
-  (HuddleRule "policy_id" era, HuddleRule "asset_name" era) =>
+  HuddleRule1 "multiasset" era =>
+  Proxy "value" ->
   Proxy era ->
   Rule
-maryValueRule p =
-  "value"
-    =:= huddleRule @"coin" p
-    / sarr [a $ huddleRule @"coin" p, a $ maryMultiasset p VUInt]
+maryValueRule pname p =
+  pname
+    =.= huddleRule @"coin" p
+    / sarr [a $ huddleRule @"coin" p, a $ huddleRule1 @"multiasset" p VUInt]
 
 maryMintRule ::
   forall era.
-  (HuddleRule "policy_id" era, HuddleRule "asset_name" era) =>
+  HuddleRule1 "multiasset" era =>
+  Proxy "mint" ->
   Proxy era ->
   Rule
-maryMintRule p = "mint" =:= maryMultiasset p (huddleRule @"int64" p)
+maryMintRule pname p = pname =.= huddleRule1 @"multiasset" p (huddleRule @"int64" p)
 
-assetNameRule :: Proxy era -> Rule
-assetNameRule _ = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
+assetNameRule :: Proxy "asset_name" -> Rule
+assetNameRule pname = pname =.= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "block" MaryEra where
-  huddleRule = blockRule @MaryEra
+  huddleRuleNamed = blockRule
 
 instance HuddleRule "transaction" MaryEra where
-  huddleRule = transactionRule @MaryEra
+  huddleRuleNamed = transactionRule
 
 instance HuddleRule "header" MaryEra where
-  huddleRule = headerRule @MaryEra
+  huddleRuleNamed = headerRule
 
 instance HuddleRule "header_body" MaryEra where
-  huddleRule = headerBodyRule @MaryEra
+  huddleRuleNamed = headerBodyRule
 
 instance HuddleGroup "protocol_version" MaryEra where
-  huddleGroup = shelleyProtocolVersionGroup @MaryEra
+  huddleGroupNamed = shelleyProtocolVersionGroup
 
 instance HuddleRule "major_protocol_version" MaryEra where
-  huddleRule = majorProtocolVersionRule @MaryEra
+  huddleRuleNamed = majorProtocolVersionRule
 
 instance HuddleRule "transaction_id" MaryEra where
-  huddleRule = transactionIdRule @MaryEra
+  huddleRuleNamed = transactionIdRule
 
 instance HuddleRule "transaction_input" MaryEra where
-  huddleRule = transactionInputRule @MaryEra
+  huddleRuleNamed = transactionInputRule
 
 instance HuddleGroup "operational_cert" MaryEra where
-  huddleGroup = shelleyOperationalCertGroup @MaryEra
+  huddleGroupNamed = shelleyOperationalCertGroup
 
 instance HuddleRule "vkeywitness" MaryEra where
-  huddleRule = vkeywitnessRule @MaryEra
+  huddleRuleNamed = vkeywitnessRule
 
 instance HuddleRule "bootstrap_witness" MaryEra where
-  huddleRule = bootstrapWitnessRule @MaryEra
+  huddleRuleNamed = bootstrapWitnessRule
 
 instance HuddleRule "transaction_witness_set" MaryEra where
-  huddleRule = transactionWitnessSetRule @MaryEra
+  huddleRuleNamed = transactionWitnessSetRule
 
 instance HuddleRule "withdrawals" MaryEra where
-  huddleRule = shelleyWithdrawalsRule @MaryEra
+  huddleRuleNamed = shelleyWithdrawalsRule
 
 instance HuddleRule "certificate" MaryEra where
-  huddleRule = certificateRule @MaryEra
+  huddleRuleNamed = certificateRule
 
 instance HuddleGroup "account_registration_cert" MaryEra where
-  huddleGroup = accountRegistrationCertGroup @MaryEra
+  huddleGroupNamed = accountRegistrationCertGroup
 
 instance HuddleGroup "account_unregistration_cert" MaryEra where
-  huddleGroup = accountUnregistrationCertGroup @MaryEra
+  huddleGroupNamed = accountUnregistrationCertGroup
 
 instance HuddleGroup "delegation_to_stake_pool_cert" MaryEra where
-  huddleGroup = delegationToStakePoolCertGroup @MaryEra
+  huddleGroupNamed = delegationToStakePoolCertGroup
 
 instance HuddleGroup "pool_registration_cert" MaryEra where
-  huddleGroup = poolRegistrationCertGroup @MaryEra
+  huddleGroupNamed = poolRegistrationCertGroup
 
 instance HuddleGroup "pool_retirement_cert" MaryEra where
-  huddleGroup = poolRetirementCertGroup @MaryEra
+  huddleGroupNamed = poolRetirementCertGroup
 
 instance HuddleGroup "genesis_delegation_cert" MaryEra where
-  huddleGroup = genesisDelegationCertGroup @MaryEra
+  huddleGroupNamed = genesisDelegationCertGroup
 
 instance HuddleGroup "move_instantaneous_rewards_cert" MaryEra where
-  huddleGroup = moveInstantaneousRewardsCertGroup @MaryEra
+  huddleGroupNamed = moveInstantaneousRewardsCertGroup
 
 instance HuddleRule "genesis_hash" MaryEra where
-  huddleRule = genesisHashRule @MaryEra
+  huddleRuleNamed = genesisHashRule
 
 instance HuddleRule "genesis_delegate_hash" MaryEra where
-  huddleRule = genesisDelegateHashRule @MaryEra
+  huddleRuleNamed = genesisDelegateHashRule
 
 instance HuddleRule "delta_coin" MaryEra where
-  huddleRule _ = deltaCoinRule
+  huddleRuleNamed pname _ = deltaCoinRule pname
 
 instance HuddleRule "move_instantaneous_reward" MaryEra where
-  huddleRule = moveInstantaneousRewardRule @MaryEra
+  huddleRuleNamed = moveInstantaneousRewardRule
 
 instance HuddleGroup "pool_params" MaryEra where
-  huddleGroup = poolParamsGroup @MaryEra
+  huddleGroupNamed = poolParamsGroup
 
 instance HuddleRule "pool_metadata" MaryEra where
-  huddleRule = poolMetadataRule @MaryEra
+  huddleRuleNamed = poolMetadataRule
 
 instance HuddleRule "dns_name" MaryEra where
-  huddleRule _ = dnsNameRule
+  huddleRuleNamed pname _ = dnsNameRule pname
 
 instance HuddleRule "url" MaryEra where
-  huddleRule _ = urlRule
+  huddleRuleNamed pname _ = urlRule pname
 
 instance HuddleGroup "single_host_addr" MaryEra where
-  huddleGroup = singleHostAddrGroup @MaryEra
+  huddleGroupNamed = singleHostAddrGroup
 
 instance HuddleGroup "single_host_name" MaryEra where
-  huddleGroup = singleHostNameGroup @MaryEra
+  huddleGroupNamed = singleHostNameGroup
 
 instance HuddleGroup "multi_host_name" MaryEra where
-  huddleGroup = multiHostNameGroup @MaryEra
+  huddleGroupNamed = multiHostNameGroup
 
 instance HuddleRule "relay" MaryEra where
-  huddleRule = relayRule @MaryEra
+  huddleRuleNamed = relayRule
 
 instance HuddleRule "protocol_param_update" MaryEra where
-  huddleRule = protocolParamUpdateRule @MaryEra
+  huddleRuleNamed = protocolParamUpdateRule
 
 instance HuddleRule "proposed_protocol_parameter_updates" MaryEra where
-  huddleRule = proposedProtocolParameterUpdatesRule @MaryEra
+  huddleRuleNamed = proposedProtocolParameterUpdatesRule
 
 instance HuddleRule "update" MaryEra where
-  huddleRule = updateRule @MaryEra
+  huddleRuleNamed = updateRule
 
 instance HuddleGroup "script_pubkey" MaryEra where
-  huddleGroup = scriptPubkeyGroup @MaryEra
+  huddleGroupNamed = scriptPubkeyGroup
 
 instance HuddleGroup "script_all" MaryEra where
-  huddleGroup = scriptAllGroup @MaryEra
+  huddleGroupNamed = scriptAllGroup
 
 instance HuddleGroup "script_any" MaryEra where
-  huddleGroup = scriptAnyGroup @MaryEra
+  huddleGroupNamed = scriptAnyGroup
 
 instance HuddleGroup "script_n_of_k" MaryEra where
-  huddleGroup = scriptNOfKGroup @MaryEra
+  huddleGroupNamed = scriptNOfKGroup
 
 instance HuddleGroup "script_invalid_before" MaryEra where
-  huddleGroup = scriptInvalidBeforeGroup @MaryEra
+  huddleGroupNamed = scriptInvalidBeforeGroup
 
 instance HuddleGroup "script_invalid_hereafter" MaryEra where
-  huddleGroup = scriptInvalidHereafterGroup @MaryEra
+  huddleGroupNamed = scriptInvalidHereafterGroup
 
 instance HuddleRule "native_script" MaryEra where
-  huddleRule = nativeScriptRule @MaryEra
+  huddleRuleNamed = nativeScriptRule
 
 instance HuddleRule "transaction_body" MaryEra where
-  huddleRule p =
-    "transaction_body"
-      =:= mp
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
         [ idx 0 ==> huddleRule1 @"set" p (huddleRule @"transaction_input" p)
         , idx 1 ==> arr [0 <+ a (huddleRule @"transaction_output" p)]
         , idx 2 ==> huddleRule @"coin" p
@@ -214,33 +219,36 @@ instance HuddleRule "transaction_body" MaryEra where
         ]
 
 instance HuddleRule "transaction_output" MaryEra where
-  huddleRule p =
-    "transaction_output"
-      =:= arr
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
         [ a $ huddleRule @"address" p
         , "amount" ==> huddleRule @"value" p
         ]
 
 instance HuddleRule "value" MaryEra where
-  huddleRule = maryValueRule @MaryEra
+  huddleRuleNamed = maryValueRule
 
 instance HuddleRule "policy_id" MaryEra where
-  huddleRule p = "policy_id" =:= huddleRule @"script_hash" p
+  huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p
 
 instance HuddleRule "asset_name" MaryEra where
-  huddleRule = assetNameRule @MaryEra
+  huddleRuleNamed pname _ = assetNameRule pname
 
 instance HuddleRule "mint" MaryEra where
-  huddleRule = maryMintRule @MaryEra
+  huddleRuleNamed = maryMintRule
 
 instance HuddleRule "auxiliary_data" MaryEra where
-  huddleRule = auxiliaryDataRule @MaryEra
+  huddleRuleNamed = auxiliaryDataRule
 
 instance HuddleRule "auxiliary_data_array" MaryEra where
-  huddleRule = auxiliaryDataArrayRule @MaryEra
+  huddleRuleNamed = auxiliaryDataArrayRule
 
 instance HuddleRule "auxiliary_scripts" MaryEra where
-  huddleRule = auxiliaryScriptsRule @MaryEra
+  huddleRuleNamed = auxiliaryScriptsRule
 
 instance HuddleRule1 "set" MaryEra where
-  huddleRule1 _ = untaggedSet
+  huddleRule1Named pname _ = untaggedSet pname
+
+instance HuddleRule1 "multiasset" MaryEra where
+  huddleRule1Named = maryMultiasset

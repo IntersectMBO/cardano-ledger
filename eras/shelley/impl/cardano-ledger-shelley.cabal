@@ -153,7 +153,6 @@ library cddl
     base,
     cardano-ledger-core:cddl,
     cardano-ledger-shelley,
-    cuddle >=1.1,
     heredoc,
 
 executable generate-cddl

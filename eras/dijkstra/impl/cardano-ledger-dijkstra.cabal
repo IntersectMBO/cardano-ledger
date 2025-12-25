@@ -178,7 +178,6 @@ library cddl
     base,
     cardano-ledger-conway:cddl,
     cardano-ledger-dijkstra,
-    cuddle >=0.4,
     heredoc,
     text,
 
