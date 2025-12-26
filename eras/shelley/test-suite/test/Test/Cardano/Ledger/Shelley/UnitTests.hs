@@ -52,6 +52,7 @@ import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
@@ -561,8 +562,9 @@ testWithdrawalWrongAmt =
       dpState' = addReward dpState (raCredential rAccount) (Coin 10)
       tx = MkShelleyTx $ ShelleyTx @ShelleyEra txb txwits SNothing
       errs =
-        [ ShelleyIncompleteWithdrawals
-            [(rAccount, Mismatch (Coin 11) (Coin 10))]
+        [ ShelleyIncompleteWithdrawals $
+            NEM.singleton rAccount $
+              Mismatch (Coin 11) (Coin 10)
         ]
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 

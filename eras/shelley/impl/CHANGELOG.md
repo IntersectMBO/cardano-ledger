@@ -10,6 +10,7 @@
   - `ppMinFeeB` -> `ppTxFeeFixed`
 * Changed type of `sppMinFeeA` to `CoinPerByte`:
 * Change sets containing errors into `NonEmptySet` for `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`
+* Change all maps into `NonEmptyMap` for `ShelleyLedgerPredFailure`
 * Change all lists into `NonEmpty` for `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`
 * Changed the type of the following fields to `CompactForm Coin` in `ShelleyPParams`:
   - `sppMinFeeB`

@@ -7,6 +7,8 @@ module Test.Cardano.Data.TreeDiff where
 
 import Data.Foldable (Foldable (..))
 import Data.Foldable qualified as F
+import Data.Map.NonEmpty (NonEmptyMap)
+import Data.Map.NonEmpty qualified as NEM
 import Data.OMap.Strict
 import Data.OSet.Strict
 import Data.Set.NonEmpty (NonEmptySet)
@@ -22,3 +24,7 @@ instance (HasOKey k v, ToExpr v) => ToExpr (OMap k v) where
 
 instance ToExpr a => ToExpr (NonEmptySet a) where
   toExpr = toExpr . NES.toList
+
+instance (Ord k, ToExpr k, ToExpr v) => ToExpr (NonEmptyMap k v) where
+  listToExpr = listToExpr . F.toList
+  toExpr = toExpr . NEM.toList

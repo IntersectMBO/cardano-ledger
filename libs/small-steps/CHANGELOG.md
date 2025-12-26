@@ -2,6 +2,7 @@
 
 ## 1.1.3.0
 
+* Add `failOnNonEmptyMap` and `failureOnNonEmptyMap`
 * Add `failOnNonEmptySet` and `failureOnNonEmptySet`
 
 ## 1.1.2.0

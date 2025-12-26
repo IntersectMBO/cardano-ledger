@@ -14,6 +14,7 @@
   - `cppMinFeeB` -> `cppTxFeeFixed`
 * Changed type of `cppMinFeeA` to `CoinPerByte`
 * Change sets containing errors into `NonEmptySet` for `ConwayGovPredFailure`, `ConwayUtxoPredFailure`, `ConwayUtxowPredFailure`
+* Change all maps into `NonEmptyMap` for `ConwayGovPredFailure` and `ConwayLedgerPredFailure`
 * Change all lists into `NonEmpty` for `ConwayUtxoPredFailure`, `ConwayUtxosPredFailure`, `ConwayUtxowPredFailure`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Re-export `UtxoEnv` from `Cardano.Ledger.Conway.Rules.Utxo`

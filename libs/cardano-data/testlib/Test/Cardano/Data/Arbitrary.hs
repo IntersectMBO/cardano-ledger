@@ -5,6 +5,8 @@
 
 module Test.Cardano.Data.Arbitrary (genOSet) where
 
+import Data.Map.NonEmpty as NEM
+import Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.OMap.Strict qualified as OMap
 import Data.OSet.Strict qualified as OSet
@@ -32,4 +34,16 @@ instance (Arbitrary a, Ord a) => Arbitrary (NonEmptySet a) where
     [ fromJust $ NES.fromSet xs'
     | xs' <- shrink $ NES.toSet nes
     , not (Set.null xs')
+    ]
+
+instance (Arbitrary k, Arbitrary v, Ord k) => Arbitrary (NonEmptyMap k v) where
+  arbitrary = do
+    k <- arbitrary
+    v <- arbitrary
+    fromJust . NEM.fromMap . Map.insert k v <$> arbitrary
+
+  shrink nem =
+    [ fromJust $ NEM.fromMap xs'
+    | xs' <- shrink $ NEM.toMap nem
+    , not (Map.null xs')
     ]

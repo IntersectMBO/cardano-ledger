@@ -117,7 +117,7 @@ import Cardano.Ledger.Shelley.Rules (
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.Map.Strict as Map
+import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Sequence (Seq)
 import Data.Void (absurd)
 import GHC.Generics (Generic (..))
