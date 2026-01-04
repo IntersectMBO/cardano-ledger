@@ -126,6 +126,7 @@ import Control.State.Transition.Extended (
  )
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
+import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)
 import Data.Sequence (Seq)
@@ -145,7 +146,7 @@ data ConwayLedgerPredFailure era
   | ConwayTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | ConwayMempoolFailure Text
   | ConwayWithdrawalsMissingAccounts Withdrawals
-  | ConwayIncompleteWithdrawals (Map.Map RewardAccount (Mismatch RelEQ Coin))
+  | ConwayIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
   deriving (Generic)
 
 type instance EraRuleFailure "LEDGER" ConwayEra = ConwayLedgerPredFailure ConwayEra

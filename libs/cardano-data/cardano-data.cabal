@@ -19,6 +19,7 @@ library
   exposed-modules:
     Data.CanonicalMaps
     Data.ListMap
+    Data.Map.NonEmpty
     Data.MapExtras
     Data.MonoTuple
     Data.OMap.Strict
