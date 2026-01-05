@@ -7,7 +7,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | This module provides the 'StakePoolState' data type, which represents the
@@ -113,11 +112,13 @@ import Control.Monad.Trans (lift)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser, explicitParseField)
-import Data.ByteString (ByteString)
+import Data.Array.Byte (ByteArray (..))
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Short as SBS
 import Data.Default (Default (..))
 import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
+import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Text as Text
@@ -283,7 +284,7 @@ stakePoolStateToStakePoolParams poolId networkId sps =
 
 data PoolMetadata = PoolMetadata
   { pmUrl :: !Url
-  , pmHash :: !ByteString
+  , pmHash :: !ByteArray
   }
   deriving (Eq, Ord, Generic, Show)
 
@@ -293,7 +294,7 @@ instance ToJSON PoolMetadata where
   toJSON pmd =
     Aeson.object
       [ "url" .= pmUrl pmd
-      , "hash" .= Text.decodeLatin1 (B16.encode (pmHash pmd))
+      , "hash" .= Text.decodeLatin1 (B16.encode $ SBS.fromShort $ byteArrayToShortByteString $ pmHash pmd)
       ]
 
 instance FromJSON PoolMetadata where
@@ -303,15 +304,18 @@ instance FromJSON PoolMetadata where
       hash <- explicitParseField parseJsonBase16 obj "hash"
       return $ PoolMetadata url hash
 
-parseJsonBase16 :: Value -> Parser ByteString
+parseJsonBase16 :: Value -> Parser ByteArray
 parseJsonBase16 v = do
   txt <- parseJSON v
   unless (Text.isAscii txt) $ fail $ "Supplied text contains non-ASCII characters: " <> show txt
-  case B16.decode (Text.encodeUtf8 txt) of
-    Right bs -> return bs
+  case B16.decode $ Text.encodeUtf8 txt of
+    Right bs -> return $ byteArrayFromShortByteString $ SBS.toShort bs
     Left msg -> fail msg
 
-instance NoThunks PoolMetadata
+-- | Check WHNF by pattern-matching on both fields, since they both are strict, and just contain ByteArray#
+instance NoThunks PoolMetadata where
+  wNoThunks _ (PoolMetadata _ _) = return Nothing
+  showTypeOf _ = "PoolMetadata"
 
 data StakePoolRelay
   = -- | One or both of IPv4 & IPv6

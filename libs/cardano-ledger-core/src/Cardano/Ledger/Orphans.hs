@@ -14,14 +14,18 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
 import Control.DeepSeq (NFData)
 import Data.Aeson
+import Data.Array.Byte (ByteArray)
 import qualified Data.ByteString as Long (ByteString, empty)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, empty)
 import qualified Data.ByteString.Short as Short (ShortByteString, empty, pack)
+import Data.Char (ord)
 import Data.Default (Default (..))
 import Data.Fixed (Fixed (..))
 import Data.IP (IPv4, IPv6)
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Proxy
 import qualified Data.Sequence.Strict as SS
+import Data.String (IsString (..))
 import qualified Data.Text as Text
 import NoThunks.Class (NoThunks (..))
 import Text.Read (readEither)
@@ -51,6 +55,9 @@ instance NoThunks IPv6
 instance NFData IPv4
 
 instance NFData IPv6
+
+instance IsString ByteArray where
+  fromString = byteArrayFromShortByteString . Short.pack . map (fromIntegral . ord)
 
 instance NoThunks WC.XSignature where
   wNoThunks ctxt s = wNoThunks ctxt (WC.unXSignature s)

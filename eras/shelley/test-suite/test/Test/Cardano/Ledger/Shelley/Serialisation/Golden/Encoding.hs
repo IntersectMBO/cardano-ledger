@@ -121,7 +121,6 @@ import qualified Codec.CBOR.Encoding as CBOR (Encoding (..))
 import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.Coerce (coerce)
 import Data.IP (toIPv4)
@@ -505,7 +504,7 @@ tests =
           poolPledge = Coin 11
           poolCost = Coin 55
           poolUrl = "pool.io"
-          poolMDHash = BS.pack "{}"
+          poolMDHash = "{}"
           ipv4 = toIPv4 [127, 0, 0, 1]
           ipv4Bytes = ipv4ToBytes . toIPv4 $ [127, 0, 0, 1]
           poolRelays =

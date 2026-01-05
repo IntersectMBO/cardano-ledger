@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Change `PoolMetadata.pmHash` from `ByteString` to `Data.Array.Byte.ByteArray` to reduce memory fragmentation.
 * Added:
   - `ppTxFeeFixedCompactL`
   - `ppuTxFeeFixedCompactL`

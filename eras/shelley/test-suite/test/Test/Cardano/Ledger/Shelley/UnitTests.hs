@@ -49,7 +49,6 @@ import Cardano.Protocol.Crypto (StandardCrypto, VRF, hashVerKeyVRF)
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.DeepSeq (rnf)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
-import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.NonEmpty as NEM
@@ -604,7 +603,7 @@ aliceStakePoolParamsSmallCost =
         SJust $
           PoolMetadata
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
-            , pmHash = BS.pack "{}"
+            , pmHash = "{}"
             }
     }
   where

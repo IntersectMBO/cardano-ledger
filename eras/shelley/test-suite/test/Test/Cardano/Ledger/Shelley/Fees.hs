@@ -56,7 +56,6 @@ import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.Crypto (StandardCrypto, hashVerKeyVRF)
 import qualified Data.ByteString.Base16.Lazy as Base16
-import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map (empty, singleton)
@@ -125,7 +124,7 @@ aliceStakePoolParams =
         SJust $
           PoolMetadata
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
-            , pmHash = BS.pack "{}"
+            , pmHash = "{}"
             }
     }
 

@@ -72,8 +72,8 @@ import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
+import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
-import Data.ByteString.Short.Internal (ShortByteString (SBS))
 import Data.CanonicalMaps (
   canonicalMap,
   canonicalMapUnion,
@@ -89,6 +89,7 @@ import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.MemPack
+import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
 import qualified Data.Monoid as M (Sum (Sum, getSum))
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
@@ -626,7 +627,7 @@ to v@(MaryValue _ ma) = do
              in BA.copyByteArray
                   byteArray
                   (fromIntegral offset)
-                  (sbsToByteArray pidBytes)
+                  (byteArrayFromShortByteString pidBytes)
                   0
                   pidSize
 
@@ -637,10 +638,10 @@ to v@(MaryValue _ ma) = do
              in BA.copyByteArray
                   byteArray
                   (fromIntegral offset)
-                  (sbsToByteArray anameBytes)
+                  (byteArrayFromShortByteString anameBytes)
                   0
                   anameLen
-        byteArrayToSbs <$> BA.unsafeFreezeByteArray byteArray
+        byteArrayToShortByteString <$> BA.unsafeFreezeByteArray byteArray
   where
     (ada, triples) = gettriples v
     numTriples = length triples
@@ -726,7 +727,7 @@ from (CompactValueMultiAsset c numAssets rep) =
   where
     n = fromIntegral numAssets
 
-    ba = sbsToByteArray rep
+    ba = byteArrayFromShortByteString rep
 
     getTripleForIndex :: Int -> (Word16, Word16, Word64)
     getTripleForIndex i =
@@ -786,15 +787,9 @@ nubOrd =
       | otherwise =
           let s' = Set.insert a s in s' `seq` a : loop s' as
 
-sbsToByteArray :: ShortByteString -> BA.ByteArray
-sbsToByteArray (SBS bah) = BA.ByteArray bah
-
-byteArrayToSbs :: BA.ByteArray -> ShortByteString
-byteArrayToSbs (BA.ByteArray bah) = SBS bah
-
 readShortByteString :: ShortByteString -> Int -> Int -> ShortByteString
 readShortByteString sbs start len =
-  byteArrayToSbs $ BA.cloneByteArray (sbsToByteArray sbs) start len
+  byteArrayToShortByteString $ BA.cloneByteArray (byteArrayFromShortByteString sbs) start len
 
 -- ========================================================================
 -- Operations on Values
