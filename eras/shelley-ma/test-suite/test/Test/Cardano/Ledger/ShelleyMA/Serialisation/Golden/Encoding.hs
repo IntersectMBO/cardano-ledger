@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -15,10 +16,19 @@ import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Allegra.TxAuxData (data AllegraTxAuxData)
+#else
 import Cardano.Ledger.Allegra.TxAuxData (pattern AllegraTxAuxData)
+#endif
 import Cardano.Ledger.Allegra.TxBody (TxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Binary (DecCBOR)
@@ -30,15 +40,27 @@ import Cardano.Ledger.Mary.TxBody (TxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Shelley.PParams (
   Update,
+#if __GLASGOW_HASKELL__ >= 914
+  data ProposedPPUpdates,
+  data Update,
+#else
   pattern ProposedPPUpdates,
   pattern Update,
+#endif
  )
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireAnyOf,
+  data RequireMOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
   pattern RequireSignature,
+#endif
  )
 import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))

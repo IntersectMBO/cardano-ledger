@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -20,7 +21,11 @@
 module Cardano.Ledger.Dijkstra.Rules.Gov (
   DijkstraGOV,
   DijkstraGovPredFailure (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data InvalidPolicyHash,
+#else
   pattern InvalidPolicyHash,
+#endif
   conwayToDijkstraGovPredFailure,
 ) where
 

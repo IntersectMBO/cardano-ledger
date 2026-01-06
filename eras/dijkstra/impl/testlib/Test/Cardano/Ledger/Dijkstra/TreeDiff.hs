@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -118,7 +119,11 @@ instance ToExpr (TxBody l DijkstraEra)
 
 instance ToExpr PerasCert
 
-instance (ToExpr (Tx TopTx era), ToExpr PerasCert) => ToExpr (DijkstraBlockBody era)
+instance (ToExpr (Tx TopTx era)
+#if __GLASGOW_HASKELL__ < 914
+  , ToExpr PerasCert
+#endif  
+  ) => ToExpr (DijkstraBlockBody era)
 
 instance ToExpr (DijkstraTx l DijkstraEra) where
   toExpr = \case

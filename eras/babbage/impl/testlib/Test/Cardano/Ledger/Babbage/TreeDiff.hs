@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -13,7 +14,9 @@ module Test.Cardano.Ledger.Babbage.TreeDiff (
   module Test.Cardano.Ledger.Alonzo.TreeDiff,
 ) where
 
+#if __GLASGOW_HASKELL__ < 914
 import Cardano.Ledger.Address
+#endif
 import Cardano.Ledger.Alonzo.Rules
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
@@ -40,9 +43,13 @@ instance ToExpr (BabbagePParams Identity era)
 
 -- TxOut
 instance
-  ( ToExpr CompactAddr
-  , ToExpr (CompactForm (Value era))
+  ( ToExpr (CompactForm (Value era))
   , ToExpr (Script era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , ToExpr CompactAddr
+#endif
   ) =>
   ToExpr (BabbageTxOut era)
 

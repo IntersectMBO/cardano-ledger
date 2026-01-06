@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -315,7 +316,13 @@ instance (EraStake era, ConwayEraAccounts era) => Pulsable (DRepPulser era) wher
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
 
 deriving instance
-  (EraPParams era, Show (InstantStake era), Show (Accounts era), Show ans) =>
+  (EraPParams era, Show (InstantStake era), Show (Accounts era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Show ans
+#endif
+  ) =>
   Show (DRepPulser era m ans)
 
 instance

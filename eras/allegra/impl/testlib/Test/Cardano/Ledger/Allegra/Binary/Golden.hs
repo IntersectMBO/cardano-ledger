@@ -1,8 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Allegra.Binary.Golden (
   spec,
@@ -14,7 +16,11 @@ import Cardano.Ledger.Allegra.Core (
   AllegraEraTxBody (..),
   ShelleyEraTxCert,
   ValidityInterval (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data DelegStakeTxCert,
+#else
   pattern DelegStakeTxCert,
+#endif
  )
 import Cardano.Ledger.Binary (Version)
 import Cardano.Ledger.Credential (Credential (..))

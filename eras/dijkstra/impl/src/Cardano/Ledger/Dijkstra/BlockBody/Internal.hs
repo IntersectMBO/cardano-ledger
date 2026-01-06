@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -103,7 +104,11 @@ data DijkstraBlockBody era = DijkstraBlockBodyInternal
   }
   deriving (Generic)
 
-instance (NFData (Tx TopTx era), NFData PerasCert) => NFData (DijkstraBlockBody era)
+instance (NFData (Tx TopTx era)
+#if __GLASGOW_HASKELL__ < 914
+  , NFData PerasCert
+#endif
+  ) => NFData (DijkstraBlockBody era)
 
 instance EraBlockBody DijkstraEra where
   type BlockBody DijkstraEra = DijkstraBlockBody DijkstraEra

@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -198,7 +199,14 @@ instance (Era era, MemPack (CompactForm (Value era))) => MemPack (AlonzoTxOut er
       n -> unknownTagM @(AlonzoTxOut era) n
   {-# INLINE unpackM #-}
 
-deriving stock instance (Eq (Value era), Compactible (Value era)) => Eq (AlonzoTxOut era)
+deriving stock instance (
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+
+  Eq (Value era),
+#endif
+  Compactible (Value era)) => Eq (AlonzoTxOut era)
 
 deriving instance Generic (AlonzoTxOut era)
 

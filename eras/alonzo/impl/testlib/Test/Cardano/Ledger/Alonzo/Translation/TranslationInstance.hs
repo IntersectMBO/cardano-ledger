@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -10,6 +11,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
+#if __GLASGOW_HASKELL__ >= 914
+-- The `ghc-9.14` alpha release has what looks like a bug;
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/26381
+{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
+#endif
 
 module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (..),
@@ -43,6 +50,7 @@ import GHC.Generics (Generic)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusTx.Ratio as PlutusTx
 
 data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo
@@ -166,7 +174,7 @@ instance Cborg.Serialise a => Cborg.Serialise (PV3.LowerBound a)
 
 instance Cborg.Serialise a => Cborg.Serialise (PV3.UpperBound a)
 
-instance Cborg.Serialise PV3.Rational
+instance Cborg.Serialise PlutusTx.Rational
 
 instance Cborg.Serialise VersionedTxInfo
 

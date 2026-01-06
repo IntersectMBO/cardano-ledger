@@ -1,9 +1,11 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxowSpec (spec) where
 
@@ -17,7 +19,11 @@ import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireSignature,
+#else
   pattern RequireSignature,
+#endif
  )
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES

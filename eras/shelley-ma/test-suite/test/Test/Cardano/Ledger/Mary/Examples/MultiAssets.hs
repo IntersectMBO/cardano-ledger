@@ -1,7 +1,9 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- |
 -- Module      : Test.Cardano.Ledger.Mary.Examples.MultiAssets
@@ -15,8 +17,13 @@ module Test.Cardano.Ledger.Mary.Examples.MultiAssets (
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (
   Timelock (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
@@ -33,8 +40,13 @@ import Cardano.Ledger.Mary.Value (
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure (..), ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireSignature,
+#endif
  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
