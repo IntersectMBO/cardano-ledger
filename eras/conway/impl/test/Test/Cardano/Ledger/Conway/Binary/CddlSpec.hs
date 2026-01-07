@@ -15,12 +15,6 @@ import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingPro
 import Cardano.Ledger.Conway.HuddleSpec (conwayCDDL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
-import Test.Cardano.Ledger.Binary.Cddl (
-  beforeAllCddlFile,
-  cddlDecoderEquivalenceSpec,
-  cddlRoundTripAnnCborSpec,
-  cddlRoundTripCborSpec,
- )
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
@@ -31,49 +25,12 @@ import Test.Cardano.Ledger.Binary.Cuddle (
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
-import Test.Cardano.Ledger.Conway.Binary.Cddl (readConwayCddlFiles)
 
 spec :: Spec
 spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @ConwayEra
-    describe "Ruby-based" $ beforeAllCddlFile 3 readConwayCddlFiles $ do
-      cddlRoundTripCborSpec @(Value ConwayEra) v "positive_coin"
-      cddlRoundTripCborSpec @(Value ConwayEra) v "value"
-      cddlRoundTripAnnCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
-      cddlRoundTripCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
-      cddlRoundTripAnnCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
-      cddlRoundTripCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
-      cddlRoundTripAnnCborSpec @(Timelock ConwayEra) v "native_script"
-      cddlRoundTripCborSpec @(Timelock ConwayEra) v "native_script"
-      cddlRoundTripAnnCborSpec @(Data ConwayEra) v "plutus_data"
-      cddlRoundTripCborSpec @(Data ConwayEra) v "plutus_data"
-      cddlRoundTripCborSpec @(TxOut ConwayEra) v "transaction_output"
-      cddlRoundTripAnnCborSpec @(Script ConwayEra) v "script"
-      cddlRoundTripCborSpec @(Script ConwayEra) v "script"
-      cddlRoundTripCborSpec @(Datum ConwayEra) v "datum_option"
-      cddlRoundTripAnnCborSpec @(TxWits ConwayEra) v "transaction_witness_set"
-      cddlRoundTripCborSpec @(TxWits ConwayEra) v "transaction_witness_set"
-      cddlRoundTripCborSpec @(PParamsUpdate ConwayEra) v "protocol_param_update"
-      cddlRoundTripCborSpec @CostModels v "cost_models"
-      cddlRoundTripAnnCborSpec @(Redeemers ConwayEra) v "redeemers"
-      cddlRoundTripCborSpec @(Redeemers ConwayEra) v "redeemers"
-      cddlRoundTripAnnCborSpec @(Tx TopTx ConwayEra) v "transaction"
-      cddlRoundTripCborSpec @(Tx TopTx ConwayEra) v "transaction"
-      cddlRoundTripCborSpec @(VotingProcedure ConwayEra) v "voting_procedure"
-      cddlRoundTripCborSpec @(ProposalProcedure ConwayEra) v "proposal_procedure"
-      cddlRoundTripCborSpec @(GovAction ConwayEra) v "gov_action"
-      cddlRoundTripCborSpec @(TxCert ConwayEra) v "certificate"
-      describe "DecCBOR instances equivalence via CDDL" $ do
-        cddlDecoderEquivalenceSpec @(TxBody TopTx ConwayEra) v "transaction_body"
-        cddlDecoderEquivalenceSpec @(TxAuxData ConwayEra) v "auxiliary_data"
-        cddlDecoderEquivalenceSpec @(Timelock ConwayEra) v "native_script"
-        cddlDecoderEquivalenceSpec @(Data ConwayEra) v "plutus_data"
-        cddlDecoderEquivalenceSpec @(Script ConwayEra) v "script"
-        cddlDecoderEquivalenceSpec @(TxWits ConwayEra) v "transaction_witness_set"
-        cddlDecoderEquivalenceSpec @(Redeemers ConwayEra) v "redeemers"
-        cddlDecoderEquivalenceSpec @(Tx TopTx ConwayEra) v "transaction"
-    describe "Huddle" $ specWithHuddle conwayCDDL 100 $ do
+    specWithHuddle conwayCDDL 100 $ do
       -- Value
       huddleRoundTripCborSpec @(Value ConwayEra) v "positive_coin"
       huddleRoundTripArbitraryValidate @(Value ConwayEra) v "value"

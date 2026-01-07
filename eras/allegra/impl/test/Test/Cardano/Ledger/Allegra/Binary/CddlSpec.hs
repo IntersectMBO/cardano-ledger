@@ -7,13 +7,6 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.HuddleSpec (allegraCDDL)
 import Cardano.Ledger.Core
 import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
-import Test.Cardano.Ledger.Allegra.Binary.Cddl (readAllegraCddlFiles)
-import Test.Cardano.Ledger.Binary.Cddl (
-  beforeAllCddlFile,
-  cddlDecoderEquivalenceSpec,
-  cddlRoundTripAnnCborSpec,
-  cddlRoundTripCborSpec,
- )
 import Test.Cardano.Ledger.Binary.Cuddle
 import Test.Cardano.Ledger.Common
 
@@ -21,20 +14,7 @@ spec :: Spec
 spec =
   describe "CDDL" $ do
     let v = eraProtVerLow @AllegraEra
-    describe "Ruby-based" $ beforeAllCddlFile 3 readAllegraCddlFiles $ do
-      cddlRoundTripCborSpec @(Value AllegraEra) v "coin"
-      cddlRoundTripAnnCborSpec @(TxBody TopTx AllegraEra) v "transaction_body"
-      cddlRoundTripCborSpec @(TxBody TopTx AllegraEra) v "transaction_body"
-      cddlRoundTripAnnCborSpec @(Script AllegraEra) v "native_script"
-      cddlRoundTripCborSpec @(Script AllegraEra) v "native_script"
-      cddlRoundTripAnnCborSpec @(TxAuxData AllegraEra) v "auxiliary_data"
-      cddlRoundTripCborSpec @(TxAuxData AllegraEra) v "auxiliary_data"
-      describe "DecCBOR instances equivalence via CDDL" $ do
-        cddlDecoderEquivalenceSpec @(TxBody TopTx AllegraEra) v "transaction_body"
-        cddlDecoderEquivalenceSpec @(Script AllegraEra) v "native_script"
-        cddlDecoderEquivalenceSpec @(TxAuxData AllegraEra) v "auxiliary_data"
-
-    describe "Huddle" $ specWithHuddle allegraCDDL 100 $ do
+    specWithHuddle allegraCDDL 100 $ do
       huddleRoundTripCborSpec @(Value AllegraEra) v "coin"
       huddleRoundTripAnnCborSpec @(TxBody TopTx AllegraEra) v "transaction_body"
       huddleRoundTripCborSpec @(TxBody TopTx AllegraEra) v "transaction_body"
