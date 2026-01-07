@@ -13,7 +13,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ApplyTxError (ConwayApplyTxError), ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
@@ -28,7 +28,6 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (..),
   RewardAccount (..),
   TxId (..),
  )
@@ -63,7 +62,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
 ledgerExamples :: LedgerExamples ConwayEra
 ledgerExamples =
   mkLedgerExamples
-    ( ApplyTxError $
+    ( ConwayApplyTxError $
         pure $
           wrapFailed @(ConwayDELEG ConwayEra) @(ConwayLEDGER ConwayEra) $
             DelegateeStakePoolNotRegisteredDELEG @ConwayEra (mkKeyHash 1)

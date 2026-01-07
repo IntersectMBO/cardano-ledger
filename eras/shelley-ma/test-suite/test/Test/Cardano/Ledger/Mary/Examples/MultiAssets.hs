@@ -19,7 +19,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary (MaryEra, Tx (..))
 import Cardano.Ledger.Mary.Core
@@ -49,6 +49,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import GHC.Exts (fromString)
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
@@ -87,8 +88,8 @@ initUTxO =
 pp :: PParams MaryEra
 pp =
   emptyPParams
-    & ppMinFeeAL .~ Coin 0
-    & ppMinFeeBL .~ Coin 1
+    & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 0)
+    & ppTxFeeFixedL .~ Coin 1
     & ppMaxTxSizeL .~ 16384
     & ppMinUTxOValueL .~ Coin 100
 
@@ -117,7 +118,7 @@ makeMaryTxBody ins outs interval minted =
 policyFailure ::
   PolicyID -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra)
 policyFailure p =
-  Left . pure . UtxowFailure . ScriptWitnessNotValidatingUTXOW $ Set.singleton (policyID p)
+  Left . pure . UtxowFailure . ScriptWitnessNotValidatingUTXOW $ NES.singleton (policyID p)
 
 outTooBigFailure ::
   ShelleyTxOut MaryEra -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra)

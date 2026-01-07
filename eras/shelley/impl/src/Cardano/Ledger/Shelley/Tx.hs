@@ -49,6 +49,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -255,4 +256,4 @@ instance
 -- | Minimum fee calculation
 shelleyMinFeeTx :: EraTx era => PParams era -> Tx l era -> Coin
 shelleyMinFeeTx pp tx =
-  (tx ^. sizeTxF <×> pp ^. ppMinFeeAL) <+> pp ^. ppMinFeeBL
+  (tx ^. sizeTxF <×> (fromCompact . unCoinPerByte) (pp ^. ppTxFeePerByteL)) <+> pp ^. ppTxFeeFixedL

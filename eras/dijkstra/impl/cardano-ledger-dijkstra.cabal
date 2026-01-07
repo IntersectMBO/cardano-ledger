@@ -60,6 +60,17 @@ library
     Cardano.Ledger.Dijkstra.Rules.Ledgers
     Cardano.Ledger.Dijkstra.Rules.Mempool
     Cardano.Ledger.Dijkstra.Rules.Pool
+    Cardano.Ledger.Dijkstra.Rules.SubCert
+    Cardano.Ledger.Dijkstra.Rules.SubCerts
+    Cardano.Ledger.Dijkstra.Rules.SubDeleg
+    Cardano.Ledger.Dijkstra.Rules.SubGov
+    Cardano.Ledger.Dijkstra.Rules.SubGovCert
+    Cardano.Ledger.Dijkstra.Rules.SubLedger
+    Cardano.Ledger.Dijkstra.Rules.SubLedgers
+    Cardano.Ledger.Dijkstra.Rules.SubPool
+    Cardano.Ledger.Dijkstra.Rules.SubUtxo
+    Cardano.Ledger.Dijkstra.Rules.SubUtxos
+    Cardano.Ledger.Dijkstra.Rules.SubUtxow
     Cardano.Ledger.Dijkstra.Rules.Utxo
     Cardano.Ledger.Dijkstra.Rules.Utxos
     Cardano.Ledger.Dijkstra.Rules.Utxow
@@ -120,6 +131,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Era
     Test.Cardano.Ledger.Dijkstra.Examples
     Test.Cardano.Ledger.Dijkstra.Imp
+    Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -177,7 +189,6 @@ library cddl
     base,
     cardano-ledger-conway:cddl,
     cardano-ledger-dijkstra,
-    cuddle >=0.4,
     heredoc,
     text,
 

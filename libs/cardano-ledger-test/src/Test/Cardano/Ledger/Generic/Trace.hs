@@ -57,6 +57,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SS
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Data.TreeDiff
 import Data.Vector (Vector, (!))
 import qualified Data.Vector as Vector
@@ -232,7 +233,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
                     )
                 )
             )
-        ) = set
+        ) = NES.toSet set
     getw
       Alonzo
       ( MockChainFromLedgersFailure
@@ -243,7 +244,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
                     )
                 )
             )
-        ) = set
+        ) = NES.toSet set
     getw
       Mary
       ( MockChainFromLedgersFailure
@@ -252,7 +253,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
                   (ScriptWitnessNotValidatingUTXOW set)
                 )
             )
-        ) = set
+        ) = NES.toSet set
     getw
       Allegra
       ( MockChainFromLedgersFailure
@@ -261,7 +262,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
                   (ScriptWitnessNotValidatingUTXOW set)
                 )
             )
-        ) = set
+        ) = NES.toSet set
     getw _ _ = Set.empty
 
 shortTxOut :: EraTxOut era => TxOut era -> Expr

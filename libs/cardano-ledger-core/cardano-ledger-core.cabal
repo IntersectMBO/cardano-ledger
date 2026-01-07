@@ -130,7 +130,7 @@ library
     nothunks >=0.1.5 && <0.4,
     partial-order,
     plutus-core,
-    plutus-ledger-api,
+    plutus-ledger-api >=1.56,
     prettyprinter,
     primitive,
     quiet,
@@ -185,7 +185,7 @@ library cddl
   build-depends:
     base,
     cardano-ledger-core,
-    cuddle >=0.4,
+    cuddle >=1.1,
     heredoc,
     text,
 
@@ -226,6 +226,7 @@ library testlib
     bytestring,
     cardano-crypto-class,
     cardano-crypto-wrapper:{cardano-crypto-wrapper, testlib},
+    cardano-data:testlib,
     cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.5,
     cardano-ledger-byron:{cardano-ledger-byron, testlib},
     cardano-ledger-core,

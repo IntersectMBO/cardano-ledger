@@ -2,6 +2,43 @@
 
 ## 0.2.0.0
 
+* Add:
+  - `DijkstraSUBCERT`
+  - `DijkstraSUBCERTS`
+  - `DijkstraSUBDELEG`
+  - `DijkstraSUBGOV`
+  - `DijkstraSUBGOVCERT`
+  - `DijkstraSUBLEDGER`
+  - `DijkstraSUBLEDGERS`
+  - `DijkstraSUBPOOL`
+  - `DijkstraSUBUTXOS`
+  - `DijkstraSUBUTXOW`
+  - `DijkstraSUBUTXO`
+    and `STS` instances for them
+* Add:
+  - `DijkstraSubCertPredFailure`
+  - `DijkstraSubCertsPredFailure`
+  - `DijkstraSubDelegPredFailure`
+  - `DijkstraSubGovPredFailure`
+  - `DijkstraSubGovCertPredFailure`
+  - `DijkstraSubLedgerPredFailure`
+  - `DijkstraSubLedgersPredFailure`
+  - `DijkstraSubPoolPredFailure`
+  - `DijkstraSubUtxoPredFailure`
+  - `DijkstraSubUtxosPredFailure`
+  - `DijkstraSubUtxowPredFailure`
+* Add `DijkstraSubLedgersFailure` to `DijkstraLedgerPredFailure`
+* Add `SubCertsEnv`
+* Deprecate `InvalidPolicyHash` in favor of new `InvalidGuardrailsScriptHash`
+* Move the `DijkstraMempoolFailure` constructor from `DijkstraLedgerPredFailure` to `DijkstraMempoolPredFailure`
+* Add the `DijkstraMempoolPredFailure` predicate failure for the MEMPOOL rule
+* Add `DijkstraApplyTxError` constructor for `ApplyTxError era`
+* Renamed:
+  - `dppMinFeeA` -> `dppTxFeePerByte`
+  - `dppMinFeeB` -> `dppTxFeeFixed`
+* Changed type of `dppMinFeeA` to `CoinPerByte`
+* Change sets containing errors into `NonEmptySet` for `DijkstraGovPredFailure`, `DijkstraUtxoPredFailure`, `DijkstraUtxowPredFailure`
+* Change all maps into `NonEmptyMap` for `DijkstraGovPredFailure` and `DijkstraLedgerPredFailure`
 * Change Dijkstra BBODY rule to validate Peras certificates when present
 * Add new block body predicate falures for Dijkstra:
   - `PrevEpochNonceNotPresent` for missing optional nonce needed for validation
@@ -16,11 +53,9 @@
 * Add `DijkstraEraBlockBody` class and instance for `DijkstraEraBlockBody`
 * Add `EraBlockBody` instance for `DijkstraEra`
 * Re-export `DijkstraBlockBody` from `Cardano.Ledger.Dijkstra.Core`
-* Add `Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec`
 * Add `DijkstraUtxoPredFailure`
 * Add `DijkstraUTXO`
 * Changed the type of the following fields to `CompactForm Coin` in `DijkstraPParams`:
-  - `dppMinFeeA`
   - `dppMinFeeB`
   - `dppKeyDeposit`
   - `dppMinPoolCost`
@@ -62,11 +97,13 @@
 
 ### `cddl`
 
+* Renamed `policy_hash` to `guardrails_script_hash` in governance actions to avoid confusion with multi-asset policy IDs
 * Move `cddl-files` to `cddl/data`.
 * Add full `HuddleSpec`.
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec`
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Re-export `Test.Cardano.Ledger.Conway.Binary.Golden`
 * Remove CDDL `certificate` redefinition to reuse from conway.

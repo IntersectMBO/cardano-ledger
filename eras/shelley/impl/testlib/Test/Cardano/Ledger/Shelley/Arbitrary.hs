@@ -32,7 +32,8 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (ApplyTxError),
+  ApplyTx (..),
+  ApplyTxError (..),
   MultiSig,
   ShelleyDelegCert,
   ShelleyTx (ShelleyTx),
@@ -92,6 +93,7 @@ import qualified Data.Text.Encoding as T (encodeUtf8)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
+import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
@@ -711,14 +713,7 @@ instance
 
 deriving newtype instance Arbitrary (Tx TopTx ShelleyEra)
 
-instance
-  ( Era era
-  , Arbitrary (PredicateFailure (EraRule "LEDGER" era))
-  ) =>
-  Arbitrary (ApplyTxError era)
-  where
-  arbitrary = ApplyTxError <$> arbitrary
-  shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
+deriving newtype instance Arbitrary (ApplyTxError ShelleyEra)
 
 instance
   ( Era era

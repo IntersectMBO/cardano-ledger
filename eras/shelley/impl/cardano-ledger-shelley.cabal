@@ -153,7 +153,6 @@ library cddl
     base,
     cardano-ledger-core:cddl,
     cardano-ledger-shelley,
-    cuddle >=0.4,
     heredoc,
 
 executable generate-cddl
@@ -218,7 +217,7 @@ library testlib
     cardano-crypto,
     cardano-crypto-class,
     cardano-crypto-wrapper,
-    cardano-data,
+    cardano-data:{cardano-data, testlib},
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron:{cardano-ledger-byron, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},

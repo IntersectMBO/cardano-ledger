@@ -115,6 +115,7 @@ module Cardano.Ledger.Conway.Governance (
   rsExpiredL,
   rsEnactedL,
   rsDelayedL,
+  constitutionGuardrailsScriptHashL,
   constitutionScriptL,
   constitutionAnchorL,
   gasIdL,

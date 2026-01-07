@@ -12,15 +12,20 @@ module Test.Cardano.Ledger.Mary.Examples (
 
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Genesis (NoGenesis (..))
-import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary (ApplyTxError (MaryApplyTxError), MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelegsPredFailure (DelegateeNotRegisteredDELEG),
+  ShelleyLedgerPredFailure (DelegsFailure),
+ )
 import qualified Data.Map.Strict as Map (singleton)
 import Data.Proxy
 import Lens.Micro
 import Test.Cardano.Ledger.Allegra.Examples (exampleAllegraTxAuxData, exampleAllegraTxBody)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples,
+  mkKeyHash,
   mkLedgerExamples,
   mkScriptHash,
   mkWitnessesPreAlonzo,
@@ -29,6 +34,9 @@ import Test.Cardano.Ledger.Shelley.Examples (
 ledgerExamples :: LedgerExamples MaryEra
 ledgerExamples =
   mkLedgerExamples
+    ( MaryApplyTxError . pure . DelegsFailure $
+        DelegateeNotRegisteredDELEG @MaryEra (mkKeyHash 1)
+    )
     (mkWitnessesPreAlonzo (Proxy @MaryEra))
     (exampleMultiAssetValue 1)
     ( exampleAllegraTxBody (exampleMultiAssetValue 1)

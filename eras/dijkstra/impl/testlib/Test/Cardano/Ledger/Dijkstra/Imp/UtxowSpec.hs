@@ -17,6 +17,7 @@ import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -32,7 +33,7 @@ spec =
       scriptHash <- impAddNativeScript (RequireGuard guardKeyHash)
       txIn <- produceScript scriptHash
       let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
-      submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
+      submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
       submitTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
 
     it "A native script required as guard needs to be witnessed " $ do
@@ -40,10 +41,12 @@ spec =
       let guardScriptHash = hashScript @era $ fromNativeScript guardScript
       scriptHash <- impAddNativeScript $ RequireGuard (ScriptHashObj guardScriptHash)
       tx <- mkTokenMintingTx scriptHash
-      submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
+      submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
       let txWithGuards = tx & bodyTxL . guardsTxBodyL .~ [ScriptHashObj guardScriptHash]
-      submitFailingTx txWithGuards [injectFailure $ MissingScriptWitnessesUTXOW [guardScriptHash]]
+      submitFailingTx
+        txWithGuards
+        [injectFailure $ MissingScriptWitnessesUTXOW $ NES.singleton guardScriptHash]
       submitTx_ $ txWithGuards & witsTxL . hashScriptTxWitsL .~ [fromNativeScript guardScript]
 
     it "A failing native script required as guard results in a predicate failure" $ do
@@ -56,7 +59,7 @@ spec =
               & bodyTxL . certsTxBodyL .~ [RegDepositTxCert (ScriptHashObj scriptHash) expectedDeposit]
               & bodyTxL . guardsTxBodyL .~ [ScriptHashObj guardScriptHash]
               & witsTxL . hashScriptTxWitsL .~ [fromNativeScript guardScriptFailing]
-      submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [guardScriptHash]]
+      submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton guardScriptHash]
 
     it "A redundant guard is ignored" $ do
       guardKeyHash <- KeyHashObj <$> freshKeyHash
@@ -73,7 +76,7 @@ spec =
       scriptHash <- impAddNativeScript $ RequireGuard (ScriptHashObj guardScriptHash)
 
       tx <- mkTokenMintingTx scriptHash
-      submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
+      submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
       submitTx_ $
         tx
           & bodyTxL . guardsTxBodyL .~ [ScriptHashObj guardScriptHash, guardKeyHash]

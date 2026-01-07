@@ -64,7 +64,6 @@ import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (
   BabbageEraPParams (..),
-  CoinPerByte (..),
   ppCoinsPerUTxOByteL,
  )
 import Cardano.Ledger.Babbage.Scripts ()
@@ -99,7 +98,7 @@ import Cardano.Ledger.Binary (
   peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Plutus.Data (
@@ -655,9 +654,9 @@ babbageMinUTxOValue ::
   Sized a ->
   Coin
 babbageMinUTxOValue pp sizedTxOut =
-  Coin $ fromIntegral (constantOverhead + sizedSize sizedTxOut) * cpb
+  Coin $ fromIntegral (constantOverhead + sizedSize sizedTxOut) * fromIntegral cpb
   where
-    CoinPerByte (Coin cpb) = pp ^. ppCoinsPerUTxOByteL
+    CoinPerByte (CompactCoin cpb) = pp ^. ppCoinsPerUTxOByteL
     -- This constant is an approximation of the memory overhead that comes
     -- from TxIn and an entry in the Map data structure:
     --

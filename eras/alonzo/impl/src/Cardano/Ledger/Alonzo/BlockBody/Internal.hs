@@ -47,6 +47,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
+import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
@@ -87,6 +88,8 @@ data AlonzoBlockBody era = AlonzoBlockBodyInternal
   -- transactions with 'isValid' == False.
   }
   deriving (Generic)
+
+instance NFData (Tx TopTx era) => NFData (AlonzoBlockBody era)
 
 instance EraBlockBody AlonzoEra where
   type BlockBody AlonzoEra = AlonzoBlockBody AlonzoEra

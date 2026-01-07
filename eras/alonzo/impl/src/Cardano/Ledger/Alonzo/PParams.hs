@@ -64,6 +64,10 @@ module Cardano.Ledger.Alonzo.PParams (
   ppMaxTxExUnits,
   ppMaxValSize,
   ppPrices,
+
+  -- * Deprecated
+  appMinFeeA,
+  appMinFeeB,
 ) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -86,7 +90,7 @@ import Cardano.Ledger.Binary (
   encodePreEncoded,
   serialize',
  )
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Mary.Core
@@ -223,9 +227,9 @@ ppuMaxCollateralInputsL = ppuLensHKD . hkdMaxCollateralInputsL @era @StrictMaybe
 -- | Protocol parameters.
 -- Shelley parameters + additional ones
 data AlonzoPParams f era = AlonzoPParams
-  { appMinFeeA :: !(HKD f (CompactForm Coin))
+  { appTxFeePerByte :: !(HKD f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
-  , appMinFeeB :: !(HKD f (CompactForm Coin))
+  , appTxFeeFixed :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , appMaxBBSize :: !(HKD f Word32)
   -- ^ Maximal block body size
@@ -280,6 +284,14 @@ data AlonzoPParams f era = AlonzoPParams
   }
   deriving (Generic)
 
+appMinFeeA :: forall era f. HKDFunctor f => AlonzoPParams f era -> HKD f Coin
+appMinFeeA p = appTxFeePerByte p ^. hkdCoinPerByteL @f . hkdPartialCompactCoinL @f
+{-# DEPRECATED appMinFeeA "In favor of `appTxFeePerByte`" #-}
+
+appMinFeeB :: forall era f. HKDFunctor f => AlonzoPParams f era -> HKD f Coin
+appMinFeeB p = appTxFeeFixed p ^. hkdPartialCompactCoinL @f
+{-# DEPRECATED appMinFeeB "In favor of `appTxFeeFixed`" #-}
+
 deriving instance Eq (AlonzoPParams Identity era)
 
 deriving instance Ord (AlonzoPParams Identity era)
@@ -312,8 +324,8 @@ instance EraPParams AlonzoEra where
   downgradePParamsHKD = downgradeAlonzoPParams
   emptyUpgradePParamsUpdate = emptyAlonzoUpgradePParamsUpdate
 
-  hkdMinFeeACompactL = lens appMinFeeA $ \pp x -> pp {appMinFeeA = x}
-  hkdMinFeeBCompactL = lens appMinFeeB $ \pp x -> pp {appMinFeeB = x}
+  hkdTxFeePerByteL = lens appTxFeePerByte $ \pp x -> pp {appTxFeePerByte = x}
+  hkdTxFeeFixedCompactL = lens appTxFeeFixed $ \pp x -> pp {appTxFeeFixed = x}
   hkdMaxBBSizeL = lens appMaxBBSize $ \pp x -> pp {appMaxBBSize = x}
   hkdMaxTxSizeL = lens appMaxTxSize $ \pp x -> pp {appMaxTxSize = x}
   hkdMaxBHSizeL = lens appMaxBHSize $ \pp x -> pp {appMaxBHSize = x}
@@ -331,8 +343,8 @@ instance EraPParams AlonzoEra where
   hkdMinPoolCostCompactL = lens appMinPoolCost $ \pp x -> pp {appMinPoolCost = x}
 
   eraPParams =
-    [ ppMinFeeA
-    , ppMinFeeB
+    [ ppTxFeePerByte
+    , ppTxFeeFixed
     , ppMaxBBSize
     , ppMaxTxSize
     , ppMaxBHSize
@@ -470,8 +482,8 @@ instance NFData (DowngradeAlonzoPParams Identity)
 emptyAlonzoPParams :: forall era. Era era => AlonzoPParams Identity era
 emptyAlonzoPParams =
   AlonzoPParams
-    { appMinFeeA = CompactCoin 0
-    , appMinFeeB = CompactCoin 0
+    { appTxFeePerByte = CoinPerByte $ CompactCoin 0
+    , appTxFeeFixed = CompactCoin 0
     , appMaxBBSize = 0
     , appMaxTxSize = 2048
     , appMaxBHSize = 0
@@ -500,8 +512,8 @@ emptyAlonzoPParams =
 emptyAlonzoPParamsUpdate :: AlonzoPParams StrictMaybe era
 emptyAlonzoPParamsUpdate =
   AlonzoPParams
-    { appMinFeeA = SNothing
-    , appMinFeeB = SNothing
+    { appTxFeePerByte = SNothing
+    , appTxFeeFixed = SNothing
     , appMaxBBSize = SNothing
     , appMaxTxSize = SNothing
     , appMaxBHSize = SNothing
@@ -594,8 +606,8 @@ upgradeAlonzoPParams ::
   AlonzoPParams f era2
 upgradeAlonzoPParams UpgradeAlonzoPParams {..} ShelleyPParams {..} =
   AlonzoPParams
-    { appMinFeeA = sppMinFeeA
-    , appMinFeeB = sppMinFeeB
+    { appTxFeePerByte = sppTxFeePerByte
+    , appTxFeeFixed = sppTxFeeFixed
     , appMaxBBSize = sppMaxBBSize
     , appMaxTxSize = sppMaxTxSize
     , appMaxBHSize = sppMaxBHSize
@@ -625,8 +637,8 @@ upgradeAlonzoPParams UpgradeAlonzoPParams {..} ShelleyPParams {..} =
 downgradeAlonzoPParams :: DowngradeAlonzoPParams f -> AlonzoPParams f era2 -> ShelleyPParams f era1
 downgradeAlonzoPParams DowngradeAlonzoPParams {dappMinUTxOValue} AlonzoPParams {..} =
   ShelleyPParams
-    { sppMinFeeA = appMinFeeA
-    , sppMinFeeB = appMinFeeB
+    { sppTxFeePerByte = appTxFeePerByte
+    , sppTxFeeFixed = appTxFeeFixed
     , sppMaxBBSize = appMaxBBSize
     , sppMaxTxSize = appMaxTxSize
     , sppMaxBHSize = appMaxBHSize

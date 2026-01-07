@@ -22,15 +22,19 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovPredFailure (UnelectedCommitteeVoters),
   ConwayLedgerPredFailure (..),
   ConwayUtxoPredFailure (BadInputsUTxO),
+  PredicateFailure,
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError (..), applyTx, mkMempoolEnv)
+import Cardano.Ledger.Shelley.API.Mempool (applyTx, mkMempoolEnv)
 import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad.Reader (asks)
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import qualified Data.Text as T
 import Data.Word (Word32)
 import GHC.Exts (fromList)
@@ -212,6 +216,11 @@ spec = do
 
   describe "Mempool" $ do
     let
+      submitFailingMempoolTx ::
+        String ->
+        Tx TopTx era ->
+        NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+        ImpM (LedgerSpec era) (Tx TopTx era)
       submitFailingMempoolTx cause tx expectedFailures = do
         globals <- use impGlobalsL
         nes <- use impNESL
@@ -223,13 +232,21 @@ spec = do
         logToExpr txFixed
         case applyTx globals mempoolEnv ls txFixed of
           Left err -> do
-            err `shouldBe` ApplyTxError @era expectedFailures
+            err `shouldBe` inject expectedFailures
           Right _ ->
             assertFailure $ "Expected failure due to " <> cause <> ": " <> show txFixed
         pure txFixed
+      submitFailingMempoolTx_ ::
+        String ->
+        Tx TopTx era ->
+        NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+        ImpM (LedgerSpec era) ()
       submitFailingMempoolTx_ c t = void . submitFailingMempoolTx c t
 
-    it "Duplicate transactions" $ do
+    -- We disable this test for Dijkstra, for now.
+    -- It will need to be moved to its own `MempoolSpec` module and enabled for Dijkstra as well
+    -- when we start calling `applyTx` in ImpSpec, instead of directly the `LEDGER` rule
+    it "Duplicate transactions" $ whenMajorVersionAtMost @11 $ do
       let
         newInput = do
           addr <- freshKeyAddr_
@@ -237,6 +254,9 @@ spec = do
           sendCoinTo addr amount
 
       inputsCommon <- replicateM 5 newInput
+      inputsCommonNES <- case NES.fromFoldable inputsCommon of
+        Nothing -> error "Impossible empty set"
+        Just nes -> pure nes
       inputs1 <- replicateM 2 newInput
       inputs2 <- replicateM 3 newInput
 
@@ -248,7 +268,7 @@ spec = do
       impAnn "Identical transaction" $ do
         withNoFixup $
           submitFailingMempoolTx_ "duplicate transaction" txFinal $
-            pure . injectFailure . ConwayMempoolFailure $
+            NonEmpty.singleton . injectFailure . ConwayMempoolFailure $
               "All inputs are spent. Transaction has probably already been included"
 
       impAnn "Overlapping transaction" $ do
@@ -256,7 +276,7 @@ spec = do
         submitFailingMempoolTx_
           "overlapping transaction"
           txOverlap
-          [injectFailure $ BadInputsUTxO $ fromList inputsCommon]
+          [injectFailure $ BadInputsUTxO inputsCommonNES]
 
     it "Unelected Committee voting" $ whenPostBootstrap $ do
       _ <- registerInitialCommittee
@@ -293,6 +313,6 @@ spec = do
         else do
           txFixed <-
             submitFailingMempoolTx "unallowed votes" tx $
-              pure . injectFailure . ConwayMempoolFailure $
+              NonEmpty.singleton . injectFailure . ConwayMempoolFailure $
                 "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
           withNoFixup $ submitTx_ txFixed

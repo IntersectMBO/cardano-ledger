@@ -60,7 +60,7 @@ import Data.Foldable (toList)
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
+import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -70,7 +70,7 @@ import Validation
 -- ==========================================================
 
 data AllegraUtxoPredFailure era
-  = BadInputsUTxO (Set TxIn) -- The bad transaction inputs
+  = BadInputsUTxO (NonEmptySet TxIn) -- The bad transaction inputs
   | OutsideValidityIntervalUTxO
       ValidityInterval -- transaction's validity interval
       SlotNo -- current slot
@@ -80,10 +80,10 @@ data AllegraUtxoPredFailure era
   | ValueNotConservedUTxO (Mismatch RelEQ (Value era)) -- Consumed, then produced
   | WrongNetwork
       Network -- the expected network id
-      (Set Addr) -- the set of addresses with incorrect network IDs
+      (NonEmptySet Addr) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       Network -- the expected network id
-      (Set RewardAccount) -- the set of reward addresses with incorrect network IDs
+      (NonEmptySet RewardAccount) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       (NonEmpty (TxOut era)) -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures

@@ -289,8 +289,8 @@ shelleyGenesis =
       \    \"maxTxSize\": 16384,\
       \    \"maxBlockBodySize\": 65536,\
       \    \"maxBlockHeaderSize\": 1100,\
-      \    \"minFeeA\": 44,\
-      \    \"minFeeB\": 155381,\
+      \    \"txFeePerByte\": 44,\
+      \    \"txFeeFixed\": 155381,\
       \    \"minUTxOValue\": 1000000,\
       \    \"poolDeposit\": 500000000,\
       \    \"minPoolCost\": 340000000,\

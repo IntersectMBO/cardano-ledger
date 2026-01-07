@@ -27,6 +27,10 @@ module Cardano.Ledger.Dijkstra.PParams (
   ppuRefScriptCostStrideL,
   ppuMaxRefScriptSizePerTxL,
   ppuMaxRefScriptSizePerBlockL,
+
+  -- * Deprecated
+  dppMinFeeA,
+  dppMinFeeB,
 ) where
 
 import Cardano.Ledger.Alonzo.PParams
@@ -45,7 +49,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Core
@@ -78,9 +82,9 @@ import Numeric.Natural (Natural)
 -- * @refScriptCostStride@
 -- * @refScriptCostMultiplier@
 data DijkstraPParams f era = DijkstraPParams
-  { dppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
+  { dppTxFeePerByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
-  , dppMinFeeB :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
+  , dppTxFeeFixed :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , dppMaxBBSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
   -- ^ Maximal block body size
@@ -155,6 +159,20 @@ data DijkstraPParams f era = DijkstraPParams
   }
   deriving (Generic)
 
+dppMinFeeA ::
+  forall era f.
+  HKDFunctor f =>
+  DijkstraPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin
+dppMinFeeA p = THKD $ unTHKD (dppTxFeePerByte p) ^. hkdCoinPerByteL @f . hkdPartialCompactCoinL @f
+{-# DEPRECATED dppMinFeeA "In favor of `dppTxFeePerByte`" #-}
+
+dppMinFeeB ::
+  forall era f.
+  HKDFunctor f =>
+  DijkstraPParams f era -> THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin
+dppMinFeeB p = THKD $ unTHKD (dppTxFeeFixed p) ^. hkdPartialCompactCoinL @f
+{-# DEPRECATED dppMinFeeB "In favor of `dppTxFeeFixed`" #-}
+
 dijkstraApplyPPUpdates ::
   forall era.
   DijkstraPParams Identity era ->
@@ -162,8 +180,8 @@ dijkstraApplyPPUpdates ::
   DijkstraPParams Identity era
 dijkstraApplyPPUpdates pp ppu = do
   DijkstraPParams
-    { dppMinFeeA = ppApplyUpdate dppMinFeeA
-    , dppMinFeeB = ppApplyUpdate dppMinFeeB
+    { dppTxFeePerByte = ppApplyUpdate dppTxFeePerByte
+    , dppTxFeeFixed = ppApplyUpdate dppTxFeeFixed
     , dppMaxBBSize = ppApplyUpdate dppMaxBBSize
     , dppMaxTxSize = ppApplyUpdate dppMaxTxSize
     , dppMaxBHSize = ppApplyUpdate dppMaxBHSize
@@ -293,8 +311,8 @@ upgradeDijkstraPParams ::
   DijkstraPParams f DijkstraEra
 upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
   DijkstraPParams
-    { dppMinFeeA = cppMinFeeA
-    , dppMinFeeB = cppMinFeeB
+    { dppTxFeePerByte = cppTxFeePerByte
+    , dppTxFeeFixed = cppTxFeeFixed
     , dppMaxBBSize = cppMaxBBSize
     , dppMaxTxSize = cppMaxTxSize
     , dppMaxBHSize = cppMaxBHSize
@@ -333,8 +351,8 @@ upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
 downgradeDijkstraPParams :: DijkstraPParams f DijkstraEra -> ConwayPParams f ConwayEra
 downgradeDijkstraPParams DijkstraPParams {..} =
   ConwayPParams
-    { cppMinFeeA = dppMinFeeA
-    , cppMinFeeB = dppMinFeeB
+    { cppTxFeePerByte = dppTxFeePerByte
+    , cppTxFeeFixed = dppTxFeeFixed
     , cppMaxBBSize = dppMaxBBSize
     , cppMaxTxSize = dppMaxTxSize
     , cppMaxBHSize = dppMaxBHSize
@@ -381,8 +399,8 @@ instance EraPParams DijkstraEra where
   downgradePParamsHKD _ = downgradeDijkstraPParams
   emptyUpgradePParamsUpdate = emptyDijkstraUpgradePParamsUpdate
 
-  hkdMinFeeACompactL = lens (unTHKD . dppMinFeeA) $ \pp x -> pp {dppMinFeeA = THKD x}
-  hkdMinFeeBCompactL = lens (unTHKD . dppMinFeeB) $ \pp x -> pp {dppMinFeeB = THKD x}
+  hkdTxFeePerByteL = lens (unTHKD . dppTxFeePerByte) $ \pp x -> pp {dppTxFeePerByte = THKD x}
+  hkdTxFeeFixedCompactL = lens (unTHKD . dppTxFeeFixed) $ \pp x -> pp {dppTxFeeFixed = THKD x}
   hkdMaxBBSizeL = lens (unTHKD . dppMaxBBSize) $ \pp x -> pp {dppMaxBBSize = THKD x}
   hkdMaxTxSizeL = lens (unTHKD . dppMaxTxSize) $ \pp x -> pp {dppMaxTxSize = THKD x}
   hkdMaxBHSizeL = lens (unTHKD . dppMaxBHSize) $ \pp x -> pp {dppMaxBHSize = THKD x}
@@ -403,8 +421,8 @@ instance EraPParams DijkstraEra where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueCompactL = notSupportedInThisEraL
   eraPParams =
-    [ ppMinFeeA
-    , ppMinFeeB
+    [ ppTxFeePerByte
+    , ppTxFeeFixed
     , ppMaxBBSize
     , ppMaxTxSize
     , ppMaxBHSize
@@ -539,7 +557,7 @@ instance ConwayEraPParams DijkstraEra where
         isValid (/= mempty) ppuPoolDepositL
       , isValid (/= zero) ppuGovActionDepositL
       , isValid (/= zero) ppuDRepDepositL
-      , isValid ((/= zero) . unCoinPerByte) ppuCoinsPerUTxOByteL
+      , isValid ((/= CompactCoin 0) . unCoinPerByte) ppuCoinsPerUTxOByteL
       , ppu /= emptyPParamsUpdate
       , isValid (/= 0) ppuNOptL
       ]
@@ -580,8 +598,8 @@ instance ConwayEraPParams DijkstraEra where
 emptyDijkstraPParams :: forall era. Era era => DijkstraPParams Identity era
 emptyDijkstraPParams =
   DijkstraPParams
-    { dppMinFeeA = THKD (CompactCoin 0)
-    , dppMinFeeB = THKD (CompactCoin 0)
+    { dppTxFeePerByte = THKD (CoinPerByte $ CompactCoin 0)
+    , dppTxFeeFixed = THKD (CompactCoin 0)
     , dppMaxBBSize = THKD 0
     , dppMaxTxSize = THKD 2048
     , dppMaxBHSize = THKD 0
@@ -594,7 +612,7 @@ emptyDijkstraPParams =
     , dppTau = THKD minBound
     , dppProtocolVersion = ProtVer (eraProtVerLow @era) 0
     , dppMinPoolCost = THKD mempty
-    , dppCoinsPerUTxOByte = THKD (CoinPerByte $ Coin 0)
+    , dppCoinsPerUTxOByte = THKD (CoinPerByte $ CompactCoin 0)
     , dppCostModels = THKD emptyCostModels
     , dppPrices = THKD (Prices minBound minBound)
     , dppMaxTxExUnits = THKD (OrdExUnits $ ExUnits 0 0)
@@ -620,8 +638,8 @@ emptyDijkstraPParams =
 emptyDijkstraPParamsUpdate :: DijkstraPParams StrictMaybe era
 emptyDijkstraPParamsUpdate =
   DijkstraPParams
-    { dppMinFeeA = THKD SNothing
-    , dppMinFeeB = THKD SNothing
+    { dppTxFeePerByte = THKD SNothing
+    , dppTxFeeFixed = THKD SNothing
     , dppMaxBBSize = THKD SNothing
     , dppMaxTxSize = THKD SNothing
     , dppMaxBHSize = THKD SNothing

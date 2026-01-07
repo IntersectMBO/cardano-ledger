@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -20,6 +22,7 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageSupplementalDataHashes,
  )
 import Cardano.Ledger.BaseTypes (inject)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.UTxO (
   conwayConsumed,
   conwayProducedValue,
@@ -27,7 +30,7 @@ import Cardano.Ledger.Conway.UTxO (
   getConwayScriptsNeeded,
   getConwayWitsVKeyNeeded,
  )
-import Cardano.Ledger.Credential (credScriptHash)
+import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..), pattern GuardingPurpose)
@@ -35,22 +38,79 @@ import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
-import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Data.Foldable (Foldable (..))
 import Data.Maybe (catMaybes)
 import Lens.Micro ((^.))
+import Lens.Micro.Extras (view)
+
+getConsumedDijkstraValue ::
+  forall era l.
+  ( DijkstraEraTxBody era
+  , EraUTxO era
+  , Value era ~ MaryValue
+  , STxLevel l era ~ STxBothLevels l era
+  ) =>
+  PParams era ->
+  (Credential Staking -> Maybe Coin) ->
+  (Credential DRepRole -> Maybe Coin) ->
+  UTxO era ->
+  TxBody l era ->
+  Value era
+getConsumedDijkstraValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
+  withBothTxLevels
+    txBody
+    ( \topTxBody ->
+        txBodyConsumedValue topTxBody <> subTransactionsConsumedValue topTxBody
+    )
+    txBodyConsumedValue
+  where
+    txBodyConsumedValue :: forall m. TxBody m era -> Value era
+    txBodyConsumedValue = getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo
+    subTransactionsConsumedValue topTxBody =
+      foldMap'
+        (getConsumedValue pp lookupStakingDeposit lookupDRepDeposit utxo . view bodyTxL)
+        (topTxBody ^. subTransactionsTxBodyL)
+
+dijkstraProducedValue ::
+  ( DijkstraEraTxBody era
+  , EraUTxO era
+  , Value era ~ MaryValue
+  ) =>
+  PParams era ->
+  (KeyHash StakePool -> Bool) ->
+  TxBody TopTx era ->
+  MaryValue
+dijkstraProducedValue pp isRegPoolId txBody =
+  conwayProducedValue pp isRegPoolId txBody
+    <> foldMap'
+      (getProducedValue pp isRegPoolId . view bodyTxL)
+      (txBody ^. subTransactionsTxBodyL)
+
+getProducedDijkstraValue ::
+  ( STxLevel l era ~ STxBothLevels l era
+  , DijkstraEraTxBody era
+  , EraUTxO era
+  , Value era ~ MaryValue
+  ) =>
+  PParams era ->
+  (KeyHash StakePool -> Bool) ->
+  TxBody l era ->
+  MaryValue
+getProducedDijkstraValue pp isRegPoolId txBody =
+  withBothTxLevels
+    txBody
+    (dijkstraProducedValue pp isRegPoolId)
+    (dijkstraSubTxProducedValue pp isRegPoolId)
 
 instance EraUTxO DijkstraEra where
   type ScriptsNeeded DijkstraEra = AlonzoScriptsNeeded DijkstraEra
 
   consumed = conwayConsumed
 
-  getConsumedValue = getConsumedMaryValue
+  getConsumedValue = getConsumedDijkstraValue
 
-  getProducedValue pp isRegPoolId txBody =
-    withBothTxLevels
-      txBody
-      (conwayProducedValue pp isRegPoolId)
-      (dijkstraSubTxProducedValue pp isRegPoolId)
+  getProducedValue = getProducedDijkstraValue
 
   getScriptsProvided = getBabbageScriptsProvided
 

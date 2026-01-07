@@ -19,11 +19,13 @@ library
   exposed-modules:
     Data.CanonicalMaps
     Data.ListMap
+    Data.Map.NonEmpty
     Data.MapExtras
     Data.MonoTuple
     Data.OMap.Strict
     Data.OSet.Strict
     Data.Pulse
+    Data.Set.NonEmpty
     Data.Universe
 
   hs-source-dirs: src

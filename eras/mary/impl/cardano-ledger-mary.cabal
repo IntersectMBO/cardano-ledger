@@ -115,7 +115,6 @@ library cddl
     base,
     cardano-ledger-allegra:cddl,
     cardano-ledger-mary,
-    cuddle >=0.4,
 
 executable generate-cddl
   main-is: Main.hs

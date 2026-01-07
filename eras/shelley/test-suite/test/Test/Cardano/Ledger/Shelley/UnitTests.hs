@@ -52,6 +52,7 @@ import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
@@ -59,6 +60,7 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Data.Word (Word64)
 import GHC.Stack
 import Lens.Micro
@@ -123,8 +125,8 @@ mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 pp :: forall era. (EraPParams era, AtMostEra "Mary" era) => PParams era
 pp =
   emptyPParams
-    & ppMinFeeAL .~ Coin 1
-    & ppMinFeeBL .~ Coin 1
+    & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 1)
+    & ppTxFeeFixedL .~ Coin 1
     & ppKeyDepositL .~ Coin 100
     & ppPoolDepositL .~ Coin 250
     & ppMaxTxSizeL .~ 1024
@@ -329,7 +331,7 @@ testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
     [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO $ Mismatch (Coin 0) (Coin 10000)))
-    , UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ mkGenesisTxIn 42))
+    , UtxowFailure (UtxoFailure $ BadInputsUTxO (NES.singleton $ mkGenesisTxIn 42))
     ]
     $ aliceGivesBobLovelace
     $ AliceToBob
@@ -360,7 +362,7 @@ testWitnessNotIncluded =
           SNothing
           SNothing
       tx = ShelleyTx @ShelleyEra txbody mempty SNothing
-      txwits = Set.singleton (asWitness $ hashKey $ vKey alicePay)
+      txwits = NES.singleton (asWitness $ hashKey $ vKey alicePay)
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW txwits
@@ -381,7 +383,7 @@ testSpendNotOwnedUTxO =
           SNothing
       aliceWit = mkWitnessVKey (hashAnnotated txbody) alicePay
       tx = MkShelleyTx $ ShelleyTx @ShelleyEra txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
-      txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
+      txwits = NES.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW txwits
@@ -412,7 +414,7 @@ testWitnessWrongUTxO =
           SNothing
       aliceWit = mkWitnessVKey (hashAnnotated tx2body) alicePay
       tx = ShelleyTx @ShelleyEra txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
-      txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
+      txwits = NES.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
             InvalidWitnessesUTXOW
@@ -526,7 +528,7 @@ testWithdrawalNoWit =
       txwits :: ShelleyTxWits ShelleyEra
       txwits = mempty {addrWits = Set.singleton $ mkWitnessVKey (hashAnnotated txb) alicePay}
       tx = ShelleyTx @ShelleyEra txb txwits SNothing
-      missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
+      missing = NES.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
         [ UtxowFailure $ MissingVKeyWitnessesUTXOW missing
         ]
@@ -560,8 +562,9 @@ testWithdrawalWrongAmt =
       dpState' = addReward dpState (raCredential rAccount) (Coin 10)
       tx = MkShelleyTx $ ShelleyTx @ShelleyEra txb txwits SNothing
       errs =
-        [ ShelleyIncompleteWithdrawals
-            [(rAccount, Mismatch (Coin 11) (Coin 10))]
+        [ ShelleyIncompleteWithdrawals $
+            NEM.singleton rAccount $
+              Mismatch (Coin 11) (Coin 10)
         ]
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 

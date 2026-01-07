@@ -16,7 +16,9 @@ module Test.Cardano.Ledger.TreeDiff (
 ) where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.BHeaderView
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Block
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -34,6 +36,7 @@ import Cardano.Ledger.TxIn
 import Data.Functor.Identity
 import Data.TreeDiff.OMap
 import GHC.TypeLits
+import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.Binary.TreeDiff
 import Test.Data.VMap.TreeDiff ()
 
@@ -173,6 +176,8 @@ deriving newtype instance
 deriving newtype instance
   ToExpr (PParamsHKD StrictMaybe era) => ToExpr (PParamsUpdate era)
 
+deriving newtype instance ToExpr CoinPerByte
+
 instance ToExpr TxIn
 
 instance ToExpr TxId
@@ -251,3 +256,7 @@ instance ToExpr a => ToExpr (NonZero a) where
 
 instance ToExpr PositiveInterval where
   toExpr = toExpr . unboundRational
+
+instance ToExpr BHeaderView
+
+instance (ToExpr h, ToExpr (BlockBody era)) => ToExpr (Block h era)

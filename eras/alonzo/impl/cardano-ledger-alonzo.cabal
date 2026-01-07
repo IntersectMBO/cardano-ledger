@@ -124,7 +124,6 @@ library cddl
     base,
     cardano-ledger-alonzo,
     cardano-ledger-mary:cddl,
-    cuddle >=0.4,
     heredoc,
 
 executable generate-cddl
@@ -159,6 +158,7 @@ library testlib
     Test.Cardano.Ledger.Alonzo.Era
     Test.Cardano.Ledger.Alonzo.Examples
     Test.Cardano.Ledger.Alonzo.Imp
+    Test.Cardano.Ledger.Alonzo.Imp.BbodySpec
     Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec
     Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec
     Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec

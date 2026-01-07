@@ -16,7 +16,7 @@ source-repository-package
   subdir: hs
   -- !WARNING!:
   -- MAKE SURE THIS POINTS TO A COMMIT IN `*-artifacts` BEFORE MERGE!
-  tag: 99420c6806ed42c4c2e8bb74c593d161fd821456
+  tag: 9291fe30190180631e79589c506a062e95123961
 
 source-repository-package
   type: git
@@ -27,8 +27,8 @@ source-repository-package
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
-  , hackage.haskell.org 2025-09-30T00:00:00Z
-  , cardano-haskell-packages 2025-12-01T07:41:27Z
+  , hackage.haskell.org 2025-12-11T11:28:18Z
+  , cardano-haskell-packages 2025-12-10T11:48:32Z
 
 packages:
   -- == Byron era ==

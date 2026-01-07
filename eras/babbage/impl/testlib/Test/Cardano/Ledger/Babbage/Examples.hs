@@ -13,12 +13,12 @@ module Test.Cardano.Ledger.Babbage.Examples (
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
 import Cardano.Ledger.Alonzo.Translation ()
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage (ApplyTxError (BabbageApplyTxError), BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (
@@ -27,7 +27,6 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (..),
   Network (..),
   NewEpochState (..),
   ProposedPPUpdates (..),
@@ -62,7 +61,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
 ledgerExamples :: LedgerExamples BabbageEra
 ledgerExamples =
   mkLedgerExamples
-    ( ApplyTxError $
+    ( BabbageApplyTxError $
         pure $
           DelegsFailure $
             DelegateeNotRegisteredDELEG @BabbageEra (mkKeyHash 1)
@@ -80,7 +79,7 @@ exampleBabbageNewEpochState =
   exampleNewEpochState
     (exampleMultiAssetValue 1)
     emptyPParams
-    (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))
+    (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 1))
 
 exampleTxBabbage :: Tx TopTx BabbageEra
 exampleTxBabbage =

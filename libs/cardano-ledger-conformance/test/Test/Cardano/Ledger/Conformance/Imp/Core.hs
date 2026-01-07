@@ -119,8 +119,8 @@ submitTxConformanceHook globals trc@(TRC (env, state, signal)) =
   where
     ctx =
       ConwayLedgerExecContext
-        { clecPolicyHash =
-            state ^. lsUTxOStateL . utxosGovStateL . constitutionGovStateL . constitutionScriptL
+        { clecGuardrailsScriptHash =
+            state ^. lsUTxOStateL . utxosGovStateL . constitutionGovStateL . constitutionGuardrailsScriptHashL
         , clecEnactState = mkEnactState $ state ^. lsUTxOStateL . utxosGovStateL
         , clecUtxoExecContext =
             UtxoExecContext

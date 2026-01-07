@@ -118,7 +118,6 @@ library cddl
     base,
     cardano-ledger-alonzo:cddl,
     cardano-ledger-babbage,
-    cuddle >=0.4,
     heredoc,
 
 executable generate-cddl
@@ -176,6 +175,7 @@ library testlib
     QuickCheck,
     base,
     bytestring,
+    cardano-data,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-babbage,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},

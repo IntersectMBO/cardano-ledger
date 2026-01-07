@@ -2,6 +2,8 @@
 
 ## 1.3.0.0
 
+* Add `Data.Map.NonEmpty`
+* Add `Data.Set.NonEmpty`
 * Add `lookupInternMap`
 * Replace `okeyL` with `toOKey`
 

@@ -142,9 +142,7 @@ library cddl
     base,
     cardano-ledger-babbage:cddl,
     cardano-ledger-conway,
-    cuddle >=0.4,
     heredoc,
-    text,
 
 executable generate-cddl
   main-is: Main.hs

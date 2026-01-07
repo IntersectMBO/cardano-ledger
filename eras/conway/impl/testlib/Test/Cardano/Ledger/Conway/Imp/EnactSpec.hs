@@ -23,7 +23,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
 import Cardano.Ledger.Val (zero, (<->))
 import Control.Monad (forM)
-import Control.Monad.Writer (listen)
 import Data.Default (def)
 import Data.Foldable as F (foldl', traverse_)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -214,18 +213,18 @@ hardForkInitiationSpec =
     submitYesVote_ (DRepVoter dRep1) govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd <*> pure []
+      & impEventsFrom
+      >>= expectHardForkEvents <*> pure []
     getProtVer `shouldReturn` curProtVer
     submitYesVote_ (DRepVoter dRep2) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd <*> pure []
+      & impEventsFrom
+      >>= expectHardForkEvents <*> pure []
     getProtVer `shouldReturn` curProtVer
     submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd
+      & impEventsFrom
+      >>= expectHardForkEvents
         <*> pure
           [ SomeSTSEvent @era @"TICK" . injectEvent $ ConwayHardForkEvent nextProtVer
           ]
@@ -255,13 +254,13 @@ hardForkInitiationNoDRepsSpec =
     submitYesVoteCCs_ committeeMembers' govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd <*> pure []
+      & impEventsFrom
+      >>= expectHardForkEvents <*> pure []
     getProtVer `shouldReturn` curProtVer
     submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd
+      & impEventsFrom
+      >>= expectHardForkEvents
         <*> pure
           [ SomeSTSEvent @era @"TICK" . injectEvent $ ConwayHardForkEvent nextProtVer
           ]
@@ -436,7 +435,7 @@ actionPrioritySpec =
 
     -- distinct constitutional values for minFee
     let genMinFeeVals =
-          (\x y z -> (Coin x, Coin y, Coin z))
+          (\x y z -> (CoinPerByte $ CompactCoin x, CoinPerByte $ CompactCoin y, CoinPerByte $ CompactCoin z))
             <$> uniformRM (30, 330)
             <*> uniformRM (330, 660)
             <*> uniformRM (660, 1000)
@@ -451,15 +450,15 @@ actionPrioritySpec =
       pGai0 <-
         submitParameterChange
           SNothing
-          $ def & ppuMinFeeAL .~ SJust val1
+          $ def & ppuTxFeePerByteL .~ SJust val1
       pGai1 <-
         submitParameterChange
           (SJust pGai0)
-          $ def & ppuMinFeeAL .~ SJust val2
+          $ def & ppuTxFeePerByteL .~ SJust val2
       pGai2 <-
         submitParameterChange
           (SJust pGai1)
-          $ def & ppuMinFeeAL .~ SJust val3
+          $ def & ppuTxFeePerByteL .~ SJust val3
       traverse_ @[]
         ( \gaid -> do
             submitYesVote_ (StakePoolVoter spoC) gaid
@@ -470,7 +469,7 @@ actionPrioritySpec =
       getLastEnactedParameterChange
         `shouldReturn` SJust (GovPurposeId pGai2)
       expectNoCurrentProposals
-      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
+      getsNES (nesEsL . curPParamsEpochStateL . ppTxFeePerByteL)
         `shouldReturn` val3
 
     it "only the first action of a transaction gets enacted" $ do
@@ -486,15 +485,15 @@ actionPrioritySpec =
           NE.fromList
             [ ParameterChange
                 SNothing
-                (def & ppuMinFeeAL .~ SJust val1)
+                (def & ppuTxFeePerByteL .~ SJust val1)
                 policy
             , ParameterChange
                 SNothing
-                (def & ppuMinFeeAL .~ SJust val2)
+                (def & ppuTxFeePerByteL .~ SJust val2)
                 policy
             , ParameterChange
                 SNothing
-                (def & ppuMinFeeAL .~ SJust val3)
+                (def & ppuTxFeePerByteL .~ SJust val3)
                 policy
             ]
       traverse_
@@ -504,7 +503,7 @@ actionPrioritySpec =
         )
         gaids
       passNEpochs 2
-      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
+      getsNES (nesEsL . curPParamsEpochStateL . ppTxFeePerByteL)
         `shouldReturn` val1
       expectNoCurrentProposals
 

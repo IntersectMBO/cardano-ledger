@@ -6,7 +6,7 @@
 module Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -74,7 +74,7 @@ spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitPr
     modifyPParams $ \pp ->
       pp
         & ppCommitteeMaxTermLengthL .~ maxTermLength
-        & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
+        & ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 1)
         & ppCommitteeMinSizeL .~ 2
     (credDRep, _, _) <- setupSingleDRep 300
     (credSPO, _, _) <- setupPoolWithStake $ Coin 1_000_000

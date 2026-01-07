@@ -60,7 +60,7 @@ import Cardano.Ledger.Binary.Crypto (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (
   DSIGN,
@@ -604,7 +604,7 @@ tests =
         (emptyPParamsUpdate @ShelleyEra & ppuKeyDepositL .~ SJust (Coin 5))
         ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5))
     , -- checkEncodingCBOR "pparams_update_all"
-      let minfeea = Coin 0
+      let minfeea = CompactCoin 0
           minfeeb = Coin 1
           maxbbsize = 2
           maxtxsize = 3
@@ -625,8 +625,8 @@ tests =
             shelleyProtVer
             "pparams_update_all"
             ( emptyPParamsUpdate @ShelleyEra
-                & ppuMinFeeAL .~ SJust minfeea
-                & ppuMinFeeBL .~ SJust minfeeb
+                & ppuTxFeePerByteL .~ SJust (CoinPerByte minfeea)
+                & ppuTxFeeFixedL .~ SJust minfeeb
                 & ppuMaxBBSizeL .~ SJust maxbbsize
                 & ppuMaxTxSizeL .~ SJust maxtxsize
                 & ppuMaxBHSizeL .~ SJust maxbhsize

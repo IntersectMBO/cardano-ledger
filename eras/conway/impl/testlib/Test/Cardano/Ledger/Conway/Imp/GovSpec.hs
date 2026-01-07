@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Conway.Imp.GovSpec (spec) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (hardforkConwayDisallowUnelectedCommitteeFromVoting)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -30,10 +30,12 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Val (zero, (<->))
 import Data.Default (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Data.Tree
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -105,7 +107,7 @@ predicateFailuresSpec =
               (0 %! 1)
       passEpoch
       let expectedFailure =
-            injectFailure $ ExpirationEpochTooSmall $ Map.singleton committeeC expiration
+            injectFailure $ ExpirationEpochTooSmall $ NEM.singleton committeeC expiration
       proposal <- mkProposal action
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrapAndPostBootstrap
@@ -142,7 +144,7 @@ predicateFailuresSpec =
               (Set.singleton committeeC)
               (Map.singleton committeeC (addEpochInterval curEpochNo (EpochInterval 1)))
               (1 %! 1)
-      let expectedFailure = injectFailure $ ConflictingCommitteeUpdate $ Set.singleton committeeC
+      let expectedFailure = injectFailure $ ConflictingCommitteeUpdate $ NES.singleton committeeC
       proposal <- mkProposal action
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrapAndPostBootstrap $
@@ -292,7 +294,7 @@ proposalsSpec = do
                          , Node SNothing []
                          ]
       it "Subtrees are pruned when proposals expire over multiple rounds" $ do
-        let ppupdate = def & ppuMinFeeAL .~ SJust (Coin 1000)
+        let ppupdate = def & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 1000)
         let submitInitialProposal = submitParameterChange SNothing ppupdate
         let submitChildProposal parent = submitParameterChange (SJust parent) ppupdate
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
@@ -733,7 +735,7 @@ proposalsSpec = do
     submitParameterChangeForest = submitGovActionForest $ paramAction >=> submitGovAction
     submitParameterChangeTree = submitGovActionTree (paramAction >=> submitGovAction)
     submitConstitutionForest = submitGovActionForest $ submitConstitution . fmap GovPurposeId
-    paramAction p = mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin 500))
+    paramAction p = mkParameterChangeGovAction p (def & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 500))
 
 votingSpec ::
   forall era.
@@ -858,7 +860,7 @@ votingSpec =
           NewConstitution
             SNothing
             Constitution
-              { constitutionScript = SNothing
+              { constitutionGuardrailsScriptHash = SNothing
               , constitutionAnchor = anchor
               }
       submitYesVote_ (DRepVoter dRepCred) constitutionChangeId
@@ -886,7 +888,7 @@ votingSpec =
       gaId <-
         submitParameterChange SNothing $
           def
-            & ppuMinFeeAL .~ SJust (Coin 100)
+            & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 100)
       submitVote_ @era VoteYes (StakePoolVoter spoHash) gaId
 
 constitutionSpec ::
@@ -1006,7 +1008,7 @@ policySpec =
         mkProposal (ParameterChange SNothing pparamsUpdate (SJust wrongScriptHash))
           >>= flip
             submitFailingProposal
-            [injectFailure $ InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)]
+            [injectFailure $ InvalidGuardrailsScriptHash (SJust wrongScriptHash) (SJust scriptHash)]
 
       impAnn "TreasuryWithdrawals with invalid policy fails" $ do
         rewardAccount <- registerRewardAccount
@@ -1014,7 +1016,7 @@ policySpec =
         mkProposal (TreasuryWithdrawals withdrawals (SJust wrongScriptHash))
           >>= flip
             submitFailingProposal
-            [injectFailure $ InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)]
+            [injectFailure $ InvalidGuardrailsScriptHash (SJust wrongScriptHash) (SJust scriptHash)]
 
 networkIdSpec ::
   forall era.
@@ -1089,7 +1091,7 @@ withdrawalsSpec =
         mkTreasuryWithdrawalsGovAction [(badRewardAccount, Coin 100_000_000)] >>= mkProposal
       let idMismatch =
             injectFailure $
-              TreasuryWithdrawalsNetworkIdMismatch (Set.singleton badRewardAccount) Testnet
+              TreasuryWithdrawalsNetworkIdMismatch (NES.singleton badRewardAccount) Testnet
           returnAddress =
             injectFailure $
               TreasuryWithdrawalReturnAccountsDoNotExist [badRewardAccount]

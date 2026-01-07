@@ -54,7 +54,6 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
   conwayGovCertVKeyWitness,
   conwayTotalDepositsTxCerts,
-  conwayTotalRefundsTxCerts,
   conwayTxCertDelegDecoder,
  )
 import Cardano.Ledger.Core (
@@ -77,9 +76,10 @@ import Cardano.Ledger.Shelley.TxCert (
   encodeShelleyDelegCert,
   poolTxCertDecoder,
  )
-import Cardano.Ledger.Val (Val)
+import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue ((.=)), ToJSON (..))
+import Data.Foldable (Foldable (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -223,6 +223,18 @@ instance Era era => EncCBOR (DijkstraTxCert era) where
     DijkstraTxCertPool poolCert -> encodePoolCert poolCert
     DijkstraTxCertGov govCert -> encCBOR govCert
 
+-- | Unlike previous eras, we no longer need to lookup refunds from the ledger state, since all of the certificates specify the actual refund and ledger rules will validate that they are accurate.
+dijkstraTotalRefundsTxCerts ::
+  ( Foldable f
+  , ConwayEraTxCert era
+  ) =>
+  f (TxCert era) ->
+  Coin
+dijkstraTotalRefundsTxCerts = foldMap' $ \case
+  UnRegDepositTxCert _ deposit -> deposit
+  UnRegDRepTxCert _ deposit -> deposit
+  _ -> zero
+
 instance EraTxCert DijkstraEra where
   type TxCert DijkstraEra = DijkstraTxCert DijkstraEra
 
@@ -268,7 +280,7 @@ instance EraTxCert DijkstraEra where
     UnRegDepositTxCert c _ -> Just c
     _ -> Nothing
 
-  getTotalRefundsTxCerts = conwayTotalRefundsTxCerts
+  getTotalRefundsTxCerts _ _ _ = dijkstraTotalRefundsTxCerts
 
   getTotalDepositsTxCerts = conwayTotalDepositsTxCerts
 

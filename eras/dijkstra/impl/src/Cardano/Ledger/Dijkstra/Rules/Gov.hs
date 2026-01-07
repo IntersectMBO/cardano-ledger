@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -19,6 +20,7 @@
 module Cardano.Ledger.Dijkstra.Rules.Gov (
   DijkstraGOV,
   DijkstraGovPredFailure (..),
+  pattern InvalidPolicyHash,
   conwayToDijkstraGovPredFailure,
 ) where
 
@@ -74,8 +76,8 @@ import Control.State.Transition.Extended (
   STS (..),
  )
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
+import Data.Map.NonEmpty (NonEmptyMap)
+import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -83,7 +85,7 @@ data DijkstraGovPredFailure era
   = GovActionsDoNotExist (NonEmpty GovActionId)
   | MalformedProposal (GovAction era)
   | ProposalProcedureNetworkIdMismatch RewardAccount Network
-  | TreasuryWithdrawalsNetworkIdMismatch (Set.Set RewardAccount) Network
+  | TreasuryWithdrawalsNetworkIdMismatch (NonEmptySet RewardAccount) Network
   | ProposalDepositIncorrect (Mismatch RelEQ Coin)
   | -- | Some governance actions are not allowed to be voted on by certain types of
     -- Voters. This failure lists all governance action ids with their respective voters
@@ -91,10 +93,10 @@ data DijkstraGovPredFailure era
     DisallowedVoters (NonEmpty (Voter, GovActionId))
   | ConflictingCommitteeUpdate
       -- | Credentials that are mentioned as members to be both removed and added
-      (Set.Set (Credential ColdCommitteeRole))
+      (NonEmptySet (Credential ColdCommitteeRole))
   | ExpirationEpochTooSmall
       -- | Members for which the expiration epoch has already been reached
-      (Map.Map (Credential ColdCommitteeRole) EpochNo)
+      (NonEmptyMap (Credential ColdCommitteeRole) EpochNo)
   | InvalidPrevGovActionId (ProposalProcedure era)
   | VotingOnExpiredGovAction (NonEmpty (Voter, GovActionId))
   | ProposalCantFollow
@@ -102,10 +104,10 @@ data DijkstraGovPredFailure era
       (StrictMaybe (GovPurposeId 'HardForkPurpose))
       -- | Its protocol version and the protocal version of the previous gov-action pointed to by the proposal
       (Mismatch RelGT ProtVer)
-  | InvalidPolicyHash
-      -- | The policy script hash in the proposal
+  | InvalidGuardrailsScriptHash
+      -- | The guardrails script hash in the proposal
       (StrictMaybe ScriptHash)
-      -- | The policy script hash of the current constitution
+      -- | The guardrails script hash of the current constitution
       (StrictMaybe ScriptHash)
   | DisallowedProposalDuringBootstrap (ProposalProcedure era)
   | DisallowedVotesDuringBootstrap
@@ -121,6 +123,11 @@ data DijkstraGovPredFailure era
   | -- | Disallow votes by unelected committee members
     UnelectedCommitteeVoters (NonEmpty (Credential HotCommitteeRole))
   deriving (Eq, Show, Generic)
+
+{-# DEPRECATED InvalidPolicyHash "In favor of `InvalidGuardrailsScriptHash`" #-}
+pattern InvalidPolicyHash ::
+  StrictMaybe ScriptHash -> StrictMaybe ScriptHash -> DijkstraGovPredFailure era
+pattern InvalidPolicyHash got expected = InvalidGuardrailsScriptHash got expected
 
 type instance EraRuleFailure "GOV" DijkstraEra = DijkstraGovPredFailure DijkstraEra
 
@@ -148,7 +155,7 @@ instance EraPParams era => DecCBOR (DijkstraGovPredFailure era) where
     8 -> SumD InvalidPrevGovActionId <! From
     9 -> SumD VotingOnExpiredGovAction <! From
     10 -> SumD ProposalCantFollow <! From <! From
-    11 -> SumD InvalidPolicyHash <! From <! From
+    11 -> SumD InvalidGuardrailsScriptHash <! From <! From
     12 -> SumD DisallowedProposalDuringBootstrap <! From
     13 -> SumD DisallowedVotesDuringBootstrap <! From
     14 -> SumD VotersDoNotExist <! From
@@ -183,8 +190,8 @@ instance EraPParams era => EncCBOR (DijkstraGovPredFailure era) where
         Sum VotingOnExpiredGovAction 9 !> To ga
       ProposalCantFollow prevgaid mm ->
         Sum ProposalCantFollow 10 !> To prevgaid !> To mm
-      InvalidPolicyHash got expected ->
-        Sum InvalidPolicyHash 11 !> To got !> To expected
+      InvalidGuardrailsScriptHash got expected ->
+        Sum InvalidGuardrailsScriptHash 11 !> To got !> To expected
       DisallowedProposalDuringBootstrap proposal ->
         Sum DisallowedProposalDuringBootstrap 12 !> To proposal
       DisallowedVotesDuringBootstrap votes ->
@@ -241,7 +248,7 @@ conwayToDijkstraGovPredFailure = \case
   Conway.InvalidPrevGovActionId pp -> InvalidPrevGovActionId pp
   Conway.VotingOnExpiredGovAction ga -> VotingOnExpiredGovAction ga
   Conway.ProposalCantFollow gpId mm -> ProposalCantFollow gpId mm
-  Conway.InvalidPolicyHash sh1 sh2 -> InvalidPolicyHash sh1 sh2
+  Conway.InvalidGuardrailsScriptHash sh1 sh2 -> InvalidGuardrailsScriptHash sh1 sh2
   Conway.DisallowedProposalDuringBootstrap pp -> DisallowedProposalDuringBootstrap pp
   Conway.DisallowedVotesDuringBootstrap vs -> DisallowedVotesDuringBootstrap vs
   Conway.VotersDoNotExist vs -> VotersDoNotExist vs

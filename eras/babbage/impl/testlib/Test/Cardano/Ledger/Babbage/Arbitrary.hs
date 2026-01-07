@@ -27,8 +27,6 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)
 import Test.QuickCheck
 
-deriving instance Arbitrary CoinPerByte
-
 instance Arbitrary (BabbagePParams Identity era) where
   arbitrary =
     BabbagePParams
@@ -150,3 +148,5 @@ instance Arbitrary (TxBody TopTx BabbageEra) where
 deriving newtype instance Arbitrary (TransitionConfig BabbageEra)
 
 deriving newtype instance Arbitrary (Tx TopTx BabbageEra)
+
+deriving newtype instance Arbitrary (ApplyTxError BabbageEra)

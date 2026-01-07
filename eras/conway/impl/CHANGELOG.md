@@ -2,11 +2,23 @@
 
 ## 1.21.0.0
 
+* Add `conwayLedgerTransitionTRC`
+* Deprecate
+  - `constitutionScriptL` in favor of new `constitutionGuardrailsScriptHashL`
+  - `InvalidPolicyHash` in favor of new `InvalidGuardrailsScriptHash`
+  - `checkPolicy` in favor of new `checkGuardrailsScriptHash`
+* Rename `gePPolicy` to `geGuardrailsScriptHash`
+* Add `ConwayApplyTxError` constructor for `ApplyTxError era`
+* Renamed:
+  - `cppMinFeeA` -> `cppTxFeePerByte`
+  - `cppMinFeeB` -> `cppTxFeeFixed`
+* Changed type of `cppMinFeeA` to `CoinPerByte`
+* Change sets containing errors into `NonEmptySet` for `ConwayGovPredFailure`, `ConwayUtxoPredFailure`, `ConwayUtxowPredFailure`
+* Change all maps into `NonEmptyMap` for `ConwayGovPredFailure` and `ConwayLedgerPredFailure`
 * Change all lists into `NonEmpty` for `ConwayUtxoPredFailure`, `ConwayUtxosPredFailure`, `ConwayUtxowPredFailure`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Re-export `UtxoEnv` from `Cardano.Ledger.Conway.Rules.Utxo`
 * Changed the type of the following fields to `CompactForm Coin` in `ConwayPParams`:
-  - `cppMinFeeA`
   - `cppMinFeeB`
   - `cppKeyDeposit`
   - `cppMinPoolCost`
@@ -37,6 +49,8 @@
 
 ### `cddl`
 
+* Renamed `policy_hash` to `guardrails_script_hash` in governance actions to avoid confusion with multi-asset policy IDs
+* Add `HuddleRule1` instances for sets.
 * Move `cddl-files` to `cddl/data`.
 * Export for `dnsNameRule`, `urlRule`, `voteRule` among others for reuse.
 * Add full `HuddleSpec`.

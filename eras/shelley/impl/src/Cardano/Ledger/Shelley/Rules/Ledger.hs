@@ -80,11 +80,13 @@ import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
-  failOnJust,
+  failOnNonEmptyMap,
   judgmentContext,
   liftSTS,
   trans,
  )
+import Data.Map.NonEmpty (NonEmptyMap)
+import qualified Data.Map.NonEmpty as NEM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
@@ -127,7 +129,7 @@ data ShelleyLedgerPredFailure era
   = UtxowFailure (PredicateFailure (EraRule "UTXOW" era)) -- Subtransition Failures
   | DelegsFailure (PredicateFailure (EraRule "DELEGS" era)) -- Subtransition Failures
   | ShelleyWithdrawalsMissingAccounts Withdrawals
-  | ShelleyIncompleteWithdrawals (Map RewardAccount (Mismatch RelEQ Coin))
+  | ShelleyIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
   deriving (Generic)
 
 ledgerSlotNoL :: Lens' (LedgerEnv era) SlotNo
@@ -361,13 +363,11 @@ testIncompleteAndMissingWithdrawals accounts withdrawals = do
   network <- liftSTS $ asks networkId
   let (missingWithdrawals, incompleteWithdrawals) =
         case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
-          Nothing -> (Nothing, Nothing)
-          Just (missing, incomplete) ->
-            ( if null (unWithdrawals missing) then Nothing else Just missing
-            , if null incomplete then Nothing else Just incomplete
-            )
-  failOnJust missingWithdrawals $ injectFailure . ShelleyWithdrawalsMissingAccounts
-  failOnJust incompleteWithdrawals $ injectFailure . ShelleyIncompleteWithdrawals
+          Nothing -> (Map.empty, Map.empty)
+          Just (missing, incomplete) -> (unWithdrawals missing, incomplete)
+  failOnNonEmptyMap missingWithdrawals $
+    injectFailure . ShelleyWithdrawalsMissingAccounts . Withdrawals . NEM.toMap
+  failOnNonEmptyMap incompleteWithdrawals $ injectFailure . ShelleyIncompleteWithdrawals
 
 instance
   ( Era era

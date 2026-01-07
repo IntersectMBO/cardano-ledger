@@ -11,7 +11,6 @@ module Cardano.Ledger.Babbage.Core (
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Babbage.PParams (
   BabbageEraPParams (..),
-  CoinPerByte (..),
   ppCoinsPerUTxOByteL,
   ppuCoinsPerUTxOByteL,
  )

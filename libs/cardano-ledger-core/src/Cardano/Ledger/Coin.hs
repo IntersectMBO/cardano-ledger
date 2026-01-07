@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -6,6 +7,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnboxedTuples #-}
@@ -14,6 +17,7 @@ module Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (..),
   DeltaCoin (..),
+  CoinPerByte (..),
   word64ToCoin,
   coinToRational,
   rationalToCoinViaFloor,
@@ -33,6 +37,10 @@ module Cardano.Ledger.Coin (
   toCoinNonZero,
   fromCompactCoinNonZero,
   compactCoinNonZero,
+  coinPerByteL,
+  coinPerByteFL,
+  hkdPartialCompactCoinL,
+  hkdCoinPerByteL,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -52,6 +60,7 @@ import Cardano.Ledger.Binary (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.HKD (HKD, HKDFunctor, hkdMap)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Coerce (coerce)
@@ -61,6 +70,7 @@ import Data.MemPack
 import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
 import Data.Primitive.Types
+import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Stack
@@ -182,6 +192,10 @@ addCompactCoin (CompactCoin x) (CompactCoin y) = CompactCoin (x + y)
 sumCompactCoin :: Foldable t => t (CompactForm Coin) -> CompactForm Coin
 sumCompactCoin = F.foldl' addCompactCoin (CompactCoin 0)
 
+newtype CoinPerByte = CoinPerByte {unCoinPerByte :: CompactForm Coin}
+  deriving stock (Eq, Ord)
+  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
+
 -- ================================
 
 decodePositiveCoin :: String -> Decoder s Coin
@@ -223,3 +237,16 @@ compactCoinNonZero = unsafeNonZero . CompactCoin . unNonZero
 
 partialCompactCoinL :: HasCallStack => Lens' (CompactForm Coin) Coin
 partialCompactCoinL = lens fromCompact $ const compactCoinOrError
+
+coinPerByteL :: Lens' CoinPerByte (CompactForm Coin)
+coinPerByteL = lens unCoinPerByte $ const CoinPerByte
+
+coinPerByteFL :: Functor f => Lens' (f CoinPerByte) (f (CompactForm Coin))
+coinPerByteFL = lens (fmap unCoinPerByte) $ const (fmap CoinPerByte)
+
+hkdPartialCompactCoinL ::
+  forall f. (HasCallStack, HKDFunctor f) => Lens' (HKD f (CompactForm Coin)) (HKD f Coin)
+hkdPartialCompactCoinL = lens (hkdMap (Proxy @f) (fromCompact @Coin)) (\_compact -> hkdMap (Proxy @f) compactCoinOrError)
+
+hkdCoinPerByteL :: forall f. HKDFunctor f => Lens' (HKD f CoinPerByte) (HKD f (CompactForm Coin))
+hkdCoinPerByteL = lens (hkdMap (Proxy @f) unCoinPerByte) (\_cpb -> hkdMap (Proxy @f) CoinPerByte)
