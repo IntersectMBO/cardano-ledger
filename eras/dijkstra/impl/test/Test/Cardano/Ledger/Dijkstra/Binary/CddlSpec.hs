@@ -7,6 +7,7 @@
 
 module Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec (spec) where
 
+import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
@@ -83,6 +84,8 @@ spec = do
         xdescribe "Fix decoder equivalence of Tx" $ do
           cddlDecoderEquivalenceSpec @(Tx TopTx DijkstraEra) v "transaction"
     describe "Huddle" $ specWithHuddle dijkstraCDDL 100 $ do
+      huddleRoundTripArbitraryValidate @Addr v "address"
+      huddleRoundTripCborSpec @Addr v "address"
       huddleRoundTripCborSpec @(Value DijkstraEra) v "positive_coin"
       huddleRoundTripArbitraryValidate @(Value DijkstraEra) v "value"
       describe "MultiAsset" $ do
@@ -91,7 +94,7 @@ spec = do
         huddleRoundTripAnnCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleRoundTripCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $
+      describe "hangs" $
         huddleRoundTripArbitraryValidate @(TxBody TopTx DijkstraEra) v "transaction_body"
       huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
       -- TODO fails because of plutus scripts

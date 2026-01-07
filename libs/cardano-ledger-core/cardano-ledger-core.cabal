@@ -184,9 +184,12 @@ library cddl
 
   build-depends:
     base,
+    bytestring,
     cardano-ledger-core,
+    cborg,
     cuddle >=1.1,
     heredoc,
+    random,
     text,
 
 library testlib
