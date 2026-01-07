@@ -38,9 +38,6 @@
             };
             buildInputs = [
               gitMinimal
-              # CBOR scheme specification related tools
-              cddl
-              cbor-diag
             ];
           };
       })

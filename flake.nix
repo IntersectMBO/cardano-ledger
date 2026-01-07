@@ -121,6 +121,7 @@
             tools =
               {
                 cabal = "3.14.2.0";
+                cuddle = "latest";
               }
               // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
@@ -180,17 +181,6 @@
                 };
               };
             })
-            ({pkgs, ...}:
-              lib.mkIf pkgs.stdenv.hostPlatform.isUnix {
-                packages.cardano-ledger-shelley.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-allegra.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-mary.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-alonzo.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-babbage.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-conway.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-dijkstra.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-protocol-tpraos.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
-              })
             ({pkgs, ...}:
               lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
                 packages.plutus-preprocessor.buildable = lib.mkForce false;
