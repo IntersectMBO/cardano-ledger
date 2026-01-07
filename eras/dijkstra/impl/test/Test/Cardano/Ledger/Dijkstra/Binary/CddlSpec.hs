@@ -94,7 +94,7 @@ spec = do
         huddleRoundTripAnnCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleRoundTripCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      describe "hangs" $
+      xdescribe "hangs" $
         huddleRoundTripArbitraryValidate @(TxBody TopTx DijkstraEra) v "transaction_body"
       huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
       -- TODO fails because of plutus scripts
@@ -107,10 +107,8 @@ spec = do
       huddleRoundTripAnnCborSpec @(Data DijkstraEra) v "plutus_data"
       huddleRoundTripArbitraryValidate @(Data DijkstraEra) v "plutus_data"
       huddleRoundTripCborSpec @(Data DijkstraEra) v "plutus_data"
-      xdescribe "fix TxOut" $ do
-        huddleRoundTripCborSpec @(TxOut DijkstraEra) v "transaction_output"
-      -- TODO fails because of `address`
-      xdescribe "fix address" $
+      huddleRoundTripCborSpec @(TxOut DijkstraEra) v "transaction_output"
+      xdescribe "fix Script" $ do
         huddleRoundTripArbitraryValidate @(TxOut DijkstraEra) v "transaction_output"
       xdescribe "fix Script" $ do
         huddleRoundTripAnnCborSpec @(Script DijkstraEra) v "script"
