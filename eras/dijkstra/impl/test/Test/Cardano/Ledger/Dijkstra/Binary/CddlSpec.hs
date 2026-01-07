@@ -7,6 +7,8 @@
 
 module Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec (spec) where
 
+import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingProcedure)
@@ -44,9 +46,8 @@ spec = do
         huddleRoundTripAnnCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
         huddleRoundTripCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ do
-        huddleRoundTripArbitraryValidate @(TxBody TopTx DijkstraEra) v "transaction_body"
-        huddleRoundTripArbitraryValidate @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
+      huddleRoundTripArbitraryValidate @(TxBody TopTx DijkstraEra) v "transaction_body"
+      huddleRoundTripArbitraryValidate @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
       huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
       -- TODO fails because of plutus scripts
       xdescribe "fix plutus scripts" $ do
