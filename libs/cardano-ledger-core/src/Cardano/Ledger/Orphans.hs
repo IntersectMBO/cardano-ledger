@@ -18,11 +18,10 @@ import Data.Array.Byte (ByteArray)
 import qualified Data.ByteString as Long (ByteString, empty)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, empty)
 import qualified Data.ByteString.Short as Short (ShortByteString, empty, pack)
-import Data.Char (ord)
 import Data.Default (Default (..))
 import Data.Fixed (Fixed (..))
 import Data.IP (IPv4, IPv6)
-import Data.MemPack.Buffer (byteArrayFromShortByteString)
+import Data.MemPack (pack)
 import Data.Proxy
 import qualified Data.Sequence.Strict as SS
 import Data.String (IsString (..))
@@ -57,7 +56,7 @@ instance NFData IPv4
 instance NFData IPv6
 
 instance IsString ByteArray where
-  fromString = byteArrayFromShortByteString . Short.pack . map (fromIntegral . ord)
+  fromString = pack
 
 instance NoThunks WC.XSignature where
   wNoThunks ctxt s = wNoThunks ctxt (WC.unXSignature s)
