@@ -55,11 +55,14 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   untaggedSet,
 ) where
 
-import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule)
+import Cardano.Ledger.Core.HuddleSpec (genArrayTerm, majorProtocolVersionRule)
 import Cardano.Ledger.Huddle
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Codec.CBOR.Cuddle.CDDL.CBORGenerator (WrappedTerm (..))
+import Control.Monad (replicateM)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
+import System.Random.Stateful (uniformListM, uniformRM)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -434,7 +437,12 @@ certificateRule pname p =
     / arr [a $ huddleGroup @"move_instantaneous_rewards_cert" p]
 
 untaggedSet :: IsType0 a => Proxy "set" -> a -> GRuleCall
-untaggedSet pname = binding $ \x -> pname =.= arr [0 <+ a x]
+untaggedSet pname = binding $ \x -> withGenerator (generator x) $ pname =.= arr [0 <+ a x]
+  where
+    generator (GRef ref) g = do
+      numElems <- uniformRM (0, 10) g
+      es <- replicateM numElems undefined
+      S <$> genArrayTerm es g
 
 instance HuddleRule "dns_name" ShelleyEra where
   huddleRuleNamed pname _ = dnsNameRule pname
