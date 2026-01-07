@@ -37,7 +37,7 @@ singleton k v = NonEmptyMap $ Map.singleton k v
 
 -- | \(O(1)\).
 fromMap :: forall k v. Map k v -> Maybe (NonEmptyMap k v)
-fromMap set = if Map.null set then Nothing else Just (NonEmptyMap set)
+fromMap x = if Map.null x then Nothing else Just (NonEmptyMap x)
 
 -- | \(O(1)\).
 toMap :: forall k v. NonEmptyMap k v -> Map k v
@@ -49,4 +49,4 @@ fromFoldable = fromMap . Foldable.foldl' (flip (uncurry Map.insert)) Map.empty
 
 -- | \(O(n)\).
 toList :: forall k v. NonEmptyMap k v -> [(k, v)]
-toList (NonEmptyMap set) = Map.toList set
+toList (NonEmptyMap x) = Map.toList x

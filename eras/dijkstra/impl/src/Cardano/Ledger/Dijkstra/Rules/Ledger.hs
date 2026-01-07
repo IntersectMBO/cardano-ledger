@@ -114,11 +114,17 @@ import Cardano.Ledger.Shelley.Rules (
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
  )
+import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
+import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import Data.Sequence (Seq)
+import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
+import qualified Data.Set.NonEmpty as NES
 import Data.Void (absurd)
 import GHC.Generics (Generic (..))
 import Lens.Micro
@@ -134,6 +140,7 @@ data DijkstraLedgerPredFailure era
   | DijkstraWithdrawalsMissingAccounts Withdrawals
   | DijkstraIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
   | DijkstraSubLedgersFailure (PredicateFailure (EraRule "SUBLEDGERS" era))
+  | DijkstraSpendingOutputFromSameTx (NonEmptyMap TxId (NonEmptySet TxIn))
   deriving (Generic)
 
 type instance EraRuleFailure "LEDGER" DijkstraEra = DijkstraLedgerPredFailure DijkstraEra
@@ -270,6 +277,7 @@ instance
       DijkstraWithdrawalsMissingAccounts w -> Sum DijkstraWithdrawalsMissingAccounts 7 !> To w
       DijkstraIncompleteWithdrawals w -> Sum DijkstraIncompleteWithdrawals 8 !> To w
       DijkstraSubLedgersFailure w -> Sum DijkstraSubLedgersFailure 9 !> To w
+      DijkstraSpendingOutputFromSameTx txIds -> Sum DijkstraSpendingOutputFromSameTx 10 !> To txIds
 
 instance
   ( Era era
@@ -290,6 +298,7 @@ instance
     7 -> SumD DijkstraWithdrawalsMissingAccounts <! From
     8 -> SumD DijkstraIncompleteWithdrawals <! From
     9 -> SumD DijkstraSubLedgersFailure <! From
+    10 -> SumD DijkstraSpendingOutputFromSameTx <! From
     n -> Invalid n
 
 instance
@@ -334,6 +343,21 @@ instance
 
   assertions = shelleyLedgerAssertions @era @DijkstraLEDGER
 
+-- | A transaction should not be able to spend its own outputs.
+-- Finds all spendable inputs in the entire transaction that are sub-transaction outputs (TxIds).
+spentSubTxOutputs ::
+  (EraTx era, DijkstraEraTxBody era) => Tx TopTx era -> Map.Map TxId (NonEmptySet TxIn)
+spentSubTxOutputs tx =
+  filterBadInputs subTxs <> filterBadInputs (Map.singleton (txIdTx tx) tx)
+  where
+    subTxs = OMap.toMap $ tx ^. bodyTxL . subTransactionsTxBodyL
+    subTxIds = Map.keysSet subTxs -- None of these should be present as a spendable input in the entire transaction
+    filterBadInputs :: EraTx era => Map.Map TxId (Tx l era) -> Map.Map TxId (NonEmptySet TxIn)
+    filterBadInputs = Map.mapMaybe $ \curTx -> do
+      let spendableInputs = curTx ^. bodyTxL . spendableInputsTxBodyF
+      NES.fromSet $
+        Set.filter (\(TxIn txId _) -> txId `Set.member` subTxIds) spendableInputs
+
 dijkstraLedgerTransition ::
   forall era.
   ( AlonzoEraTx era
@@ -363,6 +387,9 @@ dijkstraLedgerTransition ::
   TransitionRule (DijkstraLEDGER era)
 dijkstraLedgerTransition = do
   TRC (env, ledgerState, tx) <- judgmentContext
+
+  failOnNonEmptyMap (spentSubTxOutputs tx) DijkstraSpendingOutputFromSameTx
+
   ledgerStateAfterSubledgers <-
     trans @(EraRule "SUBLEDGERS" era) $
       TRC (env, ledgerState, tx ^. bodyTxL . subTransactionsTxBodyL)
