@@ -15,7 +15,6 @@ import Cardano.Ledger.Address (CompactAddr, RewardAccount)
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, Prices)
-import Cardano.Ledger.Babbage.PParams (CoinPerByte)
 import Cardano.Ledger.BaseTypes (
   Anchor,
   EpochInterval,

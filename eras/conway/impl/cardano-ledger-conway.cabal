@@ -278,7 +278,6 @@ library scls
   build-depends:
     base,
     bytestring,
-    -- cardano-crypto-wrapper,
     cardano-crypto-class,
     cardano-ledger-allegra,
     cardano-ledger-alonzo,
@@ -373,7 +372,7 @@ test-suite tests
     base,
     cardano-ledger-allegra,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
-    cardano-ledger-babbage,
+    -- cardano-ledger-babbage,
     cardano-ledger-binary:testlib,
     cardano-ledger-conway:{cardano-ledger-conway, cddl, scls, scls-testlib, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},

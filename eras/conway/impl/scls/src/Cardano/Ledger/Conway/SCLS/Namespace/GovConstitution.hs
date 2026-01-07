@@ -53,7 +53,7 @@ deriving newtype instance FromCanonicalCBOR v GovConstitutionOut
 
 instance ToCanonicalCBOR v (Constitution ConwayEra) where
   toCanonicalCBOR v Constitution {..} =
-    toCanonicalCBOR v (constitutionAnchor, constitutionScript)
+    toCanonicalCBOR v (constitutionAnchor, constitutionGuardrailsScriptHash)
 
 instance FromCanonicalCBOR v (Constitution ConwayEra) where
   fromCanonicalCBOR = do

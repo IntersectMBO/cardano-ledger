@@ -18,7 +18,7 @@ module Cardano.Ledger.Conway.SCLS.Namespace.GovPParams (
 ) where
 
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits)
-import Cardano.Ledger.Babbage.PParams (CoinPerByte)
+import Cardano.Ledger.Coin (CoinPerByte)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams (
   ConwayPParams (..),
@@ -120,8 +120,8 @@ instance ToCanonicalCBOR v (PParams ConwayEra) where
       , mkEncodablePair v ("n_opt" :: Text) (unTHKD cppNOpt)
       , mkEncodablePair v ("prices" :: Text) (unTHKD cppPrices)
       , mkEncodablePair v ("epoch_max" :: Text) (unTHKD cppEMax)
-      , mkEncodablePair v ("min_fee_a" :: Text) (unTHKD cppMinFeeA)
-      , mkEncodablePair v ("min_fee_b" :: Text) (unTHKD cppMinFeeB)
+      , mkEncodablePair v ("min_fee_a" :: Text) (unTHKD cppTxFeePerByte)
+      , mkEncodablePair v ("min_fee_b" :: Text) (unTHKD cppTxFeeFixed)
       , mkEncodablePair v ("cost_models" :: Text) (unTHKD cppCostModels)
       , mkEncodablePair v ("key_deposit" :: Text) (unTHKD cppKeyDeposit)
       , mkEncodablePair v ("max_tx_size" :: Text) (unTHKD cppMaxTxSize)
@@ -159,8 +159,8 @@ instance FromCanonicalCBOR v (PParams ConwayEra) where
     Versioned (THKD -> cppNOpt) <- decodeField "n_opt"
     Versioned (THKD -> cppPrices) <- decodeField "prices"
     Versioned (THKD -> cppEMax) <- decodeField "epoch_max"
-    Versioned (THKD -> cppMinFeeA) <- decodeField "min_fee_a"
-    Versioned (THKD -> cppMinFeeB) <- decodeField "min_fee_b"
+    Versioned (THKD -> cppTxFeePerByte) <- decodeField "min_fee_a"
+    Versioned (THKD -> cppTxFeeFixed) <- decodeField "min_fee_b"
     Versioned (THKD -> cppCostModels) <- decodeField "cost_models"
     Versioned (THKD -> cppKeyDeposit) <- decodeField "key_deposit"
     Versioned (THKD -> cppMaxTxSize) <- decodeField "max_tx_size"
@@ -204,8 +204,8 @@ instance ToCanonicalCBOR v (PParamsUpdate ConwayEra) where
       , mkEncodablePair v ("n_opt" :: Text) (unTHKD cppNOpt)
       , mkEncodablePair v ("prices" :: Text) (unTHKD cppPrices)
       , mkEncodablePair v ("epoch_max" :: Text) (unTHKD cppEMax)
-      , mkEncodablePair v ("min_fee_a" :: Text) (unTHKD cppMinFeeA)
-      , mkEncodablePair v ("min_fee_b" :: Text) (unTHKD cppMinFeeB)
+      , mkEncodablePair v ("min_fee_a" :: Text) (unTHKD cppTxFeePerByte)
+      , mkEncodablePair v ("min_fee_b" :: Text) (unTHKD cppTxFeeFixed)
       , mkEncodablePair v ("cost_models" :: Text) (unTHKD cppCostModels)
       , mkEncodablePair v ("key_deposit" :: Text) (unTHKD cppKeyDeposit)
       , mkEncodablePair v ("max_tx_size" :: Text) (unTHKD cppMaxTxSize)
@@ -242,8 +242,8 @@ instance FromCanonicalCBOR v (PParamsUpdate ConwayEra) where
     Versioned (THKD -> cppNOpt) <- decodeField "n_opt"
     Versioned (THKD -> cppPrices) <- decodeField "prices"
     Versioned (THKD -> cppEMax) <- decodeField "epoch_max"
-    Versioned (THKD -> cppMinFeeA) <- decodeField "min_fee_a"
-    Versioned (THKD -> cppMinFeeB) <- decodeField "min_fee_b"
+    Versioned (THKD -> cppTxFeePerByte) <- decodeField "min_fee_a"
+    Versioned (THKD -> cppTxFeeFixed) <- decodeField "min_fee_b"
     Versioned (THKD -> cppCostModels) <- decodeField "cost_models"
     Versioned (THKD -> cppKeyDeposit) <- decodeField "key_deposit"
     Versioned (THKD -> cppMaxTxSize) <- decodeField "max_tx_size"
