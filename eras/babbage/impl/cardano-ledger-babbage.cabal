@@ -158,6 +158,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.Era
     Test.Cardano.Ledger.Babbage.Examples
     Test.Cardano.Ledger.Babbage.Imp
+    Test.Cardano.Ledger.Babbage.Imp.PoolSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxoSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxosSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxowSpec
