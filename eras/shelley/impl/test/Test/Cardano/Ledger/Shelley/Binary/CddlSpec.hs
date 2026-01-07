@@ -69,7 +69,6 @@ spec =
 
     describe "Huddle" $ specWithHuddle shelleyCDDL 100 $ do
       huddleRoundTripCborSpec @Addr v "address"
-      -- TODO re-enable this once we've removed the hard-coded definition for `address`
       huddleRoundTripArbitraryValidate @Addr v "address"
       huddleRoundTripAnnCborSpec @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripArbitraryValidate @BootstrapWitness v "bootstrap_witness"
