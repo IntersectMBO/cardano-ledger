@@ -402,7 +402,7 @@ instance EraApi AlonzoEra where
       AlonzoTxAuxDataRaw
         { atadrMetadata = md
         , atadrNativeScripts = upgradeNativeScript <$> scripts
-        , atadrPlutus = mempty
+        , atadrPlutusScripts = mempty
         }
 
   upgradeTxWits (ShelleyTxWits {addrWits, scriptWits, bootWits}) =
@@ -437,11 +437,11 @@ translateAlonzoTxAuxData ::
   (AlonzoEraScript (PreviousEra era), AlonzoEraScript era, EraApi era) =>
   AlonzoTxAuxData (PreviousEra era) ->
   AlonzoTxAuxData era
-translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadNativeScripts, atadPlutus} =
+translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadNativeScripts, atadPlutusScripts} =
   AlonzoTxAuxData
     { atadMetadata = atadMetadata
     , atadNativeScripts = upgradeNativeScript <$> atadNativeScripts
-    , atadPlutus = atadPlutus
+    , atadPlutusScripts = atadPlutusScripts
     }
 
 newtype BabbageTxUpgradeError

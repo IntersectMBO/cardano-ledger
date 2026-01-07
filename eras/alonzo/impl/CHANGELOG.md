@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Change `atadrPlutus`, `atadPlutus` and `atadPlutus'` to `atadrPlutusScripts`, `atadPlutusScripts` and `atadPlutusScripts'` respectively
 * Add `AlonzoApplyTxError` constructor for `ApplyTxError era`
 * Renamed:
   - `appMinFeeA` -> `appTxFeePerByte`
