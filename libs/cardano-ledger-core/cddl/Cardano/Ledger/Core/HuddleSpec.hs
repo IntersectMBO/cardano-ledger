@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -28,6 +29,7 @@ import Data.ByteString.Short (fromShort)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Proxy (Proxy (..))
+import Data.Ratio (denominator, numerator)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import Data.Word (Word64)
@@ -58,12 +60,13 @@ instance Era era => HuddleRule "max_word32" era where
 instance Era era => HuddleRule "positive_word32" era where
   huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word32" p
 
+genArrayTerm :: StatefulGen g m => [Term] -> g -> m Term
+genArrayTerm es = pickOne [TList es, TListI es]
+
 instance Era era => HuddleRule "unit_interval" era where
   huddleRuleNamed pname _ =
     comment
-      [str|The real unit_interval is: #6.30([uint, uint])
-          |
-          |A unit interval is a number in the range between 0 and 1, which
+      [str|A unit interval is a number in the range between 0 and 1, which
           |means there are two extra constraints:
           |  1. numerator <= denominator
           |  2. denominator > 0
@@ -76,8 +79,12 @@ instance Era era => HuddleRule "unit_interval" era where
           |our encoders/decoders. Which means we cannot use the actual
           |definition here and we hard code the value to 1/2
           |]
-      $ pname
-        =.= tag 30 (arr [1, 2])
+      . withGenerator generator
+      $ pname =.= tag 30 (arr [a VUInt, a VUInt])
+    where
+      generator g = do
+        val <- toRational @Double <$> uniformRM (0.0, 1.0) g
+        S . TTagged 30 <$> genArrayTerm [TInteger $ numerator val, TInteger $ denominator val] g
 
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
@@ -223,11 +230,10 @@ instance Era era => HuddleRule "address" era where
           header = shMask .|. pointerAddrMask .|. baseMask .|. testnetMask
         stakingCred <- case (isPointer, isBase) of
           (False, False) -> pure mempty
-          (False, True) -> fromShort <$> uniformShortByteStringM 28 g
           (True, False) ->
             -- TODO implement variable length encodings to generate all possible values
             pure "\x87\x68\x02\x03"
-          (True, True) -> fromShort <$> uniformShortByteStringM 28 g
+          (_, True) -> fromShort <$> uniformShortByteStringM 28 g
         paymentCred <- fromShort <$> uniformShortByteStringM 28 g
         -- TODO use genBytesTerm once indefinite bytestring decoding has been fixed
         let bytesTerm = TBytes . BS.cons header $ paymentCred <> stakingCred
