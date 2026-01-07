@@ -176,9 +176,7 @@ genStringTerm t = pickOne [TString t, TStringI $ LT.fromStrict t]
 instance Era era => HuddleRule "address" era where
   huddleRuleNamed pname _ =
     comment
-      [str|address = bytes
-          |
-          |address format:
+      [str|address format:
           |  [ 8 bit header | payload ];
           |
           |shelley payment addresses:
@@ -232,16 +230,22 @@ instance Era era => HuddleRule "address" era where
           (True, True) -> fromShort <$> uniformShortByteStringM 28 g
         paymentCred <- fromShort <$> uniformShortByteStringM 28 g
         -- TODO use genBytesTerm once indefinite bytestring decoding has been fixed
-        let bytesTerm = TBytes (BS.cons header $ paymentCred <> stakingCred)
+        let bytesTerm = TBytes . BS.cons header $ paymentCred <> stakingCred
         pure $ S bytesTerm
 
 instance Era era => HuddleRule "reward_account" era where
-  huddleRuleNamed pname _ =
-    comment
-      "reward_account = bytes"
-      $ pname
-        =.= bstr "E090000000000000000000000000000000000000000000000000000000"
-        / bstr "F0A0000000000000000000000000000000000000000000000000000000"
+  huddleRuleNamed pname _ = withGenerator generator $ pname =.= VBytes
+    where
+      generator g = do
+        isMainnet <- uniformM g
+        isScript <- uniformM g
+        let
+          mainnetMask | isMainnet = 0x01 | otherwise = 0x00
+          scriptMask | isScript = 0x10 | otherwise = 0x00
+          header = 0xe0 .|. mainnetMask .|. scriptMask
+        payload <- fromShort <$> uniformShortByteStringM 28 g
+        let term = TBytes $ BS.cons header payload
+        pure $ S term
 
 instance Era era => HuddleRule "transaction_index" era where
   huddleRuleNamed pname _ = pname =.= VUInt `sized` (2 :: Word64)
