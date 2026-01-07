@@ -5,6 +5,8 @@
 
 module Test.Cardano.Ledger.Shelley.Binary.CddlSpec (spec) where
 
+import Cardano.Ledger.Address (Addr, RewardAccount)
+import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
