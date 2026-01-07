@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Add `DijkstraSpendingOutputFromSameTx` to `DijkstraLedgerPredFailure`, to report when a sub-tx-id is being spent within the same transaction.
 * Add:
   - `DijkstraSUBCERT`
   - `DijkstraSUBCERTS`
@@ -103,6 +104,7 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec`
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Re-export `Test.Cardano.Ledger.Conway.Binary.Golden`
