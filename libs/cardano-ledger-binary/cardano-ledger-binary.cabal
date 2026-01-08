@@ -86,7 +86,6 @@ library testlib
   exposed-modules:
     Test.Cardano.Ledger.Binary
     Test.Cardano.Ledger.Binary.Arbitrary
-    Test.Cardano.Ledger.Binary.Cddl
     Test.Cardano.Ledger.Binary.Cuddle
     Test.Cardano.Ledger.Binary.Golden
     Test.Cardano.Ledger.Binary.Plain.Golden
@@ -142,8 +141,6 @@ library testlib
     random >=1.2,
     text,
     tree-diff,
-    typed-process,
-    unliftio,
     vector-map,
 
 test-suite tests

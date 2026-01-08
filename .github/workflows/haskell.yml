@@ -233,8 +233,6 @@ jobs:
 
       SECP_CACHE_VERSION: "2022-12-30"
 
-      packages-with-ruby-cddl-tests: '["cardano-protocol-tpraos", "cardano-ledger-shelley", "cardano-ledger-allegra", "cardano-ledger-mary", "cardano-ledger-alonzo", "cardano-ledger-babbage", "cardano-ledger-conway", "cardano-ledger-dijkstra"]'
-
     defaults:
       run:
         shell: bash
@@ -270,18 +268,6 @@ jobs:
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: 3.14
-
-    - name: Set up Ruby
-      if: contains(fromJson(env.packages-with-ruby-cddl-tests), matrix.package)
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 3.3
-
-    - name: Install cbor-diag and cddl
-      if: contains(fromJson(env.packages-with-ruby-cddl-tests), matrix.package)
-      run: |
-        gem install cddl -v 0.10.3
-        gem install cbor-diag
 
     - name: Download Mainnet Mirror
       if: matrix.package == 'cardano-ledger-byron'

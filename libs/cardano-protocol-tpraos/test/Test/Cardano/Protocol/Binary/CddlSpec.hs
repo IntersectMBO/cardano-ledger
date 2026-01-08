@@ -21,51 +21,31 @@ import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHBody, BHeader)
 import Cardano.Protocol.TPraos.OCert (OCert)
 import Codec.CBOR.Cuddle.Huddle (Huddle)
-import qualified Data.ByteString.Lazy as BSL
-import Test.Cardano.Ledger.Allegra.Binary.Cddl (readAllegraCddlFiles)
-import Test.Cardano.Ledger.Alonzo.Binary.Cddl (readAlonzoCddlFiles)
-import Test.Cardano.Ledger.Binary.Cddl (beforeAllCddlFile, cddlRoundTripCborSpec)
 import Test.Cardano.Ledger.Binary.Cuddle
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Mary.Binary.Cddl (readMaryCddlFiles)
-import Test.Cardano.Ledger.Shelley.Binary.Cddl (readShelleyCddlFiles)
 import Test.Cardano.Protocol.Binary.Annotator ()
-import Test.Cardano.Protocol.Binary.Cddl (
-  cddlBlockSpec,
-  huddleBlockSpec,
- )
+import Test.Cardano.Protocol.Binary.Cddl (huddleBlockSpec)
 
 spec :: Spec
 spec =
   describe "CDDL" $ do
-    let n = 3
-    specForEra @ShelleyEra readShelleyCddlFiles shelleyCDDL n
-    specForEra @AllegraEra readAllegraCddlFiles allegraCDDL n
-    specForEra @MaryEra readMaryCddlFiles maryCDDL n
-    specForEra @AlonzoEra readAlonzoCddlFiles alonzoCDDL n
+    specForEra @ShelleyEra shelleyCDDL
+    specForEra @AllegraEra allegraCDDL
+    specForEra @MaryEra maryCDDL
+    specForEra @AlonzoEra alonzoCDDL
 
 specForEra ::
   forall era.
   (Era era, AtMostEra "Alonzo" era) =>
-  IO [BSL.ByteString] ->
   Huddle ->
-  Int ->
   Spec
-specForEra readCddlFiles cddlFiles n = do
+specForEra cddlFiles = do
   describe (eraName @era) $ do
-    describe "Ruby-based" $
-      beforeAllCddlFile n readCddlFiles $ do
-        cddlBlockSpec @era @StandardCrypto @BHeader @BHBody
-        cddlRoundTripCborSpec @(CBORGroup (OCert StandardCrypto))
+    specWithHuddle cddlFiles 100 $ do
+      huddleBlockSpec @era @StandardCrypto @BHeader @BHBody
+      xdescribe "Cannot generate a CBOR term corresponding to a group with cuddle" $
+        huddleRoundTripCborSpec @(CBORGroup (OCert StandardCrypto))
           (eraProtVerLow @era)
           "[ operational_cert ]"
-
-    describe "Huddle" $
-      specWithHuddle cddlFiles 100 $ do
-        huddleBlockSpec @era @StandardCrypto @BHeader @BHBody
-        xdescribe "Cannot generate a CBOR term corresponding to a group with cuddle" $
-          huddleRoundTripCborSpec @(CBORGroup (OCert StandardCrypto))
-            (eraProtVerLow @era)
-            "[ operational_cert ]"
   where
     _atMostAlonzo = atMostEra @"Alonzo" @era

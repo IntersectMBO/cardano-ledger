@@ -4,6 +4,10 @@
 
 * Remove deprecated function `bHeaderSize`
 
+### `testlib`
+
+* Remove `cddlBlockSpec`, `praosBlockCddlSpec`
+
 ## 1.4.1.0
 
 * Remove `HashHeader` definition (move to `cardano-ledger-core`)
