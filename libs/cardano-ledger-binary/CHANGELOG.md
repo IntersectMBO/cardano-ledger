@@ -18,6 +18,7 @@
 
 ### `testlib`
 
+* Add `huddleRoundTripGenValidate`
 * Remove `Test.Cardano.Ledger.Binary.Cddl`
 * Add `ToExpr` instances to `DeserialiseFailure` and `DecoderError`
 * Remove `assertExprEqualWithMessage`

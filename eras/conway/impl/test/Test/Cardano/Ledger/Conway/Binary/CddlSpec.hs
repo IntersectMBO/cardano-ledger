@@ -46,7 +46,8 @@ spec = do
       -- TxBody
       huddleRoundTripAnnCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "fix scripts" $ huddleRoundTripArbitraryValidate @(TxBody TopTx ConwayEra) v "transaction_body"
+      xdescribe "fix scripts" $
+        huddleRoundTripArbitraryValidate @(TxBody TopTx ConwayEra) v "transaction_body"
       huddleRoundTripCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
       -- AuxData
       huddleRoundTripAnnCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
