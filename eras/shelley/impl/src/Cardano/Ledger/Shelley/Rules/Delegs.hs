@@ -21,7 +21,6 @@ module Cardano.Ledger.Shelley.Rules.Delegs (
   ShelleyDelegsPredFailure (..),
   ShelleyDelegsEvent (..),
   PredicateFailure,
-  validateStakePoolDelegateeRegistered,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -39,7 +38,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
-import Cardano.Ledger.Rules.ValidationMode (Test)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS, ShelleyEra)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
@@ -60,16 +58,12 @@ import Control.State.Transition (
   TransitionRule,
   judgmentContext,
   trans,
-  validateTrans,
  )
-import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic)
-import Lens.Micro
 import NoThunks.Class (NoThunks (..))
-import Validation (failureUnless)
 
 data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: SlotNo
@@ -87,11 +81,8 @@ deriving stock instance
   ) =>
   Show (DelegsEnv era)
 
-data ShelleyDelegsPredFailure era
-  = -- | Target pool which is not registered
-    DelegateeNotRegisteredDELEG
-      (KeyHash StakePool)
-  | -- | Subtransition Failures
+newtype ShelleyDelegsPredFailure era
+  = -- | Subtransition Failures
     DelplFailure (PredicateFailure (EraRule "DELPL" era))
   deriving (Generic)
 
@@ -161,10 +152,6 @@ instance
   EncCBOR (ShelleyDelegsPredFailure era)
   where
   encCBOR = \case
-    DelegateeNotRegisteredDELEG kh ->
-      encodeListLen 2
-        <> encCBOR (0 :: Word8)
-        <> encCBOR kh
     (DelplFailure a) ->
       encodeListLen 2
         <> encCBOR (1 :: Word8)
@@ -180,9 +167,6 @@ instance
   decCBOR =
     decodeRecordSum "PredicateFailure" $
       \case
-        0 -> do
-          kh <- decCBOR
-          pure (2, DelegateeNotRegisteredDELEG kh)
         1 -> do
           a <- decCBOR
           pure (2, DelplFailure a)
@@ -212,24 +196,11 @@ delegsTransition = do
     gamma :|> txCert -> do
       certState' <-
         trans @(ShelleyDELEGS era) $ TRC (env, certState, gamma)
-      validateTrans DelegateeNotRegisteredDELEG $
-        case txCert of
-          DelegStakeTxCert _ targetPool ->
-            validateStakePoolDelegateeRegistered (certState' ^. certPStateL) targetPool
-          _ -> pure ()
       -- It is impossible to have 65535 number of certificates in a transaction.
       let certIx = CertIx (fromIntegral @Int @Word16 $ length gamma)
           ptr = Ptr (SlotNo32 (fromIntegral @Word64 @Word32 slot64)) txIx certIx
       trans @(EraRule "DELPL" era) $
         TRC (DelplEnv slot epochNo ptr pp chainAccountState, certState', txCert)
-
-validateStakePoolDelegateeRegistered ::
-  PState era ->
-  KeyHash StakePool ->
-  Test (KeyHash StakePool)
-validateStakePoolDelegateeRegistered pState targetPool =
-  let stPools = psStakePools pState
-   in failureUnless (Map.member targetPool stPools) targetPool
 
 instance
   ( Era era

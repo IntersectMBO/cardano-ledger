@@ -42,8 +42,10 @@ import Cardano.Ledger.Shelley.API (
   Update (..),
  )
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegsPredFailure (..),
-  ShelleyLedgerPredFailure (..),
+  ShelleyDelegPredFailure (DelegateeNotRegisteredDELEG),
+  ShelleyDelegsPredFailure (DelplFailure),
+  ShelleyDelplPredFailure (DelegFailure),
+  ShelleyLedgerPredFailure (DelegsFailure),
  )
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (mkTxInPartial)
@@ -80,7 +82,9 @@ ledgerExamples =
     ( AlonzoApplyTxError $
         pure $
           DelegsFailure $
-            DelegateeNotRegisteredDELEG @AlonzoEra (mkKeyHash 1)
+            DelplFailure $
+              DelegFailure $
+                DelegateeNotRegisteredDELEG @AlonzoEra (mkKeyHash 1)
     )
     exampleAlonzoNewEpochState
     exampleTxAlonzo

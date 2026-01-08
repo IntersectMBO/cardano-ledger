@@ -2,6 +2,10 @@
 
 ## 1.18.0.0
 
+* Move delegatee registration validation from `DELEGS` to `DELEG` rule:
+  - Add `DelegateeNotRegisteredDELEG` to `ShelleyDelegPredFailure`
+  - Remove `DelegateeNotRegisteredDELEG` from `ShelleyDelegsPredFailure`
+  - Remove `validateStakePoolDelegateeRegistered` function from `Cardano.Ledger.Shelley.Rules.Delegs`
 * Expose `poolTransition` from `Pool`
 * Change the type `ApplyTxError era` to be a data family of the `ApplyTx era` class, with its constructor renamed to `ShelleyApplyTxError` for the Shelley era
 * Renamed:

@@ -16,7 +16,9 @@ import Cardano.Ledger.Mary (ApplyTxError (MaryApplyTxError), MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegsPredFailure (DelegateeNotRegisteredDELEG),
+  ShelleyDelegPredFailure (DelegateeNotRegisteredDELEG),
+  ShelleyDelegsPredFailure (DelplFailure),
+  ShelleyDelplPredFailure (DelegFailure),
   ShelleyLedgerPredFailure (DelegsFailure),
  )
 import qualified Data.Map.Strict as Map (singleton)
@@ -34,7 +36,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
 ledgerExamples :: LedgerExamples MaryEra
 ledgerExamples =
   mkLedgerExamples
-    ( MaryApplyTxError . pure . DelegsFailure $
+    ( MaryApplyTxError . pure . DelegsFailure . DelplFailure . DelegFailure $
         DelegateeNotRegisteredDELEG @MaryEra (mkKeyHash 1)
     )
     (mkWitnessesPreAlonzo (Proxy @MaryEra))
