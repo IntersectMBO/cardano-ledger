@@ -16,6 +16,7 @@
 
 ### `testlib`
 
+* Add `huddleRoundTripGenValidate`
 * Add `ToExpr` instances to `DeserialiseFailure` and `DecoderError`
 * Remove `assertExprEqualWithMessage`
 
