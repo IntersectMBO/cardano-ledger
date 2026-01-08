@@ -18,7 +18,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   curPParamsEpochStateL,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyPOOL)
+import Cardano.Ledger.Shelley.Rules (ShelleyPOOL, ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.BHeader (bhbody, bheaderSlotNo)
@@ -66,6 +66,7 @@ tests ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   ) =>
   TestTree
 tests =
@@ -83,6 +84,7 @@ tests =
 poolRetirement ::
   ( ChainProperty era
   , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -100,6 +102,7 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
 poolRegistration ::
   ( ChainProperty era
   , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -114,6 +117,7 @@ poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
 poolStateIsInternallyConsistent ::
   ( ChainProperty era
   , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property

@@ -19,7 +19,13 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyPOOL)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
-import Cardano.Ledger.Shelley.Rules (BbodyEnv, LedgerEnv, ShelleyBbodyState, ShelleyLedgersEnv)
+import Cardano.Ledger.Shelley.Rules (
+  BbodyEnv,
+  LedgerEnv,
+  ShelleyBbodyState,
+  ShelleyLedgersEnv,
+  ShelleyPoolPredFailure,
+ )
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknEnv, TicknState)
@@ -88,6 +94,7 @@ commonTests ::
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   ) =>
   [TestTree]
 commonTests =

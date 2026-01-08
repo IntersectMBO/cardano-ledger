@@ -126,6 +126,7 @@ instance NFData (ShelleyPoolPredFailure era)
 instance
   ( EraPParams era
   , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   ) =>
   STS (ShelleyPOOL era)
   where
@@ -213,7 +214,7 @@ poolTransition ::
   , STS (EraRule rule era)
   , Event (EraRule rule era) ~ PoolEvent era
   , BaseM (EraRule rule era) ~ ShelleyBase
-  , PredicateFailure (EraRule rule era) ~ ShelleyPoolPredFailure era
+  , InjectRuleFailure rule ShelleyPoolPredFailure era
   ) =>
   TransitionRule (EraRule rule era)
 poolTransition = do
@@ -231,33 +232,38 @@ poolTransition = do
         let suppliedNetID = raNetwork sppRewardAccount
         actualNetID
           == suppliedNetID
-            ?! WrongNetworkPOOL
-              Mismatch
-                { mismatchSupplied = suppliedNetID
-                , mismatchExpected = actualNetID
-                }
-              sppId
+            ?! injectFailure
+              ( WrongNetworkPOOL
+                  Mismatch
+                    { mismatchSupplied = suppliedNetID
+                    , mismatchExpected = actualNetID
+                    }
+                  sppId
+              )
 
       when (SoftForks.restrictPoolMetadataHash pv) $
         forM_ sppMetadata $ \pmd ->
           let s = sizeofByteArray $ pmHash pmd
            in s
                 <= fromIntegral (sizeHash ([] @HASH))
-                  ?! PoolMedataHashTooBig sppId s
+                  ?! injectFailure (PoolMedataHashTooBig sppId s)
 
       let minPoolCost = pp ^. ppMinPoolCostL
       sppCost
         >= minPoolCost
-          ?! StakePoolCostTooLowPOOL
-            Mismatch
-              { mismatchSupplied = sppCost
-              , mismatchExpected = minPoolCost
-              }
+          ?! injectFailure
+            ( StakePoolCostTooLowPOOL
+                Mismatch
+                  { mismatchSupplied = sppCost
+                  , mismatchExpected = minPoolCost
+                  }
+            )
       case Map.lookup sppId psStakePools of
         -- register new, Pool-Reg
         Nothing -> do
           when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
-            Map.notMember sppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered sppId sppVrf
+            Map.notMember sppVrf psVRFKeyHashes
+              ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
           let updateVRFKeyHash
                 | hardforkConwayDisallowDuplicatedVRFKeys pv = Map.insert sppVrf (knownNonZeroBounded @1)
                 | otherwise = id
@@ -271,7 +277,8 @@ poolTransition = do
         Just stakePoolState -> do
           when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
             sppVrf == stakePoolState ^. spsVrfL
-              || Map.notMember sppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered sppId sppVrf
+              || Map.notMember sppVrf psVRFKeyHashes
+                ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
           let updateFutureVRFKeyHash
                 | hardforkConwayDisallowDuplicatedVRFKeys pv =
                     -- If a pool re-registers with a fresh VRF, we have to record it in the map,
@@ -297,18 +304,20 @@ poolTransition = do
               & psRetiringL %~ Map.delete sppId
               & psVRFKeyHashesL %~ updateFutureVRFKeyHash
     RetirePool sppId e -> do
-      Map.member sppId psStakePools ?! StakePoolNotRegisteredOnKeyPOOL sppId
+      Map.member sppId psStakePools ?! injectFailure (StakePoolNotRegisteredOnKeyPOOL sppId)
       let maxEpoch = pp ^. ppEMaxL
           limitEpoch = addEpochInterval cEpoch maxEpoch
       (cEpoch < e && e <= limitEpoch)
-        ?! StakePoolRetirementWrongEpochPOOL
-          Mismatch -- RelGT - The supplied value should be greater than the current epoch
-            { mismatchSupplied = e
-            , mismatchExpected = cEpoch
-            }
-          Mismatch -- RelLTEQ - The supplied value should be less then or equal to ppEMax after the current epoch
-            { mismatchSupplied = e
-            , mismatchExpected = limitEpoch
-            }
+        ?! injectFailure
+          ( StakePoolRetirementWrongEpochPOOL
+              Mismatch -- RelGT - The supplied value should be greater than the current epoch
+                { mismatchSupplied = e
+                , mismatchExpected = cEpoch
+                }
+              Mismatch -- RelLTEQ - The supplied value should be less then or equal to ppEMax after the current epoch
+                { mismatchSupplied = e
+                , mismatchExpected = limitEpoch
+                }
+          )
       -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
       pure $ ps & psRetiringL %~ Map.insert sppId e

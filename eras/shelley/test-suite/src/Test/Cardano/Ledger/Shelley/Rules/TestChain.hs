@@ -45,6 +45,7 @@ import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
   PoolEnv (..),
   ShelleyPOOL,
+  ShelleyPoolPredFailure,
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.API (GetLedgerView)
@@ -190,6 +191,7 @@ poolTraceFromBlock ::
   forall era.
   ( ChainProperty era
   , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
