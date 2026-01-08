@@ -6,6 +6,7 @@
 module Test.Cardano.Ledger.Shelley.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Address (Addr, RewardAccount)
+import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -68,9 +69,10 @@ spec =
         cddlDecoderEquivalenceSpec @(Tx TopTx ShelleyEra) v "transaction"
 
     describe "Huddle" $ specWithHuddle shelleyCDDL 100 $ do
+      huddleRoundTripCborSpec @UnitInterval v "unit_interval"
+      huddleRoundTripArbitraryValidate @UnitInterval v "unit_interval"
       huddleRoundTripCborSpec @Addr v "address"
-      -- TODO re-enable this once we've removed the hard-coded definition for `address`
-      xdescribe "bad CDDL" $ huddleRoundTripArbitraryValidate @Addr v "address"
+      huddleRoundTripArbitraryValidate @Addr v "address"
       huddleRoundTripAnnCborSpec @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripArbitraryValidate @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripCborSpec @BootstrapWitness v "bootstrap_witness"

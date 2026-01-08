@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -18,10 +19,25 @@ import Cardano.Ledger.BaseTypes (getVersion)
 import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
 import Cardano.Ledger.Huddle
 import Codec.CBOR.Cuddle.CDDL (Name (..))
+import Codec.CBOR.Cuddle.CDDL.CBORGenerator (WrappedTerm (..))
 import Codec.CBOR.Cuddle.Huddle
+import Codec.CBOR.Term (Term (..))
+import Data.Bits (Bits (..))
+import Data.ByteString (ByteString, fromStrict)
+import qualified Data.ByteString as BS
+import Data.ByteString.Short (fromShort)
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import Data.Word (Word64)
+import System.Random.Stateful (
+  StatefulGen,
+  Uniform (..),
+  UniformRange (..),
+  uniformShortByteStringM,
+ )
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -43,12 +59,13 @@ instance Era era => HuddleRule "max_word32" era where
 instance Era era => HuddleRule "positive_word32" era where
   huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word32" p
 
+genArrayTerm :: StatefulGen g m => [Term] -> g -> m Term
+genArrayTerm es = pickOne [TList es, TListI es]
+
 instance Era era => HuddleRule "unit_interval" era where
   huddleRuleNamed pname _ =
     comment
-      [str|The real unit_interval is: #6.30([uint, uint])
-          |
-          |A unit interval is a number in the range between 0 and 1, which
+      [str|A unit interval is a number in the range between 0 and 1, which
           |means there are two extra constraints:
           |  1. numerator <= denominator
           |  2. denominator > 0
@@ -61,8 +78,15 @@ instance Era era => HuddleRule "unit_interval" era where
           |our encoders/decoders. Which means we cannot use the actual
           |definition here and we hard code the value to 1/2
           |]
-      $ pname
-        =.= tag 30 (arr [1, 2])
+      . withGenerator generator
+      $ pname =.= tag 30 (arr [a VUInt, a VUInt])
+    where
+      generator g = do
+        -- TODO should we test with even larger values than Word64?
+        n <- uniformRM (0, maxBound @Word64) g
+        d <- uniformRM (n, maxBound @Word64) g
+        S . TTagged 30
+          <$> genArrayTerm [TInteger $ fromIntegral n, TInteger $ fromIntegral d] g
 
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
@@ -147,12 +171,21 @@ instance Era era => HuddleRule "coin" era where
 instance Era era => HuddleRule "positive_coin" era where
   huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word64" p
 
+pickOne :: StatefulGen g m => NonEmpty a -> g -> m a
+pickOne es g = do
+  i <- uniformRM (0, length es - 1) g
+  pure $ es NE.!! i
+
+genBytesTerm :: StatefulGen g m => ByteString -> g -> m Term
+genBytesTerm bs = pickOne [TBytes bs, TBytesI $ fromStrict bs]
+
+genStringTerm :: StatefulGen g m => T.Text -> g -> m Term
+genStringTerm t = pickOne [TString t, TStringI $ LT.fromStrict t]
+
 instance Era era => HuddleRule "address" era where
   huddleRuleNamed pname _ =
     comment
-      [str|address = bytes
-          |
-          |address format:
+      [str|address format:
           |  [ 8 bit header | payload ];
           |
           |shelley payment addresses:
@@ -183,27 +216,44 @@ instance Era era => HuddleRule "address" era where
           |     1111: reward account: scripthash28
           |1001-1101: future formats
           |]
-      $ pname
-        =.= bstr
-          "001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000"
-        / bstr
-          "102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000"
-        / bstr
-          "203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000"
-        / bstr
-          "304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000"
-        / bstr "405000000000000000000000000000000000000000000000000000000087680203"
-        / bstr "506000000000000000000000000000000000000000000000000000000087680203"
-        / bstr "6070000000000000000000000000000000000000000000000000000000"
-        / bstr "7080000000000000000000000000000000000000000000000000000000"
+      . withGenerator generator
+      $ pname =.= VBytes
+    where
+      generator g = do
+        isScriptHash <- uniformM g
+        isPointer <- uniformM g
+        isBase <- uniformM g
+        isTestnet <- uniformM g
+        let
+          shMask | isScriptHash = 0x10 | otherwise = 0x00
+          pointerAddrMask | isPointer = 0x00 | otherwise = 0x20
+          baseMask | isBase = 0x00 | otherwise = 0x40
+          testnetMask | isTestnet = 0x01 | otherwise = 0x00
+          header = shMask .|. pointerAddrMask .|. baseMask .|. testnetMask
+        stakingCred <- case (isPointer, isBase) of
+          (False, False) -> pure mempty
+          (True, False) ->
+            -- TODO implement variable length encodings to generate all possible values
+            pure "\x87\x68\x02\x03"
+          (_, True) -> fromShort <$> uniformShortByteStringM 28 g
+        paymentCred <- fromShort <$> uniformShortByteStringM 28 g
+        -- TODO use genBytesTerm once indefinite bytestring decoding has been fixed
+        let bytesTerm = TBytes . BS.cons header $ paymentCred <> stakingCred
+        pure $ S bytesTerm
 
 instance Era era => HuddleRule "reward_account" era where
-  huddleRuleNamed pname _ =
-    comment
-      "reward_account = bytes"
-      $ pname
-        =.= bstr "E090000000000000000000000000000000000000000000000000000000"
-        / bstr "F0A0000000000000000000000000000000000000000000000000000000"
+  huddleRuleNamed pname _ = withGenerator generator $ pname =.= VBytes
+    where
+      generator g = do
+        isMainnet <- uniformM g
+        isScript <- uniformM g
+        let
+          mainnetMask | isMainnet = 0x01 | otherwise = 0x00
+          scriptMask | isScript = 0x10 | otherwise = 0x00
+          header = 0xe0 .|. mainnetMask .|. scriptMask
+        payload <- fromShort <$> uniformShortByteStringM 28 g
+        let term = TBytes $ BS.cons header payload
+        pure $ S term
 
 instance Era era => HuddleRule "transaction_index" era where
   huddleRuleNamed pname _ = pname =.= VUInt `sized` (2 :: Word64)
