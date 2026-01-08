@@ -119,6 +119,10 @@ type instance EraRuleFailure "POOL" ShelleyEra = ShelleyPoolPredFailure ShelleyE
 
 instance InjectRuleFailure "POOL" ShelleyPoolPredFailure ShelleyEra
 
+type instance EraRuleEvent "POOL" ShelleyEra = PoolEvent ShelleyEra
+
+instance InjectRuleEvent "POOL" PoolEvent ShelleyEra
+
 instance NoThunks (ShelleyPoolPredFailure era)
 
 instance NFData (ShelleyPoolPredFailure era)
@@ -127,6 +131,7 @@ instance
   ( EraPParams era
   , EraRule "POOL" era ~ ShelleyPOOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
+  , InjectRuleEvent "POOL" PoolEvent era
   ) =>
   STS (ShelleyPOOL era)
   where
@@ -212,9 +217,9 @@ poolTransition ::
   , Environment (EraRule rule era) ~ PoolEnv era
   , State (EraRule rule era) ~ PState era
   , STS (EraRule rule era)
-  , Event (EraRule rule era) ~ PoolEvent era
   , BaseM (EraRule rule era) ~ ShelleyBase
   , InjectRuleFailure rule ShelleyPoolPredFailure era
+  , InjectRuleEvent rule PoolEvent era
   ) =>
   TransitionRule (EraRule rule era)
 poolTransition = do
@@ -267,7 +272,7 @@ poolTransition = do
           let updateVRFKeyHash
                 | hardforkConwayDisallowDuplicatedVRFKeys pv = Map.insert sppVrf (knownNonZeroBounded @1)
                 | otherwise = id
-          tellEvent $ RegisterPool sppId
+          tellEvent $ injectEvent $ RegisterPool sppId
           pure $
             ps
               & psStakePoolsL
@@ -292,7 +297,7 @@ poolTransition = do
                               . Map.delete (futureStakePoolParams ^. sppVrfL)
                         | otherwise -> id
                 | otherwise = id
-          tellEvent $ ReregisterPool sppId
+          tellEvent $ injectEvent $ ReregisterPool sppId
           -- This `sppId` is already registered, so we want to reregister it.
           -- That means adding it to the futureStakePoolParams or overriding it  with the new 'poolParams'.
           -- We must also unretire it, if it has been scheduled for retirement.

@@ -22,6 +22,7 @@ import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv,
   LedgerEnv,
+  PoolEvent,
   ShelleyBbodyState,
   ShelleyLedgersEnv,
   ShelleyPoolPredFailure,
@@ -95,6 +96,7 @@ commonTests ::
   , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , EraRule "POOL" era ~ ShelleyPOOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
+  , InjectRuleEvent "POOL" PoolEvent era
   ) =>
   [TestTree]
 commonTests =
