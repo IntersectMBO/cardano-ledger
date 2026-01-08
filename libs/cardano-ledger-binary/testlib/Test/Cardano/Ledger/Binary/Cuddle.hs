@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   huddleRoundTripCborSpec,
   huddleRoundTripAnnCborSpec,
   writeSpec,
+  huddleRoundTripGenValidate,
   huddleRoundTripArbitraryValidate,
 ) where
 
@@ -71,7 +72,7 @@ import Test.Hspec (
   shouldBe,
  )
 import Test.Hspec.Core.Spec (Example (..), paramsQuickCheckArgs)
-import Test.QuickCheck (Arbitrary (..), Args (replay), Testable (..))
+import Test.QuickCheck (Arbitrary (..), Args (replay), Gen, Testable (..), forAll)
 import Test.QuickCheck.Random (QCGen, mkQCGen)
 import Text.Pretty.Simple (pShow)
 
@@ -237,21 +238,13 @@ cddlFailure encoding err =
       , "Generated diag: " <> CBOR.prettyHexEnc encoding
       ]
 
-huddleRoundTripArbitraryValidate ::
-  forall a.
-  ( DecCBOR a
-  , EncCBOR a
-  , Arbitrary a
-  , Show a
-  ) =>
-  Version ->
-  T.Text ->
-  SpecWith CuddleData
-huddleRoundTripArbitraryValidate version ruleName =
+huddleRoundTripGenValidate ::
+  forall a. (DecCBOR a, Show a, EncCBOR a) => Gen a -> Version -> T.Text -> SpecWith CuddleData
+huddleRoundTripGenValidate gen version ruleName =
   let lbl = label $ Proxy @a
    in describe "Encode an arbitrary value and check against CDDL"
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
-        $ \CuddleData {cddl} -> property $ \(val :: a) -> do
+        $ \CuddleData {cddl} -> property . forAll gen $ \(val :: a) -> do
           let
             bs = serialize' version val
             res = validateCBOR bs (Name ruleName) (mapIndex cddl)
@@ -279,6 +272,18 @@ huddleRoundTripArbitraryValidate version ruleName =
                           , "====="
                           ]
                   _ -> pretty $ pShow err
+
+huddleRoundTripArbitraryValidate ::
+  forall a.
+  ( DecCBOR a
+  , EncCBOR a
+  , Arbitrary a
+  , Show a
+  ) =>
+  Version ->
+  T.Text ->
+  SpecWith CuddleData
+huddleRoundTripArbitraryValidate = huddleRoundTripGenValidate $ arbitrary @a
 
 --------------------------------------------------------------------------------
 -- Writing specs to a file
