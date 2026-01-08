@@ -54,6 +54,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
@@ -603,7 +604,7 @@ aliceStakePoolParamsSmallCost =
         SJust $
           PoolMetadata
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
-            , pmHash = "{}"
+            , pmHash = byteArrayFromShortByteString "{}"
             }
     }
   where

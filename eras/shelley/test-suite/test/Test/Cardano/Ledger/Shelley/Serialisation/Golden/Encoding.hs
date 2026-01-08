@@ -126,6 +126,7 @@ import Data.Coerce (coerce)
 import Data.IP (toIPv4)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -504,7 +505,7 @@ tests =
           poolPledge = Coin 11
           poolCost = Coin 55
           poolUrl = "pool.io"
-          poolMDHash = "{}"
+          poolMDHash = byteArrayFromShortByteString "{}"
           ipv4 = toIPv4 [127, 0, 0, 1]
           ipv4Bytes = ipv4ToBytes . toIPv4 $ [127, 0, 0, 1]
           poolRelays =

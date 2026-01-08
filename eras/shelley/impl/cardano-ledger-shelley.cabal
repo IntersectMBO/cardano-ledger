@@ -229,6 +229,7 @@ library testlib
     data-default,
     generic-random,
     hedgehog-quickcheck,
+    mempack,
     microlens,
     microlens-mtl,
     mtl,

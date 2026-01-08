@@ -28,6 +28,7 @@ import Data.Aeson hiding (Encoding)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Scientific (Scientific)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -262,7 +263,7 @@ exampleShelleyGenesis =
             L.SJust $
               L.PoolMetadata
                 { L.pmUrl = fromJust $ textToUrl 64 "best.pool.com"
-                , L.pmHash = "100ab{}100ab{}"
+                , L.pmHash = byteArrayFromShortByteString "100ab{}100ab{}"
                 }
         }
     staking =
