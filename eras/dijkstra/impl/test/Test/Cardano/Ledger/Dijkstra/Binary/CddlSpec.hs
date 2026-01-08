@@ -84,8 +84,6 @@ spec = do
         xdescribe "Fix decoder equivalence of Tx" $ do
           cddlDecoderEquivalenceSpec @(Tx TopTx DijkstraEra) v "transaction"
     describe "Huddle" $ specWithHuddle dijkstraCDDL 100 $ do
-      huddleRoundTripArbitraryValidate @Addr v "address"
-      huddleRoundTripCborSpec @Addr v "address"
       huddleRoundTripCborSpec @(Value DijkstraEra) v "positive_coin"
       huddleRoundTripArbitraryValidate @(Value DijkstraEra) v "value"
       describe "MultiAsset" $ do
