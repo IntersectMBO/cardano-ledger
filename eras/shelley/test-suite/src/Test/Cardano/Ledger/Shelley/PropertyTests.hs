@@ -16,7 +16,7 @@ import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, SlotNo)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.API (ApplyBlock)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyPOOL)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (BbodyEnv, LedgerEnv, ShelleyBbodyState, ShelleyLedgersEnv)
@@ -87,6 +87,7 @@ commonTests ::
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  , EraRule "POOL" era ~ ShelleyPOOL era
   ) =>
   [TestTree]
 commonTests =

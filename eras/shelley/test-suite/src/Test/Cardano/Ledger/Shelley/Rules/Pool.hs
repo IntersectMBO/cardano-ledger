@@ -5,6 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.Pool (
   tests,
@@ -64,6 +65,7 @@ tests ::
   , EraStake era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
+  , EraRule "POOL" era ~ ShelleyPOOL era
   ) =>
   TestTree
 tests =
@@ -79,7 +81,9 @@ tests =
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
 -- retirement.
 poolRetirement ::
-  ChainProperty era =>
+  ( ChainProperty era
+  , EraRule "POOL" era ~ ShelleyPOOL era
+  ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
 poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
@@ -94,7 +98,9 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
 -- | Check that a newly registered pool key is registered and not
 -- in the retiring map.
 poolRegistration ::
-  ChainProperty era =>
+  ( ChainProperty era
+  , EraRule "POOL" era ~ ShelleyPOOL era
+  ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
 poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
@@ -106,7 +112,9 @@ poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
 poolStateIsInternallyConsistent ::
-  ChainProperty era =>
+  ( ChainProperty era
+  , EraRule "POOL" era ~ ShelleyPOOL era
+  ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
 poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = block}) =

@@ -66,7 +66,6 @@ import Control.State.Transition (
   tellEvent,
   (?!),
  )
-import Data.Kind (Type)
 import qualified Data.Map as Map
 import Data.Primitive.ByteArray (sizeofByteArray)
 import Data.Word (Word8)
@@ -124,7 +123,12 @@ instance NoThunks (ShelleyPoolPredFailure era)
 
 instance NFData (ShelleyPoolPredFailure era)
 
-instance EraPParams era => STS (ShelleyPOOL era) where
+instance
+  ( EraPParams era
+  , EraRule "POOL" era ~ ShelleyPOOL era
+  ) =>
+  STS (ShelleyPOOL era)
+  where
   type State (ShelleyPOOL era) = PState era
 
   type Signal (ShelleyPOOL era) = PoolCert
@@ -135,7 +139,7 @@ instance EraPParams era => STS (ShelleyPOOL era) where
   type PredicateFailure (ShelleyPOOL era) = ShelleyPoolPredFailure era
   type Event (ShelleyPOOL era) = PoolEvent era
 
-  transitionRules = [poolDelegationTransition]
+  transitionRules = [poolTransition]
 
 data PoolEvent era
   = RegisterPool (KeyHash StakePool)
@@ -200,19 +204,19 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
         pure (3, VRFKeyHashAlreadyRegistered poolID vrfKeyHash)
       k -> invalidKey k
 
-poolDelegationTransition ::
-  forall (ledger :: Type -> Type) era.
+poolTransition ::
+  forall rule era.
   ( EraPParams era
-  , Signal (ledger era) ~ PoolCert
-  , Environment (ledger era) ~ PoolEnv era
-  , State (ledger era) ~ PState era
-  , STS (ledger era)
-  , Event (ledger era) ~ PoolEvent era
-  , BaseM (ledger era) ~ ShelleyBase
-  , PredicateFailure (ledger era) ~ ShelleyPoolPredFailure era
+  , Signal (EraRule rule era) ~ PoolCert
+  , Environment (EraRule rule era) ~ PoolEnv era
+  , State (EraRule rule era) ~ PState era
+  , STS (EraRule rule era)
+  , Event (EraRule rule era) ~ PoolEvent era
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  , PredicateFailure (EraRule rule era) ~ ShelleyPoolPredFailure era
   ) =>
-  TransitionRule (ledger era)
-poolDelegationTransition = do
+  TransitionRule (EraRule rule era)
+poolTransition = do
   TRC
     ( PoolEnv cEpoch pp
       , ps@PState {psStakePools, psFutureStakePoolParams, psVRFKeyHashes}
