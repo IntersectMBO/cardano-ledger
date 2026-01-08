@@ -127,6 +127,7 @@
 
 ### `cddl`
 
+* Add `pickOne`, `genBytesTerm`, `genStringTerm`
 * Re-export necessary functionality from `cuddle` for use in the eras, crucially hiding `(=:=)` and `(=:~)`.
 * Change `HuddleRule` and related typeclasses to imply their name using the type-level string via a `Proxy`.
 * Add `HuddleRule1` typeclass.

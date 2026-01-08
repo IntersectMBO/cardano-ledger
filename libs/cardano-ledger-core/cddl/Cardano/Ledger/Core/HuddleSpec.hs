@@ -29,7 +29,6 @@ import Data.ByteString.Short (fromShort)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Proxy (Proxy (..))
-import Data.Ratio (denominator, numerator)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import Data.Word (Word64)
@@ -83,8 +82,11 @@ instance Era era => HuddleRule "unit_interval" era where
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
     where
       generator g = do
-        val <- toRational @Double <$> uniformRM (0.0, 1.0) g
-        S . TTagged 30 <$> genArrayTerm [TInteger $ numerator val, TInteger $ denominator val] g
+        -- TODO should we test with even larger values than Word64?
+        n <- uniformRM (0, maxBound @Word64) g
+        d <- uniformRM (n, maxBound @Word64) g
+        S . TTagged 30
+          <$> genArrayTerm [TInteger $ fromIntegral n, TInteger $ fromIntegral d] g
 
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
