@@ -209,8 +209,11 @@ mkMemoBytes t = mkMemoBytesStrict t . toStrict
 -- | Same as `mkMemoBytes`, but with strict bytes
 mkMemoBytesStrict :: forall t. t -> ByteString -> MemoBytes t
 mkMemoBytesStrict t bs =
-  MemoBytes t (toShort bs) $
-    makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) bs
+  MemoBytes t sbs hash
+  where
+    sbs = toShort bs
+    -- Ensure original `ByteString` can be garbage collected as soon as the hash is computed
+    hash = sbs `seq` makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) bs
 
 -- | Create MemoBytes from its CBOR encoding
 --
