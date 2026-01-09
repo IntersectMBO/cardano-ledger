@@ -176,7 +176,7 @@ instance
   decCBOR = do
     (Annotator getT, Annotator getBytes) <- withSlice decCBOR
     pure $ Annotator $ \fullBytes ->
-      mkMemoBytes <$> getT fullBytes <*> getBytes fullBytes
+      mkMemoBytesForce <$> getT fullBytes <*> getBytes fullBytes
 
 -- | Both binary representation and Haskell types are compared.
 instance Eq t => Eq (MemoBytes t) where
@@ -223,6 +223,14 @@ mkMemoBytesShort t sbs =
   MemoBytes t sbs hash
   where
     hash = makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) (fromShort sbs)
+
+-- | Same as `mkMemoBytes`, but immediately makes a copy of the original bytes, in order to ensure
+-- that potentially much larger source `LazyByteString` is not retained in memory.
+mkMemoBytesForce :: t -> BSL.ByteString -> MemoBytes t
+mkMemoBytesForce t bsl =
+  -- Note: we cannot simply use `toStrict` here, since it does not guarantee a copy, which is why we
+  -- must convert it to a `ShortByteString` and ensure it is fully evaluated.
+  mkMemoBytesShort t $! toShort $ BSL.toStrict bsl
 
 -- | Create MemoBytes from its CBOR encoding
 --
@@ -289,7 +297,7 @@ mkMemoizedEra = mkMemoized (eraProtVerLow @era)
 decodeMemoized :: Decoder s t -> Decoder s (MemoBytes t)
 decodeMemoized rawTypeDecoder = do
   Annotated rawType lazyBytes <- decodeAnnotated rawTypeDecoder
-  pure $ mkMemoBytes rawType lazyBytes
+  pure $! mkMemoBytesForce rawType lazyBytes
 
 -- | Extract memoized SafeHash
 getMemoSafeHash :: Memoized t => t -> SafeHash (MemoHashIndex (RawType t))
