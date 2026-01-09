@@ -45,9 +45,7 @@ import Cardano.Ledger.Shelley.TxCert (
   pattern RegTxCert,
   pattern UnRegTxCert,
  )
-import Cardano.Ledger.Shelley.TxWits (
-  addrWits,
- )
+import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State (PoolMetadata (..), StakePoolRelay (..))
@@ -56,11 +54,11 @@ import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.Crypto (StandardCrypto, hashVerKeyVRF)
 import qualified Data.ByteString.Base16.Lazy as Base16
-import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map (empty, singleton)
 import Data.Maybe (fromJust)
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word32)
@@ -125,7 +123,7 @@ aliceStakePoolParams =
         SJust $
           PoolMetadata
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
-            , pmHash = BS.pack "{}"
+            , pmHash = byteArrayFromShortByteString "{}"
             }
     }
 

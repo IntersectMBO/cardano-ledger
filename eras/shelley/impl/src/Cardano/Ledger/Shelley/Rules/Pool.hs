@@ -66,9 +66,9 @@ import Control.State.Transition (
   tellEvent,
   (?!),
  )
-import qualified Data.ByteString as BS
 import Data.Kind (Type)
 import qualified Data.Map as Map
+import Data.Primitive.ByteArray (sizeofByteArray)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -236,7 +236,7 @@ poolDelegationTransition = do
 
       when (SoftForks.restrictPoolMetadataHash pv) $
         forM_ sppMetadata $ \pmd ->
-          let s = BS.length (pmHash pmd)
+          let s = sizeofByteArray $ pmHash pmd
            in s
                 <= fromIntegral (sizeHash ([] @HASH))
                   ?! PoolMedataHashTooBig sppId s

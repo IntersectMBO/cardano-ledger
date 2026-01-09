@@ -121,12 +121,12 @@ import qualified Codec.CBOR.Encoding as CBOR (Encoding (..))
 import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.Coerce (coerce)
 import Data.IP (toIPv4)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -505,7 +505,7 @@ tests =
           poolPledge = Coin 11
           poolCost = Coin 55
           poolUrl = "pool.io"
-          poolMDHash = BS.pack "{}"
+          poolMDHash = byteArrayFromShortByteString "{}"
           ipv4 = toIPv4 [127, 0, 0, 1]
           ipv4Bytes = ipv4ToBytes . toIPv4 $ [127, 0, 0, 1]
           poolRelays =
