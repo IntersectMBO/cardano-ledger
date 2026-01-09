@@ -128,6 +128,7 @@ rupdTransition = do
     k <- asks securityParameter -- Maximum number of blocks we are allowed to roll back
     return (slotsPerEpoch, slot, slot +* Duration sr, maxLL, asc, k, e)
   let maxsupply = Coin (fromIntegral maxLL)
+
   case determineRewardTiming s slot slotForce of
     -- Waiting for the stability point, do nothing, keep waiting
     RewardsTooEarly -> pure SNothing

@@ -70,6 +70,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withTxsInFailingBlock,
   withTxsInFailingBlockM,
   withTxsInBlockEither,
+  withIssuerAndTxsInBlock_,
+  withIssuerAndTxsInBlock,
   tryTxsInBlock,
   impShelleyExpectTxSuccess,
   modifyNES,
@@ -1365,6 +1367,16 @@ submitFailingBlockM ::
 submitFailingBlockM = withTxsInFailingBlockM . traverse_ submitTx_
 
 -- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to succeed.
+withIssuerAndTxsInBlock_ ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  KeyHash BlockIssuer ->
+  ImpTestM era a ->
+  ImpTestM era ()
+withIssuerAndTxsInBlock_ blockIssuer = void . withIssuerAndTxsInBlock blockIssuer . void
+
+-- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to succeed.
 withTxsInBlock_ ::
   ( HasCallStack
   , ShelleyEraImp era
@@ -1373,6 +1385,15 @@ withTxsInBlock_ ::
   ImpTestM era ()
 withTxsInBlock_ = void . withTxsInBlock . void
 
+withIssuerAndTxsInBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  KeyHash BlockIssuer ->
+  ImpTestM era () ->
+  ImpTestM era (Block BHeaderView era)
+withIssuerAndTxsInBlock blockIssuer = expectRightDeepExpr <=< withTxsInBlockEither (Just blockIssuer)
+
 -- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to succeed.
 withTxsInBlock ::
   ( HasCallStack
@@ -1380,7 +1401,7 @@ withTxsInBlock ::
   ) =>
   ImpTestM era () ->
   ImpTestM era (Block BHeaderView era)
-withTxsInBlock = expectRightDeepExpr <=< withTxsInBlockEither
+withTxsInBlock = expectRightDeepExpr <=< withTxsInBlockEither Nothing
 
 -- | Gather all the txs submitted by @act@ and resubmit them as a block
 -- that's expected to fail with the given predicate failures.
@@ -1403,7 +1424,7 @@ withTxsInFailingBlockM ::
   (Block BHeaderView era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "BBODY" era)))) ->
   ImpTestM era ()
 withTxsInFailingBlockM act mkExpectedFailures = do
-  (predFailures, block) <- expectLeftDeepExpr <=< withTxsInBlockEither $ act
+  (predFailures, block) <- expectLeftDeepExpr <=< withTxsInBlockEither Nothing $ act
   expectedFailures <- mkExpectedFailures block
   predFailures `shouldBeExpr` expectedFailures
 
@@ -1413,6 +1434,7 @@ withTxsInFailingBlockM act mkExpectedFailures = do
 withTxsInBlockEither ::
   forall era.
   ShelleyEraImp era =>
+  Maybe (KeyHash BlockIssuer) ->
   ImpTestM era () ->
   ImpTestM
     era
@@ -1420,12 +1442,14 @@ withTxsInBlockEither ::
         (NonEmpty (PredicateFailure (EraRule "BBODY" era)), Block BHeaderView era)
         (Block BHeaderView era)
     )
-withTxsInBlockEither act = do
+withTxsInBlockEither mIssuer act = do
   stateBefore <- get
   txs <- impRecordSubmittedTxs act
   stateAfter <- get
   put stateBefore
-  tryTxsInBlock txs stateAfter
+  case mIssuer of
+    Nothing -> tryTxsInBlock txs stateAfter
+    Just blockIssuer -> tryTxsInBlock' txs stateAfter blockIssuer
 
 -- | Given a sequence of fixed-up transactions and an expected final test state,
 -- try to submit the transactions as a block.
@@ -1444,6 +1468,21 @@ tryTxsInBlock ::
     )
 tryTxsInBlock txs finalState = do
   blockIssuer <- freshKeyHash
+  tryTxsInBlock' txs finalState blockIssuer
+
+tryTxsInBlock' ::
+  forall era.
+  ShelleyEraImp era =>
+  StrictSeq (Tx TopTx era) ->
+  ImpTestState era ->
+  KeyHash BlockIssuer ->
+  ImpTestM
+    era
+    ( Either
+        (NonEmpty (PredicateFailure (EraRule "BBODY" era)), Block BHeaderView era)
+        (Block BHeaderView era)
+    )
+tryTxsInBlock' txs finalState blockIssuer = do
   slotNo <- use impCurSlotNoG
 
   let
@@ -1966,19 +2005,23 @@ freshPoolParams khPool rewardAccount = do
   vrfHash <- freshKeyHashVRF
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let minCost = pp ^. ppMinPoolCostL
-  poolCostExtra <- uniformRM (Coin 0, Coin 100_000_000)
-  pledge <- uniformRM (Coin 0, Coin 100_000_000)
+  _poolCostExtra <- uniformRM (Coin 0, Coin 100_000_000)
+  -- pledge <- uniformRM (Coin 0, Coin 100_000)
+  let pledge = Coin 0
+  let owners = case raCredential rewardAccount of
+        KeyHashObj credKh -> Set.fromList [credKh]
+        _ -> mempty
   pure
     StakePoolParams
       { sppVrf = vrfHash
       , sppRewardAccount = rewardAccount
       , sppRelays = mempty
       , sppPledge = pledge
-      , sppOwners = mempty
+      , sppOwners = owners
       , sppMetadata = SNothing
       , sppMargin = def
       , sppId = khPool
-      , sppCost = minCost <> poolCostExtra
+      , sppCost = minCost -- <> poolCostExtra
       }
 
 registerPool ::

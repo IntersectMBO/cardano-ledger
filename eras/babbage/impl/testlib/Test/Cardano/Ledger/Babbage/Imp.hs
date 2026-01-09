@@ -4,11 +4,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Babbage.Imp (spec) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.Core
+import Cardano.Ledger.Babbage.State
+import Cardano.Ledger.Shelley.Rules
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import qualified Test.Cardano.Ledger.Babbage.Imp.EpochSpec as Epoch
@@ -30,7 +35,10 @@ spec = do
 
 babbageEraSpecificSpec ::
   forall era.
-  AlonzoEraImp era =>
+  ( BabbageEraImp era
+  , ShelleyEraAccounts era
+  , Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 babbageEraSpecificSpec = do
   describe "Babbage era specific Imp spec" $
