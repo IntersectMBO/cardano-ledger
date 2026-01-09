@@ -90,7 +90,7 @@ import Cardano.Ledger.MemoBytes (
   packMemoBytesM,
   unpackMemoBytesM,
  )
-import Cardano.Ledger.MemoBytes.Internal (mkMemoBytes)
+import Cardano.Ledger.MemoBytes.Internal (mkMemoBytesShort)
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
   nativeMultiSigTag,
@@ -103,8 +103,6 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
-import Data.ByteString.Lazy (fromStrict)
-import Data.ByteString.Short (fromShort)
 import Data.Foldable as F (foldl')
 import Data.MemPack
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
@@ -176,7 +174,7 @@ deriving instance Era era => NoThunks (TimelockRaw era)
 deriving instance Show (TimelockRaw era)
 
 -- | This function deconstructs and then reconstructs the timelock script
--- to prove the compiler that we can arbirarily switch out the eras as long
+-- to prove the compiler that we can arbitrarily switch out the eras as long
 -- as the cryptos for both eras are the same.
 translateTimelock ::
   forall era1 era2.
@@ -185,8 +183,8 @@ translateTimelock ::
   ) =>
   Timelock era1 ->
   Timelock era2
-translateTimelock (MkTimelock (Memo tl bs)) =
-  let rewrap rtl = MkTimelock $ mkMemoBytes rtl (fromStrict $ fromShort bs)
+translateTimelock (MkTimelock (Memo tl sbs)) =
+  let rewrap rtl = MkTimelock $ mkMemoBytesShort rtl sbs
    in case tl of
         TimelockSignature s -> rewrap $ TimelockSignature s
         TimelockAllOf l -> rewrap . TimelockAllOf $ translateTimelock <$> l

@@ -34,6 +34,7 @@ module Cardano.Ledger.MemoBytes.Internal (
   Mem,
   MemoHashIndex,
   mkMemoBytes,
+  mkMemoBytesShort,
   mkMemoBytesStrict,
   getMemoBytesType,
   getMemoBytesHash,
@@ -122,7 +123,7 @@ pattern Memo :: t -> ShortByteString -> MemoBytes t
 pattern Memo memoType memoBytes <-
   MemoBytes memoType memoBytes _
   where
-    Memo mt mb = mkMemoBytes mt (shortToLazy mb)
+    Memo mt mb = mkMemoBytesShort mt mb
 
 {-# COMPLETE Memo #-}
 
@@ -214,6 +215,14 @@ mkMemoBytesStrict t bs =
     sbs = toShort bs
     -- Ensure original `ByteString` can be garbage collected as soon as the hash is computed
     hash = sbs `seq` makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) bs
+
+-- | Same as `mkMemoBytes`, but for `ShortByteString`. This will be more efficient if original bytes are
+-- already available in a form of a `ShortByteString` and especially whenever hash is never demanded.
+mkMemoBytesShort :: forall t. t -> ShortByteString -> MemoBytes t
+mkMemoBytesShort t sbs =
+  MemoBytes t sbs hash
+  where
+    hash = makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) (fromShort sbs)
 
 -- | Create MemoBytes from its CBOR encoding
 --
