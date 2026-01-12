@@ -97,7 +97,7 @@ kes_period = uint .size 8
 
 signature = bytes .size 64
 
-protocol_version = [major_protocol_version, uint]
+protocol_version = [major_protocol_version, uint .size 4]
 
 major_protocol_version = 0 .. 13
 

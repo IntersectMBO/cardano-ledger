@@ -209,12 +209,12 @@ instance Arbitrary Version where
 
 genVersion :: HasCallStack => Version -> Version -> Gen Version
 genVersion minVersion maxVersion =
-  genVersion64 (getVersion64 minVersion) (getVersion64 maxVersion)
+  genVersion32 (getVersion32 minVersion) (getVersion32 maxVersion)
   where
-    genVersion64 minVersion64 maxVersion64 = do
-      v64 <- choose (minVersion64, maxVersion64)
-      case mkVersion64 v64 of
-        Nothing -> error $ "Impossible: Invalid version generated: " ++ show v64
+    genVersion32 minVersion32 maxVersion32 = do
+      v32 <- choose (minVersion32, maxVersion32)
+      case mkVersion32 v32 of
+        Nothing -> error $ "Impossible: Invalid version generated: " ++ show v32
         Just v -> pure v
 
 genByteString :: Int -> Gen BS.ByteString
