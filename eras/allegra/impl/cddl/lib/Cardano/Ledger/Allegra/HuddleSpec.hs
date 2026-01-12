@@ -188,7 +188,7 @@ instance HuddleGroup "operational_cert" AllegraEra where
   huddleGroupNamed = shelleyOperationalCertGroup
 
 instance HuddleRule "header_body" AllegraEra where
-  huddleRuleNamed = headerBodyRule
+  huddleRuleNamed = shelleyHeaderBodyRule
 
 instance HuddleRule "header" AllegraEra where
   huddleRuleNamed = headerRule
