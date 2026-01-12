@@ -93,7 +93,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
 
 import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder (setTag)
-import Cardano.Ledger.Binary.Version (Version, getVersion64, natVersion)
+import Cardano.Ledger.Binary.Version (Version, getVersion32, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginToMaybe)
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray)
 import qualified Codec.CBOR.Term as C (Term (..), encodeTerm)
@@ -275,7 +275,7 @@ encodeTerm = fromPlainEncoding . C.encodeTerm
 --------------------------------------------------------------------------------
 
 encodeVersion :: Version -> Encoding
-encodeVersion = encodeWord64 . getVersion64
+encodeVersion = encodeWord32 . getVersion32
 
 encodeRatioNoTag :: (t -> Encoding) -> Ratio t -> Encoding
 encodeRatioNoTag encodeNumeric r =

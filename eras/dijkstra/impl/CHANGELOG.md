@@ -98,6 +98,7 @@
 
 ### `cddl`
 
+* Constrain `protocol_version` minor field to `uint .size 4`.
 * Renamed `policy_hash` to `guardrails_script_hash` in governance actions to avoid confusion with multi-asset policy IDs
 * Move `cddl-files` to `cddl/data`.
 * Add full `HuddleSpec`.

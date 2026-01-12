@@ -174,7 +174,7 @@ import Cardano.Ledger.Binary.Plain (
   toCborError,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain (assertTag, decodeTagMaybe)
-import Cardano.Ledger.Binary.Version (Version, mkVersion64, natVersion)
+import Cardano.Ledger.Binary.Version (Version, mkVersion32, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
 import Codec.CBOR.ByteArray (ByteArray (..))
 import qualified Codec.CBOR.Decoding as C (
@@ -425,7 +425,7 @@ unlessDecoderVersionAtLeast atLeast decoder = do
 --------------------------------------------------------------------------------
 
 decodeVersion :: Decoder s Version
-decodeVersion = decodeWord64 >>= mkVersion64
+decodeVersion = decodeWord32 >>= mkVersion32
 {-# INLINE decodeVersion #-}
 
 -- | `Decoder` for `Rational`. Versions variance:
@@ -471,8 +471,8 @@ decodeRational =
 _decodeRationalFuture :: Decoder s Rational
 _decodeRationalFuture = do
   -- We are not using `natVersion` because these versions aren't yet supported.
-  v9 <- mkVersion64 9
-  v10 <- mkVersion64 10
+  v9 <- mkVersion32 9
+  v10 <- mkVersion32 10
   ifDecoderVersionAtLeast
     v10
     decodeRationalWithTag

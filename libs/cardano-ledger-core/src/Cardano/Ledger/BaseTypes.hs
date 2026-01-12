@@ -218,14 +218,14 @@ instance NoThunks ProtVer
 instance ToJSON ProtVer where
   toJSON (ProtVer major minor) =
     object
-      [ "major" .= getVersion64 major
+      [ "major" .= getVersion32 major
       , "minor" .= minor
       ]
 
 instance FromJSON ProtVer where
   parseJSON =
     withObject "ProtVer" $ \obj -> do
-      pvMajor <- mkVersion64 =<< obj .: "major"
+      pvMajor <- mkVersion32 =<< obj .: "major"
       pvMinor <- obj .: "minor"
       pure ProtVer {..}
 

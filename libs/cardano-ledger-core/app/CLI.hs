@@ -5,7 +5,7 @@ module CLI (
   optsParser,
 ) where
 
-import Cardano.Ledger.Binary (mkVersion64)
+import Cardano.Ledger.Binary (mkVersion32)
 import Cardano.Ledger.Plutus.Evaluate
 import Options.Applicative
 import Text.Read (readMaybe)
@@ -28,7 +28,7 @@ overridesParser =
           <> help "Plutus script hex without context"
       )
     <*> option
-      (mkVersion64 <$> auto)
+      (mkVersion32 <$> auto)
       ( long "protocol-version"
           <> short 'v'
           <> value Nothing
