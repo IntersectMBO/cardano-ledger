@@ -125,7 +125,6 @@ import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import qualified Data.Set.NonEmpty as NES
-import Data.Void (absurd)
 import GHC.Generics (Generic (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -307,12 +306,14 @@ data DijkstraLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))
   | CertsEvent (Event (EraRule "CERTS" era))
   | GovEvent (Event (EraRule "GOV" era))
+  | SubLedgersEvent (Event (EraRule "SUBLEDGERS" era))
   deriving (Generic)
 
 deriving instance
   ( Eq (Event (EraRule "CERTS" era))
   , Eq (Event (EraRule "UTXOW" era))
   , Eq (Event (EraRule "GOV" era))
+  , Eq (Event (EraRule "SUBLEDGERS" era))
   ) =>
   Eq (DijkstraLedgerEvent era)
 
@@ -320,6 +321,7 @@ instance
   ( NFData (Event (EraRule "CERTS" era))
   , NFData (Event (EraRule "UTXOW" era))
   , NFData (Event (EraRule "GOV" era))
+  , NFData (Event (EraRule "SUBLEDGERS" era))
   ) =>
   NFData (DijkstraLedgerEvent era)
 
@@ -563,9 +565,10 @@ instance
   , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
   , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
   , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
+  , Event (EraRule "LEDGER" era) ~ DijkstraLedgerEvent era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)
   where
   wrapFailed = DijkstraSubLedgersFailure
-  wrapEvent = absurd
+  wrapEvent = SubLedgersEvent

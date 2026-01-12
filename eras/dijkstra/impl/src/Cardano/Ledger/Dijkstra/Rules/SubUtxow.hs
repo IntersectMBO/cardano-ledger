@@ -16,6 +16,7 @@
 module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
   DijkstraSUBUTXOW,
   DijkstraSubUtxowPredFailure (..),
+  DijkstraSubUtxowEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -40,11 +41,10 @@ import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
-import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data DijkstraSubUtxowPredFailure era
+newtype DijkstraSubUtxowPredFailure era
   = SubUtxoFailure (PredicateFailure (EraRule "SUBUTXO" era))
   deriving (Generic)
 
@@ -80,12 +80,21 @@ instance
 
 type instance EraRuleFailure "SUBUTXOW" DijkstraEra = DijkstraSubUtxowPredFailure DijkstraEra
 
-type instance EraRuleEvent "SUBUTXOW" DijkstraEra = VoidEraRule "SUBUTXOW" DijkstraEra
+type instance EraRuleEvent "SUBUTXOW" DijkstraEra = DijkstraSubUtxowEvent DijkstraEra
 
 instance InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBUTXOW" DijkstraSubUtxoPredFailure DijkstraEra where
   injectFailure = SubUtxoFailure
+
+instance InjectRuleEvent "SUBUTXOW" DijkstraSubUtxowEvent DijkstraEra
+
+newtype DijkstraSubUtxowEvent era = SubUtxo (Event (EraRule "SUBUTXO" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "SUBUTXO" era)) => Eq (DijkstraSubUtxowEvent era)
+
+instance NFData (Event (EraRule "SUBUTXO" era)) => NFData (DijkstraSubUtxowEvent era)
 
 instance
   ( ConwayEraGov era
@@ -101,7 +110,7 @@ instance
   type Environment (DijkstraSUBUTXOW era) = UtxoEnv era
   type BaseM (DijkstraSUBUTXOW era) = ShelleyBase
   type PredicateFailure (DijkstraSUBUTXOW era) = DijkstraSubUtxowPredFailure era
-  type Event (DijkstraSUBUTXOW era) = Void
+  type Event (DijkstraSUBUTXOW era) = DijkstraSubUtxowEvent era
 
   transitionRules = [dijkstraSubUtxowTransition @era]
 
@@ -125,4 +134,4 @@ instance
   Embed (DijkstraSUBUTXO era) (DijkstraSUBUTXOW era)
   where
   wrapFailed = SubUtxoFailure
-  wrapEvent = absurd
+  wrapEvent = SubUtxo

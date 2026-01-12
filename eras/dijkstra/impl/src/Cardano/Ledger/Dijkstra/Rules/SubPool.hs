@@ -1,10 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -14,6 +16,7 @@
 module Cardano.Ledger.Dijkstra.Rules.SubPool (
   DijkstraSUBPOOL,
   DijkstraSubPoolPredFailure (..),
+  DijkstraSubPoolEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -29,7 +32,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBPOOL,
  )
 import Cardano.Ledger.Dijkstra.State
-import Cardano.Ledger.Shelley.Rules (PoolEnv)
+import Cardano.Ledger.Shelley.Rules (PoolEnv, PoolEvent (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -45,7 +48,6 @@ import Control.State.Transition.Extended (
   transitionRules,
  )
 import Data.Typeable (Typeable)
-import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -64,9 +66,14 @@ instance Typeable era => DecCBOR (DijkstraSubPoolPredFailure era) where
 
 type instance EraRuleFailure "SUBPOOL" DijkstraEra = DijkstraSubPoolPredFailure DijkstraEra
 
-type instance EraRuleEvent "SUBPOOL" DijkstraEra = VoidEraRule "SUBPOOL" DijkstraEra
+type instance EraRuleEvent "SUBPOOL" DijkstraEra = DijkstraSubPoolEvent DijkstraEra
 
 instance InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure DijkstraEra
+
+instance InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent DijkstraEra
+
+newtype DijkstraSubPoolEvent era = DijkstraSubPoolEvent (PoolEvent era)
+  deriving (Generic, Eq, NFData)
 
 instance
   ( EraGov era
@@ -79,7 +86,7 @@ instance
   type Environment (DijkstraSUBPOOL era) = PoolEnv era
   type BaseM (DijkstraSUBPOOL era) = ShelleyBase
   type PredicateFailure (DijkstraSUBPOOL era) = DijkstraSubPoolPredFailure era
-  type Event (DijkstraSUBPOOL era) = Void
+  type Event (DijkstraSUBPOOL era) = DijkstraSubPoolEvent era
 
   transitionRules = [dijkstraSubPoolTransition @era]
 

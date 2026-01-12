@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -13,6 +14,7 @@
 
 module Cardano.Ledger.Dijkstra.Rules.SubUtxos (
   DijkstraSUBUTXOS,
+  DijkstraSubUtxosEvent (..),
   DijkstraSubUtxosPredFailure (..),
 ) where
 
@@ -25,6 +27,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules (ConwayUtxosEvent)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXOS,
@@ -46,7 +49,6 @@ import Control.State.Transition.Extended (
   transitionRules,
  )
 import Data.Typeable (Typeable)
-import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -65,9 +67,18 @@ instance Typeable era => DecCBOR (DijkstraSubUtxosPredFailure era) where
 
 type instance EraRuleFailure "SUBUTXOS" DijkstraEra = DijkstraSubUtxosPredFailure DijkstraEra
 
-type instance EraRuleEvent "SUBUTXOS" DijkstraEra = VoidEraRule "SUBUTXOS" DijkstraEra
+type instance EraRuleEvent "SUBUTXOS" DijkstraEra = DijkstraSubUtxosEvent DijkstraEra
 
 instance InjectRuleFailure "SUBUTXOS" DijkstraSubUtxosPredFailure DijkstraEra
+
+newtype DijkstraSubUtxosEvent era = DijkstraSubUtxosEvent (ConwayUtxosEvent era)
+  deriving (Generic)
+
+deriving instance Eq (ConwayUtxosEvent era) => Eq (DijkstraSubUtxosEvent era)
+
+instance NFData (ConwayUtxosEvent era) => NFData (DijkstraSubUtxosEvent era)
+
+instance InjectRuleEvent "SUBUTXOS" DijkstraSubUtxosEvent DijkstraEra
 
 instance
   ( ConwayEraGov era
@@ -80,7 +91,7 @@ instance
   type Environment (DijkstraSUBUTXOS era) = UtxoEnv era
   type BaseM (DijkstraSUBUTXOS era) = ShelleyBase
   type PredicateFailure (DijkstraSUBUTXOS era) = DijkstraSubUtxosPredFailure era
-  type Event (DijkstraSUBUTXOS era) = Void
+  type Event (DijkstraSUBUTXOS era) = DijkstraSubUtxosEvent era
 
   transitionRules = [dijkstraSubUtxosTransition @era]
 

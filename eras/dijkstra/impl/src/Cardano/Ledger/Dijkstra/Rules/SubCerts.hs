@@ -18,6 +18,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubCerts (
   DijkstraSUBCERTS,
   SubCertsEnv (..),
   DijkstraSubCertsPredFailure (..),
+  DijkstraSubCertsEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes
@@ -44,7 +45,6 @@ import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
-import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -84,12 +84,21 @@ instance
 
 type instance EraRuleFailure "SUBCERTS" DijkstraEra = DijkstraSubCertsPredFailure DijkstraEra
 
-type instance EraRuleEvent "SUBCERTS" DijkstraEra = VoidEraRule "SUBCERTS" DijkstraEra
+type instance EraRuleEvent "SUBCERTS" DijkstraEra = DijkstraSubCertsEvent DijkstraEra
 
 instance InjectRuleFailure "SUBCERTS" DijkstraSubCertsPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBCERTS" DijkstraSubCertPredFailure DijkstraEra where
   injectFailure = SubCertFailure
+
+instance InjectRuleEvent "SUBCERTS" DijkstraSubCertsEvent DijkstraEra
+
+newtype DijkstraSubCertsEvent era = SubCertEvent (Event (EraRule "SUBCERT" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "SUBCERT" era)) => Eq (DijkstraSubCertsEvent era)
+
+instance NFData (Event (EraRule "SUBCERT" era)) => NFData (DijkstraSubCertsEvent era)
 
 instance
   ( ConwayEraGov era
@@ -105,7 +114,7 @@ instance
   type Environment (DijkstraSUBCERTS era) = SubCertsEnv era
   type BaseM (DijkstraSUBCERTS era) = ShelleyBase
   type PredicateFailure (DijkstraSUBCERTS era) = DijkstraSubCertsPredFailure era
-  type Event (DijkstraSUBCERTS era) = Void
+  type Event (DijkstraSUBCERTS era) = DijkstraSubCertsEvent era
 
   transitionRules = [dijkstraSubCertsTransition @era]
 
@@ -146,7 +155,7 @@ instance
   Embed (DijkstraSUBCERT era) (DijkstraSUBCERTS era)
   where
   wrapFailed = SubCertFailure
-  wrapEvent = absurd
+  wrapEvent = SubCertEvent
 
 -- TODO: instead of duplicating this, parameterize on TxLevel
 data SubCertsEnv era = SubCertsEnv

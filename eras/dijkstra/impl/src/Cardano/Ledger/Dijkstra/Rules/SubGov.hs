@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -14,6 +15,7 @@
 module Cardano.Ledger.Dijkstra.Rules.SubGov (
   DijkstraSUBGOV,
   DijkstraSubGovPredFailure (..),
+  DijkstraSubGovEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -25,7 +27,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (GovEnv, GovSignal)
+import Cardano.Ledger.Conway.Rules (ConwayGovEvent (..), GovEnv, GovSignal)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBGOV,
@@ -45,7 +47,6 @@ import Control.State.Transition.Extended (
   transitionRules,
  )
 import Data.Typeable (Typeable)
-import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -64,9 +65,14 @@ instance Typeable era => DecCBOR (DijkstraSubGovPredFailure era) where
 
 type instance EraRuleFailure "SUBGOV" DijkstraEra = DijkstraSubGovPredFailure DijkstraEra
 
-type instance EraRuleEvent "SUBGOV" DijkstraEra = VoidEraRule "SUBGOV" DijkstraEra
+type instance EraRuleEvent "SUBGOV" DijkstraEra = DijkstraSubGovEvent DijkstraEra
 
 instance InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure DijkstraEra
+
+newtype DijkstraSubGovEvent era = DijkstraSubGovEvent (ConwayGovEvent era)
+  deriving (Generic, Eq, NFData)
+
+instance InjectRuleEvent "SUBGOV" DijkstraSubGovEvent DijkstraEra
 
 instance
   ( EraGov era
@@ -79,7 +85,7 @@ instance
   type Environment (DijkstraSUBGOV era) = GovEnv era
   type BaseM (DijkstraSUBGOV era) = ShelleyBase
   type PredicateFailure (DijkstraSUBGOV era) = DijkstraSubGovPredFailure era
-  type Event (DijkstraSUBGOV era) = Void
+  type Event (DijkstraSUBGOV era) = DijkstraSubGovEvent era
 
   transitionRules = [dijkstraSubGovTransition @era]
 

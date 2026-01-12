@@ -2,6 +2,17 @@
 
 ## 0.2.0.0
 
+* Add:
+  - `DijkstraLedgerEvent`
+  - `DijkstraSubLedgersEvent`
+  - `DijkstraSubLedgerEvent`
+  - `DijkstraSubCertsEvent`
+  - `DijkstraSubCertEvent`
+  - `DijkstraSubPoolEvent`
+  - `DijkstraSubGovEvent`
+  - `DijkstraSubUtxowEvent`
+  - `DijkstraSubUtxoEvent`
+  - `DijkstraSubUtxosEvent`
 * Add `DijkstraLedgerEvent`
 * Add `DirectDeposits` to transaction bodies at both (top and sub) levels.
   - Add `directDepositsTxBodyL` lens to the `DijkstraEraTxBody` typeclass.
