@@ -83,7 +83,7 @@ instance HuddleRule "header" MaryEra where
   huddleRuleNamed = headerRule
 
 instance HuddleRule "header_body" MaryEra where
-  huddleRuleNamed = headerBodyRule
+  huddleRuleNamed = shelleyHeaderBodyRule
 
 instance HuddleGroup "protocol_version" MaryEra where
   huddleGroupNamed = shelleyProtocolVersionGroup

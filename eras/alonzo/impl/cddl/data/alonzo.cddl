@@ -18,14 +18,14 @@ header = [header_body, body_signature : kes_signature]
 
 header_body = 
   [ block_number      : block_number
-  , slot              : slot       
-  , prev_hash         : hash32/ nil
-  , issuer_vkey       : vkey       
-  , vrf_vkey          : vrf_vkey   
-  , nonce_vrf         : vrf_cert   
-  , leader_vrf        : vrf_cert   
-  , block_body_size   : uint       
-  , block_body_hash   : hash32      ; merkle triple root
+  , slot              : slot        
+  , prev_hash         : hash32/ nil 
+  , issuer_vkey       : vkey        
+  , vrf_vkey          : vrf_vkey    
+  , nonce_vrf         : vrf_cert    
+  , leader_vrf        : vrf_cert    
+  , block_body_size   : uint .size 4
+  , block_body_hash   : hash32      
   , operational_cert
   , protocol_version
   ]

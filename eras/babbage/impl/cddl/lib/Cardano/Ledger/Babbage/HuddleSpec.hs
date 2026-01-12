@@ -24,9 +24,11 @@ module Cardano.Ledger.Babbage.HuddleSpec (
   dataRule,
   datumOptionRule,
   scriptRefRule,
+  babbageHeaderBodyRule,
 ) where
 
 import Cardano.Ledger.Alonzo.HuddleSpec hiding (
+  shelleyHeaderBodyRule,
   shelleyOperationalCertGroup,
   shelleyProtocolVersionGroup,
  )
@@ -145,6 +147,29 @@ babbageScript pname p =
       =.= arr [0, a (huddleRule @"native_script" p)]
       / arr [1, a (huddleRule @"plutus_v1_script" p)]
       / arr [2, a (huddleRule @"plutus_v2_script" p)]
+
+babbageHeaderBodyRule ::
+  forall era.
+  ( HuddleRule "operational_cert" era
+  , HuddleRule "protocol_version" era
+  ) =>
+  Proxy "header_body" ->
+  Proxy era ->
+  Rule
+babbageHeaderBodyRule pname p =
+  pname
+    =.= arr
+      [ "block_number" ==> huddleRule @"block_number" p
+      , "slot" ==> huddleRule @"slot" p
+      , "prev_hash" ==> (huddleRule @"hash32" p / VNil)
+      , "issuer_vkey" ==> huddleRule @"vkey" p
+      , "vrf_vkey" ==> huddleRule @"vrf_vkey" p
+      , "vrf_result" ==> huddleRule @"vrf_cert" p
+      , "block_body_size" ==> VUInt `sized` (4 :: Word64)
+      , "block_body_hash" ==> huddleRule @"hash32" p //- "merkle triple root"
+      , a $ huddleRule @"operational_cert" p
+      , a $ huddleRule @"protocol_version" p
+      ]
 
 instance HuddleGroup "account_registration_cert" BabbageEra where
   huddleGroupNamed = accountRegistrationCertGroup
@@ -338,20 +363,7 @@ instance HuddleRule "header" BabbageEra where
 -- See 'babbageProtocolVersionRule' and 'operational_cert' instance for details.
 -- References: PR #3762, Issue #3559
 instance HuddleRule "header_body" BabbageEra where
-  huddleRuleNamed pname p =
-    pname
-      =.= arr
-        [ "block_number" ==> huddleRule @"block_number" p
-        , "slot" ==> huddleRule @"slot" p
-        , "prev_hash" ==> (huddleRule @"hash32" p / VNil)
-        , "issuer_vkey" ==> huddleRule @"vkey" p
-        , "vrf_vkey" ==> huddleRule @"vrf_vkey" p
-        , "vrf_result" ==> huddleRule @"vrf_cert" p //- "replaces nonce_vrf and leader_vrf"
-        , "block_body_size" ==> VUInt
-        , "block_body_hash" ==> huddleRule @"hash32" p //- "merkle triple root"
-        , a $ huddleRule @"operational_cert" p
-        , a $ huddleRule @"protocol_version" p
-        ]
+  huddleRuleNamed pname p = comment "nonce_vrf and leader_vrf are replaced by vrf_result" $ babbageHeaderBodyRule pname p
 
 instance HuddleRule "transaction" BabbageEra where
   huddleRuleNamed pname p =

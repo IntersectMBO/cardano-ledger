@@ -16,15 +16,16 @@ block =
 
 header = [header_body, body_signature : kes_signature]
 
+; nonce_vrf and leader_vrf are replaced by vrf_result
 header_body = 
   [ block_number      : block_number
-  , slot              : slot       
-  , prev_hash         : hash32/ nil
-  , issuer_vkey       : vkey       
-  , vrf_vkey          : vrf_vkey   
-  , vrf_result        : vrf_cert    ; replaces nonce_vrf and leader_vrf
-  , block_body_size   : uint       
-  , block_body_hash   : hash32      ; merkle triple root
+  , slot              : slot        
+  , prev_hash         : hash32/ nil 
+  , issuer_vkey       : vkey        
+  , vrf_vkey          : vrf_vkey    
+  , vrf_result        : vrf_cert    
+  , block_body_size   : uint .size 4
+  , block_body_hash   : hash32       ; merkle triple root
   , operational_cert
   , protocol_version
   ]

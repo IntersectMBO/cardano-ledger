@@ -20,7 +20,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   proposedProtocolParameterUpdatesRule,
   updateRule,
   protocolParamUpdateRule,
-  headerBodyRule,
+  shelleyHeaderBodyRule,
   transactionWitnessSetRule,
   vkeywitnessRule,
   bootstrapWitnessRule,
@@ -123,7 +123,7 @@ protocolParamUpdateRule pname p =
       , opt (idx 16 ==> huddleRule @"coin" p) //- "min pool cost"
       ]
 
-headerBodyRule ::
+shelleyHeaderBodyRule ::
   forall era.
   ( HuddleGroup "operational_cert" era
   , HuddleGroup "protocol_version" era
@@ -131,7 +131,7 @@ headerBodyRule ::
   Proxy "header_body" ->
   Proxy era ->
   Rule
-headerBodyRule pname p =
+shelleyHeaderBodyRule pname p =
   pname
     =.= arr
       [ "block_number" ==> huddleRule @"block_number" p
@@ -518,7 +518,7 @@ instance HuddleGroup "operational_cert" ShelleyEra where
   huddleGroupNamed = shelleyOperationalCertGroup
 
 instance HuddleRule "header_body" ShelleyEra where
-  huddleRuleNamed = headerBodyRule
+  huddleRuleNamed = shelleyHeaderBodyRule
 
 instance HuddleRule "header" ShelleyEra where
   huddleRuleNamed = headerRule
