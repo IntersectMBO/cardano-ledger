@@ -21,6 +21,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedger (
   DijkstraSubLedgerEvent (..),
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
@@ -302,6 +303,8 @@ instance
 instance
   ( ConwayEraGov era
   , ConwayEraCertState era
+  , ConwayEraTxBody era
+  , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era

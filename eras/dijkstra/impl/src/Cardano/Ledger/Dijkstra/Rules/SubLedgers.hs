@@ -19,6 +19,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedgers (
   DijkstraSubLedgersEvent (..),
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
@@ -109,6 +110,7 @@ instance NFData (Event (EraRule "SUBLEDGER" era)) => NFData (DijkstraSubLedgersE
 instance
   ( ConwayEraGov era
   , ConwayEraCertState era
+  , EraPlutusContext era
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , Embed (EraRule "SUBLEDGER" era) (DijkstraSUBLEDGERS era)
@@ -145,6 +147,7 @@ instance
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
+  , EraPlutusContext era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era

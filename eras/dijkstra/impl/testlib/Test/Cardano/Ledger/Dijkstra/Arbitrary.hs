@@ -21,6 +21,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes (PerasCert (..), StrictMaybe)
+import Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure)
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
@@ -258,8 +259,11 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance Arbitrary (DijkstraSubUtxosPredFailure era) where
-  arbitrary = pure DijkstraSubUtxosPredFailure
+instance
+  Arbitrary (ConwayUtxosPredFailure era) =>
+  Arbitrary (DijkstraSubUtxosPredFailure era)
+  where
+  arbitrary = DijkstraSubUtxosPredFailure <$> arbitrary
 
 instance
   Arbitrary (PredicateFailure (EraRule "SUBUTXO" era)) =>

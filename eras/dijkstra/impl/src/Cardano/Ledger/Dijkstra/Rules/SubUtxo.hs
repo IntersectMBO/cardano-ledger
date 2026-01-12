@@ -19,6 +19,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxo (
   DijkstraSubUtxoEvent (..),
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
@@ -124,6 +125,8 @@ dijkstraSubUtxoTransition = do
 
 instance
   ( ConwayEraGov era
+  , ConwayEraTxBody era
+  , EraPlutusContext era
   , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
   ) =>
   Embed (DijkstraSUBUTXOS era) (DijkstraSUBUTXO era)

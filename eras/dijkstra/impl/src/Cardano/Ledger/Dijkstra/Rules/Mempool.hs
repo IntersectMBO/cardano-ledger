@@ -21,6 +21,7 @@ module Cardano.Ledger.Dijkstra.Rules.Mempool (
   DijkstraMempoolEvent (..),
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -223,6 +224,7 @@ instance
   , ConwayEraCertState era
   , DijkstraEraTxBody era
   , ConwayEraGov era
+  , EraPlutusContext era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "CERTS" era) (DijkstraLEDGER era)
   , Embed (EraRule "GOV" era) (DijkstraLEDGER era)

@@ -19,6 +19,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
   DijkstraSubUtxowEvent (..),
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
@@ -98,6 +99,8 @@ instance NFData (Event (EraRule "SUBUTXO" era)) => NFData (DijkstraSubUtxowEvent
 
 instance
   ( ConwayEraGov era
+  , ConwayEraTxBody era
+  , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
@@ -127,6 +130,8 @@ dijkstraSubUtxowTransition = do
 
 instance
   ( ConwayEraGov era
+  , ConwayEraTxBody era
+  , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era

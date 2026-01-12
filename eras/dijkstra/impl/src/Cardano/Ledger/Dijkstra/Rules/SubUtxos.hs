@@ -1,8 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -18,6 +20,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxos (
   DijkstraSubUtxosPredFailure (..),
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
@@ -27,7 +30,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (ConwayUtxosEvent)
+import Cardano.Ledger.Conway.Rules (ConwayUtxosEvent, ConwayUtxosPredFailure)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXOS,
@@ -48,22 +51,33 @@ import Control.State.Transition.Extended (
   judgmentContext,
   transitionRules,
  )
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data DijkstraSubUtxosPredFailure era = DijkstraSubUtxosPredFailure
-  deriving (Show, Eq, Generic)
+newtype DijkstraSubUtxosPredFailure era = DijkstraSubUtxosPredFailure (ConwayUtxosPredFailure era)
+  deriving (Generic)
 
-instance NoThunks (DijkstraSubUtxosPredFailure era)
+deriving newtype instance
+  Eq (ConwayUtxosPredFailure era) =>
+  Eq (DijkstraSubUtxosPredFailure era)
 
-instance NFData (DijkstraSubUtxosPredFailure era)
+deriving newtype instance
+  Show (ConwayUtxosPredFailure era) =>
+  Show (DijkstraSubUtxosPredFailure era)
 
-instance Era era => EncCBOR (DijkstraSubUtxosPredFailure era) where
-  encCBOR _ = encCBOR ()
+instance
+  NoThunks (ConwayUtxosPredFailure era) =>
+  NoThunks (DijkstraSubUtxosPredFailure era)
 
-instance Typeable era => DecCBOR (DijkstraSubUtxosPredFailure era) where
-  decCBOR = decCBOR @() *> pure DijkstraSubUtxosPredFailure
+instance NFData (ConwayUtxosPredFailure era) => NFData (DijkstraSubUtxosPredFailure era)
+
+deriving newtype instance
+  EncCBOR (ConwayUtxosPredFailure era) =>
+  EncCBOR (DijkstraSubUtxosPredFailure era)
+
+deriving newtype instance
+  (Era era, DecCBOR (ConwayUtxosPredFailure era)) =>
+  DecCBOR (DijkstraSubUtxosPredFailure era)
 
 type instance EraRuleFailure "SUBUTXOS" DijkstraEra = DijkstraSubUtxosPredFailure DijkstraEra
 
@@ -82,6 +96,8 @@ instance InjectRuleEvent "SUBUTXOS" DijkstraSubUtxosEvent DijkstraEra
 
 instance
   ( ConwayEraGov era
+  , ConwayEraTxBody era
+  , EraPlutusContext era
   , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
   ) =>
   STS (DijkstraSUBUTXOS era)
