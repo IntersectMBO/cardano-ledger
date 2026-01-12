@@ -17,6 +17,7 @@
 module Cardano.Ledger.Dijkstra.Rules.Ledger (
   DijkstraLEDGER,
   DijkstraLedgerPredFailure (..),
+  DijkstraLedgerEvent (..),
   shelleyToDijkstraLedgerPredFailure,
   conwayToDijkstraLedgerPredFailure,
 ) where
@@ -62,7 +63,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
-  ConwayLedgerEvent (..),
   ConwayLedgerPredFailure,
   ConwayUtxoPredFailure,
   ConwayUtxosPredFailure,
@@ -145,7 +145,9 @@ data DijkstraLedgerPredFailure era
 
 type instance EraRuleFailure "LEDGER" DijkstraEra = DijkstraLedgerPredFailure DijkstraEra
 
-type instance EraRuleEvent "LEDGER" DijkstraEra = ConwayLedgerEvent DijkstraEra
+type instance EraRuleEvent "LEDGER" DijkstraEra = DijkstraLedgerEvent DijkstraEra
+
+instance InjectRuleEvent "LEDGER" DijkstraLedgerEvent DijkstraEra
 
 instance InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure DijkstraEra
 
@@ -301,6 +303,26 @@ instance
     10 -> SumD DijkstraSpendingOutputFromSameTx <! From
     n -> Invalid n
 
+data DijkstraLedgerEvent era
+  = UtxowEvent (Event (EraRule "UTXOW" era))
+  | CertsEvent (Event (EraRule "CERTS" era))
+  | GovEvent (Event (EraRule "GOV" era))
+  deriving (Generic)
+
+deriving instance
+  ( Eq (Event (EraRule "CERTS" era))
+  , Eq (Event (EraRule "UTXOW" era))
+  , Eq (Event (EraRule "GOV" era))
+  ) =>
+  Eq (DijkstraLedgerEvent era)
+
+instance
+  ( NFData (Event (EraRule "CERTS" era))
+  , NFData (Event (EraRule "UTXOW" era))
+  , NFData (Event (EraRule "GOV" era))
+  ) =>
+  NFData (DijkstraLedgerEvent era)
+
 instance
   ( AlonzoEraTx era
   , ConwayEraTxBody era
@@ -334,7 +356,7 @@ instance
   type Environment (DijkstraLEDGER era) = LedgerEnv era
   type BaseM (DijkstraLEDGER era) = ShelleyBase
   type PredicateFailure (DijkstraLEDGER era) = DijkstraLedgerPredFailure era
-  type Event (DijkstraLEDGER era) = ConwayLedgerEvent era
+  type Event (DijkstraLEDGER era) = DijkstraLedgerEvent era
 
   initialRules = []
   transitionRules = [dijkstraLedgerTransition]
@@ -414,7 +436,7 @@ instance
   Embed (DijkstraUTXOW era) (DijkstraLEDGER era)
   where
   wrapFailed = DijkstraUtxowFailure
-  wrapEvent = Conway.UtxowEvent
+  wrapEvent = UtxowEvent
 
 instance
   ( Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)

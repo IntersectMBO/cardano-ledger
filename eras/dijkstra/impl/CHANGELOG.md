@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Add `DijkstraLedgerEvent`
 * Add `DirectDeposits` to transaction bodies at both (top and sub) levels.
   - Add `directDepositsTxBodyL` lens to the `DijkstraEraTxBody` typeclass.
 * Add `DijkstraSpendingOutputFromSameTx` to `DijkstraLedgerPredFailure`, to report when a sub-tx-id is being spent within the same transaction.

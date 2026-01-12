@@ -176,6 +176,13 @@ instance
   ToExpr (DijkstraLedgerPredFailure era)
 
 instance
+  ( ToExpr (Event (EraRule "UTXOW" era))
+  , ToExpr (Event (EraRule "CERTS" era))
+  , ToExpr (Event (EraRule "GOV" era))
+  ) =>
+  ToExpr (DijkstraLedgerEvent era)
+
+instance
   ( ToExpr (Value era)
   , ToExpr (TxOut era)
   , ToExpr (PredicateFailure (EraRule "UTXOS" era))
