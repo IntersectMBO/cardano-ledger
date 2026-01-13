@@ -48,7 +48,6 @@ import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (toList)
-import Data.IP (IPv4, IPv6)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.TreeDiff
@@ -78,9 +77,11 @@ tableDoc mTitle rows =
 -- ===========================================================
 -- Orphan instances from external imports
 
-instance ToExpr IPv4
+instance ToExpr IPv4 where
+  toExpr = defaultExprViaShow
 
-instance ToExpr IPv6
+instance ToExpr IPv6 where
+  toExpr = defaultExprViaShow
 
 instance ToExpr (Hash.Hash c index) where
   toExpr = trimExprViaShow 10

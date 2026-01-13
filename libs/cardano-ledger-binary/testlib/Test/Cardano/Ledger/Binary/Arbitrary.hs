@@ -35,8 +35,8 @@ import qualified Data.ByteString.Short as SBS
 #else
 import qualified Data.ByteString.Short.Internal as SBS
 #endif
+import Cardano.Ledger.Binary.Network (IPv4, IPv6, toIPv4w, toIPv6w)
 import qualified Data.Foldable as F
-import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Data.Maybe.Strict
 import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
 import Data.Proxy (Proxy (..))

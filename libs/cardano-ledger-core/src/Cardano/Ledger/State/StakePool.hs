@@ -86,6 +86,8 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   EncCBORGroup (..),
+  IPv4,
+  IPv6,
   Interns,
   decodeNullStrictMaybe,
   decodeRecordNamed,
@@ -117,7 +119,6 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
 import Data.Default (Default (..))
 import Data.Foldable (asum)
-import Data.IP (IPv4, IPv6)
 import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)

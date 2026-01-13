@@ -165,7 +165,6 @@ test-suite cardano-ledger-shelley-test
     data-default,
     deepseq,
     groups,
-    iproute,
     mempack,
     microlens,
     prettyprinter,

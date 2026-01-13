@@ -121,7 +121,6 @@ library
     data-default >=0.8,
     deepseq,
     groups,
-    iproute,
     measures,
     mempack >=0.2,
     microlens,

@@ -2,6 +2,8 @@
 
 ## 1.19.0.0
 
+* Remove orphan `NoThunks`, `NFData`, `FromJSON`, `ToJSON` instances for `IPv4` and `IPv6`
+  - Moved to `cardano-ledger-binary:Cardano.Ledger.Binary.Network`
 * Change `PoolMetadata.pmHash` from `ByteString` to `Data.Array.Byte.ByteArray` to reduce memory fragmentation.
 * Added:
   - `ppTxFeeFixedCompactL`

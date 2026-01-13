@@ -58,6 +58,7 @@ import Cardano.Ledger.Binary.Crypto (
   encodeSignedKES,
   encodeVerKeyDSIGN,
  )
+import Cardano.Ledger.Binary.Network (toIPv4)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), DeltaCoin (..))
@@ -123,7 +124,6 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.Coerce (coerce)
-import Data.IP (toIPv4)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
 import Data.MemPack.Buffer (byteArrayFromShortByteString)

@@ -4,96 +4,98 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Binary.Encoding.Encoder (
-  -- * Decoders
-  Encoding,
-  toBuilder,
-  C.Tokens (..),
-  toPlainEncoding,
-  fromPlainEncoding,
-  fromPlainEncodingWithVersion,
-  withCurrentEncodingVersion,
-  enforceEncodingVersion,
-  ifEncodingVersionAtLeast,
+module Cardano.Ledger.Binary.Encoding.Encoder
+  ( -- * Decoders
+    Encoding,
+    toBuilder,
+    C.Tokens (..),
+    toPlainEncoding,
+    fromPlainEncoding,
+    fromPlainEncodingWithVersion,
+    withCurrentEncodingVersion,
+    enforceEncodingVersion,
+    ifEncodingVersionAtLeast,
 
-  -- ** Custom
-  encodeVersion,
-  encodeMaybe,
-  encodeNullMaybe,
-  encodeStrictMaybe,
-  encodeNullStrictMaybe,
-  encodeTuple,
-  encodeRatio,
-  encodeRatioNoTag,
-  encodeRatioWithTag,
-  encodeEnum,
-  encodeWithOrigin,
+    -- ** Custom
+    encodeVersion,
+    encodeMaybe,
+    encodeNullMaybe,
+    encodeStrictMaybe,
+    encodeNullStrictMaybe,
+    encodeTuple,
+    encodeRatio,
+    encodeRatioNoTag,
+    encodeRatioWithTag,
+    encodeEnum,
+    encodeWithOrigin,
 
-  -- *** Containers
-  encodeList,
-  encodeSeq,
-  encodeStrictSeq,
-  encodeSet,
-  encodeMap,
-  encodeVMap,
-  encodeVector,
-  variableListLenEncoding,
+    -- *** Containers
+    encodeList,
+    encodeSeq,
+    encodeStrictSeq,
+    encodeSet,
+    encodeMap,
+    encodeVMap,
+    encodeVector,
+    variableListLenEncoding,
 
-  -- **** Helpers
-  encodeFoldableEncoder,
-  encodeFoldableAsDefLenList,
-  encodeFoldableAsIndefLenList,
-  encodeFoldableMapEncoder,
-  lengthThreshold,
+    -- **** Helpers
+    encodeFoldableEncoder,
+    encodeFoldableAsDefLenList,
+    encodeFoldableAsIndefLenList,
+    encodeFoldableMapEncoder,
+    lengthThreshold,
 
-  -- *** Time
-  encodeUTCTime,
+    -- *** Time
+    encodeUTCTime,
 
-  -- *** Network
-  encodeIPv4,
-  ipv4ToBytes,
-  encodeIPv6,
-  ipv6ToBytes,
+    -- *** Network
+    encodeIPv4,
+    ipv4ToBytes,
+    encodeIPv6,
+    ipv6ToBytes,
 
-  -- ** Original
-  encodeWord,
-  encodeWord8,
-  encodeWord16,
-  encodeWord32,
-  encodeWord64,
-  encodeInt,
-  encodeInt8,
-  encodeInt16,
-  encodeInt32,
-  encodeInt64,
-  encodeInteger,
-  encodeBytes,
-  encodeBytesIndef,
-  encodeByteArray,
-  encodeString,
-  encodeStringIndef,
-  encodeUtf8ByteArray,
-  encodeListLen,
-  encodeListLenIndef,
-  encodeMapLen,
-  encodeMapLenIndef,
-  encodeBreak,
-  encodeTag,
-  encodeTag64,
-  encodeBool,
-  encodeUndef,
-  encodeNull,
-  encodeSimple,
-  encodeFloat16,
-  encodeFloat,
-  encodeDouble,
-  encodePreEncoded,
-  encodeTerm,
-) where
+    -- ** Original
+    encodeWord,
+    encodeWord8,
+    encodeWord16,
+    encodeWord32,
+    encodeWord64,
+    encodeInt,
+    encodeInt8,
+    encodeInt16,
+    encodeInt32,
+    encodeInt64,
+    encodeInteger,
+    encodeBytes,
+    encodeBytesIndef,
+    encodeByteArray,
+    encodeString,
+    encodeStringIndef,
+    encodeUtf8ByteArray,
+    encodeListLen,
+    encodeListLenIndef,
+    encodeMapLen,
+    encodeMapLenIndef,
+    encodeBreak,
+    encodeTag,
+    encodeTag64,
+    encodeBool,
+    encodeUndef,
+    encodeNull,
+    encodeSimple,
+    encodeFloat16,
+    encodeFloat,
+    encodeDouble,
+    encodePreEncoded,
+    encodeTerm,
+  )
+where
 
 import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder (setTag)
-import Cardano.Ledger.Binary.Version (Version, getVersion32, natVersion)
+import Cardano.Ledger.Binary.Network (IPv4 (..), IPv6 (..))
+import Cardano.Ledger.Binary.Version (Version, getVersion32, getVersion64, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginToMaybe)
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray)
 import qualified Codec.CBOR.Term as C (Term (..), encodeTerm)
@@ -104,7 +106,7 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable as F (foldMap', foldl')
-import Data.IP (IPv4, IPv6, toHostAddress, toHostAddress6)
+import qualified Data.IP as IP
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -298,7 +300,7 @@ encodeRatio encodeNumeric r =
     (encodeRatioWithTag encodeNumeric r)
     (encodeRatioNoTag encodeNumeric r)
 
-encodeEnum :: Enum a => a -> Encoding
+encodeEnum :: (Enum a) => a -> Encoding
 encodeEnum = encodeInt . fromEnum
 
 encodeWithOrigin :: (a -> Encoding) -> WithOrigin a -> Encoding
@@ -342,18 +344,18 @@ encodeTuple encodeFirst encodeSecond (x, y) =
     <> encodeSecond y
 
 -- | Encode any Foldable with indefinite list length encoding
-encodeFoldableAsIndefLenList :: Foldable f => (a -> Encoding) -> f a -> Encoding
+encodeFoldableAsIndefLenList :: (Foldable f) => (a -> Encoding) -> f a -> Encoding
 encodeFoldableAsIndefLenList encodeValue xs =
   encodeListLenIndef <> foldr (\x r -> encodeValue x <> r) encodeBreak xs
 
-encodeFoldableAsDefLenList :: Foldable f => (a -> Encoding) -> f a -> Encoding
+encodeFoldableAsDefLenList :: (Foldable f) => (a -> Encoding) -> f a -> Encoding
 encodeFoldableAsDefLenList encodeValue xs =
   case foldMap' (\v -> (1, encodeValue v)) xs of
     (Sum len, exactLenEncList) -> encodeListLen len <> exactLenEncList
 
 -- | Encode any Foldable with the variable list length encoding, which will use indefinite
 -- encoding over 23 elements and definite otherwise.
-encodeFoldableEncoder :: Foldable f => (a -> Encoding) -> f a -> Encoding
+encodeFoldableEncoder :: (Foldable f) => (a -> Encoding) -> f a -> Encoding
 encodeFoldableEncoder encoder xs = variableListLenEncoding len contents
   where
     (len, contents) = foldl' go (0, mempty) xs
@@ -363,7 +365,7 @@ encodeFoldableEncoder encoder xs = variableListLenEncoding len contents
 -- variable map length encoding, which means an indefinite encoding for maps with over 23
 -- elements and definite otherwise.
 encodeFoldableMapEncoder ::
-  Foldable f =>
+  (Foldable f) =>
   -- | A function that accepts an index of the value in the foldable data strucure, the
   -- actual value and optionally produces the encoding of the value and an index if that
   -- value should be encoded.
@@ -526,7 +528,7 @@ encodeContainerSkel encodeLen size foldFunction f c =
 
 -- | Generic encoder for vectors. Its intended use is to allow easy
 -- definition of 'EncCBOR' instances for custom vector
-encodeVector :: VG.Vector v a => (a -> Encoding) -> v a -> Encoding
+encodeVector :: (VG.Vector v a) => (a -> Encoding) -> v a -> Encoding
 encodeVector encodeValue =
   encodeContainerSkel
     encodeListLen
@@ -554,14 +556,14 @@ encodeUTCTime (UTCTime day timeOfDay) =
 --------------------------------------------------------------------------------
 
 ipv4ToBytes :: IPv4 -> BS.ByteString
-ipv4ToBytes = BSL.toStrict . runPut . putWord32le . toHostAddress
+ipv4ToBytes (IPv4 ip) = BSL.toStrict . runPut . putWord32le $ IP.toHostAddress ip
 
 encodeIPv4 :: IPv4 -> Encoding
 encodeIPv4 = encodeBytes . ipv4ToBytes
 
 ipv6ToBytes :: IPv6 -> BS.ByteString
-ipv6ToBytes ipv6 = BSL.toStrict . runPut $ do
-  let (w1, w2, w3, w4) = toHostAddress6 ipv6
+ipv6ToBytes (IPv6 ip) = BSL.toStrict . runPut $ do
+  let (w1, w2, w3, w4) = IP.toHostAddress6 ip
   putWord32le w1
   putWord32le w2
   putWord32le w3

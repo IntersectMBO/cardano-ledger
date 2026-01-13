@@ -55,7 +55,6 @@ import Control.Monad (when)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Fixed (Nano, Pico)
 import Data.Foldable as F
-import Data.IP (IPv4, IPv6)
 import Data.Int
 import qualified Data.Map.Strict as Map
 import Data.Maybe

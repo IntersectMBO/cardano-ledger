@@ -23,6 +23,7 @@ library
     Cardano.Ledger.Binary.Encoding
     Cardano.Ledger.Binary.FlatTerm
     Cardano.Ledger.Binary.Group
+    Cardano.Ledger.Binary.Network
     Cardano.Ledger.Binary.Plain
     Cardano.Ledger.Binary.Version
 
@@ -131,7 +132,6 @@ library testlib
     hedgehog,
     hspec,
     hspec-core,
-    iproute,
     pretty-show,
     pretty-simple,
     prettyprinter,
@@ -185,7 +185,6 @@ test-suite tests
     hedgehog,
     hedgehog-quickcheck,
     hspec,
-    iproute,
     primitive,
     tagged,
     testlib,

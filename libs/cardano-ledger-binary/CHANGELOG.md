@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `Cardano.Ledger.Binary.Network` module with `IPv4` and `IPv6` newtype wrappers to avoid orphan instances
 * Change `Version` from `Word64` to `Word32`
   - Add `mkVersion32` and `getVersion32`
 * Remove `listLenBound` from `EncCBORGroup`
