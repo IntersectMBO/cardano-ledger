@@ -35,19 +35,19 @@ import Cardano.Ledger.Conway.Core (
   txIdTx,
  )
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.Rules (ConwayUtxowPredFailure (..))
+import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Credential (Credential (..), StakeReference)
+import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Plutus (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Lens.Micro ((&), (.~), (^.), (%~))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
+import Lens.Micro ((%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
-import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 
 spec ::
   forall era.
@@ -93,6 +93,35 @@ spec = do
       $ submitFailingTx
         tx
         [ injectFailure $ ScriptIntegrityHashMismatch mismatch (SJust $ originalBytes scriptIntegrity)
+        ]
+  it "Transaction containing SPO vote but no witness for it fails" $ do
+    spoKh <- freshKeyHash
+    registerPool spoKh
+    gaId <- mkProposal InfoAction >>= submitProposal
+    submitVote_ @era VoteYes (StakePoolVoter spoKh) gaId
+    let tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . votingProceduresTxBodyL
+              .~ VotingProcedures
+                ( Map.singleton
+                    (StakePoolVoter spoKh)
+                    ( Map.singleton
+                        gaId
+                        ( VotingProcedure
+                            { vProcVote = VoteYes
+                            , vProcAnchor = SNothing
+                            }
+                        )
+                    )
+                )
+    let isSPOWitness wit = witVKeyHash wit == asWitness spoKh
+    withPostFixup (pure . (witsTxL . addrTxWitsL %~ Set.filter (not . isSPOWitness))) $
+      submitFailingTx
+        tx
+        [ injectFailure $
+            MissingVKeyWitnessesUTXOW $
+              NES.singleton $
+                asWitness spoKh
         ]
 
 setupBadPPViewHashTx ::
