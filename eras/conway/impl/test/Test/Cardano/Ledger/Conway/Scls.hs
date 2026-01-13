@@ -44,8 +44,6 @@ import Cardano.Ledger.Plutus.CostModels
 import Cardano.Ledger.Plutus.Data (BinaryData)
 import Cardano.Ledger.Shelley.TxOut qualified as Shelley
 import Cardano.Ledger.State (
-  CommitteeAuthorization (..),
-  CommitteeState (..),
   PoolMetadata (..),
   StakePoolParams (..),
   StakePoolRelay (..),
@@ -87,8 +85,8 @@ spec = do
     isCanonical @"common" @(EpochNo)
   describe "Cardano ledger state: CDDL conformance tests" $ do
     describe "gov/committee/v0" $ do
-      validateType @"gov/committee/v0" @(CommitteeState ConwayEra) "committee"
-      validateType @"gov/committee/v0" @(CommitteeAuthorization) "committee_authorization"
+      validateType @"gov/committee/v0" @CanonicalCommitteeState "committee"
+      validateType @"gov/committee/v0" @CanonicalCommitteeAuthorization "committee_authorization"
     describe "gov/pparams/v0" $ do
       validateType @"gov/pparams/v0" @(PoolVotingThresholds) "pool_voting_thresholds"
       validateType @"gov/pparams/v0" @(DRepVotingThresholds) "drep_voting_thresholds"

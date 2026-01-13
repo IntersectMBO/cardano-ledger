@@ -307,7 +307,7 @@ main = do
             & addNamespacedChunks
               (Proxy @"gov/committee/v0")
               ( S.each
-                  [ ChunkEntry (GovCommitteeIn epoch) (GovCommitteeOut cms)
+                  [ ChunkEntry (GovCommitteeIn epoch) (mkCanonicalCommitteeState cms)
                   | let cms = nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
                   ]
               )

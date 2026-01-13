@@ -16,6 +16,7 @@ import Cardano.Ledger.Conway.SCLS.Namespace.PoolStake
 import Cardano.Ledger.Conway.SCLS.Namespace.Pots
 import Cardano.Ledger.Conway.SCLS.Namespace.Snapshots
 import Cardano.Ledger.Conway.SCLS.Namespace.UTxO
+import Cardano.Ledger.Conway.SCLS.Common
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -24,10 +25,16 @@ import Test.QuickCheck.Arbitrary
 
 deriving newtype instance Arbitrary BlockOut
 
-deriving newtype instance Arbitrary GovCommitteeOut
+deriving newtype instance Arbitrary CanonicalCommitteeState
+
+instance Arbitrary (CanonicalCredential kr) where
+    arbitrary = fmap mkCanonicalCredential arbitrary
 
 instance Arbitrary CanonicalConstitution where
     arbitrary = genericArbitraryU
+
+instance Arbitrary CanonicalCommitteeAuthorization where
+    arbitrary = fmap mkCanonicalCommitteeAuthorization arbitrary
 
 deriving newtype instance Arbitrary GovPParamsOut
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -9,7 +10,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Common namespace utilities and types for SCLS export.
-module Cardano.Ledger.Conway.SCLS.Common () where
+module Cardano.Ledger.Conway.SCLS.Common
+  ( CanonicalCredential(..)
+  , fromCanonicalCredential
+  , mkCanonicalCredential
+  ) where
 
 import Cardano.Ledger.BaseTypes (Anchor, EpochNo, NonNegativeInterval, ProtVer, UnitInterval)
 import Cardano.Ledger.Coin (Coin, CompactForm)
@@ -33,6 +38,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
+import GHC.Generics (Generic)
 
 instance ToCanonicalCBOR v (CompactForm Coin) where
   toCanonicalCBOR v (Coin.CompactCoin ci) = toCanonicalCBOR v ci
@@ -45,6 +51,35 @@ instance ToCanonicalCBOR v Coin where
 
 instance FromCanonicalCBOR v Coin where
   fromCanonicalCBOR = fmap Coin.Coin <$> fromCanonicalCBOR
+
+
+-- | Credential key, it does not keep the role around, because the role is
+-- created anyway as we serialize the value.
+data CanonicalCredential kr =
+  CanonicalScriptHashObj !ScriptHash
+  | CanonicalKeyHashObj !(KeyHash kr)
+  deriving (Eq, Show, Ord, Generic)
+
+mkCanonicalCredential :: Credential kr -> CanonicalCredential kr
+mkCanonicalCredential (ScriptHashObj sh) = CanonicalScriptHashObj sh
+mkCanonicalCredential (KeyHashObj kh) = CanonicalKeyHashObj kh
+
+fromCanonicalCredential :: CanonicalCredential kr -> Credential kr
+fromCanonicalCredential (CanonicalScriptHashObj sh) = ScriptHashObj sh
+fromCanonicalCredential (CanonicalKeyHashObj sh) = KeyHashObj sh
+
+instance ToCanonicalCBOR v (CanonicalCredential kr) where
+  toCanonicalCBOR v (CanonicalScriptHashObj sh) = toCanonicalCBOR v (0 :: Word8, sh)
+  toCanonicalCBOR v (CanonicalKeyHashObj kh) = toCanonicalCBOR v (1 :: Word8, kh)
+
+instance Typeable kr => FromCanonicalCBOR v (CanonicalCredential kr) where
+  fromCanonicalCBOR = do
+    decodeListLenCanonicalOf 2
+    Versioned (tag :: Word8) <- fromCanonicalCBOR
+    case tag of
+      0 -> fmap CanonicalScriptHashObj <$> fromCanonicalCBOR
+      1 -> fmap CanonicalKeyHashObj <$> fromCanonicalCBOR
+      _ -> fail "Invalid Credential tag"
 
 instance ToCanonicalCBOR v (Credential kr) where
   toCanonicalCBOR v (ScriptHashObj sh) = toCanonicalCBOR v (0 :: Word8, sh)
