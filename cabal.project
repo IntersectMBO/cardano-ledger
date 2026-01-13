@@ -30,6 +30,27 @@ index-state:
   , hackage.haskell.org 2025-12-11T11:28:18Z
   , cardano-haskell-packages 2025-12-10T11:48:32Z
 
+allow-newer:
+  cardano-crypto-class
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  tag: 959d8737eebe4c93abce08a9251d88dd1bb8f83e
+  subdir: orphans-deriving-via
+          cardano-crypto-peras
+          base-deriving-via
+          cardano-strict-containers
+          measures
+          cardano-crypto-class
+          cardano-slotting
+          cardano-base
+          cardano-git-rev
+          cardano-binary
+          heapwords
+          cardano-crypto-praos
+  --sha256: 0ad99783bcpvkdgc253b5pr0g8w0kx52369ahv1770315zqpg8mm
+
 packages:
   -- == Byron era ==
   -- byron-spec-chain:
