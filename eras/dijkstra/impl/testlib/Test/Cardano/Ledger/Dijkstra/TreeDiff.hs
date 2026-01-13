@@ -263,7 +263,10 @@ instance ToExpr (DijkstraSubPoolPredFailure era)
 instance ToExpr (DijkstraSubPoolEvent era)
 
 instance
-  ToExpr (PredicateFailure (EraRule "SUBUTXOS" era)) =>
+  ( ToExpr (Value era)
+  , ToExpr (TxOut era)
+  , ToExpr (PredicateFailure (EraRule "SUBUTXOS" era))
+  ) =>
   ToExpr (DijkstraSubUtxoPredFailure era)
 
 instance

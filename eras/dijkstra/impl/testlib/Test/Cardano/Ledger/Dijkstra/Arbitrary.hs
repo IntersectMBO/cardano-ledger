@@ -254,7 +254,11 @@ instance Arbitrary (DijkstraSubPoolPredFailure era) where
   arbitrary = pure DijkstraSubPoolPredFailure
 
 instance
-  Arbitrary (PredicateFailure (EraRule "SUBUTXOS" era)) =>
+  ( EraTxOut era
+  , Arbitrary (Value era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (PredicateFailure (EraRule "SUBUTXOS" era))
+  ) =>
   Arbitrary (DijkstraSubUtxoPredFailure era)
   where
   arbitrary = genericArbitraryU
