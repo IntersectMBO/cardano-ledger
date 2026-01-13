@@ -21,15 +21,15 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedger (
   DijkstraSubLedgerEvent (..),
 ) where
 
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
-import Cardano.Ledger.BaseTypes (
-  ShelleyBase,
- )
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
@@ -63,6 +63,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
   epochFromSlot,
  )
+import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -80,7 +81,10 @@ import Control.State.Transition.Extended (
   trans,
   transitionRules,
  )
+import Data.List.NonEmpty (NonEmpty)
+import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -89,6 +93,12 @@ data DijkstraSubLedgerPredFailure era
   = SubUtxowFailure (PredicateFailure (EraRule "SUBUTXOW" era))
   | SubCertsFailure (PredicateFailure (EraRule "SUBCERTS" era))
   | SubGovFailure (PredicateFailure (EraRule "SUBGOV" era))
+  | SubWdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
+  | SubTreasuryValueMismatch (Mismatch RelEQ Coin)
+  | SubTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
+  | SubWithdrawalsMissingAccounts Withdrawals
+  | SubIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
+  | SubSpendingOutputFromSameTx (NonEmptyMap TxId (NonEmptySet TxIn))
   deriving (Generic)
 
 deriving stock instance
@@ -118,34 +128,6 @@ instance
   , NFData (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   NFData (DijkstraSubLedgerPredFailure era)
-
-instance
-  ( Era era
-  , EncCBOR (PredicateFailure (EraRule "SUBGOV" era))
-  , EncCBOR (PredicateFailure (EraRule "SUBCERTS" era))
-  , EncCBOR (PredicateFailure (EraRule "SUBUTXOW" era))
-  ) =>
-  EncCBOR (DijkstraSubLedgerPredFailure era)
-  where
-  encCBOR =
-    encode . \case
-      SubUtxowFailure e -> Sum (SubUtxowFailure @era) 1 !> To e
-      SubGovFailure e -> Sum (SubGovFailure @era) 2 !> To e
-      SubCertsFailure e -> Sum (SubCertsFailure @era) 3 !> To e
-
-instance
-  ( Era era
-  , DecCBOR (PredicateFailure (EraRule "SUBGOV" era))
-  , DecCBOR (PredicateFailure (EraRule "SUBCERTS" era))
-  , DecCBOR (PredicateFailure (EraRule "SUBUTXOW" era))
-  ) =>
-  DecCBOR (DijkstraSubLedgerPredFailure era)
-  where
-  decCBOR = decode . Summands "DijkstraSubLedgerPredFailure" $ \case
-    1 -> SumD SubUtxowFailure <! From
-    2 -> SumD SubGovFailure <! From
-    3 -> SumD SubCertsFailure <! From
-    n -> Invalid n
 
 type instance EraRuleFailure "SUBLEDGER" DijkstraEra = DijkstraSubLedgerPredFailure DijkstraEra
 
@@ -328,3 +310,43 @@ instance
   where
   wrapFailed = SubCertsFailure
   wrapEvent = SubCertsEvent
+
+instance
+  ( Era era
+  , EncCBOR (PredicateFailure (EraRule "SUBUTXOW" era))
+  , EncCBOR (PredicateFailure (EraRule "SUBCERTS" era))
+  , EncCBOR (PredicateFailure (EraRule "SUBGOV" era))
+  ) =>
+  EncCBOR (DijkstraSubLedgerPredFailure era)
+  where
+  encCBOR =
+    encode . \case
+      SubUtxowFailure x -> Sum (SubUtxowFailure @era) 1 !> To x
+      SubCertsFailure x -> Sum (SubCertsFailure @era) 2 !> To x
+      SubGovFailure x -> Sum (SubGovFailure @era) 3 !> To x
+      SubWdrlNotDelegatedToDRep x -> Sum (SubWdrlNotDelegatedToDRep @era) 4 !> To x
+      SubTreasuryValueMismatch mm -> Sum (SubTreasuryValueMismatch @era) 5 !> To mm
+      SubTxRefScriptsSizeTooBig mm -> Sum SubTxRefScriptsSizeTooBig 6 !> To mm
+      SubWithdrawalsMissingAccounts w -> Sum SubWithdrawalsMissingAccounts 7 !> To w
+      SubIncompleteWithdrawals w -> Sum SubIncompleteWithdrawals 8 !> To w
+      SubSpendingOutputFromSameTx txIds -> Sum SubSpendingOutputFromSameTx 9 !> To txIds
+
+instance
+  ( Era era
+  , DecCBOR (PredicateFailure (EraRule "SUBUTXOW" era))
+  , DecCBOR (PredicateFailure (EraRule "SUBCERTS" era))
+  , DecCBOR (PredicateFailure (EraRule "SUBGOV" era))
+  ) =>
+  DecCBOR (DijkstraSubLedgerPredFailure era)
+  where
+  decCBOR = decode . Summands "DijkstraSubLedgerPredFailure" $ \case
+    1 -> SumD SubUtxowFailure <! From
+    2 -> SumD SubCertsFailure <! From
+    3 -> SumD SubGovFailure <! From
+    4 -> SumD SubWdrlNotDelegatedToDRep <! From
+    5 -> SumD SubTreasuryValueMismatch <! From
+    6 -> SumD SubTxRefScriptsSizeTooBig <! From
+    7 -> SumD SubWithdrawalsMissingAccounts <! From
+    8 -> SumD SubIncompleteWithdrawals <! From
+    9 -> SumD SubSpendingOutputFromSameTx <! From
+    n -> Invalid n
