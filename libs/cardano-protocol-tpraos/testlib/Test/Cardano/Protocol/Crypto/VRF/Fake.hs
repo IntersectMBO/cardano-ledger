@@ -40,10 +40,12 @@ import Cardano.Ledger.Binary.Crypto (
   encodeSignKeyVRF,
   encodeVerKeyVRF,
  )
+import Data.Array.Byte (ByteArray (ByteArray))
 import Data.Bits
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString.Short (ShortByteString (SBS), fromShort, toShort)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
@@ -75,9 +77,10 @@ instance EncCBOR a => SneakilyContainResult (WithResult a) where
   -- Note that this instance completely ignores the key.
   sneakilyExtractResult (WithResult _ nat) _ =
     -- Fill in the word64 as the low 8 bytes of a 16 byte string
-    OutputVRF (toBytes (BS.word64BE 0 <> BS.word64BE nat))
+    OutputVRF (unShortByteString $ toShort (toBytes (BS.word64BE 0 <> BS.word64BE nat)))
     where
       toBytes = LBS.toStrict . BS.toLazyByteString
+      unShortByteString (SBS b) = ByteArray b
 
   unsneakilyExtractPayload (WithResult p _) = p
 
@@ -87,7 +90,7 @@ instance SneakilyContainResult Seed where
   type Payload Seed = Seed
   sneakilyExtractResult s sk =
     OutputVRF
-      . hashToBytes
+      . hashToByteArray
       . hashWithEncoder @Blake2b_224 shelleyProtVer id
       $ encCBOR s <> encCBOR sk
   unsneakilyExtractPayload = id
@@ -121,7 +124,7 @@ instance VRFAlgorithm FakeVRF where
     | otherwise = Nothing
     where
       (OutputVRF recomputedProofBytes, _) = evalFakeVRF a (SignKeyFakeVRF n)
-      recomputedProof = fromIntegral . bytesToNatural $ recomputedProofBytes
+      recomputedProof = fromIntegral . byteArrayToNatural $ recomputedProofBytes
 
   sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
@@ -130,8 +133,8 @@ instance VRFAlgorithm FakeVRF where
 
   rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
   rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k
-  rawSerialiseCertVRF (CertFakeVRF k s (OutputVRF b)) =
-    writeBinaryWord64 k <> writeBinaryWord16 s <> b
+  rawSerialiseCertVRF (CertFakeVRF k s (OutputVRF (ByteArray b))) =
+    writeBinaryWord64 k <> writeBinaryWord16 s <> fromShort (SBS b)
 
   rawDeserialiseVerKeyVRF bs
     | [kb] <- splitsAt [8] bs
@@ -151,9 +154,11 @@ instance VRFAlgorithm FakeVRF where
     | [kb, smb, xs] <- splitsAt [8, 2, 16] bs
     , let k = readBinaryWord64 kb
     , let s = readBinaryWord16 smb =
-        Just $! CertFakeVRF k s (OutputVRF xs)
+        Just $! CertFakeVRF k s (OutputVRF (unShortByteString $ toShort xs))
     | otherwise =
         Nothing
+    where
+      unShortByteString (SBS b) = ByteArray b
 
 evalFakeVRF ::
   SneakilyContainResult a =>
