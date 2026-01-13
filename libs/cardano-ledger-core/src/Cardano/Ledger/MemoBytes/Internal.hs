@@ -34,6 +34,7 @@ module Cardano.Ledger.MemoBytes.Internal (
   Mem,
   MemoHashIndex,
   mkMemoBytes,
+  mkMemoBytesShort,
   mkMemoBytesStrict,
   getMemoBytesType,
   getMemoBytesHash,
@@ -122,7 +123,7 @@ pattern Memo :: t -> ShortByteString -> MemoBytes t
 pattern Memo memoType memoBytes <-
   MemoBytes memoType memoBytes _
   where
-    Memo mt mb = mkMemoBytes mt (shortToLazy mb)
+    Memo mt mb = mkMemoBytesShort mt mb
 
 {-# COMPLETE Memo #-}
 
@@ -175,7 +176,7 @@ instance
   decCBOR = do
     (Annotator getT, Annotator getBytes) <- withSlice decCBOR
     pure $ Annotator $ \fullBytes ->
-      mkMemoBytes <$> getT fullBytes <*> getBytes fullBytes
+      mkMemoBytesForce <$> getT fullBytes <*> getBytes fullBytes
 
 -- | Both binary representation and Haskell types are compared.
 instance Eq t => Eq (MemoBytes t) where
@@ -209,8 +210,27 @@ mkMemoBytes t = mkMemoBytesStrict t . toStrict
 -- | Same as `mkMemoBytes`, but with strict bytes
 mkMemoBytesStrict :: forall t. t -> ByteString -> MemoBytes t
 mkMemoBytesStrict t bs =
-  MemoBytes t (toShort bs) $
-    makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) bs
+  MemoBytes t sbs hash
+  where
+    sbs = toShort bs
+    -- Ensure original `ByteString` can be garbage collected as soon as the hash is computed
+    hash = sbs `seq` makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) bs
+
+-- | Same as `mkMemoBytes`, but for `ShortByteString`. This will be more efficient if original bytes are
+-- already available in a form of a `ShortByteString` and especially whenever hash is never demanded.
+mkMemoBytesShort :: forall t. t -> ShortByteString -> MemoBytes t
+mkMemoBytesShort t sbs =
+  MemoBytes t sbs hash
+  where
+    hash = makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) (fromShort sbs)
+
+-- | Same as `mkMemoBytes`, but immediately makes a copy of the original bytes, in order to ensure
+-- that potentially much larger source `LazyByteString` is not retained in memory.
+mkMemoBytesForce :: t -> BSL.ByteString -> MemoBytes t
+mkMemoBytesForce t bsl =
+  -- Note: we cannot simply use `toStrict` here, since it does not guarantee a copy, which is why we
+  -- must convert it to a `ShortByteString` and ensure it is fully evaluated.
+  mkMemoBytesShort t $! toShort $ BSL.toStrict bsl
 
 -- | Create MemoBytes from its CBOR encoding
 --
@@ -277,7 +297,7 @@ mkMemoizedEra = mkMemoized (eraProtVerLow @era)
 decodeMemoized :: Decoder s t -> Decoder s (MemoBytes t)
 decodeMemoized rawTypeDecoder = do
   Annotated rawType lazyBytes <- decodeAnnotated rawTypeDecoder
-  pure $ mkMemoBytes rawType lazyBytes
+  pure $! mkMemoBytesForce rawType lazyBytes
 
 -- | Extract memoized SafeHash
 getMemoSafeHash :: Memoized t => t -> SafeHash (MemoHashIndex (RawType t))
