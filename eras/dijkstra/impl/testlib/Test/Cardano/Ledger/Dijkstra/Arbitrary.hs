@@ -244,8 +244,11 @@ instance
 instance Arbitrary (DijkstraSubDelegPredFailure era) where
   arbitrary = pure DijkstraSubDelegPredFailure
 
-instance Arbitrary (DijkstraSubGovPredFailure era) where
-  arbitrary = pure DijkstraSubGovPredFailure
+instance
+  Arbitrary (DijkstraGovPredFailure era) =>
+  Arbitrary (DijkstraSubGovPredFailure era)
+  where
+  arbitrary = DijkstraSubGovPredFailure <$> arbitrary
 
 instance Arbitrary (DijkstraSubGovCertPredFailure era) where
   arbitrary = pure DijkstraSubGovCertPredFailure

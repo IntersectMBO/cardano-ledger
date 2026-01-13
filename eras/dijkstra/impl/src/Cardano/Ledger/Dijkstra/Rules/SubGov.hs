@@ -1,8 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -32,6 +34,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBGOV,
  )
+import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -46,22 +49,11 @@ import Control.State.Transition.Extended (
   judgmentContext,
   transitionRules,
  )
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data DijkstraSubGovPredFailure era = DijkstraSubGovPredFailure
-  deriving (Show, Eq, Generic)
-
-instance NoThunks (DijkstraSubGovPredFailure era)
-
-instance NFData (DijkstraSubGovPredFailure era)
-
-instance Era era => EncCBOR (DijkstraSubGovPredFailure era) where
-  encCBOR _ = encCBOR ()
-
-instance Typeable era => DecCBOR (DijkstraSubGovPredFailure era) where
-  decCBOR = decCBOR @() *> pure DijkstraSubGovPredFailure
+newtype DijkstraSubGovPredFailure era = DijkstraSubGovPredFailure (DijkstraGovPredFailure era)
+  deriving (Generic, Eq, Show, NoThunks, NFData, EncCBOR, DecCBOR)
 
 type instance EraRuleFailure "SUBGOV" DijkstraEra = DijkstraSubGovPredFailure DijkstraEra
 

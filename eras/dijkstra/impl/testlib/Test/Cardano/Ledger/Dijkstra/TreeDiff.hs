@@ -252,7 +252,9 @@ instance
   ToExpr (Event (EraRule "SUBLEDGER" era)) =>
   ToExpr (DijkstraSubLedgersEvent era)
 
-instance ToExpr (DijkstraSubGovPredFailure era)
+instance
+  ToExpr (DijkstraGovPredFailure era) =>
+  ToExpr (DijkstraSubGovPredFailure era)
 
 instance ToExpr (ConwayGovEvent era) => ToExpr (DijkstraSubGovEvent era)
 
