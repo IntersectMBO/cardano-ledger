@@ -33,6 +33,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
@@ -253,8 +254,11 @@ instance
 instance Arbitrary (DijkstraSubGovCertPredFailure era) where
   arbitrary = pure DijkstraSubGovCertPredFailure
 
-instance Arbitrary (DijkstraSubPoolPredFailure era) where
-  arbitrary = pure DijkstraSubPoolPredFailure
+instance
+  Arbitrary (ShelleyPoolPredFailure era) =>
+  Arbitrary (DijkstraSubPoolPredFailure era)
+  where
+  arbitrary = DijkstraSubPoolPredFailure <$> arbitrary
 
 instance
   ( EraTxOut era

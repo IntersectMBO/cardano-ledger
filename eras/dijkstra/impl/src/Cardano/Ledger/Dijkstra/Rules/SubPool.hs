@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -32,7 +33,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBPOOL,
  )
 import Cardano.Ledger.Dijkstra.State
-import Cardano.Ledger.Shelley.Rules (PoolEnv, PoolEvent (..))
+import Cardano.Ledger.Shelley.Rules (PoolEnv, PoolEvent (..), ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -47,22 +48,11 @@ import Control.State.Transition.Extended (
   judgmentContext,
   transitionRules,
  )
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data DijkstraSubPoolPredFailure era = DijkstraSubPoolPredFailure
-  deriving (Show, Eq, Generic)
-
-instance NoThunks (DijkstraSubPoolPredFailure era)
-
-instance NFData (DijkstraSubPoolPredFailure era)
-
-instance Era era => EncCBOR (DijkstraSubPoolPredFailure era) where
-  encCBOR _ = encCBOR ()
-
-instance Typeable era => DecCBOR (DijkstraSubPoolPredFailure era) where
-  decCBOR = decCBOR @() *> pure DijkstraSubPoolPredFailure
+newtype DijkstraSubPoolPredFailure era = DijkstraSubPoolPredFailure (ShelleyPoolPredFailure era)
+  deriving (Eq, Show, Generic, DecCBOR, EncCBOR, NFData, NoThunks)
 
 type instance EraRuleFailure "SUBPOOL" DijkstraEra = DijkstraSubPoolPredFailure DijkstraEra
 
