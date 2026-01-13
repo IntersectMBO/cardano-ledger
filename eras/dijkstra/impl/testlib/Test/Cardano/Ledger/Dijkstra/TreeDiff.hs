@@ -280,7 +280,12 @@ instance
 instance ToExpr (TxOut era) => ToExpr (DijkstraSubUtxosEvent era)
 
 instance
-  ToExpr (PredicateFailure (EraRule "SUBUTXO" era)) =>
+  ( Era era
+  , ToExpr (PredicateFailure (EraRule "SUBUTXO" era))
+  , ToExpr (PlutusPurpose AsIx era)
+  , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (TxCert era)
+  ) =>
   ToExpr (DijkstraSubUtxowPredFailure era)
 
 instance

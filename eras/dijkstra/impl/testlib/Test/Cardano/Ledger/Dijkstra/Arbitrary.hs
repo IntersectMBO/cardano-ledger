@@ -270,7 +270,12 @@ instance
   arbitrary = DijkstraSubUtxosPredFailure <$> arbitrary
 
 instance
-  Arbitrary (PredicateFailure (EraRule "SUBUTXO" era)) =>
+  ( Era era
+  , Arbitrary (PredicateFailure (EraRule "SUBUTXO" era))
+  , Arbitrary (TxCert era)
+  , Arbitrary (PlutusPurpose AsItem era)
+  , Arbitrary (PlutusPurpose AsIx era)
+  ) =>
   Arbitrary (DijkstraSubUtxowPredFailure era)
   where
   arbitrary = genericArbitraryU
