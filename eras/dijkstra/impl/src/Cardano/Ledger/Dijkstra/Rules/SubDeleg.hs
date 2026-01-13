@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,7 +25,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayDelegEnv)
+import Cardano.Ledger.Conway.Rules (ConwayDelegEnv, ConwayDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBDELEG,
@@ -45,23 +46,12 @@ import Control.State.Transition.Extended (
   judgmentContext,
   transitionRules,
  )
-import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data DijkstraSubDelegPredFailure era = DijkstraSubDelegPredFailure
-  deriving (Show, Eq, Generic)
-
-instance NoThunks (DijkstraSubDelegPredFailure era)
-
-instance NFData (DijkstraSubDelegPredFailure era)
-
-instance Era era => EncCBOR (DijkstraSubDelegPredFailure era) where
-  encCBOR _ = encCBOR ()
-
-instance Typeable era => DecCBOR (DijkstraSubDelegPredFailure era) where
-  decCBOR = decCBOR @() *> pure DijkstraSubDelegPredFailure
+newtype DijkstraSubDelegPredFailure era = DijkstraSubDelegPredFailure (ConwayDelegPredFailure era)
+  deriving (Generic, Eq, Show, NFData, NoThunks, EncCBOR, DecCBOR)
 
 type instance EraRuleFailure "SUBDELEG" DijkstraEra = DijkstraSubDelegPredFailure DijkstraEra
 
