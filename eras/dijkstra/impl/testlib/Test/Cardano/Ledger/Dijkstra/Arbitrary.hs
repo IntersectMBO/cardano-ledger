@@ -251,8 +251,11 @@ instance
   where
   arbitrary = DijkstraSubGovPredFailure <$> arbitrary
 
-instance Arbitrary (DijkstraSubGovCertPredFailure era) where
-  arbitrary = pure DijkstraSubGovCertPredFailure
+instance
+  Arbitrary (DijkstraGovCertPredFailure era) =>
+  Arbitrary (DijkstraSubGovCertPredFailure era)
+  where
+  arbitrary = DijkstraSubGovCertPredFailure <$> arbitrary
 
 instance
   Arbitrary (ShelleyPoolPredFailure era) =>
