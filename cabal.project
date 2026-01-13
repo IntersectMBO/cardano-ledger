@@ -96,15 +96,15 @@ if impl(ghc >=9.12)
     -- Unique: https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
 
-source-repository-package
-  type: git
-  subdir:
-    merkle-tree-incremental
-    scls-core
-    scls-format
-    scls-cbor
-    scls-cardano
-    mempack-scls
-
-  location: https://github.com/tweag/cardano-cls.git
-  tag: 53da0007d2bd49c413416aab7f88636d06aa548c
+-- source-repository-package
+--   type: git
+--   subdir:
+--     merkle-tree-incremental
+--     scls-core
+--     scls-format
+--     scls-cbor
+--     scls-cardano
+--     mempack-scls
+--   location: https://github.com/tweag/cardano-cls.git
+--   tag: 53da0007d2bd49c413416aab7f88636d06aa548c
+--

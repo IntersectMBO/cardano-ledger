@@ -10,6 +10,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.SCLS.Namespace.GovProposals (
@@ -32,7 +33,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.SCLS.Common ()
 import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))
-import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution ()
+import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution (mkCanonicalConstitution, fromCanonicalConstitution)
 import Cardano.Ledger.Conway.SCLS.Namespace.GovPParams ()
 import Cardano.Ledger.Conway.SCLS.Namespace.Snapshots ()
 import Cardano.Ledger.Credential (Credential (..))
@@ -168,7 +169,8 @@ instance ToCanonicalCBOR v (GovAction ConwayEra) where
   toCanonicalCBOR v (UpdateCommittee purposeId removedMembers addedMembers newThreshold) =
     toCanonicalCBOR v (4 :: Word8, purposeId, removedMembers, addedMembers, newThreshold)
   toCanonicalCBOR v (NewConstitution purposeId constitution) =
-    toCanonicalCBOR v (5 :: Word8, purposeId, constitution)
+    let canonicalConstitution = mkCanonicalConstitution constitution
+    in toCanonicalCBOR v (5 :: Word8, purposeId, canonicalConstitution)
   toCanonicalCBOR v (InfoAction) =
     toCanonicalCBOR v (6 :: Word8, ())
 
@@ -201,7 +203,7 @@ instance FromCanonicalCBOR v (GovAction ConwayEra) where
         pure $ Versioned $ UpdateCommittee purposeId removedMembers addedMembers newThreshold
       5 | l == 3 -> do
         Versioned purposeId <- fromCanonicalCBOR
-        Versioned constitution <- fromCanonicalCBOR
+        Versioned (fromCanonicalConstitution -> constitution) <- fromCanonicalCBOR
         pure $ Versioned $ NewConstitution purposeId constitution
       6 | l == 2 -> do
         Versioned () <- fromCanonicalCBOR

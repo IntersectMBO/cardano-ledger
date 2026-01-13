@@ -293,7 +293,7 @@ main = do
             & addNamespacedChunks
               (Proxy @"gov/constitution/v0")
               ( S.each
-                  [ ChunkEntry (GovConstitutionIn epoch) (GovConstitutionOut $ nes & queryConstitution)
+                  [ ChunkEntry (GovConstitutionIn epoch) (mkCanonicalConstitution $ nes & queryConstitution)
                   ]
               )
             & addNamespacedChunks

@@ -26,7 +26,8 @@ deriving newtype instance Arbitrary BlockOut
 
 deriving newtype instance Arbitrary GovCommitteeOut
 
-deriving newtype instance Arbitrary GovConstitutionOut
+instance Arbitrary CanonicalConstitution where
+    arbitrary = genericArbitraryU
 
 deriving newtype instance Arbitrary GovPParamsOut
 

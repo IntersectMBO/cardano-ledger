@@ -27,7 +27,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
-  Constitution (..),
   GovAction (..),
   GovActionPurpose (..),
   GovPurposeId,
@@ -99,7 +98,7 @@ spec = do
       validateType @"gov/pparams/v0" @(PParams ConwayEra) "gov_pparams_out"
       validateType @"gov/proposals/v0" @(PParamsUpdate ConwayEra) "gov_params_update"
     describe "gov/constitution/v0" $ do
-      validateType @"gov/constitution/v0" @(Constitution ConwayEra) "constitution"
+      validateType @"gov/constitution/v0" @CanonicalConstitution "constitution"
     describe "gov/proposals/v0" $ do
       validateType @"gov/proposals/v0" @(GovActionState') "proposal"
       validateType @"gov/proposals/v0" @(ProposalProcedure ConwayEra) "proposal_procedure"

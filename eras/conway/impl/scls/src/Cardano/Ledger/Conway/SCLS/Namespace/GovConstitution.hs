@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -13,13 +14,16 @@
 
 module Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution (
   GovConstitutionIn (..),
-  GovConstitutionOut (..),
+  CanonicalConstitution (..),
+  mkCanonicalConstitution,
+  fromCanonicalConstitution,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..))
+import Cardano.Ledger.BaseTypes (Anchor (..), EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Constitution (..))
 import Cardano.Ledger.Conway.SCLS.Common ()
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..))
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.Entry.IsKey (IsKey (..))
@@ -32,6 +36,7 @@ import Cardano.SCLS.NamespaceCodec (
 import Cardano.SCLS.Versioned (Versioned (..))
 import Data.MemPack.ByteOrdered (packWord64beM, unpackBigEndianM)
 import Data.Proxy (Proxy (..))
+import GHC.Generics (Generic)
 
 data GovConstitutionIn = GovConstitutionIn EpochNo
   deriving (Eq, Ord, Show)
@@ -44,28 +49,33 @@ instance IsKey GovConstitutionIn where
     epochNo <- unpackBigEndianM
     return $ GovConstitutionIn (EpochNo epochNo)
 
-newtype GovConstitutionOut = GovConstitutionOut (Constitution ConwayEra)
-  deriving (Eq, Show)
+mkCanonicalConstitution :: Constitution ConwayEra -> CanonicalConstitution
+mkCanonicalConstitution Constitution {..} = CanonicalConstitution {..}
 
-deriving newtype instance ToCanonicalCBOR v GovConstitutionOut
+fromCanonicalConstitution :: CanonicalConstitution -> Constitution ConwayEra
+fromCanonicalConstitution CanonicalConstitution {..} = Constitution {..}
 
-deriving newtype instance FromCanonicalCBOR v GovConstitutionOut
+data CanonicalConstitution = CanonicalConstitution
+  { constitutionAnchor :: !Anchor
+  , constitutionGuardrailsScriptHash :: !(StrictMaybe ScriptHash)
+  }
+  deriving (Eq, Show, Generic)
 
-instance ToCanonicalCBOR v (Constitution ConwayEra) where
-  toCanonicalCBOR v Constitution {..} =
+instance ToCanonicalCBOR v CanonicalConstitution where
+  toCanonicalCBOR v (CanonicalConstitution {..}) =
     toCanonicalCBOR v (constitutionAnchor, constitutionGuardrailsScriptHash)
 
-instance FromCanonicalCBOR v (Constitution ConwayEra) where
+instance FromCanonicalCBOR v CanonicalConstitution where
   fromCanonicalCBOR = do
     Versioned (anchor, script) <- fromCanonicalCBOR
-    return $ Versioned $ Constitution anchor script
+    return $ Versioned $ CanonicalConstitution anchor script
 
 instance KnownNamespace "gov/constitution/v0" where
   type NamespaceKey "gov/constitution/v0" = GovConstitutionIn
-  type NamespaceEntry "gov/constitution/v0" = GovConstitutionOut
+  type NamespaceEntry "gov/constitution/v0" = CanonicalConstitution
 
-instance CanonicalCBOREntryEncoder "gov/constitution/v0" GovConstitutionOut where
+instance CanonicalCBOREntryEncoder "gov/constitution/v0" CanonicalConstitution where
   encodeEntry n = toCanonicalCBOR (Proxy @"gov/constitution/v0") n
 
-instance CanonicalCBOREntryDecoder "gov/constitution/v0" GovConstitutionOut where
+instance CanonicalCBOREntryDecoder "gov/constitution/v0" CanonicalConstitution where
   decodeEntry = fromCanonicalCBOR
