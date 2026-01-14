@@ -48,7 +48,7 @@ import Data.List.NonEmpty (NonEmpty)
 instance ApplyTx AlonzoEra where
   newtype ApplyTxError AlonzoEra = AlonzoApplyTxError (NonEmpty (ShelleyLedgerPredFailure AlonzoEra))
     deriving (Eq, Show)
-    deriving newtype (EncCBOR, DecCBOR)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup)
   applyTxValidation validationPolicy globals env state tx =
     first AlonzoApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
