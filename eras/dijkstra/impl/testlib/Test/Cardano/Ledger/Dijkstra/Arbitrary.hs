@@ -21,7 +21,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes (PerasCert (..), StrictMaybe)
-import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
@@ -277,3 +277,8 @@ instance
   Arbitrary (DijkstraBlockBody era)
   where
   arbitrary = DijkstraBlockBody <$> arbitrary <*> arbitrary
+
+deriving newtype instance Arbitrary (ApplyTxError DijkstraEra)
+
+instance Arbitrary (DijkstraMempoolPredFailure DijkstraEra) where
+  arbitrary = genericArbitraryU

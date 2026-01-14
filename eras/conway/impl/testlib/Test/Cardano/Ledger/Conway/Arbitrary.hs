@@ -38,7 +38,7 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Conway (ConwayEra, Tx (..))
+import Cardano.Ledger.Conway (ApplyTxError (ConwayApplyTxError), ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
@@ -892,3 +892,5 @@ instance Arbitrary (TransitionConfig ConwayEra) where
   arbitrary = ConwayTransitionConfig <$> arbitrary <*> arbitrary
 
 deriving newtype instance Arbitrary (Tx TopTx ConwayEra)
+
+deriving newtype instance Arbitrary (ApplyTxError ConwayEra)
