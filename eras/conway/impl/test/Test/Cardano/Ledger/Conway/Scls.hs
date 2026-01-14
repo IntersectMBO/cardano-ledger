@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Conway.Scls (
   spec,
 ) where
 
-import Cardano.Ledger.Address (CompactAddr, RewardAccount)
+import Cardano.Ledger.Address (CompactAddr)
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, Prices)
 import Cardano.Ledger.BaseTypes (
@@ -38,10 +38,6 @@ import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Plutus.CostModels
 import Cardano.Ledger.Plutus.Data (BinaryData)
 import Cardano.Ledger.Shelley.TxOut qualified as Shelley
-import Cardano.Ledger.State (
-  PoolMetadata (..),
-  StakePoolRelay (..),
- )
 import Cardano.SCLS.Testlib
 import Data.Typeable
 import GHC.TypeLits
@@ -56,10 +52,10 @@ spec = do
     isCanonical @"gov/pparams/v0" @CanonicalExUnits
     isCanonical @"gov/proposals/v0" @(Vote)
     isCanonical @"gov/proposals/v0" @(CanonicalPurposeId PParamUpdatePurpose)
-    isCanonical @"snapshots/v0" @(RewardAccount)
-    isCanonical @"snapshots/v0" @(PoolMetadata)
-    isCanonical @"snapshots/v0" @(StakePoolRelay)
-    isCanonical @"snapshots/v0" @(CanonicalStakePoolParams)
+    isCanonical @"snapshots/v0" @CanonicalRewardAccount
+    isCanonical @"snapshots/v0" @CanonicalPoolMetadata
+    isCanonical @"snapshots/v0" @CanonicalStakePoolRelay
+    isCanonical @"snapshots/v0" @CanonicalStakePoolParams
     isCanonical @"utxo/v0" @(Shelley.ShelleyTxOut ConwayEra)
     isCanonical @"utxo/v0" @(AlonzoScript ConwayEra)
     isCanonical @"utxo/v0" @MaryValue
@@ -96,10 +92,10 @@ spec = do
       validateType @"gov/proposals/v0" @(CanonicalPurposeId PParamUpdatePurpose) "gov_action_id"
       validateType @"gov/proposals/v0" @(Vote) "coin"
     describe "snapshots/v0" $ do
-      validateType @"snapshots/v0" @(CanonicalStakePoolParams) "pool_params"
-      validateType @"snapshots/v0" @(RewardAccount) "reward_account"
-      validateType @"snapshots/v0" @(PoolMetadata) "pool_metadata"
-      validateType @"snapshots/v0" @(StakePoolRelay) "relay"
+      validateType @"snapshots/v0" @CanonicalStakePoolParams "pool_params"
+      validateType @"snapshots/v0" @CanonicalRewardAccount "reward_account"
+      validateType @"snapshots/v0" @CanonicalPoolMetadata "pool_metadata"
+      validateType @"snapshots/v0" @CanonicalStakePoolRelay "relay"
     describe "utxo/v0" $ do
       validateType @"utxo/v0" @(Shelley.ShelleyTxOut ConwayEra) "shelley_tx_out"
       validateType @"utxo/v0" @(AlonzoScript ConwayEra) "script"

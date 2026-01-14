@@ -75,3 +75,12 @@ instance Arbitrary CanonicalNonce where arbitrary = fmap mkCanonicalNonce arbitr
 
 instance Arbitrary (CanonicalVRFVerKeyHash k) where
   arbitrary = fmap mkCanonicalVRFVerKeyHash arbitrary
+
+instance Arbitrary CanonicalRewardAccount where
+  arbitrary = fmap mkCanonicalRewardAccount arbitrary
+
+instance Arbitrary CanonicalPoolMetadata where
+  arbitrary = fmap mkCanonicalPoolMetadata arbitrary
+
+instance Arbitrary CanonicalStakePoolRelay where
+  arbitrary = fmap mkCanonicalStakePoolRelay arbitrary

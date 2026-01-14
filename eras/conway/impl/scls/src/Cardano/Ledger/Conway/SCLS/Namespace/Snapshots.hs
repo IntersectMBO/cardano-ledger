@@ -24,9 +24,22 @@ module Cardano.Ledger.Conway.SCLS.Namespace.Snapshots (
   CanonicalPoolMetadata (..),
   mkCanonicalPoolMetadata,
   fromCanonicalPoolMetadata,
+  CanonicalStakePoolRelay (..),
+  mkCanonicalStakePoolRelay,
+  fromCanonicalStakePoolRelay,
 ) where
 
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), UnitInterval, Url (..), textToUrl, urlToText)
+import Cardano.Ledger.BaseTypes (
+  DnsName,
+  Port,
+  StrictMaybe (..),
+  UnitInterval,
+  Url (..),
+  dnsToText,
+  textToDns,
+  textToUrl,
+  urlToText,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.SCLS.Common (
   CanonicalRewardAccount (..),
@@ -43,6 +56,7 @@ import Cardano.Ledger.State (PoolMetadata (..), StakePoolParams (..), StakePoolR
 import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
+  decodeListLenCanonical,
   decodeListLenCanonicalOf,
   decodeMapLenCanonicalOf,
  )
@@ -58,6 +72,7 @@ import Cardano.SCLS.Versioned (Versioned (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.Foldable (toList)
+import Data.IP (IPv4, IPv6)
 import Data.MemPack (MemPack (..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -163,7 +178,7 @@ data CanonicalStakePoolParams = CanonicalStakePoolParams
   { sppCost :: !Coin
   , sppPledge :: !Coin
   , sppMargin :: !UnitInterval
-  , sppRelays :: !(StrictSeq.StrictSeq StakePoolRelay)
+  , sppRelays :: !(StrictSeq.StrictSeq CanonicalStakePoolRelay)
   , sppId :: !(KeyHash StakePool)
   , sppOwners :: !(Set (KeyHash Staking))
   , sppVrf :: !(CanonicalVRFVerKeyHash StakePoolVRF)
@@ -207,6 +222,7 @@ mkCanonicalStakePoolParams StakePoolParams {..} =
     { sppVrf = mkCanonicalVRFVerKeyHash sppVrf
     , sppMetadata = fmap mkCanonicalPoolMetadata sppMetadata
     , sppRewardAccount = mkCanonicalRewardAccount sppRewardAccount
+    , sppRelays = fmap mkCanonicalStakePoolRelay sppRelays
     , ..
     }
 
@@ -216,7 +232,7 @@ fromCanonicalStakePoolParams CanonicalStakePoolParams {..} =
     { sppCost = sppCost
     , sppPledge = sppPledge
     , sppMargin = sppMargin
-    , sppRelays = sppRelays
+    , sppRelays = fmap fromCanonicalStakePoolRelay sppRelays
     , sppId = sppId
     , sppOwners = sppOwners
     , sppVrf = fromCanonicalVRFVerKeyHash sppVrf
@@ -251,10 +267,52 @@ decodeField fieldName = do
     fail $
       T.unpack $
         "Expected field name " <> fieldName <> " but got " <> s
+  fromCanonicalCBOR
 
-deriving via LedgerCBOR v StakePoolRelay instance ToCanonicalCBOR v StakePoolRelay
+data CanonicalStakePoolRelay
+  = CanonicalSingleHostAddr !(StrictMaybe Port) !(StrictMaybe IPv4) !(StrictMaybe IPv6)
+  | CanonicalSingleHostName !(StrictMaybe Port) !DnsName
+  | CanonicalMultiHostName !DnsName
+  deriving (Eq, Show, Generic)
 
-deriving via LedgerCBOR v StakePoolRelay instance FromCanonicalCBOR v StakePoolRelay
+instance ToCanonicalCBOR v CanonicalStakePoolRelay where
+  toCanonicalCBOR v (CanonicalSingleHostAddr port ipv4 ipv6) =
+    toCanonicalCBOR v (0 :: Word8, port, ipv4, ipv6)
+  toCanonicalCBOR v (CanonicalSingleHostName port dns) =
+    toCanonicalCBOR v (1 :: Word8, port, dns)
+  toCanonicalCBOR v (CanonicalMultiHostName dns) =
+    toCanonicalCBOR v (2 :: Word8, dns)
+
+instance FromCanonicalCBOR v CanonicalStakePoolRelay where
+  fromCanonicalCBOR = do
+    l <- decodeListLenCanonical
+    Versioned (tag :: Word8) <- fromCanonicalCBOR
+    case tag of
+      0
+        | l == 4 -> do
+            Versioned port <- fromCanonicalCBOR
+            Versioned ipv4 <- fromCanonicalCBOR
+            Versioned ipv6 <- fromCanonicalCBOR
+            return $ Versioned (CanonicalSingleHostAddr port ipv4 ipv6)
+        | otherwise -> fail "CanonicalStakePoolRelay: unexpected list for SingleHostAddr"
+      1 -> do
+        Versioned port <- fromCanonicalCBOR
+        Versioned dns <- fromCanonicalCBOR
+        return $ Versioned (CanonicalSingleHostName port dns)
+      2 -> do
+        Versioned dns <- fromCanonicalCBOR
+        return $ Versioned (CanonicalMultiHostName dns)
+      _ -> fail "Invalid CanonicalStakePoolRelay tag"
+
+mkCanonicalStakePoolRelay :: StakePoolRelay -> CanonicalStakePoolRelay
+mkCanonicalStakePoolRelay (SingleHostAddr port ipv4 ipv6) = CanonicalSingleHostAddr port ipv4 ipv6
+mkCanonicalStakePoolRelay (SingleHostName port dns) = CanonicalSingleHostName port dns
+mkCanonicalStakePoolRelay (MultiHostName dns) = CanonicalMultiHostName dns
+
+fromCanonicalStakePoolRelay :: CanonicalStakePoolRelay -> StakePoolRelay
+fromCanonicalStakePoolRelay (CanonicalSingleHostAddr port ipv4 ipv6) = SingleHostAddr port ipv4 ipv6
+fromCanonicalStakePoolRelay (CanonicalSingleHostName port dns) = SingleHostName port dns
+fromCanonicalStakePoolRelay (CanonicalMultiHostName dns) = MultiHostName dns
 
 instance ToCanonicalCBOR v PoolMetadata where
   toCanonicalCBOR v PoolMetadata {..} = toCanonicalCBOR v (pmUrl, pmHash)
@@ -278,3 +336,25 @@ instance CanonicalCBOREntryEncoder "snapshots/v0" SnapShotOut where
 
 instance CanonicalCBOREntryDecoder "snapshots/v0" SnapShotOut where
   decodeEntry = fromCanonicalCBOR
+
+instance ToCanonicalCBOR v DnsName where
+  toCanonicalCBOR v = toCanonicalCBOR v . dnsToText
+
+instance FromCanonicalCBOR v DnsName where
+  fromCanonicalCBOR = do
+    Versioned t <- fromCanonicalCBOR
+    case textToDns 128 t of
+      Just dns -> return $ Versioned dns
+      Nothing -> fail "FromCanonicalCBOR<DsnName>: DNS name is too long"
+
+deriving via LedgerCBOR v Port instance ToCanonicalCBOR v Port
+
+deriving via LedgerCBOR v Port instance FromCanonicalCBOR v Port
+
+deriving via LedgerCBOR v IPv4 instance ToCanonicalCBOR v IPv4
+
+deriving via LedgerCBOR v IPv4 instance FromCanonicalCBOR v IPv4
+
+deriving via LedgerCBOR v IPv6 instance ToCanonicalCBOR v IPv6
+
+deriving via LedgerCBOR v IPv6 instance FromCanonicalCBOR v IPv6
