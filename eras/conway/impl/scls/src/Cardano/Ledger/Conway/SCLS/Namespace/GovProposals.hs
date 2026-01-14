@@ -29,7 +29,7 @@ module Cardano.Ledger.Conway.SCLS.Namespace.GovProposals (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.Alonzo.PParams (OrdExUnits)
+import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
   EpochInterval,
@@ -87,6 +87,7 @@ import Cardano.SCLS.NamespaceCodec (
  )
 import Cardano.SCLS.Versioned (Versioned (..))
 import Control.Monad (unless)
+import Data.Functor ((<&>))
 import Data.Map (Map)
 import Data.MemPack
 import Data.MemPack.ByteOrdered
@@ -336,8 +337,8 @@ data CanonicalPParamsUpdate = CanonicalPParamsUpdate
   , ucppCoinsPerUTxOByte :: StrictMaybe (CompactForm Coin)
   , ucppCostModels :: StrictMaybe CanonicalCostModels
   , ucppPrices :: StrictMaybe CanonicalPrices
-  , ucppMaxTxExUnits :: StrictMaybe OrdExUnits
-  , ucppMaxBlockExUnits :: StrictMaybe OrdExUnits
+  , ucppMaxTxExUnits :: StrictMaybe CanonicalExUnits
+  , ucppMaxBlockExUnits :: StrictMaybe CanonicalExUnits
   , ucppMaxValSize :: StrictMaybe Word32
   , ucppCollateralPercentage :: StrictMaybe Word16
   , ucppMaxCollateralInputs :: StrictMaybe Word16
@@ -372,13 +373,13 @@ mkCanonicalPParamsUpdate (PParamsUpdate ConwayPParams {..}) =
     , ucppCoinsPerUTxOByte = fmap unCoinPerByte $ unTHKD cppCoinsPerUTxOByte
     , ucppCostModels = fmap mkCanonicalCostModels $ unTHKD cppCostModels
     , ucppPrices = fmap mkCanonicalPrices $ unTHKD cppPrices
-    , ucppMaxTxExUnits = unTHKD cppMaxTxExUnits
-    , ucppMaxBlockExUnits = unTHKD cppMaxBlockExUnits
+    , ucppMaxTxExUnits = unTHKD cppMaxTxExUnits  <&> unOrdExUnits <&> mkCanonicalExUnits
+    , ucppMaxBlockExUnits = unTHKD cppMaxBlockExUnits <&> unOrdExUnits <&> mkCanonicalExUnits
     , ucppMaxValSize = unTHKD cppMaxValSize
     , ucppCollateralPercentage = unTHKD cppCollateralPercentage
     , ucppMaxCollateralInputs = unTHKD cppMaxCollateralInputs
-    , ucppPoolVotingThresholds = fmap mkCanonicalPoolVotingThresholds $ unTHKD cppPoolVotingThresholds
-    , ucppDRepVotingThresholds = fmap mkCanonicalDRepVotingThresholds $ unTHKD cppDRepVotingThresholds
+    , ucppPoolVotingThresholds = unTHKD cppPoolVotingThresholds <&> mkCanonicalPoolVotingThresholds
+    , ucppDRepVotingThresholds = unTHKD cppDRepVotingThresholds <&> mkCanonicalDRepVotingThresholds
     , ucppCommitteeMinSize = unTHKD cppCommitteeMinSize
     , ucppCommitteeMaxTermLength = unTHKD cppCommitteeMaxTermLength
     , ucppGovActionLifetime = unTHKD cppGovActionLifetime
@@ -409,8 +410,8 @@ fromCanonicalPParamsUpdate CanonicalPParamsUpdate {..} =
       , cppCoinsPerUTxOByte = THKD (CoinPerByte <$> ucppCoinsPerUTxOByte)
       , cppCostModels = THKD (fromCanonicalCostModels <$> ucppCostModels)
       , cppPrices = THKD (fromCanonicalPrices <$> ucppPrices)
-      , cppMaxTxExUnits = THKD ucppMaxTxExUnits
-      , cppMaxBlockExUnits = THKD ucppMaxBlockExUnits
+      , cppMaxTxExUnits = THKD (ucppMaxTxExUnits <&> fromCanonicalExUnits <&> OrdExUnits)
+      , cppMaxBlockExUnits = THKD (ucppMaxBlockExUnits <&> fromCanonicalExUnits <&> OrdExUnits)
       , cppMaxValSize = THKD ucppMaxValSize
       , cppCollateralPercentage = THKD ucppCollateralPercentage
       , cppMaxCollateralInputs = THKD ucppMaxCollateralInputs

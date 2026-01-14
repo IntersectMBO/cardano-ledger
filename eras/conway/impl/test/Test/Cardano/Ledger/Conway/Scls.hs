@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Conway.Scls (
 
 import Cardano.Ledger.Address (CompactAddr, RewardAccount)
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
-import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, Prices)
 import Cardano.Ledger.BaseTypes (
   Anchor,
@@ -56,7 +55,7 @@ spec = do
   describe "Cardano ledger state: instace tests" $ do
     isCanonical @"gov/pparams/v0" @CanonicalPoolVotingThresholds
     isCanonical @"gov/pparams/v0" @CanonicalDRepVotingThresholds
-    isCanonical @"gov/pparams/v0" @(OrdExUnits)
+    isCanonical @"gov/pparams/v0" @CanonicalExUnits
     isCanonical @"gov/proposals/v0" @(Vote)
     isCanonical @"gov/proposals/v0" @(GovPurposeId PParamUpdatePurpose)
     isCanonical @"snapshots/v0" @(RewardAccount)
@@ -87,7 +86,7 @@ spec = do
       validateType @"gov/pparams/v0" @CanonicalPoolVotingThresholds "pool_voting_thresholds"
       validateType @"gov/pparams/v0" @CanonicalDRepVotingThresholds "drep_voting_thresholds"
       validateType @"gov/pparams/v0" @CostModels "cost_models"
-      validateType @"gov/pparams/v0" @OrdExUnits "ex_units"
+      validateType @"gov/pparams/v0" @CanonicalExUnits "ex_units"
       validateType @"gov/pparams/v0" @CanonicalPParams "gov_pparams_out"
       validateType @"gov/proposals/v0" @CanonicalPParamsUpdate "gov_params_update"
     describe "gov/constitution/v0" $ do

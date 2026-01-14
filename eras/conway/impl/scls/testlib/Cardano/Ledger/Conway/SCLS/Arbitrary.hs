@@ -62,3 +62,5 @@ instance Arbitrary PotsOut where arbitrary = genericArbitraryU
 instance Arbitrary SnapShotOut where arbitrary = genericArbitraryU
 
 instance Arbitrary UtxoOut where arbitrary = genericArbitraryU
+
+instance Arbitrary CanonicalExUnits where arbitrary = fmap (mkCanonicalExUnits) arbitrary

@@ -33,9 +33,12 @@ module Cardano.Ledger.Conway.SCLS.Namespace.GovPParams (
   CanonicalPoolVotingThresholds (..),
   mkCanonicalPoolVotingThresholds,
   fromCanonicalPoolVotingThresholds,
+  CanonicalExUnits (..),
+  mkCanonicalExUnits,
+  fromCanonicalExUnits
 ) where
 
-import Cardano.Ledger.Alonzo.PParams (OrdExUnits)
+import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
 -- FIXME: CompactForm Coin -> Coin
 
 import Cardano.Ledger.BaseTypes (NonNegativeInterval, ProtVer (..), UnitInterval)
@@ -63,7 +66,7 @@ import Cardano.Ledger.Plutus.CostModels (
   mkCostModels,
   mkCostModelsLenient,
  )
-import Cardano.Ledger.Plutus.ExUnits (Prices (..))
+import Cardano.Ledger.Plutus.ExUnits (Prices (..), ExUnits (..), ExUnits' (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.SCLS.CBOR.Canonical (
   CanonicalDecoder (..),
@@ -86,6 +89,7 @@ import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
+import Data.Function ((&))
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.MemPack (packByteStringM, unpackByteStringM)
@@ -94,6 +98,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word16, Word32, Word8)
 import GHC.Generics (Generic)
+import GHC.Natural
 
 data GovPParamsIn
   = GovPParamsInPrev
@@ -325,10 +330,6 @@ mkCanonicalDRepVotingThresholds DRepVotingThresholds {..} = CanonicalDRepVotingT
 fromCanonicalDRepVotingThresholds :: CanonicalDRepVotingThresholds -> DRepVotingThresholds
 fromCanonicalDRepVotingThresholds CanonicalDRepVotingThresholds {..} = DRepVotingThresholds {..}
 
-deriving via LedgerCBOR v OrdExUnits instance ToCanonicalCBOR v OrdExUnits
-
-deriving via LedgerCBOR v OrdExUnits instance FromCanonicalCBOR v OrdExUnits
-
 deriving via LedgerCBOR v Language instance FromCanonicalCBOR v Language
 
 deriving via LedgerCBOR v Language instance ToCanonicalCBOR v Language
@@ -354,8 +355,8 @@ data CanonicalPParams = CanonicalPParams
   , ccppCoinsPerUTxOByte :: CompactForm Coin
   , ccppCostModels :: CanonicalCostModels
   , ccppPrices :: CanonicalPrices
-  , ccppMaxTxExUnits :: OrdExUnits
-  , ccppMaxBlockExUnits :: OrdExUnits
+  , ccppMaxTxExUnits :: CanonicalExUnits
+  , ccppMaxBlockExUnits :: CanonicalExUnits
   , ccppMaxValSize :: Word32
   , ccppCollateralPercentage :: Word16
   , ccppMaxCollateralInputs :: Word16
@@ -391,8 +392,8 @@ mkCanonicalPParams (PParams ConwayPParams {..}) =
     , ccppCoinsPerUTxOByte = unCoinPerByte $ unTHKD cppCoinsPerUTxOByte
     , ccppCostModels = mkCanonicalCostModels $ unTHKD cppCostModels
     , ccppPrices = mkCanonicalPrices $ unTHKD cppPrices
-    , ccppMaxTxExUnits = unTHKD cppMaxTxExUnits
-    , ccppMaxBlockExUnits = unTHKD cppMaxBlockExUnits
+    , ccppMaxTxExUnits = unTHKD cppMaxTxExUnits & unOrdExUnits & mkCanonicalExUnits
+    , ccppMaxBlockExUnits = unTHKD cppMaxBlockExUnits & unOrdExUnits & mkCanonicalExUnits
     , ccppMaxValSize = unTHKD cppMaxValSize
     , ccppCollateralPercentage = unTHKD cppCollateralPercentage
     , ccppMaxCollateralInputs = unTHKD cppMaxCollateralInputs
@@ -428,8 +429,8 @@ fromCanonicalPParams CanonicalPParams {..} =
       , cppCoinsPerUTxOByte = THKD (CoinPerByte ccppCoinsPerUTxOByte)
       , cppCostModels = THKD (fromCanonicalCostModels ccppCostModels)
       , cppPrices = THKD (fromCanonicalPrices ccppPrices)
-      , cppMaxTxExUnits = THKD ccppMaxTxExUnits
-      , cppMaxBlockExUnits = THKD ccppMaxBlockExUnits
+      , cppMaxTxExUnits = THKD (ccppMaxTxExUnits & fromCanonicalExUnits & OrdExUnits)
+      , cppMaxBlockExUnits = THKD (ccppMaxBlockExUnits & fromCanonicalExUnits & OrdExUnits)
       , cppMaxValSize = THKD ccppMaxValSize
       , cppCollateralPercentage = THKD ccppCollateralPercentage
       , cppMaxCollateralInputs = THKD ccppMaxCollateralInputs
@@ -539,3 +540,31 @@ instance CanonicalCBOREntryEncoder "gov/pparams/v0" CanonicalPParams where
 
 instance CanonicalCBOREntryDecoder "gov/pparams/v0" CanonicalPParams where
   decodeEntry = fromCanonicalCBOR
+
+data CanonicalExUnits = CanonicalExUnits
+  { exUnitsMem' :: !Natural
+  , exUnitsSteps' :: !Natural
+  }
+  deriving (Eq, Show, Generic)
+
+instance ToCanonicalCBOR v CanonicalExUnits where
+  toCanonicalCBOR v CanonicalExUnits{..} = toCanonicalCBOR v (exUnitsMem', exUnitsSteps')
+
+instance FromCanonicalCBOR v CanonicalExUnits where
+  fromCanonicalCBOR = do
+    Versioned (exUnitsMem', exUnitsSteps') <- fromCanonicalCBOR @v
+    return $ Versioned CanonicalExUnits{..}
+
+mkCanonicalExUnits :: ExUnits -> CanonicalExUnits
+mkCanonicalExUnits (unWrapExUnits -> ExUnits'{..}) = CanonicalExUnits{..}
+
+fromCanonicalExUnits :: CanonicalExUnits -> ExUnits
+fromCanonicalExUnits CanonicalExUnits{..} = WrapExUnits ExUnits'{..}
+
+-- TODO: remove
+
+instance FromCanonicalCBOR v Natural where
+  fromCanonicalCBOR = assumeCanonicalDecoder $ Versioned @v . fromIntegral <$> D.decodeIntegerCanonical
+
+instance ToCanonicalCBOR v Natural where
+  toCanonicalCBOR _v n = assumeCanonicalEncoding $ E.encodeInteger (fromIntegral n)
