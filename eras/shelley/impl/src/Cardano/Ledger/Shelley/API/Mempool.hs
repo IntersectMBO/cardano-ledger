@@ -96,6 +96,8 @@ class
   , Show (ApplyTxError era)
   , Typeable (ApplyTxError era)
   , Semigroup (ApplyTxError era)
+  , EncCBOR (ApplyTxError era)
+  , DecCBOR (ApplyTxError era)
   ) =>
   ApplyTx era
   where

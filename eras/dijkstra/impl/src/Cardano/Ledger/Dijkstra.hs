@@ -11,6 +11,7 @@
 module Cardano.Ledger.Dijkstra (DijkstraEra, ApplyTxError (..)) where
 
 import Cardano.Ledger.BaseTypes (Inject (inject))
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Conway.Governance (RunConwayRatify)
 import Cardano.Ledger.Dijkstra.BlockBody ()
 import Cardano.Ledger.Dijkstra.Era
@@ -37,7 +38,7 @@ import Data.List.NonEmpty (NonEmpty)
 instance ApplyTx DijkstraEra where
   newtype ApplyTxError DijkstraEra = DijkstraApplyTxError (NonEmpty (DijkstraMempoolPredFailure DijkstraEra))
     deriving (Eq, Show)
-    deriving newtype (Semigroup)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup)
   applyTxValidation validationPolicy globals env state tx =
     first DijkstraApplyTxError $
       ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx

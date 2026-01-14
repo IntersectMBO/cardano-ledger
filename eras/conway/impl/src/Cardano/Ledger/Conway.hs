@@ -21,6 +21,7 @@ module Cardano.Ledger.Conway (
 
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.BaseTypes (Inject (..))
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Conway.BlockBody ()
 import Cardano.Ledger.Conway.Era (
   ConwayEra,
@@ -47,7 +48,7 @@ import Data.List.NonEmpty (NonEmpty)
 instance ApplyTx ConwayEra where
   newtype ApplyTxError ConwayEra = ConwayApplyTxError (NonEmpty (ConwayLedgerPredFailure ConwayEra))
     deriving (Eq, Show)
-    deriving newtype (Semigroup)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup)
   applyTxValidation validationPolicy globals env state tx =
     first ConwayApplyTxError $
       ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx
