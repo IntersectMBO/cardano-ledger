@@ -63,4 +63,5 @@ instance Arbitrary SnapShotOut where arbitrary = genericArbitraryU
 
 instance Arbitrary UtxoOut where arbitrary = genericArbitraryU
 
-instance Arbitrary CanonicalExUnits where arbitrary = fmap (mkCanonicalExUnits) arbitrary
+instance Arbitrary CanonicalExUnits where arbitrary = fmap mkCanonicalExUnits arbitrary
+instance Arbitrary (CanonicalPurposeId p) where arbitrary = fmap mkCanonicalPurposeId arbitrary

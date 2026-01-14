@@ -27,10 +27,10 @@ module Cardano.Ledger.Conway.SCLS.Namespace.GovProposals (
   mkCanonicalPParamsUpdate,
   fromCanonicalPParamsUpdate,
   CanonicalPurposeId (..),
+  mkCanonicalPurposeId,
   CanonicalGovActionId (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
@@ -62,6 +62,9 @@ import Cardano.Ledger.Conway.SCLS.Common (
   CanonicalCredential (..),
   fromCanonicalCredential,
   mkCanonicalCredential,
+  CanonicalRewardAccount (..),
+  fromCanonicalRewardAccount,
+  mkCanonicalRewardAccount,
  )
 import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))
 import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution (
@@ -103,7 +106,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word8)
 import GHC.Generics (Generic)
 
@@ -186,7 +188,7 @@ data CanonicalGovAction
       CanonicalPParamsUpdate
       (StrictMaybe ScriptHash)
   | CanonicalHardForkInitiation (StrictMaybe (CanonicalPurposeId HardForkPurpose)) ProtVer
-  | CanonicalTreasuryWithdrawals (Map RewardAccount Coin) (StrictMaybe ScriptHash)
+  | CanonicalTreasuryWithdrawals (Map CanonicalRewardAccount Coin) (StrictMaybe ScriptHash)
   | CanonicalNoConfidence (StrictMaybe (CanonicalPurposeId CommitteePurpose))
   | CanonicalUpdateCommittee
       (StrictMaybe (CanonicalPurposeId CommitteePurpose))
@@ -211,7 +213,7 @@ mkCanonicalGovAction (HardForkInitiation purposeId v) =
     v
 mkCanonicalGovAction (TreasuryWithdrawals withdrawals script) =
   CanonicalTreasuryWithdrawals
-    withdrawals
+    (Map.fromList [(mkCanonicalRewardAccount c, v) | (c, v) <- Map.toList withdrawals])
     script
 mkCanonicalGovAction (NoConfidence purposeId) =
   CanonicalNoConfidence
@@ -239,7 +241,9 @@ fromCanonicalGovAction (CanonicalHardForkInitiation purposeId v) =
     (fromCanonicalPurposeId <$> purposeId)
     v
 fromCanonicalGovAction (CanonicalTreasuryWithdrawals withdrawals script) =
-  TreasuryWithdrawals withdrawals script
+  TreasuryWithdrawals
+    (Map.fromList [(fromCanonicalRewardAccount c, v) | (c, v) <- Map.toList withdrawals])
+    script
 fromCanonicalGovAction (CanonicalNoConfidence purposeId) =
   NoConfidence
     (fromCanonicalPurposeId <$> purposeId)
@@ -259,7 +263,7 @@ data CanonicalProposalProcedure = CanonicalProposalProcedure
   { pProcAnchor :: Anchor
   , pProcDeposit :: Coin
   , pProcGovAction :: CanonicalGovAction
-  , pProcReturnAddr :: RewardAccount
+  , pProcReturnAddr :: CanonicalRewardAccount
   }
   deriving (Eq, Show, Generic)
 
@@ -267,6 +271,7 @@ mkCanonicalProposalProcedure :: ProposalProcedure ConwayEra -> CanonicalProposal
 mkCanonicalProposalProcedure ProposalProcedure {..} =
   CanonicalProposalProcedure
     { pProcGovAction = mkCanonicalGovAction pProcGovAction
+    , pProcReturnAddr = mkCanonicalRewardAccount pProcReturnAddr
     , ..
     }
 
@@ -274,6 +279,7 @@ fromCanonicalProposalProcedure :: CanonicalProposalProcedure -> ProposalProcedur
 fromCanonicalProposalProcedure CanonicalProposalProcedure {..} =
   ProposalProcedure
     { pProcGovAction = fromCanonicalGovAction pProcGovAction
+    , pProcReturnAddr = fromCanonicalRewardAccount pProcReturnAddr
     , ..
     }
 
@@ -347,13 +353,6 @@ instance FromCanonicalCBOR v CanonicalGovAction where
         Versioned () <- fromCanonicalCBOR
         pure $ Versioned CanonicalInfoAction
       _ -> fail $ "Unknown GovAction tag: " ++ show tag
-
-deriving via LedgerCBOR v (GovPurposeId purpose) instance ToCanonicalCBOR v (GovPurposeId purpose)
-
-deriving via
-  LedgerCBOR v (GovPurposeId purpose)
-  instance
-    Typeable purpose => FromCanonicalCBOR v (GovPurposeId purpose)
 
 deriving via LedgerCBOR v Vote instance ToCanonicalCBOR v Vote
 

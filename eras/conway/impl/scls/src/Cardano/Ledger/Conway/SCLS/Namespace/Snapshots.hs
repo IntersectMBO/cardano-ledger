@@ -20,7 +20,6 @@ module Cardano.Ledger.Conway.SCLS.Namespace.Snapshots (
   SnapshotStage (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.BaseTypes (Url (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.SCLS.Common ()
@@ -182,10 +181,6 @@ decodeField fieldName = do
       T.unpack $
         "Expected field name " <> fieldName <> " but got " <> s
   fromCanonicalCBOR
-
-deriving via LedgerCBOR v RewardAccount instance ToCanonicalCBOR v RewardAccount
-
-deriving via LedgerCBOR v RewardAccount instance FromCanonicalCBOR v RewardAccount
 
 deriving via LedgerCBOR v PoolMetadata instance FromCanonicalCBOR v PoolMetadata
 

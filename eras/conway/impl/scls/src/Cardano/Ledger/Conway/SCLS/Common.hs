@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -14,14 +15,18 @@ module Cardano.Ledger.Conway.SCLS.Common (
   CanonicalCredential (..),
   fromCanonicalCredential,
   mkCanonicalCredential,
+  CanonicalRewardAccount (..),
+  fromCanonicalRewardAccount,
+  mkCanonicalRewardAccount
 ) where
 
-import Cardano.Ledger.BaseTypes (Anchor, EpochNo, NonNegativeInterval, ProtVer, UnitInterval)
+import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.BaseTypes (Anchor, EpochNo, NonNegativeInterval, ProtVer, UnitInterval, Network)
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import qualified Cardano.Ledger.Coin as Coin
 import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Hashes (KeyHash, ScriptHash, VRFVerKeyHash)
+import Cardano.Ledger.Hashes (KeyHash, ScriptHash, VRFVerKeyHash, Staking)
 import Cardano.Ledger.Plutus.ExUnits (Prices)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
@@ -157,3 +162,32 @@ instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictSeq a) where
   fromCanonicalCBOR = do
     Versioned (l :: [a]) <- fromCanonicalCBOR @v
     pure $ Versioned $ StrictSeq.fromList l
+
+data CanonicalRewardAccount = CanonicalRewardAccount
+  { raNetwork :: !Network
+  , raCredential :: !(CanonicalCredential Staking)
+  }
+  deriving (Eq, Show, Ord, Generic)
+
+instance ToCanonicalCBOR v CanonicalRewardAccount where
+  toCanonicalCBOR v = toCanonicalCBOR v . fromCanonicalRewardAccount
+
+instance FromCanonicalCBOR v CanonicalRewardAccount where
+  fromCanonicalCBOR = fmap mkCanonicalRewardAccount <$> fromCanonicalCBOR
+
+deriving via LedgerCBOR v RewardAccount instance ToCanonicalCBOR v RewardAccount
+deriving via LedgerCBOR v RewardAccount instance FromCanonicalCBOR v RewardAccount
+
+mkCanonicalRewardAccount :: RewardAccount -> CanonicalRewardAccount
+mkCanonicalRewardAccount RewardAccount{..} =
+  CanonicalRewardAccount
+    { raCredential = mkCanonicalCredential raCredential
+    , ..
+    }
+
+fromCanonicalRewardAccount :: CanonicalRewardAccount -> RewardAccount
+fromCanonicalRewardAccount CanonicalRewardAccount{..} =
+  RewardAccount
+    { raCredential = fromCanonicalCredential raCredential
+    , ..
+    }

@@ -27,7 +27,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   GovActionPurpose (..),
-  GovPurposeId,
   Vote (..),
  )
 import Cardano.Ledger.Conway.SCLS
@@ -57,7 +56,7 @@ spec = do
     isCanonical @"gov/pparams/v0" @CanonicalDRepVotingThresholds
     isCanonical @"gov/pparams/v0" @CanonicalExUnits
     isCanonical @"gov/proposals/v0" @(Vote)
-    isCanonical @"gov/proposals/v0" @(GovPurposeId PParamUpdatePurpose)
+    isCanonical @"gov/proposals/v0" @(CanonicalPurposeId PParamUpdatePurpose)
     isCanonical @"snapshots/v0" @(RewardAccount)
     isCanonical @"snapshots/v0" @(PoolMetadata)
     isCanonical @"snapshots/v0" @(StakePoolRelay)
@@ -95,7 +94,7 @@ spec = do
       validateType @"gov/proposals/v0" @CanonicalGovActionState "proposal"
       validateType @"gov/proposals/v0" @CanonicalProposalProcedure "proposal_procedure"
       validateType @"gov/proposals/v0" @CanonicalGovAction "gov_action"
-      validateType @"gov/proposals/v0" @(GovPurposeId PParamUpdatePurpose) "gov_action_id"
+      validateType @"gov/proposals/v0" @(CanonicalPurposeId PParamUpdatePurpose) "gov_action_id"
       validateType @"gov/proposals/v0" @(Vote) "coin"
     describe "snapshots/v0" $ do
       validateType @"snapshots/v0" @(StakePoolParams) "pool_params"
