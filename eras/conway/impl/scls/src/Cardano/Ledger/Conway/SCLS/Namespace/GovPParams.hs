@@ -35,7 +35,7 @@ module Cardano.Ledger.Conway.SCLS.Namespace.GovPParams (
   fromCanonicalPoolVotingThresholds,
   CanonicalExUnits (..),
   mkCanonicalExUnits,
-  fromCanonicalExUnits
+  fromCanonicalExUnits,
 ) where
 
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
@@ -66,7 +66,7 @@ import Cardano.Ledger.Plutus.CostModels (
   mkCostModels,
   mkCostModelsLenient,
  )
-import Cardano.Ledger.Plutus.ExUnits (Prices (..), ExUnits (..), ExUnits' (..))
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), ExUnits' (..), Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.SCLS.CBOR.Canonical (
   CanonicalDecoder (..),
@@ -548,18 +548,18 @@ data CanonicalExUnits = CanonicalExUnits
   deriving (Eq, Show, Generic)
 
 instance ToCanonicalCBOR v CanonicalExUnits where
-  toCanonicalCBOR v CanonicalExUnits{..} = toCanonicalCBOR v (exUnitsMem', exUnitsSteps')
+  toCanonicalCBOR v CanonicalExUnits {..} = toCanonicalCBOR v (exUnitsMem', exUnitsSteps')
 
 instance FromCanonicalCBOR v CanonicalExUnits where
   fromCanonicalCBOR = do
     Versioned (exUnitsMem', exUnitsSteps') <- fromCanonicalCBOR @v
-    return $ Versioned CanonicalExUnits{..}
+    return $ Versioned CanonicalExUnits {..}
 
 mkCanonicalExUnits :: ExUnits -> CanonicalExUnits
-mkCanonicalExUnits (unWrapExUnits -> ExUnits'{..}) = CanonicalExUnits{..}
+mkCanonicalExUnits (unWrapExUnits -> ExUnits' {..}) = CanonicalExUnits {..}
 
 fromCanonicalExUnits :: CanonicalExUnits -> ExUnits
-fromCanonicalExUnits CanonicalExUnits{..} = WrapExUnits ExUnits'{..}
+fromCanonicalExUnits CanonicalExUnits {..} = WrapExUnits ExUnits' {..}
 
 -- TODO: remove
 

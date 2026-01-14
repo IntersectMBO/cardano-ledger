@@ -26,6 +26,8 @@ module Cardano.Ledger.Conway.SCLS.Namespace.GovProposals (
   CanonicalPParamsUpdate (..),
   mkCanonicalPParamsUpdate,
   fromCanonicalPParamsUpdate,
+  CanonicalPurposeId (..),
+  CanonicalGovActionId (..),
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -56,7 +58,11 @@ import Cardano.Ledger.Conway.PParams (
   ConwayPParams (..),
   THKD (..),
  )
-import Cardano.Ledger.Conway.SCLS.Common ()
+import Cardano.Ledger.Conway.SCLS.Common (
+  CanonicalCredential (..),
+  fromCanonicalCredential,
+  mkCanonicalCredential,
+ )
 import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))
 import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution (
   fromCanonicalConstitution,
@@ -65,10 +71,10 @@ import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution (
 import Cardano.Ledger.Conway.SCLS.Namespace.GovPParams
 import Cardano.Ledger.Conway.SCLS.Namespace.Snapshots ()
 import Cardano.Ledger.Core (PParamsUpdate (..))
-import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys
+import Cardano.Ledger.TxIn
 import Cardano.SCLS.CBOR.Canonical
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
@@ -89,10 +95,12 @@ import Cardano.SCLS.Versioned (Versioned (..))
 import Control.Monad (unless)
 import Data.Functor ((<&>))
 import Data.Map (Map)
+import qualified Data.Map.Strict as Map
 import Data.MemPack
 import Data.MemPack.ByteOrdered
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
@@ -144,12 +152,15 @@ mkCanonicalGovActionState :: GovActionState ConwayEra -> CanonicalGovActionState
 mkCanonicalGovActionState GovActionState {..} =
   CanonicalGovActionState
     { gasProposalProcedure = mkCanonicalProposalProcedure gasProposalProcedure
+    , gasCommitteeVotes =
+        Map.fromList [(mkCanonicalCredential k, v) | (k, v) <- Map.toList gasCommitteeVotes]
+    , gasDRepVotes = Map.fromList [(mkCanonicalCredential k, v) | (k, v) <- Map.toList gasDRepVotes]
     , ..
     }
 
 data CanonicalGovActionState = CanonicalGovActionState
-  { gasCommitteeVotes :: !(Map (Credential HotCommitteeRole) Vote)
-  , gasDRepVotes :: !(Map (Credential DRepRole) Vote)
+  { gasCommitteeVotes :: !(Map (CanonicalCredential HotCommitteeRole) Vote)
+  , gasDRepVotes :: !(Map (CanonicalCredential DRepRole) Vote)
   , gasStakePoolVotes :: !(Map (KeyHash StakePool) Vote)
   , gasProposalProcedure :: !CanonicalProposalProcedure
   , gasProposedIn :: !EpochNo
@@ -171,37 +182,77 @@ instance FromCanonicalCBOR v CanonicalGovActionState where
 
 data CanonicalGovAction
   = CanonicalParameterChange
-      (StrictMaybe (GovPurposeId PParamUpdatePurpose))
+      (StrictMaybe (CanonicalPurposeId PParamUpdatePurpose))
       CanonicalPParamsUpdate
       (StrictMaybe ScriptHash)
-  | CanonicalHardForkInitiation (StrictMaybe (GovPurposeId HardForkPurpose)) ProtVer
+  | CanonicalHardForkInitiation (StrictMaybe (CanonicalPurposeId HardForkPurpose)) ProtVer
   | CanonicalTreasuryWithdrawals (Map RewardAccount Coin) (StrictMaybe ScriptHash)
-  | CanonicalNoConfidence (StrictMaybe (GovPurposeId CommitteePurpose))
+  | CanonicalNoConfidence (StrictMaybe (CanonicalPurposeId CommitteePurpose))
   | CanonicalUpdateCommittee
-      (StrictMaybe (GovPurposeId CommitteePurpose))
-      (Set (Credential ColdCommitteeRole))
-      (Map (Credential ColdCommitteeRole) EpochNo)
+      (StrictMaybe (CanonicalPurposeId CommitteePurpose))
+      (Set (CanonicalCredential ColdCommitteeRole))
+      (Map (CanonicalCredential ColdCommitteeRole) EpochNo)
       UnitInterval
-  | CanonicalNewConstitution (StrictMaybe (GovPurposeId ConstitutionPurpose)) (Constitution ConwayEra)
+  | CanonicalNewConstitution
+      (StrictMaybe (CanonicalPurposeId ConstitutionPurpose))
+      (Constitution ConwayEra)
   | CanonicalInfoAction
   deriving (Eq, Show, Generic)
 
 mkCanonicalGovAction :: GovAction ConwayEra -> CanonicalGovAction
-mkCanonicalGovAction (ParameterChange purposeId pparamsUpdate mScriptHash) = CanonicalParameterChange purposeId (mkCanonicalPParamsUpdate pparamsUpdate) mScriptHash
-mkCanonicalGovAction (HardForkInitiation purposeId v) = CanonicalHardForkInitiation purposeId v
-mkCanonicalGovAction (TreasuryWithdrawals withdrawals script) = CanonicalTreasuryWithdrawals withdrawals script
-mkCanonicalGovAction (NoConfidence purposeId) = CanonicalNoConfidence purposeId
-mkCanonicalGovAction (UpdateCommittee purposeId removedMembers addedMembers newThreshold) = CanonicalUpdateCommittee purposeId removedMembers addedMembers newThreshold
-mkCanonicalGovAction (NewConstitution purposeId constitution) = CanonicalNewConstitution purposeId constitution
+mkCanonicalGovAction (ParameterChange purposeId pparamsUpdate mScriptHash) =
+  CanonicalParameterChange
+    (mkCanonicalPurposeId <$> purposeId)
+    (mkCanonicalPParamsUpdate pparamsUpdate)
+    mScriptHash
+mkCanonicalGovAction (HardForkInitiation purposeId v) =
+  CanonicalHardForkInitiation
+    (mkCanonicalPurposeId <$> purposeId)
+    v
+mkCanonicalGovAction (TreasuryWithdrawals withdrawals script) =
+  CanonicalTreasuryWithdrawals
+    withdrawals
+    script
+mkCanonicalGovAction (NoConfidence purposeId) =
+  CanonicalNoConfidence
+    (mkCanonicalPurposeId <$> purposeId)
+mkCanonicalGovAction (UpdateCommittee purposeId removedMembers addedMembers newThreshold) =
+  CanonicalUpdateCommittee
+    (mkCanonicalPurposeId <$> purposeId)
+    (Set.fromList [mkCanonicalCredential c | c <- Set.toList removedMembers])
+    (Map.fromList [(mkCanonicalCredential c, v) | (c, v) <- Map.toList addedMembers])
+    newThreshold
+mkCanonicalGovAction (NewConstitution purposeId constitution) =
+  CanonicalNewConstitution
+    (mkCanonicalPurposeId <$> purposeId)
+    constitution
 mkCanonicalGovAction (InfoAction) = CanonicalInfoAction
 
 fromCanonicalGovAction :: CanonicalGovAction -> GovAction ConwayEra
-fromCanonicalGovAction (CanonicalParameterChange purposeId pparamsUpdate mScriptHash) = ParameterChange purposeId (fromCanonicalPParamsUpdate pparamsUpdate) mScriptHash
-fromCanonicalGovAction (CanonicalHardForkInitiation purposeId v) = HardForkInitiation purposeId v
-fromCanonicalGovAction (CanonicalTreasuryWithdrawals withdrawals script) = TreasuryWithdrawals withdrawals script
-fromCanonicalGovAction (CanonicalNoConfidence purposeId) = NoConfidence purposeId
-fromCanonicalGovAction (CanonicalUpdateCommittee purposeId removedMembers addedMembers newThreshold) = UpdateCommittee purposeId removedMembers addedMembers newThreshold
-fromCanonicalGovAction (CanonicalNewConstitution purposeId constitution) = NewConstitution purposeId constitution
+fromCanonicalGovAction (CanonicalParameterChange purposeId pparamsUpdate mScriptHash) =
+  ParameterChange
+    (fromCanonicalPurposeId <$> purposeId)
+    (fromCanonicalPParamsUpdate pparamsUpdate)
+    mScriptHash
+fromCanonicalGovAction (CanonicalHardForkInitiation purposeId v) =
+  HardForkInitiation
+    (fromCanonicalPurposeId <$> purposeId)
+    v
+fromCanonicalGovAction (CanonicalTreasuryWithdrawals withdrawals script) =
+  TreasuryWithdrawals withdrawals script
+fromCanonicalGovAction (CanonicalNoConfidence purposeId) =
+  NoConfidence
+    (fromCanonicalPurposeId <$> purposeId)
+fromCanonicalGovAction (CanonicalUpdateCommittee purposeId removedMembers addedMembers newThreshold) =
+  UpdateCommittee
+    (fromCanonicalPurposeId <$> purposeId)
+    (Set.fromList [fromCanonicalCredential c | c <- Set.toList removedMembers])
+    (Map.fromList [(fromCanonicalCredential c, v) | (c, v) <- Map.toList addedMembers])
+    newThreshold
+fromCanonicalGovAction (CanonicalNewConstitution purposeId constitution) =
+  NewConstitution
+    (fromCanonicalPurposeId <$> purposeId)
+    constitution
 fromCanonicalGovAction (CanonicalInfoAction) = InfoAction
 
 data CanonicalProposalProcedure = CanonicalProposalProcedure
@@ -373,7 +424,7 @@ mkCanonicalPParamsUpdate (PParamsUpdate ConwayPParams {..}) =
     , ucppCoinsPerUTxOByte = fmap unCoinPerByte $ unTHKD cppCoinsPerUTxOByte
     , ucppCostModels = fmap mkCanonicalCostModels $ unTHKD cppCostModels
     , ucppPrices = fmap mkCanonicalPrices $ unTHKD cppPrices
-    , ucppMaxTxExUnits = unTHKD cppMaxTxExUnits  <&> unOrdExUnits <&> mkCanonicalExUnits
+    , ucppMaxTxExUnits = unTHKD cppMaxTxExUnits <&> unOrdExUnits <&> mkCanonicalExUnits
     , ucppMaxBlockExUnits = unTHKD cppMaxBlockExUnits <&> unOrdExUnits <&> mkCanonicalExUnits
     , ucppMaxValSize = unTHKD cppMaxValSize
     , ucppCollateralPercentage = unTHKD cppCollateralPercentage
@@ -498,3 +549,46 @@ instance FromCanonicalCBOR v CanonicalPParamsUpdate where
     Versioned ucppPoolVotingThresholds <- decodeField "pool_voting_thresholds"
     Versioned ucppMinFeeRefScriptCostPerByte <- decodeField "min_fee_ref_script_cost_per_byte"
     pure $ Versioned CanonicalPParamsUpdate {..}
+
+newtype CanonicalPurposeId (p :: GovActionPurpose) = CanonicalPurposeId CanonicalGovActionId
+  deriving (Eq, Show, Generic)
+
+instance ToCanonicalCBOR v (CanonicalPurposeId p) where
+  toCanonicalCBOR v (CanonicalPurposeId p) = toCanonicalCBOR v p
+
+instance FromCanonicalCBOR v (CanonicalPurposeId p) where
+  fromCanonicalCBOR = fmap CanonicalPurposeId <$> fromCanonicalCBOR
+
+mkCanonicalPurposeId :: GovPurposeId p -> CanonicalPurposeId p
+mkCanonicalPurposeId (GovPurposeId p) = CanonicalPurposeId (mkCanonicalGovActionId p)
+
+fromCanonicalPurposeId :: CanonicalPurposeId p -> GovPurposeId p
+fromCanonicalPurposeId (CanonicalPurposeId p) = GovPurposeId (fromCanonicalGovActionId p)
+
+data CanonicalGovActionId = CanonicalGovActionId
+  { gaidTxId :: TxId
+  , gaidGovActionIx :: {-# UNPACK #-} !GovActionIx
+  }
+  deriving (Eq, Show, Generic)
+
+instance ToCanonicalCBOR v CanonicalGovActionId where
+  toCanonicalCBOR v CanonicalGovActionId {..} = toCanonicalCBOR v (gaidTxId, gaidGovActionIx)
+
+instance FromCanonicalCBOR v CanonicalGovActionId where
+  fromCanonicalCBOR = do
+    Versioned (gaidTxId, gaidGovActionIx) <- fromCanonicalCBOR
+    return $ Versioned CanonicalGovActionId {..}
+
+mkCanonicalGovActionId :: GovActionId -> CanonicalGovActionId
+mkCanonicalGovActionId GovActionId {..} = CanonicalGovActionId {..}
+
+fromCanonicalGovActionId :: CanonicalGovActionId -> GovActionId
+fromCanonicalGovActionId CanonicalGovActionId {..} = GovActionId {..}
+
+deriving via LedgerCBOR v TxId instance ToCanonicalCBOR v TxId
+
+deriving via LedgerCBOR v TxId instance FromCanonicalCBOR v TxId
+
+deriving via LedgerCBOR v GovActionIx instance ToCanonicalCBOR v GovActionIx
+
+deriving via LedgerCBOR v GovActionIx instance FromCanonicalCBOR v GovActionIx
