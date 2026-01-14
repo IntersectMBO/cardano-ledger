@@ -20,25 +20,22 @@ import Cardano.Ledger.BaseTypes (
   EpochInterval,
   EpochNo,
   NonNegativeInterval,
+  Nonce,
   ProtVer,
   SlotNo,
   UnitInterval,
-  Nonce
  )
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
-  GovAction (..),
   GovActionPurpose (..),
   GovPurposeId,
-  ProposalProcedure (..),
   Vote (..),
  )
-import Cardano.Ledger.Conway.PParams
-import qualified Cardano.Ledger.Hashes as H
 import Cardano.Ledger.Conway.SCLS
 import Cardano.Ledger.Conway.SCLS.Arbitrary ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Hashes qualified as H
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Plutus.CostModels
 import Cardano.Ledger.Plutus.Data (BinaryData)
@@ -57,8 +54,8 @@ spec :: Spec
 spec = do
   describe "Cardano ledger state: namespaces tests" testAllNS
   describe "Cardano ledger state: instace tests" $ do
-    isCanonical @"gov/pparams/v0" @(PoolVotingThresholds)
-    isCanonical @"gov/pparams/v0" @(DRepVotingThresholds)
+    isCanonical @"gov/pparams/v0" @CanonicalPoolVotingThresholds
+    isCanonical @"gov/pparams/v0" @CanonicalDRepVotingThresholds
     isCanonical @"gov/pparams/v0" @(CoinPerByte)
     isCanonical @"gov/pparams/v0" @(OrdExUnits)
     isCanonical @"gov/proposals/v0" @(Vote)
@@ -88,19 +85,19 @@ spec = do
       validateType @"gov/committee/v0" @CanonicalCommitteeState "committee"
       validateType @"gov/committee/v0" @CanonicalCommitteeAuthorization "committee_authorization"
     describe "gov/pparams/v0" $ do
-      validateType @"gov/pparams/v0" @(PoolVotingThresholds) "pool_voting_thresholds"
-      validateType @"gov/pparams/v0" @(DRepVotingThresholds) "drep_voting_thresholds"
-      validateType @"gov/pparams/v0" @(CostModels) "cost_models"
-      validateType @"gov/pparams/v0" @(CoinPerByte) "coin"
-      validateType @"gov/pparams/v0" @(OrdExUnits) "ex_units"
-      validateType @"gov/pparams/v0" @(PParams ConwayEra) "gov_pparams_out"
-      validateType @"gov/proposals/v0" @(PParamsUpdate ConwayEra) "gov_params_update"
+      validateType @"gov/pparams/v0" @CanonicalPoolVotingThresholds "pool_voting_thresholds"
+      validateType @"gov/pparams/v0" @CanonicalDRepVotingThresholds "drep_voting_thresholds"
+      validateType @"gov/pparams/v0" @CostModels "cost_models"
+      validateType @"gov/pparams/v0" @CoinPerByte "coin"
+      validateType @"gov/pparams/v0" @OrdExUnits "ex_units"
+      validateType @"gov/pparams/v0" @CanonicalPParams "gov_pparams_out"
+      validateType @"gov/proposals/v0" @CanonicalPParamsUpdate "gov_params_update"
     describe "gov/constitution/v0" $ do
       validateType @"gov/constitution/v0" @CanonicalConstitution "constitution"
     describe "gov/proposals/v0" $ do
-      validateType @"gov/proposals/v0" @(GovActionState') "proposal"
-      validateType @"gov/proposals/v0" @(ProposalProcedure ConwayEra) "proposal_procedure"
-      validateType @"gov/proposals/v0" @(GovAction ConwayEra) "gov_action"
+      validateType @"gov/proposals/v0" @CanonicalGovActionState "proposal"
+      validateType @"gov/proposals/v0" @CanonicalProposalProcedure "proposal_procedure"
+      validateType @"gov/proposals/v0" @CanonicalGovAction "gov_action"
       validateType @"gov/proposals/v0" @(GovPurposeId PParamUpdatePurpose) "gov_action_id"
       validateType @"gov/proposals/v0" @(Vote) "coin"
     describe "snapshots/v0" $ do

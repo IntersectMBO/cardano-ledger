@@ -10,11 +10,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Common namespace utilities and types for SCLS export.
-module Cardano.Ledger.Conway.SCLS.Common
-  ( CanonicalCredential(..)
-  , fromCanonicalCredential
-  , mkCanonicalCredential
-  ) where
+module Cardano.Ledger.Conway.SCLS.Common (
+  CanonicalCredential (..),
+  fromCanonicalCredential,
+  mkCanonicalCredential,
+) where
 
 import Cardano.Ledger.BaseTypes (Anchor, EpochNo, NonNegativeInterval, ProtVer, UnitInterval)
 import Cardano.Ledger.Coin (Coin, CompactForm)
@@ -52,11 +52,10 @@ instance ToCanonicalCBOR v Coin where
 instance FromCanonicalCBOR v Coin where
   fromCanonicalCBOR = fmap Coin.Coin <$> fromCanonicalCBOR
 
-
 -- | Credential key, it does not keep the role around, because the role is
 -- created anyway as we serialize the value.
-data CanonicalCredential kr =
-  CanonicalScriptHashObj !ScriptHash
+data CanonicalCredential kr
+  = CanonicalScriptHashObj !ScriptHash
   | CanonicalKeyHashObj !(KeyHash kr)
   deriving (Eq, Show, Ord, Generic)
 

@@ -19,7 +19,6 @@ import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.SCLS
-import Cardano.Ledger.Conway.SCLS.Namespace.GovProposals as Proposals
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.TxOut as Shelley ()
@@ -279,7 +278,7 @@ main = do
             & addNamespacedChunks
               (Proxy @"gov/pparams/v0")
               ( S.each
-                  [ ChunkEntry k (GovPParamsOut v)
+                  [ ChunkEntry k (mkCanonicalPParams v)
                   | Just (k, v) <-
                       [ Just (GovPParamsInCurr, nes ^. nesEpochStateL . curPParamsEpochStateL)
                       , Just (GovPParamsInPrev, nes ^. nesEpochStateL . prevPParamsEpochStateL)
@@ -299,7 +298,7 @@ main = do
             & addNamespacedChunks
               (Proxy @"gov/proposals/v0")
               ( S.each
-                  [ ChunkEntry (GovProposalIn gasId) (GovProposalOut $ Proposals.toWire g)
+                  [ ChunkEntry (GovProposalIn gasId) (mkCanonicalGovActionState g)
                   | let proposals = nes & flip queryProposals Set.empty
                   , g@GovActionState {..} <- toList proposals
                   ]
