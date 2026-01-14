@@ -54,6 +54,7 @@ module Cardano.Ledger.Address (
   decodeRewardAccount,
   fromCborRewardAccount,
   Withdrawals (..),
+  DirectDeposits (..),
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -902,5 +903,10 @@ fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
 
 -- | This is called @wdrl@ in the spec.
 newtype Withdrawals = Withdrawals {unWithdrawals :: Map RewardAccount Coin}
+  deriving (Show, Eq, Generic)
+  deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
+
+-- | Direct deposits to reward accounts.
+newtype DirectDeposits = DirectDeposits {unDirectDeposits :: Map RewardAccount Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)

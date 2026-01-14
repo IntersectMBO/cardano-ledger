@@ -67,7 +67,7 @@ instance ToExpr (DijkstraPParams StrictMaybe DijkstraEra)
 
 instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
   toExpr = \case
-    txBody@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
+    txBody@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
       let DijkstraTxBodyRaw {..} = txBody
        in Rec "DijkstraTxBodyRaw" $
             OMap.fromList
@@ -91,8 +91,9 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dtbrCurrentTreasuryValue", toExpr dtbrCurrentTreasuryValue)
               , ("dtbrTreasuryDonation", toExpr dtbrTreasuryDonation)
               , ("dtbrSubTransactions", toExpr dtbrSubTransactions)
+              , ("dtbrDirectDeposits", toExpr dtbrDirectDeposits)
               ]
-    txBody@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
+    txBody@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
       let DijkstraSubTxBodyRaw {..} = txBody
        in Rec "DijkstraSubTxBodyRaw" $
             OMap.fromList
@@ -111,7 +112,8 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dstbrProposalProcedures", toExpr dstbrProposalProcedures)
               , ("dstbrCurrentTreasuryValue", toExpr dstbrCurrentTreasuryValue)
               , ("dstbrTreasuryDonation", toExpr dstbrTreasuryDonation)
-              , ("dstbrRequiredTopLevelGuards", toExpr dstbrTreasuryDonation)
+              , ("dstbrRequiredTopLevelGuards", toExpr dstbrRequiredTopLevelGuards)
+              , ("dstbrDirectDeposits", toExpr dstbrDirectDeposits)
               ]
 
 instance ToExpr (TxBody l DijkstraEra)

@@ -69,6 +69,7 @@ instance Arbitrary (TxBody SubTx DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary (TxBody TopTx DijkstraEra) where
   arbitrary =
@@ -93,6 +94,7 @@ instance Arbitrary (TxBody TopTx DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
       <*> (choose (0, 4) >>= \n -> OMap.fromFoldable <$> vectorOf n arbitrary)
+      <*> arbitrary
 
 instance Arbitrary (UpgradeDijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU
