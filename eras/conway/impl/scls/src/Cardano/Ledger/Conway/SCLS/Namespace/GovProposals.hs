@@ -39,9 +39,19 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe,
   UnitInterval,
  )
-import Cardano.Ledger.Coin (Coin (..), CoinPerByte, CompactForm)
+import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), CompactForm)
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Governance (Constitution (..), GovAction (..), GovActionId (..), GovActionIx (..), GovActionPurpose (..), GovActionState (..), GovPurposeId (..), ProposalProcedure (..), Vote (..))
+import Cardano.Ledger.Conway.Governance (
+  Constitution (..),
+  GovAction (..),
+  GovActionId (..),
+  GovActionIx (..),
+  GovActionPurpose (..),
+  GovActionState (..),
+  GovPurposeId (..),
+  ProposalProcedure (..),
+  Vote (..),
+ )
 import Cardano.Ledger.Conway.PParams (
   ConwayPParams (..),
   THKD (..),
@@ -59,8 +69,6 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys
-import Cardano.Ledger.Plutus.CostModels (CostModels)
-import Cardano.Ledger.Plutus.ExUnits (Prices (..))
 import Cardano.SCLS.CBOR.Canonical
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
@@ -313,8 +321,8 @@ instance CanonicalCBOREntryDecoder "gov/proposals/v0" CanonicalGovActionState wh
 
 data CanonicalPParamsUpdate = CanonicalPParamsUpdate
   { ucppA0 :: StrictMaybe NonNegativeInterval
-  , ucppTxFeePerByte :: StrictMaybe CoinPerByte
-  , ucppTxFeeFixed :: StrictMaybe (CompactForm Coin) -- FIXME
+  , ucppTxFeePerByte :: StrictMaybe (CompactForm Coin)
+  , ucppTxFeeFixed :: StrictMaybe (CompactForm Coin)
   , ucppMaxBBSize :: StrictMaybe Word32
   , ucppMaxTxSize :: StrictMaybe Word32
   , ucppMaxBHSize :: StrictMaybe Word16
@@ -325,9 +333,9 @@ data CanonicalPParamsUpdate = CanonicalPParamsUpdate
   , ucppRho :: StrictMaybe UnitInterval
   , ucppTau :: StrictMaybe UnitInterval
   , ucppMinPoolCost :: StrictMaybe (CompactForm Coin)
-  , ucppCoinsPerUTxOByte :: StrictMaybe CoinPerByte
-  , ucppCostModels :: StrictMaybe CostModels -- FIXME
-  , ucppPrices :: StrictMaybe Prices -- FIXME ?
+  , ucppCoinsPerUTxOByte :: StrictMaybe (CompactForm Coin)
+  , ucppCostModels :: StrictMaybe CanonicalCostModels
+  , ucppPrices :: StrictMaybe CanonicalPrices
   , ucppMaxTxExUnits :: StrictMaybe OrdExUnits
   , ucppMaxBlockExUnits :: StrictMaybe OrdExUnits
   , ucppMaxValSize :: StrictMaybe Word32
@@ -349,7 +357,7 @@ mkCanonicalPParamsUpdate :: PParamsUpdate ConwayEra -> CanonicalPParamsUpdate
 mkCanonicalPParamsUpdate (PParamsUpdate ConwayPParams {..}) =
   CanonicalPParamsUpdate
     { ucppA0 = unTHKD cppA0
-    , ucppTxFeePerByte = unTHKD cppTxFeePerByte
+    , ucppTxFeePerByte = fmap unCoinPerByte $ unTHKD cppTxFeePerByte
     , ucppTxFeeFixed = unTHKD cppTxFeeFixed
     , ucppMaxBBSize = unTHKD cppMaxBBSize
     , ucppMaxTxSize = unTHKD cppMaxTxSize
@@ -361,9 +369,9 @@ mkCanonicalPParamsUpdate (PParamsUpdate ConwayPParams {..}) =
     , ucppRho = unTHKD cppRho
     , ucppTau = unTHKD cppTau
     , ucppMinPoolCost = unTHKD cppMinPoolCost
-    , ucppCoinsPerUTxOByte = unTHKD cppCoinsPerUTxOByte
-    , ucppCostModels = unTHKD cppCostModels
-    , ucppPrices = unTHKD cppPrices
+    , ucppCoinsPerUTxOByte = fmap unCoinPerByte $ unTHKD cppCoinsPerUTxOByte
+    , ucppCostModels = fmap mkCanonicalCostModels $ unTHKD cppCostModels
+    , ucppPrices = fmap mkCanonicalPrices $ unTHKD cppPrices
     , ucppMaxTxExUnits = unTHKD cppMaxTxExUnits
     , ucppMaxBlockExUnits = unTHKD cppMaxBlockExUnits
     , ucppMaxValSize = unTHKD cppMaxValSize
@@ -385,7 +393,7 @@ fromCanonicalPParamsUpdate CanonicalPParamsUpdate {..} =
   PParamsUpdate
     ConwayPParams
       { cppA0 = THKD ucppA0
-      , cppTxFeePerByte = THKD ucppTxFeePerByte
+      , cppTxFeePerByte = THKD (CoinPerByte <$> ucppTxFeePerByte)
       , cppTxFeeFixed = THKD ucppTxFeeFixed
       , cppMaxBBSize = THKD ucppMaxBBSize
       , cppMaxTxSize = THKD ucppMaxTxSize
@@ -398,9 +406,9 @@ fromCanonicalPParamsUpdate CanonicalPParamsUpdate {..} =
       , cppTau = THKD ucppTau
       , cppProtocolVersion = NoUpdate
       , cppMinPoolCost = THKD ucppMinPoolCost
-      , cppCoinsPerUTxOByte = THKD ucppCoinsPerUTxOByte
-      , cppCostModels = THKD ucppCostModels
-      , cppPrices = THKD ucppPrices
+      , cppCoinsPerUTxOByte = THKD (CoinPerByte <$> ucppCoinsPerUTxOByte)
+      , cppCostModels = THKD (fromCanonicalCostModels <$> ucppCostModels)
+      , cppPrices = THKD (fromCanonicalPrices <$> ucppPrices)
       , cppMaxTxExUnits = THKD ucppMaxTxExUnits
       , cppMaxBlockExUnits = THKD ucppMaxBlockExUnits
       , cppMaxValSize = THKD ucppMaxValSize

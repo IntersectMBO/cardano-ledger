@@ -39,7 +39,7 @@ import Cardano.Ledger.Alonzo.PParams (OrdExUnits)
 -- FIXME: CompactForm Coin -> Coin
 
 import Cardano.Ledger.BaseTypes (NonNegativeInterval, ProtVer (..), UnitInterval)
-import Cardano.Ledger.Coin (Coin, CoinPerByte)
+import Cardano.Ledger.Coin (Coin, CoinPerByte (..))
 import Cardano.Ledger.Compactible (CompactForm)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams (
@@ -325,10 +325,6 @@ mkCanonicalDRepVotingThresholds DRepVotingThresholds {..} = CanonicalDRepVotingT
 fromCanonicalDRepVotingThresholds :: CanonicalDRepVotingThresholds -> DRepVotingThresholds
 fromCanonicalDRepVotingThresholds CanonicalDRepVotingThresholds {..} = DRepVotingThresholds {..}
 
-deriving via LedgerCBOR v CoinPerByte instance ToCanonicalCBOR v CoinPerByte
-
-deriving via LedgerCBOR v CoinPerByte instance FromCanonicalCBOR v CoinPerByte
-
 deriving via LedgerCBOR v OrdExUnits instance ToCanonicalCBOR v OrdExUnits
 
 deriving via LedgerCBOR v OrdExUnits instance FromCanonicalCBOR v OrdExUnits
@@ -342,7 +338,7 @@ newtype GovPParamsOut = GovPParamsOut (PParams ConwayEra)
 
 data CanonicalPParams = CanonicalPParams
   { ccppA0 :: NonNegativeInterval
-  , ccppTxFeePerByte :: CoinPerByte
+  , ccppTxFeePerByte :: CompactForm Coin
   , ccppTxFeeFixed :: CompactForm Coin
   , ccppMaxBBSize :: Word32
   , ccppMaxTxSize :: Word32
@@ -355,7 +351,7 @@ data CanonicalPParams = CanonicalPParams
   , ccppTau :: UnitInterval
   , ccppProtocolVersion :: ProtVer
   , ccppMinPoolCost :: CompactForm Coin
-  , ccppCoinsPerUTxOByte :: CoinPerByte
+  , ccppCoinsPerUTxOByte :: CompactForm Coin
   , ccppCostModels :: CanonicalCostModels
   , ccppPrices :: CanonicalPrices
   , ccppMaxTxExUnits :: OrdExUnits
@@ -379,7 +375,7 @@ mkCanonicalPParams :: PParams ConwayEra -> CanonicalPParams
 mkCanonicalPParams (PParams ConwayPParams {..}) =
   CanonicalPParams
     { ccppA0 = unTHKD cppA0
-    , ccppTxFeePerByte = unTHKD cppTxFeePerByte
+    , ccppTxFeePerByte = unCoinPerByte $ unTHKD cppTxFeePerByte
     , ccppTxFeeFixed = unTHKD cppTxFeeFixed
     , ccppMaxBBSize = unTHKD cppMaxBBSize
     , ccppMaxTxSize = unTHKD cppMaxTxSize
@@ -392,7 +388,7 @@ mkCanonicalPParams (PParams ConwayPParams {..}) =
     , ccppTau = unTHKD cppTau
     , ccppProtocolVersion = cppProtocolVersion
     , ccppMinPoolCost = unTHKD cppMinPoolCost
-    , ccppCoinsPerUTxOByte = unTHKD cppCoinsPerUTxOByte
+    , ccppCoinsPerUTxOByte = unCoinPerByte $ unTHKD cppCoinsPerUTxOByte
     , ccppCostModels = mkCanonicalCostModels $ unTHKD cppCostModels
     , ccppPrices = mkCanonicalPrices $ unTHKD cppPrices
     , ccppMaxTxExUnits = unTHKD cppMaxTxExUnits
@@ -416,7 +412,7 @@ fromCanonicalPParams CanonicalPParams {..} =
   PParams
     ConwayPParams
       { cppA0 = THKD ccppA0
-      , cppTxFeePerByte = THKD ccppTxFeePerByte
+      , cppTxFeePerByte = THKD (CoinPerByte ccppTxFeePerByte)
       , cppTxFeeFixed = THKD ccppTxFeeFixed
       , cppMaxBBSize = THKD ccppMaxBBSize
       , cppMaxTxSize = THKD ccppMaxTxSize
@@ -429,7 +425,7 @@ fromCanonicalPParams CanonicalPParams {..} =
       , cppTau = THKD ccppTau
       , cppProtocolVersion = ccppProtocolVersion
       , cppMinPoolCost = THKD ccppMinPoolCost
-      , cppCoinsPerUTxOByte = THKD ccppCoinsPerUTxOByte
+      , cppCoinsPerUTxOByte = THKD (CoinPerByte ccppCoinsPerUTxOByte)
       , cppCostModels = THKD (fromCanonicalCostModels ccppCostModels)
       , cppPrices = THKD (fromCanonicalPrices ccppPrices)
       , cppMaxTxExUnits = THKD ccppMaxTxExUnits

@@ -56,7 +56,6 @@ spec = do
   describe "Cardano ledger state: instace tests" $ do
     isCanonical @"gov/pparams/v0" @CanonicalPoolVotingThresholds
     isCanonical @"gov/pparams/v0" @CanonicalDRepVotingThresholds
-    isCanonical @"gov/pparams/v0" @(CoinPerByte)
     isCanonical @"gov/pparams/v0" @(OrdExUnits)
     isCanonical @"gov/proposals/v0" @(Vote)
     isCanonical @"gov/proposals/v0" @(GovPurposeId PParamUpdatePurpose)
@@ -88,7 +87,6 @@ spec = do
       validateType @"gov/pparams/v0" @CanonicalPoolVotingThresholds "pool_voting_thresholds"
       validateType @"gov/pparams/v0" @CanonicalDRepVotingThresholds "drep_voting_thresholds"
       validateType @"gov/pparams/v0" @CostModels "cost_models"
-      validateType @"gov/pparams/v0" @CoinPerByte "coin"
       validateType @"gov/pparams/v0" @OrdExUnits "ex_units"
       validateType @"gov/pparams/v0" @CanonicalPParams "gov_pparams_out"
       validateType @"gov/proposals/v0" @CanonicalPParamsUpdate "gov_params_update"
