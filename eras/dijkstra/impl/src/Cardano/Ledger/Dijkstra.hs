@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -35,6 +37,7 @@ import Data.List.NonEmpty (NonEmpty)
 instance ApplyTx DijkstraEra where
   newtype ApplyTxError DijkstraEra = DijkstraApplyTxError (NonEmpty (DijkstraMempoolPredFailure DijkstraEra))
     deriving (Eq, Show)
+    deriving newtype (Semigroup)
   applyTxValidation validationPolicy globals env state tx =
     first DijkstraApplyTxError $
       ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx

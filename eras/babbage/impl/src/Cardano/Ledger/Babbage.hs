@@ -41,7 +41,7 @@ import Data.List.NonEmpty (NonEmpty)
 instance ApplyTx BabbageEra where
   newtype ApplyTxError BabbageEra = BabbageApplyTxError (NonEmpty (ShelleyLedgerPredFailure BabbageEra))
     deriving (Eq, Show)
-    deriving newtype (EncCBOR, DecCBOR)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup)
   applyTxValidation validationPolicy globals env state tx =
     first BabbageApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
