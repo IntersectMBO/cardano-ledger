@@ -12,6 +12,9 @@
 module Cardano.Ledger.Conway.SCLS.Namespace.Nonces (
   NoncesIn (..),
   NoncesOut (..),
+  CanonicalWithOrigin (..),
+  mkCanonicalWithOrigin,
+  fromCanonicalWithOrigin
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
@@ -53,7 +56,7 @@ newtype NoncesOut = NoncesOut NoncesState
   deriving (Eq, Ord, Show)
 
 data NoncesState = NoncesState
-  { noncesStateLastSlot :: !(WithOrigin SlotNo)
+  { noncesStateLastSlot :: !(CanonicalWithOrigin SlotNo)
   , noncesStateOCertCounters :: !(Map (KeyHash BlockIssuer) Word64)
   , noncesStateEvolvingNonce :: !Nonce
   , noncesStateCandidateNonce :: !Nonce
@@ -63,21 +66,32 @@ data NoncesState = NoncesState
   }
   deriving (Generic, Show, Eq, Ord)
 
-instance ToCanonicalCBOR v a => ToCanonicalCBOR v (WithOrigin a) where
-  toCanonicalCBOR v (Origin) = toCanonicalCBOR v [0 :: Word8]
-  toCanonicalCBOR v (At t) = toCanonicalCBOR v (1 :: Word8, t)
+data CanonicalWithOrigin t = CanonicalOrigin | CanonicalAt t
+  deriving (Generic, Show, Eq, Ord)
 
-instance FromCanonicalCBOR v a => FromCanonicalCBOR v (WithOrigin a) where
+mkCanonicalWithOrigin :: WithOrigin t -> CanonicalWithOrigin t
+mkCanonicalWithOrigin Origin = CanonicalOrigin
+mkCanonicalWithOrigin (At t) = CanonicalAt t
+
+fromCanonicalWithOrigin :: CanonicalWithOrigin t -> WithOrigin t
+fromCanonicalWithOrigin CanonicalOrigin = Origin
+fromCanonicalWithOrigin (CanonicalAt t) = At t
+
+instance ToCanonicalCBOR v a => ToCanonicalCBOR v (CanonicalWithOrigin a) where
+  toCanonicalCBOR v CanonicalOrigin = toCanonicalCBOR v [0 :: Word8]
+  toCanonicalCBOR v (CanonicalAt t) = toCanonicalCBOR v (1 :: Word8, t)
+
+instance FromCanonicalCBOR v a => FromCanonicalCBOR v (CanonicalWithOrigin a) where
   fromCanonicalCBOR = do
     n <- decodeListLenCanonical
     case n of
       1 -> do
         Versioned (0 :: Word8) <- fromCanonicalCBOR
-        return (Versioned Origin)
+        return (Versioned CanonicalOrigin)
       2 -> do
         Versioned (1 :: Word8) <- fromCanonicalCBOR
         t <- fromCanonicalCBOR
-        return (At <$> t)
+        return (CanonicalAt <$> t)
       _ -> fail "Invalid WithOrigin encoding"
 
 instance ToCanonicalCBOR v Nonce where
