@@ -4,9 +4,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -17,16 +17,23 @@ module Cardano.Ledger.Conway.SCLS.Common (
   mkCanonicalCredential,
   CanonicalRewardAccount (..),
   fromCanonicalRewardAccount,
-  mkCanonicalRewardAccount
+  mkCanonicalRewardAccount,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (Anchor, EpochNo, NonNegativeInterval, ProtVer, UnitInterval, Network)
+import Cardano.Ledger.BaseTypes (
+  Anchor,
+  EpochNo,
+  Network,
+  NonNegativeInterval,
+  ProtVer,
+  UnitInterval,
+ )
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import qualified Cardano.Ledger.Coin as Coin
 import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Hashes (KeyHash, ScriptHash, VRFVerKeyHash, Staking)
+import Cardano.Ledger.Hashes (KeyHash, ScriptHash, Staking, VRFVerKeyHash)
 import Cardano.Ledger.Plutus.ExUnits (Prices)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
@@ -176,17 +183,18 @@ instance FromCanonicalCBOR v CanonicalRewardAccount where
   fromCanonicalCBOR = fmap mkCanonicalRewardAccount <$> fromCanonicalCBOR
 
 deriving via LedgerCBOR v RewardAccount instance ToCanonicalCBOR v RewardAccount
+
 deriving via LedgerCBOR v RewardAccount instance FromCanonicalCBOR v RewardAccount
 
 mkCanonicalRewardAccount :: RewardAccount -> CanonicalRewardAccount
-mkCanonicalRewardAccount RewardAccount{..} =
+mkCanonicalRewardAccount RewardAccount {..} =
   CanonicalRewardAccount
     { raCredential = mkCanonicalCredential raCredential
     , ..
     }
 
 fromCanonicalRewardAccount :: CanonicalRewardAccount -> RewardAccount
-fromCanonicalRewardAccount CanonicalRewardAccount{..} =
+fromCanonicalRewardAccount CanonicalRewardAccount {..} =
   RewardAccount
     { raCredential = fromCanonicalCredential raCredential
     , ..

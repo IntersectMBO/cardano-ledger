@@ -14,12 +14,13 @@ module Cardano.Ledger.Conway.SCLS.Namespace.Nonces (
   NoncesOut (..),
   CanonicalWithOrigin (..),
   mkCanonicalWithOrigin,
-  fromCanonicalWithOrigin
+  fromCanonicalWithOrigin,
+  CanonicalNonce (..),
+  mkCanonicalNonce,
+  fromCanonicalNonce,
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
--- import Cardano.Crypto.Hashing (AbstractHash, Hash, hashToBytes, unsafeHashFromBytes)
-
 import Cardano.Ledger.BaseTypes (Nonce (..), SlotNo (..))
 import Cardano.Ledger.Conway.SCLS.Common ()
 import qualified Cardano.Ledger.Hashes as H
@@ -40,7 +41,8 @@ import Cardano.SCLS.NamespaceCodec (
  )
 import Cardano.SCLS.Versioned (Versioned (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
-import Control.Monad (unless)
+import qualified Codec.CBOR.Decoding as D
+import Control.Monad (join, unless)
 import Data.Map.Strict (Map)
 import Data.MemPack (MemPack (..))
 import Data.Proxy (Proxy (..))
@@ -58,11 +60,11 @@ newtype NoncesOut = NoncesOut NoncesState
 data NoncesState = NoncesState
   { noncesStateLastSlot :: !(CanonicalWithOrigin SlotNo)
   , noncesStateOCertCounters :: !(Map (KeyHash BlockIssuer) Word64)
-  , noncesStateEvolvingNonce :: !Nonce
-  , noncesStateCandidateNonce :: !Nonce
-  , noncesStateEpochNonce :: !Nonce
-  , noncesStateLabNonce :: !Nonce
-  , noncesStateLastEpochBlockNonce :: !Nonce
+  , noncesStateEvolvingNonce :: !CanonicalNonce
+  , noncesStateCandidateNonce :: !CanonicalNonce
+  , noncesStateEpochNonce :: !CanonicalNonce
+  , noncesStateLabNonce :: !CanonicalNonce
+  , noncesStateLastEpochBlockNonce :: !CanonicalNonce
   }
   deriving (Generic, Show, Eq, Ord)
 
@@ -94,12 +96,34 @@ instance FromCanonicalCBOR v a => FromCanonicalCBOR v (CanonicalWithOrigin a) wh
         return (CanonicalAt <$> t)
       _ -> fail "Invalid WithOrigin encoding"
 
-instance ToCanonicalCBOR v Nonce where
-  toCanonicalCBOR v (Nonce n) = toCanonicalCBOR v (1 :: Word8, n)
-  toCanonicalCBOR v (NeutralNonce) = toCanonicalCBOR v [0 :: Word8]
+data CanonicalNonce
+  = CanonicalNonce (H.Hash Hash.Blake2b_256 Nonce)
+  | CanonicalNeutralNonce
+  deriving (Generic, Show, Eq, Ord)
 
-instance FromCanonicalCBOR v Nonce where
-  fromCanonicalCBOR = fmap Nonce <$> fromCanonicalCBOR
+mkCanonicalNonce :: Nonce -> CanonicalNonce
+mkCanonicalNonce (Nonce p) = CanonicalNonce p
+mkCanonicalNonce NeutralNonce = CanonicalNeutralNonce
+
+fromCanonicalNonce :: CanonicalNonce -> Nonce
+fromCanonicalNonce CanonicalNeutralNonce = NeutralNonce
+fromCanonicalNonce (CanonicalNonce p) = Nonce p
+
+instance ToCanonicalCBOR v CanonicalNonce where
+  toCanonicalCBOR v (CanonicalNonce n) = toCanonicalCBOR v (1 :: Word8, n)
+  toCanonicalCBOR v (CanonicalNeutralNonce) = toCanonicalCBOR v [0 :: Word8]
+
+instance FromCanonicalCBOR v CanonicalNonce where
+  fromCanonicalCBOR = join $ assumeCanonicalDecoder $ do
+    n <- D.decodeListLenCanonical
+    case n of
+      1 -> do
+        D.decodeWordOf 0
+        return (return $ Versioned CanonicalNeutralNonce)
+      2 -> do
+        D.decodeWordOf 1
+        return (fmap CanonicalNonce <$> fromCanonicalCBOR)
+      _ -> fail $ "CanonicalNonce: Unexpected tuple size " <> show n
 
 instance ToCanonicalCBOR v NoncesState where
   toCanonicalCBOR v NoncesState {..} =

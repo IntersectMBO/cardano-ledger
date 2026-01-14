@@ -60,10 +60,10 @@ import Cardano.Ledger.Conway.PParams (
  )
 import Cardano.Ledger.Conway.SCLS.Common (
   CanonicalCredential (..),
-  fromCanonicalCredential,
-  mkCanonicalCredential,
   CanonicalRewardAccount (..),
+  fromCanonicalCredential,
   fromCanonicalRewardAccount,
+  mkCanonicalCredential,
   mkCanonicalRewardAccount,
  )
 import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))

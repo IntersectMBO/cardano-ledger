@@ -121,7 +121,7 @@ spec = do
       validateType @"gov/proposals/v0" @(EpochNo) "epoch_no"
       validateType @"utxo/v0" @(SlotNo) "slot_no"
     describe "nonces/v0" $ do
-      validateType @"nonces/v0" @(Nonce) "nonce"
+      validateType @"nonces/v0" @(CanonicalNonce) "nonce"
       validateType @"nonces/v0" @(H.Hash H.HASH Nonce) "hash32"
 
 isCanonical ::

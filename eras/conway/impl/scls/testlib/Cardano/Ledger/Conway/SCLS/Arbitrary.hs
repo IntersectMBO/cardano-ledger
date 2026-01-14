@@ -13,6 +13,7 @@ import Cardano.Ledger.Conway.SCLS.Namespace.GovCommittee
 import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution
 import Cardano.Ledger.Conway.SCLS.Namespace.GovPParams
 import Cardano.Ledger.Conway.SCLS.Namespace.GovProposals
+import Cardano.Ledger.Conway.SCLS.Namespace.Nonces
 import Cardano.Ledger.Conway.SCLS.Namespace.PoolStake
 import Cardano.Ledger.Conway.SCLS.Namespace.Pots
 import Cardano.Ledger.Conway.SCLS.Namespace.Snapshots
@@ -64,4 +65,7 @@ instance Arbitrary SnapShotOut where arbitrary = genericArbitraryU
 instance Arbitrary UtxoOut where arbitrary = genericArbitraryU
 
 instance Arbitrary CanonicalExUnits where arbitrary = fmap mkCanonicalExUnits arbitrary
+
 instance Arbitrary (CanonicalPurposeId p) where arbitrary = fmap mkCanonicalPurposeId arbitrary
+
+instance Arbitrary CanonicalNonce where arbitrary = fmap mkCanonicalNonce arbitrary
