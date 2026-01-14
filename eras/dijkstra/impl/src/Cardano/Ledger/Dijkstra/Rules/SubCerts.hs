@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -50,10 +51,7 @@ import Data.Sequence (Seq (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data DijkstraSubCertsPredFailure era
-  = -- | Withdrawals that are missing or do not withdraw the entire amount (pv < 11)
-    SubWithdrawalsNotInRewardsCERTS Withdrawals
-  | SubCertFailure (PredicateFailure (EraRule "SUBCERT" era))
+newtype DijkstraSubCertsPredFailure era = SubCertFailure (PredicateFailure (EraRule "SUBCERT" era))
   deriving (Generic)
 
 deriving stock instance
@@ -70,27 +68,17 @@ instance
   NFData (PredicateFailure (EraRule "SUBCERT" era)) =>
   NFData (DijkstraSubCertsPredFailure era)
 
-instance
+deriving newtype instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "SUBCERT" era))
   ) =>
   EncCBOR (DijkstraSubCertsPredFailure era)
-  where
-  encCBOR =
-    encode . \case
-      SubWithdrawalsNotInRewardsCERTS rs -> Sum (SubWithdrawalsNotInRewardsCERTS @era) 0 !> To rs
-      SubCertFailure x -> Sum (SubCertFailure @era) 1 !> To x
 
-instance
+deriving newtype instance
   ( Era era
   , DecCBOR (PredicateFailure (EraRule "SUBCERT" era))
   ) =>
   DecCBOR (DijkstraSubCertsPredFailure era)
-  where
-  decCBOR = decode $ Summands "DijkstraSubCertsPredFailure" $ \case
-    0 -> SumD SubWithdrawalsNotInRewardsCERTS <! From
-    1 -> SumD SubCertFailure <! From
-    k -> Invalid k
 
 type instance EraRuleFailure "SUBCERTS" DijkstraEra = DijkstraSubCertsPredFailure DijkstraEra
 

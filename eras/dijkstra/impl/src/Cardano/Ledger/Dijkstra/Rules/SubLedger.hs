@@ -63,7 +63,6 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
   epochFromSlot,
  )
-import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -84,7 +83,6 @@ import Control.State.Transition.Extended (
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -98,7 +96,6 @@ data DijkstraSubLedgerPredFailure era
   | SubTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | SubWithdrawalsMissingAccounts Withdrawals
   | SubIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
-  | SubSpendingOutputFromSameTx (NonEmptyMap TxId (NonEmptySet TxIn))
   deriving (Generic)
 
 deriving stock instance
@@ -329,7 +326,6 @@ instance
       SubTxRefScriptsSizeTooBig mm -> Sum SubTxRefScriptsSizeTooBig 6 !> To mm
       SubWithdrawalsMissingAccounts w -> Sum SubWithdrawalsMissingAccounts 7 !> To w
       SubIncompleteWithdrawals w -> Sum SubIncompleteWithdrawals 8 !> To w
-      SubSpendingOutputFromSameTx txIds -> Sum SubSpendingOutputFromSameTx 9 !> To txIds
 
 instance
   ( Era era
@@ -348,5 +344,4 @@ instance
     6 -> SumD SubTxRefScriptsSizeTooBig <! From
     7 -> SumD SubWithdrawalsMissingAccounts <! From
     8 -> SumD SubIncompleteWithdrawals <! From
-    9 -> SumD SubSpendingOutputFromSameTx <! From
     n -> Invalid n
