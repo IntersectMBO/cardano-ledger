@@ -33,7 +33,12 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBPOOL,
  )
 import Cardano.Ledger.Dijkstra.State
-import Cardano.Ledger.Shelley.Rules (PoolEnv, PoolEvent (..), ShelleyPoolPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  PoolEnv,
+  PoolEvent (..),
+  ShelleyPoolPredFailure,
+  poolTransition,
+ )
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -43,9 +48,6 @@ import Control.State.Transition.Extended (
   STS,
   Signal,
   State,
-  TRC (TRC),
-  TransitionRule,
-  judgmentContext,
   transitionRules,
  )
 import GHC.Generics (Generic)
@@ -60,7 +62,13 @@ type instance EraRuleEvent "SUBPOOL" DijkstraEra = DijkstraSubPoolEvent Dijkstra
 
 instance InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure DijkstraEra
 
+instance InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure DijkstraEra where
+  injectFailure = DijkstraSubPoolPredFailure
+
 instance InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent DijkstraEra
+
+instance InjectRuleEvent "SUBPOOL" PoolEvent DijkstraEra where
+  injectEvent = DijkstraSubPoolEvent
 
 newtype DijkstraSubPoolEvent era = DijkstraSubPoolEvent (PoolEvent era)
   deriving (Generic, Eq, NFData)
@@ -68,6 +76,10 @@ newtype DijkstraSubPoolEvent era = DijkstraSubPoolEvent (PoolEvent era)
 instance
   ( EraGov era
   , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
+  , InjectRuleEvent "SUBPOOL" PoolEvent era
+  , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
   ) =>
   STS (DijkstraSUBPOOL era)
   where
@@ -78,9 +90,4 @@ instance
   type PredicateFailure (DijkstraSUBPOOL era) = DijkstraSubPoolPredFailure era
   type Event (DijkstraSUBPOOL era) = DijkstraSubPoolEvent era
 
-  transitionRules = [dijkstraSubPoolTransition @era]
-
-dijkstraSubPoolTransition :: TransitionRule (EraRule "SUBPOOL" era)
-dijkstraSubPoolTransition = do
-  TRC (_, st, _) <- judgmentContext
-  pure st
+  transitionRules = [poolTransition]

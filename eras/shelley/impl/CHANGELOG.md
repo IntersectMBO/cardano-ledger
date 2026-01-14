@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Expose `poolTransition` from `Pool`
 * Change the type `ApplyTxError era` to be a data family of the `ApplyTx era` class, with its constructor renamed to `ShelleyApplyTxError` for the Shelley era
 * Renamed:
   - `sppMinFeeA` -> `sppTxFeePerByte`
