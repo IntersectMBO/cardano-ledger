@@ -18,11 +18,24 @@ module Cardano.Ledger.Conway.SCLS.Namespace.Snapshots (
   SnapShotOut (..),
   SnapShotValueType (..),
   SnapshotStage (..),
+  CanonicalStakePoolParams (..),
+  mkCanonicalStakePoolParams,
+  fromCanonicalStakePoolParams,
+  CanonicalPoolMetadata (..),
+  mkCanonicalPoolMetadata,
+  fromCanonicalPoolMetadata,
 ) where
 
-import Cardano.Ledger.BaseTypes (Url (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), UnitInterval, Url (..), textToUrl, urlToText)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.SCLS.Common ()
+import Cardano.Ledger.Conway.SCLS.Common (
+  CanonicalRewardAccount (..),
+  CanonicalVRFVerKeyHash (..),
+  fromCanonicalRewardAccount,
+  fromCanonicalVRFVerKeyHash,
+  mkCanonicalRewardAccount,
+  mkCanonicalVRFVerKeyHash,
+ )
 import Cardano.Ledger.Conway.SCLS.LedgerCBOR
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys
@@ -43,10 +56,12 @@ import Cardano.SCLS.NamespaceCodec (
  )
 import Cardano.SCLS.Versioned (Versioned (..))
 import Control.Monad (unless)
+import Data.ByteString (ByteString)
 import Data.Foldable (toList)
 import Data.MemPack (MemPack (..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
@@ -124,7 +139,7 @@ instance IsKey SnapShotIn where
 data SnapShotOut where
   SnapShotOutCoin :: Coin -> SnapShotOut
   SnapShotOutAddress :: KeyHash StakePool -> SnapShotOut
-  SnapShotOutPoolParams :: StakePoolParams -> SnapShotOut
+  SnapShotOutPoolParams :: CanonicalStakePoolParams -> SnapShotOut
   deriving (Show)
   deriving (Eq)
   deriving (Generic)
@@ -144,8 +159,21 @@ instance FromCanonicalCBOR v SnapShotOut where
       2 -> fmap SnapShotOutPoolParams <$> fromCanonicalCBOR
       _ -> fail "Invalid SnapShotOut tag"
 
-instance ToCanonicalCBOR v (StakePoolParams) where
-  toCanonicalCBOR v StakePoolParams {..} =
+data CanonicalStakePoolParams = CanonicalStakePoolParams
+  { sppCost :: !Coin
+  , sppPledge :: !Coin
+  , sppMargin :: !UnitInterval
+  , sppRelays :: !(StrictSeq.StrictSeq StakePoolRelay)
+  , sppId :: !(KeyHash StakePool)
+  , sppOwners :: !(Set (KeyHash Staking))
+  , sppVrf :: !(CanonicalVRFVerKeyHash StakePoolVRF)
+  , sppMetadata :: !(StrictMaybe CanonicalPoolMetadata)
+  , sppRewardAccount :: !CanonicalRewardAccount
+  }
+  deriving (Eq, Show, Generic)
+
+instance ToCanonicalCBOR v CanonicalStakePoolParams where
+  toCanonicalCBOR v CanonicalStakePoolParams {..} =
     encodeAsMap
       [ mkEncodablePair v ("cost" :: Text) sppCost
       , mkEncodablePair v ("pledge" :: Text) sppPledge
@@ -158,7 +186,7 @@ instance ToCanonicalCBOR v (StakePoolParams) where
       , mkEncodablePair v ("reward_account" :: Text) sppRewardAccount
       ]
 
-instance FromCanonicalCBOR v (StakePoolParams) where
+instance FromCanonicalCBOR v CanonicalStakePoolParams where
   fromCanonicalCBOR = do
     decodeMapLenCanonicalOf 9
     Versioned sppCost <- decodeField "cost"
@@ -171,7 +199,50 @@ instance FromCanonicalCBOR v (StakePoolParams) where
     Versioned sppVrf <- decodeField "vrf_keyhash"
     Versioned sppMetadata <- decodeField "pool_metadata"
     Versioned sppRewardAccount <- decodeField "reward_account"
-    pure $ Versioned StakePoolParams {..}
+    pure $ Versioned CanonicalStakePoolParams {..}
+
+mkCanonicalStakePoolParams :: StakePoolParams -> CanonicalStakePoolParams
+mkCanonicalStakePoolParams StakePoolParams {..} =
+  CanonicalStakePoolParams
+    { sppVrf = mkCanonicalVRFVerKeyHash sppVrf
+    , sppMetadata = fmap mkCanonicalPoolMetadata sppMetadata
+    , sppRewardAccount = mkCanonicalRewardAccount sppRewardAccount
+    , ..
+    }
+
+fromCanonicalStakePoolParams :: CanonicalStakePoolParams -> StakePoolParams
+fromCanonicalStakePoolParams CanonicalStakePoolParams {..} =
+  StakePoolParams
+    { sppCost = sppCost
+    , sppPledge = sppPledge
+    , sppMargin = sppMargin
+    , sppRelays = sppRelays
+    , sppId = sppId
+    , sppOwners = sppOwners
+    , sppVrf = fromCanonicalVRFVerKeyHash sppVrf
+    , sppMetadata = fmap (\CanonicalPoolMetadata {..} -> PoolMetadata pmUrl pmHash) sppMetadata
+    , sppRewardAccount = fromCanonicalRewardAccount sppRewardAccount
+    }
+
+data CanonicalPoolMetadata = CanonicalPoolMetadata
+  { pmUrl :: !Url
+  , pmHash :: !ByteString
+  }
+  deriving (Eq, Show, Generic)
+
+instance ToCanonicalCBOR v CanonicalPoolMetadata where
+  toCanonicalCBOR v CanonicalPoolMetadata {..} = toCanonicalCBOR v (pmUrl, pmHash)
+
+instance FromCanonicalCBOR v CanonicalPoolMetadata where
+  fromCanonicalCBOR = do
+    Versioned (pmUrl, pmHash) <- fromCanonicalCBOR
+    return $ Versioned CanonicalPoolMetadata {..}
+
+mkCanonicalPoolMetadata :: PoolMetadata -> CanonicalPoolMetadata
+mkCanonicalPoolMetadata PoolMetadata {..} = CanonicalPoolMetadata {..}
+
+fromCanonicalPoolMetadata :: CanonicalPoolMetadata -> PoolMetadata
+fromCanonicalPoolMetadata CanonicalPoolMetadata {..} = PoolMetadata {..}
 
 decodeField :: forall s v a. FromCanonicalCBOR v a => T.Text -> CanonicalDecoder s (Versioned v a)
 decodeField fieldName = do
@@ -180,9 +251,6 @@ decodeField fieldName = do
     fail $
       T.unpack $
         "Expected field name " <> fieldName <> " but got " <> s
-  fromCanonicalCBOR
-
-deriving via LedgerCBOR v PoolMetadata instance FromCanonicalCBOR v PoolMetadata
 
 deriving via LedgerCBOR v StakePoolRelay instance ToCanonicalCBOR v StakePoolRelay
 
@@ -193,6 +261,13 @@ instance ToCanonicalCBOR v PoolMetadata where
 
 instance ToCanonicalCBOR v Url where
   toCanonicalCBOR v u = toCanonicalCBOR v (urlToText u)
+
+instance FromCanonicalCBOR v Url where
+  fromCanonicalCBOR = do
+    Versioned t <- fromCanonicalCBOR
+    case textToUrl 128 t of
+      Just url -> return $ Versioned url
+      Nothing -> fail "Invalid URL"
 
 instance KnownNamespace "snapshots/v0" where
   type NamespaceKey "snapshots/v0" = SnapShotIn

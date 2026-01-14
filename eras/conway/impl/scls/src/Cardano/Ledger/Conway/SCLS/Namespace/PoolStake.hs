@@ -16,8 +16,8 @@ module Cardano.Ledger.Conway.SCLS.Namespace.PoolStake (
 ) where
 
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.SCLS.Common ()
-import Cardano.Ledger.Keys (KeyHash, StakePool (..), StakePoolVRF (..), VRFVerKeyHash)
+import Cardano.Ledger.Conway.SCLS.Common (CanonicalVRFVerKeyHash (..))
+import Cardano.Ledger.Keys (KeyHash, StakePool (..), StakePoolVRF (..))
 import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), decodeMapLenCanonicalOf)
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..), encodeAsMap, mkEncodablePair)
 import Cardano.SCLS.Entry.IsKey (IsKey (..))
@@ -43,7 +43,7 @@ instance IsKey PoolStakeIn where
 
 data PoolStakeOut = PoolStakeOut
   { total :: !Coin
-  , vrf :: !(VRFVerKeyHash StakePoolVRF)
+  , vrf :: !(CanonicalVRFVerKeyHash StakePoolVRF)
   }
   deriving (Eq, Show)
   deriving (Generic)

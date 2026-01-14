@@ -222,7 +222,7 @@ main = do
                   <> S.each
                     [ ChunkEntry
                         (SnapShotInKey SnapShotStageSet poolHash SnapShotValuePoolParams)
-                        (SnapShotOutPoolParams poolParams)
+                        (SnapShotOutPoolParams $ mkCanonicalStakePoolParams poolParams)
                     | (poolHash, poolParams) <-
                         nes ^. nesEsL . esSnapshotsL . ssStakeSetL . ssPoolParamsL . to (VMap.toList)
                     ]
@@ -241,7 +241,7 @@ main = do
                   <> S.each
                     [ ChunkEntry
                         (SnapShotInKey SnapshotStageMark poolHash SnapShotValuePoolParams)
-                        (SnapShotOutPoolParams poolParams)
+                        (SnapShotOutPoolParams $ mkCanonicalStakePoolParams poolParams)
                     | (poolHash, poolParams) <-
                         nes ^. nesEsL . esSnapshotsL . ssStakeMarkL . ssPoolParamsL . to (VMap.toList)
                     ]
@@ -271,7 +271,10 @@ main = do
               ( S.each
                   [ ChunkEntry
                       (PoolStakeIn cred)
-                      (PoolStakeOut (fromCompact individualTotalPoolStake) individualPoolStakeVrf)
+                      ( PoolStakeOut
+                          (fromCompact individualTotalPoolStake)
+                          (mkCanonicalVRFVerKeyHash individualPoolStakeVrf)
+                      )
                   | (cred, IndividualPoolStake {..}) <- nes ^. nesPdL . poolDistrDistrL . to (Map.toList)
                   ]
               )

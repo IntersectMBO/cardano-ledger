@@ -62,6 +62,9 @@ instance Arbitrary PotsOut where arbitrary = genericArbitraryU
 
 instance Arbitrary SnapShotOut where arbitrary = genericArbitraryU
 
+instance Arbitrary CanonicalStakePoolParams where
+  arbitrary = fmap mkCanonicalStakePoolParams arbitrary
+
 instance Arbitrary UtxoOut where arbitrary = genericArbitraryU
 
 instance Arbitrary CanonicalExUnits where arbitrary = fmap mkCanonicalExUnits arbitrary
@@ -69,3 +72,6 @@ instance Arbitrary CanonicalExUnits where arbitrary = fmap mkCanonicalExUnits ar
 instance Arbitrary (CanonicalPurposeId p) where arbitrary = fmap mkCanonicalPurposeId arbitrary
 
 instance Arbitrary CanonicalNonce where arbitrary = fmap mkCanonicalNonce arbitrary
+
+instance Arbitrary (CanonicalVRFVerKeyHash k) where
+  arbitrary = fmap mkCanonicalVRFVerKeyHash arbitrary

@@ -40,7 +40,6 @@ import Cardano.Ledger.Plutus.Data (BinaryData)
 import Cardano.Ledger.Shelley.TxOut qualified as Shelley
 import Cardano.Ledger.State (
   PoolMetadata (..),
-  StakePoolParams (..),
   StakePoolRelay (..),
  )
 import Cardano.SCLS.Testlib
@@ -60,7 +59,7 @@ spec = do
     isCanonical @"snapshots/v0" @(RewardAccount)
     isCanonical @"snapshots/v0" @(PoolMetadata)
     isCanonical @"snapshots/v0" @(StakePoolRelay)
-    isCanonical @"snapshots/v0" @(StakePoolParams)
+    isCanonical @"snapshots/v0" @(CanonicalStakePoolParams)
     isCanonical @"utxo/v0" @(Shelley.ShelleyTxOut ConwayEra)
     isCanonical @"utxo/v0" @(AlonzoScript ConwayEra)
     isCanonical @"utxo/v0" @MaryValue
@@ -69,7 +68,7 @@ spec = do
     isCanonical @"utxo/v0" @(BinaryData ConwayEra)
     isCanonical @"common" @(ScriptHash)
     isCanonical @"common" @(KeyHash Guard)
-    isCanonical @"common" @(VRFVerKeyHash BlockIssuerVRF)
+    isCanonical @"common" @(CanonicalVRFVerKeyHash BlockIssuerVRF)
     isCanonical @"common" @(NonNegativeInterval)
     isCanonical @"common" @(UnitInterval)
     isCanonical @"common" @(Prices)
@@ -97,7 +96,7 @@ spec = do
       validateType @"gov/proposals/v0" @(CanonicalPurposeId PParamUpdatePurpose) "gov_action_id"
       validateType @"gov/proposals/v0" @(Vote) "coin"
     describe "snapshots/v0" $ do
-      validateType @"snapshots/v0" @(StakePoolParams) "pool_params"
+      validateType @"snapshots/v0" @(CanonicalStakePoolParams) "pool_params"
       validateType @"snapshots/v0" @(RewardAccount) "reward_account"
       validateType @"snapshots/v0" @(PoolMetadata) "pool_metadata"
       validateType @"snapshots/v0" @(StakePoolRelay) "relay"
@@ -111,7 +110,7 @@ spec = do
       validateType @"gov/proposals/v0" @(Credential Guard) "credential"
       validateType @"gov/constitution/v0" @(ScriptHash) "script_hash"
       validateType @"gov/proposals/v0" @(KeyHash Guard) "addr_keyhash"
-      validateType @"pool_stake/v0" @(VRFVerKeyHash StakePoolVRF) "vrf_keyhash"
+      validateType @"pool_stake/v0" @(CanonicalVRFVerKeyHash StakePoolVRF) "vrf_keyhash"
       validateType @"gov/proposals/v0" @(NonNegativeInterval) "nonnegative_interval"
       validateType @"gov/pparams/v0" @(UnitInterval) "unit_interval"
       validateType @"gov/pparams/v0" @(Prices) "ex_unit_prices"

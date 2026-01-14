@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -18,8 +19,12 @@ module Cardano.Ledger.Conway.SCLS.Common (
   CanonicalRewardAccount (..),
   fromCanonicalRewardAccount,
   mkCanonicalRewardAccount,
+  CanonicalVRFVerKeyHash (..),
+  fromCanonicalVRFVerKeyHash,
+  mkCanonicalVRFVerKeyHash,
 ) where
 
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   Anchor,
@@ -33,7 +38,16 @@ import Cardano.Ledger.Coin (Coin, CompactForm)
 import qualified Cardano.Ledger.Coin as Coin
 import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Hashes (KeyHash, ScriptHash, Staking, VRFVerKeyHash)
+import Cardano.Ledger.Hashes (
+  HASH,
+  Hash,
+  KeyHash,
+  KeyRoleVRF,
+  ScriptHash,
+  Staking,
+  VRFVerKeyHash (..),
+ )
+import qualified Cardano.Ledger.Hashes as H
 import Cardano.Ledger.Plutus.ExUnits (Prices)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
@@ -126,12 +140,30 @@ instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictMaybe a) where
         pure (Versioned SNothing)
       _ -> fmap SJust <$> fromCanonicalCBOR
 
-deriving via LedgerCBOR v (VRFVerKeyHash kr) instance ToCanonicalCBOR v (VRFVerKeyHash kr)
+newtype CanonicalVRFVerKeyHash (kr :: KeyRoleVRF) = CanonicalVRFVerKeyHash {unCanonicalVRFVerKeyHash :: Hash HASH KeyRoleVRF}
+  deriving (Eq, Ord, Show, Generic)
 
-deriving via
-  LedgerCBOR v (VRFVerKeyHash kr)
-  instance
-    Typeable kr => FromCanonicalCBOR v (VRFVerKeyHash kr)
+mkCanonicalVRFVerKeyHash :: VRFVerKeyHash kr -> CanonicalVRFVerKeyHash kr
+mkCanonicalVRFVerKeyHash (VRFVerKeyHash k) = CanonicalVRFVerKeyHash k
+
+fromCanonicalVRFVerKeyHash :: CanonicalVRFVerKeyHash kr -> VRFVerKeyHash kr
+fromCanonicalVRFVerKeyHash (CanonicalVRFVerKeyHash k) = VRFVerKeyHash k
+
+instance ToCanonicalCBOR v (CanonicalVRFVerKeyHash kr) where
+  toCanonicalCBOR v (CanonicalVRFVerKeyHash vrf) = toCanonicalCBOR v vrf
+
+instance FromCanonicalCBOR v (CanonicalVRFVerKeyHash kr) where
+  fromCanonicalCBOR = fmap CanonicalVRFVerKeyHash <$> fromCanonicalCBOR
+
+instance ToCanonicalCBOR v (H.Hash a b) where
+  toCanonicalCBOR v h = toCanonicalCBOR v (Hash.hashToBytes h)
+
+instance H.HashAlgorithm a => FromCanonicalCBOR v (H.Hash a b) where
+  fromCanonicalCBOR = do
+    Versioned bytes <- fromCanonicalCBOR
+    case Hash.hashFromBytesShort bytes of
+      Just h -> return (Versioned h)
+      Nothing -> fail "Invalid hash bytes"
 
 deriving via LedgerCBOR v NonNegativeInterval instance ToCanonicalCBOR v NonNegativeInterval
 

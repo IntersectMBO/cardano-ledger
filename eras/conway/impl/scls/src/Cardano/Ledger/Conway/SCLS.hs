@@ -1,4 +1,5 @@
 module Cardano.Ledger.Conway.SCLS (
+  module Cardano.Ledger.Conway.SCLS.Common,
   module Cardano.Ledger.Conway.SCLS.Namespace.Blocks,
   module Cardano.Ledger.Conway.SCLS.Namespace.GovCommittee,
   module Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution,
@@ -11,6 +12,7 @@ module Cardano.Ledger.Conway.SCLS (
   module Cardano.Ledger.Conway.SCLS.Namespace.UTxO,
 ) where
 
+import Cardano.Ledger.Conway.SCLS.Common
 import Cardano.Ledger.Conway.SCLS.Namespace.Blocks
 import Cardano.Ledger.Conway.SCLS.Namespace.GovCommittee
 import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution

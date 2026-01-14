@@ -175,13 +175,3 @@ decodeField fieldName = do
       T.unpack $
         "Expected field name " <> fieldName <> " but got " <> s
   fromCanonicalCBOR
-
-instance ToCanonicalCBOR v (H.Hash a b) where
-  toCanonicalCBOR v h = toCanonicalCBOR v (Hash.hashToBytes h)
-
-instance H.HashAlgorithm a => FromCanonicalCBOR v (H.Hash a b) where
-  fromCanonicalCBOR = do
-    Versioned bytes <- fromCanonicalCBOR
-    case Hash.hashFromBytesShort bytes of
-      Just h -> return (Versioned h)
-      Nothing -> fail "Invalid hash bytes"
