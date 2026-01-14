@@ -199,6 +199,8 @@ instance ToExpr BootstrapAddress where
 
 instance ToExpr Withdrawals
 
+instance ToExpr DirectDeposits
+
 instance ToExpr CompactAddr
 
 -- PoolParams

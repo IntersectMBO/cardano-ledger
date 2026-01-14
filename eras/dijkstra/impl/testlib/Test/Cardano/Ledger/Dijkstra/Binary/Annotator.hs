@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Dijkstra.Binary.Annotator (
 
 ) where
 
-import Cardano.Ledger.Address (Withdrawals (..))
+import Cardano.Ledger.Address (DirectDeposits (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes
@@ -132,6 +132,12 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
                 Map.null
                 (requiredTopLevelGuardsDijkstraTxBodyRawL .~)
                 (D (decodeMap decCBOR (decodeNullStrictMaybe decCBOR)))
+        25 ->
+          fieldGuarded
+            (emptyFailure "DirectDeposits" "non-empty")
+            (null . unDirectDeposits)
+            (directDepositsDijkstraTxBodyRawL .~)
+            From
         n -> invalidField n
       requiredFields :: STxBothLevels l DijkstraEra -> [(Word, String)]
       requiredFields sTxLevel

@@ -123,6 +123,7 @@ transaction_body =
   , ? 21 : coin                             ; current treasury value
   , ? 22 : positive_coin                    ; donation
   , ? 23 : sub_transactions                 ; sub-transactions (NEW)
+  , ? 25 : direct_deposits                  ; direct deposits
   }
 
 
@@ -729,10 +730,13 @@ sub_transaction_body =
   , ? 21 : coin                            
   , ? 22 : positive_coin                   
   , ? 24 : required_top_level_guards       
+  , ? 25 : direct_deposits                 
   }
 
 
 required_top_level_guards = {+ credential => plutus_data/ nil}
+
+direct_deposits = {+ reward_account => coin}
 
 transaction_witness_set = 
   { ? 0 : nonempty_set<vkeywitness>      

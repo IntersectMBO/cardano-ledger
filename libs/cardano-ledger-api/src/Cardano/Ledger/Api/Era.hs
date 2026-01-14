@@ -69,6 +69,7 @@ module Cardano.Ledger.Api.Era (
   atMostEra,
 ) where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (translateTimelock, upgradeMultiSig)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
@@ -640,6 +641,7 @@ instance EraApi DijkstraEra where
             , dtbVotingProcedures = coerce ctbrVotingProcedures
             , dtbTreasuryDonation = ctbrTreasuryDonation
             , dtbSubTransactions = mempty
+            , dtbDirectDeposits = DirectDeposits mempty
             }
 
   upgradeTxWits atw =

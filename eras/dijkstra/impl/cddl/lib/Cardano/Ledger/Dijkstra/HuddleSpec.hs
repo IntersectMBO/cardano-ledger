@@ -24,6 +24,7 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
   subTransactionRule,
   subTransactionBodyRule,
   requiredTopLevelGuardsRule,
+  directDepositsRule,
   dijkstraScriptRule,
   dijkstraNativeScriptRule,
   scriptRequireGuardGroup,
@@ -118,6 +119,7 @@ subTransactionBodyRule ::
   , HuddleRule "positive_coin" era
   , HuddleRule "guards" era
   , HuddleRule "required_top_level_guards" era
+  , HuddleRule "direct_deposits" era
   , HuddleRule1 "set" era
   , HuddleRule1 "nonempty_set" era
   ) =>
@@ -144,6 +146,7 @@ subTransactionBodyRule pname p =
       , opt (idx 21 ==> huddleRule @"coin" p)
       , opt (idx 22 ==> huddleRule @"positive_coin" p)
       , opt (idx 24 ==> huddleRule @"required_top_level_guards" p)
+      , opt (idx 25 ==> huddleRule @"direct_deposits" p)
       ]
 
 requiredTopLevelGuardsRule ::
@@ -160,6 +163,22 @@ requiredTopLevelGuardsRule pname p =
       [ 1
           <+ asKey (huddleRule @"credential" p)
           ==> (huddleRule @"plutus_data" p / VNil)
+      ]
+
+directDepositsRule ::
+  forall era.
+  ( HuddleRule "reward_account" era
+  , HuddleRule "coin" era
+  ) =>
+  Proxy "direct_deposits" ->
+  Proxy era ->
+  Rule
+directDepositsRule pname p =
+  pname
+    =.= mp
+      [ 1
+          <+ asKey (huddleRule @"reward_account" p)
+          ==> huddleRule @"coin" p
       ]
 
 scriptRequireGuardGroup ::
@@ -536,6 +555,9 @@ instance HuddleRule "mint" DijkstraEra where
 instance HuddleRule "withdrawals" DijkstraEra where
   huddleRuleNamed = conwayWithdrawalsRule
 
+instance HuddleRule "direct_deposits" DijkstraEra where
+  huddleRuleNamed = directDepositsRule
+
 instance HuddleRule "data" DijkstraEra where
   huddleRuleNamed = dataRule
 
@@ -808,6 +830,7 @@ instance HuddleRule "transaction_body" DijkstraEra where
         , opt (idx 21 ==> huddleRule @"coin" p) //- "current treasury value"
         , opt (idx 22 ==> huddleRule @"positive_coin" p) //- "donation"
         , opt (idx 23 ==> huddleRule @"sub_transactions" p) //- "sub-transactions (NEW)"
+        , opt (idx 25 ==> huddleRule @"direct_deposits" p) //- "direct deposits"
         ]
 
 instance HuddleRule "transaction_witness_set" DijkstraEra where
