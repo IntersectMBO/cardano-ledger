@@ -111,3 +111,6 @@ source-repository-package
     cardano-strict-containers
     heapwords
     measures
+
+allow-newer:
+  plutus-core:cardano-crypto-class
