@@ -1,6 +1,6 @@
 module Cardano.Ledger.Conway.SCLS (
   module Cardano.Ledger.Conway.SCLS.Common,
-  module Cardano.Ledger.SCLS.Namespace.BlocksV0,
+  module Cardano.Ledger.Conway.SCLS.Namespace.Blocks,
   module Cardano.Ledger.Conway.SCLS.Namespace.GovCommittee,
   module Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution,
   module Cardano.Ledger.Conway.SCLS.Namespace.GovPParams,
@@ -13,7 +13,7 @@ module Cardano.Ledger.Conway.SCLS (
 ) where
 
 import Cardano.Ledger.Conway.SCLS.Common
-import Cardano.Ledger.SCLS.Namespace.BlocksV0
+import Cardano.Ledger.Conway.SCLS.Namespace.Blocks
 import Cardano.Ledger.Conway.SCLS.Namespace.GovCommittee
 import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution
 import Cardano.Ledger.Conway.SCLS.Namespace.GovPParams

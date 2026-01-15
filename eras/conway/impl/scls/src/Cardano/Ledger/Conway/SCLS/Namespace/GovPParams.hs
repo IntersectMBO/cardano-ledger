@@ -41,7 +41,7 @@ module Cardano.Ledger.Conway.SCLS.Namespace.GovPParams (
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
 -- FIXME: CompactForm Coin -> Coin
 
-import Cardano.Ledger.BaseTypes (NonNegativeInterval, ProtVer (..), UnitInterval)
+import Cardano.Ledger.SCLS.BaseTypes (NonNegativeInterval, ProtVer (..), UnitInterval)
 import Cardano.Ledger.Coin (Coin, CoinPerByte (..))
 import Cardano.Ledger.Compactible (CompactForm)
 import Cardano.Ledger.Conway (ConwayEra)
@@ -52,7 +52,7 @@ import Cardano.Ledger.Conway.PParams (
   THKD (..),
  )
 import Cardano.Ledger.Conway.SCLS.Common ()
-import Cardano.Ledger.Conway.SCLS.LedgerCBOR
+import Cardano.Ledger.SCLS.LedgerCBOR
 import Cardano.Ledger.Core (PParams (..))
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
@@ -561,10 +561,4 @@ mkCanonicalExUnits (unWrapExUnits -> ExUnits' {..}) = CanonicalExUnits {..}
 fromCanonicalExUnits :: CanonicalExUnits -> ExUnits
 fromCanonicalExUnits CanonicalExUnits {..} = WrapExUnits ExUnits' {..}
 
--- TODO: remove
 
-instance FromCanonicalCBOR v Natural where
-  fromCanonicalCBOR = assumeCanonicalDecoder $ Versioned @v . fromIntegral <$> D.decodeIntegerCanonical
-
-instance ToCanonicalCBOR v Natural where
-  toCanonicalCBOR _v n = assumeCanonicalEncoding $ E.encodeInteger (fromIntegral n)

@@ -29,17 +29,15 @@ module Cardano.Ledger.Conway.SCLS.Namespace.Snapshots (
   fromCanonicalStakePoolRelay,
 ) where
 
-import Cardano.Ledger.BaseTypes (
+import Cardano.Ledger.SCLS.BaseTypes (
   DnsName,
   Port,
   StrictMaybe (..),
   UnitInterval,
   Url (..),
-  dnsToText,
-  textToDns,
-  textToUrl,
-  urlToText,
- )
+  IPv4,
+  IPv6,
+  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.SCLS.Common (
   CanonicalRewardAccount (..),
@@ -49,7 +47,6 @@ import Cardano.Ledger.Conway.SCLS.Common (
   mkCanonicalRewardAccount,
   mkCanonicalVRFVerKeyHash,
  )
-import Cardano.Ledger.Conway.SCLS.LedgerCBOR
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys
 import Cardano.Ledger.State (PoolMetadata (..), StakePoolParams (..), StakePoolRelay (..))
@@ -72,7 +69,6 @@ import Cardano.SCLS.Versioned (Versioned (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.Foldable (toList)
-import Data.IP (IPv4, IPv6)
 import Data.MemPack (MemPack (..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -317,15 +313,6 @@ fromCanonicalStakePoolRelay (CanonicalMultiHostName dns) = MultiHostName dns
 instance ToCanonicalCBOR v PoolMetadata where
   toCanonicalCBOR v PoolMetadata {..} = toCanonicalCBOR v (pmUrl, pmHash)
 
-instance ToCanonicalCBOR v Url where
-  toCanonicalCBOR v u = toCanonicalCBOR v (urlToText u)
-
-instance FromCanonicalCBOR v Url where
-  fromCanonicalCBOR = do
-    Versioned t <- fromCanonicalCBOR
-    case textToUrl 128 t of
-      Just url -> return $ Versioned url
-      Nothing -> fail "Invalid URL"
 
 instance KnownNamespace "snapshots/v0" where
   type NamespaceKey "snapshots/v0" = SnapShotIn
@@ -336,25 +323,3 @@ instance CanonicalCBOREntryEncoder "snapshots/v0" SnapShotOut where
 
 instance CanonicalCBOREntryDecoder "snapshots/v0" SnapShotOut where
   decodeEntry = fromCanonicalCBOR
-
-instance ToCanonicalCBOR v DnsName where
-  toCanonicalCBOR v = toCanonicalCBOR v . dnsToText
-
-instance FromCanonicalCBOR v DnsName where
-  fromCanonicalCBOR = do
-    Versioned t <- fromCanonicalCBOR
-    case textToDns 128 t of
-      Just dns -> return $ Versioned dns
-      Nothing -> fail "FromCanonicalCBOR<DsnName>: DNS name is too long"
-
-deriving via LedgerCBOR v Port instance ToCanonicalCBOR v Port
-
-deriving via LedgerCBOR v Port instance FromCanonicalCBOR v Port
-
-deriving via LedgerCBOR v IPv4 instance ToCanonicalCBOR v IPv4
-
-deriving via LedgerCBOR v IPv4 instance FromCanonicalCBOR v IPv4
-
-deriving via LedgerCBOR v IPv6 instance ToCanonicalCBOR v IPv6
-
-deriving via LedgerCBOR v IPv6 instance FromCanonicalCBOR v IPv6

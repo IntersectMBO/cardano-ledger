@@ -32,7 +32,7 @@ module Cardano.Ledger.Conway.SCLS.Namespace.GovProposals (
 ) where
 
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
-import Cardano.Ledger.BaseTypes (
+import Cardano.Ledger.SCLS.BaseTypes (
   Anchor (..),
   EpochInterval,
   EpochNo (..),
@@ -66,7 +66,7 @@ import Cardano.Ledger.Conway.SCLS.Common (
   mkCanonicalCredential,
   mkCanonicalRewardAccount,
  )
-import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))
+import Cardano.Ledger.SCLS.LedgerCBOR (LedgerCBOR (..))
 import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution (
   fromCanonicalConstitution,
   mkCanonicalConstitution,

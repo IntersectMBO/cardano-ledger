@@ -19,7 +19,7 @@ module Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution (
   fromCanonicalConstitution,
 ) where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), EpochNo (..), StrictMaybe (..))
+import Cardano.Ledger.SCLS.BaseTypes (Anchor (..), EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Constitution (..))
 import Cardano.Ledger.Conway.SCLS.Common ()

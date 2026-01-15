@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.SCLS.Namespace.GovCommittee (
   fromCanonicalCommitteeAuthorization,
 ) where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), EpochNo (..), StrictMaybe (..))
+import Cardano.Ledger.SCLS.BaseTypes (Anchor (..), EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.SCLS.Common (
   CanonicalCredential (..),

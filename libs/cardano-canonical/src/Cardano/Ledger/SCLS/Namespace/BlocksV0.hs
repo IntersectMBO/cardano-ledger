@@ -1,18 +1,21 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-
-module Cardano.Ledger.Conway.SCLS.Namespace.Blocks (
+-- | Definitions for the "blocks/v0" SCLS namespace.
+module Cardano.Ledger.SCLS.Namespace.BlocksV0 (
   BlockIn (..),
   BlockOut (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..))
-import Cardano.Ledger.Conway.SCLS.Common ()
+import Cardano.Ledger.SCLS.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Keys (KeyHash, StakePool)
+import Cardano.SCLS.CDDL ()
 import Cardano.SCLS.CBOR.Canonical.Decoder as D
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.Entry.IsKey (IsKey (..))
@@ -51,10 +54,5 @@ instance IsKey BlockIn where
     return $ BlockIn (a, EpochNo epochNo)
 
 newtype BlockOut = BlockOut Natural
-  deriving (Eq, Ord, Show)
-
-instance ToCanonicalCBOR v BlockOut where
-  toCanonicalCBOR v (BlockOut n) = toCanonicalCBOR v (fromIntegral n :: Integer)
-
-instance FromCanonicalCBOR v BlockOut where
-  fromCanonicalCBOR = fmap (BlockOut . fromIntegral @Integer) <$> fromCanonicalCBOR
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (ToCanonicalCBOR v, FromCanonicalCBOR v)

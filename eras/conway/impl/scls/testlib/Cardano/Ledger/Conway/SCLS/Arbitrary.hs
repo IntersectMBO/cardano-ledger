@@ -8,7 +8,7 @@ module Cardano.Ledger.Conway.SCLS.Arbitrary (
 ) where
 
 import Cardano.Ledger.Conway.SCLS.Common
-import Cardano.Ledger.Conway.SCLS.Namespace.Blocks
+import Cardano.Ledger.SCLS.Namespace.BlocksV0
 import Cardano.Ledger.Conway.SCLS.Namespace.GovCommittee
 import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution
 import Cardano.Ledger.Conway.SCLS.Namespace.GovPParams

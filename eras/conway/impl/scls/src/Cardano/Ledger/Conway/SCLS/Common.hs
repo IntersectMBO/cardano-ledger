@@ -24,19 +24,15 @@ module Cardano.Ledger.Conway.SCLS.Common (
   mkCanonicalVRFVerKeyHash,
 ) where
 
+import Cardano.Ledger.SCLS.BaseTypes ()
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
-  Anchor,
-  EpochNo,
   Network,
-  NonNegativeInterval,
-  ProtVer,
-  UnitInterval,
  )
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import qualified Cardano.Ledger.Coin as Coin
-import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..))
+import Cardano.Ledger.SCLS.LedgerCBOR (LedgerCBOR (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (
   HASH,
@@ -52,14 +48,12 @@ import Cardano.Ledger.Plutus.ExUnits (Prices)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
   decodeListLenCanonicalOf,
-  peekTokenType,
  )
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.CDDL ()
 import Cardano.SCLS.Versioned (Versioned (..))
-import Cardano.Slotting.Slot (EpochInterval, SlotNo (..))
-import qualified Codec.CBOR.Decoding as D
-import Data.Maybe.Strict (StrictMaybe (..))
+import Cardano.Slotting.Slot (SlotNo (..))
+
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
@@ -127,19 +121,6 @@ deriving via LedgerCBOR v (KeyHash kr) instance ToCanonicalCBOR v (KeyHash kr)
 
 deriving via LedgerCBOR v (KeyHash kr) instance Typeable kr => FromCanonicalCBOR v (KeyHash kr)
 
-instance ToCanonicalCBOR v a => ToCanonicalCBOR v (StrictMaybe a) where
-  toCanonicalCBOR v SNothing = toCanonicalCBOR v ()
-  toCanonicalCBOR v (SJust x) = toCanonicalCBOR v x
-
-instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictMaybe a) where
-  fromCanonicalCBOR = do
-    mt <- peekTokenType
-    case mt of
-      D.TypeNull -> do
-        Versioned () <- fromCanonicalCBOR
-        pure (Versioned SNothing)
-      _ -> fmap SJust <$> fromCanonicalCBOR
-
 newtype CanonicalVRFVerKeyHash (kr :: KeyRoleVRF) = CanonicalVRFVerKeyHash {unCanonicalVRFVerKeyHash :: Hash HASH KeyRoleVRF}
   deriving (Eq, Ord, Show, Generic)
 
@@ -165,37 +146,9 @@ instance H.HashAlgorithm a => FromCanonicalCBOR v (H.Hash a b) where
       Just h -> return (Versioned h)
       Nothing -> fail "Invalid hash bytes"
 
-deriving via LedgerCBOR v NonNegativeInterval instance ToCanonicalCBOR v NonNegativeInterval
-
-deriving via LedgerCBOR v NonNegativeInterval instance FromCanonicalCBOR v NonNegativeInterval
-
-deriving via LedgerCBOR v UnitInterval instance ToCanonicalCBOR v UnitInterval
-
-deriving via LedgerCBOR v UnitInterval instance FromCanonicalCBOR v UnitInterval
-
 deriving via LedgerCBOR v Prices instance ToCanonicalCBOR v Prices
 
 deriving via LedgerCBOR v Prices instance FromCanonicalCBOR v Prices
-
-deriving via LedgerCBOR v EpochInterval instance ToCanonicalCBOR v EpochInterval
-
-deriving via LedgerCBOR v EpochInterval instance FromCanonicalCBOR v EpochInterval
-
-deriving via LedgerCBOR v ProtVer instance ToCanonicalCBOR v ProtVer
-
-deriving via LedgerCBOR v ProtVer instance FromCanonicalCBOR v ProtVer
-
-deriving via LedgerCBOR v Anchor instance ToCanonicalCBOR v Anchor
-
-deriving via LedgerCBOR v Anchor instance FromCanonicalCBOR v Anchor
-
-deriving via LedgerCBOR v EpochNo instance ToCanonicalCBOR v EpochNo
-
-deriving via LedgerCBOR v EpochNo instance FromCanonicalCBOR v EpochNo
-
-deriving newtype instance ToCanonicalCBOR v SlotNo
-
-deriving newtype instance FromCanonicalCBOR v SlotNo
 
 instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictSeq a) where
   fromCanonicalCBOR = do

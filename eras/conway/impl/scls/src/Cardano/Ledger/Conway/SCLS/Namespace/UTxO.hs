@@ -34,7 +34,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Compactible (CompactForm (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.SCLS.Common ()
-import Cardano.Ledger.Conway.SCLS.LedgerCBOR (LedgerCBOR (..), LedgerCBORSafe (..))
+import Cardano.Ledger.SCLS.LedgerCBOR (LedgerCBOR (..), LedgerCBORSafe (..))
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Hashes (originalBytes)
 import Cardano.Ledger.Mary (MaryValue)

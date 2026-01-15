@@ -55,6 +55,7 @@ packages:
   libs/small-steps
   libs/cardano-data
   libs/vector-map
+  libs/cardano-canonical
   eras/byron/chain/executable-spec
   eras/byron/ledger/executable-spec
   eras/byron/ledger/impl

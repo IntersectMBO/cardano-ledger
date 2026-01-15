@@ -14,7 +14,7 @@ module Cardano.Ledger.Conway.SCLS.Namespace.Pots (
   PotsOut (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..))
+import Cardano.Ledger.SCLS.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.SCLS.Common ()
 import Cardano.Ledger.Conway.SCLS.Namespace.UTxO ()
