@@ -40,7 +40,6 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   CertIx (..),
   DnsName,
-  EpochInterval (..),
   HasZero,
   Mismatch (..),
   Network (..),
@@ -109,6 +108,7 @@ import System.Random.Stateful (StatefulGen, uniformRM)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
+import Test.Cardano.StrictContainers.Instances ()
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary (GSubterms, RecursivelyShrink)
 import Test.QuickCheck.Hedgehog (hedgehog)
@@ -258,9 +258,6 @@ instance Arbitrary Nonce where
       [ return NeutralNonce
       , mkNonceFromNumber <$> arbitrary
       ]
-
-instance Arbitrary EpochInterval where
-  arbitrary = EpochInterval <$> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.TxIn -------------------------------------------------------------------

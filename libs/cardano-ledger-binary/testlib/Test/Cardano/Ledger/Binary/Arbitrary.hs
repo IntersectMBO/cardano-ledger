@@ -21,9 +21,6 @@ import Cardano.Crypto.DSIGN.Class hiding (Signable)
 import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Binary.Version
-import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
-import Cardano.Slotting.Time (SystemStart (..))
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
 import Codec.CBOR.Term
@@ -35,12 +32,9 @@ import qualified Data.ByteString.Short as SBS
 #else
 import qualified Data.ByteString.Short.Internal as SBS
 #endif
-import qualified Data.Foldable as F
 import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
-import Data.Maybe.Strict
 import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
 import Data.Proxy (Proxy (..))
-import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.VMap as VMap
@@ -147,14 +141,6 @@ instance Arbitrary IPv6 where
     t <- (,,,) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
     pure $ toIPv6w t
 
-instance Arbitrary e => Arbitrary (SSeq.StrictSeq e) where
-  arbitrary = SSeq.fromList <$> arbitrary
-  shrink = fmap SSeq.fromList . shrink . F.toList
-
-instance Arbitrary e => Arbitrary (StrictMaybe e) where
-  arbitrary = maybeToStrictMaybe <$> arbitrary
-  shrink = fmap maybeToStrictMaybe . shrink . strictMaybeToMaybe
-
 instance
   (Ord k, VMap.Vector kv k, VMap.Vector vv v, Arbitrary k, Arbitrary v) =>
   Arbitrary (VMap.VMap kv vv k v)
@@ -191,18 +177,6 @@ instance
     where
       genCertVRF :: Gen (CertVRF v)
       genCertVRF = arbitrary
-
-instance Arbitrary t => Arbitrary (WithOrigin t) where
-  arbitrary = frequency [(20, pure Origin), (80, At <$> arbitrary)]
-  shrink = \case
-    Origin -> []
-    At x -> Origin : map At (shrink x)
-
-deriving instance Arbitrary EpochSize
-
-deriving instance Arbitrary SystemStart
-
-deriving instance Arbitrary BlockNo
 
 instance Arbitrary Version where
   arbitrary = genVersion minBound maxBound
