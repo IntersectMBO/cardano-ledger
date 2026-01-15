@@ -17,6 +17,7 @@
 module Cardano.Ledger.Dijkstra.Rules.Ledger (
   DijkstraLEDGER,
   DijkstraLedgerPredFailure (..),
+  DijkstraLedgerEvent (..),
   shelleyToDijkstraLedgerPredFailure,
   conwayToDijkstraLedgerPredFailure,
 ) where
@@ -24,6 +25,7 @@ module Cardano.Ledger.Dijkstra.Rules.Ledger (
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo (AlonzoScript)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
@@ -62,7 +64,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
-  ConwayLedgerEvent (..),
   ConwayLedgerPredFailure,
   ConwayUtxoPredFailure,
   ConwayUtxosPredFailure,
@@ -125,7 +126,6 @@ import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import qualified Data.Set.NonEmpty as NES
-import Data.Void (absurd)
 import GHC.Generics (Generic (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -145,7 +145,9 @@ data DijkstraLedgerPredFailure era
 
 type instance EraRuleFailure "LEDGER" DijkstraEra = DijkstraLedgerPredFailure DijkstraEra
 
-type instance EraRuleEvent "LEDGER" DijkstraEra = ConwayLedgerEvent DijkstraEra
+type instance EraRuleEvent "LEDGER" DijkstraEra = DijkstraLedgerEvent DijkstraEra
+
+instance InjectRuleEvent "LEDGER" DijkstraLedgerEvent DijkstraEra
 
 instance InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure DijkstraEra
 
@@ -301,6 +303,29 @@ instance
     10 -> SumD DijkstraSpendingOutputFromSameTx <! From
     n -> Invalid n
 
+data DijkstraLedgerEvent era
+  = UtxowEvent (Event (EraRule "UTXOW" era))
+  | CertsEvent (Event (EraRule "CERTS" era))
+  | GovEvent (Event (EraRule "GOV" era))
+  | SubLedgersEvent (Event (EraRule "SUBLEDGERS" era))
+  deriving (Generic)
+
+deriving instance
+  ( Eq (Event (EraRule "CERTS" era))
+  , Eq (Event (EraRule "UTXOW" era))
+  , Eq (Event (EraRule "GOV" era))
+  , Eq (Event (EraRule "SUBLEDGERS" era))
+  ) =>
+  Eq (DijkstraLedgerEvent era)
+
+instance
+  ( NFData (Event (EraRule "CERTS" era))
+  , NFData (Event (EraRule "UTXOW" era))
+  , NFData (Event (EraRule "GOV" era))
+  , NFData (Event (EraRule "SUBLEDGERS" era))
+  ) =>
+  NFData (DijkstraLedgerEvent era)
+
 instance
   ( AlonzoEraTx era
   , ConwayEraTxBody era
@@ -334,7 +359,7 @@ instance
   type Environment (DijkstraLEDGER era) = LedgerEnv era
   type BaseM (DijkstraLEDGER era) = ShelleyBase
   type PredicateFailure (DijkstraLEDGER era) = DijkstraLedgerPredFailure era
-  type Event (DijkstraLEDGER era) = ConwayLedgerEvent era
+  type Event (DijkstraLEDGER era) = DijkstraLedgerEvent era
 
   initialRules = []
   transitionRules = [dijkstraLedgerTransition]
@@ -414,7 +439,7 @@ instance
   Embed (DijkstraUTXOW era) (DijkstraLEDGER era)
   where
   wrapFailed = DijkstraUtxowFailure
-  wrapEvent = Conway.UtxowEvent
+  wrapEvent = UtxowEvent
 
 instance
   ( Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
@@ -425,6 +450,7 @@ instance
   , AlonzoEraTx era
   , ConwayEraPParams era
   , DijkstraEraTxBody era
+  , EraPlutusContext era
   , GovState era ~ ConwayGovState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
@@ -530,6 +556,7 @@ instance
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
+  , EraPlutusContext era
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
@@ -541,9 +568,10 @@ instance
   , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
   , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
   , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
+  , Event (EraRule "LEDGER" era) ~ DijkstraLedgerEvent era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)
   where
   wrapFailed = DijkstraSubLedgersFailure
-  wrapEvent = absurd
+  wrapEvent = SubLedgersEvent

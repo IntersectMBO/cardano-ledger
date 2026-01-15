@@ -17,6 +17,7 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
 ) where
 
 import Cardano.Ledger.BaseTypes (PerasCert, StrictMaybe)
+import Cardano.Ledger.Conway.Rules (ConwayGovEvent, ConwayUtxosPredFailure)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core (
   AlonzoEraScript (..),
@@ -176,6 +177,14 @@ instance
   ToExpr (DijkstraLedgerPredFailure era)
 
 instance
+  ( ToExpr (Event (EraRule "UTXOW" era))
+  , ToExpr (Event (EraRule "CERTS" era))
+  , ToExpr (Event (EraRule "GOV" era))
+  , ToExpr (Event (EraRule "SUBLEDGERS" era))
+  ) =>
+  ToExpr (DijkstraLedgerEvent era)
+
+instance
   ( ToExpr (Value era)
   , ToExpr (TxOut era)
   , ToExpr (PredicateFailure (EraRule "UTXOS" era))
@@ -208,8 +217,16 @@ instance
   ToExpr (DijkstraSubCertPredFailure era)
 
 instance
+  ToExpr (Event (EraRule "SUBPOOL" era)) =>
+  ToExpr (DijkstraSubCertEvent era)
+
+instance
   ToExpr (PredicateFailure (EraRule "SUBCERT" era)) =>
   ToExpr (DijkstraSubCertsPredFailure era)
+
+instance
+  ToExpr (Event (EraRule "SUBCERT" era)) =>
+  ToExpr (DijkstraSubCertsEvent era)
 
 instance ToExpr (DijkstraSubDelegPredFailure era)
 
@@ -221,21 +238,58 @@ instance
   ToExpr (DijkstraSubLedgerPredFailure era)
 
 instance
+  ( ToExpr (Event (EraRule "SUBGOV" era))
+  , ToExpr (Event (EraRule "SUBCERTS" era))
+  , ToExpr (Event (EraRule "SUBUTXOW" era))
+  ) =>
+  ToExpr (DijkstraSubLedgerEvent era)
+
+instance
   ToExpr (PredicateFailure (EraRule "SUBLEDGER" era)) =>
   ToExpr (DijkstraSubLedgersPredFailure era)
 
-instance ToExpr (DijkstraSubGovPredFailure era)
+instance
+  ToExpr (Event (EraRule "SUBLEDGER" era)) =>
+  ToExpr (DijkstraSubLedgersEvent era)
+
+instance
+  ToExpr (DijkstraGovPredFailure era) =>
+  ToExpr (DijkstraSubGovPredFailure era)
+
+instance ToExpr (ConwayGovEvent era) => ToExpr (DijkstraSubGovEvent era)
 
 instance ToExpr (DijkstraSubGovCertPredFailure era)
 
 instance ToExpr (DijkstraSubPoolPredFailure era)
 
+instance ToExpr (DijkstraSubPoolEvent era)
+
 instance
-  ToExpr (PredicateFailure (EraRule "SUBUTXOS" era)) =>
+  ( ToExpr (Value era)
+  , ToExpr (TxOut era)
+  , ToExpr (PredicateFailure (EraRule "SUBUTXOS" era))
+  ) =>
   ToExpr (DijkstraSubUtxoPredFailure era)
 
-instance ToExpr (DijkstraSubUtxosPredFailure era)
+instance
+  ToExpr (Event (EraRule "SUBUTXOS" era)) =>
+  ToExpr (DijkstraSubUtxoEvent era)
 
 instance
-  ToExpr (PredicateFailure (EraRule "SUBUTXO" era)) =>
+  ToExpr (ConwayUtxosPredFailure era) =>
+  ToExpr (DijkstraSubUtxosPredFailure era)
+
+instance ToExpr (TxOut era) => ToExpr (DijkstraSubUtxosEvent era)
+
+instance
+  ( Era era
+  , ToExpr (PredicateFailure (EraRule "SUBUTXO" era))
+  , ToExpr (PlutusPurpose AsIx era)
+  , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (TxCert era)
+  ) =>
   ToExpr (DijkstraSubUtxowPredFailure era)
+
+instance
+  ToExpr (Event (EraRule "SUBUTXO" era)) =>
+  ToExpr (DijkstraSubUtxowEvent era)

@@ -18,6 +18,7 @@
 module Cardano.Ledger.Dijkstra.Rules.SubCert (
   DijkstraSUBCERT,
   DijkstraSubCertPredFailure (..),
+  DijkstraSubCertEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -50,7 +51,7 @@ import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.Rules (PoolEnv (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
-import Data.Void (Void, absurd)
+import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -120,7 +121,7 @@ instance
 
 type instance EraRuleFailure "SUBCERT" DijkstraEra = DijkstraSubCertPredFailure DijkstraEra
 
-type instance EraRuleEvent "SUBCERT" DijkstraEra = VoidEraRule "SUBCERT" DijkstraEra
+type instance EraRuleEvent "SUBCERT" DijkstraEra = DijkstraSubCertEvent DijkstraEra
 
 instance InjectRuleFailure "SUBCERT" DijkstraSubCertPredFailure DijkstraEra
 
@@ -132,6 +133,15 @@ instance InjectRuleFailure "SUBCERT" DijkstraSubPoolPredFailure DijkstraEra wher
 
 instance InjectRuleFailure "SUBCERT" DijkstraSubGovCertPredFailure DijkstraEra where
   injectFailure = SubGovCertFailure
+
+instance InjectRuleEvent "SUBCERT" DijkstraSubCertEvent DijkstraEra
+
+newtype DijkstraSubCertEvent era = SubPoolEvent (Event (EraRule "SUBPOOL" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "SUBPOOL" era)) => Eq (DijkstraSubCertEvent era)
+
+instance NFData (Event (EraRule "SUBPOOL" era)) => NFData (DijkstraSubCertEvent era)
 
 instance
   ( ConwayEraGov era
@@ -152,7 +162,7 @@ instance
   type Environment (DijkstraSUBCERT era) = CertEnv era
   type BaseM (DijkstraSUBCERT era) = ShelleyBase
   type PredicateFailure (DijkstraSUBCERT era) = DijkstraSubCertPredFailure era
-  type Event (DijkstraSUBCERT era) = Void
+  type Event (DijkstraSUBCERT era) = DijkstraSubCertEvent era
 
   transitionRules = [dijkstraSubCertTransition @era]
 
@@ -204,7 +214,7 @@ instance
   Embed (DijkstraSUBPOOL era) (DijkstraSUBCERT era)
   where
   wrapFailed = SubPoolFailure
-  wrapEvent = absurd
+  wrapEvent = SubPoolEvent
 
 instance
   ( ConwayEraGov era

@@ -4,7 +4,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -18,6 +21,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubCerts (
   DijkstraSUBCERTS,
   SubCertsEnv (..),
   DijkstraSubCertsPredFailure (..),
+  DijkstraSubCertsEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes
@@ -44,12 +48,10 @@ import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
-import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data DijkstraSubCertsPredFailure era
-  = SubCertFailure (PredicateFailure (EraRule "SUBCERT" era))
+newtype DijkstraSubCertsPredFailure era = SubCertFailure (PredicateFailure (EraRule "SUBCERT" era))
   deriving (Generic)
 
 deriving stock instance
@@ -66,30 +68,35 @@ instance
   NFData (PredicateFailure (EraRule "SUBCERT" era)) =>
   NFData (DijkstraSubCertsPredFailure era)
 
-instance
+deriving newtype instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "SUBCERT" era))
   ) =>
   EncCBOR (DijkstraSubCertsPredFailure era)
-  where
-  encCBOR (SubCertFailure e) = encCBOR e
 
-instance
+deriving newtype instance
   ( Era era
   , DecCBOR (PredicateFailure (EraRule "SUBCERT" era))
   ) =>
   DecCBOR (DijkstraSubCertsPredFailure era)
-  where
-  decCBOR = SubCertFailure <$> decCBOR
 
 type instance EraRuleFailure "SUBCERTS" DijkstraEra = DijkstraSubCertsPredFailure DijkstraEra
 
-type instance EraRuleEvent "SUBCERTS" DijkstraEra = VoidEraRule "SUBCERTS" DijkstraEra
+type instance EraRuleEvent "SUBCERTS" DijkstraEra = DijkstraSubCertsEvent DijkstraEra
 
 instance InjectRuleFailure "SUBCERTS" DijkstraSubCertsPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBCERTS" DijkstraSubCertPredFailure DijkstraEra where
   injectFailure = SubCertFailure
+
+instance InjectRuleEvent "SUBCERTS" DijkstraSubCertsEvent DijkstraEra
+
+newtype DijkstraSubCertsEvent era = SubCertEvent (Event (EraRule "SUBCERT" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "SUBCERT" era)) => Eq (DijkstraSubCertsEvent era)
+
+instance NFData (Event (EraRule "SUBCERT" era)) => NFData (DijkstraSubCertsEvent era)
 
 instance
   ( ConwayEraGov era
@@ -105,7 +112,7 @@ instance
   type Environment (DijkstraSUBCERTS era) = SubCertsEnv era
   type BaseM (DijkstraSUBCERTS era) = ShelleyBase
   type PredicateFailure (DijkstraSUBCERTS era) = DijkstraSubCertsPredFailure era
-  type Event (DijkstraSUBCERTS era) = Void
+  type Event (DijkstraSUBCERTS era) = DijkstraSubCertsEvent era
 
   transitionRules = [dijkstraSubCertsTransition @era]
 
@@ -146,7 +153,7 @@ instance
   Embed (DijkstraSUBCERT era) (DijkstraSUBCERTS era)
   where
   wrapFailed = SubCertFailure
-  wrapEvent = absurd
+  wrapEvent = SubCertEvent
 
 -- TODO: instead of duplicating this, parameterize on TxLevel
 data SubCertsEnv era = SubCertsEnv

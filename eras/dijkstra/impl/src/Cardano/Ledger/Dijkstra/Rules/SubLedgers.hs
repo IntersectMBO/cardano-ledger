@@ -16,8 +16,10 @@
 module Cardano.Ledger.Dijkstra.Rules.SubLedgers (
   DijkstraSUBLEDGERS,
   DijkstraSubLedgersPredFailure (..),
+  DijkstraSubLedgersEvent (..),
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
@@ -51,7 +53,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.State.Transition.Extended
 import Data.OMap.Strict (OMap)
-import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -89,16 +90,27 @@ instance
 
 type instance EraRuleFailure "SUBLEDGERS" DijkstraEra = DijkstraSubLedgersPredFailure DijkstraEra
 
-type instance EraRuleEvent "SUBLEDGERS" DijkstraEra = VoidEraRule "SUBLEDGERS" DijkstraEra
+type instance EraRuleEvent "SUBLEDGERS" DijkstraEra = DijkstraSubLedgersEvent DijkstraEra
 
 instance InjectRuleFailure "SUBLEDGERS" DijkstraSubLedgersPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBLEDGERS" DijkstraSubLedgerPredFailure DijkstraEra where
   injectFailure = SubLedgerFailure
 
+instance InjectRuleEvent "SUBLEDGERS" DijkstraSubLedgersEvent DijkstraEra
+
+newtype DijkstraSubLedgersEvent era
+  = SubLedgerEvent (Event (EraRule "SUBLEDGER" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "SUBLEDGER" era)) => Eq (DijkstraSubLedgersEvent era)
+
+instance NFData (Event (EraRule "SUBLEDGER" era)) => NFData (DijkstraSubLedgersEvent era)
+
 instance
   ( ConwayEraGov era
   , ConwayEraCertState era
+  , EraPlutusContext era
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , Embed (EraRule "SUBLEDGER" era) (DijkstraSUBLEDGERS era)
@@ -110,7 +122,7 @@ instance
   type Environment (DijkstraSUBLEDGERS era) = LedgerEnv era
   type BaseM (DijkstraSUBLEDGERS era) = ShelleyBase
   type PredicateFailure (DijkstraSUBLEDGERS era) = DijkstraSubLedgersPredFailure era
-  type Event (DijkstraSUBLEDGERS era) = Void
+  type Event (DijkstraSUBLEDGERS era) = DijkstraSubLedgersEvent era
 
   transitionRules = [dijkstraSubLedgersTransition @era]
 
@@ -135,6 +147,7 @@ instance
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
+  , EraPlutusContext era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
@@ -150,4 +163,4 @@ instance
   Embed (DijkstraSUBLEDGER era) (DijkstraSUBLEDGERS era)
   where
   wrapFailed = SubLedgerFailure
-  wrapEvent = absurd
+  wrapEvent = SubLedgerEvent
