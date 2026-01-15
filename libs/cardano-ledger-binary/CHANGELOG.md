@@ -18,6 +18,8 @@
 
 ### `testlib`
 
+* Remove `Arbitrary` instances for `CertifiedVRF`, `SigDSIGN`, `SignKeyDSIGN`, `SignedDSIGN`, `VerKeyDSIGN`.
+  These have been moved to `cardano-crypto-class:testlib`.
 * Remove `Arbitrary` instances for `StrictSeq`, `StrictMaybe`.
   These have been moved to `cardano-strict-containers:testlib`.
 * Remove `Test.Cardano.Ledger.Binary.Cddl`
