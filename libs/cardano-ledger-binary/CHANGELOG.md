@@ -18,6 +18,8 @@
 
 ### `testlib`
 
+* Remove `Arbitrary` instances for `StrictSeq`, `StrictMaybe`.
+  These have been moved to `cardano-strict-containers:testlib`.
 * Remove `Test.Cardano.Ledger.Binary.Cddl`
 * Add `ToExpr` instances to `DeserialiseFailure` and `DecoderError`
 * Remove `assertExprEqualWithMessage`

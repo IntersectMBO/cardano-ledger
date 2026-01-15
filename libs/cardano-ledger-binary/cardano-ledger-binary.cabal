@@ -179,7 +179,7 @@ test-suite tests
     cardano-ledger-binary,
     cardano-prelude-test,
     cardano-slotting,
-    cardano-strict-containers,
+    cardano-strict-containers:{cardano-strict-containers, testlib},
     cborg,
     containers,
     hedgehog,
