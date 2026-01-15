@@ -99,8 +99,8 @@ if impl(ghc >=9.12)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-base.git
-  --sha256: sha256-wRqAU/CBzQCrRNrBo8wTtwoVacYi8DTxbjkiuNCS5bE=
-  tag: 6974b7053907594becec12ba49b2352c9b73b42f
+  --sha256: sha256-VRG4QbIsM6auNDABNCzK6MIA9S7yuxVATmYq0hrfGoM=
+  tag: 4254231210d564dbc9246e54631008e455008a4d
   subdir:
     base-deriving-via
     cardano-base
