@@ -97,6 +97,10 @@ if impl(ghc >=9.12)
     -- Unique: https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
 
+-- Drop this when the bounds in plutus-core are updated
+allow-newer:
+  plutus-core:cardano-crypto-class
+
 source-repository-package
   type: git
   location: https://github.com/tweag/cardano-cls.git
