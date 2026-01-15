@@ -100,7 +100,7 @@ test-suite cardano-data-tests
     base,
     cardano-data,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
-    cardano-strict-containers,
+    cardano-strict-containers:{cardano-strict-containers, testlib},
     containers,
     hspec,
     quickcheck-classes,

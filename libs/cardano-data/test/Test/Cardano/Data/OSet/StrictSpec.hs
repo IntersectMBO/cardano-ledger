@@ -14,6 +14,7 @@ import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set, elems, empty)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip (cborTrip, embedTripSpec, roundTripCborSpec)
+import Test.Cardano.StrictContainers.Instances ()
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Classes

@@ -231,6 +231,7 @@ library testlib
     cardano-ledger-byron:{cardano-ledger-byron, testlib},
     cardano-ledger-core,
     cardano-slotting,
+    cardano-strict-containers:testlib,
     containers,
     deepseq,
     generic-random,
