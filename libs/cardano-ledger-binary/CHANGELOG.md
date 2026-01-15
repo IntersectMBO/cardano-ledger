@@ -18,6 +18,8 @@
 
 ### `testlib`
 
+* Remove `Arbitrary` instances for `StrictSeq`, `StrictMaybe`.
+  These have been moved to `cardano-strict-containers:testlib`.
 * Add `huddleRoundTripGenValidate`
 * Remove `Test.Cardano.Ledger.Binary.Cddl`
 * Add `ToExpr` instances to `DeserialiseFailure` and `DecoderError`

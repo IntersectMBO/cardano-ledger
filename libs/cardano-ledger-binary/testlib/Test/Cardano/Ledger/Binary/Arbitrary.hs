@@ -35,12 +35,9 @@ import qualified Data.ByteString.Short as SBS
 #else
 import qualified Data.ByteString.Short.Internal as SBS
 #endif
-import qualified Data.Foldable as F
 import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
-import Data.Maybe.Strict
 import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
 import Data.Proxy (Proxy (..))
-import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.VMap as VMap
@@ -146,14 +143,6 @@ instance Arbitrary IPv6 where
   arbitrary = do
     t <- (,,,) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
     pure $ toIPv6w t
-
-instance Arbitrary e => Arbitrary (SSeq.StrictSeq e) where
-  arbitrary = SSeq.fromList <$> arbitrary
-  shrink = fmap SSeq.fromList . shrink . F.toList
-
-instance Arbitrary e => Arbitrary (StrictMaybe e) where
-  arbitrary = maybeToStrictMaybe <$> arbitrary
-  shrink = fmap maybeToStrictMaybe . shrink . strictMaybeToMaybe
 
 instance
   (Ord k, VMap.Vector kv k, VMap.Vector vv v, Arbitrary k, Arbitrary v) =>
