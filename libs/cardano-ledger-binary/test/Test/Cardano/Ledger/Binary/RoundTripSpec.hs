@@ -77,6 +77,7 @@ import Numeric.Natural
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.StrictContainers.Instances ()
+import Test.Crypto.Instances ()
 import Test.Hspec
 import Test.QuickCheck
 
