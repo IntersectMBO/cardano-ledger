@@ -166,7 +166,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   liftST,
 ) where
 
-import Cardano.Ledger.Binary.Network (IPv4 (..), IPv6 (..))
+import Cardano.Ledger.Binary.Network (IPv4, IPv6, toIPv4w, toIPv6w)
 import Cardano.Ledger.Binary.Plain (
   DecoderError (..),
   cborError,
@@ -262,7 +262,6 @@ import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Compose (Compose (..))
-import qualified Data.IP as IP
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
 import qualified Data.List.NonEmpty as NE (NonEmpty, nonEmpty)
@@ -1180,7 +1179,7 @@ binaryGetDecoder allowLeftOver name getter = do
 
 decodeIPv4 :: Decoder s IPv4
 decodeIPv4 =
-  IPv4 . IP.fromHostAddress
+  toIPv4w
     <$> ifDecoderVersionAtLeast
       (natVersion @9)
       (binaryGetDecoder False "decodeIPv4" getWord32le)
@@ -1198,7 +1197,7 @@ getHostAddress6 = do
 
 decodeIPv6 :: Decoder s IPv6
 decodeIPv6 =
-  IPv6 . IP.fromHostAddress6
+  toIPv6w
     <$> ifDecoderVersionAtLeast
       (natVersion @9)
       (binaryGetDecoder False "decodeIPv6" getHostAddress6)

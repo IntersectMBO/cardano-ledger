@@ -1,24 +1,25 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 -- | This module provides newtype wrappers for 'IPv4' and 'IPv6' addresses
 -- from the @iproute@ package. These wrappers exist to have a correct 'Show'
 -- instance and eliminate the need for orphan instances.
 module Cardano.Ledger.Binary.Network (
-  IPv4 (..),
-  IPv6 (..),
+  IPv4,
+  IPv6,
   toIPv4,
   toIPv4w,
   fromIPv4,
+  fromIPv4w,
   toIPv6,
   toIPv6w,
   fromIPv6,
+  fromIPv6w,
 ) where
 
-import Control.DeepSeq (NFData (..), rwhnf)
+import Control.DeepSeq (NFData (..), force, rwhnf)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.IP as IP
@@ -68,11 +69,10 @@ newtype IPv6 = IPv6 {unIPv6 :: IP.IPv6}
   deriving stock (Generic)
 
 instance NFData IPv6 where
-  rnf = rwhnf
+  rnf ipv6 = rnf (fromIPv6w ipv6)
 
--- Pattern matching to force WHNF, then it's all newtypes and Word32 in there
 instance NoThunks IPv6 where
-  wNoThunks _ (IPv6 _) = return Nothing
+  wNoThunks ctx ipv6 = wNoThunks ctx (fromIPv6w ipv6)
   showTypeOf _ = "IPv6"
 
 -- >>> show (toIPv6 [0x2001, 0xdb8, 0, 0, 0, 0, 0, 1])
@@ -109,13 +109,20 @@ toIPv4w = IPv4 . IP.toIPv4w
 fromIPv4 :: IPv4 -> [Int]
 fromIPv4 = IP.fromIPv4 . unIPv4
 
+fromIPv4w :: IPv4 -> Word32
+fromIPv4w = IP.fromIPv4w . unIPv4
+
 -- >>> toIPv6 [0x2001, 0xdb8, 0, 0, 0, 0, 0, 1]
 -- "2001:db8::1"
 toIPv6 :: [Int] -> IPv6
-toIPv6 = IPv6 . IP.toIPv6
+toIPv6 = toIPv6w . IP.toHostAddress6 . IP.toIPv6
 
 toIPv6w :: (Word32, Word32, Word32, Word32) -> IPv6
-toIPv6w = IPv6 . IP.toIPv6w
+toIPv6w (!w1, !w2, !w3, !w4) = IPv6 (IP.toIPv6w (w1, w2, w3, w4))
 
 fromIPv6 :: IPv6 -> [Int]
-fromIPv6 = IP.fromIPv6 . unIPv6
+fromIPv6 (IPv6 ip) = force (IP.fromIPv6 ip)
+
+fromIPv6w :: IPv6 -> (Word32, Word32, Word32, Word32)
+fromIPv6w (IPv6 ip) = case IP.toHostAddress6 ip of
+  t@(!_, !_, !_, !_) -> t
