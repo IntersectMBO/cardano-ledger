@@ -1,12 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.Arbitrary (
@@ -17,9 +14,6 @@ module Test.Cardano.Ledger.Binary.Arbitrary (
   genShortByteString,
 ) where
 
-import Cardano.Crypto.DSIGN.Class hiding (Signable)
-import Cardano.Crypto.Util
-import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Binary.Version
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
@@ -147,36 +141,6 @@ instance
   where
   arbitrary = VMap.fromMap <$> arbitrary
   shrink = fmap VMap.fromList . shrink . VMap.toList
-
-instance DSIGNAlgorithm v => Arbitrary (VerKeyDSIGN v) where
-  arbitrary = deriveVerKeyDSIGN <$> arbitrary
-
-errorInvalidSize :: HasCallStack => Int -> Maybe a -> Gen a
-errorInvalidSize n = maybe (error $ "Impossible: Invalid size " ++ show n) pure
-
-instance DSIGNAlgorithm v => Arbitrary (SignKeyDSIGN v) where
-  arbitrary = do
-    let n = fromIntegral (signKeySizeDSIGN (Proxy @v))
-    bs <- genByteString n
-    errorInvalidSize n $ rawDeserialiseSignKeyDSIGN bs
-
-instance DSIGNAlgorithm v => Arbitrary (SigDSIGN v) where
-  arbitrary = do
-    let n = fromIntegral (sigSizeDSIGN (Proxy @v))
-    bs <- genByteString n
-    errorInvalidSize n $ rawDeserialiseSigDSIGN bs
-
-instance DSIGNAlgorithm v => Arbitrary (SignedDSIGN v a) where
-  arbitrary = SignedDSIGN <$> arbitrary
-
-instance
-  (ContextVRF v ~ (), Signable v ~ SignableRepresentation, VRFAlgorithm v) =>
-  Arbitrary (CertifiedVRF v a)
-  where
-  arbitrary = CertifiedVRF <$> arbitrary <*> genCertVRF
-    where
-      genCertVRF :: Gen (CertVRF v)
-      genCertVRF = arbitrary
 
 instance Arbitrary Version where
   arbitrary = genVersion minBound maxBound

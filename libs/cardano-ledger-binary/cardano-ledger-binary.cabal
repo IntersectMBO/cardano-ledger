@@ -174,7 +174,7 @@ test-suite tests
     QuickCheck,
     base,
     bytestring,
-    cardano-crypto-class,
+    cardano-crypto-class:{cardano-crypto-class, testlib},
     cardano-crypto-praos,
     cardano-ledger-binary,
     cardano-prelude-test,
