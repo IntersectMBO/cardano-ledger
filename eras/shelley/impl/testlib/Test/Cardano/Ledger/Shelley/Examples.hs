@@ -115,7 +115,7 @@ deriving instance
 ledgerExamples :: LedgerExamples ShelleyEra
 ledgerExamples =
   mkLedgerExamples
-    ( ShelleyApplyTxError . pure . DelegsFailure $
+    ( ShelleyApplyTxError . pure . DelegsFailure . DelplFailure . DelegFailure $
         DelegateeNotRegisteredDELEG @ShelleyEra (mkKeyHash 1)
     )
     (mkWitnessesPreAlonzo (Proxy @ShelleyEra))

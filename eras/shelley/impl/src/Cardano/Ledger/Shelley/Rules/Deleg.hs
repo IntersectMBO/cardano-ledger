@@ -118,6 +118,9 @@ data ShelleyDelegPredFailure era
   | MIRNegativeTransfer
       MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
       Coin -- amount attempted to transfer
+  | -- | Target pool which is not registered
+    DelegateeNotRegisteredDELEG
+      (KeyHash StakePool)
   deriving (Show, Eq, Generic)
 
 type instance EraRuleFailure "DELEG" ShelleyEra = ShelleyDelegPredFailure ShelleyEra
@@ -192,6 +195,8 @@ instance Era era => EncCBOR (ShelleyDelegPredFailure era) where
         <> encCBOR (15 :: Word8)
         <> encCBOR pot
         <> encCBOR amt
+    DelegateeNotRegisteredDELEG kh ->
+      encodeListLen 2 <> encCBOR (16 :: Word8) <> encCBOR kh
 
 instance
   (Era era, Typeable (Script era)) =>
@@ -243,6 +248,9 @@ instance
         pot <- decCBOR
         amt <- decCBOR
         pure (3, MIRNegativeTransfer pot amt)
+      16 -> do
+        kh <- decCBOR
+        pure (2, DelegateeNotRegisteredDELEG kh)
       k -> invalidKey k
 
 delegationTransition ::
@@ -283,6 +291,9 @@ delegationTransition = do
               & certPStateL
                 %~ unDelegReDelegStakePool cred accountState Nothing
     DelegStakeTxCert cred stakePool -> do
+      -- validate that target pool is registered
+      Map.member stakePool (psStakePools (certState ^. certPStateL))
+        ?! DelegateeNotRegisteredDELEG stakePool
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
       case lookupAccountStateIntern cred (ds ^. accountsL) of
