@@ -43,7 +43,9 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBPOOL,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubCert (DijkstraSubCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
 import Cardano.Ledger.Dijkstra.TxCert
+import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import qualified Data.Map.Strict as Map
@@ -148,6 +150,10 @@ instance
   , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
   , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
   , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
+  , InjectRuleEvent "SUBPOOL" PoolEvent era
+  , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBCERT era) (DijkstraSUBCERTS era)
