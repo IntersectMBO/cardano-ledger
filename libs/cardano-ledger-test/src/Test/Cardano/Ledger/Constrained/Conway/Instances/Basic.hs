@@ -441,3 +441,17 @@ instance HasSimpleRep (NonZero Word64) where
   fromSimpleRep = unsafeNonZero
 
 instance HasSpec (NonZero Word64)
+
+instance HasSimpleRep (NonZero Integer) where
+  type SimpleRep (NonZero Integer) = Integer
+  toSimpleRep = unNonZero
+  fromSimpleRep = unsafeNonZero
+
+instance HasSpec (NonZero Integer)
+
+instance HasSimpleRep (NonZero Coin) where
+  type SimpleRep (NonZero Coin) = Coin
+  toSimpleRep = unNonZero
+  fromSimpleRep = unsafeNonZero
+
+instance HasSpec (NonZero Coin)

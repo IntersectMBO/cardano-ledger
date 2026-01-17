@@ -21,7 +21,6 @@ import Cardano.Ledger.Api.State.Query (
   queryCommitteeMembersState,
  )
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
@@ -72,7 +71,6 @@ spec = do
 committeeMembersStateSpec ::
   forall era.
   ( ConwayEraGov era
-  , Default (EpochState era)
   , Default (StashedAVVMAddresses era)
   , GovState era ~ ConwayGovState era
   , ConwayEraCertState era
@@ -96,15 +94,7 @@ committeeMembersStateSpec =
               nextRatifyState =
                 (def @(RatifyState era))
                   & rsEnactStateL . ensCommitteeL .~ maybeToStrictMaybe nextCommittee
-              defNewEpochState =
-                NewEpochState @era
-                  (EpochNo 0)
-                  (BlocksMade def)
-                  (BlocksMade def)
-                  def
-                  def
-                  (PoolDistr def $ CompactCoin 1)
-                  def
+              defNewEpochState = def @(NewEpochState era)
           -- replace some cold and hot keys from the filter with known ones from both
           -- committee and committeeState
           forAll (genRelevantColdCredsFilter committee committeeState) $ \ckFilter ->

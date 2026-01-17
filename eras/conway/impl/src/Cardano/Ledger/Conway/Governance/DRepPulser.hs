@@ -42,6 +42,8 @@ import Cardano.Ledger.BaseTypes (
   Globals (..),
   KeyValuePairs (..),
   ToKeyValuePairs (..),
+  unNonZero,
+  unsafeNonZero,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -230,7 +232,7 @@ computeDRepDistr instantStake regDReps proposalDeposits poolDistr dRepDistr =
       pure $
         distr
           & poolDistrDistrL %~ Map.insert stakePool (ips & individualTotalPoolStakeL <>~ proposalDeposit)
-          & poolDistrTotalL <>~ proposalDeposit
+          & poolDistrTotalL %~ \t -> unsafeNonZero (unNonZero t <> fromCompact proposalDeposit)
     addToDRepDistr accountState stakeAndDeposits distr = fromMaybe distr $ do
       dRep <- accountState ^. dRepDelegationAccountStateL
       let

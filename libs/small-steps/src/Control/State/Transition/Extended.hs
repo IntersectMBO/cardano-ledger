@@ -488,7 +488,7 @@ whenFailureFreeDefault defValOnFailure actionOnNoFailure =
 
 liftSTS ::
   STS sts =>
-  (BaseM sts) a ->
+  BaseM sts a ->
   Rule sts ctx a
 liftSTS f = wrap $ Lift f pure
 
