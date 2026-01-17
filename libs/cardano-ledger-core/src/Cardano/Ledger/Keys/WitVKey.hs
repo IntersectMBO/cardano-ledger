@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -53,7 +54,13 @@ deriving via
 instance NFData (WitVKey kr) where
   rnf WitVKeyInternal {wvkKeyHash} = wvkKeyHash `seq` ()
 
-instance Typeable kr => Ord (WitVKey kr) where
+instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  Typeable kr =>
+#endif
+  Ord (WitVKey kr) where
   compare x y =
     -- It is advised against comparison on keys and signatures directly,
     -- therefore we use hashes of verification keys and signatures for

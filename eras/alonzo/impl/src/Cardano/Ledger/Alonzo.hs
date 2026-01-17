@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,7 +15,11 @@ module Cardano.Ledger.Alonzo (
   AlonzoEra,
   AlonzoTxOut,
   MaryValue,
+#if __GLASGOW_HASKELL__ >= 914
+  data AlonzoTxBody,
+#else
   pattern AlonzoTxBody,
+#endif
   AlonzoScript,
   AlonzoTxAuxData,
   Tx (..),

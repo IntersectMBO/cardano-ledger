@@ -359,18 +359,24 @@ fromRatioBoundedRatio ratio
     upperBound = maxBound :: BoundedRatio b a
 
 instance
-  (ToCBOR a, Integral a, Bounded a, Typeable b, Typeable (BoundedRatio b a)) =>
+  (ToCBOR a
+#if __GLASGOW_HASKELL__ < 914  
+  , Integral a, Bounded a, Typeable b
+#endif
+  , Typeable (BoundedRatio b a)) =>
   ToCBOR (BoundedRatio b a)
   where
   toCBOR (BoundedRatio u) = Plain.encodeRatioWithTag toCBOR u
 
 instance
-  ( FromCBOR a
-  , Bounded (BoundedRatio b a)
+  ( Bounded (BoundedRatio b a)
   , Bounded a
   , Integral a
+#if __GLASGOW_HASKELL__ < 914  
+  , FromCBOR a
   , Typeable b
   , Show a
+#endif
   , Typeable (BoundedRatio b a)
   ) =>
   FromCBOR (BoundedRatio b a)

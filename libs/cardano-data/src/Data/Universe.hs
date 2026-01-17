@@ -44,7 +44,11 @@ module Data.Universe (
 
 import Data.Kind (Type)
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+#if __GLASGOW_HASKELL__ < 914
 import Type.Reflection (TypeRep, pattern App, pattern Con)
+#else
+import Type.Reflection (TypeRep, data App, data Con)
+#endif
 
 -- ==================================================
 

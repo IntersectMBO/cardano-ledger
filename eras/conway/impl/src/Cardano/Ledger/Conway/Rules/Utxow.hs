@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -207,8 +208,12 @@ instance
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
+#endif
   ) =>
   STS (ConwayUTXOW era)
   where

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -18,8 +19,13 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
+#if __GLASGOW_HASKELL__ < 914
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#else
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
@@ -44,7 +50,11 @@ import Cardano.Ledger.Dijkstra.Rules (
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript,
   evalDijkstraNativeScript,
+#if __GLASGOW_HASKELL__ < 914
   pattern RequireGuard,
+#else
+  data RequireGuard,
+#endif
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
@@ -52,10 +62,17 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ < 914
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
   pattern RequireSignature,
+#else
+  data RequireAllOf,
+  data RequireAnyOf,
+  data RequireMOf,
+  data RequireSignature,
+#endif
  )
 import Cardano.Ledger.State
 import Data.List.NonEmpty (NonEmpty)

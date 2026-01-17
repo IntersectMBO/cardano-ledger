@@ -1,9 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unused-foralls #-}
 
@@ -22,7 +24,11 @@ import Cardano.Ledger.Alonzo.Core (
   EraTxWits (..),
   TxLevel (..),
   eraProtVerLow,
+#if __GLASGOW_HASKELL__ < 914
   pattern SpendingPurpose,
+#else
+  data SpendingPurpose,
+#endif
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), unRedeemers)

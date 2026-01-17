@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -253,7 +254,11 @@ data AlonzoTxWitsRaw era = AlonzoTxWitsRaw
 instance
   ( Era era
   , NFData (Script era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , NFData (TxDats era)
+#endif
   , NFData (Redeemers era)
   ) =>
   NFData (AlonzoTxWitsRaw era)
@@ -279,7 +284,11 @@ instance AlonzoEraScript era => Monoid (AlonzoTxWits era) where
 deriving instance
   ( Era era
   , NFData (Script era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , NFData (TxDats era)
+#endif
   , NFData (Redeemers era)
   ) =>
   NFData (AlonzoTxWits era)

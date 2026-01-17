@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -11,14 +12,20 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Dijkstra.Arbitrary () where
 
 import Cardano.Ledger.Allegra.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.BaseTypes (PerasCert (..), StrictMaybe)
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure, ConwayUtxosPredFailure)
@@ -35,7 +42,11 @@ import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireSignature,
+#else
   pattern RequireSignature,
+#endif
  )
 import Data.Functor.Identity (Identity)
 import qualified Data.OMap.Strict as OMap
@@ -129,7 +140,11 @@ sizedDijkstraNativeScript n =
          , RequireGuard <$> arbitrary
          ]
 
-instance (Arbitrary (TxBody l DijkstraEra), Typeable l) => Arbitrary (Tx l DijkstraEra) where
+instance (
+#if __GLASGOW_HASKELL__ > 914
+    Arbitrary (TxBody l DijkstraEra),
+#endif
+    Typeable l) => Arbitrary (Tx l DijkstraEra) where
   arbitrary =
     fmap MkDijkstraTx . withSTxBothLevels @l $ \case
       -- Per CIP-0167, Dijkstra transactions should always have isValid = True
@@ -152,7 +167,9 @@ instance
   ( EraPParams era
   , Arbitrary (PlutusPurpose AsItem era)
   , Arbitrary (PlutusPurpose AsIx era)
+#if __GLASGOW_HASKELL__ < 914
   , Arbitrary (PParamsHKD Identity era)
+#endif
   , Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (TxCert era)
   , Arbitrary (TxOut era)
@@ -193,7 +210,9 @@ instance
 instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
+#if __GLASGOW_HASKELL__ < 914
   , Arbitrary (TxCert era)
+#endif
   , Arbitrary (PlutusPurpose AsItem era)
   , Arbitrary (PlutusPurpose AsIx era)
   ) =>

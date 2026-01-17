@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -27,7 +28,11 @@ module Cardano.Ledger.Conway.Rules.Gov (
   GovSignal (..),
   ConwayGovEvent (..),
   ConwayGovPredFailure (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data InvalidPolicyHash,
+#else
   pattern InvalidPolicyHash,
+#endif
   unelectedCommitteeVoters,
   conwayGovTransition,
   checkGuardrailsScriptHash,

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -45,8 +46,12 @@ roundTripStateEraTypesSpec ::
   , DecCBOR (StashedAVVMAddresses era)
   , Arbitrary (StashedAVVMAddresses era)
   , Arbitrary (TxOut era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Arbitrary (Value era)
   , Arbitrary (PParams era)
+#endif
   , Arbitrary (GovState era)
   , Arbitrary (CertState era)
   , Arbitrary (InstantStake era)

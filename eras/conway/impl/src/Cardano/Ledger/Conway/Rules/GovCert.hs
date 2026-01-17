@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -155,8 +156,12 @@ instance
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , EraRule "GOVCERT" era ~ ConwayGOVCERT era
   , InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
+#endif
   , ConwayEraCertState era
   ) =>
   STS (ConwayGOVCERT era)

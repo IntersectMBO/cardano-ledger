@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,7 +15,11 @@
 module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
 import qualified Cardano.Crypto.VRF as VRF
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Address (Addr (..), raCredential, data RewardAccount)
+#else
 import Cardano.Ledger.Address (Addr (..), raCredential, pattern RewardAccount)
+#endif
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
