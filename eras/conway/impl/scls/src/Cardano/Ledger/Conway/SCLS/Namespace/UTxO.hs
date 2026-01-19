@@ -13,17 +13,23 @@
 module Cardano.Ledger.Conway.SCLS.Namespace.UTxO (
   UtxoKey (..),
   UtxoOut (..),
-  ToCanonicalCBOR (..),
-  FromCanonicalCBOR (..),
+
+  module Cardano.Ledger.SCLS.Namespace.UTxO.V0,
 ) where
 
+import Cardano.Ledger.SCLS.Namespace.UTxO.V0
+{-
 import Cardano.Ledger.Address
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), TimelockRaw (..))
+-}
+import Cardano.Ledger.Allegra.Scripts (Timelock (..){-, TimelockRaw (..)-})
+{-
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   decodePlutusScript,
  )
+-}
 import qualified Cardano.Ledger.Babbage.TxOut as Babbage
+{-
 import Cardano.Ledger.Binary (
   decodeMemPack,
   encodeMemPack,
@@ -32,16 +38,24 @@ import Cardano.Ledger.Binary (
   toPlainEncoding,
  )
 import Cardano.Ledger.Compactible (CompactForm (..))
+-}
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.SCLS.Common ()
+{-
+import Cardano.Ledger.SCLS.Common ()
 import Cardano.Ledger.SCLS.LedgerCBOR (LedgerCBOR (..), LedgerCBORSafe (..))
-import Cardano.Ledger.Conway.Scripts ()
+-}
+import Cardano.Ledger.Conway.Scripts (AlonzoScript(..), PlutusScript(..))
+{-
 import Cardano.Ledger.Hashes (originalBytes)
 import Cardano.Ledger.Mary (MaryValue)
-import Cardano.Ledger.MemoBytes (mkMemoizedEra)
-import Cardano.Ledger.Plutus.Data (BinaryData, Datum (..))
+-}
+-- import Cardano.Ledger.MemoBytes (mkMemoizedEra, getMemoRawType)
+import Cardano.Ledger.Plutus.Data ({-BinaryData,-} Datum (..))
+{-
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
+-}
 import qualified Cardano.Ledger.Shelley.TxOut as Shelley
+{-
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.SCLS.CBOR.Canonical (
   assumeCanonicalDecoder,
@@ -270,3 +284,34 @@ instance CanonicalCBOREntryEncoder "utxo/v0" UtxoOut where
 
 instance CanonicalCBOREntryDecoder "utxo/v0" UtxoOut where
   decodeEntry = fromCanonicalCBOR
+-}
+
+instance IsCanonicalScript (AlonzoScript ConwayEra) where
+  mkCanonicalScript (NativeScript n) = CanonicalScriptNative (mkCanonicalNativeScript n)
+  mkCanonicalScript (PlutusScript bs) = CanonicalScriptPlutus (mkCanonicalPlutusScript bs)
+  fromCanonicalScript (CanonicalScriptNative n) = NativeScript (fromCanonicalNativeScript n)
+  fromCanonicalScript (CanonicalScriptPlutus n) = PlutusScript (fromCanonicalPlutusScript n)
+
+instance IsCanonicalPlutusScript (PlutusScript ConwayEra) where
+  mkCanonicalPlutusScript = undefined
+  fromCanonicalPlutusScript = undefined
+
+instance IsCanonicalNativeScript (Timelock ConwayEra) where
+  mkCanonicalNativeScript = undefined
+  fromCanonicalNativeScript = undefined
+
+instance IsCanonicalDatum (Datum ConwayEra) where
+  mkCanonicalDatum NoDatum = CanonicalNoDatum
+  mkCanonicalDatum (DatumHash dh) = CanonicalDatumHash dh
+  mkCanonicalDatum (Datum d) = CanonicalDatum (undefined d)
+  fromCanonicalDatum CanonicalNoDatum = NoDatum
+  fromCanonicalDatum (CanonicalDatumHash bs) = DatumHash bs
+  fromCanonicalDatum (CanonicalDatum d) = Datum (undefined d)
+
+instance IsCanonicalBabbageTxOut (Babbage.BabbageTxOut ConwayEra) where
+  mkCanonicalBabbageTxOut = undefined
+  fromCanonicalBabbageTxOut = undefined
+
+instance IsCanonicalShelleyTxOut (Shelley.ShelleyTxOut ConwayEra) where
+  mkCanonicalShelleyTxOut = undefined
+  fromCanonicalShelleyTxOut = undefined

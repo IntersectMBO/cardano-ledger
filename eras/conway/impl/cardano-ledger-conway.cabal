@@ -249,15 +249,10 @@ library testlib
 library scls
   exposed-modules:
     Cardano.Ledger.Conway.SCLS
-    Cardano.Ledger.Conway.SCLS.Common
     Cardano.Ledger.Conway.SCLS.Namespace.GovCommittee
     Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution
     Cardano.Ledger.Conway.SCLS.Namespace.GovPParams
     Cardano.Ledger.Conway.SCLS.Namespace.GovProposals
-    Cardano.Ledger.Conway.SCLS.Namespace.Nonces
-    Cardano.Ledger.Conway.SCLS.Namespace.PoolStake
-    Cardano.Ledger.Conway.SCLS.Namespace.Pots
-    Cardano.Ledger.Conway.SCLS.Namespace.Snapshots
     Cardano.Ledger.Conway.SCLS.Namespace.UTxO
 
   visibility: public
@@ -275,27 +270,23 @@ library scls
 
   build-depends:
     base,
-    bytestring,
+    -- bytestring,
     cardano-canonical,
-    cardano-crypto-class,
     cardano-ledger-allegra,
     cardano-ledger-alonzo,
     cardano-ledger-babbage,
-    cardano-ledger-binary,
+    -- cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core,
-    cardano-ledger-mary,
+    -- cardano-ledger-mary,
     cardano-ledger-shelley,
-    cardano-slotting,
-    cardano-strict-containers,
-    cborg,
+    -- cardano-slotting,
+    -- cardano-strict-containers,
+    -- cborg,
     containers,
-    mempack,
-    mempack-scls,
-    scls-cardano,
-    scls-cbor,
-    scls-core,
-    text,
+    -- mempack,
+    -- scls-cbor,
+    -- scls-core,
 
 library scls-testlib
   exposed-modules:
@@ -318,9 +309,12 @@ library scls-testlib
     QuickCheck,
     base,
     cardano-ledger-babbage:testlib,
-    cardano-ledger-conway:{scls, testlib},
+    cardano-ledger-shelley,
+    cardano-ledger-babbage,
+    cardano-ledger-conway:{cardano-ledger-conway, scls, testlib},
     cardano-ledger-core:testlib,
-    cardano-canonical,
+    cardano-ledger-core,
+    cardano-canonical:{cardano-canonical,testlib},
     generic-random,
 
 executable gen-golden
@@ -376,8 +370,9 @@ test-suite tests
     cardano-ledger-binary:testlib,
     cardano-ledger-conway:{cardano-ledger-conway, cddl, scls, scls-testlib, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-mary,
-    cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    -- cardano-ledger-mary,
+    cardano-ledger-shelley:{testlib},
+    scls-cbor,
     scls-cardano:testlib,
     -- cardano-canonical,
     testlib,
