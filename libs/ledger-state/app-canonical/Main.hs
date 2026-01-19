@@ -18,7 +18,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.SCLS
+import Cardano.Ledger.Conway.SCLS hiding (SlotNo, Network(..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.TxOut as Shelley ()
@@ -179,7 +179,7 @@ main = do
             & addNamespacedChunks
               (Proxy @"utxo/v0")
               ( S.each
-                  [ ChunkEntry (UtxoKeyIn txin) (UtxoOutBabbage txout)
+                  [ ChunkEntry (UtxoKeyIn txin) (UtxoOutBabbage (mkCanonicalBabbageTxOut txout))
                   | (txin, txout) <- Map.toList utxo0
                   ]
               )
@@ -202,11 +202,11 @@ main = do
                   [ ChunkEntry
                       (PotsIn epoch)
                       PotsOut
-                        { poFee = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosFeesL
-                        , poDeposit = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
-                        , poDonation = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDonationL
-                        , poReserves = nes ^. nesEsL . to (esChainAccountState) . casReservesL
-                        , poTreasury = nes ^. nesEsL . to (esChainAccountState) . casReservesL
+                        { poFee = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosFeesL . to mkCanonicalCoin
+                        , poDeposit = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL . to mkCanonicalCoin
+                        , poDonation = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDonationL . to mkCanonicalCoin
+                        , poReserves = nes ^. nesEsL . to (esChainAccountState) . casReservesL . to mkCanonicalCoin
+                        , poTreasury = nes ^. nesEsL . to (esChainAccountState) . casTreasuryL . to mkCanonicalCoin
                         }
                   ]
               )
@@ -227,7 +227,7 @@ main = do
                         nes ^. nesEsL . esSnapshotsL . ssStakeSetL . ssPoolParamsL . to (VMap.toList)
                     ]
                   <> S.each
-                    [ ChunkEntry (SnapShotInCred SnapShotStageSet poolHash SnapShotValueCoin) (SnapShotOutCoin coin)
+                    [ ChunkEntry (SnapShotInCred SnapShotStageSet poolHash SnapShotValueCoin) (SnapShotOutCoin $ mkCanonicalCoin coin)
                     | (poolHash, fromCompact -> coin) <-
                         nes ^. nesEsL . esSnapshotsL . ssStakeSetL . ssStakeDistrL . to (VMap.toList)
                     ]
@@ -246,12 +246,12 @@ main = do
                         nes ^. nesEsL . esSnapshotsL . ssStakeMarkL . ssPoolParamsL . to (VMap.toList)
                     ]
                   <> S.each
-                    [ ChunkEntry (SnapShotInCred SnapshotStageMark poolHash SnapShotValueCoin) (SnapShotOutCoin coin)
+                    [ ChunkEntry (SnapShotInCred SnapshotStageMark poolHash SnapShotValueCoin) (SnapShotOutCoin $ mkCanonicalCoin coin)
                     | (poolHash, fromCompact -> coin) <-
                         nes ^. nesEsL . esSnapshotsL . ssStakeMarkL . ssStakeDistrL . to (VMap.toList)
                     ]
                   <> S.each
-                    [ ChunkEntry (SnapShotInCred SnapshotStageGo poolHash SnapShotValueCoin) (SnapShotOutCoin coin)
+                    [ ChunkEntry (SnapShotInCred SnapshotStageGo poolHash SnapShotValueCoin) (SnapShotOutCoin $ mkCanonicalCoin coin)
                     | (poolHash, fromCompact -> coin) <-
                         nes ^. nesEsL . esSnapshotsL . ssStakeGoL . ssStakeDistrL . to (VMap.toList)
                     ]
@@ -261,7 +261,7 @@ main = do
                         nes ^. nesEsL . esSnapshotsL . ssStakeGoL . ssDelegationsL . to (VMap.toList)
                     ]
                   <> S.each
-                    [ ChunkEntry (SnapShotInCred SnapshotStageGo poolHash SnapShotValueCoin) (SnapShotOutCoin coin)
+                    [ ChunkEntry (SnapShotInCred SnapshotStageGo poolHash SnapShotValueCoin) (SnapShotOutCoin $ mkCanonicalCoin coin)
                     | (poolHash, fromCompact -> coin) <-
                         nes ^. nesEsL . esSnapshotsL . ssStakeGoL . ssStakeDistrL . to (VMap.toList)
                     ]
@@ -272,7 +272,7 @@ main = do
                   [ ChunkEntry
                       (PoolStakeIn cred)
                       ( PoolStakeOut
-                          (fromCompact individualTotalPoolStake)
+                          (mkCanonicalCoin individualTotalPoolStake)
                           (mkCanonicalVRFVerKeyHash individualPoolStakeVrf)
                       )
                   | (cred, IndividualPoolStake {..}) <- nes ^. nesPdL . poolDistrDistrL . to (Map.toList)
@@ -301,7 +301,7 @@ main = do
             & addNamespacedChunks
               (Proxy @"gov/proposals/v0")
               ( S.each
-                  [ ChunkEntry (GovProposalIn gasId) (mkCanonicalGovActionState g)
+                  [ ChunkEntry (GovProposalIn (mkCanonicalGovActionId gasId)) (mkCanonicalGovActionState g)
                   | let proposals = nes & flip queryProposals Set.empty
                   , g@GovActionState {..} <- toList proposals
                   ]

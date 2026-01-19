@@ -2,6 +2,7 @@
 --
 -- As per @adr-010@ we just re-use existing base types without an wrappers.
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -21,16 +22,22 @@ module Cardano.Ledger.SCLS.BaseTypes
 
 import Cardano.Ledger.BaseTypes as Export
   ( Anchor(..),
+    -- CertIx
     EpochNo(..),
+    -- EpochSize
     EpochInterval(..),
+    -- BlockNo
     NonNegativeInterval,
     Port,
     ProtVer(..),
     SlotNo(..),
+    Network (..),
+    -- TxIx
     UnitInterval,
     Url(..),
     StrictMaybe(..),
     DnsName(..),
+    Nonce (..),
   )
 import Cardano.Ledger.BaseTypes (
   textToDns,
@@ -43,7 +50,6 @@ import Cardano.SCLS.CBOR.Canonical (
  )
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
-  -- decodeListLenCanonicalOf,
   peekTokenType,
  )
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
