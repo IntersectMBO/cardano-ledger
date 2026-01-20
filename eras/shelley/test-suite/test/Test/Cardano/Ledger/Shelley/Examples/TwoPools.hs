@@ -234,14 +234,14 @@ expectedStEx1 =
     . C.newLab blockEx1
     . C.addFees feeTx1
     . C.newUTxO txbodyEx1
+    . C.delegation Cast.aliceSHK (sppId aliceStakePoolParams')
+    . C.delegation Cast.bobSHK (sppId bobStakePoolParams')
+    . C.delegation Cast.carlSHK (sppId aliceStakePoolParams')
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 1))
     . C.newStakeCred Cast.carlSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 2))
     . C.regPool aliceStakePoolParams'
     . C.regPool bobStakePoolParams'
-    . C.delegation Cast.aliceSHK (sppId aliceStakePoolParams')
-    . C.delegation Cast.bobSHK (sppId bobStakePoolParams')
-    . C.delegation Cast.carlSHK (sppId aliceStakePoolParams')
     $ initStTwoPools
 
 -- === Block 1, Slot 10, Epoch 0
