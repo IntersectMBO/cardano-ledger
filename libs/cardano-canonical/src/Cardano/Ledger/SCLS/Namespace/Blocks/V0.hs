@@ -1,23 +1,24 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 -- | Definitions for the "blocks/v0" SCLS namespace.
 module Cardano.Ledger.SCLS.Namespace.Blocks.V0 (
   BlockIn (..),
   BlockOut (..),
 ) where
 
-import Cardano.Ledger.SCLS.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Keys (KeyHash, StakePool)
-import Cardano.SCLS.CDDL ()
+import Cardano.Ledger.SCLS.BaseTypes (EpochNo (..))
 import Cardano.SCLS.CBOR.Canonical.Decoder as D
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
+import Cardano.SCLS.CDDL ()
 import Cardano.SCLS.Entry.IsKey (IsKey (..))
 import Cardano.SCLS.NamespaceCodec (
   CanonicalCBOREntryDecoder (..),

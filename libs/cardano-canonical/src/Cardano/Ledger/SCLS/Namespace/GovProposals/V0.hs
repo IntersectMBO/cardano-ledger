@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,11 +13,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE PolyKinds #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.SCLS.Namespace.GovProposals.V0 (
   GovProposalIn (..),
+  GovProposalOut (..),
   CanonicalGovActionState (..),
   MkCanonicalGovActionState (..),
   FromCanonicalGovActionState (..),
@@ -36,7 +37,8 @@ module Cardano.Ledger.SCLS.Namespace.GovProposals.V0 (
   IsCanonicalVote (..),
 ) where
 
-
+import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Keys
 import Cardano.Ledger.SCLS.BaseTypes (
   Anchor (..),
   EpochInterval,
@@ -46,7 +48,6 @@ import Cardano.Ledger.SCLS.BaseTypes (
   StrictMaybe,
   UnitInterval,
  )
--- import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), CompactForm)
 import Cardano.Ledger.SCLS.Common (
   CanonicalCoin,
   CanonicalCredential (..),
@@ -54,11 +55,9 @@ import Cardano.Ledger.SCLS.Common (
  )
 import Cardano.Ledger.SCLS.LedgerCBOR (LedgerCBOR (..))
 import Cardano.Ledger.SCLS.Namespace.GovConstitution.V0 (
-  CanonicalConstitution(..),
+  CanonicalConstitution (..),
  )
 import Cardano.Ledger.SCLS.Namespace.GovPParams.V0
-import Cardano.Ledger.Hashes (ScriptHash (..))
-import Cardano.Ledger.Keys
 import Cardano.Ledger.TxIn
 import Cardano.SCLS.CBOR.Canonical
 import Cardano.SCLS.CBOR.Canonical.Decoder (
@@ -78,6 +77,7 @@ import Cardano.SCLS.NamespaceCodec (
  )
 import Cardano.SCLS.Versioned (Versioned (..))
 import Control.Monad (unless)
+import Data.Kind (Type)
 import Data.Map (Map)
 import Data.MemPack
 import Data.MemPack.ByteOrdered
@@ -87,10 +87,24 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word16, Word32, Word8)
 import GHC.Generics (Generic)
-import Data.Kind (Type)
 
 data GovProposalIn = GovProposalIn CanonicalGovActionId
   deriving (Eq, Ord, Show)
+
+newtype GovProposalOut = GovProposalOut CanonicalGovActionState
+  deriving (Eq, Show, Generic)
+
+type instance NamespaceKeySize "gov/proposals/v0" = 34
+
+instance KnownNamespace "gov/proposals/v0" where
+  type NamespaceKey "gov/proposals/v0" = GovProposalIn
+  type NamespaceEntry "gov/proposals/v0" = GovProposalOut
+
+instance CanonicalCBOREntryEncoder "gov/proposals/v0" GovProposalOut where
+  encodeEntry (GovProposalOut n) = toCanonicalCBOR (Proxy @"gov/proposals/v0") n
+
+instance CanonicalCBOREntryDecoder "gov/proposals/v0" GovProposalOut where
+  decodeEntry = fmap GovProposalOut <$> fromCanonicalCBOR
 
 instance MemPack CanonicalGovActionIx where
   packedByteCount _ = 2
@@ -264,19 +278,6 @@ instance FromCanonicalCBOR v CanonicalGovAction where
         pure $ Versioned CanonicalInfoAction
       _ -> fail $ "Unknown GovAction tag: " ++ show tag
 
-
-type instance NamespaceKeySize "gov/proposals/v0" = 34
-
-instance KnownNamespace "gov/proposals/v0" where
-  type NamespaceKey "gov/proposals/v0" = GovProposalIn
-  type NamespaceEntry "gov/proposals/v0" = CanonicalGovActionState
-
-instance CanonicalCBOREntryEncoder "gov/proposals/v0" CanonicalGovActionState where
-  encodeEntry n = toCanonicalCBOR (Proxy @"gov/proposals/v0") n
-
-instance CanonicalCBOREntryDecoder "gov/proposals/v0" CanonicalGovActionState where
-  decodeEntry = fromCanonicalCBOR
-
 data CanonicalPParamsUpdate = CanonicalPParamsUpdate
   { ucppA0 :: StrictMaybe NonNegativeInterval
   , ucppTxFeePerByte :: StrictMaybe CanonicalCoin
@@ -428,7 +429,6 @@ instance FromCanonicalCBOR v CanonicalGovActionId where
     Versioned (gaidTxId, gaidGovActionIx) <- fromCanonicalCBOR
     return $ Versioned CanonicalGovActionId {..}
 
-
 deriving via LedgerCBOR v TxId instance ToCanonicalCBOR v TxId
 
 deriving via LedgerCBOR v TxId instance FromCanonicalCBOR v TxId
@@ -454,7 +454,7 @@ instance ToCanonicalCBOR v CanonicalVote where
 
 instance FromCanonicalCBOR v CanonicalVote where
   fromCanonicalCBOR = do
-    Versioned (w::Word8) <- fromCanonicalCBOR
+    Versioned (w :: Word8) <- fromCanonicalCBOR
     case w of
       0 -> return (Versioned CanonicalVoteNo)
       1 -> return (Versioned CanonicalVoteYes)

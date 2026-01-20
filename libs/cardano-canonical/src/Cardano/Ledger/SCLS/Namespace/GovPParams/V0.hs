@@ -15,6 +15,7 @@
 
 module Cardano.Ledger.SCLS.Namespace.GovPParams.V0 (
   GovPParamsIn (..),
+  GovPParamsOut (..),
   CanonicalPParams (..),
   IsCanonicalPParams (..),
   CanonicalCostModel (..),
@@ -35,8 +36,6 @@ module Cardano.Ledger.SCLS.Namespace.GovPParams.V0 (
   fromCanonicalExUnits,
 ) where
 
-import Cardano.Ledger.SCLS.Common (NonNegativeInterval, ProtVer (..), UnitInterval, CanonicalCoin (..))
-import Cardano.Ledger.SCLS.LedgerCBOR
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   CostModels,
@@ -51,6 +50,13 @@ import Cardano.Ledger.Plutus.CostModels (
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), ExUnits' (..), Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.SCLS.Common (
+  CanonicalCoin (..),
+  NonNegativeInterval,
+  ProtVer (..),
+  UnitInterval,
+ )
+import Cardano.Ledger.SCLS.LedgerCBOR
 import Cardano.SCLS.CBOR.Canonical (
   CanonicalDecoder (..),
   assumeCanonicalDecoder,
@@ -214,7 +220,6 @@ class IsCanonicalPoolVotingThresholds a where
   mkCanonicalPoolVotingThresholds :: a -> CanonicalPoolVotingThresholds
   fromCanonicalPoolVotingThresholds :: CanonicalPoolVotingThresholds -> a
 
-
 instance ToCanonicalCBOR v CanonicalPoolVotingThresholds where
   toCanonicalCBOR v CanonicalPoolVotingThresholds {..} =
     toCanonicalCBOR
@@ -309,8 +314,6 @@ instance FromCanonicalCBOR v CanonicalDRepVotingThresholds where
     Versioned dvtTreasuryWithdrawal <- fromCanonicalCBOR @v
     return $ Versioned CanonicalDRepVotingThresholds {..}
 
-
-
 deriving via LedgerCBOR v Language instance FromCanonicalCBOR v Language
 
 deriving via LedgerCBOR v Language instance ToCanonicalCBOR v Language
@@ -353,8 +356,6 @@ data CanonicalPParams = CanonicalPParams
 class IsCanonicalPParams a where
   mkCanonicalPParams :: a -> CanonicalPParams
   fromCanonicalPParams :: CanonicalPParams -> a
-
-
 
 instance ToCanonicalCBOR v CanonicalPParams where
   toCanonicalCBOR v CanonicalPParams {..} =
@@ -440,17 +441,20 @@ decodeField fieldName = do
         "Expected field name " <> fieldName <> " but got " <> s
   fromCanonicalCBOR
 
+newtype GovPParamsOut = GovPParamsOut CanonicalPParams
+  deriving (Eq, Show, Generic)
+
 type instance NamespaceKeySize "gov/pparams/v0" = 4
 
 instance KnownNamespace "gov/pparams/v0" where
   type NamespaceKey "gov/pparams/v0" = GovPParamsIn
-  type NamespaceEntry "gov/pparams/v0" = CanonicalPParams
+  type NamespaceEntry "gov/pparams/v0" = GovPParamsOut
 
-instance CanonicalCBOREntryEncoder "gov/pparams/v0" CanonicalPParams where
-  encodeEntry n = toCanonicalCBOR (Proxy @"gov/pparams/v0") n
+instance CanonicalCBOREntryEncoder "gov/pparams/v0" GovPParamsOut where
+  encodeEntry (GovPParamsOut n) = toCanonicalCBOR (Proxy @"gov/pparams/v0") n
 
-instance CanonicalCBOREntryDecoder "gov/pparams/v0" CanonicalPParams where
-  decodeEntry = fromCanonicalCBOR
+instance CanonicalCBOREntryDecoder "gov/pparams/v0" GovPParamsOut where
+  decodeEntry = fmap GovPParamsOut <$> fromCanonicalCBOR
 
 data CanonicalExUnits = CanonicalExUnits
   { exUnitsMem' :: !Natural

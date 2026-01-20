@@ -1,63 +1,62 @@
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 -- | Canonical definitions for the base types.
 --
 -- As per @adr-010@ we just re-use existing base types without an wrappers.
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-module Cardano.Ledger.SCLS.BaseTypes
-  ( module Export
-  , IPv4
-  , IPv6
-  ) where
+module Cardano.Ledger.SCLS.BaseTypes (
+  module Export,
+  IPv4,
+  IPv6,
+) where
 
 -- Some rules for supporting the module, if the type is re-exported from the BaseTypes
 -- module then we should import it from there. It would allow us to check the simple rule,
 -- that we may not introduce a wrapper types for the BaseTypes.
 
-import Cardano.Ledger.BaseTypes as Export
-  ( Anchor(..),
-    -- CertIx
-    EpochNo(..),
-    -- EpochSize
-    EpochInterval(..),
-    -- BlockNo
-    NonNegativeInterval,
-    Port,
-    ProtVer(..),
-    SlotNo(..),
-    Network (..),
-    -- TxIx
-    UnitInterval,
-    Url(..),
-    StrictMaybe(..),
-    DnsName(..),
-    Nonce (..),
-  )
+-- CertIx
+
+-- EpochSize
+
+-- BlockNo
+
+-- TxIx
+
 import Cardano.Ledger.BaseTypes (
   textToDns,
   textToUrl,
  )
-import Cardano.Ledger.SCLS.LedgerCBOR (LedgerCBOR (..))
-import Cardano.SCLS.CBOR.Canonical (
-  assumeCanonicalDecoder,
-  assumeCanonicalEncoding,
+import Cardano.Ledger.BaseTypes as Export (
+  Anchor (..),
+  DnsName (..),
+  EpochInterval (..),
+  EpochNo (..),
+  Network (..),
+  NonNegativeInterval,
+  Nonce (..),
+  Port,
+  ProtVer (..),
+  SlotNo (..),
+  StrictMaybe (..),
+  UnitInterval,
+  Url (..),
  )
+import Cardano.Ledger.SCLS.LedgerCBOR (LedgerCBOR (..))
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
   peekTokenType,
  )
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
-import qualified Codec.CBOR.Decoding as D
-import qualified Codec.CBOR.Encoding as E
 import Cardano.SCLS.Versioned (Versioned (..))
+import qualified Codec.CBOR.Decoding as D
 import Data.IP (IPv4, IPv6)
-import GHC.Natural (Natural)
 
 deriving via LedgerCBOR v Anchor instance ToCanonicalCBOR v Anchor
 
@@ -131,12 +130,3 @@ instance FromCanonicalCBOR v Url where
     case textToUrl 128 t of
       Just url -> return $ Versioned url
       Nothing -> fail "Invalid URL"
-
-
--- TODO: remove
-
-instance FromCanonicalCBOR v Natural where
-  fromCanonicalCBOR = assumeCanonicalDecoder $ Versioned @v . fromIntegral <$> D.decodeIntegerCanonical
-
-instance ToCanonicalCBOR v Natural where
-  toCanonicalCBOR _v n = assumeCanonicalEncoding $ E.encodeInteger (fromIntegral n)

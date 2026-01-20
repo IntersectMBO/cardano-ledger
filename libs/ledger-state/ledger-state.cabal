@@ -114,6 +114,7 @@ executable canonical-ledger
     mempack-scls,
     microlens,
     optparse-applicative,
+    resourcet,
     scls-format,
     streaming,
     text,

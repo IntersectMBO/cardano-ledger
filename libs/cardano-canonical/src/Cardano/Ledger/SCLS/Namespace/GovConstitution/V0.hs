@@ -15,12 +15,13 @@
 module Cardano.Ledger.SCLS.Namespace.GovConstitution.V0 (
   CanonicalConstitution (..),
   GovConstitutionIn (..),
+  GovConstitutionOut (..),
   IsCanonicalConstitution (..),
 ) where
 
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.SCLS.BaseTypes (Anchor (..), EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.SCLS.Common ()
-import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..))
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.Entry.IsKey (IsKey (..))
@@ -38,6 +39,9 @@ import GHC.Generics (Generic)
 data GovConstitutionIn = GovConstitutionIn EpochNo
   deriving (Eq, Ord, Show)
 
+newtype GovConstitutionOut = GovConstitutionOut CanonicalConstitution
+  deriving (Eq, Show, Generic)
+
 instance IsKey GovConstitutionIn where
   keySize = namespaceKeySize @"gov/constitution/v0"
   packKeyM (GovConstitutionIn (EpochNo epochNo)) = do
@@ -45,7 +49,6 @@ instance IsKey GovConstitutionIn where
   unpackKeyM = do
     epochNo <- unpackBigEndianM
     return $ GovConstitutionIn (EpochNo epochNo)
-
 
 data CanonicalConstitution = CanonicalConstitution
   { constitutionAnchor :: !Anchor
@@ -68,10 +71,10 @@ instance FromCanonicalCBOR v CanonicalConstitution where
 
 instance KnownNamespace "gov/constitution/v0" where
   type NamespaceKey "gov/constitution/v0" = GovConstitutionIn
-  type NamespaceEntry "gov/constitution/v0" = CanonicalConstitution
+  type NamespaceEntry "gov/constitution/v0" = GovConstitutionOut
 
-instance CanonicalCBOREntryEncoder "gov/constitution/v0" CanonicalConstitution where
-  encodeEntry n = toCanonicalCBOR (Proxy @"gov/constitution/v0") n
+instance CanonicalCBOREntryEncoder "gov/constitution/v0" GovConstitutionOut where
+  encodeEntry (GovConstitutionOut n) = toCanonicalCBOR (Proxy @"gov/constitution/v0") n
 
-instance CanonicalCBOREntryDecoder "gov/constitution/v0" CanonicalConstitution where
-  decodeEntry = fromCanonicalCBOR
+instance CanonicalCBOREntryDecoder "gov/constitution/v0" GovConstitutionOut where
+  decodeEntry = fmap GovConstitutionOut <$> fromCanonicalCBOR

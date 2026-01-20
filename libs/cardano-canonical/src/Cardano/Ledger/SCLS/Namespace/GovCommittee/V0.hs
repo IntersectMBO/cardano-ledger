@@ -14,21 +14,22 @@
 
 module Cardano.Ledger.SCLS.Namespace.GovCommittee.V0 (
   GovCommitteeIn (..),
+  GovCommitteeOut (..),
   CanonicalCommitteeState (..),
   CanonicalCommitteeAuthorization (..),
   mkCanonicalCommitteeAuthorization,
   fromCanonicalCommitteeAuthorization,
 ) where
 
+import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, HotCommitteeRole))
 import Cardano.Ledger.SCLS.Common (
   Anchor (..),
+  CanonicalCredential (..),
   EpochNo (..),
   StrictMaybe (..),
-  CanonicalCredential (..),
   fromCanonicalCredential,
   mkCanonicalCredential,
  )
-import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, HotCommitteeRole))
 import Cardano.Ledger.State (CommitteeAuthorization (..))
 import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), decodeListLenCanonicalOf)
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
@@ -48,16 +49,19 @@ import GHC.Generics (Generic)
 
 instance KnownNamespace "gov/committee/v0" where
   type NamespaceKey "gov/committee/v0" = GovCommitteeIn
-  type NamespaceEntry "gov/committee/v0" = CanonicalCommitteeState
+  type NamespaceEntry "gov/committee/v0" = GovCommitteeOut
 
-instance CanonicalCBOREntryEncoder "gov/committee/v0" CanonicalCommitteeState where
-  encodeEntry n = toCanonicalCBOR (Proxy @"gov/committee/v0") n
+instance CanonicalCBOREntryEncoder "gov/committee/v0" GovCommitteeOut where
+  encodeEntry (GovCommitteeOut n) = toCanonicalCBOR (Proxy @"gov/committee/v0") n
 
-instance CanonicalCBOREntryDecoder "gov/committee/v0" CanonicalCommitteeState where
-  decodeEntry = fromCanonicalCBOR
+instance CanonicalCBOREntryDecoder "gov/committee/v0" GovCommitteeOut where
+  decodeEntry = fmap GovCommitteeOut <$> fromCanonicalCBOR
 
 data GovCommitteeIn = GovCommitteeIn EpochNo
   deriving (Eq, Ord, Show)
+
+newtype GovCommitteeOut = GovCommitteeOut CanonicalCommitteeState
+  deriving (Eq, Show, Generic)
 
 instance IsKey GovCommitteeIn where
   keySize = namespaceKeySize @"gov/committee/v0"

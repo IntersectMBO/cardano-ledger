@@ -18,7 +18,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.SCLS hiding (SlotNo, Network(..))
+import Cardano.Ledger.Conway.SCLS hiding (Network (..), SlotNo)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.TxOut as Shelley ()
@@ -31,6 +31,7 @@ import Cardano.Types.Network (NetworkId (..))
 import Cardano.Types.SlotNo (SlotNo (..))
 import Control.Exception (throwIO)
 import Control.Monad
+import Control.Monad.Trans.Resource (runResourceT)
 import Data.Bifunctor (first)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as LBS
@@ -130,7 +131,7 @@ main = do
       withKnownNamespacedData fileName (Proxy @"snapshots/v0") $ \stream ->
         S.print stream
     Tee oldFile newFile -> do
-      withFile oldFile ReadMode $ \hdl -> do
+      withFile oldFile ReadMode $ \hdl -> runResourceT $ do
         External.serialize
           newFile
           Mainnet
@@ -170,150 +171,162 @@ main = do
       nes <- readNewEpochState stateFilePath
       UTxO utxo0 <- localReadDecCBORHex utxoFilePath
       let epoch = nesEL nes
-      print epoch
-      External.serialize
-        fileName
-        Mainnet
-        (SlotNo 1)
-        ( defaultSerializationPlan
-            & addNamespacedChunks
-              (Proxy @"utxo/v0")
-              ( S.each
-                  [ ChunkEntry (UtxoKeyIn txin) (UtxoOutBabbage (mkCanonicalBabbageTxOut txout))
-                  | (txin, txout) <- Map.toList utxo0
-                  ]
-              )
-            & addNamespacedChunks
-              (Proxy @"blocks/v0")
-              ( S.each
-                  [ ChunkEntry (BlockIn (key_hash, pred epoch)) (BlockOut natural)
-                  | let BlocksMade mpPrev = nesBprev nes
-                  , (key_hash, natural) <- Map.toList mpPrev
-                  ]
-                  <> S.each
-                    [ ChunkEntry (BlockIn (key_hash, epoch)) (BlockOut natural)
-                    | let BlocksMade mpCurrent = nesBcur nes
-                    , (key_hash, natural) <- Map.toList mpCurrent
+      runResourceT $
+        External.serialize
+          fileName
+          Mainnet
+          (SlotNo 1)
+          ( defaultSerializationPlan
+              & addNamespacedChunks
+                (Proxy @"utxo/v0")
+                ( S.each
+                    [ ChunkEntry (UtxoKeyIn txin) (UtxoOutBabbage (mkCanonicalBabbageTxOut txout))
+                    | (txin, txout) <- Map.toList utxo0
                     ]
-              )
-            & addNamespacedChunks
-              (Proxy @"pots/v0")
-              ( S.each
-                  [ ChunkEntry
-                      (PotsIn epoch)
-                      PotsOut
-                        { poFee = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosFeesL . to mkCanonicalCoin
-                        , poDeposit = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL . to mkCanonicalCoin
-                        , poDonation = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDonationL . to mkCanonicalCoin
-                        , poReserves = nes ^. nesEsL . to (esChainAccountState) . casReservesL . to mkCanonicalCoin
-                        , poTreasury = nes ^. nesEsL . to (esChainAccountState) . casTreasuryL . to mkCanonicalCoin
-                        }
-                  ]
-              )
-            & addNamespacedChunks
-              (Proxy @"snapshots/v0")
-              ( S.each
-                  [ ChunkEntry
-                      (SnapShotInCred SnapShotStageSet cred SnapShotValueAddress)
-                      (SnapShotOutAddress stakeHash)
-                  | (cred, stakeHash) <-
-                      nes ^. nesEsL . esSnapshotsL . ssStakeSetL . ssDelegationsL . to (VMap.toList)
-                  ]
-                  <> S.each
+                )
+              & addNamespacedChunks
+                (Proxy @"blocks/v0")
+                ( S.each
+                    [ ChunkEntry (BlockIn (key_hash, pred epoch)) (BlockOut natural)
+                    | let BlocksMade mpPrev = nesBprev nes
+                    , (key_hash, natural) <- Map.toList mpPrev
+                    ]
+                    <> S.each
+                      [ ChunkEntry (BlockIn (key_hash, epoch)) (BlockOut natural)
+                      | let BlocksMade mpCurrent = nesBcur nes
+                      , (key_hash, natural) <- Map.toList mpCurrent
+                      ]
+                )
+              & addNamespacedChunks
+                (Proxy @"pots/v0")
+                ( S.each
                     [ ChunkEntry
-                        (SnapShotInKey SnapShotStageSet poolHash SnapShotValuePoolParams)
-                        (SnapShotOutPoolParams $ mkCanonicalStakePoolParams poolParams)
-                    | (poolHash, poolParams) <-
-                        nes ^. nesEsL . esSnapshotsL . ssStakeSetL . ssPoolParamsL . to (VMap.toList)
+                        (PotsIn epoch)
+                        PotsOut
+                          { poFee = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosFeesL . to mkCanonicalCoin
+                          , poDeposit = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL . to mkCanonicalCoin
+                          , poDonation = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDonationL . to mkCanonicalCoin
+                          , poReserves = nes ^. nesEsL . to (esChainAccountState) . casReservesL . to mkCanonicalCoin
+                          , poTreasury = nes ^. nesEsL . to (esChainAccountState) . casTreasuryL . to mkCanonicalCoin
+                          }
                     ]
-                  <> S.each
-                    [ ChunkEntry (SnapShotInCred SnapShotStageSet poolHash SnapShotValueCoin) (SnapShotOutCoin $ mkCanonicalCoin coin)
-                    | (poolHash, fromCompact -> coin) <-
-                        nes ^. nesEsL . esSnapshotsL . ssStakeSetL . ssStakeDistrL . to (VMap.toList)
-                    ]
-                  <> S.each
+                )
+              & addNamespacedChunks
+                (Proxy @"snapshots/v0")
+                ( S.each
                     [ ChunkEntry
-                        (SnapShotInCred SnapshotStageMark cred SnapShotValueAddress)
+                        (SnapShotInCred SnapShotStageSet cred SnapShotValueAddress)
                         (SnapShotOutAddress stakeHash)
                     | (cred, stakeHash) <-
-                        nes ^. nesEsL . esSnapshotsL . ssStakeMarkL . ssDelegationsL . to (VMap.toList)
+                        nes ^. nesEsL . esSnapshotsL . ssStakeSetL . ssDelegationsL . to (VMap.toList)
                     ]
-                  <> S.each
-                    [ ChunkEntry
-                        (SnapShotInKey SnapshotStageMark poolHash SnapShotValuePoolParams)
-                        (SnapShotOutPoolParams $ mkCanonicalStakePoolParams poolParams)
-                    | (poolHash, poolParams) <-
-                        nes ^. nesEsL . esSnapshotsL . ssStakeMarkL . ssPoolParamsL . to (VMap.toList)
-                    ]
-                  <> S.each
-                    [ ChunkEntry (SnapShotInCred SnapshotStageMark poolHash SnapShotValueCoin) (SnapShotOutCoin $ mkCanonicalCoin coin)
-                    | (poolHash, fromCompact -> coin) <-
-                        nes ^. nesEsL . esSnapshotsL . ssStakeMarkL . ssStakeDistrL . to (VMap.toList)
-                    ]
-                  <> S.each
-                    [ ChunkEntry (SnapShotInCred SnapshotStageGo poolHash SnapShotValueCoin) (SnapShotOutCoin $ mkCanonicalCoin coin)
-                    | (poolHash, fromCompact -> coin) <-
-                        nes ^. nesEsL . esSnapshotsL . ssStakeGoL . ssStakeDistrL . to (VMap.toList)
-                    ]
-                  <> S.each
-                    [ ChunkEntry (SnapShotInCred SnapshotStageGo cred SnapShotValueAddress) (SnapShotOutAddress stakeHash)
-                    | (cred, stakeHash) <-
-                        nes ^. nesEsL . esSnapshotsL . ssStakeGoL . ssDelegationsL . to (VMap.toList)
-                    ]
-                  <> S.each
-                    [ ChunkEntry (SnapShotInCred SnapshotStageGo poolHash SnapShotValueCoin) (SnapShotOutCoin $ mkCanonicalCoin coin)
-                    | (poolHash, fromCompact -> coin) <-
-                        nes ^. nesEsL . esSnapshotsL . ssStakeGoL . ssStakeDistrL . to (VMap.toList)
-                    ]
-              )
-            & addNamespacedChunks
-              (Proxy @"pool_stake/v0")
-              ( S.each
-                  [ ChunkEntry
-                      (PoolStakeIn cred)
-                      ( PoolStakeOut
-                          (mkCanonicalCoin individualTotalPoolStake)
-                          (mkCanonicalVRFVerKeyHash individualPoolStakeVrf)
-                      )
-                  | (cred, IndividualPoolStake {..}) <- nes ^. nesPdL . poolDistrDistrL . to (Map.toList)
-                  ]
-              )
-            & addNamespacedChunks
-              (Proxy @"gov/pparams/v0")
-              ( S.each
-                  [ ChunkEntry k (mkCanonicalPParams v)
-                  | Just (k, v) <-
-                      [ Just (GovPParamsInCurr, nes ^. nesEpochStateL . curPParamsEpochStateL)
-                      , Just (GovPParamsInPrev, nes ^. nesEpochStateL . prevPParamsEpochStateL)
-                      , case nes ^. nesEpochStateL . futurePParamsEpochStateL of
-                          NoPParamsUpdate -> Nothing
-                          DefinitePParamsUpdate pp -> Just (GovPParamsInDefiniteFuture, pp)
-                          PotentialPParamsUpdate mp -> (GovPParamsInPossibleFuture,) <$> mp
+                    <> S.each
+                      [ ChunkEntry
+                          (SnapShotInKey SnapShotStageSet poolHash SnapShotValuePoolParams)
+                          (SnapShotOutPoolParams $ mkCanonicalStakePoolParams poolParams)
+                      | (poolHash, poolParams) <-
+                          nes ^. nesEsL . esSnapshotsL . ssStakeSetL . ssPoolParamsL . to (VMap.toList)
                       ]
-                  ]
-              )
-            & addNamespacedChunks
-              (Proxy @"gov/constitution/v0")
-              ( S.each
-                  [ ChunkEntry (GovConstitutionIn epoch) (mkCanonicalConstitution $ nes & queryConstitution)
-                  ]
-              )
-            & addNamespacedChunks
-              (Proxy @"gov/proposals/v0")
-              ( S.each
-                  [ ChunkEntry (GovProposalIn (mkCanonicalGovActionId gasId)) (mkCanonicalGovActionState g)
-                  | let proposals = nes & flip queryProposals Set.empty
-                  , g@GovActionState {..} <- toList proposals
-                  ]
-              )
-            & addNamespacedChunks
-              (Proxy @"gov/committee/v0")
-              ( S.each
-                  [ ChunkEntry (GovCommitteeIn epoch) (mkCanonicalCommitteeState cms)
-                  | let cms = nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
-                  ]
-              )
-        )
+                    <> S.each
+                      [ ChunkEntry
+                          (SnapShotInCred SnapShotStageSet poolHash SnapShotValueCoin)
+                          (SnapShotOutCoin $ mkCanonicalCoin coin)
+                      | (poolHash, fromCompact -> coin) <-
+                          nes ^. nesEsL . esSnapshotsL . ssStakeSetL . ssStakeDistrL . to (VMap.toList)
+                      ]
+                    <> S.each
+                      [ ChunkEntry
+                          (SnapShotInCred SnapshotStageMark cred SnapShotValueAddress)
+                          (SnapShotOutAddress stakeHash)
+                      | (cred, stakeHash) <-
+                          nes ^. nesEsL . esSnapshotsL . ssStakeMarkL . ssDelegationsL . to (VMap.toList)
+                      ]
+                    <> S.each
+                      [ ChunkEntry
+                          (SnapShotInKey SnapshotStageMark poolHash SnapShotValuePoolParams)
+                          (SnapShotOutPoolParams $ mkCanonicalStakePoolParams poolParams)
+                      | (poolHash, poolParams) <-
+                          nes ^. nesEsL . esSnapshotsL . ssStakeMarkL . ssPoolParamsL . to (VMap.toList)
+                      ]
+                    <> S.each
+                      [ ChunkEntry
+                          (SnapShotInCred SnapshotStageMark poolHash SnapShotValueCoin)
+                          (SnapShotOutCoin $ mkCanonicalCoin coin)
+                      | (poolHash, fromCompact -> coin) <-
+                          nes ^. nesEsL . esSnapshotsL . ssStakeMarkL . ssStakeDistrL . to (VMap.toList)
+                      ]
+                    <> S.each
+                      [ ChunkEntry
+                          (SnapShotInCred SnapshotStageGo poolHash SnapShotValueCoin)
+                          (SnapShotOutCoin $ mkCanonicalCoin coin)
+                      | (poolHash, fromCompact -> coin) <-
+                          nes ^. nesEsL . esSnapshotsL . ssStakeGoL . ssStakeDistrL . to (VMap.toList)
+                      ]
+                    <> S.each
+                      [ ChunkEntry (SnapShotInCred SnapshotStageGo cred SnapShotValueAddress) (SnapShotOutAddress stakeHash)
+                      | (cred, stakeHash) <-
+                          nes ^. nesEsL . esSnapshotsL . ssStakeGoL . ssDelegationsL . to (VMap.toList)
+                      ]
+                    <> S.each
+                      [ ChunkEntry
+                          (SnapShotInCred SnapshotStageGo poolHash SnapShotValueCoin)
+                          (SnapShotOutCoin $ mkCanonicalCoin coin)
+                      | (poolHash, fromCompact -> coin) <-
+                          nes ^. nesEsL . esSnapshotsL . ssStakeGoL . ssStakeDistrL . to (VMap.toList)
+                      ]
+                )
+              & addNamespacedChunks
+                (Proxy @"pool_stake/v0")
+                ( S.each
+                    [ ChunkEntry
+                        (PoolStakeIn cred)
+                        ( PoolStakeOut
+                            (mkCanonicalCoin individualTotalPoolStake)
+                            (mkCanonicalVRFVerKeyHash individualPoolStakeVrf)
+                        )
+                    | (cred, IndividualPoolStake {..}) <- nes ^. nesPdL . poolDistrDistrL . to (Map.toList)
+                    ]
+                )
+              & addNamespacedChunks
+                (Proxy @"gov/pparams/v0")
+                ( S.each
+                    [ ChunkEntry k (GovPParamsOut $! mkCanonicalPParams v)
+                    | Just (k, v) <-
+                        [ Just (GovPParamsInCurr, nes ^. nesEpochStateL . curPParamsEpochStateL)
+                        , Just (GovPParamsInPrev, nes ^. nesEpochStateL . prevPParamsEpochStateL)
+                        , case nes ^. nesEpochStateL . futurePParamsEpochStateL of
+                            NoPParamsUpdate -> Nothing
+                            DefinitePParamsUpdate pp -> Just (GovPParamsInDefiniteFuture, pp)
+                            PotentialPParamsUpdate mp -> (GovPParamsInPossibleFuture,) <$> mp
+                        ]
+                    ]
+                )
+              & addNamespacedChunks
+                (Proxy @"gov/constitution/v0")
+                ( S.each
+                    [ ChunkEntry
+                        (GovConstitutionIn epoch)
+                        (GovConstitutionOut $! mkCanonicalConstitution $ nes & queryConstitution)
+                    ]
+                )
+              & addNamespacedChunks
+                (Proxy @"gov/proposals/v0")
+                ( S.each
+                    [ ChunkEntry
+                        (GovProposalIn (mkCanonicalGovActionId gasId))
+                        (GovProposalOut $! mkCanonicalGovActionState g)
+                    | let proposals = nes & flip queryProposals Set.empty
+                    , g@GovActionState {..} <- toList proposals
+                    ]
+                )
+              & addNamespacedChunks
+                (Proxy @"gov/committee/v0")
+                ( S.each
+                    [ ChunkEntry (GovCommitteeIn epoch) (GovCommitteeOut $! mkCanonicalCommitteeState cms)
+                    | let cms = nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
+                    ]
+                )
+          )
 
 localReadDecCBORHex :: FilePath -> IO (UTxO ConwayEra)
 localReadDecCBORHex = either throwIO pure . decodeFullHex <=< LBS.readFile

@@ -1,18 +1,15 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Ledger.Conway.SCLS.Namespace.GovProposals (
-    module Cardano.Ledger.SCLS.Namespace.GovProposals.V0,
+  module Cardano.Ledger.SCLS.Namespace.GovProposals.V0,
 ) where
 
-import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution
-import Cardano.Ledger.Conway.SCLS.Namespace.GovPParams
-import Cardano.Ledger.SCLS.Namespace.GovProposals.V0
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
-import Cardano.Ledger.SCLS.Common
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
@@ -28,27 +25,31 @@ import Cardano.Ledger.Conway.PParams (
   ConwayPParams (..),
   THKD (..),
  )
-import qualified Data.Set as Set
-import qualified Data.Map.Strict as Map
-
-import Data.Functor ((<&>))
+import Cardano.Ledger.Conway.SCLS.Namespace.GovConstitution
+import Cardano.Ledger.Conway.SCLS.Namespace.GovPParams
 import Cardano.Ledger.Core (PParamsUpdate (..))
 import Cardano.Ledger.HKD (NoUpdate (..))
+import Cardano.Ledger.SCLS.Common
+import Cardano.Ledger.SCLS.Namespace.GovProposals.V0
+import Data.Functor ((<&>))
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 instance IsCanonicalGovActionIx GovActionIx where
   mkCanonicalGovActionIx (GovActionIx ix) = CanonicalGovActionIx ix
   fromCanonicalGovActionIx (CanonicalGovActionIx ix) = GovActionIx ix
 
-instance IsCanonicalGovActionId  GovActionId where
+instance IsCanonicalGovActionId GovActionId where
   mkCanonicalGovActionId GovActionId {..} =
     CanonicalGovActionId
-        { gaidGovActionIx=mkCanonicalGovActionIx gaidGovActionIx
-        , ..
-        }
+      { gaidGovActionIx = mkCanonicalGovActionIx gaidGovActionIx
+      , ..
+      }
   fromCanonicalGovActionId CanonicalGovActionId {..} =
     GovActionId
-        { gaidGovActionIx = fromCanonicalGovActionIx gaidGovActionIx
-        , ..}
+      { gaidGovActionIx = fromCanonicalGovActionIx gaidGovActionIx
+      , ..
+      }
 
 instance IsCanonicalProposalProcedure (ProposalProcedure ConwayEra) where
   mkCanonicalProposalProcedure ProposalProcedure {..} =
@@ -65,7 +66,6 @@ instance IsCanonicalProposalProcedure (ProposalProcedure ConwayEra) where
       , pProcDeposit = fromCanonicalCoin pProcDeposit
       , ..
       }
-
 
 instance IsCanonicalPurposeId (GovPurposeId p) where
   mkCanonicalPurposeId (GovPurposeId p) = CanonicalPurposeId (mkCanonicalGovActionId p)
@@ -111,18 +111,18 @@ instance IsCanonicalPParamsUpdate (PParamsUpdate ConwayEra) where
       ConwayPParams
         { cppA0 = THKD ucppA0
         , cppTxFeePerByte = THKD (CoinPerByte <$> fromCanonicalCoin <$> ucppTxFeePerByte)
-        , cppTxFeeFixed = THKD (fromCanonicalCoin @(CompactForm Coin) <$>  ucppTxFeeFixed)
+        , cppTxFeeFixed = THKD (fromCanonicalCoin @(CompactForm Coin) <$> ucppTxFeeFixed)
         , cppMaxBBSize = THKD ucppMaxBBSize
         , cppMaxTxSize = THKD ucppMaxTxSize
         , cppMaxBHSize = THKD ucppMaxBHSize
-        , cppKeyDeposit = THKD (fromCanonicalCoin @(CompactForm Coin) <$>  ucppKeyDeposit)
-        , cppPoolDeposit = THKD (fromCanonicalCoin @(CompactForm Coin) <$>  ucppPoolDeposit)
+        , cppKeyDeposit = THKD (fromCanonicalCoin @(CompactForm Coin) <$> ucppKeyDeposit)
+        , cppPoolDeposit = THKD (fromCanonicalCoin @(CompactForm Coin) <$> ucppPoolDeposit)
         , cppEMax = THKD ucppEMax
         , cppNOpt = THKD ucppNOpt
         , cppRho = THKD ucppRho
         , cppTau = THKD ucppTau
         , cppProtocolVersion = NoUpdate
-        , cppMinPoolCost = THKD (fromCanonicalCoin @(CompactForm Coin) <$>  ucppMinPoolCost)
+        , cppMinPoolCost = THKD (fromCanonicalCoin @(CompactForm Coin) <$> ucppMinPoolCost)
         , cppCoinsPerUTxOByte = THKD (CoinPerByte <$> fromCanonicalCoin <$> ucppCoinsPerUTxOByte)
         , cppCostModels = THKD (fromCanonicalCostModels <$> ucppCostModels)
         , cppPrices = THKD (fromCanonicalPrices <$> ucppPrices)
@@ -136,7 +136,7 @@ instance IsCanonicalPParamsUpdate (PParamsUpdate ConwayEra) where
         , cppCommitteeMinSize = THKD ucppCommitteeMinSize
         , cppCommitteeMaxTermLength = THKD ucppCommitteeMaxTermLength
         , cppGovActionLifetime = THKD ucppGovActionLifetime
-        , cppGovActionDeposit = THKD (fromCanonicalCoin @(CompactForm Coin) <$>  ucppGovActionDeposit)
+        , cppGovActionDeposit = THKD (fromCanonicalCoin @(CompactForm Coin) <$> ucppGovActionDeposit)
         , cppDRepDeposit = THKD (fromCanonicalCoin @(CompactForm Coin) <$> ucppDRepDeposit)
         , cppDRepActivity = THKD ucppDRepActivity
         , cppMinFeeRefScriptCostPerByte = THKD ucppMinFeeRefScriptCostPerByte
@@ -182,7 +182,9 @@ instance IsCanonicalGovAction (GovAction ConwayEra) where
       v
   fromCanonicalGovAction (CanonicalTreasuryWithdrawals withdrawals script) =
     TreasuryWithdrawals
-      (Map.fromList [(fromCanonicalRewardAccount c, fromCanonicalCoin v) | (c, v) <- Map.toList withdrawals])
+      ( Map.fromList
+          [(fromCanonicalRewardAccount c, fromCanonicalCoin v) | (c, v) <- Map.toList withdrawals]
+      )
       script
   fromCanonicalGovAction (CanonicalNoConfidence purposeId) =
     NoConfidence
@@ -205,11 +207,11 @@ instance MkCanonicalGovActionState (GovActionState ConwayEra) where
       { gasProposalProcedure = mkCanonicalProposalProcedure gasProposalProcedure
       , gasCommitteeVotes =
           Map.fromList [(mkCanonicalCredential k, mkCanonicalVote v) | (k, v) <- Map.toList gasCommitteeVotes]
-      , gasDRepVotes = Map.fromList [(mkCanonicalCredential k, mkCanonicalVote v) | (k, v) <- Map.toList gasDRepVotes]
+      , gasDRepVotes =
+          Map.fromList [(mkCanonicalCredential k, mkCanonicalVote v) | (k, v) <- Map.toList gasDRepVotes]
       , gasStakePoolVotes = Map.fromList [(k, mkCanonicalVote v) | (k, v) <- Map.toList gasStakePoolVotes]
       , ..
       }
-
 
 instance FromCanonicalGovActionState (GovActionState ConwayEra) where
   type ExtraCanonicalGovActionState (GovActionState ConwayEra) = GovActionId
@@ -217,12 +219,13 @@ instance FromCanonicalGovActionState (GovActionState ConwayEra) where
     GovActionState
       { gasProposalProcedure = fromCanonicalProposalProcedure gasProposalProcedure
       , gasCommitteeVotes =
-          Map.fromList [(fromCanonicalCredential k, fromCanonicalVote v) | (k, v) <- Map.toList gasCommitteeVotes]
-      , gasDRepVotes = Map.fromList [(fromCanonicalCredential k, fromCanonicalVote v) | (k, v) <- Map.toList gasDRepVotes]
+          Map.fromList
+            [(fromCanonicalCredential k, fromCanonicalVote v) | (k, v) <- Map.toList gasCommitteeVotes]
+      , gasDRepVotes =
+          Map.fromList [(fromCanonicalCredential k, fromCanonicalVote v) | (k, v) <- Map.toList gasDRepVotes]
       , gasStakePoolVotes = Map.fromList [(k, fromCanonicalVote v) | (k, v) <- Map.toList gasStakePoolVotes]
       , ..
       }
-
 
 instance IsCanonicalVote Vote where
   mkCanonicalVote VoteNo = CanonicalVoteNo

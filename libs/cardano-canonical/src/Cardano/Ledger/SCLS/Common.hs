@@ -1,45 +1,37 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-module Cardano.Ledger.SCLS.Common
-  ( module Cardano.Ledger.SCLS.BaseTypes
-  , CanonicalCoin (..)
-  , IsCanonicalCoin (..)
-  , CanonicalCredential (..)
-  , fromCanonicalCredential
-  , mkCanonicalCredential
-  , CanonicalRewardAccount (..)
-  , fromCanonicalRewardAccount
-  , mkCanonicalRewardAccount
-  , CanonicalVRFVerKeyHash (..)
-  , fromCanonicalVRFVerKeyHash
-  , mkCanonicalVRFVerKeyHash
-  , Nonce (..)
-  , CoinPerByte (..)
-  ) where
 
-import Cardano.SCLS.CDDL ()
-import Cardano.Ledger.SCLS.BaseTypes
-import Cardano.Ledger.Coin (Coin(..), CompactForm (..), CoinPerByte (..))
-import Cardano.Ledger.Plutus.ExUnits (Prices)
+module Cardano.Ledger.SCLS.Common (
+  module Cardano.Ledger.SCLS.BaseTypes,
+  CanonicalCoin (..),
+  IsCanonicalCoin (..),
+  CanonicalCredential (..),
+  fromCanonicalCredential,
+  mkCanonicalCredential,
+  CanonicalRewardAccount (..),
+  fromCanonicalRewardAccount,
+  mkCanonicalRewardAccount,
+  CanonicalVRFVerKeyHash (..),
+  fromCanonicalVRFVerKeyHash,
+  mkCanonicalVRFVerKeyHash,
+  Nonce (..),
+  CoinPerByte (..),
+  ScriptHash,
+) where
+
 import qualified Cardano.Crypto.Hash as Hash
-import qualified Cardano.Ledger.Hashes as H
-import Cardano.SCLS.Versioned (Versioned (..))
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.SCLS.CBOR.Canonical.Decoder (
-  FromCanonicalCBOR (..),
-  decodeListLenCanonicalOf,
-   -- peekTokenType,
- )
-import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
-import GHC.Generics (Generic)
+import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), CompactForm (..))
+-- peekTokenType,
+
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (
   HASH,
@@ -50,11 +42,23 @@ import Cardano.Ledger.Hashes (
   Staking,
   VRFVerKeyHash (..),
  )
-import Data.Typeable (Typeable)
-import Data.Word (Word8)
+import qualified Cardano.Ledger.Hashes as H
+import Cardano.Ledger.Plutus.ExUnits (Prices)
+import Cardano.Ledger.SCLS.BaseTypes
 import Cardano.Ledger.SCLS.LedgerCBOR (LedgerCBOR (..))
+import Cardano.SCLS.CBOR.Canonical.Decoder (
+  FromCanonicalCBOR (..),
+  decodeListLenCanonicalOf,
+ )
+import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
+import Cardano.SCLS.CDDL ()
+import Cardano.SCLS.Versioned (Versioned (..))
+import Data.Foldable (toList)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Typeable (Typeable)
+import Data.Word (Word8)
+import GHC.Generics (Generic)
 
 -- | Wrapper for the coin type
 newtype CanonicalCoin = CanonicalCoin {unCoin :: Integer}
@@ -70,12 +74,16 @@ instance IsCanonicalCoin CanonicalCoin where
   fromCanonicalCoin = id
 
 instance IsCanonicalCoin Coin where
-  mkCanonicalCoin Coin{..} = CanonicalCoin{..}
+  mkCanonicalCoin Coin {..} = CanonicalCoin {..}
   fromCanonicalCoin (CanonicalCoin i) = Coin i
 
 instance IsCanonicalCoin (CompactForm Coin) where
   mkCanonicalCoin (CompactCoin ci) = CanonicalCoin (fromIntegral ci)
   fromCanonicalCoin (CanonicalCoin ci) = CompactCoin (fromIntegral ci)
+
+instance IsCanonicalCoin Integer where
+  mkCanonicalCoin = CanonicalCoin
+  fromCanonicalCoin (CanonicalCoin ci) = ci
 
 instance ToCanonicalCBOR v CanonicalCoin where
   toCanonicalCBOR v (CanonicalCoin ci) = toCanonicalCBOR v ci
@@ -131,7 +139,6 @@ deriving via LedgerCBOR v ScriptHash instance FromCanonicalCBOR v ScriptHash
 deriving via LedgerCBOR v (KeyHash kr) instance ToCanonicalCBOR v (KeyHash kr)
 
 deriving via LedgerCBOR v (KeyHash kr) instance Typeable kr => FromCanonicalCBOR v (KeyHash kr)
-
 
 data CanonicalRewardAccount = CanonicalRewardAccount
   { raNetwork :: !Network
@@ -191,6 +198,9 @@ instance H.HashAlgorithm a => FromCanonicalCBOR v (H.Hash a b) where
 deriving via LedgerCBOR v Prices instance ToCanonicalCBOR v Prices
 
 deriving via LedgerCBOR v Prices instance FromCanonicalCBOR v Prices
+
+instance ToCanonicalCBOR v a => ToCanonicalCBOR v (StrictSeq a) where
+  toCanonicalCBOR v l = toCanonicalCBOR v (toList l)
 
 instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictSeq a) where
   fromCanonicalCBOR = do

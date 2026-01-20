@@ -15,8 +15,8 @@ module Cardano.Ledger.SCLS.Namespace.PoolStake.V0 (
   PoolStakeOut (..),
 ) where
 
-import Cardano.Ledger.SCLS.Common (CanonicalVRFVerKeyHash (..), CanonicalCoin (..) )
 import Cardano.Ledger.Keys (KeyHash, StakePool (..), StakePoolVRF (..))
+import Cardano.Ledger.SCLS.Common (CanonicalCoin (..), CanonicalVRFVerKeyHash (..))
 import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), decodeMapLenCanonicalOf)
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..), encodeAsMap, mkEncodablePair)
 import Cardano.SCLS.Entry.IsKey (IsKey (..))

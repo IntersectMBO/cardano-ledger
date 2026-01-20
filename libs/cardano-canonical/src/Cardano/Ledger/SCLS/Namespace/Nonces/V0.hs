@@ -12,6 +12,7 @@
 module Cardano.Ledger.SCLS.Namespace.Nonces.V0 (
   NoncesIn (..),
   NoncesOut (..),
+  NoncesState (..),
   CanonicalWithOrigin (..),
   mkCanonicalWithOrigin,
   fromCanonicalWithOrigin,
@@ -21,9 +22,9 @@ module Cardano.Ledger.SCLS.Namespace.Nonces.V0 (
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.SCLS.Common (Nonce (..), SlotNo (..))
 import qualified Cardano.Ledger.Hashes as H
 import Cardano.Ledger.Keys
+import Cardano.Ledger.SCLS.Common (Nonce (..), SlotNo (..))
 import Cardano.SCLS.CBOR.Canonical
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
@@ -127,13 +128,13 @@ instance FromCanonicalCBOR v CanonicalNonce where
 instance ToCanonicalCBOR v NoncesState where
   toCanonicalCBOR v NoncesState {..} =
     encodeAsMap
-      [ mkEncodablePair v ("lastSlot" :: Text) noncesStateLastSlot
-      , mkEncodablePair v ("oCertCounters" :: Text) noncesStateOCertCounters
-      , mkEncodablePair v ("evolvingNonce" :: Text) noncesStateEvolvingNonce
-      , mkEncodablePair v ("candidateNonce" :: Text) noncesStateCandidateNonce
-      , mkEncodablePair v ("epochNonce" :: Text) noncesStateEpochNonce
-      , mkEncodablePair v ("labNonce" :: Text) noncesStateLabNonce
-      , mkEncodablePair v ("lastEpochBlockNonce" :: Text) noncesStateLastEpochBlockNonce
+      [ mkEncodablePair v ("last_slot" :: Text) noncesStateLastSlot
+      , mkEncodablePair v ("cert_counters" :: Text) noncesStateOCertCounters
+      , mkEncodablePair v ("evolving_nonce" :: Text) noncesStateEvolvingNonce
+      , mkEncodablePair v ("candidate_nonce" :: Text) noncesStateCandidateNonce
+      , mkEncodablePair v ("epoch_nonce" :: Text) noncesStateEpochNonce
+      , mkEncodablePair v ("lab_nonce" :: Text) noncesStateLabNonce
+      , mkEncodablePair v ("last_epoch_block_nonce" :: Text) noncesStateLastEpochBlockNonce
       ]
 
 instance FromCanonicalCBOR v NoncesState where

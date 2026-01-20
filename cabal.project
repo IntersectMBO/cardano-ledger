@@ -107,5 +107,4 @@ if impl(ghc >=9.12)
 --     scls-cardano
 --     mempack-scls
 --   location: https://github.com/tweag/cardano-cls.git
---   tag: 53da0007d2bd49c413416aab7f88636d06aa548c
---
+--   tag: 658836d57b305d0a36e605c5fc288d9b5fa2983c

@@ -33,7 +33,6 @@
 --                  ^^^^^^^
 --                   Namespace
 -- @
---
 module Cardano.Ledger.SCLS.LedgerCBOR (
   LedgerCBOR (..),
   LedgerCBORSafe (..),

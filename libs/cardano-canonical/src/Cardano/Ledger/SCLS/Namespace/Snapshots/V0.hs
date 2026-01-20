@@ -29,25 +29,25 @@ module Cardano.Ledger.SCLS.Namespace.Snapshots.V0 (
   fromCanonicalStakePoolRelay,
 ) where
 
+import Cardano.Ledger.Credential
+import Cardano.Ledger.Keys
 import Cardano.Ledger.SCLS.Common (
+  CanonicalCoin (..),
+  CanonicalRewardAccount (..),
+  CanonicalVRFVerKeyHash (..),
   DnsName,
+  IPv4,
+  IPv6,
+  IsCanonicalCoin (..),
   Port,
   StrictMaybe (..),
   UnitInterval,
   Url (..),
-  IPv4,
-  IPv6,
-  CanonicalCoin (..),
-  IsCanonicalCoin (..),
-  CanonicalRewardAccount (..),
-  CanonicalVRFVerKeyHash (..),
   fromCanonicalRewardAccount,
   fromCanonicalVRFVerKeyHash,
   mkCanonicalRewardAccount,
   mkCanonicalVRFVerKeyHash,
  )
-import Cardano.Ledger.Credential
-import Cardano.Ledger.Keys
 import Cardano.Ledger.State (PoolMetadata (..), StakePoolParams (..), StakePoolRelay (..))
 import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
@@ -313,7 +313,6 @@ fromCanonicalStakePoolRelay (CanonicalMultiHostName dns) = MultiHostName dns
 
 instance ToCanonicalCBOR v PoolMetadata where
   toCanonicalCBOR v PoolMetadata {..} = toCanonicalCBOR v (pmUrl, pmHash)
-
 
 instance KnownNamespace "snapshots/v0" where
   type NamespaceKey "snapshots/v0" = SnapShotIn

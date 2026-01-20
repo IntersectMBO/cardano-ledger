@@ -48,20 +48,12 @@ library
     base,
     bytestring,
     cardano-crypto-class,
-    -- -- cardano-ledger-allegra,
-    -- -- cardano-ledger-alonzo,
-    -- -- cardano-ledger-babbage,
-    -- -- cardano-ledger-binary,
-    -- -- cardano-ledger-conway,
     cardano-ledger-core,
-    -- -- cardano-ledger-mary,
-    -- -- cardano-ledger-shelley,
     cardano-slotting,
     cardano-strict-containers,
     cborg,
     containers,
     iproute,
-    -- mempack,
     mempack-scls,
     scls-cardano,
     cardano-ledger-binary,
@@ -89,10 +81,12 @@ library testlib
   build-depends:
     QuickCheck,
     base,
+    bytestring,
     cardano-canonical,
 --     cardano-ledger-babbage:testlib,
 --     cardano-ledger-conway:{scls, testlib},
---     cardano-ledger-core:testlib,
+    containers,
+    cardano-ledger-core:testlib,
     generic-random,
 
 
@@ -124,3 +118,6 @@ test-suite tests
     scls-cardano:testlib,
     cardano-canonical:{cardano-canonical,testlib},
     testlib,
+
+    containers,
+    bytestring

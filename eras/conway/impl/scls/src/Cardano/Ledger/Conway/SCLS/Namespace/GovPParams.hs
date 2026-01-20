@@ -1,21 +1,12 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-module Cardano.Ledger.Conway.SCLS.Namespace.GovPParams
-  ( module Cardano.Ledger.SCLS.Namespace.GovPParams.V0,
 
-  ) where
+module Cardano.Ledger.Conway.SCLS.Namespace.GovPParams (
+  module Cardano.Ledger.SCLS.Namespace.GovPParams.V0,
+) where
 
-import Cardano.Ledger.SCLS.Namespace.GovPParams.V0
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
-import Cardano.Ledger.SCLS.Common (
-  CoinPerByte (..),
-  fromCanonicalCoin,
-  mkCanonicalCoin,
- )
-
-import Data.Function ((&))
-import Cardano.Ledger.Core (PParams (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams (
   ConwayPParams (..),
@@ -23,6 +14,14 @@ import Cardano.Ledger.Conway.PParams (
   PoolVotingThresholds (..),
   THKD (..),
  )
+import Cardano.Ledger.Core (PParams (..))
+import Cardano.Ledger.SCLS.Common (
+  CoinPerByte (..),
+  fromCanonicalCoin,
+  mkCanonicalCoin,
+ )
+import Cardano.Ledger.SCLS.Namespace.GovPParams.V0
+import Data.Function ((&))
 
 instance IsCanonicalPParams (PParams ConwayEra) where
   mkCanonicalPParams (PParams ConwayPParams {..}) =
@@ -41,7 +40,7 @@ instance IsCanonicalPParams (PParams ConwayEra) where
       , ccppTau = unTHKD cppTau
       , ccppProtocolVersion = cppProtocolVersion
       , ccppMinPoolCost = mkCanonicalCoin $ unTHKD cppMinPoolCost
-      , ccppCoinsPerUTxOByte =  mkCanonicalCoin $ unCoinPerByte $ unTHKD cppCoinsPerUTxOByte
+      , ccppCoinsPerUTxOByte = mkCanonicalCoin $ unCoinPerByte $ unTHKD cppCoinsPerUTxOByte
       , ccppCostModels = mkCanonicalCostModels $ unTHKD cppCostModels
       , ccppPrices = mkCanonicalPrices $ unTHKD cppPrices
       , ccppMaxTxExUnits = unTHKD cppMaxTxExUnits & unOrdExUnits & mkCanonicalExUnits
