@@ -22,7 +22,12 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..))
+import Cardano.Ledger.Address (
+  AccountAddress (..),
+  AccountId (..),
+  Addr (..),
+  BootstrapAddress (..),
+ )
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochInterval (..),
@@ -165,10 +170,10 @@ instance SpecTranslate ctx ExUnits where
 
   toSpecRep (ExUnits a b) = pure (toInteger a, toInteger b)
 
-instance SpecTranslate ctx RewardAccount where
-  type SpecRep RewardAccount = Agda.RewardAddress
+instance SpecTranslate ctx AccountAddress where
+  type SpecRep AccountAddress = Agda.RewardAddress
 
-  toSpecRep (RewardAccount n c) = Agda.RewardAddress <$> toSpecRep n <*> toSpecRep c
+  toSpecRep (AccountAddress n (AccountId c)) = Agda.RewardAddress <$> toSpecRep n <*> toSpecRep c
 
 instance
   ( SpecRep DataHash ~ Agda.DataHash

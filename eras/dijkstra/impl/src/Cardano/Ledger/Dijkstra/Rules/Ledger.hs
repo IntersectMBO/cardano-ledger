@@ -22,7 +22,7 @@ module Cardano.Ledger.Dijkstra.Rules.Ledger (
   conwayToDijkstraLedgerPredFailure,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo (AlonzoScript)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
@@ -139,7 +139,7 @@ data DijkstraLedgerPredFailure era
   | DijkstraTreasuryValueMismatch (Mismatch RelEQ Coin)
   | DijkstraTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | DijkstraWithdrawalsMissingAccounts Withdrawals
-  | DijkstraIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
+  | DijkstraIncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   | DijkstraSubLedgersFailure (PredicateFailure (EraRule "SUBLEDGERS" era))
   | DijkstraSpendingOutputFromSameTx (NonEmptyMap TxId (NonEmptySet TxIn))
   deriving (Generic)

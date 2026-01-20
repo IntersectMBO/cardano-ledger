@@ -23,7 +23,7 @@ module Cardano.Ledger.Conway.Rules.Utxo (
   UtxoEnv (..),
 ) where
 
-import Cardano.Ledger.Address (Addr, RewardAccount)
+import Cardano.Ledger.Address (AccountAddress, Addr)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Alonzo.Rules (
@@ -110,7 +110,7 @@ data ConwayUtxoPredFailure era
       -- | the expected network id
       Network
       -- | the set of reward addresses with incorrect network IDs
-      (NonEmptySet RewardAccount)
+      (NonEmptySet AccountAddress)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
       (NonEmpty (TxOut era))

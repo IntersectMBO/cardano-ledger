@@ -22,8 +22,8 @@ module Cardano.Ledger.Dijkstra.Rules.Utxo (
 ) where
 
 import Cardano.Ledger.Address (
+  AccountAddress,
   Addr (..),
-  RewardAccount,
  )
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
@@ -134,7 +134,7 @@ data DijkstraUtxoPredFailure era
       -- | the expected network id
       Network
       -- | the set of reward addresses with incorrect network IDs
-      (NonEmptySet RewardAccount)
+      (NonEmptySet AccountAddress)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction outputs

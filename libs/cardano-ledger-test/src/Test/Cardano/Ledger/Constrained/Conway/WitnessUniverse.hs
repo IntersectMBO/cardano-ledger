@@ -30,7 +30,7 @@ import Cardano.Crypto (SigningKey)
 import Cardano.Crypto.Signing (toVerification)
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron (generate)
-import Cardano.Ledger.Address (BootstrapAddress (..), RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress, AccountId (..), BootstrapAddress (..), aaAccountId)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),
@@ -397,15 +397,15 @@ witDRepSpec univ =
           (branchW 1 $ \_ -> True)
       ]
 
--- | Used only in Withdrawals, other RewardAccounts, not being withdrawn do not need witnessing
-witRewardAccountSpec ::
+-- | Used only in Withdrawals, other AccountAddresses, not being withdrawn do not need witnessing
+witAccountAddressSpec ::
   forall era.
-  WitUniv era -> Specification (RewardAccount)
-witRewardAccountSpec univ =
-  explainWit "rewaccount :: (RewardAccount c)" univ $
-    constrained $ \ [var|rewaccount|] ->
-      match rewaccount $ \ [var|_network|] [var|raCred|] ->
-        satisfies raCred (witCredSpec @era univ)
+  WitUniv era -> Specification (AccountAddress)
+witAccountAddressSpec univ =
+  explainWit "accountAddress :: (AccountAddress c)" univ $
+    constrained $ \ [var|accountAddress|] ->
+      match accountAddress $ \ [var|_network|] [var|accountCred|] ->
+        satisfies accountCred (witCredSpec @era univ)
 
 owners_ ::
   Term StakePoolParams -> Term (Set (KeyHash Staking))
@@ -689,8 +689,8 @@ instance Era era => Witnessed era BootstrapAddress where
 instance Era era => Witnessed era DRep where
   witness univ t = satisfies t (witDRepSpec univ)
 
-instance Era era => Witnessed era RewardAccount where
-  witness univ t = satisfies t (witRewardAccountSpec univ)
+instance Era era => Witnessed era AccountAddress where
+  witness univ t = satisfies t (witAccountAddressSpec univ)
 
 instance Era era => Witnessed era StakePoolParams where
   witness univ t = satisfies t (witStakePoolParamsSpec univ)
@@ -923,7 +923,7 @@ govActionWitness univ = explainSpec ["Witnessing GovAction"] $
       -- HardFork
       (branch $ \_ _ -> True)
       -- TreasuryWithdrawals
-      (branch $ \rewacctmap mhash -> [witness univ (dom_ rewacctmap), witness univ mhash])
+      (branch $ \accountAddressMap mhash -> [witness univ (dom_ accountAddressMap), witness univ mhash])
       -- NoConfidence
       (branch $ \_ -> True)
       -- UpdateCommitee

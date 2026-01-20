@@ -13,7 +13,7 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert () where
 
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -44,14 +44,14 @@ instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map RewardAccount Coin)
+  , Inject ctx (Map AccountAddress Coin)
   ) =>
   SpecTranslate ctx (CertEnv era)
   where
   type SpecRep (CertEnv era) = Agda.CertEnv
   toSpecRep CertEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map RewardAccount Coin)
+    withdrawals <- askCtx @(Map AccountAddress Coin)
     let ccColdCreds = foldMap (keysSet . committeeMembers) ceCurrentCommittee
     Agda.MkCertEnv
       <$> toSpecRep ceCurrentEpoch

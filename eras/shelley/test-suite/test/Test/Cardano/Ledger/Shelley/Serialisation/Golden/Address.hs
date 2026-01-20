@@ -94,13 +94,13 @@ goldenTests_MockCrypto =
         ("70" <> scriptHashHex)
     , golden
         "rewardAcntK"
-        putRewardAccount
-        (RewardAccount Testnet keyHash)
+        putAccountAddress
+        (AccountAddress Testnet (AccountId keyHash))
         ("e0" <> keyHashHex)
     , golden
         "rewardAcntS"
-        putRewardAccount
-        (RewardAccount Testnet scriptHash)
+        putAccountAddress
+        (AccountAddress Testnet (AccountId scriptHash))
         ("f0" <> scriptHashHex)
     ]
   where
@@ -161,8 +161,8 @@ goldenTests_ShelleyCrypto =
         "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
     , golden
         "rewardAcntK"
-        putRewardAccount
-        (RewardAccount Testnet stakeKey)
+        putAccountAddress
+        (AccountAddress Testnet (AccountId stakeKey))
         "e008b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4"
     , golden
         "bootstrapAddr for network id = 1"

@@ -179,8 +179,8 @@ instance Era era => HuddleRule "address" era where
           |     0110: enterprise address: keyhash28
           |     0111: enterprise address: scripthash28
           |     1000: byron address
-          |     1110: reward account: keyhash28
-          |     1111: reward account: scripthash28
+          |     1110: account address: keyhash28
+          |     1111: account address: scripthash28
           |1001-1101: future formats
           |]
       $ pname

@@ -119,7 +119,7 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   translateProposals,
 ) where
 
-import Cardano.Ledger.Address (rewardAccountCredentialL)
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   isSJust,
@@ -561,7 +561,7 @@ proposalsActions ::
   StrictSeq (GovActionState era)
 proposalsActions (Proposals omap _ _) = OMap.toStrictSeq omap
 
--- | Get a mapping from the reward-account staking credentials to deposits of
+-- | Get a mapping from the account-address staking credentials to deposits of
 -- all proposals.
 proposalsDeposits ::
   Proposals era ->
@@ -571,7 +571,7 @@ proposalsDeposits =
     ( \gasMap gas ->
         Map.insertWith
           addCompactCoin
-          (gas ^. gasReturnAddrL . rewardAccountCredentialL)
+          (gas ^. gasReturnAddrL . accountAddressCredentialL)
           (fromMaybe (CompactCoin 0) $ toCompact $ gas ^. gasDepositL)
           gasMap
     )

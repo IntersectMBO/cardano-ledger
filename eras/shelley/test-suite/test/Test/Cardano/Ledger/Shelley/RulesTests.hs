@@ -11,6 +11,7 @@ module Test.Cardano.Ledger.Shelley.RulesTests (
   multisigExamples,
 ) where
 
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashScript)
@@ -18,7 +19,7 @@ import Cardano.Ledger.Credential (pattern ScriptHashObj)
 import Cardano.Ledger.Keys (asWitness, hashKey)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
-import Cardano.Ledger.Shelley.TxBody (RewardAccount (..), Withdrawals (..))
+import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
 import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set.NonEmpty as NES
@@ -400,9 +401,9 @@ testRwdAliceSignsAlone =
         [aliceOnly]
         ( Withdrawals $
             Map.singleton
-              ( RewardAccount
+              ( AccountAddress
                   Testnet
-                  (ScriptHashObj $ hashScript @ShelleyEra aliceOnly)
+                  (AccountId (ScriptHashObj $ hashScript @ShelleyEra aliceOnly))
               )
               (Coin 1000)
         )
@@ -420,10 +421,11 @@ testRwdAliceSignsAlone' =
         [aliceOnly, bobOnly]
         ( Withdrawals $
             Map.singleton
-              ( RewardAccount
+              ( AccountAddress
                   Testnet
-                  ( ScriptHashObj $
-                      hashScript @ShelleyEra bobOnly
+                  ( AccountId $
+                      ScriptHashObj $
+                        hashScript @ShelleyEra bobOnly
                   )
               )
               (Coin 1000)
@@ -442,10 +444,11 @@ testRwdAliceSignsAlone'' =
         [aliceOnly, bobOnly]
         ( Withdrawals $
             Map.singleton
-              ( RewardAccount
+              ( AccountAddress
                   Testnet
-                  ( ScriptHashObj $
-                      hashScript @ShelleyEra bobOnly
+                  ( AccountId $
+                      ScriptHashObj $
+                        hashScript @ShelleyEra bobOnly
                   )
               )
               (Coin 1000)
@@ -464,7 +467,7 @@ testRwdAliceSignsAlone''' =
         [aliceOnly]
         ( Withdrawals $
             Map.singleton
-              (RewardAccount Testnet (ScriptHashObj $ hashScript @ShelleyEra bobOnly))
+              (AccountAddress Testnet (AccountId (ScriptHashObj $ hashScript @ShelleyEra bobOnly)))
               (Coin 1000)
         )
         (Coin 0)

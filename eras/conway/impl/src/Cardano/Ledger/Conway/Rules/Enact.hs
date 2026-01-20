@@ -15,7 +15,7 @@ module Cardano.Ledger.Conway.Rules.Enact (
   EnactState (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
@@ -96,7 +96,7 @@ enactmentTransition = do
           & ensPrevHardForkL .~ SJust (GovPurposeId govActionId)
       TreasuryWithdrawals wdrls _ ->
         let wdrlsAmount = fold wdrls
-            wdrlsNoNetworkId = Map.mapKeys raCredential wdrls
+            wdrlsNoNetworkId = Map.mapKeys (^. accountAddressCredentialL) wdrls
          in st
               { ensWithdrawals = Map.unionWith (<>) wdrlsNoNetworkId $ ensWithdrawals st
               , ensTreasury = ensTreasury st <-> wdrlsAmount

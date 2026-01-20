@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -17,7 +18,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo (
   pickRandomFromMap,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr (..), aaAccountId)
 import Cardano.Ledger.BaseTypes (
   Network (..),
   inject,
@@ -748,7 +749,7 @@ genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo)
           Right $ findPayScriptFromAddr @era addr payScriptMap
         _ -> error "unsupported address"
 
--- | Select a subset of the reward accounts to use for reward withdrawals.
+-- | Select a subset of the account addresses to use for reward withdrawals.
 genWithdrawals ::
   forall era.
   Constants ->
@@ -756,7 +757,7 @@ genWithdrawals ::
   Map (KeyHash Staking) (KeyPair Staking) ->
   Map (Credential Staking) Coin ->
   Gen
-    ( [(RewardAccount, Coin)]
+    ( [(AccountAddress, Coin)]
     , ([KeyPair Witness], [(Script era, Script era)])
     )
 genWithdrawals
@@ -786,12 +787,13 @@ genWithdrawals
         ]
     pure (a, b)
     where
-      toRewardAccount (rwd, coinx) = (RewardAccount Testnet rwd, coinx)
+      toAccountAddress (rwd, coinx) = (AccountAddress Testnet (AccountId rwd), coinx)
       genWrdls withdrawals_ = do
-        selectedWrdls <- map toRewardAccount <$> QC.sublistOf withdrawals_
+        selectedWrdls <- map toAccountAddress <$> QC.sublistOf withdrawals_
         let txwits =
               mkWithdrawalsWits @era ksIndexedStakeScripts ksIndexedStakingKeys
-                . raCredential
+                . (\(AccountId c) -> c)
+                . aaAccountId
                 . fst
                 <$> selectedWrdls
         return (selectedWrdls, Either.partitionEithers txwits)

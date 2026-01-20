@@ -418,7 +418,7 @@ finishedPulserState ::
   (PulsingSnapshot era, RatifyState era)
 finishedPulserState nes = finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)
 
--- | Query a stake pool's reward account delegatee which determines the pool's default vote
+-- | Query a stake pool's account address delegatee which determines the pool's default vote
 -- in absence of an explicit vote. Note that this is different from the delegatee determined
 -- by the credential of the stake pool itself.
 queryStakePoolDefaultVote ::

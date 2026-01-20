@@ -23,7 +23,7 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   conwayLedgerTransitionTRC,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress, accountAddressCredentialL)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
@@ -146,7 +146,7 @@ data ConwayLedgerPredFailure era
   | ConwayTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | ConwayMempoolFailure Text
   | ConwayWithdrawalsMissingAccounts Withdrawals
-  | ConwayIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
+  | ConwayIncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   deriving (Generic)
 
 type instance EraRuleFailure "LEDGER" ConwayEra = ConwayLedgerPredFailure ConwayEra
@@ -428,13 +428,14 @@ conwayLedgerTransitionTRC
           -- KeyHashes and not delegated to Dreps.
           --
           -- We also need to make sure we are using the certState before certificates are applied,
-          -- because otherwise it would not be possible to unregister a reward account and withdraw
+          -- because otherwise it would not be possible to unregister an account address and withdraw
           -- all funds from it in the same transaction.
           unless (hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL)) $ do
             let accounts = certState ^. certDStateL . accountsL
                 wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
                 wdrlsKeyHashes =
-                  [kh | (ra, _) <- Map.toList wdrls, Just kh <- [credKeyHash $ raCredential ra]]
+                  [ kh | (ra, _) <- Map.toList wdrls, Just kh <- [credKeyHash $ ra ^. accountAddressCredentialL]
+                  ]
                 isNotDRepDelegated keyHash = isNothing $ do
                   accountState <- lookupAccountState (KeyHashObj keyHash) accounts
                   accountState ^. dRepDelegationAccountStateL

@@ -34,7 +34,7 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   testIncompleteAndMissingWithdrawals,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes (Mismatch, Relation (..), ShelleyBase, TxIx, invalidKey, networkId)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -129,7 +129,7 @@ data ShelleyLedgerPredFailure era
   = UtxowFailure (PredicateFailure (EraRule "UTXOW" era)) -- Subtransition Failures
   | DelegsFailure (PredicateFailure (EraRule "DELEGS" era)) -- Subtransition Failures
   | ShelleyWithdrawalsMissingAccounts Withdrawals
-  | ShelleyIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
+  | ShelleyIncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   deriving (Generic)
 
 ledgerSlotNoL :: Lens' (LedgerEnv era) SlotNo

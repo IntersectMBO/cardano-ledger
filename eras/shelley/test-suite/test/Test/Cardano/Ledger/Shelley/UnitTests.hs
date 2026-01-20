@@ -5,7 +5,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -14,7 +13,12 @@
 module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (Addr (..), raCredential, pattern RewardAccount)
+import Cardano.Ledger.Address (
+  AccountAddress (..),
+  AccountId (..),
+  Addr (..),
+  accountAddressCredentialL,
+ )
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
@@ -67,7 +71,7 @@ import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (
   KeyPair (..),
-  mkVKeyRewardAccount,
+  mkVKeyAccountAddress,
   mkWitnessVKey,
   mkWitnessesVKey,
   vKey,
@@ -426,7 +430,7 @@ testWitnessWrongUTxO =
 
 testEmptyInputSet :: Assertion
 testEmptyInputSet =
-  let aliceWithdrawal = Map.singleton (mkVKeyRewardAccount Testnet aliceStake) (Coin 2000)
+  let aliceWithdrawal = Map.singleton (mkVKeyAccountAddress Testnet aliceStake) (Coin 2000)
       txb =
         ShelleyTxBody
           Set.empty
@@ -439,7 +443,11 @@ testEmptyInputSet =
           SNothing
       txwits = mempty {addrWits = mkWitnessesVKey (hashAnnotated txb) [aliceStake]}
       tx = ShelleyTx txb txwits SNothing
-      dpState' = addReward dpState (raCredential $ mkVKeyRewardAccount Testnet aliceStake) (Coin 2000)
+      dpState' =
+        addReward
+          dpState
+          (mkVKeyAccountAddress Testnet aliceStake ^. accountAddressCredentialL)
+          (Coin 2000)
    in testLEDGER
         (LedgerState utxoState dpState')
         (MkShelleyTx tx)
@@ -520,7 +528,7 @@ testWithdrawalNoWit =
               ]
           )
           Empty
-          (Withdrawals $ Map.singleton (mkVKeyRewardAccount Testnet bobStake) (Coin 10))
+          (Withdrawals $ Map.singleton (mkVKeyAccountAddress Testnet bobStake) (Coin 10))
           (Coin 1000)
           (SlotNo 0)
           SNothing
@@ -532,7 +540,11 @@ testWithdrawalNoWit =
       errs =
         [ UtxowFailure $ MissingVKeyWitnessesUTXOW missing
         ]
-      dpState' = addReward dpState (raCredential $ mkVKeyRewardAccount Testnet bobStake) (Coin 10)
+      dpState' =
+        addReward
+          dpState
+          (mkVKeyAccountAddress Testnet bobStake ^. accountAddressCredentialL)
+          (Coin 10)
    in testLEDGER (LedgerState utxoState dpState') (MkShelleyTx tx) ledgerEnv (Left errs)
 
 testWithdrawalWrongAmt :: Assertion
@@ -546,7 +558,7 @@ testWithdrawalWrongAmt =
               ]
           )
           Empty
-          (Withdrawals $ Map.singleton (mkVKeyRewardAccount Testnet bobStake) (Coin 11))
+          (Withdrawals $ Map.singleton (mkVKeyAccountAddress Testnet bobStake) (Coin 11))
           (Coin 1000)
           (SlotNo 0)
           SNothing
@@ -558,8 +570,8 @@ testWithdrawalWrongAmt =
                 (hashAnnotated txb)
                 [asWitness alicePay, asWitness bobStake]
           }
-      rAccount = mkVKeyRewardAccount Testnet bobStake
-      dpState' = addReward dpState (raCredential rAccount) (Coin 10)
+      rAccount = mkVKeyAccountAddress Testnet bobStake
+      dpState' = addReward dpState (rAccount ^. accountAddressCredentialL) (Coin 10)
       tx = MkShelleyTx $ ShelleyTx @ShelleyEra txb txwits SNothing
       errs =
         [ ShelleyIncompleteWithdrawals $
@@ -597,7 +609,7 @@ aliceStakePoolParamsSmallCost =
     , sppPledge = Coin 1
     , sppCost = Coin 5 -- Too Small!
     , sppMargin = unsafeBoundRational 0.1
-    , sppRewardAccount = RewardAccount Testnet (KeyHashObj . hashKey . vKey $ aliceStake)
+    , sppAccountAddress = AccountAddress Testnet (AccountId (KeyHashObj . hashKey . vKey $ aliceStake))
     , sppOwners = Set.singleton $ (hashKey . vKey) aliceStake
     , sppRelays = StrictSeq.empty
     , sppMetadata =

@@ -25,7 +25,7 @@ module Cardano.Ledger.Shelley.Rules.Pool (
 ) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.Address (raNetwork)
+import Cardano.Ledger.Address (aaNetworkId)
 import Cardano.Ledger.BaseTypes (
   EpochNo,
   Globals (..),
@@ -50,7 +50,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (
   ShelleyEra,
   ShelleyPOOL,
-  hardforkAlonzoValidatePoolRewardAccountNetID,
+  hardforkAlonzoValidatePoolAccountAddressNetID,
   hardforkConwayDisallowDuplicatedVRFKeys,
  )
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
@@ -231,11 +231,11 @@ poolTransition = do
       ) <-
     judgmentContext
   case poolCert of
-    RegPool stakePoolParams@StakePoolParams {sppId, sppVrf, sppRewardAccount, sppMetadata, sppCost} -> do
+    RegPool stakePoolParams@StakePoolParams {sppId, sppVrf, sppAccountAddress, sppMetadata, sppCost} -> do
       let pv = pp ^. ppProtocolVersionL
-      when (hardforkAlonzoValidatePoolRewardAccountNetID pv) $ do
+      when (hardforkAlonzoValidatePoolAccountAddressNetID pv) $ do
         actualNetID <- liftSTS $ asks networkId
-        let suppliedNetID = raNetwork sppRewardAccount
+        let suppliedNetID = aaNetworkId sppAccountAddress
         actualNetID
           == suppliedNetID
             ?! injectFailure

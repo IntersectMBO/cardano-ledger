@@ -335,7 +335,7 @@ instance ToJSON MIRPot where
 
 -- | MIRTarget specifies if funds from either the reserves
 -- or the treasury are to be handed out to a collection of
--- reward accounts or instead transfered to the opposite pot.
+-- account addresses or instead transfered to the opposite pot.
 data MIRTarget
   = StakeAddressesMIR !(Map (Credential Staking) DeltaCoin)
   | SendToOppositePotMIR !Coin

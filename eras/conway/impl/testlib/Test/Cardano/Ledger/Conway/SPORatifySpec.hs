@@ -198,7 +198,7 @@ data Ratios = Ratios
   }
   deriving (Show)
 
--- Prepare the pool distribution, votes, map of pool parameters and map of reward account delegatees
+-- Prepare the pool distribution, votes, map of pool parameters and map of account address delegatees
 -- according to the given ratios.
 genTestData ::
   Ratios ->
@@ -268,13 +268,13 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
     genPoolState p = sequence $ fromKeys (const arbitrary) p
 
     -- Given a delegatee and a map of stake pool params,
-    -- create a map of reward account delegatees.
+    -- create a map of account address delegatees.
     mkDelegatees ::
       DRep ->
       Map (KeyHash StakePool) StakePoolState ->
       Map (Credential Staking) DRep
     mkDelegatees drep =
-      fromKeys (const drep) . map spsRewardAccount . Map.elems
+      fromKeys (const drep) . map spsAccountAddress . Map.elems
 
     -- Create a map from each pool with the given value, where the key is the pool credential
     -- and take the union of all these maps.

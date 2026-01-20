@@ -7,20 +7,21 @@
 
 -- | This module contains previous implementations for Addr and CoompactAddr
 -- deserialization. This is used as an alternative implementation for testing and as a
--- perforance reference for benchmarking.
+-- performance reference for benchmarking.
 module Test.Cardano.Ledger.Core.Address (
   deserialiseAddrOld,
-  deserialiseRewardAccountOld,
+  deserialiseAccountAddressOld,
   decompactAddrOld,
   decompactAddrOldLazy,
 ) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address (
+  AccountAddress (..),
+  AccountId (..),
   Addr (..),
   BootstrapAddress (BootstrapAddress),
   CompactAddr,
-  RewardAccount (..),
   Word7 (..),
   toWord7,
   unCompactAddr,
@@ -65,16 +66,16 @@ deserialiseAddrOld bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
       then pure result
       else fail $ "Old Addr decoder did not consume all input"
 
--- | Deserialise an reward account from the external format. This will fail if the
+-- | Deserialise an account address from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseRewardAccountOld :: MonadFail m => BS.ByteString -> m RewardAccount
-deserialiseRewardAccountOld bs = case B.runGetOrFail getRewardAccount (BSL.fromStrict bs) of
+deserialiseAccountAddressOld :: MonadFail m => BS.ByteString -> m AccountAddress
+deserialiseAccountAddressOld bs = case B.runGetOrFail getAccountAddress (BSL.fromStrict bs) of
   Left (_remaining, _offset, message) ->
-    fail $ "Old RewardAccount decoder failed: " <> fromString message
+    fail $ "Old AccountAddress decoder failed: " <> fromString message
   Right (remaining, _offset, result) ->
     if BSL.null remaining
       then pure result
-      else fail $ "Old RewardAccount decoder did not consume all input"
+      else fail $ "Old AccountAddress decoder did not consume all input"
 
 byron :: Int
 byron = 7
@@ -109,22 +110,22 @@ getAddr = do
             concat
               ["Address with unknown network Id. (", show addrNetId, ")"]
 
-getRewardAccount :: Get RewardAccount
-getRewardAccount = do
+getAccountAddress :: Get AccountAddress
+getAccountAddress = do
   header <- B.getWord8
-  let rewardAccountPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
-      isRewardAccount = (header .&. rewardAccountPrefix) == rewardAccountPrefix
+  let accountAddressPrefix = 0xE0 -- 0b11100000 are always set for account addresses
+      isAccountAddress = (header .&. accountAddressPrefix) == accountAddressPrefix
       netId = header .&. 0x0F -- 0b00001111 is the mask for the network id
-  case (word8ToNetwork netId, isRewardAccount) of
+  case (word8ToNetwork netId, isAccountAddress) of
     (Nothing, _) ->
-      fail $ concat ["Reward account with unknown network Id. (", show netId, ")"]
+      fail $ concat ["Account address with unknown network Id. (", show netId, ")"]
     (_, False) ->
-      fail $ concat ["Expected reward account. Got account with header: ", show header]
+      fail $ concat ["Expected account address. Got account with header: ", show header]
     (Just network, True) -> do
       cred <- case testBit header rewardCredIsScript of
         True -> getScriptHash
         False -> getKeyHash
-      pure $ RewardAccount network cred
+      pure $ AccountAddress network (AccountId cred)
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
 getHash = do

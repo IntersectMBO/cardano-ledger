@@ -21,7 +21,7 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkWitnessesVKey,
   makeWitnessesFromScriptKeys,
   mkKeyHashWitFunPair,
-  mkVKeyRewardAccount,
+  mkVKeyAccountAddress,
   mkKeyPair,
   mkKeyPairWithSeed,
   mkKeyHash,
@@ -212,11 +212,11 @@ mkKeyHashWitFunPair = do
   keyPair@(KeyPair vk _) <- arbitrary @(KeyPair kr)
   pure (hashKey vk, \safeHash -> mkWitnessVKey safeHash keyPair)
 
-mkVKeyRewardAccount ::
+mkVKeyAccountAddress ::
   Network ->
   KeyPair Staking ->
-  RewardAccount
-mkVKeyRewardAccount network keys = RewardAccount network $ KeyHashObj (hashKey $ vKey keys)
+  AccountAddress
+mkVKeyAccountAddress network keys = AccountAddress network $ AccountId $ KeyHashObj (hashKey $ vKey keys)
 
 mkKeyHash :: Int -> KeyHash kd
 mkKeyHash = hashKey . vKey . mkKeyPair

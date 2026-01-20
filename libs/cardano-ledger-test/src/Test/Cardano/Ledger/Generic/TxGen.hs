@@ -29,6 +29,7 @@ module Test.Cardano.Ledger.Generic.TxGen (
   genUTxO,
 ) where
 
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
@@ -50,9 +51,10 @@ import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus.Data (Data, Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.API (
+  AccountAddress (..),
+  AccountId (..),
   Addr (..),
   Credential (..),
-  RewardAccount (..),
   ShelleyDelegCert (..),
  )
 import Cardano.Ledger.Shelley.Scripts (
@@ -553,9 +555,9 @@ genShelleyDelegCert = do
     genShelleyRegCert = RegTxCert <$> genFreshRegCred @era Certifying
     genShelleyUnRegCert = UnRegTxCert <$> genCredential Certifying
     genDelegation = do
-      rewardAccount <- genFreshRegCred Certifying
+      accountAddress <- genFreshRegCred Certifying
       (poolId, _) <- genPool
-      pure $ DelegStakeTxCert rewardAccount poolId
+      pure $ DelegStakeTxCert accountAddress poolId
 
 genTxCertDeleg :: forall era. Reflect era => GenRS era (TxCert era)
 genTxCertDeleg = case reify @era of
@@ -802,7 +804,7 @@ genWithdrawals slot =
     then do
       let networkId = Testnet
       newRewards <- genRewards
-      pure (Withdrawals $ Map.mapKeys (RewardAccount networkId) newRewards)
+      pure (Withdrawals $ Map.mapKeys (\c -> AccountAddress networkId (AccountId c)) newRewards)
     else pure (Withdrawals Map.empty)
 
 -- ============================================================================
@@ -886,7 +888,7 @@ genAlonzoTxAndInfo slot = do
     if withdrawalAmount == Coin 0
       then pure Nothing
       else Just <$> genTxOut (inject withdrawalAmount)
-  let wdrlCreds = map (raCredential . fst) $ Map.toAscList wdrlMap
+  let wdrlCreds = map ((^. accountAddressCredentialL) . fst) $ Map.toAscList wdrlMap
   (IsValid v2, mkWithdrawalsWits) <-
     redeemerWitnessMaker Rewarding $ map (Just . (,) genDatum) wdrlCreds
 

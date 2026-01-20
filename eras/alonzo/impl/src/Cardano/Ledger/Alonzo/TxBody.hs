@@ -525,8 +525,8 @@ alonzoRedeemerPointer txBody = \case
     AlonzoMinting <$> indexOf policyID (txBody ^. mintedTxBodyF :: Set PolicyID)
   AlonzoCertifying txCert ->
     AlonzoCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
-  AlonzoRewarding rewardAccount ->
-    AlonzoRewarding <$> indexOf rewardAccount (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  AlonzoRewarding accountAddress ->
+    AlonzoRewarding <$> indexOf accountAddress (unWithdrawals (txBody ^. withdrawalsTxBodyL))
 
 alonzoRedeemerPointerInverse ::
   MaryEraTxBody era =>

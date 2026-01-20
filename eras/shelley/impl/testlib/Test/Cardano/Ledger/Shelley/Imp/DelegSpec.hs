@@ -71,9 +71,9 @@ shelleyEraSpecificSpec = do
         & ppKeyDepositL .~ keyDeposit
         & ppPoolDepositL .~ poolDeposit
     stakeCred <- KeyHashObj <$> freshKeyHash
-    rewardAccount <- getRewardAccountFor stakeCred
+    accountAddress <- getAccountAddressFor stakeCred
     otherStakeCred <- KeyHashObj <$> freshKeyHash
-    otherRewardAccount <- getRewardAccountFor otherStakeCred
+    otherAccountAddress <- getAccountAddressFor otherStakeCred
     khStakePool <- freshKeyHash
     registerPool khStakePool
     stakeCredRegTxCert <- genRegTxCert stakeCred
@@ -86,8 +86,8 @@ shelleyEraSpecificSpec = do
              , otherStakeCredRegTxCert
              , delegStakeTxCert otherStakeCred khStakePool
              ]
-    expectRegisteredRewardAddress rewardAccount
-    expectRegisteredRewardAddress otherRewardAccount
+    expectRegisteredAccountAddress accountAddress
+    expectRegisteredAccountAddress otherAccountAddress
     registerAndRetirePoolToMakeReward otherStakeCred
 
     getBalance otherStakeCred `shouldReturn` poolDeposit
@@ -99,18 +99,18 @@ shelleyEraSpecificSpec = do
         & withdrawalsTxBodyL
           .~ Withdrawals
             ( Map.fromList
-                [ (rewardAccount, Coin 0)
-                , (otherRewardAccount, poolDeposit)
+                [ (accountAddress, Coin 0)
+                , (otherAccountAddress, poolDeposit)
                 ]
             )
     getBalance otherStakeCred `shouldReturn` Coin 0
-    expectNotRegisteredRewardAddress rewardAccount
+    expectNotRegisteredRewardAddress accountAddress
 
   it "Transition creates the delegations correctly" $ do
     pool1 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
     pool2 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
     pool3 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
-    poolParams <- freshKeyHash >>= \kh -> registerRewardAccount >>= freshPoolParams kh
+    poolParams <- freshKeyHash >>= \kh -> registerAccountAddress >>= freshPoolParams kh
     deleg1 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
     deleg2 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
     deleg3 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)

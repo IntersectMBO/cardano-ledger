@@ -33,7 +33,7 @@ module Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   constrainedUtxo,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Network (..),
@@ -453,7 +453,7 @@ spec = do
         (const "")
 
 data ConwayCertGenContext era = ConwayCertGenContext
-  { ccccWithdrawals :: !(Map RewardAccount Coin)
+  { ccccWithdrawals :: !(Map AccountAddress Coin)
   , ccccVotes :: !(VotingProcedures era)
   , ccccDelegatees :: !(Map (Credential DRepRole) (Set (Credential Staking)))
   }
@@ -474,9 +474,9 @@ conwayCertExecContextSpec univ wdrlsize = constrained' $
     , assert
         [ assert $ sizeOf_ withdrawals <=. lit wdrlsize
         , reify delegatees delegators $ \ [var|credStakeSet|] ->
-            [ forAll' withdrawals $ \ [var|rewAccount|] [var|_wCoin|] ->
-                match rewAccount $ \ [var|network|] [var|rewcred|] ->
-                  [network ==. lit Testnet, member_ rewcred credStakeSet]
+            [ forAll' withdrawals $ \ [var|accountAddress|] [var|_wCoin|] ->
+                match accountAddress $ \ [var|network|] [var|accountCred|] ->
+                  [network ==. lit Testnet, member_ accountCred credStakeSet]
             ]
         ]
     ]

@@ -10,13 +10,14 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | Example demonstrating a particular delegation scenario involving
--- two pools. Both pools select a reward account which is *not*
+-- two pools. Both pools select a account address which is *not*
 -- a pool owner, and which delegates to one of the pools.
 module Test.Cardano.Ledger.Shelley.Examples.TwoPools (
   twoPoolsExample,
   twoPoolsExampleExtended,
 ) where
 
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   BoundedRational (..),
@@ -66,7 +67,6 @@ import Cardano.Ledger.Shelley.Rewards (
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
-import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
@@ -171,10 +171,10 @@ feeTx1 :: Coin
 feeTx1 = Coin 3
 
 aliceStakePoolParams' :: StakePoolParams
-aliceStakePoolParams' = Cast.aliceStakePoolParams {sppRewardAccount = RewardAccount Testnet Cast.carlSHK}
+aliceStakePoolParams' = Cast.aliceStakePoolParams {sppAccountAddress = AccountAddress Testnet (AccountId Cast.carlSHK)}
 
 bobStakePoolParams' :: StakePoolParams
-bobStakePoolParams' = Cast.bobStakePoolParams {sppRewardAccount = RewardAccount Testnet Cast.carlSHK}
+bobStakePoolParams' = Cast.bobStakePoolParams {sppAccountAddress = AccountAddress Testnet (AccountId Cast.carlSHK)}
 
 txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =

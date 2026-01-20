@@ -40,7 +40,7 @@ genContext ::
   Gen
     ( WitUniv ConwayEra
     , Set (Credential DRepRole)
-    , Map RewardAccount Coin
+    , Map AccountAddress Coin
     )
 genContext = do
   univ <- genWitUniv @ConwayEra 200

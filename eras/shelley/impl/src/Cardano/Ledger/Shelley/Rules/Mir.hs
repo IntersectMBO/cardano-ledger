@@ -83,7 +83,7 @@ instance
 
   assertions =
     [ PostCondition
-        "MIR may not create or remove reward accounts"
+        "MIR may not create or remove account addresses"
         ( \(TRC (_, st, _)) st' ->
             let accountsCount esl =
                   Map.size (esl ^. esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL)

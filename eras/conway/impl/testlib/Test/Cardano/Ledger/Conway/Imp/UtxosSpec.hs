@@ -219,8 +219,8 @@ conwayFeaturesPlutusV1V2FailureSpec = do
       describe "ProposalProcedures" $ do
         it "V1" $ do
           deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-          rewardAccount <- registerRewardAccount
-          let badField = OSet.singleton $ ProposalProcedure deposit rewardAccount InfoAction def
+          accountAddress <- registerAccountAddress
+          let badField = OSet.singleton $ ProposalProcedure deposit accountAddress InfoAction def
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
             badField
@@ -229,8 +229,8 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             $ ProposalProceduresFieldNotSupported badField
         it "V2" $ do
           deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-          rewardAccount <- registerRewardAccount
-          let badField = OSet.singleton $ ProposalProcedure deposit rewardAccount InfoAction def
+          accountAddress <- registerAccountAddress
+          let badField = OSet.singleton $ ProposalProcedure deposit accountAddress InfoAction def
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
             badField
@@ -426,8 +426,8 @@ govPolicySpec = do
         submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
       impAnn "TreasuryWithdrawals" $ do
-        rewardAccount <- registerRewardAccount
-        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        accountAddress <- registerAccountAddress
+        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust scriptHash)
         proposal <- mkProposal govAction
         let tx =
@@ -447,14 +447,14 @@ govPolicySpec = do
           (Constitution anchor (SJust alwaysSucceedsSh))
           dRep
           committeeMembers'
-      rewardAccount <- registerRewardAccount
+      accountAddress <- registerAccountAddress
 
       impAnn "ParameterChange" $ do
         let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
         let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
         mkProposal govAction >>= submitProposal_
       impAnn "TreasuryWithdrawals" $ do
-        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysSucceedsSh)
         mkProposal govAction >>= submitProposal_
 
@@ -474,8 +474,8 @@ govPolicySpec = do
         submitPhase2Invalid_ tx
 
       impAnn "TreasuryWithdrawals" $ do
-        rewardAccount <- registerRewardAccount
-        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        accountAddress <- registerAccountAddress
+        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysFailsSh)
         proposal <- mkProposal govAction
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]

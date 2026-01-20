@@ -4,6 +4,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -11,7 +12,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
@@ -86,22 +87,22 @@ proposalsSpec =
         pp
           & ppGovActionLifetimeL .~ EpochInterval 1
           & ppGovActionDepositL .~ deposit
-      rewardAccount <- registerRewardAccount
+      accountAddress <- registerAccountAddress
 
       initialValue <- getsNES (nesEsL . curPParamsEpochStateL . ppTxFeePerByteL)
 
       parameterChangeAction <- mkMinFeeUpdateGovAction SNothing
       govActionId <-
-        mkProposalWithRewardAccount
+        mkProposalWithAccountAddress
           parameterChangeAction
-          rewardAccount
+          accountAddress
           >>= submitProposal
       expectPresentGovActionId govActionId
       passNEpochs 3
       expectMissingGovActionId govActionId
 
       getsNES (nesEsL . curPParamsEpochStateL . ppTxFeePerByteL) `shouldReturn` initialValue
-      getAccountBalance rewardAccount `shouldReturn` deposit
+      getAccountBalance accountAddress `shouldReturn` deposit
 
     it "Proposals are expired and removed as expected" $ whenPostBootstrap $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 1
@@ -402,12 +403,12 @@ treasurySpec =
 
     it "TreasuryWithdrawalExtra" $ whenPostBootstrap $ do
       disableTreasuryExpansion
-      rewardAccount <- registerRewardAccount
-      rewardAccountOther <- registerRewardAccount
+      accountAddress <- registerAccountAddress
+      accountAddressOther <- registerAccountAddress
       govPolicy <- getGovPolicy
       treasuryWithdrawalExpectation
-        [ TreasuryWithdrawals (Map.singleton rewardAccount (Coin 667)) govPolicy
-        , TreasuryWithdrawals (Map.singleton rewardAccountOther (Coin 668)) govPolicy
+        [ TreasuryWithdrawals (Map.singleton accountAddress (Coin 667)) govPolicy
+        , TreasuryWithdrawals (Map.singleton accountAddressOther (Coin 668)) govPolicy
         ]
 
     it
@@ -428,24 +429,24 @@ treasuryWithdrawalExpectation extraWithdrawals = do
   (dRepCred, _, _) <- setupSingleDRep 1_000_000
   treasuryStart <- getsNES treasuryL
   treasuryStart `shouldBe` withdrawalAmount
-  rewardAccount <- registerRewardAccount
+  accountAddress <- registerAccountAddress
   govPolicy <- getGovPolicy
   (govActionId NE.:| _) <-
     submitGovActions $
-      TreasuryWithdrawals (Map.singleton rewardAccount withdrawalAmount) govPolicy
+      TreasuryWithdrawals (Map.singleton accountAddress withdrawalAmount) govPolicy
         NE.:| extraWithdrawals
   submitYesVote_ (DRepVoter dRepCred) govActionId
   submitYesVoteCCs_ committeeHotCreds govActionId
   passEpoch -- 1st epoch crossing starts DRep pulser
   impAnn "Withdrawal should not be received yet" $
-    getBalance (raCredential rewardAccount) `shouldReturn` mempty
+    getBalance (accountAddress ^. accountAddressCredentialL) `shouldReturn` mempty
   passEpoch -- 2nd epoch crossing enacts all the ratified actions
   expectMissingGovActionId govActionId
   treasuryEnd <- getsNES treasuryL
   impAnn "Withdrawal deducted from treasury" $
     treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
-  impAnn "Withdrawal received by reward account" $
-    getBalance (raCredential rewardAccount) `shouldReturn` withdrawalAmount
+  impAnn "Withdrawal received by staking address" $
+    getBalance (accountAddress ^. accountAddressCredentialL) `shouldReturn` withdrawalAmount
 
 depositMovesToTreasuryWhenStakingAddressUnregisters ::
   ConwayEraImp era => ImpTestM era ()
@@ -457,12 +458,12 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
       & ppGovActionLifetimeL .~ EpochInterval 8
       & ppGovActionDepositL .~ Coin 100
       & ppCommitteeMaxTermLengthL .~ EpochInterval 0
-  returnAddr <- registerRewardAccount
+  returnAddr <- registerAccountAddress
   govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
   keyDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
   govPolicy <- getGovPolicy
   gaid <-
-    mkProposalWithRewardAccount
+    mkProposalWithAccountAddress
       ( ParameterChange
           SNothing
           (emptyPParamsUpdate & ppuGovActionDepositL .~ SJust (Coin 1000000))
@@ -473,12 +474,12 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
   expectPresentGovActionId gaid
   replicateM_ 5 passEpoch
   expectTreasury initialTreasury
-  expectRegisteredRewardAddress returnAddr
+  expectRegisteredAccountAddress returnAddr
   submitTx_ $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.singleton
-          (UnRegDepositTxCert (raCredential returnAddr) keyDeposit)
+          (UnRegDepositTxCert (returnAddr ^. accountAddressCredentialL) keyDeposit)
   expectNotRegisteredRewardAddress returnAddr
   replicateM_ 5 passEpoch
   expectMissingGovActionId gaid
@@ -513,14 +514,14 @@ eventsSpec = describe "Events" $ do
             (proposal, getsNES (nesEsL . curPParamsEpochStateL . ppCoinsPerUTxOByteL) `shouldReturn` newVal)
       (proposalA, checkProposedParameterA) <- proposeParameterChange
       (proposalB, _) <- proposeParameterChange
-      rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccount
+      accountAddress@(AccountAddress _ (AccountId accountCred)) <- registerAccountAddress
       passEpoch -- prevent proposalC expiry and force it's deletion due to conflit.
       proposalC <- impAnn "proposalC" $ do
         newVal <- CoinPerByte . CompactCoin <$> choose (3000, 6500)
         paramChange <- mkParameterChangeGovAction SNothing $ (def & ppuCoinsPerUTxOByteL .~ SJust newVal)
-        mkProposalWithRewardAccount
+        mkProposalWithAccountAddress
           paramChange
-          rewardAccount
+          accountAddress
           >>= submitProposal
       let
         isGovInfoEvent (SomeSTSEvent ev)
@@ -542,7 +543,7 @@ eventsSpec = describe "Events" $ do
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
-            .~ SSeq.singleton (UnRegDepositTxCert rewardCred keyDeposit)
+            .~ SSeq.singleton (UnRegDepositTxCert accountCred keyDeposit)
       passEpochWithNoDroppedActions
       evs <- impEventsFrom passEpoch
       checkProposedParameterA

@@ -13,6 +13,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -856,9 +857,25 @@ instance HasSimpleRep Withdrawals
 
 instance HasSpec Withdrawals
 
-instance HasSimpleRep RewardAccount
+instance HasSimpleRep AccountId where
+  type SimpleRep AccountId = Credential Staking
+  toSimpleRep (AccountId c) = c
+  fromSimpleRep c = AccountId c
 
-instance HasSpec RewardAccount
+instance HasSpec AccountId
+
+instance HasSimpleRep AccountAddress where
+  type TheSop AccountAddress = '["AccountAddress" ::: '[Network, Credential Staking]]
+  toSimpleRep (AccountAddress n (AccountId c)) =
+    inject @"AccountAddress" @'["AccountAddress" ::: '[Network, Credential Staking]]
+      n
+      c
+  fromSimpleRep rep =
+    algebra @'["AccountAddress" ::: '[Network, Credential Staking]]
+      rep
+      (\n c -> AccountAddress n (AccountId c))
+
+instance HasSpec AccountAddress
 
 instance HasSimpleRep Network
 

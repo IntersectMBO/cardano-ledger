@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (
   mkStake,
 ) where
 
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Globals (..),
@@ -58,7 +59,6 @@ import Cardano.Ledger.Shelley.PoolRank (
  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
-  RewardAccount (..),
   TxBody (..),
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
@@ -823,7 +823,7 @@ txbodyEx10 =
     (Set.fromList [mkTxInPartial genesisId 1])
     (StrictSeq.singleton $ ShelleyTxOut Cast.bobAddr (Val.inject bobAda10))
     (StrictSeq.fromList [UnRegTxCert Cast.bobSHK])
-    (Withdrawals $ Map.singleton (RewardAccount Testnet Cast.bobSHK) bobRAcnt8)
+    (Withdrawals $ Map.singleton (AccountAddress Testnet (AccountId Cast.bobSHK)) bobRAcnt8)
     feeTx10
     (SlotNo 500)
     SNothing
@@ -865,7 +865,7 @@ expectedStEx10 =
 
 -- === Block 10, Slot 420, Epoch 4
 --
--- Drain Bob's reward account and de-register Bob's stake key.
+-- Drain Bob's account address and de-register Bob's stake key.
 poolLifetime10 :: CHAINExample ShelleyEra
 poolLifetime10 = CHAINExample expectedStEx9 blockEx10 (Right expectedStEx10)
 
@@ -1045,7 +1045,7 @@ poolLifetimeExample =
     , testCase "prelude to the first nontrivial rewards" $ testCHAINExample poolLifetime7
     , testCase "create a nontrivial rewards" $ testCHAINExample poolLifetime8
     , testCase "apply a nontrivial rewards" $ testCHAINExample poolLifetime9
-    , testCase "drain reward account and deregister" $ testCHAINExample poolLifetime10
+    , testCase "drain staking address and deregister" $ testCHAINExample poolLifetime10
     , testCase "stage stake pool retirement" $ testCHAINExample poolLifetime11
     , testCase "reap stake pool" $ testCHAINExample poolLifetime12
     ]

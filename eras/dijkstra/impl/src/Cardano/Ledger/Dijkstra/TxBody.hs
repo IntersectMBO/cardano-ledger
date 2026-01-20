@@ -974,8 +974,8 @@ dijkstraRedeemerPointer txBody = \case
     DijkstraMinting <$> indexOf policyID (txBody ^. mintedTxBodyF)
   DijkstraSpending txIn ->
     DijkstraSpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
-  DijkstraRewarding rewardAccount ->
-    DijkstraRewarding <$> indexOf rewardAccount (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  DijkstraRewarding accountAddress ->
+    DijkstraRewarding <$> indexOf accountAddress (unWithdrawals (txBody ^. withdrawalsTxBodyL))
   DijkstraCertifying txCert ->
     DijkstraCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
   DijkstraVoting votingProcedure ->

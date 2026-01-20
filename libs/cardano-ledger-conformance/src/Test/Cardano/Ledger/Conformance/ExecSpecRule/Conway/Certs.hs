@@ -11,13 +11,13 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs () where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.State (CanSetAccounts (..), EraAccounts (..), EraCertState (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Lens.Micro ((%~), (.~))
+import Lens.Micro ((%~), (.~), (^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
@@ -38,5 +38,7 @@ instance ExecSpecRule "CERTS" ConwayEra where
       -- in the CERTS rule, but the spec does it in a different rule
       fixRewards =
         certDStateL . accountsL . accountsMapL
-          %~ \m -> foldr' zeroRewards m . Set.map raCredential $ Map.keysSet ccecWithdrawals
+          %~ \m ->
+            foldr' zeroRewards m . Set.map (^. accountAddressCredentialL) $
+              Map.keysSet ccecWithdrawals
       zeroRewards = Map.adjust (balanceAccountStateL .~ mempty)

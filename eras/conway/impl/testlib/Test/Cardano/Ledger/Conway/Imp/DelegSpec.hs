@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
   spec,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   Mismatch (..),
@@ -139,9 +139,9 @@ spec = do
           & ppKeyDepositL .~ keyDeposit
           & ppGovActionDepositL .~ govActionDeposit
       stakeCred <- KeyHashObj <$> freshKeyHash
-      rewardAccount <- getRewardAccountFor stakeCred
+      accountAddress <- getAccountAddressFor stakeCred
       otherStakeCred <- KeyHashObj <$> freshKeyHash
-      otherRewardAccount <- getRewardAccountFor otherStakeCred
+      otherAccountAddress <- getAccountAddressFor otherStakeCred
       khStakePool <- freshKeyHash
       registerPool khStakePool
       submitTx_ . mkBasicTx $
@@ -151,8 +151,8 @@ spec = do
               [ RegDepositDelegTxCert stakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain) keyDeposit
               , RegDepositDelegTxCert otherStakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain) keyDeposit
               ]
-      expectRegisteredRewardAddress rewardAccount
-      expectRegisteredRewardAddress otherRewardAccount
+      expectRegisteredAccountAddress accountAddress
+      expectRegisteredAccountAddress otherAccountAddress
       submitAndExpireProposalToMakeReward otherStakeCred
       getBalance otherStakeCred `shouldReturn` govActionDeposit
       unRegTxCert <- genUnRegTxCert stakeCred
@@ -162,12 +162,12 @@ spec = do
           & withdrawalsTxBodyL
             .~ Withdrawals
               ( Map.fromList
-                  [ (rewardAccount, Coin 0)
-                  , (otherRewardAccount, govActionDeposit)
+                  [ (accountAddress, Coin 0)
+                  , (otherAccountAddress, govActionDeposit)
                   ]
               )
       getBalance otherStakeCred `shouldReturn` Coin 0
-      expectNotRegisteredRewardAddress rewardAccount
+      expectNotRegisteredRewardAddress accountAddress
 
   describe "Delegate stake" $ do
     it "Delegate to unregistered pool" $ do
@@ -244,7 +244,7 @@ spec = do
       expectDelegatedVote cred (DRepCredential drepCred)
 
     it "Delegate vote of registered stake credentials to unregistered drep" $ do
-      RewardAccount _ cred <- registerRewardAccount
+      AccountAddress _ (AccountId cred) <- registerAccountAddress
       drepCred <- KeyHashObj <$> freshKeyHash
       let tx =
             mkBasicTx mkBasicTxBody
@@ -372,12 +372,12 @@ spec = do
       impAnn "Version should be bumped" $
         getProtVer `shouldReturn` nextVer
       withdrawalAmount <- getsPParams ppPoolDepositL
-      rewardAccount <- getRewardAccountFor cred
+      accountAddress <- getAccountAddressFor cred
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [UnRegDepositTxCert cred expectedDeposit]
           & bodyTxL . withdrawalsTxBodyL
-            .~ Withdrawals (Map.singleton rewardAccount withdrawalAmount)
+            .~ Withdrawals (Map.singleton accountAddress withdrawalAmount)
       expectStakeCredNotRegistered cred
       expectNotDelegatedVote cred
     it "Delegate vote and undelegate after delegating to some stake pools" $ do
@@ -398,13 +398,13 @@ spec = do
               .~ [DelegTxCert cred (DelegStake khSPO)]
       passNEpochs 3
       withdrawalAmount <- getsPParams ppPoolDepositL
-      rewardAccount <- getRewardAccountFor cred
+      accountAddress <- getAccountAddressFor cred
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [UnRegDepositTxCert cred expectedDeposit]
           & bodyTxL . withdrawalsTxBodyL
-            .~ Withdrawals (Map.singleton rewardAccount withdrawalAmount)
+            .~ Withdrawals (Map.singleton accountAddress withdrawalAmount)
       expectStakeCredNotRegistered cred
       expectNotDelegatedVote cred
 
@@ -412,7 +412,7 @@ spec = do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       cred <- KeyHashObj <$> freshKeyHash
       poolKh <- freshKeyHash
-      rewardAccount <- registerRewardAccount
+      accountAddress <- registerAccountAddress
       registerPool poolKh
       drepCred <- KeyHashObj <$> registerDRep
 
@@ -438,7 +438,7 @@ spec = do
       -- when pool is re-registered after its expiration, all delegations are cleared
       passNEpochs $ fromIntegral poolLifetime
       expectNotDelegatedToAnyPool cred
-      registerPoolWithRewardAccount poolKh rewardAccount
+      registerPoolWithAccountAddress poolKh accountAddress
       expectNotDelegatedToAnyPool cred
       -- the vote delegation is kept
       expectDelegatedVote cred (DRepCredential drepCred)
@@ -460,13 +460,13 @@ spec = do
             & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh pe]
       -- re-register the pool before the expiration time
       passNEpochs $ fromIntegral poolLifetime - 1
-      registerPoolWithRewardAccount poolKh rewardAccount
+      registerPoolWithAccountAddress poolKh accountAddress
       expectDelegatedToPool cred poolKh
       passNEpochs 2
       expectDelegatedToPool cred poolKh
 
       -- when pool is retired and re-registered in the same transaction, delegations are kept
-      pps <- freshPoolParams poolKh rewardAccount
+      pps <- freshPoolParams poolKh accountAddress
       poolExpiry >>= \pe ->
         submitTx_ $
           mkBasicTx mkBasicTxBody
@@ -534,7 +534,7 @@ spec = do
     pool1 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
     pool2 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
     pool3 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
-    poolParams <- freshKeyHash >>= \kh -> registerRewardAccount >>= freshPoolParams kh
+    poolParams <- freshKeyHash >>= \kh -> registerAccountAddress >>= freshPoolParams kh
     deleg1 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
     deleg2 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
     deleg3 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
