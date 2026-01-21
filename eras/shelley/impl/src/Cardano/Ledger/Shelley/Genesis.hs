@@ -70,7 +70,6 @@ import Cardano.Ledger.Binary (
   enforceDecoderVersion,
   enforceEncodingVersion,
   shelleyProtVer,
-  toPlainDecoder,
   toPlainEncoding,
  )
 import Cardano.Ledger.Coin (Coin)
@@ -427,7 +426,42 @@ instance FromJSON ShelleyGenesisStaking where
         <*> (forceElemsToWHNF <$> obj .: "stake")
 
 -- | Genesis are always encoded with the version of era they are defined in.
-instance DecCBOR ShelleyGenesis
+instance DecCBOR ShelleyGenesis where
+  decCBOR =
+    decodeRecordNamed "ShelleyGenesis" (const 15) $ do
+      sgSystemStart <- decCBOR
+      sgNetworkMagic <- decCBOR
+      sgNetworkId <- decCBOR
+      sgActiveSlotsCoeff <- activeSlotsCoeffDecCBOR
+      sgSecurityParam <- decCBOR
+      sgEpochLength <- decCBOR
+      sgSlotsPerKESPeriod <- decCBOR
+      sgMaxKESEvolutions <- decCBOR
+      sgSlotLength <- decCBOR
+      sgUpdateQuorum <- decCBOR
+      sgMaxLovelaceSupply <- decCBOR
+      sgProtocolParams <- decCBOR
+      sgGenDelegs <- decCBOR
+      sgInitialFunds <- decCBOR
+      sgStaking <- decCBOR
+      pure $
+        ShelleyGenesis
+          sgSystemStart
+          sgNetworkMagic
+          sgNetworkId
+          sgActiveSlotsCoeff
+          sgSecurityParam
+          (EpochSize sgEpochLength)
+          sgSlotsPerKESPeriod
+          sgMaxKESEvolutions
+          sgSlotLength
+          sgUpdateQuorum
+          sgMaxLovelaceSupply
+          sgProtocolParams
+          sgGenDelegs
+          sgInitialFunds
+          sgStaking
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR ShelleyGenesis
 
@@ -469,40 +503,8 @@ instance ToCBOR ShelleyGenesis where
           <> encCBOR sgStaking
 
 instance FromCBOR ShelleyGenesis where
-  fromCBOR = toPlainDecoder Nothing shelleyProtVer $ do
-    decodeRecordNamed "ShelleyGenesis" (const 15) $ do
-      sgSystemStart <- decCBOR
-      sgNetworkMagic <- decCBOR
-      sgNetworkId <- decCBOR
-      sgActiveSlotsCoeff <- activeSlotsCoeffDecCBOR
-      sgSecurityParam <- decCBOR
-      sgEpochLength <- decCBOR
-      sgSlotsPerKESPeriod <- decCBOR
-      sgMaxKESEvolutions <- decCBOR
-      sgSlotLength <- decCBOR
-      sgUpdateQuorum <- decCBOR
-      sgMaxLovelaceSupply <- decCBOR
-      sgProtocolParams <- decCBOR
-      sgGenDelegs <- decCBOR
-      sgInitialFunds <- decCBOR
-      sgStaking <- decCBOR
-      pure $
-        ShelleyGenesis
-          sgSystemStart
-          sgNetworkMagic
-          sgNetworkId
-          sgActiveSlotsCoeff
-          sgSecurityParam
-          (EpochSize sgEpochLength)
-          sgSlotsPerKESPeriod
-          sgMaxKESEvolutions
-          sgSlotLength
-          sgUpdateQuorum
-          sgMaxLovelaceSupply
-          sgProtocolParams
-          sgGenDelegs
-          sgInitialFunds
-          sgStaking
+  fromCBOR = fromEraCBOR @ShelleyEra
+  {-# INLINE fromCBOR #-}
 
 -- | Serialize `PositiveUnitInterval` type in the same way `Rational` is serialized,
 -- however ensure there is no usage of tag 30 by enforcing Shelley protocol version.

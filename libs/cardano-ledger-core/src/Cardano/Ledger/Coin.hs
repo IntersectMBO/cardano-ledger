@@ -63,6 +63,7 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR,
   decodeWord64,
+  fromPlainDecoder,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible
@@ -105,7 +106,9 @@ newtype Coin = Coin {unCoin :: Integer}
 instance FromCBOR Coin where
   fromCBOR = Coin . toInteger <$> Plain.decodeWord64
 
-instance DecCBOR Coin
+instance DecCBOR Coin where
+  decCBOR = fromPlainDecoder fromCBOR
+  {-# INLINE decCBOR #-}
 
 newtype DeltaCoin = DeltaCoin Integer
   deriving (Eq, Ord, Generic, Enum, NoThunks)
