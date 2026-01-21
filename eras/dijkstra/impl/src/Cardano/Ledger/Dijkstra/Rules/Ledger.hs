@@ -91,6 +91,7 @@ import Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
 import Cardano.Ledger.Dijkstra.Rules.SubPool
@@ -481,6 +482,8 @@ instance
   , InjectRuleEvent "SUBPOOL" PoolEvent era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (ShelleyLEDGERS era)
@@ -578,6 +581,8 @@ instance
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)

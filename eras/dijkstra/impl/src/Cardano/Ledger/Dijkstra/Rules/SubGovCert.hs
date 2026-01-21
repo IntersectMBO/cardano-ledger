@@ -25,14 +25,21 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayGovCertEnv)
+import Cardano.Ledger.Conway.Rules (
+  ConwayGovCertEnv,
+  ConwayGovCertPredFailure,
+  conwayGovCertTransition,
+ )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBGOVCERT,
  )
-import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.GovCert (
+  DijkstraGovCertPredFailure,
+  conwayToDijkstraGovCertPredFailure,
+ )
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -42,9 +49,6 @@ import Control.State.Transition.Extended (
   STS,
   Signal,
   State,
-  TRC (TRC),
-  TransitionRule,
-  judgmentContext,
   transitionRules,
  )
 import Data.Void (Void)
@@ -59,12 +63,18 @@ type instance EraRuleFailure "SUBGOVCERT" DijkstraEra = DijkstraSubGovCertPredFa
 
 type instance EraRuleEvent "SUBGOVCERT" DijkstraEra = VoidEraRule "SUBGOVCERT" DijkstraEra
 
+instance InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure DijkstraEra where
+  injectFailure = DijkstraSubGovCertPredFailure . conwayToDijkstraGovCertPredFailure
+
 instance InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure DijkstraEra
 
 instance
   ( EraGov era
-  , EraCertState era
+  , ConwayEraPParams era
+  , ConwayEraCertState era
   , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
+  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   ) =>
   STS (DijkstraSUBGOVCERT era)
   where
@@ -75,9 +85,4 @@ instance
   type PredicateFailure (DijkstraSUBGOVCERT era) = DijkstraSubGovCertPredFailure era
   type Event (DijkstraSUBGOVCERT era) = Void
 
-  transitionRules = [dijkstraSubGovCertTransition @era]
-
-dijkstraSubGovCertTransition :: TransitionRule (EraRule "SUBGOVCERT" era)
-dijkstraSubGovCertTransition = do
-  TRC (_, st, _) <- judgmentContext
-  pure st
+  transitionRules = [conwayGovCertTransition]
