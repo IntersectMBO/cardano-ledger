@@ -39,6 +39,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules (
   CertsEnv,
+  ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
   ConwayLedgerPredFailure (ConwayMempoolFailure),
   GovEnv,
@@ -268,6 +269,7 @@ instance
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
+  , InjectRuleFailure "DELEG" ConwayDelegPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (DijkstraMEMPOOL era)
