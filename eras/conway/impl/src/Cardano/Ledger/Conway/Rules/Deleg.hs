@@ -156,12 +156,12 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
 
 instance
   ( EraPParams era
+  , EraCertState era
+  , ConwayEraCertState era
   , State (EraRule "DELEG" era) ~ CertState era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , EraRule "DELEG" era ~ ConwayDELEG era
-  , EraCertState era
-  , ConwayEraCertState era
   ) =>
   STS (ConwayDELEG era)
   where
@@ -172,10 +172,18 @@ instance
   type PredicateFailure (ConwayDELEG era) = ConwayDelegPredFailure era
   type Event (ConwayDELEG era) = Void
 
-  transitionRules = [conwayDelegTransition @era]
+  transitionRules = [conwayDelegTransition]
 
 conwayDelegTransition ::
-  (EraPParams era, ConwayEraCertState era) => TransitionRule (ConwayDELEG era)
+  forall rule era.
+  ( EraPParams era
+  , ConwayEraCertState era
+  , Signal (EraRule rule era) ~ ConwayDelegCert
+  , Environment (EraRule rule era) ~ ConwayDelegEnv era
+  , State (EraRule rule era) ~ CertState era
+  , PredicateFailure (EraRule rule era) ~ ConwayDelegPredFailure era
+  ) =>
+  TransitionRule (EraRule rule era)
 conwayDelegTransition = do
   TRC
     ( ConwayDelegEnv pp pools
