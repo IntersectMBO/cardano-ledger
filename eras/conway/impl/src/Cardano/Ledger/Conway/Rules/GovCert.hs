@@ -168,18 +168,18 @@ instance
   type PredicateFailure (ConwayGOVCERT era) = ConwayGovCertPredFailure era
   type Event (ConwayGOVCERT era) = Void
 
-  transitionRules = [conwayGovCertTransition @era]
+  transitionRules = [conwayGovCertTransition]
 
 conwayGovCertTransition ::
-  forall era.
+  forall rule era.
   ( ConwayEraPParams era
   , ConwayEraCertState era
-  , InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure era
-  , State (EraRule "GOVCERT" era) ~ CertState era
-  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
-  , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
+  , InjectRuleFailure rule ConwayGovCertPredFailure era
+  , State (EraRule rule era) ~ CertState era
+  , Signal (EraRule rule era) ~ ConwayGovCert
+  , Environment (EraRule rule era) ~ ConwayGovCertEnv era
   ) =>
-  TransitionRule (EraRule "GOVCERT" era)
+  TransitionRule (EraRule rule era)
 conwayGovCertTransition = do
   TRC
     ( ConwayGovCertEnv {cgcePParams, cgceCurrentEpoch, cgceCurrentCommittee, cgceCommitteeProposals}

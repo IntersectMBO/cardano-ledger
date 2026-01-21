@@ -99,6 +99,7 @@ instance Typeable era => DecCBOR (DijkstraGovCertPredFailure era) where
 
 instance
   ( ConwayEraPParams era
+  , ConwayEraCertState era
   , State (EraRule "GOVCERT" era) ~ CertState era
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
@@ -106,7 +107,6 @@ instance
   , EraRule "GOVCERT" era ~ DijkstraGOVCERT era
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
-  , ConwayEraCertState era
   ) =>
   STS (DijkstraGOVCERT era)
   where
@@ -117,7 +117,7 @@ instance
   type PredicateFailure (DijkstraGOVCERT era) = DijkstraGovCertPredFailure era
   type Event (DijkstraGOVCERT era) = Void
 
-  transitionRules = [Conway.conwayGovCertTransition @era]
+  transitionRules = [Conway.conwayGovCertTransition]
 
 conwayToDijkstraGovCertPredFailure ::
   forall era. ConwayGovCertPredFailure era -> DijkstraGovCertPredFailure era
