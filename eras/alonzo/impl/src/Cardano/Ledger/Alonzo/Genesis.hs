@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -90,16 +91,18 @@ newtype AlonzoExtraConfig = AlonzoExtraConfig
   deriving (Eq)
   deriving newtype (NFData, NoThunks, Show)
 
-instance DecCBOR AlonzoExtraConfig
+alonzoExtraConfigDecoder :: Decode (Closed Dense) AlonzoExtraConfig
+alonzoExtraConfigDecoder = RecD AlonzoExtraConfig <! D (decodeNullMaybe decodeCostModelsLenient)
+
+instance DecCBOR AlonzoExtraConfig where
+  decCBOR = decode alonzoExtraConfigDecoder
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR AlonzoExtraConfig
 
 instance FromCBOR AlonzoExtraConfig where
-  fromCBOR =
-    eraDecoder @AlonzoEra $
-      decode $
-        RecD AlonzoExtraConfig
-          <! D (decodeNullMaybe decodeCostModelsLenient)
+  fromCBOR = eraDecoder @AlonzoEra $ decode alonzoExtraConfigDecoder
+  {-# INLINE fromCBOR #-}
 
 instance ToCBOR AlonzoExtraConfig where
   toCBOR x@(AlonzoExtraConfig _) =
@@ -183,25 +186,29 @@ pattern AlonzoGenesis
 instance EraGenesis AlonzoEra where
   type Genesis AlonzoEra = AlonzoGenesis
 
+alonzoGenesisDecoder :: Decode (Closed Dense) AlonzoGenesis
+alonzoGenesisDecoder =
+  RecD AlonzoGenesis
+    <! From
+    <! D (decodeCostModel PlutusV1)
+    <! From
+    <! From
+    <! From
+    <! From
+    <! From
+    <! From
+    <! From
+
 -- | Genesis types are always encoded with the version of era they are defined in.
-instance DecCBOR AlonzoGenesis
+instance DecCBOR AlonzoGenesis where
+  decCBOR = decode alonzoGenesisDecoder
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR AlonzoGenesis
 
 instance FromCBOR AlonzoGenesis where
-  fromCBOR =
-    eraDecoder @AlonzoEra $
-      decode $
-        RecD AlonzoGenesis
-          <! From
-          <! D (decodeCostModel PlutusV1)
-          <! From
-          <! From
-          <! From
-          <! From
-          <! From
-          <! From
-          <! From
+  fromCBOR = eraDecoder @AlonzoEra $ decode alonzoGenesisDecoder
+  {-# INLINE fromCBOR #-}
 
 instance ToCBOR AlonzoGenesis where
   toCBOR x@(AlonzoGenesis _ _ _ _ _ _ _ _ _) =

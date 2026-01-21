@@ -68,12 +68,13 @@ instance NoThunks ConwayGenesis
 
 instance NFData ConwayGenesis
 
+conwayGenesisDecoder :: Decode (Closed Dense) ConwayGenesis
+conwayGenesisDecoder = RecD ConwayGenesis <! From <! From <! From <! From <! From
+
 -- | Genesis are always encoded with the version of era they are defined in.
 instance FromCBOR ConwayGenesis where
-  fromCBOR =
-    eraDecoder @ConwayEra $
-      decode $
-        RecD ConwayGenesis <! From <! From <! From <! From <! From
+  fromCBOR = eraDecoder @ConwayEra $ decode conwayGenesisDecoder
+  {-# INLINE fromCBOR #-}
 
 instance ToCBOR ConwayGenesis where
   toCBOR x@(ConwayGenesis _ _ _ _ _) =
@@ -86,7 +87,9 @@ instance ToCBOR ConwayGenesis where
             !> To cgDelegs
             !> To cgInitialDReps
 
-instance DecCBOR ConwayGenesis
+instance DecCBOR ConwayGenesis where
+  decCBOR = decode conwayGenesisDecoder
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR ConwayGenesis
 

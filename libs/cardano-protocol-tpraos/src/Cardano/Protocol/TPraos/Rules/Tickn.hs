@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,8 +14,9 @@ module Cardano.Protocol.TPraos.Rules.Tickn (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR, toPlainDecoder)
+import Cardano.Ledger.Binary.Coders (Decode (..), Density (..), Wrapped (..), decode, (<!))
+import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Control.State.Transition
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -36,17 +38,16 @@ data TicknState = TicknState
 
 instance NoThunks TicknState
 
-instance DecCBOR TicknState
+ticknStateDecoder :: Decode (Closed Dense) TicknState
+ticknStateDecoder = RecD TicknState <! From <! From
+
+instance DecCBOR TicknState where
+  decCBOR = decode ticknStateDecoder
+  {-# INLINE decCBOR #-}
 
 instance FromCBOR TicknState where
-  fromCBOR =
-    decodeRecordNamed
-      "TicknState"
-      (const 2)
-      ( TicknState
-          <$> fromCBOR
-          <*> fromCBOR
-      )
+  fromCBOR = toPlainDecoder Nothing shelleyProtVer $ decode ticknStateDecoder
+  {-# INLINE fromCBOR #-}
 
 instance EncCBOR TicknState
 

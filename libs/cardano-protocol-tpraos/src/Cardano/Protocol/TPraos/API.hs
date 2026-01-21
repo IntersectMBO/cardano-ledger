@@ -56,8 +56,9 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
   epochInfoPure,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR, shelleyProtVer, toPlainDecoder)
+import Cardano.Ledger.Binary.Coders (Decode (..), Density (..), Wrapped (..), decode, (<!))
+import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
@@ -411,18 +412,16 @@ initialChainDepState initNonce genDelegs =
 
 instance NoThunks ChainDepState
 
-instance DecCBOR ChainDepState
+chainDepStateDecoder :: Decode (Closed Dense) ChainDepState
+chainDepStateDecoder = RecD ChainDepState <! From <! From <! From
+
+instance DecCBOR ChainDepState where
+  decCBOR = decode chainDepStateDecoder
+  {-# INLINE decCBOR #-}
 
 instance FromCBOR ChainDepState where
-  fromCBOR =
-    decodeRecordNamed
-      "ChainDepState"
-      (const 3)
-      ( ChainDepState
-          <$> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
-      )
+  fromCBOR = toPlainDecoder Nothing shelleyProtVer $ decode chainDepStateDecoder
+  {-# INLINE fromCBOR #-}
 
 instance EncCBOR ChainDepState
 

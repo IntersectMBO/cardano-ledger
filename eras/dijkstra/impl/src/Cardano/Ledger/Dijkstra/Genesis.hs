@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -36,12 +37,12 @@ newtype DijkstraGenesis = DijkstraGenesis
 instance EraGenesis DijkstraEra where
   type Genesis DijkstraEra = DijkstraGenesis
 
+dijkstraGenesisDecoder :: Decode (Closed Dense) DijkstraGenesis
+dijkstraGenesisDecoder = RecD DijkstraGenesis <! From
+
 instance FromCBOR DijkstraGenesis where
-  fromCBOR =
-    eraDecoder @DijkstraEra $
-      decode $
-        RecD DijkstraGenesis
-          <! From
+  fromCBOR = eraDecoder @DijkstraEra $ decode dijkstraGenesisDecoder
+  {-# INLINE fromCBOR #-}
 
 instance ToCBOR DijkstraGenesis where
   toCBOR dg@(DijkstraGenesis _) =
@@ -50,6 +51,8 @@ instance ToCBOR DijkstraGenesis where
           Rec DijkstraGenesis
             !> To dgUpgradePParams
 
-instance DecCBOR DijkstraGenesis
+instance DecCBOR DijkstraGenesis where
+  decCBOR = decode dijkstraGenesisDecoder
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR DijkstraGenesis
