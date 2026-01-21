@@ -19,6 +19,7 @@ import Test.Cardano.Ledger.Conway.Imp.LedgerSpec qualified as Ledger
 import Test.Cardano.Ledger.Conway.Imp.RatifySpec qualified as Ratify
 import Test.Cardano.Ledger.Conway.Imp.UtxoSpec qualified as Utxo
 import Test.Cardano.Ledger.Conway.Imp.UtxosSpec qualified as Utxos
+import Test.Cardano.Ledger.Conway.Imp.UtxowSpec qualified as Utxow
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
@@ -46,6 +47,7 @@ spec = do
             describe "LEDGER" Ledger.spec
             describe "RATIFY" Ratify.spec
             describe "UTXO" Utxo.spec
+            describe "UTXOW" Utxow.spec
             xdescribe "UTXOS" Utxos.spec
   describe "Imp (only spec)" $ do
     RatifySpec.spec
