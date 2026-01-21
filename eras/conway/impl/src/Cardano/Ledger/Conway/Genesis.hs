@@ -70,10 +70,8 @@ instance NFData ConwayGenesis
 
 -- | Genesis are always encoded with the version of era they are defined in.
 instance FromCBOR ConwayGenesis where
-  fromCBOR =
-    eraDecoder @ConwayEra $
-      decode $
-        RecD ConwayGenesis <! From <! From <! From <! From <! From
+  fromCBOR = fromEraCBOR @ConwayEra
+  {-# INLINE fromCBOR #-}
 
 instance ToCBOR ConwayGenesis where
   toCBOR x@(ConwayGenesis _ _ _ _ _) =
@@ -86,7 +84,9 @@ instance ToCBOR ConwayGenesis where
             !> To cgDelegs
             !> To cgInitialDReps
 
-instance DecCBOR ConwayGenesis
+instance DecCBOR ConwayGenesis where
+  decCBOR = decode (RecD ConwayGenesis <! From <! From <! From <! From <! From)
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR ConwayGenesis
 

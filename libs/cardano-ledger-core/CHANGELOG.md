@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `Nonce`
 * Add `mkSnapShot` and `resetStakePoolsSnapShot`
 * Remove `ssPoolParams` from `Snapshot`  and `ssPoolParamsL`
 * Rename `ssStake` to `ssActiveStake`.

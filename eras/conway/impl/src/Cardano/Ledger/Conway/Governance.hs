@@ -195,15 +195,13 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   decNoShareCBOR,
   decodeRecordNamedT,
+  decodeWord8,
+  encodeWord8,
  )
 import Cardano.Ledger.Binary.Coders (
   Encode (..),
   encode,
   (!>),
- )
-import Cardano.Ledger.Binary.Plain (
-  decodeWord8,
-  encodeWord8,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (CompactForm)
@@ -537,23 +535,21 @@ data DefaultVote
     DefaultNoConfidence
   deriving (Eq, Show)
 
-instance FromCBOR DefaultVote where
-  fromCBOR = do
+instance EncCBOR DefaultVote where
+  encCBOR DefaultNo = encodeWord8 0
+  encCBOR DefaultAbstain = encodeWord8 1
+  encCBOR DefaultNoConfidence = encodeWord8 2
+  {-# INLINE encCBOR #-}
+
+instance DecCBOR DefaultVote where
+  decCBOR = do
     tag <- decodeWord8
     case tag of
       0 -> pure DefaultNo
       1 -> pure DefaultAbstain
       2 -> pure DefaultNoConfidence
       _ -> fail $ "Invalid DefaultVote tag " ++ show tag
-
-instance ToCBOR DefaultVote where
-  toCBOR DefaultNo = encodeWord8 0
-  toCBOR DefaultAbstain = encodeWord8 1
-  toCBOR DefaultNoConfidence = encodeWord8 2
-
-instance EncCBOR DefaultVote
-
-instance DecCBOR DefaultVote
+  {-# INLINE decCBOR #-}
 
 defaultStakePoolVote ::
   ConwayEraAccounts era =>

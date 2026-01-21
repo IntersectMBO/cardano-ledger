@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
 * Remove `asBoundedIntegralHKD`
 * Change lens type of `hkdCommitteeMinSizeL` and `ppCommitteeMinSize` from `Natural` to `Word16`
 * Add `HeaderProtVerTooHigh` predicate failure.

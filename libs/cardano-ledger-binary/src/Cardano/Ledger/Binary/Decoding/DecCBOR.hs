@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -19,7 +18,7 @@ module Cardano.Ledger.Binary.Decoding.DecCBOR (
   decodeScriptContextFromData,
 ) where
 
-import qualified Cardano.Binary as Plain (Decoder, FromCBOR (..))
+import qualified Cardano.Binary as Plain (Decoder)
 import Cardano.Crypto.DSIGN.Class (
   DSIGNAlgorithm,
   SigDSIGN,
@@ -27,8 +26,9 @@ import Cardano.Crypto.DSIGN.Class (
   SignedDSIGN,
   VerKeyDSIGN,
  )
-import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm)
+import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, PackedBytes, hashFromPackedBytes)
 import Cardano.Crypto.KES.Class (KESAlgorithm, SigKES, VerKeyKES)
+import Cardano.Crypto.PackedBytes (packByteString)
 import Cardano.Crypto.VRF.Class (
   CertVRF,
   CertifiedVRF (..),
@@ -57,6 +57,7 @@ import Codec.CBOR.Term (Term (..))
 import Codec.Serialise as Serialise (Serialise (decode))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import GHC.TypeLits (KnownNat)
 #if MIN_VERSION_bytestring(0,11,1)
 import Data.ByteString.Short (ShortByteString(SBS))
 #else
@@ -92,9 +93,6 @@ import Prelude hiding (decodeFloat)
 
 class Typeable a => DecCBOR a where
   decCBOR :: Decoder s a
-  default decCBOR :: Plain.FromCBOR a => Decoder s a
-  decCBOR = fromPlainDecoder Plain.fromCBOR
-  {-# INLINE decCBOR #-}
 
   -- | Validate decoding of a Haskell value, without the need to actually construct
   -- it. Could be slightly faster than `decCBOR`, however it should respect this law:
@@ -476,7 +474,13 @@ instance (DSIGNAlgorithm v, Typeable a) => DecCBOR (SignedDSIGN v a) where
 -- Hash
 --------------------------------------------------------------------------------
 
-instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a)
+instance KnownNat n => DecCBOR (PackedBytes n) where
+  decCBOR = decCBOR >>= packByteString
+  {-# INLINE decCBOR #-}
+
+instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a) where
+  decCBOR = hashFromPackedBytes <$> decCBOR
+  {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- KES
@@ -530,13 +534,21 @@ instance DecCBOR Praos.VerKey where
   decCBOR = decCBOR >>= Praos.vkFromBytes
   {-# INLINE decCBOR #-}
 
-deriving instance DecCBOR (VerKeyVRF Praos.PraosVRF)
+instance DecCBOR (VerKeyVRF Praos.PraosVRF) where
+  decCBOR = decodeVerKeyVRF
+  {-# INLINE decCBOR #-}
 
-deriving instance DecCBOR (SignKeyVRF Praos.PraosVRF)
+instance DecCBOR (SignKeyVRF Praos.PraosVRF) where
+  decCBOR = decodeSignKeyVRF
+  {-# INLINE decCBOR #-}
 
-deriving instance DecCBOR (CertVRF Praos.PraosVRF)
+instance DecCBOR (CertVRF Praos.PraosVRF) where
+  decCBOR = decodeCertVRF
+  {-# INLINE decCBOR #-}
 
-deriving instance Typeable v => DecCBOR (OutputVRF v)
+instance Typeable v => DecCBOR (OutputVRF v) where
+  decCBOR = OutputVRF <$> decCBOR
+  {-# INLINE decCBOR #-}
 
 instance (VRFAlgorithm v, Typeable a) => DecCBOR (CertifiedVRF v a) where
   decCBOR =

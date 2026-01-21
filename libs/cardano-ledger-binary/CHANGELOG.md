@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Remove default implementation for `DecCBOR` class
 * Change `Version` from `Word64` to `Word32`
   - Add `mkVersion32` and `getVersion32`
 * Remove `listLenBound` from `EncCBORGroup`

@@ -46,7 +46,10 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   ifDecoderVersionAtLeast,
   natVersion,
+  shelleyProtVer,
+  toPlainDecoder,
  )
+import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (
@@ -287,7 +290,14 @@ ptrCertIx (Ptr _ _ cIx) = cIx
 -- in consensus
 instance Typeable kr => EncCBOR (Credential kr)
 
-instance Typeable kr => DecCBOR (Credential kr)
+instance Typeable kr => DecCBOR (Credential kr) where
+  decCBOR =
+    decode $
+      Summands "Credential" $ \case
+        0 -> SumD KeyHashObj <! From
+        1 -> SumD ScriptHashObj <! From
+        k -> Invalid k
+  {-# INLINE decCBOR #-}
 
 instance Typeable kr => ToCBOR (Credential kr) where
   toCBOR = \case
@@ -295,15 +305,8 @@ instance Typeable kr => ToCBOR (Credential kr) where
     ScriptHashObj hs -> Plain.encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
 
 instance Typeable kr => FromCBOR (Credential kr) where
-  fromCBOR = Plain.decodeRecordSum "Credential" $
-    \case
-      0 -> do
-        x <- fromCBOR
-        pure (2, KeyHashObj x)
-      1 -> do
-        x <- fromCBOR
-        pure (2, ScriptHashObj x)
-      k -> Plain.invalidKey k
+  fromCBOR = toPlainDecoder Nothing shelleyProtVer decCBOR
+  {-# INLINE fromCBOR #-}
 
 instance EncCBORGroup Ptr where
   encCBORGroup (Ptr sl txIx certIx) =
