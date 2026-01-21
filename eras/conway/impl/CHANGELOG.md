@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
 * Add `conwayLedgerTransitionTRC`
 * Deprecate
   - `constitutionScriptL` in favor of new `constitutionGuardrailsScriptHashL`

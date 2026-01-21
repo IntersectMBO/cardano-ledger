@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `Nonce`
 * Add `DirectDeposits` newtype.
 * Change `PoolMetadata.pmHash` from `ByteString` to `Data.Array.Byte.ByteArray` to reduce memory fragmentation.
 * Added:

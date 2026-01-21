@@ -56,8 +56,9 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
   epochInfoPure,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), shelleyProtVer, toPlainEncoding)
+import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
+import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
@@ -411,18 +412,13 @@ initialChainDepState initNonce genDelegs =
 
 instance NoThunks ChainDepState
 
-instance DecCBOR ChainDepState
+instance DecCBOR ChainDepState where
+  decCBOR = decode (RecD ChainDepState <! From <! From <! From)
+  {-# INLINE decCBOR #-}
 
 instance FromCBOR ChainDepState where
-  fromCBOR =
-    decodeRecordNamed
-      "ChainDepState"
-      (const 3)
-      ( ChainDepState
-          <$> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
-      )
+  fromCBOR = fromEraCBOR @ShelleyEra
+  {-# INLINE fromCBOR #-}
 
 instance EncCBOR ChainDepState
 
@@ -437,7 +433,7 @@ instance ToCBOR ChainDepState where
         [ encodeListLen 3
         , toCBOR csProtocol
         , toCBOR csTickn
-        , toCBOR csLabNonce
+        , toPlainEncoding shelleyProtVer (encCBOR csLabNonce)
         ]
 
 newtype ChainTransitionError c

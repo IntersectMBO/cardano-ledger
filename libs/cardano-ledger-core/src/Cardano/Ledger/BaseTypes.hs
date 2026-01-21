@@ -112,6 +112,8 @@ import Cardano.Ledger.Binary (
   FromCBOR,
   ToCBOR,
   cborError,
+  encodeListLen,
+  fromPlainDecoder,
   ifDecoderVersionAtLeast,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -119,18 +121,15 @@ import Cardano.Ledger.Binary.Coders (
   Encode (..),
   decode,
   encode,
+  invalidKey,
   (!>),
   (<!),
  )
 import Cardano.Ledger.Binary.Plain (
   FromCBOR (..),
   ToCBOR (..),
-  decodeRecordSum,
-  decodeWord8,
-  encodeListLen,
-  invalidKey,
  )
-import qualified Cardano.Ledger.Binary.Plain as Plain (decodeRationalWithTag, encodeRatioWithTag)
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary.Version
 import Cardano.Ledger.Hashes (HashAnnotated, SafeHash, SafeToHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -387,6 +386,9 @@ instance (ToCBOR (BoundedRatio b a), Typeable b, Typeable a) => EncCBOR (Bounded
 instance
   (FromCBOR (BoundedRatio b a), Typeable b, Typeable a, Typeable (BoundedRatio b a)) =>
   DecCBOR (BoundedRatio b a)
+  where
+  decCBOR = fromPlainDecoder fromCBOR
+  {-# INLINE decCBOR #-}
 
 instance Bounded (BoundedRatio b Word64) => ToJSON (BoundedRatio b Word64) where
   toJSON :: BoundedRatio b Word64 -> Value
@@ -533,22 +535,19 @@ data Nonce
 
 instance NoThunks Nonce
 
-instance EncCBOR Nonce
+instance EncCBOR Nonce where
+  encCBOR NeutralNonce = encodeListLen 1 <> encCBOR (0 :: Word8)
+  encCBOR (Nonce n) = encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR n
+  {-# INLINE encCBOR #-}
 
-instance DecCBOR Nonce
-
-instance ToCBOR Nonce where
-  toCBOR NeutralNonce = encodeListLen 1 <> toCBOR (0 :: Word8)
-  toCBOR (Nonce n) = encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR n
-
-instance FromCBOR Nonce where
-  fromCBOR = decodeRecordSum "Nonce" $
-    \case
-      0 -> pure (1, NeutralNonce)
-      1 -> do
-        x <- fromCBOR
-        pure (2, Nonce x)
-      k -> invalidKey k
+instance DecCBOR Nonce where
+  decCBOR =
+    decode $
+      Summands "Nonce" $ \case
+        0 -> SumD NeutralNonce
+        1 -> SumD Nonce <! From
+        k -> Invalid k
+  {-# INLINE decCBOR #-}
 
 instance ToJSON Nonce where
   toJSON NeutralNonce = Null
@@ -682,7 +681,9 @@ instance ToCBOR ActiveSlotCoeff where
      in -- `unActiveSlotLog` is not encoded, since it can be derived from `unActiveSlotVal`
         toCBOR unActiveSlotVal
 
-instance DecCBOR ActiveSlotCoeff
+instance DecCBOR ActiveSlotCoeff where
+  decCBOR = mkActiveSlotCoeff <$> decCBOR
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR ActiveSlotCoeff
 
@@ -839,9 +840,9 @@ word8ToNetwork e
 
 instance FromCBOR Network where
   fromCBOR = do
-    w8 <- decodeWord8
+    w8 <- Plain.decodeWord8
     case word8ToNetwork w8 of
-      Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
+      Nothing -> Plain.cborError $ DecoderErrorCustom "Network" "Unknown network id"
       Just n -> pure n
   {-# INLINE fromCBOR #-}
 
@@ -850,7 +851,9 @@ instance ToCBOR Network where
 
 instance EncCBOR Network
 
-instance DecCBOR Network
+instance DecCBOR Network where
+  decCBOR = fromPlainDecoder fromCBOR
+  {-# INLINE decCBOR #-}
 
 -- | Number of blocks which have been created by stake pools in the current epoch.
 newtype BlocksMade = BlocksMade
