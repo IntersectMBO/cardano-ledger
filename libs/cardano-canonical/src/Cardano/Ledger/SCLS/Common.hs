@@ -27,11 +27,10 @@ module Cardano.Ledger.SCLS.Common (
   ScriptHash,
 ) where
 
-import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (RewardAccount (..))
+import qualified Cardano.Binary as C
 import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), CompactForm (..))
--- peekTokenType,
-
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (
   HASH,
@@ -50,15 +49,22 @@ import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
   decodeListLenCanonicalOf,
  )
+import Cardano.SCLS.CBOR.Canonical (
+  assumeCanonicalDecoder,
+  assumeCanonicalEncoding,
+ )
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.CDDL ()
 import Cardano.SCLS.Versioned (Versioned (..))
+import Codec.CBOR.ByteArray.Sliced (fromByteArray)
+import Codec.CBOR.ByteArray (ByteArray (..))
 import Data.Foldable (toList)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
 
 -- | Wrapper for the coin type
 newtype CanonicalCoin = CanonicalCoin {unCoin :: Integer}
@@ -206,3 +212,9 @@ instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictSeq a) where
   fromCanonicalCBOR = do
     Versioned (l :: [a]) <- fromCanonicalCBOR @v
     pure $ Versioned $ StrictSeq.fromList l
+
+instance ToCanonicalCBOR v Prim.ByteArray where
+  toCanonicalCBOR _v ba = assumeCanonicalEncoding (C.encodeByteArray . fromByteArray $ ba)
+
+instance FromCanonicalCBOR v Prim.ByteArray where
+  fromCanonicalCBOR = Versioned . unBA <$> assumeCanonicalDecoder C.decodeByteArrayCanonical

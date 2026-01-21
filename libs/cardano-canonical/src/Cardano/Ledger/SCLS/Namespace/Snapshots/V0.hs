@@ -66,7 +66,6 @@ import Cardano.SCLS.NamespaceCodec (
  )
 import Cardano.SCLS.Versioned (Versioned (..))
 import Control.Monad (unless)
-import Data.ByteString (ByteString)
 import Data.Foldable (toList)
 import Data.MemPack (MemPack (..))
 import Data.Proxy (Proxy (..))
@@ -77,6 +76,8 @@ import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
+
 
 data SnapshotStage = SnapshotStageMark | SnapShotStageSet | SnapshotStageGo
   deriving (Eq, Ord, Show, Typeable)
@@ -239,7 +240,7 @@ fromCanonicalStakePoolParams CanonicalStakePoolParams {..} =
 
 data CanonicalPoolMetadata = CanonicalPoolMetadata
   { pmUrl :: !Url
-  , pmHash :: !ByteString
+  , pmHash :: !Prim.ByteArray
   }
   deriving (Eq, Show, Generic)
 
