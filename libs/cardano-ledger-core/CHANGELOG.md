@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `Semigroup` and `Monoid` instances for `Withdrawals` and `DirectDeposits`.
 * Rename `RewardAccount` to `AccountAddress`.
   - Deprecate `RewardAccount` (now a pattern-synonym) and its fields and lenses.
   - Add `AccountId` new-type for `Credential Staking` in `AccountAddress`.
