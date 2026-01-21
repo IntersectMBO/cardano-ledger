@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `Nonce`
 * In `SnapShot`, subsume `ssDelegations` into `ssActiveStake`.
   - Add `ActiveStake`, `sumAllActiveStake`, `sumCredentialsCompactActiveStake`.
   - Add `StakeWithDelegation` for the range of `ActiveStake`.

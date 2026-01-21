@@ -28,11 +28,17 @@ import qualified Cardano.Crypto.DSIGN.Class as C
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  Annotator,
+  DecCBOR (..),
+  EncCBOR (..),
+  shelleyProtVer,
+  toPlainDecoder,
+ )
+import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
 import Cardano.Ledger.Binary.Plain (
   FromCBOR (..),
   ToCBOR (..),
-  decodeRecordNamed,
   encodeListLen,
   serialize',
  )
@@ -83,14 +89,16 @@ instance ToCBOR BootstrapWitness where
 instance EncCBOR BootstrapWitness
 
 instance FromCBOR BootstrapWitness where
-  fromCBOR =
-    decodeRecordNamed "BootstrapWitness" (const 4) $
-      BootstrapWitness <$> fromCBOR <*> C.decodeSignedDSIGN <*> fromCBOR <*> fromCBOR
+  fromCBOR = toPlainDecoder Nothing shelleyProtVer decCBOR
+  {-# INLINE fromCBOR #-}
 
-instance DecCBOR BootstrapWitness
+instance DecCBOR BootstrapWitness where
+  decCBOR = decode (RecD BootstrapWitness <! From <! From <! From <! From)
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR (Annotator BootstrapWitness) where
   decCBOR = pure <$> decCBOR
+  {-# INLINE decCBOR #-}
 
 instance Ord BootstrapWitness where
   compare = comparing bootstrapWitKeyHash

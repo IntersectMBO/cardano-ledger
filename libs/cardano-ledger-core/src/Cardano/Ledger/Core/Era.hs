@@ -94,7 +94,9 @@ instance (KnownSymbol rule, Era era) => EncCBOR (VoidEraRule (rule :: Symbol) er
 instance (KnownSymbol rule, Era era) => FromCBOR (VoidEraRule (rule :: Symbol) era) where
   fromCBOR = cborError DecoderErrorVoid
 
-instance (KnownSymbol rule, Era era) => DecCBOR (VoidEraRule (rule :: Symbol) era)
+instance (KnownSymbol rule, Era era) => DecCBOR (VoidEraRule (rule :: Symbol) era) where
+  decCBOR = cborError DecoderErrorVoid
+  {-# INLINE decCBOR #-}
 
 absurdEraRule :: VoidEraRule rule era -> a
 absurdEraRule a = case a of {}

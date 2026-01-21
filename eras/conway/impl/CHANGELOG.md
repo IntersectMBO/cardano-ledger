@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
 * Add `validateTreasuryValue`, `validateWithdrawalsDelegated`
 * Update `resolveConwayInstantStake` to return `ActiveStake`
 * Remove `asBoundedIntegralHKD`
