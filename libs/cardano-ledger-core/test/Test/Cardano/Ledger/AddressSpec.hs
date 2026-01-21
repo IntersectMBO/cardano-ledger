@@ -42,6 +42,14 @@ import Test.Cardano.Ledger.Common hiding ((.&.))
 import Test.Cardano.Ledger.Core.Address
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (genByronVKeyAddr)
+import Test.QuickCheck.Classes (
+  commutativeMonoidLaws,
+  commutativeSemigroupLaws,
+  exponentialSemigroupLaws,
+  lawsCheckOne,
+  monoidLaws,
+  semigroupLaws,
+ )
 
 spec :: Spec
 spec =
@@ -96,6 +104,26 @@ roundTripAddressSpec = do
       propValidateNewDeserialize
   describe "AccountAddress" $ do
     roundTripCborSpec @AccountAddress
+  describe "Withdrawals" $ do
+    it "Semigroup and Monoid" $
+      lawsCheckOne
+        (Proxy :: Proxy Withdrawals)
+        [ semigroupLaws
+        , commutativeSemigroupLaws
+        , exponentialSemigroupLaws
+        , monoidLaws
+        , commutativeMonoidLaws
+        ]
+  describe "DirectDeposits" $ do
+    it "Semigroup and Monoid" $
+      lawsCheckOne
+        (Proxy :: Proxy DirectDeposits)
+        [ semigroupLaws
+        , commutativeSemigroupLaws
+        , exponentialSemigroupLaws
+        , monoidLaws
+        , commutativeMonoidLaws
+        ]
 
 propSameAsOldDecompactAddr :: CompactAddr -> Expectation
 propSameAsOldDecompactAddr cAddr = do

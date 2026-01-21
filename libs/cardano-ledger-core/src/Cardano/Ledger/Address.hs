@@ -122,6 +122,7 @@ import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex, unsafeTa
 import Data.Default (Default (..))
 import Data.Function (fix)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.MemPack (MemPack, Unpack (..))
 import Data.Proxy (Proxy (..))
@@ -969,7 +970,19 @@ newtype Withdrawals = Withdrawals {unWithdrawals :: Map AccountAddress Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
 
+instance Semigroup Withdrawals where
+  Withdrawals w1 <> Withdrawals w2 = Withdrawals $ Map.unionWith (<>) w1 w2
+
+instance Monoid Withdrawals where
+  mempty = Withdrawals Map.empty
+
 -- | Direct deposits to account addresses.
 newtype DirectDeposits = DirectDeposits {unDirectDeposits :: Map AccountAddress Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
+
+instance Semigroup DirectDeposits where
+  DirectDeposits d1 <> DirectDeposits d2 = DirectDeposits $ Map.unionWith (<>) d1 d2
+
+instance Monoid DirectDeposits where
+  mempty = DirectDeposits Map.empty
