@@ -64,6 +64,7 @@ import Data.Default
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Proxy
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -114,7 +115,7 @@ deriving instance
 ledgerExamples :: LedgerExamples ShelleyEra
 ledgerExamples =
   mkLedgerExamples
-    ( ShelleyApplyTxError . pure . DelegsFailure $
+    ( ShelleyApplyTxError . pure . DelegsFailure . DelplFailure . DelegFailure $
         DelegateeNotRegisteredDELEG @ShelleyEra (mkKeyHash 1)
     )
     (mkWitnessesPreAlonzo (Proxy @ShelleyEra))
@@ -403,7 +404,7 @@ exampleStakePoolParams =
         SJust $
           PoolMetadata
             { pmUrl = fromJust $ textToUrl 64 "consensus.pool"
-            , pmHash = "{}"
+            , pmHash = byteArrayFromShortByteString "{}"
             }
     }
 

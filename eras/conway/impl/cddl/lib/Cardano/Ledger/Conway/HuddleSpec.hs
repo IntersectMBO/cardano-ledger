@@ -1271,20 +1271,7 @@ instance HuddleRule "update" ConwayEra where
   huddleRuleNamed = updateRule
 
 instance HuddleRule "header_body" ConwayEra where
-  huddleRuleNamed pname p =
-    pname
-      =.= arr
-        [ "block_number" ==> huddleRule @"block_number" p
-        , "slot" ==> huddleRule @"slot" p
-        , "prev_hash" ==> (huddleRule @"hash32" p / VNil)
-        , "issuer_vkey" ==> huddleRule @"vkey" p
-        , "vrf_vkey" ==> huddleRule @"vrf_vkey" p
-        , "vrf_result" ==> huddleRule @"vrf_cert" p
-        , "block_body_size" ==> VUInt `sized` (4 :: Word64)
-        , "block_body_hash" ==> huddleRule @"hash32" p //- "merkle triple root"
-        , a $ huddleRule @"operational_cert" p
-        , a $ huddleRule @"protocol_version" p
-        ]
+  huddleRuleNamed = babbageHeaderBodyRule
 
 instance HuddleRule "header" ConwayEra where
   huddleRuleNamed = headerRule

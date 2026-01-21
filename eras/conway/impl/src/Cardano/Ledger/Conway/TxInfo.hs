@@ -62,7 +62,7 @@ import Cardano.Ledger.BaseTypes (
   Inject (..),
   ProtVer (..),
   StrictMaybe (..),
-  getVersion64,
+  getVersion32,
   isSJust,
   kindObject,
   strictMaybe,
@@ -735,7 +735,7 @@ transPlutusPurposeV1V2 proxy pv = \case
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion
 transProtVer (ProtVer major minor) =
-  PV3.ProtocolVersion (toInteger (getVersion64 major)) (toInteger minor)
+  PV3.ProtocolVersion (toInteger (getVersion32 major)) (toInteger minor)
 
 toPlutusV3Args ::
   EraPlutusTxInfo 'PlutusV3 era =>

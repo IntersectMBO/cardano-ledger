@@ -95,6 +95,9 @@ class
   , Eq (ApplyTxError era)
   , Show (ApplyTxError era)
   , Typeable (ApplyTxError era)
+  , Semigroup (ApplyTxError era)
+  , EncCBOR (ApplyTxError era)
+  , DecCBOR (ApplyTxError era)
   ) =>
   ApplyTx era
   where
@@ -141,7 +144,7 @@ ruleApplyTxValidation validationPolicy globals env state tx =
 instance ApplyTx ShelleyEra where
   newtype ApplyTxError ShelleyEra = ShelleyApplyTxError (NonEmpty (ShelleyLedgerPredFailure ShelleyEra))
     deriving (Eq, Show)
-    deriving newtype (EncCBOR, DecCBOR)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup)
   applyTxValidation validationPolicy globals env state tx =
     first ShelleyApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx

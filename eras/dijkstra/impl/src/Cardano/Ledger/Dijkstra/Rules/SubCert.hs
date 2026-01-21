@@ -18,6 +18,7 @@
 module Cardano.Ledger.Dijkstra.Rules.SubCert (
   DijkstraSUBCERT,
   DijkstraSubCertPredFailure (..),
+  DijkstraSubCertEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -45,12 +46,12 @@ import Cardano.Ledger.Dijkstra.Era (
  )
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
 import Cardano.Ledger.Dijkstra.TxCert
-import Cardano.Ledger.Shelley.Rules (PoolEnv (..))
+import Cardano.Ledger.Shelley.Rules (PoolEnv (..), PoolEvent, ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
-import Data.Void (Void, absurd)
+import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -120,7 +121,7 @@ instance
 
 type instance EraRuleFailure "SUBCERT" DijkstraEra = DijkstraSubCertPredFailure DijkstraEra
 
-type instance EraRuleEvent "SUBCERT" DijkstraEra = VoidEraRule "SUBCERT" DijkstraEra
+type instance EraRuleEvent "SUBCERT" DijkstraEra = DijkstraSubCertEvent DijkstraEra
 
 instance InjectRuleFailure "SUBCERT" DijkstraSubCertPredFailure DijkstraEra
 
@@ -132,6 +133,15 @@ instance InjectRuleFailure "SUBCERT" DijkstraSubPoolPredFailure DijkstraEra wher
 
 instance InjectRuleFailure "SUBCERT" DijkstraSubGovCertPredFailure DijkstraEra where
   injectFailure = SubGovCertFailure
+
+instance InjectRuleEvent "SUBCERT" DijkstraSubCertEvent DijkstraEra
+
+newtype DijkstraSubCertEvent era = SubPoolEvent (Event (EraRule "SUBPOOL" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "SUBPOOL" era)) => Eq (DijkstraSubCertEvent era)
+
+instance NFData (Event (EraRule "SUBPOOL" era)) => NFData (DijkstraSubCertEvent era)
 
 instance
   ( ConwayEraGov era
@@ -152,7 +162,7 @@ instance
   type Environment (DijkstraSUBCERT era) = CertEnv era
   type BaseM (DijkstraSUBCERT era) = ShelleyBase
   type PredicateFailure (DijkstraSUBCERT era) = DijkstraSubCertPredFailure era
-  type Event (DijkstraSUBCERT era) = Void
+  type Event (DijkstraSUBCERT era) = DijkstraSubCertEvent era
 
   transitionRules = [dijkstraSubCertTransition @era]
 
@@ -200,11 +210,15 @@ instance
   ( ConwayEraGov era
   , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
   , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
+  , InjectRuleEvent "SUBPOOL" PoolEvent era
+  , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
   ) =>
   Embed (DijkstraSUBPOOL era) (DijkstraSUBCERT era)
   where
   wrapFailed = SubPoolFailure
-  wrapEvent = absurd
+  wrapEvent = SubPoolEvent
 
 instance
   ( ConwayEraGov era

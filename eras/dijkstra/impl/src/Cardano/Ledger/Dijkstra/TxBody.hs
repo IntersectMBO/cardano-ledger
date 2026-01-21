@@ -49,6 +49,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbTreasuryDonation,
     dtbGuards,
     dtbSubTransactions,
+    dtbDirectDeposits,
     dstbSpendInputs,
     dstbReferenceInputs,
     dstbOutputs,
@@ -64,7 +65,8 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dstbCurrentTreasuryValue,
     dstbTreasuryDonation,
     dstbRequiredTopLevelGuards,
-    dstbGuards
+    dstbGuards,
+    dstbDirectDeposits
   ),
   upgradeProposals,
   upgradeGovAction,
@@ -92,8 +94,10 @@ module Cardano.Ledger.Dijkstra.TxBody (
   treasuryDonationDijkstraTxBodyRawL,
   subTransactionsDijkstraTxBodyRawL,
   requiredTopLevelGuardsDijkstraTxBodyRawL,
+  directDepositsDijkstraTxBodyRawL,
 ) where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
 import Cardano.Ledger.Babbage.TxBody (
@@ -176,6 +180,7 @@ data DijkstraTxBodyRaw l era where
     , dtbrCurrentTreasuryValue :: !(StrictMaybe Coin)
     , dtbrTreasuryDonation :: !Coin
     , dtbrSubTransactions :: !(OMap TxId (Tx SubTx era))
+    , dtbrDirectDeposits :: !DirectDeposits
     } ->
     DijkstraTxBodyRaw TopTx era
   DijkstraSubTxBodyRaw ::
@@ -195,6 +200,7 @@ data DijkstraTxBodyRaw l era where
     , dstbrCurrentTreasuryValue :: !(StrictMaybe Coin)
     , dstbrTreasuryDonation :: !Coin
     , dstbrRequiredTopLevelGuards :: !(Map (Credential Guard) (StrictMaybe (Data era)))
+    , dstbrDirectDeposits :: !DirectDeposits
     } ->
     DijkstraTxBodyRaw SubTx era
 
@@ -216,7 +222,7 @@ deriving via
     (Typeable l, EraTxBody era) => NoThunks (DijkstraTxBodyRaw l era)
 
 instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l era) where
-  rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
+  rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraTxBodyRaw {..} = txBodyRaw
      in dtbrSpendInputs `deepseq`
           dtbrCollateralInputs `deepseq`
@@ -237,8 +243,9 @@ instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l e
                                         dtbrProposalProcedures `deepseq`
                                           dtbrCurrentTreasuryValue `deepseq`
                                             dtbrTreasuryDonation `deepseq`
-                                              rnf dtbrSubTransactions
-  rnf txBodyRaw@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
+                                              dtbrSubTransactions `deepseq`
+                                                rnf dtbrDirectDeposits
+  rnf txBodyRaw@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraSubTxBodyRaw {..} = txBodyRaw
      in dstbrSpendInputs `deepseq`
           dstbrReferenceInputs `deepseq`
@@ -255,7 +262,8 @@ instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l e
                                 dstbrProposalProcedures `deepseq`
                                   dstbrCurrentTreasuryValue `deepseq`
                                     dstbrTreasuryDonation `deepseq`
-                                      rnf dstbrRequiredTopLevelGuards
+                                      dstbrRequiredTopLevelGuards `deepseq`
+                                        rnf dstbrDirectDeposits
 
 deriving instance (EraTxBody era, Show (Tx SubTx era)) => Show (DijkstraTxBodyRaw l era)
 
@@ -282,6 +290,7 @@ basicDijkstraTxBodyRaw STopTx =
     SNothing
     mempty
     OMap.Empty
+    (DirectDeposits mempty)
 basicDijkstraTxBodyRaw SSubTx =
   DijkstraSubTxBodyRaw
     mempty
@@ -300,6 +309,7 @@ basicDijkstraTxBodyRaw SSubTx =
     mempty
     mempty
     mempty
+    (DirectDeposits mempty)
 
 instance
   ( Typeable l
@@ -395,6 +405,12 @@ instance
                 Map.null
                 (requiredTopLevelGuardsDijkstraTxBodyRawL .~)
                 (D (decodeMap decCBOR (decodeNullStrictMaybe decCBOR)))
+        25 ->
+          fieldAGuarded
+            (emptyFailure "DirectDeposits" "non-empty")
+            (null . unDirectDeposits)
+            (directDepositsDijkstraTxBodyRawL .~)
+            From
         n -> invalidField n
       decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
       decodeSubTransactions =
@@ -439,6 +455,7 @@ encodeTxBodyRaw DijkstraTxBodyRaw {..} =
         !> encodeKeyedStrictMaybe 21 dtbrCurrentTreasuryValue
         !> Omit (== mempty) (Key 22 $ To dtbrTreasuryDonation)
         !> Omit null (Key 23 $ To dtbrSubTransactions)
+        !> Omit (null . unDirectDeposits) (Key 25 (To dtbrDirectDeposits))
 encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
   let ValidityInterval bot top = dstbrVldt
    in Keyed
@@ -464,6 +481,7 @@ encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
         !> Omit
           (== mempty)
           (Key 24 $ E (encodeMap encCBOR (encodeNullStrictMaybe encCBOR)) dstbrRequiredTopLevelGuards)
+        !> Omit (null . unDirectDeposits) (Key 25 (To dstbrDirectDeposits))
 
 instance
   ( EraTxBody era
@@ -542,6 +560,7 @@ pattern DijkstraTxBody ::
   StrictMaybe Coin ->
   Coin ->
   OMap TxId (Tx SubTx DijkstraEra) ->
+  DirectDeposits ->
   TxBody TopTx DijkstraEra
 pattern DijkstraTxBody
   { dtbSpendInputs
@@ -564,6 +583,7 @@ pattern DijkstraTxBody
   , dtbCurrentTreasuryValue
   , dtbTreasuryDonation
   , dtbSubTransactions
+  , dtbDirectDeposits
   } <-
   ( getMemoRawType ->
       DijkstraTxBodyRaw
@@ -587,6 +607,7 @@ pattern DijkstraTxBody
         , dtbrCurrentTreasuryValue = dtbCurrentTreasuryValue
         , dtbrTreasuryDonation = dtbTreasuryDonation
         , dtbrSubTransactions = dtbSubTransactions
+        , dtbrDirectDeposits = dtbDirectDeposits
         }
     )
   where
@@ -610,7 +631,8 @@ pattern DijkstraTxBody
       proposalProcedures
       currentTreasuryValue
       treasuryDonation
-      subTransactions =
+      subTransactions
+      directDeposits =
         mkMemoizedEra @DijkstraEra $
           DijkstraTxBodyRaw
             inputsX
@@ -633,6 +655,7 @@ pattern DijkstraTxBody
             currentTreasuryValue
             treasuryDonation
             subTransactions
+            directDeposits
 
 pattern DijkstraSubTxBody ::
   ( EncCBOR (Tx SubTx DijkstraEra)
@@ -658,6 +681,7 @@ pattern DijkstraSubTxBody ::
   StrictMaybe Coin ->
   Coin ->
   Map (Credential Guard) (StrictMaybe (Data DijkstraEra)) ->
+  DirectDeposits ->
   TxBody SubTx DijkstraEra
 pattern DijkstraSubTxBody
   { dstbSpendInputs
@@ -676,6 +700,7 @@ pattern DijkstraSubTxBody
   , dstbCurrentTreasuryValue
   , dstbTreasuryDonation
   , dstbRequiredTopLevelGuards
+  , dstbDirectDeposits
   } <-
   ( getMemoRawType ->
       DijkstraSubTxBodyRaw
@@ -695,6 +720,7 @@ pattern DijkstraSubTxBody
         , dstbrCurrentTreasuryValue = dstbCurrentTreasuryValue
         , dstbrTreasuryDonation = dstbTreasuryDonation
         , dstbrRequiredTopLevelGuards = dstbRequiredTopLevelGuards
+        , dstbrDirectDeposits = dstbDirectDeposits
         }
     )
   where
@@ -714,7 +740,8 @@ pattern DijkstraSubTxBody
       proposalProcedures
       currentTreasuryValue
       treasuryDonation
-      requiredTopLevelGuards =
+      requiredTopLevelGuards
+      directDeposits =
         mkMemoizedEra @DijkstraEra $
           DijkstraSubTxBodyRaw
             inputsX
@@ -733,6 +760,7 @@ pattern DijkstraSubTxBody
             currentTreasuryValue
             treasuryDonation
             requiredTopLevelGuards
+            directDeposits
 
 {-# COMPLETE DijkstraTxBody, DijkstraSubTxBody #-}
 
@@ -830,6 +858,18 @@ withdrawalsDijkstraTxBodyRawL =
     ( \case
         x@DijkstraTxBodyRaw {} -> \y -> x {dtbrWithdrawals = y}
         x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrWithdrawals = y}
+    )
+
+directDepositsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw l era) DirectDeposits
+directDepositsDijkstraTxBodyRawL =
+  lens
+    ( \case
+        DijkstraTxBodyRaw {dtbrDirectDeposits} -> dtbrDirectDeposits
+        DijkstraSubTxBodyRaw {dstbrDirectDeposits} -> dstbrDirectDeposits
+    )
+    ( \case
+        x@DijkstraTxBodyRaw {} -> \y -> x {dtbrDirectDeposits = y}
+        x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrDirectDeposits = y}
     )
 
 instance
@@ -1219,6 +1259,8 @@ class ConwayEraTxBody era => DijkstraEraTxBody era where
   requiredTopLevelGuardsL ::
     Lens' (TxBody SubTx era) (Map (Credential Guard) (StrictMaybe (Data era)))
 
+  directDepositsTxBodyL :: Lens' (TxBody l era) DirectDeposits
+
 guardsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw l era) (OSet (Credential Guard))
 guardsDijkstraTxBodyRawL =
   lens
@@ -1256,6 +1298,9 @@ instance
   subTransactionsTxBodyL = memoRawTypeL @DijkstraEra . subTransactionsDijkstraTxBodyRawL
 
   requiredTopLevelGuardsL = memoRawTypeL @DijkstraEra . requiredTopLevelGuardsDijkstraTxBodyRawL
+
+  directDepositsTxBodyL = memoRawTypeL @DijkstraEra . directDepositsDijkstraTxBodyRawL
+  {-# INLINE directDepositsTxBodyL #-}
 
 -- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
 -- the first element and if it's a credential, it decodes the rest of the

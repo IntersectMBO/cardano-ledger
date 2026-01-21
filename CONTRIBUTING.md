@@ -151,10 +151,6 @@ For example the Shelley tests can be run with:
 cabal test cardano-ledger-shelley-test
 ```
 
-**Note** that the tests in `cardano-ledger-shelley-test` require two Ruby gems,
-[cbor-diag](https://rubygems.org/gems/cbor-diag) and
-[cddl](https://rubygems.org/gems/cddl).
-
 It can be helpful to use the `--test-show-details=streaming` option for seeing
 the output of the tests while they run:
 

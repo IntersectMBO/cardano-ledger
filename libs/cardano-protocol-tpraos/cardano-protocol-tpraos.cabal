@@ -126,7 +126,6 @@ test-suite tests
 
   build-depends:
     base,
-    bytestring,
     cardano-ledger-allegra:{cardano-ledger-allegra, cddl, testlib},
     cardano-ledger-alonzo:{cardano-ledger-alonzo, cddl, testlib},
     cardano-ledger-binary:{cardano-ledger-binary, testlib},

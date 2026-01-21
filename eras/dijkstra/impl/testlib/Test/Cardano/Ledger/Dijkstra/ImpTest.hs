@@ -104,6 +104,7 @@ instance ConwayEraImp DijkstraEra
 class
   ( ConwayEraImp era
   , DijkstraEraTest era
+  , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraUtxoPredFailure era
   , InjectRuleFailure "MEMPOOL" DijkstraMempoolPredFailure era
   , InjectRuleFailure "MEMPOOL" DijkstraUtxoPredFailure era

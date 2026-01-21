@@ -21,7 +21,8 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes (PerasCert (..), StrictMaybe)
-import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure, ConwayUtxosPredFailure)
+import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
@@ -32,6 +33,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
@@ -69,6 +71,7 @@ instance Arbitrary (TxBody SubTx DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary (TxBody TopTx DijkstraEra) where
   arbitrary =
@@ -93,6 +96,7 @@ instance Arbitrary (TxBody TopTx DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
       <*> (choose (0, 4) >>= \n -> OMap.fromFoldable <$> vectorOf n arbitrary)
+      <*> arbitrary
 
 instance Arbitrary (UpgradeDijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU
@@ -238,29 +242,53 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance Arbitrary (DijkstraSubDelegPredFailure era) where
-  arbitrary = pure DijkstraSubDelegPredFailure
-
-instance Arbitrary (DijkstraSubGovPredFailure era) where
-  arbitrary = pure DijkstraSubGovPredFailure
-
-instance Arbitrary (DijkstraSubGovCertPredFailure era) where
-  arbitrary = pure DijkstraSubGovCertPredFailure
-
-instance Arbitrary (DijkstraSubPoolPredFailure era) where
-  arbitrary = pure DijkstraSubPoolPredFailure
+instance
+  Arbitrary (ConwayDelegPredFailure era) =>
+  Arbitrary (DijkstraSubDelegPredFailure era)
+  where
+  arbitrary = DijkstraSubDelegPredFailure <$> arbitrary
 
 instance
-  Arbitrary (PredicateFailure (EraRule "SUBUTXOS" era)) =>
+  Arbitrary (DijkstraGovPredFailure era) =>
+  Arbitrary (DijkstraSubGovPredFailure era)
+  where
+  arbitrary = DijkstraSubGovPredFailure <$> arbitrary
+
+instance
+  Arbitrary (DijkstraGovCertPredFailure era) =>
+  Arbitrary (DijkstraSubGovCertPredFailure era)
+  where
+  arbitrary = DijkstraSubGovCertPredFailure <$> arbitrary
+
+instance
+  Arbitrary (ShelleyPoolPredFailure era) =>
+  Arbitrary (DijkstraSubPoolPredFailure era)
+  where
+  arbitrary = DijkstraSubPoolPredFailure <$> arbitrary
+
+instance
+  ( EraTxOut era
+  , Arbitrary (Value era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (PredicateFailure (EraRule "SUBUTXOS" era))
+  ) =>
   Arbitrary (DijkstraSubUtxoPredFailure era)
   where
   arbitrary = genericArbitraryU
 
-instance Arbitrary (DijkstraSubUtxosPredFailure era) where
-  arbitrary = pure DijkstraSubUtxosPredFailure
+instance
+  Arbitrary (ConwayUtxosPredFailure era) =>
+  Arbitrary (DijkstraSubUtxosPredFailure era)
+  where
+  arbitrary = DijkstraSubUtxosPredFailure <$> arbitrary
 
 instance
-  Arbitrary (PredicateFailure (EraRule "SUBUTXO" era)) =>
+  ( Era era
+  , Arbitrary (PredicateFailure (EraRule "SUBUTXO" era))
+  , Arbitrary (TxCert era)
+  , Arbitrary (PlutusPurpose AsItem era)
+  , Arbitrary (PlutusPurpose AsIx era)
+  ) =>
   Arbitrary (DijkstraSubUtxowPredFailure era)
   where
   arbitrary = genericArbitraryU
@@ -277,3 +305,8 @@ instance
   Arbitrary (DijkstraBlockBody era)
   where
   arbitrary = DijkstraBlockBody <$> arbitrary <*> arbitrary
+
+deriving newtype instance Arbitrary (ApplyTxError DijkstraEra)
+
+instance Arbitrary (DijkstraMempoolPredFailure DijkstraEra) where
+  arbitrary = genericArbitraryU

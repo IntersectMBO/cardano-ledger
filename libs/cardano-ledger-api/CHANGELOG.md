@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Re-export `DirectDeposits` and `directDepositsTxBodyL` from `Cardano.Ledger.Api.Tx.Body`.
 * Re-export `constitutionGuardrailsScriptHashL` from `Cardano.Ledger.Api.Governance`.
 * Changed the type of the following functions by adding `Network` argument:
   - `queryPoolParameters`

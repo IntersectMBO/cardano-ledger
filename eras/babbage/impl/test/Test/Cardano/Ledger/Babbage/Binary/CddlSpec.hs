@@ -11,13 +11,6 @@ import Cardano.Ledger.Babbage.HuddleSpec (babbageCDDL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
-import Test.Cardano.Ledger.Babbage.Binary.Cddl (readBabbageCddlFiles)
-import Test.Cardano.Ledger.Binary.Cddl (
-  beforeAllCddlFile,
-  cddlDecoderEquivalenceSpec,
-  cddlRoundTripAnnCborSpec,
-  cddlRoundTripCborSpec,
- )
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
@@ -30,38 +23,7 @@ spec :: Spec
 spec =
   describe "CDDL" $ do
     let v = eraProtVerHigh @BabbageEra
-    describe "Ruby-based" $ beforeAllCddlFile 3 readBabbageCddlFiles $ do
-      cddlRoundTripCborSpec @(Value BabbageEra) v "coin"
-      cddlRoundTripAnnCborSpec @(TxBody TopTx BabbageEra) v "transaction_body"
-      cddlRoundTripCborSpec @(TxBody TopTx BabbageEra) v "transaction_body"
-      cddlRoundTripAnnCborSpec @(TxAuxData BabbageEra) v "auxiliary_data"
-      cddlRoundTripCborSpec @(TxAuxData BabbageEra) v "auxiliary_data"
-      cddlRoundTripAnnCborSpec @(Timelock BabbageEra) v "native_script"
-      cddlRoundTripCborSpec @(Timelock BabbageEra) v "native_script"
-      cddlRoundTripAnnCborSpec @(Data BabbageEra) v "plutus_data"
-      cddlRoundTripCborSpec @(Data BabbageEra) v "plutus_data"
-      cddlRoundTripCborSpec @(TxOut BabbageEra) v "transaction_output"
-      cddlRoundTripAnnCborSpec @(Script BabbageEra) v "script"
-      cddlRoundTripCborSpec @(Script BabbageEra) v "script"
-      cddlRoundTripCborSpec @(Datum BabbageEra) v "datum_option"
-      cddlRoundTripAnnCborSpec @(TxWits BabbageEra) v "transaction_witness_set"
-      cddlRoundTripCborSpec @(TxWits BabbageEra) v "transaction_witness_set"
-      cddlRoundTripCborSpec @(PParamsUpdate BabbageEra) v "protocol_param_update"
-      cddlRoundTripCborSpec @CostModels v "cost_models"
-      cddlRoundTripAnnCborSpec @(Redeemers BabbageEra) v "redeemers"
-      cddlRoundTripCborSpec @(Redeemers BabbageEra) v "redeemers"
-      cddlRoundTripAnnCborSpec @(Tx TopTx BabbageEra) v "transaction"
-      cddlRoundTripCborSpec @(Tx TopTx BabbageEra) v "transaction"
-      describe "DecCBOR instances equivalence via CDDL" $ do
-        cddlDecoderEquivalenceSpec @(TxBody TopTx BabbageEra) v "transaction_body"
-        cddlDecoderEquivalenceSpec @(TxAuxData BabbageEra) v "auxiliary_data"
-        cddlDecoderEquivalenceSpec @(Timelock BabbageEra) v "native_script"
-        cddlDecoderEquivalenceSpec @(Data BabbageEra) v "plutus_data"
-        cddlDecoderEquivalenceSpec @(Script BabbageEra) v "script"
-        cddlDecoderEquivalenceSpec @(TxWits BabbageEra) v "transaction_witness_set"
-        cddlDecoderEquivalenceSpec @(Redeemers BabbageEra) v "redeemers"
-        cddlDecoderEquivalenceSpec @(Tx TopTx BabbageEra) v "transaction"
-    describe "Huddle" $ specWithHuddle babbageCDDL 100 $ do
+    specWithHuddle babbageCDDL 100 $ do
       huddleRoundTripCborSpec @(Value BabbageEra) v "coin"
       huddleRoundTripAnnCborSpec @(TxBody TopTx BabbageEra) v "transaction_body"
       huddleRoundTripCborSpec @(TxBody TopTx BabbageEra) v "transaction_body"

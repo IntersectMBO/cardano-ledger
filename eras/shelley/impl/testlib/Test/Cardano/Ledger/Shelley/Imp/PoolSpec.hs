@@ -19,7 +19,7 @@ import Cardano.Ledger.State
 import Data.Map.Strict as Map
 import Data.Proxy
 import Lens.Micro
-import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
+import Test.Cardano.Ledger.Binary.Arbitrary (genByteArray)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
@@ -57,7 +57,7 @@ spec = describe "POOL" $ do
       pv <- getsPParams ppProtocolVersionL
       let maxMetadataSize = sizeHash (Proxy :: Proxy HASH)
       tooBigSize <- choose (maxMetadataSize + 1, maxMetadataSize + 50)
-      metadataHash <- liftGen $ genByteString $ fromIntegral tooBigSize
+      metadataHash <- liftGen $ genByteArray $ fromIntegral tooBigSize
       url <- arbitrary
       let metadata = PoolMetadata url metadataHash
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF

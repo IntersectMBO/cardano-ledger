@@ -34,7 +34,12 @@ import Cardano.Ledger.Shelley.API (
   TxId (..),
   Update (..),
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelegPredFailure (DelegateeNotRegisteredDELEG),
+  ShelleyDelegsPredFailure (DelplFailure),
+  ShelleyDelplPredFailure (DelegFailure),
+  ShelleyLedgerPredFailure (DelegsFailure),
+ )
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
@@ -64,7 +69,9 @@ ledgerExamples =
     ( BabbageApplyTxError $
         pure $
           DelegsFailure $
-            DelegateeNotRegisteredDELEG @BabbageEra (mkKeyHash 1)
+            DelplFailure $
+              DelegFailure $
+                DelegateeNotRegisteredDELEG @BabbageEra (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
     exampleTxBabbage

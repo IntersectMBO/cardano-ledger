@@ -33,7 +33,6 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 shelleyEraSpecificSpec ::
   ( ShelleyEraImp era
   , ShelleyEraAccounts era
-  , InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 shelleyEraSpecificSpec = do

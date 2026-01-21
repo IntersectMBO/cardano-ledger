@@ -54,6 +54,7 @@ module Cardano.Ledger.Address (
   decodeRewardAccount,
   fromCborRewardAccount,
   Withdrawals (..),
+  DirectDeposits (..),
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -849,12 +850,12 @@ headerRewardAccountIsScript = (`testBit` 4)
 --
 -- ┏━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
 -- ┃ Reward Account ┃1┊1┊1┊x┊0┊0┊0┊x┃
--- ┗━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
---                  ┃1┊1┊1┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingKey    ┃
---                  ┃1┊1┊1┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingKey    ┃
---                  ┃1┊1┊1┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingKey    ┃
---                  ┃1┊1┊1┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingKey    ┃
---                  ┗━┷━┷━┷━┷━┷━┷━┷━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+-- ┗━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━┓
+--                  ┃1┊1┊1┊0┊0┊0┊0┊0┃ Testnet StakingKey    ┃
+--                  ┃1┊1┊1┊0┊0┊0┊0┊1┃ Mainnet StakingKey    ┃
+--                  ┃1┊1┊1┊1┊0┊0┊0┊0┃ Testnet StakingScript ┃
+--                  ┃1┊1┊1┊1┊0┊0┊0┊1┃ Mainnet StakingScript ┃
+--                  ┗━┷━┷━┷━┷━┷━┷━┷━┻━━━━━━━━━━━━━━━━━━━━━━━┛
 --                          \       \
 --                           \       `Is Mainnet Address
 --                            `Account Credential is a Script
@@ -902,5 +903,10 @@ fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
 
 -- | This is called @wdrl@ in the spec.
 newtype Withdrawals = Withdrawals {unWithdrawals :: Map RewardAccount Coin}
+  deriving (Show, Eq, Generic)
+  deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
+
+-- | Direct deposits to reward accounts.
+newtype DirectDeposits = DirectDeposits {unDirectDeposits :: Map RewardAccount Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)

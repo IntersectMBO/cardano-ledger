@@ -69,6 +69,7 @@ module Cardano.Ledger.Api.Era (
   atMostEra,
 ) where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (translateTimelock, upgradeMultiSig)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
@@ -402,7 +403,7 @@ instance EraApi AlonzoEra where
       AlonzoTxAuxDataRaw
         { atadrMetadata = md
         , atadrNativeScripts = upgradeNativeScript <$> scripts
-        , atadrPlutus = mempty
+        , atadrPlutusScripts = mempty
         }
 
   upgradeTxWits (ShelleyTxWits {addrWits, scriptWits, bootWits}) =
@@ -437,11 +438,11 @@ translateAlonzoTxAuxData ::
   (AlonzoEraScript (PreviousEra era), AlonzoEraScript era, EraApi era) =>
   AlonzoTxAuxData (PreviousEra era) ->
   AlonzoTxAuxData era
-translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadNativeScripts, atadPlutus} =
+translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadNativeScripts, atadPlutusScripts} =
   AlonzoTxAuxData
     { atadMetadata = atadMetadata
     , atadNativeScripts = upgradeNativeScript <$> atadNativeScripts
-    , atadPlutus = atadPlutus
+    , atadPlutusScripts = atadPlutusScripts
     }
 
 newtype BabbageTxUpgradeError
@@ -640,6 +641,7 @@ instance EraApi DijkstraEra where
             , dtbVotingProcedures = coerce ctbrVotingProcedures
             , dtbTreasuryDonation = ctbrTreasuryDonation
             , dtbSubTransactions = mempty
+            , dtbDirectDeposits = DirectDeposits mempty
             }
 
   upgradeTxWits atw =

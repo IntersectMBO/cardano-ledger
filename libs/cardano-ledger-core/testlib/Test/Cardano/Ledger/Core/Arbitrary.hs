@@ -405,6 +405,10 @@ instance Arbitrary Withdrawals where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
+instance Arbitrary DirectDeposits where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Reward -----------------------------------------------------------------
 ------------------------------------------------------------------------------------------

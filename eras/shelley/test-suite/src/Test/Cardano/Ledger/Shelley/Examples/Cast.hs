@@ -61,9 +61,9 @@ import Cardano.Ledger.State (
  )
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromJust)
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkCredential)
@@ -135,7 +135,7 @@ aliceStakePoolParams =
         SJust $
           PoolMetadata
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
-            , pmHash = BS.pack "{}"
+            , pmHash = byteArrayFromShortByteString "{}"
             }
     }
 

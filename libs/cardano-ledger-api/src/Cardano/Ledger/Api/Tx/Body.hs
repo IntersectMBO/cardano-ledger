@@ -79,13 +79,15 @@ module Cardano.Ledger.Api.Tx.Body (
   -- * Dijstra Era
   DijkstraEraTxBody,
   guardsTxBodyL,
+  directDepositsTxBodyL,
+  DirectDeposits (..),
 
   -- * Upgrade
   binaryUpgradeTxBody,
   upgradeTxBody,
 ) where
 
-import Cardano.Ledger.Address (Withdrawals (..))
+import Cardano.Ledger.Address (DirectDeposits (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ScriptIntegrityHash)

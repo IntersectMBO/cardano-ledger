@@ -132,6 +132,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Examples
     Test.Cardano.Ledger.Dijkstra.Imp
     Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -235,7 +236,6 @@ test-suite tests
 
   build-depends:
     base,
-    cardano-ledger-allegra,
     cardano-ledger-alonzo,
     cardano-ledger-babbage:testlib,
     cardano-ledger-binary:testlib,

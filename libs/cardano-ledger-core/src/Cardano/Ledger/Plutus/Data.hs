@@ -62,7 +62,7 @@ import Cardano.Ledger.MemoBytes (
   getMemoSafeHash,
   mkMemoizedEra,
  )
-import Cardano.Ledger.MemoBytes.Internal (mkMemoBytesStrict)
+import Cardano.Ledger.MemoBytes.Internal (mkMemoBytesShort)
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value (Null))
@@ -170,7 +170,7 @@ decodeBinaryData :: forall era. Era era => BinaryData era -> Either DecoderError
 decodeBinaryData (BinaryData sbs) = do
   let bs = fromShort sbs
   plutusData <- decodeFull' (eraProtVerLow @era) bs
-  pure (MkData (mkMemoBytesStrict plutusData bs))
+  pure (MkData (mkMemoBytesShort plutusData sbs))
 
 -- | It is safe to convert `BinaryData` to `Data` because the only way to
 -- construct `BinaryData` is through the smart constructor `makeBinaryData` that

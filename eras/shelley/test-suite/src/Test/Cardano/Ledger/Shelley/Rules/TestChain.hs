@@ -44,7 +44,9 @@ import Cardano.Ledger.Shelley.Rules (
   DelegEnv (..),
   LedgerEnv (..),
   PoolEnv (..),
+  PoolEvent,
   ShelleyPOOL,
+  ShelleyPoolPredFailure,
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.API (GetLedgerView)
@@ -188,7 +190,11 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
 poolTraceFromBlock ::
   forall era.
-  ChainProperty era =>
+  ( ChainProperty era
+  , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
+  , InjectRuleEvent "POOL" PoolEvent era
+  ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
   (ChainState era, Trace (ShelleyPOOL era))

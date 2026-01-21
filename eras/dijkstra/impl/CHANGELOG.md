@@ -3,6 +3,21 @@
 ## 0.2.0.0
 
 * Add:
+  - `DijkstraLedgerEvent`
+  - `DijkstraSubLedgersEvent`
+  - `DijkstraSubLedgerEvent`
+  - `DijkstraSubCertsEvent`
+  - `DijkstraSubCertEvent`
+  - `DijkstraSubPoolEvent`
+  - `DijkstraSubGovEvent`
+  - `DijkstraSubUtxowEvent`
+  - `DijkstraSubUtxoEvent`
+  - `DijkstraSubUtxosEvent`
+* Add `DijkstraLedgerEvent`
+* Add `DirectDeposits` to transaction bodies at both (top and sub) levels.
+  - Add `directDepositsTxBodyL` lens to the `DijkstraEraTxBody` typeclass.
+* Add `DijkstraSpendingOutputFromSameTx` to `DijkstraLedgerPredFailure`, to report when a sub-tx-id is being spent within the same transaction.
+* Add:
   - `DijkstraSUBCERT`
   - `DijkstraSUBCERTS`
   - `DijkstraSUBDELEG`
@@ -97,12 +112,15 @@
 
 ### `cddl`
 
+* Add `directDepositsRule` to the transaction body.
+* Constrain `protocol_version` minor field to `uint .size 4`.
 * Renamed `policy_hash` to `guardrails_script_hash` in governance actions to avoid confusion with multi-asset policy IDs
 * Move `cddl-files` to `cddl/data`.
 * Add full `HuddleSpec`.
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec`
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Re-export `Test.Cardano.Ledger.Conway.Binary.Golden`

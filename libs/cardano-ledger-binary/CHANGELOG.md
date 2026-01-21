@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Change `Version` from `Word64` to `Word32`
+  - Add `mkVersion32` and `getVersion32`
 * Remove `listLenBound` from `EncCBORGroup`
 * Change type of `listLen` in `EncCBORGroup` to accept a `Proxy` instead of a concrete value
 * Add `decodeNonEmptySetLikeEnforceNoDuplicatesAnn` to `Annotated` module
@@ -16,6 +18,7 @@
 
 ### `testlib`
 
+* Remove `Test.Cardano.Ledger.Binary.Cddl`
 * Add `ToExpr` instances to `DeserialiseFailure` and `DecoderError`
 * Remove `assertExprEqualWithMessage`
 

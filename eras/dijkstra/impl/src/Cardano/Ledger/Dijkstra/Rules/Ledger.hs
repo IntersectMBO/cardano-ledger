@@ -17,6 +17,7 @@
 module Cardano.Ledger.Dijkstra.Rules.Ledger (
   DijkstraLEDGER,
   DijkstraLedgerPredFailure (..),
+  DijkstraLedgerEvent (..),
   shelleyToDijkstraLedgerPredFailure,
   conwayToDijkstraLedgerPredFailure,
 ) where
@@ -24,6 +25,7 @@ module Cardano.Ledger.Dijkstra.Rules.Ledger (
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo (AlonzoScript)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
@@ -62,7 +64,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
-  ConwayLedgerEvent (..),
   ConwayLedgerPredFailure,
   ConwayUtxoPredFailure,
   ConwayUtxosPredFailure,
@@ -82,7 +83,6 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBDELEG,
   DijkstraSUBGOV,
   DijkstraSUBGOVCERT,
-  DijkstraSUBPOOL,
   DijkstraSUBUTXO,
   DijkstraSUBUTXOS,
   DijkstraSUBUTXOW,
@@ -93,6 +93,7 @@ import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
+import Cardano.Ledger.Dijkstra.Rules.SubPool
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody
@@ -103,6 +104,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
+  PoolEvent,
   ShelleyLEDGERS,
   ShelleyLedgerPredFailure (..),
   ShelleyLedgersEvent (LedgerEvent),
@@ -114,12 +116,17 @@ import Cardano.Ledger.Shelley.Rules (
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
  )
+import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
+import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import Data.Sequence (Seq)
-import Data.Void (absurd)
+import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
+import qualified Data.Set.NonEmpty as NES
 import GHC.Generics (Generic (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -134,11 +141,14 @@ data DijkstraLedgerPredFailure era
   | DijkstraWithdrawalsMissingAccounts Withdrawals
   | DijkstraIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
   | DijkstraSubLedgersFailure (PredicateFailure (EraRule "SUBLEDGERS" era))
+  | DijkstraSpendingOutputFromSameTx (NonEmptyMap TxId (NonEmptySet TxIn))
   deriving (Generic)
 
 type instance EraRuleFailure "LEDGER" DijkstraEra = DijkstraLedgerPredFailure DijkstraEra
 
-type instance EraRuleEvent "LEDGER" DijkstraEra = ConwayLedgerEvent DijkstraEra
+type instance EraRuleEvent "LEDGER" DijkstraEra = DijkstraLedgerEvent DijkstraEra
+
+instance InjectRuleEvent "LEDGER" DijkstraLedgerEvent DijkstraEra
 
 instance InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure DijkstraEra
 
@@ -270,6 +280,7 @@ instance
       DijkstraWithdrawalsMissingAccounts w -> Sum DijkstraWithdrawalsMissingAccounts 7 !> To w
       DijkstraIncompleteWithdrawals w -> Sum DijkstraIncompleteWithdrawals 8 !> To w
       DijkstraSubLedgersFailure w -> Sum DijkstraSubLedgersFailure 9 !> To w
+      DijkstraSpendingOutputFromSameTx txIds -> Sum DijkstraSpendingOutputFromSameTx 10 !> To txIds
 
 instance
   ( Era era
@@ -290,7 +301,31 @@ instance
     7 -> SumD DijkstraWithdrawalsMissingAccounts <! From
     8 -> SumD DijkstraIncompleteWithdrawals <! From
     9 -> SumD DijkstraSubLedgersFailure <! From
+    10 -> SumD DijkstraSpendingOutputFromSameTx <! From
     n -> Invalid n
+
+data DijkstraLedgerEvent era
+  = UtxowEvent (Event (EraRule "UTXOW" era))
+  | CertsEvent (Event (EraRule "CERTS" era))
+  | GovEvent (Event (EraRule "GOV" era))
+  | SubLedgersEvent (Event (EraRule "SUBLEDGERS" era))
+  deriving (Generic)
+
+deriving instance
+  ( Eq (Event (EraRule "CERTS" era))
+  , Eq (Event (EraRule "UTXOW" era))
+  , Eq (Event (EraRule "GOV" era))
+  , Eq (Event (EraRule "SUBLEDGERS" era))
+  ) =>
+  Eq (DijkstraLedgerEvent era)
+
+instance
+  ( NFData (Event (EraRule "CERTS" era))
+  , NFData (Event (EraRule "UTXOW" era))
+  , NFData (Event (EraRule "GOV" era))
+  , NFData (Event (EraRule "SUBLEDGERS" era))
+  ) =>
+  NFData (DijkstraLedgerEvent era)
 
 instance
   ( AlonzoEraTx era
@@ -325,7 +360,7 @@ instance
   type Environment (DijkstraLEDGER era) = LedgerEnv era
   type BaseM (DijkstraLEDGER era) = ShelleyBase
   type PredicateFailure (DijkstraLEDGER era) = DijkstraLedgerPredFailure era
-  type Event (DijkstraLEDGER era) = ConwayLedgerEvent era
+  type Event (DijkstraLEDGER era) = DijkstraLedgerEvent era
 
   initialRules = []
   transitionRules = [dijkstraLedgerTransition]
@@ -333,6 +368,21 @@ instance
   renderAssertionViolation = renderDepositEqualsObligationViolation
 
   assertions = shelleyLedgerAssertions @era @DijkstraLEDGER
+
+-- | A transaction should not be able to spend its own outputs.
+-- Finds all spendable inputs in the entire transaction that are sub-transaction outputs (TxIds).
+spentSubTxOutputs ::
+  (EraTx era, DijkstraEraTxBody era) => Tx TopTx era -> Map.Map TxId (NonEmptySet TxIn)
+spentSubTxOutputs tx =
+  filterBadInputs subTxs <> filterBadInputs (Map.singleton (txIdTx tx) tx)
+  where
+    subTxs = OMap.toMap $ tx ^. bodyTxL . subTransactionsTxBodyL
+    subTxIds = Map.keysSet subTxs -- None of these should be present as a spendable input in the entire transaction
+    filterBadInputs :: EraTx era => Map.Map TxId (Tx l era) -> Map.Map TxId (NonEmptySet TxIn)
+    filterBadInputs = Map.mapMaybe $ \curTx -> do
+      let spendableInputs = curTx ^. bodyTxL . spendableInputsTxBodyF
+      NES.fromSet $
+        Set.filter (\(TxIn txId _) -> txId `Set.member` subTxIds) spendableInputs
 
 dijkstraLedgerTransition ::
   forall era.
@@ -363,6 +413,9 @@ dijkstraLedgerTransition ::
   TransitionRule (DijkstraLEDGER era)
 dijkstraLedgerTransition = do
   TRC (env, ledgerState, tx) <- judgmentContext
+
+  failOnNonEmptyMap (spentSubTxOutputs tx) DijkstraSpendingOutputFromSameTx
+
   ledgerStateAfterSubledgers <-
     trans @(EraRule "SUBLEDGERS" era) $
       TRC (env, ledgerState, tx ^. bodyTxL . subTransactionsTxBodyL)
@@ -387,7 +440,7 @@ instance
   Embed (DijkstraUTXOW era) (DijkstraLEDGER era)
   where
   wrapFailed = DijkstraUtxowFailure
-  wrapEvent = Conway.UtxowEvent
+  wrapEvent = UtxowEvent
 
 instance
   ( Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
@@ -398,6 +451,7 @@ instance
   , AlonzoEraTx era
   , ConwayEraPParams era
   , DijkstraEraTxBody era
+  , EraPlutusContext era
   , GovState era ~ ConwayGovState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
@@ -423,6 +477,10 @@ instance
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubLedgersPredFailure era
+  , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
+  , InjectRuleEvent "SUBPOOL" PoolEvent era
+  , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (ShelleyLEDGERS era)
@@ -503,6 +561,7 @@ instance
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
+  , EraPlutusContext era
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
@@ -514,9 +573,14 @@ instance
   , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
   , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
   , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
+  , Event (EraRule "LEDGER" era) ~ DijkstraLedgerEvent era
+  , InjectRuleEvent "SUBPOOL" PoolEvent era
+  , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
+  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)
   where
   wrapFailed = DijkstraSubLedgersFailure
-  wrapEvent = absurd
+  wrapEvent = SubLedgersEvent

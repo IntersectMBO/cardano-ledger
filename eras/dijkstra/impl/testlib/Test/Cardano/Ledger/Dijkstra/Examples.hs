@@ -4,12 +4,12 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Examples (
   ledgerExamples,
 ) where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (mkSized)
@@ -117,8 +117,9 @@ exampleTxBodyDijkstra =
     (VotingProcedures mempty)
     mempty
     (SJust $ Coin 867530900000) -- current treasury value
-    mempty
-    mempty
+    mempty -- treasury donation
+    mempty -- sub-transactions
+    (DirectDeposits mempty)
   where
     MaryValue _ exampleMultiAsset = exampleMultiAssetValue 3
 

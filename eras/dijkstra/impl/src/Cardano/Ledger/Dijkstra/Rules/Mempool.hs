@@ -21,6 +21,7 @@ module Cardano.Ledger.Dijkstra.Rules.Mempool (
   DijkstraMempoolEvent (..),
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -64,12 +65,19 @@ import Cardano.Ledger.Dijkstra.Rules.Ledger (
   conwayToDijkstraLedgerPredFailure,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers (DijkstraSubLedgersPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLedgerPredFailure, UtxoEnv)
+import Cardano.Ledger.Shelley.Rules (
+  LedgerEnv (..),
+  PoolEvent,
+  ShelleyLedgerPredFailure,
+  ShelleyPoolPredFailure,
+  UtxoEnv,
+ )
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
   BaseM,
@@ -223,6 +231,7 @@ instance
   , ConwayEraCertState era
   , DijkstraEraTxBody era
   , ConwayEraGov era
+  , EraPlutusContext era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "CERTS" era) (DijkstraLEDGER era)
   , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
@@ -251,6 +260,10 @@ instance
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
+  , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
+  , InjectRuleEvent "SUBPOOL" PoolEvent era
+  , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (DijkstraMEMPOOL era)

@@ -108,6 +108,7 @@ library
     plutus-ledger-api >=1.0 && <2.0,
     pretty,
     prettyprinter,
+    primitive,
     random,
     small-steps:{small-steps, testlib},
     text,

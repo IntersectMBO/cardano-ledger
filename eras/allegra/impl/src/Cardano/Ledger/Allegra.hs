@@ -37,7 +37,7 @@ import Data.List.NonEmpty (NonEmpty)
 instance ApplyTx AllegraEra where
   newtype ApplyTxError AllegraEra = AllegraApplyTxError (NonEmpty (ShelleyLedgerPredFailure AllegraEra))
     deriving (Eq, Show)
-    deriving newtype (EncCBOR, DecCBOR)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup)
   applyTxValidation validationPolicy globals env state tx =
     first AllegraApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
