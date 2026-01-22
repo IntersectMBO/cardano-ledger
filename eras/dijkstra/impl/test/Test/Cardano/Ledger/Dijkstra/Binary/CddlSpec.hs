@@ -95,7 +95,7 @@ spec = do
       huddleRoundTripCborSpec @(GovAction DijkstraEra) v "gov_action"
       -- TODO enable this once map/list expansion has been optimized in cuddle
       xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(GovAction DijkstraEra) v "gov_action"
-      xdescribe "fix TxCert" $ do
+      describe "TxCert" $ do
         huddleRoundTripCborSpec @(TxCert DijkstraEra) v "certificate"
       -- TODO this fails because of the hard-coded `unit_interval` in the CDDL
       xdescribe "fix unit_interval" $

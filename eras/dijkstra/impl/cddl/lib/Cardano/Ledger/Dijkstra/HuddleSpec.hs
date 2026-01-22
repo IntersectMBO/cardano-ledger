@@ -314,6 +314,45 @@ dijkstraMultiasset pname p =
             ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
         ]
 
+dijkstraCertificateRule ::
+  forall era.
+  ( HuddleGroup "delegation_to_stake_pool_cert" era
+  , HuddleGroup "pool_registration_cert" era
+  , HuddleGroup "pool_retirement_cert" era
+  , HuddleGroup "account_registration_deposit_cert" era
+  , HuddleGroup "account_unregistration_deposit_cert" era
+  , HuddleGroup "delegation_to_drep_cert" era
+  , HuddleGroup "delegation_to_stake_pool_and_drep_cert" era
+  , HuddleGroup "account_registration_delegation_to_stake_pool_cert" era
+  , HuddleGroup "account_registration_delegation_to_drep_cert" era
+  , HuddleGroup "account_registration_delegation_to_stake_pool_and_drep_cert" era
+  , HuddleGroup "committee_authorization_cert" era
+  , HuddleGroup "committee_resignation_cert" era
+  , HuddleGroup "drep_registration_cert" era
+  , HuddleGroup "drep_unregistration_cert" era
+  , HuddleGroup "drep_update_cert" era
+  ) =>
+  Proxy "certificate" ->
+  Proxy era ->
+  Rule
+dijkstraCertificateRule pname p =
+  pname
+    =.= arr [a $ huddleGroup @"delegation_to_stake_pool_cert" p]
+    / arr [a $ huddleGroup @"pool_registration_cert" p]
+    / arr [a $ huddleGroup @"pool_retirement_cert" p]
+    / arr [a $ huddleGroup @"account_registration_deposit_cert" p]
+    / arr [a $ huddleGroup @"account_unregistration_deposit_cert" p]
+    / arr [a $ huddleGroup @"delegation_to_drep_cert" p]
+    / arr [a $ huddleGroup @"delegation_to_stake_pool_and_drep_cert" p]
+    / arr [a $ huddleGroup @"account_registration_delegation_to_stake_pool_cert" p]
+    / arr [a $ huddleGroup @"account_registration_delegation_to_drep_cert" p]
+    / arr [a $ huddleGroup @"account_registration_delegation_to_stake_pool_and_drep_cert" p]
+    / arr [a $ huddleGroup @"committee_authorization_cert" p]
+    / arr [a $ huddleGroup @"committee_resignation_cert" p]
+    / arr [a $ huddleGroup @"drep_registration_cert" p]
+    / arr [a $ huddleGroup @"drep_unregistration_cert" p]
+    / arr [a $ huddleGroup @"drep_update_cert" p]
+
 instance HuddleRule "bounded_bytes" DijkstraEra where
   huddleRuleNamed pname _ = boundedBytesRule pname
 
@@ -489,7 +528,7 @@ instance HuddleGroup "drep_update_cert" DijkstraEra where
   huddleGroupNamed = drepUpdateCertGroup
 
 instance HuddleRule "certificate" DijkstraEra where
-  huddleRuleNamed = conwayCertificateRule
+  huddleRuleNamed = dijkstraCertificateRule
 
 instance HuddleRule "certificates" DijkstraEra where
   huddleRuleNamed = certificatesRule
