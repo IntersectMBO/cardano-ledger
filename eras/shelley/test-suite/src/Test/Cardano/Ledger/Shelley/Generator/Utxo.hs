@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -792,7 +791,7 @@ genWithdrawals
         selectedWrdls <- map toAccountAddress <$> QC.sublistOf withdrawals_
         let txwits =
               mkWithdrawalsWits @era ksIndexedStakeScripts ksIndexedStakingKeys
-                . (\(AccountId c) -> c)
+                . unAccountId
                 . aaAccountId
                 . fst
                 <$> selectedWrdls

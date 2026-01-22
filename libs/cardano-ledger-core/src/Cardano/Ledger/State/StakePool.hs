@@ -106,6 +106,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Trans (lift)
@@ -447,7 +448,7 @@ deriving instance NFData StakePoolParams
 instance ToJSON StakePoolParams where
   toJSON spp =
     Aeson.object
-      [ "publicKey" .= sppId spp -- TODO publicKey is an unfortunate name, should be poolId
+      [ "poolId" .= sppId spp
       , "vrf" .= sppVrf spp
       , "pledge" .= sppPledge spp
       , "cost" .= sppCost spp
@@ -461,13 +462,15 @@ instance ToJSON StakePoolParams where
 instance FromJSON StakePoolParams where
   parseJSON =
     Aeson.withObject "StakePoolParams" $ \obj ->
+      -- Preserved for backward-compatibility,
+      -- "publicKey" and "rewardAccount" are old misnomers.
       StakePoolParams
-        <$> obj .: "publicKey" -- TODO publicKey is an unfortunate name, should be poolId
+        <$> ((obj .: "poolId") <|> (obj .: "publicKey"))
         <*> obj .: "vrf"
         <*> obj .: "pledge"
         <*> obj .: "cost"
         <*> obj .: "margin"
-        <*> obj .: "accountAddress"
+        <*> ((obj .: "accountAddress") <|> (obj .: "rewardAccount"))
         <*> obj .: "owners"
         <*> obj .: "relays"
         <*> obj .: "metadata"

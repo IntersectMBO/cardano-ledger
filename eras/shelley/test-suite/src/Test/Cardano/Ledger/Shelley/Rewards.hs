@@ -434,7 +434,7 @@ rewardOnePool
           then Map.insertWith (<>)
           else Map.insert
       potentialRewards =
-        f ((\(AccountId c) -> c) (aaAccountId $ sppAccountAddress pool)) lReward mRewards
+        f (unAccountId (aaAccountId $ sppAccountAddress pool)) lReward mRewards
       potentialRewards' =
         if hardforkBabbageForgoRewardPrefilter pv
           then potentialRewards

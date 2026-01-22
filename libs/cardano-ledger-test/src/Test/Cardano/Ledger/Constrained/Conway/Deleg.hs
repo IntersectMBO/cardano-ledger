@@ -43,7 +43,7 @@ coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n
 
 wdrlCredentials :: Map AccountAddress Coin -> Set (Credential Staking)
-wdrlCredentials m = Set.map ((\(AccountId c) -> c) . aaAccountId) (Map.keysSet m)
+wdrlCredentials m = Set.map (unAccountId . aaAccountId) (Map.keysSet m)
 
 keyHashWdrl :: Map AccountAddress Coin -> Set (Credential Staking)
 keyHashWdrl m = Set.filter isKeyHash (wdrlCredentials m)

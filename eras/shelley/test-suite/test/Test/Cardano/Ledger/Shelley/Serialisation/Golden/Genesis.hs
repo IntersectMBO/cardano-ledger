@@ -52,7 +52,7 @@ goldenTestJSON :: ToJSON a => a -> FilePath -> Assertion
 goldenTestJSON actual expectedFile =
   case eitherDecode' (encode actual) of
     Left err -> error err
-    Right (val :: Value) -> do
+    Right (val :: ShelleyGenesis) -> do
       expected <- either error id <$> eitherDecodeFileStrict expectedFile
       val @?= expected
 

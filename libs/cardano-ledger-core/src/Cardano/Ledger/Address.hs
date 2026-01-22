@@ -184,7 +184,7 @@ data AccountAddress = AccountAddress
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
-newtype AccountId = AccountId (Credential Staking)
+newtype AccountId = AccountId {unAccountId :: Credential Staking}
   deriving (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks, ToJSON, FromJSON, EncCBOR, DecCBOR)
 
@@ -912,7 +912,7 @@ headerAccountAddressIsScript = (`testBit` 4)
 -- @@@
 --
 -- ┏━━━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
--- ┃ Account Address ┃1┊1┊1┊x┊0┊0┊0┊x┃
+-- ┃ Account Address  ┃1┊1┊1┊x┊0┊0┊0┊x┃
 -- ┗━━━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━┓
 --                    ┃1┊1┊1┊0┊0┊0┊0┊0┃ Testnet StakingKey    ┃
 --                    ┃1┊1┊1┊0┊0┊0┊0┊1┃ Mainnet StakingKey    ┃
