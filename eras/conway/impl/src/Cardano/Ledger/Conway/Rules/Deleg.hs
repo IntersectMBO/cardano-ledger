@@ -19,6 +19,7 @@ module Cardano.Ledger.Conway.Rules.Deleg (
   ConwayDELEG,
   ConwayDelegPredFailure (..),
   ConwayDelegEnv (..),
+  conwayDelegTransition,
   processDelegation,
 ) where
 

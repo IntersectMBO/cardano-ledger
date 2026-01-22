@@ -33,6 +33,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
+  ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
   GovEnv (..),
   GovSignal (..),
@@ -55,6 +56,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBUTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (DijkstraSubCertsPredFailure (..), SubCertsEnv (..))
+import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
@@ -192,6 +194,8 @@ instance
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
+  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   STS (DijkstraSUBLEDGER era)
@@ -227,6 +231,8 @@ dijkstraSubLedgersTransition ::
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
+  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   , STS (EraRule "SUBLEDGER" era)
   , TxCert era ~ DijkstraTxCert era
   ) =>
@@ -325,6 +331,8 @@ instance
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
+  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBCERTS era) (DijkstraSUBLEDGER era)

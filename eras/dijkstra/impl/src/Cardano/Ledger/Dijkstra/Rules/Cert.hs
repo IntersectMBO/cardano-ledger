@@ -14,7 +14,7 @@ module Cardano.Ledger.Dijkstra.Rules.Cert (
   DijkstraCERT,
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Rules (
   CertEnv (..),
   ConwayCertEvent,
@@ -106,13 +106,8 @@ certTransition = do
     pools = psStakePools certPState
   case c of
     DijkstraTxCertDeleg delegCert ->
-      let conwayDelegCert = case delegCert of
-            DijkstraRegCert cred coin -> ConwayRegCert cred (SJust coin)
-            DijkstraUnRegCert cred coin -> ConwayUnRegCert cred (SJust coin)
-            DijkstraDelegCert cred d -> ConwayDelegCert cred d
-            DijkstraRegDelegCert sc d coin -> ConwayRegDelegCert sc d coin
-       in trans @(EraRule "DELEG" era) $
-            TRC (ConwayDelegEnv pp pools, certState, conwayDelegCert)
+      trans @(EraRule "DELEG" era) $
+        TRC (ConwayDelegEnv pp pools, certState, dijkstraToConwayDelegCert delegCert)
     DijkstraTxCertPool poolCert -> do
       newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv currentEpoch pp, certPState, poolCert)
       pure $ certState & certPStateL .~ newPState

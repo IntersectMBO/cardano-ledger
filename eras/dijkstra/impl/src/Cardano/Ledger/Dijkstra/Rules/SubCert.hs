@@ -34,6 +34,7 @@ import Cardano.Ledger.Conway.Governance (ConwayEraGov)
 import Cardano.Ledger.Conway.Rules (
   CertEnv (..),
   ConwayDelegEnv (..),
+  ConwayDelegPredFailure,
   ConwayGovCertEnv (..),
   ConwayGovCertPredFailure,
  )
@@ -188,7 +189,7 @@ dijkstraSubCertTransition = do
   case c of
     DijkstraTxCertDeleg delegCert ->
       trans @(EraRule "SUBDELEG" era) $
-        TRC (ConwayDelegEnv pp pools, certState, delegCert)
+        TRC (ConwayDelegEnv pp pools, certState, dijkstraToConwayDelegCert delegCert)
     DijkstraTxCertPool poolCert -> do
       newPState <- trans @(EraRule "SUBPOOL" era) $ TRC (PoolEnv currentEpoch pp, certPState, poolCert)
       pure $ certState & certPStateL .~ newPState
@@ -201,6 +202,8 @@ instance
   , ConwayEraCertState era
   , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
   , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
+  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   ) =>
   Embed (DijkstraSUBDELEG era) (DijkstraSUBCERT era)
   where

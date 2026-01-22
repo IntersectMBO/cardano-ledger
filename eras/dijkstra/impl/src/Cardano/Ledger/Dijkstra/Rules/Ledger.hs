@@ -91,6 +91,7 @@ import Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
@@ -485,6 +486,8 @@ instance
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , InjectRuleFailure "DELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (ShelleyLEDGERS era)
@@ -586,6 +589,8 @@ instance
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , InjectRuleFailure "DELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)
