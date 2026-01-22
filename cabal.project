@@ -90,8 +90,109 @@ tests: true
 benchmarks: true
 -- The only sensible test display option
 test-show-details: streaming
+allow-newer:
+  -- https://github.com/phadej/vec/issues/121
+  , ral:QuickCheck
+  , fin:QuickCheck
+  , bin:QuickCheck
 
-if impl(ghc >=9.12)
+if impl(ghc >=9.14)
+  source-repository-package
+    type: git
+    -- https://github.com/snowleopard/alga/issues/322
+    location: https://github.com/snowleopard/alga/
+    tag: d4e43fb42db05413459fb2df493361d5a666588a
+
+  source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/plutus
+    tag: c65a4fa1c0985ee9411554318163b11194cc7663
+    subdir:
+      plutus-core
+      plutus-tx
+      plutus-ledger-api
+
+if impl(ghc >=9.14)
+  constraints:
+    , containers >= 0.8
+    , foldl >= 1.4.18
+    , microlens ^>= 0.4
+    , microlens-th ^>= 0.4
+
+-- cabal-allow-newer
+if impl (ghc >= 9.14)
   allow-newer:
-    -- Unique: https://github.com/kapralVV/Unique/issues/11
-    , Unique:hashable
+    , aeson:QuickCheck
+    , aeson:base
+    , aeson:containers
+    , aeson:template-haskell
+    , aeson:time-compat
+    , base64-bytestring-type:QuickCheck
+    , base64-bytestring-type:base
+    , base64-bytestring-type:http-api-data
+    , bin:base
+    , binary-orphans:base
+    , boring:base
+    , canonical-json:containers
+    , cborg:base
+    , cborg:containers
+    , config-ini:containers
+    , config-ini:megaparsec
+    , constraints:boring
+    , constraints-extras:template-haskell
+    , containers:base
+    , containers:template-haskell
+    , criterion:binary-orphans
+    , dec:base
+    , dependent-map:containers
+    , dictionary-sharing:containers
+    , fin:base
+    , fin:universe-base
+    , http-api-data:base
+    , http-api-data:containers
+    , indexed-traversable:base
+    , indexed-traversable:containers
+    , indexed-traversable-instances:base
+    , ledger-state:persistent
+    , microlens-th:containers
+    , microlens-th:template-haskell
+    , microstache:base
+    , microstache:containers
+    , monoidal-containers:base
+    , monoidal-containers:containers
+    , nonempty-vector:base
+    , optics-core:containers
+    , ordered-containers:containers
+    , parsec:base
+    , parsec:text
+    , persistent:template-haskell
+    , persistent-sqlite:persistent
+    , plutus-core:dependent-map
+    , quickcheck-instances:base
+    , quickcheck-instances:containers
+    , ral:base
+    , recursion-schemes:containers
+    , recursion-schemes:template-haskell
+    , semialign:base
+    , semialign:containers
+    , serialise:base
+    , serialise:containers
+    , serialise:these
+    , serialise:time
+    , size-based:template-haskell
+    , some:base
+    , text:template-haskell
+    , these:base
+    , time-compat:base
+    , transformers:base
+    , tree-diff:QuickCheck
+    , tree-diff:aeson
+    , tree-diff:base
+    , tree-diff:containers
+    , tree-diff:parsec
+    , tree-diff:semialign
+    , tree-diff:time
+    , tree-diff:uuid-types
+    , universe-base:base
+    , universe-base:containers
+    , uuid-types:template-haskell

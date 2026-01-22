@@ -40,6 +40,10 @@ library
     -Wredundant-constraints
     -Wunused-packages
 
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     QuickCheck,
     base >=4.18 && <5,
@@ -88,6 +92,10 @@ test-suite cardano-ledger-shelley-ma-test
     -with-rtsopts=-N
     "-with-rtsopts=-K4m -M650m"
 
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     QuickCheck,
     base,
