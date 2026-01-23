@@ -112,6 +112,7 @@
 
 ### `cddl`
 
+* Remove `account_registration_cert` and `account_unregistration_cert`.
 * Add `directDepositsRule` to the transaction body.
 * Constrain `protocol_version` minor field to `uint .size 4`.
 * Renamed `policy_hash` to `guardrails_script_hash` in governance actions to avoid confusion with multi-asset policy IDs

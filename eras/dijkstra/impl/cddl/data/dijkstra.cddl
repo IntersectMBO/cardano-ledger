@@ -33,9 +33,7 @@ potential_languages = 0 .. 255
 signkey_kes = bytes .size 64
 
 certificate = 
-  [  account_registration_cert
-  // account_unregistration_cert
-  // delegation_to_stake_pool_cert
+  [  delegation_to_stake_pool_cert
   // pool_registration_cert
   // pool_retirement_cert
   // account_registration_deposit_cert
@@ -351,15 +349,9 @@ certificates = nonempty_oset<certificate>
 
 nonempty_oset<a0> = #6.258([+ a0])/ [+ a0]
 
-; This certificate will be deprecated in a future era
-account_registration_cert = (0, stake_credential)
+delegation_to_stake_pool_cert = (2, stake_credential, pool_keyhash)
 
 stake_credential = credential
-
-; This certificate will be deprecated in a future era
-account_unregistration_cert = (1, stake_credential)
-
-delegation_to_stake_pool_cert = (2, stake_credential, pool_keyhash)
 
 pool_keyhash = hash28
 

@@ -59,7 +59,6 @@ module Cardano.Ledger.Conway.HuddleSpec (
   drepVotingThresholdsRule,
   guardrailsScriptHashRule,
   potentialLanguagesRule,
-  conwayCertificateRule,
   certificatesRule,
   mkMaybeTaggedSet,
   maybeTaggedSet,
