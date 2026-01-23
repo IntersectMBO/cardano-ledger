@@ -126,9 +126,8 @@ goldenNewEpochStateExpectation
           me = Em [Ev ver k <> Ev ver v | (k, v) <- Map.toList m]
       snapShotEnc SnapShot {..} =
         Em
-          [ E (TkListLen 5)
+          [ E (TkListLen 4)
           , mapEnc (VMap.toMap (unStake ssStake))
-          , Ev ver ssTotalActiveStake
           , Ev ver ssDelegations
           , Ev ver ssPoolParams
           , Ev ver ssStakePoolsSnapShot
