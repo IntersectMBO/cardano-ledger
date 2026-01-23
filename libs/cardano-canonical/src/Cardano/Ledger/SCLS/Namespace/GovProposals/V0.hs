@@ -93,6 +93,9 @@ data GovProposalIn = GovProposalIn CanonicalGovActionId
 
 newtype GovProposalOut = GovProposalOut CanonicalGovActionState
   deriving (Eq, Show, Generic)
+  deriving newtype (ToCanonicalCBOR "gov/proposals/v0")
+  deriving newtype (FromCanonicalCBOR "gov/proposals/v0")
+
 
 type instance NamespaceKeySize "gov/proposals/v0" = 34
 

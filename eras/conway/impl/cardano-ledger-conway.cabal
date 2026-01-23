@@ -377,3 +377,6 @@ test-suite tests
     bytestring,
     cardano-ledger-byron,
     cardano-strict-containers,
+    cardano-canonical,
+    cardano-ledger-byron,
+    -- cardano-ledger-test,

@@ -27,7 +27,6 @@ import Cardano.SCLS.Internal.Entry.ChunkEntry
 import Cardano.SCLS.Internal.Reader
 import Cardano.SCLS.Internal.Serializer.Dump.Plan
 import qualified Cardano.SCLS.Internal.Serializer.External.Impl as External (serialize)
-import Cardano.Types.Network (NetworkId (..))
 import Cardano.Types.SlotNo (SlotNo (..))
 import Control.Exception (throwIO)
 import Control.Monad
@@ -134,7 +133,6 @@ main = do
       withFile oldFile ReadMode $ \hdl -> runResourceT $ do
         External.serialize
           newFile
-          Mainnet
           (SlotNo 1)
           ( defaultSerializationPlan
               & ( let p = (Proxy @"utxo/v0")
@@ -174,7 +172,6 @@ main = do
       runResourceT $
         External.serialize
           fileName
-          Mainnet
           (SlotNo 1)
           ( defaultSerializationPlan
               & addNamespacedChunks
