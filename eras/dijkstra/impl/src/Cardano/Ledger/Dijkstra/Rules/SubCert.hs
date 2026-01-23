@@ -35,6 +35,7 @@ import Cardano.Ledger.Conway.Rules (
   CertEnv (..),
   ConwayDelegEnv (..),
   ConwayGovCertEnv (..),
+  ConwayGovCertPredFailure,
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
@@ -222,9 +223,12 @@ instance
 
 instance
   ( ConwayEraGov era
+  , ConwayEraPParams era
   , ConwayEraCertState era
   , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
   , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
+  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   ) =>
   Embed (DijkstraSUBGOVCERT era) (DijkstraSUBCERT era)
   where

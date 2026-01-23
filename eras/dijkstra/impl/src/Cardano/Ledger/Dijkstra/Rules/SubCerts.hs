@@ -32,7 +32,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (CertEnv (..))
+import Cardano.Ledger.Conway.Rules (CertEnv (..), ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -43,6 +43,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBPOOL,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubCert (DijkstraSubCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPoolPredFailure)
@@ -145,6 +146,7 @@ dijkstraSubCertsTransition = do
 instance
   ( ConwayEraGov era
   , ConwayEraCertState era
+  , ConwayEraPParams era
   , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
   , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
   , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
@@ -154,6 +156,8 @@ instance
   , InjectRuleEvent "SUBPOOL" PoolEvent era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBCERT era) (DijkstraSUBCERTS era)

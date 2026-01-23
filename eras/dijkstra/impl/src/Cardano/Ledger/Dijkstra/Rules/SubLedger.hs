@@ -33,6 +33,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
+  ConwayGovCertPredFailure,
   GovEnv (..),
   GovSignal (..),
   gsCertificates,
@@ -55,6 +56,7 @@ import Cardano.Ledger.Dijkstra.Era (
  )
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (DijkstraSubCertsPredFailure (..), SubCertsEnv (..))
 import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
@@ -188,6 +190,8 @@ instance
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   STS (DijkstraSUBLEDGER era)
@@ -221,6 +225,8 @@ dijkstraSubLedgersTransition ::
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , STS (EraRule "SUBLEDGER" era)
   , TxCert era ~ DijkstraTxCert era
   ) =>
@@ -306,6 +312,7 @@ instance
 
 instance
   ( ConwayEraGov era
+  , ConwayEraPParams era
   , ConwayEraCertState era
   , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
   , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
@@ -316,6 +323,8 @@ instance
   , InjectRuleEvent "SUBPOOL" PoolEvent era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBCERTS era) (DijkstraSUBLEDGER era)
