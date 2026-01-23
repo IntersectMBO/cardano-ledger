@@ -217,7 +217,7 @@ mkCanonicalStakePoolParams StakePoolParams {..} =
   CanonicalStakePoolParams
     { sppVrf = mkCanonicalVRFVerKeyHash sppVrf
     , sppMetadata = fmap mkCanonicalPoolMetadata sppMetadata
-    , sppRewardAccount = mkCanonicalRewardAccount sppRewardAccount
+    , sppRewardAccount = mkCanonicalRewardAccount sppAccountAddress
     , sppRelays = fmap mkCanonicalStakePoolRelay sppRelays
     , sppCost = mkCanonicalCoin sppCost
     , sppPledge = mkCanonicalCoin sppPledge
@@ -235,7 +235,7 @@ fromCanonicalStakePoolParams CanonicalStakePoolParams {..} =
     , sppOwners = sppOwners
     , sppVrf = fromCanonicalVRFVerKeyHash sppVrf
     , sppMetadata = fmap (\CanonicalPoolMetadata {..} -> PoolMetadata pmUrl pmHash) sppMetadata
-    , sppRewardAccount = fromCanonicalRewardAccount sppRewardAccount
+    , sppAccountAddress = fromCanonicalRewardAccount sppRewardAccount
     }
 
 data CanonicalPoolMetadata = CanonicalPoolMetadata

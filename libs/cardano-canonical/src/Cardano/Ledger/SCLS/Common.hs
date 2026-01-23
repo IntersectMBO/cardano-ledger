@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -27,7 +28,7 @@ module Cardano.Ledger.SCLS.Common (
   ScriptHash,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import qualified Cardano.Binary as C
 import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), CompactForm (..))
 import qualified Cardano.Crypto.Hash as Hash
@@ -158,23 +159,26 @@ instance ToCanonicalCBOR v CanonicalRewardAccount where
 instance FromCanonicalCBOR v CanonicalRewardAccount where
   fromCanonicalCBOR = fmap mkCanonicalRewardAccount <$> fromCanonicalCBOR
 
-mkCanonicalRewardAccount :: RewardAccount -> CanonicalRewardAccount
-mkCanonicalRewardAccount RewardAccount {..} =
+mkCanonicalRewardAccount :: AccountAddress -> CanonicalRewardAccount
+mkCanonicalRewardAccount AccountAddress {aaAccountId = AccountId credential, aaNetworkId} =
   CanonicalRewardAccount
-    { raCredential = mkCanonicalCredential raCredential
-    , ..
+    { raCredential = mkCanonicalCredential credential
+    , raNetwork = aaNetworkId
     }
 
-fromCanonicalRewardAccount :: CanonicalRewardAccount -> RewardAccount
+fromCanonicalRewardAccount :: CanonicalRewardAccount -> AccountAddress
 fromCanonicalRewardAccount CanonicalRewardAccount {..} =
-  RewardAccount
-    { raCredential = fromCanonicalCredential raCredential
-    , ..
+  AccountAddress
+    { aaAccountId = AccountId (fromCanonicalCredential raCredential)
+    , aaNetworkId = raNetwork
     }
 
-deriving via LedgerCBOR v RewardAccount instance ToCanonicalCBOR v RewardAccount
+-- Specification require to keep address as a single binary entity, so we reuse current
+-- implementation that is standard de-facto CBOR serialization of AccountAddress.
 
-deriving via LedgerCBOR v RewardAccount instance FromCanonicalCBOR v RewardAccount
+deriving via LedgerCBOR v AccountAddress instance ToCanonicalCBOR v AccountAddress
+
+deriving via LedgerCBOR v AccountAddress instance FromCanonicalCBOR v AccountAddress
 
 newtype CanonicalVRFVerKeyHash (kr :: KeyRoleVRF) = CanonicalVRFVerKeyHash {unCanonicalVRFVerKeyHash :: Hash HASH KeyRoleVRF}
   deriving (Eq, Ord, Show, Generic)
