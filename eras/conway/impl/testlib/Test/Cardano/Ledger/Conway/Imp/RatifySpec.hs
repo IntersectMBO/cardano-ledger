@@ -601,8 +601,8 @@ committeeMinSizeAffectsInFlightProposalsSpec =
   describe "CommitteeMinSize affects in-flight proposals" $ do
     let setCommitteeMinSize n = modifyPParams $ ppCommitteeMinSizeL .~ n
         submitTreasuryWithdrawal amount = do
-          rewardAccount <- registerRewardAccount
-          submitTreasuryWithdrawals [(rewardAccount, amount)]
+          accountAddress <- registerAccountAddress
+          submitTreasuryWithdrawals [(accountAddress, amount)]
     it "TreasuryWithdrawal fails to ratify due to an increase in CommitteeMinSize" $ whenPostBootstrap $ do
       disableTreasuryExpansion
       amount <- uniformRM (Coin 1, Coin 100_000_000)
@@ -863,8 +863,8 @@ votingSpec =
             -- Setup DRep delegation #2
             (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
             (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-            -- Make a note of the reward account for the delegator to DRep #1
-            dRepRewardAccount <- getRewardAccountFor $ KeyHashObj stakingKH1
+            -- Make a note of the account address for the delegator to DRep #1
+            dRepAccountAddress <- getAccountAddressFor $ KeyHashObj stakingKH1
             -- Submit the first committee proposal, the one we will test active voting stake against.
             -- The proposal deposit comes from the root UTxO
             cc <- KeyHashObj <$> freshKeyHash
@@ -872,9 +872,9 @@ votingSpec =
             let
               newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
-              mkProposalWithRewardAccount
+              mkProposalWithAccountAddress
                 (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
-                dRepRewardAccount
+                dRepAccountAddress
                 >>= submitProposal
             -- Submit the vote from DRep #1
             submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
@@ -887,9 +887,9 @@ votingSpec =
             cc' <- KeyHashObj <$> freshKeyHash
             let
               newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
-            mkProposalWithRewardAccount
+            mkProposalWithAccountAddress
               (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
-              dRepRewardAccount
+              dRepAccountAddress
               >>= submitProposal_
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
@@ -904,9 +904,9 @@ votingSpec =
             -- Setup DRep delegation #3
             (_drepKH3, stakingKH3) <- setupDRepWithoutStake
             (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-            -- Make a note of the reward accounts for the delegators to DReps #1 and #3
-            dRepRewardAccount1 <- getRewardAccountFor $ KeyHashObj stakingKH1
-            dRepRewardAccount3 <- getRewardAccountFor $ KeyHashObj stakingKH3
+            -- Make a note of the account addresss for the delegators to DReps #1 and #3
+            dRepAccountAddress1 <- getAccountAddressFor $ KeyHashObj stakingKH1
+            dRepAccountAddress3 <- getAccountAddressFor $ KeyHashObj stakingKH3
             -- Submit committee proposals
             -- The proposal deposits comes from the root UTxO
             -- After this both stakingKH1 and stakingKH3 are expected to have 1_000_000 ADA of stake, each
@@ -915,16 +915,16 @@ votingSpec =
             let
               newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
-              mkProposalWithRewardAccount
+              mkProposalWithAccountAddress
                 (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
-                dRepRewardAccount1
+                dRepAccountAddress1
                 >>= submitProposal
             cc' <- KeyHashObj <$> freshKeyHash
             let
               newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
-            mkProposalWithRewardAccount
+            mkProposalWithAccountAddress
               (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
-              dRepRewardAccount3
+              dRepAccountAddress3
               >>= submitProposal_
             -- Submit the vote from DRep #1
             submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
@@ -1019,8 +1019,8 @@ votingSpec =
 
           (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
 
-          rewardAccount <- registerRewardAccount
-          govId <- submitTreasuryWithdrawals [(rewardAccount, initialTreasury)]
+          accountAddress <- registerAccountAddress
+          govId <- submitTreasuryWithdrawals [(accountAddress, initialTreasury)]
 
           submitYesVote_ (CommitteeVoter comMember) govId
           submitYesVote_ (DRepVoter drep1) govId
@@ -1195,8 +1195,8 @@ votingSpec =
             (poolKH1, stakingC1) <- setupPoolWithoutStake
             -- Setup Pool delegation #2
             (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
-            -- Make a note of the reward account for the delegator to SPO #1
-            spoRewardAccount <- getRewardAccountFor stakingC1
+            -- Make a note of the account address for the delegator to SPO #1
+            spoAccountAddress <- getAccountAddressFor stakingC1
             -- Submit the first committee proposal, the one we will test active voting stake against.
             -- The proposal deposit comes from the root UTxO
             cc <- KeyHashObj <$> freshKeyHash
@@ -1204,9 +1204,9 @@ votingSpec =
             let
               newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
-              mkProposalWithRewardAccount
+              mkProposalWithAccountAddress
                 (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
-                spoRewardAccount
+                spoAccountAddress
                 >>= submitProposal
 
             -- Submit a yes vote from SPO #1 and a no vote from SPO #2
@@ -1219,9 +1219,9 @@ votingSpec =
             cc' <- KeyHashObj <$> freshKeyHash
             let
               newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
-            mkProposalWithRewardAccount
+            mkProposalWithAccountAddress
               (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
-              spoRewardAccount
+              spoAccountAddress
               >>= submitProposal_
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
@@ -1247,9 +1247,9 @@ votingSpec =
             (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
             -- Setup Pool delegation #3
             (_poolKH3, stakingC3) <- setupPoolWithoutStake
-            -- Make a note of the reward accounts for the delegators to SPOs #1 and #3
-            spoRewardAccount1 <- getRewardAccountFor stakingC1
-            spoRewardAccount3 <- getRewardAccountFor stakingC3
+            -- Make a note of the account addresss for the delegators to SPOs #1 and #3
+            spoAccountAddress1 <- getAccountAddressFor stakingC1
+            spoAccountAddress3 <- getAccountAddressFor stakingC3
             -- Submit committee proposals
             -- The proposal deposits come from the root UTxO
             -- After this both stakingC1 and stakingC3 are expected to have 1_000_000 ADA of stake, each
@@ -1258,16 +1258,16 @@ votingSpec =
             let
               newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
-              mkProposalWithRewardAccount
+              mkProposalWithAccountAddress
                 (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
-                spoRewardAccount1
+                spoAccountAddress1
                 >>= submitProposal
             cc' <- KeyHashObj <$> freshKeyHash
             let
               newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
-            mkProposalWithRewardAccount
+            mkProposalWithAccountAddress
               (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
-              spoRewardAccount3
+              spoAccountAddress3
               >>= submitProposal_
             -- Submit a yes vote from SPO #1 and a no vote from SPO #2
             submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
@@ -1507,7 +1507,7 @@ votingSpec =
               calculatePoolAcceptedRatio gid `shouldReturn` (1 %! 2)
 
           impAnn
-            ( "Although the other SPO delegated its reward account to an AlwaysAbstain DRep,\n"
+            ( "Although the other SPO delegated its staking address to an AlwaysAbstain DRep,\n"
                 <> "since this is a HardForkInitiation action, their default vote remains no regardless:\n"
                 <> "YES: 1; ABSTAIN: 0; NO (default): 1 -> YES / total - ABSTAIN == 1 % 2"
             )
@@ -1527,7 +1527,7 @@ votingSpec =
 
           getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gid)
 
-        it "Reward account delegated to AlwaysNoConfidence" $ whenPostBootstrap $ do
+        it "Staking address delegated to AlwaysNoConfidence" $ whenPostBootstrap $ do
           (spoC, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
           (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -1547,7 +1547,7 @@ votingSpec =
             getCommitteeMembers `shouldNotReturn` mempty
 
           impAnn
-            ( "The SPO delegated its reward account to an AlwaysNoConfidence DRep,\n"
+            ( "The SPO delegated its staking address to an AlwaysNoConfidence DRep,\n"
                 <> "since this is a NoConfidence action, their default vote will now count as a yes:\n"
                 <> "YES: 1; ABSTAIN: 0; NO (default): 0 -> YES / total - ABSTAIN == 1 % 1"
             )
@@ -1559,7 +1559,7 @@ votingSpec =
 
           getCommitteeMembers `shouldReturn` mempty
 
-        it "Reward account delegated to AlwaysAbstain" $ whenPostBootstrap $ do
+        it "Staking address delegated to AlwaysAbstain" $ whenPostBootstrap $ do
           (spoC1, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
           (spoC2, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
           (drep, _, _) <- setupSingleDRep 1_000_000
@@ -1588,7 +1588,7 @@ votingSpec =
               calculatePoolAcceptedRatio gid `shouldReturn` (1 %! 2)
 
           impAnn
-            ( "One SPO voted yes and the other SPO delegated its reward account to an AlwaysAbstain DRep:\n"
+            ( "One SPO voted yes and the other SPO delegated its staking address to an AlwaysAbstain DRep:\n"
                 <> "YES: 1; ABSTAIN: 1; NO (default): 0 -> YES / total - ABSTAIN == 1 % 1"
             )
             $ do

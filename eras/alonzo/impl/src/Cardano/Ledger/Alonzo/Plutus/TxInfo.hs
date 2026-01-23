@@ -268,8 +268,8 @@ transTxBodyCerts proxy pv txBody =
 transWithdrawals :: Withdrawals -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
   where
-    accum ans rewardAccount (Coin n) =
-      Map.insert (PV1.StakingHash (transRewardAccount rewardAccount)) n ans
+    accum ans accountAddress (Coin n) =
+      Map.insert (PV1.StakingHash (transAccountAddress accountAddress)) n ans
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
 transTxBodyWithdrawals :: EraTxBody era => TxBody t era -> [(PV1.StakingCredential, Integer)]
@@ -360,5 +360,5 @@ transPlutusPurpose proxy pv = \case
   AlonzoSpending (AsItem txIn) -> pure $ PV1.Spending (transTxIn txIn)
   AlonzoMinting (AsItem policyId) -> pure $ PV1.Minting (transPolicyID policyId)
   AlonzoCertifying (AsItem txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert
-  AlonzoRewarding (AsItem rewardAccount) ->
-    pure $ PV1.Rewarding (PV1.StakingHash (transRewardAccount rewardAccount))
+  AlonzoRewarding (AsItem accountAddress) ->
+    pure $ PV1.Rewarding (PV1.StakingHash (transAccountAddress accountAddress))

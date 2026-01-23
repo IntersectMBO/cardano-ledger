@@ -397,8 +397,12 @@ genStakeRefWith genPtr =
     , (15, pure StakeRefNull)
     ]
 
-instance Arbitrary RewardAccount where
-  arbitrary = RewardAccount <$> arbitrary <*> arbitrary
+instance Arbitrary AccountId where
+  arbitrary = AccountId <$> arbitrary
+  shrink = genericShrink
+
+instance Arbitrary AccountAddress where
+  arbitrary = AccountAddress <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
 instance Arbitrary Withdrawals where

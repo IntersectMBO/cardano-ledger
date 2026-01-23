@@ -105,7 +105,7 @@ data ConwayDelegPredFailure era
   = IncorrectDepositDELEG Coin
   | StakeKeyRegisteredDELEG (Credential Staking)
   | StakeKeyNotRegisteredDELEG (Credential Staking)
-  | StakeKeyHasNonZeroRewardAccountBalanceDELEG Coin
+  | StakeKeyHasNonZeroAccountBalanceDELEG Coin
   | DelegateeDRepNotRegisteredDELEG (Credential DRepRole)
   | DelegateeStakePoolNotRegisteredDELEG (KeyHash StakePool)
   | DepositIncorrectDELEG (Mismatch RelEQ Coin)
@@ -131,8 +131,8 @@ instance Era era => EncCBOR (ConwayDelegPredFailure era) where
         Sum (StakeKeyRegisteredDELEG @era) 2 !> To stakeCred
       StakeKeyNotRegisteredDELEG stakeCred ->
         Sum (StakeKeyNotRegisteredDELEG @era) 3 !> To stakeCred
-      StakeKeyHasNonZeroRewardAccountBalanceDELEG mCoin ->
-        Sum (StakeKeyHasNonZeroRewardAccountBalanceDELEG @era) 4 !> To mCoin
+      StakeKeyHasNonZeroAccountBalanceDELEG mCoin ->
+        Sum (StakeKeyHasNonZeroAccountBalanceDELEG @era) 4 !> To mCoin
       DelegateeDRepNotRegisteredDELEG delegatee ->
         Sum (DelegateeDRepNotRegisteredDELEG @era) 5 !> To delegatee
       DelegateeStakePoolNotRegisteredDELEG delegatee ->
@@ -147,7 +147,7 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
     1 -> SumD IncorrectDepositDELEG <! From
     2 -> SumD StakeKeyRegisteredDELEG <! From
     3 -> SumD StakeKeyNotRegisteredDELEG <! From
-    4 -> SumD StakeKeyHasNonZeroRewardAccountBalanceDELEG <! From
+    4 -> SumD StakeKeyHasNonZeroAccountBalanceDELEG <! From
     5 -> SumD DelegateeDRepNotRegisteredDELEG <! From
     6 -> SumD DelegateeStakePoolNotRegisteredDELEG <! From
     7 -> SumD DepositIncorrectDELEG <! From
@@ -248,7 +248,7 @@ conwayDelegTransition = do
             guard (balanceCompact /= mempty)
             Just $ fromCompact balanceCompact
       failOnJust checkInvalidRefund id
-      failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
+      failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroAccountBalanceDELEG
       case mAccountState of
         Nothing -> do
           failBecause $ StakeKeyNotRegisteredDELEG stakeCred

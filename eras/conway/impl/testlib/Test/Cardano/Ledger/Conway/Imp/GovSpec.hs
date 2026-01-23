@@ -11,7 +11,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.GovSpec (spec) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), aaAccountId, aaNetworkId)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (hardforkConwayDisallowUnelectedCommitteeFromVoting)
@@ -89,12 +89,12 @@ predicateFailuresSpec =
   describe "Predicate failures" $ do
     it "ProposalReturnAccountDoesNotExist" $ do
       mkProposal InfoAction >>= submitProposal_
-      unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
+      unregisteredAccountAddress <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
 
-      proposal <- mkProposalWithRewardAccount InfoAction unregisteredRewardAccount
+      proposal <- mkProposalWithAccountAddress InfoAction unregisteredAccountAddress
       submitBootstrapAwareFailingProposal_ proposal $
         FailPostBootstrap
-          [injectFailure $ ProposalReturnAccountDoesNotExist unregisteredRewardAccount]
+          [injectFailure $ ProposalReturnAccountDoesNotExist unregisteredAccountAddress]
 
     it "ExpirationEpochTooSmall" $ do
       committeeC <- KeyHashObj <$> freshKeyHash
@@ -117,12 +117,12 @@ predicateFailuresSpec =
             }
 
     it "ProposalDepositIncorrect" $ do
-      rewardAccount <- registerRewardAccount
+      accountAddress <- registerAccountAddress
       actionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
       anchor <- arbitrary
       submitFailingProposal
         ( ProposalProcedure
-            { pProcReturnAddr = rewardAccount
+            { pProcReturnAddr = accountAddress
             , pProcGovAction = InfoAction
             , pProcDeposit = actionDeposit <-> Coin 1
             , pProcAnchor = anchor
@@ -703,7 +703,7 @@ proposalsSpec = do
       it "Proposals are stored in the expected order" $ whenPostBootstrap $ do
         modifyPParams $ ppMaxValSizeL .~ 1_000_000_000
         ens <- getEnactState
-        returnAddr <- registerRewardAccount
+        returnAddr <- registerAccountAddress
         withdrawal <-
           (: []) . (returnAddr,) . Coin . getPositive
             <$> (arbitrary :: ImpTestM era (Positive Integer))
@@ -999,8 +999,8 @@ policySpec =
         mkProposal (ParameterChange SNothing pparamsUpdate (SJust scriptHash)) >>= submitProposal_
 
       impAnn "TreasuryWithdrawals with correct policy succeeds" $ do
-        rewardAccount <- registerRewardAccount
-        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        accountAddress <- registerAccountAddress
+        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
         mkProposal (TreasuryWithdrawals withdrawals (SJust scriptHash)) >>= submitProposal_
 
       impAnn "ParameterChange with invalid policy fails" $ do
@@ -1011,8 +1011,8 @@ policySpec =
             [injectFailure $ InvalidGuardrailsScriptHash (SJust wrongScriptHash) (SJust scriptHash)]
 
       impAnn "TreasuryWithdrawals with invalid policy fails" $ do
-        rewardAccount <- registerRewardAccount
-        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        accountAddress <- registerAccountAddress
+        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
         mkProposal (TreasuryWithdrawals withdrawals (SJust wrongScriptHash))
           >>= flip
             submitFailingProposal
@@ -1025,29 +1025,29 @@ networkIdSpec ::
 networkIdSpec =
   describe "Network ID" $ do
     it "Fails with invalid network ID in proposal return address" $ do
-      rewardCredential <- KeyHashObj <$> freshKeyHash
-      let badRewardAccount =
-            RewardAccount
-              { raNetwork = Mainnet -- Our network is Testnet
-              , raCredential = rewardCredential
+      accountCredential <- KeyHashObj <$> freshKeyHash
+      let badAccountAddress =
+            AccountAddress
+              { aaNetworkId = Mainnet -- Our network is Testnet
+              , aaAccountId = AccountId accountCredential
               }
-      proposal <- mkProposalWithRewardAccount InfoAction badRewardAccount
+      proposal <- mkProposalWithAccountAddress InfoAction badAccountAddress
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrapAndPostBootstrap $
           FailBoth
             { bootstrapFailures =
                 [ injectFailure $
                     ProposalProcedureNetworkIdMismatch
-                      badRewardAccount
+                      badAccountAddress
                       Testnet
                 ]
             , postBootstrapFailures =
                 [ injectFailure $
                     ProposalReturnAccountDoesNotExist
-                      badRewardAccount
+                      badAccountAddress
                 , injectFailure $
                     ProposalProcedureNetworkIdMismatch
-                      badRewardAccount
+                      badAccountAddress
                       Testnet
                 ]
             }
@@ -1060,13 +1060,13 @@ withdrawalsSpec =
   describe "Withdrawals" $ do
     it "Fails predicate when treasury withdrawal has nonexistent return address" $ do
       policy <- getGovPolicy
-      unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
-      registeredRewardAccount <- registerRewardAccount
+      unregisteredAccountAddress <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
+      registeredAccountAddress <- registerAccountAddress
       let genPositiveCoin = Coin . getPositive <$> arbitrary
       withdrawals <-
         sequence
-          [ (unregisteredRewardAccount,) <$> genPositiveCoin
-          , (registeredRewardAccount,) <$> genPositiveCoin
+          [ (unregisteredAccountAddress,) <$> genPositiveCoin
+          , (registeredAccountAddress,) <$> genPositiveCoin
           ]
       proposal <- mkProposal $ TreasuryWithdrawals (Map.fromList withdrawals) policy
       void $
@@ -1076,25 +1076,25 @@ withdrawalsSpec =
               { bootstrapFailures = [injectFailure $ DisallowedProposalDuringBootstrap proposal]
               , postBootstrapFailures =
                   [ injectFailure $
-                      TreasuryWithdrawalReturnAccountsDoNotExist [unregisteredRewardAccount]
+                      TreasuryWithdrawalReturnAccountsDoNotExist [unregisteredAccountAddress]
                   ]
               }
 
     it "Fails with invalid network ID in withdrawal addresses" $ do
-      rewardCredential <- KeyHashObj <$> freshKeyHash
-      let badRewardAccount =
-            RewardAccount
-              { raNetwork = Mainnet -- Our network is Testnet
-              , raCredential = rewardCredential
+      accountCredential <- KeyHashObj <$> freshKeyHash
+      let badAccountAddress =
+            AccountAddress
+              { aaNetworkId = Mainnet -- Our network is Testnet
+              , aaAccountId = AccountId accountCredential
               }
       proposal <-
-        mkTreasuryWithdrawalsGovAction [(badRewardAccount, Coin 100_000_000)] >>= mkProposal
+        mkTreasuryWithdrawalsGovAction [(badAccountAddress, Coin 100_000_000)] >>= mkProposal
       let idMismatch =
             injectFailure $
-              TreasuryWithdrawalsNetworkIdMismatch (NES.singleton badRewardAccount) Testnet
+              TreasuryWithdrawalsNetworkIdMismatch (NES.singleton badAccountAddress) Testnet
           returnAddress =
             injectFailure $
-              TreasuryWithdrawalReturnAccountsDoNotExist [badRewardAccount]
+              TreasuryWithdrawalReturnAccountsDoNotExist [badAccountAddress]
       void $
         submitBootstrapAwareFailingProposal proposal $
           FailBootstrapAndPostBootstrap $
@@ -1106,15 +1106,15 @@ withdrawalsSpec =
     it "Fails for empty withdrawals" $ do
       mkTreasuryWithdrawalsGovAction [] >>= expectZeroTreasuryFailurePostBootstrap
 
-      rwdAccount1 <- registerRewardAccount
-      mkTreasuryWithdrawalsGovAction [(rwdAccount1, zero)] >>= expectZeroTreasuryFailurePostBootstrap
+      accountAddress1 <- registerAccountAddress
+      mkTreasuryWithdrawalsGovAction [(accountAddress1, zero)] >>= expectZeroTreasuryFailurePostBootstrap
 
-      rwdAccount2 <- registerRewardAccount
-      let withdrawals = [(rwdAccount1, zero), (rwdAccount2, zero)]
+      accountAddress2 <- registerAccountAddress
+      let withdrawals = [(accountAddress1, zero), (accountAddress2, zero)]
 
       mkTreasuryWithdrawalsGovAction withdrawals >>= expectZeroTreasuryFailurePostBootstrap
 
-      wdrls <- mkTreasuryWithdrawalsGovAction $ withdrawals ++ [(rwdAccount2, Coin 100_000)]
+      wdrls <- mkTreasuryWithdrawalsGovAction $ withdrawals ++ [(accountAddress2, Coin 100_000)]
       proposal <- mkProposal wdrls
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrap [disallowedProposalFailure proposal]
@@ -1273,9 +1273,9 @@ bootstrapPhaseSpec =
       submitYesVote_ (StakePoolVoter spo) gid
       submitYesVote_ (CommitteeVoter committee) gid
     it "Treasury withdrawal" $ do
-      rewardAccount <- registerRewardAccount
-      action <- mkTreasuryWithdrawalsGovAction [(rewardAccount, Coin 1000)]
-      proposal <- mkProposalWithRewardAccount action rewardAccount
+      accountAddress <- registerAccountAddress
+      action <- mkTreasuryWithdrawalsGovAction [(accountAddress, Coin 1000)]
+      proposal <- mkProposalWithAccountAddress action accountAddress
       checkProposalFailure proposal
     it "NoConfidence" $ do
       proposal <- mkProposal $ NoConfidence SNothing

@@ -121,7 +121,7 @@ instance
               (prUTxOSt st)
         )
     , PostCondition
-        "PoolReap may not create or remove reward accounts"
+        "PoolReap may not create or remove account addresses"
         ( \(TRC (_, st, _)) st' ->
             let accountsCount prState =
                   Map.size (prCertState prState ^. certDStateL . accountsL . accountsMapL)
@@ -182,7 +182,7 @@ poolReapTransition = do
     accountRefunds =
       Map.fromListWith
         (<>)
-        [(spsRewardAccount sps, spsDeposit sps) | sps <- Map.elems retiringPools]
+        [(spsAccountAddress sps, spsDeposit sps) | sps <- Map.elems retiringPools]
     accounts = ds ^. accountsL
     -- Deposits that can be refunded and those that are unclaimed (to be deposited into the treasury).
     refunds, unclaimedDeposits :: Map.Map (Credential Staking) (CompactForm Coin)
@@ -198,7 +198,7 @@ poolReapTransition = do
     let rewardAccountsWithPool =
           Map.foldrWithKey'
             ( \poolId sps ->
-                let cred = spsRewardAccount sps
+                let cred = spsAccountAddress sps
                  in Map.insertWith (Map.unionWith (<>)) cred (Map.singleton poolId (spsDeposit sps))
             )
             Map.empty

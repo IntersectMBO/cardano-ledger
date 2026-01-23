@@ -311,6 +311,7 @@ test-suite tests
     genvalidity,
     genvalidity-scientific,
     plutus-ledger-api,
+    quickcheck-classes,
     quickcheck-instances,
     scientific,
     testlib,

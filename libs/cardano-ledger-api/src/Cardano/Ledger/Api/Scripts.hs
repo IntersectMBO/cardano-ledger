@@ -60,7 +60,7 @@ module Cardano.Ledger.Api.Scripts (
   pattern GuardingPurpose,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
@@ -122,9 +122,9 @@ class EraScript era => AnyEraScript era where
     AlonzoEraScript era => PlutusPurpose f era -> Maybe (f Word32 (TxCert era))
   anyEraToCertifyingPurpose = toCertifyingPurpose
 
-  anyEraToRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 RewardAccount)
+  anyEraToRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
   default anyEraToRewardingPurpose ::
-    AlonzoEraScript era => PlutusPurpose f era -> Maybe (f Word32 RewardAccount)
+    AlonzoEraScript era => PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
   anyEraToRewardingPurpose = toRewardingPurpose
 
   anyEraToVotingPurpose :: PlutusPurpose f era -> Maybe (f Word32 Voter)
@@ -203,7 +203,7 @@ pattern AnyEraCertifyingPurpose ::
 pattern AnyEraCertifyingPurpose c <- (anyEraToCertifyingPurpose -> Just c)
 
 pattern AnyEraRewardingPurpose ::
-  AnyEraScript era => f Word32 RewardAccount -> PlutusPurpose f era
+  AnyEraScript era => f Word32 AccountAddress -> PlutusPurpose f era
 pattern AnyEraRewardingPurpose c <- (anyEraToRewardingPurpose -> Just c)
 
 pattern AnyEraVotingPurpose ::

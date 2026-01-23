@@ -212,9 +212,9 @@ alonzoEraSpecificSpec = do
     -- TODO: figure out what's the problem, this might be of interest:
     -- https://github.com/IntersectMBO/cardano-ledger/issues/4571
     registerStakeCredentialNoDeposit cred = do
-      submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
+      submitTxAnn_ ("Register Staking Address: " <> T.unpack (credToText cred)) $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ SSeq.fromList [RegTxCert cred]
       nId <- use (impGlobalsL . to networkId)
-      pure $ RewardAccount nId cred
+      pure $ AccountAddress nId (AccountId cred)

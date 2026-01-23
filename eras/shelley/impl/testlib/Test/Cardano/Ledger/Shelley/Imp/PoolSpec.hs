@@ -8,7 +8,7 @@
 module Test.Cardano.Ledger.Shelley.Imp.PoolSpec (spec) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
@@ -36,16 +36,16 @@ spec = describe "POOL" $ do
         tx
         [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
 
-    it "register a pool with a reward account having the wrong network id" $ do
+    it "register a pool with a staking address having the wrong network id" $ do
       pv <- getsPParams ppProtocolVersionL
-      rewardCredential <- KeyHashObj <$> freshKeyHash
-      let badRewardAccount =
-            RewardAccount
-              { raNetwork = Mainnet
-              , raCredential = rewardCredential
+      accountCredential <- KeyHashObj <$> freshKeyHash
+      let badAccountAddress =
+            AccountAddress
+              { aaNetworkId = Mainnet
+              , aaAccountId = AccountId accountCredential
               }
       kh <- freshKeyHash
-      pps <- freshPoolParams kh badRewardAccount
+      pps <- freshPoolParams kh badAccountAddress
       let tx = registerPoolTx pps
       if pvMajor pv < natVersion @5
         then
@@ -402,6 +402,6 @@ spec = describe "POOL" $ do
       VRFVerKeyHash StakePoolVRF ->
       ImpTestM era StakePoolParams
     poolParams kh vrf = do
-      pps <- registerRewardAccount >>= freshPoolParams kh
+      pps <- registerAccountAddress >>= freshPoolParams kh
       pure $ pps & sppVrfL .~ vrf
     getPState = getsNES @era $ nesEsL . esLStateL . lsCertStateL . certPStateL

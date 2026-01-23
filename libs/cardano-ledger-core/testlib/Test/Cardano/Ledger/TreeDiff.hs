@@ -192,7 +192,9 @@ instance ToExpr DRepState
 -- Address
 instance ToExpr Addr
 
-instance ToExpr RewardAccount
+instance ToExpr AccountAddress
+
+instance ToExpr AccountId
 
 instance ToExpr BootstrapAddress where
   toExpr = defaultExprViaShow

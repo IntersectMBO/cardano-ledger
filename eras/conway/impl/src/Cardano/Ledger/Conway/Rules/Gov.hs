@@ -34,7 +34,7 @@ module Cardano.Ledger.Conway.Rules.Gov (
   checkPolicy,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount, raCredential, raNetwork)
+import Cardano.Ledger.Address (AccountAddress, aaNetworkId, accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -179,8 +179,8 @@ deriving instance (Eq (PParams era), EraCertState era) => Eq (GovEnv era)
 data ConwayGovPredFailure era
   = GovActionsDoNotExist (NonEmpty GovActionId)
   | MalformedProposal (GovAction era)
-  | ProposalProcedureNetworkIdMismatch RewardAccount Network
-  | TreasuryWithdrawalsNetworkIdMismatch (NonEmptySet RewardAccount) Network
+  | ProposalProcedureNetworkIdMismatch AccountAddress Network
+  | TreasuryWithdrawalsNetworkIdMismatch (NonEmptySet AccountAddress) Network
   | ProposalDepositIncorrect (Mismatch RelEQ Coin)
   | -- | Some governance actions are not allowed to be voted on by certain types of
     -- Voters. This failure lists all governance action ids with their respective voters
@@ -211,10 +211,10 @@ data ConwayGovPredFailure era
     VotersDoNotExist (NonEmpty Voter)
   | -- | Treasury withdrawals that sum up to zero are not allowed
     ZeroTreasuryWithdrawals (GovAction era)
-  | -- | Proposals that have an invalid reward account for returns of the deposit
-    ProposalReturnAccountDoesNotExist RewardAccount
-  | -- | Treasury withdrawal proposals to an invalid reward account
-    TreasuryWithdrawalReturnAccountsDoNotExist (NonEmpty RewardAccount)
+  | -- | Proposals that have an invalid account address for returns of the deposit
+    ProposalReturnAccountDoesNotExist AccountAddress
+  | -- | Treasury withdrawal proposals to an invalid account address
+    TreasuryWithdrawalReturnAccountsDoNotExist (NonEmpty AccountAddress)
   | -- | Disallow votes by unelected committee members
     UnelectedCommitteeVoters (NonEmpty (Credential HotCommitteeRole))
   deriving (Eq, Show, Generic)
@@ -514,13 +514,16 @@ conwayGovTransition = do
         unless (hardforkConwayBootstrapPhase $ pp ^. ppProtocolVersionL) $ do
           let refundAddress = proposal ^. pProcReturnAddrL
               govAction = proposal ^. pProcGovActionL
-          isAccountRegistered (raCredential refundAddress) (certDState ^. accountsL)
+          isAccountRegistered (refundAddress ^. accountAddressCredentialL) (certDState ^. accountsL)
             ?! (injectFailure . ProposalReturnAccountDoesNotExist) refundAddress
           case govAction of
             TreasuryWithdrawals withdrawals _ -> do
               let nonRegisteredAccounts =
                     flip Map.filterWithKey withdrawals $ \withdrawalAddress _ ->
-                      not $ isAccountRegistered (raCredential withdrawalAddress) (certDState ^. accountsL)
+                      not $
+                        isAccountRegistered
+                          (withdrawalAddress ^. accountAddressCredentialL)
+                          (certDState ^. accountsL)
               failOnNonEmpty
                 (Map.keys nonRegisteredAccounts)
                 (injectFailure . TreasuryWithdrawalReturnAccountsDoNotExist)
@@ -537,7 +540,7 @@ conwayGovTransition = do
                     }
 
         -- Return address network id check
-        raNetwork pProcReturnAddr
+        aaNetworkId pProcReturnAddr
           == expectedNetworkId
             ?! injectFailure (ProposalProcedureNetworkIdMismatch pProcReturnAddr expectedNetworkId)
 
@@ -545,7 +548,7 @@ conwayGovTransition = do
         case pProcGovAction of
           TreasuryWithdrawals wdrls proposalPolicy -> do
             let mismatchedAccounts =
-                  Set.filter ((/= expectedNetworkId) . raNetwork) $ Map.keysSet wdrls
+                  Set.filter ((/= expectedNetworkId) . aaNetworkId) $ Map.keysSet wdrls
             failOnNonEmptySet
               mismatchedAccounts
               (\mismatched -> injectFailure (TreasuryWithdrawalsNetworkIdMismatch mismatched expectedNetworkId))

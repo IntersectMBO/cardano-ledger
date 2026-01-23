@@ -42,7 +42,7 @@ spec = describe "BBODY" $ do
           evenRedeemerNoDatumHash = hashPlutusScript $ evenRedeemerNoDatum slang :: ScriptHash
 
         it "succeeds with eight Plutus scripts" $ do
-          rewardAccount <- registerStakeCredential $ ScriptHashObj evenRedeemerNoDatumHash
+          accountAddress <- registerStakeCredential $ ScriptHashObj evenRedeemerNoDatumHash
           txCert <- genUnRegTxCert $ ScriptHashObj evenRedeemerNoDatumHash
 
           withTxsInBlock_ $ do
@@ -67,12 +67,12 @@ spec = describe "BBODY" $ do
             impAnn "notValidatingTxWithWithdrawal" $ do
               submitPhase2Invalid_ $
                 mkBasicTx mkBasicTxBody
-                  & bodyTxL . withdrawalsTxBodyL .~ Withdrawals [(rewardAccount, mempty)]
+                  & bodyTxL . withdrawalsTxBodyL .~ Withdrawals [(accountAddress, mempty)]
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert rPurpose (dex 1)
             impAnn "validatingTxWithWithdrawal" $ do
               submitTx_ $
                 mkBasicTx mkBasicTxBody
-                  & bodyTxL . withdrawalsTxBodyL .~ Withdrawals [(rewardAccount, mempty)]
+                  & bodyTxL . withdrawalsTxBodyL .~ Withdrawals [(accountAddress, mempty)]
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert rPurpose (dex 0)
 
             impAnn "notValidatingTxWithCert" $ do

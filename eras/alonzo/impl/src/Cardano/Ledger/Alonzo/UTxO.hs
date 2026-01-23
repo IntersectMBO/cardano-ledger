@@ -34,6 +34,7 @@ module Cardano.Ledger.Alonzo.UTxO (
   getAlonzoWitsVKeyNeeded,
 ) where
 
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
@@ -46,7 +47,6 @@ import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
-import Cardano.Ledger.Shelley.TxBody (raCredential)
 import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
@@ -305,8 +305,7 @@ getRewardingScriptsNeeded txBody =
   AlonzoScriptsNeeded $
     catMaybes $
       zipAsIxItem (Map.keys (unWithdrawals $ txBody ^. withdrawalsTxBodyL)) $
-        \asIxItem@(AsIxItem _ rewardAccount) ->
-          (RewardingPurpose asIxItem,) <$> credScriptHash (raCredential rewardAccount)
+        \asIxItem@(AsIxItem _ accountAddress) -> (RewardingPurpose asIxItem,) <$> credScriptHash (accountAddress ^. accountAddressCredentialL)
 {-# INLINEABLE getRewardingScriptsNeeded #-}
 
 getMintingScriptsNeeded ::

@@ -64,7 +64,7 @@ treasuryWithdrawalsSpec =
   describe "Treasury withdrawals" $ do
     -- Treasury withdrawals are disallowed in bootstrap, so we're running these tests only post-bootstrap
     it "Modify EnactState as expected" $ whenPostBootstrap $ do
-      rewardAcount1 <- registerRewardAccount
+      rewardAcount1 <- registerAccountAddress
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
       gas <- getGovActionState govActionId
       let govAction = gasAction gas
@@ -79,9 +79,10 @@ treasuryWithdrawalsSpec =
               { ensTreasury = Coin 1000
               }
       enactState' <- runImpRule @"ENACT" () enactState signal
-      ensWithdrawals enactState' `shouldBe` [(raCredential rewardAcount1, Coin 666)]
+      ensWithdrawals enactState'
+        `shouldBe` [(rewardAcount1 ^. accountAddressCredentialL, Coin 666)]
 
-      rewardAcount2 <- registerRewardAccount
+      rewardAcount2 <- registerAccountAddress
       let withdrawals' =
             [ (rewardAcount1, Coin 111)
             , (rewardAcount2, Coin 222)
@@ -98,8 +99,8 @@ treasuryWithdrawalsSpec =
       enactState'' <- runImpRule @"ENACT" () enactState' signal'
 
       ensWithdrawals enactState''
-        `shouldBe` [ (raCredential rewardAcount1, Coin 777)
-                   , (raCredential rewardAcount2, Coin 222)
+        `shouldBe` [ (rewardAcount1 ^. accountAddressCredentialL, Coin 777)
+                   , (rewardAcount2 ^. accountAddressCredentialL, Coin 222)
                    ]
       ensTreasury enactState'' `shouldBe` Coin 1
 
@@ -123,7 +124,7 @@ treasuryWithdrawalsSpec =
         submitTx_ tx
       passNEpochs 2
       getsNES treasuryL `shouldReturn` zero
-      sumRewardAccounts withdrawals `shouldReturn` sumRequested
+      sumAccountBalances withdrawals `shouldReturn` sumRequested
 
     it "Withdrawals exceeding maxBound Word64 submitted in a single proposal" $ whenPostBootstrap $ do
       disableTreasuryExpansion
@@ -168,15 +169,15 @@ treasuryWithdrawalsSpec =
 
             getsNES treasuryL `shouldReturn` expectedTreasury
             -- check that the sum of the rewards matches what was spent from the treasury
-            sumRewardAccounts withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
+            sumAccountBalances withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
   where
-    sumRewardAccounts withdrawals = mconcat <$> traverse (getAccountBalance . fst) withdrawals
+    sumAccountBalances withdrawals = mconcat <$> traverse (getAccountBalance . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
       vals <- genValuesExceeding val n
-      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccount
+      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerAccountAddress
     checkNoWithdrawal initialTreasury withdrawals = do
       getsNES treasuryL `shouldReturn` initialTreasury
-      sumRewardAccounts withdrawals `shouldReturn` zero
+      sumAccountBalances withdrawals `shouldReturn` zero
     genValuesExceeding val n = do
       pcts <- replicateM (n - 1) $ choose (1, 100)
       let tot = sum pcts

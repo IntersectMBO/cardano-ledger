@@ -2,6 +2,26 @@
 
 ## 1.19.0.0
 
+* Add `Semigroup` and `Monoid` instances for `Withdrawals` and `DirectDeposits`.
+* Rename `RewardAccount` to `AccountAddress`.
+  - Deprecate `RewardAccount` (now a pattern-synonym) and its fields and lenses.
+  - Add `AccountId` new-type for `Credential Staking` in `AccountAddress`.
+  - Add lenses
+    + `accountAddressAccountIdL`
+    + `accountAddressCredentialL`
+    + `accountAddressNetworkIdL`
+  - Rename serialization and header inspection functions and deprecate older ones:
+    + `serialiseRewardAccount` → `serialiseAccountAddress`
+    + `deserialiseRewardAccount` → `deserialiseAccountAddress`
+    + `putRewardAccount` → `putAccountAddress`
+    + `decodeRewardAccount` → `decodeAccountAddress`
+    + `fromCborRewardAccount` → `fromCborAccountAddress`
+  - Updated types:
+    + `Withdrawals` and `DirectDeposits` now use `AccountAddress` instead of `RewardAccount`
+    + `StakePoolState`: `spsRewardAccount` → `spsAccountAddress`
+    + `StakePoolState`: `spsRewardAccountL` → `spsAccountAddressL`
+    + `StakePoolParams`: `sppRewardAccount` → `sppAccountAddress`
+    + `StakePoolParams` JSON: `rewardAccount` → `accountAddress`
 * Add `DirectDeposits` newtype.
 * Change `PoolMetadata.pmHash` from `ByteString` to `Data.Array.Byte.ByteArray` to reduce memory fragmentation.
 * Added:
@@ -107,6 +127,12 @@
 
 ### `testlib`
 
+* Rename `RewardAccount` to `AccountAddress`
+  - `deserialiseRewardAccountOld` to `deserialiseAccountAddressOld`.
+  - `registerRewardAccount` to `registerAccountAddress`
+  - `getRewardAccountFor` to `getAccountAddressFor`
+  - `registerPoolWithRewardAccount` to `registerPoolWithAccountAddress`
+  - `expectRegisteredRewardAddress` to `expectRegisteredAccountAddress`
 * Added `Arbitrary` and `ToExpr` instances for `CoinPerByte` (moved from `cardano-ledger-babbage`)
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Add `forEachEraVersion`

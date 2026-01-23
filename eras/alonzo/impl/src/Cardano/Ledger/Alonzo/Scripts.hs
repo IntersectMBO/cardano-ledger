@@ -60,7 +60,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   module Cardano.Ledger.Plutus.ExUnits,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxCert ()
@@ -199,9 +199,9 @@ class
 
   toCertifyingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (TxCert era))
 
-  mkRewardingPurpose :: f Word32 RewardAccount -> PlutusPurpose f era
+  mkRewardingPurpose :: f Word32 AccountAddress -> PlutusPurpose f era
 
-  toRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 RewardAccount)
+  toRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
 
   upgradePlutusPurposeAsIx ::
     AlonzoEraScript (PreviousEra era) =>
@@ -295,7 +295,7 @@ data AlonzoPlutusPurpose f era
   = AlonzoSpending !(f Word32 TxIn)
   | AlonzoMinting !(f Word32 PolicyID)
   | AlonzoCertifying !(f Word32 (TxCert era))
-  | AlonzoRewarding !(f Word32 RewardAccount)
+  | AlonzoRewarding !(f Word32 AccountAddress)
   deriving (Generic)
 
 deriving instance Eq (AlonzoPlutusPurpose AsIx era)
@@ -413,7 +413,7 @@ pattern CertifyingPurpose c <- (toCertifyingPurpose -> Just c)
     CertifyingPurpose c = mkCertifyingPurpose c
 
 pattern RewardingPurpose ::
-  AlonzoEraScript era => f Word32 RewardAccount -> PlutusPurpose f era
+  AlonzoEraScript era => f Word32 AccountAddress -> PlutusPurpose f era
 pattern RewardingPurpose c <- (toRewardingPurpose -> Just c)
   where
     RewardingPurpose c = mkRewardingPurpose c

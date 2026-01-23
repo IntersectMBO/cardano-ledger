@@ -28,7 +28,7 @@ module Cardano.Ledger.State.Account (
   removeStakePoolDelegations,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Withdrawals (..))
 import Cardano.Ledger.BaseTypes (Mismatch (..), Network, Relation (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
@@ -187,7 +187,7 @@ lookupStakePoolDelegation cred accounts =
 -- | This function returns `Nothing` iff all of the accounts that withdrawals
 -- are trying to drain are indeed registered and all of the amounts in the
 -- withdrawals match the respective balances exactly. It returns a 2-tuple where
--- the `fst` is withdrawals with missing reward accounts or the wrong network,
+-- the `fst` is withdrawals with missing account addresses or the wrong network,
 -- and `snd` is incomplete withdrawals.
 --
 -- NOTE: We simply `checkBadWithdrawals` to avoid allocating new variables for
@@ -197,11 +197,11 @@ withdrawalsThatDoNotDrainAccounts ::
   Withdrawals ->
   Network ->
   Accounts era ->
-  -- | invalid withdrawal = that which does not have a reward account or is in
+  -- | invalid withdrawal = that which does not have an account address or is in
   -- the wrong network.
   -- incomplete withdrawal = that which does not withdraw the exact account
   -- balance.
-  Maybe (Withdrawals, Map RewardAccount (Mismatch RelEQ Coin))
+  Maybe (Withdrawals, Map AccountAddress (Mismatch RelEQ Coin))
 withdrawalsThatDoNotDrainAccounts (Withdrawals withdrawals) networkId accounts
   -- @withdrawals@ is small and @accounts@ big, better to traverse the former than the latter.
   | Map.foldrWithKey checkBadWithdrawals True withdrawals = Nothing
@@ -210,23 +210,25 @@ withdrawalsThatDoNotDrainAccounts (Withdrawals withdrawals) networkId accounts
         first Withdrawals $
           Map.foldrWithKey collectBadWithdrawals (Map.empty, Map.empty) withdrawals
   where
-    checkBadWithdrawals rewardAccount withdrawalAmount noBadWithdrawals =
-      noBadWithdrawals && isGoodWithdrawal rewardAccount withdrawalAmount
-    collectBadWithdrawals rewardAccount withdrawalAmount accum@(!_, !_) =
-      case lookupAccount rewardAccount of
-        Nothing -> first (Map.insert rewardAccount withdrawalAmount) accum
+    checkBadWithdrawals accountAddress withdrawalAmount noBadWithdrawals =
+      noBadWithdrawals && isGoodWithdrawal accountAddress withdrawalAmount
+    collectBadWithdrawals accountAddress withdrawalAmount accum@(!_, !_) =
+      case lookupAccount accountAddress of
+        Nothing -> first (Map.insert accountAddress withdrawalAmount) accum
         Just account
           | isBalanceZero withdrawalAmount account -> accum
           | otherwise ->
               second
-                (Map.insert rewardAccount $ Mismatch withdrawalAmount (fromCompact $ account ^. balanceAccountStateL))
+                ( Map.insert accountAddress $
+                    Mismatch withdrawalAmount (fromCompact $ account ^. balanceAccountStateL)
+                )
                 accum
-    isGoodWithdrawal rewardAccount withdrawalAmount =
-      maybe False (isBalanceZero withdrawalAmount) (lookupAccount rewardAccount)
+    isGoodWithdrawal accountAddress withdrawalAmount =
+      maybe False (isBalanceZero withdrawalAmount) (lookupAccount accountAddress)
     isBalanceZero withdrawalAmount accountState =
       withdrawalAmount == fromCompact (accountState ^. balanceAccountStateL)
-    lookupAccount RewardAccount {raCredential, raNetwork}
-      | raNetwork == networkId = lookupAccountState raCredential accounts
+    lookupAccount (AccountAddress aaNetworkId (AccountId credential))
+      | aaNetworkId == networkId = lookupAccountState credential accounts
       | otherwise = Nothing
 
 -- | Reset balances to zero for all accounts that are specified in the supplied `Withdrawals`.
@@ -244,7 +246,9 @@ drainAccounts (Withdrawals withdrawalsMap) accounts =
   accounts
     & accountsMapL %~ \accountsMap ->
       Map.foldrWithKey'
-        (\ra _withdrawalAmount -> Map.adjust (balanceAccountStateL .~ mempty) (raCredential ra))
+        ( \(AccountAddress _ (AccountId credential)) _withdrawalAmount ->
+            Map.adjust (balanceAccountStateL .~ mempty) credential
+        )
         accountsMap
         withdrawalsMap
 

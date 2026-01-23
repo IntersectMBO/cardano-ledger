@@ -19,7 +19,7 @@ module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
   decayFactor,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..), raCredential)
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),
@@ -180,7 +180,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       newLikelihoods = VMap.toMap $ VMap.map makeLikelihoods allPoolInfo
       -- We now compute the leader rewards for each stake pool.
       collectLRs acc poolRI =
-        let account = raCredential . sppRewardAccount $ poolPs poolRI
+        let AccountId account = aaAccountId . sppAccountAddress $ poolPs poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
          in if hardforkBabbageForgoRewardPrefilter (pr ^. ppProtocolVersionL)
               || isAccountRegistered account accounts

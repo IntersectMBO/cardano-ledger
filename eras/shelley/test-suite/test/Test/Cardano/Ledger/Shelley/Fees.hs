@@ -24,9 +24,10 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.API (
+  AccountAddress (..),
+  AccountId (..),
   Addr,
   Credential (..),
-  RewardAccount (..),
   ShelleyTxOut (..),
   StakePoolParams (..),
   TxIn (..),
@@ -112,7 +113,7 @@ aliceStakePoolParams =
     , sppPledge = Coin 1
     , sppCost = Coin 5
     , sppMargin = unsafeBoundRational 0.1
-    , sppRewardAccount = RewardAccount Testnet aliceSHK
+    , sppAccountAddress = AccountAddress Testnet (AccountId aliceSHK)
     , sppOwners = Set.singleton $ (hashKey . vKey) aliceStake
     , sppRelays =
         StrictSeq.singleton $
@@ -465,7 +466,7 @@ txbWithWithdrawal =
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts = StrictSeq.empty
     , stbWithdrawals =
-        Withdrawals $ Map.singleton (RewardAccount Testnet aliceSHK) (Val.inject $ Coin 100)
+        Withdrawals $ Map.singleton (AccountAddress Testnet (AccountId aliceSHK)) (Val.inject $ Coin 100)
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing

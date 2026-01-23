@@ -23,6 +23,7 @@
 --   idea of whats well formed.
 module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs where
 
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..), compactCoinOrError)
@@ -82,7 +83,7 @@ type WhoDelegates = Map (Credential DRepRole) (Set (Credential Staking))
 --   Map.keysSet caStates == delegators onepiece
 --   Other more subtle agreement come from fields inside DRepState and ConwayAccountState
 --   All of these are captured in the Specification for VState and DState (which contains the Account map)
---   One other thing we need to consider is: newtype Withdrawals = Withdrawals {unWithdrawals :: Map RewardAccount Coin}
+--   One other thing we need to consider is: newtype Withdrawals = Withdrawals {unWithdrawals :: Map AccountAddress Coin}
 --   WithDrawals come from Transactions, but they have subtle interactions with rewards map and the Drep delegation map
 --   So we give special Specifcations that will generate both in ways that maintain the important relationships.
 whoDelegatesSpec ::
@@ -97,11 +98,11 @@ whoDelegatesSpec univ = constrained $ \m ->
 
 wdrlSpec ::
   Map (Credential DRepRole) (Set (Credential Staking)) ->
-  Specification (Map RewardAccount Coin)
+  Specification (Map AccountAddress Coin)
 wdrlSpec whodelegates = constrained $ \m ->
   [ assert $ sizeOf_ (dom_ m) <=. lit 5
-  , forAll' m $ \ [var|rewacct|] _ ->
-      match rewacct $ \ [var|_network|] [var|credStake|] ->
+  , forAll' m $ \ [var|accountAddress|] _ ->
+      match accountAddress $ \ [var|_network|] [var|credStake|] ->
         [ assert $ _network ==. lit Testnet
         , assert $ member_ credStake (lit (delegators whodelegates))
         ]
@@ -128,7 +129,7 @@ credToDRep (ScriptHashObj sh) = DRepScriptHash sh
 toDelta :: Coin -> DeltaCoin
 toDelta (Coin n) = DeltaCoin n
 
-type CertContext = (Map (Credential DRepRole) (Set (Credential Staking)), Map RewardAccount Coin)
+type CertContext = (Map (Credential DRepRole) (Set (Credential Staking)), Map AccountAddress Coin)
 
 genCertContext :: forall era. Era era => WitUniv era -> Gen CertContext
 genCertContext univ = do
@@ -268,7 +269,7 @@ conwayDStateSpec ::
   forall era.
   era ~ ConwayEra =>
   WitUniv era ->
-  (Map (Credential DRepRole) (Set (Credential Staking)), Map RewardAccount Coin) ->
+  (Map (Credential DRepRole) (Set (Credential Staking)), Map AccountAddress Coin) ->
   Term (Map (KeyHash StakePool) StakePoolState) ->
   Specification (DState era)
 conwayDStateSpec univ (whoDelegates, wdrl) poolreg =
@@ -285,8 +286,8 @@ conwayDStateSpec univ (whoDelegates, wdrl) poolreg =
 
 -- | Specify the internal Map of ConwayAccounts ::  Map (Credential Staking) (ConwayAccountState era)
 --   Ensure that the Staking Credential is both staked to some Pool, and Delegated to some DRep
--- | Given a set of Withdrawals:: newtype Withdrawals = Withdrawals {unWithdrawals :: Map RewardAccount Coin}
---   where:: data RewardAccount = RewardAccount {raNetwork :: !Network, raCredential :: !(Credential Staking)}
+-- | Given a set of Withdrawals:: newtype Withdrawals = Withdrawals {unWithdrawals :: Map AccountAddress Coin}
+--   where:: data AccountAddress = AccountAddress {aaNetworkId :: !Network, aaAccountId :: !(AccountId)}
 --   That ensures every AccountState has the propeties listed to the left
 --   data ConwayAccountState era = ConwayAccountState
 --       {casBalance :: (CompactForm Coin)                            -- Sometimes 0, Matches the withdrawl amount if part of a Withdrawal
@@ -299,16 +300,16 @@ conwayAccountMapSpec ::
   WitUniv era ->
   Map (Credential DRepRole) (Set (Credential Staking)) ->
   Term (Map (KeyHash StakePool) StakePoolState) ->
-  Map RewardAccount Coin ->
+  Map AccountAddress Coin ->
   Specification (Map (Credential Staking) (ConwayAccountState era))
 conwayAccountMapSpec univ whoDelegates poolreg wdrl =
   let witsize = fromIntegral @Int (wvSize univ)
       wdlsize = fromIntegral @Int (Map.size wdrl)
       minAccountsize = wdlsize + 2
       withdrawalMap :: Map (Credential Staking) (CompactForm Coin)
-      withdrawalMap = Map.mapKeys raCredential (Map.map compactCoinOrError wdrl)
+      withdrawalMap = Map.mapKeys (^. accountAddressCredentialL) (Map.map compactCoinOrError wdrl)
       withdrawalKeys :: Set (Credential Staking)
-      withdrawalKeys = Map.keysSet (Map.mapKeys raCredential wdrl)
+      withdrawalKeys = Map.keysSet (Map.mapKeys (^. accountAddressCredentialL) wdrl)
    in constrained $ \ [var|conwayAccountMap|] ->
         [ -- Size of conwayAccounts, can't be bigger than the witness set (n keys + n scripts)
           -- but it must be bigger than the withdrawal size
@@ -394,7 +395,7 @@ pStateSpec univ currepoch = constrained $ \ [var|pState|] ->
 
 conwayCertStateSpec ::
   WitUniv ConwayEra ->
-  (Map (Credential DRepRole) (Set (Credential Staking)), Map RewardAccount Coin) ->
+  (Map (Credential DRepRole) (Set (Credential Staking)), Map AccountAddress Coin) ->
   Term EpochNo ->
   Specification (ConwayCertState ConwayEra)
 conwayCertStateSpec univ (whodelegates, wdrl) epoch = constrained $ \ [var|convCertState|] ->

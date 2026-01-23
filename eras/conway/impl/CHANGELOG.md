@@ -57,6 +57,7 @@
 
 ### `testlib`
 
+* Rename `mkProposalWithRewardAccount` to `mkProposalWithAccountAddress`
 * Remove `huddle-cddl` and the `CDDL` modules.
 * Add `witsEmptyFieldWithTag`
 * Add `conwayDecodeDuplicateDelegCertFails`

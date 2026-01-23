@@ -32,7 +32,7 @@ spec = do
     roundTripJsonSpec @StakePoolParams
     roundTripJsonSpec @StakePoolState
     roundTripJsonSpec @Addr
-    roundTripJsonSpec @RewardAccount
+    roundTripJsonSpec @AccountAddress
     roundTripJsonSpec @(Credential Witness)
     roundTripJsonSpec @DRep
     roundTripJsonSpec @Anchor

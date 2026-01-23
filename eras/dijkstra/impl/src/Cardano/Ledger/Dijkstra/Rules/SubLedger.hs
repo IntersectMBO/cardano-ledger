@@ -21,7 +21,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedger (
   DijkstraSubLedgerEvent (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
@@ -98,7 +98,7 @@ data DijkstraSubLedgerPredFailure era
   | SubTreasuryValueMismatch (Mismatch RelEQ Coin)
   | SubTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | SubWithdrawalsMissingAccounts Withdrawals
-  | SubIncompleteWithdrawals (NonEmptyMap RewardAccount (Mismatch RelEQ Coin))
+  | SubIncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   deriving (Generic)
 
 deriving stock instance

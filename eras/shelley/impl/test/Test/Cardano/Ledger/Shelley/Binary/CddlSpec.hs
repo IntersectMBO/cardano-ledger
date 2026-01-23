@@ -5,7 +5,7 @@
 
 module Test.Cardano.Ledger.Shelley.Binary.CddlSpec (spec) where
 
-import Cardano.Ledger.Address (Addr, RewardAccount)
+import Cardano.Ledger.Address (AccountAddress, Addr)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -39,7 +39,7 @@ spec =
       huddleRoundTripAnnCborSpec @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripArbitraryValidate @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripCborSpec @BootstrapWitness v "bootstrap_witness"
-      huddleRoundTripCborSpec @RewardAccount v "reward_account"
+      huddleRoundTripCborSpec @AccountAddress v "reward_account"
       huddleRoundTripCborSpec @(Credential Staking) v "stake_credential"
       huddleRoundTripAnnCborSpec @(TxBody TopTx ShelleyEra) v "transaction_body"
       huddleRoundTripCborSpec @(TxBody TopTx ShelleyEra) v "transaction_body"

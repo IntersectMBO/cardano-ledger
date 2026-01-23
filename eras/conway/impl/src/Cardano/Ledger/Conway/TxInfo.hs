@@ -105,6 +105,7 @@ import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..), SLanguage
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Plutus.TxInfo (
   slotToPOSIXTime,
+  transAccountAddress,
   transBoundedRational,
   transCoinToLovelace,
   transCoinToValue,
@@ -112,7 +113,6 @@ import Cardano.Ledger.Plutus.TxInfo (
   transDatum,
   transEpochNo,
   transKeyHash,
-  transRewardAccount,
   transSafeHash,
   transScriptHash,
  )
@@ -544,7 +544,7 @@ transMintValue = PV3.UnsafeMintValue . PV1.getValue . Alonzo.transMultiAsset
 -- | Translate all `Withdrawal`s from within a `TxBody`
 transTxBodyWithdrawals :: EraTxBody era => TxBody l era -> PV3.Map PV3.Credential PV3.Lovelace
 transTxBodyWithdrawals txBody =
-  transMap transRewardAccount transCoinToLovelace (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
+  transMap transAccountAddress transCoinToLovelace (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
 
 -- | In protocol version 9, a bug in `RegTxCert` and `UnRegTxCert` pattern definitions was causing
 -- the deposit in `RegDepositTxCert` and `UnRegDepositTxCert` to be omitted.  We need to keep this
@@ -633,7 +633,7 @@ transPlutusPurposeV3 proxy pv = \case
   ConwayMinting (AsIxItem _ policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
   ConwayCertifying (AsIxItem ix txCert) ->
     PV3.Certifying (toInteger ix) <$> toPlutusTxCert proxy pv txCert
-  ConwayRewarding (AsIxItem _ rewardAccount) -> pure $ PV3.Rewarding (transRewardAccount rewardAccount)
+  ConwayRewarding (AsIxItem _ accountAddress) -> pure $ PV3.Rewarding (transAccountAddress accountAddress)
   ConwayVoting (AsIxItem _ voter) -> pure $ PV3.Voting (transVoter voter)
   ConwayProposing (AsIxItem ix proposal) ->
     pure $ PV3.Proposing (toInteger ix) (transProposal proxy proposal)
@@ -664,7 +664,7 @@ transGovAction proxy = \case
       (transProtVer protVer)
   TreasuryWithdrawals withdrawals govPolicy ->
     PV3.TreasuryWithdrawals
-      (transMap transRewardAccount transCoinToLovelace withdrawals)
+      (transMap transAccountAddress transCoinToLovelace withdrawals)
       (transGovPolicy govPolicy)
   NoConfidence pGovActionId -> PV3.NoConfidence (transPrevGovActionId pGovActionId)
   UpdateCommittee pGovActionId ccToRemove ccToAdd threshold ->
@@ -711,7 +711,7 @@ transProposal ::
 transProposal proxy ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovAction} =
   PV3.ProposalProcedure
     { PV3.ppDeposit = transCoinToLovelace pProcDeposit
-    , PV3.ppReturnAddr = transRewardAccount pProcReturnAddr
+    , PV3.ppReturnAddr = transAccountAddress pProcReturnAddr
     , PV3.ppGovernanceAction = transGovAction proxy pProcGovAction
     }
 
@@ -730,7 +730,7 @@ transPlutusPurposeV1V2 proxy pv = \case
   ConwaySpending txIn -> Alonzo.transPlutusPurpose proxy pv $ AlonzoSpending txIn
   ConwayMinting policyId -> Alonzo.transPlutusPurpose proxy pv $ AlonzoMinting policyId
   ConwayCertifying txCert -> Alonzo.transPlutusPurpose proxy pv $ AlonzoCertifying txCert
-  ConwayRewarding rewardAccount -> Alonzo.transPlutusPurpose proxy pv $ AlonzoRewarding rewardAccount
+  ConwayRewarding accountAddress -> Alonzo.transPlutusPurpose proxy pv $ AlonzoRewarding accountAddress
   purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ inject purpose
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion
@@ -766,7 +766,7 @@ scriptPurposeToScriptInfo sp maybeSpendingData =
     PV3.Spending txIn -> PV3.SpendingScript txIn maybeSpendingData
     PV3.Minting policyId -> PV3.MintingScript policyId
     PV3.Certifying ix txCert -> PV3.CertifyingScript ix txCert
-    PV3.Rewarding rewardAccount -> PV3.RewardingScript rewardAccount
+    PV3.Rewarding accountAddress -> PV3.RewardingScript accountAddress
     PV3.Voting voter -> PV3.VotingScript voter
     PV3.Proposing ix proposal -> PV3.ProposingScript ix proposal
 

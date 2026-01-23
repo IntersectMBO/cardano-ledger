@@ -99,10 +99,10 @@ keyRegistration
     } =
     conjoin
       [ counterexample
-          "a newly registered key should have a reward account"
+          "a newly registered key should have a staking address"
           (isAccountRegistered cred (targetSt ^. certDStateL . accountsL))
       , counterexample
-          "a newly registered key should have a reward account with 0 balance"
+          "a newly registered key should have a staking address with 0 balance"
           ( ((^. balanceAccountStateL) <$> lookupAccountState cred (targetSt ^. certDStateL . accountsL))
               === Just mempty
           )
@@ -141,7 +141,7 @@ keyDelegation
     } =
     conjoin
       [ counterexample
-          "a delegated key should have a reward account"
+          "a delegated key should have a staking address"
           (isAccountRegistered stakeCred (targetSt ^. certDStateL . accountsL))
       , counterexample
           "a registered stake credential should be delegated"

@@ -22,8 +22,8 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxo (
 ) where
 
 import Cardano.Ledger.Address (
+  AccountAddress,
   Addr (..),
-  RewardAccount,
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes
@@ -73,7 +73,7 @@ data DijkstraSubUtxoPredFailure era
       -- | the expected network id
       Network
       -- | the set of reward addresses with incorrect network IDs
-      (NonEmptySet RewardAccount)
+      (NonEmptySet AccountAddress)
   | -- | list of supplied transaction outputs that are too small
     SubOutputTooSmallUTxO (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction outputs

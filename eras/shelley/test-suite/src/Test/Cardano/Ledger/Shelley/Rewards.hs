@@ -28,6 +28,7 @@ import qualified Cardano.Crypto.DSIGN as Crypto
 import Cardano.Crypto.Hash (Blake2b_256, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), aaAccountId)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),
@@ -96,7 +97,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent),
  )
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
 import Cardano.Protocol.Crypto (VRF, hashVerKeyVRF)
@@ -271,7 +271,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
           , sppPledge = pledge
           , sppCost = cost
           , sppMargin = margin
-          , sppRewardAccount = RewardAccount Testnet . KeyHashObj . hashKey . vKey $ rewardKey
+          , sppAccountAddress = AccountAddress Testnet . AccountId . KeyHashObj . hashKey . vKey $ rewardKey
           , sppOwners = Set.fromList [hashKey $ vKey ownerKey]
           , sppRelays = StrictSeq.empty
           , sppMetadata = SNothing
@@ -434,7 +434,7 @@ rewardOnePool
           then Map.insertWith (<>)
           else Map.insert
       potentialRewards =
-        f (raCredential $ sppRewardAccount pool) lReward mRewards
+        f (unAccountId (aaAccountId $ sppAccountAddress pool)) lReward mRewards
       potentialRewards' =
         if hardforkBabbageForgoRewardPrefilter pv
           then potentialRewards

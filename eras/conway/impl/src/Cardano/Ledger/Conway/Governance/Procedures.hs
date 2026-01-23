@@ -81,7 +81,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (
@@ -244,10 +244,10 @@ gasDepositL = gasProposalProcedureL . pProcDepositL
 gasDeposit :: GovActionState era -> Coin
 gasDeposit = pProcDeposit . gasProposalProcedure
 
-gasReturnAddrL :: Lens' (GovActionState era) RewardAccount
+gasReturnAddrL :: Lens' (GovActionState era) AccountAddress
 gasReturnAddrL = gasProposalProcedureL . pProcReturnAddrL
 
-gasReturnAddr :: GovActionState era -> RewardAccount
+gasReturnAddr :: GovActionState era -> AccountAddress
 gasReturnAddr = pProcReturnAddr . gasProposalProcedure
 
 gasActionL :: Lens' (GovActionState era) (GovAction era)
@@ -487,7 +487,7 @@ indexedGovProps = enumerateProps 0
 
 data ProposalProcedure era = ProposalProcedure
   { pProcDeposit :: !Coin
-  , pProcReturnAddr :: !RewardAccount
+  , pProcReturnAddr :: !AccountAddress
   , pProcGovAction :: !(GovAction era)
   , pProcAnchor :: !Anchor
   }
@@ -496,7 +496,7 @@ data ProposalProcedure era = ProposalProcedure
 pProcDepositL :: Lens' (ProposalProcedure era) Coin
 pProcDepositL = lens pProcDeposit (\p x -> p {pProcDeposit = x})
 
-pProcReturnAddrL :: Lens' (ProposalProcedure era) RewardAccount
+pProcReturnAddrL :: Lens' (ProposalProcedure era) AccountAddress
 pProcReturnAddrL = lens pProcReturnAddr (\p x -> p {pProcReturnAddr = x})
 
 pProcGovActionL :: Lens' (ProposalProcedure era) (GovAction era)
@@ -809,7 +809,7 @@ data GovAction era
       !ProtVer
   | TreasuryWithdrawals
       -- | Proposed treasury withdrawals
-      !(Map RewardAccount Coin)
+      !(Map AccountAddress Coin)
       -- | Guardrails script hash protection
       !(StrictMaybe ScriptHash)
   | NoConfidence

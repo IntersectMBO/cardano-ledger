@@ -12,7 +12,7 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert () where
 
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
@@ -60,7 +60,7 @@ instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map RewardAccount Coin)
+  , Inject ctx (Map AccountAddress Coin)
   ) =>
   SpecTranslate ctx (ConwayGovCertEnv era)
   where
@@ -68,7 +68,7 @@ instance
 
   toSpecRep ConwayGovCertEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map RewardAccount Coin)
+    withdrawals <- askCtx @(Map AccountAddress Coin)
     let propGetCCMembers (UpdateCommittee _ _ x _) = Just $ keysSet x
         propGetCCMembers _ = Nothing
         potentialCCMembers =

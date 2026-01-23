@@ -32,7 +32,7 @@ module Cardano.Ledger.State.StakePool (
   spsPledgeL,
   spsCostL,
   spsMarginL,
-  spsRewardAccountL,
+  spsAccountAddressL,
   spsOwnersL,
   spsRelaysL,
   spsMetadataL,
@@ -55,7 +55,7 @@ module Cardano.Ledger.State.StakePool (
     ppPledge,
     ppCost,
     ppMargin,
-    ppRewardAccount,
+    ppAccountAddress,
     ppOwners,
     ppRelays,
     ppMetadata
@@ -69,7 +69,7 @@ module Cardano.Ledger.State.StakePool (
   sppVrfL,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes (
   DnsName,
   Network,
@@ -106,6 +106,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Trans (lift)
@@ -140,8 +141,8 @@ data StakePoolState = StakePoolState
   -- ^ Fixed operational cost per epoch
   , spsMargin :: !UnitInterval
   -- ^ Pool profit margin (variable fee percentage)
-  , spsRewardAccount :: !(Credential Staking)
-  -- ^ Reward account for pool rewards
+  , spsAccountAddress :: !(Credential Staking)
+  -- ^ Account address credential for pool rewards
   , spsOwners :: !(Set (KeyHash Staking))
   -- ^ Set of stake key hashes that own this pool
   , spsRelays :: !(StrictSeq StakePoolRelay)
@@ -167,8 +168,8 @@ spsCostL = lens spsCost $ \sps c -> sps {spsCost = c}
 spsMarginL :: Lens' StakePoolState UnitInterval
 spsMarginL = lens spsMargin $ \sps m -> sps {spsMargin = m}
 
-spsRewardAccountL :: Lens' StakePoolState (Credential Staking)
-spsRewardAccountL = lens spsRewardAccount $ \sps sc -> sps {spsRewardAccount = sc}
+spsAccountAddressL :: Lens' StakePoolState (Credential Staking)
+spsAccountAddressL = lens spsAccountAddress $ \sps sc -> sps {spsAccountAddress = sc}
 
 spsOwnersL :: Lens' StakePoolState (Set (KeyHash Staking))
 spsOwnersL = lens spsOwners $ \sps s -> sps {spsOwners = s}
@@ -193,7 +194,7 @@ instance EncCBOR StakePoolState where
         !> To (spsPledge sps)
         !> To (spsCost sps)
         !> To (spsMargin sps)
-        !> To (spsRewardAccount sps)
+        !> To (spsAccountAddress sps)
         !> To (spsOwners sps)
         !> To (spsRelays sps)
         !> To (spsMetadata sps)
@@ -238,7 +239,7 @@ instance Default StakePoolState where
       , spsPledge = Coin 0
       , spsCost = Coin 0
       , spsMargin = def
-      , spsRewardAccount = def
+      , spsAccountAddress = def
       , spsOwners = def
       , spsRelays = def
       , spsMetadata = def
@@ -257,7 +258,7 @@ mkStakePoolState deposit delegators spp =
     , spsPledge = sppPledge spp
     , spsCost = sppCost spp
     , spsMargin = sppMargin spp
-    , spsRewardAccount = raCredential $ sppRewardAccount spp
+    , spsAccountAddress = sppAccountAddress spp ^. accountAddressCredentialL
     , spsOwners = sppOwners spp
     , spsRelays = sppRelays spp
     , spsMetadata = sppMetadata spp
@@ -276,7 +277,7 @@ stakePoolStateToStakePoolParams poolId networkId sps =
     , sppPledge = spsPledge sps
     , sppCost = spsCost sps
     , sppMargin = spsMargin sps
-    , sppRewardAccount = RewardAccount networkId $ spsRewardAccount sps
+    , sppAccountAddress = AccountAddress networkId $ AccountId $ spsAccountAddress sps
     , sppOwners = spsOwners sps
     , sppRelays = spsRelays sps
     , sppMetadata = spsMetadata sps
@@ -419,7 +420,7 @@ data StakePoolParams = StakePoolParams
   , sppPledge :: !Coin
   , sppCost :: !Coin
   , sppMargin :: !UnitInterval
-  , sppRewardAccount :: !RewardAccount
+  , sppAccountAddress :: !AccountAddress
   , sppOwners :: !(Set (KeyHash Staking))
   , sppRelays :: !(StrictSeq StakePoolRelay)
   , sppMetadata :: !(StrictMaybe PoolMetadata)
@@ -447,12 +448,12 @@ deriving instance NFData StakePoolParams
 instance ToJSON StakePoolParams where
   toJSON spp =
     Aeson.object
-      [ "publicKey" .= sppId spp -- TODO publicKey is an unfortunate name, should be poolId
+      [ "poolId" .= sppId spp
       , "vrf" .= sppVrf spp
       , "pledge" .= sppPledge spp
       , "cost" .= sppCost spp
       , "margin" .= sppMargin spp
-      , "rewardAccount" .= sppRewardAccount spp
+      , "accountAddress" .= sppAccountAddress spp
       , "owners" .= sppOwners spp
       , "relays" .= sppRelays spp
       , "metadata" .= sppMetadata spp
@@ -461,13 +462,15 @@ instance ToJSON StakePoolParams where
 instance FromJSON StakePoolParams where
   parseJSON =
     Aeson.withObject "StakePoolParams" $ \obj ->
+      -- Preserved for backward-compatibility,
+      -- "publicKey" and "rewardAccount" are old misnomers.
       StakePoolParams
-        <$> obj .: "publicKey" -- TODO publicKey is an unfortunate name, should be poolId
+        <$> ((obj .: "poolId") <|> (obj .: "publicKey"))
         <*> obj .: "vrf"
         <*> obj .: "pledge"
         <*> obj .: "cost"
         <*> obj .: "margin"
-        <*> obj .: "rewardAccount"
+        <*> ((obj .: "accountAddress") <|> (obj .: "rewardAccount"))
         <*> obj .: "owners"
         <*> obj .: "relays"
         <*> obj .: "metadata"
@@ -480,13 +483,13 @@ pattern PoolParams ::
   Coin ->
   Coin ->
   UnitInterval ->
-  RewardAccount ->
+  AccountAddress ->
   Set (KeyHash Staking) ->
   StrictSeq StakePoolRelay ->
   StrictMaybe PoolMetadata ->
   PoolParams
-pattern PoolParams {ppId, ppVrf, ppPledge, ppCost, ppMargin, ppRewardAccount, ppOwners, ppRelays, ppMetadata} =
-  StakePoolParams ppId ppVrf ppPledge ppCost ppMargin ppRewardAccount ppOwners ppRelays ppMetadata
+pattern PoolParams {ppId, ppVrf, ppPledge, ppCost, ppMargin, ppAccountAddress, ppOwners, ppRelays, ppMetadata} =
+  StakePoolParams ppId ppVrf ppPledge ppCost ppMargin ppAccountAddress ppOwners ppRelays ppMetadata
 
 {-# COMPLETE PoolParams #-}
 
@@ -498,7 +501,7 @@ pattern PoolParams {ppId, ppVrf, ppPledge, ppCost, ppMargin, ppRewardAccount, pp
   , ppPledge
   , ppCost
   , ppMargin
-  , ppRewardAccount
+  , ppAccountAddress
   , ppOwners
   , ppRelays
   , ppMetadata
@@ -536,7 +539,7 @@ instance EncCBORGroup StakePoolParams where
       <> encCBOR (sppPledge poolParams)
       <> encCBOR (sppCost poolParams)
       <> encCBOR (sppMargin poolParams)
-      <> encCBOR (sppRewardAccount poolParams)
+      <> encCBOR (sppAccountAddress poolParams)
       <> encCBOR (sppOwners poolParams)
       <> encCBOR (sppRelays poolParams)
       <> encodeNullStrictMaybe encCBOR (sppMetadata poolParams)
@@ -560,7 +563,7 @@ instance DecCBORGroup StakePoolParams where
         , sppPledge = pledge
         , sppCost = cost
         , sppMargin = margin
-        , sppRewardAccount = ra
+        , sppAccountAddress = ra
         , sppOwners = owners
         , sppRelays = relays
         , sppMetadata = md

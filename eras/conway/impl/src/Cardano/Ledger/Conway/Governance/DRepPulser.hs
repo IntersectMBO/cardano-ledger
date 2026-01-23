@@ -280,11 +280,11 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpProposals :: !(StrictSeq (GovActionState era))
     -- ^ Snapshot of the proposals. This is the Signal for the RATIFY rule
     , dpProposalDeposits :: !(Map (Credential Staking) (CompactForm Coin))
-    -- ^ Snapshot of the proposal-deposits per reward-account-staking-credential
+    -- ^ Snapshot of the proposal-deposits per account-address-staking-credential
     , dpGlobals :: !Globals
     , dpStakePools :: !(Map (KeyHash StakePool) StakePoolState)
     -- ^ Snapshot of the parameters of stake pools -
-    --   this is needed to get the reward account for SPO vote calculation
+    --   this is needed to get the account address for SPO vote calculation
     } ->
     DRepPulser era m ans
 

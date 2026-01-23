@@ -42,6 +42,14 @@ import Test.Cardano.Ledger.Common hiding ((.&.))
 import Test.Cardano.Ledger.Core.Address
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (genByronVKeyAddr)
+import Test.QuickCheck.Classes (
+  commutativeMonoidLaws,
+  commutativeSemigroupLaws,
+  exponentialSemigroupLaws,
+  lawsCheckOne,
+  monoidLaws,
+  semigroupLaws,
+ )
 
 spec :: Spec
 spec =
@@ -74,8 +82,8 @@ roundTripAddressSpec = do
       forAll arbitrary propCompactSerializationAgree
     prop "Ensure Addr failures on incorrect binary data" $
       propDecompactErrors
-    prop "Ensure RewardAccount failures on incorrect binary data" $
-      propDeserializeRewardAccountErrors
+    prop "Ensure AccountAddress failures on incorrect binary data" $
+      propDeserializeAccountAddressErrors
     prop "RoundTrip-invalid" $
       forAll arbitrary $
         roundTripRangeExpectation @CompactAddr
@@ -94,8 +102,28 @@ roundTripAddressSpec = do
         roundTripRangeExpectation @Addr cborTrip (natVersion @2) (natVersion @6)
     prop "Deserializing an address matches old implementation" $
       propValidateNewDeserialize
-  describe "RewardAccount" $ do
-    roundTripCborSpec @RewardAccount
+  describe "AccountAddress" $ do
+    roundTripCborSpec @AccountAddress
+  describe "Withdrawals" $ do
+    it "Semigroup and Monoid" $
+      lawsCheckOne
+        (Proxy :: Proxy Withdrawals)
+        [ semigroupLaws
+        , commutativeSemigroupLaws
+        , exponentialSemigroupLaws
+        , monoidLaws
+        , commutativeMonoidLaws
+        ]
+  describe "DirectDeposits" $ do
+    it "Semigroup and Monoid" $
+      lawsCheckOne
+        (Proxy :: Proxy DirectDeposits)
+        [ semigroupLaws
+        , commutativeSemigroupLaws
+        , exponentialSemigroupLaws
+        , monoidLaws
+        , commutativeMonoidLaws
+        ]
 
 propSameAsOldDecompactAddr :: CompactAddr -> Expectation
 propSameAsOldDecompactAddr cAddr = do
@@ -228,8 +256,8 @@ propDecompactErrors addr = do
     $ isLeft
     $ decodeAddrEither badAddr
 
-propDeserializeRewardAccountErrors :: Version -> RewardAccount -> Gen Property
-propDeserializeRewardAccountErrors v acnt = do
+propDeserializeAccountAddressErrors :: Version -> AccountAddress -> Gen Property
+propDeserializeAccountAddressErrors v acnt = do
   let bs = serialize' v acnt
       flipHeaderBit b =
         case BS.uncons bs of
@@ -254,7 +282,7 @@ propDeserializeRewardAccountErrors v acnt = do
     $ counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
     $ isNothing
-    $ decodeRewardAccount badAddr
+    $ decodeAccountAddress badAddr
 
 addressWithExtraneousBytes :: HasCallStack => BS.ByteString
 addressWithExtraneousBytes = bs
