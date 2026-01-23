@@ -233,7 +233,7 @@ instance
 
   initialRules = []
 
-  transitionRules = [conwayGovTransition @era]
+  transitionRules = [conwayGovTransition]
 
 conwayToDijkstraGovPredFailure :: forall era. ConwayGovPredFailure era -> DijkstraGovPredFailure era
 conwayToDijkstraGovPredFailure = \case

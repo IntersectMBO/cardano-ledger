@@ -359,7 +359,7 @@ instance
 
   initialRules = []
 
-  transitionRules = [conwayGovTransition @era]
+  transitionRules = [conwayGovTransition]
 
 checkVotesAreNotForExpiredActions ::
   EpochNo ->
@@ -451,20 +451,20 @@ checkBootstrapProposal pp proposal@ProposalProcedure {pProcGovAction}
   | otherwise = pure ()
 
 conwayGovTransition ::
-  forall era.
-  ( ConwayEraTxCert era
+  forall rule era.
+  ( ConwayEraCertState era
+  , ConwayEraTxCert era
   , ConwayEraPParams era
   , ConwayEraGov era
-  , STS (EraRule "GOV" era)
-  , Event (EraRule "GOV" era) ~ ConwayGovEvent era
-  , Signal (EraRule "GOV" era) ~ GovSignal era
-  , BaseM (EraRule "GOV" era) ~ ShelleyBase
-  , Environment (EraRule "GOV" era) ~ GovEnv era
-  , State (EraRule "GOV" era) ~ Proposals era
-  , InjectRuleFailure "GOV" ConwayGovPredFailure era
-  , ConwayEraCertState era
+  , STS (EraRule rule era)
+  , Event (EraRule rule era) ~ ConwayGovEvent era
+  , Signal (EraRule rule era) ~ GovSignal era
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  , Environment (EraRule rule era) ~ GovEnv era
+  , State (EraRule rule era) ~ Proposals era
+  , InjectRuleFailure rule ConwayGovPredFailure era
   ) =>
-  TransitionRule (EraRule "GOV" era)
+  TransitionRule (EraRule rule era)
 conwayGovTransition = do
   TRC
     ( GovEnv txid currentEpoch pp constitutionPolicy certState committee
