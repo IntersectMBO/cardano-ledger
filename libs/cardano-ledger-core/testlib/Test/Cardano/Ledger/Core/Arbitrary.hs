@@ -695,8 +695,7 @@ instance Arbitrary SnapShot where
         stakePoolSnapShotFromParams poolId =
           mkStakePoolSnapShot ssStake ssTotalActiveStake
             . mkStakePoolState deposit (Map.findWithDefault mempty poolId delegationsPerStakePool)
-        ssStakePoolsSnapShot =
-          VMap.toMap $ VMap.mapWithKey stakePoolSnapShotFromParams ssPoolParams
+        ssStakePoolsSnapShot = VMap.mapWithKey stakePoolSnapShotFromParams ssPoolParams
     pure SnapShot {..}
 
 instance Arbitrary SnapShots where

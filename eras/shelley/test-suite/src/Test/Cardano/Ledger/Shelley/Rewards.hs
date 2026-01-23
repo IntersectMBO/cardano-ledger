@@ -607,7 +607,7 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       , deltaROld = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2
       , rsOld = rs_
       , deltaFOld = invert (toDeltaCoin $ ssFee ss)
-      , nonMyopicOld = updateNonMyopic nm _R newLikelihoods
+      , nonMyopicOld = updateNonMyopic nm _R $ VMap.fromMap newLikelihoods
       }
 
 overrideProtocolVersionUsedInRewardCalc ::
@@ -804,7 +804,7 @@ mkRewardAns
           { fvAddrsRew = addrsRew
           , fvTotalStake = totalStake
           , fvPoolRewardInfo =
-              VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') stakePools
+              VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') stakePools
           , fvDelegs = delegs
           , fvProtVer = pp ^. ppProtocolVersionL
           }
@@ -823,7 +823,7 @@ mkSnapShot activeStake delegs stakePools =
     , ssTotalActiveStake = totalActiveStake
     , ssDelegations = delegs
     , ssPoolParams = stakePools
-    , ssStakePoolsSnapShot = VMap.toMap $ VMap.map snapShotFromStakePoolParams stakePools
+    , ssStakePoolsSnapShot = VMap.map snapShotFromStakePoolParams stakePools
     }
   where
     snapShotFromStakePoolParams stakePoolParams =

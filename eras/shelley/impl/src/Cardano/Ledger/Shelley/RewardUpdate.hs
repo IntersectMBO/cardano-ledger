@@ -163,7 +163,7 @@ data RewardSnapShot = RewardSnapShot
   , rewDeltaR1 :: !Coin -- deltaR1
   , rewR :: !Coin -- r
   , rewDeltaT1 :: !Coin -- deltaT1
-  , rewLikelihoods :: !(Map (KeyHash StakePool) Likelihood)
+  , rewLikelihoods :: !(VMap VB VB (KeyHash StakePool) Likelihood)
   , rewLeaders :: !(Map (Credential Staking) (Set Reward))
   }
   deriving (Show, Eq, Generic)
@@ -210,7 +210,7 @@ data FreeVars = FreeVars
   , fvAddrsRew :: !(Set (Credential Staking))
   , fvTotalStake :: !Coin
   , fvProtVer :: !ProtVer
-  , fvPoolRewardInfo :: !(Map (KeyHash StakePool) PoolRewardInfo)
+  , fvPoolRewardInfo :: !(VMap VB VB (KeyHash StakePool) PoolRewardInfo)
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
@@ -265,7 +265,7 @@ rewardStakePoolMember freeVars inputAnswer@(RewardAns accum recent) cred c =
           , fvProtVer
           } = freeVars
     poolId <- VMap.lookup cred fvDelegs
-    poolRI <- Map.lookup poolId fvPoolRewardInfo
+    poolRI <- VMap.lookup poolId fvPoolRewardInfo
     r <- rewardOnePoolMember fvProtVer fvTotalStake fvAddrsRew poolRI cred (fromCompact c)
     let ans = Reward MemberReward poolId r
     -- There is always just 1 member reward, so Set.singleton is appropriate

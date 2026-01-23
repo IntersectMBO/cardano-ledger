@@ -229,14 +229,14 @@ instance DecCBOR PerformanceEstimate where
   decCBOR = PerformanceEstimate <$> decodeDouble
 
 data NonMyopic = NonMyopic
-  { likelihoodsNM :: !(Map (KeyHash StakePool) Likelihood)
+  { likelihoodsNM :: !(VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) Likelihood)
   , rewardPotNM :: !Coin
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs NonMyopic
 
 instance Default NonMyopic where
-  def = NonMyopic Map.empty (Coin 0)
+  def = NonMyopic VMap.empty (Coin 0)
 
 instance NoThunks NonMyopic
 

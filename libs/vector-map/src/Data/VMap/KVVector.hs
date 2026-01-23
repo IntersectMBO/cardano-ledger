@@ -110,7 +110,7 @@ fromDistinctAscList xs = VG.fromListN (Prelude.length xs) xs
 -- vector does not provide
 {-# INLINE fromDistinctAscList #-}
 
--- | Convert a sorted assoc list with distionct keys into a KVVector. Length
+-- | Convert a sorted assoc list with distinct keys into a KVVector. Length
 -- must be supplied.
 fromDistinctAscListN ::
   (VG.Vector kv k, VG.Vector vv v) =>

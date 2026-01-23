@@ -172,7 +172,7 @@ dPStateZero =
     & certDStateL .~ dStateZero
 
 nonMyopicZero :: NonMyopic
-nonMyopicZero = NonMyopic Map.empty mempty
+nonMyopicZero = NonMyopic mempty mempty
 
 uTxOStateZero :: forall era. Reflect era => UTxOState era
 uTxOStateZero =

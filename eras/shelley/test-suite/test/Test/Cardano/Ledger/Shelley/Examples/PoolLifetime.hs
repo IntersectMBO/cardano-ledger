@@ -84,6 +84,7 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
 import GHC.Exts (fromList)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
@@ -713,7 +714,7 @@ alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
 nonMyopicEx8 :: NonMyopic
 nonMyopicEx8 =
   NonMyopic
-    (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx8)
+    (VMap.fromMap (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx8))
     rewardPot8
 
 pulserEx8 :: PulsingRewUpdate
@@ -948,7 +949,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
 nonMyopicEx11 :: NonMyopic
 nonMyopicEx11 =
   NonMyopic
-    (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx11)
+    (VMap.fromMap (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx11))
     (Coin 0)
 
 pulserEx11 :: PulsingRewUpdate

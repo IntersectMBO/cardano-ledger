@@ -247,11 +247,12 @@ getNonMyopicMemberRewards globals ss = Map.fromSet nmmRewards
         hitRateEst = percentile' (histLookup poolId)
         sigma = toShare (fromCompact (spssStake spss))
 
-    nmmRewards cred = Map.mapWithKey (calcNMMRewards $ memShare cred) stakePoolsSnapShot
-    histLookup k = Map.findWithDefault mempty k ls
+    nmmRewards cred = VMap.toMap $ VMap.mapWithKey (calcNMMRewards $ memShare cred) stakePoolsSnapShot
+    histLookup k = VMap.findWithDefault mempty k ls
     topPools =
       getTopRankedPools rPot totalStakeCoin pp $
-        Map.intersectionWith (,) (Map.map percentile' ls) stakePoolsSnapShot
+        Map.intersectionWith (,) (VMap.toMap (VMap.map percentile' ls)) $
+          VMap.toMap stakePoolsSnapShot
 
 -- | Create a current snapshot of the ledger state.
 --
@@ -330,7 +331,7 @@ getRewardInfoPools ::
   NewEpochState era ->
   (RewardParams, Map (KeyHash StakePool) RewardInfoPool)
 getRewardInfoPools globals nes =
-  (rewardParams, Map.mapWithKey mkRewardInfoPool ssStakePoolsSnapShot)
+  (rewardParams, VMap.toMap $ VMap.mapWithKey mkRewardInfoPool ssStakePoolsSnapShot)
   where
     es = nesEs nes
     pp = es ^. curPParamsEpochStateL
@@ -338,7 +339,7 @@ getRewardInfoPools globals nes =
       { likelihoodsNM = ls
       , rewardPotNM = rPot
       } = esNonMyopic es
-    histLookup poolId = Map.findWithDefault mempty poolId ls
+    histLookup poolId = VMap.findWithDefault mempty poolId ls
     network = networkId globals
 
     EB.SnapShot {ssStakePoolsSnapShot} = currentSnapshot nes network

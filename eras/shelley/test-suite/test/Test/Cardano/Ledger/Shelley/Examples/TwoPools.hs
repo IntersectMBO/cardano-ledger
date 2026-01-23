@@ -98,6 +98,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
@@ -687,7 +688,7 @@ bobPerfEx9 = likelihood blocks t (epochSize $ EpochNo 3)
 nonMyopicEx9 :: NonMyopic
 nonMyopicEx9 =
   NonMyopic
-    ( Map.fromList
+    ( VMap.fromList
         [ (aikColdKeyHash Cast.alicePoolKeys, alicePerfEx9)
         , (aikColdKeyHash Cast.bobPoolKeys, bobPerfEx9)
         ]

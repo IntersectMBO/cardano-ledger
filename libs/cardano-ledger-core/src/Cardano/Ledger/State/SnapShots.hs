@@ -62,8 +62,8 @@ import Cardano.Ledger.Binary (
   Interns,
   decNoShareCBOR,
   decSharePlusLensCBOR,
-  decodeMap,
   decodeRecordNamedT,
+  decodeVMap,
   encodeListLen,
   toMemptyLens,
  )
@@ -292,7 +292,7 @@ data SnapShot = SnapShot
   -- blocks.
   , ssDelegations :: VMap VB VB (Credential Staking) (KeyHash StakePool) -- TODO: remove (lazy on purpose)
   , ssPoolParams :: VMap VB VB (KeyHash StakePool) StakePoolParams -- TODO: remove (lazy on purpose)
-  , ssStakePoolsSnapShot :: !(Map (KeyHash StakePool) StakePoolSnapShot)
+  , ssStakePoolsSnapShot :: !(VMap VB VB (KeyHash StakePool) StakePoolSnapShot)
   -- ^ Snapshot of stake pools' information that is relevant only for the reward calculation logic.
   }
   deriving (Show, Eq, Generic)
@@ -322,7 +322,7 @@ instance DecShareCBOR SnapShot where
     ssPoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     (stakeCredInterns, stakePoolIdInterns) <- get
     ssStakePoolsSnapShot <-
-      lift $ decodeMap (interns stakePoolIdInterns <$> decCBOR) (decShareCBOR stakeCredInterns)
+      lift $ decodeVMap (interns stakePoolIdInterns <$> decCBOR) (decShareCBOR stakeCredInterns)
     pure SnapShot {..}
 
 instance ToKeyValuePairs SnapShot where
@@ -433,7 +433,8 @@ snapShotFromInstantStake instantStake dState PState {psStakePools} network =
         [ (poolId, stakePoolStateToStakePoolParams poolId network ps)
         | (poolId, ps) <- Map.toAscList psStakePools
         ]
-    stakePoolsSnapShot = Map.map (mkStakePoolSnapShot activeStake totalActiveStake) psStakePools
+    stakePoolsSnapShot =
+      VMap.map (mkStakePoolSnapShot activeStake totalActiveStake) $ VMap.fromMap psStakePools
     activeStake = resolveInstantStake instantStake accounts
     totalActiveStake = sumAllStake activeStake `nonZeroOr` knownNonZeroCoin @1
     accounts = dsAccounts dState
@@ -505,7 +506,7 @@ calculatePoolDistr' includeHash (SnapShot stake activeStake delegs poolParams st
             }
       poolDistr =
         PoolDistr
-          { unPoolDistr = Map.mapMaybeWithKey toIndividualPoolStake stakePoolSnapShot
+          { unPoolDistr = VMap.toMap $ VMap.mapMaybeWithKey toIndividualPoolStake stakePoolSnapShot
           , pdTotalActiveStake = activeStake
           }
       showFailure =

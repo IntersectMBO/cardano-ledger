@@ -513,7 +513,7 @@ snapShotSpec =
         , assert $ totalActiveStake ==. lit (knownNonZeroCoin @1)
         , assert $ delegs ==. lit VMap.empty
         , assert $ poolparams ==. lit VMap.empty
-        , assert $ pools ==. lit Map.empty
+        , assert $ pools ==. lit VMap.empty
         ]
 
 snapShotsSpec ::
@@ -560,7 +560,7 @@ epochStateSpec pp univ certctx epoch =
       [ dependsOn eLedgerState acctst
       , satisfies eLedgerState (ledgerStateSpec pp univ certctx epoch)
       , reify eLedgerState getMarkSnapShot $ \ [var|marksnap|] -> satisfies snaps (snapShotsSpec marksnap)
-      , match nonmyopic $ \ [var|x|] [var|c|] -> [genHint 0 x, assert $ c ==. lit (Coin 0)]
+      , match nonmyopic $ \ [var|x|] [var|c|] -> [assert $ x ==. lit mempty, assert $ c ==. lit (Coin 0)]
       ]
 
 getPoolDistr :: forall era. EpochState era -> PoolDistr

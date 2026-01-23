@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Change `updateNonMyopic`, `likelihoodsNM`, `rewLikelihoods` and `fvPoolRewardInfo` to use `VMap`
 * Add `calcNonMyopicMemberReward` and deprecate `nonMyopicMemberRew` in its favor.
 * Add `calcStakePoolDesirability` and deprecate `desirability` in its favor.
 * Change type signature of `mkPoolRewardInfo`, `getTopRankedPools`
