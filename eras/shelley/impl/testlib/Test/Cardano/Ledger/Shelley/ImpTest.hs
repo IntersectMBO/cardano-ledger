@@ -84,17 +84,17 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   tryRunImpRule,
   tryRunImpRuleNoAssertions,
   delegateStake,
-  registerRewardAccount,
+  registerAccountAddress,
   registerStakeCredential,
   expectNotDelegatedToAnyPool,
   expectNotDelegatedToPool,
   expectStakeCredRegistered,
   expectStakeCredNotRegistered,
   expectDelegatedToPool,
-  getRewardAccountFor,
+  getAccountAddressFor,
   freshPoolParams,
   registerPool,
-  registerPoolWithRewardAccount,
+  registerPoolWithAccountAddress,
   registerAndRetirePoolToMakeReward,
   getBalance,
   lookupBalance,
@@ -107,7 +107,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   sendCoinTo,
   sendCoinTo_,
   expectUTxOContent,
-  expectRegisteredRewardAddress,
+  expectRegisteredAccountAddress,
   expectNotRegisteredRewardAddress,
   expectTreasury,
   disableTreasuryExpansion,
@@ -179,9 +179,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron (empty)
 import Cardano.Ledger.Address (
+  AccountAddress (..),
+  AccountId (..),
   Addr (..),
   BootstrapAddress (..),
-  RewardAccount (..),
   bootstrapKeyHash,
  )
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
@@ -983,13 +984,13 @@ lookupBalance cred = do
       <$> Map.lookup cred accountsMap
 
 lookupAccountBalance ::
-  (HasCallStack, EraCertState era) => RewardAccount -> ImpTestM era (Maybe Coin)
-lookupAccountBalance ra@RewardAccount {raNetwork, raCredential} = do
+  (HasCallStack, EraCertState era) => AccountAddress -> ImpTestM era (Maybe Coin)
+lookupAccountBalance ra@(AccountAddress aaNetId (AccountId aaCred)) = do
   networkId <- use (impGlobalsL . to networkId)
-  when (raNetwork /= networkId) $
+  when (aaNetId /= networkId) $
     error $
-      "Reward Account with an unexpected NetworkId: " ++ show ra
-  lookupBalance raCredential
+      "Account address with an unexpected NetworkId: " ++ show ra
+  lookupBalance aaCred
 
 getBalance :: (HasCallStack, EraCertState era) => Credential Staking -> ImpTestM era Coin
 getBalance cred =
@@ -998,17 +999,17 @@ getBalance cred =
       assertFailure $
         "Expected a registered account: "
           ++ show cred
-          ++ ". Use `registerRewardAccount` to register a new account in ImpSpec"
+          ++ ". Use `registerAccountAddress` to register a new account in ImpSpec"
     Just balance -> pure balance
 
-getAccountBalance :: (HasCallStack, EraCertState era) => RewardAccount -> ImpTestM era Coin
+getAccountBalance :: (HasCallStack, EraCertState era) => AccountAddress -> ImpTestM era Coin
 getAccountBalance ra =
   lookupAccountBalance ra >>= \case
     Nothing ->
       assertFailure $
         "Expected a registered account: "
           ++ show ra
-          ++ ". Use `registerRewardAccount` to register a new account in ImpSpec"
+          ++ ". Use `registerAccountAddress` to register a new account in ImpSpec"
     Just balance -> pure balance
 
 getImpRootTxOut :: ImpTestM era (TxIn, TxOut era)
@@ -1844,12 +1845,12 @@ submitTxAnn_ ::
   (HasCallStack, ShelleyEraImp era) => String -> Tx TopTx era -> ImpTestM era ()
 submitTxAnn_ msg = void . submitTxAnn msg
 
-getRewardAccountFor ::
+getAccountAddressFor ::
   Credential Staking ->
-  ImpTestM era RewardAccount
-getRewardAccountFor stakingC = do
+  ImpTestM era AccountAddress
+getAccountAddressFor stakingC = do
   networkId <- use (impGlobalsL . to networkId)
-  pure $ RewardAccount networkId stakingC
+  pure $ AccountAddress networkId (AccountId stakingC)
 
 registerStakeCredential ::
   forall era.
@@ -1857,15 +1858,15 @@ registerStakeCredential ::
   , ShelleyEraImp era
   ) =>
   Credential Staking ->
-  ImpTestM era RewardAccount
+  ImpTestM era AccountAddress
 registerStakeCredential cred = do
   regTxCert <- genRegTxCert cred
-  submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
+  submitTxAnn_ ("Register Staking Address: " <> T.unpack (credToText cred)) $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList [regTxCert]
   networkId <- use (impGlobalsL . to networkId)
-  pure $ RewardAccount networkId cred
+  pure $ AccountAddress networkId (AccountId cred)
 
 delegateStake ::
   ShelleyEraImp era =>
@@ -1949,20 +1950,20 @@ expectNotDelegatedToPool cred pool = do
       ("Expected stake pool state delegation to not contain the stake credential: " <> show cred)
       (maybe True (Set.notMember cred . spsDelegators) (Map.lookup pool pools))
 
-registerRewardAccount ::
+registerAccountAddress ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
   ) =>
-  ImpTestM era RewardAccount
-registerRewardAccount = freshKeyHash >>= registerStakeCredential . KeyHashObj
+  ImpTestM era AccountAddress
+registerAccountAddress = freshKeyHash >>= registerStakeCredential . KeyHashObj
 
 freshPoolParams ::
   ShelleyEraImp era =>
   KeyHash StakePool ->
-  RewardAccount ->
+  AccountAddress ->
   ImpTestM era StakePoolParams
-freshPoolParams khPool rewardAccount = do
+freshPoolParams khPool accountAddress = do
   vrfHash <- freshKeyHashVRF
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let minCost = pp ^. ppMinPoolCostL
@@ -1971,7 +1972,7 @@ freshPoolParams khPool rewardAccount = do
   pure
     StakePoolParams
       { sppVrf = vrfHash
-      , sppRewardAccount = rewardAccount
+      , sppAccountAddress = accountAddress
       , sppRelays = mempty
       , sppPledge = pledge
       , sppOwners = mempty
@@ -1985,15 +1986,15 @@ registerPool ::
   ShelleyEraImp era =>
   KeyHash StakePool ->
   ImpTestM era ()
-registerPool khPool = registerRewardAccount >>= registerPoolWithRewardAccount khPool
+registerPool khPool = registerAccountAddress >>= registerPoolWithAccountAddress khPool
 
-registerPoolWithRewardAccount ::
+registerPoolWithAccountAddress ::
   ShelleyEraImp era =>
   KeyHash StakePool ->
-  RewardAccount ->
+  AccountAddress ->
   ImpTestM era ()
-registerPoolWithRewardAccount khPool rewardAccount = do
-  pps <- freshPoolParams khPool rewardAccount
+registerPoolWithAccountAddress khPool accountAddress = do
+  pps <- freshPoolParams khPool accountAddress
   submitTxAnn_ "Registering a new stake pool" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)
@@ -2004,7 +2005,7 @@ registerAndRetirePoolToMakeReward ::
   ImpTestM era ()
 registerAndRetirePoolToMakeReward stakingCred = do
   poolId <- freshKeyHash
-  registerPoolWithRewardAccount poolId =<< getRewardAccountFor stakingCred
+  registerPoolWithAccountAddress poolId =<< getAccountAddressFor stakingCred
   passEpoch
   curEpochNo <- getsNES nesELL
   let poolLifetime = 2
@@ -2057,26 +2058,26 @@ expectUTxOContent utxo = traverse_ $ \(txIn, test) -> do
     expectationFailure $
       "UTxO content failed predicate:\n" <> ansiExprString txIn <> " -> " <> ansiExprString result
 
-expectRegisteredRewardAddress ::
-  (HasCallStack, EraCertState era) => RewardAccount -> ImpTestM era ()
-expectRegisteredRewardAddress ra@RewardAccount {raNetwork, raCredential} = do
+expectRegisteredAccountAddress ::
+  (HasCallStack, EraCertState era) => AccountAddress -> ImpTestM era ()
+expectRegisteredAccountAddress ra@(AccountAddress aaNetId (AccountId aaCred)) = do
   networkId <- use (impGlobalsL . to networkId)
-  unless (raNetwork == networkId) $
+  unless (aaNetId == networkId) $
     assertFailure $
-      "Reward Account with an unexpected NetworkId: " ++ show ra
+      "Account address with an unexpected NetworkId: " ++ show ra
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-  unless (isAccountRegistered raCredential accounts) $
+  unless (isAccountRegistered aaCred accounts) $
     assertFailure $
       "Expected account "
         ++ show ra
         ++ " to be registered, but it is not."
 
 expectNotRegisteredRewardAddress ::
-  (HasCallStack, EraCertState era) => RewardAccount -> ImpTestM era ()
-expectNotRegisteredRewardAddress ra@RewardAccount {raNetwork, raCredential} = do
+  (HasCallStack, EraCertState era) => AccountAddress -> ImpTestM era ()
+expectNotRegisteredRewardAddress ra@(AccountAddress aaNetId (AccountId credential)) = do
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
   networkId <- use (impGlobalsL . to networkId)
-  when (raNetwork == networkId && isAccountRegistered raCredential accounts) $
+  when (aaNetId == networkId && isAccountRegistered credential accounts) $
     assertFailure $
       "Expected account "
         ++ show ra

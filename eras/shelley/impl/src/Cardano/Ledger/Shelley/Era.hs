@@ -31,7 +31,7 @@ module Cardano.Ledger.Shelley.Era (
   ShelleyUTXOW,
   hardforkAllegraAggregatedRewards,
   hardforkAlonzoAllowMIRTransfer,
-  hardforkAlonzoValidatePoolRewardAccountNetID,
+  hardforkAlonzoValidatePoolAccountAddressNetID,
   hardforkBabbageForgoRewardPrefilter,
   hardforkConwayDisallowDuplicatedVRFKeys,
 ) where
@@ -142,11 +142,11 @@ hardforkAlonzoAllowMIRTransfer ::
 hardforkAlonzoAllowMIRTransfer pv = pvMajor pv > natVersion @4
 
 -- | Starting with protocol version 5, we will validate the network ID
--- for the reward account listed in stake pool registration certificates.
-hardforkAlonzoValidatePoolRewardAccountNetID ::
+-- for the account address listed in stake pool registration certificates.
+hardforkAlonzoValidatePoolAccountAddressNetID ::
   ProtVer ->
   Bool
-hardforkAlonzoValidatePoolRewardAccountNetID pv = pvMajor pv > natVersion @4
+hardforkAlonzoValidatePoolAccountAddressNetID pv = pvMajor pv > natVersion @4
 
 -- | Starting with protocol version 7, the reward calculation no longer
 -- filters out unregistered stake addresses at the moment the calculation begins.

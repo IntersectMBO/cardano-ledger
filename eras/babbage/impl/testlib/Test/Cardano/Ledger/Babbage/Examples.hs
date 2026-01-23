@@ -27,10 +27,11 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
+  AccountAddress (..),
+  AccountId (..),
   Network (..),
   NewEpochState (..),
   ProposedPPUpdates (..),
-  RewardAccount (..),
   TxId (..),
   Update (..),
  )
@@ -115,7 +116,7 @@ exampleTxBodyBabbage =
     exampleCerts
     ( Withdrawals $
         Map.singleton
-          (RewardAccount Testnet (keyToCredential exampleStakeKey))
+          (AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey)))
           (Coin 100)
     )
     (Coin 999) -- txfee

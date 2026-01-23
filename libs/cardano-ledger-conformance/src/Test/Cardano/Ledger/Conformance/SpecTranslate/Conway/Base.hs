@@ -23,7 +23,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   SpecTranslate (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Allegra.Scripts (
   Timelock,
   pattern RequireTimeExpire,
@@ -333,7 +333,7 @@ instance SpecTranslate ctx StakePoolParams where
       <*> toSpecRep sppCost
       <*> toSpecRep sppMargin
       <*> toSpecRep sppPledge
-      <*> toSpecRep (raCredential sppRewardAccount)
+      <*> toSpecRep (sppAccountAddress ^. accountAddressCredentialL)
 
 instance SpecTranslate ctx DRep where
   type SpecRep DRep = Agda.VDeleg

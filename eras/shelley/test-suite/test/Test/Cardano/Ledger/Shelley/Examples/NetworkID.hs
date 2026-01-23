@@ -8,9 +8,10 @@ module Test.Cardano.Ledger.Shelley.Examples.NetworkID (
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
+  AccountAddress (..),
+  AccountId (..),
   Network (..),
   PoolEnv (..),
-  RewardAccount (..),
   ShelleyPOOL,
   StakePoolParams (..),
  )
@@ -56,13 +57,13 @@ testPoolNetworkID pv stakePoolParams e = do
 
 matchingNetworkIDPoolParams :: StakePoolParams
 matchingNetworkIDPoolParams =
-  Cast.aliceStakePoolParams {sppRewardAccount = RewardAccount Testnet Cast.aliceSHK}
+  Cast.aliceStakePoolParams {sppAccountAddress = AccountAddress Testnet (AccountId Cast.aliceSHK)}
 
 -- test globals use Testnet
 
 mismatchingNetworkIDPoolParams :: StakePoolParams
 mismatchingNetworkIDPoolParams =
-  Cast.aliceStakePoolParams {sppRewardAccount = RewardAccount Mainnet Cast.aliceSHK}
+  Cast.aliceStakePoolParams {sppAccountAddress = AccountAddress Mainnet (AccountId Cast.aliceSHK)}
 
 -- test globals use Testnet
 

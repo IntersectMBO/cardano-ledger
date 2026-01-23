@@ -36,12 +36,19 @@ module Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   ShelleyTxBodyRaw (..),
   EraIndependentTxBody,
-  RewardAccount (..),
+  AccountAddress (..),
+  AccountId (..),
+  pattern RewardAccount,
   Withdrawals (..),
   getShelleyGenesisKeyHashCountTxBody,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
+import Cardano.Ledger.Address (
+  AccountAddress (..),
+  AccountId (..),
+  Withdrawals (..),
+  pattern RewardAccount,
+ )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
   Annotator,

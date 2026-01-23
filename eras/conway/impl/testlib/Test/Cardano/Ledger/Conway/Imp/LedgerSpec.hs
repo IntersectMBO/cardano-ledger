@@ -127,7 +127,7 @@ spec = do
   disableInConformanceIt "Withdraw and unregister staking credential in the same transaction" $ do
     refund <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
     (_, cred, _) <- setupSingleDRep 1_000_000
-    ra <- getRewardAccountFor cred
+    ra <- getAccountAddressFor cred
 
     Positive newDeposit <- arbitrary
     modifyPParams $ \pp ->
@@ -180,7 +180,7 @@ spec = do
         & ppGovActionLifetimeL .~ EpochInterval 4
         & ppDRepActivityL .~ EpochInterval 1
     (drep, cred, _) <- setupSingleDRep 1_000_000
-    ra <- getRewardAccountFor cred
+    ra <- getAccountAddressFor cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -293,8 +293,8 @@ spec = do
         mkBasicTx (mkBasicTxBody & proposalProceduresTxBodyL .~ [proposal])
       ccHot <- registerCommitteeHotKey ccCold
       govActionId <- do
-        rewardAccount <- registerRewardAccount
-        submitTreasuryWithdrawals [(rewardAccount, Coin 1)]
+        accountAddress <- registerAccountAddress
+        submitTreasuryWithdrawals [(accountAddress, Coin 1)]
 
       let
         tx =

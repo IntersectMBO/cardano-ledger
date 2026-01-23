@@ -217,7 +217,7 @@ transPlutusPurposeV1V2 proxy pv = \case
   DijkstraSpending txIn -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwaySpending txIn
   DijkstraMinting policyId -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayMinting policyId
   DijkstraCertifying txCert -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayCertifying txCert
-  DijkstraRewarding rewardAccount -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayRewarding rewardAccount
+  DijkstraRewarding accountAddress -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayRewarding accountAddress
   DijkstraVoting voting -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayVoting voting
   DijkstraProposing proposing -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayProposing proposing
   purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ inject purpose

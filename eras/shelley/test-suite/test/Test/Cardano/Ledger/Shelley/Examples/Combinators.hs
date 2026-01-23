@@ -42,7 +42,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
   adoptFutureGenDeleg,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Network,
@@ -377,7 +377,7 @@ reapPool pool cs = cs {chainNes = nes'}
         }
     pp = es ^. curPParamsEpochStateL
     ds = dps ^. certDStateL
-    RewardAccount _ poolAccountCred = sppRewardAccount pool
+    AccountAddress _ (AccountId poolAccountCred) = sppAccountAddress pool
     accounts = ds ^. accountsL
     (accounts', unclaimed) =
       case lookupAccountState poolAccountCred accounts of

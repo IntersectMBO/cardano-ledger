@@ -33,11 +33,12 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
+  AccountAddress (..),
+  AccountId (..),
   Credential (..),
   Network (..),
   NewEpochState (..),
   ProposedPPUpdates (..),
-  RewardAccount (..),
   TxId (..),
   Update (..),
  )
@@ -184,7 +185,7 @@ exampleTxBodyAlonzo =
     exampleCerts -- txcerts
     ( Withdrawals $
         Map.singleton
-          (RewardAccount Testnet (keyToCredential exampleStakeKey))
+          (AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey)))
           (Coin 100) -- txwdrls
     )
     (Coin 999) -- txfee

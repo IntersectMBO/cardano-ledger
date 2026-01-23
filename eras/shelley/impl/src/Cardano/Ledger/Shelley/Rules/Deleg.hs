@@ -94,7 +94,7 @@ data ShelleyDelegPredFailure era
   | StakeKeyNotRegisteredDELEG
       (Credential Staking) -- Credential which is not registered
   | StakeKeyNonZeroAccountBalanceDELEG
-      Coin -- The remaining reward account balance
+      Coin -- The remaining account address balance
   | StakeDelegationImpossibleDELEG
       (Credential Staking) -- Credential that is not registered
   | WrongCertificateTypeDELEG -- The TxCertPool constructor should not be used by this transition

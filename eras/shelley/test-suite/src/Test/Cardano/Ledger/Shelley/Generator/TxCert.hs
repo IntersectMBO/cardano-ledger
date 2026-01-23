@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Shelley.Generator.TxCert (
   CertCred (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley (hardforkAlonzoAllowMIRTransfer)
@@ -347,7 +347,7 @@ genStakePool ::
   Crypto c =>
   -- | Available keys for stake pool registration
   [AllIssuerKeys c StakePool] ->
-  -- | KeyPairs containing staking keys to act as owners/reward account
+  -- | KeyPairs containing staking keys to act as owners/account address
   KeyPairs ->
   -- | Minimum pool cost Protocol Param
   Coin ->
@@ -383,7 +383,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
               pledge
               cost
               interval
-              (RewardAccount Testnet $ KeyHashObj $ hashKey acntKey)
+              (AccountAddress Testnet $ AccountId $ KeyHashObj $ hashKey acntKey)
               Set.empty
               StrictSeq.empty
               SNothing

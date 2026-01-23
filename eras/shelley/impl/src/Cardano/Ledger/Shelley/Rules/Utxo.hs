@@ -42,9 +42,9 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
 
 import Cardano.Ledger.Address (
   Addr (..),
+  aaNetworkId,
   bootstrapAddressAttrsSize,
   getNetwork,
-  raNetwork,
  )
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -70,7 +70,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (
   ShelleyPpupPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
-import Cardano.Ledger.Shelley.TxBody (RewardAccount)
+import Cardano.Ledger.Shelley.TxBody (AccountAddress)
 import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.State
@@ -186,7 +186,7 @@ data ShelleyUtxoPredFailure era
       (NonEmptySet Addr) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       Network -- the expected network id
-      (NonEmptySet RewardAccount) -- the set of reward addresses with incorrect network IDs
+      (NonEmptySet AccountAddress) -- the set of account addresses with incorrect network IDs
   | OutputTooSmallUTxO
       (NonEmpty (TxOut era)) -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
@@ -508,7 +508,7 @@ validateWrongNetworkWithdrawal netId txb =
   where
     withdrawalsWrongNetwork =
       filter
-        (\a -> raNetwork a /= netId)
+        (\a -> aaNetworkId a /= netId)
         (Map.keys . unWithdrawals $ txb ^. withdrawalsTxBodyL)
 
 -- | Ensure that value consumed and produced matches up exactly

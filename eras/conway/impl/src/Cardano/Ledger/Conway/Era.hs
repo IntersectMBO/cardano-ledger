@@ -194,7 +194,7 @@ hardforkConwayDELEGIncorrectDepositsAndRefunds pv = pvMajor pv > natVersion @10
 --
 -- NOTE: In addition, we split the predicate check for withdrawals into two to
 -- make it better: both invalid withdrawals (submitted in the wrong network or
--- with missing reward accounts) and incomplete withdrawals were being reported
+-- with missing account addresss) and incomplete withdrawals were being reported
 -- with WithdrawalsNotInRewardsCERTS but now ConwayWithdrawalsMissingAccounts and
 -- ConwayIncompleteWithdrawals are the new predicate failures we use to report
 -- the two separate cases in LEDGER

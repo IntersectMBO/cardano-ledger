@@ -70,9 +70,9 @@ poolCertSpec univ (PoolEnv e pp) ps =
     (caseOn pc)
       -- RegPool !(PoolParams c)
       ( branchW 1 $ \poolParams ->
-          match poolParams $ \_ _ _ cost _ rewAccnt _ _ mMetadata ->
+          match poolParams $ \_ _ _ cost _ accountAddr _ _ mMetadata ->
             [ witness univ poolParams
-            , match rewAccnt $ \net' _ ->
+            , match accountAddr $ \net' _ ->
                 net' ==. lit Testnet
             , onJust' mMetadata $ \metadata ->
                 match metadata $ \_ hashstr -> strLen_ hashstr <=. lit (maxMetaLen - 1)

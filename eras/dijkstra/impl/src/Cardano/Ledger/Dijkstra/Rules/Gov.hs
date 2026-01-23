@@ -24,7 +24,7 @@ module Cardano.Ledger.Dijkstra.Rules.Gov (
   conwayToDijkstraGovPredFailure,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Mismatch (..),
@@ -84,8 +84,8 @@ import NoThunks.Class (NoThunks (..))
 data DijkstraGovPredFailure era
   = GovActionsDoNotExist (NonEmpty GovActionId)
   | MalformedProposal (GovAction era)
-  | ProposalProcedureNetworkIdMismatch RewardAccount Network
-  | TreasuryWithdrawalsNetworkIdMismatch (NonEmptySet RewardAccount) Network
+  | ProposalProcedureNetworkIdMismatch AccountAddress Network
+  | TreasuryWithdrawalsNetworkIdMismatch (NonEmptySet AccountAddress) Network
   | ProposalDepositIncorrect (Mismatch RelEQ Coin)
   | -- | Some governance actions are not allowed to be voted on by certain types of
     -- Voters. This failure lists all governance action ids with their respective voters
@@ -116,10 +116,10 @@ data DijkstraGovPredFailure era
     VotersDoNotExist (NonEmpty Voter)
   | -- | Treasury withdrawals that sum up to zero are not allowed
     ZeroTreasuryWithdrawals (GovAction era)
-  | -- | Proposals that have an invalid reward account for returns of the deposit
-    ProposalReturnAccountDoesNotExist RewardAccount
-  | -- | Treasury withdrawal proposals to an invalid reward account
-    TreasuryWithdrawalReturnAccountsDoNotExist (NonEmpty RewardAccount)
+  | -- | Proposals that have an invalid account address for returns of the deposit
+    ProposalReturnAccountDoesNotExist AccountAddress
+  | -- | Treasury withdrawal proposals to an invalid account address
+    TreasuryWithdrawalReturnAccountsDoNotExist (NonEmpty AccountAddress)
   | -- | Disallow votes by unelected committee members
     UnelectedCommitteeVoters (NonEmpty (Credential HotCommitteeRole))
   deriving (Eq, Show, Generic)

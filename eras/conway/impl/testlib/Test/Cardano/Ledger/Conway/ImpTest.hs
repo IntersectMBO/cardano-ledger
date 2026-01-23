@@ -39,7 +39,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   trySubmitProposals,
   mkConstitutionProposal,
   mkProposal,
-  mkProposalWithRewardAccount,
+  mkProposalWithAccountAddress,
   mkTreasuryWithdrawalsGovAction,
   submitTreasuryWithdrawals,
   submitVote,
@@ -138,7 +138,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   conwayDelegStakeTxCert,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -758,7 +758,7 @@ submitAndExpireProposalToMakeReward ::
   Credential Staking ->
   ImpTestM era ()
 submitAndExpireProposalToMakeReward stakingC = do
-  rewardAccount <- getRewardAccountFor stakingC
+  accountAddress <- getAccountAddressFor stakingC
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let
     EpochInterval lifetime = pp ^. ppGovActionLifetimeL
@@ -767,7 +767,7 @@ submitAndExpireProposalToMakeReward stakingC = do
     submitProposal $
       ProposalProcedure
         { pProcDeposit = deposit
-        , pProcReturnAddr = rewardAccount
+        , pProcReturnAddr = accountAddress
         , pProcGovAction = InfoAction
         , pProcAnchor = def
         }
@@ -785,18 +785,18 @@ trySubmitGovActions gas = do
   proposals <- traverse mkProposal gas
   trySubmitProposals proposals
 
-mkProposalWithRewardAccount ::
+mkProposalWithAccountAddress ::
   (ShelleyEraImp era, ConwayEraTxBody era) =>
   GovAction era ->
-  RewardAccount ->
+  AccountAddress ->
   ImpTestM era (ProposalProcedure era)
-mkProposalWithRewardAccount ga rewardAccount = do
+mkProposalWithAccountAddress ga accountAddress = do
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
   anchor <- arbitrary
   pure
     ProposalProcedure
       { pProcDeposit = deposit
-      , pProcReturnAddr = rewardAccount
+      , pProcReturnAddr = accountAddress
       , pProcGovAction = ga
       , pProcAnchor = anchor
       }
@@ -806,8 +806,8 @@ mkProposal ::
   GovAction era ->
   ImpTestM era (ProposalProcedure era)
 mkProposal ga = do
-  rewardAccount <- registerRewardAccount
-  mkProposalWithRewardAccount ga rewardAccount
+  accountAddress <- registerAccountAddress
+  mkProposalWithAccountAddress ga accountAddress
 
 submitGovAction ::
   forall era.
@@ -843,21 +843,21 @@ submitGovActions gas = do
 
 mkTreasuryWithdrawalsGovAction ::
   ConwayEraGov era =>
-  [(RewardAccount, Coin)] ->
+  [(AccountAddress, Coin)] ->
   ImpTestM era (GovAction era)
 mkTreasuryWithdrawalsGovAction wdrls =
   TreasuryWithdrawals (Map.fromList wdrls) <$> getGovPolicy
 
 submitTreasuryWithdrawals ::
   ConwayEraImp era =>
-  [(RewardAccount, Coin)] ->
+  [(AccountAddress, Coin)] ->
   ImpTestM era GovActionId
 submitTreasuryWithdrawals wdrls =
   mkTreasuryWithdrawalsGovAction wdrls >>= submitGovAction
 
 enactTreasuryWithdrawals ::
   ConwayEraImp era =>
-  [(RewardAccount, Coin)] ->
+  [(AccountAddress, Coin)] ->
   Credential DRepRole ->
   NonEmpty (Credential HotCommitteeRole) ->
   ImpTestM era GovActionId
@@ -1905,7 +1905,7 @@ delegateSPORewardAddressToDRep_ kh stake drep = do
   sps <- getRatifyEnv >>= expectJust . Map.lookup kh . reStakePools
   void $
     delegateToDRep
-      (spsRewardAccount sps)
+      (spsAccountAddress sps)
       stake
       drep
 
@@ -1922,7 +1922,7 @@ instance InjectRuleFailure "CERT" ShelleyDelegPredFailure ConwayEra where
 instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure ConwayEra where
   injectFailure (Shelley.StakeKeyAlreadyRegisteredDELEG c) = StakeKeyRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = StakeKeyNotRegisteredDELEG c
-  injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = StakeKeyHasNonZeroRewardAccountBalanceDELEG c
+  injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = StakeKeyHasNonZeroAccountBalanceDELEG c
   injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into ConwayEra"
 
 getCommittee :: ConwayEraGov era => ImpTestM era (StrictMaybe (Committee era))

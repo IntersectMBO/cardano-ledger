@@ -526,13 +526,13 @@ forceDRepPulsingState nes = nes & newEpochStateDRepPulsingStateL %~ completeDRep
 
 -- | Default vote that will be used for Stake Pool.
 data DefaultVote
-  = -- | Reward account is delegated to a @DRepKeyHash@, @DRepScriptHash@ or undelegated:
+  = -- | Account address is delegated to a @DRepKeyHash@, @DRepScriptHash@ or undelegated:
     --   default vote is @No@.
     DefaultNo
-  | -- | Reward account is delegated to @DRepAlwaysAbstain@:
+  | -- | Account address is delegated to @DRepAlwaysAbstain@:
     --   default vote is @Abstain@, except for @HardForkInitiation@ actions.
     DefaultAbstain
-  | -- | Reward account is delegated to @DRepAlwaysNoConfidence@:
+  | -- | Account address is delegated to @DRepAlwaysNoConfidence@:
     --   default vote is @Yes@ in case of a @NoConfidence@ action, otherwise @No@.
     DefaultNoConfidence
   deriving (Eq, Show)
@@ -567,7 +567,7 @@ defaultStakePoolVote ::
 defaultStakePoolVote poolId poolParams accounts =
   toDefaultVote $ do
     spp <- Map.lookup poolId poolParams
-    accountState <- Map.lookup (spsRewardAccount spp) (accounts ^. accountsMapL)
+    accountState <- Map.lookup (spsAccountAddress spp) (accounts ^. accountsMapL)
     accountState ^. dRepDelegationAccountStateL
   where
     toDefaultVote (Just DRepAlwaysAbstain) = DefaultAbstain

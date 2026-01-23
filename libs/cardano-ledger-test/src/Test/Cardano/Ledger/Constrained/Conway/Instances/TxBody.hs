@@ -12,7 +12,7 @@
 
 module Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.TxBody (TxBody (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -54,7 +54,7 @@ type ShelleyTxBodyTypes =
   '[ Set TxIn
    , [TxOut ShelleyEra]
    , [TxCert ShelleyEra]
-   , Map RewardAccount Coin
+   , Map AccountAddress Coin
    , Coin
    , SlotNo
    , Maybe (Update ShelleyEra)
@@ -102,7 +102,7 @@ type AllegraTxBodyTypes =
   '[ Set TxIn
    , [TxOut AllegraEra]
    , [TxCert AllegraEra]
-   , Map RewardAccount Coin
+   , Map AccountAddress Coin
    , Coin
    , ValidityInterval
    , Maybe (Update AllegraEra)
@@ -150,7 +150,7 @@ type MaryTxBodyTypes =
   '[ Set TxIn
    , [TxOut MaryEra]
    , [TxCert MaryEra]
-   , Map RewardAccount Coin
+   , Map AccountAddress Coin
    , Coin
    , ValidityInterval
    , Maybe (Update MaryEra)
@@ -202,7 +202,7 @@ type AlonzoTxBodyTypes =
    , Set TxIn
    , [TxOut AlonzoEra]
    , [TxCert AlonzoEra]
-   , Map RewardAccount Coin
+   , Map AccountAddress Coin
    , Coin
    , ValidityInterval
    , Maybe (Update AlonzoEra)
@@ -268,7 +268,7 @@ type BabbageTxBodyTypes =
    , Maybe (Sized (TxOut BabbageEra))
    , Maybe Coin
    , [TxCert BabbageEra]
-   , Map RewardAccount Coin -- Withdrawals without the newtype
+   , Map AccountAddress Coin -- Withdrawals without the newtype
    , Coin
    , ValidityInterval
    , Maybe (Update BabbageEra)

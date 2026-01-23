@@ -127,7 +127,7 @@ instance InjectRuleFailure "CERT" ShelleyDelegPredFailure DijkstraEra where
 instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure DijkstraEra where
   injectFailure (Shelley.StakeKeyAlreadyRegisteredDELEG c) = StakeKeyRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = StakeKeyNotRegisteredDELEG c
-  injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = StakeKeyHasNonZeroRewardAccountBalanceDELEG c
+  injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = StakeKeyHasNonZeroAccountBalanceDELEG c
   injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into DijkstraEra"
 
 exampleDijkstraGenesis :: DijkstraGenesis

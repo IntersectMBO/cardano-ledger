@@ -12,7 +12,7 @@ module Cardano.Ledger.Shelley.Bench.Rewards (
   genChainInEpoch,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr (..))
 import Cardano.Ledger.BaseTypes (
   Globals (activeSlotCoeff, securityParameter),
   Network (Testnet),
@@ -145,7 +145,7 @@ genChainInEpoch epoch = do
                         , sppPledge = Coin 1
                         , sppCost = Coin 1
                         , sppMargin = minBound
-                        , sppRewardAccount = RewardAccount Testnet $ KeyHashObj owner
+                        , sppAccountAddress = AccountAddress Testnet $ AccountId $ KeyHashObj owner
                         , sppOwners = Set.singleton owner
                         , sppRelays = StrictSeq.empty
                         , sppMetadata = SNothing

@@ -1,8 +1,16 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Cardano.Ledger.Shelley.API.Types (
   module X,
 ) where
 
-import Cardano.Ledger.Address as X (Addr (..), RewardAccount (..), Withdrawals (..))
+import Cardano.Ledger.Address as X (
+  AccountAddress (..),
+  AccountId (..),
+  Addr (..),
+  Withdrawals (..),
+  pattern RewardAccount,
+ )
 import Cardano.Ledger.BHeaderView as X (isOverlaySlot)
 import Cardano.Ledger.BaseTypes as X (
   CertIx,

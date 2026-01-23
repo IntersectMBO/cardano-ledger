@@ -52,7 +52,7 @@ goldenTestJSON :: ToJSON a => a -> FilePath -> Assertion
 goldenTestJSON actual expectedFile =
   case eitherDecode' (encode actual) of
     Left err -> error err
-    Right (val :: Value) -> do
+    Right (val :: ShelleyGenesis) -> do
       expected <- either error id <$> eitherDecodeFileStrict expectedFile
       val @?= expected
 
@@ -256,7 +256,7 @@ exampleShelleyGenesis =
         , L.sppPledge = L.Coin 1
         , L.sppCost = L.Coin 5
         , L.sppMargin = unsafeBoundRational 0.25
-        , L.sppRewardAccount = L.RewardAccount L.Testnet Cast.aliceSHK
+        , L.sppAccountAddress = L.AccountAddress L.Testnet (L.AccountId Cast.aliceSHK)
         , L.sppOwners = Set.singleton $ hashKey (vKey Cast.aliceStake)
         , L.sppRelays = relays
         , L.sppMetadata =

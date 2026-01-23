@@ -24,7 +24,7 @@ module Cardano.Ledger.Conway.Rules.Epoch (
   ConwayEpochEvent (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase)
 import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Compactible (fromCompact)
@@ -123,7 +123,7 @@ data ConwayEpochEvent era
       (Set (GovActionState era))
       -- | Actions that were removed due to expiration together with their dependees
       (Set (GovActionState era))
-      -- | Map of removed governance action ids that had an unregistered reward account to their unclaimed deposits so they can be transferred to the treasury.
+      -- | Map of removed governance action ids that had an unregistered account address to their unclaimed deposits so they can be transferred to the treasury.
       (Map.Map GovActionId Coin)
   | HardForkEvent (Event (EraRule "HARDFORK" era))
   deriving (Generic)
@@ -197,7 +197,7 @@ returnProposalDeposits removedProposals oldAccounts =
       | otherwise = (accounts, Map.insert (gasId gas) (gasDeposit gas) unclaimed)
       where
         addRefund = balanceAccountStateL <>~ compactCoinOrError (gasDeposit gas)
-        cred = raCredential (gasReturnAddr gas)
+        cred = gasReturnAddr gas ^. accountAddressCredentialL
 
 -- | When there have been zero governance proposals to vote on in the previous epoch
 -- increase the dormant-epoch counter by one.

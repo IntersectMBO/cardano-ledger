@@ -81,7 +81,7 @@ data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
   -- ^ Pre-images of script hashes found within the TxBody, but which are not
   -- required as witnesses. Examples include:
   -- - Token policy IDs appearing in transaction outputs
-  -- - Pool reward account registrations
+  -- - Pool account address registrations
   }
   deriving (Generic)
 

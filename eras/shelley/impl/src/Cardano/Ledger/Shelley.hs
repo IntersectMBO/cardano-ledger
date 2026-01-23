@@ -8,7 +8,7 @@ module Cardano.Ledger.Shelley (
   nativeMultiSigTag,
   hardforkAllegraAggregatedRewards,
   hardforkAlonzoAllowMIRTransfer,
-  hardforkAlonzoValidatePoolRewardAccountNetID,
+  hardforkAlonzoValidatePoolAccountAddressNetID,
   hardforkBabbageForgoRewardPrefilter,
 ) where
 
@@ -17,7 +17,7 @@ import Cardano.Ledger.Shelley.Era (
   ShelleyEra,
   hardforkAllegraAggregatedRewards,
   hardforkAlonzoAllowMIRTransfer,
-  hardforkAlonzoValidatePoolRewardAccountNetID,
+  hardforkAlonzoValidatePoolAccountAddressNetID,
   hardforkBabbageForgoRewardPrefilter,
  )
 import Cardano.Ledger.Shelley.Genesis ()

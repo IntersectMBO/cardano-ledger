@@ -23,7 +23,7 @@ module Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNkeysMpools, -- How to precompute env for the Stake Delegation transactions
 ) where
 
-import Cardano.Ledger.Address (Addr, RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   Network (..),
@@ -296,7 +296,7 @@ ledgerDeRegisterStakeKeys x y state =
 -- ===========================================================
 -- Reward Withdrawal example
 
--- Create a transaction body that withdrawals from reward accounts,
+-- Create a transaction body that withdrawals from account addresses,
 -- corresponding to the keys seeded with (RawSeed x 0 0 0 0) to (RawSeed y 0 0 0 0).
 txbWithdrawals :: Word64 -> Word64 -> TxBody TopTx ShelleyEra
 txbWithdrawals x y =
@@ -306,14 +306,14 @@ txbWithdrawals x y =
     StrictSeq.empty
     ( Withdrawals $
         Map.fromList $
-          fmap (\ks -> (RewardAccount Testnet (stakeKeyToCred ks), Coin 0)) (stakeKeys x y)
+          fmap (\ks -> (AccountAddress Testnet (AccountId (stakeKeyToCred ks)), Coin 0)) (stakeKeys x y)
     )
     (Coin 0)
     (SlotNo 10)
     SNothing
     SNothing
 
--- Create a transaction that withdrawals from a reward accounts.
+-- Create a transaction that withdrawals from a account addresses.
 -- It spends the genesis coin indexed by 1.
 txWithdrawals :: Word64 -> Word64 -> Tx TopTx ShelleyEra
 txWithdrawals x y =
@@ -358,7 +358,7 @@ mkStakePoolParams keys =
     , sppPledge = Coin 0
     , sppCost = Coin 0
     , sppMargin = unsafeBoundRational 0
-    , sppRewardAccount = RewardAccount Testnet firstStakeKeyCred
+    , sppAccountAddress = AccountAddress Testnet (AccountId firstStakeKeyCred)
     , sppOwners = Set.singleton $ hashKey (vKey stakeKeyOne)
     , sppRelays = StrictSeq.empty
     , sppMetadata = SNothing

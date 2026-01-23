@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Re-export `AccountAddress`, `AccountId`, and pattern synonym `RewardAccount` from `Cardano.Ledger.Address`
 * Move delegatee registration validation from `DELEGS` to `DELEG` rule:
   - Add `DelegateeNotRegisteredDELEG` to `ShelleyDelegPredFailure`
   - Remove `DelegateeNotRegisteredDELEG` from `ShelleyDelegsPredFailure`

@@ -11,7 +11,7 @@
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodingTests) where
 
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
@@ -253,7 +253,7 @@ goldenEncodingTestsAllegra =
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @AllegraEra testAddrE (Coin 2)
           reg = RegTxCert testStakeCred
-          ras = Map.singleton (RewardAccount Testnet (KeyHashObj testKeyHash)) (Coin 123)
+          ras = Map.singleton (AccountAddress Testnet (AccountId (KeyHashObj testKeyHash))) (Coin 123)
           up = testUpdate
           mdh = hashTxAuxData @AllegraEra $ AllegraTxAuxData Map.empty StrictSeq.empty
        in checkEncodingCBORAnnotated
@@ -409,7 +409,7 @@ goldenEncodingTestsMary =
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @MaryEra testAddrE (Val.inject $ Coin 2)
           reg = RegTxCert testStakeCred
-          ras = Map.singleton (RewardAccount Testnet (KeyHashObj testKeyHash)) (Coin 123)
+          ras = Map.singleton (AccountAddress Testnet (AccountId (KeyHashObj testKeyHash))) (Coin 123)
           up = testUpdate
           mdh = hashTxAuxData @AllegraEra $ AllegraTxAuxData Map.empty StrictSeq.empty
           mint = Map.singleton policyID1 $ Map.singleton (AssetName assetName1) 13

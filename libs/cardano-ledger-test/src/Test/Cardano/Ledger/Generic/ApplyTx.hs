@@ -13,7 +13,7 @@
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
@@ -148,8 +148,8 @@ applyTxBody count model txbody =
         , mFees = mFees model <+> (txbody ^. feeTxBodyL)
         }
 
-applyWithdrawals :: EraAccounts era => Model era -> RewardAccount -> Coin -> Model era
-applyWithdrawals model (RewardAccount _network cred) coin =
+applyWithdrawals :: EraAccounts era => Model era -> AccountAddress -> Coin -> Model era
+applyWithdrawals model (AccountAddress _network (AccountId cred)) coin =
   model
     { mAccounts =
         adjustAccountState

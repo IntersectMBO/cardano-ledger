@@ -187,9 +187,9 @@ checkPreservation SourceSignalTarget {source, target, signal = block} count =
           , show (nesEL . chainNes $ target)
           , "\n\nCurrent protocol parameters\n"
           , show currPP
-          , "\nReward Accounts before update\n"
+          , "\nAccount Addresses before update\n"
           , show oldAccounts
-          , "\nReward Accounts after update\n"
+          , "\nAccount Addresses after update\n"
           , show newAccounts
           , "\nRetiring pools before update\n"
           , showMap (infoRetire oldPoolDeposit) show oldRetire

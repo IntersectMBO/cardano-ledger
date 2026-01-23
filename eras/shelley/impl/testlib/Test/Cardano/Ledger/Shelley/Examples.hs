@@ -377,7 +377,7 @@ exampleWithdrawals :: Withdrawals
 exampleWithdrawals =
   Withdrawals $
     Map.fromList
-      [ (exampleRewardAccount, Coin 100)
+      [ (exampleAccountAddress, Coin 100)
       ]
 
 exampleProposedPPUpdates ::
@@ -397,7 +397,7 @@ exampleStakePoolParams =
     , sppPledge = Coin 1
     , sppCost = Coin 5
     , sppMargin = unsafeBoundRational 0.1
-    , sppRewardAccount = exampleRewardAccount
+    , sppAccountAddress = exampleAccountAddress
     , sppOwners = Set.singleton $ hashKey $ vKey exampleStakeKey
     , sppRelays = StrictSeq.empty
     , sppMetadata =
@@ -417,8 +417,8 @@ exampleStakeKey = mkDSIGNKeyPair 1
 exampleVrfVerKeyHash :: VRFVerKeyHash StakePoolVRF
 exampleVrfVerKeyHash = VRFVerKeyHash "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
 
-exampleRewardAccount :: RewardAccount
-exampleRewardAccount = RewardAccount Testnet (keyToCredential exampleStakeKey)
+exampleAccountAddress :: AccountAddress
+exampleAccountAddress = AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey))
 
 exampleByronAddress :: Addr
 exampleByronAddress = AddrBootstrap (BootstrapAddress byronAddr)

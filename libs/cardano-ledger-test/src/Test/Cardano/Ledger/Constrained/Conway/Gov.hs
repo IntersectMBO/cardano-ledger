@@ -152,8 +152,8 @@ proposalsSpec geEpoch geGuardrailsScriptHash geCertState =
                     , match geCertState $ \_vState _pState [var|dState|] ->
                         match dState $ \ [var|accounts|] _ _ _ ->
                           reify accounts (Map.keysSet . (^. accountsMapL)) $ \ [var|registeredCredentials|] ->
-                            forAll (dom_ withdrawMap) $ \ [var|rewAcnt|] ->
-                              match rewAcnt $ \ [var|network|] [var|credential|] ->
+                            forAll (dom_ withdrawMap) $ \ [var|accountAddress|] ->
+                              match accountAddress $ \ [var|network|] [var|credential|] ->
                                 [ network ==. lit Testnet
                                 , credential `member_` registeredCredentials
                                 ]
@@ -383,8 +383,8 @@ wfGovAction GovEnv {geGuardrailsScriptHash, geEpoch, gePParams, geCertState} ps 
     )
     -- TreasuryWithdrawals
     ( branch $ \withdrawMap policy ->
-        [ forAll (dom_ withdrawMap) $ \rewAcnt ->
-            match rewAcnt $ \net cred ->
+        [ forAll (dom_ withdrawMap) $ \accountAddress ->
+            match accountAddress $ \net cred ->
               [ net ==. lit Testnet
               , cred `member_` lit registeredCredentials
               ]

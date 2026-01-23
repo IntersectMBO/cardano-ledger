@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -41,10 +42,10 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n
 
-wdrlCredentials :: Map RewardAccount Coin -> Set (Credential Staking)
-wdrlCredentials m = Set.map raCredential (Map.keysSet m)
+wdrlCredentials :: Map AccountAddress Coin -> Set (Credential Staking)
+wdrlCredentials m = Set.map (unAccountId . aaAccountId) (Map.keysSet m)
 
-keyHashWdrl :: Map RewardAccount Coin -> Set (Credential Staking)
+keyHashWdrl :: Map AccountAddress Coin -> Set (Credential Staking)
 keyHashWdrl m = Set.filter isKeyHash (wdrlCredentials m)
 
 isKeyHash :: Credential Staking -> Bool
@@ -136,7 +137,7 @@ dRepDelegationsSpec univ =
 dStateSpec ::
   (Era era, HasSpec (Accounts era)) =>
   WitUniv era ->
-  Map RewardAccount Coin ->
+  Map AccountAddress Coin ->
   Specification (DState era)
 dStateSpec _univ _wdrls = constrained $ \ [var| dstate |] ->
   match dstate $ \_ [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->

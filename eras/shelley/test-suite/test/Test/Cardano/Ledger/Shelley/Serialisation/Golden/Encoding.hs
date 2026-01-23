@@ -18,7 +18,7 @@ import Cardano.Crypto.DSIGN (SignedDSIGN)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.KES (SignedKES, unsoundPureSignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
   EpochInterval (..),
@@ -451,7 +451,7 @@ tests =
             <> S testScript
         )
     , -- checkEncodingCBOR "withdrawal_key"
-      let r = RewardAccount Testnet testStakeCred
+      let r = AccountAddress Testnet (AccountId testStakeCred)
        in checkEncodingCBOR
             shelleyProtVer
             "withdrawal"
@@ -462,7 +462,7 @@ tests =
             )
     , -- checkEncodingCBOR "withdrawal_script"
       --
-      let r = RewardAccount Testnet (ScriptHashObj testScriptHash)
+      let r = AccountAddress Testnet (AccountId (ScriptHashObj testScriptHash))
        in checkEncodingCBOR
             shelleyProtVer
             "withdrawal"
@@ -501,7 +501,7 @@ tests =
     , -- checkEncodingCBOR "register-pool"
       let poolOwner = testKeyHash2
           poolMargin = unsafeBoundRational 0.7
-          poolRAcnt = RewardAccount Testnet testStakeCred
+          poolAccountAddress = AccountAddress Testnet (AccountId testStakeCred)
           poolPledge = Coin 11
           poolCost = Coin 55
           poolUrl = "pool.io"
@@ -526,7 +526,7 @@ tests =
                     , sppPledge = poolPledge
                     , sppCost = poolCost
                     , sppMargin = poolMargin
-                    , sppRewardAccount = poolRAcnt
+                    , sppAccountAddress = poolAccountAddress
                     , sppOwners = Set.singleton poolOwner
                     , sppRelays = poolRelays
                     , sppMetadata =
@@ -545,7 +545,7 @@ tests =
                 <> S poolPledge -- pledge
                 <> S poolCost -- cost
                 <> S poolMargin -- margin
-                <> S poolRAcnt -- reward acct
+                <> S poolAccountAddress -- reward acct
                 <> T (TkListLen 1)
                 <> S poolOwner -- owners
                 <> T (TkListLen 3) -- relays
@@ -724,7 +724,7 @@ tests =
             )
     , -- checkEncodingCBOR "transaction_mixed"
       let tout = ShelleyTxOut @ShelleyEra testAddrE (Coin 2)
-          ra = RewardAccount Testnet (KeyHashObj testKeyHash2)
+          ra = AccountAddress Testnet (AccountId (KeyHashObj testKeyHash2))
           ras = Map.singleton ra (Coin 123)
           up =
             Update
@@ -765,7 +765,7 @@ tests =
     , -- checkEncodingCBOR "full_txn_body"
       let tout = ShelleyTxOut @ShelleyEra testAddrE (Coin 2)
           reg = RegTxCert testStakeCred
-          ra = RewardAccount Testnet (KeyHashObj testKeyHash2)
+          ra = AccountAddress Testnet (AccountId (KeyHashObj testKeyHash2))
           ras = Map.singleton ra (Coin 123)
           up =
             Update

@@ -25,7 +25,7 @@ module Cardano.Ledger.Conway.Scripts (
   pattern ProposingPurpose,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
@@ -204,7 +204,7 @@ data ConwayPlutusPurpose f era
   = ConwaySpending !(f Word32 TxIn)
   | ConwayMinting !(f Word32 PolicyID)
   | ConwayCertifying !(f Word32 (TxCert era))
-  | ConwayRewarding !(f Word32 RewardAccount)
+  | ConwayRewarding !(f Word32 AccountAddress)
   | ConwayVoting !(f Word32 Voter)
   | ConwayProposing !(f Word32 (ProposalProcedure era))
   deriving (Generic)

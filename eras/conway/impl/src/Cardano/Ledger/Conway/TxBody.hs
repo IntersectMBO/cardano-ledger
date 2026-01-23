@@ -650,8 +650,8 @@ conwayRedeemerPointer txBody = \case
     ConwayMinting <$> indexOf policyID (txBody ^. mintedTxBodyF)
   ConwaySpending txIn ->
     ConwaySpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
-  ConwayRewarding rewardAccount ->
-    ConwayRewarding <$> indexOf rewardAccount (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  ConwayRewarding accountAddress ->
+    ConwayRewarding <$> indexOf accountAddress (unWithdrawals (txBody ^. withdrawalsTxBodyL))
   ConwayCertifying txCert ->
     ConwayCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
   ConwayVoting votingProcedure ->
