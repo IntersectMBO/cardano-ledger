@@ -98,7 +98,9 @@ newtype Coin = Coin {unCoin :: Integer}
 instance FromCBOR Coin where
   fromCBOR = Coin . toInteger <$> Plain.decodeWord64
 
-instance DecCBOR Coin
+instance DecCBOR Coin where
+  decCBOR = Coin . toInteger <$> decodeWord64
+  {-# INLINE decCBOR #-}
 
 newtype DeltaCoin = DeltaCoin Integer
   deriving (Eq, Ord, Generic, Enum, NoThunks)

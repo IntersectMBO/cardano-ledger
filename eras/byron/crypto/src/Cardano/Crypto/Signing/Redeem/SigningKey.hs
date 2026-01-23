@@ -14,7 +14,7 @@ import Cardano.Crypto.Signing.Redeem.VerificationKey (
   redeemVKB64F,
  )
 import Cardano.Ledger.Binary (
-  DecCBOR,
+  DecCBOR (..),
   EncCBOR,
   FromCBOR (..),
   ToCBOR (..),
@@ -34,7 +34,9 @@ newtype RedeemSigningKey
 
 instance EncCBOR RedeemSigningKey
 
-instance DecCBOR RedeemSigningKey
+instance DecCBOR RedeemSigningKey where
+  decCBOR = RedeemSigningKey <$> decCBOR
+  {-# INLINE decCBOR #-}
 
 -- Note that there is deliberately no Ord instance. The crypto libraries
 -- encourage using key /hashes/ not keys for things like sets, map etc.

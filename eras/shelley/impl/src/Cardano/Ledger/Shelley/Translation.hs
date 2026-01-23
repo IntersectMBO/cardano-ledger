@@ -23,7 +23,16 @@ import Cardano.Ledger.Binary (
   toPlainDecoder,
   toPlainEncoding,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Density (..),
+  Encode (..),
+  Wrapped (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Core (PParams, TranslationContext, emptyPParams)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -54,18 +63,22 @@ instance ToCBOR FromByronTranslationContext where
               !> To fbtcProtocolParams
               !> To fbtcMaxLovelaceSupply
 
+fromByronTranslationContextDecoder :: Decode (Closed Dense) FromByronTranslationContext
+fromByronTranslationContextDecoder =
+  RecD FromByronTranslationContext
+    <! From
+    <! From
+    <! From
+
 instance FromCBOR FromByronTranslationContext where
-  fromCBOR =
-    toPlainDecoder Nothing shelleyProtVer $
-      decode $
-        RecD FromByronTranslationContext
-          <! From
-          <! From
-          <! From
+  fromCBOR = toPlainDecoder Nothing shelleyProtVer $ decode fromByronTranslationContextDecoder
+  {-# INLINE fromCBOR #-}
 
 instance EncCBOR FromByronTranslationContext
 
-instance DecCBOR FromByronTranslationContext
+instance DecCBOR FromByronTranslationContext where
+  decCBOR = decode fromByronTranslationContextDecoder
+  {-# INLINE decCBOR #-}
 
 instance FromJSON FromByronTranslationContext where
   parseJSON = withObject "FromByronTranslationContext" $ \o -> do

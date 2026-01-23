@@ -29,11 +29,11 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   UnitInterval,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR, shelleyProtVer, toPlainDecoder)
+import Cardano.Ledger.Binary.Coders (Decode (..), Density (..), Wrapped (..), decode, (<!))
 import Cardano.Ledger.Binary.Plain (
   FromCBOR (..),
   ToCBOR (..),
-  decodeRecordNamed,
   encodeListLen,
  )
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
@@ -84,18 +84,16 @@ instance ToCBOR PrtclState where
       , toCBOR n2
       ]
 
-instance DecCBOR PrtclState
+prtclStateDecoder :: Decode (Closed Dense) PrtclState
+prtclStateDecoder = RecD PrtclState <! From <! From <! From
+
+instance DecCBOR PrtclState where
+  decCBOR = decode prtclStateDecoder
+  {-# INLINE decCBOR #-}
 
 instance FromCBOR PrtclState where
-  fromCBOR =
-    decodeRecordNamed
-      "PrtclState"
-      (const 3)
-      ( PrtclState
-          <$> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
-      )
+  fromCBOR = toPlainDecoder Nothing shelleyProtVer $ decode prtclStateDecoder
+  {-# INLINE fromCBOR #-}
 
 instance NoThunks PrtclState
 
