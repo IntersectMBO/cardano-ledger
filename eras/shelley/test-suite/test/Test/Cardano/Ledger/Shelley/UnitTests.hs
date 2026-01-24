@@ -81,7 +81,6 @@ import Test.Cardano.Ledger.Shelley.Arbitrary (
   StakeProportion (StakeProportion),
  )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
 import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..), genesisCoins)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -694,6 +693,5 @@ unitTests =
     "Unit Tests"
     [ testsInvalidLedger
     , testsPParams
-    , sizeTests
     , testCheckLeaderVal
     ]

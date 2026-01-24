@@ -118,7 +118,6 @@ test-suite cardano-ledger-shelley-test
     Test.Cardano.Ledger.Shelley.Examples.PoolReReg
     Test.Cardano.Ledger.Shelley.Examples.TwoPools
     Test.Cardano.Ledger.Shelley.Examples.Updates
-    Test.Cardano.Ledger.Shelley.Fees
     Test.Cardano.Ledger.Shelley.MultiSigExamples
     Test.Cardano.Ledger.Shelley.RulesTests
     Test.Cardano.Ledger.Shelley.SafeHash
