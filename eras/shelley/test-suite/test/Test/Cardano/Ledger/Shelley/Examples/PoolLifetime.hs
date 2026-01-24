@@ -34,6 +34,7 @@ import Cardano.Ledger.Coin (
   CompactForm (CompactCoin),
   DeltaCoin (..),
   addDeltaCoin,
+  knownNonZeroCoin,
   toDeltaCoin,
  )
 import Cardano.Ledger.Compactible
@@ -83,6 +84,7 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
 import GHC.Exts (fromList)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
@@ -109,6 +111,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (
   epochSize,
@@ -385,18 +388,19 @@ blockEx3 =
 
 snapEx3 :: SnapShot
 snapEx3 =
-  SnapShot
-    { ssStake =
-        mkStake
-          [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr)
-          , (Cast.bobSHK, bobInitCoin)
-          ]
-    , ssDelegations =
-        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
+  let
+    stake =
+      mkStake
+        [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr)
+        , (Cast.bobSHK, bobInitCoin)
         ]
-    , ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]
-    }
+    delegations =
+      [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
+      , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
+      ]
+    poolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]
+   in
+    mkSnapShot stake delegations poolParams
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
@@ -522,20 +526,21 @@ blockEx5 =
 
 snapEx5 :: SnapShot
 snapEx5 =
-  SnapShot
-    { ssStake =
-        mkStake
-          [ (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr)
-          , (Cast.carlSHK, carlMIR)
-          , (Cast.bobSHK, bobInitCoin)
-          ]
-    , ssDelegations =
-        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
+  let
+    stake =
+      mkStake
+        [ (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr)
+        , (Cast.carlSHK, carlMIR)
+        , (Cast.bobSHK, bobInitCoin)
         ]
-    , ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]
-    }
+    delegations =
+      [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
+      , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
+      , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
+      ]
+    poolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]
+   in
+    mkSnapShot stake delegations poolParams
 
 pdEx5 :: PoolDistr
 pdEx5 =
@@ -548,7 +553,7 @@ pdEx5 =
             Cast.aliceVRFKeyHash
         )
     )
-    (CompactCoin 1)
+    (knownNonZeroCoin @1)
 
 expectedStEx5 :: ChainState ShelleyEra
 expectedStEx5 =
@@ -709,7 +714,7 @@ alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
 nonMyopicEx8 :: NonMyopic
 nonMyopicEx8 =
   NonMyopic
-    (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx8)
+    (VMap.fromMap (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx8))
     rewardPot8
 
 pulserEx8 :: PulsingRewUpdate
@@ -778,14 +783,17 @@ blockEx9 =
 
 snapEx9 :: SnapShot
 snapEx9 =
-  snapEx5
-    { ssStake =
-        mkStake
-          [ (Cast.bobSHK, bobInitCoin <> bobRAcnt8)
-          , (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr <> aliceRAcnt8)
-          , (Cast.carlSHK, carlMIR)
-          ]
-    }
+  let
+    stake =
+      mkStake
+        [ (Cast.bobSHK, bobInitCoin <> bobRAcnt8)
+        , (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr <> aliceRAcnt8)
+        , (Cast.carlSHK, carlMIR)
+        ]
+    delegations = ssDelegations snapEx5
+    poolParams = ssPoolParams snapEx5
+   in
+    mkSnapShot stake delegations poolParams
 
 expectedStEx9 :: ChainState ShelleyEra
 expectedStEx9 =
@@ -941,7 +949,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
 nonMyopicEx11 :: NonMyopic
 nonMyopicEx11 =
   NonMyopic
-    (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx11)
+    (VMap.fromMap (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx11))
     (Coin 0)
 
 pulserEx11 :: PulsingRewUpdate
@@ -999,17 +1007,19 @@ blockEx12 =
 
 snapEx12 :: SnapShot
 snapEx12 =
-  snapEx9
-    { ssStake =
-        mkStake
-          [ (Cast.aliceSHK, aliceRAcnt8 <> aliceCoinEx2Ptr <> aliceCoinEx11Ptr)
-          , (Cast.carlSHK, carlMIR)
-          ]
-    , ssDelegations =
-        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
+  let
+    stake =
+      mkStake
+        [ (Cast.aliceSHK, aliceRAcnt8 <> aliceCoinEx2Ptr <> aliceCoinEx11Ptr)
+        , (Cast.carlSHK, carlMIR)
         ]
-    }
+    delegations =
+      [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
+      , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
+      ]
+    poolParams = ssPoolParams snapEx9
+   in
+    mkSnapShot stake delegations poolParams
 
 expectedStEx12 :: ChainState ShelleyEra
 expectedStEx12 =

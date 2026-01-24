@@ -41,6 +41,7 @@ import qualified Data.Vector.Generic.Mutable as VGM
 import Database.Persist.Sqlite
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Conway.Era (EraTest, accountsFromAccountsMap, mkTestAccountState)
+import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 
 -- Populate database
 
@@ -348,12 +349,7 @@ getSnapShotNoSharing epochStateId snapShotType = do
     selectVMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do
       KeyHash keyHash <- getJust snapShotPoolKeyHashId
       pure (Keys.coerceKeyRole keyHash, snapShotPoolParams)
-  pure
-    State.SnapShot
-      { ssStake = State.Stake stake
-      , ssDelegations = delegations
-      , ssPoolParams = poolParams
-      }
+  pure $ mkSnapShot (State.Stake stake) delegations poolParams
 {-# INLINEABLE getSnapShotNoSharing #-}
 
 getSnapShotsNoSharing ::
@@ -429,12 +425,7 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
       Credential credential <- getJust snapShotDelegationCredentialId
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
       pure (internOtherDelegations credential, internPoolParams keyHash)
-  pure
-    State.SnapShot
-      { ssStake = State.Stake stake
-      , ssDelegations = delegations
-      , ssPoolParams = poolParams
-      }
+  pure $ mkSnapShot (State.Stake stake) delegations poolParams
 {-# INLINEABLE getSnapShotWithSharing #-}
 
 getSnapShotsWithSharing ::

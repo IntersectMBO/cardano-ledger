@@ -1,50 +1,87 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 -- TODO: submit a ghc bug report
 -- some GHC bug wrongfully complains about CanGetInstantStake constraint being redundant.
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.State.Stake (
+  Stake (..),
+  sumAllStake,
+  sumAllStakeCompact,
+  sumCredentialsCompactStake,
   EraStake (..),
   CanGetInstantStake (..),
   CanSetInstantStake (..),
-  snapShotFromInstantStake,
   resolveActiveInstantStakeCredentials,
 ) where
 
-import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   Interns,
  )
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.State.Account
-import Cardano.Ledger.State.CertState (DState (..), PState (..))
-import Cardano.Ledger.State.SnapShots
-import Cardano.Ledger.State.StakePool (stakePoolStateToStakePoolParams)
 import Cardano.Ledger.State.UTxO
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Data.Aeson (ToJSON)
 import Data.Default (Default)
+import Data.Foldable (foldMap')
 import Data.Functor.Identity
 import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
+import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
+import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+
+-- | Type of stake as map from staking credential to coins associated. Any staking credential that
+-- has no stake will not appear in this Map, even if it is registered. For this reason, this data
+-- type should not be used for infering whether credential is registered or not.
+newtype Stake = Stake
+  { unStake :: VMap VB VP (Credential Staking) (CompactForm Coin)
+  }
+  deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR)
+
+instance Monoid Stake where
+  mempty = Stake VMap.empty
+
+instance Semigroup Stake where
+  Stake s1 <> Stake s2 = Stake $ VMap.unionWith (<>) s1 s2
+
+instance DecShareCBOR Stake where
+  type Share Stake = Share (VMap VB VP (Credential Staking) (CompactForm Coin))
+  getShare = getShare . unStake
+  decShareCBOR = fmap Stake . decShareCBOR
+
+sumAllStake :: Stake -> Coin
+sumAllStake = fromCompact . sumAllStakeCompact
+{-# INLINE sumAllStake #-}
+
+sumAllStakeCompact :: Stake -> CompactForm Coin
+sumAllStakeCompact = VMap.foldl (<>) mempty . unStake
+{-# INLINE sumAllStakeCompact #-}
+
+sumCredentialsCompactStake :: Foldable f => Stake -> f (Credential Staking) -> CompactForm Coin
+sumCredentialsCompactStake (Stake stake) = foldMap' (fromMaybe mempty . (`VMap.lookup` stake))
+{-# INLINE sumCredentialsCompactStake #-}
 
 class
   ( EraAccounts era
@@ -81,36 +118,9 @@ class
   -- TODO: This functionality will be removed and switched to use a pulser
 
   -- | Using known stake credential registrations and delegations resolve the instant stake into a
-  -- `Stake` that will be used for `SnapShot` creation by `snapShotFromInstantStake`.
+  -- `Stake` that will be used for `SnapShot` creation by
+  -- `Cardano.Ledger.State.snapShotFromInstantStake`.
   resolveInstantStake :: InstantStake era -> Accounts era -> Stake
-
-snapShotFromInstantStake ::
-  forall era. EraStake era => InstantStake era -> DState era -> PState era -> Network -> SnapShot
-snapShotFromInstantStake iStake dState PState {psStakePools} network =
-  SnapShot
-    { ssStake = resolveInstantStake iStake accounts
-    , ssDelegations = VMap.fromDistinctAscListN delegsCount delegsAscList
-    , ssPoolParams =
-        VMap.fromDistinctAscListN
-          (Map.size psStakePools)
-          [ (poolId, stakePoolStateToStakePoolParams poolId network ps)
-          | (poolId, ps) <- Map.toAscList psStakePools
-          ]
-    }
-  where
-    accounts = dsAccounts dState
-    keepAndCountDelegations ::
-      Credential Staking ->
-      AccountState era ->
-      ([(Credential Staking, KeyHash StakePool)], Int) ->
-      ([(Credential Staking, KeyHash StakePool)], Int)
-    keepAndCountDelegations cred accountState acc@(!delegs, !count) =
-      case accountState ^. stakePoolDelegationAccountStateL of
-        Nothing -> acc
-        Just deleg -> ((cred, deleg) : delegs, count + 1)
-    (delegsAscList, delegsCount) =
-      Map.foldrWithKey keepAndCountDelegations ([], 0) $ accounts ^. accountsMapL
-{-# INLINE snapShotFromInstantStake #-}
 
 class CanGetInstantStake t where
   instantStakeG :: SimpleGetter (t era) (InstantStake era)

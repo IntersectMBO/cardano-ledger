@@ -308,13 +308,4 @@ genPctsOf100 = do
   pure (a % s, b % s, c % s, d % s, e % s, f % s)
 
 emptyRatifyEnv :: RatifyEnv ConwayEra
-emptyRatifyEnv =
-  RatifyEnv
-    mempty
-    (PoolDistr Map.empty mempty)
-    Map.empty
-    Map.empty
-    (EpochNo 0)
-    (CommitteeState Map.empty)
-    def
-    Map.empty
+emptyRatifyEnv = def

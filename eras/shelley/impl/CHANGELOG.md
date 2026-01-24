@@ -2,7 +2,11 @@
 
 ## 1.18.0.0
 
-* Re-export `AccountAddress`, `AccountId`, and pattern synonym `RewardAccount` from `Cardano.Ledger.Address`
+* Change `updateNonMyopic`, `likelihoodsNM`, `rewLikelihoods` and `fvPoolRewardInfo` to use `VMap`
+* Add `calcNonMyopicMemberReward` and deprecate `nonMyopicMemberRew` in its favor.
+* Add `calcStakePoolDesirability` and deprecate `desirability` in its favor.
+* Change type signature of `mkPoolRewardInfo`, `getTopRankedPools`
+* Re-export `AccountAddress`, `AccountId`, and pattern synonym `RewardAccount` from `Cardano.Ledger.Shelley.API.Types`
 * Move delegatee registration validation from `DELEGS` to `DELEG` rule:
   - Add `DelegateeNotRegisteredDELEG` to `ShelleyDelegPredFailure`
   - Remove `DelegateeNotRegisteredDELEG` from `ShelleyDelegsPredFailure`

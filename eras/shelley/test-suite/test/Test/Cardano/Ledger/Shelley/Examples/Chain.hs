@@ -1,4 +1,8 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Examples.Chain (
   CHAINExample (..),
@@ -6,10 +10,11 @@ module Test.Cardano.Ledger.Shelley.Examples.Chain (
 ) where
 
 import Cardano.Ledger.Block (Block)
+import Cardano.Ledger.Coin (knownNonZeroCoin)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (nesPdL)
-import Cardano.Ledger.Shelley.Scripts ()
-import Cardano.Ledger.State (individualTotalPoolStakeL, poolDistrDistrL, poolDistrTotalL)
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, nesPdL)
+import Cardano.Ledger.State
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.List.NonEmpty (NonEmpty)
@@ -31,17 +36,30 @@ data CHAINExample era = CHAINExample
   -- ^ type of fatal error, if failure expected and final chain state if success expected
   }
 
+deriving instance
+  ( EraGov era
+  , EraTxOut era
+  , Show (BlockBody era)
+  , Show (CertState era)
+  , Show (InstantStake era)
+  , Show (StashedAVVMAddresses era)
+  , Show (PredicateFailure (EraRule "BBODY" era))
+  , Show (PredicateFailure (EraRule "TICK" era))
+  , Show (PredicateFailure (EraRule "TICKN" era))
+  ) =>
+  Show (CHAINExample era)
+
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.
 testCHAINExample :: HasCallStack => CHAINExample ShelleyEra -> Assertion
 testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
   ( checkTrace @(CHAIN ShelleyEra) runShelleyBase () $
       ( pure initSt .- block
-          <&> chainStateNesL . nesPdL . poolDistrTotalL .~ mempty
+          <&> chainStateNesL . nesPdL . poolDistrTotalL .~ knownNonZeroCoin @1
           <&> chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
       )
         .->> ( expectedSt
-                 & chainStateNesL . nesPdL . poolDistrTotalL .~ mempty
+                 & chainStateNesL . nesPdL . poolDistrTotalL .~ knownNonZeroCoin @1
                  & chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
              )
     )

@@ -10,9 +10,8 @@
 
 module Test.Cardano.Ledger.Conway.SPORatifySpec (spec) where
 
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.BaseTypes (NonZero, StrictMaybe (..), unNonZero)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin, toCoinNonZero)
 import Cardano.Ledger.Conway (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -38,9 +37,9 @@ import Data.Default (def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromKeys)
-import Data.Maybe (fromJust)
 import Data.Ratio ((%))
 import Lens.Micro
+import Numeric.Natural
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Era
 
@@ -74,19 +73,24 @@ acceptedRatioProp = do
                   gas {gasStakePoolVotes = votes}
                   protVer
               expected =
-                if fromCompact totalStake == stakeAbstain <+> stakeAlwaysAbstain
+                if unNonZero totalStake == stakeAbstain <+> stakeAlwaysAbstain
                   then 0
                   else case gas ^. gasActionL of
-                    HardForkInitiation _ _ -> unCoin stakeYes % unCoin (fromCompact totalStake <-> stakeAbstain)
+                    HardForkInitiation _ _ -> unCoin stakeYes % unCoin (unNonZero totalStake <-> stakeAbstain)
                     action
                       | hardforkConwayBootstrapPhase protVer ->
                           unCoin stakeYes
-                            % unCoin (fromCompact totalStake <-> stakeAbstain <-> stakeAlwaysAbstain <-> stakeNoConfidence)
+                            % unCoin
+                              ( unNonZero totalStake
+                                  <-> stakeAbstain
+                                  <-> stakeAlwaysAbstain
+                                  <-> stakeNoConfidence
+                              )
                       | NoConfidence {} <- action ->
                           unCoin (stakeYes <+> stakeNoConfidence)
-                            % unCoin (fromCompact totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
+                            % unCoin (unNonZero totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
                       | otherwise ->
-                          unCoin stakeYes % unCoin (fromCompact totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
+                          unCoin stakeYes % unCoin (unNonZero totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
             actual `shouldBe` expected
         )
 
@@ -95,7 +99,7 @@ noStakeProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> IO ())
     "If there is no stake, accept iff threshold is zero"
     ( \(re, rs, gas) ->
-        let re' = re {reStakePoolDistr = PoolDistr Map.empty (fromJust . toCompact $ Coin 100)}
+        let re' = re {reStakePoolDistr = PoolDistr Map.empty (knownNonZeroCoin @100)}
          in spoAccepted @era re' rs gas
               `shouldBe` (votingStakePoolThreshold @era rs (gasAction gas) == SJust minBound)
     )
@@ -139,24 +143,21 @@ noVotesProp =
 allYesProp :: forall era. ConwayEraTest era => Spec
 allYesProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> Property)
-    "If all vote yes, accepted ratio is 1 (unless there is no stake) "
-    ( \(re, rs, gas) ->
-        forAll
-          ( genTestData @era
-              (Ratios {yes = 100 % 100, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})
-          )
-          ( \TestData {..} ->
-              let acceptedRatio =
-                    spoAcceptedRatio
-                      @era
-                      re {reStakePoolDistr = distr}
-                      gas {gasStakePoolVotes = votes}
-                      (rs ^. rsEnactStateL . ensProtVerL)
-               in if fromCompact totalStake == Coin 0
-                    then acceptedRatio `shouldBe` 0
-                    else acceptedRatio `shouldBe` 1
-          )
-    )
+    "If all vote yes, accepted ratio is 1"
+    $ \(re, rs, gas) ->
+      forAll
+        ( genTestData @era
+            (Ratios {yes = 100 % 100, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})
+        )
+        ( \TestData {..} ->
+            let acceptedRatio =
+                  spoAcceptedRatio
+                    @era
+                    re {reStakePoolDistr = distr}
+                    gas {gasStakePoolVotes = votes}
+                    (rs ^. rsEnactStateL . ensProtVerL)
+             in acceptedRatio `shouldBe` 1
+        )
 
 noConfidenceProp :: forall era. ConwayEraTest era => Spec
 noConfidenceProp =
@@ -177,7 +178,7 @@ noConfidenceProp =
 data TestData era = TestData
   { distr :: PoolDistr
   , votes :: Map (KeyHash StakePool) Vote
-  , totalStake :: CompactForm Coin
+  , totalStake :: NonZero Coin
   , stakeYes :: Coin
   , stakeNo :: Coin
   , stakeAbstain :: Coin
@@ -204,25 +205,25 @@ genTestData ::
   Ratios ->
   Gen (TestData era)
 genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
-  pools <- listOf (arbitrary @(KeyHash StakePool))
-  let (poolsYes, poolsNo, poolsAbstain, poolsAlwaysAbstain, poolsNoConfidence, rest) =
-        splitByPct yes no abstain alwaysAbstain noConfidence pools
-      totalStake = length pools
+  numPools :: NonZero Natural <- arbitrary
+  pools <- vectorOf (fromIntegral (unNonZero numPools)) (arbitrary @(KeyHash StakePool))
+  let
+    totalStake = toCoinNonZero numPools
+    (poolsYes, poolsNo, poolsAbstain, poolsAlwaysAbstain, poolsNoConfidence, rest) =
+      splitByPct yes no abstain alwaysAbstain noConfidence pools
   distr <- do
     vrf <- arbitrary
     let
-      indivStake = IndividualPoolStake (1 / toRational totalStake) (CompactCoin 1) vrf
-    pure $
-      PoolDistr
-        ( unionAllFromLists
-            [ (poolsYes, indivStake)
-            , (poolsNo, indivStake)
-            , (poolsAbstain, indivStake)
-            , (poolsAlwaysAbstain, indivStake)
-            , (poolsNoConfidence, indivStake)
-            ]
-        )
-        (CompactCoin $ fromIntegral totalStake)
+      indivStake = IndividualPoolStake (1 % unCoin (unNonZero totalStake)) (CompactCoin 1) vrf
+      distr =
+        unionAllFromLists
+          [ (poolsYes, indivStake)
+          , (poolsNo, indivStake)
+          , (poolsAbstain, indivStake)
+          , (poolsAlwaysAbstain, indivStake)
+          , (poolsNoConfidence, indivStake)
+          ]
+    pure $ PoolDistr distr totalStake
 
   poolStateAA <- genPoolState poolsAlwaysAbstain
   poolStateNC <- genPoolState poolsNoConfidence

@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | The stake distribution, aggregated by stake pool (as opposed to stake credential),
@@ -24,7 +25,7 @@ module Cardano.Ledger.State.PoolDistr (
   individualTotalPoolStakeL,
 ) where
 
-import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), NonZero, ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
@@ -96,7 +97,7 @@ instance ToKeyValuePairs IndividualPoolStake where
 -- necessary for the calculations in the `computeDRepDistr`.
 data PoolDistr = PoolDistr
   { unPoolDistr :: !(Map (KeyHash StakePool) IndividualPoolStake)
-  , pdTotalActiveStake :: !(CompactForm Coin)
+  , pdTotalActiveStake :: !(NonZero Coin)
   -- ^ Total stake delegated to registered stake pools. In addition to
   -- the stake considered for the `individualPoolStake` Rational, we add
   -- proposal-deposits to this field.
@@ -105,12 +106,12 @@ data PoolDistr = PoolDistr
   deriving (NFData, NoThunks, ToJSON)
 
 instance Default PoolDistr where
-  def = PoolDistr mempty mempty
+  def = PoolDistr mempty (knownNonZeroCoin @1)
 
 poolDistrDistrL :: Lens' PoolDistr (Map (KeyHash StakePool) IndividualPoolStake)
 poolDistrDistrL = lens unPoolDistr $ \x y -> x {unPoolDistr = y}
 
-poolDistrTotalL :: Lens' PoolDistr (CompactForm Coin)
+poolDistrTotalL :: Lens' PoolDistr (NonZero Coin)
 poolDistrTotalL = lens pdTotalActiveStake $ \x y -> x {pdTotalActiveStake = y}
 
 instance EncCBOR PoolDistr where

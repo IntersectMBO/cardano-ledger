@@ -496,7 +496,7 @@ conwayLedgerTransitionTRC
           -- so it can process refunds of deposits for deregistering
           -- stake credentials and DReps. The modified CertState
           -- (certStateAfterCERTS) has these already removed from its
-          -- UMap.
+          -- AccountState.
           ( UtxoEnv @era slot pp certState
           , utxoState'
           , tx

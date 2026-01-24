@@ -46,6 +46,7 @@ library
     cardano-ledger-core,
     cardano-ledger-mary,
     cardano-ledger-shelley,
+    cardano-ledger-shelley-test,
     conduit,
     containers,
     data-default,

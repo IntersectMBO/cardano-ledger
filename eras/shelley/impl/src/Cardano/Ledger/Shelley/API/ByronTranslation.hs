@@ -107,7 +107,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
     , nesBcur = BlocksMade Map.empty
     , nesEs = epochState
     , nesRu = SNothing
-    , nesPd = PoolDistr Map.empty mempty
+    , nesPd = def
     , -- At this point, we compute the stashed AVVM addresses, while we are able
       -- to do a linear scan of the UTxO, and stash them away for use at the
       -- Shelley/Allegra boundary.

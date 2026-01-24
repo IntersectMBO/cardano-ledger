@@ -103,7 +103,7 @@ aggUTxO proof = do
 
 aggTests :: Spec
 aggTests =
-  describe "tests, aggregating Tx's over a Trace." $ do
+  describe "tests, aggregating Txs over a Trace." $ do
     testPropMax 30 "UTxO size in Babbage" (aggUTxO Babbage)
     testPropMax 30 "UTxO size in Alonzo" (aggUTxO Alonzo)
     testPropMax 30 "UTxO size in Mary" (aggUTxO Mary)

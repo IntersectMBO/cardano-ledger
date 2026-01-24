@@ -103,6 +103,7 @@ import Control.State.Transition.Extended (
   applySTS,
   reapplySTS,
  )
+import Data.Default (def)
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
 import Data.List.NonEmpty (NonEmpty)
@@ -593,7 +594,7 @@ mkInitialShelleyLedgerView transCtxt =
    in LedgerView
         { lvD = fbtcProtocolParams transCtxt ^. ppDG
         , lvExtraEntropy = ee
-        , lvPoolDistr = PoolDistr Map.empty mempty
+        , lvPoolDistr = def
         , lvGenDelegs = GenDelegs $ fbtcGenDelegs transCtxt
         , lvChainChecks = pparamsToChainChecksPParams . fbtcProtocolParams $ transCtxt
         }

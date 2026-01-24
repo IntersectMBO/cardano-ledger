@@ -11,6 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UnboxedTuples #-}
 
 module Cardano.Ledger.Coin (
@@ -41,12 +42,17 @@ module Cardano.Ledger.Coin (
   coinPerByteFL,
   hkdPartialCompactCoinL,
   hkdCoinPerByteL,
+  knownNonZeroCoin,
+  knownNonZeroCompactCoin,
 ) where
 
 import Cardano.Ledger.BaseTypes (
   HasZero (..),
   Inject (..),
   NonZero,
+  WithinBounds,
+  knownNonZero,
+  knownNonZeroBounded,
   unNonZero,
   unsafeNonZero,
  )
@@ -74,6 +80,7 @@ import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Stack
+import GHC.TypeLits
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -134,7 +141,7 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin {unCompactCoin :: Word64}
-    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON, Generic)
+    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON, HasZero, Generic)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
@@ -250,3 +257,15 @@ hkdPartialCompactCoinL = lens (hkdMap (Proxy @f) (fromCompact @Coin)) (\_compact
 
 hkdCoinPerByteL :: forall f. HKDFunctor f => Lens' (HKD f CoinPerByte) (HKD f (CompactForm Coin))
 hkdCoinPerByteL = lens (hkdMap (Proxy @f) unCoinPerByte) (\_cpb -> hkdMap (Proxy @f) CoinPerByte)
+
+knownNonZeroCoin ::
+  forall (n :: Nat).
+  (KnownNat n, 1 <= n) =>
+  NonZero Coin
+knownNonZeroCoin = toCoinNonZero (knownNonZero @n)
+
+knownNonZeroCompactCoin ::
+  forall (n :: Nat).
+  (KnownNat n, 1 <= n, WithinBounds n Word64) =>
+  NonZero (CompactForm Coin)
+knownNonZeroCompactCoin = compactCoinNonZero (knownNonZeroBounded @n)

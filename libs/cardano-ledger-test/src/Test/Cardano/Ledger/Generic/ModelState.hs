@@ -36,7 +36,7 @@
 module Test.Cardano.Ledger.Generic.ModelState where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
+import Cardano.Ledger.Coin (Coin (..), knownNonZeroCoin)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
@@ -133,7 +133,7 @@ blocksMadeZero :: BlocksMade
 blocksMadeZero = BlocksMade Map.empty
 
 poolDistrZero :: PoolDistr
-poolDistrZero = PoolDistr Map.empty $ CompactCoin 1
+poolDistrZero = def
 
 accountStateZero :: ChainAccountState
 accountStateZero = ChainAccountState (Coin 0) (Coin 0)
@@ -172,7 +172,7 @@ dPStateZero =
     & certDStateL .~ dStateZero
 
 nonMyopicZero :: NonMyopic
-nonMyopicZero = NonMyopic Map.empty mempty
+nonMyopicZero = NonMyopic mempty mempty
 
 uTxOStateZero :: forall era. Reflect era => UTxOState era
 uTxOStateZero =
@@ -314,7 +314,7 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
       (BlocksMade (mBcur x))
       (extract x)
       (Complete <$> mRu x)
-      (PoolDistr (mPoolDistr x) (CompactCoin 1))
+      (PoolDistr (mPoolDistr x) (knownNonZeroCoin @1))
       (stashedAVVMAddressesZero (reify :: Proof era))
 
 abstract :: (EraGov era, EraCertState era) => NewEpochState era -> ModelNewEpochState era

@@ -172,6 +172,7 @@ test-suite cardano-ledger-shelley-test
     scientific,
     small-steps:{small-steps, testlib} >=1.1,
     time,
+    vector-map,
 
 benchmark mainbench
   type: exitcode-stdio-1.0

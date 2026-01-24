@@ -26,7 +26,13 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs where
 import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..), compactCoinOrError)
+import Cardano.Ledger.Coin (
+  Coin (..),
+  CompactForm (..),
+  DeltaCoin (..),
+  compactCoinOrError,
+  knownNonZeroCoin,
+ )
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
@@ -57,6 +63,7 @@ import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (
   txOutSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
+import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.QuickCheck hiding (forAll, witness)
 
 -- ======================================================================================
@@ -88,7 +95,9 @@ type WhoDelegates = Map (Credential DRepRole) (Set (Credential Staking))
 --   So we give special Specifcations that will generate both in ways that maintain the important relationships.
 whoDelegatesSpec ::
   forall era.
-  Era era => WitUniv era -> Specification (Map (Credential DRepRole) (Set (Credential Staking)))
+  Era era =>
+  WitUniv era ->
+  Specification (Map (Credential DRepRole) (Set (Credential Staking)))
 whoDelegatesSpec univ = constrained $ \m ->
   [ assert $ sizeOf_ m >=. 10
   , assert $ sizeOf_ m <=. 20
@@ -224,7 +233,9 @@ accountStateSpec =
 
 goodDrep ::
   forall era.
-  Era era => WitUniv era -> Specification (Map (Credential DRepRole) (Set.Set (Credential Staking)))
+  Era era =>
+  WitUniv era ->
+  Specification (Map (Credential DRepRole) (Set.Set (Credential Staking)))
 goodDrep = whoDelegatesSpec
 
 -- ========================================================================
@@ -496,11 +507,13 @@ ledgerStateSpec pp univ ctx epoch =
 snapShotSpec :: Specification SnapShot
 snapShotSpec =
   constrained $ \ [var|snap|] ->
-    match snap $ \ [var|stake|] [var|delegs|] [var|poolparams|] ->
+    match snap $ \ [var|stake|] [var|totalActiveStake|] [var|delegs|] [var|poolparams|] [var|pools|] ->
       match stake $ \ [var|stakemap|] ->
         [ assert $ stakemap ==. lit VMap.empty
+        , assert $ totalActiveStake ==. lit (knownNonZeroCoin @1)
         , assert $ delegs ==. lit VMap.empty
         , assert $ poolparams ==. lit VMap.empty
+        , assert $ pools ==. lit VMap.empty
         ]
 
 snapShotsSpec ::
@@ -516,7 +529,7 @@ snapShotsSpec marksnap =
 
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
 getMarkSnapShot :: forall era. (EraCertState era, EraStake era) => LedgerState era -> SnapShot
-getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
+getMarkSnapShot ls = mkSnapShot (Stake markStake) markDelegations markPoolParams
   where
     markStake :: VMap VB VP (Credential Staking) (CompactForm Coin)
     markStake = VMap.fromMap (ls ^. instantStakeL . instantStakeCredentialsL)
@@ -547,7 +560,7 @@ epochStateSpec pp univ certctx epoch =
       [ dependsOn eLedgerState acctst
       , satisfies eLedgerState (ledgerStateSpec pp univ certctx epoch)
       , reify eLedgerState getMarkSnapShot $ \ [var|marksnap|] -> satisfies snaps (snapShotsSpec marksnap)
-      , match nonmyopic $ \ [var|x|] [var|c|] -> [genHint 0 x, assert $ c ==. lit (Coin 0)]
+      , match nonmyopic $ \ [var|x|] [var|c|] -> [assert $ x ==. lit mempty, assert $ c ==. lit (Coin 0)]
       ]
 
 getPoolDistr :: forall era. EpochState era -> PoolDistr

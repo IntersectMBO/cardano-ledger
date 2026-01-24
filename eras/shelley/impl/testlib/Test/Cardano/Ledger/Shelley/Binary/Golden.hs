@@ -126,10 +126,11 @@ goldenNewEpochStateExpectation
           me = Em [Ev ver k <> Ev ver v | (k, v) <- Map.toList m]
       snapShotEnc SnapShot {..} =
         Em
-          [ E (TkListLen 3)
+          [ E (TkListLen 4)
           , mapEnc (VMap.toMap (unStake ssStake))
           , Ev ver ssDelegations
           , Ev ver ssPoolParams
+          , Ev ver ssStakePoolsSnapShot
           ]
 
 shelleyDecodeDuplicateDelegCertSucceeds :: Version -> Spec

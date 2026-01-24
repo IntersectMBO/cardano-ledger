@@ -27,12 +27,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Cardano.Ledger.State (
-  SnapShot (ssPoolParams),
-  StakePoolParams (..),
-  UTxO (..),
-  emptySnapShot,
- )
+import Cardano.Ledger.State (SnapShot, StakePoolParams (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
@@ -65,6 +60,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce, testGlobals)
 import Test.Tasty (TestTree, testGroup)
@@ -276,7 +272,7 @@ blockEx3 =
 
 snapEx3 :: SnapShot
 snapEx3 =
-  emptySnapShot {ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]}
+  mkSnapShot mempty mempty [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =

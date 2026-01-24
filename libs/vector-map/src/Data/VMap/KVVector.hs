@@ -30,6 +30,7 @@ module Data.VMap.KVVector (
   memberKVVector,
   lookupKVVector,
   lookupDefaultKVVector,
+  elemAtKVVector,
   sortAscKVMVector,
   internKVVectorMaybe,
   normalize,
@@ -109,7 +110,7 @@ fromDistinctAscList xs = VG.fromListN (Prelude.length xs) xs
 -- vector does not provide
 {-# INLINE fromDistinctAscList #-}
 
--- | Convert a sorted assoc list with distionct keys into a KVVector. Length
+-- | Convert a sorted assoc list with distinct keys into a KVVector. Length
 -- must be supplied.
 fromDistinctAscListN ::
   (VG.Vector kv k, VG.Vector vv v) =>
@@ -216,6 +217,11 @@ lookupDefaultKVVector v k = fromMaybe v . lookupKVVector k
 memberKVVector :: (Ord k, VG.Vector kv k) => k -> KVVector kv vv (k, v) -> Bool
 memberKVVector k = isJust . lookupIxSortedVector k . keysVector
 {-# INLINE memberKVVector #-}
+
+elemAtKVVector ::
+  (VG.Vector kv k, VG.Vector vv v) => Int -> KVVector kv vv (k, v) -> (k, v)
+elemAtKVVector ix (KVVector keys values) = (keys VG.! ix, values VG.! ix)
+{-# INLINE elemAtKVVector #-}
 
 -- | Perform a binary search on a sorted vector
 lookupIxSortedVector ::

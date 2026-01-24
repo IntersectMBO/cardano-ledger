@@ -7,6 +7,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+-- Remove when removing `sumStakePerPool` usage
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
   startStep,
@@ -19,7 +21,6 @@ module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
   decayFactor,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),
@@ -38,6 +39,7 @@ import Cardano.Ledger.Coin (
   rationalToCoinViaFloor,
   toDeltaCoin,
  )
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (hardforkBabbageForgoRewardPrefilter)
 import Cardano.Ledger.Shelley.LedgerState.Types
@@ -68,8 +70,9 @@ import Cardano.Ledger.Shelley.Rewards (
 import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Ledger.State
 import Cardano.Ledger.Val ((<->))
+import Control.Exception (assert)
+import Control.Monad (guard)
 import Data.Group (invert)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Ratio ((%))
@@ -97,7 +100,7 @@ startStep ::
   NonZero Word64 ->
   PulsingRewUpdate
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSupply asc secparam =
-  let SnapShot stake delegs poolParams = ssStakeGo ss
+  let SnapShot stake totalActiveStake delegs poolParams stakePoolSnapShots = ssStakeGo ss
       numStakeCreds = fromIntegral (VMap.size $ unStake stake)
       k = toIntegerNonZero secparam
       -- We expect approximately 10k-many blocks to be produced each epoch.
@@ -141,7 +144,6 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       _R = Coin $ rPot - deltaT1
       -- We now compute stake pool specific values that are needed for computing
       -- member and leader rewards.
-      activeStake = sumAllStake stake
       totalStake = circulation es maxSupply
       stakePerPool = sumStakePerPool delegs stake
       mkPoolRewardInfoCurry =
@@ -152,17 +154,17 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           (fromIntegral blocksMade)
           stake
           delegs
-          stakePerPool
           totalStake
-          activeStake
+          totalActiveStake
+          poolParams
       -- We map over the registered stake pools to compute the relevant
       -- stake pool specific values.
-      allPoolInfo = VMap.map mkPoolRewardInfoCurry poolParams
+      allPoolInfo = VMap.mapWithKey mkPoolRewardInfoCurry stakePoolSnapShots
 
       -- Stake pools that do not produce any blocks get no rewards,
       -- but some information is still needed from non-block-producing
       -- pools for the ranking algorithm used by the wallets.
-      blockProducingPoolInfo = VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just) allPoolInfo
+      blockProducingPoolInfo = VMap.mapMaybe (either (const Nothing) Just) allPoolInfo
       getSigma = unStakeShare . poolRelativeStake
       makeLikelihoods = \case
         -- This pool produced no blocks this epoch
@@ -177,10 +179,10 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
             (poolBlocks info)
             (leaderProbability asc (getSigma info) $ pr ^. ppDG)
             slotsPerEpoch
-      newLikelihoods = VMap.toMap $ VMap.map makeLikelihoods allPoolInfo
+      newLikelihoods = VMap.map makeLikelihoods allPoolInfo
       -- We now compute the leader rewards for each stake pool.
       collectLRs acc poolRI =
-        let AccountId account = aaAccountId . sppAccountAddress $ poolPs poolRI
+        let account = spssAccountId $ poolPs poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
          in if hardforkBabbageForgoRewardPrefilter (pr ^. ppProtocolVersionL)
               || isAccountRegistered account accounts
@@ -197,7 +199,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           , rewR = _R
           , rewDeltaT1 = Coin deltaT1
           , rewLikelihoods = newLikelihoods
-          , rewLeaders = Map.foldl' collectLRs mempty blockProducingPoolInfo
+          , rewLeaders = VMap.foldl collectLRs mempty blockProducingPoolInfo
           }
       -- The data in 'FreeVars' to supply individual stake pool members with
       -- the neccessary information to compute their individual rewards.
@@ -215,7 +217,22 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           free
           (unStake stake)
           (RewardAns Map.empty Map.empty)
-   in Pulsing rewsnap pulser
+      newStakePerPool =
+        Map.mapMaybe
+          ( \spss ->
+              let s = fromCompact $ spssStake spss
+               in s <$ guard (s /= mempty)
+          )
+          (VMap.toMap stakePoolSnapShots)
+      showFailure =
+        error $
+          "StakePerPool does not match:\nOld StakePerPool:\n"
+            <> show stakePerPool
+            <> "\nNew StakePerPool:\n"
+            <> show newStakePerPool
+   in assert
+        (stakePerPool == newStakePerPool || showFailure)
+        (Pulsing rewsnap pulser)
 
 -- Phase 2
 
@@ -317,7 +334,7 @@ decayFactor = 0.9
 updateNonMyopic ::
   NonMyopic ->
   Coin ->
-  Map (KeyHash StakePool) Likelihood ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) Likelihood ->
   NonMyopic
 updateNonMyopic nm rPot_ newLikelihoods =
   nm
@@ -330,6 +347,6 @@ updateNonMyopic nm rPot_ newLikelihoods =
       maybe
         mempty
         (applyDecay decayFactor)
-        (Map.lookup kh history)
+        (VMap.lookup kh history)
         <> newPerf
-    updatedLikelihoods = Map.mapWithKey performance newLikelihoods
+    updatedLikelihoods = VMap.mapWithKey performance newLikelihoods

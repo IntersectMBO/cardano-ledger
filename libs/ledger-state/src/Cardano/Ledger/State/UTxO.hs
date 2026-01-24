@@ -404,7 +404,7 @@ countEpochStateStats EpochState {..} =
           , essGoSnapShotStats = goSnap
           , essSnapShotsStats = markSnap <> setSnap <> goSnap
           , essLedgerStateStats = countLedgerStateStats esLState
-          , essNonMyopic = statMapKeys (likelihoodsNM esNonMyopic)
+          , essNonMyopic = statMapKeys $ VMap.toMap $ likelihoodsNM esNonMyopic
           , essAggregateStats = mempty
           }
    in stats

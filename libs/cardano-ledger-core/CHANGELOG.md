@@ -2,6 +2,13 @@
 
 ## 1.19.0.0
 
+* Add `HasZero` instance for `CompactForm Coin`
+* Export `nonZeroM`
+* Add `knownNonZeroCoin` and `knownNonZeroCompactCoin`
+* Add `sumCredentialsCompactStake`
+* Change type of `pdTotalActiveStake` to `NonZero Coin` and change its value in `Default` instance to `1`
+* Introduce `StakePoolSnapShot`, `mkStakePoolSnapShot` and remove `poolStake` as unused
+* Add `ssTotalActiveStake` and `ssStakePoolsSnapShot` to `SnapShot` type.
 * Add `Semigroup` and `Monoid` instances for `Withdrawals` and `DirectDeposits`.
 * Rename `RewardAccount` to `AccountAddress`.
   - Deprecate `RewardAccount` (now a pattern-synonym) and its fields and lenses.
@@ -127,6 +134,7 @@
 
 ### `testlib`
 
+* Stop re-exporting QuickCheck's `NonZero` as it conflcicts with our internal type.
 * Rename `RewardAccount` to `AccountAddress`
   - `deserialiseRewardAccountOld` to `deserialiseAccountAddressOld`.
   - `registerRewardAccount` to `registerAccountAddress`
