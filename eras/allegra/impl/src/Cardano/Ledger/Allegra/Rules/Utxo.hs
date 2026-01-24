@@ -22,7 +22,6 @@ module Cardano.Ledger.Allegra.Rules.Utxo (
   shelleyToAllegraUtxoPredFailure,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress, Addr)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraUTXO)
 import Cardano.Ledger.Allegra.Rules.Ppup ()

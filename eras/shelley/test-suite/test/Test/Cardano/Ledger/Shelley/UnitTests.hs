@@ -13,12 +13,7 @@
 module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (
-  AccountAddress (..),
-  AccountId (..),
-  Addr (..),
-  accountAddressCredentialL,
- )
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))

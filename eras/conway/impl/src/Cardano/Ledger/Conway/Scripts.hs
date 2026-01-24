@@ -25,7 +25,6 @@ module Cardano.Ledger.Conway.Scripts (
   pattern ProposingPurpose,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),

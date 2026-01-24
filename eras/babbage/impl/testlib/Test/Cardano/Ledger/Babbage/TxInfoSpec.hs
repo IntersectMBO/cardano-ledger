@@ -10,7 +10,6 @@
 
 module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec, spec) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
   EraPlutusTxInfo (..),

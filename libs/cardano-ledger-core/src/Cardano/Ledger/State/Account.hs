@@ -28,7 +28,6 @@ module Cardano.Ledger.State.Account (
   removeStakePoolDelegations,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Withdrawals (..))
 import Cardano.Ledger.BaseTypes (Mismatch (..), Network, Relation (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin

@@ -11,7 +11,6 @@
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodingTests) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,

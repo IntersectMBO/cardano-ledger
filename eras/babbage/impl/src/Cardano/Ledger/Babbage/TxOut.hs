@@ -43,7 +43,6 @@ module Cardano.Ledger.Babbage.TxOut (
 ) where
 
 import Cardano.Ledger.Address (
-  Addr (..),
   CompactAddr,
   compactAddr,
   decompactAddr,

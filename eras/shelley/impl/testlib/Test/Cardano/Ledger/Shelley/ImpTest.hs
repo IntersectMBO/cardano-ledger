@@ -178,13 +178,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron (empty)
-import Cardano.Ledger.Address (
-  AccountAddress (..),
-  AccountId (..),
-  Addr (..),
-  BootstrapAddress (..),
-  bootstrapKeyHash,
- )
+import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)

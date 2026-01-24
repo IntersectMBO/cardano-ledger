@@ -33,7 +33,6 @@ module Cardano.Ledger.Dijkstra.Scripts (
   upgradeTimelock,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),

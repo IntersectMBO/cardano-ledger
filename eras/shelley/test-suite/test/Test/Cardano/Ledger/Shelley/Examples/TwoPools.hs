@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.Shelley.Examples.TwoPools (
   twoPoolsExampleExtended,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   BoundedRational (..),
@@ -43,6 +42,7 @@ import Cardano.Ledger.Coin (
  )
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
+import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (

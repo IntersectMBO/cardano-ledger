@@ -18,7 +18,6 @@ module Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (
   mkStake,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Globals (..),
@@ -40,6 +39,7 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
+import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (

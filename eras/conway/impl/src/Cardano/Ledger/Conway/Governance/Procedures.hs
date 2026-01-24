@@ -81,7 +81,6 @@ module Cardano.Ledger.Conway.Governance.Procedures (
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (

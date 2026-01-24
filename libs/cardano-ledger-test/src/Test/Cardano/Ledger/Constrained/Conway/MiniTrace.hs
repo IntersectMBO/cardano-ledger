@@ -33,7 +33,6 @@ module Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   constrainedUtxo,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Network (..),

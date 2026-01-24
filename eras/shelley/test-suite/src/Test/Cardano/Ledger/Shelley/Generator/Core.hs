@@ -57,7 +57,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Core (
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), epochInfoPure, stabilityWindow)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core

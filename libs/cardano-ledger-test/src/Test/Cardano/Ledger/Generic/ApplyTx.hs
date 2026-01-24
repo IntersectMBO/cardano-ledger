@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
@@ -25,6 +24,7 @@ import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Rewards (Reward)
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -66,7 +66,11 @@ applyTxSimple count model tx = applyTxBody count model $ tx ^. bodyTxL
 
 applyTxFail ::
   (Reflect era, AlonzoEraTxBody era, EraModel era) =>
-  Int -> TxIx -> Model era -> Tx TopTx era -> Model era
+  Int ->
+  TxIx ->
+  Model era ->
+  Tx TopTx era ->
+  Model era
 applyTxFail count nextTxIx model tx = updateInfo info model
   where
     info = collInfo count nextTxIx model emptyCollInfo $ tx ^. bodyTxL

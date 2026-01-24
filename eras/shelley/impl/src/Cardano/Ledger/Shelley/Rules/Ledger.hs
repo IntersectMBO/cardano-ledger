@@ -34,7 +34,6 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   testIncompleteAndMissingWithdrawals,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes (Mismatch, Relation (..), ShelleyBase, TxIx, invalidKey, networkId)
 import Cardano.Ledger.Binary (
   DecCBOR (..),

@@ -41,7 +41,7 @@ import Cardano.Crypto.DSIGN (Ed25519DSIGN)
 import Cardano.Crypto.Hash (Blake2b_256)
 import qualified Cardano.Crypto.Hash.Class as H
 import Cardano.Crypto.KES (Sum6KES, totalPeriodsKES)
-import Cardano.Ledger.Address (Addr, serialiseAddr)
+import Cardano.Ledger.Address (serialiseAddr)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BoundedRational (boundRational, unboundRational),

@@ -23,7 +23,6 @@ module Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNkeysMpools, -- How to precompute env for the Stake Delegation transactions
 ) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   Network (..),

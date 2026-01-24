@@ -3,7 +3,6 @@
 module Cardano.Ledger.Shelley.Core (
   ShelleyBlockBody (..),
   ShelleyEraTxBody (..),
-  Withdrawals (..),
   ShelleyEraTxCert (..),
   pattern MirTxCert,
   MIRCert (..),
@@ -17,7 +16,6 @@ module Cardano.Ledger.Shelley.Core (
   module Cardano.Ledger.Shelley.Governance,
 ) where
 
-import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Core (
   EraPParams (
     DowngradePParams,

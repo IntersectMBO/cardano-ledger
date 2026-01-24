@@ -12,7 +12,6 @@
 
 module Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.TxBody (TxBody (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)

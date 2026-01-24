@@ -27,13 +27,8 @@ import Cardano.Ledger.Plutus.Data (
   dataToBinaryData,
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.API (
-  AccountAddress (..),
-  AccountId (..),
-  TxId (..),
- )
 import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.TxIn (mkTxInPartial)
+import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
 import Control.State.Transition.Extended (Embed (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet

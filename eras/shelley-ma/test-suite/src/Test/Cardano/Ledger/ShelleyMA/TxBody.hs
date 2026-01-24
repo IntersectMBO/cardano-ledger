@@ -22,7 +22,7 @@ import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
 import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Withdrawals (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString.Short as Short
 import qualified Data.Map.Strict as Map

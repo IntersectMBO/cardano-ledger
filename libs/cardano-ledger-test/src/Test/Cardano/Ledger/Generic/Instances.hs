@@ -11,7 +11,6 @@
 
 module Test.Cardano.Ledger.Generic.Instances () where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (isPlutusScript)

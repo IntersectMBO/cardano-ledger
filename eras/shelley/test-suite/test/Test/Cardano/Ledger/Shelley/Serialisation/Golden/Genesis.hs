@@ -16,10 +16,9 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis (
 import Cardano.Ledger.BaseTypes (knownNonZeroBounded, textToDns, textToUrl)
 import Cardano.Ledger.Binary (Tokens (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Core (emptyPParams, ppDL, ppMaxBBSizeL, ppMaxBHSizeL)
-import Cardano.Ledger.Keys (KeyRoleVRF (..), VRFVerKeyHash (..), hashKey)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as L
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Protocol.Crypto (StandardCrypto, hashVerKeyVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -221,9 +220,9 @@ exampleShelleyGenesis =
     delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
     delegVrfKeyHash :: VRFVerKeyHash GenDelegVRF
     delegVrfKeyHash = VRFVerKeyHash "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
-    initialFundedAddress :: L.Addr
+    initialFundedAddress :: Addr
     initialFundedAddress =
-      L.Addr
+      Addr
         L.Testnet
         paymentCredential
         (L.StakeRefBase stakingCredential)
@@ -256,7 +255,7 @@ exampleShelleyGenesis =
         , L.sppPledge = L.Coin 1
         , L.sppCost = L.Coin 5
         , L.sppMargin = unsafeBoundRational 0.25
-        , L.sppAccountAddress = L.AccountAddress L.Testnet (L.AccountId Cast.aliceSHK)
+        , L.sppAccountAddress = AccountAddress L.Testnet (AccountId Cast.aliceSHK)
         , L.sppOwners = Set.singleton $ hashKey (vKey Cast.aliceStake)
         , L.sppRelays = relays
         , L.sppMetadata =

@@ -98,6 +98,7 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.Language
+import Cardano.Ledger.Rewards
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardPulser (RSLP))
@@ -1248,7 +1249,8 @@ instance
 
 psPParamUpdate_ ::
   (EraSpecPParams era, Arbitrary (Proposals era)) =>
-  Term (Proposals era) -> Term (ProposalTree era)
+  Term (Proposals era) ->
+  Term (ProposalTree era)
 psPParamUpdate_ = sel @0
 
 data ProposalsSplit = ProposalsSplit

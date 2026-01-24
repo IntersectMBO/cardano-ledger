@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
   aggregateUtxoCoinByCredential,
 ) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (Globals (Globals, networkId), Network (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)

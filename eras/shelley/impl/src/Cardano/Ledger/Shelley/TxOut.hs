@@ -25,7 +25,7 @@ module Cardano.Ledger.Shelley.TxOut (
   valueEitherShelleyTxOutL,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
+import Cardano.Ledger.Address (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),

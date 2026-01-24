@@ -10,7 +10,6 @@
 
 module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )

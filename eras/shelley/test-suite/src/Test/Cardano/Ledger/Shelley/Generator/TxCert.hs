@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Shelley.Generator.TxCert (
   CertCred (..),
 ) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley (hardforkAlonzoAllowMIRTransfer)

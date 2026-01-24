@@ -33,8 +33,6 @@ module Cardano.Ledger.Alonzo.Rules.Utxo (
 ) where
 
 import Cardano.Ledger.Address (
-  AccountAddress,
-  Addr (..),
   CompactAddr,
   isBootstrapCompactAddr,
   isPayCredScriptCompactAddr,

@@ -21,7 +21,6 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedger (
   DijkstraSubLedgerEvent (..),
 ) where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (

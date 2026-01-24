@@ -40,12 +40,7 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   utxoEnvCertStateL,
 ) where
 
-import Cardano.Ledger.Address (
-  Addr (..),
-  aaNetworkId,
-  bootstrapAddressAttrsSize,
-  getNetwork,
- )
+import Cardano.Ledger.Address (bootstrapAddressAttrsSize, getNetwork)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network,
@@ -70,7 +65,6 @@ import Cardano.Ledger.Shelley.Rules.Ppup (
   ShelleyPpupPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
-import Cardano.Ledger.Shelley.TxBody (AccountAddress)
 import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.State

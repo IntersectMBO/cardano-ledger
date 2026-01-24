@@ -5,7 +5,6 @@
 -- | This module suppies tools to tersely describe the differences between 2 values of the same type.
 module Test.Cardano.Ledger.TerseTools where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (

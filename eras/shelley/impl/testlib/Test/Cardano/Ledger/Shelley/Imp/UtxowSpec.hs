@@ -8,7 +8,7 @@
 module Test.Cardano.Ledger.Shelley.Imp.UtxowSpec (spec) where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
+import Cardano.Ledger.Address (BootstrapAddress (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core

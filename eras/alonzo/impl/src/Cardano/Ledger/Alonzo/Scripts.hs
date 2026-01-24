@@ -60,7 +60,6 @@ module Cardano.Ledger.Alonzo.Scripts (
   module Cardano.Ledger.Plutus.ExUnits,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxCert ()

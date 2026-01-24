@@ -11,7 +11,6 @@
 
 module Test.Cardano.Ledger.Conway.Imp.GovSpec (spec) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), aaAccountId, aaNetworkId)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (hardforkConwayDisallowUnelectedCommitteeFromVoting)

@@ -8,7 +8,6 @@
 module Test.Cardano.Ledger.Shelley.Imp.PoolSpec (spec) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core

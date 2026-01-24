@@ -55,6 +55,7 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.Shelley.Era (
   hardforkAllegraAggregatedRewards,
   hardforkBabbageForgoRewardPrefilter,

@@ -18,7 +18,6 @@ import Cardano.Crypto.DSIGN (SignedDSIGN)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.KES (SignedKES, unsoundPureSignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
   EpochInterval (..),

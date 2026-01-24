@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert () where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -22,6 +21,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Rewards (rewardAmount)
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as Set
@@ -77,7 +77,9 @@ instance Era era => SpecTranslate ctx (ConwayTxCert era) where
 
 depositsMap ::
   ConwayEraCertState era =>
-  CertState era -> Proposals era -> SpecTransM ctx (Agda.HSMap Agda.DepositPurpose Integer)
+  CertState era ->
+  Proposals era ->
+  SpecTransM ctx (Agda.HSMap Agda.DepositPurpose Integer)
 depositsMap certState props =
   unionsHSMap
     <$> sequence

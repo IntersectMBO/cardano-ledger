@@ -15,18 +15,14 @@ module Test.Cardano.Ledger.Dijkstra.Binary.Annotator (
 
 ) where
 
-import Cardano.Ledger.Address (DirectDeposits (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (decodePositiveCoin)
-import Cardano.Ledger.Conway.Governance (
-  VotingProcedures (..),
- )
-import Cardano.Ledger.Core
+import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody

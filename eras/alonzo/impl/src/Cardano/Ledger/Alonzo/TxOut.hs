@@ -38,7 +38,6 @@ module Cardano.Ledger.Alonzo.TxOut (
 
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (
-  Addr (..),
   CompactAddr,
   compactAddr,
   decompactAddr,

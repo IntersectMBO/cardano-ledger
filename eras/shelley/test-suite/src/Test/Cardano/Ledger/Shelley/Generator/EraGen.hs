@@ -30,7 +30,6 @@ module Test.Cardano.Ledger.Shelley.Generator.EraGen (
   mkDummyHash,
 ) where
 
-import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -45,7 +44,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv)
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody, Withdrawals)
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.State (EraCertState, UTxO)
 import Cardano.Ledger.TxIn (TxId (TxId), TxIn)
 import Cardano.Protocol.TPraos.BHeader (BHeader)

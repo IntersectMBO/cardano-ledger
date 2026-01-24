@@ -27,7 +27,6 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Shelley.TxBody (
   TxBody (..),
-  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))

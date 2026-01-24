@@ -35,7 +35,6 @@ module Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (
   testir,
 ) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)

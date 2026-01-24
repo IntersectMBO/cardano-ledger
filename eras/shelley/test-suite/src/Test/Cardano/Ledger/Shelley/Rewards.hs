@@ -29,7 +29,6 @@ import qualified Cardano.Crypto.DSIGN as Crypto
 import Cardano.Crypto.Hash (Blake2b_256, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), aaAccountId)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),
@@ -57,6 +56,7 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (VKey (..))
+import Cardano.Ledger.Rewards (Reward (..))
 import Cardano.Ledger.Shelley (
   ShelleyEra,
   hardforkAllegraAggregatedRewards,

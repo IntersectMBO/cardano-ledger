@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.Generic.Trace where
 
 -- =========================================================================
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)

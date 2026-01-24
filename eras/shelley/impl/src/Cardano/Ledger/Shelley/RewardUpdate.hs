@@ -55,9 +55,9 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
-import Cardano.Ledger.Core (Reward (..), RewardType (MemberReward))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Rewards (Reward (..), RewardType (MemberReward))
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic)
 import Cardano.Ledger.Shelley.Rewards (
   PoolRewardInfo (..),

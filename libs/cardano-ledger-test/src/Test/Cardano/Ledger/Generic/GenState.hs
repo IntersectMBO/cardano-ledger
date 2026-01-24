@@ -80,7 +80,6 @@ module Test.Cardano.Ledger.Generic.GenState (
   modifyModelMutFee,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
