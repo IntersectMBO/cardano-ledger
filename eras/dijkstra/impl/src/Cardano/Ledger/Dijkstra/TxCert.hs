@@ -16,9 +16,10 @@ module Cardano.Ledger.Dijkstra.TxCert (
   DijkstraTxCertUpgradeError,
   DijkstraTxCert (..),
   DijkstraDelegCert (..),
+  dijkstraToConwayDelegCert,
 ) where
 
-import Cardano.Ledger.BaseTypes (kindObject)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), kindObject)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -49,6 +50,7 @@ import Cardano.Ledger.Conway.Core (
   pattern UpdateDRepTxCert,
  )
 import Cardano.Ledger.Conway.TxCert (
+  ConwayDelegCert (..),
   ConwayEraTxCert (..),
   ConwayGovCert (..),
   Delegatee (..),
@@ -356,3 +358,10 @@ instance ConwayEraTxCert DijkstraEra where
   getUpdateDRepTxCert = \case
     DijkstraTxCertGov (ConwayUpdateDRep cred mAnchor) -> Just (cred, mAnchor)
     _ -> Nothing
+
+dijkstraToConwayDelegCert :: DijkstraDelegCert -> ConwayDelegCert
+dijkstraToConwayDelegCert = \case
+  DijkstraRegCert cred deposit -> ConwayRegCert cred (SJust deposit)
+  DijkstraUnRegCert cred deposit -> ConwayUnRegCert cred (SJust deposit)
+  DijkstraDelegCert cred d -> ConwayDelegCert cred d
+  DijkstraRegDelegCert sc d deposit -> ConwayRegDelegCert sc d deposit

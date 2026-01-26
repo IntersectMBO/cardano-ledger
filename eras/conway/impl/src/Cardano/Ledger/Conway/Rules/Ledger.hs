@@ -618,6 +618,7 @@ instance
 instance
   ( EraPParams era
   , EraRule "DELEG" era ~ ConwayDELEG era
+  , InjectRuleFailure "DELEG" ConwayDelegPredFailure era
   , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
   , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era

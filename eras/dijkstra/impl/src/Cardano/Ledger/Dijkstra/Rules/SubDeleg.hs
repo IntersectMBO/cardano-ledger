@@ -25,13 +25,17 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayDelegEnv, ConwayDelegPredFailure)
+import Cardano.Ledger.Conway.Rules (
+  ConwayDelegEnv,
+  ConwayDelegPredFailure,
+  conwayDelegTransition,
+ )
+import Cardano.Ledger.Conway.TxCert (ConwayDelegCert)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBDELEG,
  )
 import Cardano.Ledger.Dijkstra.State
-import Cardano.Ledger.Dijkstra.TxCert (DijkstraDelegCert)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -41,9 +45,6 @@ import Control.State.Transition.Extended (
   STS,
   Signal,
   State,
-  TRC (TRC),
-  TransitionRule,
-  judgmentContext,
   transitionRules,
  )
 import Data.Void (Void)
@@ -59,23 +60,22 @@ type instance EraRuleEvent "SUBDELEG" DijkstraEra = VoidEraRule "SUBDELEG" Dijks
 
 instance InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure DijkstraEra
 
+instance InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure DijkstraEra where
+  injectFailure = DijkstraSubDelegPredFailure
+
 instance
   ( EraGov era
-  , EraCertState era
+  , ConwayEraCertState era
   , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
+  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
   ) =>
   STS (DijkstraSUBDELEG era)
   where
   type State (DijkstraSUBDELEG era) = CertState era
-  type Signal (DijkstraSUBDELEG era) = DijkstraDelegCert
+  type Signal (DijkstraSUBDELEG era) = ConwayDelegCert
   type Environment (DijkstraSUBDELEG era) = ConwayDelegEnv era
   type BaseM (DijkstraSUBDELEG era) = ShelleyBase
   type PredicateFailure (DijkstraSUBDELEG era) = DijkstraSubDelegPredFailure era
   type Event (DijkstraSUBDELEG era) = Void
 
-  transitionRules = [dijkstraSubDelegTransition @era]
-
-dijkstraSubDelegTransition :: TransitionRule (EraRule "SUBDELEG" era)
-dijkstraSubDelegTransition = do
-  TRC (_, st, _) <- judgmentContext
-  pure st
+  transitionRules = [conwayDelegTransition]
