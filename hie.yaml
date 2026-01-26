@@ -237,6 +237,18 @@ cradle:
     - path: "libs/cardano-ledger-binary/bench/Bench.hs"
       component: "cardano-ledger-binary:bench:bench"
 
+    - path: "libs/cardano-ledger-canonical-state/./"
+      component: "cardano-ledger-canonical-state:lib:for"
+
+    - path: "libs/cardano-ledger-canonical-state/src"
+      component: "lib:cardano-ledger-canonical-state"
+
+    - path: "libs/cardano-ledger-canonical-state/testlib"
+      component: "cardano-ledger-canonical-state:lib:testlib"
+
+    - path: "libs/cardano-ledger-canonical-state/test"
+      component: "cardano-ledger-canonical-state:test:tests"
+
     - path: "libs/cardano-ledger-conformance/src"
       component: "lib:cardano-ledger-conformance"
 

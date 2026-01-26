@@ -203,6 +203,7 @@ jobs:
         - cardano-ledger-babbage
         - cardano-ledger-binary
         - cardano-ledger-byron
+        - cardano-ledger-canonical-state
         - cardano-ledger-conformance
         - cardano-ledger-conway
         - cardano-ledger-core

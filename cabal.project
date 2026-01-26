@@ -48,8 +48,9 @@ packages:
   eras/shelley/test-suite
   eras/shelley-ma/test-suite
   libs/cardano-ledger-api
-  libs/cardano-ledger-core
   libs/cardano-ledger-binary
+  libs/cardano-ledger-canonical-state
+  libs/cardano-ledger-core
   libs/cardano-protocol-tpraos
   libs/non-integral
   libs/small-steps
@@ -95,3 +96,9 @@ if impl(ghc >=9.12)
   allow-newer:
     -- Unique: https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
+
+source-repository-package
+  type: git
+  location: https://github.com/tweag/cardano-cls.git
+  subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
+  tag: 55d9af32aab35909a4f083797876d3e802835225
