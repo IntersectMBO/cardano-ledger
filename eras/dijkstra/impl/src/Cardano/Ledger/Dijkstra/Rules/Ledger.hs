@@ -63,6 +63,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDELEG,
   ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
+  ConwayGovEvent,
   ConwayGovPredFailure,
   ConwayLedgerPredFailure,
   ConwayUtxoPredFailure,
@@ -496,13 +497,14 @@ instance
   wrapEvent = LedgerEvent
 
 instance
-  ( ConwayEraTxCert era
+  ( ConwayEraCertState era
+  , ConwayEraTxCert era
   , ConwayEraPParams era
   , ConwayEraGov era
   , EraRule "GOV" era ~ DijkstraGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
   , InjectRuleFailure "GOV" DijkstraGovPredFailure era
-  , ConwayEraCertState era
+  , InjectRuleEvent "GOV" ConwayGovEvent era
   ) =>
   Embed (DijkstraGOV era) (DijkstraLEDGER era)
   where

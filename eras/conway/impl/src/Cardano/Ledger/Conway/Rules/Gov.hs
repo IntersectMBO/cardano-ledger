@@ -230,6 +230,8 @@ type instance EraRuleEvent "GOV" ConwayEra = ConwayGovEvent ConwayEra
 
 instance InjectRuleFailure "GOV" ConwayGovPredFailure ConwayEra
 
+instance InjectRuleEvent "GOV" ConwayGovEvent ConwayEra
+
 instance EraPParams era => NFData (ConwayGovPredFailure era)
 
 instance EraPParams era => NoThunks (ConwayGovPredFailure era)
@@ -340,13 +342,13 @@ deriving instance (EraPParams era, Show (TxCert era)) => Show (GovSignal era)
 instance (EraPParams era, NFData (TxCert era)) => NFData (GovSignal era)
 
 instance
-  ( ConwayEraTxCert era
+  ( ConwayEraCertState era
+  , ConwayEraTxCert era
   , ConwayEraPParams era
   , ConwayEraGov era
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
-  , EraCertState era
-  , ConwayEraCertState era
+  , InjectRuleEvent "GOV" ConwayGovEvent era
   ) =>
   STS (ConwayGOV era)
   where
@@ -457,12 +459,12 @@ conwayGovTransition ::
   , ConwayEraPParams era
   , ConwayEraGov era
   , STS (EraRule rule era)
-  , Event (EraRule rule era) ~ ConwayGovEvent era
   , Signal (EraRule rule era) ~ GovSignal era
   , BaseM (EraRule rule era) ~ ShelleyBase
   , Environment (EraRule rule era) ~ GovEnv era
   , State (EraRule rule era) ~ Proposals era
   , InjectRuleFailure rule ConwayGovPredFailure era
+  , InjectRuleEvent rule ConwayGovEvent era
   ) =>
   TransitionRule (EraRule rule era)
 conwayGovTransition = do
@@ -636,8 +638,8 @@ conwayGovTransition = do
            in mapProposals cleanupVoters
 
   -- Report the event
-  tellEvent $ GovNewProposals txid updatedProposalStates
-  tellEvent $ GovRemovedVotes txid replacedVotes unregisteredDReps
+  tellEvent $ injectEvent $ GovNewProposals txid updatedProposalStates
+  tellEvent $ injectEvent $ GovRemovedVotes txid replacedVotes unregisteredDReps
 
   pure updatedProposalStates
 

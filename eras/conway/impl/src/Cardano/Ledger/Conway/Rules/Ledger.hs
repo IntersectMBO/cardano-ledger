@@ -80,6 +80,7 @@ import Cardano.Ledger.Conway.Rules.Certs (
  )
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (
+  ConwayGovEvent,
   ConwayGovPredFailure,
   GovEnv (..),
   GovSignal (..),
@@ -603,12 +604,13 @@ instance
   wrapEvent = LedgerEvent
 
 instance
-  ( ConwayEraTxCert era
+  ( ConwayEraCertState era
+  , ConwayEraTxCert era
   , ConwayEraPParams era
   , ConwayEraGov era
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
-  , ConwayEraCertState era
+  , InjectRuleEvent "GOV" ConwayGovEvent era
   ) =>
   Embed (ConwayGOV era) (ConwayLEDGER era)
   where
