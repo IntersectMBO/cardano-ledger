@@ -1,8 +1,11 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.VMap where
 
+import Control.Exception
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.VMap as VMap
@@ -29,6 +32,11 @@ prop_AsMapTo fromVM fromM vm = fromVM vm === fromM (toMap vm)
 prop_AsMapFrom :: (a -> VMapT) -> (a -> MapT) -> a -> Property
 prop_AsMapFrom mkVMap mkMap a = toMap (mkVMap a) === mkMap a
 
+data ThunkException = ThunkException
+  deriving (Eq, Show)
+
+instance Exception ThunkException
+
 vMapTests :: Spec
 vMapTests =
   describe "VMap" $ do
@@ -38,6 +46,37 @@ vMapTests =
       prop "to/fromAscList" $ prop_Roundtrip VMap.toAscList VMap.fromAscList
       prop "to/fromList" $ prop_Roundtrip VMap.toAscList VMap.fromList
       prop "to/fromMap" $ prop_Roundtrip VMap.toMap VMap.fromMap
+    describe "strictness" $ do
+      let bottom :: a
+          bottom = throw ThunkException
+      prop "fromList" $ \xs ys -> do
+        let
+          vmapKeyThunk, vmapValueThunk :: VMap VB VB String String
+          vmapKeyThunk = VMap.fromList $ xs ++ [(bottom, "value")] ++ ys
+          vmapValueThunk = VMap.fromList $ xs ++ [("key", bottom)] ++ ys
+        evaluate vmapKeyThunk `shouldThrow` (== ThunkException)
+        evaluate vmapValueThunk `shouldThrow` (== ThunkException)
+      prop "map" $ \xs ys -> do
+        let
+          vmapValueThunk :: VMap VB VB String String
+          vmapValueThunk =
+            VMap.map (\v -> if v == "bottom" then bottom else v) $
+              VMap.fromList $
+                xs ++ [("key", "bottom")] ++ ys
+        evaluate vmapValueThunk `shouldThrow` (== ThunkException)
+      prop "mapWithKey" $ \xs ys -> do
+        let
+          vmapKeyThunk, vmapValueThunk :: VMap VB VB String String
+          vmapKeyThunk =
+            VMap.mapWithKey (\k v -> if k == "bottom" then bottom else v) $
+              VMap.fromList $
+                xs ++ [("bottom", "value")] ++ ys
+          vmapValueThunk =
+            VMap.mapWithKey (\_ v -> if v == "bottom" then bottom else v) $
+              VMap.fromList $
+                xs ++ [("key", "bottom")] ++ ys
+        evaluate vmapKeyThunk `shouldThrow` (== ThunkException)
+        evaluate vmapValueThunk `shouldThrow` (== ThunkException)
     describe "asMap" $ do
       prop "mapMaybeWithKey" $ \xs f ->
         prop_AsMapFrom
