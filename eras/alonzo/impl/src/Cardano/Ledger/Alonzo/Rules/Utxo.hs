@@ -105,6 +105,7 @@ import Data.Coerce (coerce)
 import Data.Either (isRight)
 import Data.Foldable as F (foldl', sequenceA_, toList)
 import Data.List.NonEmpty (NonEmpty)
+import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
@@ -159,7 +160,7 @@ data AlonzoUtxoPredFailure era
       Coin
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
-      (UTxO era)
+      (NonEmptyMap TxIn (TxOut era))
   | ExUnitsTooBigUTxO (Mismatch RelLTEQ ExUnits)
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA (Value era)
@@ -315,8 +316,7 @@ validateScriptsNotPaidUTxO ::
   Map.Map TxIn (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateScriptsNotPaidUTxO utxoCollateral =
-  failureUnless (all vKeyLocked utxoCollateral) $
-    ScriptsNotPaidUTxO (UTxO (Map.filter (not . vKeyLocked) utxoCollateral))
+  failureOnNonEmptyMap (Map.filter (not . vKeyLocked) utxoCollateral) ScriptsNotPaidUTxO
 
 -- > balance ∗ 100 ≥ txfee txb ∗ (collateralPercent pp)
 validateInsufficientCollateral ::
@@ -615,8 +615,7 @@ instance
 
 encFail ::
   forall era.
-  ( Era era
-  , EncCBOR (TxOut era)
+  ( EncCBOR (TxOut era)
   , EncCBOR (Value era)
   , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
@@ -664,8 +663,7 @@ encFail NoCollateralInputs =
   Sum NoCollateralInputs 20
 
 decFail ::
-  ( Era era
-  , DecCBOR (TxOut era)
+  ( DecCBOR (TxOut era)
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
@@ -684,7 +682,7 @@ decFail 9 = SumD WrongNetworkWithdrawal <! From <! From
 decFail 10 = SumD OutputBootAddrAttrsTooBig <! From
 decFail 12 = SumD OutputTooBigUTxO <! From
 decFail 13 = SumD InsufficientCollateral <! From <! From
-decFail 14 = SumD ScriptsNotPaidUTxO <! D (UTxO <$> decCBOR)
+decFail 14 = SumD ScriptsNotPaidUTxO <! From
 decFail 15 = SumD ExUnitsTooBigUTxO <! From
 decFail 16 = SumD CollateralContainsNonADA <! From
 decFail 17 = SumD WrongNetworkInTxBody <! From

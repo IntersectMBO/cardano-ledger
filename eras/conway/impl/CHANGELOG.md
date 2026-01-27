@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Change `ScriptsNotPaidUTxO` to use `NonEmptyMap TxIn (TxOut era)` instead of `UTxO era`
 * Add `conwayLedgerTransitionTRC`
 * Deprecate
   - `constitutionScriptL` in favor of new `constitutionGuardrailsScriptHashL`

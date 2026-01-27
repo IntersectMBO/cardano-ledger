@@ -83,7 +83,6 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (UtxoEnv, validSizeComp
 import Cardano.Ledger.State (
   EraCertState (..),
   EraUTxO,
-  UTxO (..),
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
@@ -98,6 +97,7 @@ import Control.State.Transition.Extended (
  )
 import Data.Coerce (coerce)
 import Data.List.NonEmpty (NonEmpty)
+import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -147,7 +147,7 @@ data DijkstraUtxoPredFailure era
       -- | the required collateral for the given fee
       Coin
   | -- | The UTxO entries which have the wrong kind of script
-    ScriptsNotPaidUTxO (UTxO era)
+    ScriptsNotPaidUTxO (NonEmptyMap TxIn (TxOut era))
   | ExUnitsTooBigUTxO
       (Mismatch RelLTEQ ExUnits)
   | -- | The inputs marked for use as fees contain non-ADA tokens

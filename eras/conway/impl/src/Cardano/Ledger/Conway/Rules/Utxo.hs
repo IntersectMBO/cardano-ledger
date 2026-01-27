@@ -69,11 +69,12 @@ import Cardano.Ledger.Plutus (ExUnits)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (UtxoEnv, validSizeComputationCheck)
-import Cardano.Ledger.State (EraCertState (..), EraUTxO, UTxO (..))
+import Cardano.Ledger.State (EraCertState (..), EraUTxO)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (Embed (..), STS (..))
 import Data.List.NonEmpty (NonEmpty)
+import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -127,7 +128,7 @@ data ConwayUtxoPredFailure era
       Coin
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
-      (UTxO era)
+      (NonEmptyMap TxIn (TxOut era))
   | ExUnitsTooBigUTxO
       (Mismatch RelLTEQ ExUnits) -- The values are serialised in reverse order
   | -- | The inputs marked for use as fees contain non-ADA tokens
