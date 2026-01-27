@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `validateTreasuryValue`, `validateWithdrawalsDelegated`
 * Update `resolveConwayInstantStake` to return `ActiveStake`
 * Remove `asBoundedIntegralHKD`
 * Change lens type of `hkdCommitteeMinSizeL` and `ppCommitteeMinSize` from `Natural` to `Word16`

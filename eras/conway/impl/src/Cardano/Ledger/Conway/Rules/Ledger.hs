@@ -21,6 +21,8 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   shelleyToConwayLedgerPredFailure,
   conwayLedgerTransition,
   conwayLedgerTransitionTRC,
+  validateTreasuryValue,
+  validateWithdrawalsDelegated,
 ) where
 
 import Cardano.Ledger.Address (accountAddressCredentialL)
@@ -92,6 +94,10 @@ import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
+import Cardano.Ledger.Rules.ValidationMode (
+  Test,
+  runTest,
+ )
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -114,17 +120,7 @@ import Cardano.Ledger.Shelley.Rules (
 import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
-import Control.State.Transition.Extended (
-  Embed (..),
-  STS (..),
-  TRC (..),
-  TransitionRule,
-  failOnNonEmpty,
-  judgmentContext,
-  liftSTS,
-  trans,
-  (?!),
- )
+import Control.State.Transition.Extended
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
@@ -137,6 +133,7 @@ import Data.Word (Word32)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
+import Validation
 
 data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
@@ -394,36 +391,14 @@ conwayLedgerTransitionTRC
       if tx ^. isValidTxL == IsValid True
         then do
           let txBody = tx ^. bodyTxL
-              actualTreasuryValue = chainAccountState ^. casTreasuryL
-          case txBody ^. currentTreasuryValueTxBodyL of
-            SNothing -> pure ()
-            SJust submittedTreasuryValue ->
-              submittedTreasuryValue
-                == actualTreasuryValue
-                  ?! (injectFailure . ConwayTreasuryValueMismatch)
-                    ( Mismatch
-                        { mismatchSupplied = submittedTreasuryValue
-                        , mismatchExpected = actualTreasuryValue
-                        }
-                    )
-
-          let
-            totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxoL) tx
-            maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
-          totalRefScriptSize
-            <= maxRefScriptSizePerTx
-              ?! injectFailure
-                ( ConwayTxRefScriptsSizeTooBig
-                    Mismatch
-                      { mismatchSupplied = totalRefScriptSize
-                      , mismatchExpected = maxRefScriptSizePerTx
-                      }
-                )
+          runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+          runTest $ validateRefScriptSize pp (utxoState ^. utxoL) tx
 
           let govState = utxoState ^. utxosGovStateL
               committee = govState ^. committeeGovStateL
               proposals = govState ^. proposalsGovStateL
               committeeProposals = proposalsWithPurpose grCommitteeL proposals
+              accounts = certState ^. certDStateL . accountsL
 
           -- Starting with version 10, we don't allow withdrawals into RewardAcounts that are
           -- KeyHashes and not delegated to Dreps.
@@ -432,17 +407,7 @@ conwayLedgerTransitionTRC
           -- because otherwise it would not be possible to unregister an account address and withdraw
           -- all funds from it in the same transaction.
           unless (hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL)) $ do
-            let accounts = certState ^. certDStateL . accountsL
-                wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
-                wdrlsKeyHashes =
-                  [ kh | (ra, _) <- Map.toList wdrls, Just kh <- [credKeyHash $ ra ^. accountAddressCredentialL]
-                  ]
-                isNotDRepDelegated keyHash = isNothing $ do
-                  accountState <- lookupAccountState (KeyHashObj keyHash) accounts
-                  accountState ^. dRepDelegationAccountStateL
-                nonExistentDelegations =
-                  filter isNotDRepDelegated wdrlsKeyHashes
-            failOnNonEmpty nonExistentDelegations (injectFailure . ConwayWdrlNotDelegatedToDRep)
+            runTest $ validateWithdrawalsDelegated accounts tx
 
           certState' <-
             if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule $ pp ^. ppProtocolVersionL
@@ -503,6 +468,54 @@ conwayLedgerTransitionTRC
           , tx
           )
     pure $ LedgerState utxoState'' certStateAfterCERTS
+
+validateTreasuryValue ::
+  ConwayEraTxBody era => TxBody l era -> Coin -> Test (ConwayLedgerPredFailure era)
+validateTreasuryValue txBody actualTreasuryValue =
+  case txBody ^. currentTreasuryValueTxBodyL of
+    SNothing -> pure ()
+    SJust submittedTreasuryValue ->
+      failureUnless (submittedTreasuryValue == actualTreasuryValue) $
+        ConwayTreasuryValueMismatch
+          ( Mismatch
+              { mismatchSupplied = submittedTreasuryValue
+              , mismatchExpected = actualTreasuryValue
+              }
+          )
+
+validateRefScriptSize ::
+  ( EraTx era
+  , BabbageEraTxBody era
+  , ConwayEraPParams era
+  ) =>
+  PParams era -> UTxO era -> Tx l era -> Test (ConwayLedgerPredFailure era)
+validateRefScriptSize pp utxo tx =
+  let totalRefScriptSize = txNonDistinctRefScriptsSize utxo tx
+      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+   in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
+        ( ConwayTxRefScriptsSizeTooBig
+            Mismatch
+              { mismatchSupplied = totalRefScriptSize
+              , mismatchExpected = maxRefScriptSizePerTx
+              }
+        )
+
+validateWithdrawalsDelegated ::
+  ( EraTx era
+  , ConwayEraCertState era
+  ) =>
+  Accounts era -> Tx l era -> Test (ConwayLedgerPredFailure era)
+validateWithdrawalsDelegated accounts tx =
+  let wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
+      wdrlsKeyHashes =
+        [ kh | (ra, _) <- Map.toList wdrls, Just kh <- [credKeyHash $ ra ^. accountAddressCredentialL]
+        ]
+      isNotDRepDelegated keyHash = isNothing $ do
+        accountState <- lookupAccountState (KeyHashObj keyHash) accounts
+        accountState ^. dRepDelegationAccountStateL
+      nonExistentDelegations =
+        filter isNotDRepDelegated wdrlsKeyHashes
+   in failureOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
 
 conwayLedgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
