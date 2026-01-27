@@ -3,7 +3,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -58,6 +57,8 @@ module Cardano.Ledger.Api.Scripts (
     toGuardingPurpose
   ),
   pattern GuardingPurpose,
+  AccountBalanceInterval (..),
+  AccountBalanceIntervals (..),
 ) where
 
 import Cardano.Ledger.Address (AccountAddress)
@@ -87,6 +88,8 @@ import Cardano.Ledger.Core (
   validateNativeScript,
  )
 import Cardano.Ledger.Dijkstra.Scripts (
+  AccountBalanceInterval (..),
+  AccountBalanceIntervals (..),
   DijkstraEraScript (..),
   pattern GuardingPurpose,
  )

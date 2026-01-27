@@ -134,6 +134,12 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
             (null . unDirectDeposits)
             (directDepositsDijkstraTxBodyRawL .~)
             From
+        26 ->
+          fieldGuarded
+            (emptyFailure "AccountBalanceIntervals" "non-empty")
+            (null . unAccountBalanceIntervals)
+            (accountBalanceIntervalsDijkstraTxBodyRawL .~)
+            From
         n -> invalidField n
       requiredFields :: STxBothLevels l DijkstraEra -> [(Word, String)]
       requiredFields sTxLevel

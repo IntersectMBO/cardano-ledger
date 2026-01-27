@@ -2,6 +2,9 @@
 
 ## 0.2.0.0
 
+* Add `accountBalanceIntervalsTxBodyL` lens to `DijkstraEraTxBody` typeclass.
+  - Add the corresponding field to both `TopTx` and `SubTx` levels of `TxBody`.
+  - Add `AccountBalanceInterval` and `AccountBalanceIntervals` data types.
 * Add `Generic` instance for `ApplyTxError`
 * Change `ScriptsNotPaidUTxO` to use `NonEmptyMap TxIn (TxOut era)` instead of `UTxO era`
 * Add `dijkstraToConwayDelegCert`
@@ -115,6 +118,8 @@
 
 ### `cddl`
 
+* Add `account_balance_intervals` to `transaction_body` and `sub_transaction_body`.
+  - Add `accountBalanceInterval` and `accountBalanceIntervals` rules.
 * Remove `account_registration_cert` and `account_unregistration_cert`.
 * Add `directDepositsRule` to the transaction body.
 * Constrain `protocol_version` minor field to `uint .size 4`.

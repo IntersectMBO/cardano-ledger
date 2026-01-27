@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -17,7 +16,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -50,6 +48,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbGuards,
     dtbSubTransactions,
     dtbDirectDeposits,
+    dtbAccountBalanceIntervals,
     dstbSpendInputs,
     dstbReferenceInputs,
     dstbOutputs,
@@ -66,7 +65,8 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dstbTreasuryDonation,
     dstbRequiredTopLevelGuards,
     dstbGuards,
-    dstbDirectDeposits
+    dstbDirectDeposits,
+    dstbAccountBalanceIntervals
   ),
   upgradeProposals,
   upgradeGovAction,
@@ -95,6 +95,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
   subTransactionsDijkstraTxBodyRawL,
   requiredTopLevelGuardsDijkstraTxBodyRawL,
   directDepositsDijkstraTxBodyRawL,
+  accountBalanceIntervalsDijkstraTxBodyRawL,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
@@ -122,7 +123,7 @@ import Cardano.Ledger.Conway.TxBody (
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
+import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..), DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra.TxOut ()
 import Cardano.Ledger.Keys (HasKeyRole (..))
 import Cardano.Ledger.Mary.Value (MultiAsset)
@@ -181,6 +182,7 @@ data DijkstraTxBodyRaw l era where
     , dtbrTreasuryDonation :: !Coin
     , dtbrSubTransactions :: !(OMap TxId (Tx SubTx era))
     , dtbrDirectDeposits :: !DirectDeposits
+    , dtbrAccountBalanceIntervals :: !(AccountBalanceIntervals era)
     } ->
     DijkstraTxBodyRaw TopTx era
   DijkstraSubTxBodyRaw ::
@@ -201,6 +203,7 @@ data DijkstraTxBodyRaw l era where
     , dstbrTreasuryDonation :: !Coin
     , dstbrRequiredTopLevelGuards :: !(Map (Credential Guard) (StrictMaybe (Data era)))
     , dstbrDirectDeposits :: !DirectDeposits
+    , dstbrAccountBalanceIntervals :: !(AccountBalanceIntervals era)
     } ->
     DijkstraTxBodyRaw SubTx era
 
@@ -222,7 +225,7 @@ deriving via
     (Typeable l, EraTxBody era) => NoThunks (DijkstraTxBodyRaw l era)
 
 instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l era) where
-  rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
+  rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraTxBodyRaw {..} = txBodyRaw
      in dtbrSpendInputs `deepseq`
           dtbrCollateralInputs `deepseq`
@@ -244,8 +247,9 @@ instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l e
                                           dtbrCurrentTreasuryValue `deepseq`
                                             dtbrTreasuryDonation `deepseq`
                                               dtbrSubTransactions `deepseq`
-                                                rnf dtbrDirectDeposits
-  rnf txBodyRaw@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
+                                                dtbrDirectDeposits `deepseq`
+                                                  rnf dtbrAccountBalanceIntervals
+  rnf txBodyRaw@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraSubTxBodyRaw {..} = txBodyRaw
      in dstbrSpendInputs `deepseq`
           dstbrReferenceInputs `deepseq`
@@ -263,7 +267,8 @@ instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l e
                                   dstbrCurrentTreasuryValue `deepseq`
                                     dstbrTreasuryDonation `deepseq`
                                       dstbrRequiredTopLevelGuards `deepseq`
-                                        rnf dstbrDirectDeposits
+                                        dstbrDirectDeposits `deepseq`
+                                          rnf dstbrAccountBalanceIntervals
 
 deriving instance (EraTxBody era, Show (Tx SubTx era)) => Show (DijkstraTxBodyRaw l era)
 
@@ -291,6 +296,7 @@ basicDijkstraTxBodyRaw STopTx =
     mempty
     OMap.Empty
     (DirectDeposits mempty)
+    (AccountBalanceIntervals mempty)
 basicDijkstraTxBodyRaw SSubTx =
   DijkstraSubTxBodyRaw
     mempty
@@ -310,6 +316,7 @@ basicDijkstraTxBodyRaw SSubTx =
     mempty
     mempty
     (DirectDeposits mempty)
+    (AccountBalanceIntervals mempty)
 
 instance
   ( Typeable l
@@ -411,6 +418,12 @@ instance
             (null . unDirectDeposits)
             (directDepositsDijkstraTxBodyRawL .~)
             From
+        26 ->
+          fieldAGuarded
+            (emptyFailure "AccountBalanceIntervals" "non-empty")
+            (null . unAccountBalanceIntervals)
+            (accountBalanceIntervalsDijkstraTxBodyRawL .~)
+            From
         n -> invalidField n
       decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
       decodeSubTransactions =
@@ -456,6 +469,7 @@ encodeTxBodyRaw DijkstraTxBodyRaw {..} =
         !> Omit (== mempty) (Key 22 $ To dtbrTreasuryDonation)
         !> Omit null (Key 23 $ To dtbrSubTransactions)
         !> Omit (null . unDirectDeposits) (Key 25 (To dtbrDirectDeposits))
+        !> Omit (null . unAccountBalanceIntervals) (Key 26 (To dtbrAccountBalanceIntervals))
 encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
   let ValidityInterval bot top = dstbrVldt
    in Keyed
@@ -482,6 +496,7 @@ encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
           (== mempty)
           (Key 24 $ E (encodeMap encCBOR (encodeNullStrictMaybe encCBOR)) dstbrRequiredTopLevelGuards)
         !> Omit (null . unDirectDeposits) (Key 25 (To dstbrDirectDeposits))
+        !> Omit (null . unAccountBalanceIntervals) (Key 26 (To dstbrAccountBalanceIntervals))
 
 instance
   ( EraTxBody era
@@ -561,6 +576,7 @@ pattern DijkstraTxBody ::
   Coin ->
   OMap TxId (Tx SubTx DijkstraEra) ->
   DirectDeposits ->
+  AccountBalanceIntervals DijkstraEra ->
   TxBody TopTx DijkstraEra
 pattern DijkstraTxBody
   { dtbSpendInputs
@@ -584,6 +600,7 @@ pattern DijkstraTxBody
   , dtbTreasuryDonation
   , dtbSubTransactions
   , dtbDirectDeposits
+  , dtbAccountBalanceIntervals
   } <-
   ( getMemoRawType ->
       DijkstraTxBodyRaw
@@ -608,6 +625,7 @@ pattern DijkstraTxBody
         , dtbrTreasuryDonation = dtbTreasuryDonation
         , dtbrSubTransactions = dtbSubTransactions
         , dtbrDirectDeposits = dtbDirectDeposits
+        , dtbrAccountBalanceIntervals = dtbAccountBalanceIntervals
         }
     )
   where
@@ -632,7 +650,8 @@ pattern DijkstraTxBody
       currentTreasuryValue
       treasuryDonation
       subTransactions
-      directDeposits =
+      directDeposits
+      accountBalanceIntervals =
         mkMemoizedEra @DijkstraEra $
           DijkstraTxBodyRaw
             inputsX
@@ -656,6 +675,7 @@ pattern DijkstraTxBody
             treasuryDonation
             subTransactions
             directDeposits
+            accountBalanceIntervals
 
 pattern DijkstraSubTxBody ::
   ( EncCBOR (Tx SubTx DijkstraEra)
@@ -682,6 +702,7 @@ pattern DijkstraSubTxBody ::
   Coin ->
   Map (Credential Guard) (StrictMaybe (Data DijkstraEra)) ->
   DirectDeposits ->
+  AccountBalanceIntervals DijkstraEra ->
   TxBody SubTx DijkstraEra
 pattern DijkstraSubTxBody
   { dstbSpendInputs
@@ -701,6 +722,7 @@ pattern DijkstraSubTxBody
   , dstbTreasuryDonation
   , dstbRequiredTopLevelGuards
   , dstbDirectDeposits
+  , dstbAccountBalanceIntervals
   } <-
   ( getMemoRawType ->
       DijkstraSubTxBodyRaw
@@ -721,6 +743,7 @@ pattern DijkstraSubTxBody
         , dstbrTreasuryDonation = dstbTreasuryDonation
         , dstbrRequiredTopLevelGuards = dstbRequiredTopLevelGuards
         , dstbrDirectDeposits = dstbDirectDeposits
+        , dstbrAccountBalanceIntervals = dstbAccountBalanceIntervals
         }
     )
   where
@@ -741,7 +764,8 @@ pattern DijkstraSubTxBody
       currentTreasuryValue
       treasuryDonation
       requiredTopLevelGuards
-      directDeposits =
+      directDeposits
+      accountBalanceIntervals =
         mkMemoizedEra @DijkstraEra $
           DijkstraSubTxBodyRaw
             inputsX
@@ -761,6 +785,7 @@ pattern DijkstraSubTxBody
             treasuryDonation
             requiredTopLevelGuards
             directDeposits
+            accountBalanceIntervals
 
 {-# COMPLETE DijkstraTxBody, DijkstraSubTxBody #-}
 
@@ -870,6 +895,19 @@ directDepositsDijkstraTxBodyRawL =
     ( \case
         x@DijkstraTxBodyRaw {} -> \y -> x {dtbrDirectDeposits = y}
         x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrDirectDeposits = y}
+    )
+
+accountBalanceIntervalsDijkstraTxBodyRawL ::
+  Lens' (DijkstraTxBodyRaw l era) (AccountBalanceIntervals era)
+accountBalanceIntervalsDijkstraTxBodyRawL =
+  lens
+    ( \case
+        DijkstraTxBodyRaw {dtbrAccountBalanceIntervals} -> dtbrAccountBalanceIntervals
+        DijkstraSubTxBodyRaw {dstbrAccountBalanceIntervals} -> dstbrAccountBalanceIntervals
+    )
+    ( \case
+        x@DijkstraTxBodyRaw {} -> \y -> x {dtbrAccountBalanceIntervals = y}
+        x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrAccountBalanceIntervals = y}
     )
 
 instance
@@ -1261,6 +1299,8 @@ class ConwayEraTxBody era => DijkstraEraTxBody era where
 
   directDepositsTxBodyL :: Lens' (TxBody l era) DirectDeposits
 
+  accountBalanceIntervalsTxBodyL :: Lens' (TxBody l era) (AccountBalanceIntervals era)
+
 guardsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw l era) (OSet (Credential Guard))
 guardsDijkstraTxBodyRawL =
   lens
@@ -1301,6 +1341,9 @@ instance
 
   directDepositsTxBodyL = memoRawTypeL @DijkstraEra . directDepositsDijkstraTxBodyRawL
   {-# INLINE directDepositsTxBodyL #-}
+
+  accountBalanceIntervalsTxBodyL = memoRawTypeL @DijkstraEra . accountBalanceIntervalsDijkstraTxBodyRawL
+  {-# INLINE accountBalanceIntervalsTxBodyL #-}
 
 -- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
 -- the first element and if it's a credential, it decodes the rest of the
