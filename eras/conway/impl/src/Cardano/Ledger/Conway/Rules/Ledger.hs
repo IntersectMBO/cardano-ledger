@@ -21,6 +21,7 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   shelleyToConwayLedgerPredFailure,
   conwayLedgerTransition,
   conwayLedgerTransitionTRC,
+  validateTreasuryValue,
 ) where
 
 import Cardano.Ledger.Address (accountAddressCredentialL)
@@ -92,6 +93,10 @@ import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
+import Cardano.Ledger.Rules.ValidationMode (
+  Test,
+  runTest,
+ )
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -137,6 +142,7 @@ import Data.Word (Word32)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
+import Validation
 
 data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
@@ -394,18 +400,7 @@ conwayLedgerTransitionTRC
       if tx ^. isValidTxL == IsValid True
         then do
           let txBody = tx ^. bodyTxL
-              actualTreasuryValue = chainAccountState ^. casTreasuryL
-          case txBody ^. currentTreasuryValueTxBodyL of
-            SNothing -> pure ()
-            SJust submittedTreasuryValue ->
-              submittedTreasuryValue
-                == actualTreasuryValue
-                  ?! (injectFailure . ConwayTreasuryValueMismatch)
-                    ( Mismatch
-                        { mismatchSupplied = submittedTreasuryValue
-                        , mismatchExpected = actualTreasuryValue
-                        }
-                    )
+          runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
 
           let
             totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxoL) tx
@@ -503,6 +498,20 @@ conwayLedgerTransitionTRC
           , tx
           )
     pure $ LedgerState utxoState'' certStateAfterCERTS
+
+validateTreasuryValue ::
+  ConwayEraTxBody era => TxBody l era -> Coin -> Test (ConwayLedgerPredFailure era)
+validateTreasuryValue txBody actualTreasuryValue =
+  case txBody ^. currentTreasuryValueTxBodyL of
+    SNothing -> pure ()
+    SJust submittedTreasuryValue ->
+      failureUnless (submittedTreasuryValue == actualTreasuryValue) $
+        ConwayTreasuryValueMismatch
+          ( Mismatch
+              { mismatchSupplied = submittedTreasuryValue
+              , mismatchExpected = actualTreasuryValue
+              }
+          )
 
 conwayLedgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
