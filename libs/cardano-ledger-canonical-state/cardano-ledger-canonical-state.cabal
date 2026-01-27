@@ -29,7 +29,7 @@ common warnings
 source-repository head
   type: git
   location: https://github.com/intersectmbo/cardano-ledger.git
-  subdir: libs/cardano-canonical
+  subdir: libs/cardano-ledger-canonical-state
 
 library
   import: warnings

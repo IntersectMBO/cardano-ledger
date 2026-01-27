@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -28,6 +29,7 @@ import Cardano.SCLS.NamespaceCodec (
 import Data.MemPack (MemPack (..))
 import Data.MemPack.ByteOrdered (packWord64beM, unpackBigEndianM)
 import Data.Proxy (Proxy (..))
+import GHC.Generics (Generic)
 import GHC.Num.Natural (Natural)
 
 -- | Definition of the namespace.
@@ -39,7 +41,7 @@ data BlockIn = BlockIn
   { blockInStakePoolId :: !(KeyHash StakePool)
   , blockInEpochNo :: !EpochNo
   }
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show, Generic)
 
 instance IsKey BlockIn where
   keySize = namespaceKeySize @"blocks/v0"
@@ -60,5 +62,5 @@ instance CanonicalCBOREntryDecoder "blocks/v0" BlockOut where
   decodeEntry = fromCanonicalCBOR
 
 newtype BlockOut = BlockOut Natural
-  deriving stock (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show, Generic)
   deriving newtype (ToCanonicalCBOR v, FromCanonicalCBOR v)
