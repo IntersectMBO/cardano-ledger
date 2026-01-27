@@ -122,6 +122,7 @@ transaction_body =
   , ? 22 : positive_coin                    ; donation
   , ? 23 : sub_transactions                 ; sub-transactions (NEW)
   , ? 25 : direct_deposits                  ; direct deposits
+  , ? 26 : account_balance_intervals        ; account balance intervals
   }
 
 
@@ -723,12 +724,21 @@ sub_transaction_body =
   , ? 22 : positive_coin                   
   , ? 24 : required_top_level_guards       
   , ? 25 : direct_deposits                 
+  , ? 26 : account_balance_intervals       
   }
 
 
 required_top_level_guards = {+ credential => plutus_data/ nil}
 
 direct_deposits = {+ reward_account => coin}
+
+account_balance_intervals = {+ credential => account_balance_interval}
+
+account_balance_interval = 
+  [  inclusive_lower_bound : coin, exclusive_upper_bound : coin/ nil
+  // inclusive_lower_bound : coin/ nil, exclusive_upper_bound : coin
+  ]
+
 
 transaction_witness_set = 
   { ? 0 : nonempty_set<vkeywitness>      

@@ -50,6 +50,10 @@ instance ToExpr (CompactForm Coin) where
 
 deriving newtype instance ToExpr (CompactForm DeltaCoin)
 
+deriving newtype instance ToExpr a => ToExpr (Inclusive a)
+
+deriving newtype instance ToExpr a => ToExpr (Exclusive a)
+
 -- HKD
 instance ToExpr (NoUpdate a)
 

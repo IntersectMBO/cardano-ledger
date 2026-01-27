@@ -34,9 +34,7 @@ import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
-import Cardano.Ledger.Shelley.Scripts (
-  pattern RequireSignature,
- )
+import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Data.Functor.Identity (Identity)
 import qualified Data.OMap.Strict as OMap
 import Data.Typeable (Typeable)
@@ -72,6 +70,7 @@ instance Arbitrary (TxBody SubTx DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary (TxBody TopTx DijkstraEra) where
   arbitrary =
@@ -96,6 +95,7 @@ instance Arbitrary (TxBody TopTx DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
       <*> (choose (0, 4) >>= \n -> OMap.fromFoldable <$> vectorOf n arbitrary)
+      <*> arbitrary
       <*> arbitrary
 
 instance Arbitrary (UpgradeDijkstraPParams Identity DijkstraEra) where
@@ -310,3 +310,11 @@ deriving newtype instance Arbitrary (ApplyTxError DijkstraEra)
 
 instance Arbitrary (DijkstraMempoolPredFailure DijkstraEra) where
   arbitrary = genericArbitraryU
+
+instance Arbitrary (AccountBalanceIntervals era) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Arbitrary (AccountBalanceInterval era) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
