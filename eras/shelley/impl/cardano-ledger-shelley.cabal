@@ -96,10 +96,19 @@ library
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
-    -Wredundant-constraints
     -Wpartial-fields
     -Wunused-packages
 
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     FailT,
     aeson >=2,
@@ -206,10 +215,19 @@ library testlib
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
-    -Wredundant-constraints
     -Wpartial-fields
     -Wunused-packages
 
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     FailT,
     ImpSpec,

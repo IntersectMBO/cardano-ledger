@@ -716,11 +716,11 @@ toPTree (ChildParent childParent) root (PGraph fullGraph) = do
     childToTree parent child (!graph, !acc) =
       case Map.lookup child graph of
         Nothing -> Left $ "Cannot find the node: " ++ show child
-        Just edges -> do
-          unless (peParent edges == parent) $
+        Just es -> do
+          unless (peParent es == parent) $
             Left $
               "Incorrect parent: "
-                ++ show (peParent edges)
+                ++ show (peParent es)
                 ++ " listed for the node: "
                 ++ show child
           case Map.lookup child childParent of
@@ -738,7 +738,7 @@ toPTree (ChildParent childParent) root (PGraph fullGraph) = do
           (graph', !subTree) <-
             -- Deleting the child from the graph ensures that every node except the root
             -- appears exactly once in the graph.
-            nodeToTree (SJust child) (peChildren edges) (Map.delete child graph)
+            nodeToTree (SJust child) (peChildren es) (Map.delete child graph)
           pure (graph', subTree : acc)
 
 -- | Verify invariant after addition of GovActionState to Proposals. Will print the state
