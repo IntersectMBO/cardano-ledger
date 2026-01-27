@@ -24,8 +24,8 @@ common warnings
     -Wincomplete-uni-patterns
     -Wredundant-constraints
     -Wpartial-fields
-    -Wunused-packages
 
+-- -Wunused-packages
 source-repository head
   type: git
   location: https://github.com/intersectmbo/cardano-ledger.git
@@ -35,24 +35,40 @@ library
   import: warnings
   default-language: Haskell2010
   exposed-modules:
+    Cardano.Ledger.CanonicalState.BasicTypes
     Cardano.Ledger.CanonicalState.Namespace.Blocks.V0
+    Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
 
   hs-source-dirs: src
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wpartial-fields
-    -Wredundant-constraints
-    -Wunused-packages
-    -Werror
-
   build-depends:
     base,
+    base16-bytestring,
+    bytestring,
+    cardano-ledger-binary,
     cardano-ledger-core,
+    cborg,
     mempack-scls,
     scls-cardano,
+    scls-cbor,
+    scls-core,
+
+library conway
+  import: warnings
+  default-language: Haskell2010
+  exposed-modules:
+    Cardano.Ledger.Conway.CanonicalState.Namespace.UTxO.V0
+
+  hs-source-dirs: conway
+  build-depends:
+    base,
+    bytestring,
+    cardano-ledger-api,
+    cardano-ledger-babbage,
+    cardano-ledger-binary,
+    cardano-ledger-canonical-state,
+    cardano-ledger-conway,
+    cardano-ledger-shelley,
+    cborg,
     scls-cbor,
     scls-core,
 
@@ -60,6 +76,7 @@ library testlib
   import: warnings
   exposed-modules:
     Test.Cardano.Ledger.CanonicalState.Arbitrary
+    Test.Cardano.Ledger.Conway.CanonicalState.Arbitrary
 
   visibility: public
   hs-source-dirs: testlib
@@ -67,7 +84,11 @@ library testlib
   build-depends:
     QuickCheck,
     base,
-    cardano-ledger-canonical-state,
+    cardano-ledger-babbage,
+    cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway},
+    cardano-ledger-conway:{cardano-ledger-conway, testlib},
+    cardano-ledger-shelley,
+    generic-random,
 
 test-suite tests
   import: warnings
@@ -85,8 +106,10 @@ test-suite tests
     -with-rtsopts=-N
 
   build-depends:
+    QuickCheck,
     base,
-    cardano-ledger-canonical-state:{cardano-ledger-canonical-state, testlib},
+    cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway, testlib},
+    cardano-ledger-conway,
     cardano-ledger-core:testlib,
     scls-cardano:testlib,
     scls-cbor,
