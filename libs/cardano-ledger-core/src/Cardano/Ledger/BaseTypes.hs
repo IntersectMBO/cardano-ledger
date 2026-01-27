@@ -5,12 +5,14 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -40,6 +42,8 @@ module Cardano.Ledger.BaseTypes (
   positiveUnitIntervalRelaxToUnitInterval,
   positiveUnitIntervalRelaxToPositiveInterval,
   positiveIntervalRelaxToNonNegativeInterval,
+  Inclusive (..),
+  Exclusive (..),
   BoundedRational (..),
   fpPrecision,
   integralToBounded,
@@ -760,6 +764,12 @@ newtype EpochErr = EpochErr Text
 deriving instance Show EpochErr
 
 instance Exception EpochErr
+
+newtype Inclusive a = Inclusive {unInclusive :: a}
+  deriving newtype (Generic, Show, Eq, Ord, NoThunks, NFData, EncCBOR, DecCBOR)
+
+newtype Exclusive a = Exclusive {unExclusive :: a}
+  deriving newtype (Generic, Show, Eq, Ord, NoThunks, NFData, EncCBOR, DecCBOR)
 
 -- | Relationship descriptor for the expectation in the 'Mismatch' type.
 type data Relation

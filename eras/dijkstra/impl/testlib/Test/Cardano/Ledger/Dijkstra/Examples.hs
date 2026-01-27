@@ -121,6 +121,7 @@ exampleTxBodyDijkstra =
     mempty -- treasury donation
     mempty -- sub-transactions
     (DirectDeposits mempty)
+    SNothing
   where
     MaryValue _ exampleMultiAsset = exampleMultiAssetValue 3
 
