@@ -15,7 +15,7 @@ import GHC.TypeLits
 import Test.Cardano.Ledger.CanonicalState.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
-spec :: SpecWith ()
+spec :: Spec
 spec = do
   describe "types" $ do
     describe "blocks/v0" $ do
@@ -26,7 +26,6 @@ spec = do
 
 isCanonical ::
   forall ns a. (KnownSymbol ns, ToCanonicalCBOR ns a, Typeable a, Arbitrary a, Show a) => Spec
-isCanonical = go
+isCanonical = prop propName $ propTypeIsCanonical @ns @a
   where
-    typ = showsTypeRep (typeRep (Proxy @a))
-    go = prop (typ " is canonical") $ propTypeIsCanonical @ns @a
+    propName = showsTypeRep (typeRep (Proxy @a)) " is canonical"
