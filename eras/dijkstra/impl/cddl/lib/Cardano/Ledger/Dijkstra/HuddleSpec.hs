@@ -120,6 +120,7 @@ subTransactionBodyRule ::
   , HuddleRule "guards" era
   , HuddleRule "required_top_level_guards" era
   , HuddleRule "direct_deposits" era
+  , HuddleRule "account_balance_intervals" era
   , HuddleRule1 "set" era
   , HuddleRule1 "nonempty_set" era
   ) =>
@@ -147,6 +148,7 @@ subTransactionBodyRule pname p =
       , opt (idx 22 ==> huddleRule @"positive_coin" p)
       , opt (idx 24 ==> huddleRule @"required_top_level_guards" p)
       , opt (idx 25 ==> huddleRule @"direct_deposits" p)
+      , opt (idx 26 ==> huddleRule @"account_balance_intervals" p)
       ]
 
 requiredTopLevelGuardsRule ::
@@ -179,6 +181,39 @@ directDepositsRule pname p =
       [ 1
           <+ asKey (huddleRule @"reward_account" p)
           ==> huddleRule @"coin" p
+      ]
+
+accountBalanceIntervalsRule ::
+  forall era.
+  ( HuddleRule "credential" era
+  , HuddleRule "account_balance_interval" era
+  ) =>
+  Proxy "account_balance_intervals" ->
+  Proxy era ->
+  Rule
+accountBalanceIntervalsRule pname p =
+  pname
+    =.= mp
+      [ 1
+          <+ asKey (huddleRule @"credential" p)
+          ==> huddleRule @"account_balance_interval" p
+      ]
+
+accountBalanceIntervalRule ::
+  forall era.
+  HuddleRule "coin" era =>
+  Proxy "account_balance_interval" ->
+  Proxy era ->
+  Rule
+accountBalanceIntervalRule pname p =
+  pname
+    =.= arr
+      [ "inclusive_lower_bound" ==> huddleRule @"coin" p
+      , "exclusive_upper_bound" ==> huddleRule @"coin" p / VNil
+      ]
+    / arr
+      [ "inclusive_lower_bound" ==> huddleRule @"coin" p / VNil
+      , "exclusive_upper_bound" ==> huddleRule @"coin" p
       ]
 
 scriptRequireGuardGroup ::
@@ -597,6 +632,12 @@ instance HuddleRule "withdrawals" DijkstraEra where
 instance HuddleRule "direct_deposits" DijkstraEra where
   huddleRuleNamed = directDepositsRule
 
+instance HuddleRule "account_balance_intervals" DijkstraEra where
+  huddleRuleNamed = accountBalanceIntervalsRule
+
+instance HuddleRule "account_balance_interval" DijkstraEra where
+  huddleRuleNamed = accountBalanceIntervalRule
+
 instance HuddleRule "data" DijkstraEra where
   huddleRuleNamed = dataRule
 
@@ -870,6 +911,7 @@ instance HuddleRule "transaction_body" DijkstraEra where
         , opt (idx 22 ==> huddleRule @"positive_coin" p) //- "donation"
         , opt (idx 23 ==> huddleRule @"sub_transactions" p) //- "sub-transactions (NEW)"
         , opt (idx 25 ==> huddleRule @"direct_deposits" p) //- "direct deposits"
+        , opt (idx 26 ==> huddleRule @"account_balance_intervals" p) //- "account balance intervals"
         ]
 
 instance HuddleRule "transaction_witness_set" DijkstraEra where

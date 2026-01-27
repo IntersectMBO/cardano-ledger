@@ -13,6 +13,7 @@ import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingPro
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
+import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval, AccountBalanceIntervals)
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
@@ -30,16 +31,22 @@ spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @DijkstraEra
     specWithHuddle dijkstraCDDL 100 $ do
+      huddleRoundTripCborSpec @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
+      huddleRoundTripCborSpec @(AccountBalanceIntervals DijkstraEra) v "account_balance_intervals"
+      huddleRoundTripArbitraryValidate @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
       huddleRoundTripCborSpec @(Value DijkstraEra) v "positive_coin"
       huddleRoundTripArbitraryValidate @(Value DijkstraEra) v "value"
       describe "MultiAsset" $ do
         huddleRoundTripCborSpec @(Value DijkstraEra) v "value"
-      xdescribe "fix TxBody" $ do
+      describe "fix TxBody" $ do
         huddleRoundTripAnnCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleRoundTripCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
+        huddleRoundTripAnnCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
+        huddleRoundTripCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $
+      xdescribe "hangs" $ do
         huddleRoundTripArbitraryValidate @(TxBody TopTx DijkstraEra) v "transaction_body"
+        huddleRoundTripArbitraryValidate @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
       huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
       -- TODO fails because of plutus scripts
       xdescribe "fix plutus scripts" $ do
@@ -102,6 +109,7 @@ spec = do
         huddleRoundTripArbitraryValidate @(TxCert DijkstraEra) v "certificate"
       describe "DecCBOR instances equivalence via CDDL" $ do
         huddleDecoderEquivalenceSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
+        huddleDecoderEquivalenceSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
         xdescribe "Fix decoder equivalence of TxAuxData" $ do
           huddleDecoderEquivalenceSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
         huddleDecoderEquivalenceSpec @(NativeScript DijkstraEra) v "native_script"

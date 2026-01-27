@@ -38,6 +38,8 @@ import Cardano.Ledger.Dijkstra.Core (
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams)
 import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.Dijkstra.Scripts (
+  AccountBalanceInterval,
+  AccountBalanceIntervals,
   DijkstraNativeScript,
   DijkstraNativeScriptRaw,
   DijkstraPlutusPurpose,
@@ -68,7 +70,7 @@ instance ToExpr (DijkstraPParams StrictMaybe DijkstraEra)
 
 instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
   toExpr = \case
-    txBody@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
+    txBody@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
       let DijkstraTxBodyRaw {..} = txBody
        in Rec "DijkstraTxBodyRaw" $
             OMap.fromList
@@ -93,8 +95,9 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dtbrTreasuryDonation", toExpr dtbrTreasuryDonation)
               , ("dtbrSubTransactions", toExpr dtbrSubTransactions)
               , ("dtbrDirectDeposits", toExpr dtbrDirectDeposits)
+              , ("dtbrAccountBalanceIntervals", toExpr dtbrAccountBalanceIntervals)
               ]
-    txBody@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
+    txBody@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
       let DijkstraSubTxBodyRaw {..} = txBody
        in Rec "DijkstraSubTxBodyRaw" $
             OMap.fromList
@@ -115,6 +118,7 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dstbrTreasuryDonation", toExpr dstbrTreasuryDonation)
               , ("dstbrRequiredTopLevelGuards", toExpr dstbrRequiredTopLevelGuards)
               , ("dstbrDirectDeposits", toExpr dstbrDirectDeposits)
+              , ("dstbrAccountBalanceIntervals", toExpr dstbrAccountBalanceIntervals)
               ]
 
 instance ToExpr (TxBody l DijkstraEra)
@@ -293,3 +297,7 @@ instance
 instance
   ToExpr (Event (EraRule "SUBUTXO" era)) =>
   ToExpr (DijkstraSubUtxowEvent era)
+
+instance ToExpr (AccountBalanceInterval era)
+
+instance ToExpr (AccountBalanceIntervals era)

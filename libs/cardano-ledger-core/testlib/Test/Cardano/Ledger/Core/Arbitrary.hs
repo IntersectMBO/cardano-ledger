@@ -40,7 +40,10 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   CertIx (..),
   DnsName,
+  EpochInterval (..),
+  Exclusive (..),
   HasZero,
+  Inclusive (..),
   Mismatch (..),
   Network (..),
   NonNegativeInterval,
@@ -338,6 +341,10 @@ instance Arbitrary GenDelegPair where
   arbitrary = GenDelegPair <$> arbitrary <*> arbitrary
 
 deriving instance Arbitrary GenDelegs
+
+deriving instance Arbitrary a => Arbitrary (Inclusive a)
+
+deriving instance Arbitrary a => Arbitrary (Exclusive a)
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Coin -------------------------------------------------------------------
