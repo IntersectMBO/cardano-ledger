@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `validateTreasuryValue`
 * Change `ScriptsNotPaidUTxO` to use `NonEmptyMap TxIn (TxOut era)` instead of `UTxO era`
 * Add `conwayLedgerTransitionTRC`
 * Deprecate
