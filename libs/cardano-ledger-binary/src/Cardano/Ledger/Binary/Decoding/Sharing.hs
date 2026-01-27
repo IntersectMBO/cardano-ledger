@@ -129,7 +129,7 @@ internsFromMap m
             }
         ]
 
-internsFromVMap :: Ord k => VMap VB kv k a -> Interns k
+internsFromVMap :: (Ord k, VMap.Vector kv a) => VMap VB kv k a -> Interns k
 internsFromVMap m
   | VMap.size m == 0 = mempty
   | otherwise =

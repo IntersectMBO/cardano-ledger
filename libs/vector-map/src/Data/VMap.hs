@@ -110,8 +110,8 @@ instance
 empty :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v
 empty = VMap VG.empty
 
-size :: VG.Vector kv k => VMap kv vv k v -> Int
-size = VG.length . KV.keysVector . unVMap
+size :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v -> Int
+size = VG.length . unVMap
 {-# INLINE size #-}
 
 lookup ::
@@ -230,11 +230,13 @@ fromDistinctAscListN n = VMap . KV.fromDistinctAscListN n
 {-# INLINE fromDistinctAscListN #-}
 
 map ::
-  (VG.Vector vv a, VG.Vector vv b) =>
+  (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
   (a -> b) ->
   VMap kv vv k a ->
   VMap kv vv k b
-map f (VMap vec) = VMap (KV.mapValsKVVector f vec)
+map f (VMap vec) = VMap (VG.map (\(k, v) -> (k, f v)) vec)
+-- TODO: benchmark and switch to this implementation when we switch to Data.Vector.Strict
+-- VMap (KV.mapValsKVVector f vec)
 {-# INLINE map #-}
 
 mapMaybe ::
@@ -258,7 +260,9 @@ mapWithKey ::
   (k -> a -> b) ->
   VMap kv vv k a ->
   VMap kv vv k b
-mapWithKey f (VMap vec) = VMap (KV.mapWithKeyKVVector f vec)
+mapWithKey f (VMap vec) = VMap (VG.map (\(k, v) -> (k, f k v)) vec)
+-- TODO: benchmark and switch to this implementation when we switch to Data.Vector.Strict
+-- VMap (KV.mapWithKeyKVVector f vec)
 {-# INLINE mapWithKey #-}
 
 foldMapWithKey ::
