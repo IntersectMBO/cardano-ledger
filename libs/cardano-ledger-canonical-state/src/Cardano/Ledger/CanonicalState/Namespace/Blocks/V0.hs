@@ -36,8 +36,8 @@ instance KnownNamespace "blocks/v0" where
   type NamespaceEntry "blocks/v0" = BlockOut
 
 data BlockIn = BlockIn
-  { blockInHash :: !(KeyHash StakePool)
-  , blockInEpoch :: !EpochNo
+  { blockInStakePoolId :: !(KeyHash StakePool)
+  , blockInEpochNo :: !EpochNo
   }
   deriving (Eq, Ord, Show)
 
