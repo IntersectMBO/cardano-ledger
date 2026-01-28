@@ -31,17 +31,19 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules (ConwayUtxowPredFailure, UtxoEnv)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBUTXO,
   DijkstraSUBUTXOW,
  )
-import Cardano.Ledger.Dijkstra.Rules.SubUtxo (
-  DijkstraSubUtxoPredFailure,
+import Cardano.Ledger.Dijkstra.Rules.SubUtxo
+import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.Utxow (
+  DijkstraUtxowPredFailure (..),
+  conwayToDijkstraUtxowPredFailure,
  )
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
-import Cardano.Ledger.Shelley.Rules (UtxoEnv)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -134,6 +136,12 @@ instance InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBUTXOW" DijkstraSubUtxoPredFailure DijkstraEra where
   injectFailure = SubUtxoFailure
+
+instance InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure DijkstraEra where
+  injectFailure = dijkstraUtxowToDijkstraSubUtxowPredFailure
+
+instance InjectRuleFailure "SUBUTXOW" ConwayUtxowPredFailure DijkstraEra where
+  injectFailure = dijkstraUtxowToDijkstraSubUtxowPredFailure . conwayToDijkstraUtxowPredFailure
 
 instance InjectRuleEvent "SUBUTXOW" DijkstraSubUtxowEvent DijkstraEra
 
@@ -241,3 +249,30 @@ instance
     17 -> SumD SubMalformedReferenceScripts <! From
     18 -> SumD SubScriptIntegrityHashMismatch <! From <! From
     n -> Invalid n
+
+dijkstraUtxowToDijkstraSubUtxowPredFailure ::
+  forall era.
+  ( InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
+  , PredicateFailure (EraRule "UTXO" era) ~ DijkstraUtxoPredFailure era
+  ) =>
+  DijkstraUtxowPredFailure era -> DijkstraSubUtxowPredFailure era
+dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
+  UtxoFailure f -> SubUtxoFailure (injectFailure @"SUBUTXO" f)
+  InvalidWitnessesUTXOW ks -> SubInvalidWitnessesUTXOW ks
+  MissingVKeyWitnessesUTXOW ks -> SubMissingVKeyWitnessesUTXOW ks
+  MissingScriptWitnessesUTXOW hs -> SubMissingScriptWitnessesUTXOW hs
+  ScriptWitnessNotValidatingUTXOW hs -> SubScriptWitnessNotValidatingUTXOW hs
+  MissingTxBodyMetadataHash dh -> SubMissingTxBodyMetadataHash dh
+  MissingTxMetadata dh -> SubMissingTxMetadata dh
+  ConflictingMetadataHash mm -> SubConflictingMetadataHash mm
+  InvalidMetadata -> SubInvalidMetadata
+  ExtraneousScriptWitnessesUTXOW hs -> SubExtraneousScriptWitnessesUTXOW hs
+  MissingRedeemers pps -> SubMissingRedeemers pps
+  MissingRequiredDatums hs1 hs2 -> SubMissingRequiredDatums hs1 hs2
+  NotAllowedSupplementalDatums hs1 hs2 -> SubNotAllowedSupplementalDatums hs1 hs2
+  PPViewHashesDontMatch mm -> SubPPViewHashesDontMatch mm
+  UnspendableUTxONoDatumHash txs -> SubUnspendableUTxONoDatumHash txs
+  ExtraRedeemers pps -> SubExtraRedeemers pps
+  MalformedScriptWitnesses hs -> SubMalformedScriptWitnesses hs
+  MalformedReferenceScripts hs -> SubMalformedReferenceScripts hs
+  ScriptIntegrityHashMismatch mm f -> SubScriptIntegrityHashMismatch mm f

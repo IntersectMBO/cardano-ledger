@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Expose `conwayToDijkstraUtxowPredFailure`
 * Add `accountBalanceIntervalsTxBodyL` lens to `DijkstraEraTxBody` typeclass.
   - Add the corresponding field to both `TopTx` and `SubTx` levels of `TxBody`.
   - Add `AccountBalanceInterval` and `AccountBalanceIntervals` data types.

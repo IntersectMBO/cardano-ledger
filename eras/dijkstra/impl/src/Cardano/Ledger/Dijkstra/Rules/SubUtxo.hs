@@ -30,9 +30,14 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules (ConwayUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXO,
+ )
+import Cardano.Ledger.Dijkstra.Rules.Utxo (
+  DijkstraUtxoPredFailure (..),
+  conwayToDijkstraUtxoPredFailure,
  )
 import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv)
@@ -118,6 +123,12 @@ type instance EraRuleEvent "SUBUTXO" DijkstraEra = DijkstraSubUtxoEvent Dijkstra
 
 instance InjectRuleFailure "SUBUTXO" DijkstraSubUtxoPredFailure DijkstraEra
 
+instance InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure DijkstraEra where
+  injectFailure = dijkstraUtxoToDijkstraSubUtxoPredFailure
+
+instance InjectRuleFailure "SUBUTXO" ConwayUtxoPredFailure DijkstraEra where
+  injectFailure = dijkstraUtxoToDijkstraSubUtxoPredFailure . conwayToDijkstraUtxoPredFailure
+
 instance InjectRuleEvent "SUBUTXO" DijkstraSubUtxoEvent DijkstraEra
 
 data DijkstraSubUtxoEvent era
@@ -201,3 +212,31 @@ instance
     10 -> SumD SubOutsideForecast <! From
     11 -> SumD SubBabbageOutputTooSmallUTxO <! From
     n -> Invalid n
+
+dijkstraUtxoToDijkstraSubUtxoPredFailure ::
+  DijkstraUtxoPredFailure era -> DijkstraSubUtxoPredFailure era
+dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
+  UtxosFailure _ -> error "Impossible: `UtxosFailure` for SUBUTXO"
+  BadInputsUTxO x -> SubBadInputsUTxO x
+  OutsideValidityIntervalUTxO vi slotNo -> SubOutsideValidityIntervalUTxO vi slotNo
+  MaxTxSizeUTxO m -> SubMaxTxSizeUTxO m
+  InputSetEmptyUTxO -> SubInputSetEmptyUTxO
+  FeeTooSmallUTxO _ -> error "Impossible: `FeeTooSmallUTxO` for SUBUTXO"
+  ValueNotConservedUTxO _ -> error "Impossible: `ValueNotConservedUTxO` for SUBUTXO"
+  WrongNetwork x y -> SubWrongNetwork x y
+  WrongNetworkWithdrawal x y -> SubWrongNetworkWithdrawal x y
+  OutputTooSmallUTxO x -> SubOutputTooSmallUTxO x
+  OutputBootAddrAttrsTooBig xs -> SubOutputBootAddrAttrsTooBig xs
+  OutputTooBigUTxO xs -> SubOutputTooBigUTxO xs
+  InsufficientCollateral _ _ -> error "Impossible: `InsufficientCollateral` for SUBUTXO"
+  ScriptsNotPaidUTxO _ -> error "Impossible: `ScriptsNotPaidUTxO` for SUBUTXO"
+  ExUnitsTooBigUTxO _ -> error "Impossible: `ExUnitsTooBigUTxO` for SUBUTXO"
+  CollateralContainsNonADA _ -> error "Impossible: `CollateralContainsNonADA` for SUBUTXO"
+  WrongNetworkInTxBody m -> SubWrongNetworkInTxBody m
+  OutsideForecast sno -> SubOutsideForecast sno
+  TooManyCollateralInputs _ -> error "Impossible: `TooManyCollateralInputs` for SUBUTXO"
+  NoCollateralInputs -> error "Impossible: `NoCollateralInputs` for SUBUTXO"
+  IncorrectTotalCollateralField _ _ -> error "Impossible: `IncorrectTotalCollateralField` for SUBUTXO"
+  BabbageOutputTooSmallUTxO txouts -> SubBabbageOutputTooSmallUTxO txouts
+  BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"
+  PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
