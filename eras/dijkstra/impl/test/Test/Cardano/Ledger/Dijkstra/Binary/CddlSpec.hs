@@ -7,8 +7,6 @@
 
 module Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec (spec) where
 
-import Cardano.Ledger.Address (Addr)
-import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingProcedure)
