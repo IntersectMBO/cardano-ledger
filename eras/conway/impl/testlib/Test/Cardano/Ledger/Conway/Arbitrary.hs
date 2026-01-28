@@ -37,7 +37,7 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Conway (ApplyTxError (ConwayApplyTxError), ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -505,8 +505,11 @@ instance
 genParameterChange :: Arbitrary (PParamsUpdate era) => Gen (GovAction era)
 genParameterChange = ParameterChange <$> arbitrary <*> arbitrary <*> arbitrary
 
-genHardForkInitiation :: Gen (GovAction era)
-genHardForkInitiation = HardForkInitiation <$> arbitrary <*> arbitrary
+genHardForkInitiation :: forall era. Era era => Gen (GovAction era)
+genHardForkInitiation =
+  HardForkInitiation
+    <$> arbitrary
+    <*> (ProtVer <$> elements [eraProtVerLow @era .. succ $ eraProtVerHigh @era] <*> arbitrary)
 
 genTreasuryWithdrawals :: Gen (GovAction era)
 genTreasuryWithdrawals = TreasuryWithdrawals <$> arbitrary <*> arbitrary
