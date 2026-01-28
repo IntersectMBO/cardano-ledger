@@ -494,6 +494,7 @@ instance
   , InjectRuleEvent "SUBGOV" ConwayGovEvent era
   , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
   , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
+  , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (ShelleyLEDGERS era)
@@ -604,6 +605,7 @@ instance
   , InjectRuleEvent "SUBGOV" ConwayGovEvent era
   , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
   , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
+  , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)

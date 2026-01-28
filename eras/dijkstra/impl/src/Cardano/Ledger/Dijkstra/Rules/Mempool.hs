@@ -280,6 +280,7 @@ instance
   , InjectRuleEvent "SUBGOV" ConwayGovEvent era
   , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
   , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
+  , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (DijkstraMEMPOOL era)

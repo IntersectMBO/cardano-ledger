@@ -32,7 +32,13 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (CertEnv (..), ConwayDelegPredFailure, ConwayGovCertPredFailure)
+import Cardano.Ledger.Conway.Rules (
+  CertEnv (..),
+  ConwayCertPredFailure,
+  ConwayCertsPredFailure (..),
+  ConwayDelegPredFailure,
+  ConwayGovCertPredFailure,
+ )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -42,6 +48,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBGOVCERT,
   DijkstraSUBPOOL,
  )
+import Cardano.Ledger.Dijkstra.Rules.Cert ()
 import Cardano.Ledger.Dijkstra.Rules.SubCert (DijkstraSubCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
@@ -92,6 +99,9 @@ instance InjectRuleFailure "SUBCERTS" DijkstraSubCertsPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBCERTS" DijkstraSubCertPredFailure DijkstraEra where
   injectFailure = SubCertFailure
+
+instance InjectRuleFailure "SUBCERTS" ConwayCertsPredFailure DijkstraEra where
+  injectFailure = conwayToDijkstraSubCertsPredFailure @DijkstraEra
 
 instance InjectRuleEvent "SUBCERTS" DijkstraSubCertsEvent DijkstraEra
 
@@ -195,3 +205,13 @@ deriving instance (EraPParams era, Eq (Tx SubTx era)) => Eq (SubCertsEnv era)
 deriving instance (EraPParams era, Show (Tx SubTx era)) => Show (SubCertsEnv era)
 
 instance (EraPParams era, NFData (Tx SubTx era)) => NFData (SubCertsEnv era)
+
+conwayToDijkstraSubCertsPredFailure ::
+  forall era.
+  ( InjectRuleFailure "SUBCERT" ConwayCertPredFailure era
+  , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
+  ) =>
+  ConwayCertsPredFailure era -> DijkstraSubCertsPredFailure era
+conwayToDijkstraSubCertsPredFailure = \case
+  WithdrawalsNotInRewardsCERTS _ -> error "Impossible: `WithdrawalsNotInRewardsCERTS` for SUBCERTS"
+  CertFailure f -> SubCertFailure (injectFailure @"SUBCERT" f)
