@@ -41,6 +41,8 @@ import Cardano.Ledger.Conway.Rules (
   CertsEnv,
   ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
+  ConwayGovEvent,
+  ConwayGovPredFailure,
   ConwayLedgerPredFailure (ConwayMempoolFailure),
   GovEnv,
   GovSignal,
@@ -67,6 +69,7 @@ import Cardano.Ledger.Dijkstra.Rules.Ledger (
   conwayToDijkstraLedgerPredFailure,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovEvent, DijkstraSubGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers (DijkstraSubLedgersPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
@@ -273,6 +276,10 @@ instance
   , InjectRuleFailure "DELEG" ConwayDelegPredFailure era
   , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
   , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
+  , InjectRuleEvent "SUBGOV" DijkstraSubGovEvent era
+  , InjectRuleEvent "SUBGOV" ConwayGovEvent era
+  , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
+  , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (DijkstraMEMPOOL era)

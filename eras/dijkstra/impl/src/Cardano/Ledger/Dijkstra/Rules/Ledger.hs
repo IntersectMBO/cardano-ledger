@@ -63,6 +63,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDELEG,
   ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
+  ConwayGovEvent,
   ConwayGovPredFailure,
   ConwayLedgerPredFailure,
   ConwayUtxoPredFailure,
@@ -92,6 +93,7 @@ import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovEvent, DijkstraSubGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
@@ -488,6 +490,10 @@ instance
   , InjectRuleFailure "DELEG" ConwayDelegPredFailure era
   , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
   , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
+  , InjectRuleEvent "SUBGOV" DijkstraSubGovEvent era
+  , InjectRuleEvent "SUBGOV" ConwayGovEvent era
+  , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
+  , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (ShelleyLEDGERS era)
@@ -496,13 +502,14 @@ instance
   wrapEvent = LedgerEvent
 
 instance
-  ( ConwayEraTxCert era
+  ( ConwayEraCertState era
+  , ConwayEraTxCert era
   , ConwayEraPParams era
   , ConwayEraGov era
   , EraRule "GOV" era ~ DijkstraGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
   , InjectRuleFailure "GOV" DijkstraGovPredFailure era
-  , ConwayEraCertState era
+  , InjectRuleEvent "GOV" ConwayGovEvent era
   ) =>
   Embed (DijkstraGOV era) (DijkstraLEDGER era)
   where
@@ -570,6 +577,8 @@ instance
   , ConwayEraGov era
   , ConwayEraCertState era
   , EraPlutusContext era
+  , ConwayEraTxCert era
+  , ConwayEraPParams era
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
@@ -591,6 +600,10 @@ instance
   , InjectRuleFailure "DELEG" ConwayDelegPredFailure era
   , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
   , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
+  , InjectRuleEvent "SUBGOV" DijkstraSubGovEvent era
+  , InjectRuleEvent "SUBGOV" ConwayGovEvent era
+  , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
+  , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)

@@ -29,26 +29,21 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (ConwayGovEvent (..), GovEnv, GovSignal)
+import Cardano.Ledger.Conway.Rules (
+  ConwayGovEvent (..),
+  ConwayGovPredFailure (..),
+  GovEnv,
+  GovSignal,
+  conwayGovTransition,
+ )
+import Cardano.Ledger.Conway.State (ConwayEraCertState)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBGOV,
  )
-import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure, conwayToDijkstraGovPredFailure)
 import Control.DeepSeq (NFData)
-import Control.State.Transition.Extended (
-  BaseM,
-  Environment,
-  Event,
-  PredicateFailure,
-  STS,
-  Signal,
-  State,
-  TRC (TRC),
-  TransitionRule,
-  judgmentContext,
-  transitionRules,
- )
+import Control.State.Transition.Extended
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -59,6 +54,9 @@ type instance EraRuleFailure "SUBGOV" DijkstraEra = DijkstraSubGovPredFailure Di
 
 type instance EraRuleEvent "SUBGOV" DijkstraEra = DijkstraSubGovEvent DijkstraEra
 
+instance InjectRuleFailure "SUBGOV" ConwayGovPredFailure DijkstraEra where
+  injectFailure = DijkstraSubGovPredFailure . conwayToDijkstraGovPredFailure
+
 instance InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure DijkstraEra
 
 newtype DijkstraSubGovEvent era = DijkstraSubGovEvent (ConwayGovEvent era)
@@ -66,9 +64,19 @@ newtype DijkstraSubGovEvent era = DijkstraSubGovEvent (ConwayGovEvent era)
 
 instance InjectRuleEvent "SUBGOV" DijkstraSubGovEvent DijkstraEra
 
+instance InjectRuleEvent "SUBGOV" ConwayGovEvent DijkstraEra where
+  injectEvent = DijkstraSubGovEvent
+
 instance
-  ( EraGov era
+  ( ConwayEraCertState era
+  , ConwayEraTxCert era
+  , ConwayEraPParams era
+  , ConwayEraGov era
   , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
+  , InjectRuleEvent "SUBGOV" DijkstraSubGovEvent era
+  , InjectRuleEvent "SUBGOV" ConwayGovEvent era
+  , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
+  , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
   ) =>
   STS (DijkstraSUBGOV era)
   where
@@ -79,9 +87,4 @@ instance
   type PredicateFailure (DijkstraSUBGOV era) = DijkstraSubGovPredFailure era
   type Event (DijkstraSUBGOV era) = DijkstraSubGovEvent era
 
-  transitionRules = [dijkstraSubGovTransition @era]
-
-dijkstraSubGovTransition :: TransitionRule (EraRule "SUBGOV" era)
-dijkstraSubGovTransition = do
-  TRC (_, st, _) <- judgmentContext
-  pure st
+  transitionRules = [conwayGovTransition]

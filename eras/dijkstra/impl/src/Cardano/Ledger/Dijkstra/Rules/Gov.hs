@@ -138,6 +138,8 @@ instance InjectRuleFailure "GOV" DijkstraGovPredFailure DijkstraEra
 instance InjectRuleFailure "GOV" ConwayGovPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraGovPredFailure
 
+instance InjectRuleEvent "GOV" ConwayGovEvent DijkstraEra
+
 instance EraPParams era => NFData (DijkstraGovPredFailure era)
 
 instance EraPParams era => NoThunks (DijkstraGovPredFailure era)
@@ -219,6 +221,7 @@ instance
   , ConwayEraGov era
   , EraRule "GOV" era ~ DijkstraGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
+  , InjectRuleEvent "GOV" ConwayGovEvent era
   , EraCertState era
   , ConwayEraCertState era
   ) =>
@@ -233,7 +236,7 @@ instance
 
   initialRules = []
 
-  transitionRules = [conwayGovTransition @era]
+  transitionRules = [conwayGovTransition]
 
 conwayToDijkstraGovPredFailure :: forall era. ConwayGovPredFailure era -> DijkstraGovPredFailure era
 conwayToDijkstraGovPredFailure = \case

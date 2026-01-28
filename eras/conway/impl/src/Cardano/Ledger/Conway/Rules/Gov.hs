@@ -230,6 +230,8 @@ type instance EraRuleEvent "GOV" ConwayEra = ConwayGovEvent ConwayEra
 
 instance InjectRuleFailure "GOV" ConwayGovPredFailure ConwayEra
 
+instance InjectRuleEvent "GOV" ConwayGovEvent ConwayEra
+
 instance EraPParams era => NFData (ConwayGovPredFailure era)
 
 instance EraPParams era => NoThunks (ConwayGovPredFailure era)
@@ -340,13 +342,13 @@ deriving instance (EraPParams era, Show (TxCert era)) => Show (GovSignal era)
 instance (EraPParams era, NFData (TxCert era)) => NFData (GovSignal era)
 
 instance
-  ( ConwayEraTxCert era
+  ( ConwayEraCertState era
+  , ConwayEraTxCert era
   , ConwayEraPParams era
   , ConwayEraGov era
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
-  , EraCertState era
-  , ConwayEraCertState era
+  , InjectRuleEvent "GOV" ConwayGovEvent era
   ) =>
   STS (ConwayGOV era)
   where
@@ -359,7 +361,7 @@ instance
 
   initialRules = []
 
-  transitionRules = [conwayGovTransition @era]
+  transitionRules = [conwayGovTransition]
 
 checkVotesAreNotForExpiredActions ::
   EpochNo ->
@@ -451,20 +453,20 @@ checkBootstrapProposal pp proposal@ProposalProcedure {pProcGovAction}
   | otherwise = pure ()
 
 conwayGovTransition ::
-  forall era.
-  ( ConwayEraTxCert era
+  forall rule era.
+  ( ConwayEraCertState era
+  , ConwayEraTxCert era
   , ConwayEraPParams era
   , ConwayEraGov era
-  , STS (EraRule "GOV" era)
-  , Event (EraRule "GOV" era) ~ ConwayGovEvent era
-  , Signal (EraRule "GOV" era) ~ GovSignal era
-  , BaseM (EraRule "GOV" era) ~ ShelleyBase
-  , Environment (EraRule "GOV" era) ~ GovEnv era
-  , State (EraRule "GOV" era) ~ Proposals era
-  , InjectRuleFailure "GOV" ConwayGovPredFailure era
-  , ConwayEraCertState era
+  , STS (EraRule rule era)
+  , Signal (EraRule rule era) ~ GovSignal era
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  , Environment (EraRule rule era) ~ GovEnv era
+  , State (EraRule rule era) ~ Proposals era
+  , InjectRuleFailure rule ConwayGovPredFailure era
+  , InjectRuleEvent rule ConwayGovEvent era
   ) =>
-  TransitionRule (EraRule "GOV" era)
+  TransitionRule (EraRule rule era)
 conwayGovTransition = do
   TRC
     ( GovEnv txid currentEpoch pp constitutionPolicy certState committee
@@ -636,8 +638,8 @@ conwayGovTransition = do
            in mapProposals cleanupVoters
 
   -- Report the event
-  tellEvent $ GovNewProposals txid updatedProposalStates
-  tellEvent $ GovRemovedVotes txid replacedVotes unregisteredDReps
+  tellEvent $ injectEvent $ GovNewProposals txid updatedProposalStates
+  tellEvent $ injectEvent $ GovRemovedVotes txid replacedVotes unregisteredDReps
 
   pure updatedProposalStates
 
