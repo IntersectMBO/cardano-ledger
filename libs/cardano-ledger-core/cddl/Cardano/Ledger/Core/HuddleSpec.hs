@@ -82,9 +82,17 @@ instance Era era => HuddleRule "unit_interval" era where
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
     where
       generator g = do
-        -- TODO should we test with even larger values than Word64?
-        n <- uniformRM (0, maxBound @Word64) g
-        d <- uniformRM (n, maxBound @Word64) g
+        let genUnitInterval64 l u = do
+              d <- uniformRM (l, u) g
+              n <- uniformRM (l, d) g
+              pure (n, d)
+            max64 = toInteger (maxBound @Word64)
+        (n, d) <-
+          oneof
+            [ genUnitInterval64 (0, max64)
+            , genUnitInterval64 (0, 1000)
+            , genUnitInterval64 (max64 - 1000, max64)
+            ]
         S . TTagged 30
           <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d] g
 
