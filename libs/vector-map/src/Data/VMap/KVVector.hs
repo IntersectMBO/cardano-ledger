@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -25,8 +26,8 @@ module Data.VMap.KVVector (
   fromDistinctAscListN,
   fromList,
   fromListN,
-  mapValsKVVector,
-  mapWithKeyKVVector,
+  -- mapValsKVVector,
+  -- mapWithKeyKVVector,
   memberKVVector,
   lookupKVVector,
   lookupDefaultKVVector,
@@ -58,6 +59,13 @@ import qualified Data.Vector.Storable as VS
 import qualified GHC.Exts as Exts
 import GHC.Generics
 import NoThunks.Class
+#if MIN_VERSION_vector(0, 13, 2)
+import qualified Data.Vector.Strict as VBS
+
+instance NoThunks a => NoThunks (VBS.Vector a) where
+  showTypeOf _ = "Boxed..StrictVector"
+  wNoThunks ctxt = noThunksInValues ctxt . VBS.toList
+#endif
 
 -- | Convert a __sorted__ key/value vector into a `Map.Map`
 toMap ::
@@ -173,26 +181,28 @@ fromAscListWithKeyN n f xs
       VG.create $ VGM.unsafeNew n >>= fillWithList xs >>= removeDuplicates (\k v1 v2 -> f k v2 v1)
 {-# INLINE fromAscListWithKeyN #-}
 
-mapValsKVVector ::
-  (VG.Vector vv a, VG.Vector vv b) =>
-  (a -> b) ->
-  KVVector kv vv (k, a) ->
-  KVVector kv vv (k, b)
-mapValsKVVector f vec =
-  KVVector {keysVector = keysVector vec, valsVector = VG.map f (valsVector vec)}
-{-# INLINE mapValsKVVector #-}
+-- These guys are too lazy for the KVVector and would require `Data.Vector.Strict`
+--
+-- mapValsKVVector ::
+--   (VG.Vector vv a, VG.Vector vv b) =>
+--   (a -> b) ->
+--   KVVector kv vv (k, a) ->
+--   KVVector kv vv (k, b)
+-- mapValsKVVector f vec =
+--   KVVector {keysVector = keysVector vec, valsVector = VG.map f (valsVector vec)}
+-- {-# INLINE mapValsKVVector #-}
 
-mapWithKeyKVVector ::
-  (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
-  (k -> a -> b) ->
-  KVVector kv vv (k, a) ->
-  KVVector kv vv (k, b)
-mapWithKeyKVVector f KVVector {..} =
-  KVVector
-    { keysVector = keysVector
-    , valsVector = VG.imap (\i -> f (keysVector VG.! i)) valsVector
-    }
-{-# INLINE mapWithKeyKVVector #-}
+-- mapWithKeyKVVector ::
+--   (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
+--   (k -> a -> b) ->
+--   KVVector kv vv (k, a) ->
+--   KVVector kv vv (k, b)
+-- mapWithKeyKVVector f KVVector {..} =
+--   KVVector
+--     { keysVector = keysVector
+--     , valsVector = VG.imap (\i -> f (keysVector VG.! i)) valsVector
+--     }
+-- {-# INLINE mapWithKeyKVVector #-}
 
 internKVVectorMaybe :: (VG.Vector kv k, Ord k) => k -> KVVector kv vv (k, v) -> Maybe k
 internKVVectorMaybe key (KVVector keys _values) =
