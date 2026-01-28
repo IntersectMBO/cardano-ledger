@@ -1,3 +1,4 @@
+{-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -22,8 +23,9 @@ import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CBORGenerator (WrappedTerm (..))
 import Codec.CBOR.Cuddle.Huddle
 import Codec.CBOR.Term (Term (..))
+import Control.Monad (join)
 import Data.Bits (Bits (..))
-import Data.ByteString (ByteString, fromStrict)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (fromShort)
 import Data.List.NonEmpty (NonEmpty)
@@ -36,6 +38,7 @@ import System.Random.Stateful (
   StatefulGen,
   Uniform (..),
   UniformRange (..),
+  uniformByteStringM,
   uniformShortByteStringM,
  )
 import Text.Heredoc
@@ -82,11 +85,21 @@ instance Era era => HuddleRule "unit_interval" era where
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
     where
       generator g = do
-        -- TODO should we test with even larger values than Word64?
-        n <- uniformRM (0, maxBound @Word64) g
-        d <- uniformRM (n, maxBound @Word64) g
+        let genUnitInterval64 l u = do
+              d <- uniformRM (l, u) g
+              n <- uniformRM (l, d) g
+              pure (n, d)
+            max64 = toInteger (maxBound @Word64)
+        (n, d) <-
+          join $
+            pickOne
+              [ genUnitInterval64 0 max64
+              , genUnitInterval64 0 1000
+              , genUnitInterval64 (max64 - 1000) max64
+              ]
+              g
         S . TTagged 30
-          <$> genArrayTerm [TInteger $ fromIntegral n, TInteger $ fromIntegral d] g
+          <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d] g
 
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
@@ -177,7 +190,7 @@ pickOne es g = do
   pure $ es NE.!! i
 
 genBytesTerm :: StatefulGen g m => ByteString -> g -> m Term
-genBytesTerm bs = pickOne [TBytes bs, TBytesI $ fromStrict bs]
+genBytesTerm bs = pickOne [TBytes bs, TBytesI $ BS.fromStrict bs]
 
 genStringTerm :: StatefulGen g m => T.Text -> g -> m Term
 genStringTerm t = pickOne [TString t, TStringI $ LT.fromStrict t]
@@ -248,10 +261,10 @@ instance Era era => HuddleRule "reward_account" era where
         isMainnet <- uniformM g
         isScript <- uniformM g
         let
-          mainnetMask | isMainnet = 0x01 | otherwise = 0x00
-          scriptMask | isScript = 0x10 | otherwise = 0x00
-          header = 0xe0 .|. mainnetMask .|. scriptMask
-        payload <- fromShort <$> uniformShortByteStringM 28 g
+          mainnetMask | isMainnet = 0b00000001 | otherwise = 0x00
+          scriptMask | isScript = 0b00010000 | otherwise = 0x00
+          header = 0b11100000 .|. mainnetMask .|. scriptMask
+        payload <- uniformByteStringM 28 g
         let term = TBytes $ BS.cons header payload
         pure $ S term
 
