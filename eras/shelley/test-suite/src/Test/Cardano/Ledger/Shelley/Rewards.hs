@@ -104,6 +104,7 @@ import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
 import Cardano.Protocol.Crypto (VRF, hashVerKeyVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
+import Control.DeepSeq
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
 import Data.Foldable as F (fold, foldl')
@@ -823,7 +824,7 @@ mkSnapShot activeStake delegs stakePools =
     , ssTotalActiveStake = totalActiveStake
     , ssDelegations = delegs
     , ssPoolParams = stakePools
-    , ssStakePoolsSnapShot = VMap.map snapShotFromStakePoolParams stakePools
+    , ssStakePoolsSnapShot = force $ VMap.map snapShotFromStakePoolParams stakePools
     }
   where
     snapShotFromStakePoolParams stakePoolParams =
