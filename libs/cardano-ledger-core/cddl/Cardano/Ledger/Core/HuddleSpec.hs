@@ -1,3 +1,4 @@
+{-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -22,8 +23,9 @@ import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CBORGenerator (WrappedTerm (..))
 import Codec.CBOR.Cuddle.Huddle
 import Codec.CBOR.Term (Term (..))
+import Control.Monad (join)
 import Data.Bits (Bits (..))
-import Data.ByteString (ByteString, fromStrict)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (fromShort)
 import Data.List.NonEmpty (NonEmpty)
@@ -36,6 +38,7 @@ import System.Random.Stateful (
   StatefulGen,
   Uniform (..),
   UniformRange (..),
+  uniformByteStringM,
   uniformShortByteStringM,
  )
 import Text.Heredoc
@@ -88,11 +91,13 @@ instance Era era => HuddleRule "unit_interval" era where
               pure (n, d)
             max64 = toInteger (maxBound @Word64)
         (n, d) <-
-          oneof
-            [ genUnitInterval64 (0, max64)
-            , genUnitInterval64 (0, 1000)
-            , genUnitInterval64 (max64 - 1000, max64)
-            ]
+          join $
+            pickOne
+              [ genUnitInterval64 0 max64
+              , genUnitInterval64 0 1000
+              , genUnitInterval64 (max64 - 1000) max64
+              ]
+              g
         S . TTagged 30
           <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d] g
 
