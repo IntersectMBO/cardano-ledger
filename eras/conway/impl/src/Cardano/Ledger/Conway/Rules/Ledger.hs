@@ -22,6 +22,7 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   conwayLedgerTransition,
   conwayLedgerTransitionTRC,
   validateTreasuryValue,
+  validateRefScriptSize,
 ) where
 
 import Cardano.Ledger.Address (AccountAddress, accountAddressCredentialL)
@@ -128,7 +129,6 @@ import Control.State.Transition.Extended (
   judgmentContext,
   liftSTS,
   trans,
-  (?!),
  )
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
@@ -401,19 +401,7 @@ conwayLedgerTransitionTRC
         then do
           let txBody = tx ^. bodyTxL
           runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
-
-          let
-            totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxoL) tx
-            maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
-          totalRefScriptSize
-            <= maxRefScriptSizePerTx
-              ?! injectFailure
-                ( ConwayTxRefScriptsSizeTooBig
-                    Mismatch
-                      { mismatchSupplied = totalRefScriptSize
-                      , mismatchExpected = maxRefScriptSizePerTx
-                      }
-                )
+          runTest $ validateRefScriptSize pp (utxoState ^. utxoL) tx
 
           let govState = utxoState ^. utxosGovStateL
               committee = govState ^. committeeGovStateL
@@ -512,6 +500,23 @@ validateTreasuryValue txBody actualTreasuryValue =
               , mismatchExpected = actualTreasuryValue
               }
           )
+
+validateRefScriptSize ::
+  ( EraTx era
+  , BabbageEraTxBody era
+  , ConwayEraPParams era
+  ) =>
+  PParams era -> UTxO era -> Tx l era -> Test (ConwayLedgerPredFailure era)
+validateRefScriptSize pp utxo tx =
+  let totalRefScriptSize = txNonDistinctRefScriptsSize utxo tx
+      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+   in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
+        ( ConwayTxRefScriptsSizeTooBig
+            Mismatch
+              { mismatchSupplied = totalRefScriptSize
+              , mismatchExpected = maxRefScriptSizePerTx
+              }
+        )
 
 conwayLedgerTransition ::
   forall (someLEDGER :: Type -> Type) era.

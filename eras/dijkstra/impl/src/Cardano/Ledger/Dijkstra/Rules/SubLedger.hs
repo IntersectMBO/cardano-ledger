@@ -44,6 +44,7 @@ import Cardano.Ledger.Conway.Rules (
   gsCertificates,
   gsProposalProcedures,
   gsVotingProcedures,
+  validateRefScriptSize,
   validateTreasuryValue,
  )
 import Cardano.Ledger.Conway.State
@@ -265,6 +266,7 @@ dijkstraSubLedgersTransition = do
   let proposals = govState ^. proposalsGovStateL
 
   runTest @"SUBLEDGER" $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+  runTest @"SUBLEDGER" $ validateRefScriptSize pp (ledgerState ^. lsUTxOStateL . utxoL) tx
 
   certStateAfterSubCerts <-
     trans @(EraRule "SUBCERTS" era) $
