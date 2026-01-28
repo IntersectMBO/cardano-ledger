@@ -86,7 +86,7 @@ instance Era era => HuddleRule "unit_interval" era where
         n <- uniformRM (0, maxBound @Word64) g
         d <- uniformRM (n, maxBound @Word64) g
         S . TTagged 30
-          <$> genArrayTerm [TInteger $ fromIntegral n, TInteger $ fromIntegral d] g
+          <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d] g
 
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
