@@ -37,8 +37,8 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
-import Cardano.Ledger.Conway (ApplyTxError (ConwayApplyTxError), ConwayEra, Tx (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
+import Cardano.Ledger.Conway (ApplyTxError (ConwayApplyTxError), ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
