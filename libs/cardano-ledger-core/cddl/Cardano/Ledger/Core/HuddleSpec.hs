@@ -251,7 +251,7 @@ instance Era era => HuddleRule "reward_account" era where
           mainnetMask | isMainnet = 0x01 | otherwise = 0x00
           scriptMask | isScript = 0x10 | otherwise = 0x00
           header = 0xe0 .|. mainnetMask .|. scriptMask
-        payload <- fromShort <$> uniformShortByteStringM 28 g
+        payload <- uniformByteStringM 28 g
         let term = TBytes $ BS.cons header payload
         pure $ S term
 
