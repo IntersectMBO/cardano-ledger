@@ -43,6 +43,7 @@ import Cardano.Ledger.Conway.Rules (
   gsCertificates,
   gsProposalProcedures,
   gsVotingProcedures,
+  validateTreasuryValue,
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
@@ -67,6 +68,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubP
 import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
+import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -249,7 +251,7 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( LedgerEnv slot mbCurEpochNo _ pp _
+    ( LedgerEnv slot mbCurEpochNo _ pp chainAccountState
       , ledgerState
       , tx
       ) <-
@@ -260,6 +262,9 @@ dijkstraSubLedgersTransition = do
   let govState = ledgerState ^. lsUTxOStateL . utxosGovStateL
   let committee = govState ^. committeeGovStateL
   let proposals = govState ^. proposalsGovStateL
+
+  runTest @"SUBLEDGER" $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+
   certStateAfterSubCerts <-
     trans @(EraRule "SUBCERTS" era) $
       TRC
