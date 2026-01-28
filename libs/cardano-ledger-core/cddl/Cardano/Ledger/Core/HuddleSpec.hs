@@ -177,7 +177,7 @@ pickOne es g = do
   pure $ es NE.!! i
 
 genBytesTerm :: StatefulGen g m => ByteString -> g -> m Term
-genBytesTerm bs = pickOne [TBytes bs, TBytesI $ fromStrict bs]
+genBytesTerm bs = pickOne [TBytes bs, TBytesI $ BS.fromStrict bs]
 
 genStringTerm :: StatefulGen g m => T.Text -> g -> m Term
 genStringTerm t = pickOne [TString t, TStringI $ LT.fromStrict t]
