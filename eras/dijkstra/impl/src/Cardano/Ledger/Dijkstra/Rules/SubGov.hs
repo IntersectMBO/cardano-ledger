@@ -59,6 +59,9 @@ instance InjectRuleFailure "SUBGOV" ConwayGovPredFailure DijkstraEra where
 
 instance InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure DijkstraEra
 
+instance InjectRuleFailure "SUBGOV" DijkstraGovPredFailure DijkstraEra where
+  injectFailure = DijkstraSubGovPredFailure
+
 newtype DijkstraSubGovEvent era = DijkstraSubGovEvent (ConwayGovEvent era)
   deriving (Generic, Eq, NFData)
 

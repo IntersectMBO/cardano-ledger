@@ -31,18 +31,18 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules (ConwayUtxoPredFailure, ConwayUtxowPredFailure, UtxoEnv)
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBUTXO,
   DijkstraSUBUTXOS,
   DijkstraSUBUTXOW,
  )
-import Cardano.Ledger.Dijkstra.Rules.SubUtxo (
-  DijkstraSubUtxoPredFailure,
- )
+import Cardano.Ledger.Dijkstra.Rules.SubUtxo
+import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure (..))
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
-import Cardano.Ledger.Shelley.Rules (UtxoEnv)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -135,6 +135,12 @@ instance InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBUTXOW" DijkstraSubUtxoPredFailure DijkstraEra where
   injectFailure = SubUtxoFailure
+
+instance InjectRuleFailure "SUBUTXOW" ConwayUtxowPredFailure DijkstraEra where
+  injectFailure = conwayToDijkstraSubUtxowPredFailure
+
+instance InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure DijkstraEra where
+  injectFailure = dijkstraUtxowToDijkstraSubUtxowPredFailure
 
 instance InjectRuleEvent "SUBUTXOW" DijkstraSubUtxowEvent DijkstraEra
 
@@ -244,3 +250,58 @@ instance
     17 -> SumD SubMalformedReferenceScripts <! From
     18 -> SumD SubScriptIntegrityHashMismatch <! From <! From
     n -> Invalid n
+
+conwayToDijkstraSubUtxowPredFailure ::
+  forall era.
+  ( InjectRuleFailure "SUBUTXO" ConwayUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
+  , PredicateFailure (EraRule "UTXO" era) ~ DijkstraUtxoPredFailure era
+  ) =>
+  ConwayUtxowPredFailure era -> DijkstraSubUtxowPredFailure era
+conwayToDijkstraSubUtxowPredFailure = \case
+  Conway.UtxoFailure f -> SubUtxoFailure (injectFailure @"SUBUTXO" f)
+  Conway.InvalidWitnessesUTXOW ks -> SubInvalidWitnessesUTXOW ks
+  Conway.MissingVKeyWitnessesUTXOW ks -> SubMissingVKeyWitnessesUTXOW ks
+  Conway.MissingScriptWitnessesUTXOW hs -> SubMissingScriptWitnessesUTXOW hs
+  Conway.ScriptWitnessNotValidatingUTXOW hs -> SubScriptWitnessNotValidatingUTXOW hs
+  Conway.MissingTxBodyMetadataHash dh -> SubMissingTxBodyMetadataHash dh
+  Conway.MissingTxMetadata dh -> SubMissingTxMetadata dh
+  Conway.ConflictingMetadataHash mm -> SubConflictingMetadataHash mm
+  Conway.InvalidMetadata -> SubInvalidMetadata
+  Conway.ExtraneousScriptWitnessesUTXOW hs -> SubExtraneousScriptWitnessesUTXOW hs
+  Conway.MissingRedeemers pps -> SubMissingRedeemers pps
+  Conway.MissingRequiredDatums hs1 hs2 -> SubMissingRequiredDatums hs1 hs2
+  Conway.NotAllowedSupplementalDatums hs1 hs2 -> SubNotAllowedSupplementalDatums hs1 hs2
+  Conway.PPViewHashesDontMatch mm -> SubPPViewHashesDontMatch mm
+  Conway.UnspendableUTxONoDatumHash txs -> SubUnspendableUTxONoDatumHash txs
+  Conway.ExtraRedeemers pps -> SubExtraRedeemers pps
+  Conway.MalformedScriptWitnesses hs -> SubMalformedScriptWitnesses hs
+  Conway.MalformedReferenceScripts hs -> SubMalformedReferenceScripts hs
+  Conway.ScriptIntegrityHashMismatch mm f -> SubScriptIntegrityHashMismatch mm f
+
+dijkstraUtxowToDijkstraSubUtxowPredFailure ::
+  forall era.
+  ( InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
+  , PredicateFailure (EraRule "UTXO" era) ~ DijkstraUtxoPredFailure era
+  ) =>
+  DijkstraUtxowPredFailure era -> DijkstraSubUtxowPredFailure era
+dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
+  UtxoFailure f -> SubUtxoFailure (injectFailure @"SUBUTXO" f)
+  InvalidWitnessesUTXOW ks -> SubInvalidWitnessesUTXOW ks
+  MissingVKeyWitnessesUTXOW ks -> SubMissingVKeyWitnessesUTXOW ks
+  MissingScriptWitnessesUTXOW hs -> SubMissingScriptWitnessesUTXOW hs
+  ScriptWitnessNotValidatingUTXOW hs -> SubScriptWitnessNotValidatingUTXOW hs
+  MissingTxBodyMetadataHash dh -> SubMissingTxBodyMetadataHash dh
+  MissingTxMetadata dh -> SubMissingTxMetadata dh
+  ConflictingMetadataHash mm -> SubConflictingMetadataHash mm
+  InvalidMetadata -> SubInvalidMetadata
+  ExtraneousScriptWitnessesUTXOW hs -> SubExtraneousScriptWitnessesUTXOW hs
+  MissingRedeemers pps -> SubMissingRedeemers pps
+  MissingRequiredDatums hs1 hs2 -> SubMissingRequiredDatums hs1 hs2
+  NotAllowedSupplementalDatums hs1 hs2 -> SubNotAllowedSupplementalDatums hs1 hs2
+  PPViewHashesDontMatch mm -> SubPPViewHashesDontMatch mm
+  UnspendableUTxONoDatumHash txs -> SubUnspendableUTxONoDatumHash txs
+  ExtraRedeemers pps -> SubExtraRedeemers pps
+  MalformedScriptWitnesses hs -> SubMalformedScriptWitnesses hs
+  MalformedReferenceScripts hs -> SubMalformedReferenceScripts hs
+  ScriptIntegrityHashMismatch mm f -> SubScriptIntegrityHashMismatch mm f
