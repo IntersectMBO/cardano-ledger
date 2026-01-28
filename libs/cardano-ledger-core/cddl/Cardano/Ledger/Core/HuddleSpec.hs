@@ -25,17 +25,12 @@ import Codec.CBOR.Cuddle.Huddle
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (join, replicateM)
 import Data.Bits (Bits (..))
-import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NE
 import Data.MemPack (VarLen (..), packByteString)
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
 import Data.Word (Word32, Word64)
 import System.Random.Stateful (
-  StatefulGen,
   Uniform (..),
   UniformRange (..),
   uniformByteStringM,
@@ -60,9 +55,6 @@ instance Era era => HuddleRule "max_word32" era where
 
 instance Era era => HuddleRule "positive_word32" era where
   huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word32" p
-
-genArrayTerm :: StatefulGen g m => [Term] -> g -> m Term
-genArrayTerm es = pickOne [TList es, TListI es]
 
 instance Era era => HuddleRule "unit_interval" era where
   huddleRuleNamed pname _ =
@@ -182,17 +174,6 @@ instance Era era => HuddleRule "coin" era where
 
 instance Era era => HuddleRule "positive_coin" era where
   huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word64" p
-
-pickOne :: StatefulGen g m => NonEmpty a -> g -> m a
-pickOne es g = do
-  i <- uniformRM (0, length es - 1) g
-  pure $ es NE.!! i
-
-genBytesTerm :: StatefulGen g m => ByteString -> g -> m Term
-genBytesTerm bs = pickOne [TBytes bs, TBytesI $ BS.fromStrict bs]
-
-genStringTerm :: StatefulGen g m => T.Text -> g -> m Term
-genStringTerm t = pickOne [TString t, TStringI $ LT.fromStrict t]
 
 instance Era era => HuddleRule "address" era where
   huddleRuleNamed pname _ =
