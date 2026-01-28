@@ -26,8 +26,9 @@ import Cardano.Crypto.DSIGN.Class (
   SignedDSIGN,
   VerKeyDSIGN,
  )
-import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, hashFromBytesShort)
+import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, PackedBytes, hashFromPackedBytes)
 import Cardano.Crypto.KES.Class (KESAlgorithm, SigKES, VerKeyKES)
+import Cardano.Crypto.PackedBytes (packByteString)
 import Cardano.Crypto.VRF.Class (
   CertVRF,
   CertifiedVRF (..),
@@ -56,6 +57,7 @@ import Codec.CBOR.Term (Term (..))
 import Codec.Serialise as Serialise (Serialise (decode))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import GHC.TypeLits (KnownNat)
 #if MIN_VERSION_bytestring(0,11,1)
 import Data.ByteString.Short (ShortByteString(SBS))
 #else
@@ -472,10 +474,12 @@ instance (DSIGNAlgorithm v, Typeable a) => DecCBOR (SignedDSIGN v a) where
 -- Hash
 --------------------------------------------------------------------------------
 
+instance KnownNat n => DecCBOR (PackedBytes n) where
+  decCBOR = decCBOR >>= packByteString
+  {-# INLINE decCBOR #-}
+
 instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a) where
-  decCBOR = do
-    sbs <- decCBOR @ShortByteString
-    maybe (fail "Invalid hash size") pure $ hashFromBytesShort sbs
+  decCBOR = hashFromPackedBytes <$> decCBOR
   {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
