@@ -80,8 +80,6 @@ transaction_id = hash32
 
 transaction_output = [address, amount : value]
 
-; address = bytes
-; 
 ; address format:
 ;   [ 8 bit header | payload ];
 ; 
@@ -112,15 +110,7 @@ transaction_output = [address, amount : value]
 ;      1110: account address: keyhash28
 ;      1111: account address: scripthash28
 ; 1001-1101: future formats
-address = 
-  h'001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000'
-  / h'102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000'
-  / h'203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000'
-  / h'304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000'
-  / h'405000000000000000000000000000000000000000000000000000000087680203'                                                
-  / h'506000000000000000000000000000000000000000000000000000000087680203'                                                
-  / h'6070000000000000000000000000000000000000000000000000000000'                                                        
-  / h'7080000000000000000000000000000000000000000000000000000000'                                                        
+address = bytes
 
 value = coin/ [coin, multiasset<uint>]
 
@@ -189,8 +179,6 @@ pool_params =
 
 vrf_keyhash = hash32
 
-; The real unit_interval is: #6.30([uint, uint])
-; 
 ; A unit interval is a number in the range between 0 and 1, which
 ; means there are two extra constraints:
 ;   1. numerator <= denominator
@@ -203,12 +191,9 @@ vrf_keyhash = hash32
 ; generate random valid data for testing implementation of
 ; our encoders/decoders. Which means we cannot use the actual
 ; definition here and we hard code the value to 1/2
-unit_interval = #6.30([1, 2])
+unit_interval = #6.30([uint, uint])
 
-; reward_account = bytes
-reward_account = 
-  h'e090000000000000000000000000000000000000000000000000000000'
-  / h'f0a0000000000000000000000000000000000000000000000000000000'
+reward_account = bytes
 
 relay = [single_host_addr// single_host_name// multi_host_name]
 

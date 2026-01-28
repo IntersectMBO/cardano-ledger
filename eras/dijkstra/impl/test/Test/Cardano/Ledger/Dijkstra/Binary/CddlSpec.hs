@@ -44,7 +44,7 @@ spec = do
         huddleRoundTripAnnCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
         huddleRoundTripCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $
+      xdescribe "hangs" $ do
         huddleRoundTripArbitraryValidate @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleRoundTripArbitraryValidate @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
       huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
