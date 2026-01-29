@@ -64,11 +64,11 @@ module Cardano.Ledger.Core (
   EraBlockBody (..),
   bBodySize,
 
-  -- * Rewards
-  RewardType (..),
-  Reward (..),
-
   -- * Re-exports
+  Addr (..),
+  AccountId (..),
+  AccountAddress (..),
+  Withdrawals (..),
   module Cardano.Ledger.Hashes,
   module Cardano.Ledger.Core.TxCert,
   module Cardano.Ledger.Core.PParams,
@@ -77,10 +77,12 @@ module Cardano.Ledger.Core (
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (
+  AccountAddress (..),
+  AccountId (..),
   Addr (..),
   BootstrapAddress,
   CompactAddr,
-  Withdrawals,
+  Withdrawals (..),
   compactAddr,
   decompactAddr,
   isBootstrapCompactAddr,
@@ -115,7 +117,6 @@ import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness, bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (WitVKey, witVKeyHash)
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Metadata
-import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.DeepSeq (NFData)

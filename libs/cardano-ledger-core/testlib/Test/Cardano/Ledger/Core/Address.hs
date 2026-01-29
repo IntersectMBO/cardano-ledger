@@ -17,9 +17,6 @@ module Test.Cardano.Ledger.Core.Address (
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address (
-  AccountAddress (..),
-  AccountId (..),
-  Addr (..),
   BootstrapAddress (BootstrapAddress),
   CompactAddr,
   Word7 (..),

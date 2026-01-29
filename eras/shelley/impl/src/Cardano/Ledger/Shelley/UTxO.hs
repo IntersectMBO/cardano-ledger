@@ -29,24 +29,19 @@ module Cardano.Ledger.Shelley.UTxO (
   module UTxO,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), accountAddressCredentialL, bootstrapKeyHash)
+import Cardano.Ledger.Address (accountAddressCredentialL, bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Keys (
   GenDelegs (..),
   asWitness,
   genDelegKeyHash,
  )
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.State ()
-import Cardano.Ledger.Shelley.Tx ()
-import Cardano.Ledger.Shelley.TxBody (
-  ShelleyEraTxBody (..),
-  Withdrawals (..),
- )
 import Cardano.Ledger.State (
   EraCertState (..),
   StakePoolParams (..),

@@ -36,17 +36,11 @@ module Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   ShelleyTxBodyRaw (..),
   EraIndependentTxBody,
-  AccountAddress (..),
-  AccountId (..),
   pattern RewardAccount,
-  Withdrawals (..),
   getShelleyGenesisKeyHashCountTxBody,
 ) where
 
 import Cardano.Ledger.Address (
-  AccountAddress (..),
-  AccountId (..),
-  Withdrawals (..),
   pattern RewardAccount,
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -174,7 +168,8 @@ boxBody n = invalidField n
 --   The key order looks strange but was choosen for backward compatibility.
 txSparse ::
   EraTxBody era =>
-  ShelleyTxBodyRaw t era -> Encode (Closed Sparse) (ShelleyTxBodyRaw t era)
+  ShelleyTxBodyRaw t era ->
+  Encode (Closed Sparse) (ShelleyTxBodyRaw t era)
 txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
   Keyed (\i o f t c w u h -> ShelleyTxBodyRaw i o c w f t u h)
     !> Key 0 (To input) -- We don't have to send these in ShelleyTxBodyRaw order

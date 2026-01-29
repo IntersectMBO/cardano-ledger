@@ -11,15 +11,13 @@ module Test.Cardano.Ledger.Shelley.RulesTests (
   multisigExamples,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (hashScript)
 import Cardano.Ledger.Credential (pattern ScriptHashObj)
-import Cardano.Ledger.Keys (asWitness, hashKey)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
-import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
 import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set.NonEmpty as NES

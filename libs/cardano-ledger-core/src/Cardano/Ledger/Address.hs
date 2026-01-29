@@ -30,6 +30,7 @@ module Cardano.Ledger.Address (
   putAccountAddress,
   decodeAccountAddress,
   fromCborAccountAddress,
+  AddressBuffer,
   pattern RewardAccount,
   raNetwork,
   raCredential,
@@ -494,6 +495,7 @@ fromCborBackwardsBothAddr = do
     pure (addr, UnsafeCompactAddr sbsCropped)
 {-# INLINE fromCborBackwardsBothAddr #-}
 
+-- | Class specialized for decoding of addresses
 class AddressBuffer b where
   bufLength :: b -> Int
 
@@ -600,36 +602,37 @@ decodeAddrStateT = decodeAddrStateLenientT False False
 -- While decoding an Addr the header (the first byte in the buffer) is expected to be in a
 -- certain format. Here are the meaning of all the bits:
 --
--- @@@
+-- @
 --
--- ┏━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
--- ┃  Byron Address ┃1┊0┊0┊0┊0┊0┊1┊0┃
--- ┣━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━┫
--- ┃Shelley Address ┃0┊x┊x┊x┊0┊0┊0┊x┃
--- ┗━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
---                  ┃0┊0┊0┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingKey    ┃
---                  ┃0┊0┊0┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingKey    ┃
---                  ┃0┊0┊0┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingKey    ┃
---                  ┃0┊0┊0┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingKey    ┃
---                  ┃0┊0┊1┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingScript ┃
---                  ┃0┊0┊1┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingScript ┃
---                  ┃0┊0┊1┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingScript ┃
---                  ┃0┊0┊1┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingScript ┃
---                  ┃0┊1┊0┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingPtr    ┃
---                  ┃0┊1┊0┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingPtr    ┃
---                  ┃0┊1┊0┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingPtr    ┃
---                  ┃0┊1┊0┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingPtr    ┃
---                  ┃0┊1┊1┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingNull   ┃
---                  ┃0┊1┊1┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingNull   ┃
---                  ┃0┊1┊1┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingNull   ┃
---                  ┃0┊1┊1┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingNull   ┃
---                  ┗━┷━┷━┷━┷━┷━┷━┷━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
---                      \ \ \       \
---                       \ \ \       `Is Mainnet Address
---                        \ \ `Payment Credential is a Script
---                         \ `Staking Credential is a Script / No Staking Credential
---                          `Not a Base Address
--- @@@
+-- ┏━━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
+-- ┃  Byron Address  ┃1┊0┊0┊0┊0┊0┊1┊0┃
+-- ┣━━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━┫
+-- ┃ Shelley Address ┃0┊x┊x┊x┊0┊0┊0┊x┃
+-- ┗━━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+--                   ┃0┊0┊0┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingKey    ┃
+--                   ┃0┊0┊0┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingKey    ┃
+--                   ┃0┊0┊0┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingKey    ┃
+--                   ┃0┊0┊0┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingKey    ┃
+--                   ┃0┊0┊1┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingScript ┃
+--                   ┃0┊0┊1┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingScript ┃
+--                   ┃0┊0┊1┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingScript ┃
+--                   ┃0┊0┊1┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingScript ┃
+--                   ┃0┊1┊0┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingPtr    ┃
+--                   ┃0┊1┊0┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingPtr    ┃
+--                   ┃0┊1┊0┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingPtr    ┃
+--                   ┃0┊1┊0┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingPtr    ┃
+--                   ┃0┊1┊1┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingNull   ┃
+--                   ┃0┊1┊1┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingNull   ┃
+--                   ┃0┊1┊1┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingNull   ┃
+--                   ┃0┊1┊1┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingNull   ┃
+--                   ┗━┷━┷━┷━┷━┷━┷━┷━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+--                      | | |       |
+--                      | | |       `Is Mainnet Address
+--                      | | `Payment Credential is a Script
+--                      | `Staking Credential is a Script / No Staking Credential
+--                      `Not a Base Address
+--
+-- @
 decodeAddrStateLenientT ::
   (MonadFail m, AddressBuffer b) =>
   -- | Enable lenient decoding for Ptrs, i.e. indicate whether junk can follow a Ptr. This
@@ -876,6 +879,23 @@ decodeVariableLengthWord64 name buf = fix (decode7BitVarLength name buf) 0
 -- Account Address Deserializer ----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+-- | Account Address Header.
+--
+-- @
+--
+-- ┏━━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
+-- ┃ Account Address ┃1┊1┊1┊x┊0┊0┊0┊x┃
+-- ┗━━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━┓
+--                   ┃1┊1┊1┊0┊0┊0┊0┊0┃ Testnet StakingKey    ┃
+--                   ┃1┊1┊1┊0┊0┊0┊0┊1┃ Mainnet StakingKey    ┃
+--                   ┃1┊1┊1┊1┊0┊0┊0┊0┃ Testnet StakingScript ┃
+--                   ┃1┊1┊1┊1┊0┊0┊0┊1┃ Mainnet StakingScript ┃
+--                   ┗━┷━┷━┷━┷━┷━┷━┷━┻━━━━━━━━━━━━━━━━━━━━━━━┛
+--                          |       |
+--                          |       `Is Mainnet Address
+--                          `Account Credential is a Script
+--
+-- @
 decodeAccountAddress ::
   forall b m.
   (AddressBuffer b, MonadFail m) =>
@@ -908,22 +928,6 @@ headerAccountAddressIsScript :: Header -> Bool
 headerAccountAddressIsScript = (`testBit` 4)
 {-# INLINE headerAccountAddressIsScript #-}
 
--- | Account Address Header.
---
--- @@@
---
--- ┏━━━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
--- ┃ Account Address  ┃1┊1┊1┊x┊0┊0┊0┊x┃
--- ┗━━━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━┓
---                    ┃1┊1┊1┊0┊0┊0┊0┊0┃ Testnet StakingKey    ┃
---                    ┃1┊1┊1┊0┊0┊0┊0┊1┃ Mainnet StakingKey    ┃
---                    ┃1┊1┊1┊1┊0┊0┊0┊0┃ Testnet StakingScript ┃
---                    ┃1┊1┊1┊1┊0┊0┊0┊1┃ Mainnet StakingScript ┃
---                    ┗━┷━┷━┷━┷━┷━┷━┷━┻━━━━━━━━━━━━━━━━━━━━━━━┛
---                            \       \
---                             \       `Is Mainnet Address
---                              `Account Credential is a Script
--- @@@
 decodeAccountAddressT ::
   (MonadFail m, AddressBuffer b) =>
   b ->

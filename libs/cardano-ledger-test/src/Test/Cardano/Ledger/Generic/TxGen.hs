@@ -51,9 +51,6 @@ import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus.Data (Data, Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.API (
-  AccountAddress (..),
-  AccountId (..),
-  Addr (..),
   Credential (..),
   ShelleyDelegCert (..),
  )

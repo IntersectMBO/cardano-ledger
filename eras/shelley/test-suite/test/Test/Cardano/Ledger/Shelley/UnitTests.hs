@@ -13,12 +13,7 @@
 module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (
-  AccountAddress (..),
-  AccountId (..),
-  Addr (..),
-  accountAddressCredentialL,
- )
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
@@ -81,7 +76,6 @@ import Test.Cardano.Ledger.Shelley.Arbitrary (
   StakeProportion (StakeProportion),
  )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
 import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..), genesisCoins)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -694,6 +688,5 @@ unitTests =
     "Unit Tests"
     [ testsInvalidLedger
     , testsPParams
-    , sizeTests
     , testCheckLeaderVal
     ]

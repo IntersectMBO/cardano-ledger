@@ -5,10 +5,10 @@ module Cardano.Ledger.Shelley.API.Types (
 ) where
 
 import Cardano.Ledger.Address as X (
-  AccountAddress (..),
-  AccountId (..),
   Addr (..),
   Withdrawals (..),
+  raCredential,
+  raNetwork,
   pattern RewardAccount,
  )
 import Cardano.Ledger.BHeaderView as X (isOverlaySlot)

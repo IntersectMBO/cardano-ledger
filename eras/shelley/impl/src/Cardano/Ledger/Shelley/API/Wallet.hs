@@ -39,7 +39,7 @@ module Cardano.Ledger.Shelley.API.Wallet (
   getStakePools,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), compactAddr)
+import Cardano.Ledger.Address (compactAddr)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
   Network,

@@ -21,10 +21,6 @@ module Cardano.Ledger.Dijkstra.Rules.Utxo (
   conwayToDijkstraUtxoPredFailure,
 ) where
 
-import Cardano.Ledger.Address (
-  AccountAddress,
-  Addr (..),
- )
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.Rules (

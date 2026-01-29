@@ -22,7 +22,6 @@ module Cardano.Ledger.Dijkstra.Rules.Ledger (
   conwayToDijkstraLedgerPredFailure,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo (AlonzoScript)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)

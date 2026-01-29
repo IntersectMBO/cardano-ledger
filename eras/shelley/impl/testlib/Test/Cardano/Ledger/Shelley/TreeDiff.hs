@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Shelley.TreeDiff (
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
+import Cardano.Ledger.Rewards
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots)
 import Cardano.Ledger.Shelley.BlockBody

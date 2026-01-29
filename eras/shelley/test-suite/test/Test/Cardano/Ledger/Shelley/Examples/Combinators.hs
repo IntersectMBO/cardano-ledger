@@ -42,7 +42,6 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
   adoptFutureGenDeleg,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Network,

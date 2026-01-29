@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo (
   pickRandomFromMap,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr (..), aaAccountId)
 import Cardano.Ledger.BaseTypes (
   Network (..),
   inject,
@@ -32,7 +31,6 @@ import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Cardano.Protocol.Crypto (Crypto)

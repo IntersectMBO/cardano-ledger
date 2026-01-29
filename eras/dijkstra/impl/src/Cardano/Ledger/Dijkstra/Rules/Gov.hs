@@ -24,7 +24,6 @@ module Cardano.Ledger.Dijkstra.Rules.Gov (
   conwayToDijkstraGovPredFailure,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Mismatch (..),

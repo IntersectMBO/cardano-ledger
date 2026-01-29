@@ -12,7 +12,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
 
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), accountAddressCredentialL)
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core

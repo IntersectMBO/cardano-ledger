@@ -12,7 +12,6 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Certs () where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core

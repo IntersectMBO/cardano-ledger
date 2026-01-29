@@ -25,12 +25,10 @@ module Cardano.Ledger.Shelley.LedgerState.IncrementalStake (
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer)
-import Cardano.Ledger.Coin (
-  Coin (..),
-  addDeltaCoin,
- )
+import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Rewards
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rewards (

@@ -6,7 +6,6 @@
 
 module Test.Cardano.Ledger.State.StakePoolSpec (spec) where
 
-import Cardano.Ledger.Address (aaNetworkId)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)

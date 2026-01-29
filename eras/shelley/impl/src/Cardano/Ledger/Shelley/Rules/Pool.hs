@@ -25,7 +25,6 @@ module Cardano.Ledger.Shelley.Rules.Pool (
 ) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.Address (aaNetworkId)
 import Cardano.Ledger.BaseTypes (
   EpochNo,
   Globals (..),

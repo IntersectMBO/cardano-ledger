@@ -29,7 +29,6 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
   lsUTxOStateL,
   utxosGovStateL,
  )
-import Cardano.Ledger.Shelley.TxBody (unWithdrawals)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
 import Data.Foldable (fold)

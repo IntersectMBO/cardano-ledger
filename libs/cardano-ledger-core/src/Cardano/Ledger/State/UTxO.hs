@@ -39,7 +39,6 @@ module Cardano.Ledger.State.UTxO (
   getScriptHash,
 ) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (Share, decShareCBOR),

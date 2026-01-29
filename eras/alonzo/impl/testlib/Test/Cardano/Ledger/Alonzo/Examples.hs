@@ -33,8 +33,6 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
-  AccountAddress (..),
-  AccountId (..),
   Credential (..),
   Network (..),
   NewEpochState (..),

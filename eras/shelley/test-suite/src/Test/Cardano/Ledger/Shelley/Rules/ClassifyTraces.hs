@@ -22,11 +22,7 @@ module Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary.Plain as Plain (serialize')
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Shelley.API (
-  Addr (..),
-  Credential (..),
-  ShelleyLEDGER,
- )
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.PParams (
@@ -34,6 +30,7 @@ import Cardano.Ledger.Shelley.PParams (
   pattern ProposedPPUpdates,
   pattern Update,
  )
+import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxCert (
   isDelegation,

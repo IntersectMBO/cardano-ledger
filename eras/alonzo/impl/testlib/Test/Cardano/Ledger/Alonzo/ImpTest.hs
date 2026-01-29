@@ -44,7 +44,6 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   alonzoFixupFees,
 ) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))

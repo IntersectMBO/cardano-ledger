@@ -5,12 +5,9 @@ module Test.Cardano.Ledger.Shelley.Examples.NetworkID (
   testPoolNetworkId,
 ) where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
+import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), natVersion)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
-  AccountAddress (..),
-  AccountId (..),
-  Network (..),
   PoolEnv (..),
   ShelleyPOOL,
   StakePoolParams (..),

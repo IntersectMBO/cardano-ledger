@@ -34,7 +34,7 @@ module Cardano.Ledger.Conway.Rules.Gov (
   checkPolicy,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress, aaNetworkId, accountAddressCredentialL)
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),

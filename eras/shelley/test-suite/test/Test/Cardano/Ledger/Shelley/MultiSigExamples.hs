@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.Shelley.MultiSigExamples (
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (Addr (Addr))
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),

@@ -31,6 +31,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Rewards (Reward)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyNEWEPOCH)

@@ -23,7 +23,6 @@ module Cardano.Ledger.Conway.Rules.Utxo (
   UtxoEnv (..),
 ) where
 
-import Cardano.Ledger.Address (AccountAddress, Addr)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Alonzo.Rules (

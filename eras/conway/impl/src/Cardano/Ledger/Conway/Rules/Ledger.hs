@@ -23,7 +23,7 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   conwayLedgerTransitionTRC,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress, accountAddressCredentialL)
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,

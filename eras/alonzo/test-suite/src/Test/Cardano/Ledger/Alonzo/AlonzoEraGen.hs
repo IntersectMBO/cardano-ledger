@@ -13,7 +13,6 @@
 -- |  AlonzoEra instances for EraGen and ScriptClass
 module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),

@@ -45,7 +45,6 @@ module Cardano.Ledger.Plutus.TxInfo (
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (unboundRational),
   CertIx (..),

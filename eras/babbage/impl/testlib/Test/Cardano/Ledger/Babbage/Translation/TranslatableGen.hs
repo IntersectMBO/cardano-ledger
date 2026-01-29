@@ -12,7 +12,6 @@ module Test.Cardano.Ledger.Babbage.Translation.TranslatableGen (
   utxoWithTx,
 ) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (SupportedLanguage (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))

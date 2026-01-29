@@ -13,7 +13,6 @@
 --   parameter and do something potentially different in each Era.
 module Test.Cardano.Ledger.Generic.Functions where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext, mkSupportedLanguageM)
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))

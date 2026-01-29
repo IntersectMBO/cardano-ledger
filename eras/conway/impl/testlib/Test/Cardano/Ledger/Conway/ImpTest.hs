@@ -138,7 +138,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   conwayDelegStakeTxCert,
 ) where
 
-import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),

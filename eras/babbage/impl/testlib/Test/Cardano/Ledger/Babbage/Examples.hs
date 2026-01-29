@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Babbage (ApplyTxError (BabbageApplyTxError), BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
@@ -26,13 +26,9 @@ import Cardano.Ledger.Plutus.Data (
   dataToBinaryData,
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.API (
-  AccountAddress (..),
-  AccountId (..),
-  Network (..),
-  NewEpochState (..),
+import Cardano.Ledger.Shelley.LedgerState (NewEpochState (..))
+import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
-  TxId (..),
   Update (..),
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -42,7 +38,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgerPredFailure (DelegsFailure),
  )
 import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.TxIn (mkTxInPartial)
+import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq

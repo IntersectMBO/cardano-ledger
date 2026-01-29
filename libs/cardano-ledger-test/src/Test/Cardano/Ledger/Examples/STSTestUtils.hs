@@ -40,7 +40,6 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
   genericCont,
 ) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript, pattern RequireTimeStart)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
