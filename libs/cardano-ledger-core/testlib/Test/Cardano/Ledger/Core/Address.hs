@@ -126,7 +126,7 @@ getAccountAddress = do
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
 getHash = do
-  bytes <- B.getByteString . fromIntegral $ Hash.sizeHash ([] @h)
+  bytes <- B.getByteString . fromIntegral $ Hash.hashSize ([] @h)
   case Hash.hashFromBytes bytes of
     Nothing -> fail "getHash: implausible hash length mismatch"
     Just !h -> pure h
@@ -230,7 +230,7 @@ getShortRemainingAsByteString = GetShort $ \i sbs ->
 
 getShortHash :: forall a h. Hash.HashAlgorithm h => GetShort (Hash.Hash h a)
 getShortHash = GetShort $ \i sbs ->
-  let hashLen = Hash.sizeHash ([] @h)
+  let hashLen = Hash.hashSize ([] @h)
       offsetStop = i + fromIntegral hashLen
    in if offsetStop <= SBS.length sbs
         then do
@@ -338,14 +338,14 @@ decompactAddrOldLazy cAddr =
           -- The address format is
           -- header | pay cred | stake cred
           -- where the header is 1 byte
-          -- the pay cred is (sizeHash (ADDRHASH crypto)) bytes
+          -- the pay cred is (hashSize (ADDRHASH crypto)) bytes
           -- and the stake cred can vary
     paycred = run "payment credential" 1 bytes (getShortPayCred header)
     stakecred = run "staking credential" 1 bytes $ do
       skipHash ([] @ADDRHASH)
       getShortStakeReference header
     skipHash :: forall proxy h. Hash.HashAlgorithm h => proxy h -> GetShort ()
-    skipHash p = skip . fromIntegral $ Hash.sizeHash p
+    skipHash p = skip . fromIntegral $ Hash.hashSize p
     skip :: Int -> GetShort ()
     skip n = GetShort $ \i sbs ->
       let offsetStop = i + n

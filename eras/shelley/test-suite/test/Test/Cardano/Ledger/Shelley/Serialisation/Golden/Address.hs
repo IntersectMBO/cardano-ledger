@@ -10,7 +10,7 @@
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address (tests) where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.Hash (HashAlgorithm (..), hashFromBytes, hashFromTextAsHex, sizeHash)
+import Cardano.Crypto.Hash (HashAlgorithm (..), hashFromBytes, hashFromTextAsHex, hashSize)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (..), mkCertIxPartial, mkTxIxPartial)
@@ -205,7 +205,7 @@ goldenTests_ShelleyCrypto =
         vk' = invariantSize 32 vk
         hk =
           invariantSize
-            (fromIntegral $ sizeHash (Proxy :: Proxy Blake2b_224))
+            (fromIntegral $ hashSize (Proxy :: Proxy Blake2b_224))
             (hash vk')
     invariantSize :: HasCallStack => Int -> BS.ByteString -> BS.ByteString
     invariantSize expectedLength bytes
