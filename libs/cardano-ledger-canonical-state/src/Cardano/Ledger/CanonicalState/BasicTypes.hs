@@ -6,14 +6,18 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.CanonicalState.BasicTypes (
   OnChain (..),
   DecodeOnChain (..),
+  CanonicalCoin (..),
+  IsCanonicalCoin (..),
 ) where
 
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
 import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..))
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
@@ -55,3 +59,34 @@ instance DecodeOnChain v a => FromCanonicalCBOR v (OnChain a) where
 -- `toPlainDecoder`.
 class DecodeOnChain (v :: Symbol) (a :: Type) where
   decodeOnChain :: BS.ByteString -> CanonicalDecoder s a
+
+-- | Wrapper for the coin type
+newtype CanonicalCoin = CanonicalCoin {unCoin :: Integer}
+  deriving (Eq, Ord, Show, Generic)
+
+-- | We introduce type class here because Coin can be created from multiple types.
+class IsCanonicalCoin a where
+  mkCanonicalCoin :: a -> CanonicalCoin
+  fromCanonicalCoin :: CanonicalCoin -> a
+
+instance IsCanonicalCoin CanonicalCoin where
+  mkCanonicalCoin = id
+  fromCanonicalCoin = id
+
+instance IsCanonicalCoin Coin where
+  mkCanonicalCoin Coin {..} = CanonicalCoin {..}
+  fromCanonicalCoin (CanonicalCoin i) = Coin i
+
+instance IsCanonicalCoin (CompactForm Coin) where
+  mkCanonicalCoin (CompactCoin ci) = CanonicalCoin (fromIntegral ci)
+  fromCanonicalCoin (CanonicalCoin ci) = CompactCoin (fromIntegral ci)
+
+instance IsCanonicalCoin Integer where
+  mkCanonicalCoin = CanonicalCoin
+  fromCanonicalCoin (CanonicalCoin ci) = ci
+
+instance ToCanonicalCBOR v CanonicalCoin where
+  toCanonicalCBOR v (CanonicalCoin ci) = toCanonicalCBOR v ci
+
+instance FromCanonicalCBOR v CanonicalCoin where
+  fromCanonicalCBOR = fmap CanonicalCoin <$> fromCanonicalCBOR
