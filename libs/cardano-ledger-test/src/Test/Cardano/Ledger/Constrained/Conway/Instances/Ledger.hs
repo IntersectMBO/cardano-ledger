@@ -13,7 +13,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -148,9 +147,9 @@ import Data.VMap qualified as VMap
 import Data.Word
 import GHC.Generics (Generic)
 import PlutusLedgerApi.V1 qualified as PV1
+import Test.Cardano.Base.Bytes (genByteArray, genShortByteString)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Binary.Arbitrary (genByteArray, genShortByteString)
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
 import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
