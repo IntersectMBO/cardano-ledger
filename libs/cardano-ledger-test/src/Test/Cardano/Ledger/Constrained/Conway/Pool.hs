@@ -91,4 +91,4 @@ poolCertSpec univ (PoolEnv e pp) ps =
     EpochInterval maxEp = pp ^. ppEMaxL
     maxEpochNo = EpochNo (fromIntegral maxEp)
     rpools = Map.keys $ psStakePools ps
-    maxMetaLen = fromIntegral (Hash.sizeHash ([] @HASH))
+    maxMetaLen = fromIntegral (Hash.hashSize ([] @HASH))

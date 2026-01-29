@@ -292,7 +292,7 @@ instance Arbitrary (Credential r) where
 ------------------------------------------------------------------------------------------
 
 genHash :: forall h a. HashAlgorithm h => Gen (Hash h a)
-genHash = UnsafeHash <$> genShortByteString (fromIntegral (sizeHash (Proxy @h)))
+genHash = UnsafeHash <$> genShortByteString (fromIntegral (hashSize (Proxy @h)))
 
 instance Arbitrary (SafeHash i) where
   arbitrary = unsafeMakeSafeHash <$> genHash
