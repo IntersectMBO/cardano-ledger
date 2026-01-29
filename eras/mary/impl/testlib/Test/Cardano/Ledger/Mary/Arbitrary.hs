@@ -40,9 +40,9 @@ import Data.Int (Int64)
 import qualified Data.Map.Strict as Map (empty)
 import Data.Maybe (fromMaybe)
 import Data.String (IsString (fromString))
+import Test.Cardano.Base.Bytes (genByteString, genShortByteString)
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
-import Test.Cardano.Ledger.Binary.Arbitrary (genByteString, genShortByteString)
 import Test.Cardano.Ledger.Common
 
 instance Arbitrary AssetName where

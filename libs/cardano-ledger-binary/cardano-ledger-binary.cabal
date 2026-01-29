@@ -114,6 +114,7 @@ library testlib
     base,
     base16-bytestring,
     bytestring,
+    cardano-base:testlib,
     cardano-binary,
     cardano-crypto-class:{cardano-crypto-class, testlib},
     cardano-crypto-praos:testlib,
