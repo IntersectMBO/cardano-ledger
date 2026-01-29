@@ -18,7 +18,7 @@ import Cardano.Ledger.State
 import Data.Map.Strict as Map
 import Data.Proxy
 import Lens.Micro
-import Test.Cardano.Ledger.Binary.Arbitrary (genByteArray)
+import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 

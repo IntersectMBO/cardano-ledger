@@ -229,6 +229,7 @@ library testlib
     base16-bytestring,
     binary,
     bytestring,
+    cardano-base:testlib,
     cardano-crypto-class,
     cardano-crypto-wrapper:{cardano-crypto-wrapper, testlib},
     cardano-data:testlib,
