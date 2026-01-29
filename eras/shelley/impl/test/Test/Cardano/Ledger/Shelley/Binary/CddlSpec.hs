@@ -16,7 +16,7 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.HuddleSpec (shelleyCDDL)
 import Cardano.Ledger.State (StakePoolRelay)
-import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.TxIn (TxIn, TxIx)
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,

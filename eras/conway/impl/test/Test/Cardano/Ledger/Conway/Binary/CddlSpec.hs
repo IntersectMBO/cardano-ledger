@@ -33,6 +33,8 @@ spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @ConwayEra
     specWithHuddle conwayCDDL 100 $ do
+      -- Address
+      huddleRoundTripCborSpec @Addr v "address"
       -- Value
       huddleRoundTripCborSpec @(Value ConwayEra) v "positive_coin"
       huddleRoundTripArbitraryValidate @(Value ConwayEra) v "value"
