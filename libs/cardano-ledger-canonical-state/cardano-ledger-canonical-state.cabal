@@ -44,6 +44,7 @@ library
     base,
     base16-bytestring,
     bytestring,
+    cardano-ledger-binary,
     cardano-ledger-core,
     mempack-scls,
     scls-cardano,
@@ -54,18 +55,13 @@ library conway
   import: warnings
   default-language: Haskell2010
   exposed-modules:
-    Cardano.Ledger.Conway.CanonicalState.Namespace.UTxO.V0
+    Cardano.Ledger.CanonicalState.Conway
 
   hs-source-dirs: conway
   build-depends:
     base,
-    bytestring,
-    cardano-ledger-api,
-    cardano-ledger-babbage,
-    cardano-ledger-binary,
     cardano-ledger-canonical-state,
     cardano-ledger-conway,
-    cborg,
     scls-core,
 
 library testlib
@@ -82,7 +78,8 @@ library testlib
     base,
     cardano-ledger-babbage,
     cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway},
-    cardano-ledger-conway:{cardano-ledger-conway, testlib},
+    cardano-ledger-core,
+    cardano-ledger-conway:{testlib},
 
 test-suite tests
   import: warnings
@@ -102,6 +99,7 @@ test-suite tests
   build-depends:
     base,
     cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway, testlib},
-    cardano-ledger-core:testlib,
+    cardano-ledger-core:{testlib},
+    cardano-ledger-conway:{cardano-ledger-conway},
     scls-cardano:testlib,
     scls-cbor,

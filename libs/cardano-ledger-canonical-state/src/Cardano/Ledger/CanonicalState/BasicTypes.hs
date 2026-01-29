@@ -7,7 +7,6 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.CanonicalState.BasicTypes (
@@ -30,7 +29,7 @@ import GHC.TypeLits (Symbol)
 --
 -- We still tag the type with an original one to be able to distinguish between
 -- them.
-data OnChain (a :: Type) = OnChain {getValue :: !a, getWireEncoding :: BS.ByteString}
+data OnChain (a :: Type) = OnChain {getValue :: !a, getWireEncoding :: !BS.ByteString}
   deriving stock (Generic)
 
 instance Eq a => Eq (OnChain a) where
