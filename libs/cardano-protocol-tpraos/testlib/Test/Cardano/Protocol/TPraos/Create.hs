@@ -67,6 +67,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Protocol.Crypto.KES (KESKeyPair (..))
 import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Cardano.Protocol.Crypto.VRF.Fake (NatNonce (..), WithResult (..))
+import Test.Crypto.Instances ()
 
 data AllIssuerKeys c (r :: KeyRole) = AllIssuerKeys
   { aikCold :: KeyPair r
