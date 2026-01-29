@@ -170,13 +170,13 @@ errorInvalidSize n = maybe (error $ "Impossible: Invalid size " ++ show n) pure
 
 instance DSIGNAlgorithm v => Arbitrary (SignKeyDSIGN v) where
   arbitrary = do
-    let n = fromIntegral (sizeSignKeyDSIGN (Proxy @v))
+    let n = fromIntegral (signKeySizeDSIGN (Proxy @v))
     bs <- genByteString n
     errorInvalidSize n $ rawDeserialiseSignKeyDSIGN bs
 
 instance DSIGNAlgorithm v => Arbitrary (SigDSIGN v) where
   arbitrary = do
-    let n = fromIntegral (sizeSigDSIGN (Proxy @v))
+    let n = fromIntegral (sigSizeDSIGN (Proxy @v))
     bs <- genByteString n
     errorInvalidSize n $ rawDeserialiseSigDSIGN bs
 

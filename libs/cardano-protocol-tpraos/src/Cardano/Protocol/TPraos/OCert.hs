@@ -149,7 +149,7 @@ instance Crypto c => SignableRepresentation (OCertSignable c) where
   getSignableRepresentation (OCertSignable vk counter period) =
     runByteBuilder
       ( fromIntegral $
-          KES.sizeVerKeyKES (Proxy @(KES c))
+          KES.verKeySizeKES (Proxy @(KES c))
             + 8
             + 8
       )
