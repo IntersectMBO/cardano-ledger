@@ -417,7 +417,7 @@ decCBORABlockOrBoundary epochSlots = do
   decCBOR @Word >>= \case
     0 -> ABOBBoundary <$> decCBORABoundaryBlock
     1 -> ABOBBlock <$> decCBORABlock epochSlots
-    t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
+    t -> cborError $ DecoderErrorUnknownTag "Block" t
 
 encCBORABlockOrBoundary ::
   ProtocolMagicId -> EpochSlots -> ABlockOrBoundary a -> Encoding

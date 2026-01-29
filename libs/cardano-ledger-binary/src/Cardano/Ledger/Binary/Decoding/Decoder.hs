@@ -613,7 +613,7 @@ decodeEither decodeLeft decodeRight = do
   case t of
     0 -> Left <$> decodeLeft
     1 -> Right <$> decodeRight
-    _ -> cborError $ DecoderErrorUnknownTag "Either" (fromIntegral t)
+    _ -> cborError $ DecoderErrorUnknownTag "Either" t
 {-# INLINE decodeEither #-}
 
 decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
@@ -871,7 +871,7 @@ setTag = 258
 decodeSetTag :: Decoder s ()
 decodeSetTag = do
   t <- decodeTag
-  when (t /= setTag) $ cborError $ DecoderErrorUnknownTag "Set" (fromIntegral t)
+  when (t /= setTag) $ cborError $ DecoderErrorUnknownTag "Set" t
 {-# INLINE decodeSetTag #-}
 
 decodeSetSkel ::
