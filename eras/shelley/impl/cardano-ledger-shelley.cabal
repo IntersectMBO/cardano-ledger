@@ -215,6 +215,7 @@ library testlib
     ImpSpec,
     base,
     bytestring,
+    cardano-base:testlib,
     cardano-crypto,
     cardano-crypto-class,
     cardano-crypto-wrapper,

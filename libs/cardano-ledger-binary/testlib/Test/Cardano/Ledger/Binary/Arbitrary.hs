@@ -9,36 +9,25 @@
 
 module Test.Cardano.Ledger.Binary.Arbitrary (
   genVersion,
-  genByteArray,
-  genByteString,
-  genLazyByteString,
-  genShortByteString,
 ) where
 
 import Cardano.Ledger.Binary.Version
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
-import Codec.CBOR.ByteArray (ByteArray (..))
+import qualified Codec.CBOR.ByteArray as CBOR
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
 import Codec.CBOR.Term
-import qualified Data.ByteString as BS (ByteString, pack, unpack)
-import qualified Data.ByteString.Lazy as BSL (ByteString, fromChunks, fromStrict, toChunks)
-import Numeric.Half
-#if MIN_VERSION_bytestring(0,11,1)
-import qualified Data.ByteString.Short as SBS
-#else
-import qualified Data.ByteString.Short.Internal as SBS
-#endif
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
-import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.VMap as VMap
 import Data.Word
 import GHC.Stack
-import System.Random.Stateful hiding (genByteString, genShortByteString)
-import Test.Cardano.Ledger.Binary.Random (QC (QC))
+import Numeric.Half
+import Test.Cardano.Base.Bytes (genByteArray, genByteString, genLazyByteString)
 import Test.Cardano.Slotting.Arbitrary ()
 import Test.Crypto.Hash ()
 import Test.Crypto.KES ()
@@ -119,7 +108,7 @@ genHalf = do
     then genHalf
     else pure $ fromHalf half
 
-deriving instance Arbitrary ByteArray
+deriving instance Arbitrary CBOR.ByteArray
 
 instance Arbitrary SlicedByteArray where
   arbitrary = do
@@ -169,22 +158,3 @@ genVersion minVersion maxVersion =
       case mkVersion32 v32 of
         Nothing -> error $ "Impossible: Invalid version generated: " ++ show v32
         Just v -> pure v
-
-genByteString :: Int -> Gen BS.ByteString
-genByteString n = uniformByteStringM (fromIntegral n) QC
-
-genLazyByteString :: Int -> Gen BSL.ByteString
-genLazyByteString n = BSL.fromStrict <$> genByteString n
-
-genShortByteString :: Int -> Gen SBS.ShortByteString
-#if MIN_VERSION_random(1,3,0)
-genShortByteString n = uniformShortByteStringM (fromIntegral n) QC
-#else
-genShortByteString n = uniformShortByteString (fromIntegral n) QC
-#endif
-
-genByteArray :: Int -> Gen Prim.ByteArray
-genByteArray n = do
-  sbs <- genShortByteString n
-  case sbs of
-    SBS.SBS ba -> pure (Prim.ByteArray ba)
