@@ -29,19 +29,9 @@ instance KnownNamespace "utxo/v0" where
   type NamespaceKey "utxo/v0" = UtxoIn
   type NamespaceEntry "utxo/v0" = UtxoOut (Babbage.BabbageTxOut ConwayEra)
 
-mkUtxoBabbage :: Babbage.BabbageTxOut ConwayEra -> UtxoOut (Babbage.BabbageTxOut ConwayEra)
-mkUtxoBabbage babbage =
-  UtxoOut $
-    OnChain
-      babbage
-      (toStrictByteString $ toPlainEncoding (eraProtVerLow @ConwayEra) (encCBOR babbage))
+mkUtxoBabbage :: EraTxOut era => Babbage.BabbageTxOut era -> UtxoOut (Babbage.BabbageTxOut era)
+mkUtxoBabbage txOut =
+  UtxoOut $ OnChain txOut $ serialize' (eraProtVerLow @era) (encCBOR txOut)
 
-instance DecodeOnChain "utxo/v0" (Babbage.BabbageTxOut ConwayEra) where
-  decodeOnChain b =
-    case deserialiseFromBytes (toPlainDecoder (Just bl) (eraProtVerLow @ConwayEra) decCBOR) bl of
-      Right (leftover, a)
-        | BL.null leftover -> return a
-        | otherwise -> fail "Leftover bytes when decoding TxOut"
-      Left err -> fail $ "Failed to decode TxOut: " ++ show err
-    where
-      bl = BL.fromStrict b
+instance EraTxOut era => DecodeOnChain "utxo/v0" (Babbage.BabbageTxOut era) where
+  decodeOnChain = either (fail . show) pure . decodeFull' (eraProtVerLow @era))
