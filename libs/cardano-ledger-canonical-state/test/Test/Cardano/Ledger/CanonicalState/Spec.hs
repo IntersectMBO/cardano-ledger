@@ -8,8 +8,9 @@
 module Test.Cardano.Ledger.CanonicalState.Spec (spec) where
 
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
-import Cardano.Ledger.Conway.CanonicalState.Namespace.UTxO.V0 ()
-import qualified Cardano.Ledger.Conway.CanonicalState.Namespace.UTxO.V0 as UTxO.V0
+import Cardano.Ledger.CanonicalState.Conway ()
+import Cardano.Ledger.Conway (ConwayEra)
+import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UTxO.V0
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.Testlib
 import Data.Typeable
@@ -25,8 +26,8 @@ spec = do
       isCanonical @"blocks/v0" @Blocks.V0.BlockOut
       validateType @"blocks/v0" @Blocks.V0.BlockOut "record_entry"
     describe "utxo/v0" $ do
-      isCanonical @"utxo/v0" @(UTxO.V0.UtxoOut (UTxO.V0.BabbageTxOut UTxO.V0.ConwayEra))
-      validateType @"utxo/v0" @(UTxO.V0.UtxoOut (UTxO.V0.BabbageTxOut UTxO.V0.ConwayEra)) "record_entry"
+      isCanonical @"utxo/v0" @(UTxO.V0.UtxoOut ConwayEra)
+      validateType @"utxo/v0" @(UTxO.V0.UtxoOut  ConwayEra) "record_entry"
   describe "namespaces" $ do
     testNS @"blocks/v0"
     testNS @"utxo/v0"
