@@ -11,5 +11,5 @@ import qualified Cardano.Ledger.Conway.CanonicalState.Namespace.UTxO.V0 as UtxoO
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.QuickCheck (Arbitrary (..))
 
-instance Arbitrary (UtxoOut.V0.UtxoOut (Babbage.BabbageTxOut ConwayEra)) where
+instance Arbitrary (TxOut era) => Arbitrary (UtxoOut.V0.UtxoOut era) where
   arbitrary = UtxoOut.V0.mkUtxoBabbage <$> arbitrary

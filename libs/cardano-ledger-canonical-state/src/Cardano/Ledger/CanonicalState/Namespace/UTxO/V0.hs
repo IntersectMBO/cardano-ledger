@@ -69,5 +69,5 @@ instance
 --
 -- We still use different constructors to be able to tag the utxo's and
 -- distinguish between them when reading.
-data UtxoOut x = UtxoOut (OnChain x)
+newtype UtxoOut era = UtxoOut (OnChain (TxOut era))
   deriving stock (Eq, Show, Generic)
