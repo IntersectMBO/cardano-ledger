@@ -642,6 +642,7 @@ instance EraApi DijkstraEra where
             , dtbTreasuryDonation = ctbrTreasuryDonation
             , dtbSubTransactions = mempty
             , dtbDirectDeposits = DirectDeposits mempty
+            , dtbAccountBalanceIntervals = AccountBalanceIntervals mempty
             }
 
   upgradeTxWits atw =

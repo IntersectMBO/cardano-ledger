@@ -31,6 +31,8 @@ module Cardano.Ledger.Dijkstra.Scripts (
   pattern RequireGuard,
   evalDijkstraNativeScript,
   upgradeTimelock,
+  AccountBalanceInterval (..),
+  AccountBalanceIntervals (..),
 ) where
 
 import Cardano.Ledger.Allegra.Scripts
@@ -47,11 +49,17 @@ import Cardano.Ledger.Binary (
   CBORGroup (..),
   DecCBOR (decCBOR),
   DecCBORGroup (..),
+  DecoderError (..),
   EncCBOR (encCBOR),
   EncCBORGroup (..),
   ToCBOR (..),
+  cborError,
+  decodeNullMaybe,
   decodeWord8,
+  encodeListLen,
+  encodeNull,
   encodeWord8,
+  enforceSize,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -63,6 +71,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
   (<*!),
  )
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, Voter)
 import Cardano.Ledger.Conway.Scripts
@@ -78,6 +87,7 @@ import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (KeyValue (..), ToJSON (..))
+import qualified Data.Map.Strict as Map
 import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
 import Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet
@@ -538,3 +548,32 @@ mkDijkstraRequireGuard = mkMemoizedEra @era . DijkstraRequireGuard
 getDijkstraRequireGuard :: DijkstraNativeScript era -> Maybe (Credential Guard)
 getDijkstraRequireGuard (MkDijkstraNativeScript (Memo (DijkstraRequireGuard cred) _)) = Just cred
 getDijkstraRequireGuard _ = Nothing
+
+data AccountBalanceInterval era
+  = AccountBalanceLowerBound !(Inclusive Coin)
+  | AccountBalanceUpperBound !(Exclusive Coin)
+  | AccountBalanceBothBounds !(Inclusive Coin) !(Exclusive Coin)
+  deriving (Generic, Show, Eq, Ord, NoThunks, NFData)
+
+instance EncCBOR (AccountBalanceInterval era) where
+  encCBOR = \case
+    AccountBalanceLowerBound l -> encodeListLen 2 <> encCBOR l <> encodeNull
+    AccountBalanceUpperBound u -> encodeListLen 2 <> encodeNull <> encCBOR u
+    AccountBalanceBothBounds l u -> encodeListLen 2 <> encCBOR l <> encCBOR u
+
+instance Typeable era => DecCBOR (AccountBalanceInterval era) where
+  decCBOR = do
+    enforceSize "AccountBalanceInterval" 2
+    lower <- decodeNullMaybe decCBOR
+    upper <- decodeNullMaybe decCBOR
+    case (lower, upper) of
+      (Just l, Just u) -> pure $ AccountBalanceBothBounds l u
+      (Just l, Nothing) -> pure $ AccountBalanceLowerBound l
+      (Nothing, Just u) -> pure $ AccountBalanceUpperBound u
+      _ -> cborError $ DecoderErrorCustom "AccountBalanceInterval" "Both interval bounds cannot be nil."
+
+newtype AccountBalanceIntervals era
+  = AccountBalanceIntervals
+  {unAccountBalanceIntervals :: Map.Map AccountId (AccountBalanceInterval era)}
+  deriving (Generic)
+  deriving newtype (Show, Ord, Eq, NoThunks, NFData, EncCBOR, DecCBOR)
