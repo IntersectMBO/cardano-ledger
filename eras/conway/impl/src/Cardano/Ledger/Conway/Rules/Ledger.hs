@@ -21,6 +21,8 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   shelleyToConwayLedgerPredFailure,
   conwayLedgerTransition,
   conwayLedgerTransitionTRC,
+  validateTreasuryValue,
+  validateRefScriptSize,
 ) where
 
 import Cardano.Ledger.Address (accountAddressCredentialL)
@@ -92,6 +94,10 @@ import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
+import Cardano.Ledger.Rules.ValidationMode (
+  Test,
+  runTest,
+ )
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -123,7 +129,6 @@ import Control.State.Transition.Extended (
   judgmentContext,
   liftSTS,
   trans,
-  (?!),
  )
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
@@ -137,6 +142,7 @@ import Data.Word (Word32)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
+import Validation
 
 data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
@@ -394,31 +400,8 @@ conwayLedgerTransitionTRC
       if tx ^. isValidTxL == IsValid True
         then do
           let txBody = tx ^. bodyTxL
-              actualTreasuryValue = chainAccountState ^. casTreasuryL
-          case txBody ^. currentTreasuryValueTxBodyL of
-            SNothing -> pure ()
-            SJust submittedTreasuryValue ->
-              submittedTreasuryValue
-                == actualTreasuryValue
-                  ?! (injectFailure . ConwayTreasuryValueMismatch)
-                    ( Mismatch
-                        { mismatchSupplied = submittedTreasuryValue
-                        , mismatchExpected = actualTreasuryValue
-                        }
-                    )
-
-          let
-            totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxoL) tx
-            maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
-          totalRefScriptSize
-            <= maxRefScriptSizePerTx
-              ?! injectFailure
-                ( ConwayTxRefScriptsSizeTooBig
-                    Mismatch
-                      { mismatchSupplied = totalRefScriptSize
-                      , mismatchExpected = maxRefScriptSizePerTx
-                      }
-                )
+          runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+          runTest $ validateRefScriptSize pp (utxoState ^. utxoL) tx
 
           let govState = utxoState ^. utxosGovStateL
               committee = govState ^. committeeGovStateL
@@ -503,6 +486,37 @@ conwayLedgerTransitionTRC
           , tx
           )
     pure $ LedgerState utxoState'' certStateAfterCERTS
+
+validateTreasuryValue ::
+  ConwayEraTxBody era => TxBody l era -> Coin -> Test (ConwayLedgerPredFailure era)
+validateTreasuryValue txBody actualTreasuryValue =
+  case txBody ^. currentTreasuryValueTxBodyL of
+    SNothing -> pure ()
+    SJust submittedTreasuryValue ->
+      failureUnless (submittedTreasuryValue == actualTreasuryValue) $
+        ConwayTreasuryValueMismatch
+          ( Mismatch
+              { mismatchSupplied = submittedTreasuryValue
+              , mismatchExpected = actualTreasuryValue
+              }
+          )
+
+validateRefScriptSize ::
+  ( EraTx era
+  , BabbageEraTxBody era
+  , ConwayEraPParams era
+  ) =>
+  PParams era -> UTxO era -> Tx l era -> Test (ConwayLedgerPredFailure era)
+validateRefScriptSize pp utxo tx =
+  let totalRefScriptSize = txNonDistinctRefScriptsSize utxo tx
+      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+   in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
+        ( ConwayTxRefScriptsSizeTooBig
+            Mismatch
+              { mismatchSupplied = totalRefScriptSize
+              , mismatchExpected = maxRefScriptSizePerTx
+              }
+        )
 
 conwayLedgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
