@@ -34,11 +34,12 @@ import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Shelley.API (ApplyBlock, ApplyTx (..), ruleApplyTxValidation)
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
+import GHC.Generics (Generic)
 
 instance ApplyTx DijkstraEra where
   newtype ApplyTxError DijkstraEra = DijkstraApplyTxError (NonEmpty (DijkstraMempoolPredFailure DijkstraEra))
     deriving (Eq, Show)
-    deriving newtype (EncCBOR, DecCBOR, Semigroup)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
   applyTxValidation validationPolicy globals env state tx =
     first DijkstraApplyTxError $
       ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx

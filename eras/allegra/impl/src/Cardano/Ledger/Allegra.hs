@@ -29,6 +29,7 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure)
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
+import GHC.Generics (Generic)
 
 --------------------------------------------------------------------------------
 -- Mempool instances
@@ -37,7 +38,7 @@ import Data.List.NonEmpty (NonEmpty)
 instance ApplyTx AllegraEra where
   newtype ApplyTxError AllegraEra = AllegraApplyTxError (NonEmpty (ShelleyLedgerPredFailure AllegraEra))
     deriving (Eq, Show)
-    deriving newtype (EncCBOR, DecCBOR, Semigroup)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
   applyTxValidation validationPolicy globals env state tx =
     first AllegraApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx

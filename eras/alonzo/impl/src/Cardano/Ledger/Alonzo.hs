@@ -42,13 +42,14 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure)
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
+import GHC.Generics (Generic)
 
 -- =====================================================
 
 instance ApplyTx AlonzoEra where
   newtype ApplyTxError AlonzoEra = AlonzoApplyTxError (NonEmpty (ShelleyLedgerPredFailure AlonzoEra))
     deriving (Eq, Show)
-    deriving newtype (EncCBOR, DecCBOR, Semigroup)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
   applyTxValidation validationPolicy globals env state tx =
     first AlonzoApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
