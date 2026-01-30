@@ -59,6 +59,7 @@ import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
 import Data.Typeable (Typeable)
+import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 
@@ -144,7 +145,7 @@ ruleApplyTxValidation validationPolicy globals env state tx =
 instance ApplyTx ShelleyEra where
   newtype ApplyTxError ShelleyEra = ShelleyApplyTxError (NonEmpty (ShelleyLedgerPredFailure ShelleyEra))
     deriving (Eq, Show)
-    deriving newtype (EncCBOR, DecCBOR, Semigroup)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
   applyTxValidation validationPolicy globals env state tx =
     first ShelleyApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx

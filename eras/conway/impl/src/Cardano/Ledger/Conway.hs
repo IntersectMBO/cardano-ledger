@@ -42,13 +42,14 @@ import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Shelley.API
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
+import GHC.Generics (Generic)
 
 -- =====================================================
 
 instance ApplyTx ConwayEra where
   newtype ApplyTxError ConwayEra = ConwayApplyTxError (NonEmpty (ConwayLedgerPredFailure ConwayEra))
     deriving (Eq, Show)
-    deriving newtype (EncCBOR, DecCBOR, Semigroup)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
   applyTxValidation validationPolicy globals env state tx =
     first ConwayApplyTxError $
       ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx

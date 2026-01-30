@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `Generic` instance for `ApplyTxError`
 * Add `AllegraApplyTxError` constructor for `ApplyTxError era`
 * Change sets containing errors into `NonEmptySet` for `AllegraUtxoPredFailure`
 * Change all lists into `NonEmpty` for `AllegraUtxoPredFailure`
