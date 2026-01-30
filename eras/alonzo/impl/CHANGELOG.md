@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Add `Generic` instance for `ApplyTxError`
 * Change `ScriptsNotPaidUTxO` to use `NonEmptyMap TxIn (TxOut era)` instead of `UTxO era`
 * Change `atadrPlutus`, `atadPlutus` and `atadPlutus'` to `atadrPlutusScripts`, `atadPlutusScripts` and `atadPlutusScripts'` respectively
 * Add `AlonzoApplyTxError` constructor for `ApplyTxError era`

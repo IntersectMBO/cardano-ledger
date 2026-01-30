@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `Generic` instance for `ApplyTxError`
 * Add `MaryApplyTxError` constructor for `ApplyTxError era`
 * Add `cddl` sub-library, and `generate-cddl` executable.
 * Remove deprecated functions `insert`, `lookup`, `prune`
