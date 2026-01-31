@@ -202,6 +202,16 @@ import System.Random.Stateful (isInRangeOrd)
 maxDecimalsWord64 :: Int
 maxDecimalsWord64 = 19
 
+-- | Protocol version.
+--
+-- Although 'ProtVer' uses 'CBORGroup' for encoding (which inlines fields into the
+-- parent structure), in Babbage+ block headers the protocol version is actually
+-- serialized as a nested array by the consensus layer (cardano-protocol-praos).
+-- This means the on-wire format in headers is @[major, minor]@ (array), not inlined
+-- group elements. This is reflected in the respective CDDL definitions.
+--
+-- See: https://github.com/IntersectMBO/cardano-ledger/issues/3559
+--      https://github.com/IntersectMBO/cardano-ledger/pull/3762
 data ProtVer = ProtVer {pvMajor :: !Version, pvMinor :: !Natural}
   deriving (Show, Eq, Generic, Ord, NFData)
   deriving (EncCBOR) via (CBORGroup ProtVer)
