@@ -1,0 +1,465 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
+module Cardano.Ledger.SCLS.Namespace.GovProposals.V0 (
+  GovProposalIn (..),
+  GovProposalOut (..),
+  CanonicalGovActionState (..),
+  MkCanonicalGovActionState (..),
+  FromCanonicalGovActionState (..),
+  CanonicalGovAction (..),
+  IsCanonicalGovAction (..),
+  CanonicalProposalProcedure (..),
+  IsCanonicalProposalProcedure (..),
+  CanonicalPParamsUpdate (..),
+  IsCanonicalPParamsUpdate (..),
+  CanonicalPurposeId (..),
+  IsCanonicalPurposeId (..),
+  CanonicalGovActionId (..),
+  IsCanonicalGovActionId (..),
+  CanonicalGovActionIx (..),
+  IsCanonicalGovActionIx (..),
+  CanonicalVote (..),
+  IsCanonicalVote (..),
+) where
+
+import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Keys
+import Cardano.Ledger.SCLS.BaseTypes (
+  Anchor (..),
+  EpochInterval,
+  EpochNo (..),
+  NonNegativeInterval,
+  ProtVer,
+  StrictMaybe,
+  UnitInterval,
+ )
+import Cardano.Ledger.SCLS.Common (
+  CanonicalCoin,
+  CanonicalCredential (..),
+  CanonicalRewardAccount (..),
+ )
+import Cardano.Ledger.SCLS.LedgerCBOR (LedgerCBOR (..))
+import Cardano.Ledger.SCLS.Namespace.GovConstitution.V0 (
+  CanonicalConstitution (..),
+ )
+import Cardano.Ledger.SCLS.Namespace.GovPParams.V0
+import Cardano.Ledger.TxIn
+import Cardano.SCLS.CBOR.Canonical
+import Cardano.SCLS.CBOR.Canonical.Decoder (
+  FromCanonicalCBOR (..),
+  decodeListLenCanonical,
+  decodeMapLenCanonicalOf,
+  decodeWord8Canonical,
+ )
+import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..), encodeAsMap, mkEncodablePair)
+import Cardano.SCLS.Entry.IsKey
+import Cardano.SCLS.NamespaceCodec (
+  CanonicalCBOREntryDecoder (..),
+  CanonicalCBOREntryEncoder (..),
+  KnownNamespace (..),
+  NamespaceKeySize,
+  namespaceKeySize,
+ )
+import Cardano.SCLS.Versioned (Versioned (..))
+import Control.Monad (unless)
+import Data.Kind (Type)
+import Data.Map (Map)
+import Data.MemPack
+import Data.MemPack.ByteOrdered
+import Data.Proxy (Proxy (..))
+import Data.Set (Set)
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Word (Word16, Word32, Word8)
+import GHC.Generics (Generic)
+
+data GovProposalIn = GovProposalIn CanonicalGovActionId
+  deriving (Eq, Ord, Show)
+
+newtype GovProposalOut = GovProposalOut CanonicalGovActionState
+  deriving (Eq, Show, Generic)
+  deriving newtype (ToCanonicalCBOR "gov/proposals/v0")
+  deriving newtype (FromCanonicalCBOR "gov/proposals/v0")
+
+
+type instance NamespaceKeySize "gov/proposals/v0" = 34
+
+instance KnownNamespace "gov/proposals/v0" where
+  type NamespaceKey "gov/proposals/v0" = GovProposalIn
+  type NamespaceEntry "gov/proposals/v0" = GovProposalOut
+
+instance CanonicalCBOREntryEncoder "gov/proposals/v0" GovProposalOut where
+  encodeEntry (GovProposalOut n) = toCanonicalCBOR (Proxy @"gov/proposals/v0") n
+
+instance CanonicalCBOREntryDecoder "gov/proposals/v0" GovProposalOut where
+  decodeEntry = fmap GovProposalOut <$> fromCanonicalCBOR
+
+instance MemPack CanonicalGovActionIx where
+  packedByteCount _ = 2
+  packM (CanonicalGovActionIx g) = do
+    packWord16beM g
+  unpackM = do
+    g <- unpackBigEndianM
+    return (CanonicalGovActionIx g)
+
+instance IsKey GovProposalIn where
+  keySize = namespaceKeySize @"gov/proposals/v0"
+  packKeyM (GovProposalIn CanonicalGovActionId {..}) = do
+    packM gaidTxId
+    packM gaidGovActionIx
+  unpackKeyM = do
+    gaidTxId <- unpackM
+    gaidGovActionIx <- unpackM
+    return $ GovProposalIn CanonicalGovActionId {..}
+
+instance ToCanonicalCBOR v CanonicalGovActionState where
+  toCanonicalCBOR v CanonicalGovActionState {..} =
+    encodeAsMap
+      [ mkEncodablePair v ("drep_votes" :: Text) gasDRepVotes
+      , mkEncodablePair v ("proposed_in" :: Text) gasProposedIn
+      , mkEncodablePair v ("expires_after" :: Text) gasExpiresAfter
+      , mkEncodablePair v ("committee_votes" :: Text) gasCommitteeVotes
+      , mkEncodablePair v ("stake_pool_votes" :: Text) gasStakePoolVotes
+      , mkEncodablePair v ("proposal_procedure" :: Text) gasProposalProcedure
+      ]
+
+decodeField :: forall s v a. FromCanonicalCBOR v a => T.Text -> CanonicalDecoder s (Versioned v a)
+decodeField fieldName = do
+  Versioned s <- fromCanonicalCBOR
+  unless (s == fieldName) $
+    fail $
+      T.unpack $
+        "Expected field name " <> fieldName <> " but got " <> s
+  fromCanonicalCBOR
+
+data CanonicalGovActionState = CanonicalGovActionState
+  { gasCommitteeVotes :: !(Map (CanonicalCredential HotCommitteeRole) CanonicalVote)
+  , gasDRepVotes :: !(Map (CanonicalCredential DRepRole) CanonicalVote)
+  , gasStakePoolVotes :: !(Map (KeyHash StakePool) CanonicalVote)
+  , gasProposalProcedure :: !CanonicalProposalProcedure
+  , gasProposedIn :: !EpochNo
+  , gasExpiresAfter :: !EpochNo
+  }
+  deriving (Eq, Show)
+  deriving (Generic)
+
+class MkCanonicalGovActionState p where
+  mkCanonicalGovActionState :: p -> CanonicalGovActionState
+
+class FromCanonicalGovActionState p where
+  type ExtraCanonicalGovActionState p :: Type
+  fromCanonicalGovActionState :: ExtraCanonicalGovActionState p -> CanonicalGovActionState -> p
+
+instance FromCanonicalCBOR v CanonicalGovActionState where
+  fromCanonicalCBOR = do
+    decodeMapLenCanonicalOf 6
+    Versioned gasDRepVotes <- decodeField "drep_votes"
+    Versioned gasProposedIn <- decodeField "proposed_in"
+    Versioned gasExpiresAfter <- decodeField "expires_after"
+    Versioned gasCommitteeVotes <- decodeField "committee_votes"
+    Versioned gasStakePoolVotes <- decodeField "stake_pool_votes"
+    Versioned gasProposalProcedure <- decodeField "proposal_procedure"
+    pure $ Versioned CanonicalGovActionState {..}
+
+data CanonicalGovAction
+  = CanonicalParameterChange
+      (StrictMaybe CanonicalPurposeId)
+      CanonicalPParamsUpdate
+      (StrictMaybe ScriptHash)
+  | CanonicalHardForkInitiation (StrictMaybe CanonicalPurposeId) ProtVer
+  | CanonicalTreasuryWithdrawals (Map CanonicalRewardAccount CanonicalCoin) (StrictMaybe ScriptHash)
+  | CanonicalNoConfidence (StrictMaybe CanonicalPurposeId)
+  | CanonicalUpdateCommittee
+      (StrictMaybe CanonicalPurposeId)
+      (Set (CanonicalCredential ColdCommitteeRole))
+      (Map (CanonicalCredential ColdCommitteeRole) EpochNo)
+      UnitInterval
+  | CanonicalNewConstitution
+      (StrictMaybe CanonicalPurposeId)
+      CanonicalConstitution
+  | CanonicalInfoAction
+  deriving (Eq, Show, Generic)
+
+class IsCanonicalGovAction p where
+  mkCanonicalGovAction :: p -> CanonicalGovAction
+  fromCanonicalGovAction :: CanonicalGovAction -> p
+
+data CanonicalProposalProcedure = CanonicalProposalProcedure
+  { pProcAnchor :: Anchor
+  , pProcDeposit :: CanonicalCoin
+  , pProcGovAction :: CanonicalGovAction
+  , pProcReturnAddr :: CanonicalRewardAccount
+  }
+  deriving (Eq, Show, Generic)
+
+class IsCanonicalProposalProcedure a where
+  mkCanonicalProposalProcedure :: a -> CanonicalProposalProcedure
+  fromCanonicalProposalProcedure :: CanonicalProposalProcedure -> a
+
+instance ToCanonicalCBOR v CanonicalProposalProcedure where
+  toCanonicalCBOR v CanonicalProposalProcedure {..} =
+    encodeAsMap
+      [ mkEncodablePair v ("anchor" :: Text) pProcAnchor
+      , mkEncodablePair v ("deposit" :: Text) pProcDeposit
+      , mkEncodablePair v ("gov_action" :: Text) pProcGovAction
+      , mkEncodablePair v ("return_address" :: Text) pProcReturnAddr
+      ]
+
+instance FromCanonicalCBOR v CanonicalProposalProcedure where
+  fromCanonicalCBOR = do
+    decodeMapLenCanonicalOf 4
+    Versioned pProcAnchor <- decodeField "anchor"
+    Versioned pProcDeposit <- decodeField "deposit"
+    Versioned pProcGovAction <- decodeField "gov_action"
+    Versioned pProcReturnAddr <- decodeField "return_address"
+    pure $ Versioned CanonicalProposalProcedure {..}
+
+instance ToCanonicalCBOR v CanonicalGovAction where
+  toCanonicalCBOR v (CanonicalParameterChange purposeId pparamsUpdate mScriptHash) =
+    toCanonicalCBOR v (0 :: Word8, purposeId, pparamsUpdate, mScriptHash)
+  toCanonicalCBOR v (CanonicalHardForkInitiation purposeId protVer) =
+    toCanonicalCBOR v (1 :: Word8, purposeId, protVer)
+  toCanonicalCBOR v (CanonicalTreasuryWithdrawals withdrawals mScriptHash) =
+    toCanonicalCBOR v (2 :: Word8, withdrawals, mScriptHash)
+  toCanonicalCBOR v (CanonicalNoConfidence purposeId) =
+    toCanonicalCBOR v (3 :: Word8, purposeId)
+  toCanonicalCBOR v (CanonicalUpdateCommittee purposeId removedMembers addedMembers newThreshold) =
+    toCanonicalCBOR v (4 :: Word8, purposeId, removedMembers, addedMembers, newThreshold)
+  toCanonicalCBOR v (CanonicalNewConstitution purposeId constitution) =
+    toCanonicalCBOR v (5 :: Word8, purposeId, constitution)
+  toCanonicalCBOR v (CanonicalInfoAction) =
+    toCanonicalCBOR v (6 :: Word8, ())
+
+instance FromCanonicalCBOR v CanonicalGovAction where
+  fromCanonicalCBOR = do
+    l <- decodeListLenCanonical
+    tag <- decodeWord8Canonical
+    case tag of
+      0 | l == 4 -> do
+        Versioned purposeId <- fromCanonicalCBOR
+        Versioned pparamsUpdate <- fromCanonicalCBOR
+        Versioned mScriptHash <- fromCanonicalCBOR
+        pure $ Versioned $ CanonicalParameterChange purposeId pparamsUpdate mScriptHash
+      1 | l == 3 -> do
+        Versioned purposeId <- fromCanonicalCBOR
+        Versioned protVer <- fromCanonicalCBOR
+        pure $ Versioned $ CanonicalHardForkInitiation purposeId protVer
+      2 | l == 3 -> do
+        Versioned withdrawals <- fromCanonicalCBOR
+        Versioned mScriptHash <- fromCanonicalCBOR
+        pure $ Versioned $ CanonicalTreasuryWithdrawals withdrawals mScriptHash
+      3 | l == 2 -> do
+        Versioned purposeId <- fromCanonicalCBOR
+        pure $ Versioned $ CanonicalNoConfidence purposeId
+      4 | l == 5 -> do
+        Versioned purposeId <- fromCanonicalCBOR
+        Versioned removedMembers <- fromCanonicalCBOR
+        Versioned addedMembers <- fromCanonicalCBOR
+        Versioned newThreshold <- fromCanonicalCBOR
+        pure $ Versioned $ CanonicalUpdateCommittee purposeId removedMembers addedMembers newThreshold
+      5 | l == 3 -> do
+        Versioned purposeId <- fromCanonicalCBOR
+        Versioned constitution <- fromCanonicalCBOR
+        pure $ Versioned $ CanonicalNewConstitution purposeId constitution
+      6 | l == 2 -> do
+        Versioned () <- fromCanonicalCBOR
+        pure $ Versioned CanonicalInfoAction
+      _ -> fail $ "Unknown GovAction tag: " ++ show tag
+
+data CanonicalPParamsUpdate = CanonicalPParamsUpdate
+  { ucppA0 :: StrictMaybe NonNegativeInterval
+  , ucppTxFeePerByte :: StrictMaybe CanonicalCoin
+  , ucppTxFeeFixed :: StrictMaybe CanonicalCoin
+  , ucppMaxBBSize :: StrictMaybe Word32
+  , ucppMaxTxSize :: StrictMaybe Word32
+  , ucppMaxBHSize :: StrictMaybe Word16
+  , ucppKeyDeposit :: StrictMaybe CanonicalCoin
+  , ucppPoolDeposit :: StrictMaybe CanonicalCoin
+  , ucppEMax :: StrictMaybe EpochInterval
+  , ucppNOpt :: StrictMaybe Word16
+  , ucppRho :: StrictMaybe UnitInterval
+  , ucppTau :: StrictMaybe UnitInterval
+  , ucppMinPoolCost :: StrictMaybe CanonicalCoin
+  , ucppCoinsPerUTxOByte :: StrictMaybe CanonicalCoin
+  , ucppCostModels :: StrictMaybe CanonicalCostModels
+  , ucppPrices :: StrictMaybe CanonicalPrices
+  , ucppMaxTxExUnits :: StrictMaybe CanonicalExUnits
+  , ucppMaxBlockExUnits :: StrictMaybe CanonicalExUnits
+  , ucppMaxValSize :: StrictMaybe Word32
+  , ucppCollateralPercentage :: StrictMaybe Word16
+  , ucppMaxCollateralInputs :: StrictMaybe Word16
+  , ucppPoolVotingThresholds :: StrictMaybe CanonicalPoolVotingThresholds
+  , ucppDRepVotingThresholds :: StrictMaybe CanonicalDRepVotingThresholds
+  , ucppCommitteeMinSize :: StrictMaybe Word16
+  , ucppCommitteeMaxTermLength :: StrictMaybe EpochInterval
+  , ucppGovActionLifetime :: StrictMaybe EpochInterval
+  , ucppGovActionDeposit :: StrictMaybe CanonicalCoin
+  , ucppDRepDeposit :: StrictMaybe CanonicalCoin
+  , ucppDRepActivity :: StrictMaybe EpochInterval
+  , ucppMinFeeRefScriptCostPerByte :: StrictMaybe NonNegativeInterval
+  }
+  deriving (Eq, Show, Generic)
+
+class IsCanonicalPParamsUpdate a where
+  mkCanonicalPParamsUpdate :: a -> CanonicalPParamsUpdate
+  fromCanonicalPParamsUpdate :: CanonicalPParamsUpdate -> a
+
+instance ToCanonicalCBOR v CanonicalPParamsUpdate where
+  toCanonicalCBOR v CanonicalPParamsUpdate {..} =
+    encodeAsMap
+      [ mkEncodablePair v ("a0" :: Text) ucppA0
+      , mkEncodablePair v ("rho" :: Text) ucppRho
+      , mkEncodablePair v ("tau" :: Text) ucppTau
+      , mkEncodablePair v ("n_opt" :: Text) ucppNOpt
+      , mkEncodablePair v ("prices" :: Text) ucppPrices
+      , mkEncodablePair v ("epoch_max" :: Text) ucppEMax
+      , mkEncodablePair v ("min_fee_a" :: Text) ucppTxFeePerByte
+      , mkEncodablePair v ("min_fee_b" :: Text) ucppTxFeeFixed
+      , mkEncodablePair v ("cost_models" :: Text) ucppCostModels
+      , mkEncodablePair v ("key_deposit" :: Text) ucppKeyDeposit
+      , mkEncodablePair v ("max_tx_size" :: Text) ucppMaxTxSize
+      , mkEncodablePair v ("drep_deposit" :: Text) ucppDRepDeposit
+      , mkEncodablePair v ("pool_deposit" :: Text) ucppPoolDeposit
+      , mkEncodablePair v ("max_val_size" :: Text) ucppMaxValSize
+      , mkEncodablePair v ("drep_activity" :: Text) ucppDRepActivity
+      , mkEncodablePair v ("min_pool_cost" :: Text) ucppMinPoolCost
+      , mkEncodablePair v ("max_block_size" :: Text) ucppMaxBBSize
+      , mkEncodablePair v ("max_tx_ex_units" :: Text) ucppMaxTxExUnits
+      , mkEncodablePair v ("coin_per_utxo_byte" :: Text) ucppCoinsPerUTxOByte
+      , mkEncodablePair v ("gov_action_deposit" :: Text) ucppGovActionDeposit
+      , mkEncodablePair v ("max_block_ex_units" :: Text) ucppMaxBlockExUnits
+      , mkEncodablePair v ("min_committee_size" :: Text) ucppCommitteeMinSize
+      , mkEncodablePair v ("committee_term_limit" :: Text) ucppCommitteeMaxTermLength
+      , mkEncodablePair v ("collateral_percentage" :: Text) ucppCollateralPercentage
+      , mkEncodablePair v ("drep_voting_thresholds" :: Text) ucppDRepVotingThresholds
+      , mkEncodablePair v ("gov_action_lifetime" :: Text) ucppGovActionLifetime
+      , mkEncodablePair v ("max_block_header_size" :: Text) ucppMaxBHSize
+      , mkEncodablePair v ("max_collateral_inputs" :: Text) ucppMaxCollateralInputs
+      , mkEncodablePair v ("pool_voting_thresholds" :: Text) ucppPoolVotingThresholds
+      , mkEncodablePair
+          v
+          ("min_fee_ref_script_cost_per_byte" :: Text)
+          (ucppMinFeeRefScriptCostPerByte)
+      ]
+
+instance FromCanonicalCBOR v CanonicalPParamsUpdate where
+  fromCanonicalCBOR = do
+    decodeMapLenCanonicalOf 30
+    Versioned ucppA0 <- decodeField "a0"
+    Versioned ucppRho <- decodeField "rho"
+    Versioned ucppTau <- decodeField "tau"
+    Versioned ucppNOpt <- decodeField "n_opt"
+    Versioned ucppPrices <- decodeField "prices"
+    Versioned ucppEMax <- decodeField "epoch_max"
+    Versioned ucppTxFeePerByte <- decodeField "min_fee_a"
+    Versioned ucppTxFeeFixed <- decodeField "min_fee_b"
+    Versioned ucppCostModels <- decodeField "cost_models"
+    Versioned ucppKeyDeposit <- decodeField "key_deposit"
+    Versioned ucppMaxTxSize <- decodeField "max_tx_size"
+    Versioned ucppDRepDeposit <- decodeField "drep_deposit"
+    Versioned ucppMaxValSize <- decodeField "max_val_size"
+    Versioned ucppPoolDeposit <- decodeField "pool_deposit"
+    Versioned ucppDRepActivity <- decodeField "drep_activity"
+    Versioned ucppMinPoolCost <- decodeField "min_pool_cost"
+    Versioned ucppMaxBBSize <- decodeField "max_block_size"
+    Versioned ucppMaxTxExUnits <- decodeField "max_tx_ex_units"
+    Versioned ucppCoinsPerUTxOByte <- decodeField "coin_per_utxo_byte"
+    Versioned ucppGovActionDeposit <- decodeField "gov_action_deposit"
+    Versioned ucppMaxBlockExUnits <- decodeField "max_block_ex_units"
+    Versioned ucppCommitteeMinSize <- decodeField "min_committee_size"
+    Versioned ucppGovActionLifetime <- decodeField "gov_action_lifetime"
+    Versioned ucppCommitteeMaxTermLength <- decodeField "committee_term_limit"
+    Versioned ucppCollateralPercentage <- decodeField "collateral_percentage"
+    Versioned ucppMaxBHSize <- decodeField "max_block_header_size"
+    Versioned ucppMaxCollateralInputs <- decodeField "max_collateral_inputs"
+    Versioned ucppDRepVotingThresholds <- decodeField "drep_voting_thresholds"
+    Versioned ucppPoolVotingThresholds <- decodeField "pool_voting_thresholds"
+    Versioned ucppMinFeeRefScriptCostPerByte <- decodeField "min_fee_ref_script_cost_per_byte"
+    pure $ Versioned CanonicalPParamsUpdate {..}
+
+newtype CanonicalPurposeId = CanonicalPurposeId CanonicalGovActionId
+  deriving (Eq, Show, Generic)
+
+class IsCanonicalPurposeId p where
+  mkCanonicalPurposeId :: p -> CanonicalPurposeId
+  fromCanonicalPurposeId :: CanonicalPurposeId -> p
+
+instance ToCanonicalCBOR v CanonicalPurposeId where
+  toCanonicalCBOR v (CanonicalPurposeId p) = toCanonicalCBOR v p
+
+instance FromCanonicalCBOR v CanonicalPurposeId where
+  fromCanonicalCBOR = fmap CanonicalPurposeId <$> fromCanonicalCBOR
+
+data CanonicalGovActionId = CanonicalGovActionId
+  { gaidTxId :: TxId
+  , gaidGovActionIx :: {-# UNPACK #-} !CanonicalGovActionIx
+  }
+  deriving (Eq, Ord, Show, Generic)
+
+class IsCanonicalGovActionId a where
+  mkCanonicalGovActionId :: a -> CanonicalGovActionId
+  fromCanonicalGovActionId :: CanonicalGovActionId -> a
+
+newtype CanonicalGovActionIx = CanonicalGovActionIx Word16
+  deriving (Eq, Ord, Show, Generic)
+  deriving newtype (ToCanonicalCBOR v)
+  deriving newtype (FromCanonicalCBOR v)
+
+class IsCanonicalGovActionIx a where
+  mkCanonicalGovActionIx :: a -> CanonicalGovActionIx
+  fromCanonicalGovActionIx :: CanonicalGovActionIx -> a
+
+instance ToCanonicalCBOR v CanonicalGovActionId where
+  toCanonicalCBOR v CanonicalGovActionId {..} = toCanonicalCBOR v (gaidTxId, gaidGovActionIx)
+
+instance FromCanonicalCBOR v CanonicalGovActionId where
+  fromCanonicalCBOR = do
+    Versioned (gaidTxId, gaidGovActionIx) <- fromCanonicalCBOR
+    return $ Versioned CanonicalGovActionId {..}
+
+deriving via LedgerCBOR v TxId instance ToCanonicalCBOR v TxId
+
+deriving via LedgerCBOR v TxId instance FromCanonicalCBOR v TxId
+
+-- deriving via LedgerCBOR v GovActionIx instance ToCanonicalCBOR v GovActionIx
+
+-- deriving via LedgerCBOR v GovActionIx instance FromCanonicalCBOR v GovActionIx
+
+data CanonicalVote
+  = CanonicalVoteNo
+  | CanonicalVoteYes
+  | CanonicalAbstain
+  deriving (Ord, Generic, Eq, Show, Enum, Bounded)
+
+class IsCanonicalVote a where
+  mkCanonicalVote :: a -> CanonicalVote
+  fromCanonicalVote :: CanonicalVote -> a
+
+instance ToCanonicalCBOR v CanonicalVote where
+  toCanonicalCBOR v CanonicalVoteNo = toCanonicalCBOR v (0 :: Word8)
+  toCanonicalCBOR v CanonicalVoteYes = toCanonicalCBOR v (1 :: Word8)
+  toCanonicalCBOR v CanonicalAbstain = toCanonicalCBOR v (2 :: Word8)
+
+instance FromCanonicalCBOR v CanonicalVote where
+  fromCanonicalCBOR = do
+    Versioned (w :: Word8) <- fromCanonicalCBOR
+    case w of
+      0 -> return (Versioned CanonicalVoteNo)
+      1 -> return (Versioned CanonicalVoteYes)
+      2 -> return (Versioned CanonicalAbstain)
+      _ -> fail "Invalid CanonicalVote"
