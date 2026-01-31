@@ -25,7 +25,7 @@ module Cardano.Ledger.Tools (
 ) where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)
+import Cardano.Crypto.DSIGN.Class (sigSizeDSIGN, verKeySizeDSIGN)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (byronProtVer, decodeFull', serialize')
@@ -259,10 +259,10 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
         . decodeFull' version
         . serialize' version
         . integralToByteStringN n
-    vKeySize = fromIntegral $ sizeVerKeyDSIGN dsign
+    vKeySize = fromIntegral $ verKeySizeDSIGN dsign
     dummyKeys = map (mkDummy "VKey" vKeySize) [0 :: Int ..]
 
-    sigSize = fromIntegral $ sizeSigDSIGN dsign
+    sigSize = fromIntegral $ sigSizeDSIGN dsign
     dummySig = mkDummy "Signature" sigSize (0 :: Int)
     dummyKeyWits =
       Set.fromList [WitVKey key dummySig | key <- take numKeyWits dummyKeys]

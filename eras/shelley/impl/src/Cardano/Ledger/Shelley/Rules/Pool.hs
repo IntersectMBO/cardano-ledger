@@ -24,7 +24,7 @@ module Cardano.Ledger.Shelley.Rules.Pool (
   poolTransition,
 ) where
 
-import Cardano.Crypto.Hash.Class (sizeHash)
+import Cardano.Crypto.Hash.Class (hashSize)
 import Cardano.Ledger.BaseTypes (
   EpochNo,
   Globals (..),
@@ -250,7 +250,7 @@ poolTransition = do
         forM_ sppMetadata $ \pmd ->
           let s = sizeofByteArray $ pmHash pmd
            in s
-                <= fromIntegral (sizeHash ([] @HASH))
+                <= fromIntegral (hashSize ([] @HASH))
                   ?! injectFailure (PoolMedataHashTooBig sppId s)
 
       let minPoolCost = pp ^. ppMinPoolCostL

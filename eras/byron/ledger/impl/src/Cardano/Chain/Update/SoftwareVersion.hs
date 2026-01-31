@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Update.SoftwareVersion (
   SoftwareVersion (..),
@@ -96,7 +97,7 @@ instance DecCBOR SoftwareVersionError where
     tag <- decodeWord8
     case tag of
       0 -> SoftwareVersionApplicationNameError <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "SoftwareVersionError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "SoftwareVersionError" $ fromIntegral @Word8 @Word tag
 
 instance B.Buildable SoftwareVersionError where
   build = \case

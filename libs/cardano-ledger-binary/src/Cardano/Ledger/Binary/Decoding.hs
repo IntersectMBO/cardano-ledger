@@ -213,11 +213,7 @@ decodeFullAnnotatorFromHexText v desc dec =
 decodeNestedCborTag :: Decoder s ()
 decodeNestedCborTag = do
   t <- decodeTag
-  when (t /= 24) $
-    cborError $
-      DecoderErrorUnknownTag
-        "decodeNestedCborTag"
-        (fromIntegral t)
+  when (t /= 24) $ cborError $ DecoderErrorUnknownTag "decodeNestedCborTag" t
 {-# INLINE decodeNestedCborTag #-}
 
 -- | Remove the the semantic tag 24 from the enclosed CBOR data item,

@@ -4,7 +4,7 @@
 
 module Test.Cardano.Ledger.Conformance.Utils where
 
-import Cardano.Crypto.Hash (ByteString, Hash, HashAlgorithm, hashFromBytes, hashToBytes, sizeHash)
+import Cardano.Crypto.Hash (ByteString, Hash, HashAlgorithm, hashFromBytes, hashSize, hashToBytes)
 import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
@@ -26,7 +26,7 @@ hashToInteger :: Hash a b -> Integer
 hashToInteger = toInteger . bytesToNatural . hashToBytes
 
 integerToHash :: forall h a. HashAlgorithm h => Integer -> Maybe (Hash h a)
-integerToHash = hashFromBytes . naturalToBytes (fromIntegral . sizeHash $ Proxy @h) . fromInteger
+integerToHash = hashFromBytes . naturalToBytes (fromIntegral . hashSize $ Proxy @h) . fromInteger
 
 -- HSMap utils
 

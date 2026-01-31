@@ -649,7 +649,7 @@ to v@(MaryValue _ ma) = do
     -- abcRegionSize is the combined size of regions A, B, and C
     abcRegionSize = numTriples * 12
 
-    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy ADDRHASH))
+    pidSize = fromIntegral (Hash.hashSize (Proxy :: Proxy ADDRHASH))
 
     -- pids is the collection of all distinct pids
     pids = Set.fromList $ (\(pid, _, _) -> pid) <$> triples
@@ -712,7 +712,7 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
     abcRegionSize = len * 12
 
     numPids = Set.size . Set.fromList $ (\(pid, _, _) -> pid) <$> xs
-    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy ADDRHASH))
+    pidSize = fromIntegral (Hash.hashSize (Proxy :: Proxy ADDRHASH))
     pidBlockSize = numPids * pidSize
 
     assetNames = Set.fromList $ (\(_, an, _) -> an) <$> xs
@@ -771,7 +771,7 @@ from (CompactValueMultiAsset c numAssets rep) =
               readShortByteString
                 rep
                 (fromIntegral p)
-                (fromIntegral $ Hash.sizeHash ([] :: [ADDRHASH]))
+                (fromIntegral $ Hash.hashSize ([] :: [ADDRHASH]))
       , AssetName $ readShortByteString rep (fromIntegral a) (assetLen a)
       , fromIntegral i
       )

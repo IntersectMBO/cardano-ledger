@@ -524,7 +524,7 @@ instance AddressBuffer BS.ByteString where
   {-# INLINE bufToByteString #-}
   bufGetHash :: forall h a. Hash.HashAlgorithm h => BS.ByteString -> Int -> Maybe (Hash.Hash h a)
   bufGetHash bs offset = do
-    let size = fromIntegral (Hash.sizeHash (Proxy :: Proxy h))
+    let size = fromIntegral (Hash.hashSize (Proxy :: Proxy h))
     guard (offset >= 0 && offset + size <= BS.length bs)
     Hash.hashFromBytes (BS.unsafeTake size (BS.unsafeDrop offset bs))
   {-# INLINE bufGetHash #-}
@@ -756,7 +756,7 @@ decodeHash buf = do
     Nothing -> fail "Impossible: Negative offset"
   where
     hashLen :: Int
-    hashLen = fromIntegral (Hash.sizeHash (Proxy :: Proxy h))
+    hashLen = fromIntegral (Hash.hashSize (Proxy :: Proxy h))
 {-# INLINE decodeHash #-}
 
 decodePtr ::

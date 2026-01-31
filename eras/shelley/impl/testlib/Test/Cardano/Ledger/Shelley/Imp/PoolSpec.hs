@@ -7,7 +7,7 @@
 
 module Test.Cardano.Ledger.Shelley.Imp.PoolSpec (spec) where
 
-import Cardano.Crypto.Hash.Class (sizeHash)
+import Cardano.Crypto.Hash.Class (hashSize)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
@@ -18,7 +18,7 @@ import Cardano.Ledger.State
 import Data.Map.Strict as Map
 import Data.Proxy
 import Lens.Micro
-import Test.Cardano.Ledger.Binary.Arbitrary (genByteArray)
+import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
@@ -54,7 +54,7 @@ spec = describe "POOL" $ do
 
     it "register a pool with too big metadata" $ do
       pv <- getsPParams ppProtocolVersionL
-      let maxMetadataSize = sizeHash (Proxy :: Proxy HASH)
+      let maxMetadataSize = hashSize (Proxy :: Proxy HASH)
       tooBigSize <- choose (maxMetadataSize + 1, maxMetadataSize + 50)
       metadataHash <- liftGen $ genByteArray $ fromIntegral tooBigSize
       url <- arbitrary

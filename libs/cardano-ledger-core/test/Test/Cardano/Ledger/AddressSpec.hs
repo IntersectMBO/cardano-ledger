@@ -189,7 +189,7 @@ propCompactSerializationAgree addr =
 propDecompactErrors :: Addr -> Gen Property
 propDecompactErrors addr = do
   let sbs = unCompactAddr $ compactAddr addr
-      hashLen = fromIntegral $ Hash.sizeHash (Proxy :: Proxy ADDRHASH)
+      hashLen = fromIntegral $ Hash.hashSize (Proxy :: Proxy ADDRHASH)
       bs = SBS.fromShort sbs
       flipHeaderBit b =
         case BS.uncons bs of

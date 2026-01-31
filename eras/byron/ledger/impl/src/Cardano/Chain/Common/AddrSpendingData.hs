@@ -77,7 +77,7 @@ instance DecCBOR AddrSpendingData where
     decodeWord8Canonical >>= \case
       0 -> VerKeyASD <$> decCBOR
       2 -> RedeemASD <$> decCBOR
-      tag -> cborError $ DecoderErrorUnknownTag "AddrSpendingData" tag
+      tag -> cborError $ DecoderErrorUnknownTag "AddrSpendingData" $ fromIntegral @Word8 @Word tag
 
 -- | Type of an address. It corresponds to constructors of 'AddrSpendingData'.
 --   It's separated, because 'Address' doesn't store 'AddrSpendingData', but we
@@ -110,7 +110,7 @@ instance DecCBOR AddrType where
     decodeWord8Canonical >>= \case
       0 -> pure ATVerKey
       2 -> pure ATRedeem
-      tag -> cborError $ DecoderErrorUnknownTag "AddrType" tag
+      tag -> cborError $ DecoderErrorUnknownTag "AddrType" $ fromIntegral @Word8 @Word tag
 
 instance HeapWords AddrType where
   heapWords = \case
