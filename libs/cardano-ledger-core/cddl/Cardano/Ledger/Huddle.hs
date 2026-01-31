@@ -2,7 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -21,16 +21,27 @@ module Cardano.Ledger.Huddle (
   (=.=),
   (=.~),
   Era,
+  genArrayTerm,
+  genBytesTerm,
+  genStringTerm,
+  pickOne,
 ) where
 
+import Cardano.Ledger.Binary (Term (..))
 import Cardano.Ledger.Core (Era)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import qualified Codec.CBOR.Cuddle.Huddle as Huddle hiding ((=:=), (=:~))
+import Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as LBS
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import System.Random.Stateful (StatefulGen, UniformRange (..))
 
 class (KnownSymbol name, Era era) => HuddleRule (name :: Symbol) era where
   huddleRuleNamed :: Proxy name -> Proxy era -> Rule
@@ -65,3 +76,17 @@ infixr 0 =.=
 (=.~) pname group = Name (T.pack (symbolVal pname)) =:~ group
 
 infixr 0 =.~
+
+genArrayTerm :: StatefulGen g m => [Term] -> g -> m Term
+genArrayTerm es = pickOne [TList es, TListI es]
+
+pickOne :: StatefulGen g m => NonEmpty a -> g -> m a
+pickOne es g = do
+  i <- uniformRM (0, length es - 1) g
+  pure $ es NE.!! i
+
+genBytesTerm :: StatefulGen g m => ByteString -> g -> m Term
+genBytesTerm bs = pickOne [TBytes bs, TBytesI $ LBS.fromStrict bs]
+
+genStringTerm :: StatefulGen g m => T.Text -> g -> m Term
+genStringTerm t = pickOne [TString t, TStringI $ LT.fromStrict t]

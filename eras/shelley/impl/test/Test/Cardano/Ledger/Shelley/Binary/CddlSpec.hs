@@ -16,7 +16,7 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.HuddleSpec (shelleyCDDL)
 import Cardano.Ledger.State (StakePoolRelay)
-import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.TxIn (TxIn, TxIx)
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
@@ -33,8 +33,7 @@ spec =
     let v = eraProtVerLow @ShelleyEra
     specWithHuddle shelleyCDDL 100 $ do
       huddleRoundTripCborSpec @Addr v "address"
-      -- TODO re-enable this once we've removed the hard-coded definition for `address`
-      xdescribe "bad CDDL" $ huddleRoundTripArbitraryValidate @Addr v "address"
+      huddleRoundTripArbitraryValidate @Addr v "address"
       huddleRoundTripAnnCborSpec @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripArbitraryValidate @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripCborSpec @BootstrapWitness v "bootstrap_witness"
