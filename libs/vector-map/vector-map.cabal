@@ -84,6 +84,7 @@ test-suite tests
     base,
     containers,
     hspec,
+    hspec-core,
     quickcheck-classes-base,
     vector-map,
 

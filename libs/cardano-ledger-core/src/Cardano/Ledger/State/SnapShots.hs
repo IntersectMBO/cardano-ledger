@@ -284,12 +284,10 @@ data SnapShot = SnapShot
   { ssStake :: !Stake -- TODO: rename to `ssActiveStake`
 
   -- ^ All of the stake for registered staking credentials that have a delegation to a stake pool.
-  , ssTotalActiveStake :: NonZero Coin -- Note: lazy on purpose
-
-  -- ^ Total active stake, which is the sum of all of the stake from `ssStake`, which is why it is
-  -- lazy.  It is primarily used in a denominator, therefore it cannot be zero and is defaulted to
-  -- 1. This is a reasonable assumption for a system that relies on non-zero active stake to produce
-  -- blocks.
+  , ssTotalActiveStake :: !(NonZero Coin)
+  -- ^ Total active stake, which is the sum of all of the stake from `ssStake`. It is primarily used
+  -- in a denominator, therefore it cannot be zero and is defaulted to 1. This is a reasonable
+  -- assumption for a system that relies on non-zero active stake to produce blocks.
   , ssDelegations :: VMap VB VB (Credential Staking) (KeyHash StakePool) -- TODO: remove (lazy on purpose)
   , ssPoolParams :: VMap VB VB (KeyHash StakePool) StakePoolParams -- TODO: remove (lazy on purpose)
   , ssStakePoolsSnapShot :: !(VMap VB VB (KeyHash StakePool) StakePoolSnapShot)
@@ -299,7 +297,7 @@ data SnapShot = SnapShot
   deriving (ToJSON) via KeyValuePairs SnapShot
   deriving
     (NoThunks)
-    via AllowThunksIn '["ssTotalActiveStake", "ssDelegations", "ssPoolParams"] SnapShot
+    via AllowThunksIn '["ssDelegations", "ssPoolParams"] SnapShot
 
 instance NFData SnapShot
 

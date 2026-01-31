@@ -85,6 +85,7 @@ import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Control.DeepSeq
 import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
 import Control.Monad.Trans.Fail.String (errorFail)
@@ -696,7 +697,7 @@ instance Arbitrary SnapShot where
         stakePoolSnapShotFromParams poolId =
           mkStakePoolSnapShot ssStake ssTotalActiveStake
             . mkStakePoolState deposit (Map.findWithDefault mempty poolId delegationsPerStakePool)
-        ssStakePoolsSnapShot = VMap.mapWithKey stakePoolSnapShotFromParams ssPoolParams
+        ssStakePoolsSnapShot = force $ VMap.mapWithKey stakePoolSnapShotFromParams ssPoolParams
     pure SnapShot {..}
 
 instance Arbitrary SnapShots where
