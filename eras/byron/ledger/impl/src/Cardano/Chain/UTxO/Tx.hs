@@ -174,7 +174,7 @@ instance DecCBOR TxIn where
     tag <- decCBOR @Word8
     case tag of
       0 -> uncurry TxInUtxo <$> decodeKnownCborDataItem
-      _ -> cborError $ DecoderErrorUnknownTag "TxIn" tag
+      _ -> cborError $ DecoderErrorUnknownTag "TxIn" $ fromIntegral @Word8 @Word tag
 
 instance HeapWords TxIn where
   heapWords (TxInUtxo txid _w16) = 3 + heapWords txid + 2

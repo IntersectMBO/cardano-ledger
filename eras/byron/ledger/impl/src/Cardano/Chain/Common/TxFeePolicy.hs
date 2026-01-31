@@ -96,7 +96,7 @@ instance DecCBOR TxFeePolicy where
     tag <- decCBOR @Word8
     case tag of
       0 -> TxFeePolicyTxSizeLinear <$> decodeKnownCborDataItem
-      _ -> cborError $ DecoderErrorUnknownTag "TxFeePolicy" tag
+      _ -> cborError $ DecoderErrorUnknownTag "TxFeePolicy" $ fromIntegral @Word8 @Word tag
 
 instance Monad m => ToJSON m TxFeePolicy where
   -- We multiply by 1e9 to keep compatibility with 'Nano' coefficients

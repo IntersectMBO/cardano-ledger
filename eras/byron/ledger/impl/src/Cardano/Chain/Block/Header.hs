@@ -415,7 +415,7 @@ decCBORHeaderToHash epochSlots = do
       void decCBORABoundaryHeader
       pure Nothing
     1 -> Just <$!> decCBORHeader epochSlots
-    t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
+    t -> cborError $ DecoderErrorUnknownTag "Header" t
 
 --------------------------------------------------------------------------------
 -- Header Formatting
@@ -691,13 +691,13 @@ instance DecCBOR BlockSignature where
 instance DecCBOR (ABlockSignature ByteSpan) where
   decCBOR = do
     enforceSize "BlockSignature" 2
-    decCBOR >>= \case
+    decCBOR @Word8 >>= \case
       2 ->
         ABlockSignature
           <$ enforceSize "BlockSignature" 2
           <*> decCBOR
           <*> decCBOR
-      t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
+      t -> cborError $ DecoderErrorUnknownTag "BlockSignature" $ fromIntegral @Word8 @Word t
 
 --------------------------------------------------------------------------------
 -- ToSign

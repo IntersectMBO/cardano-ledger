@@ -82,4 +82,4 @@ instance HS.HashAlgorithm h => Default (Hash h b) where
   def =
     UnsafeHash $
       Short.pack $
-        replicate (fromIntegral (Hash.sizeHash (Proxy :: Proxy h))) 0
+        replicate (fromIntegral (Hash.hashSize (Proxy :: Proxy h))) 0

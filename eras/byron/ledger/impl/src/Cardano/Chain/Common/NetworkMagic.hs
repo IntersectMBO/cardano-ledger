@@ -75,7 +75,7 @@ instance DecCBOR NetworkMagic where
     case tag of
       0 -> matchSize "NetworkMagic" 1 len $> NetworkMainOrStage
       1 -> matchSize "NetworkMagic" 2 len >> NetworkTestnet <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "NetworkMagic" tag
+      _ -> cborError $ DecoderErrorUnknownTag "NetworkMagic" $ fromIntegral @Word8 @Word tag
 
 makeNetworkMagic :: AProtocolMagic a -> NetworkMagic
 makeNetworkMagic pm = case getRequiresNetworkMagic pm of

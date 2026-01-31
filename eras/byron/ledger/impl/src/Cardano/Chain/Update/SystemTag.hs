@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Update.SystemTag (
   SystemTag (..),
@@ -97,7 +98,7 @@ instance DecCBOR SystemTagError where
     case tag of
       0 -> checkSize 2 >> SystemTagNotAscii <$> decCBOR
       1 -> checkSize 2 >> SystemTagTooLong <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "SystemTagError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "SystemTagError" $ fromIntegral @Word8 @Word tag
 
 instance B.Buildable SystemTagError where
   build = \case
