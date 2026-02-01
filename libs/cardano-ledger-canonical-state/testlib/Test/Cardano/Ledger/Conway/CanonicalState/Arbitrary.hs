@@ -7,10 +7,9 @@
 
 module Test.Cardano.Ledger.Conway.CanonicalState.Arbitrary () where
 
-import qualified Cardano.Ledger.Babbage.TxOut as Babbage
-import Cardano.Ledger.Core (Era, EraTxOut)
-import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UtxoOut.V0
 import Cardano.Ledger.CanonicalState.Conway ()
+import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UtxoOut.V0
+import Cardano.Ledger.Core (Era, EraTxOut, TxOut)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.QuickCheck (Arbitrary (..))
 

@@ -68,7 +68,6 @@ library testlib
   import: warnings
   exposed-modules:
     Test.Cardano.Ledger.CanonicalState.Arbitrary
-    Test.Cardano.Ledger.Conway.CanonicalState.Arbitrary
 
   visibility: public
   hs-source-dirs: testlib
@@ -76,7 +75,6 @@ library testlib
   build-depends:
     QuickCheck,
     base,
-    cardano-ledger-babbage,
     cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway},
     cardano-ledger-core,
     cardano-ledger-conway:{testlib},

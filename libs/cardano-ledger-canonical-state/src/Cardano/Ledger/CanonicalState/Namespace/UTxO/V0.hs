@@ -8,8 +8,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -19,11 +19,10 @@ module Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 (
   mkUtxo,
 ) where
 
+import Cardano.Ledger.Binary (decodeFull', encCBOR, serialize')
 import Cardano.Ledger.CanonicalState.BasicTypes
-import Cardano.Ledger.Binary (encCBOR, decodeFull', serialize')
-import Cardano.Ledger.Core (TxOut, EraScript, EraTxOut, eraProtVerLow)
-import Cardano.Ledger.Hashes (originalBytes)
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.Core (EraScript, EraTxOut, TxOut, eraProtVerLow)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.SCLS.CBOR.Canonical.Decoder as D
 import Cardano.SCLS.CBOR.Canonical.Encoder
 import Cardano.SCLS.CDDL ()
@@ -41,13 +40,8 @@ newtype UtxoIn
 
 instance IsKey UtxoIn where
   keySize = namespaceKeySize @"utxo/v0"
-  packKeyM (UtxoKeyIn (TxIn (TxId a) b)) = do
-    packByteStringM (originalBytes a)
-    packM b
-  unpackKeyM = do
-    a <- unpackM -- FIXME read bytestirng and create unsafe hash
-    b <- unpackM
-    return $ UtxoKeyIn (TxIn a b)
+  packKeyM (UtxoKeyIn txIn) = packM txIn
+  unpackKeyM = UtxoKeyIn <$> unpackM
 
 instance CanonicalCBOREntryEncoder "utxo/v0" (UtxoOut era) where
   encodeEntry n = toCanonicalCBOR (Proxy @"utxo/v0") n
@@ -81,7 +75,7 @@ deriving instance
   Show (TxOut era) =>
   Show (UtxoOut era)
 
-mkUtxo :: forall era . (EraTxOut era) => TxOut era -> UtxoOut era
+mkUtxo :: forall era. EraTxOut era => TxOut era -> UtxoOut era
 mkUtxo txOut =
   UtxoOut $ OnChain txOut $ serialize' (eraProtVerLow @era) (encCBOR txOut)
 
