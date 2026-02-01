@@ -33,13 +33,13 @@ data OnChain (a :: Type) = OnChain {getValue :: !a, getWireEncoding :: !BS.ByteS
   deriving stock (Generic)
 
 instance Eq a => Eq (OnChain a) where
-  (OnChain a1 _) == (OnChain a2 _) = a1 == a2
+  (OnChain _ bs1) == (OnChain _ bs2) = bs1 == bs2
 
 instance Ord a => Ord (OnChain a) where
-  compare (OnChain a1 _) (OnChain a2 _) = compare a1 a2
+  compare (OnChain _ bs1) (OnChain _ bs2) = compare bs1 bs2
 
 instance Show a => Show (OnChain a) where
-  show (OnChain a b) = (show $ Base16.encode b) ++ ":" ++ show a
+  show (OnChain a b) = show (Base16.encode b) ++ ":" ++ show a
 
 instance ToCanonicalCBOR v (OnChain a) where
   toCanonicalCBOR v (OnChain _ bs) = toCanonicalCBOR v bs

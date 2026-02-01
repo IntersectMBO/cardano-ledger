@@ -14,5 +14,5 @@ import Cardano.Ledger.CanonicalState.Conway ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.QuickCheck (Arbitrary (..))
 
-instance (EraTxOut era, Arbitrary (Babbage.TxOut era), Era era) => Arbitrary (UtxoOut.V0.UtxoOut era) where
+instance (EraTxOut era, Arbitrary (TxOut era), Era era) => Arbitrary (UtxoOut.V0.UtxoOut era) where
   arbitrary = UtxoOut.V0.mkUtxo <$> arbitrary
