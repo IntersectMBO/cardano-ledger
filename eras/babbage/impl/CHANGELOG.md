@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Change `babbageEvalScriptsTxInvalid` to return a `Rule` instead of `TransitionRule`
 * Change `STS` instance of `BabbageUTXOS`: use `UtxosEnv` as `Environment` and `ShelleyGovState` as `State`
 * Add `Generic` instance for `ApplyTxError`
 * Add `BabbageApplyTxError` constructor for `ApplyTxError era`

@@ -150,10 +150,12 @@ utxosTransition ::
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
-  judgmentContext >>= \(TRC (_, _, tx)) -> do
+  judgmentContext >>= \(TRC (UtxosEnv _ pp _ utxo, pup, tx)) -> do
     case tx ^. isValidTxL of
       IsValid True -> babbageEvalScriptsTxValid
-      IsValid False -> babbageEvalScriptsTxInvalid
+      IsValid False -> do
+        babbageEvalScriptsTxInvalid @era pp tx utxo
+        pure pup
 
 -- ===================================================================
 
@@ -233,23 +235,20 @@ babbageEvalScriptsTxInvalid ::
   , EraPlutusContext era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , STS (EraRule "UTXOS" era)
-  , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
-  , State (EraRule "UTXOS" era) ~ ShelleyGovState era
-  , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
+  , STS (EraRule "UTXOS" era)
   ) =>
-  TransitionRule (EraRule "UTXOS" era)
-babbageEvalScriptsTxInvalid = do
-  TRC (UtxosEnv _ pp _ utxo, pup, tx) <- judgmentContext
+  PParams era ->
+  Tx TopTx era ->
+  UTxO era ->
+  Rule (EraRule "UTXOS" era) 'Transition ()
+babbageEvalScriptsTxInvalid pp tx utxo = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
-
   () <- pure $! Debug.traceEvent invalidBegin ()
-
-  case collectPlutusScriptsWithContext ei sysSt pp tx utxo of
+  case collectPlutusScriptsWithContext @era ei sysSt pp tx utxo of
     Right sLst ->
       {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
       {- isValid tx = evalScripts tx sLst = False -}
@@ -260,10 +259,10 @@ babbageEvalScriptsTxInvalid = do
               injectFailure $
                 ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
           Fails ps fs -> do
-            mapM_ (tellEvent . injectEvent @"UTXOS" . SuccessfulPlutusScriptsEvent @era) (nonEmpty ps)
-            tellEvent (injectEvent $ FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
-    Left info -> failBecause (injectFailure $ CollectErrors info)
-
-  () <- pure $! Debug.traceEvent invalidEnd ()
-
-  pure pup
+            mapM_
+              (tellEvent . injectEvent . SuccessfulPlutusScriptsEvent @era)
+              (nonEmpty ps)
+            tellEvent . injectEvent $
+              FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs)
+    Left info -> failBecause (injectFailure (CollectErrors info))
+  pure $! Debug.traceEvent invalidEnd ()
