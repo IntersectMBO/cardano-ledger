@@ -26,6 +26,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxos (
   validEnd,
   invalidBegin,
   invalidEnd,
+  UtxosEnv (..),
   AlonzoUtxosEvent (..),
   when2Phase,
   FailureDescription (..),
@@ -57,14 +58,12 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext,
   ScriptFailure (..),
   ScriptResult (..),
  )
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
@@ -72,8 +71,6 @@ import Cardano.Ledger.Shelley.Rules (
   PpupEvent,
   ShelleyPPUP,
   ShelleyPpupPredFailure,
-  UtxoEnv (..),
-  updateUTxOState,
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
@@ -89,7 +86,6 @@ import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..), nonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty as NonEmpty
-import Data.MapExtras (extractKeys)
 import Data.Text (Text)
 import qualified Debug.Trace as Debug
 import GHC.Generics (Generic)
@@ -124,39 +120,30 @@ instance
   STS (AlonzoUTXOS era)
   where
   type BaseM (AlonzoUTXOS era) = ShelleyBase
-  type Environment (AlonzoUTXOS era) = UtxoEnv era
-  type State (AlonzoUTXOS era) = UTxOState era
+  type Environment (AlonzoUTXOS era) = UtxosEnv era
+  type State (AlonzoUTXOS era) = ShelleyGovState era
   type Signal (AlonzoUTXOS era) = Tx TopTx era
   type PredicateFailure (AlonzoUTXOS era) = AlonzoUtxosPredFailure era
   type Event (AlonzoUTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
 
-data AlonzoUtxosEvent era
-  = AlonzoPpupToUtxosEvent (EraRuleEvent "PPUP" era)
-  | TotalDeposits (SafeHash EraIndependentTxBody) Coin
-  | SuccessfulPlutusScriptsEvent (NonEmpty PlutusWithContext)
-  | FailedPlutusScriptsEvent (NonEmpty PlutusWithContext)
-  | -- | The UTxOs consumed and created by a signal tx
-    TxUTxODiff
-      -- | UTxO consumed
-      (UTxO era)
-      -- | UTxO created
-      (UTxO era)
+data UtxosEnv era = UtxosEnv
+  { ueSlot :: SlotNo
+  , uePParams :: PParams era
+  , ueCertState :: CertState era
+  , ueUtxo :: UTxO era
+  }
   deriving (Generic)
 
-deriving instance
-  ( Era era
-  , Eq (TxOut era)
-  , Eq (EraRuleEvent "PPUP" era)
-  ) =>
-  Eq (AlonzoUtxosEvent era)
+data AlonzoUtxosEvent era
+  = AlonzoPpupToUtxosEvent (EraRuleEvent "PPUP" era)
+  | SuccessfulPlutusScriptsEvent (NonEmpty PlutusWithContext)
+  | FailedPlutusScriptsEvent (NonEmpty PlutusWithContext)
+  deriving (Generic)
 
-instance
-  ( Era era
-  , NFData (TxOut era)
-  , NFData (EraRuleEvent "PPUP" era)
-  ) =>
-  NFData (AlonzoUtxosEvent era)
+deriving instance Eq (EraRuleEvent "PPUP" era) => Eq (AlonzoUtxosEvent era)
+
+instance NFData (EraRuleEvent "PPUP" era) => NFData (AlonzoUtxosEvent era)
 
 instance
   ( Era era
@@ -240,15 +227,13 @@ alonzoEvalScriptsTxValid ::
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
-  , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext era
   , EraCertState era
-  , EraStake era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxValid = do
-  TRC (UtxoEnv slot pp certState, utxos@(UTxOState utxo _ _ pup _ _), tx) <-
+  TRC (UtxosEnv slot pp certState utxo, pup, tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
       genDelegs = certState ^. certDStateL . Shelley.dsGenDelegsL
@@ -265,18 +250,8 @@ alonzoEvalScriptsTxValid = do
 
   () <- pure $! Debug.traceEvent validEnd ()
 
-  ppup' <-
-    trans @(EraRule "PPUP" era) $
-      TRC (PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
-
-  updateUTxOState
-    pp
-    utxos
-    txBody
-    certState
-    ppup'
-    (tellEvent . TotalDeposits (hashAnnotated txBody))
-    (\a b -> tellEvent $ TxUTxODiff a b)
+  trans @(EraRule "PPUP" era) $
+    TRC (PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
 
 alonzoEvalScriptsTxInvalid ::
   forall era.
@@ -285,12 +260,10 @@ alonzoEvalScriptsTxInvalid ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
   , EraPlutusContext era
-  , EraStake era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxInvalid = do
-  TRC (UtxoEnv slot pp _, utxos@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
-  let txBody = tx ^. bodyTxL
+  TRC (UtxosEnv slot pp _ utxo, pup, tx) <- judgmentContext
 
   () <- pure $! Debug.traceEvent invalidBegin ()
 
@@ -304,15 +277,7 @@ alonzoEvalScriptsTxInvalid = do
 
   () <- pure $! Debug.traceEvent invalidEnd ()
 
-  {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
-  {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
-  let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
-  pure $!
-    utxos
-      { utxosUtxo = UTxO utxoKeep
-      , utxosFees = fees <> sumAllCoin utxoDel
-      , utxosInstantStake = deleteInstantStake (UTxO utxoDel) (utxos ^. instantStakeL)
-      }
+  pure pup
 
 -- =======================================
 -- Names for the events we will tell

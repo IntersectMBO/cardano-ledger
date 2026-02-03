@@ -2,6 +2,9 @@
 
 ## 1.15.0.0
 
+* Move `TotalDeposits` and `TxUTxODiff` data constructors from `AlonzoUtxosEvent` to `AlonzoUtxoEvent`
+* Add `UtxosEnv`
+* Change `STS` instance of `AlonzoUTXOS`: use `UtxosEnv` as `Environment` and `ShelleyGovState` as `State`
 * Add `Generic` instance for `ApplyTxError`
 * Change `ScriptsNotPaidUTxO` to use `NonEmptyMap TxIn (TxOut era)` instead of `UTxO era`
 * Change `atadrPlutus`, `atadPlutus` and `atadPlutus'` to `atadrPlutusScripts`, `atadPlutusScripts` and `atadPlutusScripts'` respectively

@@ -184,11 +184,10 @@ instance
 
 instance ToExpr (Event (EraRule "UTXO" era)) => ToExpr (AlonzoUtxowEvent era)
 
-instance ToExpr (Event (EraRule "UTXOS" era)) => ToExpr (AlonzoUtxoEvent era)
+instance (ToExpr (TxOut era), ToExpr (Event (EraRule "UTXOS" era))) => ToExpr (AlonzoUtxoEvent era)
 
 instance
   ( ToExpr (EraRuleEvent "PPUP" era)
-  , ToExpr (TxOut era)
   , ToExpr PlutusWithContext
   ) =>
   ToExpr (AlonzoUtxosEvent era)
