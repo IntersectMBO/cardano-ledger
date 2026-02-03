@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -43,9 +44,13 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXO)
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Ppup ()
-import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
+import Cardano.Ledger.Alonzo.Rules.Utxos (
+  AlonzoUTXOS,
+  AlonzoUtxosPredFailure,
+  UtxosEnv (..),
+ )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), totExUnits)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxBody (
   AllegraEraTxBody (..),
   AlonzoEraTxBody (..),
@@ -84,8 +89,13 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (utxosUtxo))
-import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv (..))
+import Cardano.Ledger.Shelley.LedgerState (ShelleyGovState, UTxOState (..))
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyPpupPredFailure,
+  ShelleyUtxoPredFailure,
+  UtxoEnv (..),
+  updateUTxOState,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
@@ -99,12 +109,12 @@ import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
-import Data.Coerce (coerce)
 import Data.Either (isRight)
 import Data.Foldable as F (foldl', sequenceA_, toList)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (extractKeys)
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
@@ -222,15 +232,37 @@ instance
   ) =>
   NFData (AlonzoUtxoPredFailure era)
 
-newtype AlonzoUtxoEvent era
+data AlonzoUtxoEvent era
   = UtxosEvent (Event (EraRule "UTXOS" era))
+  | TotalDeposits (SafeHash EraIndependentTxBody) Coin
+  | -- | The UTxOs consumed and created by a signal tx
+    TxUTxODiff
+      -- | UTxO consumed
+      (UTxO era)
+      -- | UTxO created
+      (UTxO era)
   deriving (Generic)
 
-deriving instance Show (Event (EraRule "UTXOS" era)) => Show (AlonzoUtxoEvent era)
+deriving instance
+  ( Show (TxOut era)
+  , Show
+      (Event (EraRule "UTXOS" era))
+  ) =>
+  Show (AlonzoUtxoEvent era)
 
-deriving instance Eq (Event (EraRule "UTXOS" era)) => Eq (AlonzoUtxoEvent era)
+deriving instance
+  ( Era era
+  , Eq (TxOut era)
+  , Eq (Event (EraRule "UTXOS" era))
+  ) =>
+  Eq (AlonzoUtxoEvent era)
 
-instance NFData (Event (EraRule "UTXOS" era)) => NFData (AlonzoUtxoEvent era)
+instance
+  ( Era era
+  , NFData (TxOut era)
+  , NFData (Event (EraRule "UTXOS" era))
+  ) =>
+  NFData (AlonzoUtxoEvent era)
 
 -- | Returns true for VKey locked addresses, and false for any kind of
 -- script-locked address.
@@ -478,15 +510,17 @@ utxoTransition ::
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ShelleyGovState era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , EraCertState era
+  , EraStake era
   , SafeToHash (TxWits era)
+  , GovState era ~ ShelleyGovState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
-  TRC (UtxoEnv slot pp dpstate, utxos, tx) <- judgmentContext
+  TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let utxo = utxosUtxo utxos
 
   {-   txb := txbody tx   -}
@@ -517,7 +551,7 @@ utxoTransition = do
   runTest $ Shelley.validateBadInputsUTxO utxo inputsAndCollateral
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ Shelley.validateValueNotConservedUTxO pp utxo dpstate txBody
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo certState txBody
 
   {- adaPolicy ∉ supp mint tx
      above check not needed because mint field of type MultiAsset cannot contain ada -}
@@ -551,7 +585,30 @@ utxoTransition = do
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
 
-  trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
+  updatedGovState <-
+    trans @(EraRule "UTXOS" era) $
+      TRC (UtxosEnv slot pp certState utxo, utxosGovState utxos, tx)
+
+  case tx ^. isValidTxL of
+    IsValid True ->
+      updateUTxOState
+        pp
+        utxos
+        txBody
+        certState
+        updatedGovState
+        (tellEvent . TotalDeposits (hashAnnotated txBody))
+        (\a b -> tellEvent (TxUTxODiff a b))
+    IsValid False ->
+      {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
+      {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
+      let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
+       in pure $!
+            utxos
+              { utxosUtxo = UTxO utxoKeep
+              , utxosFees = (utxosFees utxos) <> sumAllCoin utxoDel
+              , utxosInstantStake = deleteInstantStake (UTxO utxoDel) (utxos ^. instantStakeL)
+              }
 
 --------------------------------------------------------------------------------
 -- AlonzoUTXO STS
@@ -562,8 +619,8 @@ instance
   ( EraUTxO era
   , AlonzoEraTx era
   , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ShelleyGovState era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , EraRule "UTXO" era ~ AlonzoUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
@@ -571,7 +628,9 @@ instance
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , AtMostEra "Babbage" era
   , EraCertState era
+  , EraStake era
   , SafeToHash (TxWits era)
+  , GovState era ~ ShelleyGovState era
   ) =>
   STS (AlonzoUTXO era)
   where
