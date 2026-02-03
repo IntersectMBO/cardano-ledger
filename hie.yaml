@@ -243,6 +243,9 @@ cradle:
     - path: "libs/cardano-ledger-canonical-state/src"
       component: "lib:cardano-ledger-canonical-state"
 
+    - path: "libs/cardano-ledger-canonical-state/conway"
+      component: "cardano-ledger-canonical-state:lib:conway"
+
     - path: "libs/cardano-ledger-canonical-state/testlib"
       component: "cardano-ledger-canonical-state:lib:testlib"
 
