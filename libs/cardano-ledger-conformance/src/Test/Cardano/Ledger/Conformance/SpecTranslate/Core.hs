@@ -156,9 +156,9 @@ instance SpecTranslate ctx ProtVer where
   toSpecRep (ProtVer ver minor) = pure (getVersion ver, toInteger minor)
 
 instance SpecTranslate ctx CostModels where
-  type SpecRep CostModels = ()
+  type SpecRep CostModels = [((), ())]
 
-  toSpecRep _ = pure ()
+  toSpecRep _ = pure [((), ())]
 
 instance SpecTranslate ctx Prices where
   type SpecRep Prices = ()
