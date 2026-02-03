@@ -76,8 +76,8 @@ library testlib
     QuickCheck,
     base,
     cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway},
+    cardano-ledger-conway:testlib,
     cardano-ledger-core,
-    cardano-ledger-conway:{testlib},
 
 test-suite tests
   import: warnings
@@ -97,7 +97,7 @@ test-suite tests
   build-depends:
     base,
     cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway, testlib},
-    cardano-ledger-core:{testlib},
-    cardano-ledger-conway:{cardano-ledger-conway},
+    cardano-ledger-conway,
+    cardano-ledger-core:testlib,
     scls-cardano:testlib,
     scls-cbor,
