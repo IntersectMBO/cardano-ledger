@@ -109,6 +109,7 @@ library testlib
     cardano-protocol-tpraos,
     cardano-strict-containers,
     containers,
+    cuddle,
     generic-random,
     microlens,
     nothunks,

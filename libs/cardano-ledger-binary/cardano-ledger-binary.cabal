@@ -111,6 +111,7 @@ library testlib
     ghc-options:
       -Wredundant-constraints
   build-depends:
+    antigen,
     ImpSpec,
     QuickCheck,
     base,

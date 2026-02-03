@@ -41,11 +41,12 @@ specForEra ::
   Spec
 specForEra cddlFiles = do
   describe (eraName @era) $ do
-    specWithHuddle cddlFiles 100 $ do
-      huddleBlockSpec @era @StandardCrypto @BHeader @BHBody
-      xdescribe "Cannot generate a CBOR term corresponding to a group with cuddle" $
-        huddleRoundTripCborSpec @(CBORGroup (OCert StandardCrypto))
-          (eraProtVerLow @era)
-          "[ operational_cert ]"
+    describe "Huddle" $
+      specWithHuddle cddlFiles $ do
+        huddleBlockSpec @era @StandardCrypto @BHeader @BHBody
+        xdescribe "Cannot generate a CBOR term corresponding to a group with cuddle" $
+          huddleRoundTripCborSpec @(CBORGroup (OCert StandardCrypto))
+            (eraProtVerLow @era)
+            "[ operational_cert ]"
   where
     _atMostAlonzo = atMostEra @"Alonzo" @era
