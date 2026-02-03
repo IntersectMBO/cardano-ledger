@@ -20,6 +20,18 @@ source-repository-package
 
 source-repository-package
   type: git
+  location: https://github.com/input-output-hk/cuddle.git
+  tag: ca1a2e6c260a50290782760bdddf0d574ad9ad45
+  --sha256: sha256-xb//wzU/0AzMFtidbfrbodjxcWbssOh8tNx/MajLy4g=
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/antigen.git
+  tag: 64d1cb8dba12ceeb35a8f50e6b90968e293e80a7
+  --sha256: sha256-xw6Pwgdq86DXtd4o0BDnCYu6Rm0eCrnveKTtNGiDshE=
+
+source-repository-package
+  type: git
   location: https://github.com/input-output-hk/constrained-generators.git
   --sha256: sha256-h0bJTwdfJG84XrERJJoBBi5ZzRHgeVoZWS2yW/z7LiU=
   tag: 966f65f3c28cb22fc45220dbd1408baea93b53d8

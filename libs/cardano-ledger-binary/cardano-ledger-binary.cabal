@@ -113,6 +113,7 @@ library testlib
     ghc-options:
       -Wredundant-constraints
   build-depends:
+    antigen,
     ImpSpec,
     QuickCheck,
     base,
@@ -134,7 +135,6 @@ library testlib
     half,
     hedgehog,
     hspec,
-    hspec-core,
     iproute,
     pretty-show,
     pretty-simple,
