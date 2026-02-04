@@ -141,7 +141,7 @@ library testlib
     random >=1.2,
     text,
     tree-diff,
-    vector-map,
+    vector-map:testlib,
 
 test-suite tests
   type: exitcode-stdio-1.0
