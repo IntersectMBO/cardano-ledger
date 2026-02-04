@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -8,7 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-
+{-# OPTIONS_GHC -Wno-deprecations #-}
 module Cardano.Ledger.Api.State.Query (
   -- * @GetFilteredDelegationsAndRewardAccounts@
   queryStakePoolDelegsAndRewards,
@@ -70,6 +71,9 @@ module Cardano.Ledger.Api.State.Query (
   QueryPoolStateResult (..),
   mkQueryPoolStateResult,
 
+    -- * @GetStakeSnapshots@
+  queryStakeSnapshots,
+
   -- * For testing
   getNextEpochCommitteeMembers,
 ) where
@@ -83,6 +87,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
  )
 import Cardano.Ledger.BaseTypes (EpochNo, Network, strictMaybeToMaybe)
 import Cardano.Ledger.Binary
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
@@ -112,6 +117,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (credToDRep, dRepToCred)
 import Cardano.Ledger.Shelley.LedgerState
+import Control.DeepSeq
 import Control.Monad (guard)
 import Data.Foldable (foldMap')
 import Data.Map (Map)
@@ -122,6 +128,8 @@ import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
+import GHC.Generics
 import Lens.Micro
 import Lens.Micro.Extras (view)
 
@@ -494,3 +502,126 @@ queryPoolParameters ::
 queryPoolParameters network nes poolKeys =
   let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
    in Map.mapWithKey (`stakePoolStateToStakePoolParams` network) $ Map.restrictKeys pools poolKeys
+
+-- | The stake snapshot returns information about the mark, set, go ledger snapshots for a pool,
+-- plus the total active stake for each snapshot that can be used in a 'sigma' calculation.
+--
+-- Each snapshot is taken at the end of a different era. The go snapshot is the current one and
+-- was taken two epochs earlier, set was taken one epoch ago, and mark was taken immediately
+-- before the start of the current epoch.
+data StakeSnapshot = StakeSnapshot
+  { ssMarkPool :: !Coin
+  , ssSetPool :: !Coin
+  , ssGoPool :: !Coin
+  }
+  deriving (Eq, Show, Generic)
+
+instance NFData StakeSnapshot
+
+instance ToCBOR StakeSnapshot where
+  toCBOR
+    StakeSnapshot
+      { ssMarkPool
+      , ssSetPool
+      , ssGoPool
+      } =
+      Plain.encodeListLen 3
+        <> toCBOR ssMarkPool
+        <> toCBOR ssSetPool
+        <> toCBOR ssGoPool
+
+instance FromCBOR StakeSnapshot where
+  fromCBOR = do
+    Plain.enforceSize "StakeSnapshot" 3
+    StakeSnapshot
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+data StakeSnapshots = StakeSnapshots
+  { ssStakeSnapshots :: !(Map (KeyHash StakePool) StakeSnapshot)
+  , ssMarkTotal :: !Coin
+  , ssSetTotal :: !Coin
+  , ssGoTotal :: !Coin
+  }
+  deriving (Eq, Show, Generic)
+
+instance NFData StakeSnapshots
+
+instance ToCBOR StakeSnapshots where
+  toCBOR
+    StakeSnapshots
+      { ssStakeSnapshots
+      , ssMarkTotal
+      , ssSetTotal
+      , ssGoTotal
+      } =
+      Plain.encodeListLen 4
+        <> toCBOR ssStakeSnapshots
+        <> toCBOR ssMarkTotal
+        <> toCBOR ssSetTotal
+        <> toCBOR ssGoTotal
+
+instance FromCBOR StakeSnapshots where
+  fromCBOR = do
+    Plain.enforceSize "StakeSnapshots" 4
+    StakeSnapshots
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+queryStakeSnapshots ::
+  NewEpochState era ->
+  Maybe (Set (KeyHash StakePool)) ->
+  StakeSnapshots
+queryStakeSnapshots nes mPoolIds =
+  let SnapShots
+        { ssStakeMark
+        , ssStakeSet
+        , ssStakeGo
+        } = esSnapshots $ nesEs nes
+
+      totalMarkByPoolId :: Map (KeyHash StakePool) Coin
+      totalMarkByPoolId = sumStakePerPool (ssDelegations ssStakeMark) (ssStake ssStakeMark)
+
+      totalSetByPoolId :: Map (KeyHash StakePool) Coin
+      totalSetByPoolId = sumStakePerPool (ssDelegations ssStakeSet) (ssStake ssStakeSet)
+
+      totalGoByPoolId :: Map (KeyHash StakePool) Coin
+      totalGoByPoolId = sumStakePerPool (ssDelegations ssStakeGo) (ssStake ssStakeGo)
+
+      getPoolStakes :: Set (KeyHash StakePool) -> Map (KeyHash StakePool) StakeSnapshot
+      getPoolStakes poolIds = Map.fromSet mkStakeSnapshot poolIds
+        where
+          mkStakeSnapshot poolId =
+            StakeSnapshot
+              { ssMarkPool = Map.findWithDefault mempty poolId totalMarkByPoolId
+              , ssSetPool = Map.findWithDefault mempty poolId totalSetByPoolId
+              , ssGoPool = Map.findWithDefault mempty poolId totalGoByPoolId
+              }
+
+      getAllStake :: SnapShot -> Coin
+      getAllStake (SnapShot stake _ _ _ _) = VMap.foldMap fromCompact (unStake stake)
+   in case mPoolIds of
+        Nothing ->
+          let poolIds =
+                Set.fromList $
+                  mconcat
+                    [ VMap.elems (ssDelegations ssStakeMark)
+                    , VMap.elems (ssDelegations ssStakeSet)
+                    , VMap.elems (ssDelegations ssStakeGo)
+                    ]
+           in StakeSnapshots
+                { ssStakeSnapshots = getPoolStakes poolIds
+                , ssMarkTotal = getAllStake ssStakeMark
+                , ssSetTotal = getAllStake ssStakeSet
+                , ssGoTotal = getAllStake ssStakeGo
+                }
+        Just poolIds ->
+          StakeSnapshots
+            { ssStakeSnapshots = getPoolStakes poolIds
+            , ssMarkTotal = getAllStake ssStakeMark
+            , ssSetTotal = getAllStake ssStakeSet
+            , ssGoTotal = getAllStake ssStakeGo
+            }
