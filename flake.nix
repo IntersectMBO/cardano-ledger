@@ -86,7 +86,7 @@
           #
           inputMap = {
             "https://chap.intersectmbo.org/" = inputs.CHaP;
-            "https://github.com/IntersectMBO/formal-ledger-specifications.git" = inputs.formal-ledger-specifications;
+            "https://github.com/IntersectMBO/formal-ledger-specifications.git/master-artifacts" = inputs.formal-ledger-specifications;
           };
           cabalProjectLocal = ''
             repository cardano-haskell-packages-local
