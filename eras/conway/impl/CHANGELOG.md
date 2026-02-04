@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Change `STS` instance of `ConwayUTOXS`: use `PParams` as `Environment`
+* Remove `TotalDeposits` and `TxUTxODiff` data constructors from `ConwayUtxosEvent`
 * Add `Generic` instance for `ApplyTxError`
 * Change `ScriptsNotPaidUTxO` to use `NonEmptyMap TxIn (TxOut era)` instead of `UTxO era`
 * Add `conwayLedgerTransitionTRC`
