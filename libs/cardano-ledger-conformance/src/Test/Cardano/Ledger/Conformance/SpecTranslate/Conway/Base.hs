@@ -230,7 +230,7 @@ instance
       ppPv = (0, 0)
       ppMinUTxOValue = 0 -- minUTxOValue has been deprecated and is not supported in Conway
     ppCoinsPerUTxOByte <- toSpecRep cppCoinsPerUTxOByte
-    ppCostmdls <- toSpecRep cppCostModels
+    ppCostmdlsAssoc <- toSpecRep cppCostModels
     ppPrices <- toSpecRep cppPrices
     let
       pp = PParams cpp
