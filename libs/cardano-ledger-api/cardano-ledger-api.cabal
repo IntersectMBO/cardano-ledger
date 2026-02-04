@@ -72,8 +72,10 @@ library
     cardano-strict-containers,
     containers,
     data-default,
+    deepseq,
     microlens,
     transformers,
+    vector-map,
 
 library testlib
   exposed-modules:
