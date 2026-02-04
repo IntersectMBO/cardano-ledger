@@ -112,7 +112,11 @@ import Test.Cardano.Base.Bytes (genByteString, genShortByteString)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
+import Test.Cardano.Slotting.Arbitrary ()
 import Test.Cardano.StrictContainers.Instances ()
+import Test.Crypto.Hash ()
+import Test.Crypto.KES ()
+import Test.Crypto.VRF ()
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary (GSubterms, RecursivelyShrink)
 import Test.QuickCheck.Hedgehog (hedgehog)

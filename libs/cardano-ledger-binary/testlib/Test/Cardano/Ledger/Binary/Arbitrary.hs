@@ -1,10 +1,6 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.Arbitrary (
@@ -28,10 +24,6 @@ import Data.Word
 import GHC.Stack
 import Numeric.Half
 import Test.Cardano.Base.Bytes (genByteArray, genByteString, genLazyByteString)
-import Test.Cardano.Slotting.Arbitrary ()
-import Test.Crypto.Hash ()
-import Test.Crypto.KES ()
-import Test.Crypto.VRF ()
 import Test.QuickCheck
 import Test.QuickCheck.Instances ()
 
