@@ -85,7 +85,6 @@
 * Remove `Generic` instance from `BoundedRatio` type
 * Remove deprecated function `addrPtrNormalize`
 * Remove deprecated functions `mkTxIx`, `mkCertIx`, `hashAnchorData`
-* Remove deprecated functions `bheader`, `bbody`
 * Remove deprecated methods `fromTxSeq`, `toTxSeq`, `hashTxSeq` from `EraBlockBody` typeclass
 * Remove deprecated function `normalizePtr`
 * Remove deprecated functions `hashSignature`, `hashVerKeyVRF`
