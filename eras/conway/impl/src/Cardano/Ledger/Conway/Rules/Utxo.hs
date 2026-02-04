@@ -26,18 +26,20 @@ module Cardano.Ledger.Conway.Rules.Utxo (
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxoEvent,
+  AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
-  AlonzoUtxoEvent (UtxosEvent),
   AlonzoUtxoPredFailure (..),
  )
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
+import Cardano.Ledger.Babbage.Rules (
+  BabbageUtxoPredFailure,
+  babbageUtxoValidation,
+  updateUTxOStateByTxValidity,
+ )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   BabbageUtxoPredFailure (..),
-  utxoTransition,
  )
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -65,13 +67,16 @@ import Cardano.Ledger.Conway.Rules.Utxos (
   ConwayUtxosPredFailure (..),
  )
 import Cardano.Ledger.Plutus (ExUnits)
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
-import qualified Cardano.Ledger.Shelley.Rules as Shelley (UtxoEnv, validSizeComputationCheck)
-import Cardano.Ledger.State (EraCertState (..), EraUTxO)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyUtxoPredFailure,
+  UtxoEnv (..),
+  validSizeComputationCheck,
+ )
+import Cardano.Ledger.State (EraCertState (..), EraStake, EraUTxO)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
-import Control.State.Transition.Extended (Embed (..), STS (..))
+import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Set.NonEmpty (NonEmptySet)
@@ -174,7 +179,7 @@ instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure ConwayEra where
     allegraToConwayUtxoPredFailure
       . shelleyToAllegraUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure ConwayEra where
+instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure ConwayEra where
   injectFailure = allegraToConwayUtxoPredFailure
 
 instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure ConwayEra where
@@ -216,6 +221,36 @@ instance
   ) =>
   NFData (ConwayUtxoPredFailure era)
 
+conwayUtxoTransition ::
+  forall era.
+  ( EraUTxO era
+  , EraCertState era
+  , BabbageEraTxBody era
+  , AlonzoEraTx era
+  , EraStake era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , BaseM (EraRule "UTXO" era) ~ ShelleyBase
+  , STS (EraRule "UTXO" era)
+  , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
+  , -- In this function we we call the UTXOS rule, so we need some assumptions
+    Environment (EraRule "UTXOS" era) ~ PParams era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
+  ) =>
+  TransitionRule (EraRule "UTXO" era)
+conwayUtxoTransition = do
+  TRC (UtxoEnv _ pp certState, utxos, tx) <- judgmentContext
+  babbageUtxoValidation
+  updatedUtxos <- trans @(EraRule "UTXOS" era) $ TRC (pp, utxos, tx)
+  updateUTxOStateByTxValidity pp certState (utxosGovState utxos) tx updatedUtxos
+
 --------------------------------------------------------------------------------
 -- ConwayUTXO STS
 --------------------------------------------------------------------------------
@@ -225,7 +260,8 @@ instance
   ( EraTx era
   , EraUTxO era
   , ConwayEraTxBody era
-  , AlonzoEraTxWits era
+  , AlonzoEraTx era
+  , EraStake era
   , EraRule "UTXO" era ~ ConwayUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
@@ -233,8 +269,8 @@ instance
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXO" ConwayUtxoPredFailure era
   , Embed (EraRule "UTXOS" era) (ConwayUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ PParams era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , PredicateFailure (EraRule "UTXO" era) ~ ConwayUtxoPredFailure era
   , EraCertState era
@@ -242,18 +278,18 @@ instance
   ) =>
   STS (ConwayUTXO era)
   where
-  type State (ConwayUTXO era) = Shelley.UTxOState era
+  type State (ConwayUTXO era) = UTxOState era
   type Signal (ConwayUTXO era) = Tx TopTx era
-  type Environment (ConwayUTXO era) = Shelley.UtxoEnv era
+  type Environment (ConwayUTXO era) = UtxoEnv era
   type BaseM (ConwayUTXO era) = ShelleyBase
   type PredicateFailure (ConwayUTXO era) = ConwayUtxoPredFailure era
   type Event (ConwayUTXO era) = AlonzoUtxoEvent era
 
   initialRules = []
 
-  transitionRules = [Babbage.utxoTransition @era]
+  transitionRules = [conwayUtxoTransition]
 
-  assertions = [Shelley.validSizeComputationCheck]
+  assertions = [validSizeComputationCheck]
 
 instance
   ( Era era
@@ -264,7 +300,7 @@ instance
   Embed (ConwayUTXOS era) (ConwayUTXO era)
   where
   wrapFailed = UtxosFailure
-  wrapEvent = Alonzo.UtxosEvent
+  wrapEvent = UtxosEvent
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -381,7 +417,7 @@ alonzoToConwayUtxoPredFailure = \case
 allegraToConwayUtxoPredFailure ::
   forall era.
   EraRuleFailure "PPUP" era ~ VoidEraRule "PPUP" era =>
-  Allegra.AllegraUtxoPredFailure era ->
+  AllegraUtxoPredFailure era ->
   ConwayUtxoPredFailure era
 allegraToConwayUtxoPredFailure = \case
   Allegra.BadInputsUTxO x -> BadInputsUTxO x

@@ -49,20 +49,18 @@ import Cardano.Ledger.Babbage.Rules (
   expectScriptsToPass,
  )
 import Cardano.Ledger.Babbage.Tx
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Plutus (PlutusWithContext)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
-import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), updateUTxOState)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
@@ -86,20 +84,13 @@ data ConwayUtxosPredFailure era
     (Generic)
 
 data ConwayUtxosEvent era
-  = TotalDeposits (SafeHash EraIndependentTxBody) Coin
-  | SuccessfulPlutusScriptsEvent (NonEmpty PlutusWithContext)
+  = SuccessfulPlutusScriptsEvent (NonEmpty PlutusWithContext)
   | FailedPlutusScriptsEvent (NonEmpty PlutusWithContext)
-  | -- | The UTxOs consumed and created by a signal tx
-    TxUTxODiff
-      -- | UTxO consumed
-      (UTxO era)
-      -- | UTxO created
-      (UTxO era)
   deriving (Generic)
 
-deriving instance (Era era, Eq (TxOut era)) => Eq (ConwayUtxosEvent era)
+deriving instance Eq (ConwayUtxosEvent era)
 
-instance (Era era, NFData (TxOut era)) => NFData (ConwayUtxosEvent era)
+instance NFData (ConwayUtxosEvent era)
 
 type instance EraRuleFailure "UTXOS" ConwayEra = ConwayUtxosPredFailure ConwayEra
 
@@ -132,10 +123,8 @@ alonzoToConwayUtxosEvent ::
   ConwayUtxosEvent era
 alonzoToConwayUtxosEvent = \case
   Alonzo.AlonzoPpupToUtxosEvent x -> absurdEraRule @"PPUP" @era x
-  Alonzo.TotalDeposits h c -> TotalDeposits h c
   Alonzo.SuccessfulPlutusScriptsEvent l -> SuccessfulPlutusScriptsEvent l
   Alonzo.FailedPlutusScriptsEvent l -> FailedPlutusScriptsEvent l
-  Alonzo.TxUTxODiff x y -> TxUTxODiff x y
 
 instance
   ( EraTxCert era
@@ -214,7 +203,7 @@ instance
   STS (ConwayUTXOS era)
   where
   type BaseM (ConwayUTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
-  type Environment (ConwayUTXOS era) = UtxoEnv era
+  type Environment (ConwayUTXOS era) = PParams era
   type State (ConwayUTXOS era) = UTxOState era
   type Signal (ConwayUTXOS era) = Tx TopTx era
   type PredicateFailure (ConwayUTXOS era) = ConwayUtxosPredFailure era
@@ -251,24 +240,23 @@ utxosTransition ::
   , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , EraPlutusContext era
-  , EraStake era
-  , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , STS (EraRule "UTXOS" era)
-  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXOS" era) ~ PParams era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
-  , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
-  judgmentContext >>= \(TRC (_, _, tx)) -> do
+  judgmentContext >>= \(TRC (pp, utxos, tx)) -> do
     case tx ^. isValidTxL of
       IsValid True -> conwayEvalScriptsTxValid
-      IsValid False -> babbageEvalScriptsTxInvalid
+      IsValid False -> do
+        babbageEvalScriptsTxInvalid @era pp tx (utxosUtxo utxos)
+        pure utxos
 
 conwayEvalScriptsTxValid ::
   forall era.
@@ -276,35 +264,22 @@ conwayEvalScriptsTxValid ::
   , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , EraPlutusContext era
-  , EraStake era
-  , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , STS (EraRule "UTXOS" era)
   , State (EraRule "UTXOS" era) ~ UTxOState era
-  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXOS" era) ~ PParams era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
-  , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do
-  TRC (UtxoEnv _ pp certState, utxos@(UTxOState utxo _ _ govState _ _), tx) <-
-    judgmentContext
+  TRC (pp, utxos, tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
   () <- pure $! Debug.traceEvent validBegin ()
-  expectScriptsToPass pp tx utxo
+  expectScriptsToPass pp tx (utxosUtxo utxos)
   () <- pure $! Debug.traceEvent validEnd ()
 
-  utxos' <-
-    updateUTxOState
-      pp
-      utxos
-      txBody
-      certState
-      govState
-      (tellEvent . injectEvent . TotalDeposits (hashAnnotated txBody))
-      (\a b -> tellEvent . injectEvent $ TxUTxODiff a b)
-  pure $! utxos' & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL
+  pure $! utxos & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL
