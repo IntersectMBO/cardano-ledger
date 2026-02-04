@@ -19,11 +19,11 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import qualified Data.VMap as VMap
 import Data.Word
 import GHC.Stack
 import Numeric.Half
 import Test.Cardano.Base.Bytes (genByteArray, genByteString, genLazyByteString)
+import Test.Data.VMap.Arbitrary ()
 import Test.QuickCheck
 import Test.QuickCheck.Instances ()
 
@@ -118,13 +118,6 @@ instance Arbitrary IPv6 where
   arbitrary = do
     t <- (,,,) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
     pure $ toIPv6w t
-
-instance
-  (Ord k, VMap.Vector kv k, VMap.Vector vv v, Arbitrary k, Arbitrary v) =>
-  Arbitrary (VMap.VMap kv vv k v)
-  where
-  arbitrary = VMap.fromMap <$> arbitrary
-  shrink = fmap VMap.fromList . shrink . VMap.toList
 
 instance Arbitrary t => Arbitrary (WithOrigin t) where
   arbitrary = frequency [(20, pure Origin), (80, At <$> arbitrary)]
