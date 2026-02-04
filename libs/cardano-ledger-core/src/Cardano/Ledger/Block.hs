@@ -16,6 +16,8 @@
 
 module Cardano.Ledger.Block (
   Block (..),
+  bheader,
+  bbody,
   neededTxInsForBlock,
 ) where
 
@@ -99,6 +101,16 @@ instance
     pure $ Block <$> header <*> txns
     where
       blockSize = 1 + fromIntegral (numSegComponents @era)
+
+bheader ::
+  Block h era ->
+  h
+bheader (Block bh _) = bh
+{-# DEPRECATED bheader "In favor of `blockHeader`" #-}
+
+bbody :: Block h era -> BlockBody era
+bbody (Block _ txs) = txs
+{-# DEPRECATED bbody "In favor of `blockBody`" #-}
 
 -- | The validity of any individual block depends only on a subset
 -- of the UTxO stored in the ledger state. This function returns
