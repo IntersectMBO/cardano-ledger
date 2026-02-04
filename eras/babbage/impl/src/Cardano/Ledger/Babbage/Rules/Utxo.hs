@@ -27,6 +27,7 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
   validateCollateralEqBalance,
   validateOutputTooSmallUTxO,
   disjointRefInputs,
+  updateUTxOStateByTxValidity,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
@@ -461,36 +462,52 @@ utxoTransition ::
 utxoTransition = do
   TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   babbageUtxoValidation
-  let utxo = utxosUtxo utxos
   updatedGovState <-
     trans @(EraRule "UTXOS" era) $
-      TRC (UtxosEnv slot pp certState utxo, utxosGovState utxos, tx)
+      TRC (UtxosEnv slot pp certState (utxosUtxo utxos), utxosGovState utxos, tx)
+  updateUTxOStateByTxValidity pp certState updatedGovState tx utxos
 
+updateUTxOStateByTxValidity ::
+  forall era.
+  ( AlonzoEraTx era
+  , BabbageEraTxBody era
+  , EraStake era
+  , EraCertState era
+  , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
+  ) =>
+  PParams era ->
+  CertState era ->
+  GovState era ->
+  Tx TopTx era ->
+  UTxOState era ->
+  Rule (EraRule "UTXO" era) 'Transition (UTxOState era)
+updateUTxOStateByTxValidity pp certState govState tx utxoState =
   let txBody = tx ^. bodyTxL
-  case tx ^. isValidTxL of
-    IsValid True ->
-      updateUTxOState
-        pp
-        utxos
-        txBody
-        certState
-        updatedGovState
-        (tellEvent . TotalDeposits (hashAnnotated txBody))
-        (\a b -> tellEvent $ TxUTxODiff a b)
-    IsValid False ->
-      {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
-      {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
-      let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
-          UTxO collouts = collOuts txBody
-          DeltaCoin collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
-       in pure $!
-            utxos {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
-              { utxosUtxo = UTxO (Map.union utxoKeep collouts) -- NEW to Babbage
-              {- fees + collateralFees -}
-              , utxosFees = utxosFees utxos <> Coin collateralFees -- NEW to Babbage
-              , utxosInstantStake =
-                  deleteInstantStake (UTxO utxoDel) (addInstantStake (UTxO collouts) (utxos ^. instantStakeL))
-              }
+      utxo = utxosUtxo utxoState
+   in case tx ^. isValidTxL of
+        IsValid True ->
+          updateUTxOState
+            pp
+            utxoState
+            txBody
+            certState
+            govState
+            (tellEvent . TotalDeposits (hashAnnotated txBody))
+            (\a b -> tellEvent $ TxUTxODiff a b)
+        IsValid False ->
+          {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
+          {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
+          let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
+              UTxO collouts = collOuts txBody
+              DeltaCoin collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
+           in pure $!
+                utxoState {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
+                  { utxosUtxo = UTxO (Map.union utxoKeep collouts) -- NEW to Babbage
+                  {- fees + collateralFees -}
+                  , utxosFees = utxosFees utxoState <> Coin collateralFees -- NEW to Babbage
+                  , utxosInstantStake =
+                      deleteInstantStake (UTxO utxoDel) (addInstantStake (UTxO collouts) (utxoState ^. instantStakeL))
+                  }
 
 --------------------------------------------------------------------------------
 -- BabbageUTXO STS
