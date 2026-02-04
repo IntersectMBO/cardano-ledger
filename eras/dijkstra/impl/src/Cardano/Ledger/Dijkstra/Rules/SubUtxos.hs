@@ -88,7 +88,7 @@ instance InjectRuleFailure "SUBUTXOS" DijkstraSubUtxosPredFailure DijkstraEra
 newtype DijkstraSubUtxosEvent era = DijkstraSubUtxosEvent (ConwayUtxosEvent era)
   deriving (Generic)
 
-deriving instance Eq (ConwayUtxosEvent era) => Eq (DijkstraSubUtxosEvent era)
+deriving instance Eq (DijkstraSubUtxosEvent era)
 
 instance NFData (ConwayUtxosEvent era) => NFData (DijkstraSubUtxosEvent era)
 
