@@ -103,6 +103,7 @@ library testlib
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:testlib,
     data-default,
+    generic-random,
     prettyprinter,
 
 test-suite cardano-ledger-api-test
@@ -136,7 +137,7 @@ test-suite cardano-ledger-api-test
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-api,
     cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
-    cardano-ledger-binary,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
@@ -150,3 +151,4 @@ test-suite cardano-ledger-api-test
     microlens,
     microlens-mtl,
     testlib,
+    vector-map,

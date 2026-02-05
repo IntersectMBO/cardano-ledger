@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Cardano.Ledger.Api.State.Query (
   -- * @GetFilteredDelegationsAndRewardAccounts@
   queryStakePoolDelegsAndRewards,
@@ -71,8 +72,10 @@ module Cardano.Ledger.Api.State.Query (
   QueryPoolStateResult (..),
   mkQueryPoolStateResult,
 
-    -- * @GetStakeSnapshots@
+  -- * @GetStakeSnapshots@
   queryStakeSnapshots,
+  StakeSnapshot (..),
+  StakeSnapshots (..),
 
   -- * For testing
   getNextEpochCommitteeMembers,
@@ -87,7 +90,6 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
  )
 import Cardano.Ledger.BaseTypes (EpochNo, Network, strictMaybeToMaybe)
 import Cardano.Ledger.Binary
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
@@ -518,25 +520,25 @@ data StakeSnapshot = StakeSnapshot
 
 instance NFData StakeSnapshot
 
-instance ToCBOR StakeSnapshot where
-  toCBOR
+instance EncCBOR StakeSnapshot where
+  encCBOR
     StakeSnapshot
       { ssMarkPool
       , ssSetPool
       , ssGoPool
       } =
-      Plain.encodeListLen 3
-        <> toCBOR ssMarkPool
-        <> toCBOR ssSetPool
-        <> toCBOR ssGoPool
+      encodeListLen 3
+        <> encCBOR ssMarkPool
+        <> encCBOR ssSetPool
+        <> encCBOR ssGoPool
 
-instance FromCBOR StakeSnapshot where
-  fromCBOR = do
-    Plain.enforceSize "StakeSnapshot" 3
+instance DecCBOR StakeSnapshot where
+  decCBOR = do
+    enforceSize "StakeSnapshot" 3
     StakeSnapshot
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
 
 data StakeSnapshots = StakeSnapshots
   { ssStakeSnapshots :: !(Map (KeyHash StakePool) StakeSnapshot)
@@ -548,28 +550,28 @@ data StakeSnapshots = StakeSnapshots
 
 instance NFData StakeSnapshots
 
-instance ToCBOR StakeSnapshots where
-  toCBOR
+instance EncCBOR StakeSnapshots where
+  encCBOR
     StakeSnapshots
       { ssStakeSnapshots
       , ssMarkTotal
       , ssSetTotal
       , ssGoTotal
       } =
-      Plain.encodeListLen 4
-        <> toCBOR ssStakeSnapshots
-        <> toCBOR ssMarkTotal
-        <> toCBOR ssSetTotal
-        <> toCBOR ssGoTotal
+      encodeListLen 4
+        <> encCBOR ssStakeSnapshots
+        <> encCBOR ssMarkTotal
+        <> encCBOR ssSetTotal
+        <> encCBOR ssGoTotal
 
-instance FromCBOR StakeSnapshots where
-  fromCBOR = do
-    Plain.enforceSize "StakeSnapshots" 4
+instance DecCBOR StakeSnapshots where
+  decCBOR = do
+    enforceSize "StakeSnapshots" 4
     StakeSnapshots
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
 
 queryStakeSnapshots ::
   NewEpochState era ->
