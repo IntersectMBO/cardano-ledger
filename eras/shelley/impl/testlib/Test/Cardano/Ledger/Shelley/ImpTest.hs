@@ -1440,6 +1440,7 @@ tryTxsInBlock ::
 tryTxsInBlock txs finalState = do
   blockIssuer <- freshKeyHash
   slotNo <- use impCurSlotNoG
+  nes <- use impNESL
 
   let
     blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ txs
@@ -1451,11 +1452,11 @@ tryTxsInBlock txs finalState = do
         , bhviewBHash = hashBlockBody blockBody
         , bhviewSlot = slotNo
         , bhviewPrevEpochNonce = Nothing
+        , bhviewProtVer = nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL
         }
     block = Block {blockHeader, blockBody}
 
   globals <- use impGlobalsL
-  nes <- use impNESL
 
   let res = applyBlockEither EPReturn ValidateAll globals nes block
 

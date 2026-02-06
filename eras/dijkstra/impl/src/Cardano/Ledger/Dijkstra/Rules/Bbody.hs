@@ -389,6 +389,7 @@ conwayToDijkstraBbodyPredFailure = \case
   Conway.LedgersFailure f -> LedgersFailure f
   Conway.TooManyExUnits mm -> TooManyExUnits mm
   Conway.BodyRefScriptsSizeTooBig mm -> BodyRefScriptsSizeTooBig mm
+  Conway.HeaderProtVerTooHigh {} -> error "Impossible: HeaderProtVerTooHigh cannot be triggered in Dijkstra era"
 
 instance
   ( Era era
