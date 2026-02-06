@@ -32,6 +32,7 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
   babbageUtxoValidation,
+  updateUTxOStateByTxValidity,
  )
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -59,7 +60,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUTXOS,
   ConwayUtxoPredFailure,
   ConwayUtxosPredFailure (..),
-  UtxoEnv,
   allegraToConwayUtxoPredFailure,
   alonzoToConwayUtxoPredFailure,
   babbageToConwayUtxoPredFailure,
@@ -70,14 +70,15 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Rules.ValidationMode (failOnJustStatic)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState)
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
+  UtxoEnv (..),
+  validSizeComputationCheck,
  )
-import qualified Cardano.Ledger.Shelley.Rules as Shelley (UtxoEnv, validSizeComputationCheck)
 import Cardano.Ledger.State (
   EraCertState (..),
+  EraStake,
   EraUTxO,
  )
 import Cardano.Ledger.TxIn (TxIn)
@@ -91,7 +92,6 @@ import Control.State.Transition.Extended (
   judgmentContext,
   trans,
  )
-import Data.Coerce (coerce)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Set.NonEmpty (NonEmptySet)
@@ -253,12 +253,13 @@ validateNoPtrInCollateralReturn txBody = do
         Just collateralReturn
   failOnJustStatic hasCollateralTxOut (injectFailure . PtrPresentInCollateralReturn)
 
-utxoTransition ::
+dijkstraUtxoTransition ::
   forall era.
   ( EraUTxO era
   , EraCertState era
   , BabbageEraTxBody era
-  , AlonzoEraTxWits era
+  , AlonzoEraTx era
+  , EraStake era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
@@ -269,27 +270,28 @@ utxoTransition ::
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
+  , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
   , -- In this function we we call the UTXOS rule, so we need some assumptions
-    Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+    Environment (EraRule "UTXOS" era) ~ PParams era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   ) =>
   TransitionRule (EraRule "UTXO" era)
-utxoTransition = do
-  TRC (_, _, tx) <- judgmentContext
+dijkstraUtxoTransition = do
+  TRC (UtxoEnv _ pp certState, utxos, tx) <- judgmentContext
   babbageUtxoValidation
-
   validateNoPtrInCollateralReturn $ tx ^. bodyTxL
-
-  trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
+  updatedUtxos <- trans @(EraRule "UTXOS" era) $ TRC (pp, utxos, tx)
+  updateUTxOStateByTxValidity pp certState (utxosGovState utxos) tx updatedUtxos
 
 instance
   forall era.
   ( EraTx era
   , EraUTxO era
+  , EraStake era
   , ConwayEraTxBody era
-  , AlonzoEraTxWits era
+  , AlonzoEraTx era
   , EraRule "UTXO" era ~ DijkstraUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
@@ -304,7 +306,7 @@ instance
   , STS (EraRule "UTXO" era)
   , -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (DijkstraUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXOS" era) ~ PParams era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , EraCertState era
@@ -313,18 +315,18 @@ instance
   ) =>
   STS (DijkstraUTXO era)
   where
-  type State (DijkstraUTXO era) = Shelley.UTxOState era
+  type State (DijkstraUTXO era) = UTxOState era
   type Signal (DijkstraUTXO era) = Tx TopTx era
-  type Environment (DijkstraUTXO era) = Shelley.UtxoEnv era
+  type Environment (DijkstraUTXO era) = UtxoEnv era
   type BaseM (DijkstraUTXO era) = ShelleyBase
   type PredicateFailure (DijkstraUTXO era) = DijkstraUtxoPredFailure era
   type Event (DijkstraUTXO era) = AlonzoUtxoEvent era
 
   initialRules = []
 
-  transitionRules = [utxoTransition @era]
+  transitionRules = [dijkstraUtxoTransition @era]
 
-  assertions = [Shelley.validSizeComputationCheck]
+  assertions = [validSizeComputationCheck]
 
 instance
   ( Era era

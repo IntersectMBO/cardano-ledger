@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -26,6 +27,7 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
   validateCollateralEqBalance,
   validateOutputTooSmallUTxO,
   disjointRefInputs,
+  updateUTxOStateByTxValidity,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
@@ -36,6 +38,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
+  UtxosEnv (..),
   allegraToAlonzoUtxoPredFailure,
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
@@ -48,7 +51,7 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   validateWrongNetworkInTxBody,
  )
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.Babbage.Collateral (collAdaBalance)
+import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXO)
 import Cardano.Ledger.Babbage.Rules.Ppup ()
@@ -63,14 +66,19 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..), natVersion)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin, toDeltaCoin)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Rules.ValidationMode (
   Test,
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (utxosUtxo))
-import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyPpupPredFailure,
+  ShelleyUtxoPredFailure,
+  UtxoEnv (..),
+  updateUTxOState,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
@@ -79,24 +87,12 @@ import qualified Cardano.Ledger.Val as Val (inject, isAdaOnly, pointwise)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when)
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition.Extended (
-  Embed (..),
-  Rule,
-  RuleType (..),
-  STS (..),
-  TRC (..),
-  TransitionRule,
-  failureOnNonEmpty,
-  judgmentContext,
-  liftSTS,
-  trans,
-  validate,
- )
+import Control.State.Transition.Extended
 import Data.Bifunctor (first)
-import Data.Coerce (coerce)
 import Data.Foldable (sequenceA_, toList)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (extractKeys)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -442,7 +438,10 @@ utxoTransition ::
   forall era.
   ( EraUTxO era
   , BabbageEraTxBody era
-  , AlonzoEraTxWits era
+  , AlonzoEraTx era
+  , EraCertState era
+  , EraStake era
+  , GovState era ~ ShelleyGovState era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
@@ -451,18 +450,64 @@ utxoTransition ::
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
+  , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
   , STS (EraRule "UTXO" era)
   , -- In this function we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
-  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ShelleyGovState era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
-  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
+  TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   babbageUtxoValidation
-  trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
+  updatedGovState <-
+    trans @(EraRule "UTXOS" era) $
+      TRC (UtxosEnv slot pp certState (utxosUtxo utxos), utxosGovState utxos, tx)
+  updateUTxOStateByTxValidity pp certState updatedGovState tx utxos
+
+updateUTxOStateByTxValidity ::
+  forall era.
+  ( AlonzoEraTx era
+  , BabbageEraTxBody era
+  , EraStake era
+  , EraCertState era
+  , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
+  ) =>
+  PParams era ->
+  CertState era ->
+  GovState era ->
+  Tx TopTx era ->
+  UTxOState era ->
+  Rule (EraRule "UTXO" era) 'Transition (UTxOState era)
+updateUTxOStateByTxValidity pp certState govState tx utxoState =
+  let txBody = tx ^. bodyTxL
+      utxo = utxosUtxo utxoState
+   in case tx ^. isValidTxL of
+        IsValid True ->
+          updateUTxOState
+            pp
+            utxoState
+            txBody
+            certState
+            govState
+            (tellEvent . TotalDeposits (hashAnnotated txBody))
+            (\a b -> tellEvent $ TxUTxODiff a b)
+        IsValid False ->
+          {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
+          {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
+          let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
+              UTxO collouts = collOuts txBody
+              DeltaCoin collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
+           in pure $!
+                utxoState {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
+                  { utxosUtxo = UTxO (Map.union utxoKeep collouts) -- NEW to Babbage
+                  {- fees + collateralFees -}
+                  , utxosFees = utxosFees utxoState <> Coin collateralFees -- NEW to Babbage
+                  , utxosInstantStake =
+                      deleteInstantStake (UTxO utxoDel) (addInstantStake (UTxO collouts) (utxoState ^. instantStakeL))
+                  }
 
 --------------------------------------------------------------------------------
 -- BabbageUTXO STS
@@ -473,7 +518,11 @@ instance
   ( EraTx era
   , EraUTxO era
   , BabbageEraTxBody era
+  , AlonzoEraTx era
   , AlonzoEraTxWits era
+  , EraCertState era
+  , EraStake era
+  , GovState era ~ ShelleyGovState era
   , EraRule "UTXO" era ~ BabbageUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
@@ -481,10 +530,9 @@ instance
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , -- instructions for calling UTXOS from BabbageUTXO
     Embed (EraRule "UTXOS" era) (BabbageUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ShelleyGovState era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
-  , EraCertState era
   , SafeToHash (TxWits era)
   ) =>
   STS (BabbageUTXO era)
