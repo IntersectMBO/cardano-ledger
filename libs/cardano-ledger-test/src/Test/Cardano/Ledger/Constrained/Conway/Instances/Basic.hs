@@ -352,7 +352,7 @@ data SimplePPUpdate = SimplePPUpdate
   , -- Conway
     upoolVotingThresholds :: StrictMaybe PoolVotingThresholds
   , udrepVotingThresholds :: StrictMaybe DRepVotingThresholds
-  , ucommitteeMinSize :: StrictMaybe Natural
+  , ucommitteeMinSize :: StrictMaybe Word16
   , ucommitteeMaxTermLength :: StrictMaybe EpochInterval
   , ugovActionLifetime :: StrictMaybe EpochInterval
   , ugovActionDeposit :: StrictMaybe Coin

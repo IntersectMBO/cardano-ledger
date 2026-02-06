@@ -184,7 +184,7 @@ class BabbageEraPParams era => ConwayEraPParams era where
 
   hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
   hkdDRepVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f DRepVotingThresholds)
-  hkdCommitteeMinSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdCommitteeMinSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word16)
   hkdCommitteeMaxTermLengthL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
   hkdGovActionLifetimeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
   hkdGovActionDepositCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
@@ -229,7 +229,7 @@ ppDRepVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) DRepVotingThresholds
 ppDRepVotingThresholdsL = ppLensHKD . hkdDRepVotingThresholdsL @era @Identity
 
-ppCommitteeMinSizeL :: forall era. ConwayEraPParams era => Lens' (PParams era) Natural
+ppCommitteeMinSizeL :: forall era. ConwayEraPParams era => Lens' (PParams era) Word16
 ppCommitteeMinSizeL = ppLensHKD . hkdCommitteeMinSizeL @era @Identity
 
 ppCommitteeMaxTermLengthL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
@@ -267,7 +267,7 @@ ppuDRepVotingThresholdsL ::
 ppuDRepVotingThresholdsL = ppuLensHKD . hkdDRepVotingThresholdsL @era @StrictMaybe
 
 ppuCommitteeMinSizeL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
 ppuCommitteeMinSizeL = ppuLensHKD . hkdCommitteeMinSizeL @era @StrictMaybe
 
 ppuCommitteeMaxTermLengthL ::
@@ -973,10 +973,8 @@ instance ConwayEraPParams ConwayEra where
     lens (unTHKD . cppPoolVotingThresholds) $ \pp x -> pp {cppPoolVotingThresholds = THKD x}
   hkdDRepVotingThresholdsL =
     lens (unTHKD . cppDRepVotingThresholds) $ \pp x -> pp {cppDRepVotingThresholds = THKD x}
-  hkdCommitteeMinSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
   hkdCommitteeMinSizeL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . cppCommitteeMinSize)) $
-      \pp x -> pp {cppCommitteeMinSize = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
+    lens (unTHKD . cppCommitteeMinSize) $ \pp x -> pp {cppCommitteeMinSize = THKD x}
   hkdCommitteeMaxTermLengthL =
     lens (unTHKD . cppCommitteeMaxTermLength) $ \pp x -> pp {cppCommitteeMaxTermLength = THKD x}
   hkdGovActionLifetimeL =

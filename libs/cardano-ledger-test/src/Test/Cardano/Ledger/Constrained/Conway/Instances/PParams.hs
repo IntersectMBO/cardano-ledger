@@ -503,7 +503,7 @@ drepVotingThresholds_ ::
 drepVotingThresholds_ simplepp = sel @26 simplepp
 
 committeeMinSize_ ::
-  EraSpecPParams era => Term (SimplePParams era) -> Term Natural
+  EraSpecPParams era => Term (SimplePParams era) -> Term Word16
 committeeMinSize_ simplepp = sel @27 simplepp
 
 committeeMaxTermLength_ ::

@@ -573,10 +573,8 @@ instance ConwayEraPParams DijkstraEra where
     lens (unTHKD . dppPoolVotingThresholds) $ \pp x -> pp {dppPoolVotingThresholds = THKD x}
   hkdDRepVotingThresholdsL =
     lens (unTHKD . dppDRepVotingThresholds) $ \pp x -> pp {dppDRepVotingThresholds = THKD x}
-  hkdCommitteeMinSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f DijkstraEra) (HKD f Natural)
   hkdCommitteeMinSizeL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . dppCommitteeMinSize)) $
-      \pp x -> pp {dppCommitteeMinSize = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
+    lens (unTHKD . dppCommitteeMinSize) $ \pp x -> pp {dppCommitteeMinSize = THKD x}
   hkdCommitteeMaxTermLengthL =
     lens (unTHKD . dppCommitteeMaxTermLength) $ \pp x -> pp {dppCommitteeMaxTermLength = THKD x}
   hkdGovActionLifetimeL =
