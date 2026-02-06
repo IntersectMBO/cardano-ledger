@@ -425,7 +425,10 @@ unlessDecoderVersionAtLeast atLeast decoder = do
 --------------------------------------------------------------------------------
 
 decodeVersion :: Decoder s Version
-decodeVersion = decodeWord64 >>= mkVersion64
+decodeVersion = do
+  v <- decodeWord64 >>= mkVersion64
+  when (v >= natVersion @12) $ fail "Version number 12 and higher are not yet supported"
+  pure v
 {-# INLINE decodeVersion #-}
 
 -- | `Decoder` for `Rational`. Versions variance:

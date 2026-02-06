@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -205,7 +206,7 @@ deriving instance Arbitrary SystemStart
 deriving instance Arbitrary BlockNo
 
 instance Arbitrary Version where
-  arbitrary = genVersion minBound maxBound
+  arbitrary = genVersion minBound (natVersion @11)
 
 genVersion :: HasCallStack => Version -> Version -> Gen Version
 genVersion minVersion maxVersion =
