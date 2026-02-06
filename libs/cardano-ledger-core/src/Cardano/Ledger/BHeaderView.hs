@@ -4,7 +4,7 @@
 
 module Cardano.Ledger.BHeaderView where
 
-import Cardano.Ledger.BaseTypes (BoundedRational (..), Nonce, UnitInterval)
+import Cardano.Ledger.BaseTypes (BoundedRational (..), Nonce, ProtVer, UnitInterval)
 import Cardano.Ledger.Hashes (EraIndependentBlockBody, HASH, Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.Slot (SlotNo (..), (-*))
 import Control.DeepSeq (NFData)
@@ -35,6 +35,7 @@ data BHeaderView = BHeaderView
   , bhviewPrevEpochNonce :: Maybe Nonce
   -- ^ The previous epoch nonce, needed to validate Peras certificates
   -- contained in blocks.
+  , bhviewProtVer :: ProtVer
   }
   deriving (Generic)
 

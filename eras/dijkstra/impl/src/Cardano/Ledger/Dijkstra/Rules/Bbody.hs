@@ -389,6 +389,7 @@ conwayToDijkstraBbodyPredFailure = \case
   Conway.LedgersFailure f -> LedgersFailure f
   Conway.TooManyExUnits mm -> TooManyExUnits mm
   Conway.BodyRefScriptsSizeTooBig mm -> BodyRefScriptsSizeTooBig mm
+  Conway.HeaderProtVerTooHigh {} -> error "Impossible: HeaderProtVerTooHigh cannot be triggered ib Dijstra era"
 
 instance
   ( Era era

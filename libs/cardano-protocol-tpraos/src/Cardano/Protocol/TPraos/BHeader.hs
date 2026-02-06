@@ -463,3 +463,4 @@ makeHeaderView bh@(BHeader bhb _) nonce =
     (bhash bhb)
     (bheaderSlotNo bhb)
     nonce
+    (bprotver bhb)
