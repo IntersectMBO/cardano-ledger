@@ -48,6 +48,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer,
   Relation (..),
   ShelleyBase,
+  Version,
   natVersion,
   pvMajor,
  )
@@ -88,6 +89,7 @@ import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
+  failOnJust,
   judgmentContext,
   (?!),
  )
@@ -110,6 +112,7 @@ data ConwayBbodyPredFailure era
     LedgersFailure (PredicateFailure (EraRule "LEDGERS" era))
   | TooManyExUnits (Mismatch RelLTEQ ExUnits)
   | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
+  | HeaderProtVerTooHigh (Mismatch RelLTEQ Version)
   deriving (Generic)
 
 deriving instance
@@ -141,6 +144,7 @@ instance
       LedgersFailure x -> Sum (LedgersFailure @era) 2 !> To x
       TooManyExUnits mm -> Sum TooManyExUnits 3 !> ToGroup mm
       BodyRefScriptsSizeTooBig mm -> Sum BodyRefScriptsSizeTooBig 4 !> ToGroup mm
+      HeaderProtVerTooHigh mm -> Sum HeaderProtVerTooHigh 5 !> To mm
 
 instance
   ( Era era
@@ -154,6 +158,7 @@ instance
     2 -> SumD LedgersFailure <! From
     3 -> SumD TooManyExUnits <! FromGroup
     4 -> SumD BodyRefScriptsSizeTooBig <! FromGroup
+    5 -> SumD HeaderProtVerTooHigh <! From
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" ConwayEra = ConwayBbodyPredFailure ConwayEra
@@ -295,13 +300,24 @@ conwayBbodyTransition = do
     >>= \( TRC
              ( BbodyEnv pp _
                , state@(BbodyState ls _)
-               , Block _ txsSeq
+               , Block bhView txsSeq
                )
            ) -> do
         let utxo = utxosUtxo (lsUTxOState ls)
             txs = txsSeq ^. txSeqBlockBodyL
             totalRefScriptSize = totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs utxo
             maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+            checkHeaderProtVerTooHigh =
+              if pvMajor (pp ^. ppProtocolVersionL) < natVersion @11
+                && pvMajor (bhviewProtVer bhView) >= natVersion @12
+                then
+                  Just $
+                    Mismatch
+                      { mismatchSupplied = pvMajor (bhviewProtVer bhView)
+                      , mismatchExpected = natVersion @11
+                      }
+                else Nothing
+        failOnJust checkHeaderProtVerTooHigh $ injectFailure . HeaderProtVerTooHigh @era
         totalRefScriptSize
           <= maxRefScriptSizePerBlock
             ?! injectFailure

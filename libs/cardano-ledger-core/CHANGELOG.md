@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `bhviewProtVer` to `BHeaderView`
 * Remove re-exports of `Reward` and `RewardType` from `Cardano.Ledger.Core`
 * Add re-exports of `Addr`, `AccountAddress`, `Withdrawals` and `AccountId` from `Cardano.Ledger.Core`
 * Add `HasZero` instance for `CompactForm Coin`

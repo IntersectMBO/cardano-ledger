@@ -40,11 +40,12 @@ import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Mismatch (..),
   Network,
-  ProtVer,
+  ProtVer (..),
   Relation (..),
   ShelleyBase,
   StrictMaybe (SJust),
   addEpochInterval,
+  natVersion,
   networkId,
  )
 import Cardano.Ledger.Binary (
@@ -500,7 +501,17 @@ conwayGovTransition = do
               (prevGaid, newProtVer, prevProtVer) <-
                 preceedingHardFork @era pProcGovAction pp prevGovActionIds st
               if pvCanFollow prevProtVer newProtVer
-                then Nothing
+                then
+                  if pvMajor (pp ^. ppProtocolVersionL) < natVersion @11
+                    && pvMajor newProtVer >= natVersion @12
+                    then
+                      Just $
+                        ProposalCantFollow @era prevGaid $
+                          Mismatch
+                            { mismatchSupplied = newProtVer
+                            , mismatchExpected = prevProtVer
+                            }
+                    else Nothing
                 else
                   Just $
                     ProposalCantFollow @era prevGaid $

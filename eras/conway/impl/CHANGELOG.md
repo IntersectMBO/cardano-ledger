@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `HeaderProtVerTooHigh` predicate failure.
 * Change `STS` instance of `ConwayUTOXS`: use `PParams` as `Environment`
 * Remove `TotalDeposits` and `TxUTxODiff` data constructors from `ConwayUtxosEvent`
 * Add `Generic` instance for `ApplyTxError`
