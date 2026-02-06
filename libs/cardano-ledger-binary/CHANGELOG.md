@@ -18,6 +18,8 @@
 
 ### `testlib`
 
+* Remove `Arbitrary` instances for `BlockNo`, `EpochInterval`, `EpochSize`, `SystemStart`, `WithOrigin`.
+  These have been moved to `cardano-slotting:testlib`.
 * Remove `genByteArray`, `genByteString`, `genLazyByteString`, `genShortByteString`.
   These have been moved to `cardano-base:testlib`.
 * Remove `Arbitrary` instances for `CertifiedVRF`, `SigDSIGN`, `SignKeyDSIGN`, `SignedDSIGN`, `VerKeyDSIGN`.

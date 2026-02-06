@@ -1,5 +1,4 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -8,9 +7,6 @@ module Test.Cardano.Ledger.Binary.Arbitrary (
 ) where
 
 import Cardano.Ledger.Binary.Version
-import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
-import Cardano.Slotting.Time (SystemStart (..))
 import qualified Codec.CBOR.ByteArray as CBOR
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
 import Codec.CBOR.Term
@@ -118,18 +114,6 @@ instance Arbitrary IPv6 where
   arbitrary = do
     t <- (,,,) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
     pure $ toIPv6w t
-
-instance Arbitrary t => Arbitrary (WithOrigin t) where
-  arbitrary = frequency [(20, pure Origin), (80, At <$> arbitrary)]
-  shrink = \case
-    Origin -> []
-    At x -> Origin : map At (shrink x)
-
-deriving instance Arbitrary EpochSize
-
-deriving instance Arbitrary SystemStart
-
-deriving instance Arbitrary BlockNo
 
 instance Arbitrary Version where
   arbitrary = genVersion minBound maxBound

@@ -119,7 +119,7 @@ library testlib
     cardano-crypto-class,
     cardano-ledger-binary,
     cardano-prelude-test,
-    cardano-slotting:{cardano-slotting, testlib},
+    cardano-slotting:testlib,
     cardano-strict-containers,
     cborg,
     containers,
