@@ -474,13 +474,15 @@ proposalsRemoveWithDescendants gais ps@(Proposals omap _roots graph) =
     getAllDescendants gai =
       case OMap.lookup gai omap of
         Nothing -> assert False mempty
-        Just gas -> withGovActionParent gas mempty $ \govRelationL _ ->
-          let go acc gpi =
-                case Map.lookup gpi $ graph ^. govRelationL . pGraphNodesL of
-                  Nothing -> assert False acc
-                  Just (PEdges _parent children) ->
-                    F.foldl' go (Set.map unGovPurposeId children <> acc) children
-           in go mempty
+        Just gas -> withGovActionParent gas mempty $ \govRelationL _ selfId ->
+          let loop !acc [] = acc
+              loop !acc (curr : rest) =
+                case Map.lookup curr $ graph ^. govRelationL . pGraphNodesL of
+                  Nothing -> loop acc rest
+                  Just (PEdges _ children) ->
+                    let newChildren = Set.map unGovPurposeId children
+                     in loop (newChildren <> acc) (Set.toList children ++ rest)
+           in loop mempty [selfId]
 
 -- | For use in the @`EPOCH`@ rule. Apply the result of
 -- @`extractDRepPulsingState`@ to the @`Proposals`@ forest, so that:
