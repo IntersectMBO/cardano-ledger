@@ -13,7 +13,9 @@ module Test.Cardano.Ledger.Conway.CDDL (
   module Test.Cardano.Ledger.Conway.CDDL,
 ) where
 
+import Cardano.Ledger.BaseTypes (getVersion)
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Core
 import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
@@ -155,7 +157,12 @@ header_body =
       ]
 
 protocol_version :: Rule
-protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @ConwayEra, a VUInt]
+protocol_version = "protocol_version" =:= arr [a $ conway_major_protocol_version, a VUInt]
+
+conway_major_protocol_version :: Rule
+conway_major_protocol_version =
+  "major_protocol_version"
+    =:= (getVersion @Integer (eraProtVerLow @ByronEra) ... getVersion @Integer (eraProtVerHigh @ConwayEra))
 
 transaction_body :: Rule
 transaction_body =

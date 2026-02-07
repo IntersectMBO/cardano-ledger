@@ -1163,7 +1163,7 @@ firstHardForkCantFollow ::
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
-firstHardForkCantFollow = do
+firstHardForkCantFollow = whenMajorVersionAtMost @11 $ do
   protver0 <- getProtVer
   let protver1 = minorFollow protver0
       protver2 = cantFollow protver1
@@ -1198,7 +1198,7 @@ secondHardForkCantFollow ::
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
-secondHardForkCantFollow = do
+secondHardForkCantFollow = whenMajorVersionAtMost @11 $ do
   protver0 <- getProtVer
   let protver1 = minorFollow protver0
       protver2 = cantFollow protver1

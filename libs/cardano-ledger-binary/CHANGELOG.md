@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.7.1.0
+
+* Disable decoding version `12` and higher.
+
 ## 1.7.0.0
 
 * Add `Random` instance for `Version`.
