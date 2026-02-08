@@ -40,6 +40,7 @@ library
     Cardano.Ledger.CanonicalState.Namespace
     Cardano.Ledger.CanonicalState.Namespace.Blocks.V0
     Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
+    Cardano.Ledger.CanonicalState.Namespace.Nonces.V0
     Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
 
   hs-source-dirs: src
@@ -47,13 +48,17 @@ library
     base,
     base16-bytestring,
     bytestring,
+    cardano-crypto-class,
     cardano-ledger-binary,
     cardano-ledger-core,
+    cardano-slotting,
     cborg,
+    containers,
     mempack-scls,
     scls-cardano,
     scls-cbor,
     scls-core,
+    text,
 
 library conway
   import: warnings

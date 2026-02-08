@@ -11,6 +11,7 @@ module Cardano.Ledger.CanonicalState.Conway (
 
 import Cardano.Ledger.CanonicalState.Namespace
 import Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
+import Cardano.Ledger.CanonicalState.Namespace.Nonces.V0 ()
 import Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Constitution (..))
@@ -18,9 +19,11 @@ import Cardano.SCLS.NamespaceCodec
 
 type instance NamespaceEra "blocks/v0" = ConwayEra
 
-type instance NamespaceEra "utxo/v0" = ConwayEra
-
 type instance NamespaceEra "gov/constitution/v0" = ConwayEra
+
+type instance NamespaceEra "nonces/v0" = ConwayEra
+
+type instance NamespaceEra "utxo/v0" = ConwayEra
 
 instance KnownNamespace "utxo/v0" where
   type NamespaceKey "utxo/v0" = UtxoIn
