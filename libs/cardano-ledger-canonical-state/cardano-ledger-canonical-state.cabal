@@ -37,7 +37,6 @@ library
   exposed-modules:
     Cardano.Ledger.CanonicalState.BasicTypes
     Cardano.Ledger.CanonicalState.Namespace.Blocks.V0
-    Cardano.Ledger.CanonicalState.Namespace.Pots.V0
     Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
 
   hs-source-dirs: src
@@ -51,7 +50,6 @@ library
     scls-cardano,
     scls-cbor,
     scls-core,
-    text,
 
 library conway
   import: warnings
@@ -80,7 +78,6 @@ library testlib
     cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway},
     cardano-ledger-conway:testlib,
     cardano-ledger-core,
-    generic-random,
 
 test-suite tests
   import: warnings
