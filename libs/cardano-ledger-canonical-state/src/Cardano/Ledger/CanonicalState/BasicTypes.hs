@@ -6,14 +6,17 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.CanonicalState.BasicTypes (
   OnChain (..),
   DecodeOnChain (..),
+  CanonicalCoin (..),
 ) where
 
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
 import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..))
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
@@ -55,3 +58,18 @@ instance DecodeOnChain v a => FromCanonicalCBOR v (OnChain a) where
 -- `toPlainDecoder`.
 class DecodeOnChain (v :: Symbol) (a :: Type) where
   decodeOnChain :: BS.ByteString -> CanonicalDecoder s a
+
+-- | Wrapper for the coin type.
+--
+-- Despite the fact that Coin is on-chain type, we do not want to use
+-- 'OnChain' wrapper for it. Because it's expected that if we keep chain
+-- structure like transaction in canonical state, then we should keep entire
+-- structure there and keep that as a whole, like 'UTxOut'.
+newtype CanonicalCoin = CanonicalCoin {unCoin :: CompactForm Coin}
+  deriving (Eq, Ord, Show, Generic)
+
+instance FromCanonicalCBOR v CanonicalCoin where
+  fromCanonicalCBOR = fmap (CanonicalCoin . CompactCoin) <$> fromCanonicalCBOR
+
+instance ToCanonicalCBOR v CanonicalCoin where
+  toCanonicalCBOR v (CanonicalCoin (CompactCoin c)) = toCanonicalCBOR v c
