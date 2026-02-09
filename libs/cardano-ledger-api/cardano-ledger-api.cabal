@@ -75,7 +75,7 @@ library
     deepseq,
     microlens,
     transformers,
-    vector-map,
+    vector-map >=1.2,
 
 library testlib
   exposed-modules:
