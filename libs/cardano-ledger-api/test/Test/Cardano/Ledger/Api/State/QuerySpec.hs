@@ -13,6 +13,7 @@ import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.State.Query
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
@@ -471,15 +472,16 @@ queryStakeSnapshotsSpec =
           Map.filter ((> 0) . spssNumDelegators) . VMap.toMap . ssStakePoolsSnapShot
         allPoolIdsWithDelegations =
           foldMap (Map.keysSet . getPoolIds) [ssStakeMark ss, ssStakeSet ss, ssStakeGo ss]
-        nonZeroTotal ssWhich = nonZeroOr (ssWhich result) (knownNonZeroCoin @1)
+        nonZeroTotal s =
+          nonZeroOr (VMap.foldMap fromCompact (unStake (ssStake s))) (knownNonZeroCoin @1)
       subPoolIds <- uniformSubSet Nothing allPoolIdsWithDelegations QC
       let
         subResult = queryStakeSnapshots nes (Just subPoolIds)
       pure @Gen $
         conjoin
           [ Map.keysSet (ssStakeSnapshots result) === allPoolIdsWithDelegations
-          , nonZeroTotal ssMarkTotal === ssTotalActiveStake (ssStakeMark ss)
-          , nonZeroTotal ssSetTotal === ssTotalActiveStake (ssStakeSet ss)
-          , nonZeroTotal ssGoTotal === ssTotalActiveStake (ssStakeGo ss)
+          , ssMarkTotal result === nonZeroTotal (ssStakeMark ss)
+          , ssSetTotal result === nonZeroTotal (ssStakeSet ss)
+          , ssGoTotal result === nonZeroTotal (ssStakeGo ss)
           , Map.keysSet (ssStakeSnapshots subResult) === subPoolIds
           ]
