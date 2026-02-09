@@ -88,7 +88,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   MemberStatus (..),
   NextEpochChange (..),
  )
-import Cardano.Ledger.BaseTypes (EpochNo, Network, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, strictMaybeToMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
@@ -542,9 +542,9 @@ instance DecCBOR StakeSnapshot where
 
 data StakeSnapshots = StakeSnapshots
   { ssStakeSnapshots :: !(Map (KeyHash StakePool) StakeSnapshot)
-  , ssMarkTotal :: !Coin
-  , ssSetTotal :: !Coin
-  , ssGoTotal :: !Coin
+  , ssMarkTotal :: !(NonZero Coin)
+  , ssSetTotal :: !(NonZero Coin)
+  , ssGoTotal :: !(NonZero Coin)
   }
   deriving (Eq, Show, Generic)
 
@@ -602,9 +602,6 @@ queryStakeSnapshots nes mPoolIds =
               , ssSetPool = Map.findWithDefault mempty poolId totalSetByPoolId
               , ssGoPool = Map.findWithDefault mempty poolId totalGoByPoolId
               }
-
-      getAllStake :: SnapShot -> Coin
-      getAllStake (SnapShot stake _ _ _ _) = VMap.foldMap fromCompact (unStake stake)
    in case mPoolIds of
         Nothing ->
           let poolIds =
@@ -616,14 +613,14 @@ queryStakeSnapshots nes mPoolIds =
                     ]
            in StakeSnapshots
                 { ssStakeSnapshots = getPoolStakes poolIds
-                , ssMarkTotal = getAllStake ssStakeMark
-                , ssSetTotal = getAllStake ssStakeSet
-                , ssGoTotal = getAllStake ssStakeGo
+                , ssMarkTotal = ssTotalActiveStake ssStakeMark
+                , ssSetTotal = ssTotalActiveStake ssStakeSet
+                , ssGoTotal = ssTotalActiveStake ssStakeGo
                 }
         Just poolIds ->
           StakeSnapshots
             { ssStakeSnapshots = getPoolStakes poolIds
-            , ssMarkTotal = getAllStake ssStakeMark
-            , ssSetTotal = getAllStake ssStakeSet
-            , ssGoTotal = getAllStake ssStakeGo
+            , ssMarkTotal = ssTotalActiveStake ssStakeMark
+            , ssSetTotal = ssTotalActiveStake ssStakeSet
+            , ssGoTotal = ssTotalActiveStake ssStakeGo
             }
