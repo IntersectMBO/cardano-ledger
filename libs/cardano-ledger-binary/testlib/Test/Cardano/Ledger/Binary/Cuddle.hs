@@ -34,8 +34,16 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Decoding (label)
 import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
 import Codec.CBOR.Cuddle.CBOR.Validator (validateCBOR)
+import Codec.CBOR.Cuddle.CBOR.Validator.Trace (
+  Evidenced (..),
+  SValidity (..),
+  TraceOptions (..),
+  ValidationTrace,
+  defaultTraceOptions,
+  isValid,
+  prettyValidationTrace,
+ )
 import Codec.CBOR.Cuddle.CDDL (Name (..))
-import Codec.CBOR.Cuddle.CDDL.CBORGenerator (ValidationResult (..))
 import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
 import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
@@ -52,7 +60,8 @@ import Data.Data (Proxy (..))
 import Data.Either (isLeft)
 import qualified Data.Text as T
 import GHC.Stack (HasCallStack)
-import Prettyprinter (Pretty (pretty))
+import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)
+import qualified Prettyprinter.Render.Terminal as Ansi
 import Prettyprinter.Render.Text (hPutDoc)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
@@ -75,7 +84,6 @@ import Test.Hspec (
   expectationFailure,
   it,
   shouldBe,
-  shouldSatisfy,
  )
 import Test.Hspec.Core.Spec (Example (..), paramsQuickCheckArgs)
 import Test.QuickCheck (Arbitrary (..), Args (replay), Gen, Testable (..), forAll)
@@ -132,7 +140,7 @@ huddleRoundTripAnnCborSpec version ruleName =
 
 huddleAntiCborSpec ::
   forall a.
-  (DecCBOR a, Show a) =>
+  DecCBOR a =>
   Version ->
   T.Text ->
   SpecWith (CTreeRoot MonoReferenced)
@@ -140,15 +148,29 @@ huddleAntiCborSpec version ruleName =
   let lbl = label $ Proxy @a
    in describe "Decoding fails when term is zapped"
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
-        $ \(mapIndex -> cddl) -> property $ do
-          mTerm <- tryZapAntiGen 1 . generateFromName cddl $ Name ruleName
+        $ \cddl -> property @(Gen Property) $ do
+          mTerm <- tryZapAntiGen 1 . generateFromName (mapIndex cddl) $ Name ruleName
           case mTerm of
             Just term -> do
               let
                 encoding = toPlainEncoding version $ encodeTerm term
                 bs = C.toStrictByteString encoding
-              pure . counterexample (prettyHexEnc encoding) $
-                decodeFull' @a version bs `shouldSatisfy` isLeft
+              case validateCBOR bs (Name ruleName) (mapIndex cddl) of
+                Evidenced SInvalid trc -> do
+                  let
+                    errMsg =
+                      unlines
+                        [ "Generated term:"
+                        , prettyHexEnc encoding
+                        , mempty
+                        , "Validation result:"
+                        , T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
+                            prettyValidationTrace (defaultTraceOptions {toFoldValid = True}) trc
+                        , mempty
+                        , "Decoding succeeded, expected failure"
+                        ]
+                  pure . counterexample errMsg . isLeft $ decodeFull' @a version bs
+                Evidenced SValid _ -> discard
             Nothing -> discard
 
 specWithHuddle :: Cuddle.Huddle -> SpecWith (CTreeRoot MonoReferenced) -> Spec
@@ -236,6 +258,11 @@ cddlFailure encoding err =
       , "Generated diag: " <> CBOR.prettyHexEnc encoding
       ]
 
+showValidationTrace :: Evidenced ValidationTrace -> String
+showValidationTrace (Evidenced _ t) =
+  T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
+    prettyValidationTrace defaultTraceOptions t
+
 huddleRoundTripArbitraryValidate ::
   forall a.
   ( DecCBOR a
@@ -255,13 +282,11 @@ huddleRoundTripArbitraryValidate version ruleName =
             let
               bs = serialize' version val
               res = validateCBOR bs (Name ruleName) (mapIndex cddl)
-            case res of
-              ValidatorSuccess -> pure ()
-              ValidatorFail err ->
+            if isValid res
+              then pure ()
+              else
                 expectationFailure $
-                  "CBOR Validation failed\nError:\n" <> show errMsg
-                where
-                  errMsg = pretty $ pShow err
+                  "CBOR Validation failed\nError:\n" <> showValidationTrace res
 
 huddleRoundTripArbitraryValidate ::
   forall a.

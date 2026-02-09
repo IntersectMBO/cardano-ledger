@@ -21,14 +21,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cuddle.git
-  tag: ca1a2e6c260a50290782760bdddf0d574ad9ad45
-  --sha256: sha256-xb//wzU/0AzMFtidbfrbodjxcWbssOh8tNx/MajLy4g=
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/antigen.git
-  tag: 64d1cb8dba12ceeb35a8f50e6b90968e293e80a7
-  --sha256: sha256-xw6Pwgdq86DXtd4o0BDnCYu6Rm0eCrnveKTtNGiDshE=
+  tag: 65c64867e4d4cdace105cbd1a5097701db2c5bac
+  --sha256: sha256-TS1qbTwLrJ+OQq/f+FqnmindvANnQf8mZbAqFDk5Kuo=
 
 source-repository-package
   type: git
@@ -114,10 +108,10 @@ if impl(ghc >=9.12)
 
 source-repository-package
   type: git
-  location: https://github.com/tweag/cardano-cls.git
+  location: https://github.com/Soupstraw/cardano-cls.git
   subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
-  --sha256: sha256-olahRoXIykwIeCwRFSNy4CJC68F+N/A2M0B25Wj8Rz0=
-  tag: 0fd0b9d252637684c117f1366a87ae404fed41e1
+  --sha256: sha256-POBr11BhEN6SFfc70ZD5saGBanyH/F2Is1TK7+xbk4s=
+  tag: c8414c077b8efd1a8818b147cc33b42504779e4e
 
 if impl(ghc >=9.14)
   source-repository-package
