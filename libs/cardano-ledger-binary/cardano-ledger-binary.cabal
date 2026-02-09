@@ -111,7 +111,7 @@ library testlib
     ghc-options:
       -Wredundant-constraints
   build-depends:
-    antigen,
+    antigen >=0.3.1.0 && < 0.4,
     ImpSpec,
     QuickCheck,
     base,
@@ -135,7 +135,6 @@ library testlib
     hspec,
     hspec-core,
     pretty-show,
-    pretty-simple,
     prettyprinter,
     prettyprinter-ansi-terminal,
     primitive,
