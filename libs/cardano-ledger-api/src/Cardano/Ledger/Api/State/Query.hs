@@ -584,33 +584,23 @@ queryStakeSnapshots nes mPoolIds =
         , ssStakeGo
         } = esSnapshots $ nesEs nes
 
-      totalMarkByPoolId :: Map (KeyHash StakePool) Coin
-      totalMarkByPoolId = sumStakePerPool (ssDelegations ssStakeMark) (ssStake ssStakeMark)
-
-      totalSetByPoolId :: Map (KeyHash StakePool) Coin
-      totalSetByPoolId = sumStakePerPool (ssDelegations ssStakeSet) (ssStake ssStakeSet)
-
-      totalGoByPoolId :: Map (KeyHash StakePool) Coin
-      totalGoByPoolId = sumStakePerPool (ssDelegations ssStakeGo) (ssStake ssStakeGo)
-
       getPoolStakes :: Set (KeyHash StakePool) -> Map (KeyHash StakePool) StakeSnapshot
       getPoolStakes poolIds = Map.fromSet mkStakeSnapshot poolIds
         where
+          lookupStake poolId =
+            maybe mempty (fromCompact . spssStake) . VMap.lookup poolId . ssStakePoolsSnapShot
           mkStakeSnapshot poolId =
             StakeSnapshot
-              { ssMarkPool = Map.findWithDefault mempty poolId totalMarkByPoolId
-              , ssSetPool = Map.findWithDefault mempty poolId totalSetByPoolId
-              , ssGoPool = Map.findWithDefault mempty poolId totalGoByPoolId
+              { ssMarkPool = lookupStake poolId ssStakeMark
+              , ssSetPool = lookupStake poolId ssStakeSet
+              , ssGoPool = lookupStake poolId ssStakeGo
               }
    in case mPoolIds of
         Nothing ->
           let poolIds =
-                Set.fromList $
-                  mconcat
-                    [ VMap.elems (ssDelegations ssStakeMark)
-                    , VMap.elems (ssDelegations ssStakeSet)
-                    , VMap.elems (ssDelegations ssStakeGo)
-                    ]
+                foldMap
+                  (VMap.keysSet . VMap.filter (\_ -> (> 0) . spssNumDelegators) . ssStakePoolsSnapShot)
+                  [ssStakeMark, ssStakeSet, ssStakeGo]
            in StakeSnapshots
                 { ssStakeSnapshots = getPoolStakes poolIds
                 , ssMarkTotal = ssTotalActiveStake ssStakeMark

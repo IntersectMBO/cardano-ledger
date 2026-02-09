@@ -472,14 +472,26 @@ queryStakeSnapshotsSpec =
           Map.filter ((> 0) . spssNumDelegators) . VMap.toMap . ssStakePoolsSnapShot
         allPoolIdsWithDelegations =
           foldMap (Map.keysSet . getPoolIds) [ssStakeMark ss, ssStakeSet ss, ssStakeGo ss]
+        allPoolIds =
+          foldMap
+            (Map.keysSet . VMap.toMap . ssStakePoolsSnapShot)
+            [ssStakeMark ss, ssStakeSet ss, ssStakeGo ss]
         nonZeroTotal s =
           nonZeroOr (VMap.foldMap fromCompact (unStake (ssStake s))) (knownNonZeroCoin @1)
-      subPoolIds <- uniformSubSet Nothing allPoolIdsWithDelegations QC
+        nonZeroSubTotal ssWhich =
+          nonZeroOr (foldMap ssWhich (ssStakeSnapshots result)) (knownNonZeroCoin @1)
+      subPoolIds <- uniformSubSet Nothing allPoolIds QC
+      -- Tricky bit about the query is when all pool ids are requested then ones that do not have
+      -- delegations are filtered out, while when poolIds are specified, then they are retained even
+      -- if they don't have any delegations
       let
         subResult = queryStakeSnapshots nes (Just subPoolIds)
       pure @Gen $
         conjoin
           [ Map.keysSet (ssStakeSnapshots result) === allPoolIdsWithDelegations
+          , nonZeroSubTotal ssMarkPool === ssMarkTotal result
+          , nonZeroSubTotal ssSetPool === ssSetTotal result
+          , nonZeroSubTotal ssGoPool === ssGoTotal result
           , ssMarkTotal result === nonZeroTotal (ssStakeMark ss)
           , ssSetTotal result === nonZeroTotal (ssStakeSet ss)
           , ssGoTotal result === nonZeroTotal (ssStakeGo ss)
