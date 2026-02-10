@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `bhviewProtVer` to `BHeaderView`
 * Remove re-exports of `Reward` and `RewardType` from `Cardano.Ledger.Core`
 * Add re-exports of `Addr`, `AccountAddress`, `Withdrawals` and `AccountId` from `Cardano.Ledger.Core`
 * Add `HasZero` instance for `CompactForm Coin`
@@ -85,7 +86,6 @@
 * Remove `Generic` instance from `BoundedRatio` type
 * Remove deprecated function `addrPtrNormalize`
 * Remove deprecated functions `mkTxIx`, `mkCertIx`, `hashAnchorData`
-* Remove deprecated functions `bheader`, `bbody`
 * Remove deprecated methods `fromTxSeq`, `toTxSeq`, `hashTxSeq` from `EraBlockBody` typeclass
 * Remove deprecated function `normalizePtr`
 * Remove deprecated functions `hashSignature`, `hashVerKeyVRF`

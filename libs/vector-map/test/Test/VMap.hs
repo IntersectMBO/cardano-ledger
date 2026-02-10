@@ -104,6 +104,9 @@ vMapTests =
           (\(m1, m2) -> VMap.fromMap m1 <> VMap.fromMap m2)
           (uncurry (<>))
           (Map.fromList xs1, Map.fromList xs2)
+      prop "keys" $ prop_AsMapTo VMap.keys Map.keys
+      prop "keysSet" $ prop_AsMapTo VMap.keysSet Map.keysSet
+      prop "elems" $ prop_AsMapTo VMap.elems Map.elems
       prop "toAscList" $ prop_AsMapTo VMap.toAscList Map.toAscList
       prop "foldMapWithKey" $ \f ->
         let f' k v = applyFun2 f k v :: String
