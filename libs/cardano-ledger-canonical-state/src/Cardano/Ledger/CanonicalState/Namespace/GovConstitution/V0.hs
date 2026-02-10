@@ -39,7 +39,7 @@ import Data.MemPack.ByteOrdered (packWord64beM, unpackBigEndianM)
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 
-data GovConstitutionIn = GovConstitutionIn EpochNo
+newtype GovConstitutionIn = GovConstitutionIn EpochNo
   deriving (Eq, Ord, Show)
 
 newtype GovConstitutionOut = GovConstitutionOut CanonicalConstitution

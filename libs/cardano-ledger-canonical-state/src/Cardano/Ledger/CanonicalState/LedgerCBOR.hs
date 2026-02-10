@@ -28,7 +28,7 @@
 -- deriving via LedgerCBOR v ScriptHash instance FromCanonicalCBOR v ScriptHash
 --
 -- tests = do
---    descripe "GovConstitution ScriptHash canonical encoding" $ do
+--    describe "GovConstitution ScriptHash canonical encoding" $ do
 --      validateType @"gov/constitution/v0" @(ScriptHash) "script_hash"
 -- --                  ^^^^^^^^^^^^^^^^^^                 ^^^^^^^^^^^^
 -- --                   SCLS namespace                    CDDL rule name, to verify against
@@ -78,7 +78,7 @@ newtype LedgerCBORSafe (v :: Symbol) a = LedgerCBORSafe {unLedgerCBORSafe :: a}
 -- | A safer version of 'LedgerCBOR' that forces canonical encoding by re-encoding the produced value,
 -- this instance is slower but guarantees canonicity of the type.
 --
--- This instance do not guarantee conformance with the specification, so it's important to add
+-- This instance does not guarantee conformance with the specification, so it's important to add
 -- conformance tests (@validateType@) for such instances as well.
 instance
   (EncCBOR a, Era era, NamespaceEra v ~ era) =>
