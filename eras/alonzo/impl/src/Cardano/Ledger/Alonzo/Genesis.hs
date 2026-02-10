@@ -68,9 +68,9 @@ import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
-import Numeric.Natural (Natural)
 
 -- | All configuration that is necessary to bootstrap AlonzoEra from ShelleyGenesis
 data AlonzoGenesis = AlonzoGenesisWrapper
@@ -123,9 +123,9 @@ pattern AlonzoGenesis ::
   Prices ->
   ExUnits ->
   ExUnits ->
-  Natural ->
-  Natural ->
-  Natural ->
+  Word32 ->
+  Word16 ->
+  Word16 ->
   Maybe AlonzoExtraConfig ->
   AlonzoGenesis
 pattern AlonzoGenesis

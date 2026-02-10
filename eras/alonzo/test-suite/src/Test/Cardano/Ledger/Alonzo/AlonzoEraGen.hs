@@ -355,7 +355,7 @@ genAlonzoPParamsUpdate constants pp = do
   maxBlockExUnits <- genM genMaxBlockExUnits
   -- Not too small for maxValSize, if this is too small then any Tx with Value
   -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
-  maxValSize <- genM (genNatural 4000 5000)
+  maxValSize <- genM (choose (4000, 5000))
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
@@ -383,7 +383,7 @@ genAlonzoPParams constants = do
   -- prices <- Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000))
   maxTxExUnits <- genMaxTxExUnits
   maxBlockExUnits <- genMaxBlockExUnits
-  maxValSize <- genNatural 4000 10000 -- This can't be too small. Shelley uses Hard coded 4000
+  maxValSize <- choose (4000, 10000) -- This can't be too small. Shelley uses Hard coded 4000
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord

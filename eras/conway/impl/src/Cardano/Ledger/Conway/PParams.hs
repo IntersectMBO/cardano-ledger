@@ -921,20 +921,12 @@ instance AlonzoEraPParams ConwayEra where
   hkdMaxBlockExUnitsL =
     lens (hkdMap (Proxy @f) unOrdExUnits . unTHKD . cppMaxBlockExUnits) $ \pp x ->
       pp {cppMaxBlockExUnits = THKD $ hkdMap (Proxy @f) OrdExUnits x}
-  hkdMaxValSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
   hkdMaxValSizeL =
-    lens (asNaturalHKD @f @Word32 . (unTHKD . cppMaxValSize)) $
-      \pp x -> pp {cppMaxValSize = THKD (asBoundedIntegralHKD @f @Natural @Word32 x)}
-  hkdCollateralPercentageL ::
-    forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
+    lens (unTHKD . cppMaxValSize) $ \pp x -> pp {cppMaxValSize = THKD x}
   hkdCollateralPercentageL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . cppCollateralPercentage)) $
-      \pp x -> pp {cppCollateralPercentage = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
-  hkdMaxCollateralInputsL ::
-    forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
+    lens (unTHKD . cppCollateralPercentage) $ \pp x -> pp {cppCollateralPercentage = THKD x}
   hkdMaxCollateralInputsL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . cppMaxCollateralInputs)) $
-      \pp x -> pp {cppMaxCollateralInputs = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
+    lens (unTHKD . cppMaxCollateralInputs) $ \pp x -> pp {cppMaxCollateralInputs = THKD x}
 
 instance BabbageEraPParams ConwayEra where
   hkdCoinsPerUTxOByteL =
@@ -1140,12 +1132,9 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
     , cppPrices = THKD bppPrices
     , cppMaxTxExUnits = THKD bppMaxTxExUnits
     , cppMaxBlockExUnits = THKD bppMaxBlockExUnits
-    , cppMaxValSize =
-        THKD (asBoundedIntegralHKD @f @Natural @Word32 bppMaxValSize)
-    , cppCollateralPercentage =
-        THKD (asBoundedIntegralHKD @f @Natural @Word16 bppCollateralPercentage)
-    , cppMaxCollateralInputs =
-        THKD (asBoundedIntegralHKD @f @Natural @Word16 bppMaxCollateralInputs)
+    , cppMaxValSize = THKD bppMaxValSize
+    , cppCollateralPercentage = THKD bppCollateralPercentage
+    , cppMaxCollateralInputs = THKD bppMaxCollateralInputs
     , -- New for Conway
       cppPoolVotingThresholds = THKD ucppPoolVotingThresholds
     , cppDRepVotingThresholds = THKD ucppDRepVotingThresholds
@@ -1184,9 +1173,9 @@ downgradeConwayPParams ConwayPParams {..} =
     , bppPrices = unTHKD cppPrices
     , bppMaxTxExUnits = unTHKD cppMaxTxExUnits
     , bppMaxBlockExUnits = unTHKD cppMaxBlockExUnits
-    , bppMaxValSize = asNaturalHKD @f @Word32 (unTHKD cppMaxValSize)
-    , bppCollateralPercentage = asNaturalHKD @f @Word16 (unTHKD cppCollateralPercentage)
-    , bppMaxCollateralInputs = asNaturalHKD @f @Word16 (unTHKD cppMaxCollateralInputs)
+    , bppMaxValSize = unTHKD cppMaxValSize
+    , bppCollateralPercentage = unTHKD cppCollateralPercentage
+    , bppMaxCollateralInputs = unTHKD cppMaxCollateralInputs
     }
 
 -- | Functionality for updating protocol parameters in Conway era. Worth noting that, unlike previous

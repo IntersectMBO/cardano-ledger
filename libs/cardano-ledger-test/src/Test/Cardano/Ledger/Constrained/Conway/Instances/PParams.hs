@@ -83,7 +83,6 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Constrained.API
 import Data.Word
 import Lens.Micro
-import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
@@ -479,15 +478,15 @@ maxBlockExUnits_ ::
 maxBlockExUnits_ simplepp = sel @20 simplepp
 
 maxValSize_ ::
-  EraSpecPParams era => Term (SimplePParams era) -> Term Natural
+  EraSpecPParams era => Term (SimplePParams era) -> Term Word32
 maxValSize_ simplepp = sel @21 simplepp
 
 collateralPercentage_ ::
-  EraSpecPParams era => Term (SimplePParams era) -> Term Natural
+  EraSpecPParams era => Term (SimplePParams era) -> Term Word16
 collateralPercentage_ simplepp = sel @22 simplepp
 
 maxCollateralInputs_ ::
-  EraSpecPParams era => Term (SimplePParams era) -> Term Natural
+  EraSpecPParams era => Term (SimplePParams era) -> Term Word16
 maxCollateralInputs_ simplepp = sel @23 simplepp
 
 coinsPerUTxOByte_ ::

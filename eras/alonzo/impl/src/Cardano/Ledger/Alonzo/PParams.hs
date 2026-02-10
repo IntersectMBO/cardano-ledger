@@ -128,7 +128,6 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 
 class EraPParams era => AlonzoEraPParams era where
   hkdCoinsPerUTxOWordL ::
@@ -143,11 +142,11 @@ class EraPParams era => AlonzoEraPParams era where
 
   hkdMaxBlockExUnitsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f ExUnits)
 
-  hkdMaxValSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdMaxValSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word32)
 
-  hkdCollateralPercentageL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdCollateralPercentageL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word16)
 
-  hkdMaxCollateralInputsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdMaxCollateralInputsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word16)
 
 ppCoinsPerUTxOWordL ::
   forall era.
@@ -167,13 +166,13 @@ ppMaxTxExUnitsL = ppLensHKD . hkdMaxTxExUnitsL @era @Identity
 ppMaxBlockExUnitsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) ExUnits
 ppMaxBlockExUnitsL = ppLensHKD . hkdMaxBlockExUnitsL @era @Identity
 
-ppMaxValSizeL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Natural
+ppMaxValSizeL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Word32
 ppMaxValSizeL = ppLensHKD . hkdMaxValSizeL @era @Identity
 
-ppCollateralPercentageL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Natural
+ppCollateralPercentageL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Word16
 ppCollateralPercentageL = ppLensHKD . hkdCollateralPercentageL @era @Identity
 
-ppMaxCollateralInputsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Natural
+ppMaxCollateralInputsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Word16
 ppMaxCollateralInputsL = ppLensHKD . hkdMaxCollateralInputsL @era @Identity
 
 ppuCoinsPerUTxOWordL ::
@@ -209,19 +208,19 @@ ppuMaxBlockExUnitsL = ppuLensHKD . hkdMaxBlockExUnitsL @era @StrictMaybe
 ppuMaxValSizeL ::
   forall era.
   AlonzoEraPParams era =>
-  Lens' (PParamsUpdate era) (StrictMaybe Natural)
+  Lens' (PParamsUpdate era) (StrictMaybe Word32)
 ppuMaxValSizeL = ppuLensHKD . hkdMaxValSizeL @era @StrictMaybe
 
 ppuCollateralPercentageL ::
   forall era.
   AlonzoEraPParams era =>
-  Lens' (PParamsUpdate era) (StrictMaybe Natural)
+  Lens' (PParamsUpdate era) (StrictMaybe Word16)
 ppuCollateralPercentageL = ppuLensHKD . hkdCollateralPercentageL @era @StrictMaybe
 
 ppuMaxCollateralInputsL ::
   forall era.
   AlonzoEraPParams era =>
-  Lens' (PParamsUpdate era) (StrictMaybe Natural)
+  Lens' (PParamsUpdate era) (StrictMaybe Word16)
 ppuMaxCollateralInputsL = ppuLensHKD . hkdMaxCollateralInputsL @era @StrictMaybe
 
 -- | Protocol parameters.
@@ -274,12 +273,12 @@ data AlonzoPParams f era = AlonzoPParams
   -- ^ Max total script execution resources units allowed per tx
   , appMaxBlockExUnits :: !(HKD f OrdExUnits)
   -- ^ Max total script execution resources units allowed per block
-  , appMaxValSize :: !(HKD f Natural)
+  , appMaxValSize :: !(HKD f Word32)
   -- ^ Max size of a Value in an output
-  , appCollateralPercentage :: !(HKD f Natural)
+  , appCollateralPercentage :: !(HKD f Word16)
   -- ^ Percentage of the txfee which must be provided as collateral when
   -- including non-native scripts.
-  , appMaxCollateralInputs :: !(HKD f Natural)
+  , appMaxCollateralInputs :: !(HKD f Word16)
   -- ^ Maximum number of collateral inputs allowed in a transaction
   }
   deriving (Generic)
@@ -425,9 +424,9 @@ data UpgradeAlonzoPParams f = UpgradeAlonzoPParams
   , uappPrices :: !(HKD f Prices)
   , uappMaxTxExUnits :: !(HKD f ExUnits)
   , uappMaxBlockExUnits :: !(HKD f ExUnits)
-  , uappMaxValSize :: !(HKD f Natural)
-  , uappCollateralPercentage :: !(HKD f Natural)
-  , uappMaxCollateralInputs :: !(HKD f Natural)
+  , uappMaxValSize :: !(HKD f Word32)
+  , uappCollateralPercentage :: !(HKD f Word16)
+  , uappMaxCollateralInputs :: !(HKD f Word16)
   }
   deriving (Generic)
 

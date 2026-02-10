@@ -2,6 +2,13 @@
 
 ## 1.15.0.0
 
+* Change return type of lenses in `AlonzoEraPParams`:
+  - `hkdMaxValSizeL` to `Word32`
+  - `hkdCollateralPercentageL` to `Word16`
+  - `hkdMaxCollateralInputsL` to `Word16`
+* Change return type of `ppMaxValSizeL `to `Word32`
+* Change teturn type of `ppCollateralPercentageL` to `Word16`
+* Change return type of `ppMaxCollateralInputsL` to `Word16`
 * Move `TotalDeposits` and `TxUTxODiff` data constructors from `AlonzoUtxosEvent` to `AlonzoUtxoEvent`
 * Add `UtxosEnv`
 * Change `STS` instance of `AlonzoUTXOS`: use `UtxosEnv` as `Environment` and `ShelleyGovState` as `State`

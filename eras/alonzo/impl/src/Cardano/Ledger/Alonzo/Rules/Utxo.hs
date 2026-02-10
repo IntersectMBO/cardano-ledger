@@ -117,11 +117,10 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
-import Data.Word (Word32)
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-import Numeric.Natural (Natural)
 import Validation
 
 -- ==========================================================
@@ -178,7 +177,7 @@ data AlonzoUtxoPredFailure era
     OutsideForecast
       SlotNo
   | -- | There are too many collateral inputs
-    TooManyCollateralInputs (Mismatch RelLTEQ Natural)
+    TooManyCollateralInputs (Mismatch RelLTEQ Word16)
   | NoCollateralInputs
   deriving (Generic)
 
@@ -493,7 +492,7 @@ validateTooManyCollateralInputs pp txBody =
   failureUnless (numColl <= maxColl) $
     TooManyCollateralInputs Mismatch {mismatchSupplied = numColl, mismatchExpected = maxColl}
   where
-    maxColl, numColl :: Natural
+    maxColl, numColl :: Word16
     maxColl = pp ^. ppMaxCollateralInputsL
     numColl = fromIntegral . Set.size $ txBody ^. collateralInputsTxBodyL
 

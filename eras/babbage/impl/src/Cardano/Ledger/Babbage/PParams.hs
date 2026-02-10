@@ -72,7 +72,6 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 
 class AlonzoEraPParams era => BabbageEraPParams era where
   hkdCoinsPerUTxOByteL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f CoinPerByte)
@@ -127,12 +126,12 @@ data BabbagePParams f era = BabbagePParams
   -- ^ Max total script execution resources units allowed per tx
   , bppMaxBlockExUnits :: !(HKD f OrdExUnits)
   -- ^ Max total script execution resources units allowed per block
-  , bppMaxValSize :: !(HKD f Natural)
+  , bppMaxValSize :: !(HKD f Word32)
   -- ^ Max size of a Value in an output
-  , bppCollateralPercentage :: !(HKD f Natural)
+  , bppCollateralPercentage :: !(HKD f Word16)
   -- ^ Percentage of the txfee which must be provided as collateral when
   -- including non-native scripts.
-  , bppMaxCollateralInputs :: !(HKD f Natural)
+  , bppMaxCollateralInputs :: !(HKD f Word16)
   -- ^ Maximum number of collateral inputs allowed in a transaction
   }
   deriving (Generic)

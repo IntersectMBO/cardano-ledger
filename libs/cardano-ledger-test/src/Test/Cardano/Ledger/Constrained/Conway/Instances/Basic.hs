@@ -285,15 +285,15 @@ data SimplePParams era = SimplePParams
   , prices :: Prices
   , maxTxExUnits :: ExUnits
   , maxBlockExUnits :: ExUnits
-  , maxValSize :: Natural
-  , collateralPercentage :: Natural
-  , maxCollateralInputs :: Natural
+  , maxValSize :: Word32
+  , collateralPercentage :: Word16
+  , maxCollateralInputs :: Word16
   -- ^  Babbage
   , coinsPerUTxOByte :: Coin
   -- ^ Conway
   , poolVotingThresholds :: PoolVotingThresholds
   , drepVotingThresholds :: DRepVotingThresholds
-  , committeeMinSize :: Natural
+  , committeeMinSize :: Word16
   , committeeMaxTermLength :: EpochInterval
   , govActionLifetime :: EpochInterval
   , govActionDeposit :: Coin
@@ -344,9 +344,9 @@ data SimplePPUpdate = SimplePPUpdate
   , uprices :: StrictMaybe Prices
   , umaxTxExUnits :: StrictMaybe ExUnits
   , umaxBlockExUnits :: StrictMaybe ExUnits
-  , umaxValSize :: StrictMaybe Natural
-  , ucollateralPercentage :: StrictMaybe Natural
-  , umaxCollateralInputs :: StrictMaybe Natural
+  , umaxValSize :: StrictMaybe Word32
+  , ucollateralPercentage :: StrictMaybe Word16
+  , umaxCollateralInputs :: StrictMaybe Word16
   , -- Babbage
     ucoinsPerUTxOByte :: StrictMaybe Coin
   , -- Conway
