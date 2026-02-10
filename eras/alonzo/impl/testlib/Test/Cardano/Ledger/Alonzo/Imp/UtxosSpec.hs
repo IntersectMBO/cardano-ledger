@@ -11,6 +11,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
@@ -205,3 +206,7 @@ spec = describe "UTXOS" $ do
           submitFailingTx
             tx
             [injectFailure (CollectErrors [NoCostModel lang])]
+
+        it "Scripts with bootstrap addresses pass" $
+          when (eraProtVerLow @era <= eraProtVerHigh @AlonzoEra) $ do
+            mkTxWithPlutusAndBootstrapAddress slang >>= submitTx_

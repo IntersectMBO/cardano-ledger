@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -10,9 +11,10 @@ module Test.Cardano.Ledger.Babbage.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  TxOutSource (TxOutFromOutput),
+  TxOutSource (..),
  )
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (CollectErrors))
+import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core (
   collateralInputsTxBodyL,
@@ -24,6 +26,7 @@ import Cardano.Ledger.Babbage.Core (
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (
   BabbageContextError (
+    ByronTxOutInContext,
     ReferenceInputsNotSupported,
     ReferenceScriptsNotSupported
   ),
@@ -47,7 +50,12 @@ import Cardano.Ledger.Core (
   outputsTxBodyL,
  )
 import Cardano.Ledger.Credential (StakeReference (..))
-import Cardano.Ledger.Plutus (Language (..), hashPlutusScript, mkInlineDatum, withSLanguage)
+import Cardano.Ledger.Plutus (
+  Language (..),
+  hashPlutusScript,
+  mkInlineDatum,
+  withSLanguage,
+ )
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
@@ -105,6 +113,20 @@ spec = describe "UTXOS" $ do
                   ReferenceInputsNotSupported @era [refIn]
               ]
         ]
+
+  describe "Scripts with bootstrap addresses fail" $
+    forM_ (eraLanguages @era) $ \lang ->
+      withSLanguage lang $ \slang ->
+        it (show lang) $ do
+          tx <- mkTxWithPlutusAndBootstrapAddress slang
+          submitFailingTx
+            tx
+            [ injectFailure $
+                CollectErrors
+                  [ BadTranslation . inject $
+                      ByronTxOutInContext @era (TxOutFromOutput (TxIx 0))
+                  ]
+            ]
 
   describe "PlutusV2 with references" $ do
     it "succeeds with same txIn in regular inputs and reference inputs" $ do

@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -34,6 +35,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   impComputeScriptIntegrity,
   computeScriptIntegrityHash,
   computeScriptIntegrity,
+  mkTxWithPlutusAndBootstrapAddress,
   -- Fixup
   fixupDatums,
   fixupOutputDatums,
@@ -68,7 +70,7 @@ import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Plutus (
   Data (..),
   Datum (..),
@@ -108,6 +110,7 @@ import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Rational ((%!))
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.ImpTest
 import Test.Cardano.Ledger.Plutus (
@@ -229,7 +232,8 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
   newRedeemers <- Map.fromList . catMaybes <$> mapM mkNewRedeemers contexts
   pure $
     tx
-      & witsTxL . rdmrsTxWitsL . unRedeemersL .~ Map.unions [oldRedeemers, newRedeemers, newMaxRedeemers]
+      & witsTxL . rdmrsTxWitsL . unRedeemersL
+        .~ Map.unions @[] [oldRedeemers, newRedeemers, newMaxRedeemers]
 
 txWithMaxRedeemers ::
   forall era l.
@@ -570,3 +574,30 @@ impComputeScriptIntegrity tx =
 computeScriptIntegrityHash ::
   AlonzoEraImp era => Tx l era -> ImpTestM era (StrictMaybe ScriptIntegrityHash)
 computeScriptIntegrityHash tx = fmap hashScriptIntegrity <$> impComputeScriptIntegrity tx
+
+mkTxWithPlutusAndBootstrapAddress ::
+  forall era l.
+  (AlonzoEraImp era, PlutusLanguage l) =>
+  SLanguage l ->
+  ImpTestM era (Tx TopTx era)
+mkTxWithPlutusAndBootstrapAddress slang = do
+  ba <- freshBootstapAddress
+  datum <- arbitrary
+  let scriptHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
+      datumHash = hashData datum
+      txOutScript =
+        mkBasicTxOut @era (mkAddr scriptHash StakeRefNull) mempty
+          & dataHashTxOutL .~ SJust datumHash
+  tx <-
+    submitTx $
+      mkBasicTx $
+        mkBasicTxBody & outputsTxBodyL .~ [txOutScript]
+  let txIn = txInAt 0 tx
+      txOutBootstrapAddr = mkBasicTxOut @era (AddrBootstrap ba) mempty
+  return $
+    mkBasicTx
+      ( mkBasicTxBody @era
+          & inputsTxBodyL .~ [txIn]
+          & outputsTxBodyL .~ [txOutBootstrapAddr]
+      )
+      & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
