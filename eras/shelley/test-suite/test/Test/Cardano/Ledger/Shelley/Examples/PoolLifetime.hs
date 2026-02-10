@@ -941,7 +941,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
     blocks = 0
     t = leaderProbability f relativeStake (unsafeBoundRational 0.5)
     -- everyone has delegated to Alice's Pool
-    Coin stake = sumAllStake (ssStake snapEx5)
+    Coin stake = sumAllStake (ssActiveStake snapEx5)
     relativeStake = fromRational (stake % supply)
     Coin supply = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals

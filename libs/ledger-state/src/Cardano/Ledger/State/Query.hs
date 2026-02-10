@@ -142,7 +142,7 @@ insertSnapShot ::
   ReaderT SqlBackend m ()
 insertSnapShot snapShotEpochStateId snapShotType State.SnapShot {..} = do
   snapShotId <- insert $ SnapShot {snapShotType, snapShotEpochStateId}
-  VG.forM_ (VMap.unVMap (State.unStake ssStake)) $ \(cred, c) -> do
+  VG.forM_ (VMap.unVMap (State.unStake ssActiveStake)) $ \(cred, c) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (SnapShotStake snapShotId credId c)
   VG.forM_ (VMap.unVMap ssDelegations) $ \(cred, spKeyHash) -> do
@@ -396,7 +396,7 @@ getSnapShotWithSharing ::
 getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
   let internOtherStakes =
         interns
-          (foldMap (internsFromVMap . State.unStake . State.ssStake) otherSnapShots)
+          (foldMap (internsFromVMap . State.unStake . State.ssActiveStake) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherPoolParams =
         interns (foldMap (internsFromVMap . State.ssPoolParams) otherSnapShots)

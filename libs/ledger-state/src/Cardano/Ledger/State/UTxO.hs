@@ -239,7 +239,7 @@ instance AggregateStat SnapShotStats where
 countSnapShotStat :: SnapShot -> SnapShotStats
 countSnapShotStat SnapShot {..} =
   SnapShotStats
-    { sssStake = statMapKeys (VMap.toMap (unStake ssStake))
+    { sssStake = statMapKeys (VMap.toMap (unStake ssActiveStake))
     , sssDelegationCredential = statMapKeys (VMap.toMap ssDelegations)
     , sssDelegationStakePool = statFoldable (VMap.toMap ssDelegations)
     , sssPoolParams = statMapKeys (VMap.toMap ssPoolParams)

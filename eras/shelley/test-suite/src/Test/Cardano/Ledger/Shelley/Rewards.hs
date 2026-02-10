@@ -820,7 +820,7 @@ mkSnapShot ::
   SnapShot
 mkSnapShot activeStake delegs stakePools =
   SnapShot
-    { ssStake = activeStake
+    { ssActiveStake = activeStake
     , ssTotalActiveStake = totalActiveStake
     , ssDelegations = delegs
     , ssPoolParams = stakePools

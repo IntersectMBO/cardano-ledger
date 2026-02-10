@@ -90,7 +90,7 @@ snapTransition = do
 
   tellEvent $
     let stMap :: Map (Credential Staking) (CompactForm Coin)
-        stMap = VMap.toMap . unStake $ ssStake istakeSnap
+        stMap = VMap.toMap . unStake $ ssActiveStake istakeSnap
 
         stakeCoinMap :: Map (Credential Staking) Coin
         stakeCoinMap = fmap fromCompact stMap

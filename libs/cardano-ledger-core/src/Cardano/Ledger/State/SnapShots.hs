@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -33,7 +32,9 @@ module Cardano.Ledger.State.SnapShots (
   ssStakeSetL,
   ssStakeGoL,
   ssFeeL,
+  ssStake,
   ssStakeL,
+  ssActiveStakeL,
   ssStakeDistrL,
   ssDelegationsL,
   ssPoolParamsL,
@@ -281,8 +282,7 @@ instance DecShareCBOR StakePoolSnapShot where
 
 -- | Snapshot of the stake distribution.
 data SnapShot = SnapShot
-  { ssStake :: !Stake -- TODO: rename to `ssActiveStake`
-
+  { ssActiveStake :: !Stake
   -- ^ All of the stake for registered staking credentials that have a delegation to a stake pool.
   , ssTotalActiveStake :: !(NonZero Coin)
   -- ^ Total active stake, which is the sum of all of the stake from `ssStake`. It is primarily used
@@ -305,7 +305,7 @@ instance EncCBOR SnapShot where
   encCBOR ss@(SnapShot _ _ _ _ _) =
     let SnapShot {..} = ss
      in encodeListLen 4
-          <> encCBOR ssStake
+          <> encCBOR ssActiveStake
           -- `ssTotalActiveStake` is ommitted on purpose
           <> encCBOR ssDelegations
           <> encCBOR ssPoolParams
@@ -314,8 +314,8 @@ instance EncCBOR SnapShot where
 instance DecShareCBOR SnapShot where
   type Share SnapShot = (Interns (Credential Staking), Interns (KeyHash StakePool))
   decSharePlusCBOR = decodeRecordNamedT "SnapShot" (const 4) $ do
-    ssStake <- decSharePlusLensCBOR _1
-    let ssTotalActiveStake = sumAllStake ssStake `nonZeroOr` knownNonZeroCoin @1
+    ssActiveStake <- decSharePlusLensCBOR _1
+    let ssTotalActiveStake = sumAllStake ssActiveStake `nonZeroOr` knownNonZeroCoin @1
     ssDelegations <- decSharePlusCBOR
     ssPoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     (stakeCredInterns, stakePoolIdInterns) <- get
@@ -326,7 +326,7 @@ instance DecShareCBOR SnapShot where
 instance ToKeyValuePairs SnapShot where
   toKeyValuePairs ss@(SnapShot _ _ _ _ _) =
     let SnapShot {..} = ss
-     in [ "stake" .= ssStake
+     in [ "stake" .= ssActiveStake
         , "delegations" .= ssDelegations
         , "poolParams" .= ssPoolParams
         , "stakePoolsSnapShot" .= ssStakePoolsSnapShot
@@ -414,7 +414,7 @@ snapShotFromInstantStake instantStake dState PState {psStakePools} network =
           )
     )
     $ SnapShot
-      { ssStake = activeStake
+      { ssActiveStake = activeStake
       , ssTotalActiveStake = totalActiveStake
       , ssDelegations = delegs
       , ssPoolParams = poolParams
@@ -538,11 +538,19 @@ ssFeeL = lens ssFee (\ds u -> ds {ssFee = u})
 
 -- SnapShot
 
+ssActiveStakeL :: Lens' SnapShot Stake
+ssActiveStakeL = lens ssActiveStake (\ds u -> ds {ssActiveStake = u})
+
+ssStake :: SnapShot -> Stake
+ssStake = ssActiveStake
+{-# DEPRECATED ssStake "In favor of `ssActiveStake`" #-}
+
 ssStakeL :: Lens' SnapShot Stake
-ssStakeL = lens ssStake (\ds u -> ds {ssStake = u})
+ssStakeL = lens ssActiveStake (\ds u -> ds {ssActiveStake = u})
+{-# DEPRECATED ssStakeL "In favor of `ssActiveStakeL`" #-}
 
 ssStakeDistrL :: Lens' SnapShot (VMap VB VP (Credential Staking) (CompactForm Coin))
-ssStakeDistrL = lens (unStake . ssStake) (\ds u -> ds {ssStake = Stake u})
+ssStakeDistrL = lens (unStake . ssActiveStake) (\ds u -> ds {ssActiveStake = Stake u})
 
 ssDelegationsL :: Lens' SnapShot (VMap VB VB (Credential Staking) (KeyHash StakePool))
 ssDelegationsL = lens ssDelegations (\ds u -> ds {ssDelegations = u})

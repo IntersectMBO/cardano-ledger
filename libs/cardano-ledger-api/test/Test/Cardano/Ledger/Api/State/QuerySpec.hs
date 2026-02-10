@@ -477,7 +477,7 @@ queryStakeSnapshotsSpec =
             (Map.keysSet . VMap.toMap . ssStakePoolsSnapShot)
             [ssStakeMark ss, ssStakeSet ss, ssStakeGo ss]
         nonZeroTotal s =
-          nonZeroOr (VMap.foldMap fromCompact (unStake (ssStake s))) (knownNonZeroCoin @1)
+          nonZeroOr (VMap.foldMap fromCompact (unStake (ssActiveStake s))) (knownNonZeroCoin @1)
         nonZeroSubTotal ssWhich =
           nonZeroOr (foldMap ssWhich (ssStakeSnapshots result)) (knownNonZeroCoin @1)
       subPoolIds <- uniformSubSet Nothing allPoolIds QC
