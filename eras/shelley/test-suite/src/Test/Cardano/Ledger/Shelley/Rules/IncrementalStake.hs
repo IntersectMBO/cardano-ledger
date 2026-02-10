@@ -183,7 +183,10 @@ checkIncrementalStake network es =
    in
     counterexample
       ( "\nIncremental stake distribution does not match old style stake distribution"
-          ++ tersediffincremental "differences: Old vs Incremental" (ssStake stake) (ssStake snapShot)
+          ++ tersediffincremental
+            "differences: Old vs Incremental"
+            (ssActiveStake stake)
+            (ssActiveStake snapShot)
       )
       (stake === snapShot)
 

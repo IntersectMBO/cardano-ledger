@@ -196,7 +196,7 @@ instance SpecTranslate ctx SnapShot where
 
   toSpecRep (SnapShot {..}) =
     Agda.MkSnapshot
-      <$> toSpecRep ssStake
+      <$> toSpecRep ssActiveStake
       <*> toSpecRep (VMap.toMap ssDelegations)
       <*> toSpecRep (VMap.toMap ssPoolParams)
 
