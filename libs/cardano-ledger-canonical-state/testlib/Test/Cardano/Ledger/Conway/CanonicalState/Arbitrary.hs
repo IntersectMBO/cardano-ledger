@@ -7,8 +7,6 @@
 
 module Test.Cardano.Ledger.Conway.CanonicalState.Arbitrary () where
 
--- import Cardano.Ledger.Core (Era, EraTxOut, TxOut)
--- import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UtxoOut.V0
 import Cardano.Ledger.CanonicalState.Conway ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0 as GovConstitution.V0
 import Cardano.Ledger.Conway (ConwayEra)
