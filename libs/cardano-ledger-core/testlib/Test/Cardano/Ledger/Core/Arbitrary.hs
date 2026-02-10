@@ -696,8 +696,8 @@ instance Arbitrary SnapShot where
             pure (cred, (deleg, stake))
     let
       ssDelegations = VMap.fromMap $ Map.map fst credsWithStakeAndDelegations
-      ssStake = Stake $ VMap.fromMap $ Map.map snd credsWithStakeAndDelegations
-      ssTotalActiveStake = sumAllStake ssStake `BaseTypes.nonZeroOr` (knownNonZeroCoin @1)
+      ssActiveStake = Stake $ VMap.fromMap $ Map.map snd credsWithStakeAndDelegations
+      ssTotalActiveStake = sumAllStake ssActiveStake `BaseTypes.nonZeroOr` (knownNonZeroCoin @1)
     deposit <- arbitrary
     let delegationsPerStakePool :: Map (KeyHash StakePool) (Set (Credential Staking))
         delegationsPerStakePool =
@@ -706,7 +706,7 @@ instance Arbitrary SnapShot where
             mempty
             credsWithStakeAndDelegations
         stakePoolSnapShotFromParams poolId =
-          mkStakePoolSnapShot ssStake ssTotalActiveStake
+          mkStakePoolSnapShot ssActiveStake ssTotalActiveStake
             . mkStakePoolState deposit (Map.findWithDefault mempty poolId delegationsPerStakePool)
         ssStakePoolsSnapShot = force $ VMap.mapWithKey stakePoolSnapShotFromParams ssPoolParams
     pure SnapShot {..}
