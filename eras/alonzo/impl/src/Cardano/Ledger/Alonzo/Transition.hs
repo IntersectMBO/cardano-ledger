@@ -32,8 +32,8 @@ instance EraTransition AlonzoEra where
 
   mkTransitionConfig = AlonzoTransitionConfig
 
-  injectIntoTestState cfg =
-    shelleyRegisterInitialFundsThenStaking cfg . alonzoInjectCostModels cfg
+  injectIntoTestState hasFS cfg newEpochState =
+    shelleyRegisterInitialFundsThenStaking hasFS cfg (alonzoInjectCostModels cfg newEpochState)
 
   tcPreviousEraConfigL =
     lens atcMaryTransitionConfig (\atc pc -> atc {atcMaryTransitionConfig = pc})

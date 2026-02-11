@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -33,7 +34,9 @@ import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
+import Cardano.Ledger.Shelley.Genesis (
+  ShelleyGenesisStaking (..),
+ )
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
   curPParamsEpochStateL,
@@ -42,6 +45,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
  )
 import Cardano.Ledger.Shelley.Transition
+import Control.Monad.Class.MonadThrow (MonadThrow)
+import Control.Monad.IO.Class (MonadIO)
 import Data.ListMap (ListMap)
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
@@ -50,6 +55,7 @@ import GHC.Generics
 import GHC.Stack
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+import System.FS.API (HasFS)
 
 class (EraTransition era, ConwayEraCertState era) => ConwayEraTransition era where
   tcConwayGenesisL :: Lens' (TransitionConfig era) ConwayGenesis
@@ -76,9 +82,9 @@ instance EraTransition ConwayEra where
 
   mkTransitionConfig = ConwayTransitionConfig
 
-  injectIntoTestState cfg =
-    conwayRegisterInitialFundsThenStaking cfg
-      . alonzoInjectCostModels (cfg ^. tcPreviousEraConfigL . tcPreviousEraConfigL)
+  injectIntoTestState hasFS cfg newEpochState =
+    conwayRegisterInitialFundsThenStaking hasFS cfg $
+      alonzoInjectCostModels (cfg ^. tcPreviousEraConfigL . tcPreviousEraConfigL) newEpochState
 
   tcPreviousEraConfigL =
     lens ctcBabbageTransitionConfig (\ctc pc -> ctc {ctcBabbageTransitionConfig = pc})
@@ -104,20 +110,22 @@ tcInitialDRepsL =
 instance NoThunks (TransitionConfig ConwayEra)
 
 conwayRegisterInitialFundsThenStaking ::
-  ConwayEraTransition era =>
+  (ConwayEraTransition era, HasCallStack, MonadIO m, MonadThrow m) =>
+  HasFS m h ->
   TransitionConfig era ->
   NewEpochState era ->
-  NewEpochState era
-conwayRegisterInitialFundsThenStaking cfg =
+  m (NewEpochState era)
+conwayRegisterInitialFundsThenStaking hasFS cfg newEpochState = do
   -- We must first register the initial funds, because the stake
   -- information depends on it.
-  resetStakeDistribution
-    . registerDRepsThenDelegs cfg
-    . conwayRegisterInitialAccounts (cfg ^. tcInitialStakingL)
-    . registerInitialStakePools (cfg ^. tcInitialStakingL)
-    . registerInitialFunds cfg
+  newEpochState' <- registerInitialFunds hasFS cfg newEpochState
+  pure $
+    resetStakeDistribution $
+      registerDRepsThenDelegs cfg $
+        conwayRegisterInitialAccounts (cfg ^. tcInitialStakingL) $
+          registerInitialStakePools (cfg ^. tcInitialStakingL) newEpochState'
 
--- | Register all staking credentials and apply delegations. Make sure StakePools that are bing
+-- | Register all staking credentials and apply delegations. Make sure StakePools that are being
 -- delegated to are already registered, which can be done with `registerInitialStakePools`.
 conwayRegisterInitialAccounts ::
   forall era.
