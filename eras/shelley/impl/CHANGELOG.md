@@ -25,6 +25,10 @@
 
 ## 1.18.0.0
 
+* Add `InjectionData`, `foldInjectionData`, `InjectionError` to `Cardano.Ledger.Shelley.Genesis`
+* Add `ShelleyExtraConfig` type to `Cardano.Ledger.Shelley.Genesis`
+* Add `sgExtraConfig` field to `ShelleyGenesis`
+* Change `registerInitialFunds`, `shelleyRegisterInitialFundsThenStaking`, and `injectIntoTestState` to require `MonadIO` and `MonadThrow`, and accept a `HasFS m h` parameter for streaming initial funds from external files
 * Subsume delegations into `ActiveStake`.
   - `epochStateStakeDistrL` returns `ActiveStake`
   - Remove `fvDelegs` from `FreeVars`.

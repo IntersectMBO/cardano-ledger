@@ -6,8 +6,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,6 +20,7 @@
 
 module Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesisStaking (..),
+  ShelleyExtraConfig (..),
   ShelleyGenesis (..),
   ValidationErr (..),
   NominalDiffTimeMicro (..),
@@ -35,6 +39,12 @@ module Cardano.Ledger.Shelley.Genesis (
   secondsToNominalDiffTimeMicro,
   sgInitialFundsL,
   sgStakingL,
+  sgExtraConfigL,
+
+  -- * Streaming injection
+  InjectionData (..),
+  foldInjectionData,
+  InjectionError (..),
 ) where
 
 import Cardano.Crypto.DSIGN (Ed25519DSIGN)
@@ -52,7 +62,9 @@ import Cardano.Ledger.BaseTypes (
   NonZero (..),
   Nonce (..),
   PositiveUnitInterval,
+  StrictMaybe (..),
   ToKeyValuePairs (..),
+  maybeToStrictMaybe,
   mkActiveSlotCoeff,
  )
 import Cardano.Ledger.Binary (
@@ -66,17 +78,20 @@ import Cardano.Ledger.Binary (
   cborError,
   decodeRational,
   decodeRecordNamed,
+  decodeRecordSum,
   encodeListLen,
   enforceDecoderVersion,
   enforceEncodingVersion,
   shelleyProtVer,
   toPlainEncoding,
  )
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (GenDelegPair (..))
+import qualified Cardano.Ledger.Shelley.Crypto.Blake2b as Blake2b
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.StabilityWindow
@@ -86,11 +101,34 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Control.DeepSeq (NFData)
+import Control.Exception (Exception (..))
+import Control.Monad (unless, when)
+import Control.Monad.Class.MonadThrow (MonadThrow (throwIO))
+import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.:?), (.=))
+import Control.Monad.Trans.Class (lift)
+import Data.Aeson (
+  FromJSON (..),
+  FromJSONKey,
+  ToJSON (..),
+  fromJSON,
+  object,
+  withObject,
+  (.!=),
+  (.:),
+  (.:?),
+  (.=),
+ )
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Types (Parser, Value (..), typeMismatch)
+import Data.Aeson.Types (Parser, Value (..), parseEither, typeMismatch)
+import qualified Data.ByteString as BS
+import Data.Coerce (coerce)
+import Data.Default (Default (..))
 import Data.Fixed (Fixed (..), Micro, Pico)
+import Data.JsonStream.Parser (ParseOutput (..), runParser)
+import qualified Data.JsonStream.Parser as JsonStream
+import Data.List (foldl')
+import Data.ListMap (ListMap)
 import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -108,7 +146,18 @@ import Data.Unit.Strict (forceElemsToWHNF)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
-import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import NoThunks.Class (AllowThunksIn (..), InspectHeap (..), NoThunks (..))
+import Streaming (Of (..), Stream)
+import qualified Streaming.Prelude as Streaming
+import System.FS.API (
+  FsPath,
+  Handle,
+  HasFS (..),
+  OpenMode (..),
+  fsPathFromList,
+  fsPathToList,
+  withFile,
+ )
 
 -- | Genesis Shelley staking configuration.
 --
@@ -161,6 +210,44 @@ instance DecCBOR ShelleyGenesisStaking where
 -- | Empty genesis staking
 emptyGenesisStaking :: ShelleyGenesisStaking
 emptyGenesisStaking = mempty
+
+-- | Extra configuration for injecting Genesis data
+--
+-- TODO (#5549): Add secStakePools, secStakeCredentials, secDRepDelegations
+data ShelleyExtraConfig = ShelleyExtraConfig
+  { secInitialFunds :: !(InjectionData Addr Coin)
+  -- ^ Initial funds to inject.
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs ShelleyExtraConfig
+
+instance NFData ShelleyExtraConfig
+
+instance NoThunks ShelleyExtraConfig
+
+instance Default ShelleyExtraConfig where
+  def = ShelleyExtraConfig NoInjection
+
+instance EncCBOR ShelleyExtraConfig where
+  encCBOR (ShelleyExtraConfig funds) =
+    encode $
+      Rec ShelleyExtraConfig
+        !> To funds
+
+instance DecCBOR ShelleyExtraConfig where
+  decCBOR =
+    decode $
+      RecD ShelleyExtraConfig
+        <! From
+
+instance ToKeyValuePairs ShelleyExtraConfig where
+  toKeyValuePairs ShelleyExtraConfig {secInitialFunds} =
+    ["initialFunds" .= secInitialFunds]
+
+instance FromJSON ShelleyExtraConfig where
+  parseJSON = Aeson.withObject "ShelleyExtraConfig" $ \obj ->
+    ShelleyExtraConfig
+      <$> obj .:? "initialFunds" .!= NoInjection
 
 -- | Unlike @'NominalDiffTime'@ that supports @'Pico'@ precision, this type
 -- only supports @'Micro'@ precision.
@@ -227,6 +314,8 @@ data ShelleyGenesis = ShelleyGenesis
   , sgStaking :: ShelleyGenesisStaking
   -- ^ 'sgStaking' is intentionally kept lazy, as it can otherwise cause
   --   out-of-memory problems in testing and benchmarking.
+  , sgExtraConfig :: !(StrictMaybe ShelleyExtraConfig)
+  -- ^ Optional extra configuration for streaming injection.
   }
   deriving stock (Generic, Show, Eq)
   deriving (ToJSON) via KeyValuePairs ShelleyGenesis
@@ -238,6 +327,9 @@ sgInitialFundsL = lens sgInitialFunds (\sg x -> sg {sgInitialFunds = x})
 
 sgStakingL :: Lens' ShelleyGenesis ShelleyGenesisStaking
 sgStakingL = lens sgStaking (\sg x -> sg {sgStaking = x})
+
+sgExtraConfigL :: Lens' ShelleyGenesis (StrictMaybe ShelleyExtraConfig)
+sgExtraConfigL = lens sgExtraConfig (\sg x -> sg {sgExtraConfig = x})
 
 deriving via
   AllowThunksIn '["sgInitialFunds", "sgStaking"] ShelleyGenesis
@@ -265,6 +357,7 @@ instance ToKeyValuePairs ShelleyGenesis where
       , sgGenDelegs
       , sgInitialFunds
       , sgStaking
+      , sgExtraConfig
       } =
       let !strictSgInitialFunds = sgInitialFunds
           !strictSgStaking = sgStaking
@@ -284,6 +377,7 @@ instance ToKeyValuePairs ShelleyGenesis where
           , "initialFunds" .= strictSgInitialFunds
           , "staking" .= strictSgStaking
           ]
+            <> ["extraConfig" .= ec | SJust ec <- [sgExtraConfig]]
 
 instance EraGenesis ShelleyEra where
   type Genesis ShelleyEra = ShelleyGenesis
@@ -406,6 +500,7 @@ instance FromJSON ShelleyGenesis where
         <*> (forceElemsToWHNF <$> obj .: "genDelegs")
         <*> (forceElemsToWHNF <$> obj .: "initialFunds") -- TODO: disable. Move to EraTransition
         <*> obj .:? "staking" .!= emptyGenesisStaking -- TODO: remove. Move to EraTransition
+        <*> (maybeToStrictMaybe <$> obj .:? "extraConfig")
     where
       forceUTCTime date =
         let !day = utctDay date
@@ -428,7 +523,7 @@ instance FromJSON ShelleyGenesisStaking where
 -- | Genesis are always encoded with the version of era they are defined in.
 instance DecCBOR ShelleyGenesis where
   decCBOR =
-    decodeRecordNamed "ShelleyGenesis" (const 15) $ do
+    decodeRecordNamed "ShelleyGenesis" (const 16) $ do
       sgSystemStart <- decCBOR
       sgNetworkMagic <- decCBOR
       sgNetworkId <- decCBOR
@@ -444,6 +539,7 @@ instance DecCBOR ShelleyGenesis where
       sgGenDelegs <- decCBOR
       sgInitialFunds <- decCBOR
       sgStaking <- decCBOR
+      sgExtraConfig <- decCBOR
       pure $
         ShelleyGenesis
           sgSystemStart
@@ -461,6 +557,7 @@ instance DecCBOR ShelleyGenesis where
           sgGenDelegs
           sgInitialFunds
           sgStaking
+          sgExtraConfig
   {-# INLINE decCBOR #-}
 
 instance EncCBOR ShelleyGenesis
@@ -483,9 +580,10 @@ instance ToCBOR ShelleyGenesis where
       , sgGenDelegs
       , sgInitialFunds
       , sgStaking
+      , sgExtraConfig
       } =
       toPlainEncoding shelleyProtVer $
-        encodeListLen 15
+        encodeListLen 16
           <> encCBOR sgSystemStart
           <> encCBOR sgNetworkMagic
           <> encCBOR sgNetworkId
@@ -501,10 +599,10 @@ instance ToCBOR ShelleyGenesis where
           <> encCBOR sgGenDelegs
           <> encCBOR sgInitialFunds
           <> encCBOR sgStaking
+          <> encCBOR sgExtraConfig
 
 instance FromCBOR ShelleyGenesis where
   fromCBOR = fromEraCBOR @ShelleyEra
-  {-# INLINE fromCBOR #-}
 
 -- | Serialize `PositiveUnitInterval` type in the same way `Rational` is serialized,
 -- however ensure there is no usage of tag 30 by enforcing Shelley protocol version.
@@ -679,3 +777,166 @@ mkShelleyGlobals genesis epochInfoAc =
       computeStabilityWindow (unNonZero k) (sgActiveSlotCoeff genesis)
     randomnessStabilisationWindow =
       computeRandomnessStabilisationWindow (unNonZero k) (sgActiveSlotCoeff genesis)
+
+{-------------------------------------------------------------------------------
+  Streaming injection
+-------------------------------------------------------------------------------}
+
+deriving via InspectHeap FsPath instance NoThunks FsPath
+
+-- | Source for injectable data
+data InjectionData k v
+  = -- | No injection data
+    NoInjection
+  | -- | Load data from a JSON file with hash verification
+    InjectionFromFile !FsPath !(H.Hash Blake2b_256 BS.ByteString)
+  | -- | Embedded data from memory
+    EmbeddedInjection !(ListMap k v)
+  deriving (Show, Eq, Generic, NFData, NoThunks)
+
+instance Default (InjectionData k v) where
+  def = NoInjection
+
+instance (EncCBOR k, EncCBOR v) => EncCBOR (InjectionData k v) where
+  encCBOR NoInjection = encodeListLen 1 <> encCBOR (0 :: Word)
+  encCBOR (InjectionFromFile fp h) =
+    encodeListLen 3 <> encCBOR (1 :: Word) <> encCBOR (fsPathToList fp) <> encCBOR h
+  encCBOR (EmbeddedInjection lm) =
+    encodeListLen 2 <> encCBOR (2 :: Word) <> encCBOR lm
+
+instance (DecCBOR k, DecCBOR v) => DecCBOR (InjectionData k v) where
+  decCBOR = decodeRecordSum "InjectionData" $ \case
+    0 -> pure (1, NoInjection)
+    1 -> do
+      fp <- fsPathFromList <$> decCBOR
+      h <- decCBOR
+      pure (3, InjectionFromFile fp h)
+    2 -> do
+      lm <- decCBOR
+      pure (2, EmbeddedInjection lm)
+    k -> cborError $ DecoderErrorUnknownTag "InjectionData" (fromIntegral k)
+
+instance (ToJSON k, ToJSON v, Aeson.ToJSONKey k) => ToJSON (InjectionData k v) where
+  toJSON = \case
+    NoInjection -> object []
+    InjectionFromFile fp h -> object ["file" .= fsPathToList fp, "hash" .= H.hashToTextAsHex h]
+    EmbeddedInjection lm -> object ["data" .= lm]
+
+instance (FromJSON k, FromJSON v, Aeson.FromJSONKey k, Ord k) => FromJSON (InjectionData k v) where
+  parseJSON = withObject "InjectionData" $ \o -> do
+    mFile <- o .:? "file"
+    mData <- o .:? "data"
+    case (mFile, mData) of
+      (Just segments, Nothing) -> do
+        hashText <- o .: "hash"
+        case H.hashFromTextAsHex hashText of
+          Nothing -> fail $ "Invalid hash format: " <> show hashText
+          Just h -> pure $ InjectionFromFile (fsPathFromList segments) h
+      (Nothing, Just d) -> pure $ EmbeddedInjection d
+      (Nothing, Nothing) ->
+        fail "InjectionData: No injection was provided. Expected either \"file\" or \"data\""
+      (Just _, Just _) ->
+        fail "InjectionData: cannot specify both \"file\" and \"data\" fields"
+
+-- | Errors that can occur during injection source resolution
+data InjectionError
+  = InjectionHashMismatch !FsPath !Text !Text
+  | InjectionParseError !FsPath !String
+  | InjectionNotAllowedOnMainnet
+  | InjectionConflictingSources !String
+  deriving (Show, Eq)
+
+instance Exception InjectionError where
+  displayException (InjectionHashMismatch fp expected actual) =
+    "Hash mismatch for injection file "
+      <> show fp
+      <> ": expected "
+      <> Text.unpack expected
+      <> ", got "
+      <> Text.unpack actual
+  displayException (InjectionParseError fp err) =
+    "Parse error in injection file " <> show fp <> ": " <> err
+  displayException InjectionNotAllowedOnMainnet =
+    "Injection of initial data is not allowed on Mainnet"
+  displayException (InjectionConflictingSources msg) =
+    "Conflicting injection sources: " <> msg
+
+-- | Fold over a source of injected data: for EmbeddedInjection the data is
+-- folded in memory, while for InjectionFromFile the data is streamed, hashed,
+-- and parsed incrementally, with content hash verification at the end.
+foldInjectionData ::
+  forall k v m h acc.
+  (MonadIO m, MonadThrow m, FromJSON k, FromJSON v, FromJSONKey k) =>
+  HasFS m h ->
+  InjectionData k v ->
+  (acc -> (k, v) -> acc) ->
+  acc ->
+  m acc
+foldInjectionData _ NoInjection _ acc0 = pure acc0
+foldInjectionData _ (EmbeddedInjection lm) f acc0 =
+  pure $ foldl' f acc0 (LM.toList lm)
+foldInjectionData hasFS (InjectionFromFile fp expectedHash) f acc0 =
+  withFile hasFS fp ReadMode $ \hdl -> do
+    (result, actualHash) <- Blake2b.withBlake2bHash $ \ctx -> do
+      let chunks = hGetSomeStream hasFS hdl
+          hashingChunks = Streaming.mapM (\c -> c <$ Blake2b.blake2bUpdate ctx c) chunks
+      Streaming.fold_ f acc0 id (streamJsonObject hashingChunks)
+    when (expectedHash /= actualHash) $
+      throwIO $
+        InjectionHashMismatch
+          fp
+          (H.hashToTextAsHex expectedHash)
+          (H.hashToTextAsHex actualHash)
+    pure result
+  where
+    -- stream key-value pairs from a JSON chunk stream
+    streamJsonObject :: Stream (Of BS.ByteString) m () -> Stream (Of (k, v)) m ()
+    streamJsonObject = go (runParser parser)
+      where
+        parser = JsonStream.objectItems JsonStream.value :: JsonStream.Parser (Text, Aeson.Value)
+
+        go :: ParseOutput (Text, Aeson.Value) -> Stream (Of BS.ByteString) m () -> Stream (Of (k, v)) m ()
+        go output chunksStream = case output of
+          ParseYield (textKey, jsonValue) next -> do
+            k <- case fromJSONKeyText textKey of
+              Nothing ->
+                lift $
+                  throwIO $
+                    InjectionParseError fp ("Failed to parse key from text: " <> Text.unpack textKey)
+              Just key -> pure key
+            v <- case fromJSON jsonValue of
+              Aeson.Error err ->
+                lift $
+                  throwIO $
+                    InjectionParseError fp ("Failed to parse value for key " <> Text.unpack textKey <> ": " <> err)
+              Aeson.Success val -> pure val
+            Streaming.yield (k, v)
+            go next chunksStream
+          ParseNeedData cont -> do
+            result <- lift $ Streaming.uncons chunksStream
+            case result of
+              Nothing -> go (cont BS.empty) (pure ())
+              Just (chunk, rest) -> go (cont chunk) rest
+          ParseFailed err ->
+            lift $ throwIO $ InjectionParseError fp ("JSON parse error: " <> err)
+          ParseDone _ -> pure ()
+
+        fromJSONKeyText :: Text -> Maybe k
+        fromJSONKeyText t = case Aeson.fromJSONKey of
+          Aeson.FromJSONKeyCoerce -> Just (coerce t)
+          Aeson.FromJSONKeyText f' -> Just (f' t)
+          Aeson.FromJSONKeyTextParser p -> case parseEither p t of
+            Left _ -> Nothing
+            Right a -> Just a
+          Aeson.FromJSONKeyValue _ ->
+            case Aeson.fromJSON (Aeson.String t) of
+              Aeson.Error _ -> Nothing
+              Aeson.Success a -> Just a
+
+-- | Stream ByteString chunks from a file handle using 'hGetSome'.
+hGetSomeStream :: Monad m => HasFS m h -> Handle h -> Stream (Of BS.ByteString) m ()
+hGetSomeStream fs handle = go
+  where
+    go = do
+      chunk <- lift $ hGetSome fs handle 65_536 -- 64KB
+      unless (BS.null chunk) $ Streaming.yield chunk >> go

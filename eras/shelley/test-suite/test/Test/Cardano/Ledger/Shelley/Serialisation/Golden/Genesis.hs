@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis (
 ) where
 
 import Cardano.Base.IP (toIPv4, toIPv6)
-import Cardano.Ledger.BaseTypes (knownNonZeroBounded, textToDns, textToUrl)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), knownNonZeroBounded, textToDns, textToUrl)
 import Cardano.Ledger.Binary (Tokens (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -76,7 +76,7 @@ golden_cbor_ShelleyGenesis =
     expected = Plain.serialize' example
 
     expectedTokens =
-      TkListLen 15
+      TkListLen 16
         . TkListLen 3
         . TkInt 2009
         . TkInt 44
@@ -177,6 +177,7 @@ golden_cbor_ShelleyGenesis =
         . TkBytes
           "\131\161\146\222\192\232\218!\136\229 \208\197\&6\166\154t|\241s\163\223\SYN\166\218\169M\134"
         . TkBytes "d\158\218\130\191dM4\166\146_$\234LL6\210~Q\222\ESCD\239G\227V\v\231"
+        . TkListLen 0
 
 -- TODO - return a CBOR diff in the case of failure
 
@@ -210,6 +211,7 @@ exampleShelleyGenesis =
     , sgGenDelegs = Map.fromList [(genesisVerKeyHash, genDelegPair)]
     , sgInitialFunds = LM.ListMap [(initialFundedAddress, initialFunds)]
     , sgStaking = staking
+    , sgExtraConfig = SNothing
     }
   where
     -- hash of the genesis verification key
