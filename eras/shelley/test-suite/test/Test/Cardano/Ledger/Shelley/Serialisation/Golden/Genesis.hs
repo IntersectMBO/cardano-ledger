@@ -209,6 +209,7 @@ exampleShelleyGenesis =
     , sgGenDelegs = Map.fromList [(genesisVerKeyHash, genDelegPair)]
     , sgInitialFunds = LM.ListMap [(initialFundedAddress, initialFunds)]
     , sgStaking = staking
+    , sgExtraConfig = Nothing
     }
   where
     -- hash of the genesis verification key
