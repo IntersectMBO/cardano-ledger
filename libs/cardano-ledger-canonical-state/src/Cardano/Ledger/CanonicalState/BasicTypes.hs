@@ -19,23 +19,35 @@ module Cardano.Ledger.CanonicalState.BasicTypes (
   OnChain (..),
   DecodeOnChain (..),
   CanonicalCoin (..),
+  CanonicalCredential (..),
+  mkCanonicalCredential,
+  fromCanonicalCredential,
 ) where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), StrictMaybe (..))
+import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.BaseTypes (Anchor (..), SlotNo (..), StrictMaybe (..))
 import Cardano.Ledger.CanonicalState.LedgerCBOR
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..))
+import qualified Cardano.Ledger.Hashes as H
 import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
-import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), peekTokenType)
+import Cardano.SCLS.CBOR.Canonical.Decoder (
+  FromCanonicalCBOR (..),
+  decodeListLenCanonicalOf,
+  peekTokenType,
+ )
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.Versioned
 import qualified Codec.CBOR.Decoding as D
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import Data.Kind (Type)
+import Data.Typeable (Typeable)
+import Data.Word
 import GHC.Generics (Generic)
-import GHC.TypeLits (Symbol)
+import GHC.TypeLits
 
 -- | Wrapper type that tells that the type is the type that is kept on-chain
 -- for such types we want to keep exactly the same encoding as on the wire.
@@ -116,3 +128,68 @@ deriving via
   LedgerCBOR v ScriptHash
   instance
     (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v ScriptHash
+
+instance ToCanonicalCBOR v (H.Hash a b) where
+  toCanonicalCBOR v h = toCanonicalCBOR v (Hash.hashToBytes h)
+
+instance H.HashAlgorithm a => FromCanonicalCBOR v (H.Hash a b) where
+  fromCanonicalCBOR = do
+    Versioned bytes <- fromCanonicalCBOR
+    case Hash.hashFromBytesShort bytes of
+      Just h -> return (Versioned h)
+      Nothing -> fail "Invalid hash bytes"
+
+deriving newtype instance ToCanonicalCBOR v SlotNo
+
+deriving newtype instance FromCanonicalCBOR v SlotNo
+
+deriving via
+  LedgerCBOR v (H.KeyHash kr)
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v (H.KeyHash kr)
+
+deriving via
+  LedgerCBOR v (H.KeyHash kr)
+  instance
+    (Era era, NamespaceEra v ~ era, Typeable kr) => FromCanonicalCBOR v (H.KeyHash kr)
+
+-- | Credential key, it does not keep the role around, because the role is
+-- created anyway as we serialize the value.
+data CanonicalCredential kr
+  = CanonicalScriptHashObj !ScriptHash
+  | CanonicalKeyHashObj !(KeyHash kr)
+  deriving (Eq, Show, Ord, Generic)
+
+instance (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v (CanonicalCredential kr) where
+  toCanonicalCBOR v (CanonicalScriptHashObj sh) = toCanonicalCBOR v (0 :: Word8, sh)
+  toCanonicalCBOR v (CanonicalKeyHashObj kh) = toCanonicalCBOR v (1 :: Word8, kh)
+
+instance (Era era, NamespaceEra v ~ era, Typeable kr) => FromCanonicalCBOR v (CanonicalCredential kr) where
+  fromCanonicalCBOR = do
+    decodeListLenCanonicalOf 2
+    Versioned (tag :: Word8) <- fromCanonicalCBOR
+    case tag of
+      0 -> fmap CanonicalScriptHashObj <$> fromCanonicalCBOR @v
+      1 -> fmap CanonicalKeyHashObj <$> fromCanonicalCBOR @v
+      _ -> fail "Invalid Credential tag"
+
+mkCanonicalCredential :: Credential kr -> CanonicalCredential kr
+mkCanonicalCredential (ScriptHashObj sh) = CanonicalScriptHashObj sh
+mkCanonicalCredential (KeyHashObj kh) = CanonicalKeyHashObj kh
+
+fromCanonicalCredential :: CanonicalCredential kr -> Credential kr
+fromCanonicalCredential (CanonicalScriptHashObj sh) = ScriptHashObj sh
+fromCanonicalCredential (CanonicalKeyHashObj sh) = KeyHashObj sh
+
+instance (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v (Credential kr) where
+  toCanonicalCBOR v (ScriptHashObj sh) = toCanonicalCBOR v (0 :: Word8, sh)
+  toCanonicalCBOR v (KeyHashObj kh) = toCanonicalCBOR v (1 :: Word8, kh)
+
+instance (Era era, NamespaceEra v ~ era, Typeable kr) => FromCanonicalCBOR v (Credential kr) where
+  fromCanonicalCBOR = do
+    decodeListLenCanonicalOf 2
+    Versioned (tag :: Word8) <- fromCanonicalCBOR
+    case tag of
+      0 -> fmap ScriptHashObj <$> fromCanonicalCBOR @v
+      1 -> fmap KeyHashObj <$> fromCanonicalCBOR @v
+      _ -> fail "Invalid Credential tag"
