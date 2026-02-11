@@ -100,7 +100,7 @@ startStep ::
   NonZero Word64 ->
   PulsingRewUpdate
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSupply asc secparam =
-  let SnapShot stake totalActiveStake delegs poolParams stakePoolSnapShots = ssStakeGo ss
+  let SnapShot {ssActiveStake, ssTotalActiveStake, ssStakePoolsSnapShots} = ssStakeGo ss
       numStakeCreds = fromIntegral (VMap.size $ unStake stake)
       k = toIntegerNonZero secparam
       -- We expect approximately 10k-many blocks to be produced each epoch.
@@ -145,21 +145,20 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       -- We now compute stake pool specific values that are needed for computing
       -- member and leader rewards.
       totalStake = circulation es maxSupply
-      stakePerPool = sumStakePerPool delegs stake
       mkPoolRewardInfoCurry =
         mkPoolRewardInfo
           pr
           _R
           b
           (fromIntegral blocksMade)
-          stake
+          ssActiveStake
           delegs
           totalStake
-          totalActiveStake
+          ssTotalActiveStake
           poolParams
       -- We map over the registered stake pools to compute the relevant
       -- stake pool specific values.
-      allPoolInfo = VMap.mapWithKey mkPoolRewardInfoCurry stakePoolSnapShots
+      allPoolInfo = VMap.mapWithKey mkPoolRewardInfoCurry ssStakePoolsSnapShots
 
       -- Stake pools that do not produce any blocks get no rewards,
       -- but some information is still needed from non-block-producing
@@ -215,24 +214,9 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
         RSLP
           pulseSize
           free
-          (unStake stake)
+          (unStake ssActiveStake)
           (RewardAns Map.empty Map.empty)
-      newStakePerPool =
-        Map.mapMaybe
-          ( \spss ->
-              let s = fromCompact $ spssStake spss
-               in s <$ guard (s /= mempty)
-          )
-          (VMap.toMap stakePoolSnapShots)
-      showFailure =
-        error $
-          "StakePerPool does not match:\nOld StakePerPool:\n"
-            <> show stakePerPool
-            <> "\nNew StakePerPool:\n"
-            <> show newStakePerPool
-   in assert
-        (stakePerPool == newStakePerPool || showFailure)
-        (Pulsing rewsnap pulser)
+   in Pulsing rewsnap pulser
 
 -- Phase 2
 

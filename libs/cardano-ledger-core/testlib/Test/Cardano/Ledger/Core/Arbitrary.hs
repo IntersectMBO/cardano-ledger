@@ -674,17 +674,17 @@ instance Arbitrary StakePoolSnapShot where
 
 instance Arbitrary SnapShot where
   arbitrary = do
-    ssPoolParams <- arbitrary
+    poolParams <- arbitrary
     credsWithStakeAndDelegations <-
-      if VMap.null ssPoolParams
+      if VMap.null poolParams
         then pure mempty
         else do
           len <- sized $ \n -> chooseInt (0, n)
           fmap Map.fromList $ vectorOf len $ do
             cred <- arbitrary
             !deleg <- do
-              ix <- chooseInt (0, VMap.size ssPoolParams - 1)
-              pure $ fst $ VMap.elemAt ix ssPoolParams
+              ix <- chooseInt (0, VMap.size poolParams - 1)
+              pure $ fst $ VMap.elemAt ix poolParams
             -- Make sure that the total sum does not overflow.
             randomStake <- arbitrary
             let stake
@@ -693,7 +693,6 @@ instance Arbitrary SnapShot where
                   | otherwise = randomStake
             pure (cred, (deleg, stake))
     let
-      ssDelegations = VMap.fromMap $ Map.map fst credsWithStakeAndDelegations
       ssActiveStake = Stake $ VMap.fromMap $ Map.map snd credsWithStakeAndDelegations
       ssTotalActiveStake = sumAllStake ssActiveStake `BaseTypes.nonZeroOr` (knownNonZeroCoin @1)
     deposit <- arbitrary
@@ -706,7 +705,7 @@ instance Arbitrary SnapShot where
         stakePoolSnapShotFromParams poolId =
           mkStakePoolSnapShot ssActiveStake ssTotalActiveStake
             . mkStakePoolState deposit (Map.findWithDefault mempty poolId delegationsPerStakePool)
-        ssStakePoolsSnapShot = force $ VMap.mapWithKey stakePoolSnapShotFromParams ssPoolParams
+        ssStakePoolsSnapShot = force $ VMap.mapWithKey stakePoolSnapShotFromParams poolParams
     pure SnapShot {..}
 
 instance Arbitrary SnapShots where

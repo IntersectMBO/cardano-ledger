@@ -341,7 +341,6 @@ mkPoolRewardInfo ::
   VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
   Coin ->
   NonZero Coin ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) StakePoolParams -> -- TODO: remove
   KeyHash StakePool ->
   StakePoolSnapShot ->
   Either StakeShare PoolRewardInfo
@@ -354,7 +353,6 @@ mkPoolRewardInfo
   delegs
   (Coin totalStake)
   totalActiveStake
-  stakePools
   stakePoolId
   stakePoolSnapShot =
     case Map.lookup stakePoolId (unBlocksMade blocks) of
@@ -386,13 +384,7 @@ mkPoolRewardInfo
                 , poolBlocks = numBlocksMade
                 , poolLeaderReward = LeaderOnlyReward stakePoolId stakePoolOperatorReward
                 }
-            showFailure =
-              error $
-                "OwnerStake is not the same:\nOld OwnerStake:\n"
-                  <> show selfDelegatedOwnersStake
-                  <> "\nNew wnerStake:\n"
-                  <> show poolOwnerStakeOld
-         in assert (selfDelegatedOwnersStake == poolOwnerStakeOld || showFailure) (Right $! rewardInfo)
+         in Right $! rewardInfo
     where
       pp_d = pp ^. ppDG
       pp_a0 = pp ^. ppA0L
@@ -402,12 +394,6 @@ mkPoolRewardInfo
         hk <- VMap.lookup (KeyHashObj o) delegs
         guard (hk == stakePoolId)
         VMap.lookup (KeyHashObj o) (unStake stake)
-      Coin poolOwnerStakeOld =
-        case VMap.lookup stakePoolId stakePools of
-          Nothing ->
-            error $ "Impossible: Transition to StakePoolSnapShot is missing relevant pool: " <> show stakePoolId
-          Just pool ->
-            fromCompact $ Set.foldl' accOwnerStake mempty (sppOwners pool)
       Coin selfDelegatedOwnersStake = spssSelfDelegatedOwnersStake stakePoolSnapShot
       Coin pledge = spssPledge stakePoolSnapShot
       -- warning: In theory `totalStake` and `totalActiveStake` could be zero, but that would imply no
