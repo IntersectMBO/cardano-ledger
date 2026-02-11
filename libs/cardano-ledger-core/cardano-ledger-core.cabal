@@ -130,6 +130,7 @@ library
     containers,
     data-default >=0.8,
     deepseq,
+    fs-api,
     groups,
     measures,
     mempack >=0.2,

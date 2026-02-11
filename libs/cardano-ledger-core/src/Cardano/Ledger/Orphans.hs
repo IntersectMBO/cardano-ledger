@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,7 +21,10 @@ import Data.Default (Default (..))
 import Data.Fixed (Fixed (..))
 import Data.Proxy
 import qualified Data.Sequence.Strict as SS
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (InspectHeap (..), NoThunks (..))
+import System.FS.API (FsPath)
+
+deriving via InspectHeap FsPath instance NoThunks FsPath
 
 instance NoThunks WC.XSignature where
   wNoThunks ctxt s = wNoThunks ctxt (WC.unXSignature s)
