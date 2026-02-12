@@ -40,10 +40,6 @@ import Cardano.Ledger.Binary.Crypto (
   encodeSignKeyVRF,
   encodeVerKeyVRF,
  )
-import Data.Bits
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Builder as BS
-import qualified Data.ByteString.Lazy as LBS
 import Data.Proxy (Proxy (..))
 import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
@@ -73,11 +69,8 @@ instance EncCBOR a => SneakilyContainResult (WithResult a) where
   type Payload (WithResult a) = a
 
   -- Note that this instance completely ignores the key.
-  sneakilyExtractResult (WithResult _ nat) _ =
-    -- Fill in the word64 as the low 8 bytes of a 16 byte string
-    OutputVRF (toBytes (BS.word64BE 0 <> BS.word64BE nat))
-    where
-      toBytes = LBS.toStrict . BS.toLazyByteString
+  sneakilyExtractResult (WithResult _ _nat) _ =
+    undefined -- TODO(10.7)
 
   unsneakilyExtractPayload (WithResult p _) = p
 
@@ -85,11 +78,7 @@ instance EncCBOR a => SneakilyContainResult (WithResult a) where
 -- has been provided.
 instance SneakilyContainResult Seed where
   type Payload Seed = Seed
-  sneakilyExtractResult s sk =
-    OutputVRF
-      . hashToBytes
-      . hashWithEncoder @Blake2b_224 shelleyProtVer id
-      $ encCBOR s <> encCBOR sk
+  sneakilyExtractResult _s _sk = undefined -- TODO(10.7)
   unsneakilyExtractPayload = id
 
 instance VRFAlgorithm FakeVRF where
@@ -120,8 +109,8 @@ instance VRFAlgorithm FakeVRF where
     | proof == recomputedProof = Just o
     | otherwise = Nothing
     where
-      (OutputVRF recomputedProofBytes, _) = evalFakeVRF a (SignKeyFakeVRF n)
-      recomputedProof = fromIntegral . bytesToNatural $ recomputedProofBytes
+      (OutputVRF _recomputedProofBytes, _) = evalFakeVRF a (SignKeyFakeVRF n)
+      recomputedProof = undefined -- TODO(10.7)
 
   sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
@@ -130,30 +119,14 @@ instance VRFAlgorithm FakeVRF where
 
   rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
   rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k
-  rawSerialiseCertVRF (CertFakeVRF k s (OutputVRF b)) =
-    writeBinaryWord64 k <> writeBinaryWord16 s <> b
+  rawSerialiseCertVRF (CertFakeVRF _k _s (OutputVRF _b)) =
+    undefined -- TODO(10.7)
 
-  rawDeserialiseVerKeyVRF bs
-    | [kb] <- splitsAt [8] bs
-    , let k = readBinaryWord64 kb =
-        Just $! VerKeyFakeVRF k
-    | otherwise =
-        Nothing
+  rawDeserialiseVerKeyVRF _bs = undefined -- TODO(10.7)
 
-  rawDeserialiseSignKeyVRF bs
-    | [kb] <- splitsAt [8] bs
-    , let k = readBinaryWord64 kb =
-        Just $! SignKeyFakeVRF k
-    | otherwise =
-        Nothing
+  rawDeserialiseSignKeyVRF _bs = undefined -- TODO(10.7)
 
-  rawDeserialiseCertVRF bs
-    | [kb, smb, xs] <- splitsAt [8, 2, 16] bs
-    , let k = readBinaryWord64 kb
-    , let s = readBinaryWord16 smb =
-        Just $! CertFakeVRF k s (OutputVRF xs)
-    | otherwise =
-        Nothing
+  rawDeserialiseCertVRF _bs = undefined -- TODO(10.7)
 
 evalFakeVRF ::
   SneakilyContainResult a =>
@@ -188,13 +161,3 @@ instance DecCBOR (CertVRF FakeVRF) where
 
 instance EncCBOR (CertVRF FakeVRF) where
   encCBOR = encodeCertVRF
-
-readBinaryWord16 :: ByteString -> Word16
-readBinaryWord16 =
-  BS.foldl' (\acc w8 -> unsafeShiftL acc 8 + fromIntegral w8) 0
-
-writeBinaryWord16 :: Word16 -> ByteString
-writeBinaryWord16 =
-  BS.reverse
-    . fst
-    . BS.unfoldrN 2 (\w -> Just (fromIntegral w, unsafeShiftR w 8))
