@@ -85,7 +85,7 @@ module Cardano.Ledger.Hashes (
 ) where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import Cardano.Crypto.Hash (sizeHash)
+import Cardano.Crypto.Hash (hashSize)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
@@ -425,7 +425,7 @@ castSafeHash :: forall i j. SafeHash i -> SafeHash j
 castSafeHash (SafeHash h) = SafeHash (Hash.castHash h)
 
 standardHashSize :: Int
-standardHashSize = fromIntegral . sizeHash $ Proxy @HASH
+standardHashSize = fromIntegral . hashSize $ Proxy @HASH
 
 standardAddrHashSize :: Int
-standardAddrHashSize = fromIntegral . sizeHash $ Proxy @ADDRHASH
+standardAddrHashSize = fromIntegral . hashSize $ Proxy @ADDRHASH

@@ -140,7 +140,7 @@ instance DecCBOR Error where
     tag <- decodeWord8
     case tag of
       0 -> MultipleProposalsForProtocolVersion <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "Endorsement.Error" tag
+      _ -> cborError $ DecoderErrorUnknownTag "Endorsement.Error" (fromIntegral tag)
 
 -- | Register an endorsement.
 --

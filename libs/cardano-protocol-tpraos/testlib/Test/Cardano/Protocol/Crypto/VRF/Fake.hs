@@ -126,7 +126,7 @@ instance VRFAlgorithm FakeVRF where
   sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
   sizeCertVRF _ = 26
-  sizeOutputVRF _ = sizeHash (Proxy :: Proxy Blake2b_224)
+  sizeOutputVRF _ = hashSize (Proxy :: Proxy Blake2b_224)
 
   rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
   rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k

@@ -94,7 +94,7 @@ instance DecCBOR ApplicationNameError where
     case tag of
       0 -> checkSize 2 >> ApplicationNameTooLong <$> decCBOR
       1 -> checkSize 2 >> ApplicationNameNotAscii <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "ApplicationNameError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "ApplicationNameError" (fromIntegral tag)
 
 instance B.Buildable ApplicationNameError where
   build = \case

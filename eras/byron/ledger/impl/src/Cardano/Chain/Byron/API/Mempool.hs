@@ -70,7 +70,7 @@ instance DecCBOR ApplyMempoolPayloadErr where
       1 -> MempoolDlgErr <$> decCBOR
       2 -> MempoolUpdateProposalErr <$> decCBOR
       3 -> MempoolUpdateVoteErr <$> decCBOR
-      tag -> cborError $ DecoderErrorUnknownTag "ApplyMempoolPayloadErr" tag
+      tag -> cborError $ DecoderErrorUnknownTag "ApplyMempoolPayloadErr" (fromIntegral tag)
 
 applyMempoolPayload ::
   MonadError ApplyMempoolPayloadErr m =>

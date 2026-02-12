@@ -211,7 +211,7 @@ instance DecCBOR Error where
       1 -> checkSize 2 >> Voting <$> decCBOR
       2 -> checkSize 2 >> Endorsement <$> decCBOR
       3 -> checkSize 2 >> NumberOfGenesisKeysTooLarge <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "Interface.Error" tag
+      _ -> cborError $ DecoderErrorUnknownTag "Interface.Error" (fromIntegral tag)
 
 -- | Signal combining signals from various rules
 data Signal = Signal

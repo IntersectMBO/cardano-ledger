@@ -168,7 +168,7 @@ instance DecCBOR Error where
       2 -> checkSize 3 >> MultipleDelegationsForSlot <$> decCBOR <*> decCBOR
       3 -> checkSize 2 >> NonGenesisDelegator <$> decCBOR
       4 -> checkSize 3 >> WrongEpoch <$> decCBOR <*> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "Scheduling.Error" tag
+      _ -> cborError $ DecoderErrorUnknownTag "Scheduling.Error" (fromIntegral tag)
 
 -- | Update the delegation 'State' with a 'Certificate' if it passes
 --   all the validation rules. This is an implementation of the delegation
