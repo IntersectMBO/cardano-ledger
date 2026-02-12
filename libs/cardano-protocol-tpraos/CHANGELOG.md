@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.5.1.0
+
+* upper bound on cardano-crypto-class
+
 ## 1.5.0.0
 
 * Remove deprecated function `bHeaderSize`
