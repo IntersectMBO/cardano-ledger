@@ -103,3 +103,13 @@ source-repository-package
   subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
   --sha256: sha256-olahRoXIykwIeCwRFSNy4CJC68F+N/A2M0B25Wj8Rz0=
   tag: 0fd0b9d252637684c117f1366a87ae404fed41e1
+
+-- TODO: remove once https://github.com/IntersectMBO/plutus/pull/7586 is merged and plutus packages are released
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/plutus
+  tag: 339cc8b05cc5575ff1c7089dcf5972ac7546d717
+  --sha256: sha256-wqriBVjkC1mW/Mp+FButFNBRClync9cDwZtgG+a6lb0=
+  subdir:
+    plutus-core
+    plutus-ledger-api
