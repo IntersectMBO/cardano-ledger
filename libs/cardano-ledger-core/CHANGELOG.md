@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.20.0.0
+
+* upper bound on cardano-crypto-class
+
 ## 1.19.0.0
 
 * Add `bhviewProtVer` to `BHeaderView`
