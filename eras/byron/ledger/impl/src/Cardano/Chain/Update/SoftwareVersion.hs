@@ -96,7 +96,7 @@ instance DecCBOR SoftwareVersionError where
     tag <- decodeWord8
     case tag of
       0 -> SoftwareVersionApplicationNameError <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "SoftwareVersionError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "SoftwareVersionError" (fromIntegral tag)
 
 instance B.Buildable SoftwareVersionError where
   build = \case

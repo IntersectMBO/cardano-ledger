@@ -119,7 +119,7 @@ instance DecCBOR Error where
       1 -> checkSize 2 >> VotingProposalNotRegistered <$> decCBOR
       2 -> checkSize 2 >> VotingVoterNotDelegate <$> decCBOR
       3 -> checkSize 2 >> VotingVoteAlreadyCast <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "Voting.Error" tag
+      _ -> cborError $ DecoderErrorUnknownTag "Voting.Error" (fromIntegral tag)
 
 -- | Register a vote and confirm the corresponding proposal if it passes the
 --   voting threshold. This corresponds to the @UPVOTE@ rules in the spec.

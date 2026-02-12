@@ -169,7 +169,7 @@ instance DecCBOR TxValidationError where
       6 -> checkSize 3 >> TxValidationTxTooLarge <$> decCBOR <*> decCBOR
       7 -> checkSize 1 $> TxValidationUnknownAddressAttributes
       8 -> checkSize 1 $> TxValidationUnknownAttributes
-      _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" (fromIntegral tag)
 
 -- | Validate that:
 --
@@ -353,7 +353,7 @@ instance DecCBOR UTxOValidationError where
     decodeWord8 >>= \case
       0 -> UTxOValidationTxValidationError <$> decCBOR
       1 -> UTxOValidationUTxOError <$> decCBOR
-      tag -> cborError $ DecoderErrorUnknownTag "UTxOValidationError" tag
+      tag -> cborError $ DecoderErrorUnknownTag "UTxOValidationError" (fromIntegral tag)
 
 -- | Validate a transaction and use it to update the 'UTxO'
 updateUTxOTx ::

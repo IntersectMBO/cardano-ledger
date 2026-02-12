@@ -173,7 +173,7 @@ instance DecCBOR LovelaceError where
       1 -> checkSize 2 >> LovelaceTooLarge <$> decCBOR
       2 -> checkSize 2 >> LovelaceTooSmall <$> decCBOR
       3 -> checkSize 3 >> LovelaceUnderflow <$> decCBOR <*> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" (fromIntegral tag)
 
 -- | Maximal possible value of 'Lovelace'
 maxLovelaceVal :: Word64

@@ -125,7 +125,7 @@ instance DecCBOR TxInWitness where
       2 -> do
         matchSize "TxInWitness.RedeemWitness" len 2
         uncurry RedeemWitness <$> decodeKnownCborDataItem
-      tag -> cborError $ DecoderErrorUnknownTag "TxInWitness" tag
+      tag -> cborError $ DecoderErrorUnknownTag "TxInWitness" (fromIntegral tag)
 
 -- | Data that is being signed when creating a TxSig
 newtype TxSigData = TxSigData

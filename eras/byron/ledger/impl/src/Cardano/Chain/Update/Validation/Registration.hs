@@ -290,7 +290,7 @@ instance DecCBOR Error where
       11 -> checkSize 2 >> SoftwareVersionError <$> decCBOR
       12 -> checkSize 2 >> SystemTagError <$> decCBOR
       13 -> checkSize 1 >> pure NullUpdateProposal
-      _ -> cborError $ DecoderErrorUnknownTag "Registration.Error" tag
+      _ -> cborError $ DecoderErrorUnknownTag "Registration.Error" (fromIntegral tag)
 
 data TooLarge n = TooLarge
   { tlActual :: n
