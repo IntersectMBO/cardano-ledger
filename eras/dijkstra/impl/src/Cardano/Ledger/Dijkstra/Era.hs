@@ -1,6 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 #if __GLASGOW_HASKELL__ >= 908
 {-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
@@ -27,17 +30,29 @@ module Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBUTXO,
   DijkstraUTXO,
   DijkstraUTXOW,
+  DijkstraEraBlockHeader (..),
+  DijkstraBbodySignal (..),
 ) where
 
+import Cardano.Ledger.BaseTypes (Nonce)
+import Cardano.Ledger.Block (Block, EraBlockHeader)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Internal.Era (DijkstraEra)
 import Cardano.Ledger.Mary (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules
+import Lens.Micro
 
 instance EraTxLevel DijkstraEra where
   type STxLevel l DijkstraEra = STxBothLevels l DijkstraEra
+
+data DijkstraBbodySignal era where
+  DijkstraBbodySignal ::
+    DijkstraEraBlockHeader h era => {unDijkstraBbodySignal :: Block h era} -> DijkstraBbodySignal era
+
+class EraBlockHeader h era => DijkstraEraBlockHeader h era where
+  blockHeaderPrevNonceL :: Lens' (Block h era) Nonce
 
 -------------------------------------------------------------------------------
 -- Deprecated rules
