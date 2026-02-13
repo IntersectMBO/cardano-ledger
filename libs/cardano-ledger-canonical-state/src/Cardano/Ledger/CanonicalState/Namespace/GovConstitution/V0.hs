@@ -18,7 +18,6 @@ module Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0 (
   CanonicalConstitution (..),
   GovConstitutionIn (..),
   GovConstitutionOut (..),
-  IsCanonicalConstitution (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (Anchor (..), EpochNo (..), StrictMaybe (..))
@@ -58,11 +57,6 @@ data CanonicalConstitution = CanonicalConstitution
   , constitutionGuardrailsScriptHash :: !(StrictMaybe ScriptHash)
   }
   deriving (Eq, Show, Generic)
-
-class IsCanonicalConstitution a where
-  mkCanonicalConstitution :: a -> CanonicalConstitution
-mkCanonicalConstitution :: Constitution era -> CanonicalConstitution
-mkCanonicalConstitution Constitution{..} = CanonicalConstitution{..}
 
 instance (NamespaceEra v ~ era, Era era) => ToCanonicalCBOR v CanonicalConstitution where
   toCanonicalCBOR v (CanonicalConstitution {..}) =

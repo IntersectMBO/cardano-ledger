@@ -5,7 +5,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.CanonicalState.Conway () where
+module Cardano.Ledger.CanonicalState.Conway (
+  mkCanonicalConstitution,
+) where
 
 import Cardano.Ledger.CanonicalState.Namespace
 import Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
@@ -24,6 +26,5 @@ instance KnownNamespace "utxo/v0" where
   type NamespaceKey "utxo/v0" = UtxoIn
   type NamespaceEntry "utxo/v0" = UtxoOut ConwayEra
 
-instance IsCanonicalConstitution (Constitution ConwayEra) where
-  mkCanonicalConstitution Constitution {..} = CanonicalConstitution {..}
-  fromCanonicalConstitution CanonicalConstitution {..} = Constitution {..}
+mkCanonicalConstitution :: Constitution era -> CanonicalConstitution
+mkCanonicalConstitution Constitution {..} = CanonicalConstitution {..}
