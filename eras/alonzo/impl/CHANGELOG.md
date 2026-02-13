@@ -2,6 +2,8 @@
 
 ## 1.15.0.0
 
+* Add `validateExUnits`.
+* Change `AlonzoBBODY` `Signal` to `BbodySignal`.
 * Change return type of lenses in `AlonzoEraPParams`:
   - `hkdMaxValSizeL` to `Word32`
   - `hkdCollateralPercentageL` to `Word16`

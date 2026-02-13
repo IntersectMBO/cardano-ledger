@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,6 +20,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
   AlonzoBbodyPredFailure (..),
   AlonzoBbodyEvent (..),
   alonzoBbodyTransition,
+  validateExUnits,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
@@ -30,16 +32,15 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (totExUnits)
-import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, epochInfoPure)
+import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Keys (coerceKeyRole)
+import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
+  BbodySignal (..),
   ShelleyBbodyEvent (..),
   ShelleyBbodyPredFailure (..),
   ShelleyBbodyState (..),
@@ -53,12 +54,15 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPpupPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
+  validateBodyHash,
+  validateBodySize,
  )
-import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Cardano.Ledger.Slot (slotToEpochBoundary)
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
+  Rule,
+  RuleType (..),
   STS (..),
   TRC (..),
   TransitionRule,
@@ -72,9 +76,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
-
--- =======================================
--- A new PredicateFailure type
 
 data AlonzoBbodyPredFailure era
   = ShelleyInAlonzoBbodyPredFailure (ShelleyBbodyPredFailure era)
@@ -166,14 +167,33 @@ instance
       dec 1 = SumD TooManyExUnits <! From
       dec n = Invalid n
 
--- ========================================
--- The STS instance
+-- | Validate that total execution units (all transactions) do not exceed block limit.
+validateExUnits ::
+  forall era.
+  ( AlonzoEraTx era
+  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
+  ) =>
+  StrictSeq.StrictSeq (Tx TopTx era) ->
+  -- | Max block exunits protocol parameter.
+  ExUnits ->
+  Rule (EraRule "BBODY" era) 'Transition ()
+validateExUnits txs ppMax =
+  let txTotal = foldMap totExUnits txs
+   in pointWiseExUnits (<=) txTotal ppMax
+        ?! injectFailure
+          ( TooManyExUnits $
+              Mismatch
+                { mismatchSupplied = txTotal
+                , mismatchExpected = ppMax
+                }
+          )
 
 alonzoBbodyTransition ::
   forall era.
   ( STS (EraRule "BBODY" era)
-  , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  , Signal (EraRule "BBODY" era) ~ BbodySignal era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
+  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
@@ -182,84 +202,39 @@ alonzoBbodyTransition ::
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , EraBlockBody era
-  , AlonzoEraTxWits era
-  , AlonzoEraPParams era
+  , AlonzoEraTx era
   ) =>
   TransitionRule (EraRule "BBODY" era)
-alonzoBbodyTransition =
-  judgmentContext
-    >>= \( TRC
-             ( BbodyEnv pp account
-               , BbodyState ls b
-               , Block bh txsSeq
-               )
-           ) -> do
-        let txs = txsSeq ^. txSeqBlockBodyL
-            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashBlockBody @era txsSeq
+alonzoBbodyTransition = do
+  TRC (BbodyEnv pp account, BbodyState ls blocksMade, BbodySignal blk@Block {blockBody}) <-
+    judgmentContext
 
-        actualBodySize
-          == fromIntegral (bhviewBSize bh)
-            ?! injectFailure
-              ( ShelleyInAlonzoBbodyPredFailure
-                  ( WrongBlockBodySizeBBODY $
-                      Mismatch
-                        { mismatchSupplied = actualBodySize
-                        , mismatchExpected = fromIntegral $ bhviewBSize bh
-                        }
-                  )
-              )
+  validateBodySize blk (pp ^. ppProtocolVersionL)
 
-        actualBodyHash
-          == bhviewBHash bh
-            ?! injectFailure
-              ( ShelleyInAlonzoBbodyPredFailure
-                  ( InvalidBodyHashBBODY @era $
-                      Mismatch
-                        { mismatchSupplied = actualBodyHash
-                        , mismatchExpected = bhviewBHash bh
-                        }
-                  )
-              )
+  validateBodyHash blk
 
-        -- Note that this may not actually be a stake pool - it could be a
-        -- genesis key delegate. However, this would only entail an overhead of
-        -- 7 counts, and it's easier than differentiating here.
-        --
-        -- TODO move this computation inside 'incrBlocks' where it belongs. Here
-        -- we make an assumption that 'incrBlocks' must enforce, better for it
-        -- to be done in 'incrBlocks' where we can see that the assumption is
-        -- enforced.
-        let hkAsStakePool = coerceKeyRole $ bhviewID bh
-            slot = bhviewSlot bh
-        (firstSlotNo, curEpochNo) <- liftSTS $ do
-          ei <- asks epochInfoPure
-          let curEpochNo = epochInfoEpoch ei slot
-          pure (epochInfoFirst ei curEpochNo, curEpochNo)
+  let bhSlot = blk ^. blockHeaderSlotL
 
-        ls' <-
-          trans @(EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bhviewSlot bh) curEpochNo pp account, ls, StrictSeq.fromStrict txs)
+  (firstSlot, curEpoch) <- liftSTS $ slotToEpochBoundary bhSlot
 
-        {- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp  -}
-        let txTotal, ppMax :: ExUnits
-            txTotal = foldMap totExUnits txs
-            ppMax = pp ^. ppMaxBlockExUnitsL
-        pointWiseExUnits (<=) txTotal ppMax
-          ?! injectFailure (TooManyExUnits Mismatch {mismatchSupplied = txTotal, mismatchExpected = ppMax})
+  let txs = blockBody ^. txSeqBlockBodyL
 
-        pure $
-          BbodyState @era
-            ls'
-            ( incrBlocks
-                (isOverlaySlot firstSlotNo (pp ^. ppDG) slot)
-                hkAsStakePool
-                b
-            )
+  ls' <-
+    trans @(EraRule "LEDGERS" era) $
+      TRC
+        ( LedgersEnv bhSlot curEpoch pp account
+        , ls
+        , StrictSeq.fromStrict txs
+        )
+
+  validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
+
+  pure $ BbodyState ls' $ incrBlocks blk firstSlot (pp ^. ppDG) blocksMade
 
 instance
   ( EraRule "BBODY" era ~ AlonzoBBODY era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
+  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
@@ -267,12 +242,13 @@ instance
   , AlonzoEraTxWits era
   , EraBlockBody era
   , AlonzoEraPParams era
+  , AlonzoEraTx era
   ) =>
   STS (AlonzoBBODY era)
   where
   type State (AlonzoBBODY era) = ShelleyBbodyState era
 
-  type Signal (AlonzoBBODY era) = Block BHeaderView era
+  type Signal (AlonzoBBODY era) = BbodySignal era
 
   type Environment (AlonzoBBODY era) = BbodyEnv era
 
