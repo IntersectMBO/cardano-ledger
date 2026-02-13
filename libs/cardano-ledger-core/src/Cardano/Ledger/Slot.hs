@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -8,6 +7,7 @@
 module Cardano.Ledger.Slot (
   SlotNo (..),
   getTheSlotOfNoReturn,
+  isOverlaySlot,
   Duration (..),
   (-*),
   (+*),
@@ -21,9 +21,16 @@ module Cardano.Ledger.Slot (
   epochInfoEpoch,
   epochInfoFirst,
   epochInfoSize,
+  slotToEpochBoundary,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals (Globals, stabilityWindow), ShelleyBase, epochInfoPure)
+import Cardano.Ledger.BaseTypes (
+  Globals (Globals, stabilityWindow),
+  ShelleyBase,
+  UnitInterval,
+  epochInfoPure,
+  unboundRational,
+ )
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo as EI
@@ -82,6 +89,13 @@ epochInfoSize ::
   EpochSize
 epochInfoSize ei = runIdentity . EI.epochInfoSize ei
 
+-- | Given the current slot, get the epoch and its first slot.
+slotToEpochBoundary :: SlotNo -> Reader Globals (SlotNo, EpochNo)
+slotToEpochBoundary slot = do
+  ei <- asks epochInfoPure
+  let epoch = epochInfoEpoch ei slot
+  pure (epochInfoFirst ei epoch, epoch)
+
 -- | Figure out a slot number that is two stability windows before the end of the next
 -- epoch. Together with the slot number we also return the current epoch number and the
 -- next epoch number.
@@ -98,3 +112,19 @@ getTheSlotOfNoReturn slot = do
       firstSlotNextEpoch = epochInfoFirst epochInfo nextEpochNo
       pointOfNoReturn = firstSlotNextEpoch *- Duration (2 * stabilityWindow)
   pure (epochNo, pointOfNoReturn, nextEpochNo)
+
+-- | Determine if the given slot is reserved for the overlay schedule.
+isOverlaySlot ::
+  -- | The first slot of the given epoch.
+  SlotNo ->
+  -- | The decentralization parameter.
+  UnitInterval ->
+  -- | The slot to check.
+  SlotNo ->
+  Bool
+isOverlaySlot firstSlotNo dval slot = step s < step (s + 1)
+  where
+    s = fromIntegral $ slot -* firstSlotNo
+    d = unboundRational dval
+    step :: Rational -> Integer
+    step x = ceiling (x * d)
