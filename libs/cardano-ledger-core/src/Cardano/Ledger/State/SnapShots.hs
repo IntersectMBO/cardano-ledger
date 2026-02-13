@@ -37,7 +37,6 @@ module Cardano.Ledger.State.SnapShots (
   ssStake,
   ssStakeL,
   ssActiveStakeL,
-  ssStakeDistrL,
   ssDelegationsL,
 ) where
 
@@ -263,13 +262,12 @@ instance DecShareCBOR StakePoolSnapShot where
 
 -- | Snapshot of the stake distribution.
 data SnapShot = SnapShot
-  { ssActiveStake :: !Stake
+  { ssActiveStake :: !StakeWithDelegation
   -- ^ All of the stake for registered staking credentials that have a delegation to a stake pool.
   , ssTotalActiveStake :: !(NonZero Coin)
   -- ^ Total active stake, which is the sum of all of the stake from `ssStake`. It is primarily used
   -- in a denominator, therefore it cannot be zero and is defaulted to 1. This is a reasonable
   -- assumption for a system that relies on non-zero active stake to produce blocks.
-  , ssDelegations :: !(VMap VB VB (Credential Staking) (KeyHash StakePool)) -- TODO: subsume into `ssActiveStake`
   , ssStakePoolsSnapShot :: !(VMap VB VB (KeyHash StakePool) StakePoolSnapShot)
   -- ^ Snapshot of stake pools' information that is relevant only for the reward calculation logic.
   }
@@ -363,7 +361,7 @@ instance ToKeyValuePairs SnapShots where
         ]
 
 emptySnapShot :: SnapShot
-emptySnapShot = SnapShot (Stake VMap.empty) (knownNonZeroCoin @1) VMap.empty mempty
+emptySnapShot = SnapShot (StakeWithDelegations VMap.empty) (knownNonZeroCoin @1) mempty
 
 emptySnapShots :: SnapShots
 emptySnapShots =
@@ -424,14 +422,14 @@ snapShotFromInstantStake instantStake dState PState {psStakePools} =
 calculatePoolStake ::
   (KeyHash StakePool -> Bool) ->
   VMap VB VB (Credential Staking) (KeyHash StakePool) ->
-  Stake ->
+  StakeWithDelegation ->
   Map.Map (KeyHash StakePool) (CompactForm Coin)
 calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty delegs
   where
     accum ans cred keyHash =
       if includeHash keyHash
         then
-          let !c = fromMaybe mempty $ VMap.lookup cred (unStake stake)
+          let !c = maybe mempty swdStake $ VMap.lookup cred (unActiveStake stake)
            in Map.insertWith (<>) keyHash c ans
         else ans
 
@@ -479,19 +477,16 @@ ssFeeL = lens ssFee (\ds u -> ds {ssFee = u})
 
 -- SnapShot
 
-ssActiveStakeL :: Lens' SnapShot Stake
+ssActiveStakeL :: Lens' SnapShot StakeWithDelegation
 ssActiveStakeL = lens ssActiveStake (\ds u -> ds {ssActiveStake = u})
 
-ssStake :: SnapShot -> Stake
+ssStake :: SnapShot -> StakeWithDelegation
 ssStake = ssActiveStake
 {-# DEPRECATED ssStake "In favor of `ssActiveStake`" #-}
 
-ssStakeL :: Lens' SnapShot Stake
+ssStakeL :: Lens' SnapShot StakeWithDelegation
 ssStakeL = lens ssActiveStake (\ds u -> ds {ssActiveStake = u})
 {-# DEPRECATED ssStakeL "In favor of `ssActiveStakeL`" #-}
-
-ssStakeDistrL :: Lens' SnapShot (VMap VB VP (Credential Staking) (CompactForm Coin))
-ssStakeDistrL = lens (unStake . ssActiveStake) (\ds u -> ds {ssActiveStake = Stake u})
 
 ssDelegationsL :: Lens' SnapShot (VMap VB VB (Credential Staking) (KeyHash StakePool))
 ssDelegationsL = lens ssDelegations (\ds u -> ds {ssDelegations = u})
