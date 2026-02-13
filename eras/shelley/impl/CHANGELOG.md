@@ -2,6 +2,13 @@
 
 ## 1.18.0.0
 
+* Deprecate `BHeaderView` in favour of `EraBlockHeader`.
+  - `chainChecks` now takes a `Block h era` instead.
+  - `ApplyBlock era` now takes another parameter (block header) to become `ApplyBlock h era`.
+    + `applyBlock*` functions and `applyTickNoEvents` now take `Block h era` instead.
+  - Update `incrBlocks` to `:: SlotNo -> UnitInterval -> SlotNo -> KeyHash StakePool -> BlocksMake -> BlocksMade`.
+  - Change `ShelleyBBODY` `Signal` to `BbodySignal`.
+  - Add `validateBodySize` and `validateBodyHash`.
 * Remove `ssPoolParamsL`
 * Add `Generic` instance for `ApplyTxError`
 * Change `updateNonMyopic`, `likelihoodsNM`, `rewLikelihoods` and `fvPoolRewardInfo` to use `VMap`

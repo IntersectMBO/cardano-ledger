@@ -43,6 +43,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Nonce (..),
   StrictMaybe (..),
+  UnitInterval,
   maybeToStrictMaybe,
   mkNonceFromNumber,
   strictMaybeToMaybe,
@@ -59,10 +60,12 @@ import Cardano.Ledger.Binary (
   serialize,
   withSlice,
  )
+import Cardano.Ledger.Block (Block, EraBlockHeader (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Tx ()
-import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..), isOverlaySlot)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -287,10 +290,21 @@ slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 incrBlocks ::
-  Bool ->
-  KeyHash StakePool ->
+  EraBlockHeader h era =>
+  Block h era ->
+  -- | First Slot
+  SlotNo ->
+  -- | ppDG
+  UnitInterval ->
   BlocksMade ->
   BlocksMade
-incrBlocks isOverlay hk blocksMade@(BlocksMade blocksMadeMap)
+incrBlocks blk firstSlot d blocksMade@(BlocksMade blocksMadeMap)
   | isOverlay = blocksMade
-  | otherwise = BlocksMade $ Map.insertWith (+) hk 1 blocksMadeMap
+  | otherwise = BlocksMade $ Map.insertWith (+) hkAsStakePool 1 blocksMadeMap
+  where
+    bhSlot = blk ^. blockHeaderSlotL
+    isOverlay = isOverlaySlot firstSlot d bhSlot
+    -- Note that this may not actually be a stake pool - it could be a
+    -- genesis key delegate. However, this would only entail an overhead
+    -- of 7 counts, and it's easier than differentiating here.
+    hkAsStakePool = coerceKeyRole $ blk ^. blockHeaderIssuerL

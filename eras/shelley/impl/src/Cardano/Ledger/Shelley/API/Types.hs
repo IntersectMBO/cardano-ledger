@@ -11,7 +11,6 @@ import Cardano.Ledger.Address as X (
   raNetwork,
   pattern RewardAccount,
  )
-import Cardano.Ledger.BHeaderView as X (isOverlaySlot)
 import Cardano.Ledger.BaseTypes as X (
   CertIx,
   Globals (..),
@@ -122,6 +121,7 @@ import Cardano.Ledger.Shelley.TxOut as X (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits as X (
   ShelleyTxWits,
  )
+import Cardano.Ledger.Slot as X (isOverlaySlot)
 import Cardano.Ledger.State as X (
   PoolDistr (..),
   PoolMetadata (..),

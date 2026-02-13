@@ -1,8 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -19,19 +21,21 @@ module Cardano.Ledger.Shelley.Rules.Bbody (
   ShelleyBBODY,
   ShelleyBbodyState (..),
   BbodyEnv (..),
+  BbodySignal (..),
   ShelleyBbodyPredFailure (..),
   ShelleyBbodyEvent (..),
   PredicateFailure,
   State,
+  validateBodySize,
+  validateBodyHash,
 ) where
 
-import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (
   BlocksMade,
   Mismatch (..),
+  ProtVer,
   Relation (..),
   ShelleyBase,
-  epochInfoPure,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -42,9 +46,8 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (BbodySignal (..), Block (..), EraBlockHeader (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.Era (ShelleyBBODY, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (ChainAccountState)
@@ -57,11 +60,12 @@ import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure)
-import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Cardano.Ledger.Slot (slotToEpochBoundary)
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
+  Rule,
+  RuleType (..),
   STS (..),
   TRC (..),
   TransitionRule,
@@ -184,6 +188,8 @@ instance
 
 instance
   ( EraBlockBody era
+  , EraRule "BBODY" era ~ ShelleyBBODY era
+  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
@@ -192,7 +198,7 @@ instance
   where
   type State (ShelleyBBODY era) = ShelleyBbodyState era
 
-  type Signal (ShelleyBBODY era) = Block BHeaderView era
+  type Signal (ShelleyBBODY era) = BbodySignal era
 
   type Environment (ShelleyBBODY era) = BbodyEnv era
 
@@ -208,57 +214,82 @@ instance
 bbodyTransition ::
   forall era.
   ( STS (ShelleyBBODY era)
+  , EraRule "BBODY" era ~ ShelleyBBODY era
   , EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
+  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
   ) =>
   TransitionRule (ShelleyBBODY era)
-bbodyTransition =
-  judgmentContext
-    >>= \( TRC
-             ( BbodyEnv pp account
-               , BbodyState ls b
-               , Block {blockHeader = blockHeaderView, blockBody}
-               )
-           ) -> do
-        let txs = blockBody ^. txSeqBlockBodyL
-            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) blockBody
-            actualBodyHash = hashBlockBody blockBody
+bbodyTransition = do
+  TRC (BbodyEnv pp account, BbodyState ls blocksMade, BbodySignal blk@Block {blockBody}) <-
+    judgmentContext
 
-        actualBodySize
-          == fromIntegral (bhviewBSize blockHeaderView)
-            ?! WrongBlockBodySizeBBODY
-              ( Mismatch
-                  { mismatchSupplied = actualBodySize
-                  , mismatchExpected = fromIntegral $ bhviewBSize blockHeaderView
-                  }
-              )
+  validateBodySize blk (pp ^. ppProtocolVersionL)
 
-        actualBodyHash
-          == bhviewBHash blockHeaderView
-            ?! InvalidBodyHashBBODY
-              ( Mismatch
-                  { mismatchSupplied = actualBodyHash
-                  , mismatchExpected = bhviewBHash blockHeaderView
-                  }
-              )
-        -- Note that this may not actually be a stake pool - it could be a genesis key
-        -- delegate. However, this would only entail an overhead of 7 counts, and it's
-        -- easier than differentiating here.
-        let hkAsStakePool = coerceKeyRole $ bhviewID blockHeaderView
-            slot = bhviewSlot blockHeaderView
-        (firstSlotNo, curEpochNo) <- liftSTS $ do
-          ei <- asks epochInfoPure
-          let curEpochNo = epochInfoEpoch ei slot
-          pure (epochInfoFirst ei curEpochNo, curEpochNo)
+  validateBodyHash blk
 
-        ls' <-
-          trans @(EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bhviewSlot blockHeaderView) curEpochNo pp account, ls, StrictSeq.fromStrict txs)
+  let bhSlot = blk ^. blockHeaderSlotL
 
-        let isOverlay = isOverlaySlot firstSlotNo (pp ^. ppDG) slot
-        pure $ BbodyState ls' (incrBlocks isOverlay hkAsStakePool b)
+  (firstSlot, curEpoch) <- liftSTS $ slotToEpochBoundary bhSlot
+
+  ls' <-
+    trans @(EraRule "LEDGERS" era) $
+      TRC
+        ( LedgersEnv bhSlot curEpoch pp account
+        , ls
+        , StrictSeq.fromStrict $ blockBody ^. txSeqBlockBodyL
+        )
+
+  pure $ BbodyState ls' $ incrBlocks blk firstSlot (pp ^. ppDG) blocksMade
+
+-- | Validate that actual block body size matches claimed size in block header.
+validateBodySize ::
+  forall h era.
+  ( EraBlockHeader h era
+  , EraBlockBody era
+  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
+  ) =>
+  Block h era ->
+  ProtVer ->
+  Rule (EraRule "BBODY" era) 'Transition ()
+validateBodySize block protVer =
+  actualSize
+    == sizeInBlockHeader
+      ?! injectFailure
+        ( WrongBlockBodySizeBBODY $
+            Mismatch
+              { mismatchSupplied = actualSize
+              , mismatchExpected = sizeInBlockHeader
+              }
+        )
+  where
+    actualSize = bBodySize protVer $ blockBody block
+    sizeInBlockHeader = fromIntegral $ block ^. blockHeaderBSizeL
+
+-- | Validate that actual block body hash matches claimed hash in block header.
+validateBodyHash ::
+  forall h era.
+  ( EraBlockHeader h era
+  , EraBlockBody era
+  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
+  ) =>
+  Block h era ->
+  Rule (EraRule "BBODY" era) 'Transition ()
+validateBodyHash block =
+  actualHash
+    == hashInBlockHeader
+      ?! injectFailure
+        ( InvalidBodyHashBBODY $
+            Mismatch
+              { mismatchSupplied = actualHash
+              , mismatchExpected = hashInBlockHeader
+              }
+        )
+  where
+    actualHash = hashBlockBody $ blockBody block
+    hashInBlockHeader = block ^. blockHeaderBHashL
 
 instance
   forall era ledgers.
