@@ -86,6 +86,7 @@ import Data.Coerce (Coercible, coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Word (Word64)
+import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils as CoreUtils
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
@@ -104,7 +105,7 @@ import Test.Tasty.HUnit (
  )
 
 type ChainProperty era =
-  ( ApplyBlock era
+  ( ApplyBlock TestBlockHeader era
   , GetLedgerView era
   , EraTx era
   )
