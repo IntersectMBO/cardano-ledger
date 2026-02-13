@@ -54,8 +54,8 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPpupPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
-  validateBodyHash,
-  validateBodySize,
+  validateBlockBodyHash,
+  validateBlockBodySize,
  )
 import Cardano.Ledger.Slot (slotToEpochBoundary)
 import Control.DeepSeq (NFData)
@@ -168,6 +168,7 @@ instance
       dec n = Invalid n
 
 -- | Validate that total execution units (all transactions) do not exceed block limit.
+-- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp
 validateExUnits ::
   forall era.
   ( AlonzoEraTx era
@@ -206,14 +207,14 @@ alonzoBbodyTransition ::
   ) =>
   TransitionRule (EraRule "BBODY" era)
 alonzoBbodyTransition = do
-  TRC (BbodyEnv pp account, BbodyState ls blocksMade, BbodySignal blk@Block {blockBody}) <-
+  TRC (BbodyEnv pp account, BbodyState ls blocksMade, BbodySignal block@Block {blockBody}) <-
     judgmentContext
 
-  validateBodySize blk (pp ^. ppProtocolVersionL)
+  validateBlockBodySize block (pp ^. ppProtocolVersionL)
 
-  validateBodyHash blk
+  validateBlockBodyHash block
 
-  let bhSlot = blk ^. blockHeaderSlotL
+  let bhSlot = block ^. slotNoBlockHeaderL
 
   (firstSlot, curEpoch) <- liftSTS $ slotToEpochBoundary bhSlot
 
@@ -229,7 +230,7 @@ alonzoBbodyTransition = do
 
   validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
 
-  pure $ BbodyState ls' $ incrBlocks blk firstSlot (pp ^. ppDG) blocksMade
+  pure $ BbodyState ls' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
 
 instance
   ( EraRule "BBODY" era ~ AlonzoBBODY era
