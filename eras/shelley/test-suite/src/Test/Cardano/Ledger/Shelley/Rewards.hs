@@ -793,11 +793,8 @@ mkRewardAns
               r
               (BlocksMade b)
               totalBlocks
-              stakeRestrictedToPool
-              delegs
               totalStake
               totalActiveStake
-              stakePools
               stakePoolId
               stakePoolSnapShot
       free =

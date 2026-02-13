@@ -70,11 +70,8 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Decoding (interns)
 import Cardano.Ledger.Coin (
   Coin (..),
-  CompactForm (..),
   coinToRational,
-  fromCompactCoinNonZero,
   knownNonZeroCoin,
-  knownNonZeroCompactCoin,
   rationalToCoinViaFloor,
   unCoinNonZero,
  )
@@ -86,13 +83,12 @@ import Cardano.Ledger.State.CertState (DState (..), PState (..))
 import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.State.Stake
 import Cardano.Ledger.State.StakePool (
-  StakePoolParams (sppVrf),
+  StakePoolParams,
   StakePoolState (..),
   stakePoolStateToStakePoolParams,
  )
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
-import Control.Exception (assert)
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State.Strict (get)
@@ -107,7 +103,6 @@ import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
 import Data.Word (Word16)
 import GHC.Generics (Generic)
-import GHC.Stack
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
@@ -396,35 +391,21 @@ emptySnapShots =
 
 snapShotFromInstantStake ::
   forall era.
-  (HasCallStack, EraStake era) =>
+  EraStake era =>
   InstantStake era ->
   DState era ->
   PState era ->
   Network ->
   SnapShot
 snapShotFromInstantStake instantStake dState PState {psStakePools} network =
-  assert
-    ( delegatorsPerStakePool
-        == reverseDelegatorsPerStakePool
-        || error
-          ( "Delegs:\n  "
-              ++ show delegatorsPerStakePool
-              ++ "\n/=\nReverse Delegs:\n  "
-              ++ show reverseDelegatorsPerStakePool
-          )
-    )
-    $ SnapShot
-      { ssStake = activeStake
-      , ssTotalActiveStake = totalActiveStake
-      , ssDelegations = delegs
-      , ssPoolParams = poolParams
-      , ssStakePoolsSnapShot = stakePoolsSnapShot
-      }
+  SnapShot
+    { ssStake = activeStake
+    , ssTotalActiveStake = totalActiveStake
+    , ssDelegations = delegs
+    , ssPoolParams = poolParams
+    , ssStakePoolsSnapShot = stakePoolsSnapShot
+    }
   where
-    reverseDelegatorsPerStakePool =
-      Map.mapMaybe
-        (\sps -> spsDelegators sps <$ guard (not (Set.null (spsDelegators sps))))
-        psStakePools
     poolParams =
       VMap.fromDistinctAscListN
         (Map.size psStakePools)
@@ -437,11 +418,6 @@ snapShotFromInstantStake instantStake dState PState {psStakePools} network =
     totalActiveStake = sumAllStake activeStake `nonZeroOr` knownNonZeroCoin @1
     accounts = dsAccounts dState
     delegs = VMap.fromDistinctAscListN delegsCount delegsAscList
-    delegatorsPerStakePool =
-      VMap.foldlWithKey
-        (\acc cred poolId -> Map.insertWith (<>) poolId (Set.singleton cred) acc)
-        mempty
-        delegs
     keepAndCountDelegations ::
       Credential Staking ->
       AccountState era ->
@@ -472,28 +448,12 @@ calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty 
            in Map.insertWith (<>) keyHash c ans
         else ans
 
-calculatePoolDistr :: HasCallStack => SnapShot -> PoolDistr
+calculatePoolDistr :: SnapShot -> PoolDistr
 calculatePoolDistr = calculatePoolDistr' (const True)
 
-calculatePoolDistr' :: HasCallStack => (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
-calculatePoolDistr' includeHash (SnapShot stake activeStake delegs poolParams stakePoolSnapShot) =
-  let total = sumAllStakeCompact stake
-      nonZeroTotal = fromCompactCoinNonZero $ total `nonZeroOr` knownNonZeroCompactCoin @1
-      poolStakeMap = calculatePoolStake includeHash delegs stake
-      oldPoolDistr =
-        PoolDistr
-          ( Map.intersectionWith
-              ( \stakePoolStake@(CompactCoin w64) poolParam ->
-                  IndividualPoolStake
-                    (toInteger w64 %. unCoinNonZero nonZeroTotal)
-                    stakePoolStake
-                    (sppVrf poolParam)
-              )
-              poolStakeMap
-              (VMap.toMap poolParams)
-          )
-          nonZeroTotal
-      toIndividualPoolStake poolId spss = do
+calculatePoolDistr' :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
+calculatePoolDistr' includeHash (SnapShot _ activeStake _ _ stakePoolSnapShot) =
+  let toIndividualPoolStake poolId spss = do
         guard (includeHash poolId)
         guard (spssNumDelegators spss > 0)
         Just
@@ -507,13 +467,7 @@ calculatePoolDistr' includeHash (SnapShot stake activeStake delegs poolParams st
           { unPoolDistr = VMap.toMap $ VMap.mapMaybeWithKey toIndividualPoolStake stakePoolSnapShot
           , pdTotalActiveStake = activeStake
           }
-      showFailure =
-        error $
-          "PoolDistr is not the same:\nOld PoolDistr:\n"
-            <> show oldPoolDistr
-            <> "\nNew PoolDistr:\n"
-            <> show poolDistr
-   in assert (oldPoolDistr == poolDistr || showFailure) poolDistr
+   in poolDistr
 
 -- ======================================================
 -- Lenses
