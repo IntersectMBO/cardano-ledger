@@ -5,6 +5,8 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -13,15 +15,19 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Block (
   Block (..),
   bheader,
   bbody,
+  BbodySignal (..),
+  EraBlockHeader (..),
   neededTxInsForBlock,
 ) where
 
 import Cardano.Base.Proxy (asProxy)
+import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -34,13 +40,15 @@ import Cardano.Ledger.Binary (
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Slotting.Slot (SlotNo)
 import Control.DeepSeq (NFData)
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro (Lens', (^.))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era = Block
@@ -132,3 +140,15 @@ neededTxInsForBlock Block {blockBody} = Set.filter isNotNewInput allTxIns
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txIdTxBody txBodies
     isNotNewInput (TxIn txId _) = txId `Set.notMember` newTxIds
+
+data BbodySignal era where
+  BbodySignal ::
+    EraBlockHeader h era => {unBbodySignal :: Block h era} -> BbodySignal era
+
+class Era era => EraBlockHeader h era where
+  blockHeaderIssuerL :: Lens' (Block h era) (KeyHash BlockIssuer)
+  blockHeaderBSizeL :: Lens' (Block h era) Word32
+  blockHeaderHSizeL :: Lens' (Block h era) Int
+  blockHeaderBHashL :: Lens' (Block h era) (Hash HASH EraIndependentBlockBody)
+  blockHeaderSlotL :: Lens' (Block h era) SlotNo
+  blockHeaderProtVerL :: Lens' (Block h era) ProtVer

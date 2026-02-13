@@ -2,11 +2,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Cardano.Ledger.BHeaderView where
+module Cardano.Ledger.BHeaderView {-# DEPRECATED "Use the {Era|ShelleyEra|DijkstraEra|...}BlockHeader typeclasses instead." #-} where
 
-import Cardano.Ledger.BaseTypes (BoundedRational (..), Nonce, ProtVer, UnitInterval)
+import Cardano.Ledger.BaseTypes (Nonce, ProtVer)
 import Cardano.Ledger.Hashes (EraIndependentBlockBody, HASH, Hash, KeyHash, KeyRole (..))
-import Cardano.Ledger.Slot (SlotNo (..), (-*))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Control.DeepSeq (NFData)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -40,19 +40,3 @@ data BHeaderView = BHeaderView
   deriving (Generic)
 
 instance NFData BHeaderView
-
--- | Determine if the given slot is reserved for the overlay schedule.
-isOverlaySlot ::
-  -- | The first slot of the given epoch.
-  SlotNo ->
-  -- | The decentralization parameter.
-  UnitInterval ->
-  -- | The slot to check.
-  SlotNo ->
-  Bool
-isOverlaySlot firstSlotNo dval slot = step s < step (s + 1)
-  where
-    s = fromIntegral $ slot -* firstSlotNo
-    d = unboundRational dval
-    step :: Rational -> Integer
-    step x = ceiling (x * d)
