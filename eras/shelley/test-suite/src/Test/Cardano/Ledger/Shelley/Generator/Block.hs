@@ -14,8 +14,8 @@ module Test.Cardano.Ledger.Shelley.Generator.Block (
 ) where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.BHeaderView (bhviewBSize, bhviewHSize)
 import Cardano.Ledger.BaseTypes (UnitInterval)
+import Cardano.Ledger.Block (EraBlockHeader (..))
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsGenDelegsL)
@@ -26,7 +26,6 @@ import Cardano.Protocol.TPraos.BHeader (
   BHeader (..),
   LastAppliedBlock (..),
   hashHeaderToNonce,
-  makeHeaderView,
   mkSeed,
   seedL,
  )
@@ -36,6 +35,7 @@ import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad (unless)
+import Control.State.Transition.Extended (SingEP (EPDiscard))
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.List as List (find)
@@ -46,6 +46,7 @@ import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Common (tracedDiscard)
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
@@ -86,11 +87,12 @@ type TxGen era =
 genBlock ::
   forall era c.
   ( MinLEDGER_STS era
-  , ApplyBlock era
+  , ApplyBlock TestBlockHeader era
   , GetLedgerView era
   , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv c era)
   , EraGen era
   , PraosCrypto c
+  , EraBlockHeader (BHeader c) era
   ) =>
   GenEnv c era ->
   ChainState era ->
@@ -106,9 +108,10 @@ genBlock ge = genBlockWithTxGen genTxs ge
 genBlockWithTxGen ::
   forall era c.
   ( GetLedgerView era
-  , ApplyBlock era
+  , ApplyBlock TestBlockHeader era
   , EraGen era
   , PraosCrypto c
+  , EraBlockHeader (BHeader c) era
   ) =>
   TxGen era ->
   GenEnv c era ->
@@ -173,17 +176,18 @@ genBlockWithTxGen
         -- e.g. the KES period in which this key starts to be valid.
         <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
         <*> pure oCert
-    let hView = makeHeaderView (blockHeader theBlock) Nothing
-    unless (bhviewBSize hView <= pp ^. ppMaxBBSizeL) $
+    let bSize = theBlock ^. blockHeaderBSizeL
+    unless (bSize <= pp ^. ppMaxBBSizeL) $
       tracedDiscard $
-        "genBlockWithTxGen: bhviewBSize too large"
-          <> show (bhviewBSize hView)
+        "genBlockWithTxGen: bsize too large"
+          <> show bSize
           <> " vs "
           <> show (pp ^. ppMaxBBSizeL)
-    unless (bhviewHSize hView <= fromIntegral (pp ^. ppMaxBHSizeL)) $
+    let hSize = theBlock ^. blockHeaderHSizeL
+    unless (hSize <= fromIntegral (pp ^. ppMaxBHSizeL)) $
       tracedDiscard $
-        "genBlockWithTxGen: bhviewHSize too large"
-          <> show (bhviewHSize hView)
+        "genBlockWithTxGen: header size too large"
+          <> show hSize
           <> " vs "
           <> show (pp ^. ppMaxBHSizeL)
     pure theBlock
@@ -198,7 +202,7 @@ selectNextSlotWithLeader ::
   forall era c.
   ( EraGen era
   , GetLedgerView era
-  , ApplyBlock era
+  , ApplyBlock TestBlockHeader era
   , PraosCrypto c
   ) =>
   GenEnv c era ->
@@ -274,7 +278,7 @@ selectNextSlotWithLeader
 -- | The chain state is a composite of the new epoch state and the chain dep
 -- state. We tick both.
 tickChainState ::
-  (GetLedgerView era, ApplyBlock era) =>
+  (GetLedgerView era, ApplyBlock TestBlockHeader era) =>
   SlotNo ->
   ChainState era ->
   ChainState era
@@ -302,7 +306,7 @@ tickChainState
         ChainDepState {csProtocol, csTickn} =
           tickChainDepState testGlobals lv isNewEpoch cds
         PrtclState ocertIssue evNonce candNonce = csProtocol
-        nes' = applyTickNoEvents testGlobals chainNes slotNo
+        nes' = fst $ applyTick @TestBlockHeader EPDiscard testGlobals chainNes slotNo
      in ChainState
           { chainNes = nes'
           , chainOCertIssue = ocertIssue

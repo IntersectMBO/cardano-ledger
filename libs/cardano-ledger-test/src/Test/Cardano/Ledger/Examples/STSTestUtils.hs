@@ -48,10 +48,10 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), AsIx, ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
-import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), mkTxIxPartial)
+import Cardano.Ledger.Block (BbodySignal, EraBlockHeader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (AlonzoEraTxOut (..), ScriptIntegrityHash)
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -252,7 +252,7 @@ mkSingleRedeemer tag datum =
 -- and expected are ValidationTagMismatch. Of course the 'path' to ValidationTagMismatch differs by Era.
 -- so we need to case over the Era proof, to get the path correctly.
 testBBODY ::
-  forall era.
+  forall era h.
   ( HasCallStack
   , Eq (State (EraRule "LEDGERS" era))
   , ToExpr (PredicateFailure (EraRule "BBODY" era))
@@ -260,17 +260,18 @@ testBBODY ::
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
-  , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  , Signal (EraRule "BBODY" era) ~ BbodySignal era
   , STS (EraRule "BBODY" era)
+  , EraBlockHeader h era
   ) =>
   ShelleyBbodyState era ->
-  Block BHeaderView era ->
+  Block h era ->
   Either (NonEmpty (PredicateFailure (EraRule "BBODY" era))) (ShelleyBbodyState era) ->
   PParams era ->
   Expectation
 testBBODY initialSt block expected pparams =
   let env = BbodyEnv pparams def
-   in runSTS @"BBODY" @era (TRC (env, initialSt, block)) (genericCont "" expected)
+   in runSTS @"BBODY" @era (TRC (env, initialSt, Shelley.BbodySignal block)) (genericCont "" expected)
 
 -- | Use an equality test on the expected and computed [PredicateFailure]
 testUTXOW ::
