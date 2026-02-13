@@ -32,9 +32,9 @@
 --      validateType @"gov/constitution/v0" @(ScriptHash) "script_hash"
 -- --                  ^^^^^^^^^^^^^^^^^^                 ^^^^^^^^^^^^
 -- --                   SCLS namespace                    CDDL rule name, to verify against
---     isCanonical @"common" @ScriptHash
---                  ^^^^^^^
---                   Namespace
+--      isCanonical @"common" @ScriptHash
+-- --               ^^^^^^^
+-- --               Namespace
 -- @
 module Cardano.Ledger.CanonicalState.LedgerCBOR (
   LedgerCBOR (..),
@@ -64,15 +64,14 @@ newtype LedgerCBOR (v :: Symbol) a = LedgerCBOR {unLedgerCBOR :: a}
   deriving (Eq, Show)
 
 instance (EncCBOR a, Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v (LedgerCBOR v a) where
-  toCanonicalCBOR _v (LedgerCBOR a) = assumeCanonicalEncoding $ toPlainEncoding (eraProtVerLow @era) (encCBOR a)
+  toCanonicalCBOR _v (LedgerCBOR a) = assumeCanonicalEncoding $ toEraCBOR @era a
 
 instance (DecCBOR a, Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v (LedgerCBOR v a) where
   fromCanonicalCBOR =
-    Versioned . LedgerCBOR
-      <$> (assumeCanonicalDecoder $ toPlainDecoder Nothing (eraProtVerLow @era) decCBOR)
+    Versioned . LedgerCBOR <$> assumeCanonicalDecoder (fromEraCBOR @era)
 
 -- | Helper that allows us to deriving instances via decodeTermToken CBOR representation
-newtype LedgerCBORSafe (v :: Symbol) a = LedgerCBORSafe {unLedgerCBORSafe :: a}
+newtype LedgerSafeCBOR (v :: Symbol) a = LedgerSafeCBOR {unLedgerSafeCBOR :: a}
   deriving (Eq, Show)
 
 -- | A safer version of 'LedgerCBOR' that forces canonical encoding by re-encoding the produced value,
@@ -84,12 +83,11 @@ instance
   (EncCBOR a, Era era, NamespaceEra v ~ era) =>
   ToCanonicalCBOR v (LedgerCBORSafe v a)
   where
-  toCanonicalCBOR v (LedgerCBORSafe a) = forceCanonical v $ toPlainEncoding (eraProtVerLow @era) (encCBOR a)
+  toCanonicalCBOR v (LedgerCBORSafe a) = forceCanonical v $ toEraCBOR @era a
 
 instance
   (DecCBOR a, Era era, NamespaceEra v ~ era) =>
   FromCanonicalCBOR v (LedgerCBORSafe v a)
   where
   fromCanonicalCBOR =
-    Versioned . LedgerCBORSafe
-      <$> (assumeCanonicalDecoder $ toPlainDecoder Nothing (eraProtVerLow @era) decCBOR)
+    Versioned . LedgerCBORSafe <$> assumeCanonicalDecoder (fromEraCBOR @era)

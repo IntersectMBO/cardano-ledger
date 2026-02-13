@@ -61,7 +61,8 @@ data CanonicalConstitution = CanonicalConstitution
 
 class IsCanonicalConstitution a where
   mkCanonicalConstitution :: a -> CanonicalConstitution
-  fromCanonicalConstitution :: CanonicalConstitution -> a
+mkCanonicalConstitution :: Constitution era -> CanonicalConstitution
+mkCanonicalConstitution Constitution{..} = CanonicalConstitution{..}
 
 instance (NamespaceEra v ~ era, Era era) => ToCanonicalCBOR v CanonicalConstitution where
   toCanonicalCBOR v (CanonicalConstitution {..}) =
