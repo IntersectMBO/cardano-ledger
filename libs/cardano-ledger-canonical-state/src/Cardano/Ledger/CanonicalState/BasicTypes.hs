@@ -2,13 +2,18 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.CanonicalState.BasicTypes (
   OnChain (..),
@@ -16,11 +21,16 @@ module Cardano.Ledger.CanonicalState.BasicTypes (
   CanonicalCoin (..),
 ) where
 
+import Cardano.Ledger.BaseTypes (Anchor (..), StrictMaybe (..))
+import Cardano.Ledger.CanonicalState.LedgerCBOR
+import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
-import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..))
+import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), peekTokenType)
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.Versioned
+import qualified Codec.CBOR.Decoding as D
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import Data.Kind (Type)
@@ -73,3 +83,36 @@ instance FromCanonicalCBOR v CanonicalCoin where
 
 instance ToCanonicalCBOR v CanonicalCoin where
   toCanonicalCBOR v (CanonicalCoin (CompactCoin c)) = toCanonicalCBOR v c
+
+instance ToCanonicalCBOR v a => ToCanonicalCBOR v (StrictMaybe a) where
+  toCanonicalCBOR v SNothing = toCanonicalCBOR v ()
+  toCanonicalCBOR v (SJust x) = toCanonicalCBOR v x
+
+instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictMaybe a) where
+  fromCanonicalCBOR = do
+    mt <- peekTokenType
+    case mt of
+      D.TypeNull -> do
+        Versioned () <- fromCanonicalCBOR
+        pure (Versioned SNothing)
+      _ -> fmap SJust <$> fromCanonicalCBOR
+
+deriving via
+  LedgerCBOR v Anchor
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v Anchor
+
+deriving via
+  LedgerCBOR v Anchor
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v Anchor
+
+deriving via
+  LedgerCBOR v ScriptHash
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v ScriptHash
+
+deriving via
+  LedgerCBOR v ScriptHash
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v ScriptHash
