@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Protocol.TPraos.BHeader (
   HashHeader (..),
@@ -77,6 +78,8 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Crypto
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
+import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
@@ -111,6 +114,7 @@ import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import Data.Word (Word32)
 import GHC.Generics (Generic)
+import Lens.Micro (lens, to)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -469,3 +473,23 @@ makeHeaderView bh@(BHeader bhb _) nonce =
     (bheaderSlotNo bhb)
     nonce
     (bprotver bhb)
+
+instance (Crypto c, Era era) => EraBlockHeader (BHeader c) era where
+  blockIssuerBlockHeaderG = to (\(Block (BHeader bhb _) _) -> hashKey $ bheaderVk bhb)
+  blockHeaderSizeBlockHeaderG = to (\(Block bh _) -> originalBytesSize bh)
+  blockBodySizeBlockHeaderL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bsize bhb)
+      (\(Block (BHeader bhb sig) body) newSize -> Block (BHeader (bhb {bsize = newSize}) sig) body)
+  blockBodyHashBlockHeaderL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bhash bhb)
+      (\(Block (BHeader bhb sig) body) newHash -> Block (BHeader (bhb {bhash = newHash}) sig) body)
+  slotNoBlockHeaderL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bheaderSlotNo bhb)
+      (\(Block (BHeader bhb sig) body) newSlot -> Block (BHeader (bhb {bheaderSlotNo = newSlot}) sig) body)
+  protVerBlockHeaderL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bprotver bhb)
+      (\(Block (BHeader bhb sig) body) protVer -> Block (BHeader (bhb {bprotver = protVer}) sig) body)
