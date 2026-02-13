@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.15.0.1
+## 1.16.0.0
 
-*
+* Change `AlonzoBBODY` `Signal` to `BbodySignal`.
+* Add `validateExUnits`.
 
 ## 1.15.0.0
 
