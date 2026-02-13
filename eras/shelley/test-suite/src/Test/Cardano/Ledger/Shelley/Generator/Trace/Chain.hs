@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,7 +14,7 @@
 
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 
-import Cardano.Ledger.BHeaderView (BHeaderView (..))
+import Cardano.Ledger.Block (BbodySignal, EraBlockHeader)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules (
@@ -36,6 +35,7 @@ import Cardano.Ledger.Slot (
 import Cardano.Ledger.Val ((<->))
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader (
+  BHeader,
   LastAppliedBlock (..),
   hashHeaderToNonce,
  )
@@ -51,6 +51,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
@@ -85,14 +86,15 @@ import Test.QuickCheck (Gen)
 instance
   ( EraGen era
   , EraBlockBody era
-  , ApplyBlock era
+  , EraBlockHeader (BHeader MockCrypto) era
+  , ApplyBlock TestBlockHeader era
   , GetLedgerView era
   , MinLEDGER_STS era
   , MinCHAIN_STS era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
-  , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  , Signal (EraRule "BBODY" era) ~ BbodySignal era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
   , State (EraRule "TICKN" era) ~ TicknState
@@ -109,7 +111,7 @@ instance
 
   sigGen ge _env st = genBlock ge st
 
-  shrinkSignal = (\_x -> []) -- shrinkBlock -- TO DO FIX ME
+  shrinkSignal _x = [] -- shrinkBlock -- TO DO FIX ME
 
   type BaseEnv (CHAIN era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
