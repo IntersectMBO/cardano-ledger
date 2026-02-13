@@ -1,5 +1,5 @@
 {
-    "collateralPercentage": 51,
+    "collateralPercentage": 54880,
     "executionUnitPrices": {
         "priceMemory": 6.137517258401616982e11,
         "priceSteps": {
@@ -13,8 +13,8 @@
         "steps": 4878948358509797471
     },
     "maxBlockHeaderSize": 7370,
-    "maxCollateralInputs": 45,
-    "maxValueSize": 39,
+    "maxCollateralInputs": 11954,
+    "maxValueSize": 3392963155,
     "minPoolCost": 855261,
     "monetaryExpansion": 0.2,
     "poolPledgeInfluence": 6.790200579626650307,
