@@ -2,6 +2,8 @@
 
 ## 1.15.0.0
 
+* Add `validateExUnits`.
+* Change `AlonzoBBODY` `Signal` to `BbodySignal`.
 * Move `TotalDeposits` and `TxUTxODiff` data constructors from `AlonzoUtxosEvent` to `AlonzoUtxoEvent`
 * Add `UtxosEnv`
 * Change `STS` instance of `AlonzoUTXOS`: use `UtxosEnv` as `Environment` and `ShelleyGovState` as `State`
