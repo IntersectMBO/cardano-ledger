@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -22,6 +23,7 @@ module Cardano.Ledger.Conway (
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Conway.BlockBody ()
 import Cardano.Ledger.Conway.Era (
   ConwayEra,
@@ -44,8 +46,6 @@ import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
 
--- =====================================================
-
 instance ApplyTx ConwayEra where
   newtype ApplyTxError ConwayEra = ConwayApplyTxError (NonEmpty (ConwayLedgerPredFailure ConwayEra))
     deriving (Eq, Show)
@@ -54,7 +54,7 @@ instance ApplyTx ConwayEra where
     first ConwayApplyTxError $
       ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx
 
-instance ApplyBlock ConwayEra
+instance EraBlockHeader h ConwayEra => ApplyBlock h ConwayEra
 
 instance RunConwayRatify ConwayEra
 
