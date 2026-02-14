@@ -97,7 +97,7 @@ startStep ::
   NonZero Word64 ->
   PulsingRewUpdate
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSupply asc secparam =
-  let SnapShot stake totalActiveStake delegs _ stakePoolSnapShots = ssStakeGo ss
+  let SnapShot stake totalActiveStake delegs stakePoolSnapShots = ssStakeGo ss
       numStakeCreds = fromIntegral (VMap.size $ unStake stake)
       k = toIntegerNonZero secparam
       -- We expect approximately 10k-many blocks to be produced each epoch.

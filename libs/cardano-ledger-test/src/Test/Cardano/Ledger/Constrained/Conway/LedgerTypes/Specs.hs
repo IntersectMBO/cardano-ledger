@@ -63,7 +63,6 @@ import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (
   txOutSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
-import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.QuickCheck hiding (forAll, witness)
 
 -- ======================================================================================
@@ -507,12 +506,11 @@ ledgerStateSpec pp univ ctx epoch =
 snapShotSpec :: Specification SnapShot
 snapShotSpec =
   constrained $ \ [var|snap|] ->
-    match snap $ \ [var|stake|] [var|totalActiveStake|] [var|delegs|] [var|poolparams|] [var|pools|] ->
+    match snap $ \ [var|stake|] [var|totalActiveStake|] [var|delegs|] [var|pools|] ->
       match stake $ \ [var|stakemap|] ->
         [ assert $ stakemap ==. lit VMap.empty
         , assert $ totalActiveStake ==. lit (knownNonZeroCoin @1)
         , assert $ delegs ==. lit VMap.empty
-        , assert $ poolparams ==. lit VMap.empty
         , assert $ pools ==. lit VMap.empty
         ]
 
@@ -529,18 +527,16 @@ snapShotsSpec marksnap =
 
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
 getMarkSnapShot :: forall era. (EraCertState era, EraStake era) => LedgerState era -> SnapShot
-getMarkSnapShot ls = mkSnapShot (Stake markStake) markDelegations markPoolParams
+getMarkSnapShot ls =
+  resetStakePoolsSnapShot markStakePoolState $ mkSnapShot (Stake markStake) markDelegations VMap.empty
   where
     markStake :: VMap VB VP (Credential Staking) (CompactForm Coin)
     markStake = VMap.fromMap (ls ^. instantStakeL . instantStakeCredentialsL)
     markDelegations :: VMap VB VB (Credential Staking) (KeyHash StakePool)
     markDelegations = VMap.fromMap $ getDelegs (ls ^. lsCertStateL)
-    markPoolParams :: VMap VB VB (KeyHash StakePool) StakePoolParams
-    markPoolParams =
-      VMap.fromMap $
-        Map.mapWithKey (`stakePoolStateToStakePoolParams` Testnet) $
-          psStakePools $
-            ls ^. lsCertStateL . certPStateL
+    markStakePoolState :: VMap VB VB (KeyHash StakePool) StakePoolState
+    markStakePoolState =
+      VMap.fromMap $ psStakePools $ ls ^. lsCertStateL . certPStateL
 
 -- ====================================================================
 -- Specs for EpochState and NewEpochState

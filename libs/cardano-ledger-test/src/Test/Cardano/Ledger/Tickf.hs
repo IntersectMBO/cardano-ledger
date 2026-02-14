@@ -18,7 +18,7 @@ import Cardano.Ledger.State (
   PoolDistr (..),
   SnapShot (..),
   Stake (..),
-  StakePoolParams (sppVrf),
+  StakePoolSnapShot (spssVrf),
   sumAllStake,
  )
 import qualified Data.Map.Strict as Map
@@ -40,7 +40,7 @@ calcPoolDistOldEqualsNew =
 
 -- | The original version of calculatePoolDistr
 oldCalculatePoolDistr :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
-oldCalculatePoolDistr includeHash (SnapShot stake _ delegs stakePoolParams _) =
+oldCalculatePoolDistr includeHash (SnapShot stake _ delegs stakePoolsSnapShot) =
   let totalActiveStake = sumAllStake stake
       nonZeroTotalActiveStake = totalActiveStake `nonZeroOr` knownNonZeroCoin @1
       withZeroStake = VMap.toMap (unStake stake) `Map.union` (mempty <$ VMap.toMap delegs)
@@ -56,6 +56,6 @@ oldCalculatePoolDistr includeHash (SnapShot stake _ delegs stakePoolParams _) =
         ( Map.intersectionWith
             (\(cc, rat) vrf -> IndividualPoolStake rat cc vrf)
             sd
-            (VMap.toMap (VMap.map sppVrf stakePoolParams))
+            (VMap.toMap (VMap.map spssVrf stakePoolsSnapShot))
         )
         nonZeroTotalActiveStake

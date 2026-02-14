@@ -88,10 +88,10 @@ SnapShotDelegation
   credentialId CredentialId
   keyHash KeyHashId
   UniqueSnapShotDelegation snapShotId credentialId
-SnapShotPool
+SnapShotStakePool
   snapShotId SnapShotId
   keyHashId KeyHashId
-  params Shelley.StakePoolParams
+  snapShot Shelley.StakePoolSnapShot
   UniqueSnapShotPool snapShotId keyHashId
 
 LedgerState

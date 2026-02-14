@@ -95,9 +95,8 @@ instantStakeIncludesRewards = do
             ]
         )
     instantStake = addInstantStake utxo1 mempty
-  network <- arbitrary
   let snapShot =
-        snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL) network
+        snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL)
       computedStakeDistr = VMap.toMap (unStake (ssActiveStake snapShot))
 
       expectedStakeDistr :: Map (Credential Staking) (CompactForm Coin)

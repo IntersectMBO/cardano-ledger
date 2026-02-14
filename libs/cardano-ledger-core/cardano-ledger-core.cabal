@@ -249,6 +249,7 @@ library testlib
     time,
     tree-diff,
     unliftio,
+    vector,
     vector-map:{vector-map, testlib},
 
 library tasty-compat
