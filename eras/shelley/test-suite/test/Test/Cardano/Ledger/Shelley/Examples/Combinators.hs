@@ -318,7 +318,7 @@ updatePoolParams network pool cs = cs {chainNes = nes'}
               ( \k sps ->
                   if k == sppId pool
                     then Nothing
-                    else Just $ stakePoolStateToStakePoolParams k network sps
+                    else Just $ stakePoolStateToStakePoolParams network k sps
               )
               (psStakePools ps)
         }
