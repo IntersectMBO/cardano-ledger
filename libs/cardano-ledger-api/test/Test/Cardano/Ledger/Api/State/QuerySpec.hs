@@ -62,15 +62,15 @@ latestErasSpec ::
   , ConwayEraCertState era
   ) =>
   Spec
-latestErasSpec = do
+latestErasSpec =
   describe "QuerySpec" $ do
-    describe (eraName @era) $
+    describe (eraName @era) $ do
       describe "Roundtrip" $ do
         prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
         prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
-    describe "Queries" $ do
-      committeeMembersStateSpec @era
-      queryStakeSnapshotsSpec @era
+      describe "Queries" $ do
+        committeeMembersStateSpec @era
+        queryStakeSnapshotsSpec @era
 
 committeeMembersStateSpec ::
   forall era.
@@ -488,12 +488,13 @@ queryStakeSnapshotsSpec =
         subResult = queryStakeSnapshots nes (Just subPoolIds)
       pure @Gen $
         conjoin
-          [ Map.keysSet (ssStakeSnapshots result) === allPoolIdsWithDelegations
-          , nonZeroSubTotal ssMarkPool === ssMarkTotal result
-          , nonZeroSubTotal ssSetPool === ssSetTotal result
-          , nonZeroSubTotal ssGoPool === ssGoTotal result
-          , ssMarkTotal result === nonZeroTotal (ssStakeMark ss)
-          , ssSetTotal result === nonZeroTotal (ssStakeSet ss)
-          , ssGoTotal result === nonZeroTotal (ssStakeGo ss)
-          , Map.keysSet (ssStakeSnapshots subResult) === subPoolIds
+          [ counterexample "AllPoolIds" $
+              Map.keysSet (ssStakeSnapshots result) === allPoolIdsWithDelegations
+          , counterexample "SubTotal Mark" $ nonZeroSubTotal ssMarkPool === ssMarkTotal result
+          , counterexample "SubTotal Set" $ nonZeroSubTotal ssSetPool === ssSetTotal result
+          , counterexample "SubTotal Go" $ nonZeroSubTotal ssGoPool === ssGoTotal result
+          , counterexample "Total Mark" $ ssMarkTotal result === nonZeroTotal (ssStakeMark ss)
+          , counterexample "Total Set" $ ssSetTotal result === nonZeroTotal (ssStakeSet ss)
+          , counterexample "Total Go" $ ssGoTotal result === nonZeroTotal (ssStakeGo ss)
+          , counterexample "subPoolIds" $ Map.keysSet (ssStakeSnapshots subResult) === subPoolIds
           ]

@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -101,6 +100,7 @@ import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
+import Test.Cardano.Ledger.Core.Arbitrary (mkSnapShotFromStakePoolParams)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
@@ -125,7 +125,6 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (
   epochSize,
@@ -322,16 +321,14 @@ snapEx3 =
         , (Cast.carlSHK, carlInitCoin)
         ]
     delegations =
-      [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
-      , (Cast.bobSHK, aikColdKeyHash Cast.bobPoolKeys)
-      , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
-      ]
-    poolParams =
-      [ (aikColdKeyHash Cast.alicePoolKeys, aliceStakePoolParams')
-      , (aikColdKeyHash Cast.bobPoolKeys, bobStakePoolParams')
-      ]
+      VMap.fromList
+        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
+        , (Cast.bobSHK, aikColdKeyHash Cast.bobPoolKeys)
+        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
+        ]
+    poolParams = [aliceStakePoolParams', bobStakePoolParams']
    in
-    mkSnapShot stake delegations poolParams
+    mkSnapShotFromStakePoolParams stake delegations poolParams
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =

@@ -2,6 +2,8 @@
 
 ## 1.19.0.0
 
+* Add `mkSnapShot` and `resetStakePoolsSnapShot`
+* Remove `ssPoolParams` from `Snapshot`  and `ssPoolParamsL`
 * Rename `ssStake` to `ssActiveStake`.
 * Deprecate `ssStakeL` in favor of new `ssActiveStakeL`
 * Add `bhviewProtVer` to `BHeaderView`
@@ -73,7 +75,6 @@
 * Add `positiveUnitIntervalRelaxToUnitInterval`, `positiveUnitIntervalRelaxToPositiveInterval` and  `positiveIntervalRelaxToNonNegativeInterval`
 * Changed the type of the following functions by adding `Network` argument:
   - `stakePoolStateToStakePoolParams`
-  - `snapShotFromInstantStake`
 * Changed type of `spsRewardAccount` in `StakePoolState` to `Credential Staking`
 * Changed type of `parseCostModels` by adding `[Language]` argument
 * Add `HasOKey` instance for `TxId (TxBody l era)`
@@ -139,6 +140,7 @@
 
 ### `testlib`
 
+* Add `mkSnapShotFromStakePoolParams` and `resetStakePoolSnapShotFromPoolParams`
 * Stop re-exporting QuickCheck's `NonZero` as it conflcicts with our internal type.
 * Rename `RewardAccount` to `AccountAddress`
   - `deserialiseRewardAccountOld` to `deserialiseAccountAddressOld`.

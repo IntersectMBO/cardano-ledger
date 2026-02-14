@@ -117,7 +117,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   ssStakeL,
   ssStakeDistrL,
   ssDelegationsL,
-  ssPoolParamsL,
 ) where
 
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
