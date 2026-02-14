@@ -2,8 +2,11 @@
 
 ## 1.8.0.0
 
-* Add `mkSnapShot` as a backwards compatible smart constructor.
-* Changed the type of `stakeDistr` by adding `Network` argument
+* Rename `alicePoolParams` and `bobPoolParams` to `aliceStakePoolParams` and `bobStakePoolParams` respectively.
+* Remove deprecated modules:
+  - `Test.Cardano.Ledger.Shelley.Generator.Constants`
+  - `Test.Cardano.Ledger.Shelley.Generator.Trace.DCert`
+  - `Test.Cardano.Ledger.Shelley.Generator.Delegation`
 
 ## 1.7.0.0
 
