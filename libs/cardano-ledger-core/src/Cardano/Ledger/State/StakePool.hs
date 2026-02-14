@@ -269,8 +269,8 @@ mkStakePoolState deposit delegators spp =
 -- | Convert 'StakePoolState' back to 'StakePoolParams' by providing the pool ID.
 -- This is useful when you need to reconstruct the full parameters from
 -- the state representation.
-stakePoolStateToStakePoolParams :: KeyHash StakePool -> Network -> StakePoolState -> StakePoolParams
-stakePoolStateToStakePoolParams poolId networkId sps =
+stakePoolStateToStakePoolParams :: Network -> KeyHash StakePool -> StakePoolState -> StakePoolParams
+stakePoolStateToStakePoolParams networkId poolId sps =
   StakePoolParams
     { sppId = poolId
     , sppVrf = spsVrf sps

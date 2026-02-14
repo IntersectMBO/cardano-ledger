@@ -25,5 +25,5 @@ spec = do
           let poolId = sppId stakePoolParams
               network = aaNetworkId $ sppAccountAddress stakePoolParams
               stakePoolState = mkStakePoolState deposit delegs stakePoolParams
-              stakePoolParams' = stakePoolStateToStakePoolParams poolId network stakePoolState
+              stakePoolParams' = stakePoolStateToStakePoolParams network poolId stakePoolState
            in stakePoolParams === stakePoolParams'

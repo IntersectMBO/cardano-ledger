@@ -38,7 +38,7 @@ totalTxDeposits network pp dpstate txb =
     certs = toList (txb ^. certsTxBodyL)
     numKeys = length $ filter isRegStakeTxCert certs
     regpools =
-      Map.mapWithKey (`stakePoolStateToStakePoolParams` network) $ psStakePools (dpstate ^. certPStateL)
+      Map.mapWithKey (stakePoolStateToStakePoolParams network) $ psStakePools (dpstate ^. certPStateL)
     accum (!pools, !ans) (RegPoolTxCert stakePoolParams) =
       -- We don't pay a deposit on a pool that is already registered
       if Map.member (sppId stakePoolParams) pools
@@ -120,7 +120,7 @@ genTxBodyFrom certState (UTxO u) = do
   network <- arbitrary
   let deReg =
         Map.elems $
-          Map.mapWithKey (`stakePoolStateToStakePoolParams` network) $
+          Map.mapWithKey (stakePoolStateToStakePoolParams network) $
             Map.restrictKeys (certState ^. certPStateL . psStakePoolsL) (Set.fromList deRegKeys)
   certs <-
     shuffle $

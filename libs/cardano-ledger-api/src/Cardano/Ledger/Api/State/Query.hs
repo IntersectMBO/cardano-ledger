@@ -472,7 +472,7 @@ mkQueryPoolStateResult ::
 mkQueryPoolStateResult f ps network =
   QueryPoolStateResult
     { qpsrStakePoolParams =
-        Map.mapWithKey (`stakePoolStateToStakePoolParams` network) restrictedStakePools
+        Map.mapWithKey (stakePoolStateToStakePoolParams network) restrictedStakePools
     , qpsrFutureStakePoolParams = f $ psFutureStakePoolParams ps
     , qpsrRetiring = f $ psRetiring ps
     , qpsrDeposits = Map.map (fromCompact . spsDeposit) restrictedStakePools
@@ -503,7 +503,7 @@ queryPoolParameters ::
   Map (KeyHash StakePool) StakePoolParams
 queryPoolParameters network nes poolKeys =
   let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-   in Map.mapWithKey (`stakePoolStateToStakePoolParams` network) $ Map.restrictKeys pools poolKeys
+   in Map.mapWithKey (stakePoolStateToStakePoolParams network) $ Map.restrictKeys pools poolKeys
 
 -- | The stake snapshot returns information about the mark, set, go ledger snapshots for a pool,
 -- plus the total active stake for each snapshot that can be used in a 'sigma' calculation.

@@ -505,7 +505,7 @@ countPStateStats PState {..} =
     , pssPoolParamsStats =
         foldMap
           countPoolParamsStats
-          (Map.mapWithKey (`stakePoolStateToStakePoolParams` Testnet) psStakePools)
+          (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools)
           <> foldMap countPoolParamsStats psFutureStakePoolParams
     }
 
