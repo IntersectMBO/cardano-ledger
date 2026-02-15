@@ -278,17 +278,16 @@ data SnapShot = SnapShot
   -- ^ Total active stake, which is the sum of all of the stake from `ssStake`. It is primarily used
   -- in a denominator, therefore it cannot be zero and is defaulted to 1. This is a reasonable
   -- assumption for a system that relies on non-zero active stake to produce blocks.
-  , ssDelegations :: VMap VB VB (Credential Staking) (KeyHash StakePool) -- TODO: remove (lazy on purpose)
+  , ssDelegations :: !(VMap VB VB (Credential Staking) (KeyHash StakePool)) -- TODO: subsume into `ssActiveStake`
   , ssStakePoolsSnapShot :: !(VMap VB VB (KeyHash StakePool) StakePoolSnapShot)
   -- ^ Snapshot of stake pools' information that is relevant only for the reward calculation logic.
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs SnapShot
-  deriving
-    (NoThunks)
-    via AllowThunksIn '["ssDelegations"] SnapShot
 
 instance NFData SnapShot
+
+instance NoThunks SnapShot
 
 instance EncCBOR SnapShot where
   encCBOR ss@(SnapShot _ _ _ _) =
