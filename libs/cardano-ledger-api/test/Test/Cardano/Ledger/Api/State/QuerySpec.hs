@@ -469,7 +469,7 @@ queryStakeSnapshotsSpec =
         nes = (def :: NewEpochState era) & nesEsL . esSnapshotsL .~ ss
         result = queryStakeSnapshots nes Nothing
         getPoolIds =
-          Map.filter ((> 0) . spssNumDelegators) . VMap.toMap . ssStakePoolsSnapShot
+          Map.filter ((> mempty) . spssStake) . VMap.toMap . ssStakePoolsSnapShot
         allPoolIdsWithDelegations =
           foldMap (Map.keysSet . getPoolIds) [ssStakeMark ss, ssStakeSet ss, ssStakeGo ss]
         allPoolIds =

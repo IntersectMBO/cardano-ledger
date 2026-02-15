@@ -673,7 +673,6 @@ instance Arbitrary StakePoolSnapShot where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
 instance Arbitrary SnapShot where
   arbitrary = do

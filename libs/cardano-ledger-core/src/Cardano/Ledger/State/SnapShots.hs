@@ -173,11 +173,6 @@ data StakePoolSnapShot = StakePoolSnapShot
   -- ^ Corresponding field in the `StakePoolState` is `spsCost`.
   , spssMargin :: !UnitInterval
   -- ^ Corresponding field in the `StakePoolState` is `spsMargin`.
-  , spssNumDelegators :: !Int
-  -- ^ Number of delegators, which is the count from the `spsDelegators` field.  We don't need the
-  -- actual delegators, since at this point the actual stake has already been resolved.  This count
-  -- is only needed to preserve older behavior where we filter out stake pools from `PoolDistr` that
-  -- do not have any delegations.
   , spssAccountId :: !(Credential Staking)
   -- ^ This is the account where stake pools rewards will be deposited to. Corresponding field in
   -- the `StakePoolState` is `spsAccountAddress`.
@@ -208,7 +203,6 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
     , spssPledge = spsPledge
     , spssCost = spsCost
     , spssMargin = spsMargin
-    , spssNumDelegators = Set.size spsDelegators
     , spssAccountId = spsAccountAddress
     }
   where
@@ -223,7 +217,7 @@ instance NoThunks StakePoolSnapShot
 instance NFData StakePoolSnapShot
 
 instance ToKeyValuePairs StakePoolSnapShot where
-  toKeyValuePairs ss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _ _) =
+  toKeyValuePairs ss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _) =
     let StakePoolSnapShot {..} = ss
      in [ "stake" .= spssStake
         , "stakeRatio" .= spssStakeRatio
@@ -233,14 +227,13 @@ instance ToKeyValuePairs StakePoolSnapShot where
         , "pledge" .= spssPledge
         , "cost" .= spssCost
         , "margin" .= spssMargin
-        , "numDelegators" .= spssNumDelegators
         , "accountId" .= spssAccountId
         ]
 
 instance EncCBOR StakePoolSnapShot where
-  encCBOR spss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _ _) =
+  encCBOR spss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _) =
     let StakePoolSnapShot {..} = spss
-     in encodeListLen 10
+     in encodeListLen 9
           <> encCBOR spssStake
           <> encCBOR spssStakeRatio
           <> encCBOR spssSelfDelegatedOwners
@@ -249,12 +242,11 @@ instance EncCBOR StakePoolSnapShot where
           <> encCBOR spssPledge
           <> encCBOR spssCost
           <> encCBOR spssMargin
-          <> encCBOR spssNumDelegators
           <> encCBOR spssAccountId
 
 instance DecShareCBOR StakePoolSnapShot where
   type Share StakePoolSnapShot = Interns (Credential Staking)
-  decSharePlusCBOR = decodeRecordNamedT "StakePoolSnapShot" (const 10) $ do
+  decSharePlusCBOR = decodeRecordNamedT "StakePoolSnapShot" (const 9) $ do
     credInterns <- get
     spssStake <- lift decCBOR
     spssStakeRatio <- lift decCBOR
@@ -266,7 +258,6 @@ instance DecShareCBOR StakePoolSnapShot where
     spssPledge <- lift decCBOR
     spssCost <- lift decCBOR
     spssMargin <- lift decCBOR
-    spssNumDelegators <- lift decCBOR
     spssAccountId <- interns credInterns <$> lift decCBOR
     pure StakePoolSnapShot {..}
 
@@ -451,7 +442,7 @@ calculatePoolDistr' :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
 calculatePoolDistr' includeHash (SnapShot _ activeStake _ stakePoolSnapShot) =
   let toIndividualPoolStake poolId spss = do
         guard (includeHash poolId)
-        guard (spssNumDelegators spss > 0)
+        guard (spssStake spss > mempty)
         Just
           IndividualPoolStake
             { individualPoolStake = spssStakeRatio spss

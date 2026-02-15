@@ -598,7 +598,7 @@ queryStakeSnapshots nes mPoolIds =
         case mPoolIds of
           Nothing ->
             foldMap
-              (VMap.keysSet . VMap.filter (\_ -> (> 0) . spssNumDelegators) . ssStakePoolsSnapShot)
+              (VMap.keysSet . VMap.filter (\_ -> (> mempty) . spssStake) . ssStakePoolsSnapShot)
               [ssStakeMark, ssStakeSet, ssStakeGo]
           Just ids -> ids
    in StakeSnapshots
