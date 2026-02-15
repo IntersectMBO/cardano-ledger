@@ -573,6 +573,16 @@ instance DecCBOR StakeSnapshots where
       <*> decCBOR
       <*> decCBOR
 
+-- | Report stake per poool per snapshot as well as total active stake per snapshot.
+--
+-- /Note/ - Whenever poolIds are not supplied, we collect all of the pools, even if they don't have any
+-- delegations. Otherwise we filter out for exact poolIds that were supplied. In both cases it means
+-- that there can be pools that have zero stake in all three snapshot, but the meaning of that can be very different
+--
+-- However, starting with Protocol Version 11 we remove this strange inconsistency and only ever
+-- report stake pools that have non-zero stake, which implies not reporting back pools without
+-- delegations making such case of a stake pool being reported without any stake in either one of
+-- the three snapshots impossible.
 queryStakeSnapshots ::
   NewEpochState era ->
   Maybe (Set (KeyHash StakePool)) ->
@@ -584,16 +594,30 @@ queryStakeSnapshots nes mPoolIds =
         , ssStakeGo
         } = esSnapshots $ nesEs nes
 
+      mkStakeSnapshot poolId = do
+        let
+          markPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeMark)
+          setPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeSet)
+          goPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeGo)
+        -- Unregistered stake pools or ones that have no stake are of no intereset to us.
+        guard (fold [markPoolStake, setPoolStake, goPoolStake] > Just mempty)
+        Just
+          StakeSnapshot
+            { ssMarkPool = maybe mempty fromCompact markPoolStake
+            , ssSetPool = maybe mempty fromCompact setPoolStake
+            , ssGoPool = maybe mempty fromCompact ssGoPool
+            }
       mkStakeSnapshot poolId =
-        let lookupStake =
-              maybe mempty (fromCompact . spssStake) . VMap.lookup poolId . ssStakePoolsSnapShot
-         in StakeSnapshot
-              { ssMarkPool = lookupStake ssStakeMark
-              , ssSetPool = lookupStake ssStakeSet
-              , ssGoPool = lookupStake ssStakeGo
-              }
-      -- Whenever poolIds are not supplied, we collect all pools that don't have any delegations,
-      -- otherwise we filter out for exact poolIds that were supplied.
+        let
+          lookupStake =
+            maybe mempty (fromCompact . spssStake) . VMap.lookup poolId . ssStakePoolsSnapShot
+         in
+          StakeSnapshot
+            { ssMarkPool = lookupStake ssStakeMark
+            , ssSetPool = lookupStake ssStakeSet
+            , ssGoPool = lookupStake ssStakeGo
+            }
+      version = pvMajor (nes ^. nesEsL . curPParamsEpochStateL)
       poolIds =
         case mPoolIds of
           Nothing ->
@@ -602,7 +626,10 @@ queryStakeSnapshots nes mPoolIds =
               [ssStakeMark, ssStakeSet, ssStakeGo]
           Just ids -> ids
    in StakeSnapshots
-        { ssStakeSnapshots = Map.fromSet mkStakeSnapshot poolIds
+        { ssStakeSnapshots =
+            if version < natVersion @11
+              then Map.fromSet mkStakeSnapshot poolIds
+              else Map.mapMaybe id $ Map.fromSet mkStakeSnapshotMaybe poolIds
         , ssMarkTotal = ssTotalActiveStake ssStakeMark
         , ssSetTotal = ssTotalActiveStake ssStakeSet
         , ssGoTotal = ssTotalActiveStake ssStakeGo
