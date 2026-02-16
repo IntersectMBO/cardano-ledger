@@ -1,18 +1,28 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.CanonicalState.Spec (spec) where
 
+import Cardano.Ledger.BaseTypes (EpochInterval, NonNegativeInterval, UnitInterval)
+import Cardano.Ledger.CanonicalState.BasicTypes (CanonicalExUnits (..))
 import Cardano.Ledger.CanonicalState.Conway ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 as Committee.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0 as GovConstitution.V0
+import qualified Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0 as GovPParams.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UTxO.V0
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Core (PParams)
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.Testlib
 import Data.Typeable
@@ -39,11 +49,27 @@ spec = do
     describe "gov/constitution/v0" $ do
       isCanonical @"gov/constitution/v0" @GovConstitution.V0.CanonicalConstitution
       validateType @"gov/constitution/v0" @GovConstitution.V0.CanonicalConstitution "record_entry"
+    describe "gov/pparams/v0" $ do
+      isCanonical @"gov/pparams/v0" @EpochInterval
+      validateType @"gov/pparams/v0" @EpochInterval "epoch_interval"
+      isCanonical @"gov/pparams/v0" @NonNegativeInterval
+      validateType @"gov/pparams/v0" @NonNegativeInterval "nonnegative_interval"
+      isCanonical @"gov/pparams/v0" @UnitInterval
+      validateType @"gov/pparams/v0" @UnitInterval "unit_interval"
+      isCanonical @"gov/pparams/v0" @CanonicalExUnits
+      validateType @"gov/pparams/v0" @CanonicalExUnits "ex_units"
+      isCanonical @"gov/pparams/v0" @(PParams ConwayEra)
+      validateType @"gov/pparams/v0" @(GovPParams.V0.GovPParamsOut ConwayEra) "gov_pparams_out"
   describe "namespaces" $ do
     testNS @"blocks/v0"
     testNS @"utxo/v0"
     testNS @"gov/constitution/v0"
     testNS @"gov/committee/v0"
+    testNS @"gov/pparams/v0"
+
+-- Is checked by the: isCanonical @"gov/pparams/v0" @(PParamsWithProtVer ConwayEra)
+-- prop "canonical with regards to it's definition" $
+--  propNamespaceEntryRoundTrip @"gov/pparams/v0"
 
 isCanonical ::
   forall ns a. (KnownSymbol ns, ToCanonicalCBOR ns a, Typeable a, Arbitrary a, Show a) => Spec
