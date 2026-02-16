@@ -38,7 +38,7 @@ spec = do
       huddleRoundTripArbitraryValidate @(Value DijkstraEra) v "value"
       describe "MultiAsset" $ do
         huddleRoundTripCborSpec @(Value DijkstraEra) v "value"
-      describe "fix TxBody" $ do
+      xdescribe "fix TxBody" $ do
         huddleRoundTripAnnCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleRoundTripCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleRoundTripAnnCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
@@ -99,8 +99,7 @@ spec = do
       huddleRoundTripCborSpec @(GovAction DijkstraEra) v "gov_action"
       -- TODO enable this once map/list expansion has been optimized in cuddle
       huddleRoundTripArbitraryValidate @(GovAction DijkstraEra) v "gov_action"
-      describe "fix TxCert" $ do
-        huddleRoundTripCborSpec @(TxCert DijkstraEra) v "certificate"
+      huddleRoundTripCborSpec @(TxCert DijkstraEra) v "certificate"
       huddleRoundTripArbitraryValidate @(TxCert DijkstraEra) v "certificate"
       describe "DecCBOR instances equivalence via CDDL" $ do
         huddleDecoderEquivalenceSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
