@@ -354,9 +354,9 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mAccountState ne
                 -- This is the case where we only add the new reverse delegation and do not remove
                 -- the old one, which is the behavior that we want:
                 --
-                -- - for new accounts, since there is no old reverse delegeation to remove
+                -- 1) for new accounts, since there is no old reverse delegation to remove
                 --
-                -- - in the bootstrap phase to preserve the incorrect behavior, where old reverse
+                -- 2) in the bootstrap phase, in order to preserve the incorrect behavior, where old reverse
                 --   delegation for the prior DRep was wrongfully retained. It is important to note
                 --   that in case when the new delegation was to a predefined DRep, the reverse
                 --   delegations where handled correctly even in the boostrap phase
