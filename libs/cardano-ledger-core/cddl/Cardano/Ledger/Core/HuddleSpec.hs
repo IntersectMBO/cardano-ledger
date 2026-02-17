@@ -23,13 +23,13 @@ import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CBORGenerator (WrappedTerm (..))
 import Codec.CBOR.Cuddle.Huddle
 import Codec.CBOR.Term (Term (..))
-import Control.Monad (join, replicateM)
+import Control.Monad (join)
 import Data.Bits (Bits (..))
 import qualified Data.ByteString as BS
 import Data.MemPack (VarLen (..), packByteString)
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
-import Data.Word (Word32, Word64)
+import Data.Word (Word16, Word32, Word64)
 import System.Random.Stateful (
   Uniform (..),
   UniformRange (..),
@@ -223,13 +223,16 @@ instance Era era => HuddleRule "address" era where
           header = stakeRefMask .|. isPaymentScriptMask .|. isMainnetMask
           genHash28 = uniformByteStringM 28 g
           genVar32 = VarLen <$> uniformM @Word32 g
+          genVar16 = VarLen <$> uniformM @Word16 g
         stakeCred <- case stakeRef of
           0b00 -> genHash28 -- staking payment hash
           0b01 -> genHash28 -- staking script hash
           0b10 -> do
             -- Ptr
-            ptr <- replicateM 3 genVar32
-            pure $ foldMap packByteString ptr
+            slotNo <- genVar32
+            txIx <- genVar16
+            certIx <- genVar16
+            pure $ packByteString slotNo <> packByteString txIx <> packByteString certIx
           _ -> pure mempty
         paymentCred <- genHash28
         -- TODO use genBytesTerm once indefinite bytestring decoding has been fixed

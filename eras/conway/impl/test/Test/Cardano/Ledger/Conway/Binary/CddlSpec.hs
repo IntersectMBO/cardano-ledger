@@ -59,7 +59,6 @@ spec = do
       huddleRoundTripCborSpec @(Data ConwayEra) v "plutus_data"
       -- TxOut
       huddleRoundTripCborSpec @(TxOut ConwayEra) v "transaction_output"
-      -- TODO fails because of `address`
       xdescribe "fix scripts" $ huddleRoundTripArbitraryValidate @(TxOut ConwayEra) v "transaction_output"
       -- Script
       huddleRoundTripAnnCborSpec @(Script ConwayEra) v "script"
