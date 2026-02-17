@@ -56,6 +56,7 @@ import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
 import qualified Codec.CBOR.Write as C
 import qualified Codec.CBOR.Write as CBOR
+import Control.Monad (unless)
 import Data.Data (Proxy (..))
 import Data.Either (isLeft)
 import qualified Data.Text as T
@@ -85,11 +86,15 @@ import Test.Hspec (
   it,
   shouldBe,
  )
-import Test.Hspec.Core.Spec (Example (..), paramsQuickCheckArgs)
-import Test.QuickCheck (Arbitrary (..), Args (replay), Gen, Testable (..), forAll)
-import Test.QuickCheck.Gen (Gen (..))
-import Test.QuickCheck.Random (QCGen, mkQCGen)
-import Text.Pretty.Simple (pShow)
+import Test.QuickCheck (
+  Arbitrary (..),
+  Gen,
+  Testable (..),
+  counterexample,
+  discard,
+  forAll,
+ )
+import Test.QuickCheck.Property (Property)
 
 huddleDecoderEquivalenceSpec ::
   forall a.
@@ -263,30 +268,20 @@ showValidationTrace (Evidenced _ t) =
   T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
     prettyValidationTrace defaultTraceOptions t
 
-huddleRoundTripArbitraryValidate ::
+huddleRoundTripGenValidate ::
   forall a.
-  ( DecCBOR a
-  , EncCBOR a
-  , Arbitrary a
-  , Show a
-  ) =>
-  Version ->
-  T.Text ->
-  SpecWith (CTreeRoot MonoReferenced)
-huddleRoundTripArbitraryValidate version ruleName =
+  (DecCBOR a, Show a, EncCBOR a) => Gen a -> Version -> T.Text -> SpecWith (CTreeRoot MonoReferenced)
+huddleRoundTripGenValidate gen version ruleName =
   let lbl = label $ Proxy @a
    in describe "Encode an arbitrary value and check against CDDL"
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
-        $ \cddl -> property $
+        $ \cddl -> property . forAll gen $
           \(val :: a) -> do
             let
               bs = serialize' version val
               res = validateCBOR bs (Name ruleName) (mapIndex cddl)
-            if isValid res
-              then pure ()
-              else
-                expectationFailure $
-                  "CBOR Validation failed\nError:\n" <> showValidationTrace res
+            unless (isValid res) . expectationFailure $
+              "CBOR Validation failed\nError:\n" <> showValidationTrace res
 
 huddleRoundTripArbitraryValidate ::
   forall a.
@@ -297,7 +292,7 @@ huddleRoundTripArbitraryValidate ::
   ) =>
   Version ->
   T.Text ->
-  SpecWith CuddleData
+  SpecWith (CTreeRoot MonoReferenced)
 huddleRoundTripArbitraryValidate = huddleRoundTripGenValidate $ arbitrary @a
 
 --------------------------------------------------------------------------------

@@ -23,18 +23,14 @@ import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CBORGenerator (WrappedTerm (..))
 import Codec.CBOR.Cuddle.Huddle
 import Codec.CBOR.Term (Term (..))
-import Control.Monad (join)
 import Data.Bits (Bits (..))
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.MemPack (VarLen (..), packByteString)
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import Data.Word (Word16, Word32, Word64)
-import System.Random.Stateful (
-  Uniform (..),
-  UniformRange (..),
-  uniformByteStringM,
- )
+import Test.QuickCheck (Arbitrary (..), Gen, choose, oneof, vector)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -72,25 +68,23 @@ instance Era era => HuddleRule "unit_interval" era where
           |our encoders/decoders. Which means we cannot use the actual
           |definition here and we hard code the value to 1/2
           |]
-      . withGenerator generator
+      . withGenerator (const generator)
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
     where
-      generator g = do
+      generator = do
         let genUnitInterval64 l u = do
-              d <- uniformRM (max 1 l, u) g
-              n <- uniformRM (l, d) g
+              d <- choose (max 1 l, u)
+              n <- choose (l, d)
               pure (n, d)
             max64 = toInteger (maxBound @Word64)
         (n, d) <-
-          join $
-            pickOne
-              [ genUnitInterval64 0 max64
-              , genUnitInterval64 0 1000
-              , genUnitInterval64 (max64 - 1000) max64
-              ]
-              g
+          oneof
+            [ genUnitInterval64 0 max64
+            , genUnitInterval64 0 1000
+            , genUnitInterval64 (max64 - 1000) max64
+            ]
         S . TTagged 30
-          <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d] g
+          <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d]
 
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
@@ -175,6 +169,11 @@ instance Era era => HuddleRule "coin" era where
 instance Era era => HuddleRule "positive_coin" era where
   huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word64" p
 
+genHash28 :: Gen ByteString
+genHash28 =
+  -- TODO better implementation
+  BS.pack <$> vector 28
+
 instance Era era => HuddleRule "address" era where
   huddleRuleNamed pname _ =
     comment
@@ -209,21 +208,20 @@ instance Era era => HuddleRule "address" era where
           |     1111: account address: scripthash28
           |1001-1101: future formats
           |]
-      . withGenerator generator
+      . withGenerator (const generator)
       $ pname =.= VBytes
     where
-      generator g = do
-        stakeRef <- uniformRM (0, 0b11) g
+      generator = do
+        stakeRef <- choose (0, 0b11)
         let
           stakeRefMask = stakeRef `shiftL` 5 -- 0b0xx00000
           mkMask mask isMask = if isMask then mask else 0
-        isPaymentScriptMask <- mkMask 0b00010000 <$> uniformM g
-        isMainnetMask <- mkMask 0b00000001 <$> uniformM g
+        isPaymentScriptMask <- mkMask 0b00010000 <$> arbitrary
+        isMainnetMask <- mkMask 0b00000001 <$> arbitrary
         let
           header = stakeRefMask .|. isPaymentScriptMask .|. isMainnetMask
-          genHash28 = uniformByteStringM 28 g
-          genVar32 = VarLen <$> uniformM @Word32 g
-          genVar16 = VarLen <$> uniformM @Word16 g
+          genVar32 = VarLen <$> arbitrary @Word32
+          genVar16 = VarLen <$> arbitrary @Word16
         stakeCred <- case stakeRef of
           0b00 -> genHash28 -- staking payment hash
           0b01 -> genHash28 -- staking script hash
@@ -240,16 +238,16 @@ instance Era era => HuddleRule "address" era where
         pure $ S bytesTerm
 
 instance Era era => HuddleRule "reward_account" era where
-  huddleRuleNamed pname _ = withGenerator generator $ pname =.= VBytes
+  huddleRuleNamed pname _ = withGenerator (const generator) $ pname =.= VBytes
     where
-      generator g = do
-        isMainnet <- uniformM g
-        isScript <- uniformM g
+      generator = do
+        isMainnet <- arbitrary
+        isScript <- arbitrary
         let
           mainnetMask | isMainnet = 0b00000001 | otherwise = 0x00
           scriptMask | isScript = 0b00010000 | otherwise = 0x00
           header = 0b11100000 .|. mainnetMask .|. scriptMask
-        payload <- uniformByteStringM 28 g
+        payload <- genHash28
         let term = TBytes $ BS.cons header payload
         pure $ S term
 
