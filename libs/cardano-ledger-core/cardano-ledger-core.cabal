@@ -193,12 +193,13 @@ library cddl
     -Wunused-packages
 
   build-depends:
+    QuickCheck,
     base,
     bytestring,
     cardano-ledger-binary,
     cardano-ledger-core,
     cborg,
-    cuddle >=1.1,
+    cuddle >=1.2,
     heredoc,
     mempack,
     random,

@@ -113,9 +113,9 @@ library testlib
     ghc-options:
       -Wredundant-constraints
   build-depends:
-    antigen >=0.3.1.0 && < 0.4,
     ImpSpec,
     QuickCheck,
+    antigen >=0.3.1.0 && <0.4,
     base,
     base16-bytestring,
     bytestring,
@@ -128,7 +128,7 @@ library testlib
     cardano-strict-containers,
     cborg,
     containers,
-    cuddle >=1.1 && <1.1.2,
+    cuddle >=1.2,
     directory,
     filepath,
     formatting,

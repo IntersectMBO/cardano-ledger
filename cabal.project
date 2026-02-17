@@ -20,12 +20,6 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cuddle.git
-  tag: 65c64867e4d4cdace105cbd1a5097701db2c5bac
-  --sha256: sha256-TS1qbTwLrJ+OQq/f+FqnmindvANnQf8mZbAqFDk5Kuo=
-
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/constrained-generators.git
   --sha256: sha256-h0bJTwdfJG84XrERJJoBBi5ZzRHgeVoZWS2yW/z7LiU=
   tag: 966f65f3c28cb22fc45220dbd1408baea93b53d8
@@ -108,10 +102,10 @@ if impl(ghc >=9.12)
 
 source-repository-package
   type: git
-  location: https://github.com/Soupstraw/cardano-cls.git
+  location: https://github.com/tweag/cardano-cls.git
   subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
-  --sha256: sha256-POBr11BhEN6SFfc70ZD5saGBanyH/F2Is1TK7+xbk4s=
-  tag: c8414c077b8efd1a8818b147cc33b42504779e4e
+  --sha256: sha256-HqkjvqBwo8zZpKHZY7R21OVhP7VQtfoBwK0vawZtNfg=
+  tag: 98b29d8a866d4dd6658682e285a3d49c17039d0d
 
 if impl(ghc >=9.14)
   source-repository-package

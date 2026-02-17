@@ -13,6 +13,7 @@ import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingPro
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
+import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval, AccountBalanceIntervals)
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
@@ -30,6 +31,9 @@ spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @DijkstraEra
     describe "Huddle" $ specWithHuddle dijkstraCDDL $ do
+      huddleRoundTripCborSpec @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
+      huddleRoundTripCborSpec @(AccountBalanceIntervals DijkstraEra) v "account_balance_intervals"
+      huddleRoundTripArbitraryValidate @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
       huddleRoundTripCborSpec @(Value DijkstraEra) v "positive_coin"
       huddleRoundTripArbitraryValidate @(Value DijkstraEra) v "value"
       describe "MultiAsset" $ do
