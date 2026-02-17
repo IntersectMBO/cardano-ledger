@@ -41,15 +41,14 @@ spec = do
       xdescribe "fix TxBody" $ do
         huddleRoundTripAnnCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleRoundTripCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
+        huddleRoundTripArbitraryValidate @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleRoundTripAnnCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
         huddleRoundTripCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
-      -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ do
-        huddleRoundTripArbitraryValidate @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleRoundTripArbitraryValidate @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
-      huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
+      -- TODO enable this once map/list expansion has been optimized in cuddle
       -- TODO fails because of plutus scripts
       xdescribe "fix plutus scripts" $ do
+        huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
         huddleRoundTripArbitraryValidate @(TxAuxData DijkstraEra) v "auxiliary_data"
         huddleRoundTripCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
       huddleRoundTripAnnCborSpec @(NativeScript DijkstraEra) v "native_script"
@@ -78,8 +77,7 @@ spec = do
         huddleRoundTripArbitraryValidate @(TxWits DijkstraEra) v "transaction_witness_set"
       huddleRoundTripCborSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ do
-        huddleRoundTripArbitraryValidate @(PParamsUpdate DijkstraEra) v "protocol_param_update"
+      huddleRoundTripArbitraryValidate @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       huddleRoundTripCborSpec @CostModels v "cost_models"
       huddleRoundTripArbitraryValidate @CostModels v "cost_models"
       huddleRoundTripAnnCborSpec @(Redeemers DijkstraEra) v "redeemers"

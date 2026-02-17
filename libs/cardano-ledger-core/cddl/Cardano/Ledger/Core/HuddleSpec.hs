@@ -77,7 +77,7 @@ instance Era era => HuddleRule "unit_interval" era where
     where
       generator g = do
         let genUnitInterval64 l u = do
-              d <- uniformRM (l, u) g
+              d <- uniformRM (max 1 l, u) g
               n <- uniformRM (l, d) g
               pure (n, d)
             max64 = toInteger (maxBound @Word64)
