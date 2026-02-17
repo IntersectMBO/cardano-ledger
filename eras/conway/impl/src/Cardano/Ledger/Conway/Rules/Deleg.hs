@@ -76,6 +76,7 @@ import Control.State.Transition (
  )
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isNothing)
 import Data.Set as Set
 import Data.Void (Void)
 import GHC.Generics (Generic)
@@ -345,14 +346,35 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mAccountState ne
           (certPStateL . psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.insert stakeCred) stakePool)
           (\accountState -> certPStateL %~ unDelegReDelegStakePool stakeCred accountState (Just stakePool))
           mAccountState
+
     delegVote dRep cState =
-      cState
-        & certDStateL . accountsL %~ adjustAccountState (dRepDelegationAccountStateL ?~ dRep) stakeCred
-        & maybe
-          (certVStateL %~ insertDRepDeleg dRep)
-          (\accountState -> certVStateL %~ unDelegReDelegDRep stakeCred accountState (Just dRep))
-          (guard (not preserveIncorrectDelegation) >> mAccountState)
-    insertDRepDeleg dRep = case dRep of
-      DRepCredential dRepCred ->
-        vsDRepsL %~ Map.adjust (drepDelegsL %~ Set.insert stakeCred) dRepCred
-      _ -> id
+      let handleReverseDelegation =
+            case dRepToCred dRep of
+              Just dRepCred
+                -- This is the case where we only add the new reverse delegation and do not remove
+                -- the old one, which is the behavior that we want:
+                --
+                -- 1) for new accounts, since there is no old reverse delegation to remove
+                --
+                -- 2) in the bootstrap phase, in order to preserve the incorrect behavior, where old reverse
+                --   delegation for the prior DRep was wrongfully retained. It is important to note
+                --   that in case when the new delegation was to a predefined DRep, the reverse
+                --   delegations where handled correctly even in the boostrap phase
+                --
+                -- For reference here is the original bug report:
+                --   https://github.com/IntersectMBO/cardano-ledger/issues/4772
+                | isNothing mAccountState || preserveIncorrectDelegation ->
+                    certVStateL . vsDRepsL
+                      %~ Map.adjust (drepDelegsL %~ Set.insert stakeCred) dRepCred
+              _
+                -- AccountState existed before this delegation, therefore we need to properly handle
+                -- potential undelegation of the old DRep
+                | Just accountState <- mAccountState ->
+                    certVStateL %~ unDelegReDelegDRep stakeCred accountState (Just dRep)
+                -- If this is a fresh registration with delegation to a predefined DRep, there are
+                -- no extra steps that need to be done
+                | otherwise -> id
+       in cState
+            & certDStateL . accountsL
+              %~ adjustAccountState (dRepDelegationAccountStateL ?~ dRep) stakeCred
+            & handleReverseDelegation
