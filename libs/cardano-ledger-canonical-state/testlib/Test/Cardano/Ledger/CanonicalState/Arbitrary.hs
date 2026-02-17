@@ -9,8 +9,6 @@ module Test.Cardano.Ledger.CanonicalState.Arbitrary () where
 
 import Cardano.Ledger.CanonicalState.BasicTypes (
   CanonicalCoin (..),
-  CanonicalCredential,
-  mkCanonicalCredential,
  )
 import Cardano.Ledger.CanonicalState.Conway ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
@@ -40,5 +38,3 @@ instance Arbitrary Committee.V0.CanonicalCommitteeAuthorization where
   arbitrary = fmap Committee.V0.mkCanonicalCommitteeAuthorization arbitrary
 
 instance Arbitrary Committee.V0.CanonicalCommitteeState where arbitrary = genericArbitraryU
-
-instance Arbitrary (CanonicalCredential kr) where arbitrary = fmap mkCanonicalCredential arbitrary

@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -24,12 +25,9 @@ module Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 (
 ) where
 
 import Cardano.Ledger.BaseTypes (Anchor (..), EpochNo (..), StrictMaybe (..))
-import Cardano.Ledger.CanonicalState.BasicTypes (
-  CanonicalCredential (..),
-  fromCanonicalCredential,
-  mkCanonicalCredential,
- )
+import Cardano.Ledger.CanonicalState.BasicTypes ()
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, HotCommitteeRole))
 import Cardano.Ledger.State (CommitteeAuthorization (..))
 import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), decodeListLenCanonicalOf)
@@ -79,7 +77,7 @@ instance IsKey GovCommitteeIn where
     return $ GovCommitteeIn (EpochNo no)
 
 newtype CanonicalCommitteeState = CanonicalCommitteeState
-  { csCommitteeCreds :: Map.Map (CanonicalCredential ColdCommitteeRole) CanonicalCommitteeAuthorization
+  { csCommitteeCreds :: Map.Map (Credential ColdCommitteeRole) CanonicalCommitteeAuthorization
   }
   deriving (Eq, Show, Generic)
 
@@ -102,19 +100,19 @@ instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalCommitt
     decodeListLenCanonicalOf 2
     Versioned (tag :: Word8) <- fromCanonicalCBOR
     case tag of
-      0 -> fmap CanonicalCommitteeHotCredential <$> fromCanonicalCBOR
-      1 -> fmap CanonicalCommitteeMemberResigned <$> fromCanonicalCBOR
+      0 -> fmap CanonicalCommitteeHotCredential <$> fromCanonicalCBOR @v
+      1 -> fmap CanonicalCommitteeMemberResigned <$> fromCanonicalCBOR @v
       _ -> fail "Invalid CommitteeAuthorization tag"
 
 data CanonicalCommitteeAuthorization
-  = CanonicalCommitteeHotCredential (CanonicalCredential HotCommitteeRole)
+  = CanonicalCommitteeHotCredential (Credential HotCommitteeRole)
   | CanonicalCommitteeMemberResigned (StrictMaybe Anchor)
   deriving (Eq, Show, Ord, Generic)
 
 mkCanonicalCommitteeAuthorization :: CommitteeAuthorization -> CanonicalCommitteeAuthorization
-mkCanonicalCommitteeAuthorization (CommitteeHotCredential credential) = CanonicalCommitteeHotCredential (mkCanonicalCredential credential)
+mkCanonicalCommitteeAuthorization (CommitteeHotCredential credential) = CanonicalCommitteeHotCredential credential
 mkCanonicalCommitteeAuthorization (CommitteeMemberResigned anchor) = CanonicalCommitteeMemberResigned anchor
 
 fromCanonicalCommitteeAuthorization :: CanonicalCommitteeAuthorization -> CommitteeAuthorization
-fromCanonicalCommitteeAuthorization (CanonicalCommitteeHotCredential credential) = CommitteeHotCredential (fromCanonicalCredential credential)
+fromCanonicalCommitteeAuthorization (CanonicalCommitteeHotCredential credential) = CommitteeHotCredential credential
 fromCanonicalCommitteeAuthorization (CanonicalCommitteeMemberResigned anchor) = CommitteeMemberResigned anchor
