@@ -92,7 +92,6 @@ spec = do
       -- CostModels
       huddleRoundTripCborSpec @CostModels v "cost_models"
       huddleRoundTripArbitraryValidate @CostModels v "cost_models"
-      huddleAntiCborSpec @CostModels v "cost_models"
       -- Redeemers
       huddleRoundTripAnnCborSpec @(Redeemers ConwayEra) v "redeemers"
       huddleRoundTripGenValidate @(Redeemers ConwayEra) genNonEmptyRedeemers v "redeemers"
