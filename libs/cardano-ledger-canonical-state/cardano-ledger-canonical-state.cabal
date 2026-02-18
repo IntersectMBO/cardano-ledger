@@ -47,6 +47,7 @@ library
     Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0
     Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
     Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0
+    Cardano.Ledger.CanonicalState.Namespace.PoolStake.V0
     Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
 
   hs-source-dirs: src
@@ -65,6 +66,7 @@ library
     scls-cardano,
     scls-cbor,
     scls-core,
+    text,
 
 library conway
   import: warnings
