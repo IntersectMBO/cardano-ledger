@@ -236,14 +236,28 @@ instance AggregateStat SnapShotStats where
       , gsKeyHashStakePool = sssDelegationStakePool <> sssPoolParams
       }
 
+countStakePoolSnapShotStats :: KeyHash StakePool -> StakePoolSnapShot -> PoolParamsStats
+countStakePoolSnapShotStats poolId StakePoolSnapShot {..} =
+  PoolParamsStats
+    { ppsPoolId = statSingleton poolId
+    , ppsAccountAddress = statSingleton spssAccountId
+    , ppsOwners = statSet spssSelfDelegatedOwners
+    }
+
 countSnapShotStat :: SnapShot -> SnapShotStats
 countSnapShotStat SnapShot {..} =
   SnapShotStats
-    { sssStake = statMapKeys (VMap.toMap (unStake ssStake))
+    { sssStake = statMapKeys (VMap.toMap (unStake ssActiveStake))
     , sssDelegationCredential = statMapKeys (VMap.toMap ssDelegations)
     , sssDelegationStakePool = statFoldable (VMap.toMap ssDelegations)
-    , sssPoolParams = statMapKeys (VMap.toMap ssPoolParams)
-    , sssPoolParamsStats = VMap.foldMap countPoolParamsStats ssPoolParams
+    , sssPoolParams = statMapKeys (VMap.toMap ssStakePoolsSnapShot)
+    , sssPoolParamsStats =
+        VMap.foldlWithKey
+          ( \acc poolId spss ->
+              acc <> countStakePoolSnapShotStats poolId spss
+          )
+          mempty
+          ssStakePoolsSnapShot
     }
 
 data PoolParamsStats = PoolParamsStats
@@ -491,7 +505,7 @@ countPStateStats PState {..} =
     , pssPoolParamsStats =
         foldMap
           countPoolParamsStats
-          (Map.mapWithKey (`stakePoolStateToStakePoolParams` Testnet) psStakePools)
+          (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools)
           <> foldMap countPoolParamsStats psFutureStakePoolParams
     }
 

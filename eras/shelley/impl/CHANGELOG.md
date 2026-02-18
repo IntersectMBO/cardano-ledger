@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Remove `ssPoolParamsL`
 * Add `Generic` instance for `ApplyTxError`
 * Change `updateNonMyopic`, `likelihoodsNM`, `rewLikelihoods` and `fvPoolRewardInfo` to use `VMap`
 * Add `calcNonMyopicMemberReward` and deprecate `nonMyopicMemberRew` in its favor.

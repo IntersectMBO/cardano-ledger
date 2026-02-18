@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
@@ -88,7 +89,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   MemberStatus (..),
   NextEpochChange (..),
  )
-import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, ProtVer (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
@@ -121,7 +122,7 @@ import Cardano.Ledger.DRep (credToDRep, dRepToCred)
 import Cardano.Ledger.Shelley.LedgerState
 import Control.DeepSeq
 import Control.Monad (guard)
-import Data.Foldable (foldMap')
+import Data.Foldable (fold, foldMap')
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
@@ -472,7 +473,7 @@ mkQueryPoolStateResult ::
 mkQueryPoolStateResult f ps network =
   QueryPoolStateResult
     { qpsrStakePoolParams =
-        Map.mapWithKey (`stakePoolStateToStakePoolParams` network) restrictedStakePools
+        Map.mapWithKey (stakePoolStateToStakePoolParams network) restrictedStakePools
     , qpsrFutureStakePoolParams = f $ psFutureStakePoolParams ps
     , qpsrRetiring = f $ psRetiring ps
     , qpsrDeposits = Map.map (fromCompact . spsDeposit) restrictedStakePools
@@ -503,7 +504,7 @@ queryPoolParameters ::
   Map (KeyHash StakePool) StakePoolParams
 queryPoolParameters network nes poolKeys =
   let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-   in Map.mapWithKey (`stakePoolStateToStakePoolParams` network) $ Map.restrictKeys pools poolKeys
+   in Map.mapWithKey (stakePoolStateToStakePoolParams network) $ Map.restrictKeys pools poolKeys
 
 -- | The stake snapshot returns information about the mark, set, go ledger snapshots for a pool,
 -- plus the total active stake for each snapshot that can be used in a 'sigma' calculation.
@@ -573,7 +574,20 @@ instance DecCBOR StakeSnapshots where
       <*> decCBOR
       <*> decCBOR
 
+-- | Report stake per pool per snapshot as well as total active stake per snapshot.
+--
+-- /Note/ - Whenever poolIds are not supplied, we collect all of the pools, even if they don't have
+-- any delegations. Otherwise we filter out for exact poolIds that were supplied. In both cases it
+-- means that there can be pools that have zero stake in all three snapshot, but the meaning of that
+-- can be very different:
+--
+-- * either the pool has no delegations, or
+-- * it was explicitly requested even though it has no stake or not even registered
+--
+-- However, starting with Protocol Version 11 we remove this strange inconsistency and only ever
+-- report stake pools with non-zero stake, which means pools without delegations (hence without any stake in any of the three snapshots) are no longer included in the results.
 queryStakeSnapshots ::
+  EraGov era =>
   NewEpochState era ->
   Maybe (Set (KeyHash StakePool)) ->
   StakeSnapshots
@@ -584,25 +598,47 @@ queryStakeSnapshots nes mPoolIds =
         , ssStakeGo
         } = esSnapshots $ nesEs nes
 
+      mkStakeSnapshotMaybe poolId = do
+        let
+          markPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeMark)
+          setPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeSet)
+          goPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeGo)
+        -- Non-registered stake pools or ones that have no stake are of no interest to us.
+        guard (fold [markPoolStake, setPoolStake, goPoolStake] > Just mempty)
+        Just
+          StakeSnapshot
+            { ssMarkPool = maybe mempty fromCompact markPoolStake
+            , ssSetPool = maybe mempty fromCompact setPoolStake
+            , ssGoPool = maybe mempty fromCompact goPoolStake
+            }
       mkStakeSnapshot poolId =
-        let lookupStake =
-              maybe mempty (fromCompact . spssStake) . VMap.lookup poolId . ssStakePoolsSnapShot
-         in StakeSnapshot
-              { ssMarkPool = lookupStake ssStakeMark
-              , ssSetPool = lookupStake ssStakeSet
-              , ssGoPool = lookupStake ssStakeGo
-              }
-      -- Whenever poolIds are not supplied, we collect all pools that don't have any delegations,
-      -- otherwise we filter out for exact poolIds that were supplied.
+        let
+          lookupStake =
+            maybe mempty (fromCompact . spssStake) . VMap.lookup poolId . ssStakePoolsSnapShot
+         in
+          StakeSnapshot
+            { ssMarkPool = lookupStake ssStakeMark
+            , ssSetPool = lookupStake ssStakeSet
+            , ssGoPool = lookupStake ssStakeGo
+            }
+      version = pvMajor (nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL)
       poolIds =
         case mPoolIds of
-          Nothing ->
-            foldMap
-              (VMap.keysSet . VMap.filter (\_ -> (> 0) . spssNumDelegators) . ssStakePoolsSnapShot)
-              [ssStakeMark, ssStakeSet, ssStakeGo]
+          Nothing
+            | version < natVersion @11 ->
+                foldMap
+                  (VMap.keysSet . VMap.filter (\_ -> (> 0) . spssNumDelegators) . ssStakePoolsSnapShot)
+                  [ssStakeMark, ssStakeSet, ssStakeGo]
+            | otherwise ->
+                foldMap
+                  (VMap.keysSet . VMap.filter (\_ -> (> mempty) . spssStake) . ssStakePoolsSnapShot)
+                  [ssStakeMark, ssStakeSet, ssStakeGo]
           Just ids -> ids
    in StakeSnapshots
-        { ssStakeSnapshots = Map.fromSet mkStakeSnapshot poolIds
+        { ssStakeSnapshots =
+            if version < natVersion @11
+              then Map.fromSet mkStakeSnapshot poolIds
+              else Map.mapMaybe id $ Map.fromSet mkStakeSnapshotMaybe poolIds
         , ssMarkTotal = ssTotalActiveStake ssStakeMark
         , ssSetTotal = ssTotalActiveStake ssStakeSet
         , ssGoTotal = ssTotalActiveStake ssStakeGo

@@ -159,7 +159,7 @@ poolRegistrationProp
             conjoin
               [ counterexample
                   "New StakePoolParams are registered in pParams"
-                  ( (stakePoolStateToStakePoolParams hk Testnet <$> Map.lookup hk (psStakePools targetSt))
+                  ( (stakePoolStateToStakePoolParams Testnet hk <$> Map.lookup hk (psStakePools targetSt))
                       === Just stakePoolParams
                   )
               , counterexample

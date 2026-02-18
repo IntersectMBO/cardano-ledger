@@ -87,6 +87,7 @@ import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Exts (fromList)
 import GHC.Stack (HasCallStack)
+import Test.Cardano.Ledger.Core.Arbitrary (mkSnapShotFromStakePoolParams)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
@@ -111,7 +112,6 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (
   epochSize,
@@ -398,9 +398,8 @@ snapEx3 =
       [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
       , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
       ]
-    poolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]
    in
-    mkSnapShot stake delegations poolParams
+    mkSnapShotFromStakePoolParams stake delegations poolParamsEx5
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
@@ -538,9 +537,11 @@ snapEx5 =
       , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
       , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
       ]
-    poolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]
    in
-    mkSnapShot stake delegations poolParams
+    mkSnapShotFromStakePoolParams stake delegations poolParamsEx5
+
+poolParamsEx5 :: [StakePoolParams]
+poolParamsEx5 = [Cast.aliceStakePoolParams]
 
 pdEx5 :: PoolDistr
 pdEx5 =
@@ -791,9 +792,8 @@ snapEx9 =
         , (Cast.carlSHK, carlMIR)
         ]
     delegations = ssDelegations snapEx5
-    poolParams = ssPoolParams snapEx5
    in
-    mkSnapShot stake delegations poolParams
+    mkSnapShotFromStakePoolParams stake delegations poolParamsEx5
 
 expectedStEx9 :: ChainState ShelleyEra
 expectedStEx9 =
@@ -941,7 +941,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
     blocks = 0
     t = leaderProbability f relativeStake (unsafeBoundRational 0.5)
     -- everyone has delegated to Alice's Pool
-    Coin stake = sumAllStake (ssStake snapEx5)
+    Coin stake = sumAllStake (ssActiveStake snapEx5)
     relativeStake = fromRational (stake % supply)
     Coin supply = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals
@@ -1017,9 +1017,8 @@ snapEx12 =
       [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
       , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
       ]
-    poolParams = ssPoolParams snapEx9
    in
-    mkSnapShot stake delegations poolParams
+    mkSnapShotFromStakePoolParams stake delegations poolParamsEx5
 
 expectedStEx12 :: ChainState ShelleyEra
 expectedStEx12 =

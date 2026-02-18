@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
   aggregateUtxoCoinByCredential,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals (Globals, networkId), Network (..))
+import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (Identity, LedgerEnv)
 import Cardano.Ledger.Shelley.State
-import Control.Monad.Reader (MonadReader (ask), ReaderT)
+import Control.Monad.Reader (ReaderT)
 import Control.State.Transition (STS (..))
 import Data.Foldable (fold)
 import Data.Map (Map)
@@ -43,7 +43,6 @@ import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rewards (mkSnapShot)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
@@ -51,10 +50,7 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   longTraceLen,
   traceLen,
  )
-import Test.Cardano.Ledger.Shelley.Utils (
-  ChainProperty,
-  runShelleyBase,
- )
+import Test.Cardano.Ledger.Shelley.Utils (ChainProperty)
 import Test.Cardano.Ledger.TerseTools (tersemapdiffs)
 import Test.Control.State.Transition.Trace (
   SourceSignalTarget (..),
@@ -155,12 +151,11 @@ incrStakeComparisonTest ::
   Proxy era ->
   TestTree
 incrStakeComparisonTest Proxy = do
-  let network = runShelleyBase $ ask >>= \Globals {networkId} -> pure networkId
   testProperty "Incremental stake distribution at epoch boundaries agrees" $
     forAllChainTrace traceLen defaultConstants $ \tr ->
       conjoin
         $ map
-          (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era network ((nesEs . chainNes) target))
+          (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era ((nesEs . chainNes) target))
         $ filter (not . sameEpoch) (sourceSignalTargets tr)
   where
     sameEpoch SourceSignalTarget {source, target} = epoch source == epoch target
@@ -169,21 +164,23 @@ incrStakeComparisonTest Proxy = do
 checkIncrementalStake ::
   forall era.
   (EraGov era, EraTxOut era, EraStake era, EraCertState era, ShelleyEraAccounts era) =>
-  Network ->
   EpochState era ->
   Property
-checkIncrementalStake network es =
+checkIncrementalStake es =
   let
     LedgerState (UTxOState utxo _ _ _ instantStake _) certState = esLState es
     dstate = certState ^. certDStateL
     pstate = certState ^. certPStateL
     stake = stakeDistr @era utxo dstate pstate
-    snapShot = snapShotFromInstantStake instantStake dstate pstate network
+    snapShot = snapShotFromInstantStake instantStake dstate pstate
     _pp = es ^. curPParamsEpochStateL
    in
     counterexample
       ( "\nIncremental stake distribution does not match old style stake distribution"
-          ++ tersediffincremental "differences: Old vs Incremental" (ssStake stake) (ssStake snapShot)
+          ++ tersediffincremental
+            "differences: Old vs Incremental"
+            (ssActiveStake stake)
+            (ssActiveStake snapShot)
       )
       (stake === snapShot)
 
@@ -203,7 +200,8 @@ stakeDistr ::
   PState era ->
   SnapShot
 stakeDistr u ds PState {psStakePools} =
-  mkSnapShot activeStake (VMap.fromMap delegs) poolParams
+  resetStakePoolsSnapShot (VMap.fromMap psStakePools) $
+    mkSnapShot activeStake (VMap.fromMap delegs) VMap.empty
   where
     activeStake = Stake $ VMap.fromMap (stakeRelation `Map.intersection` activeDelegs)
     accountsMap = ds ^. accountsL . accountsMapL
@@ -216,7 +214,6 @@ stakeDistr u ds PState {psStakePools} =
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
     activeDelegs :: Map.Map (Credential Staking) (KeyHash StakePool)
     activeDelegs = Map.filterWithKey (\k v -> Map.member k rewards' && Map.member v psStakePools) delegs
-    poolParams = VMap.fromMap $ Map.mapWithKey (`stakePoolStateToStakePoolParams` Testnet) psStakePools
 
 -- | Sum up all the Coin for each staking Credential. This function has an
 --   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'

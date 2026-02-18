@@ -234,7 +234,7 @@ tickfRuleBench =
                     , bgroup
                         "calculatePoolDistr subparts"
                         [ bench "poolStake" $
-                            whnf (calculatePoolStake (const True) (ssDelegations (getSnap nes))) (ssStake (getSnap nes))
+                            whnf (calculatePoolStake (const True) (ssDelegations (getSnap nes))) (ssActiveStake (getSnap nes))
                         , bench "old calculatePoolDistr" $
                             whnf (oldCalculatePoolDistr (const True)) (getSnap nes)
                         ]

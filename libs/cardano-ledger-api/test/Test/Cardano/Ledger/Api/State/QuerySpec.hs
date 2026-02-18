@@ -62,15 +62,15 @@ latestErasSpec ::
   , ConwayEraCertState era
   ) =>
   Spec
-latestErasSpec = do
+latestErasSpec =
   describe "QuerySpec" $ do
-    describe (eraName @era) $
+    describe (eraName @era) $ do
       describe "Roundtrip" $ do
         prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
         prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
-    describe "Queries" $ do
-      committeeMembersStateSpec @era
-      queryStakeSnapshotsSpec @era
+      describe "Queries" $ do
+        committeeMembersStateSpec @era
+        queryStakeSnapshotsSpec @era
 
 committeeMembersStateSpec ::
   forall era.
@@ -468,16 +468,20 @@ queryStakeSnapshotsSpec =
       let
         nes = (def :: NewEpochState era) & nesEsL . esSnapshotsL .~ ss
         result = queryStakeSnapshots nes Nothing
-        getPoolIds =
+        getPoolIdsWithNonZeroDelegators =
           Map.filter ((> 0) . spssNumDelegators) . VMap.toMap . ssStakePoolsSnapShot
-        allPoolIdsWithDelegations =
-          foldMap (Map.keysSet . getPoolIds) [ssStakeMark ss, ssStakeSet ss, ssStakeGo ss]
-        allPoolIds =
+        getPoolIdsWithNonZeroStake =
+          Map.filter ((> mempty) . spssStake) . VMap.toMap . ssStakePoolsSnapShot
+        allPoolIdsFiltered with =
           foldMap
-            (Map.keysSet . VMap.toMap . ssStakePoolsSnapShot)
+            (Map.keysSet . with)
             [ssStakeMark ss, ssStakeSet ss, ssStakeGo ss]
+        version = pvMajor (nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL)
+        allPoolIds
+          | version >= natVersion @11 = allPoolIdsFiltered getPoolIdsWithNonZeroStake
+          | otherwise = allPoolIdsFiltered getPoolIdsWithNonZeroDelegators
         nonZeroTotal s =
-          nonZeroOr (VMap.foldMap fromCompact (unStake (ssStake s))) (knownNonZeroCoin @1)
+          nonZeroOr (VMap.foldMap fromCompact (unStake (ssActiveStake s))) (knownNonZeroCoin @1)
         nonZeroSubTotal ssWhich =
           nonZeroOr (foldMap ssWhich (ssStakeSnapshots result)) (knownNonZeroCoin @1)
       subPoolIds <- uniformSubSet Nothing allPoolIds QC
@@ -488,12 +492,13 @@ queryStakeSnapshotsSpec =
         subResult = queryStakeSnapshots nes (Just subPoolIds)
       pure @Gen $
         conjoin
-          [ Map.keysSet (ssStakeSnapshots result) === allPoolIdsWithDelegations
-          , nonZeroSubTotal ssMarkPool === ssMarkTotal result
-          , nonZeroSubTotal ssSetPool === ssSetTotal result
-          , nonZeroSubTotal ssGoPool === ssGoTotal result
-          , ssMarkTotal result === nonZeroTotal (ssStakeMark ss)
-          , ssSetTotal result === nonZeroTotal (ssStakeSet ss)
-          , ssGoTotal result === nonZeroTotal (ssStakeGo ss)
-          , Map.keysSet (ssStakeSnapshots subResult) === subPoolIds
+          [ counterexample "AllPoolIds" $
+              Map.keysSet (ssStakeSnapshots result) === allPoolIds
+          , counterexample "SubTotal Mark" $ nonZeroSubTotal ssMarkPool === ssMarkTotal result
+          , counterexample "SubTotal Set" $ nonZeroSubTotal ssSetPool === ssSetTotal result
+          , counterexample "SubTotal Go" $ nonZeroSubTotal ssGoPool === ssGoTotal result
+          , counterexample "Total Mark" $ ssMarkTotal result === nonZeroTotal (ssStakeMark ss)
+          , counterexample "Total Set" $ ssSetTotal result === nonZeroTotal (ssStakeSet ss)
+          , counterexample "Total Go" $ ssGoTotal result === nonZeroTotal (ssStakeGo ss)
+          , counterexample "subPoolIds" $ Map.keysSet (ssStakeSnapshots subResult) === subPoolIds
           ]

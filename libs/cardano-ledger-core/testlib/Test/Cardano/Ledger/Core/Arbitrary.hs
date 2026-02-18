@@ -18,6 +18,8 @@
 module Test.Cardano.Ledger.Core.Arbitrary (
   module Test.Cardano.Ledger.Binary.Arbitrary,
   genericShrinkMemo,
+  mkSnapShotFromStakePoolParams,
+  resetStakePoolSnapShotFromPoolParams,
 
   -- * Plutus
   genValidAndUnknownCostModels,
@@ -63,7 +65,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as BaseTypes
 import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..), knownNonZeroCoin)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
@@ -86,10 +88,10 @@ import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Control.DeepSeq
 import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
 import Control.Monad.Trans.Fail.String (errorFail)
+import Data.Foldable (toList)
 import Data.GenValidity
 import Data.Int (Int64)
 import Data.Map.Strict (Map)
@@ -100,6 +102,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Typeable
 import qualified Data.VMap as VMap
+import qualified Data.Vector as V
 import Data.Word (Word16, Word64, Word8)
 import GHC.Generics (Generic (..))
 import GHC.Stack
@@ -676,17 +679,17 @@ instance Arbitrary StakePoolSnapShot where
 
 instance Arbitrary SnapShot where
   arbitrary = do
-    ssPoolParams <- arbitrary
+    poolParams <- arbitrary
     credsWithStakeAndDelegations <-
-      if VMap.null ssPoolParams
+      if V.null poolParams
         then pure mempty
         else do
           len <- sized $ \n -> chooseInt (0, n)
           fmap Map.fromList $ vectorOf len $ do
             cred <- arbitrary
             !deleg <- do
-              ix <- chooseInt (0, VMap.size ssPoolParams - 1)
-              pure $ fst $ VMap.elemAt ix ssPoolParams
+              ix <- chooseInt (0, V.length poolParams - 1)
+              pure $ sppId $ poolParams V.! ix
             -- Make sure that the total sum does not overflow.
             randomStake <- arbitrary
             let stake
@@ -695,21 +698,46 @@ instance Arbitrary SnapShot where
                   | otherwise = randomStake
             pure (cred, (deleg, stake))
     let
-      ssDelegations = VMap.fromMap $ Map.map fst credsWithStakeAndDelegations
-      ssStake = Stake $ VMap.fromMap $ Map.map snd credsWithStakeAndDelegations
-      ssTotalActiveStake = sumAllStake ssStake `BaseTypes.nonZeroOr` (knownNonZeroCoin @1)
-    deposit <- arbitrary
-    let delegationsPerStakePool :: Map (KeyHash StakePool) (Set (Credential Staking))
-        delegationsPerStakePool =
-          Map.foldrWithKey'
-            (\cred (stakePool, _) -> Map.insertWith (<>) stakePool (Set.singleton cred))
-            mempty
-            credsWithStakeAndDelegations
-        stakePoolSnapShotFromParams poolId =
-          mkStakePoolSnapShot ssStake ssTotalActiveStake
-            . mkStakePoolState deposit (Map.findWithDefault mempty poolId delegationsPerStakePool)
-        ssStakePoolsSnapShot = force $ VMap.mapWithKey stakePoolSnapShotFromParams ssPoolParams
-    pure SnapShot {..}
+      delegations = VMap.fromMap $ Map.map fst credsWithStakeAndDelegations
+      activeStake = Stake $ VMap.fromMap $ Map.map snd credsWithStakeAndDelegations
+    pure $
+      mkSnapShotFromStakePoolParams activeStake delegations poolParams
+
+-- | Adaptor that can construct new SnapShot representation from the old one
+mkSnapShotFromStakePoolParams ::
+  Foldable f =>
+  Stake ->
+  VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
+  f StakePoolParams ->
+  SnapShot
+mkSnapShotFromStakePoolParams activeStake delegs poolParams =
+  resetStakePoolSnapShotFromPoolParams poolParams $
+    mkSnapShot activeStake delegs VMap.empty
+
+-- | Given a snapshot and stake pool params fully override the stake pools snapshot.
+resetStakePoolSnapShotFromPoolParams ::
+  Foldable f =>
+  f StakePoolParams ->
+  SnapShot ->
+  SnapShot
+resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
+  ss
+    { ssStakePoolsSnapShot =
+        VMap.fromList
+          [ (sppId pp, snapShotFromStakePoolParams pp)
+          | pp <- toList stakePools
+          ]
+    }
+  where
+    snapShotFromStakePoolParams stakePoolParams =
+      let delegations = Map.findWithDefault mempty (sppId stakePoolParams) delegatorsPerStakePool
+       in mkStakePoolSnapShot ssActiveStake ssTotalActiveStake $
+            mkStakePoolState mempty delegations stakePoolParams
+    delegatorsPerStakePool =
+      VMap.foldlWithKey
+        (\acc cred poolId -> Map.insertWith (<>) poolId (Set.singleton cred) acc)
+        mempty
+        ssDelegations
 
 instance Arbitrary SnapShots where
   arbitrary = do
