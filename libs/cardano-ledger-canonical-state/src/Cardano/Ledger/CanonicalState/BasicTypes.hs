@@ -23,6 +23,7 @@ module Cardano.Ledger.CanonicalState.BasicTypes (
   CanonicalExUnits (..),
   mkCanonicalExUnits,
   fromCanonicalExUnits,
+  CanonicalVRFVerKeyHash (..),
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
@@ -39,7 +40,7 @@ import Cardano.Ledger.CanonicalState.LedgerCBOR
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..))
+import Cardano.Ledger.Hashes (HASH, Hash, KeyHash (..), ScriptHash (..))
 import qualified Cardano.Ledger.Hashes as H
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), ExUnits' (..))
 import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
@@ -235,3 +236,12 @@ mkCanonicalExUnits (unWrapExUnits -> ExUnits' {..}) = CanonicalExUnits {..}
 
 fromCanonicalExUnits :: CanonicalExUnits -> ExUnits
 fromCanonicalExUnits CanonicalExUnits {..} = WrapExUnits ExUnits' {..}
+
+newtype CanonicalVRFVerKeyHash (kr :: H.KeyRoleVRF) = CanonicalVRFVerKeyHash {unCanonicalVRFVerKeyHash :: Hash HASH H.KeyRoleVRF}
+  deriving (Eq, Ord, Show, Generic)
+
+instance (NamespaceEra v ~ era, Era era) => ToCanonicalCBOR v (CanonicalVRFVerKeyHash kr) where
+  toCanonicalCBOR v (CanonicalVRFVerKeyHash vrf) = toCanonicalCBOR v vrf
+
+instance (NamespaceEra v ~ era, Era era) => FromCanonicalCBOR v (CanonicalVRFVerKeyHash kr) where
+  fromCanonicalCBOR = fmap CanonicalVRFVerKeyHash <$> fromCanonicalCBOR
