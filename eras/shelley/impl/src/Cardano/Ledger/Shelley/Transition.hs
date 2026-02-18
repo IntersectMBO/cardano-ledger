@@ -34,6 +34,7 @@ module Cardano.Ledger.Shelley.Transition (
     tcShelleyGenesisL,
     tcInitialPParamsG
   ),
+  WithFileHandle,
   pattern ShelleyTransitionConfig,
   tcInitialFundsL,
   tcInitialStakingL,
@@ -65,6 +66,8 @@ import Cardano.Ledger.Shelley.Translation (
   toFromByronTranslationContext,
  )
 import Cardano.Ledger.Val
+import Control.Monad (when)
+import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, withObject, (.:))
 import qualified Data.Aeson as Aeson (Value (..))
 import Data.Aeson.Key (Key, fromString)
@@ -116,14 +119,16 @@ class
     TransitionConfig (PreviousEra era) ->
     TransitionConfig era
 
+  -- | Extract data from the given transition configuration and store it in the given state.
+  --
+  -- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
+  -- when 'NetworkId' is set to 'Mainnet'.
   injectIntoTestState ::
-    -- | Extract data from the given transition configuration and store it in the given state.
-    --
-    -- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
-    -- when 'NetworkId' is set to 'Mainnet'.
+    (MonadIO m, MonadFail m) =>
+    WithFileHandle m ->
     TransitionConfig era ->
     NewEpochState era ->
-    NewEpochState era
+    m (NewEpochState era)
 
   -- | In case when a previous era is available, we should always be able to access
   -- `TransitionConfig` for the previous era, from within the current era's
@@ -221,17 +226,19 @@ tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
 shelleyRegisterInitialFundsThenStaking ::
-  (EraTransition era, ShelleyEraAccounts era) =>
+  (EraTransition era, ShelleyEraAccounts era, MonadIO m, MonadFail m) =>
+  WithFileHandle m ->
   TransitionConfig era ->
   NewEpochState era ->
-  NewEpochState era
-shelleyRegisterInitialFundsThenStaking cfg =
+  m (NewEpochState era)
+shelleyRegisterInitialFundsThenStaking withFileHandle cfg newEpochState = do
   -- We must first register the initial funds, because the stake
   -- information depends on it.
-  resetStakeDistribution
-    . shelleyRegisterInitialAccounts (cfg ^. tcInitialStakingL)
-    . registerInitialStakePools (cfg ^. tcInitialStakingL)
-    . registerInitialFunds cfg
+  newEpochState' <- registerInitialFunds withFileHandle cfg newEpochState
+  pure $
+    resetStakeDistribution $
+      shelleyRegisterInitialAccounts (cfg ^. tcInitialStakingL) $
+        registerInitialStakePools (cfg ^. tcInitialStakingL) newEpochState'
 
 instance EraTransition ShelleyEra where
   newtype TransitionConfig ShelleyEra = ShelleyTransitionConfig
@@ -472,57 +479,82 @@ resetStakeDistribution nes =
 -- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
 -- when NetworkId is set to Mainnet
 registerInitialFunds ::
-  forall era.
+  forall era m.
   ( EraTransition era
   , HasCallStack
+  , MonadIO m
+  , MonadFail m
   ) =>
+  WithFileHandle m ->
   TransitionConfig era ->
   NewEpochState era ->
-  NewEpochState era
-registerInitialFunds tc nes =
-  nes
-    { nesEs =
-        epochState
-          { esChainAccountState = accountState'
-          , esLState = ledgerState'
-          }
-    }
+  m (NewEpochState era)
+registerInitialFunds withFileHandle tc newEpochState = do
+  -- Guard against mainnet injection before processing
+  when (tc ^. tcNetworkIDG == Mainnet) $
+    fail "Injection of InitialFunds is not possible on Mainnet"
+
+  -- we currently have two possible injection points: extraConfig takes priority
+  -- over (legacy) sgInitialFunds, but having both is an error.
+  let sg = tc ^. tcShelleyGenesisL
+  source <- case sgExtraConfig sg of
+    Just extraConfig
+      | not (null (sgInitialFunds sg)) ->
+          fail $
+            "Both legacy 'initialFunds' and 'extraConfig.initialFunds' are specified. "
+              ++ "Please use only one source for initial funds."
+      | otherwise -> pure $ secInitialFunds extraConfig
+    Nothing -> pure $ Embedded (sgInitialFunds sg)
+
+  -- fold over the stream of initial funds, accumulating state changes
+  (newUtxoEntries, totalCoins) <-
+    foldInjectionSource
+      withFileHandle
+      source
+      ( \(!acc, !coins) (addr, amount) ->
+          let txIn = initialFundsPseudoTxIn addr
+              txOut = mkBasicTxOut addr (inject amount)
+           in (Map.insert txIn txOut acc, coins <> amount)
+      )
+      (Map.empty, mempty)
+
+  pure $ applyFunds newUtxoEntries totalCoins
   where
-    epochState = nesEs nes
+    epochState = nesEs newEpochState
     accountState = esChainAccountState epochState
     ledgerState = esLState epochState
     utxoState = lsUTxOState ledgerState
     utxo = utxosUtxo utxoState
 
-    initialFundsUtxo :: UTxO era
-    initialFundsUtxo =
-      UTxO $
-        Map.fromList
-          [ (txIn, txOut)
-          | (addr, amount) <- ListMap.toList (tc ^. tcInitialFundsL)
-          , let txIn = initialFundsPseudoTxIn addr
-                txOut = mkBasicTxOut addr (inject amount)
-          ]
-
-    utxo' = mergeUtxoNoOverlap utxo initialFundsUtxo
-
-    -- Update the reserves
-    accountState' =
-      accountState
-        { casReserves = casReserves accountState <-> sumCoinUTxO initialFundsUtxo
-        }
-
-    ledgerState' =
-      ledgerState
-        { lsUTxOState =
-            utxoState
-              { utxosUtxo = utxo'
-              , -- Normally we would incrementally update here. But since we pass
-                -- the full UTxO as "toAdd" rather than a delta, we simply
-                -- reinitialise the full instant stake.
-                utxosInstantStake = addInstantStake utxo' mempty
+    applyFunds newUtxoEntries totalCoins =
+      newEpochState
+        { nesEs =
+            epochState
+              { esChainAccountState = accountState'
+              , esLState = ledgerState'
               }
         }
+      where
+        initialFundsUtxo = UTxO newUtxoEntries
+        utxo' = mergeUtxoNoOverlap utxo initialFundsUtxo
+
+        -- Update the reserves
+        accountState' =
+          accountState
+            { casReserves = casReserves accountState <-> totalCoins
+            }
+
+        ledgerState' =
+          ledgerState
+            { lsUTxOState =
+                utxoState
+                  { utxosUtxo = utxo'
+                  , -- Normally we would incrementally update here. But since we pass
+                    -- the full UTxO as "toAdd" rather than a delta, we simply
+                    -- reinitialise the full instant stake.
+                    utxosInstantStake = addInstantStake utxo' mempty
+                  }
+            }
 
     -- Merge two UTxOs, throw an 'error' in case of overlap
     mergeUtxoNoOverlap ::

@@ -2,6 +2,10 @@
 
 ## 1.18.0.0
 
+* Add `InjectionSource`, `WithFileHandle`, `foldInjectionSource`, `InjectionError`, `renderInjectionError` to `Cardano.Ledger.Shelley.Genesis`
+* Add `ShelleyExtraConfig` type to `Cardano.Ledger.Shelley.Genesis`
+* Add `sgExtraConfig` field to `ShelleyGenesis`
+* Change `registerInitialFunds` and `injectIntoTestState` to require `MonadIO`, `MonadFail` and accept a `WithFileHandle` callback parameter for streaming initial funds from external files
 * Add `Generic` instance for `ApplyTxError`
 * Change `updateNonMyopic`, `likelihoodsNM`, `rewLikelihoods` and `fvPoolRewardInfo` to use `VMap`
 * Add `calcNonMyopicMemberReward` and deprecate `nonMyopicMemberRew` in its favor.

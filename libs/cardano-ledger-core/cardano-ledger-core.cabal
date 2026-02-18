@@ -51,6 +51,7 @@ library
     Cardano.Ledger.Coin
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
+    Cardano.Ledger.Crypto.Blake2b.Incremental
     Cardano.Ledger.Credential
     Cardano.Ledger.DRep
     Cardano.Ledger.Genesis

@@ -607,6 +607,7 @@ instance
     sgGenDelegs <- arbitrary
     sgInitialFunds <- arbitrary
     sgStaking <- arbitrary
+    let sgExtraConfig = Nothing
     pure ShelleyGenesis {..}
 
 instance Arbitrary ShelleyGenesisStaking where

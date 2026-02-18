@@ -317,6 +317,7 @@ testShelleyGenesis =
     , sgGenDelegs = Map.empty
     , sgInitialFunds = mempty
     , sgStaking = emptyGenesisStaking
+    , sgExtraConfig = Nothing
     }
 
 exampleCoin :: Coin
