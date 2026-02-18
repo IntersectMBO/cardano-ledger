@@ -28,7 +28,7 @@ source-repository-package
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
   , hackage.haskell.org 2025-12-11T11:28:18Z
-  , cardano-haskell-packages 2025-12-10T11:48:32Z
+  , cardano-haskell-packages 2026-02-17T21:19:19Z
 
 packages:
   -- == Byron era ==
@@ -91,6 +91,9 @@ tests: true
 benchmarks: true
 -- The only sensible test display option
 test-show-details: streaming
+allow-newer:
+  -- Drop this when the bounds in plutus-core are updated
+  plutus-core:cardano-crypto-class
 
 if impl(ghc >=9.12)
   allow-newer:

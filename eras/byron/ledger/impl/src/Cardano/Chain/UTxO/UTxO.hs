@@ -106,7 +106,7 @@ instance DecCBOR UTxOError where
     case tag of
       0 -> matchSize "UTxOError" 2 len >> UTxOMissingInput <$> decCBOR
       1 -> matchSize "UTxOError" 1 len $> UTxOOverlappingUnion
-      _ -> cborError $ DecoderErrorUnknownTag "UTxOError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "UTxOError" $ fromIntegral @Word8 @Word tag
 
 empty :: UTxO
 empty = UTxO mempty

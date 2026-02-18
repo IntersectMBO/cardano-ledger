@@ -38,8 +38,8 @@ library
   build-depends:
     base >=4.18 && <5,
     bytestring,
-    cardano-base >=0.1.1.0,
-    cardano-crypto-class ^>=2.2,
+    cardano-base >=0.1.2,
+    cardano-crypto-class ^>=2.3,
     cardano-crypto-praos ^>=2.2,
     cardano-ledger-allegra >=1.1,
     cardano-ledger-alonzo >=1.2,
@@ -89,7 +89,8 @@ library testlib
   build-depends:
     base,
     bytestring,
-    cardano-crypto-class >=2.1.1,
+    cardano-base:{cardano-base, testlib},
+    cardano-crypto-class:{cardano-crypto-class, testlib},
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-binary:{cardano-ledger-binary, testlib},

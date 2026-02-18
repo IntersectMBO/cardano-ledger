@@ -18,6 +18,14 @@
 
 ### `testlib`
 
+* Remove `Arbitrary` instances for `BlockNo`, `EpochInterval`, `EpochSize`, `SystemStart`, `WithOrigin`.
+  These have been moved to `cardano-slotting:testlib`.
+* Remove `genByteArray`, `genByteString`, `genLazyByteString`, `genShortByteString`.
+  These have been moved to `cardano-base:testlib`.
+* Remove `Arbitrary` instances for `CertifiedVRF`, `SigDSIGN`, `SignKeyDSIGN`, `SignedDSIGN`, `VerKeyDSIGN`.
+  These have been moved to `cardano-crypto-class:testlib`.
+* Remove `Arbitrary` instances for `StrictSeq`, `StrictMaybe`.
+  These have been moved to `cardano-strict-containers:testlib`.
 * Add `huddleRoundTripGenValidate`
 * Remove `Test.Cardano.Ledger.Binary.Cddl`
 * Add `ToExpr` instances to `DeserialiseFailure` and `DecoderError`

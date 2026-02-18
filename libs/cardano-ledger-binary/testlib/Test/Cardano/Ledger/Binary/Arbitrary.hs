@@ -1,57 +1,25 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.Arbitrary (
   genVersion,
-  genByteArray,
-  genByteString,
-  genLazyByteString,
-  genShortByteString,
 ) where
 
-import Cardano.Crypto.DSIGN.Class hiding (Signable)
-import Cardano.Crypto.Util
-import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Binary.Version
-import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
-import Cardano.Slotting.Time (SystemStart (..))
-import Codec.CBOR.ByteArray (ByteArray (..))
+import qualified Codec.CBOR.ByteArray as CBOR
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
 import Codec.CBOR.Term
-import qualified Data.ByteString as BS (ByteString, pack, unpack)
-import qualified Data.ByteString.Lazy as BSL (ByteString, fromChunks, fromStrict, toChunks)
-import Numeric.Half
-#if MIN_VERSION_bytestring(0,11,1)
-import qualified Data.ByteString.Short as SBS
-#else
-import qualified Data.ByteString.Short.Internal as SBS
-#endif
-import qualified Data.Foldable as F
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
-import Data.Maybe.Strict
-import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
-import Data.Proxy (Proxy (..))
-import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import qualified Data.VMap as VMap
 import Data.Word
 import GHC.Stack
-import System.Random.Stateful hiding (genByteString, genShortByteString)
-import Test.Cardano.Ledger.Binary.Random (QC (QC))
-import Test.Cardano.Slotting.Arbitrary ()
-import Test.Crypto.Hash ()
-import Test.Crypto.KES ()
-import Test.Crypto.VRF ()
+import Numeric.Half
+import Test.Cardano.Base.Bytes (genByteArray, genByteString, genLazyByteString)
+import Test.Data.VMap.Arbitrary ()
 import Test.QuickCheck
 import Test.QuickCheck.Instances ()
 
@@ -128,7 +96,7 @@ genHalf = do
     then genHalf
     else pure $ fromHalf half
 
-deriving instance Arbitrary ByteArray
+deriving instance Arbitrary CBOR.ByteArray
 
 instance Arbitrary SlicedByteArray where
   arbitrary = do
@@ -147,63 +115,6 @@ instance Arbitrary IPv6 where
     t <- (,,,) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
     pure $ toIPv6w t
 
-instance Arbitrary e => Arbitrary (SSeq.StrictSeq e) where
-  arbitrary = SSeq.fromList <$> arbitrary
-  shrink = fmap SSeq.fromList . shrink . F.toList
-
-instance Arbitrary e => Arbitrary (StrictMaybe e) where
-  arbitrary = maybeToStrictMaybe <$> arbitrary
-  shrink = fmap maybeToStrictMaybe . shrink . strictMaybeToMaybe
-
-instance
-  (Ord k, VMap.Vector kv k, VMap.Vector vv v, Arbitrary k, Arbitrary v) =>
-  Arbitrary (VMap.VMap kv vv k v)
-  where
-  arbitrary = VMap.fromMap <$> arbitrary
-  shrink = fmap VMap.fromList . shrink . VMap.toList
-
-instance DSIGNAlgorithm v => Arbitrary (VerKeyDSIGN v) where
-  arbitrary = deriveVerKeyDSIGN <$> arbitrary
-
-errorInvalidSize :: HasCallStack => Int -> Maybe a -> Gen a
-errorInvalidSize n = maybe (error $ "Impossible: Invalid size " ++ show n) pure
-
-instance DSIGNAlgorithm v => Arbitrary (SignKeyDSIGN v) where
-  arbitrary = do
-    let n = fromIntegral (sizeSignKeyDSIGN (Proxy @v))
-    bs <- genByteString n
-    errorInvalidSize n $ rawDeserialiseSignKeyDSIGN bs
-
-instance DSIGNAlgorithm v => Arbitrary (SigDSIGN v) where
-  arbitrary = do
-    let n = fromIntegral (sizeSigDSIGN (Proxy @v))
-    bs <- genByteString n
-    errorInvalidSize n $ rawDeserialiseSigDSIGN bs
-
-instance DSIGNAlgorithm v => Arbitrary (SignedDSIGN v a) where
-  arbitrary = SignedDSIGN <$> arbitrary
-
-instance
-  (ContextVRF v ~ (), Signable v ~ SignableRepresentation, VRFAlgorithm v) =>
-  Arbitrary (CertifiedVRF v a)
-  where
-  arbitrary = CertifiedVRF <$> arbitrary <*> genCertVRF
-    where
-      genCertVRF :: Gen (CertVRF v)
-      genCertVRF = arbitrary
-
-instance Arbitrary t => Arbitrary (WithOrigin t) where
-  arbitrary = frequency [(20, pure Origin), (80, At <$> arbitrary)]
-  shrink = \case
-    Origin -> []
-    At x -> Origin : map At (shrink x)
-
-deriving instance Arbitrary EpochSize
-
-deriving instance Arbitrary SystemStart
-
-deriving instance Arbitrary BlockNo
-
 instance Arbitrary Version where
   arbitrary = genVersion minBound maxBound
 
@@ -216,22 +127,3 @@ genVersion minVersion maxVersion =
       case mkVersion32 v32 of
         Nothing -> error $ "Impossible: Invalid version generated: " ++ show v32
         Just v -> pure v
-
-genByteString :: Int -> Gen BS.ByteString
-genByteString n = uniformByteStringM (fromIntegral n) QC
-
-genLazyByteString :: Int -> Gen BSL.ByteString
-genLazyByteString n = BSL.fromStrict <$> genByteString n
-
-genShortByteString :: Int -> Gen SBS.ShortByteString
-#if MIN_VERSION_random(1,3,0)
-genShortByteString n = uniformShortByteStringM (fromIntegral n) QC
-#else
-genShortByteString n = uniformShortByteString (fromIntegral n) QC
-#endif
-
-genByteArray :: Int -> Gen Prim.ByteArray
-genByteArray n = do
-  sbs <- genShortByteString n
-  case sbs of
-    SBS.SBS ba -> pure (Prim.ByteArray ba)

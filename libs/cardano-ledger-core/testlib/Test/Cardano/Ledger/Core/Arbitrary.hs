@@ -40,7 +40,6 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   CertIx (..),
   DnsName,
-  EpochInterval (..),
   Exclusive (..),
   HasZero,
   Inclusive (..),
@@ -108,9 +107,15 @@ import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import System.Random.Stateful (StatefulGen, uniformRM)
+import Test.Cardano.Base.Bytes (genByteString, genShortByteString)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
+import Test.Cardano.Slotting.Arbitrary ()
+import Test.Cardano.StrictContainers.Instances ()
+import Test.Crypto.Hash ()
+import Test.Crypto.KES ()
+import Test.Crypto.VRF ()
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary (GSubterms, RecursivelyShrink)
 import Test.QuickCheck.Hedgehog (hedgehog)
@@ -261,9 +266,6 @@ instance Arbitrary Nonce where
       , mkNonceFromNumber <$> arbitrary
       ]
 
-instance Arbitrary EpochInterval where
-  arbitrary = EpochInterval <$> arbitrary
-
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.TxIn -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
@@ -295,7 +297,7 @@ instance Arbitrary (Credential r) where
 ------------------------------------------------------------------------------------------
 
 genHash :: forall h a. HashAlgorithm h => Gen (Hash h a)
-genHash = UnsafeHash <$> genShortByteString (fromIntegral (sizeHash (Proxy @h)))
+genHash = UnsafeHash <$> genShortByteString (fromIntegral (hashSize (Proxy @h)))
 
 instance Arbitrary (SafeHash i) where
   arbitrary = unsafeMakeSafeHash <$> genHash
