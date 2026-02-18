@@ -87,7 +87,6 @@ module Cardano.Ledger.Conway.PParams (
   emptyConwayPParams,
   emptyConwayPParamsUpdate,
   asNaturalHKD,
-  asBoundedIntegralHKD,
   ppGroup,
   asCompactCoinHKD,
 
@@ -116,7 +115,6 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   ToKeyValuePairs (..),
   UnitInterval,
-  integralToBounded,
   knownNonZeroBounded,
   strictMaybeToMaybe,
  )
@@ -1263,24 +1261,6 @@ asCompactCoinHKD = hkdMap (Proxy @f) compactCoinOrError
 -- an `ArithmeticUnderflow` exception for negative numbers.
 asNaturalHKD :: forall f i. (HKDFunctor f, Integral i) => HKD f i -> HKD f Natural
 asNaturalHKD = hkdMap (Proxy @f) (fromIntegral @i @Natural)
-
-asBoundedIntegralHKD ::
-  forall f i b.
-  (HKDFunctor f, Integral i, Integral b, Bounded b, HasCallStack) =>
-  HKD f i ->
-  HKD f b
-asBoundedIntegralHKD = hkdMap (Proxy @f) $ \x ->
-  case integralToBounded @i @b @Maybe x of
-    Just b -> b
-    Nothing ->
-      error $
-        "Value: "
-          <> show (toInteger x)
-          <> " is out of the valid range: ["
-          <> show (toInteger (minBound @b))
-          <> ","
-          <> show (toInteger (maxBound @b))
-          <> "]"
 
 ppPoolVotingThresholds :: ConwayEraPParams era => PParam era
 ppPoolVotingThresholds =
