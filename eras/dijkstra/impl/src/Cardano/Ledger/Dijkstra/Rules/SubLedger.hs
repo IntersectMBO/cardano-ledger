@@ -89,7 +89,6 @@ import Control.State.Transition.Extended (
   transitionRules,
  )
 import Data.List.NonEmpty (NonEmpty)
-import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -101,9 +100,6 @@ data DijkstraSubLedgerPredFailure era
   | SubGovFailure (PredicateFailure (EraRule "SUBGOV" era))
   | SubWdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
   | SubTreasuryValueMismatch (Mismatch RelEQ Coin)
-  | SubTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
-  | SubWithdrawalsMissingAccounts Withdrawals
-  | SubIncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   deriving (Generic)
 
 deriving stock instance
@@ -362,9 +358,6 @@ instance
       SubGovFailure x -> Sum (SubGovFailure @era) 3 !> To x
       SubWdrlNotDelegatedToDRep x -> Sum (SubWdrlNotDelegatedToDRep @era) 4 !> To x
       SubTreasuryValueMismatch mm -> Sum (SubTreasuryValueMismatch @era) 5 !> To mm
-      SubTxRefScriptsSizeTooBig mm -> Sum SubTxRefScriptsSizeTooBig 6 !> To mm
-      SubWithdrawalsMissingAccounts w -> Sum SubWithdrawalsMissingAccounts 7 !> To w
-      SubIncompleteWithdrawals w -> Sum SubIncompleteWithdrawals 8 !> To w
 
 instance
   ( Era era
@@ -380,7 +373,4 @@ instance
     3 -> SumD SubGovFailure <! From
     4 -> SumD SubWdrlNotDelegatedToDRep <! From
     5 -> SumD SubTreasuryValueMismatch <! From
-    6 -> SumD SubTxRefScriptsSizeTooBig <! From
-    7 -> SumD SubWithdrawalsMissingAccounts <! From
-    8 -> SumD SubIncompleteWithdrawals <! From
     n -> Invalid n
