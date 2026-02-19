@@ -85,9 +85,9 @@ class
 
   -- | Add `AccountState` to `Accounts`. There are no checks whether account is already registered
   -- or not.
-  addAccountState :: Credential Staking -> AccountState era -> Accounts era -> Accounts era
+  addAccountState :: AccountId -> AccountState era -> Accounts era -> Accounts era
 
-  accountsMapL :: Lens' (Accounts era) (Map (Credential Staking) (AccountState era))
+  accountsMapL :: Lens' (Accounts era) (Map AccountId (AccountState era))
 
   balanceAccountStateL :: Lens' (AccountState era) (CompactForm Coin)
 
@@ -126,7 +126,7 @@ addToBalanceAccounts ::
   EraAccounts era =>
   -- | Map containing amounts that the balance in the account should be increased by. It is
   -- important to ensure that all of the credentials in this Map are actually registered.
-  Map (Credential Staking) (CompactForm Coin) ->
+  Map AccountId (CompactForm Coin) ->
   -- | Accounts that will have their balance increased.
   Accounts era ->
   Accounts era
@@ -143,12 +143,12 @@ addToBalanceAccounts addBalanceMap accounts =
 
 -- | Lookup an account state by its credential. Returns Nothing if such account is not registrered
 lookupAccountState ::
-  EraAccounts era => Credential Staking -> Accounts era -> Maybe (AccountState era)
+  EraAccounts era => AccountId -> Accounts era -> Maybe (AccountState era)
 lookupAccountState cred accounts = Map.lookup cred (accounts ^. accountsMapL)
 
 lookupAccountStateIntern ::
   EraAccounts era =>
-  Credential Staking -> Accounts era -> Maybe (Credential Staking, AccountState era)
+  AccountId -> Accounts era -> Maybe (AccountId, AccountState era)
 lookupAccountStateIntern cred accounts =
   lookupInternMap cred (accounts ^. accountsMapL)
 
@@ -156,7 +156,7 @@ lookupAccountStateIntern cred accounts =
 updateLookupAccountState ::
   EraAccounts era =>
   (AccountState era -> AccountState era) ->
-  Credential Staking ->
+  AccountId ->
   Accounts era ->
   (Maybe (AccountState era), Accounts era)
 updateLookupAccountState f cred accounts =
@@ -164,19 +164,19 @@ updateLookupAccountState f cred accounts =
     (res, accountsMap) -> (res, accounts & accountsMapL .~ accountsMap)
 
 -- | Check whether account for this staking credential is registered
-isAccountRegistered :: EraAccounts era => Credential Staking -> Accounts era -> Bool
+isAccountRegistered :: EraAccounts era => AccountId -> Accounts era -> Bool
 isAccountRegistered cred accounts = Map.member cred (accounts ^. accountsMapL)
 
 adjustAccountState ::
   EraAccounts era =>
-  (AccountState era -> AccountState era) -> Credential Staking -> Accounts era -> Accounts era
+  (AccountState era -> AccountState era) -> AccountId -> Accounts era -> Accounts era
 adjustAccountState f cred = accountsMapL %~ Map.adjust f cred
 
 -- | In case when account state is registered and it is delegated to a stake pool this function
 -- will return that delegation.
 lookupStakePoolDelegation ::
   EraAccounts era =>
-  Credential Staking ->
+  AccountId ->
   Accounts era ->
   Maybe (KeyHash StakePool)
 lookupStakePoolDelegation cred accounts =
@@ -226,8 +226,8 @@ withdrawalsThatDoNotDrainAccounts (Withdrawals withdrawals) networkId accounts
       maybe False (isBalanceZero withdrawalAmount) (lookupAccount accountAddress)
     isBalanceZero withdrawalAmount accountState =
       withdrawalAmount == fromCompact (accountState ^. balanceAccountStateL)
-    lookupAccount (AccountAddress aaNetworkId (AccountId credential))
-      | aaNetworkId == networkId = lookupAccountState credential accounts
+    lookupAccount (AccountAddress aaNetworkId accountId)
+      | aaNetworkId == networkId = lookupAccountState accountId accounts
       | otherwise = Nothing
 
 -- | Reset balances to zero for all accounts that are specified in the supplied `Withdrawals`.
@@ -245,15 +245,15 @@ drainAccounts (Withdrawals withdrawalsMap) accounts =
   accounts
     & accountsMapL %~ \accountsMap ->
       Map.foldrWithKey'
-        ( \(AccountAddress _ (AccountId credential)) _withdrawalAmount ->
-            Map.adjust (balanceAccountStateL .~ mempty) credential
+        ( \(AccountAddress _ accountId) _withdrawalAmount ->
+            Map.adjust (balanceAccountStateL .~ mempty) accountId
         )
         accountsMap
         withdrawalsMap
 
 -- | Remove delegations of supplied credentials
 removeStakePoolDelegations ::
-  EraAccounts era => Set (Credential Staking) -> Accounts era -> Accounts era
+  EraAccounts era => Set AccountId -> Accounts era -> Accounts era
 removeStakePoolDelegations creds accounts =
   accounts
     & accountsMapL

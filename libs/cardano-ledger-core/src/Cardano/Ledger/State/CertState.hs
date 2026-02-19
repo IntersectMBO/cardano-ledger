@@ -217,15 +217,15 @@ instance ToJSON (Accounts era) => ToKeyValuePairs (DState era) where
         ]
 
 -- | Function that looks up the deposit for currently delegated staking credential
-lookupDepositDState :: EraAccounts era => DState era -> (Credential Staking -> Maybe Coin)
-lookupDepositDState DState {dsAccounts} cred = do
-  accountState <- Map.lookup cred (dsAccounts ^. accountsMapL)
+lookupDepositDState :: EraAccounts era => DState era -> (AccountId -> Maybe Coin)
+lookupDepositDState DState {dsAccounts} accountId = do
+  accountState <- Map.lookup accountId (dsAccounts ^. accountsMapL)
   Just $! fromCompact (accountState ^. depositAccountStateL)
 
 -- | Function that looks up curret reward for the delegated staking credential.
-lookupRewardDState :: EraAccounts era => DState era -> (Credential Staking -> Maybe Coin)
-lookupRewardDState DState {dsAccounts} cred = do
-  accountState <- Map.lookup cred (dsAccounts ^. accountsMapL)
+lookupRewardDState :: EraAccounts era => DState era -> (AccountId -> Maybe Coin)
+lookupRewardDState DState {dsAccounts} accountId = do
+  accountState <- Map.lookup accountId (dsAccounts ^. accountsMapL)
   Just $! fromCompact (accountState ^. balanceAccountStateL)
 
 -- | The state used by the POOL rule, which tracks stake pool information.
