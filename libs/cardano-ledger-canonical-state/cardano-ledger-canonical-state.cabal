@@ -39,6 +39,7 @@ library
     Cardano.Ledger.CanonicalState.LedgerCBOR
     Cardano.Ledger.CanonicalState.Namespace
     Cardano.Ledger.CanonicalState.Namespace.Blocks.V0
+    Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0
     Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
     Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
 
@@ -47,9 +48,11 @@ library
     base,
     base16-bytestring,
     bytestring,
+    cardano-crypto-class,
     cardano-ledger-binary,
     cardano-ledger-core,
     cborg,
+    containers,
     mempack-scls,
     scls-cardano,
     scls-cbor,

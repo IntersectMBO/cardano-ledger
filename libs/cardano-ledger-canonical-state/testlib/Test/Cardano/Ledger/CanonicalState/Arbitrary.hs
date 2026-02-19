@@ -7,12 +7,16 @@
 
 module Test.Cardano.Ledger.CanonicalState.Arbitrary () where
 
-import Cardano.Ledger.CanonicalState.BasicTypes (CanonicalCoin (..))
+import Cardano.Ledger.CanonicalState.BasicTypes (
+  CanonicalCoin (..),
+ )
 import Cardano.Ledger.CanonicalState.Conway ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
+import qualified Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 as Committee.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UtxoOut.V0
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Core (Era, EraTxOut, TxOut)
+import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.QuickCheck (Arbitrary (..), Positive (..))
 
@@ -26,3 +30,11 @@ instance (EraTxOut era, Arbitrary (TxOut era), Era era) => Arbitrary (UtxoOut.V0
 
 instance Arbitrary CanonicalCoin where
   arbitrary = CanonicalCoin . CompactCoin <$> arbitrary
+
+instance Arbitrary Committee.V0.GovCommitteeOut where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary Committee.V0.CanonicalCommitteeAuthorization where
+  arbitrary = fmap Committee.V0.mkCanonicalCommitteeAuthorization arbitrary
+
+instance Arbitrary Committee.V0.CanonicalCommitteeState where arbitrary = genericArbitraryU
