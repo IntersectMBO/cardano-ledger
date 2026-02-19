@@ -175,7 +175,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       newLikelihoods = VMap.map makeLikelihoods allPoolInfo
       -- We now compute the leader rewards for each stake pool.
       collectLRs acc poolRI =
-        let account = spssAccountId $ poolPs poolRI
+        let account = unAccountId $ spssAccountId $ poolPs poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
          in if hardforkBabbageForgoRewardPrefilter (pr ^. ppProtocolVersionL)
               || isAccountRegistered account accounts

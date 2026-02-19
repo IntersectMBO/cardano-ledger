@@ -567,7 +567,7 @@ defaultStakePoolVote ::
 defaultStakePoolVote poolId poolParams accounts =
   toDefaultVote $ do
     spp <- Map.lookup poolId poolParams
-    accountState <- Map.lookup (spsAccountAddress spp) (accounts ^. accountsMapL)
+    accountState <- Map.lookup (unAccountId (spsAccountId spp)) (accounts ^. accountsMapL)
     accountState ^. dRepDelegationAccountStateL
   where
     toDefaultVote (Just DRepAlwaysAbstain) = DefaultAbstain
