@@ -22,7 +22,7 @@ module Cardano.Ledger.Address (
   getNetwork,
   AccountAddress (..),
   AccountId (..),
-  accountAddressAccountIdL,
+  accountAddressIdL,
   accountAddressCredentialL,
   accountAddressNetworkIdL,
   serialiseAccountAddress,
@@ -182,7 +182,7 @@ instance NoThunks Addr
 -- | An account based address for rewards
 data AccountAddress = AccountAddress
   { aaNetworkId :: !Network
-  , aaAccountId :: !AccountId
+  , aaId :: !AccountId
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
@@ -197,15 +197,15 @@ pattern RewardAccount {raNetwork, raCredential} = AccountAddress raNetwork (Acco
 
 {-# DEPRECATED raNetwork "In favor of `aaNetworkId`" #-}
 
-{-# DEPRECATED raCredential "In favor of `aaAccountId`" #-}
+{-# DEPRECATED raCredential "In favor of `aaId`" #-}
 
 {-# COMPLETE RewardAccount #-}
 
-accountAddressAccountIdL :: Lens' AccountAddress AccountId
-accountAddressAccountIdL = lens aaAccountId $ \x y -> x {aaAccountId = y}
+accountAddressIdL :: Lens' AccountAddress AccountId
+accountAddressIdL = lens aaId $ \x y -> x {aaId = y}
 
 accountAddressCredentialL :: Lens' AccountAddress (Credential Staking)
-accountAddressCredentialL = lens (\(AccountAddress _ (AccountId c)) -> c) $ \x y -> x {aaAccountId = AccountId y}
+accountAddressCredentialL = lens (\(AccountAddress _ (AccountId c)) -> c) $ \x y -> x {aaId = AccountId y}
 
 accountAddressNetworkIdL :: Lens' AccountAddress Network
 accountAddressNetworkIdL = lens aaNetworkId $ \x y -> x {aaNetworkId = y}

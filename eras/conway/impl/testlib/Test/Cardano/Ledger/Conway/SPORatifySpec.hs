@@ -275,7 +275,7 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
       Map (KeyHash StakePool) StakePoolState ->
       Map (Credential Staking) DRep
     mkDelegatees drep =
-      fromKeys (const drep) . map spsAccountAddress . Map.elems
+      fromKeys (const drep) . map (unAccountId . spsAccountId) . Map.elems
 
     -- Create a map from each pool with the given value, where the key is the pool credential
     -- and take the union of all these maps.

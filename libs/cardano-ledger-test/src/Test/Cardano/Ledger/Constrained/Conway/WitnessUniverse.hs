@@ -30,7 +30,7 @@ import Cardano.Crypto (SigningKey)
 import Cardano.Crypto.Signing (toVerification)
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron (generate)
-import Cardano.Ledger.Address (AccountAddress, AccountId (..), BootstrapAddress (..), aaAccountId)
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), BootstrapAddress (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),

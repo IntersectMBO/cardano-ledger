@@ -182,7 +182,7 @@ poolReapTransition = do
     accountRefunds =
       Map.fromListWith
         (<>)
-        [(spsAccountAddress sps, spsDeposit sps) | sps <- Map.elems retiringPools]
+        [(unAccountId $ spsAccountId sps, spsDeposit sps) | sps <- Map.elems retiringPools]
     accounts = ds ^. accountsL
     -- Deposits that can be refunded and those that are unclaimed (to be deposited into the treasury).
     refunds, unclaimedDeposits :: Map.Map (Credential Staking) (CompactForm Coin)
@@ -198,7 +198,7 @@ poolReapTransition = do
     let rewardAccountsWithPool =
           Map.foldrWithKey'
             ( \poolId sps ->
-                let cred = spsAccountAddress sps
+                let cred = unAccountId $ spsAccountId sps
                  in Map.insertWith (Map.unionWith (<>)) cred (Map.singleton poolId (spsDeposit sps))
             )
             Map.empty

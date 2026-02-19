@@ -41,7 +41,7 @@ spec = describe "POOL" $ do
       let badAccountAddress =
             AccountAddress
               { aaNetworkId = Mainnet
-              , aaAccountId = AccountId accountCredential
+              , aaId = AccountId accountCredential
               }
       kh <- freshKeyHash
       pps <- freshPoolParams kh badAccountAddress

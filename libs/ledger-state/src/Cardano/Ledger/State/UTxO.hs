@@ -240,7 +240,7 @@ countStakePoolSnapShotStats :: KeyHash StakePool -> StakePoolSnapShot -> PoolPar
 countStakePoolSnapShotStats poolId StakePoolSnapShot {..} =
   PoolParamsStats
     { ppsPoolId = statSingleton poolId
-    , ppsAccountAddress = statSingleton spssAccountId
+    , ppsAccountId = statSingleton (unAccountId spssAccountId)
     , ppsOwners = statSet spssSelfDelegatedOwners
     }
 
@@ -262,7 +262,7 @@ countSnapShotStat SnapShot {..} =
 
 data PoolParamsStats = PoolParamsStats
   { ppsPoolId :: !(Stat (KeyHash StakePool))
-  , ppsAccountAddress :: !(Stat (Credential Staking))
+  , ppsAccountId :: !(Stat (Credential Staking))
   , ppsOwners :: !(Stat (KeyHash Staking))
   }
 
@@ -281,19 +281,19 @@ instance Pretty PoolParamsStats where
     prettyRecord
       "PoolParamsStats"
       [ "PoolId" <:> ppsPoolId
-      , "AccountAddress" <:> ppsAccountAddress
+      , "AccountAddress" <:> ppsAccountId
       , "Owners" <:> ppsOwners
       ]
 
 instance AggregateStat PoolParamsStats where
   aggregateStat PoolParamsStats {..} =
-    mempty {gsCredentialStaking = ppsAccountAddress, gsKeyHashStakePool = ppsPoolId}
+    mempty {gsCredentialStaking = ppsAccountId, gsKeyHashStakePool = ppsPoolId}
 
 countPoolParamsStats :: StakePoolParams -> PoolParamsStats
 countPoolParamsStats StakePoolParams {..} =
   PoolParamsStats
     { ppsPoolId = statSingleton sppId
-    , ppsAccountAddress = statSingleton (sppAccountAddress ^. accountAddressCredentialL)
+    , ppsAccountId = statSingleton (unAccountId (aaId sppAccountAddress))
     , ppsOwners = statSet sppOwners
     }
 

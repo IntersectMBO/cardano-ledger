@@ -296,8 +296,6 @@ conwayDStateSpec univ (whoDelegates, wdrl) poolreg =
 
 -- | Specify the internal Map of ConwayAccounts ::  Map (Credential Staking) (ConwayAccountState era)
 --   Ensure that the Staking Credential is both staked to some Pool, and Delegated to some DRep
--- | Given a set of Withdrawals:: newtype Withdrawals = Withdrawals {unWithdrawals :: Map AccountAddress Coin}
---   where:: data AccountAddress = AccountAddress {aaNetworkId :: !Network, aaAccountId :: !(AccountId)}
 --   That ensures every AccountState has the propeties listed to the left
 --   data ConwayAccountState era = ConwayAccountState
 --       {casBalance :: (CompactForm Coin)                            -- Sometimes 0, Matches the withdrawl amount if part of a Withdrawal

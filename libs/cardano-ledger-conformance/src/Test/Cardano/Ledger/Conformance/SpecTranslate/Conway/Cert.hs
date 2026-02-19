@@ -209,7 +209,7 @@ instance SpecTranslate ctx StakePoolSnapShot where
       <*> toSpecRep spssCost
       <*> toSpecRep spssMargin
       <*> toSpecRep spssPledge
-      <*> toSpecRep spssAccountId
+      <*> toSpecRep (unAccountId spssAccountId)
 
 instance SpecTranslate ctx Stake where
   type SpecRep Stake = Agda.HSMap Agda.Credential Agda.Coin

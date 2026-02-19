@@ -178,7 +178,7 @@ data StakePoolSnapShot = StakePoolSnapShot
   -- actual delegators, since at this point the actual stake has already been resolved.  This count
   -- is only needed to preserve older behavior where we filter out stake pools from `PoolDistr` that
   -- do not have any delegations.
-  , spssAccountId :: !(Credential Staking)
+  , spssAccountId :: !AccountId
   -- ^ This is the account where stake pools rewards will be deposited to. Corresponding field in
   -- the `StakePoolState` is `spsAccountAddress`.
   }
@@ -209,10 +209,10 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
     , spssCost = spsCost
     , spssMargin = spsMargin
     , spssNumDelegators = Set.size spsDelegators
-    , spssAccountId = spsAccountAddress
+    , spssAccountId = spsAccountId
     }
   where
-    StakePoolState {spsVrf, spsPledge, spsCost, spsMargin, spsAccountAddress, spsOwners, spsDelegators} =
+    StakePoolState {spsVrf, spsPledge, spsCost, spsMargin, spsAccountId, spsOwners, spsDelegators} =
       stakePoolState
     selfDelegatedOwners =
       Set.filter (\ownerKeyHash -> KeyHashObj ownerKeyHash `Set.member` spsDelegators) spsOwners
@@ -267,7 +267,7 @@ instance DecShareCBOR StakePoolSnapShot where
     spssCost <- lift decCBOR
     spssMargin <- lift decCBOR
     spssNumDelegators <- lift decCBOR
-    spssAccountId <- interns credInterns <$> lift decCBOR
+    spssAccountId <- AccountId . interns credInterns <$> lift decCBOR
     pure StakePoolSnapShot {..}
 
 -- | Snapshot of the stake distribution.
