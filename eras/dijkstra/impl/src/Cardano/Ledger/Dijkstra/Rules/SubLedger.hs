@@ -43,6 +43,8 @@ import Cardano.Ledger.Conway.Rules (
   gsCertificates,
   gsProposalProcedures,
   gsVotingProcedures,
+  validateTreasuryValue,
+  validateWithdrawalsDelegated,
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
@@ -67,6 +69,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubP
 import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
+import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -230,6 +233,7 @@ dijkstraSubLedgersTransition ::
   , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
   , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
   , Embed (EraRule "SUBUTXOW" era) (DijkstraSUBLEDGER era)
+  , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
   , InjectRuleEvent "SUBPOOL" PoolEvent era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
@@ -244,22 +248,28 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( LedgerEnv slot mbCurEpochNo _ pp _
-      , ledgerState
+    ( LedgerEnv slot mbCurEpochNo _ pp chainAccountState
+      , ledgerState@(LedgerState utxoState certState)
       , tx
       ) <-
     judgmentContext
 
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
   let txBody = tx ^. bodyTxL
-  let govState = ledgerState ^. lsUTxOStateL . utxosGovStateL
+  let govState = utxoState ^. utxosGovStateL
   let committee = govState ^. committeeGovStateL
   let proposals = govState ^. proposalsGovStateL
+      accounts = certState ^. certDStateL . accountsL
+
+  runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+
+  runTest $ validateWithdrawalsDelegated accounts tx
+
   certStateAfterSubCerts <-
     trans @(EraRule "SUBCERTS" era) $
       TRC
         ( SubCertsEnv tx pp curEpochNo committee (proposalsWithPurpose grCommitteeL proposals)
-        , ledgerState ^. lsCertStateL
+        , certState
         , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
         )
   let govEnv =
@@ -287,8 +297,8 @@ dijkstraSubLedgersTransition = do
   utxoStateAfterSubUtxow <-
     trans @(EraRule "SUBUTXOW" era) $
       TRC
-        ( UtxoEnv @era slot pp (ledgerState ^. lsCertStateL)
-        , ledgerState ^. lsUTxOStateL
+        ( UtxoEnv @era slot pp certState
+        , utxoState
         , tx
         )
   pure $
