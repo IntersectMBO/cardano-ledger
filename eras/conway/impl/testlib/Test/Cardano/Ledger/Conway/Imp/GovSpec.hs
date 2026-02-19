@@ -1028,7 +1028,7 @@ networkIdSpec =
       let badAccountAddress =
             AccountAddress
               { aaNetworkId = Mainnet -- Our network is Testnet
-              , aaAccountId = AccountId accountCredential
+              , aaId = AccountId accountCredential
               }
       proposal <- mkProposalWithAccountAddress InfoAction badAccountAddress
       submitBootstrapAwareFailingProposal_ proposal $
@@ -1084,7 +1084,7 @@ withdrawalsSpec =
       let badAccountAddress =
             AccountAddress
               { aaNetworkId = Mainnet -- Our network is Testnet
-              , aaAccountId = AccountId accountCredential
+              , aaId = AccountId accountCredential
               }
       proposal <-
         mkTreasuryWithdrawalsGovAction [(badAccountAddress, Coin 100_000_000)] >>= mkProposal

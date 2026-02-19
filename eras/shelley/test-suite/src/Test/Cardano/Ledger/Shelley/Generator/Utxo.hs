@@ -790,7 +790,7 @@ genWithdrawals
         let txwits =
               mkWithdrawalsWits @era ksIndexedStakeScripts ksIndexedStakingKeys
                 . unAccountId
-                . aaAccountId
+                . aaId
                 . fst
                 <$> selectedWrdls
         return (selectedWrdls, Either.partitionEithers txwits)
