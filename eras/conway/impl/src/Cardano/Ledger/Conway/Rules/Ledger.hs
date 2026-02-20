@@ -214,7 +214,7 @@ shelleyToConwayLedgerPredFailure ::
   forall era. ShelleyLedgerPredFailure era -> ConwayLedgerPredFailure era
 shelleyToConwayLedgerPredFailure = \case
   UtxowFailure x -> ConwayUtxowFailure x
-  DelegsFailure _ -> error "Impossible: DELEGS has ben removed in Conway"
+  DelegsFailure _ -> error "Impossible: DELEGS has been removed in Conway"
   ShelleyWithdrawalsMissingAccounts x -> ConwayWithdrawalsMissingAccounts x
   ShelleyIncompleteWithdrawals x -> ConwayIncompleteWithdrawals x
 
@@ -348,8 +348,6 @@ instance
   renderAssertionViolation = renderDepositEqualsObligationViolation
 
   assertions = shelleyLedgerAssertions @era @ConwayLEDGER
-
--- =======================================
 
 conwayLedgerTransitionTRC ::
   forall (someLEDGER :: Type -> Type) era.

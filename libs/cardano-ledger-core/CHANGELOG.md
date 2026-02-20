@@ -2,6 +2,11 @@
 
 ## 1.19.0.0
 
+* Deprecate `BHeaderView` in favour `*EraBlockHeader` typeclasses.
+  - Move `isOverlaySlot` to `Cardano.Ledger.Slot`.
+  - Remove `PerasCert`, `PerasKey` and `validatePerasCert` to `dijkstra`.
+  - Add `BbodySignal` GADT and the `EraBlockHeader` typeclass.
+  - Add `slotToEpochBoundary`.
 * Add `mkSnapShot` and `resetStakePoolsSnapShot`
 * Remove `ssPoolParams` from `Snapshot`  and `ssPoolParamsL`
 * Rename `ssStake` to `ssActiveStake`.
@@ -140,6 +145,7 @@
 
 ### `testlib`
 
+* Add `TestBlockHeader` and `mkTestBlockHeaderNoNonce` as a replacement to deprecated `BHeaderView` and `makeHeaderView`.
 * Add `mkSnapShotFromStakePoolParams` and `resetStakePoolSnapShotFromPoolParams`
 * Stop re-exporting QuickCheck's `NonZero` as it conflcicts with our internal type.
 * Rename `RewardAccount` to `AccountAddress`

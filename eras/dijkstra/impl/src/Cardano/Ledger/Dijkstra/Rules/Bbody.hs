@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -7,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -24,34 +24,30 @@ module Cardano.Ledger.Dijkstra.Rules.Bbody (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoBbodyEvent (ShelleyInAlonzoEvent),
   AlonzoBbodyPredFailure,
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
   AlonzoUtxowPredFailure,
-  alonzoBbodyTransition,
+  validateExUnits,
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
-import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Nonce,
-  PerasCert,
-  PerasKey (..),
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
-  validatePerasCert,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure,
@@ -65,15 +61,26 @@ import Cardano.Ledger.Conway.Rules (
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
-import Cardano.Ledger.Dijkstra.BlockBody (DijkstraEraBlockBody (..))
-import Cardano.Ledger.Dijkstra.Era (DijkstraBBODY, DijkstraEra)
+import Cardano.Ledger.Dijkstra.BlockBody (
+  DijkstraEraBlockBody (..),
+  PerasCert,
+  PerasKey (..),
+  validatePerasCert,
+ )
+import Cardano.Ledger.Dijkstra.Era (
+  DijkstraBBODY,
+  DijkstraBbodySignal (..),
+  DijkstraEra,
+  DijkstraEraBlockHeader (..),
+ )
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Ledgers ()
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import Cardano.Ledger.Shelley.API (incrBlocks)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), utxoL)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   ShelleyBbodyPredFailure,
@@ -85,15 +92,12 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Slot (slotToEpochBoundary)
 import Control.DeepSeq (NFData)
-import Control.State.Transition (
-  Embed (..),
-  STS (..),
-  TransitionRule,
-  judgmentContext,
- )
-import Control.State.Transition.Extended (TRC (..), failBecause, (?!))
+import Control.State.Transition
 import Data.Sequence (Seq)
+import Data.Sequence.Strict (fromStrict)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -105,7 +109,6 @@ data DijkstraBbodyPredFailure era
     LedgersFailure (PredicateFailure (EraRule "LEDGERS" era))
   | TooManyExUnits (Mismatch RelLTEQ ExUnits)
   | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
-  | PrevEpochNonceNotPresent
   | PerasCertValidationFailed PerasCert Nonce
   deriving (Generic)
 
@@ -136,7 +139,6 @@ instance
       LedgersFailure x -> Sum (LedgersFailure @era) 2 !> To x
       TooManyExUnits mm -> Sum TooManyExUnits 3 !> To mm
       BodyRefScriptsSizeTooBig mm -> Sum BodyRefScriptsSizeTooBig 4 !> To mm
-      PrevEpochNonceNotPresent -> Sum PrevEpochNonceNotPresent 5
       PerasCertValidationFailed cert nonce ->
         Sum PerasCertValidationFailed 6 !> To cert !> To nonce
 
@@ -152,7 +154,6 @@ instance
     2 -> SumD LedgersFailure <! From
     3 -> SumD TooManyExUnits <! From
     4 -> SumD BodyRefScriptsSizeTooBig <! From
-    5 -> SumD PrevEpochNonceNotPresent
     6 -> SumD PerasCertValidationFailed <! From <! From
     n -> Invalid n
 
@@ -318,6 +319,7 @@ instance
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
+  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
   , EraRule "BBODY" era ~ DijkstraBBODY era
   , AlonzoEraTx era
   , BabbageEraTxBody era
@@ -328,7 +330,7 @@ instance
   where
   type State (DijkstraBBODY era) = ShelleyBbodyState era
 
-  type Signal (DijkstraBBODY era) = Block BHeaderView era
+  type Signal (DijkstraBBODY era) = DijkstraBbodySignal era
 
   type Environment (DijkstraBBODY era) = BbodyEnv era
 
@@ -339,48 +341,70 @@ instance
   type Event (DijkstraBBODY era) = AlonzoBbodyEvent era
 
   initialRules = []
-  transitionRules =
-    [ dijkstraBbodyTransition @era
-        >> Conway.conwayBbodyTransition @era
-        >> alonzoBbodyTransition @era
-    ]
+  transitionRules = [dijkstraBbodyTransition @era]
 
 dijkstraBbodyTransition ::
   forall era.
-  ( Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  ( Signal (EraRule "BBODY" era) ~ DijkstraBbodySignal era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , DijkstraEraBlockBody era
+  , BabbageEraTxBody era
+  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
+  , STS (EraRule "BBODY" era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
+  , BaseM (EraRule "BBODY" era) ~ ShelleyBase
+  , AlonzoEraTx era
+  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
+  , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
+  , ConwayEraPParams era
   ) =>
   TransitionRule (EraRule "BBODY" era)
 dijkstraBbodyTransition = do
-  judgmentContext
-    >>= \( TRC
-             ( _
-               , state
-               , Block bh bbody
-               )
-           ) -> do
-        case bbody ^. perasCertBlockBodyL of
-          SNothing ->
-            -- No certificate is present, so no validation is needed.
-            --
-            -- NOTE: this currently allows the previous epoch nonce to be
-            -- missing until an actual certificate appears in a block body.
-            -- This could be tightened in the future.
-            pure ()
-          SJust cert ->
-            case bhviewPrevEpochNonce bh of
-              Nothing ->
-                -- Certificate is present, but previous epoch nonce is missing.
-                failBecause (injectFailure PrevEpochNonceNotPresent)
-              Just nonce ->
-                -- Both certificate and previous epoch nonce are present, so we
-                -- can go ahead and validate it.
-                validatePerasCert nonce PerasKey cert
-                  ?! injectFailure (PerasCertValidationFailed cert nonce)
-        pure state
+  TRC (BbodyEnv pp account, BbodyState ls blocksMade, DijkstraBbodySignal blk@Block {blockBody}) <-
+    judgmentContext
 
+  Shelley.validateBodySize blk (pp ^. ppProtocolVersionL)
+
+  Shelley.validateBodyHash blk
+
+  let bhSlot = blk ^. blockHeaderSlotL
+
+  (firstSlot, curEpoch) <- liftSTS $ slotToEpochBoundary bhSlot
+
+  let txs = blockBody ^. txSeqBlockBodyL
+
+  ls' <-
+    trans @(EraRule "LEDGERS" era) $
+      TRC
+        ( LedgersEnv bhSlot curEpoch pp account
+        , ls
+        , fromStrict txs
+        )
+
+  validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
+
+  let maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+
+  Conway.validateRefScriptSize @era
+    (pp ^. ppProtocolVersionL)
+    (blockBody ^. txSeqBlockBodyL)
+    (ls ^. utxoL)
+    maxRefScriptSizePerBlock
+
+  case blockBody ^. perasCertBlockBodyL of
+    SNothing -> pure ()
+    SJust cert ->
+      let nonce = blk ^. blockHeaderPrevNonceL
+       in validatePerasCert nonce PerasKey cert ?! injectFailure (PerasCertValidationFailed cert nonce)
+
+  pure $ BbodyState ls' $ incrBlocks blk firstSlot (pp ^. ppDG) blocksMade
+
+-- | Validate that Peras certificate is in the block body.
 conwayToDijkstraBbodyPredFailure ::
   forall era. ConwayBbodyPredFailure era -> DijkstraBbodyPredFailure era
 conwayToDijkstraBbodyPredFailure = \case

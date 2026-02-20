@@ -2,6 +2,10 @@
 
 ## 0.2.0.0
 
+* Deprecate `BHeaderView` in favour of `DijkstraEraBlockHeader` typeclass.
+  - Add `PerasCert`, `PerasKey` and `validatePerasCert` to `Dijkstra.BlockBody` (moved from core).
+  - Add `DijkstraEraBlockHeader` typeclass and the `DijkstraBbodySignal` GADT.
+  - Remove `PrevEpochNonceNotPresent` from `DijkstraBbodyPredFailure`.
 * Add `accountBalanceIntervalsTxBodyL` lens to `DijkstraEraTxBody` typeclass.
   - Add the corresponding field to both `TopTx` and `SubTx` levels of `TxBody`.
   - Add `AccountBalanceInterval` and `AccountBalanceIntervals` data types.

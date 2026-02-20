@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -23,6 +24,7 @@ module Cardano.Ledger.Conway.Rules.Bbody (
   shelleyToConwayBbodyPredFailure,
   totalRefScriptSizeInBlock,
   conwayBbodyTransition,
+  validateRefScriptSize,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
@@ -39,7 +41,6 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoBbodyPredFailure (
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, IsValid (..), isValidTxL)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
-import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
@@ -54,7 +55,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
 import Cardano.Ledger.Conway.Era (ConwayBBODY, ConwayEra)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
@@ -69,9 +70,10 @@ import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsUTxOState, utxosUtxo)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), utxoL)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
+  BbodySignal (..),
   ShelleyBbodyEvent (..),
   ShelleyBbodyPredFailure,
   ShelleyBbodyState (..),
@@ -86,6 +88,8 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), txouts, unUTxO)
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
   Embed (..),
+  Rule,
+  RuleType (..),
   STS (..),
   TRC (..),
   TransitionRule,
@@ -99,7 +103,7 @@ import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (getSum))
 import qualified Data.Monoid as Monoid (Sum (..))
 import Data.Sequence (Seq)
-import Data.Sequence.Strict (StrictSeq (..))
+import Data.Sequence.Strict (StrictSeq)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -259,6 +263,7 @@ instance
   , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
   , EraRule "BBODY" era ~ ConwayBBODY era
   , AlonzoEraTx era
   , BabbageEraTxBody era
@@ -268,7 +273,7 @@ instance
   where
   type State (ConwayBBODY era) = ShelleyBbodyState era
 
-  type Signal (ConwayBBODY era) = Block BHeaderView era
+  type Signal (ConwayBBODY era) = BbodySignal era
 
   type Environment (ConwayBBODY era) = BbodyEnv era
 
@@ -283,11 +288,10 @@ instance
 
 conwayBbodyTransition ::
   forall era.
-  ( Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  ( Signal (EraRule "BBODY" era) ~ BbodySignal era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , AlonzoEraTx era
   , EraBlockBody era
@@ -296,38 +300,30 @@ conwayBbodyTransition ::
   ) =>
   TransitionRule (EraRule "BBODY" era)
 conwayBbodyTransition = do
-  judgmentContext
-    >>= \( TRC
-             ( BbodyEnv pp _
-               , state@(BbodyState ls _)
-               , Block bhView txsSeq
-               )
-           ) -> do
-        let utxo = utxosUtxo (lsUTxOState ls)
-            txs = txsSeq ^. txSeqBlockBodyL
-            totalRefScriptSize = totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs utxo
-            maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
-            checkHeaderProtVerTooHigh =
-              if pvMajor (pp ^. ppProtocolVersionL) < natVersion @11
-                && pvMajor (bhviewProtVer bhView) >= natVersion @12
-                then
-                  Just $
-                    Mismatch
-                      { mismatchSupplied = pvMajor (bhviewProtVer bhView)
-                      , mismatchExpected = natVersion @11
-                      }
-                else Nothing
-        failOnJust checkHeaderProtVerTooHigh $ injectFailure . HeaderProtVerTooHigh @era
-        totalRefScriptSize
-          <= maxRefScriptSizePerBlock
-            ?! injectFailure
-              ( BodyRefScriptsSizeTooBig $
-                  Mismatch
-                    { mismatchSupplied = totalRefScriptSize
-                    , mismatchExpected = maxRefScriptSizePerBlock
-                    }
-              )
-        pure state
+  TRC (BbodyEnv pp _, state@(BbodyState ls _), BbodySignal blk@Block {blockBody}) <- judgmentContext
+
+  let maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+
+  let bhProtVerMajor = pvMajor $ blk ^. blockHeaderProtVerL
+      checkHeaderProtVerTooHigh =
+        if pvMajor (pp ^. ppProtocolVersionL) < natVersion @11
+          && bhProtVerMajor >= natVersion @12
+          then
+            Just $
+              Mismatch
+                { mismatchSupplied = bhProtVerMajor
+                , mismatchExpected = natVersion @11
+                }
+          else Nothing
+  failOnJust checkHeaderProtVerTooHigh $ injectFailure . HeaderProtVerTooHigh @era
+
+  validateRefScriptSize @era
+    (pp ^. ppProtocolVersionL)
+    (blockBody ^. txSeqBlockBodyL)
+    (ls ^. utxoL)
+    maxRefScriptSizePerBlock
+
+  pure state
 
 instance
   ( Era era
@@ -339,6 +335,31 @@ instance
   where
   wrapFailed = LedgersFailure
   wrapEvent = ShelleyInAlonzoEvent . LedgersEvent
+
+-- | Validate that total reference script size does not exceed block limit.
+validateRefScriptSize ::
+  forall era.
+  ( AlonzoEraTx era
+  , BabbageEraTxBody era
+  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  ) =>
+  ProtVer ->
+  StrictSeq (Tx TopTx era) ->
+  UTxO era ->
+  -- | Max ref script size per block protocol parameter
+  Int ->
+  Rule (EraRule "BBODY" era) 'Transition ()
+validateRefScriptSize protVer txs utxo maxSize =
+  let totalSize = totalRefScriptSizeInBlock protVer txs utxo
+   in totalSize
+        <= maxSize
+          ?! injectFailure
+            ( BodyRefScriptsSizeTooBig $
+                Mismatch
+                  { mismatchSupplied = totalSize
+                  , mismatchExpected = maxSize
+                  }
+            )
 
 totalRefScriptSizeInBlock ::
   (AlonzoEraTx era, BabbageEraTxBody era) => ProtVer -> StrictSeq (Tx TopTx era) -> UTxO era -> Int

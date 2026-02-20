@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -36,6 +37,7 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut, TxBody (AlonzoTxBody))
 import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data ()
 import Cardano.Ledger.Shelley.API
@@ -43,8 +45,6 @@ import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure)
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
-
--- =====================================================
 
 instance ApplyTx AlonzoEra where
   newtype ApplyTxError AlonzoEra = AlonzoApplyTxError (NonEmpty (ShelleyLedgerPredFailure AlonzoEra))
@@ -54,4 +54,4 @@ instance ApplyTx AlonzoEra where
     first AlonzoApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
 
-instance ApplyBlock AlonzoEra
+instance EraBlockHeader h AlonzoEra => ApplyBlock h AlonzoEra

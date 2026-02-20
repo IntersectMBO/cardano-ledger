@@ -16,9 +16,10 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
   module Test.Cardano.Ledger.Conway.TreeDiff,
 ) where
 
-import Cardano.Ledger.BaseTypes (PerasCert, StrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Conway.Rules (ConwayGovEvent, ConwayUtxosPredFailure)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
 import Cardano.Ledger.Dijkstra.Core (
   AlonzoEraScript (..),
   AsItem,

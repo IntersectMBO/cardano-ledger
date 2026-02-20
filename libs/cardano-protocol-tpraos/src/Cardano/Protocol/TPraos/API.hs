@@ -46,7 +46,6 @@ import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
@@ -74,7 +73,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertStateL,
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
-import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.Slot (SlotNo, isOverlaySlot)
 import Cardano.Ledger.State (EraCertState (..), PoolDistr (..), individualPoolStake)
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (

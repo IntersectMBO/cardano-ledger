@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -17,8 +18,8 @@ module Cardano.Ledger.Chain (
   chainChecks,
 ) where
 
-import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), Version)
+import Cardano.Ledger.Block (Block, EraBlockHeader (..))
 import Cardano.Ledger.Core
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
@@ -60,18 +61,20 @@ data ChainPredicateFailure
 instance NoThunks ChainPredicateFailure
 
 chainChecks ::
-  MonadError ChainPredicateFailure m =>
+  (MonadError ChainPredicateFailure m, EraBlockHeader h era) =>
   Version ->
   ChainChecksPParams ->
-  BHeaderView ->
+  Block h era ->
   m ()
-chainChecks maxpv ccd bhv = do
+chainChecks maxpv ccd blk = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
-  unless (bhviewHSize bhv <= (fromIntegral :: Word16 -> Int) (ccMaxBHSize ccd)) $
+  let bhHSize = blk ^. blockHeaderHSizeL
+      bhBSize = blk ^. blockHeaderBSizeL
+  unless (bhHSize <= (fromIntegral :: Word16 -> Int) (ccMaxBHSize ccd)) $
     throwError $
-      HeaderSizeTooLargeCHAIN (bhviewHSize bhv) (ccMaxBHSize ccd)
-  unless (bhviewBSize bhv <= ccMaxBBSize ccd) $
+      HeaderSizeTooLargeCHAIN bhHSize (ccMaxBHSize ccd)
+  unless (bhBSize <= ccMaxBBSize ccd) $
     throwError $
-      BlockSizeTooLargeCHAIN (bhviewBSize bhv) (ccMaxBBSize ccd)
+      BlockSizeTooLargeCHAIN bhBSize (ccMaxBBSize ccd)
   where
     ProtVer m _ = ccProtocolVersion ccd

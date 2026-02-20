@@ -66,6 +66,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants)
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
@@ -251,7 +252,7 @@ delegTraceFromBlock chainSt block =
 ledgerTraceBase ::
   forall era.
   ( GetLedgerView era
-  , ApplyBlock era
+  , ApplyBlock TestBlockHeader era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->

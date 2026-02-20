@@ -198,7 +198,7 @@ benchmark mainbench
     QuickCheck,
     base,
     cardano-data,
-    cardano-ledger-core,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-test,
     cardano-protocol-tpraos,

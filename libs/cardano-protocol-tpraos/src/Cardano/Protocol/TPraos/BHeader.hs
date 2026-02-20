@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Protocol.TPraos.BHeader (
   HashHeader (..),
@@ -46,7 +47,10 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   FixedPoint,
@@ -77,6 +81,9 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Crypto
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
@@ -92,6 +99,7 @@ import Cardano.Ledger.Hashes (
   originalBytesSize,
  )
 import Cardano.Ledger.Keys (VKey)
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
@@ -102,6 +110,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.OCert (OCert (..))
@@ -111,6 +120,7 @@ import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import Data.Word (Word32)
 import GHC.Generics (Generic)
+import Lens.Micro (lens)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -464,3 +474,185 @@ makeHeaderView bh@(BHeader bhb _) nonce =
     (bheaderSlotNo bhb)
     nonce
     (bprotver bhb)
+
+instance Crypto c => EraBlockHeader (BHeader c) ShelleyEra where
+  blockHeaderIssuerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> hashKey $ bheaderVk bhb)
+      (\(Block (BHeader bhb sig) body) _ -> Block (BHeader bhb sig) body) -- QUESTION: What does it mean to "unhash" and set this?
+  blockHeaderBSizeL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bsize bhb)
+      (\(Block (BHeader bhb sig) body) newSize -> Block (BHeader (bhb {bsize = newSize}) sig) body)
+  blockHeaderHSizeL =
+    lens
+      (\(Block bh _) -> originalBytesSize bh)
+      (\(Block bh body) _ -> Block bh body) -- QUESTION: What does it mean to do this here?
+  blockHeaderBHashL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bhash bhb)
+      (\(Block (BHeader bhb sig) body) newHash -> Block (BHeader (bhb {bhash = newHash}) sig) body)
+  blockHeaderSlotL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bheaderSlotNo bhb)
+      (\(Block (BHeader bhb sig) body) newSlot -> Block (BHeader (bhb {bheaderSlotNo = newSlot}) sig) body)
+  blockHeaderProtVerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bprotver bhb)
+      (\(Block (BHeader bhb sig) body) protVer -> Block (BHeader (bhb {bprotver = protVer}) sig) body)
+
+instance Crypto c => EraBlockHeader (BHeader c) AllegraEra where
+  blockHeaderIssuerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> hashKey $ bheaderVk bhb)
+      (\(Block (BHeader bhb sig) body) _ -> Block (BHeader bhb sig) body)
+  blockHeaderBSizeL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bsize bhb)
+      (\(Block (BHeader bhb sig) body) newSize -> Block (BHeader (bhb {bsize = newSize}) sig) body)
+  blockHeaderHSizeL =
+    lens
+      (\(Block bh _) -> originalBytesSize bh)
+      (\(Block bh body) _ -> Block bh body)
+  blockHeaderBHashL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bhash bhb)
+      (\(Block (BHeader bhb sig) body) newHash -> Block (BHeader (bhb {bhash = newHash}) sig) body)
+  blockHeaderSlotL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bheaderSlotNo bhb)
+      (\(Block (BHeader bhb sig) body) newSlot -> Block (BHeader (bhb {bheaderSlotNo = newSlot}) sig) body)
+  blockHeaderProtVerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bprotver bhb)
+      (\(Block (BHeader bhb sig) body) protVer -> Block (BHeader (bhb {bprotver = protVer}) sig) body)
+
+instance Crypto c => EraBlockHeader (BHeader c) MaryEra where
+  blockHeaderIssuerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> hashKey $ bheaderVk bhb)
+      (\(Block (BHeader bhb sig) body) _ -> Block (BHeader bhb sig) body)
+  blockHeaderBSizeL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bsize bhb)
+      (\(Block (BHeader bhb sig) body) newSize -> Block (BHeader (bhb {bsize = newSize}) sig) body)
+  blockHeaderHSizeL =
+    lens
+      (\(Block bh _) -> originalBytesSize bh)
+      (\(Block bh body) _ -> Block bh body)
+  blockHeaderBHashL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bhash bhb)
+      (\(Block (BHeader bhb sig) body) newHash -> Block (BHeader (bhb {bhash = newHash}) sig) body)
+  blockHeaderSlotL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bheaderSlotNo bhb)
+      (\(Block (BHeader bhb sig) body) newSlot -> Block (BHeader (bhb {bheaderSlotNo = newSlot}) sig) body)
+  blockHeaderProtVerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bprotver bhb)
+      (\(Block (BHeader bhb sig) body) protVer -> Block (BHeader (bhb {bprotver = protVer}) sig) body)
+
+instance Crypto c => EraBlockHeader (BHeader c) AlonzoEra where
+  blockHeaderIssuerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> hashKey $ bheaderVk bhb)
+      (\(Block (BHeader bhb sig) body) _ -> Block (BHeader bhb sig) body)
+  blockHeaderBSizeL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bsize bhb)
+      (\(Block (BHeader bhb sig) body) newSize -> Block (BHeader (bhb {bsize = newSize}) sig) body)
+  blockHeaderHSizeL =
+    lens
+      (\(Block bh _) -> originalBytesSize bh)
+      (\(Block bh body) _ -> Block bh body)
+  blockHeaderBHashL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bhash bhb)
+      (\(Block (BHeader bhb sig) body) newHash -> Block (BHeader (bhb {bhash = newHash}) sig) body)
+  blockHeaderSlotL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bheaderSlotNo bhb)
+      (\(Block (BHeader bhb sig) body) newSlot -> Block (BHeader (bhb {bheaderSlotNo = newSlot}) sig) body)
+  blockHeaderProtVerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bprotver bhb)
+      (\(Block (BHeader bhb sig) body) protVer -> Block (BHeader (bhb {bprotver = protVer}) sig) body)
+
+instance Crypto c => EraBlockHeader (BHeader c) BabbageEra where
+  blockHeaderIssuerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> hashKey $ bheaderVk bhb)
+      (\(Block (BHeader bhb sig) body) _ -> Block (BHeader bhb sig) body)
+  blockHeaderBSizeL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bsize bhb)
+      (\(Block (BHeader bhb sig) body) newSize -> Block (BHeader (bhb {bsize = newSize}) sig) body)
+  blockHeaderHSizeL =
+    lens
+      (\(Block bh _) -> originalBytesSize bh)
+      (\(Block bh body) _ -> Block bh body)
+  blockHeaderBHashL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bhash bhb)
+      (\(Block (BHeader bhb sig) body) newHash -> Block (BHeader (bhb {bhash = newHash}) sig) body)
+  blockHeaderSlotL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bheaderSlotNo bhb)
+      (\(Block (BHeader bhb sig) body) newSlot -> Block (BHeader (bhb {bheaderSlotNo = newSlot}) sig) body)
+  blockHeaderProtVerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bprotver bhb)
+      (\(Block (BHeader bhb sig) body) protVer -> Block (BHeader (bhb {bprotver = protVer}) sig) body)
+
+instance Crypto c => EraBlockHeader (BHeader c) ConwayEra where
+  blockHeaderIssuerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> hashKey $ bheaderVk bhb)
+      (\(Block (BHeader bhb sig) body) _ -> Block (BHeader bhb sig) body)
+  blockHeaderBSizeL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bsize bhb)
+      (\(Block (BHeader bhb sig) body) newSize -> Block (BHeader (bhb {bsize = newSize}) sig) body)
+  blockHeaderHSizeL =
+    lens
+      (\(Block bh _) -> originalBytesSize bh)
+      (\(Block bh body) _ -> Block bh body)
+  blockHeaderBHashL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bhash bhb)
+      (\(Block (BHeader bhb sig) body) newHash -> Block (BHeader (bhb {bhash = newHash}) sig) body)
+  blockHeaderSlotL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bheaderSlotNo bhb)
+      (\(Block (BHeader bhb sig) body) newSlot -> Block (BHeader (bhb {bheaderSlotNo = newSlot}) sig) body)
+  blockHeaderProtVerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bprotver bhb)
+      (\(Block (BHeader bhb sig) body) protVer -> Block (BHeader (bhb {bprotver = protVer}) sig) body)
+
+instance Crypto c => EraBlockHeader (BHeader c) DijkstraEra where
+  blockHeaderIssuerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> hashKey $ bheaderVk bhb)
+      (\(Block (BHeader bhb sig) body) _ -> Block (BHeader bhb sig) body)
+  blockHeaderBSizeL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bsize bhb)
+      (\(Block (BHeader bhb sig) body) newSize -> Block (BHeader (bhb {bsize = newSize}) sig) body)
+  blockHeaderHSizeL =
+    lens
+      (\(Block bh _) -> originalBytesSize bh)
+      (\(Block bh body) _ -> Block bh body)
+  blockHeaderBHashL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bhash bhb)
+      (\(Block (BHeader bhb sig) body) newHash -> Block (BHeader (bhb {bhash = newHash}) sig) body)
+  blockHeaderSlotL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bheaderSlotNo bhb)
+      (\(Block (BHeader bhb sig) body) newSlot -> Block (BHeader (bhb {bheaderSlotNo = newSlot}) sig) body)
+  blockHeaderProtVerL =
+    lens
+      (\(Block (BHeader bhb _) _) -> bprotver bhb)
+      (\(Block (BHeader bhb sig) body) protVer -> Block (BHeader (bhb {bprotver = protVer}) sig) body)

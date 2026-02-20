@@ -1,9 +1,12 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -25,9 +28,8 @@ module Cardano.Ledger.Shelley.API.Validation (
   chainChecks,
 ) where
 
-import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, Version)
-import Cardano.Ledger.Block (Block)
+import Cardano.Ledger.Block (Block, EraBlockHeader)
 import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -35,7 +37,7 @@ import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
-import Cardano.Ledger.Shelley.Rules ()
+import Cardano.Ledger.Shelley.Rules (BbodySignal (..))
 import qualified Cardano.Ledger.Shelley.Rules as STS
 import Cardano.Ledger.Shelley.State ()
 import Cardano.Ledger.Slot (SlotNo)
@@ -51,7 +53,7 @@ import NoThunks.Class (NoThunks (..))
   Block validation API
 -------------------------------------------------------------------------------}
 
-class (EraGov era, EraBlockBody era) => ApplyBlock era where
+class (EraGov era, EraBlockBody era, EraBlockHeader h era) => ApplyBlock h era where
   -- | Run the `BBODY` rule with `globalAssertionPolicy`. This function always succeeds, but
   -- whenever validation is turned on it is necessary to check for presence of predicate failures
   -- before a call can be marked successful. Therefore it is recommended to call `applyBlockEither`
@@ -61,21 +63,21 @@ class (EraGov era, EraBlockBody era) => ApplyBlock era where
     ValidationPolicy ->
     Globals ->
     NewEpochState era ->
-    Block BHeaderView era ->
+    Block h era ->
     (NewEpochState era, [PredicateFailure (EraRule "BBODY" era)], [Event (EraRule "BBODY" era)])
   default applyBlock ::
     ( STS (EraRule "BBODY" era)
     , BaseM (EraRule "BBODY" era) ~ ShelleyBase
     , Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era
     , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
-    , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+    , Signal (EraRule "BBODY" era) ~ BbodySignal era
     , State (EraRule "LEDGERS" era) ~ LedgerState era
     ) =>
     SingEP ep ->
     ValidationPolicy ->
     Globals ->
     NewEpochState era ->
-    Block BHeaderView era ->
+    Block h era ->
     (NewEpochState era, [PredicateFailure (EraRule "BBODY" era)], [Event (EraRule "BBODY" era)])
   applyBlock eventsPolicy validationPolicy globals newEpochState block =
     (updateNewEpochState newEpochState stsResultState, stsResultFailures, stsResultEvents)
@@ -89,7 +91,7 @@ class (EraGov era, EraBlockBody era) => ApplyBlock era where
       STSResult {stsResultState, stsResultFailures, stsResultEvents} =
         flip runReader globals $
           applySTSOptsResult @(EraRule "BBODY" era) opts $
-            TRC (mkBbodyEnv newEpochState, bBodyState, block)
+            TRC (mkBbodyEnv newEpochState, bBodyState, BbodySignal block)
       bBodyState =
         STS.BbodyState
           (LedgerState.esLState $ LedgerState.nesEs newEpochState)
@@ -130,12 +132,12 @@ class (EraGov era, EraBlockBody era) => ApplyBlock era where
 -- | Same as `applyBlock`, except it produces a Left when there are failures present and `Right`
 -- with result otherwise.
 applyBlockEither ::
-  ApplyBlock era =>
+  ApplyBlock h era =>
   SingEP ep ->
   ValidationPolicy ->
   Globals ->
   NewEpochState era ->
-  Block BHeaderView era ->
+  Block h era ->
   Either (BlockTransitionError era) (NewEpochState era, [Event (EraRule "BBODY" era)])
 applyBlockEither eventsPolicy validationPolicy globals newEpochState block =
   case failure of
@@ -146,11 +148,11 @@ applyBlockEither eventsPolicy validationPolicy globals newEpochState block =
       applyBlock eventsPolicy validationPolicy globals newEpochState block
 
 applyBlockEitherNoEvents ::
-  ApplyBlock era =>
+  ApplyBlock h era =>
   ValidationPolicy ->
   Globals ->
   NewEpochState era ->
-  Block BHeaderView era ->
+  Block h era ->
   Either (BlockTransitionError era) (NewEpochState era)
 applyBlockEitherNoEvents validationPolicy globals newEpochState block =
   fst <$> applyBlockEither EPDiscard validationPolicy globals newEpochState block
@@ -161,10 +163,10 @@ applyBlockEitherNoEvents validationPolicy globals newEpochState block =
 -- the caller implicitly guarantees that they have previously called
 -- 'applyBlockTransition' on the same block and that this was successful.
 applyBlockNoValidaton ::
-  ApplyBlock era =>
+  ApplyBlock h era =>
   Globals ->
   NewEpochState era ->
-  Block BHeaderView era ->
+  Block h era ->
   NewEpochState era
 applyBlockNoValidaton globals newEpochState block = newEpochStateResult
   where
@@ -173,27 +175,28 @@ applyBlockNoValidaton globals newEpochState block = newEpochStateResult
 
 -- | Same as `applyTick`, but do not retain any ledger events
 applyTickNoEvents ::
-  ApplyBlock era =>
+  forall era h.
+  ApplyBlock h era =>
   Globals ->
   NewEpochState era ->
   SlotNo ->
   NewEpochState era
 applyTickNoEvents globals newEpochState slotNo =
-  fst $ applyTick EPDiscard globals newEpochState slotNo
+  fst $ applyTick @h EPDiscard globals newEpochState slotNo
 
-instance ApplyBlock ShelleyEra
+instance EraBlockHeader h ShelleyEra => ApplyBlock h ShelleyEra
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
 -------------------------------------------------------------------------------}
 
 chainChecks ::
-  forall m.
-  MonadError STS.ChainPredicateFailure m =>
+  forall m h era.
+  (MonadError STS.ChainPredicateFailure m, EraBlockHeader h era) =>
   -- | Max major protocol version
   Version ->
   STS.ChainChecksPParams ->
-  BHeaderView ->
+  Block h era ->
   m ()
 chainChecks = STS.chainChecks
 

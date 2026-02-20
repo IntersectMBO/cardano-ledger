@@ -197,6 +197,7 @@ library cddl
 library testlib
   import: warnings
   exposed-modules:
+    Test.Cardano.Ledger.BlockHeader
     Test.Cardano.Ledger.Common
     Test.Cardano.Ledger.Core.Address
     Test.Cardano.Ledger.Core.Arbitrary
