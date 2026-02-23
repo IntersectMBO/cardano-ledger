@@ -95,9 +95,8 @@ import Control.State.Transition.Extended (
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Set.NonEmpty (NonEmptySet)
-import Data.Word (Word32)
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
-import GHC.Natural (Natural)
 import Lens.Micro ((^.))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
@@ -155,7 +154,7 @@ data DijkstraUtxoPredFailure era
     OutsideForecast SlotNo
   | -- | There are too many collateral inputs
     TooManyCollateralInputs
-      (Mismatch RelLTEQ Natural)
+      (Mismatch RelLTEQ Word16)
   | NoCollateralInputs
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField

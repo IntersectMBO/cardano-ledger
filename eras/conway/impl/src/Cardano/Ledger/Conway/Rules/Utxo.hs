@@ -80,9 +80,8 @@ import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Set.NonEmpty (NonEmptySet)
-import Data.Word (Word32)
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
-import GHC.Natural (Natural)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 -- ======================================================
@@ -145,7 +144,7 @@ data ConwayUtxoPredFailure era
       SlotNo
   | -- | There are too many collateral inputs
     TooManyCollateralInputs
-      (Mismatch RelLTEQ Natural) -- The values are serialised in reverse order
+      (Mismatch RelLTEQ Word16) -- The values are serialised in reverse order
   | NoCollateralInputs
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField

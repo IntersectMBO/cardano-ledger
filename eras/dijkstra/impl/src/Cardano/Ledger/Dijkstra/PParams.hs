@@ -74,7 +74,6 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to, (^.))
 import NoThunks.Class (NoThunks)
-import Numeric.Natural (Natural)
 
 -- | Dijkstra Protocol parameters. The following parameters have been added since Dijkstra:
 -- * @maxRefScriptSizePerBlock@
@@ -523,20 +522,11 @@ instance AlonzoEraPParams DijkstraEra where
   hkdMaxBlockExUnitsL =
     lens (hkdMap (Proxy @f) unOrdExUnits . unTHKD . dppMaxBlockExUnits) $ \pp x ->
       pp {dppMaxBlockExUnits = THKD $ hkdMap (Proxy @f) OrdExUnits x}
-  hkdMaxValSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f DijkstraEra) (HKD f Natural)
-  hkdMaxValSizeL =
-    lens (asNaturalHKD @f @Word32 . (unTHKD . dppMaxValSize)) $
-      \pp x -> pp {dppMaxValSize = THKD (asBoundedIntegralHKD @f @Natural @Word32 x)}
-  hkdCollateralPercentageL ::
-    forall f. HKDFunctor f => Lens' (PParamsHKD f DijkstraEra) (HKD f Natural)
+  hkdMaxValSizeL = lens (unTHKD . dppMaxValSize) $ \pp x -> pp {dppMaxValSize = THKD x}
   hkdCollateralPercentageL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . dppCollateralPercentage)) $
-      \pp x -> pp {dppCollateralPercentage = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
-  hkdMaxCollateralInputsL ::
-    forall f. HKDFunctor f => Lens' (PParamsHKD f DijkstraEra) (HKD f Natural)
+    lens (unTHKD . dppCollateralPercentage) $ \pp x -> pp {dppCollateralPercentage = THKD x}
   hkdMaxCollateralInputsL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . dppMaxCollateralInputs)) $
-      \pp x -> pp {dppMaxCollateralInputs = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
+    lens (unTHKD . dppMaxCollateralInputs) $ \pp x -> pp {dppMaxCollateralInputs = THKD x}
 
 instance BabbageEraPParams DijkstraEra where
   hkdCoinsPerUTxOByteL =
@@ -573,10 +563,8 @@ instance ConwayEraPParams DijkstraEra where
     lens (unTHKD . dppPoolVotingThresholds) $ \pp x -> pp {dppPoolVotingThresholds = THKD x}
   hkdDRepVotingThresholdsL =
     lens (unTHKD . dppDRepVotingThresholds) $ \pp x -> pp {dppDRepVotingThresholds = THKD x}
-  hkdCommitteeMinSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f DijkstraEra) (HKD f Natural)
   hkdCommitteeMinSizeL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . dppCommitteeMinSize)) $
-      \pp x -> pp {dppCommitteeMinSize = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
+    lens (unTHKD . dppCommitteeMinSize) $ \pp x -> pp {dppCommitteeMinSize = THKD x}
   hkdCommitteeMaxTermLengthL =
     lens (unTHKD . dppCommitteeMaxTermLength) $ \pp x -> pp {dppCommitteeMaxTermLength = THKD x}
   hkdGovActionLifetimeL =

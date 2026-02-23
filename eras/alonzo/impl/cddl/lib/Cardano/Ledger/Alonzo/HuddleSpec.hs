@@ -382,9 +382,9 @@ instance HuddleRule "protocol_param_update" AlonzoEra where
         , opt (idx 19 ==> huddleRule @"ex_unit_prices" p) //- "execution costs"
         , opt (idx 20 ==> huddleRule @"ex_units" p) //- "max tx ex units"
         , opt (idx 21 ==> huddleRule @"ex_units" p) //- "max block ex units"
-        , opt (idx 22 ==> VUInt) //- "max value size"
-        , opt (idx 23 ==> VUInt) //- "collateral percentage"
-        , opt (idx 24 ==> VUInt) //- "max collateral inputs"
+        , opt (idx 22 ==> VUInt `sized` (4 :: Word64)) //- "max value size"
+        , opt (idx 23 ==> VUInt `sized` (2 :: Word64)) //- "collateral percentage"
+        , opt (idx 24 ==> VUInt `sized` (2 :: Word64)) //- "max collateral inputs"
         ]
 
 instance HuddleRule "transaction_witness_set" AlonzoEra where

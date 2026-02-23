@@ -399,9 +399,9 @@ protocol_param_update =
   , ? 19 : ex_unit_prices       ; execution costs
   , ? 20 : ex_units             ; max tx ex units
   , ? 21 : ex_units             ; max block ex units
-  , ? 22 : uint                 ; max value size
-  , ? 23 : uint                 ; collateral percentage
-  , ? 24 : uint                 ; max collateral inputs
+  , ? 22 : uint .size 4         ; max value size
+  , ? 23 : uint .size 2         ; collateral percentage
+  , ? 24 : uint .size 2         ; max collateral inputs
   }
 
 

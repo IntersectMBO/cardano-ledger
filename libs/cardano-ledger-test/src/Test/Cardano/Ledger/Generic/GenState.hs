@@ -128,8 +128,8 @@ import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.TreeDiff (Expr, ToExpr (toExpr))
+import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
-import GHC.Word (Word64)
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
@@ -181,9 +181,9 @@ class (EraTest era, Reflect era, EraModel era) => EraGenericGen era where
 
   -- Era generic "lenses" for testing
 
-  ppMaxCollateralInputsT :: Lens' (PParams era) Natural
+  ppMaxCollateralInputsT :: Lens' (PParams era) Word16
 
-  ppCollateralPercentageT :: Lens' (PParams era) Natural
+  ppCollateralPercentageT :: Lens' (PParams era) Word16
 
   ppCostModelsT :: Lens' (PParams era) CostModels
 
@@ -191,7 +191,7 @@ class (EraTest era, Reflect era, EraModel era) => EraGenericGen era where
 
   ppMaxBlockExUnitsT :: Lens' (PParams era) ExUnits
 
-  ppMaxValSizeT :: Lens' (PParams era) Natural
+  ppMaxValSizeT :: Lens' (PParams era) Word32
 
   -- Utils
 
@@ -206,7 +206,7 @@ data GenSize = GenSize
   , startSlot :: !Word64
   , slotDelta :: !(Word64, Word64)
   , blocksizeMax :: !Integer
-  , collInputsMax :: !Natural
+  , collInputsMax :: !Word16
   , spendInputsMax :: !Int
   , refInputsMax :: !Int
   , utxoChoicesMax :: !Int
@@ -350,7 +350,7 @@ getCertificateMax = certificateMax . geSize . gsGenEnv
 getUtxoChoicesMax :: GenState era -> Int
 getUtxoChoicesMax = utxoChoicesMax . geSize . gsGenEnv
 
-getCollInputsMax :: GenState era -> Natural
+getCollInputsMax :: GenState era -> Word16
 getCollInputsMax = collInputsMax . geSize . gsGenEnv
 
 getOldUtxoPercent :: GenState era -> Int

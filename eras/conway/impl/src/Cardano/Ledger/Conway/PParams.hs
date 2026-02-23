@@ -87,7 +87,6 @@ module Cardano.Ledger.Conway.PParams (
   emptyConwayPParams,
   emptyConwayPParamsUpdate,
   asNaturalHKD,
-  asBoundedIntegralHKD,
   ppGroup,
   asCompactCoinHKD,
 
@@ -116,7 +115,6 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   ToKeyValuePairs (..),
   UnitInterval,
-  integralToBounded,
   knownNonZeroBounded,
   strictMaybeToMaybe,
  )
@@ -184,7 +182,7 @@ class BabbageEraPParams era => ConwayEraPParams era where
 
   hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
   hkdDRepVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f DRepVotingThresholds)
-  hkdCommitteeMinSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdCommitteeMinSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word16)
   hkdCommitteeMaxTermLengthL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
   hkdGovActionLifetimeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
   hkdGovActionDepositCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
@@ -229,7 +227,7 @@ ppDRepVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) DRepVotingThresholds
 ppDRepVotingThresholdsL = ppLensHKD . hkdDRepVotingThresholdsL @era @Identity
 
-ppCommitteeMinSizeL :: forall era. ConwayEraPParams era => Lens' (PParams era) Natural
+ppCommitteeMinSizeL :: forall era. ConwayEraPParams era => Lens' (PParams era) Word16
 ppCommitteeMinSizeL = ppLensHKD . hkdCommitteeMinSizeL @era @Identity
 
 ppCommitteeMaxTermLengthL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
@@ -267,7 +265,7 @@ ppuDRepVotingThresholdsL ::
 ppuDRepVotingThresholdsL = ppuLensHKD . hkdDRepVotingThresholdsL @era @StrictMaybe
 
 ppuCommitteeMinSizeL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
 ppuCommitteeMinSizeL = ppuLensHKD . hkdCommitteeMinSizeL @era @StrictMaybe
 
 ppuCommitteeMaxTermLengthL ::
@@ -921,20 +919,12 @@ instance AlonzoEraPParams ConwayEra where
   hkdMaxBlockExUnitsL =
     lens (hkdMap (Proxy @f) unOrdExUnits . unTHKD . cppMaxBlockExUnits) $ \pp x ->
       pp {cppMaxBlockExUnits = THKD $ hkdMap (Proxy @f) OrdExUnits x}
-  hkdMaxValSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
   hkdMaxValSizeL =
-    lens (asNaturalHKD @f @Word32 . (unTHKD . cppMaxValSize)) $
-      \pp x -> pp {cppMaxValSize = THKD (asBoundedIntegralHKD @f @Natural @Word32 x)}
-  hkdCollateralPercentageL ::
-    forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
+    lens (unTHKD . cppMaxValSize) $ \pp x -> pp {cppMaxValSize = THKD x}
   hkdCollateralPercentageL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . cppCollateralPercentage)) $
-      \pp x -> pp {cppCollateralPercentage = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
-  hkdMaxCollateralInputsL ::
-    forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
+    lens (unTHKD . cppCollateralPercentage) $ \pp x -> pp {cppCollateralPercentage = THKD x}
   hkdMaxCollateralInputsL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . cppMaxCollateralInputs)) $
-      \pp x -> pp {cppMaxCollateralInputs = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
+    lens (unTHKD . cppMaxCollateralInputs) $ \pp x -> pp {cppMaxCollateralInputs = THKD x}
 
 instance BabbageEraPParams ConwayEra where
   hkdCoinsPerUTxOByteL =
@@ -973,10 +963,8 @@ instance ConwayEraPParams ConwayEra where
     lens (unTHKD . cppPoolVotingThresholds) $ \pp x -> pp {cppPoolVotingThresholds = THKD x}
   hkdDRepVotingThresholdsL =
     lens (unTHKD . cppDRepVotingThresholds) $ \pp x -> pp {cppDRepVotingThresholds = THKD x}
-  hkdCommitteeMinSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
   hkdCommitteeMinSizeL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . cppCommitteeMinSize)) $
-      \pp x -> pp {cppCommitteeMinSize = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
+    lens (unTHKD . cppCommitteeMinSize) $ \pp x -> pp {cppCommitteeMinSize = THKD x}
   hkdCommitteeMaxTermLengthL =
     lens (unTHKD . cppCommitteeMaxTermLength) $ \pp x -> pp {cppCommitteeMaxTermLength = THKD x}
   hkdGovActionLifetimeL =
@@ -1142,12 +1130,9 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
     , cppPrices = THKD bppPrices
     , cppMaxTxExUnits = THKD bppMaxTxExUnits
     , cppMaxBlockExUnits = THKD bppMaxBlockExUnits
-    , cppMaxValSize =
-        THKD (asBoundedIntegralHKD @f @Natural @Word32 bppMaxValSize)
-    , cppCollateralPercentage =
-        THKD (asBoundedIntegralHKD @f @Natural @Word16 bppCollateralPercentage)
-    , cppMaxCollateralInputs =
-        THKD (asBoundedIntegralHKD @f @Natural @Word16 bppMaxCollateralInputs)
+    , cppMaxValSize = THKD bppMaxValSize
+    , cppCollateralPercentage = THKD bppCollateralPercentage
+    , cppMaxCollateralInputs = THKD bppMaxCollateralInputs
     , -- New for Conway
       cppPoolVotingThresholds = THKD ucppPoolVotingThresholds
     , cppDRepVotingThresholds = THKD ucppDRepVotingThresholds
@@ -1186,9 +1171,9 @@ downgradeConwayPParams ConwayPParams {..} =
     , bppPrices = unTHKD cppPrices
     , bppMaxTxExUnits = unTHKD cppMaxTxExUnits
     , bppMaxBlockExUnits = unTHKD cppMaxBlockExUnits
-    , bppMaxValSize = asNaturalHKD @f @Word32 (unTHKD cppMaxValSize)
-    , bppCollateralPercentage = asNaturalHKD @f @Word16 (unTHKD cppCollateralPercentage)
-    , bppMaxCollateralInputs = asNaturalHKD @f @Word16 (unTHKD cppMaxCollateralInputs)
+    , bppMaxValSize = unTHKD cppMaxValSize
+    , bppCollateralPercentage = unTHKD cppCollateralPercentage
+    , bppMaxCollateralInputs = unTHKD cppMaxCollateralInputs
     }
 
 -- | Functionality for updating protocol parameters in Conway era. Worth noting that, unlike previous
@@ -1276,24 +1261,6 @@ asCompactCoinHKD = hkdMap (Proxy @f) compactCoinOrError
 -- an `ArithmeticUnderflow` exception for negative numbers.
 asNaturalHKD :: forall f i. (HKDFunctor f, Integral i) => HKD f i -> HKD f Natural
 asNaturalHKD = hkdMap (Proxy @f) (fromIntegral @i @Natural)
-
-asBoundedIntegralHKD ::
-  forall f i b.
-  (HKDFunctor f, Integral i, Integral b, Bounded b, HasCallStack) =>
-  HKD f i ->
-  HKD f b
-asBoundedIntegralHKD = hkdMap (Proxy @f) $ \x ->
-  case integralToBounded @i @b @Maybe x of
-    Just b -> b
-    Nothing ->
-      error $
-        "Value: "
-          <> show (toInteger x)
-          <> " is out of the valid range: ["
-          <> show (toInteger (minBound @b))
-          <> ","
-          <> show (toInteger (maxBound @b))
-          <> "]"
 
 ppPoolVotingThresholds :: ConwayEraPParams era => PParam era
 ppPoolVotingThresholds =
