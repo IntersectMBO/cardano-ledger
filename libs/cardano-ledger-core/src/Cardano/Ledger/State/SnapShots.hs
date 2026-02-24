@@ -422,7 +422,9 @@ snapShotFromInstantStake instantStake dState PState {psStakePools} =
     keepAndCountDelegations cred accountState acc@(!curDelegs, !curCount) =
       case accountState ^. stakePoolDelegationAccountStateL of
         Nothing -> acc
-        Just deleg -> ((cred, deleg) : curDelegs, curCount + 1)
+        Just deleg ->
+          let !d = (cred, deleg)
+           in (d : curDelegs, curCount + 1)
     (delegsAscList, delegsCount) =
       Map.foldrWithKey keepAndCountDelegations ([], 0) $ accounts ^. accountsMapL
 {-# INLINE snapShotFromInstantStake #-}
