@@ -89,7 +89,14 @@ instance
       <*> toSpecRep (txb ^. currentTreasuryValueTxBodyL)
       <*> pure 0
       <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
-      <*> toSpecRep (txb ^. scriptIntegrityHashTxBodyL)
+      -- The script integrity hash is computed using @const 0@ on the Agda
+      -- side (@Hashable-ScriptIntegrity = record { hash = λ x → 0 }@).
+      -- Until a proper hash function is used in Agda, we emulate the same
+      -- behavior here.
+      --
+      -- The following PR documents the discrepancy on the Agda side:
+      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1086
+      <*> fmap (fmap (const 0)) (toSpecRep (txb ^. scriptIntegrityHashTxBodyL))
 
 instance SpecTranslate ctx (Tx TopTx ConwayEra) where
   type SpecRep (Tx TopTx ConwayEra) = Agda.Tx
