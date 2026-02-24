@@ -36,7 +36,7 @@ jobs:
   build:
     strategy:
       matrix:
-        ghc: ["9.6.7", "9.8.4", "9.10.2", "9.12.2"]
+        ghc: ["9.6.7", "9.8.4", "9.10.3", "9.12.2", "9.14.1"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -87,7 +87,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.14
+        cabal-version: 3.16
 
     - name: Configure to use libsodium
       run: |
@@ -217,7 +217,7 @@ jobs:
         - non-integral
         - small-steps
         - vector-map
-        ghc: ["9.6.7", "9.8.4", "9.10.2", "9.12.2"]
+        ghc: ["9.6.7", "9.8.4", "9.10.3", "9.12.2"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -268,7 +268,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.14
+        cabal-version: 3.16
 
     - name: Download Mainnet Mirror
       if: matrix.package == 'cardano-ledger-byron'
@@ -452,7 +452,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ env.ghc-version }}
-        cabal-version: 3.14
+        cabal-version: 3.16
 
     # Retrieve working directory from build jobs
     - name: Download working directory archive
@@ -532,7 +532,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: 9.10.1
-        cabal-version: 3.14
+        cabal-version: 3.16
 
     - name: Install gen-hie if not cached
       if: steps.cache-gen-hie.outputs.cache-hit != 'true'
