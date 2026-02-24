@@ -236,10 +236,14 @@ map ::
   (a -> b) ->
   VMap kv vv k a ->
   VMap kv vv k b
-map f (VMap vec) = VMap (VG.map (\(k, v) -> (k, f v)) vec)
+map f (VMap vec) = VMap (VG.map (\(k, v) -> let v' = f v in v' `seq` (k, v')) vec)
 -- TODO: benchmark and switch to this implementation when we switch to Data.Vector.Strict
 -- VMap (KV.mapValsKVVector f vec)
-{-# INLINE map #-}
+--
+-- This is marked as NOINLINE because there is some strange issue in `vector`, likely due to stream
+-- fusion, that prevents elements from being forced. This needs further investigation, but for now
+-- we can get away with NOINLINE. FTR. `Data.Vector.Strict` is also susceptible to this problem.
+{-# NOINLINE map #-}
 
 mapMaybe ::
   (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
