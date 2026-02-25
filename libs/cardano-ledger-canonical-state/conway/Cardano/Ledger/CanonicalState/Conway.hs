@@ -12,10 +12,17 @@
 
 module Cardano.Ledger.CanonicalState.Conway (
   mkCanonicalConstitution,
+  CanonicalGovActionState (..),
+  toGovActionState,
+  fromGovActionState,
 ) where
 
+import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.CanonicalState.BasicTypes (
+  OnChain(..),
+  mkOnChain,
   CanonicalCoin (..),
+  DecodeOnChain (..),
   fromCanonicalExUnits,
   mkCanonicalExUnits,
  )
@@ -23,10 +30,13 @@ import Cardano.Ledger.CanonicalState.Namespace
 import Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 ()
 import Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
 import Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0
+import Cardano.Ledger.CanonicalState.Namespace.GovProposals.V0
 import Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Binary (decodeFull')
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (Constitution (..))
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.SCLS.CBOR.Canonical (
   CanonicalDecoder,
@@ -43,21 +53,26 @@ import Cardano.SCLS.NamespaceCodec
 import Cardano.SCLS.Versioned (Versioned (..))
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
+import Control.Monad (unless)
+import Data.Map (Map)
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Word (Word8)
 import Lens.Micro
 
 type instance NamespaceEra "blocks/v0" = ConwayEra
 
 type instance NamespaceEra "gov/committee/v0" = ConwayEra
 
-type instance NamespaceEra "utxo/v0" = ConwayEra
-
 type instance NamespaceEra "gov/constitution/v0" = ConwayEra
 
 type instance NamespaceEra "gov/pparams/v0" = ConwayEra
 
-type instance NamespaceEra "utxo/v0" = ConwayEra
+type instance NamespaceEra "gov/proposals/v0" = ConwayEra
 
 type instance NamespaceEra "pool_stake/v0" = ConwayEra
+
+type instance NamespaceEra "utxo/v0" = ConwayEra
 
 instance KnownNamespace "utxo/v0" where
   type NamespaceKey "utxo/v0" = UtxoIn
@@ -171,11 +186,12 @@ instance FromCanonicalCBOR "gov/pparams/v0" (PParams ConwayEra) where
           & ppDRepActivityL .~ dRepActivity
           & ppMinFeeRefScriptCostPerByteL .~ minFeeRefScriptCostPerByte
           & ppProtocolVersionL .~ protVer
-
-decodeField :: forall v a s. FromCanonicalCBOR v a => Word -> CanonicalDecoder s a
-decodeField expectedTag = do
-  decodeWordCanonicalOf expectedTag
-  unVer <$> fromCanonicalCBOR @v
+    where
+      decodeField :: forall v a s. FromCanonicalCBOR v a => Word -> CanonicalDecoder s a
+      decodeField expectedTag = do
+        decodeWordCanonicalOf expectedTag
+        Versioned value <- fromCanonicalCBOR @v
+        return value
 
 instance ToCanonicalCBOR "gov/pparams/v0" DRepVotingThresholds where
   toCanonicalCBOR v dvt =
@@ -228,3 +244,101 @@ instance FromCanonicalCBOR "gov/pparams/v0" PoolVotingThresholds where
         ) <-
       fromCanonicalCBOR @"gov/pparams/v0"
     return $ Versioned PoolVotingThresholds {..}
+
+instance KnownNamespace "gov/proposals/v0" where
+  type NamespaceKey "gov/proposals/v0" = GovProposalIn
+  type NamespaceEntry "gov/proposals/v0" = GovProposalOut CanonicalGovActionState
+
+fromGovActionState :: GovActionState ConwayEra -> (GovProposalIn, GovProposalOut CanonicalGovActionState)
+fromGovActionState GovActionState {..} =
+  ( mkGovProposalsIn gasId
+  , GovProposalOut $
+      CanonicalGovActionState
+        { gasProposalProcedure = mkOnChain @ConwayEra gasProposalProcedure
+        , ..
+        }
+  )
+
+toGovActionState :: (GovProposalIn, GovProposalOut CanonicalGovActionState) -> GovActionState ConwayEra
+toGovActionState (govIn, GovProposalOut CanonicalGovActionState {..}) =
+  GovActionState
+    { gasProposalProcedure = getValue gasProposalProcedure
+    , gasId = fromGovProposalsIn govIn
+    , ..
+    }
+
+mkGovProposalsIn :: GovActionId -> GovProposalIn
+mkGovProposalsIn GovActionId {gaidGovActionIx=GovActionIx idx, ..} =
+  GovProposalIn $ CanonicalGovActionId
+    { gaidTxId = gaidTxId
+    , gaidGovActionIx = CanonicalGovActionIx idx
+    }
+
+fromGovProposalsIn :: GovProposalIn -> GovActionId
+fromGovProposalsIn (GovProposalIn CanonicalGovActionId {gaidGovActionIx = CanonicalGovActionIx aix, ..}) =
+  GovActionId
+    { gaidTxId = gaidTxId
+    , gaidGovActionIx = GovActionIx aix
+    }
+
+-- | This is the same strucutre as GovActionState but without the id.
+--
+-- This unfortunate code duplication is needed because otherwise we would have to
+-- create dummy keys.
+data CanonicalGovActionState = CanonicalGovActionState
+  { gasCommitteeVotes :: !(Map (Credential HotCommitteeRole) Vote)
+  , gasDRepVotes :: !(Map (Credential DRepRole) Vote)
+  , gasStakePoolVotes :: !(Map (KeyHash StakePool) Vote)
+  , gasProposalProcedure :: OnChain (ProposalProcedure ConwayEra)
+  , gasProposedIn :: !EpochNo
+  , gasExpiresAfter :: !EpochNo
+  }
+  deriving (Eq, Show)
+
+instance DecodeOnChain "gov/proposals/v0" (ProposalProcedure ConwayEra) where
+  decodeOnChain = either (fail . show) (pure) . decodeFull' (eraProtVerLow @ConwayEra)
+
+instance ToCanonicalCBOR "gov/proposals/v0" (CanonicalGovActionState) where
+  toCanonicalCBOR v CanonicalGovActionState{..} =
+    encodeAsMap
+         [ mkEncodablePair v ("drep_votes" :: Text) gasDRepVotes
+         , mkEncodablePair v ("proposed_in" :: Text) gasProposedIn
+         , mkEncodablePair v ("expires_after" :: Text) gasExpiresAfter
+         , mkEncodablePair v ("committee_votes" :: Text) gasCommitteeVotes
+         , mkEncodablePair v ("stake_pool_votes" :: Text) gasStakePoolVotes
+         , mkEncodablePair v ("proposal_procedure" :: Text) gasProposalProcedure
+         ]
+
+instance FromCanonicalCBOR "gov/proposals/v0" (CanonicalGovActionState) where
+  fromCanonicalCBOR = do
+    decodeMapLenCanonicalOf 6
+    Versioned gasDRepVotes <- decodeField @"gov/proposals/v0" "drep_votes"
+    Versioned gasProposedIn <- decodeField @"gov/proposals/v0" "proposed_in"
+    Versioned gasExpiresAfter <- decodeField @"gov/proposals/v0" "expires_after"
+    Versioned gasCommitteeVotes <- decodeField @"gov/proposals/v0" "committee_votes"
+    Versioned gasStakePoolVotes <- decodeField @"gov/proposals/v0" "stake_pool_votes"
+    Versioned gasProposalProcedure <- decodeField @"gov/proposals/v0" "proposal_procedure"
+    pure $ Versioned CanonicalGovActionState { .. }
+    where
+      decodeField :: forall v s a . FromCanonicalCBOR v a => Text -> CanonicalDecoder s (Versioned v a)
+      decodeField fieldName = do
+        Versioned s <- fromCanonicalCBOR
+        unless (s == fieldName) $
+          fail $
+            T.unpack $
+              "Expected field name " <> fieldName <> " but got " <> s
+        fromCanonicalCBOR
+
+instance ToCanonicalCBOR v Vote where
+  toCanonicalCBOR v VoteNo = toCanonicalCBOR v (0 :: Word8)
+  toCanonicalCBOR v VoteYes = toCanonicalCBOR v (1 :: Word8)
+  toCanonicalCBOR v Abstain = toCanonicalCBOR v (2 :: Word8)
+
+instance FromCanonicalCBOR v Vote where
+  fromCanonicalCBOR = do
+    Versioned (w :: Word8) <- fromCanonicalCBOR
+    case w of
+      0 -> return (Versioned VoteNo)
+      1 -> return (Versioned VoteYes)
+      2 -> return (Versioned Abstain)
+      _ -> fail "Invalid CanonicalVote"

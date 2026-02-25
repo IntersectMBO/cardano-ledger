@@ -47,6 +47,7 @@ library
     Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0
     Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
     Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0
+    Cardano.Ledger.CanonicalState.Namespace.GovProposals.V0
     Cardano.Ledger.CanonicalState.Namespace.PoolStake.V0
     Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
 
@@ -77,12 +78,16 @@ library conway
   hs-source-dirs: conway
   build-depends:
     base,
+    cardano-ledger-binary,
+    cardano-ledger-core,
     cardano-ledger-canonical-state,
     cardano-ledger-conway,
     cborg,
+    containers,
     microlens,
     scls-cbor,
     scls-core,
+    text,
 
 library testlib
   import: warnings
