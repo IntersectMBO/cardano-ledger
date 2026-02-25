@@ -72,6 +72,7 @@ spec = do
     -- prop "canonical with regards to it's definition" $
     --  propNamespaceEntryRoundTrip @"gov/pparams/v0"
     testNS @"pool_stake/v0"
+    testNS @"gov/proposals/v0"
 
 isCanonical ::
   forall ns a. (KnownSymbol ns, ToCanonicalCBOR ns a, Typeable a, Arbitrary a, Show a) => Spec

@@ -19,6 +19,7 @@
 module Cardano.Ledger.CanonicalState.BasicTypes (
   OnChain (..),
   DecodeOnChain (..),
+  mkOnChain,
   CanonicalCoin (..),
   CanonicalExUnits (..),
   mkCanonicalExUnits,
@@ -32,12 +33,15 @@ import Cardano.Ledger.BaseTypes (
   EpochInterval,
   NonNegativeInterval,
   ProtVer (..),
+  EpochNo (..),
   SlotNo (..),
   StrictMaybe (..),
   UnitInterval,
  )
 import Cardano.Ledger.CanonicalState.LedgerCBOR
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
+import Cardano.Ledger.Binary (encCBOR, serialize', EncCBOR)
+import Cardano.Ledger.Core (eraProtVerLow)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (HASH, Hash, KeyHash (..), ScriptHash (..))
@@ -67,6 +71,9 @@ import GHC.TypeLits
 -- them.
 data OnChain (a :: Type) = OnChain {getValue :: !a, getWireEncoding :: !BS.ByteString}
   deriving stock (Generic)
+
+mkOnChain :: forall era a . (Era era, EncCBOR a) => a -> OnChain a
+mkOnChain x = OnChain x $! serialize' (eraProtVerLow @era) (encCBOR x)
 
 instance Eq a => Eq (OnChain a) where
   (OnChain _ bs1) == (OnChain _ bs2) = bs1 == bs2
@@ -119,6 +126,16 @@ instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictMaybe a) where
         Versioned () <- fromCanonicalCBOR
         pure (Versioned SNothing)
       _ -> fmap SJust <$> fromCanonicalCBOR
+
+deriving via
+  LedgerCBOR v EpochNo
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v EpochNo
+
+deriving via
+  LedgerCBOR v EpochNo
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v EpochNo
 
 deriving via
   LedgerCBOR v Anchor
