@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,25 +20,33 @@
 module Cardano.Ledger.CanonicalState.BasicTypes (
   OnChain (..),
   DecodeOnChain (..),
+  mkOnChain,
   CanonicalCoin (..),
   CanonicalExUnits (..),
   mkCanonicalExUnits,
   fromCanonicalExUnits,
+
+  -- * Helpers
+  decodeNamespacedField,
+  decodeNamespacedTag,
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
   EpochInterval,
+  EpochNo (..),
   NonNegativeInterval,
   ProtVer (..),
   SlotNo (..),
   StrictMaybe (..),
   UnitInterval,
  )
+import Cardano.Ledger.Binary (EncCBOR, encCBOR, serialize')
 import Cardano.Ledger.CanonicalState.LedgerCBOR
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
+import Cardano.Ledger.Core (eraProtVerLow)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..))
 import qualified Cardano.Ledger.Hashes as H
@@ -46,14 +55,17 @@ import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
   decodeListLenCanonicalOf,
+  decodeWordCanonicalOf,
   peekTokenType,
  )
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.Versioned
 import qualified Codec.CBOR.Decoding as D
+import Control.Monad (unless)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import Data.Kind (Type)
+import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
 import GHC.Generics (Generic)
@@ -66,6 +78,9 @@ import GHC.TypeLits
 -- them.
 data OnChain (a :: Type) = OnChain {getValue :: !a, getWireEncoding :: !BS.ByteString}
   deriving stock (Generic)
+
+mkOnChain :: forall era a. (Era era, EncCBOR a) => a -> OnChain a
+mkOnChain x = OnChain x $! serialize' (eraProtVerLow @era) (encCBOR x)
 
 instance Eq a => Eq (OnChain a) where
   (OnChain _ bs1) == (OnChain _ bs2) = bs1 == bs2
@@ -118,6 +133,16 @@ instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictMaybe a) where
         Versioned () <- fromCanonicalCBOR
         pure (Versioned SNothing)
       _ -> fmap SJust <$> fromCanonicalCBOR
+
+deriving via
+  LedgerCBOR v EpochNo
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v EpochNo
+
+deriving via
+  LedgerCBOR v EpochNo
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v EpochNo
 
 deriving via
   LedgerCBOR v Anchor
@@ -235,3 +260,18 @@ mkCanonicalExUnits (unWrapExUnits -> ExUnits' {..}) = CanonicalExUnits {exUnitsM
 
 fromCanonicalExUnits :: CanonicalExUnits -> ExUnits
 fromCanonicalExUnits CanonicalExUnits {..} = WrapExUnits ExUnits' {exUnitsMem' = exUnitsMem, exUnitsSteps' = exUnitsSteps}
+
+decodeNamespacedField ::
+  forall v s a. FromCanonicalCBOR v a => T.Text -> CanonicalDecoder s (Versioned v a)
+decodeNamespacedField fieldName = do
+  Versioned s <- fromCanonicalCBOR
+  unless (s == fieldName) $
+    fail $
+      T.unpack $
+        "Expected field name " <> fieldName <> " but got " <> s
+  fromCanonicalCBOR
+
+decodeNamespacedTag :: forall v a s. FromCanonicalCBOR v a => Word -> CanonicalDecoder s a
+decodeNamespacedTag expectedTag = do
+  decodeWordCanonicalOf expectedTag
+  unVer <$> fromCanonicalCBOR @v
