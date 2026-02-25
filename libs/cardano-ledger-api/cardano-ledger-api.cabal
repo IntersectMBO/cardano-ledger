@@ -54,6 +54,10 @@ library
     -Wpartial-fields
     -Wunused-packages
 
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     FailT,
     aeson >=2.2,

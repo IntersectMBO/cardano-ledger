@@ -5,11 +5,11 @@ module Test.Cardano.Data (
 
 import Control.Monad
 import qualified Data.Map.Internal.Debug as Map
-import qualified Data.Map.Strict as Map hiding (showTree)
+import qualified Data.Map.Strict as SMap
 import Test.Hspec
 import Test.QuickCheck
 
-expectValidMap :: HasCallStack => (Ord k, Show k, Show a) => Map.Map k a -> Expectation
+expectValidMap :: HasCallStack => (Ord k, Show k, Show a) => SMap.Map k a -> Expectation
 expectValidMap m =
   unless (Map.valid m) $
     expectationFailure $
@@ -21,5 +21,5 @@ expectValidMap m =
         , Map.showTree m
         ]
 
-genNonEmptyMap :: Ord k => Gen k -> Gen v -> Gen (Map.Map k v)
-genNonEmptyMap genKey genVal = Map.fromList <$> listOf1 ((,) <$> genKey <*> genVal)
+genNonEmptyMap :: Ord k => Gen k -> Gen v -> Gen (SMap.Map k v)
+genNonEmptyMap genKey genVal = SMap.fromList <$> listOf1 ((,) <$> genKey <*> genVal)

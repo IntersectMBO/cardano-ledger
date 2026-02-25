@@ -22,9 +22,14 @@ common warnings
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
-    -Wredundant-constraints
     -Wpartial-fields
     -Wunused-packages
+
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
 
 source-repository head
   type: git

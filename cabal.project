@@ -27,8 +27,8 @@ source-repository-package
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
-  , hackage.haskell.org 2025-12-11T11:28:18Z
-  , cardano-haskell-packages 2026-02-17T21:19:19Z
+  , hackage.haskell.org 2026-02-24T18:41:42Z
+  , cardano-haskell-packages 2026-02-19T00:52:30Z
 
 packages:
   -- == Byron era ==
@@ -106,3 +106,73 @@ source-repository-package
   subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
   --sha256: sha256-olahRoXIykwIeCwRFSNy4CJC68F+N/A2M0B25Wj8Rz0=
   tag: 0fd0b9d252637684c117f1366a87ae404fed41e1
+
+if impl(ghc >=9.14)
+  source-repository-package
+    type: git
+    -- https://github.com/snowleopard/alga/issues/322
+    location: https://github.com/snowleopard/alga/
+    tag: d4e43fb42db05413459fb2df493361d5a666588a
+
+if impl(ghc >=9.14)
+  constraints:
+    , containers >= 0.8
+    , foldl >= 1.4.18
+
+  allow-newer:
+    -- https://github.com/IntersectMBO/cardano-ledger/issues/5588
+    -- Plutus stuff has been fixed in the master branch on Github,
+    -- but not yet released to CHaP.
+    , aeson:QuickCheck
+    , aeson:base
+    , aeson:containers
+    , aeson:data-fix
+    , aeson:template-haskell
+    , aeson:time
+    , binary-orphans:base
+    , boring:base
+    , canonical-json:containers
+    , cborg:base
+    , cborg:containers
+    , serialise:base
+    , serialise:containers
+    , config-ini:containers
+    , constraints-extras:base
+    , constraints-extras:template-haskell
+    , dependent-map:constraints-extras
+    , dependent-map:containers
+    , dictionary-sharing:containers
+    , dec:base
+    , bin:base
+    , fin:base
+    , ral:base
+    , http-api-data:base
+    , http-api-data:containers
+    , indexed-traversable:base
+    , indexed-traversable:containers
+    , indexed-traversable-instances:base
+    , microstache:base
+    , microstache:containers
+    , nonempty-vector:base
+    , ordered-containers:containers
+    , persistent:template-haskell
+    , plutus-core:dependent-map
+    , plutus-core:vty
+    , plutus-core:vty-crossplatform
+    , pqueue:base
+    , quickcheck-instances:base
+    , quickcheck-instances:containers
+    , quickcheck-instances:these
+    , quickcheck-instances:uuid-types
+    , semialign:base
+    , semialign:containers
+    , semialign:indexed-traversable
+    , semialign:indexed-traversable-instances
+    , these:base
+    , tree-diff:QuickCheck
+    , tree-diff:base
+    , tree-diff:containers
+    , tree-diff:time
+    , universe-base:base
+    , universe-base:containers
+    , uuid-types:template-haskell

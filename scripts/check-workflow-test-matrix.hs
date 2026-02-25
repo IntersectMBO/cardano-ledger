@@ -6,7 +6,7 @@
   ghc-options: -Wall -Wcompat -Wunused-packages
 -}
 {- project:
-allow-newer: cabal-plan:*
+allow-newer: cabal-plan:*, *:*
 -}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE OverloadedStrings #-}

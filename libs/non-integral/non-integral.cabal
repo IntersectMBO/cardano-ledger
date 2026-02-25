@@ -40,13 +40,17 @@ test-suite non-integral-test
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
-    -Wredundant-constraints
     -Wunused-packages
     -O2
     -threaded
     -rtsopts
     -with-rtsopts=-N
 
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
   build-depends:
     QuickCheck,
     base,
