@@ -1,0 +1,58 @@
+cabal-version: 3.0
+name: cabal-logs
+version: 0.1.0.0
+synopsis: Utilities for examining Cabal logs
+author: Neil Mayhew <neil.mayhew@iohk.io>
+copyright: 2026 IOG
+license: Apache-2.0
+tested-with:
+  ghc ==9.6.7 || ==9.8.4 || ==9.10.3 || ==9.12.2
+
+common language
+  default-language: GHC2021
+
+common warnings
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wunused-packages
+    -Werror
+
+common rts
+  ghc-options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+executable extract-failures
+  import: language, warnings, rts
+  main-is: extract-failures.hs
+  other-modules:
+    LogResults
+    Parse
+
+  build-depends:
+    aeson,
+    base,
+    cabal-plan,
+    containers,
+    directory,
+    filepath,
+    optparse-applicative,
+    regex-applicative,
+    terminal-size,
+    text,
+
+executable render-failures
+  import: language, warnings, rts
+  main-is: render-failures.hs
+  other-modules:
+    LogResults
+
+  build-depends:
+    aeson,
+    base,
+    containers,
+    optparse-applicative,
+    terminal-size,
+    text,

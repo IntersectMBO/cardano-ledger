@@ -332,8 +332,71 @@ jobs:
           scripts/cabal-test-with-retries.sh "${{ matrix.package }}" "$TRIES"
         fi
 
+    - name: Record test failures
+      if: failure()
+      run: |
+        cabal run --project-dir=scripts/cabal-logs -- \
+          extract-failures -v -o failures.json
+
+    - name: Upload test failures artifact
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: failures-${{ matrix.package }}-${{ matrix.ghc }}-${{ matrix.os }}
+        path: failures.json
+
     - name: Run doctests
       run: scripts/doctest.sh "${{ matrix.package }}"
+
+  test-summary:
+    name: Summarize test failures
+    runs-on: ubuntu-latest
+    needs: test
+    if: needs.test.result == 'failure'
+
+    steps:
+    - name: Set up installation directory
+      run: |
+        BINDIR=$HOME/.local/bin
+        echo "bindir=$BINDIR" >> "$GITHUB_ENV"
+        echo "$BINDIR" >> "$GITHUB_PATH"
+
+    - name: Cache render-failures executable
+      id: cache-render-failures
+      uses: actions/cache@v5
+      with:
+        path: ${{ env.bindir }}/render-failures
+        key: ${{ runner.os }}-cache-render-failures
+
+    - name: Install Haskell
+      if: steps.cache-render-failures.outputs.cache-hit != 'true'
+      id: install-haskell
+      uses: input-output-hk/actions/haskell@latest
+      with:
+        ghc-version: 9.10.1
+        cabal-version: 3.16
+
+    - uses: actions/checkout@v6
+      if: steps.cache-render-failures.outputs.cache-hit != 'true'
+      with:
+        sparse-checkout: scripts/cabal-logs
+
+    - name: Install render-failures
+      if: steps.cache-render-failures.outputs.cache-hit != 'true'
+      run: |
+        cabal update --project-dir=scripts/cabal-logs
+        cabal install --project-dir=scripts/cabal-logs \
+          --installdir=${{ env.bindir }} --install-method=copy --overwrite-policy=always \
+          render-failures
+
+    - name: Download test failures artifacts
+      uses: actions/download-artifact@v8
+      with:
+        pattern: failures-*
+        path: failures
+
+    - name: Generate summary
+      run: render-failures -o "$GITHUB_STEP_SUMMARY" failures/*/failures.json
 
   complete:
     name: Tests completed
