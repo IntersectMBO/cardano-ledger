@@ -114,7 +114,7 @@
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "0.3.0.0",
+        "ref": "0.4.0.0",
         "repo": "cardano-ledger-release-tool",
         "type": "github"
       }

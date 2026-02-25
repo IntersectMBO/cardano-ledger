@@ -147,7 +147,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.3.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.0
 
     - name: Check workflow test matrix
       run: cabal build all --dry-run -v0 && cleret workflow check-test-matrix
@@ -335,8 +335,20 @@ jobs:
         fi
 
     - name: Install cleret
+      if: always()
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.3.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.0
+
+    - name: Record test failures
+      if: failure()
+      run: cleret failures extract -v -o failures.json
+
+    - name: Upload test failures artifact
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: failures-${{ matrix.package }}-${{ matrix.ghc }}-${{ matrix.os }}
+        path: failures.json
 
     - name: Install doctest
       run: |
@@ -347,6 +359,25 @@ jobs:
     - name: Run doctests
       if: matrix.ghc != '9.14.1'
       run: scripts/doctest.sh "${{ matrix.package }}"
+
+  test-summary:
+    name: Summarize test failures
+    runs-on: ubuntu-latest
+    needs: test
+    if: failure() && needs.test.result == 'failure'
+
+    steps:
+    - name: Install cleret
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.0
+
+    - name: Download test failures artifacts
+      uses: actions/download-artifact@v8
+      with:
+        pattern: failures-*
+        path: failures
+
+    - name: Generate summary
+      run: cleret failures render failures/*/failures.json -o "$GITHUB_STEP_SUMMARY"
 
   complete:
     name: Tests completed
@@ -665,7 +696,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.3.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.0
 
     - name: Run linter
       run: scripts/format-changelogs.sh || (git diff; false)
