@@ -17,7 +17,7 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
 ) where
 
 import Cardano.Ledger.BaseTypes (PerasCert, StrictMaybe)
-import Cardano.Ledger.Conway.Rules (ConwayGovEvent, ConwayUtxosPredFailure)
+import Cardano.Ledger.Conway.Rules (ConwayGovEvent)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core (
   AlonzoEraScript (..),
@@ -271,19 +271,10 @@ instance ToExpr (DijkstraSubPoolEvent era)
 instance
   ( ToExpr (Value era)
   , ToExpr (TxOut era)
-  , ToExpr (PredicateFailure (EraRule "SUBUTXOS" era))
   ) =>
   ToExpr (DijkstraSubUtxoPredFailure era)
 
-instance
-  ToExpr (Event (EraRule "SUBUTXOS" era)) =>
-  ToExpr (DijkstraSubUtxoEvent era)
-
-instance
-  ToExpr (ConwayUtxosPredFailure era) =>
-  ToExpr (DijkstraSubUtxosPredFailure era)
-
-instance ToExpr (TxOut era) => ToExpr (DijkstraSubUtxosEvent era)
+instance ToExpr (TxOut era) => ToExpr (DijkstraSubUtxoEvent era)
 
 instance
   ( Era era

@@ -53,7 +53,6 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBLEDGER,
   DijkstraSUBPOOL,
   DijkstraSUBUTXO,
-  DijkstraSUBUTXOS,
   DijkstraSUBUTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (DijkstraSubCertsPredFailure (..), SubCertsEnv (..))
@@ -180,7 +179,6 @@ instance
   , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
-  , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
   , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
   , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
   , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
@@ -316,7 +314,6 @@ instance
   , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
-  , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
   ) =>
   Embed (DijkstraSUBUTXOW era) (DijkstraSUBLEDGER era)
   where

@@ -22,7 +22,6 @@ module Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBLEDGER,
   DijkstraSUBLEDGERS,
   DijkstraSUBPOOL,
-  DijkstraSUBUTXOS,
   DijkstraSUBUTXOW,
   DijkstraSUBUTXO,
   DijkstraUTXO,
@@ -114,10 +113,6 @@ type instance EraRule "SUBPOOL" DijkstraEra = DijkstraSUBPOOL DijkstraEra
 data DijkstraSUBUTXO era
 
 type instance EraRule "SUBUTXO" DijkstraEra = DijkstraSUBUTXO DijkstraEra
-
-data DijkstraSUBUTXOS era
-
-type instance EraRule "SUBUTXOS" DijkstraEra = DijkstraSUBUTXOS DijkstraEra
 
 data DijkstraSUBUTXOW era
 
