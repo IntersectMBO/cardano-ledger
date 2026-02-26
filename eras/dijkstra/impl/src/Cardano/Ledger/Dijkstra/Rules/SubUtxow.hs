@@ -34,7 +34,6 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXO,
-  DijkstraSUBUTXOS,
   DijkstraSUBUTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubUtxo (
@@ -151,7 +150,6 @@ instance
   , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
-  , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
   ) =>
   STS (DijkstraSUBUTXOW era)
@@ -181,7 +179,6 @@ instance
   , ConwayEraTxBody era
   , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
-  , EraRule "SUBUTXOS" era ~ DijkstraSUBUTXOS era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   ) =>
   Embed (DijkstraSUBUTXO era) (DijkstraSUBUTXOW era)
