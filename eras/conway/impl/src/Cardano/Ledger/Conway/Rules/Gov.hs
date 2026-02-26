@@ -45,8 +45,8 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (SJust),
   addEpochInterval,
-  natVersion,
   networkId,
+  succVersion,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -114,7 +114,7 @@ import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.TxIn (TxId (..))
 import Control.DeepSeq (NFData)
-import Control.Monad (unless, when)
+import Control.Monad (guard, unless, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   STS (..),
@@ -500,25 +500,13 @@ conwayGovTransition = do
         let badHardFork = do
               (prevGaid, newProtVer, prevProtVer) <-
                 preceedingHardFork @era pp prevGovActionIds st pProcGovAction
-              if pvCanFollow prevProtVer newProtVer
-                then
-                  if pvMajor (pp ^. ppProtocolVersionL) < natVersion @11
-                    && pvMajor newProtVer >= natVersion @12
-                    then
-                      Just $
-                        ProposalCantFollow @era prevGaid $
-                          Mismatch
-                            { mismatchSupplied = newProtVer
-                            , mismatchExpected = prevProtVer
-                            }
-                    else Nothing
-                else
-                  Just $
-                    ProposalCantFollow @era prevGaid $
-                      Mismatch
-                        { mismatchSupplied = newProtVer
-                        , mismatchExpected = prevProtVer
-                        }
+              guard (not (pvCanFollow prevProtVer newProtVer))
+              Just $
+                ProposalCantFollow @era prevGaid $
+                  Mismatch
+                    { mismatchSupplied = newProtVer
+                    , mismatchExpected = prevProtVer
+                    }
         failOnJust badHardFork injectFailure
 
         -- PParamsUpdate well-formedness check
@@ -703,7 +691,15 @@ preceedingHardFork ::
   Maybe (StrictMaybe (GovPurposeId 'HardForkPurpose), ProtVer, ProtVer)
 preceedingHardFork pp pgaids ps = \case
   HardForkInitiation mPrev newProtVer
-    | mPrev == pgaids ^. grHardForkL -> Just (mPrev, newProtVer, pp ^. ppProtocolVersionL)
+    | mPrev == pgaids ^. grHardForkL
+        -- If major version is too high, then we need to compare it to the current protocol version,
+        -- instead of the one in previous action, since major versions that are at least one higher
+        -- than current are not allowed.
+        --
+        -- It is statically guaranteed for `succVersion` to produce `Just` in this case, since we
+        -- always have next major version available for any `Era`.
+        || Just (pvMajor newProtVer) > succVersion (pvMajor (pp ^. ppProtocolVersionL)) ->
+        Just (mPrev, newProtVer, pp ^. ppProtocolVersionL)
     | otherwise -> do
         SJust (GovPurposeId prevGovActionId) <- Just mPrev
         HardForkInitiation _ prevProtVer <- gasAction <$> proposalsLookupId prevGovActionId ps
