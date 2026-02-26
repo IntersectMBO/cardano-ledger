@@ -186,7 +186,7 @@ library cddl
     base,
     bytestring,
     cardano-ledger-binary,
-    cardano-ledger-core,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
     cborg,
     cuddle >=1.1,
     heredoc,

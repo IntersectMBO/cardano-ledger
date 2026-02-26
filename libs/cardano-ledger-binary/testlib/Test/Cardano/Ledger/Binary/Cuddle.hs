@@ -30,7 +30,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Decoding (label)
 import qualified Codec.CBOR.Cuddle.CBOR.Gen as Cuddle
-import Codec.CBOR.Cuddle.CBOR.Validator (CBORTermResult (..), CDDLResult (..), validateCBOR)
+import Codec.CBOR.Cuddle.CBOR.Validator (validateCBOR)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import qualified Codec.CBOR.Cuddle.CDDL as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.CTree as Cuddle
@@ -249,8 +249,8 @@ huddleRoundTripGenValidate gen version ruleName =
             bs = serialize' version val
             res = validateCBOR bs (Name ruleName) (mapIndex cddl)
           case res of
-            CBORTermResult _ (Valid _) -> pure ()
-            CBORTermResult term err ->
+            Evidenced SValid _ -> pure ()
+            Evidenced term err ->
               expectationFailure $
                 "CBOR Validation failed\nTerm:\n" <> LT.unpack (pShow term) <> "\nError:\n" <> show errMsg
               where

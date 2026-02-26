@@ -37,6 +37,7 @@ import System.Random.Stateful (
  )
 import Text.Heredoc
 import Prelude hiding ((/))
+import Test.Cardano.Ledger.Common (choose)
 
 instance Era era => HuddleRule "hash28" era where
   huddleRuleNamed pname _ = pname =.= VBytes `sized` (28 :: Word64)
@@ -75,10 +76,10 @@ instance Era era => HuddleRule "unit_interval" era where
       . withGenerator generator
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
     where
-      generator g = do
+      generator = do
         let genUnitInterval64 l u = do
-              d <- uniformRM (max 1 l, u) g
-              n <- uniformRM (l, d) g
+              d <- choose (max 1 l, u)
+              n <- choose (l, d)
               pure (n, d)
             max64 = toInteger (maxBound @Word64)
         (n, d) <-

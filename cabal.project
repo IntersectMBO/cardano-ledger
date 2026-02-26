@@ -24,10 +24,16 @@ source-repository-package
   --sha256: sha256-h0bJTwdfJG84XrERJJoBBi5ZzRHgeVoZWS2yW/z7LiU=
   tag: 966f65f3c28cb22fc45220dbd1408baea93b53d8
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cuddle.git
+  --sha256: sha256-aEcwRwMr4thvYvQhxgIMkI2yaX1o3S+G/KAb8AoYhxU=
+  tag: 85e074ad5274cf4e9127c694ae17324108ccb8e8
+
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
-  , hackage.haskell.org 2025-12-11T11:28:18Z
+  , hackage.haskell.org 2026-02-06T13:08:09Z
   , cardano-haskell-packages 2026-02-17T21:19:19Z
 
 packages:
@@ -102,7 +108,7 @@ if impl(ghc >=9.12)
 
 source-repository-package
   type: git
-  location: https://github.com/tweag/cardano-cls.git
+  location: https://github.com/Soupstraw/cardano-cls.git
   subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
-  --sha256: sha256-olahRoXIykwIeCwRFSNy4CJC68F+N/A2M0B25Wj8Rz0=
-  tag: 0fd0b9d252637684c117f1366a87ae404fed41e1
+  --sha256: sha256-ciRh1jeZy29fIm9LAwrAsEHR1U57SxDO1D5NRpW+r2U=
+  tag: 79ca0fae15dac6440702c957077c047f98a980d9
