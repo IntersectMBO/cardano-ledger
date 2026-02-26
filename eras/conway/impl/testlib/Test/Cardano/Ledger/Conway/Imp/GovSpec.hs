@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -1137,7 +1138,7 @@ withdrawalsSpec =
 -- | Tests the first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkFollows ::
   forall era.
-  ConwayEraImp era =>
+  (HasCallStack, ConwayEraImp era) =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 firstHardForkFollows computeNewFromOld = do
@@ -1147,27 +1148,26 @@ firstHardForkFollows computeNewFromOld = do
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkCantFollow ::
   forall era.
-  ConwayEraImp era =>
+  (HasCallStack, ConwayEraImp era) =>
   ImpTestM era ()
 firstHardForkCantFollow = do
-  protver0 <- getProtVer
-  let protver1 = minorFollow protver0
-      protver2 = cantFollow protver1
-  proposal <- mkProposal $ HardForkInitiation SNothing protver2
+  curProtVer <- getProtVer
+  nextProtVer <- genCantFollow curProtVer
+  proposal <- mkProposal $ HardForkInitiation SNothing nextProtVer
   submitFailingProposal
     proposal
     [ injectFailure $
         ProposalCantFollow SNothing $
           Mismatch
-            { mismatchSupplied = protver2
-            , mismatchExpected = protver0
+            { mismatchSupplied = nextProtVer
+            , mismatchExpected = curProtVer
             }
     ]
 
 -- | Tests a second hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkFollows ::
   forall era.
-  ConwayEraImp era =>
+  (HasCallStack, ConwayEraImp era) =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 secondHardForkFollows computeNewFromOld = do
@@ -1180,27 +1180,42 @@ secondHardForkFollows computeNewFromOld = do
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkCantFollow ::
   forall era.
-  ConwayEraImp era =>
+  (HasCallStack, ConwayEraImp era) =>
   ImpTestM era ()
 secondHardForkCantFollow = do
-  protver0 <- getProtVer
-  let protver1 = minorFollow protver0
-      protver2 = cantFollow protver1
-  gaid1 <- mkProposal (HardForkInitiation SNothing protver1) >>= submitProposal
-  mkProposal (HardForkInitiation (SJust (GovPurposeId gaid1)) protver2)
+  curProtVer <- getProtVer
+  let nextProtVer = minorFollow curProtVer
+  gaid1 <- mkProposal (HardForkInitiation SNothing nextProtVer) >>= submitProposal
+  badProtVer <- genCantFollow nextProtVer
+  mkProposal (HardForkInitiation (SJust (GovPurposeId gaid1)) badProtVer)
     >>= flip
       submitFailingProposal
       [ injectFailure $
           ProposalCantFollow (SJust (GovPurposeId gaid1)) $
             Mismatch
-              { mismatchSupplied = protver2
-              , mismatchExpected = protver1
+              { mismatchSupplied = badProtVer
+              , mismatchExpected = nextProtVer
               }
       ]
+  genCantFollowCurrent >>= \case
+    Nothing ->
+      -- This is the end of the line. Next era is not even defined yet
+      pvMajor curProtVer `shouldBe` eraProtVerHigh @era
+    Just protVerMajorTooHigh -> do
+      mkProposal (HardForkInitiation (SJust (GovPurposeId gaid1)) protVerMajorTooHigh)
+        >>= flip
+          submitFailingProposal
+          [ injectFailure $
+              ProposalCantFollow (SJust (GovPurposeId gaid1)) $
+                Mismatch
+                  { mismatchSupplied = protVerMajorTooHigh
+                  , mismatchExpected = curProtVer
+                  }
+          ]
 
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.
-  ConwayEraImp era =>
+  (HasCallStack, ConwayEraImp era) =>
   ImpTestM era ()
 ccVoteOnConstitutionFailsWithMultipleVotes = do
   (ccCred :| _) <- registerInitialCommittee
