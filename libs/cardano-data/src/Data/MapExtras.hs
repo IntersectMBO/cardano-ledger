@@ -24,6 +24,8 @@ module Data.MapExtras (
   intersectDomPLeft,
   intersectMapSetFold,
   disjointMapSetFold,
+  boundedEnumMap,
+  lookupMapFail,
   extractKeys,
   extractKeysSmallSet,
   fromKeys,
@@ -284,3 +286,13 @@ lookupInternMap k = go
         LT -> go l
         GT -> go r
         EQ -> Just (kx, v)
+
+boundedEnumMap :: (Ord k, Bounded a, Enum a) => (a -> k) -> Map k a
+boundedEnumMap toTxt = Map.fromList [(toTxt t, t) | t <- [minBound .. maxBound]]
+
+lookupMapFail ::
+  (Ord k, Show k, MonadFail m) => String -> Map k v -> k -> m v
+lookupMapFail name m key =
+  case Map.lookup key m of
+    Just t -> pure t
+    Nothing -> fail $ "Unrecognized " <> name <> ": " ++ show key
