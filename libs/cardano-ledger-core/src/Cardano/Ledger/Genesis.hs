@@ -48,7 +48,9 @@ instance Era era => FromCBOR (NoGenesis era) where
 
 instance Era era => EncCBOR (NoGenesis era)
 
-instance Era era => DecCBOR (NoGenesis era)
+instance Era era => DecCBOR (NoGenesis era) where
+  decCBOR = NoGenesis <$ decCBOR @()
+  {-# INLINE decCBOR #-}
 
 instance ToKeyValuePairs (NoGenesis era) where
   toKeyValuePairs _ = []

@@ -4,6 +4,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -20,11 +21,17 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   shelleyProtVer,
-  toPlainDecoder,
   toPlainEncoding,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Core (PParams, TranslationContext, emptyPParams)
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
+import Cardano.Ledger.Core (PParams, TranslationContext, emptyPParams, fromEraCBOR)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
@@ -55,17 +62,14 @@ instance ToCBOR FromByronTranslationContext where
               !> To fbtcMaxLovelaceSupply
 
 instance FromCBOR FromByronTranslationContext where
-  fromCBOR =
-    toPlainDecoder Nothing shelleyProtVer $
-      decode $
-        RecD FromByronTranslationContext
-          <! From
-          <! From
-          <! From
+  fromCBOR = fromEraCBOR @ShelleyEra
+  {-# INLINE fromCBOR #-}
 
 instance EncCBOR FromByronTranslationContext
 
-instance DecCBOR FromByronTranslationContext
+instance DecCBOR FromByronTranslationContext where
+  decCBOR = decode (RecD FromByronTranslationContext <! From <! From <! From)
+  {-# INLINE decCBOR #-}
 
 instance FromJSON FromByronTranslationContext where
   parseJSON = withObject "FromByronTranslationContext" $ \o -> do

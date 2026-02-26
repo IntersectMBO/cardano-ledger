@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -90,16 +91,15 @@ newtype AlonzoExtraConfig = AlonzoExtraConfig
   deriving (Eq)
   deriving newtype (NFData, NoThunks, Show)
 
-instance DecCBOR AlonzoExtraConfig
+instance DecCBOR AlonzoExtraConfig where
+  decCBOR = decode (RecD AlonzoExtraConfig <! D (decodeNullMaybe decodeCostModelsLenient))
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR AlonzoExtraConfig
 
 instance FromCBOR AlonzoExtraConfig where
-  fromCBOR =
-    eraDecoder @AlonzoEra $
-      decode $
-        RecD AlonzoExtraConfig
-          <! D (decodeNullMaybe decodeCostModelsLenient)
+  fromCBOR = fromEraCBOR @AlonzoEra
+  {-# INLINE fromCBOR #-}
 
 instance ToCBOR AlonzoExtraConfig where
   toCBOR x@(AlonzoExtraConfig _) =
@@ -184,24 +184,26 @@ instance EraGenesis AlonzoEra where
   type Genesis AlonzoEra = AlonzoGenesis
 
 -- | Genesis types are always encoded with the version of era they are defined in.
-instance DecCBOR AlonzoGenesis
+instance DecCBOR AlonzoGenesis where
+  decCBOR =
+    decode $
+      RecD AlonzoGenesis
+        <! From
+        <! D (decodeCostModel PlutusV1)
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR AlonzoGenesis
 
 instance FromCBOR AlonzoGenesis where
-  fromCBOR =
-    eraDecoder @AlonzoEra $
-      decode $
-        RecD AlonzoGenesis
-          <! From
-          <! D (decodeCostModel PlutusV1)
-          <! From
-          <! From
-          <! From
-          <! From
-          <! From
-          <! From
-          <! From
+  fromCBOR = fromEraCBOR @AlonzoEra
+  {-# INLINE fromCBOR #-}
 
 instance ToCBOR AlonzoGenesis where
   toCBOR x@(AlonzoGenesis _ _ _ _ _ _ _ _ _) =

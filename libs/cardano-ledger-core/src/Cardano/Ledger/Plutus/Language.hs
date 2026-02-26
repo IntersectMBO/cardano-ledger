@@ -63,6 +63,7 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   Version,
+  decodeEnumBounded,
   decodeRecordNamed,
   decodeScriptContextFromData,
   encodeEnum,
@@ -286,7 +287,9 @@ instance FromCBOR Language where
 
 instance EncCBOR Language
 
-instance DecCBOR Language
+instance DecCBOR Language where
+  decCBOR = decodeEnumBounded
+  {-# INLINE decCBOR #-}
 
 nonNativeLanguages :: [Language]
 nonNativeLanguages = [minBound .. maxBound]
@@ -310,7 +313,9 @@ instance PlutusLanguage l => FromCBOR (SLanguage l) where
 
 instance PlutusLanguage l => EncCBOR (SLanguage l)
 
-instance PlutusLanguage l => DecCBOR (SLanguage l)
+instance PlutusLanguage l => DecCBOR (SLanguage l) where
+  decCBOR = toSLanguage =<< decCBOR @Language
+  {-# INLINE decCBOR #-}
 
 -- | Construct value level laguage version from the type level
 plutusLanguage :: forall l proxy. PlutusLanguage l => proxy l -> Language

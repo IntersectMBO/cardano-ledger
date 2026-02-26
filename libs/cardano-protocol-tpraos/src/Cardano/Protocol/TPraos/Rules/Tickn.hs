@@ -1,7 +1,9 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Protocol.TPraos.Rules.Tickn (
@@ -13,8 +15,11 @@ module Cardano.Protocol.TPraos.Rules.Tickn (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), toPlainEncoding)
+import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
+import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.Core (fromEraCBOR)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.State.Transition
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -36,17 +41,13 @@ data TicknState = TicknState
 
 instance NoThunks TicknState
 
-instance DecCBOR TicknState
+instance DecCBOR TicknState where
+  decCBOR = decode (RecD TicknState <! From <! From)
+  {-# INLINE decCBOR #-}
 
 instance FromCBOR TicknState where
-  fromCBOR =
-    decodeRecordNamed
-      "TicknState"
-      (const 2)
-      ( TicknState
-          <$> fromCBOR
-          <*> fromCBOR
-      )
+  fromCBOR = fromEraCBOR @ShelleyEra
+  {-# INLINE fromCBOR #-}
 
 instance EncCBOR TicknState
 
@@ -58,8 +59,8 @@ instance ToCBOR TicknState where
       ) =
       mconcat
         [ encodeListLen 2
-        , toCBOR ηv
-        , toCBOR ηc
+        , toPlainEncoding shelleyProtVer (encCBOR ηv)
+        , toPlainEncoding shelleyProtVer (encCBOR ηc)
         ]
 
 data TicknPredicateFailure -- No predicate failures
