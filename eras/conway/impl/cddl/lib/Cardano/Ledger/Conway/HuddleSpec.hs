@@ -1318,6 +1318,9 @@ instance HuddleRule "auxiliary_data_map" ConwayEra where
 instance HuddleRule "auxiliary_data_array" ConwayEra where
   huddleRuleNamed = auxiliaryDataArrayRule
 
+instance HuddleRule "metadatum" ConwayEra where
+  huddleRuleNamed = metadatumRule
+
 instance HuddleRule "auxiliary_data" ConwayEra where
   huddleRuleNamed pname p =
     comment
