@@ -306,12 +306,7 @@ metadata = {* metadatum_label => metadatum}
 
 metadatum_label = uint .size 8
 
-metadatum = 
-  {* metadatum => metadatum}
-  / [* metadatum]       
-  / int                     
-  / bytes .size (0 .. 64)
-  / text .size (0 .. 64) 
+metadatum = {* metadatum => metadatum}/ [* metadatum]/ int/ bytes/ text
 
 transaction = [transaction_body, transaction_witness_set, metadata/ nil]
 
