@@ -32,7 +32,7 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
   auxiliaryDataMapRule,
 ) where
 
-import Cardano.Ledger.Conway.HuddleSpec hiding ()
+import Cardano.Ledger.Conway.HuddleSpec hiding (metadatumRule)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Data.Proxy (Proxy (..))
 import Data.Text ()
@@ -937,6 +937,20 @@ instance HuddleRule "script" DijkstraEra where
 
 instance HuddleRule "redeemer_tag" DijkstraEra where
   huddleRuleNamed pname _ = dijkstraRedeemerTagRule pname
+
+metadatumRule :: Proxy "metadatum" -> Proxy era -> Rule
+metadatumRule pname era =
+  pname
+    =.= smp
+      [ 0 <+ asKey (metadatumRule pname era) ==> metadatumRule pname era
+      ]
+    / sarr [0 <+ a (metadatumRule pname era)]
+    / VInt
+    / (VBytes `sized` (32 :: Word64))
+    / (VText `sized` (32 :: Word64))
+
+instance HuddleRule "metadatum" DijkstraEra where
+  huddleRuleNamed = metadatumRule
 
 instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v4_script" era where
   huddleRuleNamed pname p =
