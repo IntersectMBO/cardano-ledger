@@ -21,6 +21,7 @@ import qualified Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 as Comm
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0 as GovConstitution.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0 as GovPParams.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.PoolStake.V0 as PoolStake.V0 ()
+import qualified Cardano.Ledger.CanonicalState.Namespace.Snapshots.V0 as Snapshots.V0 ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UTxO.V0
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (PParams)
@@ -67,12 +68,9 @@ spec = do
     testNS @"gov/constitution/v0"
     testNS @"gov/committee/v0"
     testNS @"gov/pparams/v0"
-
-    -- Is checked by the: isCanonical @"gov/pparams/v0" @(PParamsWithProtVer ConwayEra)
-    -- prop "canonical with regards to it's definition" $
-    --  propNamespaceEntryRoundTrip @"gov/pparams/v0"
-    testNS @"pool_stake/v0"
     testNS @"gov/proposals/v0"
+    testNS @"pool_stake/v0"
+    testNS @"snapshots/v0"
 
 isCanonical ::
   forall ns a. (KnownSymbol ns, ToCanonicalCBOR ns a, Typeable a, Arbitrary a, Show a) => Spec

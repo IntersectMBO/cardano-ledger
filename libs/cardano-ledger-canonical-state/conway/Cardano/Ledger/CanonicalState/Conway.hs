@@ -72,6 +72,8 @@ type instance NamespaceEra "gov/proposals/v0" = ConwayEra
 
 type instance NamespaceEra "pool_stake/v0" = ConwayEra
 
+type instance NamespaceEra "snapshots/v0" = ConwayEra
+
 type instance NamespaceEra "utxo/v0" = ConwayEra
 
 instance KnownNamespace "utxo/v0" where

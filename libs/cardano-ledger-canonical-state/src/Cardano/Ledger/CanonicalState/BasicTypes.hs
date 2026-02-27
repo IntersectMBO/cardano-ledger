@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -25,6 +26,11 @@ module Cardano.Ledger.CanonicalState.BasicTypes (
   mkCanonicalExUnits,
   fromCanonicalExUnits,
   CanonicalVRFVerKeyHash (..),
+  mkCanonicalVRFVerKeyHash,
+  fromCanonicalVRFVerKeyHash,
+  CanonicalRewardAccount (..),
+  mkCanonicalRewardAccount,
+  fromCanonicalRewardAccount,
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
@@ -34,14 +40,18 @@ import Cardano.Ledger.BaseTypes (
   NonNegativeInterval,
   ProtVer (..),
   EpochNo (..),
+  Network (..),
   SlotNo (..),
   StrictMaybe (..),
   UnitInterval,
+  Url (..),
+  textToUrl,
+  urlToText,
  )
 import Cardano.Ledger.CanonicalState.LedgerCBOR
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Binary (encCBOR, serialize', EncCBOR)
-import Cardano.Ledger.Core (eraProtVerLow)
+import Cardano.Ledger.Core (eraProtVerLow, AccountAddress (..), AccountId (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (HASH, Hash, KeyHash (..), ScriptHash (..))
@@ -257,8 +267,54 @@ fromCanonicalExUnits CanonicalExUnits {..} = WrapExUnits ExUnits' {..}
 newtype CanonicalVRFVerKeyHash (kr :: H.KeyRoleVRF) = CanonicalVRFVerKeyHash {unCanonicalVRFVerKeyHash :: Hash HASH H.KeyRoleVRF}
   deriving (Eq, Ord, Show, Generic)
 
+mkCanonicalVRFVerKeyHash :: H.VRFVerKeyHash kr -> CanonicalVRFVerKeyHash kr
+mkCanonicalVRFVerKeyHash (H.VRFVerKeyHash k) = CanonicalVRFVerKeyHash k
+
+fromCanonicalVRFVerKeyHash :: CanonicalVRFVerKeyHash kr -> H.VRFVerKeyHash kr
+fromCanonicalVRFVerKeyHash (CanonicalVRFVerKeyHash k) = H.VRFVerKeyHash k
+
 instance (NamespaceEra v ~ era, Era era) => ToCanonicalCBOR v (CanonicalVRFVerKeyHash kr) where
   toCanonicalCBOR v (CanonicalVRFVerKeyHash vrf) = toCanonicalCBOR v vrf
 
 instance (NamespaceEra v ~ era, Era era) => FromCanonicalCBOR v (CanonicalVRFVerKeyHash kr) where
   fromCanonicalCBOR = fmap CanonicalVRFVerKeyHash <$> fromCanonicalCBOR
+
+instance ToCanonicalCBOR v Url where
+  toCanonicalCBOR v u = toCanonicalCBOR v (urlToText u)
+
+instance FromCanonicalCBOR v Url where
+  fromCanonicalCBOR = do
+    Versioned t <- fromCanonicalCBOR
+    case textToUrl 128 t of
+      Just url -> return $ Versioned url
+      Nothing -> fail "Invalid URL"
+
+data CanonicalRewardAccount = CanonicalRewardAccount
+  { raNetwork :: !Network
+  , raCredential :: !(Credential H.Staking)
+  }
+  deriving (Eq, Show, Ord, Generic)
+
+instance (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v CanonicalRewardAccount where
+  toCanonicalCBOR v = toCanonicalCBOR v . fromCanonicalRewardAccount
+
+instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalRewardAccount where
+  fromCanonicalCBOR = fmap mkCanonicalRewardAccount <$> fromCanonicalCBOR @v
+
+mkCanonicalRewardAccount :: AccountAddress -> CanonicalRewardAccount
+mkCanonicalRewardAccount AccountAddress {aaId = AccountId raCredential, aaNetworkId} =
+  CanonicalRewardAccount
+    { raCredential = raCredential
+    , raNetwork = aaNetworkId
+    }
+
+fromCanonicalRewardAccount :: CanonicalRewardAccount -> AccountAddress
+fromCanonicalRewardAccount CanonicalRewardAccount {..} =
+  AccountAddress
+    { aaId = AccountId raCredential
+    , aaNetworkId = raNetwork
+    }
+
+deriving via LedgerCBOR v AccountAddress instance (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v AccountAddress
+
+deriving via LedgerCBOR v AccountAddress instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v AccountAddress
