@@ -510,6 +510,7 @@ jobs:
         run: ./scripts/cabal-format.sh check
 
   gen-hie:
+    name: Generate HIE files
     runs-on: ubuntu-latest
 
     steps:
