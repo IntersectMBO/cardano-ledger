@@ -157,6 +157,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.Era
     Test.Cardano.Ledger.Babbage.Examples
     Test.Cardano.Ledger.Babbage.Imp
+    Test.Cardano.Ledger.Babbage.Imp.EpochSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxoSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxosSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxowSpec
@@ -206,6 +207,7 @@ library testlib
     generic-random,
     microlens,
     microlens-ghc,
+    mtl,
     plutus-ledger-api,
     small-steps >=1.1,
     time,
