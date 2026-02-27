@@ -778,7 +778,8 @@ metadata = {* metadatum_label => metadatum}
 
 metadatum_label = uint .size 8
 
-metadatum = {* metadatum => metadatum}/ [* metadatum]/ int/ bytes/ text
+metadatum = 
+  {* metadatum => metadatum}/ [* metadatum]/ int/ bytes .size 32/ text .size 32
 
 auxiliary_data_array = 
   [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
