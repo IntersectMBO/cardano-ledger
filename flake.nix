@@ -120,15 +120,15 @@
             # tools we want in our shell, from hackage
             tools =
               {
-                cabal = "3.14.2.0";
-                cuddle = "latest";
+                cabal = "3.16.1.0";
               }
               // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
-                fourmolu = fourmoluVersion;
-                hlint = "3.8";
-                haskell-language-server = "2.12.0.0";
                 cabal-gild = "1.5.0.1";
+                cuddle = "latest";
+                fourmolu = fourmoluVersion;
+                haskell-language-server = "2.12.0.0";
+                hlint = "3.8";
               };
 
             # and from nixpkgs or other inputs
@@ -142,7 +142,7 @@
               (let
                 doctest = haskell-nix.hackage-package {
                   name = "doctest";
-                  version = "0.24.0";
+                  version = "0.24.3";
                   configureArgs = "-f cabal-doctest";
                   inherit (config) compiler-nix-name;
                 };
