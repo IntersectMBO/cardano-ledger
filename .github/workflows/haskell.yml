@@ -507,37 +507,37 @@ jobs:
         run: ./scripts/cabal-format.sh check
 
   gen-hie:
+    name: Generate HIE files
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        shell: bash
-
-    strategy:
-      fail-fast: false
-
     steps:
+    - name: Set up installation directory
+      run: |
+        BINDIR=$HOME/.local/bin
+        echo "bindir=$BINDIR" >> "$GITHUB_ENV"
+        echo "$BINDIR" >> "$GITHUB_PATH"
+
     - name: Cache implicit-hie executable (gen-hie)
       id: cache-gen-hie
       uses: actions/cache@v5
       with:
-        path: |
-          ~/.cabal/bin/gen-hie
+        path: ${{ env.bindir }}/gen-hie
         key: ${{ runner.os }}-cache-gen-hie
 
     - name: Install Haskell
+      if: steps.cache-gen-hie.outputs.cache-hit != 'true'
       id: install-haskell
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: 9.10.1
         cabal-version: 3.16
 
-    - name: Install gen-hie if not cached
+    - name: Install gen-hie
       if: steps.cache-gen-hie.outputs.cache-hit != 'true'
-      run: cabal update && cabal install implicit-hie --install-method=copy --overwrite-policy=always
-
-    - name: Add cabal-bin to PATH
-      run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
+      run: |
+        cabal update
+        cabal install implicit-hie \
+          --installdir=${{ env.bindir }} --install-method=copy --overwrite-policy=always
 
     - uses: actions/checkout@v6
 
