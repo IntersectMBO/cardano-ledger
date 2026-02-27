@@ -13,22 +13,36 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.CanonicalState.BasicTypes (
   OnChain (..),
   DecodeOnChain (..),
   CanonicalCoin (..),
+  CanonicalExUnits (..),
+  mkCanonicalExUnits,
+  fromCanonicalExUnits,
+  CanonicalVRFVerKeyHash (..),
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.BaseTypes (Anchor (..), SlotNo (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (
+  Anchor (..),
+  EpochInterval,
+  NonNegativeInterval,
+  ProtVer (..),
+  SlotNo (..),
+  StrictMaybe (..),
+  UnitInterval,
+ )
 import Cardano.Ledger.CanonicalState.LedgerCBOR
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..))
+import Cardano.Ledger.Hashes (HASH, Hash, KeyHash (..), ScriptHash (..))
 import qualified Cardano.Ledger.Hashes as H
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), ExUnits' (..))
 import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
@@ -162,3 +176,72 @@ instance (Era era, NamespaceEra v ~ era, Typeable kr) => FromCanonicalCBOR v (Cr
       0 -> fmap ScriptHashObj <$> fromCanonicalCBOR @v
       1 -> fmap KeyHashObj <$> fromCanonicalCBOR @v
       _ -> fail "Invalid Credential tag"
+
+deriving via
+  LedgerCBOR v UnitInterval
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v UnitInterval
+
+deriving via
+  LedgerCBOR v UnitInterval
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v UnitInterval
+
+deriving via
+  LedgerCBOR v NonNegativeInterval
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v NonNegativeInterval
+
+deriving via
+  LedgerCBOR v NonNegativeInterval
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v NonNegativeInterval
+
+deriving via
+  LedgerCBOR v ProtVer
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v ProtVer
+
+deriving via
+  LedgerCBOR v ProtVer
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v ProtVer
+
+deriving via
+  LedgerCBOR v EpochInterval
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v EpochInterval
+
+deriving via
+  LedgerCBOR v EpochInterval
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v EpochInterval
+
+data CanonicalExUnits = CanonicalExUnits
+  { exUnitsMem' :: !Natural
+  , exUnitsSteps' :: !Natural
+  }
+  deriving (Eq, Show, Generic)
+
+instance ToCanonicalCBOR v CanonicalExUnits where
+  toCanonicalCBOR v CanonicalExUnits {..} = toCanonicalCBOR v (exUnitsMem', exUnitsSteps')
+
+instance FromCanonicalCBOR v CanonicalExUnits where
+  fromCanonicalCBOR = do
+    Versioned (exUnitsMem', exUnitsSteps') <- fromCanonicalCBOR @v
+    return $ Versioned CanonicalExUnits {..}
+
+mkCanonicalExUnits :: ExUnits -> CanonicalExUnits
+mkCanonicalExUnits (unWrapExUnits -> ExUnits' {..}) = CanonicalExUnits {..}
+
+fromCanonicalExUnits :: CanonicalExUnits -> ExUnits
+fromCanonicalExUnits CanonicalExUnits {..} = WrapExUnits ExUnits' {..}
+
+newtype CanonicalVRFVerKeyHash (kr :: H.KeyRoleVRF) = CanonicalVRFVerKeyHash {unCanonicalVRFVerKeyHash :: Hash HASH H.KeyRoleVRF}
+  deriving (Eq, Ord, Show, Generic)
+
+instance (NamespaceEra v ~ era, Era era) => ToCanonicalCBOR v (CanonicalVRFVerKeyHash kr) where
+  toCanonicalCBOR v (CanonicalVRFVerKeyHash vrf) = toCanonicalCBOR v vrf
+
+instance (NamespaceEra v ~ era, Era era) => FromCanonicalCBOR v (CanonicalVRFVerKeyHash kr) where
+  fromCanonicalCBOR = fmap CanonicalVRFVerKeyHash <$> fromCanonicalCBOR

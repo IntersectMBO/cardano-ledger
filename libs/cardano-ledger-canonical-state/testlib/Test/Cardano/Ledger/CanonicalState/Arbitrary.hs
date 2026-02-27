@@ -9,10 +9,15 @@ module Test.Cardano.Ledger.CanonicalState.Arbitrary () where
 
 import Cardano.Ledger.CanonicalState.BasicTypes (
   CanonicalCoin (..),
+  CanonicalExUnits (..),
+  CanonicalVRFVerKeyHash (..),
+  mkCanonicalExUnits,
  )
 import Cardano.Ledger.CanonicalState.Conway ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 as Committee.V0
+import qualified Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0 as GovPParams.V0 ()
+import qualified Cardano.Ledger.CanonicalState.Namespace.PoolStake.V0 as PoolStake.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UtxoOut.V0
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Core (Era, EraTxOut, TxOut)
@@ -38,3 +43,10 @@ instance Arbitrary Committee.V0.CanonicalCommitteeAuthorization where
   arbitrary = fmap Committee.V0.mkCanonicalCommitteeAuthorization arbitrary
 
 instance Arbitrary Committee.V0.CanonicalCommitteeState where arbitrary = genericArbitraryU
+
+instance Arbitrary CanonicalExUnits where
+  arbitrary = mkCanonicalExUnits <$> arbitrary
+
+instance Arbitrary PoolStake.V0.PoolStakeOut where arbitrary = genericArbitraryU
+
+instance Arbitrary (CanonicalVRFVerKeyHash k) where arbitrary = genericArbitraryU
