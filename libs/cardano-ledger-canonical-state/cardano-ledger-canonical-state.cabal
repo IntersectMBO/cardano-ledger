@@ -48,6 +48,7 @@ library
     Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
     Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0
     Cardano.Ledger.CanonicalState.Namespace.GovProposals.V0
+    Cardano.Ledger.CanonicalState.Namespace.Snapshots.V0
     Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
 
   hs-source-dirs: src
@@ -59,6 +60,7 @@ library
     cardano-data,
     cardano-ledger-binary,
     cardano-ledger-core,
+    cardano-strict-containers,
     cborg,
     containers,
     mempack-scls,
