@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -19,16 +20,29 @@ module Cardano.Ledger.State.Stake (
   sumAllStake,
   sumAllStakeCompact,
   sumCredentialsCompactStake,
+  StakeWithDelegation (..),
+  ActiveStake (..),
+  sumAllActiveStake,
+  sumCredentialsCompactActiveStake,
   EraStake (..),
   CanGetInstantStake (..),
   CanSetInstantStake (..),
   resolveActiveInstantStakeCredentials,
 ) where
 
+import Cardano.Ledger.BaseTypes (
+  NonZero (..),
+  nonZero,
+  nonZeroOr,
+  unsafeNonZero,
+ )
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
   Interns,
+  decodeListLen,
+  encodeListLen,
  )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
@@ -37,7 +51,6 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.State.Account
 import Cardano.Ledger.State.UTxO
 import Control.DeepSeq (NFData)
-import Control.Monad (guard)
 import Data.Aeson (ToJSON)
 import Data.Default (Default)
 import Data.Foldable (foldMap')
@@ -83,6 +96,56 @@ sumCredentialsCompactStake :: Foldable f => Stake -> f (Credential Staking) -> C
 sumCredentialsCompactStake (Stake stake) = foldMap' (fromMaybe mempty . (`VMap.lookup` stake))
 {-# INLINE sumCredentialsCompactStake #-}
 
+-- | Combination of non-zero stake with the pool delegation for a single credential.
+data StakeWithDelegation = StakeWithDelegation
+  { swdStake :: {-# UNPACK #-} !(NonZero (CompactForm Coin))
+  , swdDelegation :: !(KeyHash StakePool)
+  }
+  deriving (Eq, Show, Generic)
+
+instance NoThunks StakeWithDelegation
+
+instance NFData StakeWithDelegation
+
+instance ToJSON StakeWithDelegation
+
+instance EncCBOR StakeWithDelegation where
+  encCBOR (StakeWithDelegation s d) = encodeListLen 2 <> encCBOR s <> encCBOR d
+
+instance DecCBOR StakeWithDelegation where
+  decCBOR =
+    decodeRecordNamed "SnapShot" (const 2) $
+      StakeWithDelegation <$> decCBOR <*> decCBOR
+
+instance DecShareCBOR StakeWithDelegation where
+  type Share StakeWithDelegation = Interns (Credential Staking)
+  decShareCBOR _si = decCBOR
+
+-- | Active stake: maps staking credentials to their non-zero stake paired with delegation.
+-- Only credentials that are registered, delegated, and have non-zero stake appear here.
+newtype ActiveStake = ActiveStake
+  { unActiveStake :: VMap VB VB (Credential Staking) StakeWithDelegation
+  }
+  deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR)
+
+instance DecShareCBOR ActiveStake where
+  type Share ActiveStake = Interns (Credential Staking)
+  getShare (ActiveStake m) = fst (getShare m)
+  decShareCBOR si = ActiveStake <$> decShareCBOR (si, mempty)
+
+-- | Sum all active stake. Returns @NonZero Coin@, defaulting to 1 lovelace if empty.
+sumAllActiveStake :: ActiveStake -> NonZero Coin
+sumAllActiveStake (ActiveStake m) =
+  VMap.foldMap (fromCompact . unNonZero . swdStake) m `nonZeroOr` knownNonZeroCoin @1
+{-# INLINE sumAllActiveStake #-}
+
+-- | Sum the compact stake for a set of credentials from an @ActiveStake@.
+sumCredentialsCompactActiveStake ::
+  Foldable f => ActiveStake -> f (Credential Staking) -> CompactForm Coin
+sumCredentialsCompactActiveStake (ActiveStake m) =
+  foldMap' (\cred -> maybe mempty (unNonZero . swdStake) (VMap.lookup cred m))
+{-# INLINE sumCredentialsCompactActiveStake #-}
+
 class
   ( EraAccounts era
   , Eq (InstantStake era)
@@ -117,10 +180,10 @@ class
 
   -- TODO: This functionality will be removed and switched to use a pulser
 
-  -- | Using known stake credential registrations and delegations resolve the instant stake into a
-  -- `Stake` that will be used for `SnapShot` creation by
+  -- | Using known stake credential registrations and delegations resolve the instant stake into
+  -- `ActiveStake` that will be used for `SnapShot` creation by
   -- `Cardano.Ledger.State.snapShotFromInstantStake`.
-  resolveInstantStake :: InstantStake era -> Accounts era -> Stake
+  resolveInstantStake :: InstantStake era -> Accounts era -> ActiveStake
 
 class CanGetInstantStake t where
   instantStakeG :: SimpleGetter (t era) (InstantStake era)
@@ -138,29 +201,26 @@ resolveActiveInstantStakeCredentials ::
   EraStake era =>
   InstantStake era ->
   Accounts era ->
-  Map (Credential Staking) (CompactForm Coin)
+  Map (Credential Staking) StakeWithDelegation
 resolveActiveInstantStakeCredentials instantStake accounts =
   Map.merge
     Map.dropMissing -- ignore non-registered stake credentials
-    (Map.mapMaybeMissing (const getNonZeroActiveBalance)) -- use the account balance, unless it is zero
-    (Map.zipWithMaybeAMatched addInstantActiveStake) -- combine the stake with the account balance
+    (Map.mapMaybeMissing (const getNonZeroActiveStakeWithDelegation)) -- use the account balance, unless it is zero
+    (Map.zipWithMaybeAMatched addInstantActiveStakeWithDelegation) -- combine the stake with the account balance
     (instantStake ^. instantStakeCredentialsL)
     (accounts ^. accountsMapL)
   where
-    -- Only return balance for accounts that have an active delegation to a stake pool.
-    getActiveBalance accountState = do
-      _ <- accountState ^. stakePoolDelegationAccountStateL
-      pure $! accountState ^. balanceAccountStateL
-    {-# INLINE getActiveBalance #-}
-    -- Retain any non-zero balance
-    getNonZeroActiveBalance accountState = do
-      balance <- getActiveBalance accountState
-      balance <$ guard (balance > mempty)
-    {-# INLINE getNonZeroActiveBalance #-}
-    -- Adds instant stake to any active staking credential
-    addInstantActiveStake _ stake accountState = Identity $ do
-      balance <- getActiveBalance accountState
+    -- Only return non-zero balance bundled with delegation for active accounts.
+    getNonZeroActiveStakeWithDelegation accountState = do
+      poolId <- accountState ^. stakePoolDelegationAccountStateL
+      nzBalance <- nonZero $ accountState ^. balanceAccountStateL
+      pure $! StakeWithDelegation nzBalance poolId
+    {-# INLINE getNonZeroActiveStakeWithDelegation #-}
+    -- Adds instant stake to any active staking credential, bundling with delegation
+    addInstantActiveStakeWithDelegation _ stake accountState = Identity $ do
+      poolId <- accountState ^. stakePoolDelegationAccountStateL
+      let balance = accountState ^. balanceAccountStateL
       -- instant stake is guaranteed to be non-zero due to minUTxO, so no need to guard against mempty
-      pure $! stake <> balance
-    {-# INLINE addInstantActiveStake #-}
+      pure $! StakeWithDelegation (unsafeNonZero $ stake <> balance) poolId
+    {-# INLINE addInstantActiveStakeWithDelegation #-}
 {-# INLINEABLE resolveActiveInstantStakeCredentials #-}
