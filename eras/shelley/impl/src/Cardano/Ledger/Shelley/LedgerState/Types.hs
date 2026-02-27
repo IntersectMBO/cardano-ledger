@@ -43,7 +43,7 @@ import Cardano.Ledger.Binary (
   encodeMemPack,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Coin (Coin (..), CompactForm)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -56,7 +56,6 @@ import Control.Monad.Trans (MonadTrans (lift))
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default, def)
 import Data.Map.Strict (Map)
-import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -671,8 +670,8 @@ epochStateStakePoolsL ::
 epochStateStakePoolsL = esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
 epochStateStakeDistrL ::
-  Lens' (EpochState era) (VMap VB VP (Credential Staking) (CompactForm Coin))
-epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssStakeDistrL
+  Lens' (EpochState era) ActiveStake
+epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssActiveStakeL
 
 potEqualsObligation ::
   (EraGov era, EraCertState era) =>

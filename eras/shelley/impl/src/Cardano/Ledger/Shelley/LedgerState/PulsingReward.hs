@@ -97,8 +97,8 @@ startStep ::
   NonZero Word64 ->
   PulsingRewUpdate
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSupply asc secparam =
-  let SnapShot stake totalActiveStake delegs stakePoolSnapShots = ssStakeGo ss
-      numStakeCreds = fromIntegral (VMap.size $ unStake stake)
+  let SnapShot activeStake totalActiveStake stakePoolSnapShots = ssStakeGo ss
+      numStakeCreds = fromIntegral (VMap.size $ unActiveStake activeStake)
       k = toIntegerNonZero secparam
       -- We expect approximately 10k-many blocks to be produced each epoch.
       -- The reward calculation begins (4k/f)-many slots into the epoch,
@@ -198,7 +198,6 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       -- the neccessary information to compute their individual rewards.
       free =
         FreeVars
-          delegs
           (Map.keysSet (accounts ^. accountsMapL)) -- TODO optimize. This is an expensive operation
           totalStake
           (pr ^. ppProtocolVersionL)
@@ -208,7 +207,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
         RSLP
           pulseSize
           free
-          (unStake stake)
+          (unActiveStake activeStake)
           (RewardAns Map.empty Map.empty)
    in Pulsing rewsnap pulser
 

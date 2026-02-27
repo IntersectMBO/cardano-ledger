@@ -37,6 +37,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   ShelleyBase,
   ToKeyValuePairs (..),
+  unNonZero,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -53,7 +54,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -63,6 +64,7 @@ import Cardano.Ledger.Shelley.Rewards (
   PoolRewardInfo (..),
   rewardOnePoolMember,
  )
+import Cardano.Ledger.State (StakeWithDelegation (..))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..), Value (Null), (.=))
 import Data.Default (def)
@@ -206,8 +208,7 @@ instance DecCBOR RewardSnapShot where
 -- Pulsable function.
 
 data FreeVars = FreeVars
-  { fvDelegs :: !(VMap VB VB (Credential Staking) (KeyHash StakePool))
-  , fvAddrsRew :: !(Set (Credential Staking))
+  { fvAddrsRew :: !(Set (Credential Staking))
   , fvTotalStake :: !Coin
   , fvProtVer :: !ProtVer
   , fvPoolRewardInfo :: !(VMap VB VB (KeyHash StakePool) PoolRewardInfo)
@@ -220,15 +221,13 @@ instance NFData FreeVars
 instance EncCBOR FreeVars where
   encCBOR
     FreeVars
-      { fvDelegs
-      , fvAddrsRew
+      { fvAddrsRew
       , fvTotalStake
       , fvProtVer
       , fvPoolRewardInfo
       } =
       encode
         ( Rec FreeVars
-            !> To fvDelegs
             !> To fvAddrsRew
             !> To fvTotalStake
             !> To fvProtVer
@@ -239,7 +238,6 @@ instance DecCBOR FreeVars where
   decCBOR =
     decode
       ( RecD FreeVars
-          <! From {- fvDelegs -}
           <! From {- fvAddrsRew -}
           <! From {- fvTotalStake -}
           <! From {- fvProtver -}
@@ -253,20 +251,23 @@ rewardStakePoolMember ::
   FreeVars ->
   RewardAns ->
   Credential Staking ->
-  CompactForm Coin ->
+  StakeWithDelegation ->
   RewardAns
-rewardStakePoolMember freeVars inputAnswer@(RewardAns accum recent) cred c =
+rewardStakePoolMember freeVars inputAnswer@(RewardAns accum recent) cred swd =
   fromMaybe inputAnswer $ do
     let FreeVars
-          { fvDelegs
-          , fvAddrsRew
+          { fvAddrsRew
           , fvTotalStake
           , fvPoolRewardInfo
           , fvProtVer
           } = freeVars
-    poolId <- VMap.lookup cred fvDelegs
+        poolId = swdDelegation swd
     poolRI <- VMap.lookup poolId fvPoolRewardInfo
-    r <- rewardOnePoolMember fvProtVer fvTotalStake fvAddrsRew poolRI cred (fromCompact c)
+    r <-
+      rewardOnePoolMember fvProtVer fvTotalStake fvAddrsRew poolRI cred $
+        fromCompact $
+          unNonZero $
+            swdStake swd
     let ans = Reward MemberReward poolId r
     -- There is always just 1 member reward, so Set.singleton is appropriate
     pure $ RewardAns (Map.insert cred ans accum) (Map.insert cred (Set.singleton ans) recent)
@@ -285,7 +286,7 @@ data RewardPulser (m :: Type -> Type) ans where
     (ans ~ RewardAns, m ~ ShelleyBase) =>
     !Int ->
     !FreeVars ->
-    !(VMap.VMap VMap.VB VMap.VP (Credential Staking) (CompactForm Coin)) ->
+    !(VMap.VMap VMap.VB VMap.VB (Credential Staking) StakeWithDelegation) ->
     !ans ->
     RewardPulser m ans
 
