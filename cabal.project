@@ -112,6 +112,7 @@ if impl(ghc >=9.14)
     type: git
     -- https://github.com/snowleopard/alga/issues/322
     location: https://github.com/snowleopard/alga/
+    --sha256: sha256-sQRAjHV+bor/SBt/zDtcw3tN1ir7xjjevEdyYqilNWg=
     tag: d4e43fb42db05413459fb2df493361d5a666588a
 
 if impl(ghc >=9.14)
