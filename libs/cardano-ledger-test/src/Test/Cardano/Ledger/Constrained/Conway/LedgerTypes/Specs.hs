@@ -33,6 +33,7 @@ import Cardano.Ledger.Coin (
   compactCoinOrError,
   knownNonZeroCoin,
  )
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
@@ -50,7 +51,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.VMap (VB, VMap, VP)
+import Data.VMap (VB, VMap)
 import qualified Data.VMap as VMap
 import Lens.Micro ((^.))
 import System.IO.Unsafe (unsafePerformIO)
@@ -63,6 +64,7 @@ import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (
   txOutSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
+import Test.Cardano.Ledger.Core.Utils (mkActiveStake)
 import Test.QuickCheck hiding (forAll, witness)
 
 -- ======================================================================================
@@ -504,13 +506,11 @@ ledgerStateSpec pp univ ctx epoch =
 snapShotSpec :: Specification SnapShot
 snapShotSpec =
   constrained $ \ [var|snap|] ->
-    match snap $ \ [var|stake|] [var|totalActiveStake|] [var|delegs|] [var|pools|] ->
-      match stake $ \ [var|stakemap|] ->
-        [ assert $ stakemap ==. lit VMap.empty
-        , assert $ totalActiveStake ==. lit (knownNonZeroCoin @1)
-        , assert $ delegs ==. lit VMap.empty
-        , assert $ pools ==. lit VMap.empty
-        ]
+    match snap $ \ [var|activeStake|] [var|totalActiveStake|] [var|pools|] ->
+      [ assert $ activeStake ==. lit (ActiveStake VMap.empty)
+      , assert $ totalActiveStake ==. lit (knownNonZeroCoin @1)
+      , assert $ pools ==. lit VMap.empty
+      ]
 
 snapShotsSpec ::
   Term SnapShot -> Specification SnapShots
@@ -526,12 +526,14 @@ snapShotsSpec marksnap =
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
 getMarkSnapShot :: forall era. (EraCertState era, EraStake era) => LedgerState era -> SnapShot
 getMarkSnapShot ls =
-  resetStakePoolsSnapShot markStakePoolState $ mkSnapShot (Stake markStake) markDelegations VMap.empty
+  resetStakePoolsSnapShot markStakePoolState $ mkSnapShot markActiveStake VMap.empty
   where
-    markStake :: VMap VB VP (Credential Staking) (CompactForm Coin)
-    markStake = VMap.fromMap (ls ^. instantStakeL . instantStakeCredentialsL)
-    markDelegations :: VMap VB VB (Credential Staking) (KeyHash StakePool)
-    markDelegations = VMap.fromMap $ getDelegs (ls ^. lsCertStateL)
+    markActiveStake :: ActiveStake
+    markActiveStake =
+      mkActiveStake
+        (Map.map fromCompact $ ls ^. instantStakeL . instantStakeCredentialsL)
+        $ getDelegs
+        $ ls ^. lsCertStateL
     markStakePoolState :: VMap VB VB (KeyHash StakePool) StakePoolState
     markStakePoolState =
       VMap.fromMap $ psStakePools $ ls ^. lsCertStateL . certPStateL

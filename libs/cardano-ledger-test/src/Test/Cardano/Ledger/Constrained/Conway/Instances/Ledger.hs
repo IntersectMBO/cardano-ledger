@@ -413,6 +413,13 @@ instance
   ) =>
   HasSpec (CompactForm a)
 
+instance HasSimpleRep (NonZero (CompactForm Coin)) where
+  type SimpleRep (NonZero (CompactForm Coin)) = CompactForm Coin
+  toSimpleRep = unNonZero
+  fromSimpleRep = unsafeNonZero
+
+instance HasSpec (NonZero (CompactForm Coin))
+
 instance MaybeBounded (CompactForm Coin) where
   lowerBound = Just (CompactCoin 0)
   upperBound = Just (CompactCoin (maxBound @Word64))
@@ -1429,6 +1436,14 @@ instance HasSimpleRep Stake
 
 instance HasSpec Stake
 
+instance HasSimpleRep StakeWithDelegation
+
+instance HasSpec StakeWithDelegation
+
+instance HasSimpleRep ActiveStake
+
+instance HasSpec ActiveStake
+
 instance (Typeable k, Typeable v, VMap.Vector vk k, VMap.Vector vv v) => HasSimpleRep (VMap vk vv k v) where
   type SimpleRep (VMap vk vv k v) = Map k v
   toSimpleRep = VMap.toMap
@@ -1899,7 +1914,7 @@ instance HasSpec RewardUpdate
 type PulserTypes =
   '[ Int
    , FreeVars
-   , VMap VMap.VB VMap.VP (Credential Staking) (CompactForm Coin)
+   , VMap VMap.VB VMap.VB (Credential Staking) StakeWithDelegation
    , RewardAns
    ]
 

@@ -377,12 +377,16 @@ instance SpecNormalize Snapshots
 
 instance SpecNormalize Snapshot where
   specNormalize (MkSnapshot s d p) =
-    MkSnapshot (specNormalize $ removeZero s) (specNormalize $ removeZero d) p
+    MkSnapshot (specNormalize s') (specNormalize d') p
     where
-      removeZero (MkHSMap l) = MkHSMap $ f l
-      f [] = []
-      f ((_, 0) : xs) = f xs
-      f (x : xs) = x : f xs
+      s' = removeZero s
+      -- Only keep delegations for credentials that have non-zero stake,
+      -- since ActiveStake drops zero-stake credentials
+      d' = keepOnlyStaked s' (removeZero d)
+      removeZero (MkHSMap l) = MkHSMap $ filter ((/= 0) . snd) l
+      keepOnlyStaked (MkHSMap sl) (MkHSMap dl) =
+        let stakeKeys = Set.fromList (map fst sl)
+         in MkHSMap $ filter ((`Set.member` stakeKeys) . fst) dl
 
 instance SpecNormalize Acnt
 
