@@ -247,6 +247,9 @@ instance HuddleRule "auxiliary_data_array" MaryEra where
 instance HuddleRule "auxiliary_scripts" MaryEra where
   huddleRuleNamed = auxiliaryScriptsRule
 
+instance HuddleRule "metadatum" MaryEra where
+  huddleRuleNamed = metadatumRule
+
 instance HuddleRule1 "set" MaryEra where
   huddleRule1Named pname _ = untaggedSet pname
 

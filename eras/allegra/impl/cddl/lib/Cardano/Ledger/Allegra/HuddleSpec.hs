@@ -86,7 +86,10 @@ auxiliaryScriptsRule pname p = pname =.= arr [0 <+ a (huddleRule @"native_script
 
 auxiliaryDataArrayRule ::
   forall era.
-  HuddleRule "auxiliary_scripts" era => Proxy "auxiliary_data_array" -> Proxy era -> Rule
+  ( HuddleRule "auxiliary_scripts" era
+  , HuddleRule "metadatum" era
+  ) =>
+  Proxy "auxiliary_data_array" -> Proxy era -> Rule
 auxiliaryDataArrayRule pname p =
   pname
     =.= arr
@@ -96,7 +99,10 @@ auxiliaryDataArrayRule pname p =
 
 auxiliaryDataRule ::
   forall era.
-  HuddleRule "auxiliary_data_array" era => Proxy "auxiliary_data" -> Proxy era -> Rule
+  ( HuddleRule "auxiliary_data_array" era
+  , HuddleRule "metadatum" era
+  ) =>
+  Proxy "auxiliary_data" -> Proxy era -> Rule
 auxiliaryDataRule pname p =
   pname
     =.= huddleRule @"metadata" p
@@ -336,3 +342,6 @@ instance HuddleRule "block" AllegraEra where
 
 instance HuddleRule1 "set" AllegraEra where
   huddleRule1Named pname _ = untaggedSet pname
+
+instance HuddleRule "metadatum" AllegraEra where
+  huddleRuleNamed = metadatumRule
