@@ -85,6 +85,9 @@ type instance EraRuleEvent "SUBUTXOS" DijkstraEra = DijkstraSubUtxosEvent Dijkst
 
 instance InjectRuleFailure "SUBUTXOS" DijkstraSubUtxosPredFailure DijkstraEra
 
+instance InjectRuleFailure "SUBUTXOS" ConwayUtxosPredFailure DijkstraEra where
+  injectFailure = DijkstraSubUtxosPredFailure
+
 newtype DijkstraSubUtxosEvent era = DijkstraSubUtxosEvent (ConwayUtxosEvent era)
   deriving (Generic)
 

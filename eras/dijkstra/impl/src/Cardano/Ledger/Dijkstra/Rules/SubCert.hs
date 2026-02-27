@@ -33,6 +33,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ConwayEraGov)
 import Cardano.Ledger.Conway.Rules (
   CertEnv (..),
+  ConwayCertPredFailure (..),
   ConwayDelegEnv (..),
   ConwayDelegPredFailure,
   ConwayGovCertEnv (..),
@@ -46,6 +47,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBGOVCERT,
   DijkstraSUBPOOL,
  )
+import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
@@ -135,6 +137,9 @@ instance InjectRuleFailure "SUBCERT" DijkstraSubPoolPredFailure DijkstraEra wher
 
 instance InjectRuleFailure "SUBCERT" DijkstraSubGovCertPredFailure DijkstraEra where
   injectFailure = SubGovCertFailure
+
+instance InjectRuleFailure "SUBCERT" ConwayCertPredFailure DijkstraEra where
+  injectFailure = conwayToDijkstraSubCertPredFailure
 
 instance InjectRuleEvent "SUBCERT" DijkstraSubCertEvent DijkstraEra
 
@@ -237,3 +242,18 @@ instance
   where
   wrapFailed = SubGovCertFailure
   wrapEvent = absurd
+
+conwayToDijkstraSubCertPredFailure ::
+  forall era.
+  ( InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , PredicateFailure (EraRule "DELEG" era) ~ ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
+  , PredicateFailure (EraRule "POOL" era) ~ ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" DijkstraGovCertPredFailure era
+  , PredicateFailure (EraRule "GOVCERT" era) ~ DijkstraGovCertPredFailure era
+  ) =>
+  ConwayCertPredFailure era -> DijkstraSubCertPredFailure era
+conwayToDijkstraSubCertPredFailure = \case
+  DelegFailure f -> SubDelegFailure (injectFailure @"SUBDELEG" f)
+  PoolFailure f -> SubPoolFailure (injectFailure @"SUBPOOL" f)
+  GovCertFailure f -> SubGovCertFailure (injectFailure @"SUBGOVCERT" f)

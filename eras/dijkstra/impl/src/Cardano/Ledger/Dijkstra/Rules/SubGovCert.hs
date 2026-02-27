@@ -68,6 +68,9 @@ instance InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure DijkstraEra whe
 
 instance InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure DijkstraEra
 
+instance InjectRuleFailure "SUBGOVCERT" DijkstraGovCertPredFailure DijkstraEra where
+  injectFailure = DijkstraSubGovCertPredFailure
+
 instance
   ( EraGov era
   , ConwayEraPParams era
