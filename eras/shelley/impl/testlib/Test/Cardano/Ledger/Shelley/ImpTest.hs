@@ -131,7 +131,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   disableInConformanceIt,
   minorFollow,
   majorFollow,
-  cantFollow,
+  genCantFollow,
+  genCantFollowCurrent,
   whenMajorVersion,
   whenMajorVersionAtLeast,
   whenMajorVersionAtMost,
@@ -283,6 +284,7 @@ import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.TreeDiff (ansiWlExpr)
 import Data.Type.Equality (TestEquality (..))
 import Data.Void
+import Data.Word
 import GHC.TypeLits (KnownNat, KnownSymbol, Symbol, symbolVal, type (<=))
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
@@ -2126,9 +2128,53 @@ majorFollow pv@(ProtVer x _) = case succVersion x of
   Just x' -> ProtVer x' 0
   Nothing -> error ("The last major version can't be incremented. " ++ show pv)
 
--- | An illegal ProtVer that skips 3 minor versions
-cantFollow :: ProtVer -> ProtVer
-cantFollow (ProtVer x y) = ProtVer x (y + 3)
+genCantFollow :: (MonadFail m, MonadGen m) => ProtVer -> m ProtVer
+genCantFollow pv@ProtVer {pvMajor, pvMinor} =
+  oneof
+    [ cantFollowMajor
+    , cantFollowMinor
+    , do
+        Positive newMinor <- arbitrary
+        pure $ (majorFollow pv) {pvMinor = fromIntegral @Word32 @Natural newMinor}
+    ]
+  where
+    maxMinor = fromIntegral @Word32 @Natural maxBound
+    cantFollowMinor
+      | pvMinor > maxMinor = error $ "Minor version is too big: " ++ show pvMinor
+      | pvMinor == pred maxMinor = do
+          newMinor <- choose (minBound, pred $ fromIntegral @Natural @Word32 pvMinor)
+          pure pv {pvMinor = fromIntegral @Word32 @Natural newMinor}
+      | otherwise = do
+          newMinor <- choose (succ $ succ $ fromIntegral @Natural @Word32 pvMinor, maxBound)
+          pure pv {pvMinor = fromIntegral @Word32 @Natural newMinor}
+    -- For major version we can only go backwards
+    cantFollowMajor = do
+      let pvMajor32 = getVersion32 pvMajor
+          maxMajor32 = getVersion32 (maxBound :: Version)
+          pvMajorDiff = maxMajor32 - pvMajor32
+      if pvMajorDiff >= 2
+        then cantFollowMinor
+        else do
+          nextMajor <- mkVersion32 =<< choose (minBound, pred pvMajor32)
+          pure pv {pvMajor = nextMajor}
+
+-- | Generate major version that is two major versions away from the current version , whenever
+-- possible
+genCantFollowCurrent :: EraGov era => ImpTestM era (Maybe ProtVer)
+genCantFollowCurrent = do
+  pv@ProtVer {pvMajor} <- getProtVer
+  let pvMajor32 = getVersion32 pvMajor
+      maxMajor32 = getVersion32 (maxBound :: Version)
+      pvMajorDiff = maxMajor32 - pvMajor32
+  if pvMajorDiff >= 2
+    then do
+      nextMajor <- mkVersion32 =<< choose (pvMajor32 + 2, maxMajor32)
+      Just
+        <$> elements
+          [ pv {pvMajor = nextMajor}
+          , ProtVer {pvMajor = nextMajor, pvMinor = 0}
+          ]
+    else pure Nothing
 
 whenMajorVersion ::
   forall (v :: Natural) era.

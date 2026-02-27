@@ -38,6 +38,13 @@ import Data.Word (Word32, Word64)
 import GHC.TypeLits (KnownNat, natVal, type (<=))
 import NoThunks.Class (NoThunks)
 import System.Random (Random)
+import System.Random.Stateful (
+  Uniform (..),
+  UniformRange (..),
+  isInRangeEnum,
+  uniformEnumM,
+  uniformEnumRM,
+ )
 
 --------------------------------------------------------------------------------
 -- Version
@@ -46,7 +53,7 @@ import System.Random (Random)
 -- | Protocol version number that is used during encoding and decoding. All supported
 -- versions are in the range from `MinVersion` to `MaxVersion`.
 newtype Version = Version Word32
-  deriving (Eq, Ord, Show, NFData, NoThunks, ToCBOR, ToJSON, Random)
+  deriving (Eq, Ord, Show, NFData, NoThunks, ToCBOR, ToJSON)
 
 -- | Minimum supported version
 type MinVersion = 0
@@ -62,6 +69,15 @@ instance Enum Version where
 instance Bounded Version where
   minBound = Version (fromInteger (natVal (Proxy @MinVersion)))
   maxBound = Version (fromInteger (natVal (Proxy @MaxVersion)))
+
+instance Random Version
+
+instance Uniform Version where
+  uniformM = uniformEnumM
+
+instance UniformRange Version where
+  uniformRM = uniformEnumRM
+  isInRange = isInRangeEnum
 
 instance FromCBOR Version where
   fromCBOR = fromCBOR >>= mkVersion32

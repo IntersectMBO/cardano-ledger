@@ -51,6 +51,7 @@ import Cardano.Ledger.BaseTypes (
   Version,
   natVersion,
   pvMajor,
+  succVersion,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -84,6 +85,7 @@ import Cardano.Ledger.Shelley.Rules (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyBbodyPredFailure (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), txouts, unUTxO)
 import Control.DeepSeq (NFData)
+import Control.Monad (guard)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -307,17 +309,20 @@ conwayBbodyTransition = do
             txs = txsSeq ^. txSeqBlockBodyL
             totalRefScriptSize = totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs utxo
             maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
-            checkHeaderProtVerTooHigh =
-              if pvMajor (pp ^. ppProtocolVersionL) < natVersion @11
-                && pvMajor (bhviewProtVer bhView) >= natVersion @12
-                then
-                  Just $
-                    Mismatch
-                      { mismatchSupplied = pvMajor (bhviewProtVer bhView)
-                      , mismatchExpected = natVersion @11
-                      }
-                else Nothing
-        failOnJust checkHeaderProtVerTooHigh $ injectFailure . HeaderProtVerTooHigh @era
+            checkHeaderMajorProtVerTooHigh = do
+              let
+                curMajorVer = pvMajor (pp ^. ppProtocolVersionL)
+                headerMajorVer = pvMajor (bhviewProtVer bhView)
+              -- There is always next version higher than the current one used
+              nextMajorVer <- succVersion curMajorVer
+              -- If header version is less then or equal to the next version, then we are OK.
+              guard (headerMajorVer > nextMajorVer)
+              Just $
+                Mismatch
+                  { mismatchSupplied = headerMajorVer
+                  , mismatchExpected = nextMajorVer
+                  }
+        failOnJust checkHeaderMajorProtVerTooHigh $ injectFailure . HeaderProtVerTooHigh @era
         totalRefScriptSize
           <= maxRefScriptSizePerBlock
             ?! injectFailure

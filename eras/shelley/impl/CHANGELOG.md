@@ -71,6 +71,8 @@
 
 ### `testlib`
 
+* Remove `cantFollow`
+* Add `genCantFollow` and `genCantFollowCurrent`
 * Renamed:
   - `maxMinFeeA` -> `maxTxFeePerByte`
   - `maxMinFeeB` -> `maxTxFeeFixed`

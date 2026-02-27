@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `Uniform`, `UniformRange` instances and fix `Random` instance
 * Change `Version` from `Word64` to `Word32`
   - Add `mkVersion32` and `getVersion32`
 * Remove `listLenBound` from `EncCBORGroup`
