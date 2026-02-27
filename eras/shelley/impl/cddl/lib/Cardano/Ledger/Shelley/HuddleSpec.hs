@@ -53,6 +53,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   delegationToStakePoolCertGroup,
   certificateRule,
   untaggedSet,
+  metadatumRule,
 ) where
 
 import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule)
@@ -610,3 +611,17 @@ instance HuddleRule "block" ShelleyEra where
 
 instance HuddleRule1 "set" ShelleyEra where
   huddleRule1Named pname _ = untaggedSet pname
+
+metadatumRule :: Era era => Proxy "metadatum" -> Proxy era -> Rule
+metadatumRule pname era =
+  pname
+    =.= smp
+      [ 0 <+ asKey (metadatumRule pname era) ==> metadatumRule pname era
+      ]
+    / sarr [0 <+ a (metadatumRule pname era)]
+    / VInt
+    / VBytes
+    / VText
+
+instance HuddleRule "metadatum" ShelleyEra where
+  huddleRuleNamed = metadatumRule
