@@ -26,7 +26,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Cardano.Ledger.State (SnapShot, StakePoolParams (..), UTxO (..))
+import Cardano.Ledger.State (ActiveStake (..), SnapShot, StakePoolParams (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
@@ -35,6 +35,7 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.Arbitrary (mkSnapShotFromStakePoolParams)
@@ -271,10 +272,7 @@ blockEx3 =
 
 snapEx3 :: SnapShot
 snapEx3 =
-  mkSnapShotFromStakePoolParams
-    mempty
-    mempty
-    [Cast.aliceStakePoolParams]
+  mkSnapShotFromStakePoolParams (ActiveStake VMap.empty) [Cast.aliceStakePoolParams]
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =

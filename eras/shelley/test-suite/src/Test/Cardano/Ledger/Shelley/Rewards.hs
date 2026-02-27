@@ -42,14 +42,13 @@ import Cardano.Ledger.BaseTypes (
   activeSlotVal,
   epochInfoPure,
   mkActiveSlotCoeff,
-  nonZeroOr,
+  unNonZero,
   (%?),
  )
 import Cardano.Ledger.Binary (encCBOR, hashWithEncoder, natVersion, shelleyProtVer)
 import Cardano.Ledger.Coin (
   Coin (..),
   DeltaCoin (..),
-  knownNonZeroCoin,
   rationalToCoinViaFloor,
   toDeltaCoin,
  )
@@ -119,10 +118,10 @@ import qualified Data.Set as Set
 import Data.TreeDiff (ansiWlEditExprCompact, ediff)
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
-import GHC.Stack
 import Lens.Micro ((&), (.~), (^.))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
+import Test.Cardano.Ledger.Core.Utils (mkActiveStake)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genCoin, genNatural)
@@ -301,10 +300,6 @@ genBlocksMade pools = BlocksMade . Map.fromList <$> mapM f pools
 
 -- Properties --
 
-toCompactCoinError :: HasCallStack => Coin -> CompactForm Coin
-toCompactCoinError c =
-  fromMaybe (error $ "Invalid Coin: " <> show c) $ toCompact c
-
 rewardsBoundedByPot ::
   forall era.
   (EraPParams era, AtMostEra "Alonzo" era) =>
@@ -339,8 +334,7 @@ rewardsBoundedByPot _ = property $ do
             rewardPot
             rewardAccounts
             stakePoolParams
-            (Stake (VMap.fromMap (toCompactCoinError <$> stake)))
-            (VMap.fromMap delegs)
+            (mkActiveStake stake delegs)
             totalLovelace
   pure $
     counterexample
@@ -564,7 +558,9 @@ createRUpdOld_ ::
   ShelleyBase RewardUpdateOld
 createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake rs nm = do
   asc <- asks activeSlotCoeff
-  let SnapShot stake' _ delegs' stakePoolsSnapShot = ssStakeGo ss
+  let SnapShot activeStake' _ stakePoolsSnapShot = ssStakeGo ss
+      stake' = Stake $ VMap.fromMap $ Map.map (unNonZero . swdStake) $ VMap.toMap $ unActiveStake activeStake'
+      delegs' = VMap.fromMap $ Map.map swdDelegation $ VMap.toMap $ unActiveStake activeStake'
       -- reserves and rewards change
       deltaR1 =
         rationalToCoinViaFloor $
@@ -753,8 +749,7 @@ mkRewardAns ::
   Coin ->
   Set (Credential Staking) ->
   VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) StakePoolParams ->
-  Stake ->
-  VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
+  ActiveStake ->
   Coin ->
   ShelleyBase RewardAns
 mkRewardAns
@@ -763,23 +758,23 @@ mkRewardAns
   r
   addrsRew
   stakePools
-  stake
-  delegs
+  activeStake
   totalStake = completeM pulser
     where
       totalBlocks = sum b
-      totalActiveStake = sumAllStake stake `nonZeroOr` knownNonZeroCoin @1
+      totalActiveStake = sumAllActiveStake activeStake
       delegatorsPerStakePool =
         VMap.foldlWithKey
-          (\acc cred poolId -> Map.insertWith (<>) poolId (Set.singleton cred) acc)
+          (\acc cred swd -> Map.insertWith (<>) (swdDelegation swd) (Set.singleton cred) acc)
           mempty
-          delegs
+          $ unActiveStake activeStake
 
       mkPoolRewardInfo' stakePoolParams =
-        -- lehins: why is this restriction necessary? :o
-        -- ensure mkPoolRewardInfo does not use stake that doesn't belong to the pool
-        let stakeRestrictedToPool = poolStake (sppId stakePoolParams) delegs stake
-            stakePoolId = sppId stakePoolParams
+        let stakePoolId = sppId stakePoolParams
+            stakeRestrictedToPool =
+              ActiveStake $
+                VMap.filter (\_ swd -> swdDelegation swd == stakePoolId) $
+                  unActiveStake activeStake
             delegators = Map.findWithDefault mempty stakePoolId delegatorsPerStakePool
             stakePoolState = mkStakePoolState (pp ^. ppPoolDepositCompactL) delegators stakePoolParams
             stakePoolSnapShot = mkStakePoolSnapShot stakeRestrictedToPool totalActiveStake stakePoolState
@@ -798,11 +793,10 @@ mkRewardAns
           , fvTotalStake = totalStake
           , fvPoolRewardInfo =
               VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') stakePools
-          , fvDelegs = delegs
           , fvProtVer = pp ^. ppProtocolVersionL
           }
       pulser :: Pulser
-      pulser = RSLP 2 free (unStake stake) (RewardAns Map.empty Map.empty)
+      pulser = RSLP 2 free (unActiveStake activeStake) (RewardAns Map.empty Map.empty)
 
 -- ==================================================================
 
