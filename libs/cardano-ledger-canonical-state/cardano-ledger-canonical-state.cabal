@@ -46,14 +46,17 @@ library
     Cardano.Ledger.CanonicalState.Namespace.Blocks.V0
     Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0
     Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
+    Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0
     Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
 
   hs-source-dirs: src
   build-depends:
+    -- cardano-slotting,
     base,
     base16-bytestring,
     bytestring,
     cardano-crypto-class,
+    cardano-data,
     cardano-ledger-binary,
     cardano-ledger-core,
     cborg,
@@ -74,6 +77,9 @@ library conway
     base,
     cardano-ledger-canonical-state,
     cardano-ledger-conway,
+    cborg,
+    microlens,
+    scls-cbor,
     scls-core,
 
 library testlib
@@ -112,6 +118,7 @@ test-suite tests
     base,
     cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway, testlib},
     cardano-ledger-conway,
+    cardano-ledger-core,
     cardano-ledger-core:testlib,
     scls-cardano:testlib,
     scls-cbor,
