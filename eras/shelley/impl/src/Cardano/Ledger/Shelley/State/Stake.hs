@@ -21,7 +21,12 @@ module Cardano.Ledger.Shelley.State.Stake (
 ) where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
+import Cardano.Ledger.BaseTypes (
+  KeyValuePairs (..),
+  NonZero (..),
+  ToKeyValuePairs (..),
+  unsafeNonZero,
+ )
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
@@ -149,19 +154,19 @@ resolveShelleyInstantStake ::
   ) =>
   ShelleyInstantStake era ->
   ShelleyAccounts era ->
-  Stake
+  ActiveStake
 resolveShelleyInstantStake instantStake@ShelleyInstantStake {sisPtrStake} sas =
-  Stake $ VMap.fromMap $ Map.foldlWithKey' addPtrStake credentialStakeMap sisPtrStake
+  ActiveStake $ VMap.fromMap $ Map.foldlWithKey' addPtrStake credentialStakeMap sisPtrStake
   where
     !credentialStakeMap = resolveActiveInstantStakeCredentials instantStake sas
     addPtrStake !acc ptr ptrStake = fromMaybe acc $ do
       cred <- Map.lookup ptr (saPtrs sas)
-      -- Ensure only staking credential that delegates to a pool receive Ptr delegations
       accountState <- lookupAccountState cred sas
-      _ <- accountState ^. stakePoolDelegationAccountStateL
+      poolId <- accountState ^. stakePoolDelegationAccountStateL
       let plusPtrStake =
             Just . \case
-              Nothing -> ptrStake
-              Just curStake -> curStake <> ptrStake
-      -- instant stake is guaranteed to be non-zero due to minUTxO, so no need to guard against mempty
+              -- instant stake is guaranteed to be non-zero due to minUTxO,
+              -- therefore usage of 'unsafeNonZero' here is safe.
+              Nothing -> StakeWithDelegation (unsafeNonZero ptrStake) poolId
+              Just swd -> swd {swdStake = unsafeNonZero $ unNonZero (swdStake swd) <> ptrStake}
       pure $ Map.alter plusPtrStake cred acc

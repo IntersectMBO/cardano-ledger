@@ -16,8 +16,8 @@ module Cardano.Ledger.Shelley.Rules.Snap (
   SnapEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Coin (Coin, CompactForm)
+import Cardano.Ledger.BaseTypes (ShelleyBase, unNonZero)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -85,17 +85,11 @@ snapTransition = do
         snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL)
 
   tellEvent $
-    let stMap :: Map (Credential Staking) (CompactForm Coin)
-        stMap = VMap.toMap . unStake $ ssActiveStake istakeSnap
-
-        stakeCoinMap :: Map (Credential Staking) Coin
-        stakeCoinMap = fmap fromCompact stMap
-
-        stakePoolMap :: Map (Credential Staking) (KeyHash StakePool)
-        stakePoolMap = VMap.toMap $ ssDelegations istakeSnap
-
-        stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
-        stakeMap = Map.intersectionWith (,) stakeCoinMap stakePoolMap
+    let stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
+        stakeMap =
+          Map.map
+            (\swd -> (fromCompact $ unNonZero $ swdStake swd, swdDelegation swd))
+            (VMap.toMap $ unActiveStake $ ssActiveStake istakeSnap)
      in StakeDistEvent stakeMap
 
   pure $

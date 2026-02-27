@@ -124,7 +124,7 @@ resolveConwayInstantStake ::
   (EraStake era, InstantStake era ~ ConwayInstantStake era) =>
   ConwayInstantStake era ->
   Accounts era ->
-  Stake
+  ActiveStake
 resolveConwayInstantStake instantStake accounts =
-  Stake $ VMap.fromMap $ resolveActiveInstantStakeCredentials instantStake accounts
+  ActiveStake $ VMap.fromMap $ resolveActiveInstantStakeCredentials instantStake accounts
 {-# INLINE resolveConwayInstantStake #-}

@@ -10,6 +10,7 @@
 module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Babbage.TxOut (internBabbageTxOut)
+import Cardano.Ledger.BaseTypes (unNonZero, unsafeNonZero)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core (TxOut, emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
@@ -141,13 +142,11 @@ insertSnapShot ::
   ReaderT SqlBackend m ()
 insertSnapShot snapShotEpochStateId snapShotType State.SnapShot {..} = do
   snapShotId <- insert $ SnapShot {snapShotType, snapShotEpochStateId}
-  VG.forM_ (VMap.unVMap (State.unStake ssActiveStake)) $ \(cred, c) -> do
-    credId <- insertGetKey (Credential (Keys.asWitness cred))
-    insert_ (SnapShotStake snapShotId credId c)
-  VG.forM_ (VMap.unVMap ssDelegations) $ \(cred, spKeyHash) -> do
-    credId <- insertGetKey (Credential (Keys.asWitness cred))
-    keyHashId <- insertGetKey (KeyHash (Keys.asWitness spKeyHash))
-    insert_ (SnapShotDelegation snapShotId credId keyHashId)
+  VG.forM_ (VMap.unVMap $ State.unActiveStake ssActiveStake) $ \(cred, swd) -> do
+    stakeId <- insertGetKey (Credential (Keys.asWitness cred))
+    insert_ (SnapShotStake snapShotId stakeId (unNonZero $ State.swdStake swd))
+    poolId <- insertGetKey (KeyHash (Keys.asWitness $ State.swdDelegation swd))
+    insert_ (SnapShotDelegation snapShotId stakeId poolId)
   VG.forM_ (VMap.unVMap ssStakePoolsSnapShot) $ \(keyHash, spss) -> do
     keyHashId <- insertGetKey (KeyHash (Keys.asWitness keyHash))
     insert_ (SnapShotStakePool snapShotId keyHashId spss)
@@ -335,20 +334,26 @@ getSnapShotNoSharing epochStateId snapShotType = do
         Nothing -> error $ "Missing a snapshot: " ++ show snapShotType
         Just (Entity snapShotId _) -> snapShotId
   stake <-
-    selectVMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
+    selectMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
       pure (Keys.coerceKeyRole credential, snapShotStakeCoin)
   delegations <-
-    selectVMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
+    selectMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
       Credential credential <- getJust snapShotDelegationCredentialId
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
-      -- TODO ^ rename snapShotDelegationKeyHashId
       pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole keyHash)
   stakePoolSnapShot <-
     selectVMap [SnapShotStakePoolSnapShotId ==. snapShotId] $ \SnapShotStakePool {..} -> do
       KeyHash keyHash <- getJust snapShotStakePoolKeyHashId
       pure (Keys.coerceKeyRole keyHash, snapShotStakePoolSnapShot)
-  pure $ State.mkSnapShot (State.Stake stake) delegations stakePoolSnapShot
+  let activeStake =
+        State.ActiveStake $
+          VMap.fromMap $
+            Map.intersectionWith
+              (\c -> State.StakeWithDelegation (unsafeNonZero c))
+              stake
+              delegations
+  pure $ State.mkSnapShot activeStake stakePoolSnapShot
 {-# INLINEABLE getSnapShotNoSharing #-}
 
 getSnapShotsNoSharing ::
@@ -393,15 +398,12 @@ getSnapShotWithSharing ::
   SnapShotType ->
   ReaderT SqlBackend m State.SnapShot
 getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
-  let internOtherStakes =
+  let internOtherCredentials =
         interns
-          (foldMap (internsFromVMap . State.unStake . State.ssActiveStake) otherSnapShots)
+          (foldMap (internsFromVMap . State.unActiveStake . State.ssActiveStake) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherPoolParams =
         interns (foldMap (internsFromVMap . State.ssStakePoolsSnapShot) otherSnapShots)
-          . Keys.coerceKeyRole
-  let internOtherDelegations =
-        interns (foldMap (internsFromVMap . State.ssDelegations) otherSnapShots)
           . Keys.coerceKeyRole
   snapShotId <-
     selectFirst
@@ -411,20 +413,27 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
         Nothing -> error $ "Missing a snapshot: " ++ show snapShotType
         Just (Entity snapShotId _) -> snapShotId
   stake <-
-    selectVMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
+    selectMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
-      pure (internOtherStakes credential, snapShotStakeCoin)
+      pure (internOtherCredentials credential, snapShotStakeCoin)
   stakePoolSnapShot <-
     selectVMap [SnapShotStakePoolSnapShotId ==. snapShotId] $ \SnapShotStakePool {..} -> do
       KeyHash keyHash <- getJust snapShotStakePoolKeyHashId
       pure (internOtherPoolParams keyHash, snapShotStakePoolSnapShot)
   let internStakePoolSnapShot = interns (internsFromVMap stakePoolSnapShot) . Keys.coerceKeyRole
   delegations <-
-    selectVMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
+    selectMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
       Credential credential <- getJust snapShotDelegationCredentialId
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
-      pure (internOtherDelegations credential, internStakePoolSnapShot keyHash)
-  pure $ State.mkSnapShot (State.Stake stake) delegations stakePoolSnapShot
+      pure (internOtherCredentials credential, internStakePoolSnapShot keyHash)
+  let activeStake =
+        State.ActiveStake $
+          VMap.fromMap $
+            Map.intersectionWith
+              (\c -> State.StakeWithDelegation (unsafeNonZero c))
+              stake
+              delegations
+  pure $ State.mkSnapShot activeStake stakePoolSnapShot
 {-# INLINEABLE getSnapShotWithSharing #-}
 
 getSnapShotsWithSharing ::

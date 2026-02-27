@@ -121,6 +121,7 @@ import Test.Crypto.KES ()
 import Test.Crypto.VRF ()
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary (GSubterms, RecursivelyShrink)
+import Test.QuickCheck.Gen (chooseWord64)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
 maxDecimalsWord64 :: Int
@@ -691,28 +692,24 @@ instance Arbitrary SnapShot where
               ix <- chooseInt (0, V.length poolParams - 1)
               pure $ sppId $ poolParams V.! ix
             -- Make sure that the total sum does not overflow.
-            randomStake <- arbitrary
-            let stake
-                  | randomStake > CompactCoin 1000000 =
-                      CompactCoin (unCompactCoin randomStake `div` fromIntegral @Int @Word64 len)
-                  | otherwise = randomStake
-            pure (cred, (deleg, stake))
+            stake <-
+              BaseTypes.unsafeNonZero . CompactCoin
+                <$> chooseWord64 (0, maxBound @Word64 `div` fromIntegral @Int @Word64 len)
+            pure (cred, StakeWithDelegation stake deleg)
     let
-      delegations = VMap.fromMap $ Map.map fst credsWithStakeAndDelegations
-      activeStake = Stake $ VMap.fromMap $ Map.map snd credsWithStakeAndDelegations
+      activeStake = ActiveStake $ VMap.fromMap credsWithStakeAndDelegations
     pure $
-      mkSnapShotFromStakePoolParams activeStake delegations poolParams
+      mkSnapShotFromStakePoolParams activeStake poolParams
 
 -- | Adaptor that can construct new SnapShot representation from the old one
 mkSnapShotFromStakePoolParams ::
   Foldable f =>
-  Stake ->
-  VMap.VMap VMap.VB VMap.VB (Credential Staking) (KeyHash StakePool) ->
+  ActiveStake ->
   f StakePoolParams ->
   SnapShot
-mkSnapShotFromStakePoolParams activeStake delegs poolParams =
+mkSnapShotFromStakePoolParams activeStake poolParams =
   resetStakePoolSnapShotFromPoolParams poolParams $
-    mkSnapShot activeStake delegs VMap.empty
+    mkSnapShot activeStake VMap.empty
 
 -- | Given a snapshot and stake pool params fully override the stake pools snapshot.
 resetStakePoolSnapShotFromPoolParams ::
@@ -735,9 +732,9 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
             mkStakePoolState mempty delegations stakePoolParams
     delegatorsPerStakePool =
       VMap.foldlWithKey
-        (\acc cred poolId -> Map.insertWith (<>) poolId (Set.singleton cred) acc)
+        (\acc cred swd -> Map.insertWith (<>) (swdDelegation swd) (Set.singleton cred) acc)
         mempty
-        ssDelegations
+        (unActiveStake ssActiveStake)
 
 instance Arbitrary SnapShots where
   arbitrary = do
@@ -768,6 +765,12 @@ instance Arbitrary Stake where
         let pair = (,) <$> arbitrary <*> (CompactCoin <$> genWord64 n)
         list <- frequency [(1, pure []), (99, vectorOf n pair)]
         pure (Map.fromList list)
+
+instance Arbitrary StakeWithDelegation where
+  arbitrary = StakeWithDelegation <$> arbitrary <*> arbitrary
+
+instance Arbitrary ActiveStake where
+  arbitrary = ActiveStake <$> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Core.TxCert ----------------------------------------------------------
