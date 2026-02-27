@@ -104,8 +104,8 @@ source-repository-package
   type: git
   location: https://github.com/tweag/cardano-cls.git
   subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
-  --sha256: sha256-olahRoXIykwIeCwRFSNy4CJC68F+N/A2M0B25Wj8Rz0=
-  tag: 0fd0b9d252637684c117f1366a87ae404fed41e1
+  --sha256: sha256-HqkjvqBwo8zZpKHZY7R21OVhP7VQtfoBwK0vawZtNfg=
+  tag: 98b29d8a866d4dd6658682e285a3d49c17039d0d
 
 if impl(ghc >=9.14)
   source-repository-package
