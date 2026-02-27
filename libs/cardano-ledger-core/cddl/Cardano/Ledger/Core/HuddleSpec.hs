@@ -267,8 +267,8 @@ instance Era era => HuddleRule "metadatum" era where
         ]
       / sarr [0 <+ a (huddleRule @"metadatum" p)]
       / VInt
-      / (VBytes `sized` (0 :: Word64, 64 :: Word64))
-      / (VText `sized` (0 :: Word64, 64 :: Word64))
+      / VBytes
+      / VText
 
 instance Era era => HuddleRule "metadata" era where
   huddleRuleNamed pname p =
