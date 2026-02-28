@@ -6,7 +6,16 @@
   ghc-options: -Wall -Wcompat -Wunused-packages
 -}
 {- project:
-  allow-newer: cabal-plan:*
+  allow-newer:
+    cabal-plan:*,
+  if impl(ghc >=9.14)
+    allow-newer:
+      aeson:containers, aeson:template-haskell,
+      indexed-traversable:base, indexed-traversable:containers,
+      indexed-traversable-instances:base,
+      uuid-types:template-haskell,
+      these:base,
+      semialign:base, semialign:containers,
 -}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE LambdaCase #-}
