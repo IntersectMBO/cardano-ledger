@@ -56,7 +56,7 @@ jobs:
         shell: bash
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Free up disk space
       run: |
@@ -126,7 +126,7 @@ jobs:
         | tee dependencies.txt
 
     - name: Restore cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       id: restore-cabal-cache
       env:
         cache-name: cache-cabal-build
@@ -158,7 +158,7 @@ jobs:
     # Save the cache of built dependencies early, so that it is available for
     # the next GHA run if the Build step fails.
     - name: Save cache
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       id: save-cabal-cache
       # Note: cache-hit will be set to true only when cache hit occurs for the
       # exact key match. For a partial key match via restore-keys or a cache
@@ -177,9 +177,7 @@ jobs:
       # default format uses a one-second resolution for timestamps
       run: tar --use-compress-program zstdmt --format posix --exclude-vcs -cf /var/tmp/state.tzst . && mv /var/tmp/state.tzst .
     - name: Upload working directory archive
-      # upload-artifact is pinned to avoid a bug in download-artifact
-      # See https://github.com/actions/download-artifact/issues/328
-      uses: actions/upload-artifact@v4.2.0
+      uses: actions/upload-artifact@v7
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
         path: state.tzst
@@ -296,7 +294,7 @@ jobs:
 
     # Retrieve working directory from build jobs
     - name: Download working directory archive
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
 
@@ -314,7 +312,7 @@ jobs:
         ./scripts/file-not-null.sh dependencies.txt
 
     - name: Restore cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       id: restore-cabal-cache
       env:
         cache-name: cache-cabal-build
@@ -367,7 +365,7 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install fourmolu
       run: |
@@ -385,7 +383,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install shellcheck
       run: |
@@ -421,7 +419,7 @@ jobs:
         shell: bash
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Free up disk space
       run: |
@@ -456,7 +454,7 @@ jobs:
 
     # Retrieve working directory from build jobs
     - name: Download working directory archive
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: state-${{ env.ghc-version }}-${{ env.os }}
 
@@ -474,7 +472,7 @@ jobs:
         ./scripts/file-not-null.sh dependencies.txt
 
     - name: Restore cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       id: restore-cabal-cache
       env:
         cache-name: cache-cabal-build
@@ -501,7 +499,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: tfausak/cabal-gild-setup-action@v2
         with:
           version: 1.5.0.1
@@ -509,39 +507,39 @@ jobs:
         run: ./scripts/cabal-format.sh check
 
   gen-hie:
+    name: Generate HIE files
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        shell: bash
-
-    strategy:
-      fail-fast: false
-
     steps:
+    - name: Set up installation directory
+      run: |
+        BINDIR=$HOME/.local/bin
+        echo "bindir=$BINDIR" >> "$GITHUB_ENV"
+        echo "$BINDIR" >> "$GITHUB_PATH"
+
     - name: Cache implicit-hie executable (gen-hie)
       id: cache-gen-hie
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
-        path: |
-          ~/.cabal/bin/gen-hie
+        path: ${{ env.bindir }}/gen-hie
         key: ${{ runner.os }}-cache-gen-hie
 
     - name: Install Haskell
+      if: steps.cache-gen-hie.outputs.cache-hit != 'true'
       id: install-haskell
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: 9.10.1
         cabal-version: 3.16
 
-    - name: Install gen-hie if not cached
+    - name: Install gen-hie
       if: steps.cache-gen-hie.outputs.cache-hit != 'true'
-      run: cabal update && cabal install implicit-hie --install-method=copy --overwrite-policy=always
+      run: |
+        cabal update
+        cabal install implicit-hie \
+          --installdir=${{ env.bindir }} --install-method=copy --overwrite-policy=always
 
-    - name: Add cabal-bin to PATH
-      run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
-
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Regenerate hie.yaml and confirm that it is in sync
       run: ./scripts/gen-hie.sh
@@ -551,7 +549,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.base_ref != '' && github.ref != '' }}  # Only true for PRs
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Ensure the branch doesn't contain any merges
       run: |
         PR_TARGET=${{ github.base_ref }}
@@ -599,7 +597,7 @@ jobs:
         shell: bash
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Check formal-ledger-specifications SRP commit hash
       run: |
         TAG=$(sed -ne \
@@ -622,7 +620,7 @@ jobs:
     if: ${{ github.base_ref != '' && github.ref != '' }}  # Only true for PRs
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Check for `undefined`s in the diffs
       run: |
         PR_TARGET=${{ github.base_ref }}
@@ -641,7 +639,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install changelog linter
       run: |
