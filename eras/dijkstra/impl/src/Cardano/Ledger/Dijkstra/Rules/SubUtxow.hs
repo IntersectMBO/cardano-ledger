@@ -37,7 +37,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
   ConwayUtxowPredFailure,
-  UtxoEnv,
+  UtxoEnv (..),
   alonzoToConwayUtxowPredFailure,
   shelleyToConwayUtxowPredFailure,
  )
@@ -55,7 +55,10 @@ import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
-import qualified Cardano.Ledger.Shelley.Rules as Shelley (validateVerifiedWits)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley (
+  validateNeededWitnesses,
+  validateVerifiedWits,
+ )
 import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
@@ -213,9 +216,10 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env, utxoState, tx) <- judgmentContext
+  TRC (env@(UtxoEnv _ _ certState), utxoState, tx) <- judgmentContext
   let utxo = utxosUtxo utxoState
       txBody = tx ^. bodyTxL
+      witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
 
   {- ∀[ (vk , σ) ∈ vKeySigs ] isSigned vk (txidBytes txId) σ -}
   runTestOnSignal $ Shelley.validateVerifiedWits tx
@@ -226,6 +230,9 @@ dijkstraSubUtxowTransition = do
 
   {- ∀[ s ∈ p1ScriptsNeeded ] validP1Script vKeyHashesProvided txVldt s -}
   runTest $ Babbage.validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
+
+  {- vKeyHashesNeeded ⊆ vKeyHashesProvided -}
+  runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState utxo txBody
 
   {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
   runTest $ Alonzo.missingRequiredDatums utxo tx
