@@ -22,6 +22,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 # Cancel running workflows when a new workflow on the same PR or branch is started,
 # but put scheduled workflows into their own group
 concurrency:
