@@ -59,7 +59,12 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedger (DijkstraSubLedgerPredFailure (..
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv, PoolEvent, ShelleyPoolPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  LedgerEnv,
+  PoolEvent,
+  ShelleyPoolPredFailure,
+  ShelleyUtxowPredFailure,
+ )
 import Cardano.Ledger.TxIn (TxId)
 import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
@@ -190,6 +195,7 @@ instance
   , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
   , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGER era) (DijkstraSUBLEDGERS era)

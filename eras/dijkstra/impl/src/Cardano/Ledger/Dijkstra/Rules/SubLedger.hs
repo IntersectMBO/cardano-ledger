@@ -76,6 +76,7 @@ import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
   PoolEvent,
   ShelleyPoolPredFailure,
+  ShelleyUtxowPredFailure,
   UtxoEnv (..),
   epochFromSlot,
  )
@@ -334,6 +335,7 @@ instance
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   ) =>
   Embed (DijkstraSUBUTXOW era) (DijkstraSUBLEDGER era)
   where

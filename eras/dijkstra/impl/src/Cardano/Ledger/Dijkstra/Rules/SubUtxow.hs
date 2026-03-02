@@ -38,6 +38,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxowPredFailure,
   UtxoEnv,
   alonzoToConwayUtxowPredFailure,
+  shelleyToConwayUtxowPredFailure,
  )
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -52,6 +53,8 @@ import Cardano.Ledger.Dijkstra.Rules.Utxow (
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosUtxo)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley (validateVerifiedWits)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -157,6 +160,12 @@ instance InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure DijkstraEra where
       . conwayToDijkstraUtxowPredFailure
       . alonzoToConwayUtxowPredFailure
 
+instance InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxowToDijkstraSubUtxowPredFailure
+      . conwayToDijkstraUtxowPredFailure
+      . shelleyToConwayUtxowPredFailure
+
 instance InjectRuleEvent "SUBUTXOW" DijkstraSubUtxowEvent DijkstraEra
 
 newtype DijkstraSubUtxowEvent era = SubUtxo (Event (EraRule "SUBUTXO" era))
@@ -176,6 +185,7 @@ instance
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   ) =>
   STS (DijkstraSUBUTXOW era)
   where
@@ -196,11 +206,15 @@ dijkstraSubUtxowTransition ::
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
   TRC (env, utxoState, tx) <- judgmentContext
   let utxo = utxosUtxo utxoState
+
+  {- ∀[ (vk , σ) ∈ vKeySigs ] isSigned vk (txidBytes txId) σ -}
+  runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
   runTest $ Alonzo.missingRequiredDatums utxo tx
