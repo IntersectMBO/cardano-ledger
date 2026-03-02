@@ -26,7 +26,11 @@ import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (missingRequiredDatums)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
-import qualified Cardano.Ledger.Babbage.Rules as Babbage (validateFailedBabbageScripts)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage (
+  babbageMissingScripts,
+  validateFailedBabbageScripts,
+ )
+import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -64,7 +68,9 @@ import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -184,6 +190,7 @@ instance NFData (Event (EraRule "SUBUTXO" era)) => NFData (DijkstraSubUtxowEvent
 instance
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
+  , BabbageEraTxBody era
   , ConwayEraGov era
   , ConwayEraTxBody era
   , EraPlutusContext era
@@ -207,6 +214,7 @@ instance
 dijkstraSubUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
+  , BabbageEraTxBody era
   , AlonzoEraUTxO era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
@@ -216,10 +224,11 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env@(UtxoEnv _ _ certState), utxoState, tx) <- judgmentContext
+  TRC (env@(UtxoEnv _ pp certState), utxoState, tx) <- judgmentContext
   let utxo = utxosUtxo utxoState
       txBody = tx ^. bodyTxL
       witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
+      inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
 
   {- ∀[ (vk , σ) ∈ vKeySigs ] isSigned vk (txidBytes txId) σ -}
   runTestOnSignal $ Shelley.validateVerifiedWits tx
@@ -233,6 +242,11 @@ dijkstraSubUtxowTransition = do
 
   {- vKeyHashesNeeded ⊆ vKeyHashesProvided -}
   runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState utxo txBody
+
+  let scriptTxWits = Map.keysSet $ tx ^. witsTxL . scriptTxWitsL
+      refScripts = Map.keysSet $ getReferenceScripts utxo inputs
+  {- scriptHashesNeeded ⊆ mapˢ hash scriptsProvided -}
+  runTest $ Babbage.babbageMissingScripts pp scriptHashesNeeded refScripts scriptTxWits
 
   {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
   runTest $ Alonzo.missingRequiredDatums utxo tx
