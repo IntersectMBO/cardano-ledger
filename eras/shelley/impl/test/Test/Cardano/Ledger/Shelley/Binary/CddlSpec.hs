@@ -65,7 +65,7 @@ spec =
       huddleRoundTripCborSpec @(ProposedPPUpdates ShelleyEra) v "proposed_protocol_parameter_updates"
       huddleAntiCborSpec @(ProposedPPUpdates ShelleyEra) v "proposed_protocol_parameter_updates"
       huddleRoundTripCborSpec @(PParamsUpdate ShelleyEra) v "protocol_param_update"
-      huddleAntiCborSpec @(ProposedPPUpdates ShelleyEra) v "proposed_protocol_parameter_updates"
+      huddleAntiCborSpec @(PParamsUpdate ShelleyEra) v "protocol_param_update"
       huddleRoundTripAnnCborSpec @(Tx TopTx ShelleyEra) v "transaction"
       huddleRoundTripCborSpec @(Tx TopTx ShelleyEra) v "transaction"
       huddleAntiCborSpec @(Tx TopTx ShelleyEra) v "transaction"
