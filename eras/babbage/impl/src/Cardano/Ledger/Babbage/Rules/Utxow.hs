@@ -229,7 +229,7 @@ babbageMissingScripts _ sNeeded sRefs sReceived =
 {-  ∀ s ∈ (txscripts txw utxo ∩ Scriptnative), validateScript s tx   -}
 validateFailedBabbageScripts ::
   EraTx era =>
-  Tx TopTx era ->
+  Tx l era ->
   ScriptsProvided era ->
   Set ScriptHash ->
   Test (ShelleyUtxowPredFailure era)
