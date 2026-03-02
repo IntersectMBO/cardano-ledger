@@ -20,6 +20,8 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedgers (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
@@ -157,7 +159,8 @@ dijkstraSubLedgersTransition = do
     subTxs
 
 instance
-  ( EraTx era
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
@@ -186,6 +189,7 @@ instance
   , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
   , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
   , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraSUBLEDGER era) (DijkstraSUBLEDGERS era)
