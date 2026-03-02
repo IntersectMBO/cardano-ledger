@@ -25,7 +25,8 @@ import Cardano.Crypto.Hash (ByteString)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (missingRequiredDatums)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
+import qualified Cardano.Ledger.Babbage.Rules as Babbage (validateFailedBabbageScripts)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -55,6 +56,7 @@ import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (validateVerifiedWits)
+import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -62,6 +64,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (
   InspectHeapNamed (..),
   NoThunks (..),
@@ -212,9 +215,17 @@ dijkstraSubUtxowTransition ::
 dijkstraSubUtxowTransition = do
   TRC (env, utxoState, tx) <- judgmentContext
   let utxo = utxosUtxo utxoState
+      txBody = tx ^. bodyTxL
 
   {- ∀[ (vk , σ) ∈ vKeySigs ] isSigned vk (txidBytes txId) σ -}
   runTestOnSignal $ Shelley.validateVerifiedWits tx
+
+  let scriptsNeeded = getScriptsNeeded utxo txBody
+      scriptsProvided = getScriptsProvided utxo tx
+      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
+
+  {- ∀[ s ∈ p1ScriptsNeeded ] validP1Script vKeyHashesProvided txVldt s -}
+  runTest $ Babbage.validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
 
   {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
   runTest $ Alonzo.missingRequiredDatums utxo tx
