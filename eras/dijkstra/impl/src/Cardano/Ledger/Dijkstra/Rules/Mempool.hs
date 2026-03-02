@@ -85,6 +85,7 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEvent,
   ShelleyLedgerPredFailure,
   ShelleyPoolPredFailure,
+  ShelleyUtxowPredFailure,
   UtxoEnv,
  )
 import Control.DeepSeq (NFData)
@@ -285,6 +286,7 @@ instance
   , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   Embed (DijkstraLEDGER era) (DijkstraMEMPOOL era)
