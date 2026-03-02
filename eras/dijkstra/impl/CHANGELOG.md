@@ -18,7 +18,6 @@
   - `DijkstraSubGovEvent`
   - `DijkstraSubUtxowEvent`
   - `DijkstraSubUtxoEvent`
-  - `DijkstraSubUtxosEvent`
 * Add `DijkstraLedgerEvent`
 * Add `DirectDeposits` to transaction bodies at both (top and sub) levels.
   - Add `directDepositsTxBodyL` lens to the `DijkstraEraTxBody` typeclass.
@@ -32,7 +31,6 @@
   - `DijkstraSUBLEDGER`
   - `DijkstraSUBLEDGERS`
   - `DijkstraSUBPOOL`
-  - `DijkstraSUBUTXOS`
   - `DijkstraSUBUTXOW`
   - `DijkstraSUBUTXO`
     and `STS` instances for them
@@ -46,7 +44,6 @@
   - `DijkstraSubLedgersPredFailure`
   - `DijkstraSubPoolPredFailure`
   - `DijkstraSubUtxoPredFailure`
-  - `DijkstraSubUtxosPredFailure`
   - `DijkstraSubUtxowPredFailure`
 * Add `DijkstraSubLedgersFailure` to `DijkstraLedgerPredFailure`
 * Add `SubCertsEnv`
