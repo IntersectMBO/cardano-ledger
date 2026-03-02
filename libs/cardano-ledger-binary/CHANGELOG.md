@@ -19,6 +19,9 @@
 
 ### `testlib`
 
+* Replace `CuddleData` with `CTreeRoot MonoReferenced`
+* Remove `numExamples` argument from `specWithHuddle`
+* Add `huddleAntiCborSpec`
 * Remove `Arbitrary` instances for `BlockNo`, `EpochInterval`, `EpochSize`, `SystemStart`, `WithOrigin`.
   These have been moved to `cardano-slotting:testlib`.
 * Remove `genByteArray`, `genByteString`, `genLazyByteString`, `genShortByteString`.

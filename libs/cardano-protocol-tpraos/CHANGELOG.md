@@ -6,6 +6,7 @@
 
 ### `testlib`
 
+* Replace `CuddleData` with `CTreeRoot MonoReferenced`
 * Remove `cddlBlockSpec`, `praosBlockCddlSpec`
 
 ## 1.4.1.0

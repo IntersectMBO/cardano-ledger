@@ -30,7 +30,7 @@ spec :: Spec
 spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @DijkstraEra
-    specWithHuddle dijkstraCDDL 100 $ do
+    describe "Huddle" $ specWithHuddle dijkstraCDDL $ do
       huddleRoundTripCborSpec @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
       huddleRoundTripCborSpec @(AccountBalanceIntervals DijkstraEra) v "account_balance_intervals"
       huddleRoundTripArbitraryValidate @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"

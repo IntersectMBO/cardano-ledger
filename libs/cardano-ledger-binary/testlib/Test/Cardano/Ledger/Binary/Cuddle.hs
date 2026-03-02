@@ -6,16 +6,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Test.Cardano.Ledger.Binary.Cuddle (
-  CuddleData,
   huddleDecoderEquivalenceSpec,
-  specWithHuddle,
   huddleRoundTripCborSpec,
   huddleRoundTripAnnCborSpec,
+  huddleAntiCborSpec,
   writeSpec,
   huddleRoundTripGenValidate,
   huddleRoundTripArbitraryValidate,
+  specWithHuddle,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -23,36 +24,50 @@ import Cardano.Ledger.Binary (
   DecCBOR,
   EncCBOR,
   Version,
+  decodeFull',
   decodeFullAnnotator,
   decodeFullDecoder,
+  encodeTerm,
   serialize',
   toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Decoding (label)
-import qualified Codec.CBOR.Cuddle.CBOR.Gen as Cuddle
-import Codec.CBOR.Cuddle.CBOR.Validator (CBORTermResult (..), CDDLResult (..), validateCBOR)
+import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
+import Codec.CBOR.Cuddle.CBOR.Validator (validateCBOR)
+import Codec.CBOR.Cuddle.CBOR.Validator.Trace (
+  Evidenced (..),
+  SValidity (..),
+  TraceOptions (..),
+  ValidationTrace,
+  defaultTraceOptions,
+  isValid,
+  prettyValidationTrace,
+ )
 import Codec.CBOR.Cuddle.CDDL (Name (..))
-import qualified Codec.CBOR.Cuddle.CDDL as Cuddle
-import qualified Codec.CBOR.Cuddle.CDDL.CTree as Cuddle
+import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
+import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
 import Codec.CBOR.Cuddle.IndexMappable
 import Codec.CBOR.Cuddle.Pretty (PrettyStage)
 import qualified Codec.CBOR.Encoding as CBOR
+import Codec.CBOR.Pretty (prettyHexEnc)
 import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
+import qualified Codec.CBOR.Write as C
 import qualified Codec.CBOR.Write as CBOR
+import Control.Monad (unless)
 import Data.Data (Proxy (..))
-import Data.Foldable (Foldable (..), traverse_)
-import Data.List (unfoldr)
+import Data.Either (isLeft)
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
 import GHC.Stack (HasCallStack)
-import Prettyprinter (Pretty (pretty), vsep)
+import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)
+import qualified Prettyprinter.Render.Terminal as Ansi
 import Prettyprinter.Render.Text (hPutDoc)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
 import System.IO (IOMode (..), hPutStrLn, withFile)
+import Test.AntiGen (runAntiGen, tryZapAntiGen)
 import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
 import Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (RoundTripFailure),
@@ -71,26 +86,15 @@ import Test.Hspec (
   it,
   shouldBe,
  )
-import Test.Hspec.Core.Spec (Example (..), paramsQuickCheckArgs)
-import Test.QuickCheck (Arbitrary (..), Args (replay), Gen, Testable (..), forAll)
-import Test.QuickCheck.Random (QCGen, mkQCGen)
-import Text.Pretty.Simple (pShow)
-
-data CuddleData = CuddleData
-  { cddl :: !(Cuddle.CTreeRoot Cuddle.MonoReferenced)
-  , numExamples :: !Int
-  }
-
-newtype Seeded a = Seeded
-  { runSeeded :: QCGen -> a
-  }
-
-instance Example (a -> Seeded Expectation) where
-  type Arg (a -> Seeded Expectation) = a
-  evaluateExample e params hook =
-    let qcGen = maybe (mkQCGen 0) fst (replay $ paramsQuickCheckArgs params)
-        example a = runSeeded (e a) qcGen
-     in evaluateExample example params hook
+import Test.QuickCheck (
+  Arbitrary (..),
+  Gen,
+  Testable (..),
+  counterexample,
+  discard,
+  forAll,
+ )
+import Test.QuickCheck.Property (Property)
 
 huddleDecoderEquivalenceSpec ::
   forall a.
@@ -99,15 +103,14 @@ huddleDecoderEquivalenceSpec ::
   Version ->
   -- | Name of the CDDL rule to test
   T.Text ->
-  SpecWith CuddleData
+  SpecWith (CTreeRoot MonoReferenced)
 huddleDecoderEquivalenceSpec version ruleName =
   let lbl = label $ Proxy @a
-   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
-        \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName) $ \term -> do
-            let encoding = CBOR.encodeTerm term
-                initCborBytes = CBOR.toLazyByteString encoding
-            decoderEquivalenceExpectation @a version initCborBytes
+   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \(mapIndex -> cddl) -> property $ do
+        term <- runAntiGen . generateFromName cddl $ Name ruleName
+        let encoding = CBOR.encodeTerm term
+            initCborBytes = CBOR.toLazyByteString encoding
+        pure $ decoderEquivalenceExpectation @a version initCborBytes
 
 huddleRoundTripCborSpec ::
   forall a.
@@ -116,15 +119,14 @@ huddleRoundTripCborSpec ::
   Version ->
   -- | Name of the CDDL rule to test
   T.Text ->
-  SpecWith CuddleData
+  SpecWith (CTreeRoot MonoReferenced)
 huddleRoundTripCborSpec version ruleName =
   let lbl = label $ Proxy @a
       trip = cborTrip @a
-   in describe "Generate bytestring from CDDL and decode/encode" $
-        it (T.unpack ruleName <> ": " <> T.unpack lbl) $
-          \cddlData ->
-            withGenTerm cddlData (Cuddle.Name ruleName) $
-              roundTripExample lbl version version trip
+   in describe "Generate bytestring from CDDL and decode -> encode" $
+        it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \(mapIndex -> cddl) -> property $ do
+          term <- runAntiGen . generateFromName cddl $ Name ruleName
+          pure $ roundTripExample lbl version version trip term
 
 huddleRoundTripAnnCborSpec ::
   forall a.
@@ -133,35 +135,58 @@ huddleRoundTripAnnCborSpec ::
   Version ->
   -- | Name of the CDDL rule to test
   T.Text ->
-  SpecWith CuddleData
+  SpecWith (CTreeRoot MonoReferenced)
 huddleRoundTripAnnCborSpec version ruleName =
   let lbl = label $ Proxy @(Annotator a)
       trip = cborTrip @a
-   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
-        \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName) $
-            roundTripAnnExample lbl version version trip
+   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \(mapIndex -> cddl) -> property $ do
+        term <- runAntiGen . generateFromName cddl $ Name ruleName
+        pure $ roundTripAnnExample lbl version version trip term
 
-specWithHuddle :: Cuddle.Huddle -> Int -> SpecWith CuddleData -> Spec
-specWithHuddle h numExamples =
+huddleAntiCborSpec ::
+  forall a.
+  DecCBOR a =>
+  Version ->
+  T.Text ->
+  SpecWith (CTreeRoot MonoReferenced)
+huddleAntiCborSpec version ruleName =
+  let lbl = label $ Proxy @a
+   in describe "Decoding fails when term is zapped"
+        . it (T.unpack ruleName <> ": " <> T.unpack lbl)
+        $ \cddl -> property @(Gen Property) $ do
+          mTerm <- tryZapAntiGen 1 . generateFromName (mapIndex cddl) $ Name ruleName
+          case mTerm of
+            Just term -> do
+              let
+                encoding = toPlainEncoding version $ encodeTerm term
+                bs = C.toStrictByteString encoding
+              case validateCBOR bs (Name ruleName) (mapIndex cddl) of
+                Evidenced SInvalid trc -> do
+                  let
+                    errMsg =
+                      unlines
+                        [ "Generated term:"
+                        , prettyHexEnc encoding
+                        , mempty
+                        , "Validation result:"
+                        , T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
+                            prettyValidationTrace (defaultTraceOptions {toFoldValid = True}) trc
+                        , mempty
+                        , "Decoding succeeded, expected failure"
+                        ]
+                  pure . counterexample errMsg . isLeft $ decodeFull' @a version bs
+                Evidenced SValid _ -> discard
+            Nothing -> discard
+
+specWithHuddle :: Cuddle.Huddle -> SpecWith (CTreeRoot MonoReferenced) -> Spec
+specWithHuddle h =
   beforeAll $
     let cddl = Cuddle.toCDDL h
         rCddl = Cuddle.fullResolveCDDL (mapCDDLDropExt cddl)
      in case rCddl of
           Right ct ->
-            pure $
-              CuddleData
-                { cddl = ct
-                , numExamples = numExamples
-                }
+            pure ct
           Left nrf -> error $ show nrf
-
-withGenTerm :: CuddleData -> Cuddle.Name -> (CBOR.Term -> Expectation) -> Seeded Expectation
-withGenTerm cd n withTerm = Seeded $ \gen ->
-  let terms =
-        take (numExamples cd) $
-          unfoldr (Just . Cuddle.generateCBORTerm' (cddl cd) n) gen
-   in traverse_ withTerm terms
 
 -- | Verify that random data generated is:
 --
@@ -238,40 +263,25 @@ cddlFailure encoding err =
       , "Generated diag: " <> CBOR.prettyHexEnc encoding
       ]
 
+showValidationTrace :: Evidenced ValidationTrace -> String
+showValidationTrace (Evidenced _ t) =
+  T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
+    prettyValidationTrace defaultTraceOptions t
+
 huddleRoundTripGenValidate ::
-  forall a. (DecCBOR a, Show a, EncCBOR a) => Gen a -> Version -> T.Text -> SpecWith CuddleData
+  forall a.
+  (DecCBOR a, Show a, EncCBOR a) => Gen a -> Version -> T.Text -> SpecWith (CTreeRoot MonoReferenced)
 huddleRoundTripGenValidate gen version ruleName =
   let lbl = label $ Proxy @a
    in describe "Encode an arbitrary value and check against CDDL"
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
-        $ \CuddleData {cddl} -> property . forAll gen $ \(val :: a) -> do
-          let
-            bs = serialize' version val
-            res = validateCBOR bs (Name ruleName) (mapIndex cddl)
-          case res of
-            CBORTermResult _ (Valid _) -> pure ()
-            CBORTermResult term err ->
-              expectationFailure $
-                "CBOR Validation failed\nTerm:\n" <> LT.unpack (pShow term) <> "\nError:\n" <> show errMsg
-              where
-                errMsg = case err of
-                  ChoiceFail rule _ alternativeResults ->
-                    vsep $
-                      [ "ChoiceFail when trying rule:"
-                      , pretty $ pShow rule
-                      , "====="
-                      ]
-                        <> fmap prettyAlternative (toList alternativeResults)
-                    where
-                      prettyAlternative (r, s) =
-                        vsep
-                          [ "Tried rule"
-                          , pretty $ pShow r
-                          , "Result:"
-                          , pretty $ pShow s
-                          , "====="
-                          ]
-                  _ -> pretty $ pShow err
+        $ \cddl -> property . forAll gen $
+          \(val :: a) -> do
+            let
+              bs = serialize' version val
+              res = validateCBOR bs (Name ruleName) (mapIndex cddl)
+            unless (isValid res) . expectationFailure $
+              "CBOR Validation failed\nError:\n" <> showValidationTrace res
 
 huddleRoundTripArbitraryValidate ::
   forall a.
@@ -282,7 +292,7 @@ huddleRoundTripArbitraryValidate ::
   ) =>
   Version ->
   T.Text ->
-  SpecWith CuddleData
+  SpecWith (CTreeRoot MonoReferenced)
 huddleRoundTripArbitraryValidate = huddleRoundTripGenValidate $ arbitrary @a
 
 --------------------------------------------------------------------------------
