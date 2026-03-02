@@ -94,7 +94,7 @@ import NoThunks.Class (
 
 -- ================================
 
--- | Predicate failure type for the Conway Era
+-- | Predicate failure type for the Dijkstra Era
 data DijkstraUtxowPredFailure era
   = UtxoFailure (PredicateFailure (EraRule "UTXO" era))
   | InvalidWitnessesUTXOW (NonEmpty (VKey Witness))

@@ -23,6 +23,9 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
 
 import Cardano.Crypto.Hash (ByteString)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (missingRequiredDatums)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -31,7 +34,11 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (ConwayUtxowPredFailure, UtxoEnv)
+import Cardano.Ledger.Conway.Rules (
+  ConwayUtxowPredFailure,
+  UtxoEnv,
+  alonzoToConwayUtxowPredFailure,
+ )
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXOW,
@@ -43,7 +50,8 @@ import Cardano.Ledger.Dijkstra.Rules.Utxow (
   conwayToDijkstraUtxowPredFailure,
  )
 import Cardano.Ledger.Keys (VKey)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState)
+import Cardano.Ledger.Rules.ValidationMode
+import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosUtxo)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -143,6 +151,12 @@ instance InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure DijkstraEra where
 instance InjectRuleFailure "SUBUTXOW" ConwayUtxowPredFailure DijkstraEra where
   injectFailure = dijkstraUtxowToDijkstraSubUtxowPredFailure . conwayToDijkstraUtxowPredFailure
 
+instance InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxowToDijkstraSubUtxowPredFailure
+      . conwayToDijkstraUtxowPredFailure
+      . alonzoToConwayUtxowPredFailure
+
 instance InjectRuleEvent "SUBUTXOW" DijkstraSubUtxowEvent DijkstraEra
 
 newtype DijkstraSubUtxowEvent era = SubUtxo (Event (EraRule "SUBUTXO" era))
@@ -153,12 +167,15 @@ deriving instance Eq (Event (EraRule "SUBUTXO" era)) => Eq (DijkstraSubUtxowEven
 instance NFData (Event (EraRule "SUBUTXO" era)) => NFData (DijkstraSubUtxowEvent era)
 
 instance
-  ( ConwayEraGov era
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , ConwayEraGov era
   , ConwayEraTxBody era
   , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
+  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   ) =>
   STS (DijkstraSUBUTXOW era)
   where
@@ -173,14 +190,22 @@ instance
 
 dijkstraSubUtxowTransition ::
   forall era.
-  ( EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
+  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env, state, signal) <- judgmentContext
-  trans @(EraRule "SUBUTXO" era) $ TRC (env, state, signal)
+  TRC (env, utxoState, tx) <- judgmentContext
+  let utxo = utxosUtxo utxoState
+
+  {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
+  runTest $ Alonzo.missingRequiredDatums utxo tx
+
+  trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
 
 instance
   ( ConwayEraGov era
