@@ -24,9 +24,15 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
 import Cardano.Crypto.Hash (ByteString)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (missingRequiredDatums)
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
+  checkScriptIntegrityHash,
+  missingRequiredDatums,
+ )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
-import qualified Cardano.Ledger.Babbage.Rules as Babbage (validateFailedBabbageScripts)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage (
+  validateFailedBabbageScripts,
+ )
+import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -240,6 +246,9 @@ dijkstraSubUtxowTransition = do
 
   {- txADhash ≡ map hash txAuxData -}
   runTestOnSignal $ Shelley.validateMetadata pp tx
+
+  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptHashesNeeded
+  runTest $ Alonzo.checkScriptIntegrityHash tx pp scriptIntegrity
 
   trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
 
