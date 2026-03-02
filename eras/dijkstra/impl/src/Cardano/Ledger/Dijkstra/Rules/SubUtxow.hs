@@ -60,6 +60,7 @@ import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
+  validateMetadata,
   validateNeededWitnesses,
   validateVerifiedWits,
  )
@@ -250,6 +251,9 @@ dijkstraSubUtxowTransition = do
 
   {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
   runTest $ Alonzo.missingRequiredDatums utxo tx
+
+  {- txADhash ≡ map hash txAuxData -}
+  runTestOnSignal $ Shelley.validateMetadata pp tx
 
   trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
 
