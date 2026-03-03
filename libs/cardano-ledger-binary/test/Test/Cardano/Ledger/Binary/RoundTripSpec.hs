@@ -5,6 +5,7 @@
 
 module Test.Cardano.Ledger.Binary.RoundTripSpec (spec) where
 
+import Cardano.Base.IP (IPv4, IPv6)
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, SignKeyDSIGN, SignedDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
@@ -55,7 +56,6 @@ import Control.Monad (when)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Fixed (Nano, Pico)
 import Data.Foldable as F
-import Data.IP (IPv4, IPv6)
 import Data.Int
 import qualified Data.Map.Strict as Map
 import Data.Maybe
