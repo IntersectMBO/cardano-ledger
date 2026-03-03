@@ -2,6 +2,10 @@
 
 ## 1.19.0.0
 
+* In `SnapShot`, subsume `ssDelegations` into `ssActiveStake`.
+  - Add `ActiveStake`, `sumAllActiveStake`, `sumCredentialsCompactActiveStake`.
+  - Add `StakeWithDelegation` for the range of `ActiveStake`.
+  - Remove lenses: `ssStakeDistrL`, `ssDelegationsL`.
 * Add `mkSnapShot` and `resetStakePoolsSnapShot`
 * Remove `ssPoolParams` from `Snapshot`  and `ssPoolParamsL`
 * Rename `ssStake` to `ssActiveStake`.
@@ -140,6 +144,7 @@
 
 ### `testlib`
 
+* Add `mkActiveStake` to make an `ActiveStake` combining two maps (stake and delegation)
 * Add `mkSnapShotFromStakePoolParams` and `resetStakePoolSnapShotFromPoolParams`
 * Stop re-exporting QuickCheck's `NonZero` as it conflcicts with our internal type.
 * Rename `RewardAccount` to `AccountAddress`

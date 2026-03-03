@@ -242,6 +242,10 @@ instance ToExpr StakePoolSnapShot
 
 deriving newtype instance ToExpr Stake
 
+instance ToExpr StakeWithDelegation
+
+deriving newtype instance ToExpr ActiveStake
+
 instance ToExpr (PState era)
 
 instance ToExpr (Accounts era) => ToExpr (DState era)

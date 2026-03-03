@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -95,6 +96,7 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
 
 instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxCert _ _ = pure . transTxCert
@@ -294,18 +296,13 @@ transAssetName :: AssetName -> PV1.TokenName
 transAssetName (AssetName bs) = PV1.TokenName (PV1.toBuiltin (SBS.fromShort bs))
 
 transMultiAsset :: MultiAsset -> PV1.Value
-transMultiAsset ma = transMultiAssetInternal ma mempty
-
-transMultiAssetInternal :: MultiAsset -> PV1.Value -> PV1.Value
-transMultiAssetInternal (MultiAsset m) initAcc = Map.foldlWithKey' accum1 initAcc m
+transMultiAsset (MultiAsset m) = PV1.Value (toAssocMap transPolicyID (toAssocMap transAssetName id) m)
   where
-    accum1 ans sym mp2 = Map.foldlWithKey' accum2 ans mp2
+    toAssocMap :: (k -> pk) -> (v -> pv) -> Map.Map k v -> PV2.Map pk pv
+    toAssocMap transKey transVal =
+      PV2.unsafeFromList . Map.foldrWithKey' accWithKey []
       where
-        accum2 ans2 tok quantity =
-          PV1.unionWith
-            (+)
-            ans2
-            (PV1.singleton (transPolicyID sym) (transAssetName tok) quantity)
+        accWithKey key value !acc = (transKey key, transVal value) : acc
 
 -- | Hysterical raisins:
 --
@@ -314,7 +311,7 @@ transMultiAssetInternal (MultiAsset m) initAcc = Map.foldlWithKey' accum1 initAc
 -- makes no sense). However, if we don't preserve previous translation, scripts that
 -- previously succeeded will fail.
 transMintValue :: MultiAsset -> PV1.Value
-transMintValue m = transMultiAssetInternal m (transCoinToValue zero)
+transMintValue m = transMultiAsset m <> transCoinToValue zero
 
 transValue :: MaryValue -> PV1.Value
 transValue (MaryValue c m) = transCoinToValue c <> transMultiAsset m
