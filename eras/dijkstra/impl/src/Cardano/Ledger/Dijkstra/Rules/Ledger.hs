@@ -497,6 +497,7 @@ instance
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   Embed (DijkstraLEDGER era) (ShelleyLEDGERS era)
   where
@@ -611,6 +612,7 @@ instance
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   Embed (DijkstraSUBLEDGERS era) (DijkstraLEDGER era)
   where
