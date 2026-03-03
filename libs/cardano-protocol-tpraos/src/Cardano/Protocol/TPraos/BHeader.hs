@@ -322,6 +322,11 @@ assertBoundedNatural maxVal val =
     then UnsafeBoundedNatural maxVal val
     else error $ show val <> " is greater than max value " <> show maxVal
 
+{- Note [Background on leadership checks]
+See docs/LeadershipCheck.md for detailed explanation of the Praos leadership
+lottery and VRF-based slot leader election mechanism.
+-}
+
 -- | Check that the certified VRF output, when used as a natural, is valid for
 -- being slot leader.
 checkLeaderValue ::
