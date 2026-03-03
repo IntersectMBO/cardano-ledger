@@ -26,9 +26,10 @@ import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   checkScriptIntegrityHash,
+  hasExactSetOfRedeemers,
   missingRequiredDatums,
  )
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   validateFailedBabbageScripts,
  )
@@ -199,6 +200,7 @@ instance
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   STS (DijkstraSUBUTXOW era)
   where
@@ -220,6 +222,7 @@ dijkstraSubUtxowTransition ::
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
@@ -249,6 +252,8 @@ dijkstraSubUtxowTransition = do
 
   let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptHashesNeeded
   runTest $ Alonzo.checkScriptIntegrityHash tx pp scriptIntegrity
+
+  runTest $ Alonzo.hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded
 
   trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
 
