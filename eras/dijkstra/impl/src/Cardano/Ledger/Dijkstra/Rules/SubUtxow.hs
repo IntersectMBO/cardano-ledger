@@ -30,9 +30,11 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   missingRequiredDatums,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   babbageMissingScripts,
   validateFailedBabbageScripts,
+  validateScriptsWellFormedTxOuts,
  )
 import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
@@ -48,6 +50,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxowPredFailure,
   UtxoEnv (..),
   alonzoToConwayUtxowPredFailure,
+  babbageToConwayUtxowPredFailure,
   shelleyToConwayUtxowPredFailure,
  )
 import Cardano.Ledger.Dijkstra.Era (
@@ -172,6 +175,12 @@ instance InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure DijkstraEra where
 instance InjectRuleFailure "SUBUTXOW" ConwayUtxowPredFailure DijkstraEra where
   injectFailure = dijkstraUtxowToDijkstraSubUtxowPredFailure . conwayToDijkstraUtxowPredFailure
 
+instance InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxowToDijkstraSubUtxowPredFailure
+      . conwayToDijkstraUtxowPredFailure
+      . babbageToConwayUtxowPredFailure
+
 instance InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure DijkstraEra where
   injectFailure =
     dijkstraUtxowToDijkstraSubUtxowPredFailure
@@ -205,6 +214,7 @@ instance
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   STS (DijkstraSUBUTXOW era)
@@ -228,6 +238,7 @@ dijkstraSubUtxowTransition ::
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
@@ -266,6 +277,12 @@ dijkstraSubUtxowTransition = do
   runTest $ Alonzo.checkScriptIntegrityHash tx pp scriptIntegrity
 
   runTest $ Alonzo.hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded
+
+  runTest $
+    Babbage.validateScriptsWellFormedTxOuts
+      pp
+      (tx ^. witsTxL . scriptTxWitsL)
+      (tx ^. bodyTxL . outputsTxBodyL)
 
   trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
 
