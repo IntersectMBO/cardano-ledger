@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Change `decodeIPv4`, `decodeIPv6`, `encodeIPv4`, `encodeIPv6`, `ipv4ToBytes`, `ipv6ToBytes` to work on `Cardano.Base.IP.IPv4/IPv6`
 * Remove default implementation for `DecCBOR` class
 * Add `Uniform`, `UniformRange` instances and fix `Random` instance
 * Change `Version` from `Word64` to `Word32`
@@ -20,6 +21,7 @@
 
 ### `testlib`
 
+* Remove `Arbitrary` and `ToExpr` instances for `IPv4` and `IPv6` (now in `cardano-base:testlib`)
 * Remove `Arbitrary` instances for `BlockNo`, `EpochInterval`, `EpochSize`, `SystemStart`, `WithOrigin`.
   These have been moved to `cardano-slotting:testlib`.
 * Remove `genByteArray`, `genByteString`, `genLazyByteString`, `genShortByteString`.

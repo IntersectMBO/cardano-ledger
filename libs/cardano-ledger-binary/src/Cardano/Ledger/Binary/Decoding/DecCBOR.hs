@@ -63,8 +63,8 @@ import Data.ByteString.Short (ShortByteString(SBS))
 #else
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
+import Cardano.Base.IP (IPv4, IPv6)
 import Data.Fixed (Fixed (..))
-import Data.IP (IPv4, IPv6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
 import Data.List.NonEmpty (NonEmpty)

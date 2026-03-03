@@ -69,6 +69,7 @@ module Cardano.Ledger.State.StakePool (
   sppVrfL,
 ) where
 
+import Cardano.Base.IP (IPv4, IPv6)
 import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   DnsName,
@@ -118,7 +119,6 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
 import Data.Default (Default (..))
 import Data.Foldable (asum)
-import Data.IP (IPv4, IPv6)
 import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)

@@ -14,6 +14,7 @@
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding (tests) where
 
+import Cardano.Base.IP (toIPv4)
 import Cardano.Crypto.DSIGN (SignedDSIGN)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.KES (SignedKES, unsoundPureSignedKES)
@@ -122,7 +123,6 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.Coerce (coerce)
-import Data.IP (toIPv4)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
 import Data.MemPack.Buffer (byteArrayFromShortByteString)
