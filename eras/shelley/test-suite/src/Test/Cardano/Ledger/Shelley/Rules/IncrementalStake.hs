@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
   aggregateUtxoCoinByCredential,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.BaseTypes (Globals, unNonZero)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -38,6 +38,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.VMap as VMap
 import Lens.Micro hiding (ix)
+import Test.Cardano.Ledger.Core.Utils (mkActiveStake)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -184,11 +185,11 @@ checkIncrementalStake es =
       )
       (stake === snapShot)
 
-tersediffincremental :: String -> Stake -> Stake -> String
-tersediffincremental message (Stake a) (Stake c) =
+tersediffincremental :: String -> ActiveStake -> ActiveStake -> String
+tersediffincremental message (ActiveStake a) (ActiveStake c) =
   tersemapdiffs (message ++ " " ++ "hashes") (mp a) (mp c)
   where
-    mp = Map.map fromCompact . VMap.toMap
+    mp = Map.map (fromCompact . unNonZero . swdStake) . VMap.toMap
 
 -- | Compute the current Stake Distribution. This was called at the Epoch boundary in the Snap Rule.
 --   Now it is called in the tests to see that its incremental analog 'incrementalStakeDistr' agrees.
@@ -201,9 +202,9 @@ stakeDistr ::
   SnapShot
 stakeDistr u ds PState {psStakePools} =
   resetStakePoolsSnapShot (VMap.fromMap psStakePools) $
-    mkSnapShot activeStake (VMap.fromMap delegs) VMap.empty
+    mkSnapShot activeStake' VMap.empty
   where
-    activeStake = Stake $ VMap.fromMap (stakeRelation `Map.intersection` activeDelegs)
+    activeStake' = mkActiveStake (Map.map fromCompact stakeRelation) activeDelegs
     accountsMap = ds ^. accountsL . accountsMapL
     rewards' :: Map.Map (Credential Staking) (CompactForm Coin)
     rewards' = Map.map (^. balanceAccountStateL) accountsMap

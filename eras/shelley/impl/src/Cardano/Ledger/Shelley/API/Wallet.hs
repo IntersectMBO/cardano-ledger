@@ -228,12 +228,14 @@ getNonMyopicMemberRewards globals ss = Map.fromSet nmmRewards
     totalStakeCoin@(Coin totalStake) = circulation es maxSupply
     toShare (Coin x) = StakeShare $ x %? totalStake
     memShare (Right cred) =
-      toShare $ maybe mempty fromCompact $ VMap.lookup cred (EB.unStake stake)
+      toShare $
+        maybe mempty (fromCompact . unNonZero . EB.swdStake) $
+          VMap.lookup cred (EB.unActiveStake activeStake)
     memShare (Left coin) = toShare coin
     es = nesEs ss
     pp = es ^. curPParamsEpochStateL
     NonMyopic {likelihoodsNM = ls, rewardPotNM = rPot} = esNonMyopic es
-    EB.SnapShot stake _ _ stakePoolsSnapShot = currentSnapshot ss
+    EB.SnapShot activeStake _ stakePoolsSnapShot = currentSnapshot ss
     calcNMMRewards t poolId spss
       | spssPledge <= spssSelfDelegatedOwnersStake =
           calcNonMyopicMemberReward pp rPot poolId spssCost spssMargin s sigma t topPools hitRateEst

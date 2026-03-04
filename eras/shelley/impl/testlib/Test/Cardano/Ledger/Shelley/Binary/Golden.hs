@@ -31,7 +31,6 @@ import Cardano.Ledger.TxIn (TxIn)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-import qualified Data.VMap as VMap
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Binary.Golden
 import Test.Cardano.Ledger.Binary.Plain.Golden
@@ -126,9 +125,8 @@ goldenNewEpochStateExpectation
           me = Em [Ev ver k <> Ev ver v | (k, v) <- Map.toList m]
       snapShotEnc SnapShot {..} =
         Em
-          [ E (TkListLen 3)
-          , mapEnc (VMap.toMap (unStake ssActiveStake))
-          , Ev ver ssDelegations
+          [ E (TkListLen 2)
+          , Ev ver ssActiveStake
           , Ev ver ssStakePoolsSnapShot
           ]
 

@@ -13,7 +13,6 @@ import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.State.Query
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
@@ -480,8 +479,7 @@ queryStakeSnapshotsSpec =
         allPoolIds
           | version >= natVersion @11 = allPoolIdsFiltered getPoolIdsWithNonZeroStake
           | otherwise = allPoolIdsFiltered getPoolIdsWithNonZeroDelegators
-        nonZeroTotal s =
-          nonZeroOr (VMap.foldMap fromCompact (unStake (ssActiveStake s))) (knownNonZeroCoin @1)
+        nonZeroTotal = ssTotalActiveStake
         nonZeroSubTotal ssWhich =
           nonZeroOr (foldMap ssWhich (ssStakeSnapshots result)) (knownNonZeroCoin @1)
       subPoolIds <- uniformSubSet Nothing allPoolIds QC

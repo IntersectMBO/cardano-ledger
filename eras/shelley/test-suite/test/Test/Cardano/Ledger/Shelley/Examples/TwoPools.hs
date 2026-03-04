@@ -102,6 +102,7 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Core.Arbitrary (mkSnapShotFromStakePoolParams)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
+import Test.Cardano.Ledger.Core.Utils (mkActiveStake)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..), testCHAINExample)
@@ -115,7 +116,7 @@ import Test.Cardano.Ledger.Shelley.Examples.Init (
   nonce0,
   ppEx,
  )
-import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser, mkStake)
+import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (..),
   NatNonce (..),
@@ -314,21 +315,23 @@ blockEx3 =
 snapEx3 :: SnapShot
 snapEx3 =
   let
-    stake =
-      mkStake
-        [ (Cast.aliceSHK, aliceCoinEx1)
-        , (Cast.bobSHK, bobInitCoin)
-        , (Cast.carlSHK, carlInitCoin)
-        ]
-    delegations =
-      VMap.fromList
-        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.bobSHK, aikColdKeyHash Cast.bobPoolKeys)
-        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
-        ]
+    activeStake =
+      mkActiveStake
+        ( Map.fromList
+            [ (Cast.aliceSHK, aliceCoinEx1)
+            , (Cast.bobSHK, bobInitCoin)
+            , (Cast.carlSHK, carlInitCoin)
+            ]
+        )
+        ( Map.fromList
+            [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
+            , (Cast.bobSHK, aikColdKeyHash Cast.bobPoolKeys)
+            , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
+            ]
+        )
     poolParams = [aliceStakePoolParams', bobStakePoolParams']
    in
-    mkSnapShotFromStakePoolParams stake delegations poolParams
+    mkSnapShotFromStakePoolParams activeStake poolParams
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =

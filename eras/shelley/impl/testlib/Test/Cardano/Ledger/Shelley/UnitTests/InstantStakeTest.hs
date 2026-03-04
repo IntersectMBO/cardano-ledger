@@ -7,6 +7,7 @@
 
 module Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest (spec) where
 
+import Cardano.Ledger.BaseTypes (unNonZero)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (CompactForm, fromCompact)
 import Cardano.Ledger.Core
@@ -97,7 +98,7 @@ instantStakeIncludesRewards = do
     instantStake = addInstantStake utxo1 mempty
   let snapShot =
         snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL)
-      computedStakeDistr = VMap.toMap (unStake (ssActiveStake snapShot))
+      computedStakeDistr = Map.map (unNonZero . swdStake) $ VMap.toMap $ unActiveStake $ ssActiveStake snapShot
 
       expectedStakeDistr :: Map (Credential Staking) (CompactForm Coin)
       expectedStakeDistr =

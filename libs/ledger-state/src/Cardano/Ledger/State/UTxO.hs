@@ -247,9 +247,9 @@ countStakePoolSnapShotStats poolId StakePoolSnapShot {..} =
 countSnapShotStat :: SnapShot -> SnapShotStats
 countSnapShotStat SnapShot {..} =
   SnapShotStats
-    { sssStake = statMapKeys (VMap.toMap (unStake ssActiveStake))
-    , sssDelegationCredential = statMapKeys (VMap.toMap ssDelegations)
-    , sssDelegationStakePool = statFoldable (VMap.toMap ssDelegations)
+    { sssStake = statMapKeys activeStakeMap
+    , sssDelegationCredential = statMapKeys activeStakeMap
+    , sssDelegationStakePool = statFoldable $ Map.map swdDelegation activeStakeMap
     , sssPoolParams = statMapKeys (VMap.toMap ssStakePoolsSnapShot)
     , sssPoolParamsStats =
         VMap.foldlWithKey
@@ -259,6 +259,8 @@ countSnapShotStat SnapShot {..} =
           mempty
           ssStakePoolsSnapShot
     }
+  where
+    activeStakeMap = VMap.toMap $ unActiveStake ssActiveStake
 
 data PoolParamsStats = PoolParamsStats
   { ppsPoolId :: !(Stat (KeyHash StakePool))

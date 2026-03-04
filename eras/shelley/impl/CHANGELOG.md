@@ -2,6 +2,9 @@
 
 ## 1.18.0.0
 
+* Subsume delegations into `ActiveStake`.
+  - `epochStateStakeDistrL` returns `ActiveStake`
+  - Remove `fvDelegs` from `FreeVars`.
 * Remove `ssPoolParamsL`
 * Add `Generic` instance for `ApplyTxError`
 * Change `updateNonMyopic`, `likelihoodsNM`, `rewLikelihoods` and `fvPoolRewardInfo` to use `VMap`
