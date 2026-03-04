@@ -19,6 +19,7 @@
 module Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUTXOW,
   DijkstraUtxowPredFailure (..),
+  conwayToDijkstraUtxowPredFailure,
 ) where
 
 import Cardano.Crypto.Hash (ByteString)

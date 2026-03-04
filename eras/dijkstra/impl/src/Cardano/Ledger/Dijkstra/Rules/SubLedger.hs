@@ -32,15 +32,19 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
+  ConwayCertsPredFailure,
   ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
   ConwayGovEvent,
   ConwayGovPredFailure,
+  ConwayLedgerPredFailure (..),
   GovEnv (..),
   GovSignal (..),
   gsCertificates,
   gsProposalProcedures,
   gsVotingProcedures,
+  validateTreasuryValue,
+  validateWithdrawalsDelegated,
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
@@ -55,13 +59,16 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBUTXO,
   DijkstraSUBUTXOW,
  )
+import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (DijkstraSubCertsPredFailure (..), SubCertsEnv (..))
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovEvent, DijkstraSubGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
+import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -88,7 +95,6 @@ import Control.State.Transition.Extended (
   transitionRules,
  )
 import Data.List.NonEmpty (NonEmpty)
-import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -100,9 +106,6 @@ data DijkstraSubLedgerPredFailure era
   | SubGovFailure (PredicateFailure (EraRule "SUBGOV" era))
   | SubWdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
   | SubTreasuryValueMismatch (Mismatch RelEQ Coin)
-  | SubTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
-  | SubWithdrawalsMissingAccounts Withdrawals
-  | SubIncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   deriving (Generic)
 
 deriving stock instance
@@ -147,6 +150,9 @@ instance InjectRuleFailure "SUBLEDGER" DijkstraSubUtxowPredFailure DijkstraEra w
 
 instance InjectRuleFailure "SUBLEDGER" DijkstraSubCertsPredFailure DijkstraEra where
   injectFailure = SubCertsFailure
+
+instance InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure DijkstraEra where
+  injectFailure = conwayToDijkstraSubLedgerPredFailure
 
 data DijkstraSubLedgerEvent era
   = SubCertsEvent (Event (EraRule "SUBCERTS" era))
@@ -195,6 +201,7 @@ instance
   , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
   , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
+  , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   STS (DijkstraSUBLEDGER era)
@@ -224,6 +231,7 @@ dijkstraSubLedgersTransition ::
   , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
   , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
   , Embed (EraRule "SUBUTXOW" era) (DijkstraSUBLEDGER era)
+  , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
   , InjectRuleEvent "SUBPOOL" PoolEvent era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
@@ -238,22 +246,28 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( LedgerEnv slot mbCurEpochNo _ pp _
-      , ledgerState
+    ( LedgerEnv slot mbCurEpochNo _ pp chainAccountState
+      , ledgerState@(LedgerState utxoState certState)
       , tx
       ) <-
     judgmentContext
 
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
   let txBody = tx ^. bodyTxL
-  let govState = ledgerState ^. lsUTxOStateL . utxosGovStateL
+  let govState = utxoState ^. utxosGovStateL
   let committee = govState ^. committeeGovStateL
   let proposals = govState ^. proposalsGovStateL
+      accounts = certState ^. certDStateL . accountsL
+
+  runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+
+  runTest $ validateWithdrawalsDelegated accounts tx
+
   certStateAfterSubCerts <-
     trans @(EraRule "SUBCERTS" era) $
       TRC
         ( SubCertsEnv tx pp curEpochNo committee (proposalsWithPurpose grCommitteeL proposals)
-        , ledgerState ^. lsCertStateL
+        , certState
         , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
         )
   let govEnv =
@@ -281,8 +295,8 @@ dijkstraSubLedgersTransition = do
   utxoStateAfterSubUtxow <-
     trans @(EraRule "SUBUTXOW" era) $
       TRC
-        ( UtxoEnv @era slot pp (ledgerState ^. lsCertStateL)
-        , ledgerState ^. lsUTxOStateL
+        ( UtxoEnv @era slot pp certState
+        , utxoState
         , tx
         )
   pure $
@@ -359,9 +373,6 @@ instance
       SubGovFailure x -> Sum (SubGovFailure @era) 3 !> To x
       SubWdrlNotDelegatedToDRep x -> Sum (SubWdrlNotDelegatedToDRep @era) 4 !> To x
       SubTreasuryValueMismatch mm -> Sum (SubTreasuryValueMismatch @era) 5 !> To mm
-      SubTxRefScriptsSizeTooBig mm -> Sum SubTxRefScriptsSizeTooBig 6 !> To mm
-      SubWithdrawalsMissingAccounts w -> Sum SubWithdrawalsMissingAccounts 7 !> To w
-      SubIncompleteWithdrawals w -> Sum SubIncompleteWithdrawals 8 !> To w
 
 instance
   ( Era era
@@ -377,7 +388,26 @@ instance
     3 -> SumD SubGovFailure <! From
     4 -> SumD SubWdrlNotDelegatedToDRep <! From
     5 -> SumD SubTreasuryValueMismatch <! From
-    6 -> SumD SubTxRefScriptsSizeTooBig <! From
-    7 -> SumD SubWithdrawalsMissingAccounts <! From
-    8 -> SumD SubIncompleteWithdrawals <! From
     n -> Invalid n
+
+conwayToDijkstraSubLedgerPredFailure ::
+  forall era.
+  ( InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure era
+  , PredicateFailure (EraRule "UTXOW" era) ~ DijkstraUtxowPredFailure era
+  , InjectRuleFailure "SUBCERTS" ConwayCertsPredFailure era
+  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
+  , InjectRuleFailure "SUBGOV" DijkstraGovPredFailure era
+  , PredicateFailure (EraRule "GOV" era) ~ DijkstraGovPredFailure era
+  ) =>
+  ConwayLedgerPredFailure era ->
+  DijkstraSubLedgerPredFailure era
+conwayToDijkstraSubLedgerPredFailure = \case
+  ConwayUtxowFailure f -> SubUtxowFailure (injectFailure @"SUBUTXOW" f)
+  ConwayCertsFailure f -> SubCertsFailure (injectFailure @"SUBCERTS" f)
+  ConwayGovFailure f -> SubGovFailure (injectFailure @"SUBGOV" f)
+  ConwayWdrlNotDelegatedToDRep x -> SubWdrlNotDelegatedToDRep x
+  ConwayTreasuryValueMismatch x -> SubTreasuryValueMismatch x
+  ConwayTxRefScriptsSizeTooBig _ -> error "Impossible: `ConwayTxRefScriptsSizeTooBig` for SUBLEDGER"
+  ConwayMempoolFailure _ -> error "Impossible: `ConwayMempoolFailure` for SUBLEDGER"
+  ConwayWithdrawalsMissingAccounts _ -> error "Impossible: `ConwayWithdrawalsMissingAccounts` for SUBLEDGER"
+  ConwayIncompleteWithdrawals _ -> error "Impossible: `ConwayIncompleteWithdrawals` for SUBLEDGER"
