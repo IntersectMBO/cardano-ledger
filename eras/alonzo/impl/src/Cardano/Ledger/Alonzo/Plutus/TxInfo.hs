@@ -311,7 +311,7 @@ transMultiAsset (MultiAsset m) = PV1.Value (toAssocMap transPolicyID (toAssocMap
 -- makes no sense). However, if we don't preserve previous translation, scripts that
 -- previously succeeded will fail.
 transMintValue :: MultiAsset -> PV1.Value
-transMintValue m = transMultiAsset m <> transCoinToValue zero
+transMintValue m = transCoinToValue zero <> transMultiAsset m
 
 transValue :: MaryValue -> PV1.Value
 transValue (MaryValue c m) = transCoinToValue c <> transMultiAsset m
