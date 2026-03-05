@@ -57,3 +57,5 @@ externalFunctions = Agda.MkExternalFunctions {..}
             . fromMaybe
               (error "Failed to decode the signature")
             $ signatureFromInteger sig
+
+    extValidPlutusScript = True
