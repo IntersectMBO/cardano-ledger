@@ -26,10 +26,16 @@ import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra (
   validateOutsideValidityIntervalUTxO,
  )
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure)
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
+  validateOutputTooBigUTxO,
+  validateOutsideForecast,
+ )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  sizedValue,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
@@ -38,6 +44,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
   ConwayUtxoPredFailure,
   allegraToConwayUtxoPredFailure,
+  alonzoToConwayUtxoPredFailure,
  )
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -52,6 +59,7 @@ import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState)
 import Cardano.Ledger.State (CertState, ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import Data.Set.NonEmpty (NonEmptySet)
@@ -140,6 +148,12 @@ instance InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure DijkstraEra where
 instance InjectRuleFailure "SUBUTXO" ConwayUtxoPredFailure DijkstraEra where
   injectFailure = dijkstraUtxoToDijkstraSubUtxoPredFailure . conwayToDijkstraUtxoPredFailure
 
+instance InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . alonzoToConwayUtxoPredFailure
+
 instance InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure DijkstraEra where
   injectFailure =
     dijkstraUtxoToDijkstraSubUtxoPredFailure
@@ -165,9 +179,11 @@ instance (Era era, NFData (TxOut era)) => NFData (DijkstraSubUtxoEvent era)
 instance
   ( EraTx era
   , BabbageEraTxBody era
+  , AlonzoEraTxWits era
   , ConwayEraGov era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
   ) =>
   STS (DijkstraSUBUTXO era)
   where
@@ -183,17 +199,28 @@ instance
 dijkstraSubUtxoTransition ::
   forall era.
   ( EraTx era
-  , AllegraEraTxBody era
+  , BabbageEraTxBody era
+  , AlonzoEraTxWits era
+  , STS (EraRule "SUBUTXO" era)
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (SubUtxoEnv slot _ _ _ _ _, utxoState, tx) <- judgmentContext
+  TRC (SubUtxoEnv slot pp _ _ _ _, utxoState, tx) <- judgmentContext
 
   let txBody = tx ^. bodyTxL
 
   runTest $ Allegra.validateOutsideValidityIntervalUTxO slot txBody
+
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfo
+  runTest $ Alonzo.validateOutsideForecast ei slot sysSt tx
+
+  let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
+  let allOutputs = fmap sizedValue allSizedOutputs
+  runTest $ Alonzo.validateOutputTooBigUTxO pp allOutputs
 
   pure utxoState
 
