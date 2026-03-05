@@ -23,6 +23,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
 ) where
 
 import Cardano.Crypto.Hash (ByteString)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
@@ -280,11 +281,13 @@ dijkstraSubUtxowTransition = do
   trans @(EraRule "SUBUTXO" era) $ TRC (UtxoEnv slot pp certState, utxoState, tx)
 
 instance
-  ( ConwayEraGov era
+  ( EraTx era
+  , ConwayEraGov era
   , ConwayEraTxBody era
   , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   ) =>
   Embed (DijkstraSUBUTXO era) (DijkstraSUBUTXOW era)
   where
