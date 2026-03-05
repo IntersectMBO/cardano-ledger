@@ -11,7 +11,10 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledgers () where
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (EnactState)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
+  externalFunctions,
+ )
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   runFromAgdaFunction,
  )
@@ -21,4 +24,4 @@ import Test.Cardano.Ledger.Conway.ImpTest ()
 instance ExecSpecRule "LEDGERS" ConwayEra where
   type ExecContext "LEDGERS" ConwayEra = EnactState ConwayEra
 
-  runAgdaRule = runFromAgdaFunction Agda.ledgersStep
+  runAgdaRule = runFromAgdaFunction (Agda.ledgersStep externalFunctions)
