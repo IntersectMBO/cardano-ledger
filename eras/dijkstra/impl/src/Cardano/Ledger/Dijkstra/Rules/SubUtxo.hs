@@ -30,6 +30,7 @@ import qualified Cardano.Ledger.Allegra.Rules as Allegra (
  )
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
+  validateOutputTooBigUTxO,
   validateOutsideForecast,
   validateWrongNetworkInTxBody,
  )
@@ -266,6 +267,7 @@ dijkstraSubUtxoTransition = do
 
   runTestOnSignal $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
 
+  runTest $ Alonzo.validateOutputTooBigUTxO pp allOutputs
   runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
   pure utxosState
