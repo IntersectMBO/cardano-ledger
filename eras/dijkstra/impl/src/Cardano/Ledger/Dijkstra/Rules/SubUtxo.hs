@@ -57,9 +57,10 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (
   conwayToDijkstraUtxoPredFailure,
  )
 import Cardano.Ledger.Rules.ValidationMode
-import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState)
+import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState, utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
+  validateBadInputsUTxO,
   validateInputSetEmptyUTxO,
   validateWrongNetwork,
   validateWrongNetworkWithdrawal,
@@ -69,6 +70,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -234,6 +236,11 @@ dijkstraSubUtxoTransition = do
   runTest $ Alonzo.validateOutsideForecast ei slot sysSt tx
 
   runTest $ Shelley.validateInputSetEmptyUTxO txBody
+
+  let utxo = utxosUtxo utxosState
+  let inputs = txBody ^. inputsTxBodyL
+  let refInputs = txBody ^. referenceInputsTxBodyL
+  runTest $ Shelley.validateBadInputsUTxO utxo (inputs `Set.union` refInputs)
 
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
   let allOutputs = fmap sizedValue allSizedOutputs
