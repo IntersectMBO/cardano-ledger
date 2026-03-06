@@ -23,6 +23,21 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
 
 import Cardano.Crypto.Hash (ByteString)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
+  checkScriptIntegrityHash,
+  hasExactSetOfRedeemers,
+  missingRequiredDatums,
+ )
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage (
+  babbageMissingScripts,
+  validateFailedBabbageScripts,
+  validateScriptsWellFormedTxOuts,
+ )
+import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
+import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -31,7 +46,13 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (ConwayUtxowPredFailure, UtxoEnv)
+import Cardano.Ledger.Conway.Rules (
+  ConwayUtxowPredFailure,
+  UtxoEnv (..),
+  alonzoToConwayUtxowPredFailure,
+  babbageToConwayUtxowPredFailure,
+  shelleyToConwayUtxowPredFailure,
+ )
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXOW,
@@ -43,14 +64,25 @@ import Cardano.Ledger.Dijkstra.Rules.Utxow (
   conwayToDijkstraUtxowPredFailure,
  )
 import Cardano.Ledger.Keys (VKey)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState)
+import Cardano.Ledger.Rules.ValidationMode
+import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosUtxo)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley (
+  validateMetadata,
+  validateNeededWitnesses,
+  validateVerifiedWits,
+ )
+import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (
   InspectHeapNamed (..),
   NoThunks (..),
@@ -143,6 +175,24 @@ instance InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure DijkstraEra where
 instance InjectRuleFailure "SUBUTXOW" ConwayUtxowPredFailure DijkstraEra where
   injectFailure = dijkstraUtxowToDijkstraSubUtxowPredFailure . conwayToDijkstraUtxowPredFailure
 
+instance InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxowToDijkstraSubUtxowPredFailure
+      . conwayToDijkstraUtxowPredFailure
+      . babbageToConwayUtxowPredFailure
+
+instance InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxowToDijkstraSubUtxowPredFailure
+      . conwayToDijkstraUtxowPredFailure
+      . alonzoToConwayUtxowPredFailure
+
+instance InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxowToDijkstraSubUtxowPredFailure
+      . conwayToDijkstraUtxowPredFailure
+      . shelleyToConwayUtxowPredFailure
+
 instance InjectRuleEvent "SUBUTXOW" DijkstraSubUtxowEvent DijkstraEra
 
 newtype DijkstraSubUtxowEvent era = SubUtxo (Event (EraRule "SUBUTXO" era))
@@ -153,12 +203,19 @@ deriving instance Eq (Event (EraRule "SUBUTXO" era)) => Eq (DijkstraSubUtxowEven
 instance NFData (Event (EraRule "SUBUTXO" era)) => NFData (DijkstraSubUtxowEvent era)
 
 instance
-  ( ConwayEraGov era
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , BabbageEraTxBody era
+  , ConwayEraGov era
   , ConwayEraTxBody era
   , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
+  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   STS (DijkstraSUBUTXOW era)
   where
@@ -173,14 +230,61 @@ instance
 
 dijkstraSubUtxowTransition ::
   forall era.
-  ( EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  ( AlonzoEraTx era
+  , BabbageEraTxBody era
+  , AlonzoEraUTxO era
+  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
+  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env, state, signal) <- judgmentContext
-  trans @(EraRule "SUBUTXO" era) $ TRC (env, state, signal)
+  TRC (env@(UtxoEnv _ pp certState), utxoState, tx) <- judgmentContext
+  let utxo = utxosUtxo utxoState
+      txBody = tx ^. bodyTxL
+      witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
+      inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
+
+  {- ∀[ (vk , σ) ∈ vKeySigs ] isSigned vk (txidBytes txId) σ -}
+  runTestOnSignal $ Shelley.validateVerifiedWits tx
+
+  let scriptsNeeded = getScriptsNeeded utxo txBody
+      scriptsProvided = getScriptsProvided utxo tx
+      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
+
+  {- ∀[ s ∈ p1ScriptsNeeded ] validP1Script vKeyHashesProvided txVldt s -}
+  runTest $ Babbage.validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
+
+  {- vKeyHashesNeeded ⊆ vKeyHashesProvided -}
+  runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState utxo txBody
+
+  let scriptTxWits = Map.keysSet $ tx ^. witsTxL . scriptTxWitsL
+      refScripts = Map.keysSet $ getReferenceScripts utxo inputs
+  {- scriptHashesNeeded ⊆ mapˢ hash scriptsProvided -}
+  runTest $ Babbage.babbageMissingScripts pp scriptHashesNeeded refScripts scriptTxWits
+
+  {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
+  runTest $ Alonzo.missingRequiredDatums utxo tx
+
+  {- txADhash ≡ map hash txAuxData -}
+  runTestOnSignal $ Shelley.validateMetadata pp tx
+
+  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptHashesNeeded
+  runTest $ Alonzo.checkScriptIntegrityHash tx pp scriptIntegrity
+
+  runTest $ Alonzo.hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded
+
+  runTest $
+    Babbage.validateScriptsWellFormedTxOuts
+      pp
+      (tx ^. witsTxL . scriptTxWitsL)
+      (tx ^. bodyTxL . outputsTxBodyL)
+
+  trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
 
 instance
   ( ConwayEraGov era

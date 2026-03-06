@@ -22,6 +22,9 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedger (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -74,6 +77,7 @@ import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
   PoolEvent,
   ShelleyPoolPredFailure,
+  ShelleyUtxowPredFailure,
   UtxoEnv (..),
   epochFromSlot,
  )
@@ -202,6 +206,7 @@ instance
   , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
   , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   STS (DijkstraSUBLEDGER era)
@@ -322,12 +327,18 @@ instance
   wrapEvent = SubGovEvent
 
 instance
-  ( ConwayEraGov era
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , ConwayEraGov era
   , ConwayEraCertState era
   , ConwayEraTxBody era
   , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
+  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   Embed (DijkstraSUBUTXOW era) (DijkstraSUBLEDGER era)
   where

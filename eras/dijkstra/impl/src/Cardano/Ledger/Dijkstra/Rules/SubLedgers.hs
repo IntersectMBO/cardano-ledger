@@ -20,6 +20,9 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedgers (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
@@ -57,7 +60,12 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedger (DijkstraSubLedgerPredFailure (..
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv, PoolEvent, ShelleyPoolPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  LedgerEnv,
+  PoolEvent,
+  ShelleyPoolPredFailure,
+  ShelleyUtxowPredFailure,
+ )
 import Cardano.Ledger.TxIn (TxId)
 import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
@@ -157,7 +165,8 @@ dijkstraSubLedgersTransition = do
     subTxs
 
 instance
-  ( EraTx era
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
@@ -186,7 +195,11 @@ instance
   , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
   , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
   , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   Embed (DijkstraSUBLEDGER era) (DijkstraSUBLEDGERS era)
   where
