@@ -78,6 +78,7 @@ import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
   PoolEvent,
   ShelleyPoolPredFailure,
+  ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
   epochFromSlot,
@@ -339,6 +340,7 @@ instance
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
