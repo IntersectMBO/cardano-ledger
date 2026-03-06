@@ -66,6 +66,7 @@ spec = do
     testNS @"gov/constitution/v0"
     testNS @"gov/committee/v0"
     testNS @"gov/pparams/v0"
+    testNS @"gov/proposals/v0"
 
 isCanonical ::
   forall ns a. (KnownSymbol ns, ToCanonicalCBOR ns a, Typeable a, Arbitrary a, Show a) => Spec
