@@ -60,6 +60,7 @@ import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
+  validateInputSetEmptyUTxO,
   validateWrongNetwork,
   validateWrongNetworkWithdrawal,
  )
@@ -231,6 +232,8 @@ dijkstraSubUtxoTransition = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
   runTest $ Alonzo.validateOutsideForecast ei slot sysSt tx
+
+  runTest $ Shelley.validateInputSetEmptyUTxO txBody
 
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
   let allOutputs = fmap sizedValue allSizedOutputs
