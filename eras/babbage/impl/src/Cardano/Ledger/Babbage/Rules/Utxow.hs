@@ -92,9 +92,9 @@ import Lens.Micro.Extras (view)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 data BabbageUtxowPredFailure era
-  = AlonzoInBabbageUtxowPredFailure (AlonzoUtxowPredFailure era) -- TODO: embed and translate
-  | -- | Embed UTXO rule failures
-    UtxoFailure (PredicateFailure (EraRule "UTXO" era))
+  = UtxoFailure (PredicateFailure (EraRule "UTXO" era))
+  | PPViewHashesDontMatch
+      AlonzoPPViewHashesDontMatch
   | -- | the set of malformed script witnesses
     MalformedScriptWitnesses
       (NonEmptySet ScriptHash)
@@ -106,6 +106,11 @@ data BabbageUtxowPredFailure era
       (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
       (StrictMaybe ByteString)
   deriving (Generic)
+
+
+instance InjectRuleFailure "UTXOW" AlonzoPPViewHashesDontMatch AlonzoEra where
+  injectFailure = AlonzoPPViewHashesDontMatch
+
 
 type instance EraRuleFailure "UTXOW" BabbageEra = BabbageUtxowPredFailure BabbageEra
 

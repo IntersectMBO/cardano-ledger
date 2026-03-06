@@ -111,7 +111,7 @@ data AlonzoUtxowPredFailure era
       -- | Set of acceptable supplemental data hashes
       (Set DataHash)
   | PPViewHashesDontMatch
-      (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
+      AlonzoPPViewHashesDontMatch
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
       (NonEmptySet TxIn)
@@ -123,6 +123,13 @@ data AlonzoUtxowPredFailure era
       (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
       (StrictMaybe ByteString)
   deriving (Generic)
+
+newtype AlonzoPPViewHashesDontMatch era =
+  AlonzoPPViewHashesDontMatch (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
+
+
+instance InjectRuleFailure "UTXOW" AlonzoPPViewHashesDontMatch AlonzoEra where
+  injectFailure = PPViewHashesDontMatch
 
 type instance EraRuleFailure "UTXOW" AlonzoEra = AlonzoUtxowPredFailure AlonzoEra
 
@@ -298,7 +305,7 @@ checkScriptIntegrityHash tx pp scriptIntegrity = do
   failureUnless
     (suppliedScriptIntegrityHash == computedScriptIntegrityHash)
     $ if pvMajor (pp ^. ppProtocolVersionL) < natVersion @11
-      then PPViewHashesDontMatch mismatch
+      then AlonzoPPViewHashesDontMatch mismatch
       else ScriptIntegrityHashMismatch mismatch expectedScriptIntegrity
 
 -- ==============================================================
