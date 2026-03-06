@@ -62,6 +62,7 @@ import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateBadInputsUTxO,
   validateInputSetEmptyUTxO,
+  validateMaxTxSizeUTxO,
   validateWrongNetwork,
   validateWrongNetworkWithdrawal,
  )
@@ -225,7 +226,7 @@ dijkstraSubUtxoTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (UtxoEnv slot _ _, utxosState, tx) <- judgmentContext
+  TRC (UtxoEnv slot pp _, utxosState, tx) <- judgmentContext
 
   let txBody = tx ^. bodyTxL
 
@@ -249,6 +250,8 @@ dijkstraSubUtxoTransition = do
   runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
   runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
   runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
+
+  runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
   pure utxosState
 
