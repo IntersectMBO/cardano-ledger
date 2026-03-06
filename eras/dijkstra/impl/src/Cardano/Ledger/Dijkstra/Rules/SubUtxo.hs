@@ -69,6 +69,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateBadInputsUTxO,
   validateInputSetEmptyUTxO,
   validateMaxTxSizeUTxO,
+  validateOutputBootAddrAttrsTooBig,
   validateWrongNetwork,
   validateWrongNetworkWithdrawal,
  )
@@ -268,6 +269,9 @@ dijkstraSubUtxoTransition = do
   runTestOnSignal $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
 
   runTest $ Alonzo.validateOutputTooBigUTxO pp allOutputs
+
+  runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
+
   runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
   pure utxosState
