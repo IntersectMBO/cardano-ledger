@@ -166,6 +166,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   liftST,
 ) where
 
+import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Cardano.Ledger.Binary.Plain (
   DecoderError (..),
   cborError,
@@ -261,7 +262,6 @@ import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Compose (Compose (..))
-import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
 import qualified Data.List.NonEmpty as NE (NonEmpty, nonEmpty)
@@ -278,7 +278,6 @@ import Data.Typeable (Proxy (Proxy), Typeable, typeRep)
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
-import Network.Socket (HostAddress6)
 import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
 
@@ -1179,14 +1178,14 @@ binaryGetDecoder allowLeftOver name getter = do
 
 decodeIPv4 :: Decoder s IPv4
 decodeIPv4 =
-  fromHostAddress
+  toIPv4w
     <$> ifDecoderVersionAtLeast
       (natVersion @9)
       (binaryGetDecoder False "decodeIPv4" getWord32le)
       (binaryGetDecoder True "decodeIPv4" getWord32le)
 {-# INLINE decodeIPv4 #-}
 
-getHostAddress6 :: Get HostAddress6
+getHostAddress6 :: Get (Word32, Word32, Word32, Word32)
 getHostAddress6 = do
   !w1 <- getWord32le
   !w2 <- getWord32le
@@ -1197,7 +1196,7 @@ getHostAddress6 = do
 
 decodeIPv6 :: Decoder s IPv6
 decodeIPv6 =
-  fromHostAddress6
+  toIPv6w
     <$> ifDecoderVersionAtLeast
       (natVersion @9)
       (binaryGetDecoder False "decodeIPv6" getHostAddress6)

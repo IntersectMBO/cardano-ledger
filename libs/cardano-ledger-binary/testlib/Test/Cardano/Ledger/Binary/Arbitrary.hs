@@ -12,12 +12,12 @@ import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
 import Codec.CBOR.Term
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Word
 import GHC.Stack
 import Numeric.Half
+import Test.Cardano.Base.Arbitrary ()
 import Test.Cardano.Base.Bytes (genByteArray, genByteString, genLazyByteString)
 import Test.Data.VMap.Arbitrary ()
 import Test.QuickCheck
@@ -106,14 +106,6 @@ instance Arbitrary SlicedByteArray where
     let len = off + count + slack
     ba <- genByteArray len
     pure $ SBA ba off count
-
-instance Arbitrary IPv4 where
-  arbitrary = toIPv4w <$> arbitrary
-
-instance Arbitrary IPv6 where
-  arbitrary = do
-    t <- (,,,) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-    pure $ toIPv6w t
 
 instance Arbitrary Version where
   arbitrary = genVersion minBound maxBound
