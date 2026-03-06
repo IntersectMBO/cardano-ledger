@@ -596,6 +596,9 @@ instance HuddleRule "auxiliary_data" BabbageEra where
 instance HuddleRule "auxiliary_data_array" BabbageEra where
   huddleRuleNamed = auxiliaryDataArrayRule
 
+instance HuddleRule "metadatum" BabbageEra where
+  huddleRuleNamed = metadatumRule
+
 instance HuddleRule "auxiliary_scripts" BabbageEra where
   huddleRuleNamed pname p =
     pname =.= arr [0 <+ a (huddleRule @"native_script" p)]
