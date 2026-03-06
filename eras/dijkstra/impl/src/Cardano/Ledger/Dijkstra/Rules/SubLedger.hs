@@ -26,7 +26,7 @@ import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -351,6 +351,7 @@ instance
   , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   Embed (DijkstraSUBUTXOW era) (DijkstraSUBLEDGER era)
