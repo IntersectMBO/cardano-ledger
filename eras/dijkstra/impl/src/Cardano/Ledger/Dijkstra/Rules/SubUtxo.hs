@@ -33,6 +33,10 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   validateOutsideForecast,
   validateWrongNetworkInTxBody,
  )
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage (
+  validateOutputTooSmallUTxO,
+ )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -47,6 +51,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxoPredFailure,
   allegraToConwayUtxoPredFailure,
   alonzoToConwayUtxoPredFailure,
+  babbageToConwayUtxoPredFailure,
  )
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -163,6 +168,12 @@ instance InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure DijkstraEra where
       . conwayToDijkstraUtxoPredFailure
       . alonzoToConwayUtxoPredFailure
 
+instance InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . babbageToConwayUtxoPredFailure
+
 instance InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure DijkstraEra where
   injectFailure =
     dijkstraUtxoToDijkstraSubUtxoPredFailure
@@ -201,6 +212,7 @@ instance
   , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
   ) =>
   STS (DijkstraSUBUTXO era)
   where
@@ -223,6 +235,7 @@ dijkstraSubUtxoTransition ::
   , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
@@ -250,6 +263,8 @@ dijkstraSubUtxoTransition = do
   runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
   runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
   runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
+
+  runTestOnSignal $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
 
   runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
