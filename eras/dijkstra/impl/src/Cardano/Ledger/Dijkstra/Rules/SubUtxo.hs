@@ -21,16 +21,39 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxo (
   DijkstraSubUtxoEvent (..),
 ) where
 
+import Cardano.Ledger.Allegra.Rules (
+  AllegraUtxoPredFailure,
+  shelleyToAllegraUtxoPredFailure,
+ )
+import qualified Cardano.Ledger.Allegra.Rules as Allegra (
+  validateOutsideValidityIntervalUTxO,
+ )
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure)
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
+  validateOutputTooBigUTxO,
+  validateOutsideForecast,
+  validateWrongNetworkInTxBody,
+ )
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage (
+  validateOutputTooSmallUTxO,
+ )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  sizedValue,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (ConwayUtxoPredFailure)
+import Cardano.Ledger.Conway.Rules (
+  ConwayUtxoPredFailure,
+  allegraToConwayUtxoPredFailure,
+  alonzoToConwayUtxoPredFailure,
+  babbageToConwayUtxoPredFailure,
+ )
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXO,
@@ -39,15 +62,27 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState)
-import Cardano.Ledger.Shelley.Rules (UtxoEnv)
+import Cardano.Ledger.Rules.ValidationMode
+import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState, utxosUtxo)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley (
+  validateBadInputsUTxO,
+  validateInputSetEmptyUTxO,
+  validateMaxTxSizeUTxO,
+  validateOutputBootAddrAttrsTooBig,
+  validateWrongNetwork,
+  validateWrongNetworkWithdrawal,
+ )
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 data DijkstraSubUtxoPredFailure era
@@ -129,6 +164,31 @@ instance InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure DijkstraEra where
 instance InjectRuleFailure "SUBUTXO" ConwayUtxoPredFailure DijkstraEra where
   injectFailure = dijkstraUtxoToDijkstraSubUtxoPredFailure . conwayToDijkstraUtxoPredFailure
 
+instance InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . alonzoToConwayUtxoPredFailure
+
+instance InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . babbageToConwayUtxoPredFailure
+
+instance InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . allegraToConwayUtxoPredFailure
+
+instance InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . allegraToConwayUtxoPredFailure
+      . shelleyToAllegraUtxoPredFailure
+
 instance InjectRuleEvent "SUBUTXO" DijkstraSubUtxoEvent DijkstraEra
 
 data DijkstraSubUtxoEvent era
@@ -146,9 +206,15 @@ deriving instance (Era era, Eq (TxOut era)) => Eq (DijkstraSubUtxoEvent era)
 instance (Era era, NFData (TxOut era)) => NFData (DijkstraSubUtxoEvent era)
 
 instance
-  ( ConwayEraGov era
-  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  ( EraTx era
   , BabbageEraTxBody era
+  , AlonzoEraTxWits era
+  , ConwayEraGov era
+  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
   ) =>
   STS (DijkstraSUBUTXO era)
   where
@@ -163,11 +229,52 @@ instance
 
 dijkstraSubUtxoTransition ::
   forall era.
-  EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era =>
+  ( EraTx era
+  , BabbageEraTxBody era
+  , AlonzoEraTxWits era
+  , STS (EraRule "SUBUTXO" era)
+  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (_, state, _) <- judgmentContext
-  pure state
+  TRC (UtxoEnv slot pp _, utxosState, tx) <- judgmentContext
+
+  let txBody = tx ^. bodyTxL
+
+  runTest $ Allegra.validateOutsideValidityIntervalUTxO slot txBody
+
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfo
+  runTest $ Alonzo.validateOutsideForecast ei slot sysSt tx
+
+  runTest $ Shelley.validateInputSetEmptyUTxO txBody
+
+  let utxo = utxosUtxo utxosState
+  let inputs = txBody ^. inputsTxBodyL
+  let refInputs = txBody ^. referenceInputsTxBodyL
+  runTest $ Shelley.validateBadInputsUTxO utxo (inputs `Set.union` refInputs)
+
+  let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
+  let allOutputs = fmap sizedValue allSizedOutputs
+
+  netId <- liftSTS $ asks networkId
+  runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
+  runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
+  runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
+
+  runTestOnSignal $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
+
+  runTest $ Alonzo.validateOutputTooBigUTxO pp allOutputs
+
+  runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
+
+  runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
+
+  pure utxosState
 
 instance
   ( Era era

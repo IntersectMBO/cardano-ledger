@@ -21,7 +21,11 @@ module Cardano.Ledger.Dijkstra.Rules.Mempool (
   DijkstraMempoolEvent (..),
 ) where
 
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -72,6 +76,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovEvent, DijkstraSubGov
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers (DijkstraSubLedgersPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
@@ -82,6 +87,8 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEvent,
   ShelleyLedgerPredFailure,
   ShelleyPoolPredFailure,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
   UtxoEnv,
  )
 import Control.DeepSeq (NFData)
@@ -234,6 +241,7 @@ mempoolTransition = do
 
 instance
   ( AlonzoEraTx era
+  , AlonzoEraUTxO era
   , ConwayEraCertState era
   , DijkstraEraTxBody era
   , ConwayEraGov era
@@ -279,7 +287,16 @@ instance
   , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
   , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
   , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
   , TxCert era ~ DijkstraTxCert era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   Embed (DijkstraLEDGER era) (DijkstraMEMPOOL era)
   where
