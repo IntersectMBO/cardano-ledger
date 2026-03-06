@@ -26,7 +26,7 @@ imagesize==1.4.1
     # via sphinx
 jinja2==3.1.6
     # via sphinx
-markdown==3.7
+markdown==3.8.1
     # via sphinx-markdown-tables
 markupsafe==3.0.2
     # via jinja2
