@@ -49,9 +49,11 @@ module Cardano.Ledger.Alonzo.Scripts (
   pattern CertifyingPurpose,
   pattern RewardingPurpose,
   AlonzoPlutusPurpose (..),
+  AsPurpose (..),
   AsItem (..),
   AsIx (..),
   AsIxItem (..),
+  toAsPurpose,
   toAsItem,
   toAsIx,
 
@@ -106,7 +108,7 @@ import Cardano.Ledger.Plutus.Language (
  )
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..), nativeMultiSigTag)
 import Cardano.Ledger.TxIn (TxIn)
-import Control.DeepSeq (NFData (..), deepseq)
+import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (guard, (>=>))
 import Data.Aeson (ToJSON (..), Value (String), object, (.=))
 import qualified Data.ByteString as BS
@@ -153,7 +155,7 @@ class
   where
   data PlutusScript era :: Type
 
-  type PlutusPurpose (f :: Type -> Type -> Type) era = (r :: Type) | r -> era
+  type PlutusPurpose (f :: Type -> Type -> Type) era = (r :: Type) | r -> f era
 
   -- | Highest supported Plutus language version for this era.
   eraMaxLanguage :: Language
@@ -260,6 +262,16 @@ newtype AsItem ix it = AsItem {unAsItem :: it}
   deriving stock (Show)
   deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
 
+-- | This is a helper that retains information only about the purpose, but not the actual item or
+-- index
+data AsPurpose ix it = AsPurpose
+  deriving stock (Show, Eq, Generic)
+
+instance NoThunks (AsPurpose ix it)
+
+instance NFData (AsPurpose ix it) where
+  rnf = rwhnf
+
 data AsIxItem ix it = AsIxItem
   { asIndex :: !ix
   , asItem :: !it
@@ -283,6 +295,9 @@ instance (ToJSON ix, ToJSON it) => ToJSON (AsIxItem ix it) where
       [ "index" .= toJSON ix
       , "item" .= toJSON it
       ]
+
+toAsPurpose :: f ix it -> AsPurpose ix it
+toAsPurpose = const AsPurpose
 
 toAsItem :: AsIxItem ix it -> AsItem ix it
 toAsItem (AsIxItem _ it) = AsItem it

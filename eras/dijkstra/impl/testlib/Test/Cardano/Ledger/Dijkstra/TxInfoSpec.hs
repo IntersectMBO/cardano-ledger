@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -13,7 +14,9 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
+  PlutusTxInfoResult (..),
  )
+import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..), pattern SpendingPurpose)
 import Cardano.Ledger.BaseTypes (Globals (..), Inject (..), Network (..), ProtVer (..))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core (
@@ -71,4 +74,5 @@ spec = describe "TxInfo" $ do
               utxo
               tx
         pure $
-          toPlutusTxInfo SPlutusV4 ledgerTxInfo `shouldBeLeft` inject (PointerPresentInOutput @era [txOut])
+          (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
+            `shouldBeLeft` inject (PointerPresentInOutput @era [txOut])

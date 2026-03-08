@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusScriptPurpose,
-  PlutusTxInfo,
+  PlutusTxInfoResult (..),
   SupportedLanguage (..),
   lookupTxInfoResultImpossible,
   toPlutusWithContext,
@@ -225,15 +225,18 @@ instance EraPlutusContext BabbageEra where
   type ContextError BabbageEra = BabbageContextError BabbageEra
   data TxInfoResult BabbageEra
     = BabbageTxInfoResult -- Fields must be kept lazy
-        (Either (ContextError BabbageEra) (PlutusTxInfo 'PlutusV1))
-        (Either (ContextError BabbageEra) (PlutusTxInfo 'PlutusV2))
+        (PlutusTxInfoResult 'PlutusV1 BabbageEra)
+        (PlutusTxInfoResult 'PlutusV2 BabbageEra)
 
   mkSupportedLanguage = \case
     PlutusV1 -> Just $ SupportedLanguage SPlutusV1
     PlutusV2 -> Just $ SupportedLanguage SPlutusV2
     _lang -> Nothing
 
-  mkTxInfoResult lti = BabbageTxInfoResult (toPlutusTxInfo SPlutusV1 lti) (toPlutusTxInfo SPlutusV2 lti)
+  mkTxInfoResult lti =
+    BabbageTxInfoResult
+      (toPlutusTxInfo SPlutusV1 lti)
+      (toPlutusTxInfo SPlutusV2 lti)
 
   lookupTxInfoResult SPlutusV1 (BabbageTxInfoResult tirPlutusV1 _) = tirPlutusV1
   lookupTxInfoResult SPlutusV2 (BabbageTxInfoResult _ tirPlutusV2) = tirPlutusV2
@@ -314,32 +317,36 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
 
   toPlutusScriptPurpose proxy pv = Alonzo.transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
-    let refInputs = txBody ^. referenceInputsTxBodyL
-    unless (Set.null refInputs) $ Left (ReferenceInputsNotSupported refInputs)
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+    PlutusTxInfoResult $ do
+      let refInputs = txBody ^. referenceInputsTxBodyL
+      unless (Set.null refInputs) $ Left (ReferenceInputsNotSupported refInputs)
 
-    timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-    inputs <- mapM (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
-    outputs <-
-      zipWithM
-        (transTxOutV1 . TxOutFromOutput)
-        [minBound ..]
-        (F.toList (txBody ^. outputsTxBodyL))
-    txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-    pure
-      PV1.TxInfo
-        { PV1.txInfoInputs = inputs
-        , PV1.txInfoOutputs = outputs
-        , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-        , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
-        , PV1.txInfoDCert = txCerts
-        , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
-        , PV1.txInfoValidRange = timeRange
-        , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-        , PV1.txInfoData = Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
-        , PV1.txInfoId = Alonzo.transTxBodyId txBody
-        }
+      timeRange <-
+        Alonzo.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      inputs <- mapM (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
+      outputs <-
+        zipWithM
+          (transTxOutV1 . TxOutFromOutput)
+          [minBound ..]
+          (F.toList (txBody ^. outputsTxBodyL))
+      txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
+      -- It is important for memoization for `txInfo` to be a let binding
+      let
+        txInfo =
+          PV1.TxInfo
+            { PV1.txInfoInputs = inputs
+            , PV1.txInfoOutputs = outputs
+            , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+            , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+            , PV1.txInfoDCert = txCerts
+            , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
+            , PV1.txInfoValidRange = timeRange
+            , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+            , PV1.txInfoData = Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
+            , PV1.txInfoId = Alonzo.transTxBodyId txBody
+            }
+      Right $ \_ -> txInfo
     where
       txBody = ltiTx ^. bodyTxL
 
@@ -352,33 +359,37 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
 
   toPlutusScriptPurpose proxy pv = Alonzo.transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
-    timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-    inputs <- mapM (transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
-    refInputs <- mapM (transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
-    outputs <-
-      zipWithM
-        (transTxOutV2 . TxOutFromOutput)
-        [minBound ..]
-        (F.toList (txBody ^. outputsTxBodyL))
-    txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-    plutusRedeemers <- transTxRedeemers proxy ltiProtVer ltiTx
-    pure
-      PV2.TxInfo
-        { PV2.txInfoInputs = inputs
-        , PV2.txInfoOutputs = outputs
-        , PV2.txInfoReferenceInputs = refInputs
-        , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-        , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
-        , PV2.txInfoDCert = txCerts
-        , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
-        , PV2.txInfoValidRange = timeRange
-        , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-        , PV2.txInfoRedeemers = plutusRedeemers
-        , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
-        , PV2.txInfoId = Alonzo.transTxBodyId txBody
-        }
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+    PlutusTxInfoResult $ do
+      timeRange <-
+        Alonzo.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      inputs <- mapM (transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
+      refInputs <- mapM (transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
+      outputs <-
+        zipWithM
+          (transTxOutV2 . TxOutFromOutput)
+          [minBound ..]
+          (F.toList (txBody ^. outputsTxBodyL))
+      txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
+      plutusRedeemers <- transTxRedeemers proxy ltiProtVer ltiTx
+      -- It is important for memoization for `txInfo` to be a let binding
+      let
+        txInfo =
+          PV2.TxInfo
+            { PV2.txInfoInputs = inputs
+            , PV2.txInfoOutputs = outputs
+            , PV2.txInfoReferenceInputs = refInputs
+            , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+            , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+            , PV2.txInfoDCert = txCerts
+            , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
+            , PV2.txInfoValidRange = timeRange
+            , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+            , PV2.txInfoRedeemers = plutusRedeemers
+            , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
+            , PV2.txInfoId = Alonzo.transTxBodyId txBody
+            }
+      Right $ \_ -> txInfo
     where
       txBody = ltiTx ^. bodyTxL
 
