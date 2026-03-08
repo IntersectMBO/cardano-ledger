@@ -42,7 +42,6 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   toLegacyPlutusArgs,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import Cardano.Ledger.Alonzo.Tx (Data)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Babbage.Core
@@ -315,7 +314,7 @@ instance ToJSON (PlutusPurpose AsIx era) => ToJSON (BabbageContextError era) whe
 instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
   toPlutusTxCert _ _ = pure . Alonzo.transTxCert
 
-  toPlutusScriptPurpose proxy pv = Alonzo.transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
+  toPlutusScriptPurpose = Alonzo.transPlutusPurpose
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
@@ -357,7 +356,7 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
 instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusTxCert _ _ = pure . Alonzo.transTxCert
 
-  toPlutusScriptPurpose proxy pv = Alonzo.transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
+  toPlutusScriptPurpose = Alonzo.transPlutusPurpose
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
