@@ -10,7 +10,11 @@ import Cardano.Ledger.Alonzo.Core (
   EraTxBody (..),
   EraTxOut (..),
  )
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo (..), LedgerTxInfo (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  EraPlutusTxInfo (..),
+  LedgerTxInfo (..),
+  PlutusTxInfoResult (..),
+ )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
@@ -49,7 +53,7 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
             , ltiUTxO = utxo
             , ltiTx = tx
             }
-      void $ expectRight $ toPlutusTxInfo SPlutusV1 lti
+      void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
     it "toPlutusTxInfo does not fail when Byron scripts are present in TxIns" $ do
       pv <- getProtVer
       Globals {epochInfo, systemStart} <- use impGlobalsL
@@ -75,4 +79,4 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
             , ltiUTxO = utxo
             , ltiTx = tx
             }
-      void $ expectRight $ toPlutusTxInfo SPlutusV1 lti
+      void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti

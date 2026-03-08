@@ -17,6 +17,7 @@
 module Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   EraPlutusTxInfo (..),
+  PlutusTxInfoResult (..),
   EraPlutusContext (..),
   toPlutusWithContext,
   lookupTxInfoResultImpossible,
@@ -38,10 +39,12 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (eraMaxLanguage, mkPlutusScript),
   AsIxItem (..),
+  AsPurpose,
   PlutusPurpose,
   PlutusScript (..),
   hoistPlutusPurpose,
   toAsItem,
+  toAsPurpose,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum))
 import Cardano.Ledger.BaseTypes (ProtVer (..))
@@ -105,7 +108,7 @@ class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language
   toPlutusTxInfo ::
     proxy l ->
     LedgerTxInfo era ->
-    Either (ContextError era) (PlutusTxInfo l)
+    PlutusTxInfoResult l era
 
   toPlutusArgs ::
     proxy l ->
@@ -121,6 +124,21 @@ class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language
     UTxO era ->
     TxIn ->
     Either (ContextError era) (PlutusTxInInfo era l)
+
+-- | This is the helper type that captures translation of `Tx` to `PlutusTxInfo`.
+--
+-- It is important to note that `TxInfo` is always the same per Plutus version for each `Tx`. This
+-- invariant allows us to avoid duplicate computation by memoizing all possible `PlutusTxInfo`s per
+-- transaction. Starting with Dijkstra era there is a slight complication introduced to this
+-- invariant where top level transaction has a different `PlutusTxInfo` for "Guarding" purpose, when
+-- compared to all other purposes. That is the reason why result is somewhat strange, namely a
+-- function from `PlutusPurpose` to `PlutusTxInfo`. It is also done this way, instead of adding
+-- `ScriptPurpose` as an argument to `toPlutusTxInfo` to preserve capability of memoization.
+newtype PlutusTxInfoResult l era
+  = PlutusTxInfoResult
+  { unPlutusTxInfoResult ::
+      Either (ContextError era) (PlutusPurpose AsPurpose era -> PlutusTxInfo l)
+  }
 
 class
   ( AlonzoEraScript era
@@ -154,7 +172,7 @@ class
     EraPlutusTxInfo l era =>
     SLanguage l ->
     TxInfoResult era ->
-    Either (ContextError era) (PlutusTxInfo l)
+    PlutusTxInfoResult l era
 
   mkPlutusWithContext ::
     PlutusScript era ->
@@ -181,7 +199,8 @@ toPlutusWithContext script scriptHash plutusPurpose lti txInfoResult (redeemerDa
   let slang = isLanguage @l
       maybeSpendingDatum =
         getSpendingDatum (ltiUTxO lti) (ltiTx lti) (hoistPlutusPurpose toAsItem plutusPurpose)
-  txInfo <- lookupTxInfoResult slang txInfoResult
+  mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
+  let txInfo = mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
   plutusArgs <-
     toPlutusArgs slang (ltiProtVer lti) txInfo plutusPurpose maybeSpendingDatum redeemerData
   pure $
@@ -197,7 +216,7 @@ toPlutusWithContext script scriptHash plutusPurpose lti txInfoResult (redeemerDa
 -- | Helper function to use when implementing `lookupTxInfoResult` for plutus languages that are not
 -- supported by the era.
 lookupTxInfoResultImpossible ::
-  (HasCallStack, EraPlutusTxInfo l era) => SLanguage l -> Either (ContextError era) (PlutusTxInfo l)
+  (HasCallStack, EraPlutusTxInfo l era) => SLanguage l -> PlutusTxInfoResult l era
 lookupTxInfoResultImpossible slang =
   error $ "Impossible: Attempt to lookup TxInfoResult for an unsupported language: " <> show slang
 
@@ -223,7 +242,7 @@ type family PlutusTxInfo (l :: Language) where
   PlutusTxInfo 'PlutusV4 = PV3.TxInfo
 
 type family PlutusTxInInfo era (l :: Language) where
-  -- \| This special case is here because Alonzo does not have a ContextError
+  -- This special case is here because Alonzo does not have a ContextError
   -- for the case where it encounters a Byron address in a TxIn
   PlutusTxInInfo AlonzoEra PlutusV1 = Maybe PV1.TxInInfo
   PlutusTxInInfo _ 'PlutusV1 = PV1.TxInInfo

@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext, SupportedLanguage)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AsIx, PlutusPurpose)
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -35,7 +36,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.State (UTxO (..))
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import qualified Data.ByteString.Lazy as BSL
@@ -56,16 +57,18 @@ data TranslationInstance era = TranslationInstance
   { tiProtVer :: ProtVer
   , tiLanguage :: SupportedLanguage era
   , tiUtxo :: UTxO era
-  , tiTx :: Core.Tx TopTx era
+  , tiTx :: Tx TopTx era
+  , tiPlutusPurpose :: PlutusPurpose AsIx era
   , tiResult :: VersionedTxInfo
   }
   deriving (Generic)
 
 deriving instance
-  (Era era, Eq (PParams era), Eq (UTxO era), Eq (Core.Tx TopTx era)) => Eq (TranslationInstance era)
+  (AlonzoEraScript era, Eq (PParams era), Eq (UTxO era), Eq (Tx TopTx era)) =>
+  Eq (TranslationInstance era)
 
 deriving instance
-  (Era era, Show (PParams era), Show (UTxO era), Show (Core.Tx TopTx era)) =>
+  (AlonzoEraScript era, Show (PParams era), Show (UTxO era), Show (Tx TopTx era)) =>
   Show (TranslationInstance era)
 
 instance Cborg.Serialise PV1.DCert
@@ -177,25 +180,26 @@ instance DecCBOR VersionedTxInfo where
   decCBOR = fromPlainDecoder Cborg.decode
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , EncCBOR (UTxO era)
-  , EncCBOR (Core.Tx TopTx era)
+  , EncCBOR (Tx TopTx era)
   ) =>
   EncCBOR (TranslationInstance era)
   where
-  encCBOR (TranslationInstance pp l u tx r) =
+  encCBOR (TranslationInstance pp l u tx p r) =
     encode $
       Rec TranslationInstance
         !> To pp
         !> To l
         !> To u
         !> To tx
+        !> To p
         !> To r
 
 instance
   ( DecCBOR (PParams era)
   , DecCBOR (UTxO era)
-  , DecCBOR (Core.Tx TopTx era)
+  , DecCBOR (Tx TopTx era)
   , EraPlutusContext era
   ) =>
   DecCBOR (TranslationInstance era)
@@ -208,12 +212,13 @@ instance
         <! From
         <! From
         <! From
+        <! From
 
 deserializeTranslationInstances ::
   forall era.
   ( DecCBOR (PParams era)
   , DecCBOR (UTxO era)
-  , DecCBOR (Core.Tx TopTx era)
+  , DecCBOR (Tx TopTx era)
   , EraPlutusContext era
   ) =>
   BSL.ByteString ->
