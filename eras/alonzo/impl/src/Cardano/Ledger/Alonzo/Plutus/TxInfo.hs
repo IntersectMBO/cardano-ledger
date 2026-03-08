@@ -101,7 +101,7 @@ import qualified PlutusLedgerApi.V2 as PV2
 instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxCert _ _ = pure . transTxCert
 
-  toPlutusScriptPurpose proxy pv = transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
+  toPlutusScriptPurpose = transPlutusPurpose
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
@@ -354,11 +354,11 @@ transPlutusPurpose ::
   (EraPlutusTxInfo l era, PlutusTxCert l ~ PV1.DCert) =>
   proxy l ->
   ProtVer ->
-  AlonzoPlutusPurpose AsItem era ->
+  AlonzoPlutusPurpose AsIxItem era ->
   Either (ContextError era) PV1.ScriptPurpose
 transPlutusPurpose proxy pv = \case
-  AlonzoSpending (AsItem txIn) -> pure $ PV1.Spending (transTxIn txIn)
-  AlonzoMinting (AsItem policyId) -> pure $ PV1.Minting (transPolicyID policyId)
-  AlonzoCertifying (AsItem txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert
-  AlonzoRewarding (AsItem accountAddress) ->
+  AlonzoSpending (AsIxItem _ txIn) -> pure $ PV1.Spending (transTxIn txIn)
+  AlonzoMinting (AsIxItem _ policyId) -> pure $ PV1.Minting (transPolicyID policyId)
+  AlonzoCertifying (AsIxItem _ txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert
+  AlonzoRewarding (AsIxItem _ accountAddress) ->
     pure $ PV1.Rewarding (PV1.StakingHash (transAccountAddress accountAddress))
