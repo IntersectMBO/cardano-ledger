@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -84,15 +85,20 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
 -- | All information that is necessary from the ledger to construct Plutus' TxInfo.
-data LedgerTxInfo era = LedgerTxInfo
-  { ltiProtVer :: !ProtVer
-  , ltiEpochInfo :: !(EpochInfo (Either Text))
-  , ltiSystemStart :: !SystemStart
-  , ltiUTxO :: !(UTxO era)
-  , ltiTx :: !(Tx TopTx era)
-  }
+data LedgerTxInfo era where
+  LedgerTxInfo ::
+    { ltiProtVer :: !ProtVer
+    , ltiEpochInfo :: !(EpochInfo (Either Text))
+    , ltiSystemStart :: !SystemStart
+    , ltiUTxO :: !(UTxO era)
+    , ltiTx :: !(Tx level era)
+    } ->
+    LedgerTxInfo era
 
-class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language) era where
+class
+  (PlutusLanguage l, EraPlutusContext era, EraTxLevel era) =>
+  EraPlutusTxInfo (l :: Language) era
+  where
   toPlutusTxCert ::
     proxy l ->
     ProtVer ->
@@ -195,10 +201,10 @@ toPlutusWithContext ::
   (Data era, ExUnits) ->
   CostModel ->
   Either (ContextError era) PlutusWithContext
-toPlutusWithContext script scriptHash plutusPurpose lti txInfoResult (redeemerData, exUnits) costModel = do
+toPlutusWithContext script scriptHash plutusPurpose lti@LedgerTxInfo {ltiTx} txInfoResult (redeemerData, exUnits) costModel = do
   let slang = isLanguage @l
       maybeSpendingDatum =
-        getSpendingDatum (ltiUTxO lti) (ltiTx lti) (hoistPlutusPurpose toAsItem plutusPurpose)
+        getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
   mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
   let txInfo = mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
   plutusArgs <-
