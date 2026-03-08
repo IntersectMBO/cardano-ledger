@@ -3,13 +3,8 @@
 
 module Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Core (
-  EraTx (..),
-  EraTxBody (..),
-  EraTxOut (..),
- )
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
@@ -37,6 +32,7 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
       utxo <- getUTxO
       let
         byronTxOut = mkBasicTxOut byronAddr . inject $ Coin 1
+        tx :: Tx TopTx AlonzoEra
         tx =
           mkBasicTx @AlonzoEra mkBasicTxBody
             & bodyTxL
@@ -63,6 +59,7 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
       utxo <- getUTxO
       let
         shelleyTxOut = mkBasicTxOut shelleyAddr . inject $ Coin 1
+        tx :: Tx TopTx AlonzoEra
         tx =
           mkBasicTx @AlonzoEra mkBasicTxBody
             & bodyTxL

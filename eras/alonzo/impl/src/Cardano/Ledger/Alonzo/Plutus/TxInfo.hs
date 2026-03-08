@@ -103,9 +103,10 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusScriptPurpose proxy pv = transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
-    PlutusTxInfoResult $ do
+    PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
+      let txBody = tx ^. bodyTxL
       timeRange <-
-        transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+        transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ toPlutusTxInInfo proxy ltiUTxO
       txCerts <- transTxBodyCerts proxy ltiProtVer txBody
       -- It is important for memoization for `txInfo` to be a let binding
@@ -122,12 +123,10 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
             , PV1.txInfoWdrl = transTxBodyWithdrawals txBody
             , PV1.txInfoValidRange = timeRange
             , PV1.txInfoSignatories = transTxBodyReqSignerHashes txBody
-            , PV1.txInfoData = transTxWitsDatums (ltiTx ^. witsTxL)
+            , PV1.txInfoData = transTxWitsDatums (tx ^. witsTxL)
             , PV1.txInfoId = transTxBodyId txBody
             }
       Right $ \_ -> txInfo
-    where
-      txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = toPlutusV1Args
 

@@ -78,6 +78,7 @@ spec = describe "UTXOS" $ do
           interval = ValidityInterval SNothing $ SJust $ SlotNo $ currentSlot + txValidity
           startPOSIX = floor $ utcTimeToPOSIXSeconds sysStart
           expectedUpperBound = (startPOSIX + fromIntegral (currentSlot + txValidity)) * 1000
+          tx :: Tx TopTx era
           tx = mkBasicTx mkBasicTxBody & bodyTxL . vldtTxBodyL .~ interval
           lti =
             LedgerTxInfo

@@ -9,24 +9,16 @@
 
 module Test.Cardano.Ledger.Dijkstra.TxInfoSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusTxInfoResult (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..), pattern SpendingPurpose)
+import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
 import Cardano.Ledger.BaseTypes (Globals (..), Inject (..), Network (..), ProtVer (..))
 import Cardano.Ledger.Credential (StakeReference (..))
-import Cardano.Ledger.Dijkstra.Core (
-  ConwayEraTxBody,
-  EraTx (..),
-  EraTxBody (..),
-  EraTxOut (..),
-  Value,
-  eraProtVerLow,
- )
+import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.State (UTxO (..))
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Plutus (Language (..), SLanguage (..))
@@ -62,7 +54,7 @@ spec = describe "TxInfo" $ do
               [ (txIn, mkBasicTxOut (Addr Testnet paymentCred2 stakeRef) val)
               ]
           tx =
-            mkBasicTx @era $
+            mkBasicTx @era @TopTx $
               mkBasicTxBody
                 & outputsTxBodyL .~ [txOut]
                 & inputsTxBodyL .~ [txIn]

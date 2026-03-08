@@ -318,12 +318,14 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
   toPlutusScriptPurpose proxy pv = Alonzo.transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
-    PlutusTxInfoResult $ do
-      let refInputs = txBody ^. referenceInputsTxBodyL
+    PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
+      let
+        txBody = tx ^. bodyTxL
+        refInputs = txBody ^. referenceInputsTxBodyL
       unless (Set.null refInputs) $ Left (ReferenceInputsNotSupported refInputs)
 
       timeRange <-
-        Alonzo.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+        Alonzo.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputs <- mapM (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
       outputs <-
         zipWithM
@@ -343,12 +345,10 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
             , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
             , PV1.txInfoValidRange = timeRange
             , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV1.txInfoData = Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
+            , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
             , PV1.txInfoId = Alonzo.transTxBodyId txBody
             }
       Right $ \_ -> txInfo
-    where
-      txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
@@ -360,9 +360,10 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusScriptPurpose proxy pv = Alonzo.transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
-    PlutusTxInfoResult $ do
+    PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
+      let txBody = tx ^. bodyTxL
       timeRange <-
-        Alonzo.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+        Alonzo.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputs <- mapM (transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
       refInputs <- mapM (transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
       outputs <-
@@ -371,7 +372,7 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- transTxRedeemers proxy ltiProtVer ltiTx
+      plutusRedeemers <- transTxRedeemers proxy ltiProtVer tx
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -386,12 +387,10 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
             , PV2.txInfoValidRange = timeRange
             , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
             , PV2.txInfoRedeemers = plutusRedeemers
-            , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
+            , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
             , PV2.txInfoId = Alonzo.transTxBodyId txBody
             }
       Right $ \_ -> txInfo
-    where
-      txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = toPlutusV2Args
 
