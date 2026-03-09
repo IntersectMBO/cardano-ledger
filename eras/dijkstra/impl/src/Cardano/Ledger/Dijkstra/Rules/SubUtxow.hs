@@ -19,6 +19,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
   DijkstraSUBUTXOW,
   DijkstraSubUtxowPredFailure (..),
   DijkstraSubUtxowEvent (..),
+  SubUtxowEnv (..),
 ) where
 
 import Cardano.Crypto.Hash (ByteString)
@@ -70,7 +71,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateNeededWitnesses,
   validateVerifiedWits,
  )
-import Cardano.Ledger.State (EraUTxO (..))
+import Cardano.Ledger.State (CertState, EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -83,6 +84,13 @@ import NoThunks.Class (
   InspectHeapNamed (..),
   NoThunks (..),
  )
+
+data SubUtxowEnv era = SubUtxowEnv
+  { sueSlot :: SlotNo
+  , suePParams :: PParams era
+  , sueCertState :: CertState era
+  , sueScriptsProvided :: ScriptsProvided era
+  }
 
 data DijkstraSubUtxowPredFailure era
   = SubUtxoFailure (PredicateFailure (EraRule "SUBUTXO" era))
@@ -213,7 +221,7 @@ instance
   where
   type State (DijkstraSUBUTXOW era) = UTxOState era
   type Signal (DijkstraSUBUTXOW era) = Tx SubTx era
-  type Environment (DijkstraSUBUTXOW era) = UtxoEnv era
+  type Environment (DijkstraSUBUTXOW era) = SubUtxowEnv era
   type BaseM (DijkstraSUBUTXOW era) = ShelleyBase
   type PredicateFailure (DijkstraSUBUTXOW era) = DijkstraSubUtxowPredFailure era
   type Event (DijkstraSUBUTXOW era) = DijkstraSubUtxowEvent era
@@ -235,7 +243,7 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env@(UtxoEnv _ pp certState), utxoState, tx) <- judgmentContext
+  TRC (SubUtxowEnv slot pp certState scriptsProvided, utxoState, tx) <- judgmentContext
   let utxo = utxosUtxo utxoState
       txBody = tx ^. bodyTxL
       witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
@@ -244,7 +252,6 @@ dijkstraSubUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   let scriptsNeeded = getScriptsNeeded utxo txBody
-      scriptsProvided = getScriptsProvided utxo tx
       scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
 
   {- ∀[ s ∈ p1ScriptsNeeded ] validP1Script vKeyHashesProvided txVldt s -}
@@ -270,7 +277,7 @@ dijkstraSubUtxowTransition = do
       (tx ^. witsTxL . scriptTxWitsL)
       (tx ^. bodyTxL . outputsTxBodyL)
 
-  trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
+  trans @(EraRule "SUBUTXO" era) $ TRC (UtxoEnv slot pp certState, utxoState, tx)
 
 instance
   ( ConwayEraGov era

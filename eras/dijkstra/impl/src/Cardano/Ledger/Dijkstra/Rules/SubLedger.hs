@@ -19,6 +19,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedger (
   DijkstraSUBLEDGER,
   DijkstraSubLedgerPredFailure (..),
   DijkstraSubLedgerEvent (..),
+  SubLedgerEnv (..),
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
@@ -68,17 +69,15 @@ import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovEvent, DijkstraSubGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure (..), SubUtxowEnv (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
-  LedgerEnv (..),
   PoolEvent,
   ShelleyPoolPredFailure,
   ShelleyUtxowPredFailure,
-  UtxoEnv (..),
   epochFromSlot,
  )
 import Control.DeepSeq (NFData)
@@ -103,6 +102,15 @@ import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+
+data SubLedgerEnv era = SubLedgerEnv
+  { sleSlotNo :: SlotNo
+  , sleEpochNo :: Maybe EpochNo
+  , sleTxIx :: TxIx
+  , slePParams :: PParams era
+  , sleAccount :: ChainAccountState
+  , sleScriptsProvided :: ScriptsProvided era
+  }
 
 data DijkstraSubLedgerPredFailure era
   = SubUtxowFailure (PredicateFailure (EraRule "SUBUTXOW" era))
@@ -213,7 +221,7 @@ instance
   where
   type State (DijkstraSUBLEDGER era) = LedgerState era
   type Signal (DijkstraSUBLEDGER era) = Tx SubTx era
-  type Environment (DijkstraSUBLEDGER era) = LedgerEnv era
+  type Environment (DijkstraSUBLEDGER era) = SubLedgerEnv era
   type BaseM (DijkstraSUBLEDGER era) = ShelleyBase
   type PredicateFailure (DijkstraSUBLEDGER era) = DijkstraSubLedgerPredFailure era
   type Event (DijkstraSUBLEDGER era) = DijkstraSubLedgerEvent era
@@ -251,7 +259,7 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( LedgerEnv slot mbCurEpochNo _ pp chainAccountState
+    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState scriptsProvided
       , ledgerState@(LedgerState utxoState certState)
       , tx
       ) <-
@@ -300,7 +308,7 @@ dijkstraSubLedgersTransition = do
   utxoStateAfterSubUtxow <-
     trans @(EraRule "SUBUTXOW" era) $
       TRC
-        ( UtxoEnv @era slot pp certState
+        ( SubUtxowEnv slot pp certState scriptsProvided
         , utxoState
         , tx
         )

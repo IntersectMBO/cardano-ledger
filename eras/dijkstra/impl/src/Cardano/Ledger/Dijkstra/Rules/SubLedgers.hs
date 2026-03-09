@@ -56,12 +56,14 @@ import Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovEvent, DijkstraSubGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.SubLedger (DijkstraSubLedgerPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.SubLedger (
+  DijkstraSubLedgerPredFailure (..),
+  SubLedgerEnv (..),
+ )
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
-  LedgerEnv,
   PoolEvent,
   ShelleyPoolPredFailure,
   ShelleyUtxowPredFailure,
@@ -141,7 +143,7 @@ instance
   where
   type State (DijkstraSUBLEDGERS era) = LedgerState era
   type Signal (DijkstraSUBLEDGERS era) = OMap TxId (Tx SubTx era)
-  type Environment (DijkstraSUBLEDGERS era) = LedgerEnv era
+  type Environment (DijkstraSUBLEDGERS era) = SubLedgerEnv era
   type BaseM (DijkstraSUBLEDGERS era) = ShelleyBase
   type PredicateFailure (DijkstraSUBLEDGERS era) = DijkstraSubLedgersPredFailure era
   type Event (DijkstraSUBLEDGERS era) = DijkstraSubLedgersEvent era

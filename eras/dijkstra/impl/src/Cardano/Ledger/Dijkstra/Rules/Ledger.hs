@@ -104,6 +104,8 @@ import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
+  lsUTxOStateL,
+  utxosUtxo,
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -335,6 +337,7 @@ instance
   , ConwayEraTxBody era
   , ConwayEraGov era
   , DijkstraEraTxBody era
+  , EraUTxO era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
   , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
@@ -393,6 +396,7 @@ dijkstraLedgerTransition ::
   , ConwayEraCertState era
   , ConwayEraGov era
   , DijkstraEraTxBody era
+  , EraUTxO era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
   , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
@@ -415,13 +419,26 @@ dijkstraLedgerTransition ::
   ) =>
   TransitionRule (DijkstraLEDGER era)
 dijkstraLedgerTransition = do
-  TRC (env, ledgerState, tx) <- judgmentContext
+  TRC (env@(LedgerEnv slot mbCurEpochNo txIx pp chainAccountState), ledgerState, tx) <-
+    judgmentContext
 
   failOnNonEmptyMap (spentSubTxOutputs tx) DijkstraSpendingOutputFromSameTx
 
+  let utxo = utxosUtxo (ledgerState ^. lsUTxOStateL)
+      subTxs = tx ^. bodyTxL . subTransactionsTxBodyL
+      scriptsProvided =
+        ScriptsProvided $
+          Map.unions $
+            unScriptsProvided (getScriptsProvided utxo tx)
+              : map (unScriptsProvided . getScriptsProvided utxo) (OMap.elems subTxs)
+
   ledgerStateAfterSubledgers <-
     trans @(EraRule "SUBLEDGERS" era) $
-      TRC (env, ledgerState, tx ^. bodyTxL . subTransactionsTxBodyL)
+      TRC
+        ( SubLedgerEnv slot mbCurEpochNo txIx pp chainAccountState scriptsProvided
+        , ledgerState
+        , subTxs
+        )
   conwayLedgerTransitionTRC (TRC (env, ledgerStateAfterSubledgers, tx))
 
 instance
