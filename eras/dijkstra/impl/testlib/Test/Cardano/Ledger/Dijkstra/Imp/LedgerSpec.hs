@@ -14,7 +14,6 @@ import Cardano.Ledger.Dijkstra.Rules (
   DijkstraLedgerPredFailure (..),
   DijkstraUtxoPredFailure (BadInputsUTxO),
  )
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.OMap.Strict as OMap

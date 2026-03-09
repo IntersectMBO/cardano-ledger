@@ -162,6 +162,17 @@ class
   where
   data Tx (l :: TxLevel) era
 
+  -- | This is a `Tx` that is annotated with some information from the state annotated transaction,
+  -- which can be reused between validations. It is critical to only store here information that
+  -- cannot be invalidated byitself if used with different instance of the state. In other words if
+  -- some part of the state changed and made this annotation invalid, it must be the case that there
+  -- will be another predicate check in the rules that will ensure transaction becomes invalid. For
+  -- example, if a reference input gets spent, then there must a predicate check that fails on
+  -- missing output, regardless if data from reference inputs is still present in the `StAnnTx`
+  type StAnnTx (l :: TxLevel) era = (r :: Type) | r -> l era
+
+  txStAnnTxG :: SimpleGetter (StAnnTx l era) (Tx l era)
+
   mkBasicTx :: TxBody l era -> Tx l era
 
   bodyTxL :: Lens' (Tx l era) (TxBody l era)

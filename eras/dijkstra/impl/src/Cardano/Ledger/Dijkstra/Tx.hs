@@ -21,15 +21,17 @@
 module Cardano.Ledger.Dijkstra.Tx (
   DijkstraTx (..),
   Tx (..),
+  DijkstraStAnnTx (..),
   validateDijkstraNativeScript,
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, ContextError, TxInfoResult)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   IsValid (..),
  )
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), integralToBounded)
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -56,17 +58,23 @@ import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.Plutus (PlutusWithContext)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
+import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
 import NoThunks.Class (InspectHeap (..), NoThunks)
+
+-- class AlonzoEraTx era => DijkstraEraTx era where
+--   txStAnnTxL :: Lens (StAnnTx l era) (StAnnTx SubTx era) (Tx l era) (Tx SubTx era)
 
 data DijkstraTx l era where
   DijkstraTx ::
@@ -182,6 +190,12 @@ instance EraTx DijkstraEra where
   newtype Tx l DijkstraEra = MkDijkstraTx {unDijkstraTx :: DijkstraTx l DijkstraEra}
     deriving newtype (Eq, Show, NFData, NoThunks, ToCBOR, EncCBOR)
     deriving (Generic)
+
+  type StAnnTx l DijkstraEra = DijkstraStAnnTx l DijkstraEra
+
+  txStAnnTxG = to $ \case
+    DijkstraStAnnTopTx {dsattTx} -> dsattTx
+    DijkstraStAnnSubTx {dsastTx} -> dsastTx
 
   mkBasicTx = MkDijkstraTx . mkBasicDijkstraTx
 
@@ -354,3 +368,54 @@ toCBORForMempoolSubmission = \case
         !> To dstBody
         !> To dstWits
         !> E (encodeNullStrictMaybe encCBOR) dstAuxData
+
+data DijkstraStAnnTx l era where
+  DijkstraStAnnTopTx ::
+    { dsattTx :: !(Tx TopTx era)
+    , dsattProtocolVersion :: !ProtVer
+    , dsattScriptsNeeded :: ScriptsNeeded era
+    , dsattScriptsProvided :: ScriptsProvided era
+    , dsattPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
+    , dsattStAnnSubTxs :: [DijkstraStAnnTx SubTx era]
+    } ->
+    DijkstraStAnnTx TopTx era
+  DijkstraStAnnSubTx ::
+    { dsastTx :: !(Tx SubTx era)
+    , dsastScriptsNeeded :: ScriptsNeeded era
+    , dsastScriptsProvided :: ScriptsProvided era
+    , dsastTxInfoResult :: TxInfoResult era
+    , dsastPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
+    } ->
+    DijkstraStAnnTx SubTx era
+
+deriving instance
+  ( DijkstraEraScript era
+  , Eq (Tx l era)
+  , Eq (Tx SubTx era)
+  , Eq (ScriptsNeeded era)
+  , Eq (ScriptsProvided era)
+  , Eq (ContextError era)
+  , Eq (TxInfoResult era)
+  ) =>
+  Eq (DijkstraStAnnTx l era)
+
+deriving instance
+  ( DijkstraEraScript era
+  , Show (Tx l era)
+  , Show (Tx SubTx era)
+  , Show (ScriptsNeeded era)
+  , Show (ScriptsProvided era)
+  , Show (ContextError era)
+  , Show (TxInfoResult era)
+  ) =>
+  Show (DijkstraStAnnTx l era)
+
+instance
+  ( EraTxLevel era
+  , STxLevel SubTx era ~ STxBothLevels SubTx era
+  , STxLevel TopTx era ~ STxBothLevels TopTx era
+  ) =>
+  HasEraTxLevel DijkstraStAnnTx era
+  where
+  toSTxLevel DijkstraStAnnTopTx {} = STopTx @era
+  toSTxLevel DijkstraStAnnSubTx {} = SSubTx @era

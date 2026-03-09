@@ -201,6 +201,10 @@ instance EraTx ShelleyEra where
     deriving newtype (Eq, EncCBOR, NFData, NoThunks, Show, ToCBOR)
     deriving (Generic)
 
+  type StAnnTx l ShelleyEra = Tx l ShelleyEra
+
+  txStAnnTxG = id
+
   mkBasicTx = MkShelleyTx . mkBasicShelleyTx
 
   bodyTxL = shelleyTxL . bodyShelleyTxL

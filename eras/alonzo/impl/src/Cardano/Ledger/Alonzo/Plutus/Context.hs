@@ -1,12 +1,17 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 -- Recursive definition constraints of `EraPlutusContext` and `EraPlutusTxInfo` lead to a wrongful
 -- redundant constraint warning in the definition of `lookupTxInfoResult`.
@@ -16,13 +21,13 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Alonzo.Plutus.Context (
+  CollectError (..),
   LedgerTxInfo (..),
   EraPlutusTxInfo (..),
   PlutusTxInfoResult (..),
   mkPlutusTxInfoFromResult,
   toPlutusTxInfoForPurpose,
   EraPlutusContext (..),
-  toPlutusWithContext,
   lookupTxInfoResultImpossible,
   SupportedLanguage (..),
   mkSupportedLanguageM,
@@ -41,17 +46,15 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (eraMaxLanguage, mkPlutusScript),
+  AsItem (..),
   AsIxItem (..),
   AsPurpose,
   PlutusPurpose,
   PlutusScript (..),
-  hoistPlutusPurpose,
-  toAsItem,
-  toAsPurpose,
  )
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum))
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), kindObject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus (
   CostModel,
@@ -62,12 +65,10 @@ import Cardano.Ledger.Plutus (
   PlutusArgs,
   PlutusBinary,
   PlutusLanguage,
-  PlutusRunnable,
   PlutusScriptContext,
   PlutusWithContext (..),
   SLanguage (..),
   asSLanguage,
-  isLanguage,
   plutusLanguage,
  )
 import Cardano.Ledger.State (UTxO (..))
@@ -77,10 +78,11 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
 import Control.Monad (join)
 import Control.Monad.Trans.Fail.String (errorFail)
-import Data.Aeson (ToJSON)
+import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Text (Text)
+import GHC.Generics
 import GHC.Stack
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
@@ -224,35 +226,6 @@ class
     CostModel ->
     Either (ContextError era) PlutusWithContext
 
-toPlutusWithContext ::
-  forall l era.
-  (EraPlutusTxInfo l era, AlonzoEraUTxO era) =>
-  Either (Plutus l) (PlutusRunnable l) ->
-  ScriptHash ->
-  PlutusPurpose AsIxItem era ->
-  LedgerTxInfo era ->
-  TxInfoResult era ->
-  (Data era, ExUnits) ->
-  CostModel ->
-  Either (ContextError era) PlutusWithContext
-toPlutusWithContext script scriptHash plutusPurpose lti@LedgerTxInfo {ltiTx} txInfoResult (redeemerData, exUnits) costModel = do
-  let slang = isLanguage @l
-      maybeSpendingDatum =
-        getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
-  mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
-  txInfo <- mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
-  plutusArgs <-
-    toPlutusArgs slang (ltiProtVer lti) txInfo plutusPurpose maybeSpendingDatum redeemerData
-  pure $
-    PlutusWithContext
-      { pwcProtocolVersion = pvMajor (ltiProtVer lti)
-      , pwcScript = script
-      , pwcScriptHash = scriptHash
-      , pwcArgs = plutusArgs
-      , pwcExUnits = exUnits
-      , pwcCostModel = costModel
-      }
-
 -- | Helper function to use when implementing `lookupTxInfoResult` for plutus languages that are not
 -- supported by the era.
 lookupTxInfoResultImpossible ::
@@ -364,3 +337,68 @@ mkSupportedLanguageM lang =
   case mkSupportedLanguage lang of
     Nothing -> fail $ show lang ++ " language is not supported in " ++ eraName @era
     Just supportedLanguage -> pure supportedLanguage
+
+-- | When collecting inputs for two phase scripts, these are the that things can go wrong.
+data CollectError era
+  = NoRedeemer !(PlutusPurpose AsItem era)
+  | NoWitness !ScriptHash
+  | NoCostModel !Language
+  | BadTranslation !(ContextError era)
+  deriving (Generic)
+
+deriving instance
+  (AlonzoEraScript era, Eq (ContextError era)) =>
+  Eq (CollectError era)
+
+deriving instance
+  (AlonzoEraScript era, Show (ContextError era)) =>
+  Show (CollectError era)
+
+instance
+  (AlonzoEraScript era, NoThunks (ContextError era)) =>
+  NoThunks (CollectError era)
+
+instance
+  (AlonzoEraScript era, NFData (ContextError era)) =>
+  NFData (CollectError era)
+
+instance (AlonzoEraScript era, EncCBOR (ContextError era)) => EncCBOR (CollectError era) where
+  encCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
+  encCBOR (NoWitness x) = encode $ Sum (NoWitness @era) 1 !> To x
+  encCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
+  encCBOR (BadTranslation x) = encode $ Sum (BadTranslation @era) 3 !> To x
+
+instance (AlonzoEraScript era, DecCBOR (ContextError era)) => DecCBOR (CollectError era) where
+  decCBOR = decode (Summands "CollectError" dec)
+    where
+      dec 0 = SumD NoRedeemer <! From
+      dec 1 = SumD NoWitness <! From
+      dec 2 = SumD NoCostModel <! From
+      dec 3 = SumD BadTranslation <! From
+      dec n = Invalid n
+
+instance
+  ( Era era
+  , ToJSON (PlutusPurpose AsItem era)
+  , ToJSON (ContextError era)
+  ) =>
+  ToJSON (CollectError era)
+  where
+  toJSON = \case
+    NoRedeemer sPurpose ->
+      kindObject "CollectError" $
+        [ "error" .= String "NoRedeemer"
+        , "plutusPurpose" .= toJSON sPurpose
+        ]
+    NoWitness sHash ->
+      kindObject "CollectError" $
+        [ "error" .= String "NoWitness"
+        , "scriptHash" .= toJSON sHash
+        ]
+    NoCostModel lang ->
+      kindObject "CollectError" $
+        [ "error" .= String "NoCostModel"
+        , "language" .= toJSON lang
+        ]
+    BadTranslation err ->
+      kindObject "BadTranslation" ["error" .= toJSON err]

@@ -1,14 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -33,13 +30,15 @@ module Cardano.Ledger.Alonzo.Plutus.Evaluate (
 ) where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext (..), LedgerTxInfo (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  CollectError (..),
+  ContextError,
+  EraPlutusContext (..),
+  LedgerTxInfo (..),
+ )
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (kindObject)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Plutus.CostModels (costModelsValid)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext (..),
@@ -54,8 +53,6 @@ import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
-import Control.DeepSeq (NFData)
-import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Bifunctor (first)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty)
@@ -68,77 +65,11 @@ import Data.Text (Text)
 import qualified Debug.Trace as Debug
 import GHC.Generics
 import Lens.Micro
-import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.Common as P
 
 -- ===============================================================
 -- From the specification, Figure 7 "Scripts and their Arguments"
 -- ===============================================================
-
--- | When collecting inputs for two phase scripts, 3 things can go wrong.
-data CollectError era
-  = NoRedeemer !(PlutusPurpose AsItem era)
-  | NoWitness !ScriptHash
-  | NoCostModel !Language
-  | BadTranslation !(ContextError era)
-  deriving (Generic)
-
-deriving instance
-  (AlonzoEraScript era, Eq (ContextError era)) =>
-  Eq (CollectError era)
-
-deriving instance
-  (AlonzoEraScript era, Show (ContextError era)) =>
-  Show (CollectError era)
-
-deriving instance
-  (AlonzoEraScript era, NoThunks (ContextError era)) =>
-  NoThunks (CollectError era)
-
-deriving instance
-  (AlonzoEraScript era, NFData (ContextError era)) =>
-  NFData (CollectError era)
-
-instance (AlonzoEraScript era, EncCBOR (ContextError era)) => EncCBOR (CollectError era) where
-  encCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
-  encCBOR (NoWitness x) = encode $ Sum (NoWitness @era) 1 !> To x
-  encCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
-  encCBOR (BadTranslation x) = encode $ Sum (BadTranslation @era) 3 !> To x
-
-instance (AlonzoEraScript era, DecCBOR (ContextError era)) => DecCBOR (CollectError era) where
-  decCBOR = decode (Summands "CollectError" dec)
-    where
-      dec 0 = SumD NoRedeemer <! From
-      dec 1 = SumD NoWitness <! From
-      dec 2 = SumD NoCostModel <! From
-      dec 3 = SumD BadTranslation <! From
-      dec n = Invalid n
-
-instance
-  ( Era era
-  , ToJSON (PlutusPurpose AsItem era)
-  , ToJSON (ContextError era)
-  ) =>
-  ToJSON (CollectError era)
-  where
-  toJSON = \case
-    NoRedeemer sPurpose ->
-      kindObject "CollectError" $
-        [ "error" .= String "NoRedeemer"
-        , "plutusPurpose" .= toJSON sPurpose
-        ]
-    NoWitness sHash ->
-      kindObject "CollectError" $
-        [ "error" .= String "NoWitness"
-        , "scriptHash" .= toJSON sHash
-        ]
-    NoCostModel lang ->
-      kindObject "CollectError" $
-        [ "error" .= String "NoCostModel"
-        , "language" .= toJSON lang
-        ]
-    BadTranslation err ->
-      kindObject "BadTranslation" ["error" .= toJSON err]
 
 collectPlutusScriptsWithContext ::
   forall era l.
@@ -196,8 +127,8 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
           (redeemerData, exUnits)
           costModel
 
-    -- \| Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
-    --   but if there are none, use 'f' to construct a success.
+    -- Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
+    -- but if there are none, use 'f' to construct a success.
     merge ::
       forall t b a.
       (t -> Either a b) -> [Either a t] -> Either (NonEmpty a) [b] -> Either (NonEmpty a) [b]
