@@ -91,8 +91,6 @@ data DijkstraSubUtxowPredFailure era
     SubMissingVKeyWitnessesUTXOW
       -- | witnesses which were needed and not supplied
       (NonEmptySet (KeyHash Witness))
-  | -- | missing scripts
-    SubMissingScriptWitnessesUTXOW (NonEmptySet ScriptHash)
   | -- | failed scripts
     SubScriptWitnessNotValidatingUTXOW (NonEmptySet ScriptHash)
   | -- | hash of the full metadata
@@ -102,8 +100,6 @@ data DijkstraSubUtxowPredFailure era
   | SubConflictingMetadataHash (Mismatch RelEQ TxAuxDataHash)
   | -- | Contains out of range values (string`s too long)
     SubInvalidMetadata
-  | -- | extraneous scripts
-    SubExtraneousScriptWitnessesUTXOW (NonEmptySet ScriptHash)
   | SubMissingRedeemers (NonEmpty (PlutusPurpose AsItem era, ScriptHash))
   | SubMissingRequiredDatums
       -- | Set of missing data hashes
@@ -299,22 +295,20 @@ instance
       SubUtxoFailure x -> Sum SubUtxoFailure 0 !> To x
       SubInvalidWitnessesUTXOW xs -> Sum SubInvalidWitnessesUTXOW 1 !> To xs
       SubMissingVKeyWitnessesUTXOW xs -> Sum SubMissingVKeyWitnessesUTXOW 2 !> To xs
-      SubMissingScriptWitnessesUTXOW xs -> Sum SubMissingScriptWitnessesUTXOW 3 !> To xs
-      SubScriptWitnessNotValidatingUTXOW xs -> Sum SubScriptWitnessNotValidatingUTXOW 4 !> To xs
-      SubMissingTxBodyMetadataHash xs -> Sum SubMissingTxBodyMetadataHash 5 !> To xs
-      SubMissingTxMetadata xs -> Sum SubMissingTxMetadata 6 !> To xs
-      SubConflictingMetadataHash mm -> Sum SubConflictingMetadataHash 7 !> To mm
-      SubInvalidMetadata -> Sum SubInvalidMetadata 8
-      SubExtraneousScriptWitnessesUTXOW xs -> Sum SubExtraneousScriptWitnessesUTXOW 9 !> To xs
-      SubMissingRedeemers x -> Sum SubMissingRedeemers 10 !> To x
-      SubMissingRequiredDatums x y -> Sum SubMissingRequiredDatums 11 !> To x !> To y
-      SubNotAllowedSupplementalDatums x y -> Sum SubNotAllowedSupplementalDatums 12 !> To x !> To y
-      SubPPViewHashesDontMatch mm -> Sum SubPPViewHashesDontMatch 13 !> To mm
-      SubUnspendableUTxONoDatumHash x -> Sum SubUnspendableUTxONoDatumHash 14 !> To x
-      SubExtraRedeemers x -> Sum SubExtraRedeemers 15 !> To x
-      SubMalformedScriptWitnesses x -> Sum SubMalformedScriptWitnesses 16 !> To x
-      SubMalformedReferenceScripts x -> Sum SubMalformedReferenceScripts 17 !> To x
-      SubScriptIntegrityHashMismatch x y -> Sum SubScriptIntegrityHashMismatch 18 !> To x !> To y
+      SubScriptWitnessNotValidatingUTXOW xs -> Sum SubScriptWitnessNotValidatingUTXOW 3 !> To xs
+      SubMissingTxBodyMetadataHash xs -> Sum SubMissingTxBodyMetadataHash 4 !> To xs
+      SubMissingTxMetadata xs -> Sum SubMissingTxMetadata 5 !> To xs
+      SubConflictingMetadataHash mm -> Sum SubConflictingMetadataHash 6 !> To mm
+      SubInvalidMetadata -> Sum SubInvalidMetadata 7
+      SubMissingRedeemers x -> Sum SubMissingRedeemers 8 !> To x
+      SubMissingRequiredDatums x y -> Sum SubMissingRequiredDatums 9 !> To x !> To y
+      SubNotAllowedSupplementalDatums x y -> Sum SubNotAllowedSupplementalDatums 10 !> To x !> To y
+      SubPPViewHashesDontMatch mm -> Sum SubPPViewHashesDontMatch 11 !> To mm
+      SubUnspendableUTxONoDatumHash x -> Sum SubUnspendableUTxONoDatumHash 12 !> To x
+      SubExtraRedeemers x -> Sum SubExtraRedeemers 13 !> To x
+      SubMalformedScriptWitnesses x -> Sum SubMalformedScriptWitnesses 14 !> To x
+      SubMalformedReferenceScripts x -> Sum SubMalformedReferenceScripts 15 !> To x
+      SubScriptIntegrityHashMismatch x y -> Sum SubScriptIntegrityHashMismatch 16 !> To x !> To y
 
 instance
   ( ConwayEraScript era
@@ -326,22 +320,20 @@ instance
     0 -> SumD SubUtxoFailure <! From
     1 -> SumD SubInvalidWitnessesUTXOW <! From
     2 -> SumD SubMissingVKeyWitnessesUTXOW <! From
-    3 -> SumD SubMissingScriptWitnessesUTXOW <! From
-    4 -> SumD SubScriptWitnessNotValidatingUTXOW <! From
-    5 -> SumD SubMissingTxBodyMetadataHash <! From
-    6 -> SumD SubMissingTxMetadata <! From
-    7 -> SumD SubConflictingMetadataHash <! From
-    8 -> SumD SubInvalidMetadata
-    9 -> SumD SubExtraneousScriptWitnessesUTXOW <! From
-    10 -> SumD SubMissingRedeemers <! From
-    11 -> SumD SubMissingRequiredDatums <! From <! From
-    12 -> SumD SubNotAllowedSupplementalDatums <! From <! From
-    13 -> SumD SubPPViewHashesDontMatch <! From
-    14 -> SumD SubUnspendableUTxONoDatumHash <! From
-    15 -> SumD SubExtraRedeemers <! From
-    16 -> SumD SubMalformedScriptWitnesses <! From
-    17 -> SumD SubMalformedReferenceScripts <! From
-    18 -> SumD SubScriptIntegrityHashMismatch <! From <! From
+    3 -> SumD SubScriptWitnessNotValidatingUTXOW <! From
+    4 -> SumD SubMissingTxBodyMetadataHash <! From
+    5 -> SumD SubMissingTxMetadata <! From
+    6 -> SumD SubConflictingMetadataHash <! From
+    7 -> SumD SubInvalidMetadata
+    8 -> SumD SubMissingRedeemers <! From
+    9 -> SumD SubMissingRequiredDatums <! From <! From
+    10 -> SumD SubNotAllowedSupplementalDatums <! From <! From
+    11 -> SumD SubPPViewHashesDontMatch <! From
+    12 -> SumD SubUnspendableUTxONoDatumHash <! From
+    13 -> SumD SubExtraRedeemers <! From
+    14 -> SumD SubMalformedScriptWitnesses <! From
+    15 -> SumD SubMalformedReferenceScripts <! From
+    16 -> SumD SubScriptIntegrityHashMismatch <! From <! From
     n -> Invalid n
 
 dijkstraUtxowToDijkstraSubUtxowPredFailure ::
@@ -354,13 +346,13 @@ dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
   UtxoFailure f -> SubUtxoFailure (injectFailure @"SUBUTXO" f)
   InvalidWitnessesUTXOW ks -> SubInvalidWitnessesUTXOW ks
   MissingVKeyWitnessesUTXOW ks -> SubMissingVKeyWitnessesUTXOW ks
-  MissingScriptWitnessesUTXOW hs -> SubMissingScriptWitnessesUTXOW hs
+  MissingScriptWitnessesUTXOW _ -> error "Impossible: `MissingScriptWitnessesUTXOW` for SUBUTXOW"
   ScriptWitnessNotValidatingUTXOW hs -> SubScriptWitnessNotValidatingUTXOW hs
   MissingTxBodyMetadataHash dh -> SubMissingTxBodyMetadataHash dh
   MissingTxMetadata dh -> SubMissingTxMetadata dh
   ConflictingMetadataHash mm -> SubConflictingMetadataHash mm
   InvalidMetadata -> SubInvalidMetadata
-  ExtraneousScriptWitnessesUTXOW hs -> SubExtraneousScriptWitnessesUTXOW hs
+  ExtraneousScriptWitnessesUTXOW _ -> error "Impossible: `ExtraneousScriptWitnessesUTXOW` for SUBUTXOW"
   MissingRedeemers pps -> SubMissingRedeemers pps
   MissingRequiredDatums hs1 hs2 -> SubMissingRequiredDatums hs1 hs2
   NotAllowedSupplementalDatums hs1 hs2 -> SubNotAllowedSupplementalDatums hs1 hs2
