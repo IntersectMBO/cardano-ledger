@@ -20,6 +20,7 @@ module Cardano.Ledger.Conway (
   ApplyTxError (..),
 ) where
 
+import Cardano.Ledger.Alonzo (mkAlonzoStAnnTx)
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
@@ -51,6 +52,9 @@ instance ApplyTx ConwayEra where
   newtype ApplyTxError ConwayEra = ConwayApplyTxError (NonEmpty (ConwayLedgerPredFailure ConwayEra))
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
+
+  mkStAnnTx = mkAlonzoStAnnTx
+
   applyTxValidation validationPolicy globals env state tx =
     first ConwayApplyTxError $
       ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx

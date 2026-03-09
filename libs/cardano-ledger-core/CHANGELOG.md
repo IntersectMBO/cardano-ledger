@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class
 * Remove `ToCBOR` and `FromCBOR` instances for `TxIx`, `CertIx`, `SlotNo32`, `Ptr`, `VRFVerKeyHash`, `SafeHash`, `VoidEraRule`, `Language`, `SLanguage`
 * Remove `FromCBOR` instances for `ScriptHash`, `ChainCode`, `PlutusBinary`, `BootstrapWitness`, `WitVKey`
 * Remove `ToCBOR` and `FromCBOR` instances for `PlutusWithContext`

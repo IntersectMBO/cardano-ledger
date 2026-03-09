@@ -2,6 +2,8 @@
 
 ## 0.3.0.0
 
+* Add `DijkstraStAnnTx`
+* Add `scriptsProvidedDijkstraStAnnTx`
 * Remove `ToCBOR` and `FromCBOR` instances for `DijkstraGovPredFailure`
 * Add `getDijkstraScriptsProvided`
 * Add `MissingRequiredGuards` constructor to `DijkstraUtxowPredFailure`

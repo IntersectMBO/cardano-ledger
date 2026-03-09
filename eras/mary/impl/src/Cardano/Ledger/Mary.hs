@@ -46,6 +46,9 @@ instance ApplyTx MaryEra where
   newtype ApplyTxError MaryEra = MaryApplyTxError (NonEmpty (ShelleyLedgerPredFailure MaryEra))
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
+
+  mkStAnnTx _ _ _ _ = id
+
   applyTxValidation validationPolicy globals env state tx =
     first MaryApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
