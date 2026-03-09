@@ -20,13 +20,15 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
--- | This module exports implementations of many of the functions outlined in the Alonzo specification.
+-- | This module exports implementations many of the functions outlined in the Alonzo specification.
 --     The link to source of the specification
 --       https://github.com/intersectmbo/cardano-ledger/tree/master/eras/alonzo/formal-spec
 --     The most recent version of the document can be found here:
 --       https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
 --     The functions can be found in Figures in that document, and sections of this code refer to those figures.
 module Cardano.Ledger.Alonzo.Tx (
+  -- ** State Annotated
+  AlonzoStAnnTx (..),
   -- Figure 1
   CostModel,
   getLanguageView,
@@ -73,6 +75,7 @@ import Cardano.Ledger.Alonzo.PParams (
   getLanguageView,
   ppPricesL,
  )
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, ContextError)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   CostModel,
@@ -94,7 +97,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemersL,
   unTxDatsL,
  )
-import Cardano.Ledger.BaseTypes (integralToBounded)
+import Cardano.Ledger.BaseTypes (ProtVer, integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -113,10 +116,9 @@ import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Tx (..))
 import Cardano.Ledger.MemoBytes (EqRaw (..))
-import Cardano.Ledger.Plutus.Data (Data, hashData)
-import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
+import Cardano.Ledger.Plutus (Data, PlutusWithContext, hashData, nonNativeLanguages)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
-import Cardano.Ledger.State (EraUTxO, ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..), deepseq)
@@ -124,6 +126,7 @@ import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -161,7 +164,11 @@ instance EraTx AlonzoEra where
     deriving newtype (Eq, NFData, EncCBOR, ToCBOR, NoThunks, Show)
     deriving (Generic)
 
+  type StAnnTx l AlonzoEra = AlonzoStAnnTx l AlonzoEra
+
   mkBasicTx = MkAlonzoTx . mkBasicAlonzoTx
+
+  txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
 
   bodyTxL = alonzoTxL . bodyAlonzoTxL
   {-# INLINE bodyTxL #-}
@@ -464,3 +471,37 @@ instance
             <*! Ann From
             <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
   {-# INLINE decCBOR #-}
+
+data AlonzoStAnnTx l era where
+  AlonzoStAnnTx ::
+    { asatTx :: !(Tx TopTx era)
+    , asatProtocolVersion :: !ProtVer
+    , asatScriptsNeeded :: ScriptsNeeded era
+    , asatScriptsProvided :: ScriptsProvided era
+    , asatPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
+    } ->
+    AlonzoStAnnTx TopTx era
+
+deriving instance
+  ( AlonzoEraScript era
+  , Eq (Tx l era)
+  , Eq (ScriptsNeeded era)
+  , Eq (ScriptsProvided era)
+  , Eq (ContextError era)
+  ) =>
+  Eq (AlonzoStAnnTx l era)
+
+deriving instance
+  ( AlonzoEraScript era
+  , Show (Tx l era)
+  , Show (ScriptsNeeded era)
+  , Show (ScriptsProvided era)
+  , Show (ContextError era)
+  ) =>
+  Show (AlonzoStAnnTx l era)
+
+instance
+  (EraTxLevel era, STxLevel TopTx era ~ STxTopLevel TopTx era) =>
+  HasEraTxLevel AlonzoStAnnTx era
+  where
+  toSTxLevel (AlonzoStAnnTx {}) = STopTxOnly @era

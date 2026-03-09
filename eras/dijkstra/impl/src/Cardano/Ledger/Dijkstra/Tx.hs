@@ -68,6 +68,9 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
 import NoThunks.Class (InspectHeap (..), NoThunks)
 
+class AlonzoEraTx era => DijkstraEraTx era where
+  txStAnnTxL :: Lens (StAnnTx l era) (StAnnTx SubTx era) (Tx l era) (Tx SubTx era)
+
 data DijkstraTx l era where
   DijkstraTx ::
     { dtBody :: !(TxBody TopTx era)

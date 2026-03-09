@@ -19,6 +19,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Plutus.TxInfo (
+  toPlutusWithContext,
   AlonzoContextError (..),
   TxOutSource (..),
   transLookupTxOut,
@@ -49,9 +50,15 @@ import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), PlutusScript (..))
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoPlutusPurpose (..),
+  PlutusScript (..),
+  toAsItem,
+  toAsPurpose,
+ )
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -68,14 +75,7 @@ import Cardano.Ledger.Mary.Value (
   MultiAsset (..),
   PolicyID (..),
  )
-import Cardano.Ledger.Plutus.Data (Data, getPlutusData)
-import Cardano.Ledger.Plutus.Language (
-  Language (..),
-  LegacyPlutusArgs (..),
-  PlutusArgs (..),
-  SLanguage (..),
- )
-import Cardano.Ledger.Plutus.TxInfo
+import Cardano.Ledger.Plutus
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
 import Cardano.Ledger.State (StakePoolParams (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
@@ -97,6 +97,35 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
+
+toPlutusWithContext ::
+  forall l era.
+  (EraPlutusTxInfo l era, AlonzoEraUTxO era) =>
+  Either (Plutus l) (PlutusRunnable l) ->
+  ScriptHash ->
+  PlutusPurpose AsIxItem era ->
+  LedgerTxInfo era ->
+  TxInfoResult era ->
+  (Data era, ExUnits) ->
+  CostModel ->
+  Either (ContextError era) PlutusWithContext
+toPlutusWithContext script scriptHash plutusPurpose lti@LedgerTxInfo {ltiTx} txInfoResult (redeemerData, exUnits) costModel = do
+  let slang = isLanguage @l
+      maybeSpendingDatum =
+        getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
+  mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
+  let txInfo = mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
+  plutusArgs <-
+    toPlutusArgs slang (ltiProtVer lti) txInfo plutusPurpose maybeSpendingDatum redeemerData
+  pure $
+    PlutusWithContext
+      { pwcProtocolVersion = pvMajor (ltiProtVer lti)
+      , pwcScript = script
+      , pwcScriptHash = scriptHash
+      , pwcArgs = plutusArgs
+      , pwcExUnits = exUnits
+      , pwcCostModel = costModel
+      }
 
 instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxCert _ _ = pure . transTxCert
