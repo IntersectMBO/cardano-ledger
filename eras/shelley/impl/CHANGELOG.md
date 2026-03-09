@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `mkStAnnTx` to `ApplyTx`
 * Add `InjectionData`, `foldInjectionData`, `InjectionError` to `Cardano.Ledger.Shelley.Genesis`
 * Add `ShelleyExtraConfig` type to `Cardano.Ledger.Shelley.Genesis`
 * Add `sgExtraConfig` field to `ShelleyGenesis`

@@ -39,6 +39,9 @@ instance ApplyTx AllegraEra where
   newtype ApplyTxError AllegraEra = AllegraApplyTxError (NonEmpty (ShelleyLedgerPredFailure AllegraEra))
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
+
+  mkStAnnTx _ _ _ _ = id
+
   applyTxValidation validationPolicy globals env state tx =
     first AllegraApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx

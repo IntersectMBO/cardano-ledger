@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -19,9 +20,7 @@ import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Tx as X
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxAuxData ()
-import Cardano.Ledger.Babbage.TxBody (
-  TxBody (..),
- )
+import Cardano.Ledger.Babbage.TxBody (TxBody (..))
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Core
@@ -29,7 +28,7 @@ import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq (NFData)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens)
+import Lens.Micro (Lens', lens, to)
 import NoThunks.Class (NoThunks)
 
 instance HasEraTxLevel Tx BabbageEra where
@@ -39,6 +38,11 @@ instance EraTx BabbageEra where
   newtype Tx l BabbageEra = MkBabbageTx {unBabbageTx :: AlonzoTx l BabbageEra}
     deriving newtype (Eq, NFData, Show, NoThunks, ToCBOR, EncCBOR)
     deriving (Generic)
+
+  type StAnnTx l BabbageEra = AlonzoStAnnTx l BabbageEra
+
+  txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
+
   mkBasicTx = MkBabbageTx . mkBasicAlonzoTx
 
   bodyTxL = babbageTxL . bodyAlonzoTxL

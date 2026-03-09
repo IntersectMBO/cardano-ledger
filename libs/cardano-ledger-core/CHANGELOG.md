@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class
 * Add `decodeProtVer` to `Cardano.Ledger.BaseTypes`
 * Add `EraDecoder` type and `ppEraDecoder` field to `PParam`
 * Fix `DecCBOR` instance for `PParamsUpdate` to reject `ProtVer` values exceeding the era maximum

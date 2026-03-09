@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -27,6 +28,9 @@ module Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsHashesNeeded,
   zipAsIxItem,
 
+  -- * Scripts provided
+  scriptsProvidedAlonzoStAnnTx,
+
   -- * Datums needed
   getInputDataHashesTxBody,
 
@@ -39,6 +43,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.State ()
+import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx (..))
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Credential (credScriptHash)
@@ -123,10 +128,23 @@ class EraUTxO era => AlonzoEraUTxO era where
     PlutusPurpose AsItem era ->
     Maybe (Data era)
 
+  scriptsProvidedStAnnTx :: StAnnTx l era -> ScriptsProvided era
+
 instance AlonzoEraUTxO AlonzoEra where
   getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
 
   getSpendingDatum = getAlonzoSpendingDatum
+
+  scriptsProvidedStAnnTx = scriptsProvidedAlonzoStAnnTx
+
+scriptsProvidedAlonzoStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxTopLevel l era
+  , STxLevel TopTx era ~ STxTopLevel TopTx era
+  ) =>
+  AlonzoStAnnTx l era -> ScriptsProvided era
+scriptsProvidedAlonzoStAnnTx stAnnTx =
+  withTopTxLevelOnly stAnnTx $ \AlonzoStAnnTx {asatScriptsProvided} -> asatScriptsProvided
 
 getAlonzoSupplementalDataHashes ::
   (EraTxBody era, AlonzoEraTxOut era) =>

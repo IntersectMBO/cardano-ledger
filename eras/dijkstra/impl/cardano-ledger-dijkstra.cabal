@@ -114,6 +114,7 @@ library
     cardano-ledger-core:{cardano-ledger-core, internal} >=1.20,
     cardano-ledger-mary,
     cardano-ledger-shelley,
+    cardano-slotting,
     cardano-strict-containers,
     containers,
     data-default,

@@ -47,7 +47,6 @@ import Cardano.Ledger.Dijkstra.Scripts (
   evalDijkstraNativeScript,
   pattern RequireGuard,
  )
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)

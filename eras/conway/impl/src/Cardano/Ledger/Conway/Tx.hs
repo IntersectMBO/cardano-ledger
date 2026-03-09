@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -18,8 +19,9 @@ module Cardano.Ledger.Conway.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
-import Cardano.Ledger.Alonzo.Core (AlonzoEraTxWits)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Tx (
+  AlonzoStAnnTx (..),
   alonzoMinFeeTx,
   alonzoTxEqRaw,
   auxDataAlonzoTxL,
@@ -42,7 +44,6 @@ import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ppMinFeeRefScriptCo
 import Cardano.Ledger.Conway.TxAuxData ()
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
-import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
@@ -50,7 +51,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack
-import Lens.Micro (Lens', lens, (^.))
+import Lens.Micro (Lens', lens, to, (^.))
 import NoThunks.Class (NoThunks)
 
 instance HasEraTxLevel Tx ConwayEra where
@@ -60,6 +61,10 @@ instance EraTx ConwayEra where
   newtype Tx l ConwayEra = MkConwayTx {unConwayTx :: AlonzoTx l ConwayEra}
     deriving newtype (Eq, Show, NFData, NoThunks, ToCBOR, EncCBOR)
     deriving (Generic)
+
+  type StAnnTx l ConwayEra = AlonzoStAnnTx l ConwayEra
+
+  txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
 
   mkBasicTx = MkConwayTx . mkBasicAlonzoTx
 
