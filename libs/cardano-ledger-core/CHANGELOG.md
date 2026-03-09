@@ -6,6 +6,10 @@
   - Moved to `cardano-base:Cardano.Base.IP`
 * Remove `ToCBOR` and `FromCBOR` instances for `Nonce`
 
+### `testlib`
+
+* Modify `ToExpr` instance for `Mismatch` to display type-level `r` parameter using `Typeable`
+
 ## 1.19.0.0
 
 * In `SnapShot`, subsume `ssDelegations` into `ssActiveStake`.
