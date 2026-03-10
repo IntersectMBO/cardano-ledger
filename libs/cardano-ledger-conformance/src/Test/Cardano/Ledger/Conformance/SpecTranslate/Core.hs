@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -59,9 +60,10 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
-import Cardano.Ledger.Plutus.CostModels (CostModels)
+import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.Monad (forM)
 import Control.Monad.Except (throwError)
@@ -155,10 +157,22 @@ instance SpecTranslate ctx ProtVer where
 
   toSpecRep (ProtVer ver minor) = pure (getVersion ver, toInteger minor)
 
-instance SpecTranslate ctx CostModels where
-  type SpecRep CostModels = [((), ())]
+instance SpecTranslate ctx Language where
+  type SpecRep Language = Agda.HSLanguage
 
-  toSpecRep _ = pure [((), ())]
+  toSpecRep l = case l of
+    PlutusV1 -> return Agda.PV1
+    PlutusV2 -> return Agda.PV2
+    PlutusV3 -> return Agda.PV3
+    PlutusV4 -> error "PlutusV4 not supported"
+
+instance SpecTranslate ctx CostModels where
+  type SpecRep CostModels = [(Agda.HSLanguage, ())]
+
+  toSpecRep cm =
+    -- filter out PlutusV4 language
+    let validCostModels = filter ((/= PlutusV4) . fst) $ Map.toList (costModelsValid cm)
+     in mapM (\(l, _) -> (,()) <$> toSpecRep l) validCostModels
 
 instance SpecTranslate ctx Prices where
   type SpecRep Prices = ()
