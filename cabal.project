@@ -169,6 +169,7 @@ if impl(ghc >=9.14)
     , quickcheck-instances:containers
     , quickcheck-instances:these
     , quickcheck-instances:uuid-types
+    , safe-wild-cards:template-haskell
     , semialign:base
     , semialign:containers
     , semialign:indexed-traversable
