@@ -1,5 +1,9 @@
 # Revision history for cardano-ledger-dijkstra
 
+## 0.2.0.1
+
+*
+
 ## 0.2.0.0
 
 * Expose `conwayToDijkstraUtxowPredFailure`

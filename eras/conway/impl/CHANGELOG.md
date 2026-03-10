@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.21.0.0
+## 1.22.0.0
 
 * Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
+
+## 1.21.0.0
+
 * Add `validateTreasuryValue`, `validateWithdrawalsDelegated`
 * Update `resolveConwayInstantStake` to return `ActiveStake`
 * Remove `asBoundedIntegralHKD`

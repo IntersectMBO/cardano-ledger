@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.10.0.1
+
+*
+
 ## 1.10.0.0
 
 * Add `Generic` instance for `ApplyTxError`

@@ -1,5 +1,9 @@
 # Version history for `cardano-data`
 
+## 1.3.0.1
+
+*
+
 ## 1.3.0.0
 
 * Add `Data.Map.NonEmpty`

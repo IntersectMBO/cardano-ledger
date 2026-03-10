@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.9.0.1
+
+*
+
 ## 1.9.0.0
 
 * Add `Generic` instance for `ApplyTxError`

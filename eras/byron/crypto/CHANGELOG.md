@@ -1,5 +1,9 @@
 # Revision history for `cardano-crypto-wrapper`
 
+## 1.7.0.1
+
+*
+
 ## 1.7.0.0
 
 * Remove deprecated function `hash`
