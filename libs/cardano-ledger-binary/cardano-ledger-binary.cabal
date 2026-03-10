@@ -133,7 +133,6 @@ library testlib
     half,
     hedgehog,
     hspec,
-    hspec-core,
     pretty-show,
     prettyprinter,
     prettyprinter-ansi-terminal,

@@ -30,9 +30,12 @@ import Data.MemPack (VarLen (..), packByteString)
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import Data.Word (Word16, Word32, Word64)
-import Test.QuickCheck (Arbitrary (..), Gen, choose, oneof, vector)
+import Test.QuickCheck (Arbitrary (..), Gen, choose, oneof, vectorOf)
 import Text.Heredoc
 import Prelude hiding ((/))
+
+genByteString :: Int -> Gen ByteString
+genByteString n = BS.pack <$> vectorOf n arbitrary
 
 instance Era era => HuddleRule "hash28" era where
   huddleRuleNamed pname _ = pname =.= VBytes `sized` (28 :: Word64)
@@ -170,9 +173,7 @@ instance Era era => HuddleRule "positive_coin" era where
   huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word64" p
 
 genHash28 :: Gen ByteString
-genHash28 =
-  -- TODO better implementation
-  BS.pack <$> vector 28
+genHash28 = genByteString 28
 
 instance Era era => HuddleRule "address" era where
   huddleRuleNamed pname _ =

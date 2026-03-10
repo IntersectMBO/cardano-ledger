@@ -89,12 +89,12 @@ import Test.Hspec (
 import Test.QuickCheck (
   Arbitrary (..),
   Gen,
+  Property,
   Testable (..),
   counterexample,
   discard,
   forAll,
  )
-import Test.QuickCheck.Property (Property)
 
 huddleDecoderEquivalenceSpec ::
   forall a.
