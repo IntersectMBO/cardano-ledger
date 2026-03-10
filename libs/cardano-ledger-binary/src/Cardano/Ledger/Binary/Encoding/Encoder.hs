@@ -91,6 +91,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   encodeTerm,
 ) where
 
+import Cardano.Base.IP (IPv4, IPv6, fromIPv4w, fromIPv6w)
 import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder (setTag)
 import Cardano.Ledger.Binary.Version (Version, getVersion32, natVersion)
@@ -104,7 +105,6 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable as F (foldMap', foldl')
-import Data.IP (IPv4, IPv6, toHostAddress, toHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -554,14 +554,14 @@ encodeUTCTime (UTCTime day timeOfDay) =
 --------------------------------------------------------------------------------
 
 ipv4ToBytes :: IPv4 -> BS.ByteString
-ipv4ToBytes = BSL.toStrict . runPut . putWord32le . toHostAddress
+ipv4ToBytes = BSL.toStrict . runPut . putWord32le . fromIPv4w
 
 encodeIPv4 :: IPv4 -> Encoding
 encodeIPv4 = encodeBytes . ipv4ToBytes
 
 ipv6ToBytes :: IPv6 -> BS.ByteString
 ipv6ToBytes ipv6 = BSL.toStrict . runPut $ do
-  let (w1, w2, w3, w4) = toHostAddress6 ipv6
+  let (w1, w2, w3, w4) = fromIPv6w ipv6
   putWord32le w1
   putWord32le w2
   putWord32le w3

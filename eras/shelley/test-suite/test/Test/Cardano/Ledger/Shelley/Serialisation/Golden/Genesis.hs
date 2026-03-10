@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis (
   golden_cbor_ShelleyGenesis,
 ) where
 
+import Cardano.Base.IP (toIPv4, toIPv6)
 import Cardano.Ledger.BaseTypes (knownNonZeroBounded, textToDns, textToUrl)
 import Cardano.Ledger.Binary (Tokens (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -241,8 +242,8 @@ exampleShelleyGenesis =
       StrictSeq.fromList
         [ L.SingleHostAddr
             (L.SJust $ L.Port 1234)
-            (L.SJust $ read "0.0.0.0")
-            (L.SJust $ read "2001:db8:a::123")
+            (L.SJust $ toIPv4 [0, 0, 0, 0])
+            (L.SJust $ toIPv6 [0x2001, 0xdb8, 0xa, 0, 0, 0, 0, 0x123])
         , L.SingleHostName L.SNothing (fromJust $ textToDns 64 "cool.domain.com")
         , L.MultiHostName (fromJust $ textToDns 64 "cool.domain.com")
         ]
