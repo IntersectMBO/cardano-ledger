@@ -47,7 +47,6 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   SpecTRC (..),
   runFromAgdaFunction,
  )
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
