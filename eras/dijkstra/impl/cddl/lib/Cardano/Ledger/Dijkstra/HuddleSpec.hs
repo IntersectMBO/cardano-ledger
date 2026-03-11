@@ -946,8 +946,8 @@ metadatumRule pname era =
       ]
     / sarr [0 <+ a (metadatumRule pname era)]
     / VInt
-    / (VBytes `sized` (32 :: Word64))
-    / (VText `sized` (32 :: Word64))
+    / (VBytes `sized` (0 :: Word64, 64 :: Word64))
+    / (VText `sized` (0 :: Word64, 64 :: Word64))
 
 instance HuddleRule "metadatum" DijkstraEra where
   huddleRuleNamed = metadatumRule
