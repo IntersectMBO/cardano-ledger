@@ -41,7 +41,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential, StakeReference (StakeRefPtr))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Val (Val)
@@ -156,7 +156,10 @@ instance (Era era, DecCBOR (CompactForm (Value era))) => DecCBOR (ShelleyTxOut e
   decCBOR =
     decodeRecordNamed "ShelleyTxOut" (const 2) $ do
       cAddr <- decCBOR
-      TxOutCompact cAddr <$> decCBOR
+      let cAddrNormalized = case decompactAddr cAddr of
+            addr@(Addr _ _ (StakeRefPtr _)) -> compactAddr addr
+            _ -> cAddr
+      TxOutCompact cAddrNormalized <$> decCBOR
 
 instance
   ( Era era
