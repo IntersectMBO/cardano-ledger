@@ -21,7 +21,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Plutus (emptyCostModels)
 import Cardano.Ledger.Shelley
-import Cardano.Ledger.Shelley.API (ApplyBlock, ApplyTx)
+import Cardano.Ledger.Shelley.API (ApplyTx)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.State
@@ -38,7 +38,6 @@ import Test.Cardano.Ledger.Shelley.TreeDiff ()
 
 class
   ( EraTest era
-  , ApplyBlock era
   , ApplyTx era
   , ShelleyEraScript era
   , EraTransition era

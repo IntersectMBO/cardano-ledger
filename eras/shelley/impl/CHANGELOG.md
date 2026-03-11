@@ -2,6 +2,14 @@
 
 ## 1.18.0.0
 
+* Deprecate `BHeaderView` in favour of `EraBlockHeader`.
+  - Add `wrapBlockSignal` to `ApplyBlock` typeclass for use within `applyBlock` to generalise over `Signal`.
+  - `chainChecks` now takes a `Block h era` instead.
+  - `ApplyBlock era` now takes another parameter (block header) to become `ApplyBlock h era`.
+    + `applyBlock*` functions and `applyTickNoEvents` now take `Block h era` instead.
+  - Update `incrBlocks` to `:: SlotNo -> UnitInterval -> SlotNo -> KeyHash StakePool -> BlocksMake -> BlocksMade`.
+  - Change `ShelleyBBODY` `Signal` to `BbodySignal`.
+  - Add `validateBlockBodySize` and `validateBlockBodyHash`.
 * Subsume delegations into `ActiveStake`.
   - `epochStateStakeDistrL` returns `ActiveStake`
   - Remove `fvDelegs` from `FreeVars`.

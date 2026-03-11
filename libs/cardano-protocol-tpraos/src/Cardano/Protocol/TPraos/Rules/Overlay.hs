@@ -23,7 +23,6 @@ module Cardano.Protocol.TPraos.Rules.Overlay (
 
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BoundedRational (..),
@@ -51,7 +50,7 @@ import Cardano.Ledger.Keys (
   coerceKeyRole,
   hashKey,
  )
-import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst, (-*))
+import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst, isOverlaySlot, (-*))
 import Cardano.Ledger.State (
   IndividualPoolStake (..),
   PoolDistr (..),

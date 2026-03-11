@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Add `validateRefScriptSize`.
+* Change `ConwayBBODY` `Signal` to `BbodySignal`.
 * Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
 * Add `validateTreasuryValue`, `validateWithdrawalsDelegated`
 * Update `resolveConwayInstantStake` to return `ActiveStake`
