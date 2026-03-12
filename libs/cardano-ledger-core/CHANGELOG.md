@@ -5,6 +5,7 @@
 * Remove orphan `NoThunks`, `NFData`, `FromJSON`, `ToJSON` instances for `IPv4` and `IPv6`
   - Moved to `cardano-base:Cardano.Base.IP`
 * Remove `ToCBOR` and `FromCBOR` instances for `Nonce`
+* Remove default implementation of `fromPlutusData` in `ToPlutusData` typeclass.
 
 ### `testlib`
 

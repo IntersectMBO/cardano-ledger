@@ -39,11 +39,15 @@ import PlutusLedgerApi.Common (Data (..))
 -- ===============================================================
 
 -- ToPlutusData class, and instances for parameterized data types List, Map.
+--
+-- We do *not* provide a default implementation for 'fromPlutusData' because
+-- types should always be invertible from 'PlutusData'. Therefore, we force
+-- the user to make a conscious decision to not provide an implementation for
+-- this function.
 
 class ToPlutusData x where
   toPlutusData :: x -> Data
   fromPlutusData :: Data -> Maybe x
-  fromPlutusData _ = Nothing
 
 instance ToPlutusData a => ToPlutusData [a] where
   toPlutusData xs = List (map toPlutusData xs)

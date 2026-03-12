@@ -4,7 +4,7 @@ module Test.Cardano.Ledger.Conway.Plutus.PlutusSpec (spec) where
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams (DRepVotingThresholds, PoolVotingThresholds)
-import Cardano.Ledger.Core (CoinPerByte, PParamsUpdate)
+import Cardano.Ledger.Core (PParamsUpdate)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -17,5 +17,4 @@ spec = do
   describe "roundtrip ToPlutusData Conway instances" $ do
     roundTripPlutusDataSpec @PoolVotingThresholds
     roundTripPlutusDataSpec @DRepVotingThresholds
-    roundTripPlutusDataSpec @CoinPerByte
     roundTripPlutusDataSpec @(PParamsUpdate ConwayEra)
