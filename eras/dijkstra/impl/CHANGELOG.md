@@ -4,6 +4,7 @@
 
 * Add `SubLedgerEnv` and `SubUtxowEnv`
 * Remove `OutputTooSmallUTxO` constructor from `DijkstraUtxoPredFailure`
+* Remove `SubOutputTooSmallUTxO` constructor from `DijkstraSubUtxoPredFailure`
 
 ## 0.2.0.0
 
