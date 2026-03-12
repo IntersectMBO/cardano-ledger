@@ -106,8 +106,6 @@ data DijkstraSubUtxoPredFailure era
       Network
       -- | the set of reward addresses with incorrect network IDs
       (NonEmptySet AccountAddress)
-  | -- | list of supplied transaction outputs that are too small
-    SubOutputTooSmallUTxO (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction outputs
     SubOutputBootAddrAttrsTooBig (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
@@ -289,12 +287,11 @@ instance
       SubInputSetEmptyUTxO -> Sum SubInputSetEmptyUTxO 3
       SubWrongNetwork right wrongs -> Sum (SubWrongNetwork @era) 4 !> To right !> To wrongs
       SubWrongNetworkWithdrawal right wrongs -> Sum (SubWrongNetworkWithdrawal @era) 5 !> To right !> To wrongs
-      SubOutputTooSmallUTxO outs -> Sum (SubOutputTooSmallUTxO @era) 6 !> To outs
-      SubOutputBootAddrAttrsTooBig outs -> Sum (SubOutputBootAddrAttrsTooBig @era) 7 !> To outs
-      SubOutputTooBigUTxO outs -> Sum (SubOutputTooBigUTxO @era) 8 !> To outs
-      SubWrongNetworkInTxBody mm -> Sum SubWrongNetworkInTxBody 9 !> To mm
-      SubOutsideForecast a -> Sum SubOutsideForecast 10 !> To a
-      SubBabbageOutputTooSmallUTxO x -> Sum SubBabbageOutputTooSmallUTxO 11 !> To x
+      SubOutputBootAddrAttrsTooBig outs -> Sum (SubOutputBootAddrAttrsTooBig @era) 6 !> To outs
+      SubOutputTooBigUTxO outs -> Sum (SubOutputTooBigUTxO @era) 7 !> To outs
+      SubWrongNetworkInTxBody mm -> Sum SubWrongNetworkInTxBody 8 !> To mm
+      SubOutsideForecast a -> Sum SubOutsideForecast 9 !> To a
+      SubBabbageOutputTooSmallUTxO x -> Sum SubBabbageOutputTooSmallUTxO 10 !> To x
 
 instance
   ( Era era
@@ -311,12 +308,11 @@ instance
     3 -> SumD SubInputSetEmptyUTxO
     4 -> SumD SubWrongNetwork <! From <! From
     5 -> SumD SubWrongNetworkWithdrawal <! From <! From
-    6 -> SumD SubOutputTooSmallUTxO <! From
-    7 -> SumD SubOutputBootAddrAttrsTooBig <! From
-    8 -> SumD SubOutputTooBigUTxO <! From
-    9 -> SumD SubWrongNetworkInTxBody <! From
-    10 -> SumD SubOutsideForecast <! From
-    11 -> SumD SubBabbageOutputTooSmallUTxO <! From
+    6 -> SumD SubOutputBootAddrAttrsTooBig <! From
+    7 -> SumD SubOutputTooBigUTxO <! From
+    8 -> SumD SubWrongNetworkInTxBody <! From
+    9 -> SumD SubOutsideForecast <! From
+    10 -> SumD SubBabbageOutputTooSmallUTxO <! From
     n -> Invalid n
 
 dijkstraUtxoToDijkstraSubUtxoPredFailure ::
@@ -331,7 +327,6 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   ValueNotConservedUTxO _ -> error "Impossible: `ValueNotConservedUTxO` for SUBUTXO"
   WrongNetwork x y -> SubWrongNetwork x y
   WrongNetworkWithdrawal x y -> SubWrongNetworkWithdrawal x y
-  OutputTooSmallUTxO x -> SubOutputTooSmallUTxO x
   OutputBootAddrAttrsTooBig xs -> SubOutputBootAddrAttrsTooBig xs
   OutputTooBigUTxO xs -> SubOutputTooBigUTxO xs
   InsufficientCollateral _ _ -> error "Impossible: `InsufficientCollateral` for SUBUTXO"
