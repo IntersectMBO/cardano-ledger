@@ -21,7 +21,10 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxo (
   DijkstraSubUtxoEvent (..),
 ) where
 
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Allegra.Rules (
+  AllegraUtxoPredFailure,
+  shelleyToAllegraUtxoPredFailure,
+ )
 import qualified Cardano.Ledger.Allegra.Rules as Allegra (
   validateOutsideValidityIntervalUTxO,
  )
@@ -54,13 +57,20 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (
   conwayToDijkstraUtxoPredFailure,
  )
 import Cardano.Ledger.Rules.ValidationMode
-import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState)
-import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState, utxosUtxo)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley (
+  validateBadInputsUTxO,
+  validateInputSetEmptyUTxO,
+  validateMaxTxSizeUTxO,
+  validateOutputBootAddrAttrsTooBig,
+ )
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -158,6 +168,13 @@ instance InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure DijkstraEra where
       . conwayToDijkstraUtxoPredFailure
       . allegraToConwayUtxoPredFailure
 
+instance InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . allegraToConwayUtxoPredFailure
+      . shelleyToAllegraUtxoPredFailure
+
 instance InjectRuleEvent "SUBUTXO" DijkstraSubUtxoEvent DijkstraEra
 
 data DijkstraSubUtxoEvent era
@@ -180,6 +197,7 @@ instance
   , AlonzoEraTxWits era
   , ConwayEraGov era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
   ) =>
@@ -201,6 +219,7 @@ dijkstraSubUtxoTransition ::
   , AlonzoEraTxWits era
   , STS (EraRule "SUBUTXO" era)
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
   ) =>
@@ -219,6 +238,17 @@ dijkstraSubUtxoTransition = do
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
   let allOutputs = fmap sizedValue allSizedOutputs
   runTest $ Alonzo.validateOutputTooBigUTxO pp allOutputs
+
+  runTest $ Shelley.validateInputSetEmptyUTxO txBody
+
+  let utxo = utxosUtxo utxoState
+  let inputs = txBody ^. inputsTxBodyL
+  let refInputs = txBody ^. referenceInputsTxBodyL
+  runTest $ Shelley.validateBadInputsUTxO utxo (inputs `Set.union` refInputs)
+
+  runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
+
+  runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
 
   pure utxoState
 
