@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Change `conwayRegisterInitialFundsThenStaking` to require `MonadIO`, `MonadThrow`, and accept a `HasFS m h` parameter
 * Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
 * Add `validateTreasuryValue`, `validateWithdrawalsDelegated`
 * Update `resolveConwayInstantStake` to return `ActiveStake`
