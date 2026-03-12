@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.18.0.1
+
+*
+
 ## 1.18.0.0
 
 * Subsume delegations into `ActiveStake`.

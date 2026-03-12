@@ -1,5 +1,9 @@
 # Version history for `small-steps`
 
+## 1.1.3.1
+
+*
+
 ## 1.1.3.0
 
 * Add `failOnNonEmptyMap` and `failureOnNonEmptyMap`

@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.5.0.1
+
+*
+
 ## 1.5.0.0
 
 * Remove deprecated function `bHeaderSize`

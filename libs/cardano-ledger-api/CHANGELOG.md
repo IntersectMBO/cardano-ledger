@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.13.0.1
+
+*
+
 ## 1.13.0.0
 
 * Add `queryStakeSnapshots` and the types produced by it:

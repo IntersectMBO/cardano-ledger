@@ -1,10 +1,13 @@
 # Version history for `cardano-ledger-core`
 
-## 1.19.0.0
+## 1.20.0.0
 
 * Remove orphan `NoThunks`, `NFData`, `FromJSON`, `ToJSON` instances for `IPv4` and `IPv6`
   - Moved to `cardano-base:Cardano.Base.IP`
 * Remove `ToCBOR` and `FromCBOR` instances for `Nonce`
+
+## 1.19.0.0
+
 * In `SnapShot`, subsume `ssDelegations` into `ssActiveStake`.
   - Add `ActiveStake`, `sumAllActiveStake`, `sumCredentialsCompactActiveStake`.
   - Add `StakeWithDelegation` for the range of `ActiveStake`.
