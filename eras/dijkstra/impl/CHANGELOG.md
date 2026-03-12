@@ -3,6 +3,7 @@
 ## 0.3.0.0
 
 * Remove `OutputTooSmallUTxO` constructor from `DijkstraUtxoPredFailure`
+* Remove `SubOutputTooSmallUTxO` constructor from `DijkstraSubUtxoPredFailure`
 
 ## 0.2.0.0
 
