@@ -20,6 +20,7 @@ module Cardano.Ledger.Babbage.Rules.Utxow (
   babbageMissingScripts,
   validateFailedBabbageScripts,
   validateScriptsWellFormed,
+  validateScriptsWellFormedTxOuts,
   babbageUtxowTransition,
 ) where
 
@@ -82,6 +83,7 @@ import Data.Foldable (sequenceA_, toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
+import qualified Data.Sequence.Strict as StrictSeq (singleton)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
@@ -229,7 +231,7 @@ babbageMissingScripts _ sNeeded sRefs sReceived =
 {-  ∀ s ∈ (txscripts txw utxo ∩ Scriptnative), validateScript s tx   -}
 validateFailedBabbageScripts ::
   EraTx era =>
-  Tx TopTx era ->
+  Tx l era ->
   ScriptsProvided era ->
   Set ScriptHash ->
   Test (ShelleyUtxowPredFailure era)
@@ -259,21 +261,31 @@ validateScriptsWellFormed ::
   Tx TopTx era ->
   Test (BabbageUtxowPredFailure era)
 validateScriptsWellFormed pp tx =
+  validateScriptsWellFormedTxOuts
+    pp
+    (tx ^. witsTxL . scriptTxWitsL)
+    (normalOuts <> foldMap StrictSeq.singleton returnOut)
+  where
+    normalOuts = tx ^. bodyTxL . outputsTxBodyL
+    returnOut = tx ^. bodyTxL . collateralReturnTxBodyL
+
+validateScriptsWellFormedTxOuts ::
+  forall era f.
+  ( BabbageEraTxOut era
+  , Foldable f
+  ) =>
+  PParams era ->
+  Map.Map ScriptHash (Script era) ->
+  f (TxOut era) ->
+  Test (BabbageUtxowPredFailure era)
+validateScriptsWellFormedTxOuts pp scriptWits txOuts =
   sequenceA_
     [ failureOnNonEmptySet (Map.keysSet invalidScriptWits) MalformedScriptWitnesses
     , failureOnNonEmptySet invalidRefScriptHashes MalformedReferenceScripts
     ]
   where
-    scriptWits = tx ^. witsTxL . scriptTxWitsL
     invalidScriptWits = Map.filter (not . validScript (pp ^. ppProtocolVersionL)) scriptWits
-
-    txBody = tx ^. bodyTxL
-    normalOuts = toList $ txBody ^. outputsTxBodyL
-    returnOut = txBody ^. collateralReturnTxBodyL
-    outs = case returnOut of
-      SNothing -> normalOuts
-      SJust rOut -> rOut : normalOuts
-    rScripts = mapMaybe (strictMaybeToMaybe . view referenceScriptTxOutL) outs
+    rScripts = mapMaybe (strictMaybeToMaybe . view referenceScriptTxOutL) (toList txOuts)
     invalidRefScripts = filter (not . validScript (pp ^. ppProtocolVersionL)) rScripts
     invalidRefScriptHashes = Set.fromList $ map (hashScript @era) invalidRefScripts
 

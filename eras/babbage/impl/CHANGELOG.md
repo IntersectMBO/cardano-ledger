@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.13.0.1
+## 1.13.1.0
 
-*
+* Add `validateScriptsWellFormedTxOuts`
 
 ## 1.13.0.0
 
