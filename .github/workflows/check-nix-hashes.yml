@@ -1,0 +1,34 @@
+name: Check nix hashes
+
+on:
+  push:
+    branches:
+    - main
+    paths:
+    - flake.lock
+    - cabal.project
+  pull_request:
+    paths:
+    - flake.lock
+    - cabal.project
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Install nix
+      uses: cachix/install-nix-action@v31
+
+    - name: Install cleret
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.3.0.0
+
+    - name: Check nix hashes
+      run: cleret nix hashes -vp
