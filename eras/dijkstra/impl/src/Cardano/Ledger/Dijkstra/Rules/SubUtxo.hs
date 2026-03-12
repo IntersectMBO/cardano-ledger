@@ -33,6 +33,7 @@ import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   validateOutputTooBigUTxO,
   validateOutsideForecast,
+  validateWrongNetworkInTxBody,
  )
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
@@ -69,6 +70,8 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateBadInputsUTxO,
   validateInputSetEmptyUTxO,
   validateOutputBootAddrAttrsTooBig,
+  validateWrongNetwork,
+  validateWrongNetworkWithdrawal,
  )
 import Cardano.Ledger.State (CertState, ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
@@ -264,6 +267,11 @@ dijkstraSubUtxoTransition = do
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
 
   runTestOnSignal $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
+
+  netId <- liftSTS $ asks networkId
+  runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
+  runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
+  runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
 
   pure utxoState
 
