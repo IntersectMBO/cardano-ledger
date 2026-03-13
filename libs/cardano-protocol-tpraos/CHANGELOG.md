@@ -10,6 +10,10 @@
 
 ## 1.5.0.0
 
+* Deprecate `GetLedgerView` and related `LedgerView` in favour of `*EraForecast` typeclasses from shelley and babbage eras.
+  - Add `shelleyForecastToLedgerView` and `babbageForecastToLedgerView` for backwards compatibility.
+  - Update `tickChainDepState`, `updateChainDepState`, and `reupdateChainDepState` to use the new `Forecast` API.
+  - Deprecate `mkInitialShelleyLedgerView`.
 * Remove deprecated function `bHeaderSize`
 
 ### `testlib`
