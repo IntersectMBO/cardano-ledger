@@ -25,7 +25,6 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
   bigIntRule,
   scriptDataHashRule,
   boundedBytesRule,
-  distinctBytesRule,
   alonzoRedeemer,
   alonzoRedeemerTag,
   exUnitPricesRule,
@@ -100,20 +99,6 @@ boundedBytesRule pname =
         | of definite-length encoded bytestrings and a stop code )
         |]
     $ pname =.= VBytes `sized` (0 :: Word64, 64 :: Word64)
-
-distinctBytesRule :: Proxy "distinct_bytes" -> Rule
-distinctBytesRule pname =
-  comment
-    [str|A type for distinct values.
-        |The type parameter must support .size, for example: bytes or uint
-        |]
-    $ pname
-      =.= (VBytes `sized` (8 :: Word64))
-      / (VBytes `sized` (16 :: Word64))
-      / (VBytes `sized` (20 :: Word64))
-      / (VBytes `sized` (24 :: Word64))
-      / (VBytes `sized` (30 :: Word64))
-      / (VBytes `sized` (32 :: Word64))
 
 exUnitPricesRule ::
   forall era.
@@ -490,16 +475,13 @@ instance HuddleRule "required_signers" AlonzoEra where
 instance HuddleRule "network_id" AlonzoEra where
   huddleRuleNamed pname _ = networkIdRule pname
 
-instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v1_script" era where
-  huddleRuleNamed pname p =
+instance (Era era) => HuddleRule "plutus_v1_script" era where
+  huddleRuleNamed pname _ =
     comment
       [str|Alonzo introduces Plutus smart contracts.
           |Plutus V1 scripts are opaque bytestrings.
           |]
-      $ pname =.= huddleRule @"distinct_bytes" p
-
-instance HuddleRule "distinct_bytes" AlonzoEra where
-  huddleRuleNamed pname _ = distinctBytesRule pname
+      $ pname =.= VBytes
 
 instance HuddleRule "bounded_bytes" AlonzoEra where
   huddleRuleNamed pname _ = boundedBytesRule pname
