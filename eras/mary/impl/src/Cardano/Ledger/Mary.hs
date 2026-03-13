@@ -21,6 +21,7 @@ module Cardano.Ledger.Mary (
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Mary.BlockBody ()
 import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.Forecast ()
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.Rules ()
 import Cardano.Ledger.Mary.Scripts ()
