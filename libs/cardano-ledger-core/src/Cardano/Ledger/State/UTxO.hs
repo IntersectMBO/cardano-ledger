@@ -95,10 +95,13 @@ instance CanSetUTxO UTxO where
 newtype UTxO era = UTxO {unUTxO :: Map.Map TxIn (TxOut era)}
   deriving (Default, Generic, Semigroup)
 
-instance (EncCBOR (TxOut era), Era era) => ToCBOR (UTxO era) where
+instance (Era era, EncCBOR (TxOut era)) => ToCBOR (UTxO era) where
   toCBOR = toEraCBOR @era
 
-instance (DecCBOR (TxOut era), Era era) => FromCBOR (UTxO era) where
+instance
+  (Era era, DecShareCBOR (TxOut era), Share (TxOut era) ~ Interns (Credential Staking)) =>
+  FromCBOR (UTxO era)
+  where
   fromCBOR = fromEraCBOR @era
 
 deriving instance NoThunks (TxOut era) => NoThunks (UTxO era)
@@ -111,7 +114,11 @@ deriving newtype instance Era era => Monoid (UTxO era)
 
 deriving newtype instance (Era era, EncCBOR (TxOut era)) => EncCBOR (UTxO era)
 
-deriving newtype instance (Era era, DecCBOR (TxOut era)) => DecCBOR (UTxO era)
+instance
+  (Era era, DecShareCBOR (TxOut era), Share (TxOut era) ~ Interns (Credential Staking)) =>
+  DecCBOR (UTxO era)
+  where
+  decCBOR = decNoShareCBOR
 
 instance
   ( DecShareCBOR (TxOut era)
