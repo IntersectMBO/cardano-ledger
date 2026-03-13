@@ -96,7 +96,12 @@ data LedgerTxInfo era where
     LedgerTxInfo era
 
 class
-  (PlutusLanguage l, EraPlutusContext era, EraTxLevel era) =>
+  ( PlutusLanguage l
+  , EraPlutusContext era
+  , EraTxLevel era
+  , Eq (PlutusTxInfo l)
+  , Show (PlutusTxInfo l)
+  ) =>
   EraPlutusTxInfo (l :: Language) era
   where
   toPlutusTxCert ::
