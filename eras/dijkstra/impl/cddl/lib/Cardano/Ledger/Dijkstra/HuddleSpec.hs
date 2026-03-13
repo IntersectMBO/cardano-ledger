@@ -391,9 +391,6 @@ dijkstraCertificateRule pname p =
 instance HuddleRule "bounded_bytes" DijkstraEra where
   huddleRuleNamed pname _ = boundedBytesRule pname
 
-instance HuddleRule "distinct_bytes" DijkstraEra where
-  huddleRuleNamed pname _ = distinctBytesRule pname
-
 instance HuddleRule "big_uint" DijkstraEra where
   huddleRuleNamed = bigUintRule
 
@@ -938,14 +935,12 @@ instance HuddleRule "script" DijkstraEra where
 instance HuddleRule "redeemer_tag" DijkstraEra where
   huddleRuleNamed pname _ = dijkstraRedeemerTagRule pname
 
-instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v4_script" era where
-  huddleRuleNamed pname p =
+instance Era era => HuddleRule "plutus_v4_script" era where
+  huddleRuleNamed pname _ =
     comment
       [str|Dijkstra introduces Plutus V4.
-          |
-          |Note: distinct VBytes ensures uniqueness in test generation.
           |]
-      $ pname =.= huddleRule @"distinct_bytes" p
+      $ pname =.= VBytes
 
 instance HuddleRule "auxiliary_data" DijkstraEra where
   huddleRuleNamed pname p =
