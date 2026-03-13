@@ -18,6 +18,7 @@
 
 module Cardano.Ledger.Dijkstra.TxInfo (
   DijkstraContextError (..),
+  transFailSubTxIsNotSupported,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
@@ -212,7 +213,7 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusScriptPurpose = Conway.transPlutusPurposeV1V2
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
-    flip (withBothTxLevels ltiTx) failSubTx $ \tx -> PlutusTxInfoResult $ do
+    flip (withBothTxLevels ltiTx) transFailSubTxIsNotSupported $ \tx -> PlutusTxInfoResult $ do
       let txBody = tx ^. bodyTxL
       Conway.guardConwayFeaturesForPlutusV1V2 tx
       timeRange <- Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
@@ -273,7 +274,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
   toPlutusScriptPurpose = Conway.transPlutusPurposeV1V2
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
-    flip (withBothTxLevels ltiTx) failSubTx $ \tx -> PlutusTxInfoResult $ do
+    flip (withBothTxLevels ltiTx) transFailSubTxIsNotSupported $ \tx -> PlutusTxInfoResult $ do
       let txBody = tx ^. bodyTxL
       Conway.guardConwayFeaturesForPlutusV1V2 tx
       timeRange <-
@@ -316,7 +317,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusScriptPurpose = Conway.transPlutusPurposeV3
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
-    flip (withBothTxLevels ltiTx) failSubTx $ \tx -> PlutusTxInfoResult $ do
+    flip (withBothTxLevels ltiTx) transFailSubTxIsNotSupported $ \tx -> PlutusTxInfoResult $ do
       let
         txBody = tx ^. bodyTxL
         txInputs = txBody ^. inputsTxBodyL
@@ -369,11 +370,11 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
 
   toPlutusTxInInfo _ = transTxInInfoV3
 
-failSubTx ::
+transFailSubTxIsNotSupported ::
   forall l era.
   Inject (DijkstraContextError era) (ContextError era) =>
   Tx SubTx era -> PlutusTxInfoResult l era
-failSubTx _ = PlutusTxInfoResult $ Left $ inject $ SubTxIsNotSupported @era
+transFailSubTxIsNotSupported _ = PlutusTxInfoResult $ Left $ inject $ SubTxIsNotSupported @era
 
 transTxCert ::
   (ConwayEraTxCert era, TxCert era ~ DijkstraTxCert era) => TxCert era -> PV3.TxCert

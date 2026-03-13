@@ -1,7 +1,10 @@
 # Revision history for cardano-ledger-dijkstra
 
-## 0.2.1.0
+## 0.3.0.0
 
+* Add `transFailSubTxIsNotSupported`
+* Remove `transPlutusPurposeV3` and `transPlutusPurposeV1V2`.
+* `DijkstraTxInfoResult` changed its content type to `PlutusTxInfoResult`
 * Add `SubLedgerEnv` and `SubUtxowEnv`
 
 ## 0.2.0.0

@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.13.1.0
+## 1.14.0.0
 
+* `BabbageTxInfoResult` changed its content type to `PlutusTxInfoResult`
 * Add `validateScriptsWellFormedTxOuts`
 
 ## 1.13.0.0
