@@ -48,7 +48,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
   ConwayUtxowPredFailure,
-  UtxoEnv (..),
   alonzoToConwayUtxowPredFailure,
   babbageToConwayUtxowPredFailure,
   shelleyToConwayUtxowPredFailure,
@@ -72,7 +71,14 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateNeededWitnesses,
   validateVerifiedWits,
  )
-import Cardano.Ledger.State (CertState, EraCertState, EraStake, EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (
+  CertState,
+  EraCertState,
+  EraStake,
+  EraUTxO (..),
+  ScriptsProvided (..),
+  UTxO,
+ )
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -91,6 +97,8 @@ data SubUtxowEnv era = SubUtxowEnv
   , suePParams :: PParams era
   , sueCertState :: CertState era
   , sueScriptsProvided :: ScriptsProvided era
+  , sueOriginalUtxo :: UTxO era
+  , sueIsValid :: IsValid
   }
 
 data DijkstraSubUtxowPredFailure era
@@ -244,7 +252,8 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (SubUtxowEnv slot pp certState scriptsProvided, utxoState, tx) <- judgmentContext
+  TRC (SubUtxowEnv slot pp certState scriptsProvided originalUtxo isValid, utxoState, tx) <-
+    judgmentContext
   let utxo = utxosUtxo utxoState
       txBody = tx ^. bodyTxL
       witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
@@ -278,7 +287,8 @@ dijkstraSubUtxowTransition = do
       (tx ^. witsTxL . scriptTxWitsL)
       (tx ^. bodyTxL . outputsTxBodyL)
 
-  trans @(EraRule "SUBUTXO" era) $ TRC (UtxoEnv slot pp certState, utxoState, tx)
+  trans @(EraRule "SUBUTXO" era) $
+    TRC (SubUtxoEnv slot pp certState originalUtxo isValid, utxoState, tx)
 
 instance
   ( EraTx era

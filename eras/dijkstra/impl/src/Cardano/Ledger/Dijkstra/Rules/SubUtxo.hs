@@ -19,6 +19,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxo (
   DijkstraSUBUTXO,
   DijkstraSubUtxoPredFailure (..),
   DijkstraSubUtxoEvent (..),
+  SubUtxoEnv (..),
 ) where
 
 import Cardano.Ledger.Allegra.Rules (
@@ -64,7 +65,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (
  )
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosGovState, utxosUtxo)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..), updateUTxOState)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, updateUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateBadInputsUTxO,
   validateInputSetEmptyUTxO,
@@ -85,6 +86,14 @@ import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
+
+data SubUtxoEnv era = SubUtxoEnv
+  { suoeSlot :: SlotNo
+  , suoePParams :: PParams era
+  , suoeCertState :: CertState era
+  , suoeOriginalUtxo :: UTxO era
+  , suoeIsValid :: IsValid
+  }
 
 data DijkstraSubUtxoPredFailure era
   = -- | The bad transaction inputs
@@ -221,7 +230,7 @@ instance
   where
   type State (DijkstraSUBUTXO era) = UTxOState era
   type Signal (DijkstraSUBUTXO era) = Tx SubTx era
-  type Environment (DijkstraSUBUTXO era) = UtxoEnv era
+  type Environment (DijkstraSUBUTXO era) = SubUtxoEnv era
   type BaseM (DijkstraSUBUTXO era) = ShelleyBase
   type PredicateFailure (DijkstraSUBUTXO era) = DijkstraSubUtxoPredFailure era
   type Event (DijkstraSUBUTXO era) = DijkstraSubUtxoEvent era
@@ -244,7 +253,7 @@ dijkstraSubUtxoTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (UtxoEnv slot pp certState, utxoState, tx) <- judgmentContext
+  TRC (SubUtxoEnv slot pp certState _originalUtxo _isValid, utxoState, tx) <- judgmentContext
 
   let txBody = tx ^. bodyTxL
 
