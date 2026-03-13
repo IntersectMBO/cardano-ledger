@@ -574,6 +574,9 @@ instance HuddleRule "ex_unit_prices" AlonzoEra where
 instance HuddleRule "positive_interval" AlonzoEra where
   huddleRuleNamed = positiveIntervalRule
 
+instance HuddleRule "metadatum" AlonzoEra where
+  huddleRuleNamed = metadatumRule
+
 instance HuddleRule "language" AlonzoEra where
   huddleRuleNamed pname _ =
     comment
