@@ -439,17 +439,7 @@ bootstrap_witness =
 
 ; Alonzo introduces Plutus smart contracts.
 ; Plutus V1 scripts are opaque bytestrings.
-plutus_v1_script = distinct_bytes
-
-; A type for distinct values.
-; The type parameter must support .size, for example: bytes or uint
-distinct_bytes = 
-  bytes .size 8 
-  / bytes .size 16
-  / bytes .size 20
-  / bytes .size 24
-  / bytes .size 30
-  / bytes .size 32
+plutus_v1_script = bytes
 
 plutus_data = 
   constr<plutus_data

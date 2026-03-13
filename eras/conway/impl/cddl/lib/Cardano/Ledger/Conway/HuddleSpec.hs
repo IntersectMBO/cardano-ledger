@@ -704,9 +704,6 @@ maybeTaggedNonemptyOset pname = mkMaybeTaggedSet pname 1
 instance HuddleRule "bounded_bytes" ConwayEra where
   huddleRuleNamed pname _ = boundedBytesRule pname
 
-instance HuddleRule "distinct_bytes" ConwayEra where
-  huddleRuleNamed pname _ = distinctBytesRule pname
-
 instance HuddleRule "big_uint" ConwayEra where
   huddleRuleNamed = bigUintRule
 
@@ -787,16 +784,12 @@ instance HuddleRule "operational_cert" ConwayEra where
 instance HuddleRule "protocol_version" ConwayEra where
   huddleRuleNamed = babbageProtocolVersionRule
 
-instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v3_script" era where
-  huddleRuleNamed pname p =
+instance Era era => HuddleRule "plutus_v3_script" era where
+  huddleRuleNamed pname _ =
     comment
       [str|Conway introduces Plutus V3 with support for new governance features.
-          |
-          |Note: distinct VBytes ensures uniqueness in test generation.
-          |The cddl tool we use for roundtrip testing doesn't generate
-          |distinct collections, so we use sized variants to ensure uniqueness.
           |]
-      $ pname =.= huddleRule @"distinct_bytes" p
+      $ pname =.= VBytes
 
 instance Era era => HuddleRule "negative_int64" era where
   huddleRuleNamed pname p =

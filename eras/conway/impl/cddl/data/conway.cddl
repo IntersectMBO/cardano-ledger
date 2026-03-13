@@ -307,28 +307,14 @@ script_invalid_hereafter = (5, slot)
 
 ; Alonzo introduces Plutus smart contracts.
 ; Plutus V1 scripts are opaque bytestrings.
-plutus_v1_script = distinct_bytes
-
-; A type for distinct values.
-; The type parameter must support .size, for example: bytes or uint
-distinct_bytes = 
-  bytes .size 8 
-  / bytes .size 16
-  / bytes .size 20
-  / bytes .size 24
-  / bytes .size 30
-  / bytes .size 32
+plutus_v1_script = bytes
 
 ; Babbage introduces Plutus V2 with improved cost model
 ; and additional builtins.
-plutus_v2_script = distinct_bytes
+plutus_v2_script = bytes
 
 ; Conway introduces Plutus V3 with support for new governance features.
-; 
-; Note: distinct VBytes ensures uniqueness in test generation.
-; The cddl tool we use for roundtrip testing doesn't generate
-; distinct collections, so we use sized variants to ensure uniqueness.
-plutus_v3_script = distinct_bytes
+plutus_v3_script = bytes
 
 certificates = nonempty_oset<certificate>
 
