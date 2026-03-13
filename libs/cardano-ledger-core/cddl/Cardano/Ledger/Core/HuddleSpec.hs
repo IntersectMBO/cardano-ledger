@@ -16,7 +16,7 @@
 
 module Cardano.Ledger.Core.HuddleSpec where
 
-import Cardano.Ledger.BaseTypes (getVersion)
+import Cardano.Ledger.BaseTypes (getVersion, natVersion)
 import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
 import Cardano.Ledger.Huddle
 import Codec.CBOR.Cuddle.CDDL (Name (..))
@@ -310,10 +310,14 @@ instance Era era => HuddleRule "port" era where
   huddleRuleNamed pname _ = pname =.= VUInt `le` 65535
 
 instance Era era => HuddleRule "ipv4" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (4 :: Word64)
+  huddleRuleNamed pname _
+    | eraProtVerLow @era < natVersion @9 = pname =.= VBytes
+    | otherwise = pname =.= VBytes `sized` (4 :: Word64)
 
 instance Era era => HuddleRule "ipv6" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (16 :: Word64)
+  huddleRuleNamed pname _
+    | eraProtVerLow @era < natVersion @9 = pname =.= VBytes
+    | otherwise = pname =.= VBytes `sized` (16 :: Word64)
 
 majorProtocolVersionRule ::
   forall era. Era era => Proxy "major_protocol_version" -> Proxy era -> Rule
