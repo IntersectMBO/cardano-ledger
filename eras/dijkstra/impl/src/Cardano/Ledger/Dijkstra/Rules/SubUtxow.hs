@@ -70,7 +70,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateNeededWitnesses,
   validateVerifiedWits,
  )
-import Cardano.Ledger.State (EraUTxO (..))
+import Cardano.Ledger.State (EraCertState, EraStake, EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -273,6 +273,8 @@ dijkstraSubUtxowTransition = do
 
 instance
   ( EraTx era
+  , EraStake era
+  , EraCertState era
   , AlonzoEraTxWits era
   , ConwayEraGov era
   , ConwayEraTxBody era
