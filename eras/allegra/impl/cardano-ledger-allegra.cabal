@@ -23,6 +23,7 @@ library
   exposed-modules:
     Cardano.Ledger.Allegra
     Cardano.Ledger.Allegra.Core
+    Cardano.Ledger.Allegra.Forecast
     Cardano.Ledger.Allegra.Rules
     Cardano.Ledger.Allegra.Scripts
     Cardano.Ledger.Allegra.State

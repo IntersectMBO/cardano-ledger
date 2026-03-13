@@ -6,6 +6,7 @@
 
 ## 1.10.0.0
 
+* Add `Forecast` to deprecate the use of `GetLedgerView`.
 * Add `Generic` instance for `ApplyTxError`
 * Add `MaryApplyTxError` constructor for `ApplyTxError era`
 * Add `cddl` sub-library, and `generate-cddl` executable.

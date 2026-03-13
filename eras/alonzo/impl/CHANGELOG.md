@@ -6,6 +6,7 @@
 
 ## 1.15.0.0
 
+* Add `Forecast` to deprecate the use of `GetLedgerView`.
 * Change return type of lenses in `AlonzoEraPParams`:
   - `hkdMaxValSizeL` to `Word32`
   - `hkdCollateralPercentageL` to `Word16`
