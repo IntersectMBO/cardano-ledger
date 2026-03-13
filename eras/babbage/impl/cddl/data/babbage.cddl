@@ -323,9 +323,9 @@ single_host_addr = (0, port/ nil, ipv4/ nil, ipv6/ nil)
 
 port = uint .le 65535
 
-ipv4 = bytes .size 4
+ipv4 = bytes
 
-ipv6 = bytes .size 16
+ipv6 = bytes
 
 ; dns_name: An A or AAAA DNS record
 single_host_name = (1, port/ nil, dns_name)
