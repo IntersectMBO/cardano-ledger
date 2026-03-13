@@ -6,6 +6,7 @@
 
 ## 0.2.0.0
 
+* Add `Forecast` to deprecate the use of `GetLedgerView`.
 * Expose `conwayToDijkstraUtxowPredFailure`
 * Add `accountBalanceIntervalsTxBodyL` lens to `DijkstraEraTxBody` typeclass.
   - Add the corresponding field to both `TopTx` and `SubTx` levels of `TxBody`.

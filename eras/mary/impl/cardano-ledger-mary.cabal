@@ -28,6 +28,7 @@ library
   exposed-modules:
     Cardano.Ledger.Mary
     Cardano.Ledger.Mary.Core
+    Cardano.Ledger.Mary.Forecast
     Cardano.Ledger.Mary.State
     Cardano.Ledger.Mary.Transition
     Cardano.Ledger.Mary.TxBody

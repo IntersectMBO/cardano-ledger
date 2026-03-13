@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -28,6 +29,10 @@ module Cardano.Protocol.TPraos.API (
   LedgerView (..),
   mkInitialShelleyLedgerView,
   FutureLedgerViewError (..),
+
+  -- * Forecast bridge
+  shelleyForecastToLedgerView,
+  babbageForecastToLedgerView,
   -- $chainstate
   ChainDepState (..),
   ChainTransitionError (..),
@@ -45,7 +50,9 @@ module Cardano.Protocol.TPraos.API (
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra.Forecast ()
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Forecast ()
 import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (
@@ -61,11 +68,21 @@ import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
 import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Forecast ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Forecast ()
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), coerceKeyRole)
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary.Forecast ()
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.API.Forecast (
+  BabbageEraForecast,
+  EraForecast (..),
+  Forecast,
+  ShelleyEraForecast (..),
+  forecastChainChecks,
+ )
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
@@ -126,6 +143,15 @@ class
   PraosCrypto c
 
 instance PraosCrypto StandardCrypto
+
+{-# DEPRECATED
+  GetLedgerView
+  "Use 'ShelleyEraForecast' for TPraos eras (Shelley-Alonzo) or 'BabbageEraForecast' for Praos eras (Babbage+) instead."
+  #-}
+
+{-# DEPRECATED currentLedgerView "Use 'currentForecast' instead." #-}
+
+{-# DEPRECATED futureLedgerView "Use 'futureForecast' instead." #-}
 
 class
   ( STS (EraRule "TICKF" era)
@@ -244,6 +270,41 @@ instance GetLedgerView DijkstraEra where
           . applySTS @(EraRule "TICKF" DijkstraEra)
           $ TRC ((), ss, slot)
 
+-- | Provided for backwards compatibility with GetLedgerView.
+shelleyForecastToLedgerView ::
+  forall t era.
+  ShelleyEraForecast era =>
+  Forecast t era ->
+  LedgerView
+shelleyForecastToLedgerView f =
+  LedgerView
+    { lvD = f ^. decentralizationForecastL @era @t
+    , lvExtraEntropy = f ^. extraEntropyForecastL @era @t
+    , lvPoolDistr = f ^. poolDistrForecastL @era @t
+    , lvGenDelegs = f ^. genDelegsForecastL @era @t
+    , lvChainChecks = forecastChainChecks @t @era f
+    }
+
+-- | Provided for backwards compatibility with GetLedgerView. For Babbage
+-- and later eras the TPraos-specific fields ('lvD', 'lvExtraEntropy',
+-- 'lvGenDelegs') are set to errors, matching the existing 'GetLedgerView'
+-- behaviour.
+babbageForecastToLedgerView ::
+  forall t era.
+  BabbageEraForecast era =>
+  Forecast t era ->
+  LedgerView
+babbageForecastToLedgerView f =
+  LedgerView
+    { lvD = error "Decentralization parameter (d) is not set in Praos eras"
+    , lvExtraEntropy = error "Extra entropy is not set in Praos eras"
+    , lvPoolDistr = f ^. poolDistrForecastL @era @t
+    , lvGenDelegs = error "GenDelegs are not set in Praos eras"
+    , lvChainChecks = forecastChainChecks @t @era f
+    }
+
+{-# DEPRECATED LedgerView "Use era-specific 'Forecast' types from 'Cardano.Ledger.*.Forecast' instead." #-}
+
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView = LedgerView
   { lvD :: UnitInterval
@@ -265,21 +326,20 @@ instance NoThunks LedgerView
 -- current slot and a marker indicating whether this is the first block in a new
 -- epoch.
 mkPrtclEnv ::
-  LedgerView ->
+  forall t era.
+  ShelleyEraForecast era =>
+  Forecast t era ->
   -- | Epoch nonce
   Nonce ->
   STS.Prtcl.PrtclEnv
 mkPrtclEnv
-  LedgerView
-    { lvD
-    , lvPoolDistr
-    , lvGenDelegs
-    } =
+  f =
     STS.Prtcl.PrtclEnv
-      lvD
-      lvPoolDistr
-      lvGenDelegs
+      (f ^. decentralizationForecastL @era @t)
+      (f ^. poolDistrForecastL @era @t)
+      (f ^. genDelegsForecastL @era @t)
 
+{-# DEPRECATED view "Use 'currentForecast' instead." #-}
 view ::
   (AtMostEra "Alonzo" era, EraGov era, EraCertState era) =>
   NewEpochState era ->
@@ -336,6 +396,8 @@ deriving stock instance
 deriving stock instance
   Show (PredicateFailure (EraRule "TICKF" era)) =>
   Show (FutureLedgerViewError era)
+
+{-# DEPRECATED futureView "Use 'futureForecast' instead." #-}
 
 -- | Anachronistic ledger view
 --
@@ -449,15 +511,17 @@ deriving instance Crypto c => Show (ChainTransitionError c)
 
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::
+  forall t era.
+  ShelleyEraForecast era =>
   Globals ->
-  LedgerView ->
+  Forecast t era ->
   -- | Are we in a new epoch?
   Bool ->
   ChainDepState ->
   ChainDepState
 tickChainDepState
   globals
-  LedgerView {lvExtraEntropy}
+  f
   isNewEpoch
   cs@ChainDepState {csProtocol, csTickn, csLabNonce} = cs {csTickn = newTickState}
     where
@@ -469,7 +533,7 @@ tickChainDepState
           . applySTS @STS.Tickn.TICKN
           $ TRC
             ( STS.Tickn.TicknEnv
-                lvExtraEntropy
+                (f ^. extraEntropyForecastL @era @t)
                 candidateNonce
                 csLabNonce
             , csTickn
@@ -480,18 +544,19 @@ tickChainDepState
 --
 --   This also updates the last applied block hash.
 updateChainDepState ::
-  forall c m.
+  forall t era c m.
   ( PraosCrypto c
+  , ShelleyEraForecast era
   , MonadError (ChainTransitionError c) m
   ) =>
   Globals ->
-  LedgerView ->
+  Forecast t era ->
   BHeader c ->
   ChainDepState ->
   m ChainDepState
 updateChainDepState
   globals
-  lv
+  f
   bh
   cs@ChainDepState {csProtocol, csTickn} =
     liftEither
@@ -509,7 +574,7 @@ updateChainDepState
         flip runReader globals
           . applySTS @(STS.Prtcl.PRTCL c)
           $ TRC
-            ( mkPrtclEnv lv epochNonce
+            ( mkPrtclEnv @t @era f epochNonce
             , csProtocol
             , bh
             )
@@ -521,16 +586,16 @@ updateChainDepState
 --   or consistent with the chain it is being applied to; the caller must ensure
 --   that this is valid through having previously applied it.
 reupdateChainDepState ::
-  forall c.
-  PraosCrypto c =>
+  forall t era c.
+  (PraosCrypto c, ShelleyEraForecast era) =>
   Globals ->
-  LedgerView ->
+  Forecast t era ->
   BHeader c ->
   ChainDepState ->
   ChainDepState
 reupdateChainDepState
   globals
-  lv
+  f
   bh
   cs@ChainDepState {csProtocol, csTickn} =
     cs
@@ -542,7 +607,7 @@ reupdateChainDepState
         flip runReader globals
           . reapplySTS @(STS.Prtcl.PRTCL c)
           $ TRC
-            ( mkPrtclEnv lv epochNonce
+            ( mkPrtclEnv @t @era f epochNonce
             , csProtocol
             , bh
             )
@@ -579,6 +644,8 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
     f = activeSlotCoeff globals
     epochSlots = Set.fromList [a .. b]
     (a, b) = runIdentity $ epochInfoRange ei currentEpoch
+
+{-# DEPRECATED mkInitialShelleyLedgerView "Use 'shelleyForecastToLedgerView' on an initial forecast instead." #-}
 
 -- | We construct a 'LedgerView' using the Shelley genesis config in the same
 -- way as 'translateToShelleyLedgerState'.

@@ -30,7 +30,7 @@ import Cardano.Ledger.Block (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
-import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -49,7 +49,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPoolPredFailure,
  )
 import Cardano.Ledger.Shelley.State
-import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (
   BHeader (..),
   bhbody,
@@ -250,7 +249,7 @@ delegTraceFromBlock chainSt block =
 -- transactions with the LEDGERS rule)
 ledgerTraceBase ::
   forall era.
-  ( GetLedgerView era
+  ( ShelleyEraForecast era
   , ApplyBlock era
   ) =>
   ChainState era ->

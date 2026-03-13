@@ -30,6 +30,7 @@ library
     Cardano.Ledger.Alonzo.BlockBody
     Cardano.Ledger.Alonzo.BlockBody.Internal
     Cardano.Ledger.Alonzo.Core
+    Cardano.Ledger.Alonzo.Forecast
     Cardano.Ledger.Alonzo.Genesis
     Cardano.Ledger.Alonzo.PParams
     Cardano.Ledger.Alonzo.Plutus.Context

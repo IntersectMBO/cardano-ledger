@@ -68,11 +68,10 @@ import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (DSIGN, VKey (..))
-import Cardano.Ledger.Shelley.API (ApplyBlock)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Protocol.Crypto (Crypto)
-import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
 import Cardano.Slotting.EpochInfo (
   epochInfoEpoch,
@@ -105,7 +104,7 @@ import Test.Tasty.HUnit (
 
 type ChainProperty era =
   ( ApplyBlock era
-  , GetLedgerView era
+  , ShelleyEraForecast era
   , EraTx era
   )
 

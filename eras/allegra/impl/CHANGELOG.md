@@ -6,6 +6,7 @@
 
 ## 1.9.0.0
 
+* Add `Forecast` to deprecate the use of `GetLedgerView`.
 * Add `Generic` instance for `ApplyTxError`
 * Add `AllegraApplyTxError` constructor for `ApplyTxError era`
 * Change sets containing errors into `NonEmptySet` for `AllegraUtxoPredFailure`
