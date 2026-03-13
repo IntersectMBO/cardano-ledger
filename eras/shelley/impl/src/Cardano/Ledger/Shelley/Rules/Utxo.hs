@@ -586,10 +586,15 @@ validateMaxTxSizeUTxO pp tx =
 -- be called on the @deposit - refund@ change, which is normally used to emit the
 -- `TotalDeposits` event.
 updateUTxOState ::
-  (EraTxBody era, EraStake era, EraCertState era, Monad m) =>
+  ( EraTxBody era
+  , EraStake era
+  , EraCertState era
+  , Monad m
+  , Typeable l
+  ) =>
   PParams era ->
   UTxOState era ->
-  TxBody TopTx era ->
+  TxBody l era ->
   CertState era ->
   GovState era ->
   (Coin -> m ()) ->
@@ -597,6 +602,7 @@ updateUTxOState ::
   m (UTxOState era)
 updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
   let UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosDonation} = utxos
+      fees = withTxLevel txBody (^. feeTxBodyL) (mempty)
       UTxO utxo = utxosUtxo
       !utxoAdd = txouts txBody -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
@@ -613,7 +619,7 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiff
     UTxOState
       { utxosUtxo = UTxO newUTxO
       , utxosDeposited = utxosDeposited <> depositChange
-      , utxosFees = utxosFees <> txBody ^. feeTxBodyL
+      , utxosFees = utxosFees <> fees
       , utxosGovState = govState
       , utxosInstantStake =
           deleteInstantStake deletedUTxO (addInstantStake utxoAdd (utxos ^. instantStakeL))
