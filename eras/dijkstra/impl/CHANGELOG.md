@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `EraForecast` instance for `DijkstraEra`.
 * Add `SubLedgerEnv` and `SubUtxowEnv`
 * Remove `OutputTooSmallUTxO` constructor from `DijkstraUtxoPredFailure`
 * Remove `SubOutputTooSmallUTxO` constructor from `DijkstraSubUtxoPredFailure`
