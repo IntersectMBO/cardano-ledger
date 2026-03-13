@@ -544,7 +544,7 @@ instance HuddleGroup "script_any" ShelleyEra where
 instance HuddleGroup "script_n_of_k" ShelleyEra where
   huddleGroupNamed pname p =
     pname
-      =.~ grp [3, "n" ==> VUInt, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
+      =.~ grp [3, "n" ==> VInt, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
 
 instance HuddleRule "native_script" ShelleyEra where
   huddleRuleNamed pname p =
