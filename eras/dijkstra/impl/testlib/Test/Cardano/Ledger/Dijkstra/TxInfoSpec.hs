@@ -14,6 +14,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusTxInfoResult (..),
+  SupportedLanguage (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
 import Cardano.Ledger.BaseTypes (Globals (..), Inject (..), Network (..), ProtVer (..))
@@ -23,13 +24,16 @@ import Cardano.Ledger.Dijkstra.State (UTxO (..))
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Plutus (Language (..), SLanguage (..))
 import Lens.Micro ((&), (.~))
-import Test.Cardano.Ledger.Common (Arbitrary (..), Spec, describe, prop, shouldBeLeft)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 
 spec ::
   forall era.
-  ( EraPlutusTxInfo PlutusV4 era
+  ( EraPlutusTxInfo PlutusV1 era
+  , EraPlutusTxInfo PlutusV2 era
+  , EraPlutusTxInfo PlutusV3 era
+  , EraPlutusTxInfo PlutusV4 era
   , Inject (DijkstraContextError era) (ContextError era)
   , ConwayEraTxBody era
   , EraTx era
@@ -67,3 +71,25 @@ spec = describe "TxInfo" $ do
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
           `shouldBeLeft` inject (PointerPresentInOutput @era [txOut])
+  describe "PlutusV1-V3" $ do
+    let plutusV1toV3 :: [SupportedLanguage era]
+        plutusV1toV3 =
+          [ SupportedLanguage SPlutusV1
+          , SupportedLanguage SPlutusV2
+          , SupportedLanguage SPlutusV3
+          ]
+    forM_ plutusV1toV3 $ \(SupportedLanguage slang) -> do
+      it "SubTxIsNotSupported" $ do
+        let
+          tx = mkBasicTx @era @SubTx mkBasicTxBody
+          ledgerTxInfo =
+            LedgerTxInfo @era
+              (ProtVer (eraProtVerLow @era) 0)
+              (epochInfo testGlobals)
+              (systemStart testGlobals)
+              mempty
+              tx
+          txInfoResult =
+            ($ SpendingPurpose AsPurpose)
+              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+        txInfoResult `shouldBeLeft` inject (SubTxIsNotSupported @era)
