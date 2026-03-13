@@ -7,6 +7,10 @@
 
 ### `testlib`
 
+* Replace `CuddleData` with `CTreeRoot MonoReferenced`
+* Remove `numExamples` argument from `specWithHuddle`
+* Add `huddleAntiCborSpec`
+* Remove `Arbitrary` and `ToExpr` instances for `IPv4` and `IPv6` (now in `cardano-base:testlib`)
 * Remove `Arbitrary` and `ToExpr` instances for `IPv4` and `IPv6` (now in `cardano-base:testlib`)
 
 ## 1.8.0.0

@@ -14,6 +14,8 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.OCert (OCert)
+import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
+import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import Test.Cardano.Ledger.Binary.Cuddle
 import Test.Cardano.Ledger.Common
 
@@ -30,7 +32,7 @@ huddleBlockSpec ::
   , DecCBOR (bhbody c)
   , EncCBOR (bhbody c)
   ) =>
-  SpecWith CuddleData
+  SpecWith (CTreeRoot MonoReferenced)
 huddleBlockSpec = do
   let v = eraProtVerLow @era
   huddleRoundTripAnnCborSpec @(bh c) v "header"
@@ -54,7 +56,7 @@ praosBlockHuddleSpec ::
   , DecCBOR (bhbody c)
   , EncCBOR (bhbody c)
   ) =>
-  SpecWith CuddleData
+  SpecWith (CTreeRoot MonoReferenced)
 praosBlockHuddleSpec = do
   let v = eraProtVerLow @era
   huddleBlockSpec @era @c @bh @bhbody
