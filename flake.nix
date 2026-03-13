@@ -152,7 +152,7 @@
                   (doctest.getComponent "exe:doctest")
                 ]);
             # disable Hoogle until someone request it
-            withHoogle = false;
+            withHoogle = true;
             # Skip cross compilers for the shell
             crossPlatforms = _: [];
           };
