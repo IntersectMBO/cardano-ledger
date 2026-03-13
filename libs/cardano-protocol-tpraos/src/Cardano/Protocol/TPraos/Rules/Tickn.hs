@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
@@ -10,7 +9,6 @@ module Cardano.Protocol.TPraos.Rules.Tickn (
   TICKN,
   TicknEnv (..),
   TicknState (..),
-  TicknPredicateFailure,
   PredicateFailure,
 ) where
 
@@ -21,6 +19,7 @@ import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Core (fromEraCBOR)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.State.Transition
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -63,17 +62,12 @@ instance ToCBOR TicknState where
         , toPlainEncoding shelleyProtVer (encCBOR ηc)
         ]
 
-data TicknPredicateFailure -- No predicate failures
-  deriving (Generic, Show, Eq)
-
-instance NoThunks TicknPredicateFailure
-
 instance STS TICKN where
   type State TICKN = TicknState
   type Signal TICKN = Bool -- Marker indicating whether we are in a new epoch
   type Environment TICKN = TicknEnv
   type BaseM TICKN = ShelleyBase
-  type PredicateFailure TICKN = TicknPredicateFailure
+  type PredicateFailure TICKN = Void
 
   initialRules =
     [ pure
