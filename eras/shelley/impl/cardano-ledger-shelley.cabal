@@ -27,6 +27,7 @@ library
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.API
     Cardano.Ledger.Shelley.API.ByronTranslation
+    Cardano.Ledger.Shelley.API.Forecast
     Cardano.Ledger.Shelley.API.Mempool
     Cardano.Ledger.Shelley.API.Types
     Cardano.Ledger.Shelley.API.Validation
@@ -35,6 +36,7 @@ library
     Cardano.Ledger.Shelley.BlockBody
     Cardano.Ledger.Shelley.BlockBody.Internal
     Cardano.Ledger.Shelley.Core
+    Cardano.Ledger.Shelley.Forecast
     Cardano.Ledger.Shelley.Genesis
     Cardano.Ledger.Shelley.Governance
     Cardano.Ledger.Shelley.Internal
