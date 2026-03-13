@@ -12,11 +12,13 @@ module Test.Cardano.Ledger.PlutusSpec (spec) where
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   NonNegativeInterval,
+  NonZero,
+  PositiveInterval,
   ProtVer (..),
   UnitInterval,
  )
 import Cardano.Ledger.Binary.Version (Version)
-import Cardano.Ledger.Coin (Coin, CompactForm)
+import Cardano.Ledger.Coin (Coin, CoinPerByte, CompactForm)
 import Cardano.Ledger.Plutus
 import Data.Map.Strict (Map)
 import Data.Word
@@ -81,21 +83,25 @@ dataSpec :: Spec
 dataSpec = do
   describe "RoundTrip ToPlutusData" $ do
     roundTripPlutusDataSpec @Version
-    roundTripPlutusDataSpec @Word
-    roundTripPlutusDataSpec @Word8
-    roundTripPlutusDataSpec @Word16
+    roundTripPlutusDataSpec @ProtVer
+    roundTripPlutusDataSpec @Rational
+    roundTripPlutusDataSpec @UnitInterval
+    roundTripPlutusDataSpec @NonNegativeInterval
+    roundTripPlutusDataSpec @PositiveInterval
+    roundTripPlutusDataSpec @CostModels
+    roundTripPlutusDataSpec @ExUnits
+    roundTripPlutusDataSpec @Prices
+    roundTripPlutusDataSpec @Coin
+    roundTripPlutusDataSpec @(CompactForm Coin)
+    roundTripPlutusDataSpec @CoinPerByte
     roundTripPlutusDataSpec @Word32
+    roundTripPlutusDataSpec @Word16
+    roundTripPlutusDataSpec @Word8
+    roundTripPlutusDataSpec @EpochInterval
+    roundTripPlutusDataSpec @Natural
+    roundTripPlutusDataSpec @Integer
+    roundTripPlutusDataSpec @Word
+    roundTripPlutusDataSpec @(NonZero Integer)
     roundTripPlutusDataSpec @[Word]
     roundTripPlutusDataSpec @[Word8]
     roundTripPlutusDataSpec @(Map Word Version)
-    roundTripPlutusDataSpec @Coin
-    roundTripPlutusDataSpec @(CompactForm Coin)
-    roundTripPlutusDataSpec @ExUnits
-    roundTripPlutusDataSpec @Prices
-    roundTripPlutusDataSpec @Natural
-    roundTripPlutusDataSpec @UnitInterval
-    roundTripPlutusDataSpec @EpochInterval
-    roundTripPlutusDataSpec @NonNegativeInterval
-    roundTripPlutusDataSpec @ProtVer
-    roundTripPlutusDataSpec @CostModels
-    roundTripPlutusDataSpec @Integer
