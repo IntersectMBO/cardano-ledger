@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -21,6 +22,7 @@ module Cardano.Ledger.Core.TxLevel (
   asSTxBothLevels,
   mkSTxBothLevelsM,
   withBothTxLevels,
+  withTxLevel,
 ) where
 
 import Cardano.Ledger.Core.Era (Era (..))
@@ -123,3 +125,11 @@ withBothTxLevels t fTop fSub =
   case toSTxLevel t of
     STopTx -> fTop t
     SSubTx -> fSub t
+
+withTxLevel ::
+  forall (l :: TxLevel) t era a.
+  Typeable l =>
+  t l era -> (t TopTx era -> a) -> (t SubTx era -> a) -> a
+withTxLevel t fTop fSub = withSTxBothLevels @l @era $ \case
+  STopTx -> fTop t
+  SSubTx -> fSub t
