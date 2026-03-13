@@ -521,7 +521,7 @@ instance HuddleGroup "script_invalid_before" BabbageEra where
 instance HuddleGroup "script_invalid_hereafter" BabbageEra where
   huddleGroupNamed = scriptInvalidHereafterGroup
 
-instance (Era era) => HuddleRule "plutus_v2_script" era where
+instance Era era => HuddleRule "plutus_v2_script" era where
   huddleRuleNamed pname _ =
     comment
       [str|Babbage introduces Plutus V2 with improved cost model
