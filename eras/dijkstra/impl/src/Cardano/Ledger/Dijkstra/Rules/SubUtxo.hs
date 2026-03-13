@@ -63,8 +63,8 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (
   conwayToDijkstraUtxoPredFailure,
  )
 import Cardano.Ledger.Rules.ValidationMode
-import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState, utxosUtxo)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosGovState, utxosUtxo)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..), updateUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateBadInputsUTxO,
   validateInputSetEmptyUTxO,
@@ -73,6 +73,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateWrongNetwork,
   validateWrongNetworkWithdrawal,
  )
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
@@ -205,6 +206,8 @@ instance (Era era, NFData (TxOut era)) => NFData (DijkstraSubUtxoEvent era)
 
 instance
   ( EraTx era
+  , EraStake era
+  , EraCertState era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
   , ConwayEraGov era
@@ -228,6 +231,8 @@ instance
 dijkstraSubUtxoTransition ::
   forall era.
   ( EraTx era
+  , EraStake era
+  , EraCertState era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
   , STS (EraRule "SUBUTXO" era)
@@ -239,7 +244,7 @@ dijkstraSubUtxoTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (UtxoEnv slot pp _, utxoState, tx) <- judgmentContext
+  TRC (UtxoEnv slot pp certState, utxoState, tx) <- judgmentContext
 
   let txBody = tx ^. bodyTxL
 
@@ -271,7 +276,14 @@ dijkstraSubUtxoTransition = do
   runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
   runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
 
-  pure utxoState
+  updateUTxOState
+    pp
+    utxoState
+    txBody
+    certState
+    (utxosGovState utxoState)
+    (tellEvent . TotalDeposits (hashAnnotated txBody))
+    (\a b -> tellEvent $ TxUTxODiff a b)
 
 instance
   ( Era era
@@ -338,6 +350,6 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   TooManyCollateralInputs _ -> error "Impossible: `TooManyCollateralInputs` for SUBUTXO"
   NoCollateralInputs -> error "Impossible: `NoCollateralInputs` for SUBUTXO"
   IncorrectTotalCollateralField _ _ -> error "Impossible: `IncorrectTotalCollateralField` for SUBUTXO"
-  BabbageOutputTooSmallUTxO txouts -> SubBabbageOutputTooSmallUTxO txouts
+  BabbageOutputTooSmallUTxO outs -> SubBabbageOutputTooSmallUTxO outs
   BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
