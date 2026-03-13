@@ -253,21 +253,11 @@ script_invalid_hereafter = (5, slot)
 
 ; Alonzo introduces Plutus smart contracts.
 ; Plutus V1 scripts are opaque bytestrings.
-plutus_v1_script = distinct_bytes
-
-; A type for distinct values.
-; The type parameter must support .size, for example: bytes or uint
-distinct_bytes = 
-  bytes .size 8 
-  / bytes .size 16
-  / bytes .size 20
-  / bytes .size 24
-  / bytes .size 30
-  / bytes .size 32
+plutus_v1_script = bytes
 
 ; Babbage introduces Plutus V2 with improved cost model
 ; and additional builtins.
-plutus_v2_script = distinct_bytes
+plutus_v2_script = bytes
 
 certificate = 
   [  account_registration_cert
@@ -318,11 +308,7 @@ vrf_keyhash = hash32
 ; 
 ; The relation between numerator and denominator can be
 ; expressed in CDDL, but we have a limitation currently
-; (see: https://github.com/input-output-hk/cuddle/issues/30)
-; which poses a problem for testing. We need to be able to
-; generate random valid data for testing implementation of
-; our encoders/decoders. Which means we cannot use the actual
-; definition here and we hard code the value to 1/2
+; (see: https://github.com/input-output-hk/cuddle/issues/30). 
 unit_interval = #6.30([uint, uint])
 
 reward_account = bytes
@@ -333,9 +319,9 @@ single_host_addr = (0, port/ nil, ipv4/ nil, ipv6/ nil)
 
 port = uint .le 65535
 
-ipv4 = bytes .size 4
+ipv4 = bytes
 
-ipv6 = bytes .size 16
+ipv6 = bytes
 
 ; dns_name: An A or AAAA DNS record
 single_host_name = (1, port/ nil, dns_name)

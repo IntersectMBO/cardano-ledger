@@ -16,7 +16,7 @@
 
 module Cardano.Ledger.Core.HuddleSpec where
 
-import Cardano.Ledger.BaseTypes (getVersion)
+import Cardano.Ledger.BaseTypes (getVersion, natVersion)
 import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
 import Cardano.Ledger.Huddle
 import Codec.CBOR.Cuddle.CDDL (Name (..))
@@ -65,11 +65,7 @@ instance Era era => HuddleRule "unit_interval" era where
           |
           |The relation between numerator and denominator can be
           |expressed in CDDL, but we have a limitation currently
-          |(see: https://github.com/input-output-hk/cuddle/issues/30)
-          |which poses a problem for testing. We need to be able to
-          |generate random valid data for testing implementation of
-          |our encoders/decoders. Which means we cannot use the actual
-          |definition here and we hard code the value to 1/2
+          |(see: https://github.com/input-output-hk/cuddle/issues/30). 
           |]
       . withGenerator (const generator)
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
@@ -310,10 +306,14 @@ instance Era era => HuddleRule "port" era where
   huddleRuleNamed pname _ = pname =.= VUInt `le` 65535
 
 instance Era era => HuddleRule "ipv4" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (4 :: Word64)
+  huddleRuleNamed pname _
+    | eraProtVerLow @era < natVersion @9 = pname =.= VBytes
+    | otherwise = pname =.= VBytes `sized` (4 :: Word64)
 
 instance Era era => HuddleRule "ipv6" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (16 :: Word64)
+  huddleRuleNamed pname _
+    | eraProtVerLow @era < natVersion @9 = pname =.= VBytes
+    | otherwise = pname =.= VBytes `sized` (16 :: Word64)
 
 majorProtocolVersionRule ::
   forall era. Era era => Proxy "major_protocol_version" -> Proxy era -> Rule
