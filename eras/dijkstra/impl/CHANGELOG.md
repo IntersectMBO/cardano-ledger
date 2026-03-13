@@ -2,6 +2,9 @@
 
 ## 0.3.0.0
 
+* Add `transFailSubTxIsNotSupported`
+* Remove `transPlutusPurposeV3` and `transPlutusPurposeV1V2`.
+* `DijkstraTxInfoResult` changed its content type to `PlutusTxInfoResult`
 * Add `EraForecast` instance for `DijkstraEra`.
 * Deprecate `BHeaderView` in favour of `DijkstraEraBlockHeader` typeclass.
   - Add `PerasCert`, `PerasKey` and `validatePerasCert` to `Dijkstra.BlockBody` (moved from core).

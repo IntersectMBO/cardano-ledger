@@ -38,33 +38,32 @@ spec ::
   Spec
 spec = describe "TxInfo" $ do
   describe "PlutusV4" $ do
-    prop "Fails translation when Ptr present in outputs" $
-      do
-        paymentCred <- arbitrary
-        ptr <- arbitrary
-        val <- arbitrary
-        let
-          txOut = mkBasicTxOut (Addr Testnet paymentCred (StakeRefPtr ptr)) val
-        txIn <- arbitrary
-        paymentCred2 <- arbitrary
-        stakeRef <- arbitrary
-        let
-          utxo =
-            UTxO
-              [ (txIn, mkBasicTxOut (Addr Testnet paymentCred2 stakeRef) val)
-              ]
-          tx =
-            mkBasicTx @era @TopTx $
-              mkBasicTxBody
-                & outputsTxBodyL .~ [txOut]
-                & inputsTxBodyL .~ [txIn]
-          ledgerTxInfo =
-            LedgerTxInfo @era
-              (ProtVer (eraProtVerLow @era) 0)
-              (epochInfo testGlobals)
-              (systemStart testGlobals)
-              utxo
-              tx
-        pure $
-          (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
-            `shouldBeLeft` inject (PointerPresentInOutput @era [txOut])
+    prop "Fails translation when Ptr present in outputs" $ do
+      paymentCred <- arbitrary
+      ptr <- arbitrary
+      val <- arbitrary
+      let
+        txOut = mkBasicTxOut (Addr Testnet paymentCred (StakeRefPtr ptr)) val
+      txIn <- arbitrary
+      paymentCred2 <- arbitrary
+      stakeRef <- arbitrary
+      let
+        utxo =
+          UTxO
+            [ (txIn, mkBasicTxOut (Addr Testnet paymentCred2 stakeRef) val)
+            ]
+        tx =
+          mkBasicTx @era @TopTx $
+            mkBasicTxBody
+              & outputsTxBodyL .~ [txOut]
+              & inputsTxBodyL .~ [txIn]
+        ledgerTxInfo =
+          LedgerTxInfo @era
+            (ProtVer (eraProtVerLow @era) 0)
+            (epochInfo testGlobals)
+            (systemStart testGlobals)
+            utxo
+            tx
+      pure $
+        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
+          `shouldBeLeft` inject (PointerPresentInOutput @era [txOut])
