@@ -186,11 +186,7 @@ vrf_keyhash = hash32
 ; 
 ; The relation between numerator and denominator can be
 ; expressed in CDDL, but we have a limitation currently
-; (see: https://github.com/input-output-hk/cuddle/issues/30)
-; which poses a problem for testing. We need to be able to
-; generate random valid data for testing implementation of
-; our encoders/decoders. Which means we cannot use the actual
-; definition here and we hard code the value to 1/2
+; (see: https://github.com/input-output-hk/cuddle/issues/30). 
 unit_interval = #6.30([uint, uint])
 
 reward_account = bytes

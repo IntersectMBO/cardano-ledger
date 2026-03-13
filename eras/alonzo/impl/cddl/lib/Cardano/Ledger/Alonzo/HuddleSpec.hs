@@ -475,7 +475,7 @@ instance HuddleRule "required_signers" AlonzoEra where
 instance HuddleRule "network_id" AlonzoEra where
   huddleRuleNamed pname _ = networkIdRule pname
 
-instance (Era era) => HuddleRule "plutus_v1_script" era where
+instance Era era => HuddleRule "plutus_v1_script" era where
   huddleRuleNamed pname _ =
     comment
       [str|Alonzo introduces Plutus smart contracts.

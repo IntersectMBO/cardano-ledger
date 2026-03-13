@@ -65,11 +65,7 @@ instance Era era => HuddleRule "unit_interval" era where
           |
           |The relation between numerator and denominator can be
           |expressed in CDDL, but we have a limitation currently
-          |(see: https://github.com/input-output-hk/cuddle/issues/30)
-          |which poses a problem for testing. We need to be able to
-          |generate random valid data for testing implementation of
-          |our encoders/decoders. Which means we cannot use the actual
-          |definition here and we hard code the value to 1/2
+          |(see: https://github.com/input-output-hk/cuddle/issues/30). 
           |]
       . withGenerator (const generator)
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
