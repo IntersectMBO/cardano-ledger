@@ -32,6 +32,7 @@ library
     Cardano.Ledger.Dijkstra.BlockBody
     Cardano.Ledger.Dijkstra.Core
     Cardano.Ledger.Dijkstra.Era
+    Cardano.Ledger.Dijkstra.Forecast
     Cardano.Ledger.Dijkstra.Genesis
     Cardano.Ledger.Dijkstra.Governance
     Cardano.Ledger.Dijkstra.PParams

@@ -2,6 +2,8 @@
 
 ## 1.22.0.0
 
+* Add `Forecast` to deprecate the use of `GetLedgerView`.
+  - Update `PredicateFailure` fot `ConwayTICKF` to `Void` and remove `ConwayTickfPredFailure`.
 * Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
 
 ## 1.21.0.0
