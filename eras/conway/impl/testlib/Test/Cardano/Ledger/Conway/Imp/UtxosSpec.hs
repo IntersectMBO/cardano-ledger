@@ -63,7 +63,9 @@ spec = do
   conwayFeaturesPlutusV1V2FailureSpec
   describe "Spending script without a Datum" $ do
     forM_ ([minBound .. eraMaxLanguage @era] :: [Language]) $ \lang -> do
-      it (show lang) $ do
+      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1103
+      -- TODO: Re-enable after issue is resolved, by removing this override
+      disableInConformanceIt (show lang) $ do
         let scriptHash = withSLanguage lang (hashPlutusScript . evenRedeemerNoDatum)
             addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
         amount <- uniformRM (Coin 10_000_000, Coin 100_000_000)
@@ -457,7 +459,9 @@ govPolicySpec = do
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysSucceedsSh)
         mkProposal govAction >>= submitProposal_
 
-    it "alwaysFails Plutus govPolicy does not validate" $ whenPostBootstrap $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1091
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "alwaysFails Plutus govPolicy does not validate" $ whenPostBootstrap $ do
       let alwaysFailsSh = hashPlutusScript (alwaysFailsNoDatum SPlutusV3)
       committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
@@ -485,7 +489,9 @@ costModelsSpec =
   -- These tests rely on the script in the constitution, but we can only change the constitution after bootstrap.
   -- So we cannot run these tests during bootstrap
   describe "PlutusV3 Initialization" $ do
-    it "Updating CostModels with alwaysFails govPolicy does not validate" $ whenPostBootstrap $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1104
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "Updating CostModels with alwaysFails govPolicy does not validate" $ whenPostBootstrap $ do
       -- no initial PlutusV3 CostModels
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
@@ -533,7 +539,9 @@ costModelsSpec =
 
         submitFailingGovAction govAction [injectFailure $ CollectErrors [NoCostModel PlutusV3]]
 
-    it "Updating CostModels and setting the govPolicy afterwards succeeds" $ whenPostBootstrap $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1104
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "Updating CostModels and setting the govPolicy afterwards succeeds" $ whenPostBootstrap $ do
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
       committeeMembers' <- registerInitialCommittee
