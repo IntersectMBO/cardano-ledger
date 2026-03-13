@@ -6,6 +6,14 @@
 
 ## 1.13.0.0
 
+* Add `Forecast` to deprecate the use of `GetLedgerView`:
+  - Add `BabbageForecast` to deprecate `LedgerView` for Praos.
+    + `mkBabbageForecast`
+    + `bfPoolDistrL`
+    + `bfMaxBlockHeaderSizeL`
+    + `bfMaxBlockBodySizeL`
+    + `bfProtocolVersionL`
+  - Add `EraForecast` and `BabbageEraForecast` instances.
 * Add `updateUTxOStateByTxValidity`
 * Change `babbageEvalScriptsTxInvalid` to return a `Rule` instead of `TransitionRule`
 * Change `STS` instance of `BabbageUTXOS`: use `UtxosEnv` as `Environment` and `ShelleyGovState` as `State`
