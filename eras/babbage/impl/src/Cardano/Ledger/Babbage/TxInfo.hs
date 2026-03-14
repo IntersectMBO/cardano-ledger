@@ -35,11 +35,11 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
   lookupTxInfoResultImpossible,
-  toPlutusWithContext,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   AlonzoContextError (..),
   toLegacyPlutusArgs,
+  toPlutusWithContext,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Tx (Data)

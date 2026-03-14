@@ -28,6 +28,9 @@ module Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsHashesNeeded,
   zipAsIxItem,
 
+  -- * Scripts provided
+  scriptsProvidedAlonzoStAnnTx,
+
   -- * Datums needed
   getInputDataHashesTxBody,
 
@@ -132,9 +135,16 @@ instance AlonzoEraUTxO AlonzoEra where
 
   getSpendingDatum = getAlonzoSpendingDatum
 
-  scriptsProvidedStAnnTx stAnnTx =
-    withTopTxLevelOnly stAnnTx $ \AlonzoStAnnTx {asatScriptsProvided} ->
-      asatScriptsProvided
+  scriptsProvidedStAnnTx = scriptsProvidedAlonzoStAnnTx
+
+scriptsProvidedAlonzoStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxTopLevel l era
+  , STxLevel TopTx era ~ STxTopLevel TopTx era
+  ) =>
+  AlonzoStAnnTx l era -> ScriptsProvided era
+scriptsProvidedAlonzoStAnnTx stAnnTx =
+  withTopTxLevelOnly stAnnTx $ \AlonzoStAnnTx {asatScriptsProvided} -> asatScriptsProvided
 
 getAlonzoSupplementalDataHashes ::
   (EraTxBody era, AlonzoEraTxOut era) =>
