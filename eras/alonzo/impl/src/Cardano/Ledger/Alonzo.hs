@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -45,7 +46,7 @@ import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data ()
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure)
-import Cardano.Ledger.State (EraUTxO (..), UTxO)
+import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Bifunctor (Bifunctor (first))
@@ -81,7 +82,7 @@ mkAlonzoStAnnTx ::
   UTxO era ->
   Tx TopTx era ->
   AlonzoStAnnTx TopTx era
-mkAlonzoStAnnTx epochInfo systemStart pp utxo tx =
+mkAlonzoStAnnTx ei sysStart pp utxo tx =
   let
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     scriptsProvided = getScriptsProvided utxo tx
@@ -91,6 +92,5 @@ mkAlonzoStAnnTx epochInfo systemStart pp utxo tx =
       , asatProtocolVersion = pp ^. ppProtocolVersionL
       , asatScriptsNeeded = scriptsNeeded
       , asatScriptsProvided = scriptsProvided
-      , asatPlutusScriptsWithContext =
-          collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo
+      , asatPlutusScriptsWithContext = collectPlutusScriptsWithContext ei sysStart pp tx utxo
       }
