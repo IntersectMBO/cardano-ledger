@@ -1,8 +1,19 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.15.0.1
+## 1.16.0.0
 
-*
+* Make `PlutusPurpose` injective in the selector type.
+* `LedgerTxInfo` now supports any transaction level
+* Add new type `PlutusTxInfoResult`
+* `toPlutusTxInfo` changed its return type to `PlutusTxInfoResult`
+* Support for both transaction levels in `collectPlutusScriptsWithContext`
+* Add `AsPurpose` and `toAsPurpose`
+* `AlonzoTxInfoResult` changed its content type to `PlutusTxInfoResult`
+* `AlonzoPlutusPurpose` supplied to `transPlutusPurpose` changed from `AsItem` to `AsIxItem`
+
+### `testlib`
+
+* `TranslationInstance` has a new field `tiPlutusPurpose`
 
 ## 1.15.0.0
 

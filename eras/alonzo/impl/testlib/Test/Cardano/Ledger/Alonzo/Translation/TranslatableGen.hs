@@ -12,16 +12,20 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   epochInfo,
   toVersionedTxInfo,
   systemStart,
+  mkPlutusTxInfo,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext,
+  EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusTxInfo,
+  PlutusTxInfoResult (..),
   SupportedLanguage (..),
   toPlutusTxInfo,
  )
+import Cardano.Ledger.Alonzo.Scripts (AsIx, PlutusPurpose, hoistPlutusPurpose, toAsPurpose)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.BaseTypes (ProtVer (ProtVer))
 import Cardano.Ledger.Core
@@ -41,7 +45,10 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
  )
 import Test.Cardano.Ledger.Common
 
-class (EraTx era, EraPlutusContext era, Arbitrary (Script era)) => TranslatableGen era where
+class
+  (EraTx era, EraPlutusContext era, Arbitrary (Script era), Arbitrary (PlutusPurpose AsIx era)) =>
+  TranslatableGen era
+  where
   tgRedeemers :: Gen (Redeemers era)
   tgTx :: SupportedLanguage era -> Gen (Tx TopTx era)
   tgUtxo :: SupportedLanguage era -> Tx TopTx era -> Gen (UTxO era)
@@ -76,7 +83,7 @@ genTranslationInstance ::
   Gen (TranslationInstance era)
 genTranslationInstance = do
   version <- choose (eraProtVerLow @era, eraProtVerHigh @era)
-  let protVer = ProtVer version 0
+  protVer <- ProtVer version <$> arbitrary
   supportedLanguage :: SupportedLanguage era <- arbitrary
   tx <- tgTx supportedLanguage
   utxo <- tgUtxo supportedLanguage tx
@@ -88,12 +95,27 @@ genTranslationInstance = do
           , ltiUTxO = utxo
           , ltiTx = tx
           }
-  case supportedLanguage of
-    SupportedLanguage slang -> do
-      case toPlutusTxInfo slang lti of
-        Left err -> error $ show err
-        Right txInfo ->
-          pure $ TranslationInstance protVer supportedLanguage utxo tx $ toVersionedTxInfo slang txInfo
+  plutusPurpose <- arbitrary
+  pure $ case supportedLanguage of
+    SupportedLanguage slang ->
+      let
+        txInfo = mkPlutusTxInfo slang lti plutusPurpose
+       in
+        TranslationInstance
+          { tiProtVer = protVer
+          , tiLanguage = supportedLanguage
+          , tiUtxo = utxo
+          , tiTx = tx
+          , tiPlutusPurpose = plutusPurpose
+          , tiResult = toVersionedTxInfo slang txInfo
+          }
+
+mkPlutusTxInfo ::
+  (HasCallStack, EraPlutusTxInfo l era) =>
+  SLanguage l -> LedgerTxInfo era -> PlutusPurpose AsIx era -> PlutusTxInfo l
+mkPlutusTxInfo slang lti plutusPurpose = either (error . show) id $ do
+  txInfoMaker <- unPlutusTxInfoResult $ toPlutusTxInfo slang lti
+  pure $ txInfoMaker $ hoistPlutusPurpose toAsPurpose plutusPurpose
 
 epochInfo :: EpochInfo (Either a)
 epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

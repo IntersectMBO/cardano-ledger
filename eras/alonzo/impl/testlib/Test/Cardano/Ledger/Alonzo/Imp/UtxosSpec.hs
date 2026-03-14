@@ -13,7 +13,11 @@ module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  LedgerTxInfo (..),
+  PlutusTxInfoResult (..),
+  toPlutusTxInfo,
+ )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (NoCostModel),
   TransactionScriptFailure (RedeemerPointsToUnknownScriptHash),
@@ -74,6 +78,7 @@ spec = describe "UTXOS" $ do
           interval = ValidityInterval SNothing $ SJust $ SlotNo $ currentSlot + txValidity
           startPOSIX = floor $ utcTimeToPOSIXSeconds sysStart
           expectedUpperBound = (startPOSIX + fromIntegral (currentSlot + txValidity)) * 1000
+          tx :: Tx TopTx era
           tx = mkBasicTx mkBasicTxBody & bodyTxL . vldtTxBodyL .~ interval
           lti =
             LedgerTxInfo
@@ -83,10 +88,11 @@ spec = describe "UTXOS" $ do
               , ltiUTxO = utxo
               , ltiTx = tx
               }
-      case toPlutusTxInfo (Proxy @L.PlutusV1) lti of
+      case unPlutusTxInfoResult $ toPlutusTxInfo (Proxy @L.PlutusV1) lti of
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
-        Right txInfo ->
-          PV1.txInfoValidRange txInfo
+        Right mkTxInfo ->
+          PV1.txInfoValidRange
+            (mkTxInfo (error "Expected for PlutusV1 purpose to be unevaluated"))
             `shouldBe` PV1.Interval
               (PV1.LowerBound PV1.NegInf True)
               ( PV1.UpperBound
