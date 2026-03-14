@@ -70,6 +70,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.State (StakePoolParams (..))
+import Cardano.Ledger.TxIn (TxId)
 import Control.DeepSeq (NFData)
 import Control.Monad (zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
@@ -89,7 +90,7 @@ data DijkstraContextError era
   = ConwayContextError !(ConwayContextError era)
   | PointerPresentInOutput !(NonEmpty (TxOut era))
   | -- | Attempt to translate Context for PlutusV1-V3 will result in this failure
-    SubTxIsNotSupported
+    SubTxIsNotSupported !TxId
   deriving (Generic)
 
 deriving instance
@@ -132,7 +133,7 @@ instance
   toJSON = \case
     ConwayContextError x -> toJSON x
     PointerPresentInOutput x -> kindObject "PointerPresentInOutput" ["txOut" .= toJSON x]
-    SubTxIsNotSupported -> kindObject "SubTxIsNotSupported" []
+    SubTxIsNotSupported txId -> kindObject "SubTxIsNotSupported" ["txId" .= toJSON txId]
 
 instance
   ( EraPParams era
@@ -146,7 +147,7 @@ instance
   decCBOR = decode $ Summands "ContextError" $ \case
     16 -> SumD ConwayContextError <! From
     17 -> SumD PointerPresentInOutput <! From
-    18 -> SumD SubTxIsNotSupported
+    18 -> SumD SubTxIsNotSupported <! From
     k -> Invalid k
 
 instance
@@ -162,7 +163,7 @@ instance
     encode . \case
       ConwayContextError x -> Sum ConwayContextError 16 !> To x
       PointerPresentInOutput x -> Sum PointerPresentInOutput 17 !> To x
-      SubTxIsNotSupported -> Sum SubTxIsNotSupported 18
+      SubTxIsNotSupported txId -> Sum SubTxIsNotSupported 18 !> To txId
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
@@ -372,9 +373,10 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
 
 transFailSubTxIsNotSupported ::
   forall l era.
-  Inject (DijkstraContextError era) (ContextError era) =>
+  (EraTx era, Inject (DijkstraContextError era) (ContextError era)) =>
   Tx SubTx era -> PlutusTxInfoResult l era
-transFailSubTxIsNotSupported _ = PlutusTxInfoResult $ Left $ inject $ SubTxIsNotSupported @era
+transFailSubTxIsNotSupported tx =
+  PlutusTxInfoResult $ Left $ inject $ SubTxIsNotSupported @era (txIdTx tx)
 
 transTxCert ::
   (ConwayEraTxCert era, TxCert era ~ DijkstraTxCert era) => TxCert era -> PV3.TxCert
