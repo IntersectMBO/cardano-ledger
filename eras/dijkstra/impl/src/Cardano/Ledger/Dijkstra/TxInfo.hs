@@ -29,7 +29,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxInfo,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
-  toPlutusWithContext,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
@@ -203,10 +202,10 @@ instance EraPlutusContext DijkstraEra where
   lookupTxInfoResult SPlutusV4 (DijkstraTxInfoResult _ _ _ tirPlutusV4) = tirPlutusV4
 
   mkPlutusWithContext = \case
-    DijkstraPlutusV1 p -> toPlutusWithContext $ Left p
-    DijkstraPlutusV2 p -> toPlutusWithContext $ Left p
-    DijkstraPlutusV3 p -> toPlutusWithContext $ Left p
-    DijkstraPlutusV4 p -> toPlutusWithContext $ Left p
+    DijkstraPlutusV1 p -> Alonzo.toPlutusWithContext $ Left p
+    DijkstraPlutusV2 p -> Alonzo.toPlutusWithContext $ Left p
+    DijkstraPlutusV3 p -> Alonzo.toPlutusWithContext $ Left p
+    DijkstraPlutusV4 p -> Alonzo.toPlutusWithContext $ Left p
 
 instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2

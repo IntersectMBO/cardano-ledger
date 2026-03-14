@@ -127,8 +127,8 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
           (redeemerData, exUnits)
           costModel
 
-    -- \| Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
-    --   but if there are none, use 'f' to construct a success.
+    -- Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
+    -- but if there are none, use 'f' to construct a success.
     merge ::
       forall t b a.
       (t -> Either a b) -> [Either a t] -> Either (NonEmpty a) [b] -> Either (NonEmpty a) [b]
