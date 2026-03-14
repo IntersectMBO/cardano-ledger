@@ -2,7 +2,7 @@
 
 ## 0.3.0.0
 
-* Add `transFailSubTxIsNotSupported`
+* Add `SubTxIsNotSupported` and `transFailSubTxIsNotSupported`
 * Remove `transPlutusPurposeV3` and `transPlutusPurposeV1V2`.
 * `DijkstraTxInfoResult` changed its content type to `PlutusTxInfoResult`
 * Add `SubLedgerEnv` and `SubUtxowEnv`

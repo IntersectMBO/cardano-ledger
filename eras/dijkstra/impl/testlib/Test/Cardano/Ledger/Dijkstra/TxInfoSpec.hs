@@ -92,4 +92,4 @@ spec = describe "TxInfo" $ do
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
-        txInfoResult `shouldBeLeft` inject (SubTxIsNotSupported @era)
+        txInfoResult `shouldBeLeft` inject (SubTxIsNotSupported @era (txIdTx tx))
