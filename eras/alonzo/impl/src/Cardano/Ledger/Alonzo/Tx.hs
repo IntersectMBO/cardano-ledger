@@ -166,9 +166,9 @@ instance EraTx AlonzoEra where
 
   type StAnnTx l AlonzoEra = AlonzoStAnnTx l AlonzoEra
 
-  mkBasicTx = MkAlonzoTx . mkBasicAlonzoTx
-
   txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
+
+  mkBasicTx = MkAlonzoTx . mkBasicAlonzoTx
 
   bodyTxL = alonzoTxL . bodyAlonzoTxL
   {-# INLINE bodyTxL #-}

@@ -41,9 +41,9 @@ instance EraTx BabbageEra where
 
   type StAnnTx l BabbageEra = AlonzoStAnnTx l BabbageEra
 
-  mkBasicTx = MkBabbageTx . mkBasicAlonzoTx
-
   txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
+
+  mkBasicTx = MkBabbageTx . mkBasicAlonzoTx
 
   bodyTxL = babbageTxL . bodyAlonzoTxL
   {-# INLINE bodyTxL #-}
