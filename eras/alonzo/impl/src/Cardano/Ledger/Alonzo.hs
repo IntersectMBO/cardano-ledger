@@ -47,7 +47,7 @@ import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO,
   AlonzoScriptsNeeded,
-  restrictPlutusScriptsWithPurpose,
+  resolveNeededPlutusScriptsWithPurpose,
  )
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
@@ -96,7 +96,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo tx =
   let
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     scriptsProvided = getScriptsProvided utxo tx
-    plutusScriptsUsed = restrictPlutusScriptsWithPurpose scriptsProvided scriptsNeeded
+    plutusScriptsUsed = resolveNeededPlutusScriptsWithPurpose scriptsProvided scriptsNeeded
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = pp ^. ppProtocolVersionL
@@ -104,6 +104,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiMemoizedSubTransactions = mempty
         }
    in
     AlonzoStAnnTx

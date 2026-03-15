@@ -30,7 +30,7 @@ module Cardano.Ledger.Alonzo.UTxO (
 
   -- * Scripts provided
   scriptsProvidedAlonzoStAnnTx,
-  restrictPlutusScriptsWithPurpose,
+  resolveNeededPlutusScriptsWithPurpose,
 
   -- * Datums needed
   getInputDataHashesTxBody,
@@ -355,10 +355,10 @@ getAlonzoWitsVKeyNeeded certState utxo txBody =
     `Set.union` Set.map asWitness (txBody ^. reqSignerHashesTxBodyG)
 {-# INLINEABLE getAlonzoWitsVKeyNeeded #-}
 
-restrictPlutusScriptsWithPurpose ::
+resolveNeededPlutusScriptsWithPurpose ::
   AlonzoEraScript era =>
   ScriptsProvided era ->
   AlonzoScriptsNeeded era ->
   [(ScriptHash, PlutusPurpose AsIxItem era, PlutusScript era)]
-restrictPlutusScriptsWithPurpose (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded scriptsNeeded) =
+resolveNeededPlutusScriptsWithPurpose (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded scriptsNeeded) =
   [(sh, sp, s) | (sp, sh) <- scriptsNeeded, Just s <- [lookupPlutusScript sh scriptsProvided]]

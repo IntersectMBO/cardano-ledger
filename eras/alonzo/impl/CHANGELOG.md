@@ -2,7 +2,8 @@
 
 ## 1.16.0.0
 
-* Add `restrictPlutusScriptsWithPurpose`
+* Add `ltiMemoizedSubTransactions` to `LedgerTxInfo`
+* Add `resolveNeededPlutusScriptsWithPurpose`
 * Add `scriptsWithContextFromLedgerTxInfo` and `scriptsWithContextFromLedgerTxInfoWithResult`
 * Add `AlonzoStAnnTx`
 * Move `toPlutusWithContext` from `Cardano.Ledger.Alonzo.Plutus.Context` to `Cardano.Ledger.Alonzo.Plutus.TxInfo`

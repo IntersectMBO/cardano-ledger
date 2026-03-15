@@ -44,7 +44,7 @@ import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO,
   AlonzoScriptsNeeded (..),
-  restrictPlutusScriptsWithPurpose,
+  resolveNeededPlutusScriptsWithPurpose,
  )
 import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Evaluate (
@@ -103,9 +103,10 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiMemoizedSubTransactions = mempty
         }
     neededPlutusScripts =
-      restrictPlutusScriptsWithPurpose
+      resolveNeededPlutusScriptsWithPurpose
         (getScriptsProvided utxo tx)
         (getScriptsNeeded utxo (tx ^. bodyTxL))
 
@@ -336,6 +337,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiMemoizedSubTransactions = mempty
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL

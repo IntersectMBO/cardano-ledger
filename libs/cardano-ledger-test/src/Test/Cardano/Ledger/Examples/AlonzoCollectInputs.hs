@@ -118,6 +118,7 @@ collectTwoPhaseScriptInputsOutputOrdering = do
         , ltiSystemStart = testSystemStart
         , ltiUTxO = initUTxO
         , ltiTx = validatingTx
+        , ltiMemoizedSubTransactions = mempty
         }
 
 -- ============================== DATA ===============================
