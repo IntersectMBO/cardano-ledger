@@ -59,6 +59,7 @@ import Cardano.Ledger.Plutus (
   PlutusArgs (..),
   SLanguage (..),
   TxOutSource (..),
+  plutusSLanguage,
   transCoinToLovelace,
   transCoinToValue,
   transCred,
@@ -71,12 +72,13 @@ import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.State (StakePoolParams (..))
 import Cardano.Ledger.TxIn (TxId)
 import Control.DeepSeq (NFData)
-import Control.Monad (zipWithM)
+import Control.Monad (forM, zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -422,14 +424,29 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
   toPlutusScriptPurpose _ = error "stub: PlutusV4 not yet implemented"
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
+  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     withBothTxLevels ltiTx mkTopTxInfo mkSubTxInfo
     where
       mkTopTxInfo tx = PlutusTxInfoResult $ do
         txInfo <- mkAnyLevelTxInfo tx
-        let topTxInfo = txInfo {PV3.txInfoFee = transCoinToLovelace (tx ^. bodyTxL . feeTxBodyL)}
+        let
+          topTxInfo = txInfo {PV3.txInfoFee = transCoinToLovelace (tx ^. bodyTxL . feeTxBodyL)}
+        _subTxInfosForGuards <-
+          forM (tx ^. bodyTxL . subTransactionsTxBodyL) $ \subTx -> do
+            mkTxInfo <-
+              unPlutusTxInfoResult
+                <$> case Map.lookup (txIdTx subTx) (ltiMemoizedSubTransactions lti) of
+                  Nothing ->
+                    toPlutusTxInfo proxy $
+                      lti
+                        { ltiTx = subTx
+                        , ltiMemoizedSubTransactions = mempty
+                        }
+                  Just txInfoResults ->
+                    pure $ lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
+            pure $ mkTxInfo $ GuardingPurpose AsPurpose
         Right $ \case
-          GuardingPurpose AsPurpose ->
+          purpose@(GuardingPurpose AsPurpose) -> do
             -- TODO: Add Sub transactions
             Right topTxInfo
           _ -> Right topTxInfo
