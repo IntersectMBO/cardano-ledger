@@ -20,6 +20,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure)
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
@@ -157,6 +158,7 @@ instance
   , Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (TxCert era)
   , Arbitrary (TxOut era)
+  , Arbitrary (ContextError era)
   ) =>
   Arbitrary (DijkstraContextError era)
   where
