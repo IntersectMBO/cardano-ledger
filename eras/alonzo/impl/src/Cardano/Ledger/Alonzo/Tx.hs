@@ -116,7 +116,7 @@ import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Tx (..))
 import Cardano.Ledger.MemoBytes (EqRaw (..))
-import Cardano.Ledger.Plutus (Data, PlutusWithContext, hashData, nonNativeLanguages)
+import Cardano.Ledger.Plutus (Data, Language, PlutusWithContext, hashData, nonNativeLanguages)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
 import qualified Cardano.Ledger.State as Shelley
@@ -478,6 +478,7 @@ data AlonzoStAnnTx l era where
     , asatProtocolVersion :: !ProtVer
     , asatScriptsNeeded :: ScriptsNeeded era
     , asatScriptsProvided :: ScriptsProvided era
+    , asatPlutusLanguagesUsed :: Set Language
     , asatPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
     } ->
     AlonzoStAnnTx TopTx era

@@ -2,6 +2,8 @@
 
 ## 1.16.0.0
 
+* Add `restrictPlutusScriptsWithPurpose`
+* Add `scriptsWithContextFromLedgerTxInfo` and `scriptsWithContextFromLedgerTxInfoWithResult`
 * Add `AlonzoStAnnTx`
 * Move `toPlutusWithContext` from `Cardano.Ledger.Alonzo.Plutus.Context` to `Cardano.Ledger.Alonzo.Plutus.TxInfo`
 * Add `scriptsProvidedStAnnTx` to `AlonzoEraUTxO` and a helper to implement it `scriptsProvidedAlonzoStAnnTx`

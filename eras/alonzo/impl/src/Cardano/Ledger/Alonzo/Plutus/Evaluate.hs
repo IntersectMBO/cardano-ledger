@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -17,6 +18,8 @@ module Cardano.Ledger.Alonzo.Plutus.Evaluate (
   evalPlutusScripts,
   CollectError (..),
   collectPlutusScriptsWithContext,
+  scriptsWithContextFromLedgerTxInfo,
+  scriptsWithContextFromLedgerTxInfoWithResult,
 
   -- * Execution units estimation
 
@@ -38,8 +41,12 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded (..))
-import Cardano.Ledger.Plutus.CostModels (costModelsValid)
+import Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO,
+  AlonzoScriptsNeeded (..),
+  restrictPlutusScriptsWithPurpose,
+ )
+import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext (..),
   ScriptResult (..),
@@ -60,7 +67,6 @@ import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
-import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Debug.Trace as Debug
 import GHC.Generics
@@ -86,14 +92,10 @@ collectPlutusScriptsWithContext ::
   UTxO era ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
-  merge
-    apply
-    (map getScriptWithRedeemer neededPlutusScripts)
-    (Right [])
+  scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) neededPlutusScripts
   where
     -- We need to pass major protocol version to the script for script evaluation
     protVer = pp ^. ppProtocolVersionL
-    costModels = costModelsValid $ pp ^. ppCostModelsL
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = protVer
@@ -102,27 +104,58 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiUTxO = utxo
         , ltiTx = tx
         }
-    txInfoResult = mkTxInfoResult ledgerTxInfo
-
-    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
-    AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededPlutusScripts =
-      mapMaybe (\(sp, sh) -> (,) (sh, sp) <$> lookupPlutusScript sh scriptsProvided) scriptsNeeded
+      restrictPlutusScriptsWithPurpose
+        (getScriptsProvided utxo tx)
+        (getScriptsNeeded utxo (tx ^. bodyTxL))
 
-    getScriptWithRedeemer ((plutusScriptHash, plutusPurpose), plutusScript) =
+scriptsWithContextFromLedgerTxInfo ::
+  forall era.
+  ( AlonzoEraTxWits era
+  , AlonzoEraUTxO era
+  , EraPlutusContext era
+  ) =>
+  LedgerTxInfo era ->
+  CostModels ->
+  [(ScriptHash, PlutusPurpose AsIxItem era, PlutusScript era)] ->
+  Either (NonEmpty (CollectError era)) [PlutusWithContext]
+scriptsWithContextFromLedgerTxInfo lti =
+  scriptsWithContextFromLedgerTxInfoWithResult lti (mkTxInfoResult lti)
+
+scriptsWithContextFromLedgerTxInfoWithResult ::
+  forall era.
+  ( AlonzoEraTxWits era
+  , AlonzoEraUTxO era
+  , EraPlutusContext era
+  ) =>
+  LedgerTxInfo era ->
+  TxInfoResult era ->
+  CostModels ->
+  [(ScriptHash, PlutusPurpose AsIxItem era, PlutusScript era)] ->
+  Either (NonEmpty (CollectError era)) [PlutusWithContext]
+scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels plutusScriptsUsed =
+  merge
+    apply
+    (map getScriptWithRedeemer plutusScriptsUsed)
+    (Right [])
+  where
+    redeemers =
+      case lti of
+        LedgerTxInfo {ltiTx} -> ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
+    getScriptWithRedeemer (plutusScriptHash, plutusPurpose, plutusScript) =
       let redeemerIndex = hoistPlutusPurpose toAsIx plutusPurpose
-       in case Map.lookup redeemerIndex $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL of
+       in case Map.lookup redeemerIndex redeemers of
             Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash)
             Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
     apply (plutusScript, plutusPurpose, redeemerData, exUnits, plutusScriptHash) = do
       let lang = plutusScriptLanguage plutusScript
-      costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
+      costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang $ costModelsValid costModels
       first BadTranslation $
         mkPlutusWithContext
           plutusScript
           plutusScriptHash
           plutusPurpose
-          ledgerTxInfo
+          lti
           txInfoResult
           (redeemerData, exUnits)
           costModel
