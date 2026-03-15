@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   PlutusTxInInfo,
   PlutusTxInfo,
-  PlutusTxInfoResult (..),
+  toPlutusTxInfoForPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
@@ -210,9 +210,9 @@ successfulTranslation slang tx f =
           , ltiUTxO = exampleUTxO
           , ltiTx = tx
           }
-   in case unPlutusTxInfoResult $ toPlutusTxInfo slang lti of
-        Right mkTxInfo -> f slang $ mkTxInfo $ SpendingPurpose AsPurpose
-        Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
+   in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
+        Right txInfo -> f slang txInfo
+        Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
 
 expectTranslationError ::
   forall era l.
@@ -234,8 +234,9 @@ expectTranslationError slang tx expected =
           , ltiUTxO = exampleUTxO
           , ltiTx = tx
           }
-   in case unPlutusTxInfoResult $ toPlutusTxInfo slang lti of
-        Right _ -> assertFailure "This translation was expected to fail, but it succeeded."
+   in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
+        Right txInfo ->
+          assertFailure $ "This translation was expected to fail, but it succeeded: " <> show txInfo
         Left e -> e `shouldBe` expected
 
 expectV1TranslationError ::

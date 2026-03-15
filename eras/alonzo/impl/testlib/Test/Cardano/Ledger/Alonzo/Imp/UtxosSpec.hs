@@ -13,11 +13,7 @@ module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (
-  LedgerTxInfo (..),
-  PlutusTxInfoResult (..),
-  toPlutusTxInfo,
- )
+import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusTxInfoForPurpose)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (NoCostModel),
   TransactionScriptFailure (RedeemerPointsToUnknownScriptHash),
@@ -27,7 +23,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (..),
   TagMismatchDescription (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), eraLanguages)
+import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..), eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
@@ -36,16 +32,19 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   natVersion,
  )
-import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (hashPlutusScript, withSLanguage)
-import qualified Cardano.Ledger.Plutus.Language as L
+import Cardano.Ledger.Plutus (
+  Data (..),
+  ExUnits (..),
+  SLanguage (..),
+  hashPlutusScript,
+  withSLanguage,
+ )
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Control.Monad.Reader (asks)
 import Data.Either (isLeft)
 import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (Proxy))
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Lens.Micro (set, to, (%~), (&), (.~), (<>~), (^.), _2)
@@ -88,11 +87,10 @@ spec = describe "UTXOS" $ do
               , ltiUTxO = utxo
               , ltiTx = tx
               }
-      case unPlutusTxInfoResult $ toPlutusTxInfo (Proxy @L.PlutusV1) lti of
+      case toPlutusTxInfoForPurpose SPlutusV1 lti (SpendingPurpose AsPurpose) of
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
-        Right mkTxInfo ->
-          PV1.txInfoValidRange
-            (mkTxInfo (error "Expected for PlutusV1 purpose to be unevaluated"))
+        Right txInfo ->
+          PV1.txInfoValidRange txInfo
             `shouldBe` PV1.Interval
               (PV1.LowerBound PV1.NegInf True)
               ( PV1.UpperBound

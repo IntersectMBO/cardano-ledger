@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `mkPlutusTxInfoFromResult` and `toPlutusTxInfoForPurpose` helpers
 * Make `PlutusPurpose` injective in the selector type.
 * `LedgerTxInfo` now supports any transaction level
 * Add new type `PlutusTxInfoResult`
