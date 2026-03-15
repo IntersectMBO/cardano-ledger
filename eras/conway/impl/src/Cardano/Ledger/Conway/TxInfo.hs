@@ -430,7 +430,7 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
             , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
             , PV1.txInfoId = Alonzo.transTxBodyId txBody
             }
-      Right $ \_ -> txInfo
+      Right $ \_ -> Right txInfo
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
@@ -473,7 +473,7 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
             , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
             , PV2.txInfoId = Alonzo.transTxBodyId txBody
             }
-      Right $ \_ -> txInfo
+      Right $ \_ -> Right txInfo
 
   toPlutusArgs = Babbage.toPlutusV2Args
 
@@ -531,7 +531,7 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
                     Coin 0 -> Nothing
                     coin -> Just $ transCoinToLovelace coin
               }
-      Right $ \_ -> txInfo
+      Right $ \_ -> Right txInfo
 
   toPlutusArgs = toPlutusV3Args
 
