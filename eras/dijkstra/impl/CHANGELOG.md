@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `SubTxContextError`
 * Add `DijkstraStAnnTx`
 * Add `scriptsProvidedDijkstraStAnnTx`
 * Add `mkDijkstraStAnnTopTx`

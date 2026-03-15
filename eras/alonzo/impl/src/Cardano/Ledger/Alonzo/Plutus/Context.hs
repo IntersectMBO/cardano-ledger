@@ -340,7 +340,7 @@ mkSupportedLanguageM lang =
     Nothing -> fail $ show lang ++ " language is not supported in " ++ eraName @era
     Just supportedLanguage -> pure supportedLanguage
 
--- | When collecting inputs for two phase scripts, these are the that things can go wrong.
+-- | When collecting inputs for two phase scripts, these are the things that can go wrong.
 data CollectError era
   = NoRedeemer !(PlutusPurpose AsItem era)
   | NoWitness !ScriptHash
