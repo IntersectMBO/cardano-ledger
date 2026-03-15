@@ -30,11 +30,13 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Forecast ()
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (collectPlutusScriptsWithContext)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext, LedgerTxInfo (..))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+  scriptsWithContextFromLedgerTxInfo,
+ )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo ()
 import Cardano.Ledger.Alonzo.Rules ()
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.State ()
 import Cardano.Ledger.Alonzo.Transition ()
 import Cardano.Ledger.Alonzo.Translation ()
@@ -42,7 +44,11 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx (..), Tx (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut, TxBody (AlonzoTxBody))
 import Cardano.Ledger.Alonzo.TxWits ()
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO,
+  AlonzoScriptsNeeded,
+  restrictPlutusScriptsWithPurpose,
+ )
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Mary.Value (MaryValue)
@@ -54,6 +60,7 @@ import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -89,11 +96,23 @@ mkAlonzoStAnnTx ei sysStart pp utxo tx =
   let
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     scriptsProvided = getScriptsProvided utxo tx
+    plutusScriptsUsed = restrictPlutusScriptsWithPurpose scriptsProvided scriptsNeeded
+    ledgerTxInfo =
+      LedgerTxInfo
+        { ltiProtVer = pp ^. ppProtocolVersionL
+        , ltiEpochInfo = ei
+        , ltiSystemStart = sysStart
+        , ltiUTxO = utxo
+        , ltiTx = tx
+        }
    in
     AlonzoStAnnTx
       { asatTx = tx
       , asatProtocolVersion = pp ^. ppProtocolVersionL
       , asatScriptsNeeded = scriptsNeeded
       , asatScriptsProvided = scriptsProvided
-      , asatPlutusScriptsWithContext = collectPlutusScriptsWithContext ei sysStart pp tx utxo
+      , asatPlutusLanguagesUsed =
+          Set.fromList [plutusScriptLanguage s | (_, _, s) <- plutusScriptsUsed]
+      , asatPlutusScriptsWithContext =
+          scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) plutusScriptsUsed
       }
