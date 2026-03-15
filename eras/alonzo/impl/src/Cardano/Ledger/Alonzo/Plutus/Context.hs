@@ -72,7 +72,7 @@ import Cardano.Ledger.Plutus (
   plutusLanguage,
  )
 import Cardano.Ledger.State (UTxO (..))
-import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
@@ -81,6 +81,7 @@ import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
+import Data.Map.Strict (Map)
 import Data.Text (Text)
 import GHC.Generics
 import GHC.Stack
@@ -97,6 +98,9 @@ data LedgerTxInfo era where
     , ltiSystemStart :: !SystemStart
     , ltiUTxO :: !(UTxO era)
     , ltiTx :: !(Tx level era)
+    , ltiMemoizedSubTransactions :: Map TxId (TxInfoResult era)
+    -- ^ This is a tricky field that is only used starting with Dijkstra era and only by top level
+    -- transactions. It is always safe to leave it as `mempty` upon construction, even for Dijkstra
     } ->
     LedgerTxInfo era
 

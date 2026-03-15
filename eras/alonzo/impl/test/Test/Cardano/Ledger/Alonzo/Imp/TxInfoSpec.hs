@@ -48,6 +48,7 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
             , ltiSystemStart = systemStart
             , ltiUTxO = utxo
             , ltiTx = tx
+            , ltiMemoizedSubTransactions = mempty
             }
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
     it "toPlutusTxInfo does not fail when Byron scripts are present in TxIns" $ do
@@ -75,5 +76,6 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
             , ltiSystemStart = systemStart
             , ltiUTxO = utxo
             , ltiTx = tx
+            , ltiMemoizedSubTransactions = mempty
             }
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti

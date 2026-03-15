@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -16,7 +17,12 @@ module Cardano.Ledger.Dijkstra (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (mkTxInfoResult), LedgerTxInfo (..))
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (collectPlutusScriptsWithContext)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+  getPlutusScriptsUsed,
+  scriptsWithContextFromLedgerTxInfo,
+  scriptsWithContextFromLedgerTxInfoWithResult,
+ )
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (Inject (inject))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
@@ -47,6 +53,8 @@ import Cardano.Slotting.Time (SystemStart)
 import Data.Bifunctor (Bifunctor (first))
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -90,17 +98,34 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo tx =
     txBody = tx ^. bodyTxL
     scriptsNeeded = getScriptsNeeded utxo txBody
     scriptsProvided = getScriptsProvided utxo tx
+    plutusScriptsUsed = getPlutusScriptsUsed scriptsProvided scriptsNeeded
     stAnnSubTxs =
       map
         (mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided)
         (toList (txBody ^. subTransactionsTxBodyL))
+    ledgerTxInfo =
+      LedgerTxInfo
+        { ltiProtVer = pp ^. ppProtocolVersionL
+        , ltiEpochInfo = ei
+        , ltiSystemStart = sysStart
+        , ltiUTxO = utxo
+        , ltiTx = tx
+        , ltiMemoizedSubTransactions =
+            Map.fromList
+              [ (txIdTx dsastTx, dsastTxInfoResult)
+              | DijkstraStAnnSubTx {dsastTx, dsastTxInfoResult} <- stAnnSubTxs
+              ]
+        }
    in
     DijkstraStAnnTopTx
       { dsattTx = tx
       , dsattProtocolVersion = pp ^. ppProtocolVersionL
       , dsattScriptsNeeded = scriptsNeeded
       , dsattScriptsProvided = scriptsProvided
-      , dsattPlutusScriptsWithContext = collectPlutusScriptsWithContext ei sysStart pp tx utxo
+      , dsattPlutusLanguagesUsed =
+          Set.fromList [plutusScriptLanguage s | (_, _, s) <- plutusScriptsUsed]
+      , dsattPlutusScriptsWithContext =
+          scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) plutusScriptsUsed
       , dsattStAnnSubTxs = stAnnSubTxs
       }
 
@@ -120,6 +145,7 @@ mkDijkstraStAnnSubTx ::
 mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided tx =
   let
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
+    plutusScriptsUsed = getPlutusScriptsUsed scriptsProvided scriptsNeeded
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = pp ^. ppProtocolVersionL
@@ -127,12 +153,21 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiMemoizedSubTransactions = mempty
         }
+    txInfoResult = mkTxInfoResult ledgerTxInfo
    in
     DijkstraStAnnSubTx
       { dsastTx = tx
       , dsastScriptsNeeded = scriptsNeeded
       , dsastScriptsProvided = scriptsProvided
-      , dsastTxInfoResult = mkTxInfoResult ledgerTxInfo
-      , dsastPlutusScriptsWithContext = collectPlutusScriptsWithContext ei sysStart pp tx utxo
+      , dsastTxInfoResult = txInfoResult
+      , dsastPlutusLanguagesUsed =
+          Set.fromList [plutusScriptLanguage s | (_, _, s) <- plutusScriptsUsed]
+      , dsastPlutusScriptsWithContext =
+          scriptsWithContextFromLedgerTxInfoWithResult
+            ledgerTxInfo
+            txInfoResult
+            (pp ^. ppCostModelsL)
+            plutusScriptsUsed
       }

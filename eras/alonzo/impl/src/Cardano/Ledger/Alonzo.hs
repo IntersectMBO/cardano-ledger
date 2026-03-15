@@ -98,6 +98,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiMemoizedSubTransactions = mempty
         }
    in
     AlonzoStAnnTx

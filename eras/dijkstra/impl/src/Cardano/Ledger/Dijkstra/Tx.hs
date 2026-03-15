@@ -58,7 +58,7 @@ import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
-import Cardano.Ledger.Plutus (PlutusWithContext)
+import Cardano.Ledger.Plutus (Language, PlutusWithContext)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..), deepseq)
@@ -66,6 +66,7 @@ import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
@@ -375,6 +376,7 @@ data DijkstraStAnnTx l era where
     , dsattProtocolVersion :: !ProtVer
     , dsattScriptsNeeded :: ScriptsNeeded era
     , dsattScriptsProvided :: ScriptsProvided era
+    , dsattPlutusLanguagesUsed :: Set Language
     , dsattPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
     , dsattStAnnSubTxs :: [DijkstraStAnnTx SubTx era]
     } ->
@@ -384,6 +386,7 @@ data DijkstraStAnnTx l era where
     , dsastScriptsNeeded :: ScriptsNeeded era
     , dsastScriptsProvided :: ScriptsProvided era
     , dsastTxInfoResult :: TxInfoResult era
+    , dsastPlutusLanguagesUsed :: Set Language
     , dsastPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
     } ->
     DijkstraStAnnTx SubTx era

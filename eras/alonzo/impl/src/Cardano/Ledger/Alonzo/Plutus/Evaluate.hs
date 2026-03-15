@@ -168,6 +168,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiMemoizedSubTransactions = mempty
         }
     neededPlutusScripts =
       getPlutusScriptsUsed (getScriptsProvided utxo tx) (getScriptsNeeded utxo (tx ^. bodyTxL))
@@ -339,6 +340,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiMemoizedSubTransactions = mempty
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL
