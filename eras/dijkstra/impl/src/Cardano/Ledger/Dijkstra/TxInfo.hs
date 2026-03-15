@@ -79,6 +79,7 @@ import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -431,22 +432,22 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
         txInfo <- mkAnyLevelTxInfo tx
         let
           topTxInfo = txInfo {PV3.txInfoFee = transCoinToLovelace (tx ^. bodyTxL . feeTxBodyL)}
-        _subTxInfosForGuards <-
-          forM (tx ^. bodyTxL . subTransactionsTxBodyL) $ \subTx -> do
-            mkTxInfo <-
-              unPlutusTxInfoResult
-                <$> case Map.lookup (txIdTx subTx) (ltiMemoizedSubTransactions lti) of
-                  Nothing ->
-                    toPlutusTxInfo proxy $
-                      lti
-                        { ltiTx = subTx
-                        , ltiMemoizedSubTransactions = mempty
-                        }
-                  Just txInfoResults ->
-                    pure $ lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
-            pure $ mkTxInfo $ GuardingPurpose AsPurpose
         Right $ \case
           purpose@(GuardingPurpose AsPurpose) -> do
+            _subTxInfosForGuards <-
+              forM (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL)) $ \subTx -> do
+                mkTxInfo <-
+                  unPlutusTxInfoResult $
+                    case Map.lookup (txIdTx subTx) (ltiMemoizedSubTransactions lti) of
+                      Nothing ->
+                        toPlutusTxInfo proxy $
+                          lti
+                            { ltiTx = subTx
+                            , ltiMemoizedSubTransactions = mempty
+                            }
+                      Just txInfoResults ->
+                        lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
+                mkTxInfo purpose
             -- TODO: Add Sub transactions
             Right topTxInfo
           _ -> Right topTxInfo
