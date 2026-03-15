@@ -29,7 +29,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxInfo,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
-  toPlutusWithContext,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
@@ -60,6 +59,7 @@ import Cardano.Ledger.Plutus (
   PlutusArgs (..),
   SLanguage (..),
   TxOutSource (..),
+  plutusSLanguage,
   transCoinToLovelace,
   transCoinToValue,
   transCred,
@@ -71,13 +71,16 @@ import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.State (StakePoolParams (..))
 import Cardano.Ledger.TxIn (TxId)
+import Control.Arrow (left)
 import Control.DeepSeq (NFData)
-import Control.Monad (zipWithM)
+import Control.Monad (forM, zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -88,6 +91,8 @@ import qualified PlutusLedgerApi.V3 as PV3
 
 data DijkstraContextError era
   = ConwayContextError !(ConwayContextError era)
+  | -- | Failure translating sub-transactions for Guarding purpose at the top level
+    SubTxContextError !TxId !(ContextError era)
   | PointerPresentInOutput !(NonEmpty (TxOut era))
   | -- | Attempt to use PlutusV1-V3 in a sub-transaction will result in this failure
     SubTxIsNotSupported !TxId
@@ -97,6 +102,7 @@ deriving instance
   ( AlonzoEraScript era
   , EraTxCert era
   , EraTxOut era
+  , Eq (ContextError era)
   ) =>
   Eq (DijkstraContextError era)
 
@@ -104,6 +110,7 @@ deriving instance
   ( AlonzoEraScript era
   , EraTxCert era
   , EraTxOut era
+  , Show (ContextError era)
   ) =>
   Show (DijkstraContextError era)
 
@@ -111,6 +118,7 @@ instance
   ( AlonzoEraScript era
   , EraTxCert era
   , EraTxOut era
+  , NFData (ContextError era)
   ) =>
   NFData (DijkstraContextError era)
 
@@ -118,27 +126,36 @@ instance
   ( AlonzoEraScript era
   , EraTxCert era
   , EraTxOut era
+  , NoThunks (ContextError era)
   ) =>
   NoThunks (DijkstraContextError era)
 
 instance
-  ( ToJSON (TxCert era)
+  ( ToJSON (TxOut era)
+  , ToJSON (TxCert era)
+  , ToJSON (ContextError era)
   , ToJSON (PlutusPurpose AsIx era)
   , ToJSON (PlutusPurpose AsItem era)
-  , ToJSON (TxOut era)
   , EraPParams era
   ) =>
   ToJSON (DijkstraContextError era)
   where
   toJSON = \case
     ConwayContextError x -> toJSON x
+    SubTxContextError txId subTxError ->
+      kindObject
+        "SubTxContextError"
+        [ "txId" .= toJSON txId
+        , "subTxError" .= toJSON subTxError
+        ]
     PointerPresentInOutput x -> kindObject "PointerPresentInOutput" ["txOut" .= toJSON x]
     SubTxIsNotSupported txId -> kindObject "SubTxIsNotSupported" ["txId" .= toJSON txId]
 
 instance
   ( EraPParams era
-  , DecCBOR (TxCert era)
   , DecCBOR (TxOut era)
+  , DecCBOR (TxCert era)
+  , DecCBOR (ContextError era)
   , DecCBOR (PlutusPurpose AsIx era)
   , DecCBOR (PlutusPurpose AsItem era)
   ) =>
@@ -146,14 +163,16 @@ instance
   where
   decCBOR = decode $ Summands "ContextError" $ \case
     16 -> SumD ConwayContextError <! From
-    17 -> SumD PointerPresentInOutput <! From
-    18 -> SumD SubTxIsNotSupported <! From
+    17 -> SumD SubTxContextError <! From <! From
+    18 -> SumD PointerPresentInOutput <! From
+    19 -> SumD SubTxIsNotSupported <! From
     k -> Invalid k
 
 instance
   ( EraPParams era
-  , EncCBOR (TxCert era)
   , EncCBOR (TxOut era)
+  , EncCBOR (TxCert era)
+  , EncCBOR (ContextError era)
   , EncCBOR (PlutusPurpose AsIx era)
   , EncCBOR (PlutusPurpose AsItem era)
   ) =>
@@ -162,8 +181,9 @@ instance
   encCBOR =
     encode . \case
       ConwayContextError x -> Sum ConwayContextError 16 !> To x
-      PointerPresentInOutput x -> Sum PointerPresentInOutput 17 !> To x
-      SubTxIsNotSupported txId -> Sum SubTxIsNotSupported 18 !> To txId
+      SubTxContextError txId subTxError -> Sum SubTxContextError 17 !> To txId !> To subTxError
+      PointerPresentInOutput x -> Sum PointerPresentInOutput 18 !> To x
+      SubTxIsNotSupported txId -> Sum SubTxIsNotSupported 19 !> To txId
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
@@ -203,10 +223,10 @@ instance EraPlutusContext DijkstraEra where
   lookupTxInfoResult SPlutusV4 (DijkstraTxInfoResult _ _ _ tirPlutusV4) = tirPlutusV4
 
   mkPlutusWithContext = \case
-    DijkstraPlutusV1 p -> toPlutusWithContext $ Left p
-    DijkstraPlutusV2 p -> toPlutusWithContext $ Left p
-    DijkstraPlutusV3 p -> toPlutusWithContext $ Left p
-    DijkstraPlutusV4 p -> toPlutusWithContext $ Left p
+    DijkstraPlutusV1 p -> Alonzo.toPlutusWithContext $ Left p
+    DijkstraPlutusV2 p -> Alonzo.toPlutusWithContext $ Left p
+    DijkstraPlutusV3 p -> Alonzo.toPlutusWithContext $ Left p
+    DijkstraPlutusV4 p -> Alonzo.toPlutusWithContext $ Left p
 
 instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
@@ -423,14 +443,30 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
   toPlutusScriptPurpose _ = error "stub: PlutusV4 not yet implemented"
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
+  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     withBothTxLevels ltiTx mkTopTxInfo mkSubTxInfo
     where
       mkTopTxInfo tx = PlutusTxInfoResult $ do
         txInfo <- mkAnyLevelTxInfo tx
-        let topTxInfo = txInfo {PV3.txInfoFee = transCoinToLovelace (tx ^. bodyTxL . feeTxBodyL)}
+        let
+          topTxInfo = txInfo {PV3.txInfoFee = transCoinToLovelace (tx ^. bodyTxL . feeTxBodyL)}
         Right $ \case
-          GuardingPurpose AsPurpose ->
+          purpose@(GuardingPurpose AsPurpose) -> do
+            _subTxInfosForGuards <-
+              forM (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL)) $ \subTx -> do
+                let txId = txIdTx subTx
+                mkTxInfo <-
+                  unPlutusTxInfoResult $
+                    case Map.lookup txId (ltiMemoizedSubTransactions lti) of
+                      Nothing ->
+                        toPlutusTxInfo proxy $
+                          lti
+                            { ltiTx = subTx
+                            , ltiMemoizedSubTransactions = mempty
+                            }
+                      Just txInfoResults ->
+                        lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
+                left (SubTxContextError txId) $ mkTxInfo purpose
             -- TODO: Add Sub transactions
             Right topTxInfo
           _ -> Right topTxInfo

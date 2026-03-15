@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
   module Test.Cardano.Ledger.Conway.TreeDiff,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (PerasCert, StrictMaybe)
 import Cardano.Ledger.Conway.Rules (ConwayGovEvent)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -160,6 +161,7 @@ instance
   , ToExpr (PlutusPurpose AsItem era)
   , ToExpr (TxCert era)
   , ToExpr (TxOut era)
+  , ToExpr (ContextError era)
   ) =>
   ToExpr (DijkstraContextError era)
 

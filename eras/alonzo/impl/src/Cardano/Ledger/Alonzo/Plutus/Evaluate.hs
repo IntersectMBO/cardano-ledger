@@ -1,14 +1,12 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,6 +18,9 @@ module Cardano.Ledger.Alonzo.Plutus.Evaluate (
   evalPlutusScripts,
   CollectError (..),
   collectPlutusScriptsWithContext,
+  getPlutusScriptsUsed,
+  scriptsWithContextFromLedgerTxInfo,
+  scriptsWithContextFromLedgerTxInfoWithResult,
 
   -- * Execution units estimation
 
@@ -33,14 +34,16 @@ module Cardano.Ledger.Alonzo.Plutus.Evaluate (
 ) where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext (..), LedgerTxInfo (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  CollectError (..),
+  ContextError,
+  EraPlutusContext (..),
+  LedgerTxInfo (..),
+ )
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (kindObject)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Plutus.CostModels (costModelsValid)
+import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext (..),
   ScriptResult (..),
@@ -54,8 +57,6 @@ import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
-import Control.DeepSeq (NFData)
-import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Bifunctor (first)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty)
@@ -63,82 +64,83 @@ import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
-import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Debug.Trace as Debug
 import GHC.Generics
 import Lens.Micro
-import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.Common as P
 
 -- ===============================================================
 -- From the specification, Figure 7 "Scripts and their Arguments"
 -- ===============================================================
 
--- | When collecting inputs for two phase scripts, 3 things can go wrong.
-data CollectError era
-  = NoRedeemer !(PlutusPurpose AsItem era)
-  | NoWitness !ScriptHash
-  | NoCostModel !Language
-  | BadTranslation !(ContextError era)
-  deriving (Generic)
-
-deriving instance
-  (AlonzoEraScript era, Eq (ContextError era)) =>
-  Eq (CollectError era)
-
-deriving instance
-  (AlonzoEraScript era, Show (ContextError era)) =>
-  Show (CollectError era)
-
-deriving instance
-  (AlonzoEraScript era, NoThunks (ContextError era)) =>
-  NoThunks (CollectError era)
-
-deriving instance
-  (AlonzoEraScript era, NFData (ContextError era)) =>
-  NFData (CollectError era)
-
-instance (AlonzoEraScript era, EncCBOR (ContextError era)) => EncCBOR (CollectError era) where
-  encCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
-  encCBOR (NoWitness x) = encode $ Sum (NoWitness @era) 1 !> To x
-  encCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
-  encCBOR (BadTranslation x) = encode $ Sum (BadTranslation @era) 3 !> To x
-
-instance (AlonzoEraScript era, DecCBOR (ContextError era)) => DecCBOR (CollectError era) where
-  decCBOR = decode (Summands "CollectError" dec)
-    where
-      dec 0 = SumD NoRedeemer <! From
-      dec 1 = SumD NoWitness <! From
-      dec 2 = SumD NoCostModel <! From
-      dec 3 = SumD BadTranslation <! From
-      dec n = Invalid n
-
-instance
-  ( Era era
-  , ToJSON (PlutusPurpose AsItem era)
-  , ToJSON (ContextError era)
+scriptsWithContextFromLedgerTxInfo ::
+  forall era.
+  ( AlonzoEraTxWits era
+  , AlonzoEraUTxO era
+  , EraPlutusContext era
   ) =>
-  ToJSON (CollectError era)
+  LedgerTxInfo era ->
+  CostModels ->
+  [(ScriptHash, PlutusPurpose AsIxItem era, PlutusScript era)] ->
+  Either (NonEmpty (CollectError era)) [PlutusWithContext]
+scriptsWithContextFromLedgerTxInfo lti =
+  scriptsWithContextFromLedgerTxInfoWithResult lti (mkTxInfoResult lti)
+
+scriptsWithContextFromLedgerTxInfoWithResult ::
+  forall era.
+  ( AlonzoEraTxWits era
+  , AlonzoEraUTxO era
+  , EraPlutusContext era
+  ) =>
+  LedgerTxInfo era ->
+  TxInfoResult era ->
+  CostModels ->
+  [(ScriptHash, PlutusPurpose AsIxItem era, PlutusScript era)] ->
+  Either (NonEmpty (CollectError era)) [PlutusWithContext]
+scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels plutusScriptsUsed =
+  merge
+    apply
+    (map getScriptWithRedeemer plutusScriptsUsed)
+    (Right [])
   where
-  toJSON = \case
-    NoRedeemer sPurpose ->
-      kindObject "CollectError" $
-        [ "error" .= String "NoRedeemer"
-        , "plutusPurpose" .= toJSON sPurpose
-        ]
-    NoWitness sHash ->
-      kindObject "CollectError" $
-        [ "error" .= String "NoWitness"
-        , "scriptHash" .= toJSON sHash
-        ]
-    NoCostModel lang ->
-      kindObject "CollectError" $
-        [ "error" .= String "NoCostModel"
-        , "language" .= toJSON lang
-        ]
-    BadTranslation err ->
-      kindObject "BadTranslation" ["error" .= toJSON err]
+    redeemers =
+      case lti of
+        LedgerTxInfo {ltiTx} -> ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
+    getScriptWithRedeemer (plutusScriptHash, plutusPurpose, plutusScript) =
+      let redeemerIndex = hoistPlutusPurpose toAsIx plutusPurpose
+       in case Map.lookup redeemerIndex redeemers of
+            Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash)
+            Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
+    apply (plutusScript, plutusPurpose, redeemerData, exUnits, plutusScriptHash) = do
+      let lang = plutusScriptLanguage plutusScript
+      costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang $ costModelsValid costModels
+      first BadTranslation $
+        mkPlutusWithContext
+          plutusScript
+          plutusScriptHash
+          plutusPurpose
+          lti
+          txInfoResult
+          (redeemerData, exUnits)
+          costModel
+
+    -- Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
+    -- but if there are none, use 'f' to construct a success.
+    merge ::
+      forall t b a.
+      (t -> Either a b) -> [Either a t] -> Either (NonEmpty a) [b] -> Either (NonEmpty a) [b]
+    merge _f [] answer = answer
+    merge f (x : xs) zs = merge f xs (gg x zs)
+      where
+        gg :: Either a t -> Either (NonEmpty a) [b] -> Either (NonEmpty a) [b]
+        gg (Right t) (Right cs) =
+          case f t of
+            Right c -> Right $ c : cs
+            Left e -> Left [e]
+        gg (Left a) (Right _) = Left [a]
+        gg (Right _) (Left cs) = Left cs
+        gg (Left a) (Left cs) = Left $ NonEmpty.cons a cs
 
 collectPlutusScriptsWithContext ::
   forall era l.
@@ -155,14 +157,10 @@ collectPlutusScriptsWithContext ::
   UTxO era ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
-  merge
-    apply
-    (map getScriptWithRedeemer neededPlutusScripts)
-    (Right [])
+  scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) neededPlutusScripts
   where
     -- We need to pass major protocol version to the script for script evaluation
     protVer = pp ^. ppProtocolVersionL
-    costModels = costModelsValid $ pp ^. ppCostModelsL
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = protVer
@@ -170,48 +168,18 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiMemoizedSubTransactions = mempty
         }
-    txInfoResult = mkTxInfoResult ledgerTxInfo
-
-    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
-    AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededPlutusScripts =
-      mapMaybe (\(sp, sh) -> (,) (sh, sp) <$> lookupPlutusScript sh scriptsProvided) scriptsNeeded
+      getPlutusScriptsUsed (getScriptsProvided utxo tx) (getScriptsNeeded utxo (tx ^. bodyTxL))
 
-    getScriptWithRedeemer ((plutusScriptHash, plutusPurpose), plutusScript) =
-      let redeemerIndex = hoistPlutusPurpose toAsIx plutusPurpose
-       in case Map.lookup redeemerIndex $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL of
-            Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash)
-            Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
-    apply (plutusScript, plutusPurpose, redeemerData, exUnits, plutusScriptHash) = do
-      let lang = plutusScriptLanguage plutusScript
-      costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
-      first BadTranslation $
-        mkPlutusWithContext
-          plutusScript
-          plutusScriptHash
-          plutusPurpose
-          ledgerTxInfo
-          txInfoResult
-          (redeemerData, exUnits)
-          costModel
-
-    -- \| Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
-    --   but if there are none, use 'f' to construct a success.
-    merge ::
-      forall t b a.
-      (t -> Either a b) -> [Either a t] -> Either (NonEmpty a) [b] -> Either (NonEmpty a) [b]
-    merge _f [] answer = answer
-    merge f (x : xs) zs = merge f xs (gg x zs)
-      where
-        gg :: Either a t -> Either (NonEmpty a) [b] -> Either (NonEmpty a) [b]
-        gg (Right t) (Right cs) =
-          case f t of
-            Right c -> Right $ c : cs
-            Left e -> Left [e]
-        gg (Left a) (Right _) = Left [a]
-        gg (Right _) (Left cs) = Left cs
-        gg (Left a) (Left cs) = Left $ NonEmpty.cons a cs
+getPlutusScriptsUsed ::
+  AlonzoEraScript era =>
+  ScriptsProvided era ->
+  AlonzoScriptsNeeded era ->
+  [(ScriptHash, PlutusPurpose AsIxItem era, PlutusScript era)]
+getPlutusScriptsUsed (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded scriptsNeeded) =
+  [(sh, sp, s) | (sp, sh) <- scriptsNeeded, Just s <- [lookupPlutusScript sh scriptsProvided]]
 
 -- | Evaluate a list of Plutus scripts. All scripts in the list must evaluate to `True`.
 evalPlutusScripts :: [PlutusWithContext] -> ScriptResult
@@ -372,6 +340,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiMemoizedSubTransactions = mempty
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL

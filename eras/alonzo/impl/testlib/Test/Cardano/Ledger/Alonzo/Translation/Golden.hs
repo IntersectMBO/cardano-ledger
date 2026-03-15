@@ -78,6 +78,7 @@ assertTranslationComparison (TranslationInstance protVer supportedLanguage utxo 
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiMemoizedSubTransactions = mempty
         }
     errorMessage =
       unlines
