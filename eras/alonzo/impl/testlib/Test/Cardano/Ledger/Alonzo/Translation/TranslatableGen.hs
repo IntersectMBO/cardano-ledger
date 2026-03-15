@@ -93,6 +93,7 @@ genTranslationInstance = do
           , ltiSystemStart = systemStart
           , ltiUTxO = utxo
           , ltiTx = tx
+          , ltiMemoizedSubTransactions = mempty
           }
   plutusPurpose <- arbitrary
   pure $ case supportedLanguage of

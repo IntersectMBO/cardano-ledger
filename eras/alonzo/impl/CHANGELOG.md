@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `ltiMemoizedSubTransactions` to `LedgerTxInfo`
 * Add `restrictPlutusScriptsWithPurpose`
 * Add `scriptsWithContextFromLedgerTxInfo` and `scriptsWithContextFromLedgerTxInfoWithResult`
 * Add `AlonzoStAnnTx`
