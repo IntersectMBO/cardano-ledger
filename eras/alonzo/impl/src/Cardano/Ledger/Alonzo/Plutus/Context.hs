@@ -19,6 +19,8 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   EraPlutusTxInfo (..),
   PlutusTxInfoResult (..),
+  mkPlutusTxInfoFromResult,
+  toPlutusTxInfoForPurpose,
   EraPlutusContext (..),
   toPlutusWithContext,
   lookupTxInfoResultImpossible,
@@ -73,6 +75,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
+import Control.Monad (join)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON)
 import Data.Kind (Type)
@@ -143,12 +146,38 @@ class
 -- invariant where top level transaction has a different `PlutusTxInfo` for "Guarding" purpose, when
 -- compared to all other purposes. That is the reason why result is somewhat strange, namely a
 -- function from `PlutusPurpose` to `PlutusTxInfo`. It is also done this way, instead of adding
--- `ScriptPurpose` as an argument to `toPlutusTxInfo` to preserve capability of memoization.
+-- `ScriptPurpose` as an argument to `toPlutusTxInfo` to preserve capability of memoization, hence
+-- nested `Either`
 newtype PlutusTxInfoResult l era
   = PlutusTxInfoResult
   { unPlutusTxInfoResult ::
-      Either (ContextError era) (PlutusPurpose AsPurpose era -> PlutusTxInfo l)
+      Either
+        (ContextError era)
+        ( PlutusPurpose AsPurpose era ->
+          Either (ContextError era) (PlutusTxInfo l)
+        )
   }
+
+-- | Given the prepared `PlutusTxInfoResult` and the purpose this function allows constructing the `PlutusTxInfo`, while memoizing the computation from  `PlutusTxInfoResult` for its subsequent uses.
+mkPlutusTxInfoFromResult ::
+  PlutusPurpose AsPurpose era ->
+  PlutusTxInfoResult l era ->
+  Either (ContextError era) (PlutusTxInfo l)
+mkPlutusTxInfoFromResult sp (PlutusTxInfoResult txInfoResult) =
+  join $ ($ sp) <$> txInfoResult
+
+-- | This is what `toPlutusTxInfo` would be without the intermediate `PlutusTxInfoResult`.
+--
+-- /Note/ - Using this function totally drops any memoization of `TxInfo`, as such use it only for
+-- testing or tooling that doesn't care about performance.
+toPlutusTxInfoForPurpose ::
+  EraPlutusTxInfo l era =>
+  proxy l ->
+  LedgerTxInfo era ->
+  PlutusPurpose AsPurpose era ->
+  Either (ContextError era) (PlutusTxInfo l)
+toPlutusTxInfoForPurpose proxy lti sp =
+  mkPlutusTxInfoFromResult sp $ toPlutusTxInfo proxy lti
 
 class
   ( AlonzoEraScript era
@@ -209,7 +238,7 @@ toPlutusWithContext script scriptHash plutusPurpose lti@LedgerTxInfo {ltiTx} txI
       maybeSpendingDatum =
         getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
   mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
-  let txInfo = mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
+  txInfo <- mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
   plutusArgs <-
     toPlutusArgs slang (ltiProtVer lti) txInfo plutusPurpose maybeSpendingDatum redeemerData
   pure $

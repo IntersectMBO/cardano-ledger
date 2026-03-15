@@ -21,9 +21,8 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusTxInfo,
-  PlutusTxInfoResult (..),
   SupportedLanguage (..),
-  toPlutusTxInfo,
+  toPlutusTxInfoForPurpose,
  )
 import Cardano.Ledger.Alonzo.Scripts (AsIx, PlutusPurpose, hoistPlutusPurpose, toAsPurpose)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
@@ -113,9 +112,9 @@ genTranslationInstance = do
 mkPlutusTxInfo ::
   (HasCallStack, EraPlutusTxInfo l era) =>
   SLanguage l -> LedgerTxInfo era -> PlutusPurpose AsIx era -> PlutusTxInfo l
-mkPlutusTxInfo slang lti plutusPurpose = either (error . show) id $ do
-  txInfoMaker <- unPlutusTxInfoResult $ toPlutusTxInfo slang lti
-  pure $ txInfoMaker $ hoistPlutusPurpose toAsPurpose plutusPurpose
+mkPlutusTxInfo slang lti plutusPurpose =
+  either (error . show) id $
+    toPlutusTxInfoForPurpose slang lti (hoistPlutusPurpose toAsPurpose plutusPurpose)
 
 epochInfo :: EpochInfo (Either a)
 epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

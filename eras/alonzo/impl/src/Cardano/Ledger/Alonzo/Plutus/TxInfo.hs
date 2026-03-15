@@ -126,7 +126,7 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
             , PV1.txInfoData = transTxWitsDatums (tx ^. witsTxL)
             , PV1.txInfoId = transTxBodyId txBody
             }
-      Right $ \_ -> txInfo
+      Right $ \_ -> Right txInfo
 
   toPlutusArgs = toPlutusV1Args
 

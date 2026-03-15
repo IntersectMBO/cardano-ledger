@@ -233,7 +233,7 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
             , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
             , PV1.txInfoId = Alonzo.transTxBodyId txBody
             }
-      Right $ \_ -> txInfo
+      Right $ \_ -> Right txInfo
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
@@ -298,7 +298,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
             , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
             , PV2.txInfoId = Alonzo.transTxBodyId txBody
             }
-      Right $ \_ -> txInfo
+      Right $ \_ -> Right txInfo
 
   toPlutusArgs = Babbage.toPlutusV2Args
 
@@ -357,7 +357,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
                   Coin 0 -> Nothing
                   coin -> Just $ transCoinToLovelace coin
             }
-      Right $ \_ -> txInfo
+      Right $ \_ -> Right txInfo
 
   toPlutusArgs = Conway.toPlutusV3Args
 
@@ -424,11 +424,11 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
         Right $ \case
           GuardingPurpose AsPurpose ->
             -- TODO: Add Sub transactions
-            topTxInfo
-          _ -> topTxInfo
+            Right topTxInfo
+          _ -> Right topTxInfo
       mkSubTxInfo tx = PlutusTxInfoResult $ do
         txInfo <- mkAnyLevelTxInfo tx
-        Right $ \_ -> txInfo
+        Right $ \_ -> Right txInfo
       mkAnyLevelTxInfo ::
         Tx l DijkstraEra ->
         Either (ContextError DijkstraEra) (PlutusTxInfo 'PlutusV4)
