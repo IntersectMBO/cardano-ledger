@@ -376,6 +376,7 @@ data DijkstraStAnnTx l era where
     , dsattProtocolVersion :: !ProtVer
     , dsattScriptsNeeded :: ScriptsNeeded era
     , dsattScriptsProvided :: ScriptsProvided era
+    , dsattPlutusLegacyMode :: Bool
     , dsattPlutusLanguagesUsed :: Set Language
     , dsattPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
     , dsattStAnnSubTxs :: [DijkstraStAnnTx SubTx era]
@@ -386,6 +387,7 @@ data DijkstraStAnnTx l era where
     , dsastScriptsNeeded :: ScriptsNeeded era
     , dsastScriptsProvided :: ScriptsProvided era
     , dsastTxInfoResult :: TxInfoResult era
+    , dsastPlutusLegacyMode :: Bool
     , dsastPlutusLanguagesUsed :: Set Language
     , dsastPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
     } ->

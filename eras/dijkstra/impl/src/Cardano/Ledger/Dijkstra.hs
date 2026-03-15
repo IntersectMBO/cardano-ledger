@@ -46,6 +46,7 @@ import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Dijkstra.TxInfo ()
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Dijkstra.UTxO ()
+import Cardano.Ledger.Plutus (Language(..))
 import Cardano.Ledger.Shelley.API (ApplyBlock, ApplyTx (..), ruleApplyTxValidation)
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided, UTxO)
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -101,7 +102,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo tx =
     plutusScriptsUsed = getPlutusScriptsUsed scriptsProvided scriptsNeeded
     stAnnSubTxs =
       map
-        (mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided)
+        (mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided isPlutusLegacyMode)
         (toList (txBody ^. subTransactionsTxBodyL))
     ledgerTxInfo =
       LedgerTxInfo
@@ -116,14 +117,16 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo tx =
               | DijkstraStAnnSubTx {dsastTx, dsastTxInfoResult} <- stAnnSubTxs
               ]
         }
+    languagesUsed = Set.fromList [plutusScriptLanguage s | (_, _, s) <- plutusScriptsUsed]
+    isPlutusLegacyMode = not $ Set.null $ Set.filter (<= PlutusV3) languagesUsed
    in
     DijkstraStAnnTopTx
       { dsattTx = tx
       , dsattProtocolVersion = pp ^. ppProtocolVersionL
       , dsattScriptsNeeded = scriptsNeeded
       , dsattScriptsProvided = scriptsProvided
-      , dsattPlutusLanguagesUsed =
-          Set.fromList [plutusScriptLanguage s | (_, _, s) <- plutusScriptsUsed]
+      , dsattPlutusLegacyMode = isPlutusLegacyMode
+      , dsattPlutusLanguagesUsed = languagesUsed
       , dsattPlutusScriptsWithContext =
           scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) plutusScriptsUsed
       , dsattStAnnSubTxs = stAnnSubTxs
@@ -140,9 +143,10 @@ mkDijkstraStAnnSubTx ::
   PParams era ->
   UTxO era ->
   ScriptsProvided era ->
+  Bool ->
   Tx SubTx era ->
   DijkstraStAnnTx SubTx era
-mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided tx =
+mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided isPlutusLegacyMode tx =
   let
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     plutusScriptsUsed = getPlutusScriptsUsed scriptsProvided scriptsNeeded
@@ -162,6 +166,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided tx =
       , dsastScriptsNeeded = scriptsNeeded
       , dsastScriptsProvided = scriptsProvided
       , dsastTxInfoResult = txInfoResult
+      , dsastPlutusLegacyMode = isPlutusLegacyMode
       , dsastPlutusLanguagesUsed =
           Set.fromList [plutusScriptLanguage s | (_, _, s) <- plutusScriptsUsed]
       , dsastPlutusScriptsWithContext =
