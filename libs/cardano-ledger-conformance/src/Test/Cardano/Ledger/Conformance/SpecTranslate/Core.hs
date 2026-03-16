@@ -167,12 +167,12 @@ instance SpecTranslate ctx Language where
     PlutusV4 -> error "PlutusV4 not supported"
 
 instance SpecTranslate ctx CostModels where
-  type SpecRep CostModels = [(Agda.HSLanguage, ())]
+  type SpecRep CostModels = Agda.LanguageCostModels
 
   toSpecRep cm =
     -- filter out PlutusV4 language
     let validCostModels = filter ((/= PlutusV4) . fst) $ Map.toList (costModelsValid cm)
-     in mapM (\(l, _) -> (,()) <$> toSpecRep l) validCostModels
+     in Agda.MkLanguageCostModels <$> mapM (\(l, _) -> (,()) <$> toSpecRep l) validCostModels
 
 instance SpecTranslate ctx Prices where
   type SpecRep Prices = ()

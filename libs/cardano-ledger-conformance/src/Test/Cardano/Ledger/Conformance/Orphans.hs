@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Conformance.Orphans where
 import Cardano.Ledger.Hashes (standardAddrHashSize)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default (Default)
-import Data.List (nub, sort, sortOn)
+import Data.List (nub, sortOn)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -29,6 +29,8 @@ deriving instance Ord DepositPurpose
 deriving instance Ord Tag
 
 deriving instance Ord HSLanguage
+
+deriving instance Ord LanguageCostModels
 
 deriving instance Ord Credential
 
@@ -71,6 +73,8 @@ instance NFData Timelock
 instance NFData HSTimelock
 
 instance NFData HSLanguage
+
+instance NFData LanguageCostModels
 
 instance NFData HSPlutusScript
 
@@ -222,6 +226,8 @@ instance ToExpr HSTimelock
 
 instance ToExpr HSLanguage
 
+instance ToExpr LanguageCostModels
+
 instance ToExpr HSPlutusScript
 
 instance ToExpr TxBody
@@ -326,8 +332,8 @@ instance SpecNormalize Timelock
 
 instance SpecNormalize HSTimelock
 
-instance {-# OVERLAPPING #-} SpecNormalize Agda.LanguageCostModels where
-  specNormalize l = sort l
+instance SpecNormalize Agda.LanguageCostModels where
+  specNormalize = MkLanguageCostModels . sortOn fst . lcmLanguageCostModels
 
 instance SpecNormalize HSLanguage
 
