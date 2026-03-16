@@ -193,6 +193,7 @@ library cddl
 
   build-depends:
     QuickCheck,
+    antigen,
     base,
     bytestring,
     cardano-ledger-binary,
@@ -201,6 +202,7 @@ library cddl
     cuddle >=1.2,
     heredoc,
     mempack,
+    quickcheck-transformer,
     random,
     text,
 
