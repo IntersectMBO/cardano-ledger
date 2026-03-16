@@ -7,6 +7,18 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 10.7
+
+* Finished implementation of all features needed for the upcoming intra-era hard fork into protocol version 11: [#5015](https://github.com/IntersectMBO/cardano-ledger/issues/5015):
+  - Major Protocol Version proposal restriction: [#5595](https://github.com/IntersectMBO/cardano-ledger/pull/5595)
+  - Improve semantics of GetStakeSnapshots ledger state query: [#5581](https://github.com/IntersectMBO/cardano-ledger/issues/5581)
+  - Add a new predicate failure for non-matching withdrawals: [#4640](https://github.com/IntersectMBO/cardano-ledger/issues/4640)
+  - Improve IncompleteWithdrawals failure by adding current balance: [#5452](https://github.com/IntersectMBO/cardano-ledger/issues/5452)
+* Block header CDDL spec fixes: [#5518](https://github.com/IntersectMBO/cardano-ledger/pull/5518)
+* Various performance improvements and bug fixes.
+* Plethora of features for Dijkstra era, which as a whole is not functional yet.
+* Transaction CDDL specification for Dijkstra era is mostly complete, yet is not fully tested.
+
 ## 10.6
 
 * Introduction of a new `Dijkstra` era and `PlutusV4` placeholders that for the most part mimic Conway era bahavior for now:
