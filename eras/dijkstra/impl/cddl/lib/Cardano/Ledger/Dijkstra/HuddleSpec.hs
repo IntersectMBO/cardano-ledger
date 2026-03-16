@@ -940,6 +940,7 @@ instance Era era => HuddleRule "plutus_v4_script" era where
     comment
       [str|Dijkstra introduces Plutus V4.
           |]
+      . withGenerator (const plutusScriptGen)
       $ pname =.= VBytes
 
 instance HuddleRule "auxiliary_data" DijkstraEra where
