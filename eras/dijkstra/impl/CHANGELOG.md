@@ -1,8 +1,10 @@
 # Revision history for cardano-ledger-dijkstra
 
-## 0.2.1.0
+## 0.3.0.0
 
 * Add `SubLedgerEnv` and `SubUtxowEnv`
+* Remove `OutputTooSmallUTxO` constructor from `DijkstraUtxoPredFailure`
+* Remove `SubOutputTooSmallUTxO` constructor from `DijkstraSubUtxoPredFailure`
 
 ## 0.2.0.0
 
