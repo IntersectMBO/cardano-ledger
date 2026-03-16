@@ -624,6 +624,7 @@ instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
         1 -> decodeAnnPlutus SPlutusV1
         2 -> decodeAnnPlutus SPlutusV2
         3 -> decodeAnnPlutus SPlutusV3
+        4 -> decodeAnnPlutus SPlutusV4
         n -> Invalid n
       {-# INLINE decodeScript #-}
   {-# INLINE decCBOR #-}
