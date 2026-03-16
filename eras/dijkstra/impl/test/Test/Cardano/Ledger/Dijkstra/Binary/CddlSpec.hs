@@ -76,7 +76,8 @@ spec = do
       huddleRoundTripArbitraryValidate @CostModels v "cost_models"
       huddleRoundTripAnnCborSpec @(Redeemers DijkstraEra) v "redeemers"
       -- TODO arbitrary can generate empty redeemers, which is not allowed in the CDDL
-      xdescribe "fix empty redeemers" $ huddleRoundTripArbitraryValidate @(Redeemers DijkstraEra) v "redeemers"
+      xdescribe "fix empty redeemers" $
+        huddleRoundTripArbitraryValidate @(Redeemers DijkstraEra) v "redeemers"
       huddleRoundTripCborSpec @(Redeemers DijkstraEra) v "redeemers"
       xdescribe "fix Transaction" $ do
         huddleRoundTripAnnCborSpec @(Tx TopTx DijkstraEra) v "transaction"
