@@ -41,18 +41,15 @@ spec = do
       huddleAntiCborSpec @(Value ConwayEra) v "value"
       -- TxBody
       huddleRoundTripAnnCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
-      -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "fix scripts" $
-        huddleRoundTripArbitraryValidate @(TxBody TopTx ConwayEra) v "transaction_body"
       huddleRoundTripCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
-      huddleAntiCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
+      xdescribe "fix problems with fields" $ do
+        huddleRoundTripArbitraryValidate @(TxBody TopTx ConwayEra) v "transaction_body"
+        huddleAntiCborSpec @(TxBody TopTx ConwayEra) v "transaction_body"
       -- AuxData
       huddleRoundTripAnnCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
-      -- TODO fails because of plutus scripts
-      xdescribe "fix plutus scripts" $
-        huddleRoundTripArbitraryValidate @(TxAuxData ConwayEra) v "auxiliary_data"
       huddleRoundTripCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
-      xdescribe "fix chain_code" $
+      xdescribe "fix chain_code, metadatum" $ do
+        huddleRoundTripArbitraryValidate @(TxAuxData ConwayEra) v "auxiliary_data"
         huddleAntiCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
       -- NativeScript
       huddleRoundTripAnnCborSpec @(Timelock ConwayEra) v "native_script"
@@ -66,12 +63,11 @@ spec = do
       huddleAntiCborSpec @(Data ConwayEra) v "plutus_data"
       -- TxOut
       huddleRoundTripCborSpec @(TxOut ConwayEra) v "transaction_output"
-      xdescribe "fix scripts" $ huddleRoundTripArbitraryValidate @(TxOut ConwayEra) v "transaction_output"
+      huddleRoundTripArbitraryValidate @(TxOut ConwayEra) v "transaction_output"
       huddleAntiCborSpec @(TxOut ConwayEra) v "transaction_output"
       -- Script
       huddleRoundTripAnnCborSpec @(Script ConwayEra) v "script"
-      -- TODO fails because of `plutus_v1_script`
-      xdescribe "fix plutus_v1_script" $ huddleRoundTripArbitraryValidate @(Script ConwayEra) v "script"
+      huddleRoundTripArbitraryValidate @(Script ConwayEra) v "script"
       huddleRoundTripCborSpec @(Script ConwayEra) v "script"
       huddleAntiCborSpec @(Script ConwayEra) v "script"
       -- Datum
@@ -83,9 +79,7 @@ spec = do
       huddleRoundTripAnnCborSpec @(TxWits ConwayEra) v "transaction_witness_set"
       xdescribe "fix chain_code" $
         huddleAntiCborSpec @(TxWits ConwayEra) v "transaction_witness_set"
-      -- TODO fails because of plutus_v1_script
-      xdescribe "fix plutus_v1_script" $
-        huddleRoundTripArbitraryValidate @(TxWits ConwayEra) v "transaction_witness_set"
+      huddleRoundTripArbitraryValidate @(TxWits ConwayEra) v "transaction_witness_set"
       huddleRoundTripCborSpec @(TxWits ConwayEra) v "transaction_witness_set"
       -- PParamsUpdate
       huddleRoundTripCborSpec @(PParamsUpdate ConwayEra) v "protocol_param_update"
@@ -101,10 +95,10 @@ spec = do
       huddleAntiCborSpec @(Redeemers ConwayEra) v "redeemers"
       -- Tx
       huddleRoundTripAnnCborSpec @(Tx TopTx ConwayEra) v "transaction"
-      -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(Tx TopTx ConwayEra) v "transaction"
       huddleRoundTripCborSpec @(Tx TopTx ConwayEra) v "transaction"
-      huddleAntiCborSpec @(Tx TopTx ConwayEra) v "transaction"
+      xdescribe "fix txbody" $ do
+        huddleRoundTripArbitraryValidate @(Tx TopTx ConwayEra) v "transaction"
+        huddleAntiCborSpec @(Tx TopTx ConwayEra) v "transaction"
       -- VotingProcedure
       huddleRoundTripCborSpec @(VotingProcedure ConwayEra) v "voting_procedure"
       huddleRoundTripArbitraryValidate @(VotingProcedure ConwayEra) v "voting_procedure"
