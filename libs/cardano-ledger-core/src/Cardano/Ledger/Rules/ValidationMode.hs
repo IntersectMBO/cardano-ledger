@@ -26,6 +26,9 @@ module Cardano.Ledger.Rules.ValidationMode (
   runTest,
   runTestOnSignal,
   failOnJustStatic,
+
+  -- * Validation with injection of predicate failures
+  (?!.),
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
@@ -91,3 +94,12 @@ runTestOnSignal = validateTransLabeled injectFailure $ lblStatic NE.:| []
 failOnJustStatic :: Maybe a -> (a -> PredicateFailure sts) -> Rule sts ctx ()
 failOnJustStatic cond onJust =
   validateTransLabeled id (lblStatic NE.:| []) $ failureOnJust cond onJust
+
+-- =========== Validation with injection of predicate failures ===========
+
+-- | Same as `?!`, except accepts injectable predicate failure
+(?!.) ::
+  InjectRuleFailure rule t era =>
+  Bool -> t era -> Rule (EraRule rule era) ctx ()
+(?!.) cond predFailure = cond ?! injectFailure predFailure
+{-# INLINE (?!.) #-}

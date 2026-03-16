@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.Deleg (
   tests,
@@ -13,9 +14,8 @@ module Test.Cardano.Ledger.Shelley.Rules.Deleg (
 
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley (hardforkAlonzoAllowMIRTransfer)
-import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
+import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.State
 import Data.Foldable (fold)
 import Data.Foldable as F (foldl')
@@ -62,6 +62,9 @@ tests ::
   , ShelleyEraAccounts era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
+  , EraRule "DELEG" era ~ ShelleyDELEG era
+  , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
+  , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>
   TestTree
 tests =
