@@ -1,7 +1,9 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -20,17 +22,21 @@ import Cardano.Ledger.BaseTypes (getVersion, natVersion)
 import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
 import Cardano.Ledger.Huddle
 import Codec.CBOR.Cuddle.CDDL (Name (..))
-import Codec.CBOR.Cuddle.CDDL.CBORGenerator (WrappedTerm (..))
-import Codec.CBOR.Cuddle.Huddle
+import Codec.CBOR.Cuddle.CDDL.CBORGenerator (CustomValidatorResult (..), WrappedTerm (..))
+import Codec.CBOR.Cuddle.Huddle as H
 import Codec.CBOR.Term (Term (..))
 import Data.Bits (Bits (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.MemPack (VarLen (..), packByteString)
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import Data.Word (Word16, Word32, Word64)
-import Test.QuickCheck (Arbitrary (..), Gen, choose, oneof, vectorOf)
+import GHC.TypeLits (KnownSymbol, Symbol)
+import Test.AntiGen (AntiGen, (|!))
+import Test.QuickCheck (Arbitrary (..), Gen, oneof, vectorOf)
+import Test.QuickCheck.GenT (MonadGen (..))
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -38,10 +44,10 @@ genByteString :: Int -> Gen ByteString
 genByteString n = BS.pack <$> vectorOf n arbitrary
 
 instance Era era => HuddleRule "hash28" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (28 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (28 :: Word64)
 
 instance Era era => HuddleRule "hash32" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (32 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (32 :: Word64)
 
 instance Era era => HuddleRule "max_word64" era where
   huddleRuleNamed pname _ = pname =.= (18446744073709551615 :: Integer)
@@ -98,12 +104,12 @@ distinct x =
           |]
     $ "distinct_"
       <> Name (show' x)
-        =:= (x `sized` (8 :: Word64))
-        / (x `sized` (16 :: Word64))
-        / (x `sized` (20 :: Word64))
-        / (x `sized` (24 :: Word64))
-        / (x `sized` (30 :: Word64))
-        / (x `sized` (32 :: Word64))
+        =:= (x `H.sized` (8 :: Word64))
+        / (x `H.sized` (16 :: Word64))
+        / (x `H.sized` (20 :: Word64))
+        / (x `H.sized` (24 :: Word64))
+        / (x `H.sized` (30 :: Word64))
+        / (x `H.sized` (32 :: Word64))
   where
     show' :: Value s -> T.Text
     show' = \case
@@ -115,16 +121,16 @@ instance Era era => HuddleRule "nonce" era where
   huddleRuleNamed pname p = pname =.= arr [0] / arr [1, a (huddleRule @"hash32" p)]
 
 instance Era era => HuddleRule "epoch" era where
-  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
 
 instance Era era => HuddleRule "epoch_interval" era where
-  huddleRuleNamed pname _ = pname =.= VUInt `sized` (4 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (4 :: Word64)
 
 instance Era era => HuddleRule "slot" era where
-  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
 
 instance Era era => HuddleRule "block_number" era where
-  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
 
 instance Era era => HuddleRule "addr_keyhash" era where
   huddleRuleNamed pname p = pname =.= huddleRule @"hash28" p
@@ -136,31 +142,31 @@ instance Era era => HuddleRule "vrf_keyhash" era where
   huddleRuleNamed pname p = pname =.= huddleRule @"hash32" p
 
 instance Era era => HuddleRule "vkey" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (32 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (32 :: Word64)
 
 instance Era era => HuddleRule "vrf_vkey" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (32 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (32 :: Word64)
 
 instance Era era => HuddleRule "vrf_cert" era where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `H.sized` (80 :: Word64))]
 
 instance Era era => HuddleRule "kes_vkey" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (32 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (32 :: Word64)
 
 instance Era era => HuddleRule "kes_signature" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (448 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (448 :: Word64)
 
 instance Era era => HuddleRule "signkey_kes" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (64 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (64 :: Word64)
 
 instance Era era => HuddleRule "sequence_number" era where
-  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
 
 instance Era era => HuddleRule "kes_period" era where
-  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
 
 instance Era era => HuddleRule "signature" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (64 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (64 :: Word64)
 
 instance Era era => HuddleRule "coin" era where
   huddleRuleNamed pname _ = pname =.= VUInt
@@ -249,10 +255,10 @@ instance Era era => HuddleRule "reward_account" era where
         pure $ S term
 
 instance Era era => HuddleRule "transaction_index" era where
-  huddleRuleNamed pname _ = pname =.= VUInt `sized` (2 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (2 :: Word64)
 
 instance Era era => HuddleRule "metadatum_label" era where
-  huddleRuleNamed pname _ = pname =.= VUInt `sized` (8 :: Word64)
+  huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
 
 instance Era era => HuddleRule "metadatum" era where
   huddleRuleNamed pname p =
@@ -262,8 +268,8 @@ instance Era era => HuddleRule "metadatum" era where
         ]
       / sarr [0 <+ a (huddleRule @"metadatum" p)]
       / VInt
-      / (VBytes `sized` (0 :: Word64, 64 :: Word64))
-      / (VText `sized` (0 :: Word64, 64 :: Word64))
+      / (VBytes `H.sized` (0 :: Word64, 64 :: Word64))
+      / (VText `H.sized` (0 :: Word64, 64 :: Word64))
 
 instance Era era => HuddleRule "metadata" era where
   huddleRuleNamed pname p =
@@ -305,15 +311,39 @@ instance Era era => HuddleRule "stake_credential" era where
 instance Era era => HuddleRule "port" era where
   huddleRuleNamed pname _ = pname =.= VUInt `le` 65535
 
+ipGen :: Int -> AntiGen WrappedTerm
+ipGen n = do
+  l <- choose (n, 1024) |! choose (0, pred n)
+  bs <- liftGen $ genByteString l
+  -- TODO Also generate with TBytesI
+  pure . S $ TBytes bs
+
+ipValidator :: Int -> Term -> CustomValidatorResult
+ipValidator n = \case
+  TBytes bs | BS.length bs >= n -> CustomValidatorSuccess
+  TBytesI bs | LBS.length bs >= fromIntegral n -> CustomValidatorSuccess
+  _ -> CustomValidatorFailure $ "Expected bytes with length >=" <> T.pack (show n)
+
+ipRule ::
+  forall era (r :: Symbol).
+  (Era era, KnownSymbol r) => Int -> Proxy r -> Proxy era -> Rule
+ipRule n pname _
+  | eraProtVerLow @era < natVersion @9 =
+      comment
+        [str| It is not possible to express a bytestring with no upper bound
+             | in CDDL, that's why the upper bound is set to 1024. In reality
+             | there is no such upper bound on the bytestring.
+             |]
+        . withValidator (ipValidator n)
+        . withAntiGen (\_ -> ipGen n)
+        $ pname =.= VBytes `H.sized` (fromIntegral n :: Word64, 1024 :: Word64)
+  | otherwise = pname =.= VBytes `H.sized` (fromIntegral n :: Word64)
+
 instance Era era => HuddleRule "ipv4" era where
-  huddleRuleNamed pname _
-    | eraProtVerLow @era < natVersion @9 = pname =.= VBytes
-    | otherwise = pname =.= VBytes `sized` (4 :: Word64)
+  huddleRuleNamed = ipRule 4
 
 instance Era era => HuddleRule "ipv6" era where
-  huddleRuleNamed pname _
-    | eraProtVerLow @era < natVersion @9 = pname =.= VBytes
-    | otherwise = pname =.= VBytes `sized` (16 :: Word64)
+  huddleRuleNamed = ipRule 16
 
 majorProtocolVersionRule ::
   forall era. Era era => Proxy "major_protocol_version" -> Proxy era -> Rule
