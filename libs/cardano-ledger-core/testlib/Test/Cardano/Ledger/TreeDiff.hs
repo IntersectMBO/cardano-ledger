@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -34,11 +35,12 @@ import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
 import Data.Functor.Identity
-import Data.TreeDiff.OMap
+import qualified Data.TreeDiff.OMap as OMap
 import GHC.TypeLits
 import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.Binary.TreeDiff
 import Test.Data.VMap.TreeDiff ()
+import Type.Reflection (Typeable, typeRep)
 
 -- Coin
 instance ToExpr Coin
@@ -60,7 +62,7 @@ instance ToExpr (NoUpdate a)
 -- Keys
 instance ToExpr (VKey r) where
   toExpr vk =
-    Rec "VKey" $ fromList [("VKey (hashOf)", toExpr $ hashKey vk)]
+    Rec "VKey" $ OMap.fromList [("VKey (hashOf)", toExpr $ hashKey vk)]
 
 instance ToExpr GenDelegs
 
@@ -152,7 +154,14 @@ instance ToExpr ProtVer
 
 instance ToExpr Anchor
 
-instance ToExpr a => ToExpr (Mismatch r a)
+instance (Typeable r, ToExpr a) => ToExpr (Mismatch r a) where
+  toExpr (Mismatch supplied expected) =
+    Rec
+      ("Mismatch (" <> show (typeRep @r) <> ")")
+      $ OMap.fromList
+        [ ("supplied", toExpr supplied)
+        , ("expected", toExpr expected)
+        ]
 
 instance ToExpr EpochInterval
 
