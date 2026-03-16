@@ -300,7 +300,7 @@ goldenMinFee =
             txsSeq =
               case decodeFullAnnotator (eraProtVerHigh @AlonzoEra) "Block" decCBOR cborBytesBlock of
                 Left err -> error (show err)
-                Right (Block _h txs :: Block (BHeader StandardCrypto) AlonzoEra) -> txs
+                Right (Block _h txs _ _ :: Block (BHeader StandardCrypto) AlonzoEra) -> txs
             firstTx =
               case fromTxSeq @AlonzoEra txsSeq of
                 tx :<| _ -> tx

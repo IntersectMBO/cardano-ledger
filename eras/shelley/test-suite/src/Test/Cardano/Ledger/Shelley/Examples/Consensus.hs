@@ -167,7 +167,7 @@ exampleShelleyLedgerBlock ::
   EraSegWits era =>
   Tx era ->
   Block (BHeader StandardCrypto) era
-exampleShelleyLedgerBlock tx = Block blockHeader blockBody
+exampleShelleyLedgerBlock tx = Block blockHeader' blockBody Nothing False -- FIXME(bladyjoker): Revise
   where
     keys :: AllIssuerKeys StandardCrypto 'StakePool
     keys = exampleKeys
@@ -175,8 +175,8 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
     hotKey = kesSignKey $ snd $ NE.head $ aikHot keys
     KeyPair vKeyCold _ = aikCold keys
 
-    blockHeader :: BHeader StandardCrypto
-    blockHeader = BHeader blockHeaderBody (unsoundPureSignedKES () 0 blockHeaderBody hotKey)
+    blockHeader' :: BHeader StandardCrypto
+    blockHeader' = BHeader blockHeaderBody (unsoundPureSignedKES () 0 blockHeaderBody hotKey)
 
     blockHeaderBody :: BHBody StandardCrypto
     blockHeaderBody =
@@ -340,8 +340,10 @@ exampleNewEpochState value ppp pp =
               }
         , esNonMyopic = def
         }
-        & prevPParamsEpochStateL .~ ppp
-        & curPParamsEpochStateL .~ pp
+        & prevPParamsEpochStateL
+          .~ ppp
+        & curPParamsEpochStateL
+          .~ pp
       where
         addr :: Addr
         addr =

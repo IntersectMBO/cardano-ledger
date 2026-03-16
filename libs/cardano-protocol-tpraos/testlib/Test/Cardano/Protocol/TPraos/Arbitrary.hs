@@ -156,7 +156,7 @@ instance
   ) =>
   Arbitrary (Block (BHeader c) era)
   where
-  arbitrary = Block <$> arbitrary <*> (toTxSeq <$> arbitrary)
+  arbitrary = Block <$> arbitrary <*> (toTxSeq <$> arbitrary) <*> pure Nothing <*> pure False -- FIXME(bladyjoker): Revise
 
 -- | Use supplied keys to generate a Block.
 genBlock ::
@@ -168,7 +168,7 @@ genBlock ::
   ) =>
   [AllIssuerKeys c r] ->
   Gen (Block (BHeader c) era)
-genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary)
+genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary) <*> pure Nothing <*> pure False -- FIXME(bladyjoker): Revise
 
 -- | For some purposes, a totally random block generator may not be suitable.
 -- There are tests in the ouroboros-network repository, for instance, that

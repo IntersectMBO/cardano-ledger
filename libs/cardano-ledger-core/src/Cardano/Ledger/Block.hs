@@ -5,6 +5,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -16,6 +17,11 @@
 
 module Cardano.Ledger.Block (
   Block (Block, Block', UnserialisedBlock, UnsafeUnserialisedBlock),
+  blockHeader,
+  blockTxs,
+  blockMayAnnouncedEb,
+  blockCertifiesEb,
+  EbHash (..),
   bheader,
   bbody,
   neededTxInsForBlock,
@@ -46,8 +52,20 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
+newtype EbHash = EbHash {unEbHash :: BSL.ByteString}
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NoThunks)
+  deriving newtype (DecCBOR, EncCBOR)
+
+-- FIXME(bladyjoker): Should be Either (TxSeq era) (Maybe EbHash)
 data Block h era
-  = Block' !h !(TxSeq era) BSL.ByteString
+  = Block'
+  { blockHeader :: !h
+  , blockTxs :: !(TxSeq era)
+  , blockMayAnnouncedEb :: Maybe EbHash -- FIXME(bladyjoker): This goes into the header
+  , blockCertifiesEb :: Bool
+  , blockBytes :: BSL.ByteString
+  }
   deriving (Generic)
 
 deriving stock instance
@@ -73,15 +91,21 @@ pattern Block ::
   ) =>
   h ->
   TxSeq era ->
+  Maybe EbHash ->
+  Bool ->
   Block h era
-pattern Block h txns <-
-  Block' h txns _
+pattern Block h txns mayAnnouncedEb certifiesEb <-
+  Block' h txns mayAnnouncedEb certifiesEb _
   where
-    Block h txns =
+    Block h txns mayAnnouncedEb certifiesEb =
       let bytes =
             serialize (eraProtVerLow @era) $
-              encodeListLen (1 + listLen txns) <> encCBOR h <> encCBORGroup txns
-       in Block' h txns bytes
+              encodeListLen (3 + listLen txns)
+                <> encCBOR h
+                <> encCBORGroup txns
+                <> encCBOR mayAnnouncedEb
+                <> encCBOR certifiesEb
+       in Block' h txns mayAnnouncedEb certifiesEb bytes
 
 {-# COMPLETE Block #-}
 
@@ -91,7 +115,7 @@ pattern UnserialisedBlock ::
   h ->
   TxSeq era ->
   Block h era
-pattern UnserialisedBlock h txns <- Block' h txns _
+pattern UnserialisedBlock h txns <- Block' h txns _ _ _
 
 {-# COMPLETE UnserialisedBlock #-}
 
@@ -105,18 +129,18 @@ pattern UnsafeUnserialisedBlock ::
   TxSeq era ->
   Block h era
 pattern UnsafeUnserialisedBlock h txns <-
-  Block' h txns _
+  Block' h txns _ _ _
   where
     UnsafeUnserialisedBlock h txns =
       let bytes = error "`UnsafeUnserialisedBlock` used to construct a block which was later serialised."
-       in Block' h txns bytes
+       in Block' h txns (error "FIXME(bladyjoker): annEb") (error "FIXME(bladyjoker): cert") bytes
 
 {-# COMPLETE UnsafeUnserialisedBlock #-}
 
 instance (EraTx era, Typeable h) => EncCBOR (Block h era)
 
 instance (EraTx era, Typeable h) => Plain.ToCBOR (Block h era) where
-  toCBOR (Block' _ _ blockBytes) = Plain.encodePreEncoded $ BSL.toStrict blockBytes
+  toCBOR = Plain.encodePreEncoded . BSL.toStrict . blockBytes
 
 instance
   ( EraSegWits era
@@ -129,13 +153,23 @@ instance
     decodeRecordNamed "Block" (const blockSize) $ do
       header <- decCBOR
       txns <- decCBOR
-      pure $ Block' <$> header <*> txns
+      mayAnnouncedEb <- decCBOR @(Maybe EbHash)
+      certifiesEb <- decCBOR @Bool
+      pure $ Block' <$> header <*> txns <*> pure mayAnnouncedEb <*> pure certifiesEb
     where
       blockSize =
         1 -- header
           + fromIntegral (numSegComponents @era)
+          + 1 -- announced EB -- NOTE(bladyjoker): Not sure about this
+          + 1 -- certified EB
 
-data BlockRaw h era = BlockRaw !h !(TxSeq era)
+data BlockRaw h era = BlockRaw
+  { _blockRawHeader :: !h
+  , _blockRawTxs :: !(TxSeq era)
+  , -- FIXME(bladyjoker): Same as for Block
+    _blockRawMayAnnouncedEb :: Maybe EbHash
+  , _blockRawUseCertifiedEb :: Bool
+  }
 
 instance
   ( EraSegWits era
@@ -148,9 +182,15 @@ instance
     decodeRecordNamed "Block" (const blockSize) $ do
       header <- decCBOR
       txns <- decCBOR
-      pure $ BlockRaw header txns
+      mayAnnouncedEb <- decCBOR
+      certifiesEb <- decCBOR
+      pure $ BlockRaw header txns mayAnnouncedEb certifiesEb
     where
-      blockSize = 1 + fromIntegral (numSegComponents @era)
+      blockSize =
+        1 -- header
+          + fromIntegral (numSegComponents @era)
+          + 1 -- announced EB -- NOTE(bladyjoker): Not sure about this
+          + 1 -- certified EB
 
 instance
   ( EraSegWits era
@@ -160,16 +200,15 @@ instance
   DecCBOR (Block h era)
   where
   decCBOR = do
-    Memo (BlockRaw h txSeq) bs <- decodeMemoized (decCBOR @(BlockRaw h era))
-    pure $ Block' h txSeq (BSL.fromStrict (SBS.fromShort bs))
+    Memo (BlockRaw h txSeq mayAnnouncedEb certifiesEb) bs <-
+      decodeMemoized (decCBOR @(BlockRaw h era))
+    pure $ Block' h txSeq mayAnnouncedEb certifiesEb (BSL.fromStrict (SBS.fromShort bs))
 
-bheader ::
-  Block h era ->
-  h
-bheader (Block' bh _ _) = bh
+bheader :: Block h era -> h
+bheader = blockHeader
 
 bbody :: Block h era -> TxSeq era
-bbody (Block' _ txs _) = txs
+bbody = blockTxs
 
 -- | The validity of any individual block depends only on a subset
 -- of the UTxO stored in the ledger state. This function returns
@@ -185,7 +224,7 @@ neededTxInsForBlock ::
   EraSegWits era =>
   Block h era ->
   Set TxIn
-neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
+neededTxInsForBlock (Block' _ txsSeq _ _ _) = Set.filter isNotNewInput allTxIns
   where
     txBodies = map (^. bodyTxL) $ toList $ fromTxSeq txsSeq
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
