@@ -789,6 +789,7 @@ instance Era era => HuddleRule "plutus_v3_script" era where
     comment
       [str|Conway introduces Plutus V3 with support for new governance features.
           |]
+      . withGenerator (const plutusScriptGen)
       $ pname =.= VBytes
 
 instance Era era => HuddleRule "negative_int64" era where
