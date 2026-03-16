@@ -55,7 +55,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   untaggedSet,
 ) where
 
-import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule)
+import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule, plutusScriptGen)
 import Cardano.Ledger.Huddle
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Data.Proxy (Proxy (..))

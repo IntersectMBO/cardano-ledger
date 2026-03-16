@@ -481,6 +481,7 @@ instance Era era => HuddleRule "plutus_v1_script" era where
       [str|Alonzo introduces Plutus smart contracts.
           |Plutus V1 scripts are opaque bytestrings.
           |]
+      . withGenerator (const plutusScriptGen)
       $ pname =.= VBytes
 
 instance HuddleRule "bounded_bytes" AlonzoEra where
