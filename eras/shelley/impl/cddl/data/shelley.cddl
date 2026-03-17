@@ -283,7 +283,7 @@ vkeywitness = [vkey, signature]
 ;   - Disjunctions (script_any)
 ;   - M-of-N thresholds (script_n_of_k)
 ; 
-; Note: Shelley uses VUInt for the threshold in script_n_of_k.
+; Note: Shelley uses VInt for the threshold in script_n_of_k.
 native_script = [script_pubkey// script_all// script_any// script_n_of_k]
 
 script_pubkey = (0, addr_keyhash)

@@ -43,10 +43,10 @@ import Prelude hiding ((/))
 genByteString :: Int -> Gen ByteString
 genByteString n = BS.pack <$> vectorOf n arbitrary
 
--- | Generator for plutus scripts that produces 32-byte random bytestrings.
+-- | Generator for plutus scripts that produces random bytestrings.
 -- This avoids collisions when scripts appear in sets (tag 258).
 plutusScriptGen :: MonadGen m => m WrappedTerm
-plutusScriptGen = S . TBytes <$> liftGen (genByteString 32)
+plutusScriptGen = S . TBytes <$> (liftGen . genByteString =<< choose (8, 1024))
 
 instance Era era => HuddleRule "hash28" era where
   huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (28 :: Word64)
