@@ -57,12 +57,11 @@ spec = do
       huddleRoundTripAnnCborSpec @(Data DijkstraEra) v "plutus_data"
       huddleRoundTripArbitraryValidate @(Data DijkstraEra) v "plutus_data"
       huddleRoundTripCborSpec @(Data DijkstraEra) v "plutus_data"
-      xdescribe "fix Script" $ do
+      xdescribe "fix NoDatum" $ do
         huddleRoundTripCborSpec @(TxOut DijkstraEra) v "transaction_output"
         huddleRoundTripArbitraryValidate @(TxOut DijkstraEra) v "transaction_output"
-      xdescribe "fix Script" $ do
-        huddleRoundTripAnnCborSpec @(Script DijkstraEra) v "script"
-        huddleRoundTripCborSpec @(Script DijkstraEra) v "script"
+      huddleRoundTripAnnCborSpec @(Script DijkstraEra) v "script"
+      huddleRoundTripCborSpec @(Script DijkstraEra) v "script"
       -- TODO fails because of `plutus_v1_script`
       xdescribe "fix plutus_v1_script" $ huddleRoundTripArbitraryValidate @(Script DijkstraEra) v "script"
       huddleRoundTripCborSpec @(Datum DijkstraEra) v "datum_option"
