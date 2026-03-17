@@ -47,10 +47,10 @@ spec = do
         huddleRoundTripArbitraryValidate @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
       -- TODO enable this once map/list expansion has been optimized in cuddle
       -- TODO fails because of plutus scripts
-      xdescribe "fix plutus scripts" $ do
-        huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
+      huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
+      xdescribe "fix metadatum" $
         huddleRoundTripArbitraryValidate @(TxAuxData DijkstraEra) v "auxiliary_data"
-        huddleRoundTripCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
+      huddleRoundTripCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
       huddleRoundTripAnnCborSpec @(NativeScript DijkstraEra) v "native_script"
       huddleRoundTripArbitraryValidate @(NativeScript DijkstraEra) v "native_script"
       huddleRoundTripCborSpec @(NativeScript DijkstraEra) v "native_script"
