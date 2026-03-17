@@ -458,14 +458,21 @@ fromCborCompactAddr = snd <$> fromCborBothAddr
 -- that it was encoded as.
 fromCborBothAddr :: Decoder s (Addr, CompactAddr)
 fromCborBothAddr = do
-  ifDecoderVersionAtLeast
-    (natVersion @7)
-    ( ifDecoderVersionAtLeast
-        (natVersion @9)
-        (fromCborRigorousBothAddr False)
-        (fromCborRigorousBothAddr True)
-    )
-    fromCborBackwardsBothAddr
+  (addr, cAddr) <-
+    ifDecoderVersionAtLeast
+      (natVersion @7)
+      ( ifDecoderVersionAtLeast
+          (natVersion @9)
+          (fromCborRigorousBothAddr False)
+          (fromCborRigorousBothAddr True)
+      )
+      fromCborBackwardsBothAddr
+  let
+    -- `addr` will have been normalized if it's a `Ptr`, so we need to make `cAddr` match it
+    cAddrNormalized = case addr of
+      Addr _ _ (StakeRefPtr _) -> compactAddr addr
+      _ -> cAddr
+  pure (addr, cAddrNormalized)
 {-# INLINE fromCborBothAddr #-}
 
 -- | Starting with Babbage we no longer allow addresses with garbage in them.
