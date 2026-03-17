@@ -28,6 +28,10 @@ deriving instance Ord DepositPurpose
 
 deriving instance Ord Tag
 
+deriving instance Ord HSLanguage
+
+deriving instance Ord LanguageCostModels
+
 deriving instance Ord Credential
 
 deriving instance Ord GovRole
@@ -67,6 +71,10 @@ instance NFData BootstrapAddr
 instance NFData Timelock
 
 instance NFData HSTimelock
+
+instance NFData HSLanguage
+
+instance NFData LanguageCostModels
 
 instance NFData HSPlutusScript
 
@@ -216,6 +224,10 @@ instance ToExpr Timelock
 
 instance ToExpr HSTimelock
 
+instance ToExpr HSLanguage
+
+instance ToExpr LanguageCostModels
+
 instance ToExpr HSPlutusScript
 
 instance ToExpr TxBody
@@ -319,6 +331,11 @@ instance SpecNormalize BootstrapAddr
 instance SpecNormalize Timelock
 
 instance SpecNormalize HSTimelock
+
+instance SpecNormalize Agda.LanguageCostModels where
+  specNormalize = MkLanguageCostModels . sortOn fst . lcmLanguageCostModels
+
+instance SpecNormalize HSLanguage
 
 instance SpecNormalize HSPlutusScript
 

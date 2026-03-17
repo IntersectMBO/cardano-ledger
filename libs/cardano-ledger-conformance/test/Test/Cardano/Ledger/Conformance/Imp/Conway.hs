@@ -48,6 +48,6 @@ spec = do
             describe "RATIFY" Ratify.spec
             describe "UTXO" Utxo.spec
             describe "UTXOW" Utxow.spec
-            xdescribe "UTXOS" Utxos.spec
+            describe "UTXOS" Utxos.spec
   describe "Imp (only spec)" $ do
     RatifySpec.spec

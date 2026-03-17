@@ -38,11 +38,15 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
-import Test.Cardano.Ledger.Conformance (
-  ExecSpecRule (..),
-  runFromAgdaFunction,
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
+  externalFunctions,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
+  ExecSpecRule (..),
+  SpecTRC (..),
+  runFromAgdaFunction,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -102,7 +106,9 @@ instance
 instance ExecSpecRule "LEDGER" ConwayEra where
   type ExecContext "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
 
-  runAgdaRule = runFromAgdaFunction Agda.ledgerStep
+  runAgdaRule trc =
+    let externalFunctions' = externalFunctions {Agda.extValidPlutusScript = Agda.isValid (strcSignal trc)}
+     in runFromAgdaFunction (Agda.ledgerStep externalFunctions') trc
 
   extraInfo globals ConwayLedgerExecContext {..} (TRC (LedgerEnv {..}, LedgerState {..}, sig)) _ =
     extraInfo @"UTXOW" @ConwayEra
