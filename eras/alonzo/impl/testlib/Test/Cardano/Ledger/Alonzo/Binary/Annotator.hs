@@ -298,6 +298,7 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoScr
         1 -> decodePlutus SPlutusV1
         2 -> decodePlutus SPlutusV2
         3 -> decodePlutus SPlutusV3
+        4 -> decodePlutus SPlutusV4
         n -> Invalid n
       decodePlutus slang =
         SumD PlutusScript <! D (decodePlutusScript slang)
