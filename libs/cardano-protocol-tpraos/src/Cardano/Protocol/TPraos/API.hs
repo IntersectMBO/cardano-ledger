@@ -143,15 +143,6 @@ class
 
 instance PraosCrypto StandardCrypto
 
-{-# DEPRECATED
-  GetLedgerView
-  "Use 'ShelleyEraForecast' for TPraos eras (Shelley-Alonzo) or 'EraForecast' for Praos eras (Babbage+) instead."
-  #-}
-
-{-# DEPRECATED currentLedgerView "Use 'currentForecast' instead." #-}
-
-{-# DEPRECATED futureLedgerView "Use 'futureForecast' instead." #-}
-
 class
   ( STS (EraRule "TICKF" era)
   , BaseM (EraRule "TICKF" era) ~ ShelleyBase
@@ -188,6 +179,15 @@ class
     SlotNo ->
     m LedgerView
   futureLedgerView = futureView
+
+{-# DEPRECATED
+  GetLedgerView
+  "Use 'ShelleyEraForecast' for TPraos eras (Shelley-Alonzo) or 'EraForecast' for Praos eras (Babbage+) instead."
+  #-}
+
+{-# DEPRECATED currentLedgerView "Use 'currentForecast' instead." #-}
+
+{-# DEPRECATED futureLedgerView "Use 'futureForecast' instead." #-}
 
 instance GetLedgerView ShelleyEra
 
@@ -295,8 +295,6 @@ forecastToTPraosLedgerView f =
     , tplvChainChecks = forecastChainChecks @t @era f
     }
 
-{-# DEPRECATED LedgerView "In favor of 'TPraosLedgerView'" #-}
-
 -- | Data required by the TPraos protocol from the Shelley ledger.
 data LedgerView = LedgerView
   { lvD :: !UnitInterval
@@ -314,6 +312,7 @@ data LedgerView = LedgerView
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
+{-# DEPRECATED LedgerView "In favor of 'TPraosLedgerView'" #-}
 
 -- | Construct a protocol environment from the ledger view, along with the
 -- current slot and a marker indicating whether this is the first block in a new
@@ -329,7 +328,6 @@ mkPrtclEnv
       (tplvPoolDistr lv)
       (tplvGenDelegs lv)
 
-{-# DEPRECATED view "Use 'currentForecast' instead." #-}
 view ::
   (AtMostEra "Alonzo" era, EraGov era, EraCertState era) =>
   NewEpochState era ->
@@ -347,6 +345,7 @@ view
           , lvGenDelegs = es ^. esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
           , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
           }
+{-# DEPRECATED view "Use 'currentForecast' instead." #-}
 
 -- $timetravel
 --
@@ -387,8 +386,6 @@ deriving stock instance
   Show (PredicateFailure (EraRule "TICKF" era)) =>
   Show (FutureLedgerViewError era)
 
-{-# DEPRECATED futureView "Use 'futureForecast' instead." #-}
-
 -- | Anachronistic ledger view
 --
 --   Given a slot within the future stability window from our current slot (the
@@ -420,6 +417,7 @@ futureView globals ss slot =
       flip runReader globals
         . applySTS @(EraRule "TICKF" era)
         $ TRC ((), ss, slot)
+{-# DEPRECATED futureView "Use 'futureForecast' instead." #-}
 
 -- $chainstate
 --
@@ -630,11 +628,6 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
     epochSlots = Set.fromList [a .. b]
     (a, b) = runIdentity $ epochInfoRange ei currentEpoch
 
-{-# DEPRECATED
-  mkInitialShelleyLedgerView
-  "Use 'mkInitialShelleyForecast' and 'forecastToTPraosLedgerView' instead."
-  #-}
-
 -- | We construct a 'LedgerView' using the Shelley genesis config in the same
 -- way as 'translateToShelleyLedgerState'.
 mkInitialShelleyLedgerView ::
@@ -649,6 +642,10 @@ mkInitialShelleyLedgerView transCtxt =
         , lvGenDelegs = GenDelegs $ fbtcGenDelegs transCtxt
         , lvChainChecks = pparamsToChainChecksPParams . fbtcProtocolParams $ transCtxt
         }
+{-# DEPRECATED
+  mkInitialShelleyLedgerView
+  "Use 'mkInitialShelleyForecast' and 'forecastToTPraosLedgerView' instead."
+  #-}
 
 -- | Construct an initial 'ShelleyForecast' from the Byron translation context.
 -- This can be used with 'forecastToTPraosLedgerView' to get a 'TPraosLedgerView'.

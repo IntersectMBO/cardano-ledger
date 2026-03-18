@@ -16,7 +16,7 @@ import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, SlotNo)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyPOOL)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast, ShelleyPOOL)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (
@@ -28,7 +28,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPoolPredFailure,
  )
 import Cardano.Ledger.Shelley.State
-import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknEnv, TicknState)
 import Control.State.Transition
 import Data.Sequence (Seq)
@@ -67,7 +66,7 @@ commonTests ::
   , EraStake era
   , ShelleyEraAccounts era
   , ApplyBlock era
-  , GetLedgerView era
+  , ShelleyEraForecast era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Embed (EraRule "TICK" era) (CHAIN era)
   , Embed (EraRule "TICKN" era) (CHAIN era)
@@ -78,7 +77,6 @@ commonTests ::
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , Signal (EraRule "TICKN" era) ~ Bool
   , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
-  , AtMostEra "Alonzo" era
   , GovState era ~ ShelleyGovState era
   , InstantStake era ~ ShelleyInstantStake era
   , QC.BaseEnv (EraRule "LEDGER" era) ~ Globals
