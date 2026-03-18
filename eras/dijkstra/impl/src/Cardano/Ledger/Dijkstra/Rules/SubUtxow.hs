@@ -19,7 +19,6 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
   DijkstraSUBUTXOW,
   DijkstraSubUtxowPredFailure (..),
   DijkstraSubUtxowEvent (..),
-  SubUtxowEnv (..),
 ) where
 
 import Cardano.Crypto.Hash (ByteString)
@@ -47,7 +46,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
   ConwayUtxowPredFailure,
-  UtxoEnv (..),
   alonzoToConwayUtxowPredFailure,
   babbageToConwayUtxowPredFailure,
   shelleyToConwayUtxowPredFailure,
@@ -71,7 +69,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateNeededWitnesses,
   validateVerifiedWits,
  )
-import Cardano.Ledger.State (CertState, EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -84,13 +82,6 @@ import NoThunks.Class (
   InspectHeapNamed (..),
   NoThunks (..),
  )
-
-data SubUtxowEnv era = SubUtxowEnv
-  { sueSlot :: SlotNo
-  , suePParams :: PParams era
-  , sueCertState :: CertState era
-  , sueScriptsProvided :: ScriptsProvided era
-  }
 
 data DijkstraSubUtxowPredFailure era
   = SubUtxoFailure (PredicateFailure (EraRule "SUBUTXO" era))
@@ -221,7 +212,7 @@ instance
   where
   type State (DijkstraSUBUTXOW era) = UTxOState era
   type Signal (DijkstraSUBUTXOW era) = Tx SubTx era
-  type Environment (DijkstraSUBUTXOW era) = SubUtxowEnv era
+  type Environment (DijkstraSUBUTXOW era) = SubUtxoEnv era
   type BaseM (DijkstraSUBUTXOW era) = ShelleyBase
   type PredicateFailure (DijkstraSUBUTXOW era) = DijkstraSubUtxowPredFailure era
   type Event (DijkstraSUBUTXOW era) = DijkstraSubUtxowEvent era
@@ -243,7 +234,7 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (SubUtxowEnv slot pp certState scriptsProvided, utxoState, tx) <- judgmentContext
+  TRC (env@(SubUtxoEnv _ pp certState scriptsProvided _ _), utxoState, tx) <- judgmentContext
   let utxo = utxosUtxo utxoState
       txBody = tx ^. bodyTxL
       witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
@@ -277,7 +268,7 @@ dijkstraSubUtxowTransition = do
       (tx ^. witsTxL . scriptTxWitsL)
       (tx ^. bodyTxL . outputsTxBodyL)
 
-  trans @(EraRule "SUBUTXO" era) $ TRC (UtxoEnv slot pp certState, utxoState, tx)
+  trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
 
 instance
   ( ConwayEraGov era

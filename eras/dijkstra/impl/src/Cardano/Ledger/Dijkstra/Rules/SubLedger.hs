@@ -69,7 +69,8 @@ import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovEvent, DijkstraSubGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure (..), SubUtxowEnv (..))
+import Cardano.Ledger.Dijkstra.Rules.SubUtxo (SubUtxoEnv (..))
+import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Rules.ValidationMode (runTest)
@@ -110,6 +111,8 @@ data SubLedgerEnv era = SubLedgerEnv
   , slePParams :: PParams era
   , sleAccount :: ChainAccountState
   , sleScriptsProvided :: ScriptsProvided era
+  , sleOriginalUtxo :: UTxO era
+  , sleTopTxIsValid :: IsValid
   }
 
 data DijkstraSubLedgerPredFailure era
@@ -259,7 +262,7 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState scriptsProvided
+    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState scriptsProvided originalUtxo topIsValid
       , ledgerState@(LedgerState utxoState certState)
       , tx
       ) <-
@@ -308,7 +311,7 @@ dijkstraSubLedgersTransition = do
   utxoStateAfterSubUtxow <-
     trans @(EraRule "SUBUTXOW" era) $
       TRC
-        ( SubUtxowEnv slot pp certState scriptsProvided
+        ( SubUtxoEnv slot pp certState scriptsProvided originalUtxo topIsValid
         , utxoState
         , tx
         )
