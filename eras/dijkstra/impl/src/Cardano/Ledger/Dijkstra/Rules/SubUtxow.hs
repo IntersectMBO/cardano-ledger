@@ -254,15 +254,23 @@ dijkstraSubUtxowTransition ::
 dijkstraSubUtxowTransition = do
   TRC (SubUtxowEnv slot pp certState scriptsProvided originalUtxo isValid, utxoState, tx) <-
     judgmentContext
-  let utxo = utxosUtxo utxoState
-      txBody = tx ^. bodyTxL
-      witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
+  let
+    -- FIX: use original utxo from environment
+    utxo = utxosUtxo utxoState
+    txBody = tx ^. bodyTxL
+    witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
 
   {- ∀[ (vk , σ) ∈ vKeySigs ] isSigned vk (txidBytes txId) σ -}
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
+  -- FIX:
+  -- use original utxo from environment
   let scriptsNeeded = getScriptsNeeded utxo txBody
       scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
+
+  -- TODO:   runTest $ Babbage.babbageMissingScripts pp scriptHashesNeeded refScripts scriptTxWits
+  -- split in two and check that what's required is provided for this subtx
+  -- scriptHashesSubset : scriptHashesNeeded ⊆ mapˢ hash scriptsProvided
 
   {- ∀[ s ∈ p1ScriptsNeeded ] validP1Script vKeyHashesProvided txVldt s -}
   runTest $ Babbage.validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
@@ -271,11 +279,15 @@ dijkstraSubUtxowTransition = do
   runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState utxo txBody
 
   {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
+  -- sharing datums from witnesses across transactions?
+  -- check inline data, reference scripts
   runTest $ Alonzo.missingRequiredDatums utxo tx
 
   {- txADhash ≡ map hash txAuxData -}
   runTestOnSignal $ Shelley.validateMetadata pp tx
 
+  -- CHECK: languageV4Only     : languages p2ScriptsNeeded ⊆ dom (PParams.costmdls (PParamsOf Γ)) ∩ ❴ PlutusV4 ❵
+  -- only plutus v4 allowed
   let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptHashesNeeded
   runTest $ Alonzo.checkScriptIntegrityHash tx pp scriptIntegrity
 
