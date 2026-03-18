@@ -5,7 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Allegra.Imp.UtxowSpec (
   spec,
@@ -15,11 +14,11 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..))
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import Data.Word (Word64)
 import Lens.Micro
+import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary (genUtf8StringOfSize)
 import Test.Cardano.Ledger.Shelley.ImpTest
@@ -41,7 +40,7 @@ genInvalidMetadata = do
   size <- choose (65, 1000)
   let genM =
         oneof
-          [ B . BS.pack <$> vectorOf size arbitrary
+          [ B <$> liftGen (genByteArray size)
           , S . T.pack <$> liftGen (genUtf8StringOfSize size)
           ]
   Map.fromList <$> listOf1 ((,) <$> arbitrary <*> genM)

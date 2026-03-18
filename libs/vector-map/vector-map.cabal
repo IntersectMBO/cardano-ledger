@@ -35,7 +35,7 @@ library
     base >=4.18 && <5,
     containers,
     deepseq,
-    nothunks,
+    nothunks <0.3.2,
     primitive,
     vector,
     vector-algorithms,

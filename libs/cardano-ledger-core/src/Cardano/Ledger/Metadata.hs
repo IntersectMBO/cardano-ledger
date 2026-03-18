@@ -21,7 +21,6 @@ import Cardano.Ledger.Binary (
   TokenType (..),
   cborError,
   decodeBreakOr,
-  decodeBytes,
   decodeBytesIndef,
   decodeInteger,
   decodeListLen,
@@ -30,16 +29,17 @@ import Cardano.Ledger.Binary (
   decodeMapLenIndef,
   decodeString,
   decodeStringIndef,
-  encodeBytes,
   encodeInteger,
   encodeListLen,
   encodeMapLen,
   encodeString,
   peekTokenType,
  )
+import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData (rnf))
-import Data.ByteString (ByteString)
+import Data.Array.Byte (ByteArray (..))
 import qualified Data.ByteString as BS
+import qualified Data.Primitive.ByteArray as Prim
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import GHC.Generics (Generic)
@@ -50,7 +50,7 @@ data Metadatum
   = Map ![(Metadatum, Metadatum)]
   | List ![Metadatum]
   | I !Integer
-  | B !BS.ByteString
+  | B !ByteArray
   | S !T.Text
   deriving stock (Show, Eq, Ord, Generic)
 
@@ -75,7 +75,7 @@ instance DecCBOR Metadatum where
 validMetadatum :: Metadatum -> Bool
 -- The integer size/representation checks are enforced in the decoder.
 validMetadatum (I _) = True
-validMetadatum (B b) = BS.length b <= 64
+validMetadatum (B ba) = Prim.sizeofByteArray ba <= 64
 validMetadatum (S s) = BS.length (T.encodeUtf8 s) <= 64
 validMetadatum (List xs) = all validMetadatum xs
 validMetadatum (Map kvs) =
@@ -91,7 +91,7 @@ validMetadatum (Map kvs) =
 
 encodeMetadatum :: Metadatum -> Encoding
 encodeMetadatum (I n) = encodeInteger n
-encodeMetadatum (B b) = encodeBytes b
+encodeMetadatum (B ba) = encCBOR ba
 encodeMetadatum (S s) = encodeString s
 encodeMetadatum (List xs) =
   encodeListLen (fromIntegral (length xs))
@@ -133,13 +133,10 @@ decodeMetadatum = do
     TypeNInt64 -> I <$> decodeInteger
     -- Note that we do not enforce byte and string lengths here in the
     -- decoder. We enforce that in the tx validation rules.
-    TypeBytes -> do
-      !x <- decodeBytes
-      return (B x)
+    TypeBytes -> B <$> decCBOR
     TypeBytesIndef -> do
       decodeBytesIndef
-      !x <- decodeBytesIndefLen []
-      return (B x)
+      B <$> decodeBytesIndefLen []
     TypeString -> do
       !x <- decodeString
       return (S x)
@@ -184,14 +181,14 @@ decodeMetadatum = do
   where
     decodeError msg = cborError (DecoderErrorCustom "metadata" msg)
 
-decodeBytesIndefLen :: [BS.ByteString] -> Decoder s ByteString
+decodeBytesIndefLen :: [ByteArray] -> Decoder s ByteArray
 decodeBytesIndefLen acc = do
   stop <- decodeBreakOr
   if stop
-    then return $! BS.concat (reverse acc)
+    then return $! mconcat $ reverse acc
     else do
-      !bs <- decodeBytes
-      decodeBytesIndefLen (bs : acc)
+      !ba <- decCBOR
+      decodeBytesIndefLen (ba : acc)
 
 decodeStringIndefLen :: [T.Text] -> Decoder s T.Text
 decodeStringIndefLen acc = do

@@ -80,6 +80,7 @@ module Test.Cardano.Ledger.Imp.Common (
   uniformListRM,
   uniformByteStringM,
   uniformShortByteStringM,
+  uniformByteArrayM,
 
   -- * Re-exports from ImpSpec
   withImpInit,
@@ -87,6 +88,7 @@ module Test.Cardano.Ledger.Imp.Common (
 ) where
 
 import Control.Monad.IO.Class
+import Data.Array.Byte (ByteArray)
 import Data.List (isInfixOf)
 import qualified System.Random.Stateful as R
 import Test.Cardano.Ledger.Binary.TreeDiff (expectExprEqualWithMessage)
@@ -225,3 +227,7 @@ expectNothingExpr (Just x) =
   assertFailure $
     "Expected Nothing, got Just:\n" <> showExpr x
 expectNothingExpr Nothing = pure ()
+
+uniformByteArrayM :: HasStatefulGen a m => Int -> m ByteArray
+uniformByteArrayM n = askStatefulGen >>= R.uniformByteArrayM False n
+{-# INLINE uniformByteArrayM #-}

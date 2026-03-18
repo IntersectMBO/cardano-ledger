@@ -169,6 +169,7 @@ library testlib
     QuickCheck,
     base,
     bytestring,
+    cardano-base:testlib,
     cardano-ledger-allegra,
     cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib},

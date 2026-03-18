@@ -6,7 +6,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Examples (
@@ -349,9 +348,9 @@ exampleAuxDataMap :: Map Word64 Metadatum
 exampleAuxDataMap =
   Map.fromList
     [ (1, S "string")
-    , (2, B "bytes")
+    , (2, B $ byteArrayFromShortByteString "bytes")
     , (3, List [I 1, I 2])
-    , (4, Map [(I 3, B "b")])
+    , (4, Map [(I 3, B $ byteArrayFromShortByteString "b")])
     ]
 
 exampleTxIns :: Set TxIn
