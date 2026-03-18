@@ -425,7 +425,7 @@ dijkstraLedgerTransition = do
   ledgerStateAfterSubledgers <-
     trans @(EraRule "SUBLEDGERS" era) $
       TRC
-        ( SubLedgerEnv slot mbCurEpochNo txIx pp chainAccountState scriptsProvided
+        ( SubLedgerEnv slot mbCurEpochNo txIx pp chainAccountState scriptsProvided utxo (tx ^. isValidTxL)
         , ledgerState
         , subTxs
         )
