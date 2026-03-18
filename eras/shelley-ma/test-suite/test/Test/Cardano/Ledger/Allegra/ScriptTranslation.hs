@@ -16,7 +16,6 @@ import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
   pattern RequireAllOf,
  )
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Except (runExcept)
 import Control.State.Transition.Extended (TRC (..))
@@ -56,7 +55,7 @@ testScriptPostTranslation =
             S.UTxO $
               Map.singleton
                 (S.TxIn bootstrapTxId minBound)
-                (S.ShelleyTxOut addr (Val.inject (S.Coin 1)))
+                (mkCoinTxOut addr (S.Coin 1))
           env =
             S.LedgerEnv
               (SlotNo 0)
@@ -67,15 +66,10 @@ testScriptPostTranslation =
           utxoStShelley = def {S.utxosUtxo = utxo}
           utxoStAllegra = fromRight . runExcept $ translateEra @AllegraEra NoGenesis utxoStShelley
           txb =
-            S.ShelleyTxBody
-              (Set.singleton $ S.TxIn bootstrapTxId minBound)
-              StrictSeq.empty
-              StrictSeq.empty
-              (S.Withdrawals mempty)
-              (S.Coin 1)
-              (SlotNo 1)
-              S.SNothing
-              S.SNothing
+            mkBasicTxBody @ShelleyEra @TopTx
+              & inputsTxBodyL .~ Set.singleton (S.TxIn bootstrapTxId minBound)
+              & feeTxBodyL .~ S.Coin 1
+              & ttlTxBodyL .~ SlotNo 1
           wits = mkBasicTxWits & scriptTxWitsL .~ Map.singleton scriptHash script
           txs = mkBasicTx txb & witsTxL .~ wits
           txa = fromRight . runExcept $ translateEra @AllegraEra NoGenesis txs

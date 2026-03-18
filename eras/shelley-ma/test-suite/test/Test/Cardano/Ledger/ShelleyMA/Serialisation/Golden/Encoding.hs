@@ -6,7 +6,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodingTests) where
@@ -18,14 +17,12 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Allegra.TxAuxData (pattern AllegraTxAuxData)
-import Cardano.Ledger.Allegra.TxBody (TxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
-import Cardano.Ledger.Mary.TxBody (TxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Shelley.PParams (
   Update,
@@ -40,7 +37,6 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
-import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
@@ -224,19 +220,14 @@ goldenEncodingTestsAllegra =
     , metadataWithScriptsGoldenTest @AllegraEra
     , -- "minimal_txn_body"
       let tin = mkTxInPartial genesisId 1
-          tout = ShelleyTxOut @AllegraEra testAddrE (Coin 2)
+          tout = mkBasicTxOut @AllegraEra testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
             (eraProtVerHigh @AllegraEra)
             "minimal_txbody"
-            ( AllegraTxBody
-                (Set.fromList [tin])
-                (StrictSeq.singleton tout)
-                StrictSeq.empty
-                (Withdrawals Map.empty)
-                (Coin 9)
-                (ValidityInterval SNothing SNothing)
-                SNothing
-                SNothing
+            ( mkBasicTxBody @AllegraEra
+                & inputsTxBodyL .~ Set.fromList [tin]
+                & outputsTxBodyL .~ StrictSeq.singleton tout
+                & feeTxBodyL .~ Coin 9
             )
             ( T (TkMapLen 3)
                 <> T (TkWord 0) -- Tx Ins
@@ -250,7 +241,7 @@ goldenEncodingTestsAllegra =
             )
     , -- "full_txn_body"
       let tin = mkTxInPartial genesisId 1
-          tout = ShelleyTxOut @AllegraEra testAddrE (Coin 2)
+          tout = mkBasicTxOut @AllegraEra testAddrE (Coin 2)
           reg = RegTxCert testStakeCred
           ras = Map.singleton (AccountAddress Testnet (AccountId (KeyHashObj testKeyHash))) (Coin 123)
           up = testUpdate
@@ -258,15 +249,15 @@ goldenEncodingTestsAllegra =
        in checkEncodingCBORAnnotated
             (eraProtVerHigh @AllegraEra)
             "full_txn_body"
-            ( AllegraTxBody
-                (Set.fromList [tin])
-                (StrictSeq.singleton tout)
-                (StrictSeq.fromList [reg])
-                (Withdrawals ras)
-                (Coin 9)
-                (ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600))
-                (SJust up)
-                (SJust mdh)
+            ( mkBasicTxBody @AllegraEra
+                & inputsTxBodyL .~ Set.fromList [tin]
+                & outputsTxBodyL .~ StrictSeq.singleton tout
+                & certsTxBodyL .~ StrictSeq.fromList [reg]
+                & withdrawalsTxBodyL .~ Withdrawals ras
+                & feeTxBodyL .~ Coin 9
+                & vldtTxBodyL .~ ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600)
+                & updateTxBodyL .~ SJust up
+                & auxDataHashTxBodyL .~ SJust mdh
             )
             ( T (TkMapLen 9)
                 <> T (TkWord 0) -- Tx Ins
@@ -379,20 +370,14 @@ goldenEncodingTestsMary =
     , metadataWithScriptsGoldenTest @MaryEra
     , -- "minimal_txn_body"
       let tin = mkTxInPartial genesisId 1
-          tout = ShelleyTxOut @MaryEra testAddrE (Val.inject $ Coin 2)
+          tout = mkBasicTxOut @MaryEra testAddrE (Val.inject $ Coin 2)
        in checkEncodingCBORAnnotated
             (eraProtVerHigh @MaryEra)
             "minimal_txbody"
-            ( MaryTxBody
-                (Set.fromList [tin])
-                (StrictSeq.singleton tout)
-                StrictSeq.empty
-                (Withdrawals Map.empty)
-                (Coin 9)
-                (ValidityInterval SNothing SNothing)
-                SNothing
-                SNothing
-                mempty
+            ( mkBasicTxBody @MaryEra
+                & inputsTxBodyL .~ Set.fromList [tin]
+                & outputsTxBodyL .~ StrictSeq.singleton tout
+                & feeTxBodyL .~ Coin 9
             )
             ( T (TkMapLen 3)
                 <> T (TkWord 0) -- Tx Ins
@@ -406,7 +391,7 @@ goldenEncodingTestsMary =
             )
     , -- "full_txn_body"
       let tin = mkTxInPartial genesisId 1
-          tout = ShelleyTxOut @MaryEra testAddrE (Val.inject $ Coin 2)
+          tout = mkBasicTxOut @MaryEra testAddrE (Val.inject $ Coin 2)
           reg = RegTxCert testStakeCred
           ras = Map.singleton (AccountAddress Testnet (AccountId (KeyHashObj testKeyHash))) (Coin 123)
           up = testUpdate
@@ -415,16 +400,16 @@ goldenEncodingTestsMary =
        in checkEncodingCBORAnnotated
             (eraProtVerHigh @MaryEra)
             "full_txn_body"
-            ( MaryTxBody
-                (Set.fromList [tin])
-                (StrictSeq.singleton tout)
-                (StrictSeq.fromList [reg])
-                (Withdrawals ras)
-                (Coin 9)
-                (ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600))
-                (SJust up)
-                (SJust mdh)
-                (MultiAsset mint)
+            ( mkBasicTxBody @MaryEra
+                & inputsTxBodyL .~ Set.fromList [tin]
+                & outputsTxBodyL .~ StrictSeq.singleton tout
+                & certsTxBodyL .~ StrictSeq.fromList [reg]
+                & withdrawalsTxBodyL .~ Withdrawals ras
+                & feeTxBodyL .~ Coin 9
+                & vldtTxBodyL .~ ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600)
+                & updateTxBodyL .~ SJust up
+                & auxDataHashTxBodyL .~ SJust mdh
+                & mintTxBodyL .~ MultiAsset mint
             )
             ( T (TkMapLen 10)
                 <> T (TkWord 0) -- Tx Ins

@@ -23,7 +23,7 @@ import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Mary.TxBody (TxBody (MaryTxBody))
+import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -37,8 +37,6 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
@@ -95,7 +93,8 @@ instance EraGen MaryEra where
       & feeTxBodyL .~ fee
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
-  genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
+  genEraTxWits _scriptinfo setWitVKey mapScriptWit =
+    mkBasicTxWits & addrTxWitsL .~ setWitVKey & scriptTxWitsL .~ mapScriptWit
 
 genAuxiliaryData :: Constants -> Gen (StrictMaybe (TxAuxData MaryEra))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
@@ -277,7 +276,7 @@ genTxBody ::
   PParams MaryEra ->
   SlotNo ->
   Set.Set TxIn ->
-  StrictSeq (ShelleyTxOut MaryEra) ->
+  StrictSeq (TxOut MaryEra) ->
   StrictSeq (TxCert MaryEra) ->
   Withdrawals ->
   Coin ->
@@ -295,16 +294,16 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
           Set.toList $
             policies mint
   pure
-    ( MaryTxBody
-        ins
-        outs'
-        cert
-        wdrl
-        fee
-        validityInterval
-        upd
-        meta
-        mint'
+    ( mkBasicTxBody
+        & inputsTxBodyL .~ ins
+        & outputsTxBodyL .~ outs'
+        & certsTxBodyL .~ cert
+        & withdrawalsTxBodyL .~ wdrl
+        & feeTxBodyL .~ fee
+        & vldtTxBodyL .~ validityInterval
+        & updateTxBodyL .~ upd
+        & auxDataHashTxBodyL .~ meta
+        & mintTxBodyL .~ mint'
     , ps -- These additional scripts are for the minting policies.
     )
 
@@ -321,8 +320,7 @@ instance Split MaryValue where
 
 instance MinGenTxout MaryEra where
   calcEraMinUTxO _txout pp = pp ^. ppMinUTxOValueL
-  addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
+  addValToTxOut v txout = txout & valueTxOutL %~ (v <+>)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal
-    let makeTxOut (addr, val) = ShelleyTxOut addr val
-    pure (makeTxOut <$> zip addrs values)
+    pure (zipWith mkBasicTxOut addrs values)

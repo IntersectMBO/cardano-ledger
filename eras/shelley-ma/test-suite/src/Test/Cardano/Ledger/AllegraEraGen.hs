@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.AllegraEraGen (
   genValidityInterval,
 ) where
 
-import Cardano.Ledger.Allegra (AllegraEra, Tx (..))
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
@@ -27,7 +27,6 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.Allegra.TxBody (TxBody (AllegraTxBody))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (encCBOR, serialize')
 import Cardano.Ledger.Coin (Coin)
@@ -38,9 +37,6 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)
-import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>))
 import Cardano.Slotting.Slot (SlotNo (SlotNo))
@@ -93,8 +89,10 @@ instance EraGen AllegraEra where
       & feeTxBodyL .~ fee
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
-  genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
-  constructTx x y z = MkAllegraTx $ ShelleyTx x y z
+  genEraTxWits _scriptinfo setWitVKey mapScriptWit =
+    mkBasicTxWits & addrTxWitsL .~ setWitVKey & scriptTxWitsL .~ mapScriptWit
+  constructTx body wits auxData =
+    mkBasicTx body & witsTxL .~ wits & auxDataTxL .~ auxData
 
 genTxBody ::
   SlotNo ->
@@ -109,21 +107,21 @@ genTxBody ::
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   pure
-    ( AllegraTxBody
-        ins
-        outs
-        cert
-        wdrl
-        fee
-        validityInterval
-        upd
-        ad
+    ( mkBasicTxBody
+        & inputsTxBodyL .~ ins
+        & outputsTxBodyL .~ outs
+        & certsTxBodyL .~ cert
+        & withdrawalsTxBodyL .~ wdrl
+        & feeTxBodyL .~ fee
+        & vldtTxBodyL .~ validityInterval
+        & updateTxBodyL .~ upd
+        & auxDataHashTxBodyL .~ ad
     , [] -- Allegra does not need any additional script witnesses
     )
 
 instance MinGenTxout AllegraEra where
   calcEraMinUTxO _txout pp = pp ^. ppMinUTxOValueL
-  addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
+  addValToTxOut v txout = txout & valueTxOutL %~ (v <+>)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal
     pure (zipWith mkBasicTxOut addrs values)

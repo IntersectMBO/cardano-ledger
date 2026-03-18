@@ -10,9 +10,7 @@ module Test.Cardano.Ledger.Dijkstra.Examples (
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
@@ -21,7 +19,12 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Rules (DijkstraLEDGER, DijkstraMEMPOOL)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..), DijkstraPlutusPurpose (..))
-import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
+import Cardano.Ledger.Dijkstra.TxBody (
+  accountBalanceIntervalsTxBodyL,
+  directDepositsTxBodyL,
+  guardsTxBodyL,
+  subTransactionsTxBodyL,
+ )
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (
@@ -36,6 +39,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Examples (
   exampleDatum,
@@ -65,7 +69,7 @@ ledgerExamples =
         pure $
           wrapFailed @(DijkstraLEDGER DijkstraEra) @(DijkstraMEMPOOL DijkstraEra) $
             wrapFailed @(ConwayDELEG DijkstraEra) @(DijkstraLEDGER DijkstraEra) $
-              DelegateeStakePoolNotRegisteredDELEG @DijkstraEra (mkKeyHash 1)
+              DelegateeStakePoolNotRegisteredDELEG (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
     exampleTxDijkstra
@@ -76,50 +80,50 @@ exampleTxDijkstra =
   exampleTx
     exampleTxBodyDijkstra
     (DijkstraSpending $ AsIx 0)
-    (RequireAllOf @DijkstraEra mempty)
+    (RequireAllOf mempty)
 
 exampleTxBodyDijkstra :: TxBody TopTx DijkstraEra
 exampleTxBodyDijkstra =
-  DijkstraTxBody
-    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]) -- spending inputs
-    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 2)) 1]) -- collateral inputs
-    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 3]) -- reference inputs
-    ( StrictSeq.fromList
-        [ mkSized (eraProtVerHigh @DijkstraEra) $
-            BabbageTxOut
-              (mkAddr examplePayKey exampleStakeKey)
-              (exampleMultiAssetValue 2)
-              (Datum $ dataToBinaryData exampleDatum) -- inline datum
-              (SJust $ alwaysSucceeds @'PlutusV2 3) -- reference script
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]
+    & collateralInputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 2)) 1]
+    & referenceInputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 3]
+    & outputsTxBodyL
+      .~ StrictSeq.fromList
+        [ mkBasicTxOut
+            (mkAddr examplePayKey exampleStakeKey)
+            (exampleMultiAssetValue 2)
+            & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
+            & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV2 3)
         ]
-    )
-    (SJust $ mkSized (eraProtVerHigh @DijkstraEra) exampleCollateralOutput) -- collateral return
-    (SJust $ Coin 8675309) -- collateral tot
-    exampleDijkstraCerts
-    ( Withdrawals $
-        Map.singleton
-          (AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey)))
-          (Coin 100) -- txwdrls
-    )
-    (Coin 999) -- txfee
-    (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))) -- txvldt
-    (OSet.fromList [KeyHashObj $ mkKeyHash 212, ScriptHashObj $ mkScriptHash 213]) -- guards
-    exampleMultiAsset -- mint
-    (SJust $ mkDummySafeHash 42) -- scriptIntegrityHash
-    (SJust . TxAuxDataHash $ mkDummySafeHash 42) -- adHash
-    (SJust Mainnet) -- txnetworkid
-    (VotingProcedures mempty)
-    mempty
-    (SJust $ Coin 867530900000) -- current treasury value
-    mempty -- treasury donation
-    mempty -- sub-transactions
-    (DirectDeposits mempty)
-    (AccountBalanceIntervals mempty)
+    & collateralReturnTxBodyL .~ SJust exampleCollateralOutput
+    & totalCollateralTxBodyL .~ SJust (Coin 8675309)
+    & certsTxBodyL .~ exampleDijkstraCerts
+    & withdrawalsTxBodyL
+      .~ Withdrawals
+        ( Map.singleton
+            (AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey)))
+            (Coin 100)
+        )
+    & feeTxBodyL .~ Coin 999
+    & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))
+    & guardsTxBodyL .~ OSet.fromList [KeyHashObj $ mkKeyHash 212, ScriptHashObj $ mkScriptHash 213]
+    & mintTxBodyL .~ exampleMultiAsset
+    & scriptIntegrityHashTxBodyL .~ SJust (mkDummySafeHash 42)
+    & auxDataHashTxBodyL .~ SJust (TxAuxDataHash $ mkDummySafeHash 42)
+    & networkIdTxBodyL .~ SJust Mainnet
+    & votingProceduresTxBodyL .~ VotingProcedures mempty
+    & proposalProceduresTxBodyL .~ mempty
+    & currentTreasuryValueTxBodyL .~ SJust (Coin 867530900000)
+    & treasuryDonationTxBodyL .~ mempty
+    & subTransactionsTxBodyL .~ mempty
+    & directDepositsTxBodyL .~ DirectDeposits mempty
+    & accountBalanceIntervalsTxBodyL .~ AccountBalanceIntervals mempty
   where
     MaryValue _ exampleMultiAsset = exampleMultiAssetValue 3
 
-exampleDijkstraCerts :: OSet.OSet (DijkstraTxCert era)
+exampleDijkstraCerts :: StrictSeq.StrictSeq (DijkstraTxCert era)
 exampleDijkstraCerts =
-  OSet.fromList -- TODO should I add the new certs here?
+  StrictSeq.fromList -- TODO should I add the new certs here?
     [ DijkstraTxCertPool (RegPool exampleStakePoolParams)
     ]

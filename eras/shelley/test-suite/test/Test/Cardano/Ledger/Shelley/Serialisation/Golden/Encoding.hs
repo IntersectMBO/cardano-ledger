@@ -79,11 +79,7 @@ import Cardano.Ledger.Shelley.PParams (
  )
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
-import Cardano.Ledger.Shelley.TxBody (TxBody (ShelleyTxBody))
-import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State (
   PoolMetadata (..),
@@ -194,21 +190,9 @@ testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
 testVRFKH :: VRFVerKeyHash r
 testVRFKH = hashVerKeyVRF @MockCrypto $ vrfVerKey testVRF
 
-testTxb :: TxBody TopTx ShelleyEra
-testTxb =
-  ShelleyTxBody
-    Set.empty
-    StrictSeq.empty
-    StrictSeq.empty
-    (Withdrawals Map.empty)
-    (Coin 0)
-    (SlotNo 0)
-    SNothing
-    SNothing
-
 testTxbHash ::
   SafeHash EraIndependentTxBody
-testTxbHash = hashAnnotated testTxb
+testTxbHash = hashAnnotated (mkBasicTxBody @ShelleyEra @TopTx)
 
 testKey1 :: KeyPair Payment
 testKey1 = KeyPair vk sk
@@ -424,7 +408,7 @@ tests =
        in checkEncodingCBOR
             shelleyProtVer
             "txout"
-            (ShelleyTxOut @ShelleyEra a (Coin 2))
+            (mkBasicTxOut @ShelleyEra a (Coin 2))
             ( T (TkListLen 2)
                 <> S a
                 <> S (Coin 2)
@@ -695,19 +679,15 @@ tests =
                 <> S e
             )
     , -- checkEncodingCBOR "minimal_txn_body"
-      let tout = ShelleyTxOut @ShelleyEra testAddrE (Coin 2)
+      let tout = mkCoinTxOut testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "txbody"
-            ( ShelleyTxBody -- minimal transaction body
-                (Set.fromList [genesisTxIn1])
-                (StrictSeq.singleton tout)
-                StrictSeq.empty
-                (Withdrawals Map.empty)
-                (Coin 9)
-                (SlotNo 500)
-                SNothing
-                SNothing
+            ( mkBasicTxBody @ShelleyEra -- minimal transaction body
+                & inputsTxBodyL .~ Set.fromList [genesisTxIn1]
+                & outputsTxBodyL .~ StrictSeq.singleton tout
+                & feeTxBodyL .~ Coin 9
+                & ttlTxBodyL .~ SlotNo 500
             )
             ( T (TkMapLen 4)
                 <> T (TkWord 0) -- Tx Ins
@@ -722,7 +702,7 @@ tests =
                 <> T (TkWord64 500)
             )
     , -- checkEncodingCBOR "transaction_mixed"
-      let tout = ShelleyTxOut @ShelleyEra testAddrE (Coin 2)
+      let tout = mkCoinTxOut testAddrE (Coin 2)
           ra = AccountAddress Testnet (AccountId (KeyHashObj testKeyHash2))
           ras = Map.singleton ra (Coin 123)
           up =
@@ -735,15 +715,13 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "txbody_partial"
-            ( ShelleyTxBody -- transaction body with some optional components
-                (Set.fromList [genesisTxIn1])
-                (StrictSeq.singleton tout)
-                StrictSeq.Empty
-                (Withdrawals ras)
-                (Coin 9)
-                (SlotNo 500)
-                (SJust up)
-                SNothing
+            ( mkBasicTxBody @ShelleyEra -- transaction body with some optional components
+                & inputsTxBodyL .~ Set.fromList [genesisTxIn1]
+                & outputsTxBodyL .~ StrictSeq.singleton tout
+                & withdrawalsTxBodyL .~ Withdrawals ras
+                & feeTxBodyL .~ Coin 9
+                & ttlTxBodyL .~ SlotNo 500
+                & updateTxBodyL .~ SJust up
             )
             ( T (TkMapLen 6)
                 <> T (TkWord 0) -- Tx Ins
@@ -762,7 +740,7 @@ tests =
                 <> S up
             )
     , -- checkEncodingCBOR "full_txn_body"
-      let tout = ShelleyTxOut @ShelleyEra testAddrE (Coin 2)
+      let tout = mkCoinTxOut testAddrE (Coin 2)
           reg = RegTxCert testStakeCred
           ra = AccountAddress Testnet (AccountId (KeyHashObj testKeyHash2))
           ras = Map.singleton ra (Coin 123)
@@ -773,19 +751,21 @@ tests =
                     emptyPParamsUpdate & ppuNOptL .~ SJust 100
               )
               (EpochNo 0)
-          mdh = hashTxAuxData @ShelleyEra $ TxAuxData.ShelleyTxAuxData $ Map.singleton 13 (TxAuxData.I 17)
+          mdh =
+            hashTxAuxData $
+              mkBasicTxAuxData @ShelleyEra & metadataTxAuxDataL .~ Map.singleton 13 (TxAuxData.I 17)
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "txbody_full"
-            ( ShelleyTxBody -- transaction body with all components
-                (Set.fromList [genesisTxIn1])
-                (StrictSeq.singleton tout)
-                (StrictSeq.fromList [reg])
-                (Withdrawals ras)
-                (Coin 9)
-                (SlotNo 500)
-                (SJust up)
-                (SJust mdh)
+            ( mkBasicTxBody @ShelleyEra -- transaction body with all components
+                & inputsTxBodyL .~ Set.fromList [genesisTxIn1]
+                & outputsTxBodyL .~ StrictSeq.singleton tout
+                & certsTxBodyL .~ StrictSeq.fromList [reg]
+                & withdrawalsTxBodyL .~ Withdrawals ras
+                & feeTxBodyL .~ Coin 9
+                & ttlTxBodyL .~ SlotNo 500
+                & updateTxBodyL .~ SJust up
+                & auxDataHashTxBodyL .~ SJust mdh
             )
             ( T (TkMapLen 8)
                 <> T (TkWord 0) -- Tx Ins
@@ -810,24 +790,18 @@ tests =
             )
     , -- checkEncodingCBOR "minimal_txn"
       let txb =
-            ShelleyTxBody
-              (Set.fromList [TxIn genesisId (mkTxIxPartial 1)])
-              (StrictSeq.singleton $ ShelleyTxOut @ShelleyEra testAddrE (Coin 2))
-              StrictSeq.empty
-              (Withdrawals Map.empty)
-              (Coin 9)
-              (SlotNo 500)
-              SNothing
-              SNothing
-          txbh = (hashAnnotated txb)
+            mkBasicTxBody @ShelleyEra
+              & inputsTxBodyL .~ Set.fromList [TxIn genesisId (mkTxIxPartial 1)]
+              & outputsTxBodyL .~ StrictSeq.singleton (mkCoinTxOut testAddrE (Coin 2))
+              & feeTxBodyL .~ Coin 9
+              & ttlTxBodyL .~ SlotNo 500
+          txbh = hashAnnotated txb
           w = mkWitnessVKey txbh testKey1
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "tx_min"
-            ( ShelleyTx @(ShelleyEra)
-                txb
-                (mempty {addrWits = Set.singleton w} :: ShelleyTxWits ShelleyEra)
-                SNothing
+            ( mkBasicTx @ShelleyEra txb
+                & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ Set.singleton w)
             )
             ( T (TkListLen 3)
                 <> S txb
@@ -839,25 +813,23 @@ tests =
             )
     , -- checkEncodingCBOR "full_txn"
       let txb =
-            ShelleyTxBody
-              (Set.fromList [genesisTxIn1])
-              (StrictSeq.singleton $ ShelleyTxOut @ShelleyEra testAddrE (Coin 2))
-              StrictSeq.empty
-              (Withdrawals Map.empty)
-              (Coin 9)
-              (SlotNo 500)
-              SNothing
-              SNothing
+            mkBasicTxBody @ShelleyEra
+              & inputsTxBodyL .~ Set.fromList [genesisTxIn1]
+              & outputsTxBodyL .~ StrictSeq.singleton (mkCoinTxOut testAddrE (Coin 2))
+              & feeTxBodyL .~ Coin 9
+              & ttlTxBodyL .~ SlotNo 500
           txbh = hashAnnotated txb
           w = mkWitnessVKey txbh testKey1
           s = Map.singleton (hashScript @ShelleyEra testScript) testScript
-          txwits :: ShelleyTxWits ShelleyEra
           txwits = mkBasicTxWits @ShelleyEra & addrTxWitsL .~ Set.singleton w & scriptTxWitsL .~ s
-          md = (TxAuxData.ShelleyTxAuxData @ShelleyEra) $ Map.singleton 17 (TxAuxData.I 42)
+          md = mkBasicTxAuxData & metadataTxAuxDataL .~ Map.singleton 17 (TxAuxData.I 42)
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "tx_full"
-            (ShelleyTx @ShelleyEra txb txwits (SJust md))
+            ( mkBasicTx @ShelleyEra txb
+                & witsTxL .~ txwits
+                & auxDataTxL .~ SJust md
+            )
             ( T (TkListLen 3)
                 <> S txb
                 <> T (TkMapLen 2)
@@ -978,18 +950,14 @@ tests =
       let sig :: SignedKES (KES MockCrypto) (BHBody MockCrypto)
           sig = unsoundPureSignedKES () 0 (testBHB @ShelleyEra) (kesSignKey testKESKeys)
           bh = BHeader (testBHB @ShelleyEra) sig
-          tout = StrictSeq.singleton $ ShelleyTxOut @ShelleyEra testAddrE (Coin 2)
+          tout = StrictSeq.singleton $ mkCoinTxOut @ShelleyEra testAddrE (Coin 2)
           txb :: Word64 -> TxBody TopTx ShelleyEra
           txb s =
-            ShelleyTxBody
-              (Set.fromList [genesisTxIn1])
-              tout
-              StrictSeq.empty
-              (Withdrawals Map.empty)
-              (Coin 9)
-              (SlotNo s)
-              SNothing
-              SNothing
+            mkBasicTxBody
+              & inputsTxBodyL .~ Set.fromList [genesisTxIn1]
+              & outputsTxBodyL .~ tout
+              & feeTxBodyL .~ Coin 9
+              & ttlTxBodyL .~ SlotNo s
           txb1, txb2, txb3, txb4, txb5 :: TxBody TopTx ShelleyEra
           txb1 = txb 500
           txb2 = txb 501
@@ -1021,7 +989,7 @@ tests =
           tx4 =
             mkBasicTx txb4
               & witsTxL @ShelleyEra .~ (mkBasicTxWits @ShelleyEra & scriptTxWitsL .~ ss)
-          tx5MD = TxAuxData.ShelleyTxAuxData @ShelleyEra $ Map.singleton 17 (TxAuxData.I 42)
+          tx5MD = mkBasicTxAuxData & metadataTxAuxDataL .~ Map.singleton 17 (TxAuxData.I 42)
           tx5 =
             mkBasicTx txb5
               & witsTxL @ShelleyEra .~ (mkBasicTxWits @ShelleyEra & addrTxWitsL .~ ws & scriptTxWitsL .~ ss)

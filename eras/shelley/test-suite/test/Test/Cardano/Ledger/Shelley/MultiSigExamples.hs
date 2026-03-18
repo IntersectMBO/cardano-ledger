@@ -19,7 +19,6 @@ module Test.Cardano.Ledger.Shelley.MultiSigExamples (
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (
   Network (..),
-  StrictMaybe (..),
   maybeToStrictMaybe,
   mkTxIxPartial,
  )
@@ -48,8 +47,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
-import Cardano.Ledger.Shelley.TxBody (TxBody (ShelleyTxBody))
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import qualified Cardano.Ledger.Val as Val
@@ -59,7 +57,6 @@ import Data.Foldable (fold)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
-import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
 import Lens.Micro
@@ -124,15 +121,11 @@ initTxBody ::
   [(Addr, Value ShelleyEra)] ->
   TxBody TopTx ShelleyEra
 initTxBody addrs =
-  ShelleyTxBody
-    (Set.fromList [TxIn genesisId minBound, TxIn genesisId (mkTxIxPartial 1)])
-    (StrictSeq.fromList $ map (uncurry mkBasicTxOut) addrs)
-    Empty
-    (Withdrawals Map.empty)
-    (Coin 0)
-    (SlotNo 0)
-    SNothing
-    SNothing
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [TxIn genesisId minBound, TxIn genesisId (mkTxIxPartial 1)]
+    & outputsTxBodyL .~ StrictSeq.fromList (map (uncurry mkBasicTxOut) addrs)
+    & feeTxBodyL .~ Coin 0
+    & ttlTxBodyL .~ SlotNo 0
 
 makeTxBody ::
   [TxIn] ->
@@ -140,15 +133,12 @@ makeTxBody ::
   Withdrawals ->
   TxBody TopTx ShelleyEra
 makeTxBody inp addrCs wdrl =
-  ShelleyTxBody
-    (Set.fromList inp)
-    (StrictSeq.fromList [uncurry mkBasicTxOut addrC | addrC <- addrCs])
-    Empty
-    wdrl
-    (Coin 0)
-    (SlotNo 10)
-    SNothing
-    SNothing
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList inp
+    & outputsTxBodyL .~ StrictSeq.fromList [uncurry mkBasicTxOut addrC | addrC <- addrCs]
+    & withdrawalsTxBodyL .~ wdrl
+    & feeTxBodyL .~ Coin 0
+    & ttlTxBodyL .~ SlotNo 10
 
 makeTx ::
   TxBody TopTx ShelleyEra ->
