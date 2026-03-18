@@ -1,8 +1,19 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.18.0.1
+## 1.19.0.0
 
-*
+* Add `Shelley.API.Forecast` and `Shelley.Forecast`:
+  - Add `EraForecast` and `ShelleyEraForecast` typeclasses to deprecate `GetLedgerView` from `cardano-ledger-tpraos`.
+  - Add `currentForecast` and `futureForecast` functions to deprecate `currentLedgerView` and `futureLedgerView`.
+  - Add `ShelleyForecast` to deprecate `LedgerView` for TPraos.
+    + `mkShelleyForecast`
+    + `sfPoolDistrL`
+    + `sfMaxBlockHeaderSizeL`
+    + `sfMaxBlockBodySizeL`
+    + `sfProtocolVersionL`
+    + `sfGenDelegsL`
+    + `sfDecentralizationL`
+    + `sfExtraEntropyL`
 
 ## 1.18.0.0
 

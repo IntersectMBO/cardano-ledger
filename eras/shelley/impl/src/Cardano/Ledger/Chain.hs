@@ -20,6 +20,7 @@ module Cardano.Ledger.Chain (
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), Version)
 import Cardano.Ledger.Core
+import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
 import Data.Word (Word16, Word32)
@@ -32,7 +33,8 @@ data ChainChecksPParams = ChainChecksPParams
   , ccMaxBBSize :: Word32
   , ccProtocolVersion :: ProtVer
   }
-  deriving (Show, Eq, Generic, NoThunks)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData, NoThunks)
 
 pparamsToChainChecksPParams ::
   EraPParams era =>

@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-shelley
-version: 1.18.0.1
+version: 1.19.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -27,6 +27,7 @@ library
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.API
     Cardano.Ledger.Shelley.API.ByronTranslation
+    Cardano.Ledger.Shelley.API.Forecast
     Cardano.Ledger.Shelley.API.Mempool
     Cardano.Ledger.Shelley.API.Types
     Cardano.Ledger.Shelley.API.Validation
@@ -63,6 +64,7 @@ library
   hs-source-dirs: src
   other-modules:
     Cardano.Ledger.Shelley.Era
+    Cardano.Ledger.Shelley.Forecast
     Cardano.Ledger.Shelley.LedgerState.IncrementalStake
     Cardano.Ledger.Shelley.LedgerState.NewEpochState
     Cardano.Ledger.Shelley.LedgerState.PulsingReward
