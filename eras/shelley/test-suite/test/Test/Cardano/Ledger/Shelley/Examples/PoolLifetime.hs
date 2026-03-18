@@ -23,7 +23,6 @@ import Cardano.Ledger.BaseTypes (
   Globals (..),
   Network (..),
   Nonce,
-  StrictMaybe (..),
   mkCertIxPartial,
   unNonZero,
   unsafeNonZero,
@@ -42,7 +41,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
-import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
@@ -60,15 +59,7 @@ import Cardano.Ledger.Shelley.PoolRank (
   leaderProbability,
   likelihood,
  )
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (
-  TxBody (..),
- )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
-import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (
-  addrWits,
- )
 import Cardano.Ledger.Slot (
   BlockNo (..),
   EpochNo (..),
@@ -89,6 +80,7 @@ import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Exts (fromList)
 import GHC.Stack (HasCallStack)
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Core.Arbitrary (mkSnapShotFromStakePoolParams)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
@@ -145,8 +137,8 @@ initUTxO :: UTxO ShelleyEra
 initUTxO =
   genesisCoins
     genesisId
-    [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin)
-    , ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
+    [ mkBasicTxOut Cast.aliceAddr (Val.inject aliceInitCoin)
+    , mkBasicTxOut Cast.bobAddr (Val.inject bobInitCoin)
     ]
 
 initStPoolLifetime :: ChainState ShelleyEra
@@ -174,10 +166,11 @@ feeTx1 = Coin 3
 
 txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
-  ShelleyTxBody
-    (Set.fromList [TxIn genesisId minBound])
-    (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
-    ( StrictSeq.fromList
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [TxIn genesisId minBound]
+    & outputsTxBodyL .~ StrictSeq.fromList [mkBasicTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)]
+    & certsTxBodyL
+      .~ StrictSeq.fromList
         ( [ RegTxCert Cast.aliceSHK
           , RegTxCert Cast.bobSHK
           , RegTxCert Cast.carlSHK
@@ -195,42 +188,37 @@ txbodyEx1 =
                    )
                ]
         )
-    )
-    (Withdrawals Map.empty)
-    feeTx1
-    (SlotNo 10)
-    SNothing
-    SNothing
+    & feeTxBodyL .~ feeTx1
+    & ttlTxBodyL .~ SlotNo 10
 
-txEx1 :: ShelleyTx TopTx ShelleyEra
+txEx1 :: Tx TopTx ShelleyEra
 txEx1 =
-  ShelleyTx
-    txbodyEx1
-    mempty
-      { addrWits =
-          mkWitnessesVKey
-            (hashAnnotated txbodyEx1)
-            ( (asWitness <$> [Cast.alicePay, Cast.carlPay])
-                <> (asWitness <$> [Cast.aliceStake])
-                <> [asWitness $ aikCold Cast.alicePoolKeys]
-                <> ( asWitness
-                       <$> [ aikCold (coreNodeIssuerKeys 0)
-                           , aikCold (coreNodeIssuerKeys 1)
-                           , aikCold (coreNodeIssuerKeys 2)
-                           , aikCold (coreNodeIssuerKeys 3)
-                           , aikCold (coreNodeIssuerKeys 4)
-                           ]
-                   )
-            )
-      }
-    SNothing
+  mkBasicTx txbodyEx1
+    & witsTxL
+      .~ ( mkBasicTxWits
+             & addrTxWitsL
+               .~ mkWitnessesVKey
+                 (hashAnnotated txbodyEx1)
+                 ( (asWitness <$> [Cast.alicePay, Cast.carlPay])
+                     <> (asWitness <$> [Cast.aliceStake])
+                     <> [asWitness $ aikCold Cast.alicePoolKeys]
+                     <> ( asWitness
+                            <$> [ aikCold (coreNodeIssuerKeys 0)
+                                , aikCold (coreNodeIssuerKeys 1)
+                                , aikCold (coreNodeIssuerKeys 2)
+                                , aikCold (coreNodeIssuerKeys 3)
+                                , aikCold (coreNodeIssuerKeys 4)
+                                ]
+                        )
+                 )
+         )
 
 blockEx1 :: HasCallStack => Block (BHeader MockCrypto) ShelleyEra
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [MkShelleyTx txEx1]
+    [txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
@@ -280,46 +268,41 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
 txbodyEx2 :: TxBody TopTx ShelleyEra
 txbodyEx2 =
-  ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound]
-    , stbOutputs =
-        StrictSeq.fromList
-          [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx2Base)
-          , ShelleyTxOut Cast.alicePtrAddr (Val.inject aliceCoinEx2Ptr)
-          ]
-    , stbCerts =
-        StrictSeq.fromList
-          [ DelegStakeTxCert Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys)
-          , DelegStakeTxCert Cast.bobSHK (aikColdKeyHash Cast.alicePoolKeys)
-          ]
-    , stbWithdrawals = Withdrawals Map.empty
-    , stbTxFee = feeTx2
-    , stbTTL = SlotNo 90
-    , stbUpdate = SNothing
-    , stbMDHash = SNothing
-    }
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound]
+    & outputsTxBodyL
+      .~ StrictSeq.fromList
+        [ mkBasicTxOut Cast.aliceAddr (Val.inject aliceCoinEx2Base)
+        , mkBasicTxOut Cast.alicePtrAddr (Val.inject aliceCoinEx2Ptr)
+        ]
+    & certsTxBodyL
+      .~ StrictSeq.fromList
+        [ DelegStakeTxCert Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys)
+        , DelegStakeTxCert Cast.bobSHK (aikColdKeyHash Cast.alicePoolKeys)
+        ]
+    & feeTxBodyL .~ feeTx2
+    & ttlTxBodyL .~ SlotNo 90
 
-txEx2 :: ShelleyTx TopTx ShelleyEra
+txEx2 :: Tx TopTx ShelleyEra
 txEx2 =
-  ShelleyTx
-    txbodyEx2
-    mempty
-      { addrWits =
-          mkWitnessesVKey
-            (hashAnnotated txbodyEx2)
-            [ asWitness Cast.alicePay
-            , asWitness Cast.aliceStake
-            , asWitness Cast.bobStake
-            ]
-      }
-    SNothing
+  mkBasicTx txbodyEx2
+    & witsTxL
+      .~ ( mkBasicTxWits
+             & addrTxWitsL
+               .~ mkWitnessesVKey
+                 (hashAnnotated txbodyEx2)
+                 [ asWitness Cast.alicePay
+                 , asWitness Cast.aliceStake
+                 , asWitness Cast.bobStake
+                 ]
+         )
 
 blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
   mkBlockFakeVRF
     (bhHash $ blockHeader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 90)
-    [MkShelleyTx txEx2]
+    [txEx2]
     (SlotNo 90)
     (BlockNo 2)
     nonce0
@@ -429,37 +412,32 @@ aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 
 txbodyEx4 :: TxBody TopTx ShelleyEra
 txbodyEx4 =
-  ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound]
-    , stbOutputs = StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)]
-    , stbCerts =
-        StrictSeq.fromList
-          [DelegStakeTxCert Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys)]
-    , stbWithdrawals = Withdrawals Map.empty
-    , stbTxFee = feeTx4
-    , stbTTL = SlotNo 500
-    , stbUpdate = SNothing
-    , stbMDHash = SNothing
-    }
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound]
+    & outputsTxBodyL .~ StrictSeq.fromList [mkBasicTxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)]
+    & certsTxBodyL
+      .~ StrictSeq.fromList
+        [DelegStakeTxCert Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys)]
+    & feeTxBodyL .~ feeTx4
+    & ttlTxBodyL .~ SlotNo 500
 
-txEx4 :: ShelleyTx TopTx ShelleyEra
+txEx4 :: Tx TopTx ShelleyEra
 txEx4 =
-  ShelleyTx
-    txbodyEx4
-    mempty
-      { addrWits =
-          mkWitnessesVKey
-            (hashAnnotated txbodyEx4)
-            [asWitness Cast.alicePay, asWitness Cast.carlStake]
-      }
-    SNothing
+  mkBasicTx txbodyEx4
+    & witsTxL
+      .~ ( mkBasicTxWits
+             & addrTxWitsL
+               .~ mkWitnessesVKey
+                 (hashAnnotated txbodyEx4)
+                 [asWitness Cast.alicePay, asWitness Cast.carlStake]
+         )
 
 blockEx4 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx4 =
   mkBlockFakeVRF
     (bhHash $ blockHeader blockEx3)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 190)
-    [MkShelleyTx txEx4]
+    [txEx4]
     (SlotNo 190)
     (BlockNo 4)
     epoch1Nonce
@@ -828,32 +806,32 @@ bobAda10 =
 
 txbodyEx10 :: TxBody TopTx ShelleyEra
 txbodyEx10 =
-  ShelleyTxBody
-    (Set.fromList [mkTxInPartial genesisId 1])
-    (StrictSeq.singleton $ ShelleyTxOut Cast.bobAddr (Val.inject bobAda10))
-    (StrictSeq.fromList [UnRegTxCert Cast.bobSHK])
-    (Withdrawals $ Map.singleton (AccountAddress Testnet (AccountId Cast.bobSHK)) bobRAcnt8)
-    feeTx10
-    (SlotNo 500)
-    SNothing
-    SNothing
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [mkTxInPartial genesisId 1]
+    & outputsTxBodyL .~ StrictSeq.singleton (mkBasicTxOut Cast.bobAddr (Val.inject bobAda10))
+    & certsTxBodyL .~ StrictSeq.fromList [UnRegTxCert Cast.bobSHK]
+    & withdrawalsTxBodyL
+      .~ Withdrawals (Map.singleton (AccountAddress Testnet (AccountId Cast.bobSHK)) bobRAcnt8)
+    & feeTxBodyL .~ feeTx10
+    & ttlTxBodyL .~ SlotNo 500
 
-txEx10 :: ShelleyTx TopTx ShelleyEra
+txEx10 :: Tx TopTx ShelleyEra
 txEx10 =
-  ShelleyTx
-    txbodyEx10
-    mempty
-      { addrWits =
-          mkWitnessesVKey (hashAnnotated txbodyEx10) [asWitness Cast.bobPay, asWitness Cast.bobStake]
-      }
-    SNothing
+  mkBasicTx txbodyEx10
+    & witsTxL
+      .~ ( mkBasicTxWits
+             & addrTxWitsL
+               .~ mkWitnessesVKey
+                 (hashAnnotated txbodyEx10)
+                 [asWitness Cast.bobPay, asWitness Cast.bobStake]
+         )
 
 blockEx10 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx10 =
   mkBlockFakeVRF
     (bhHash $ blockHeader blockEx9)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 420)
-    [MkShelleyTx txEx10]
+    [txEx10]
     (SlotNo 420)
     (BlockNo 10)
     epoch4Nonce
@@ -893,36 +871,33 @@ aliceRetireEpoch = EpochNo 5
 
 txbodyEx11 :: TxBody TopTx ShelleyEra
 txbodyEx11 =
-  ShelleyTxBody
-    (Set.fromList [TxIn (txIdTxBody txbodyEx4) minBound])
-    (StrictSeq.singleton $ ShelleyTxOut Cast.alicePtrAddr (Val.inject aliceCoinEx11Ptr))
-    (StrictSeq.fromList [RetirePoolTxCert (aikColdKeyHash Cast.alicePoolKeys) aliceRetireEpoch])
-    (Withdrawals Map.empty)
-    feeTx11
-    (SlotNo 500)
-    SNothing
-    SNothing
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [TxIn (txIdTxBody txbodyEx4) minBound]
+    & outputsTxBodyL .~ StrictSeq.singleton (mkBasicTxOut Cast.alicePtrAddr (Val.inject aliceCoinEx11Ptr))
+    & certsTxBodyL
+      .~ StrictSeq.fromList [RetirePoolTxCert (aikColdKeyHash Cast.alicePoolKeys) aliceRetireEpoch]
+    & feeTxBodyL .~ feeTx11
+    & ttlTxBodyL .~ SlotNo 500
 
-txEx11 :: ShelleyTx TopTx ShelleyEra
+txEx11 :: Tx TopTx ShelleyEra
 txEx11 =
-  ShelleyTx
-    txbodyEx11
-    mempty
-      { addrWits =
-          mkWitnessesVKey
-            (hashAnnotated txbodyEx11)
-            ( [asWitness Cast.alicePay]
-                <> [asWitness $ aikCold Cast.alicePoolKeys]
-            )
-      }
-    SNothing
+  mkBasicTx txbodyEx11
+    & witsTxL
+      .~ ( mkBasicTxWits
+             & addrTxWitsL
+               .~ mkWitnessesVKey
+                 (hashAnnotated txbodyEx11)
+                 ( [asWitness Cast.alicePay]
+                     <> [asWitness $ aikCold Cast.alicePoolKeys]
+                 )
+         )
 
 blockEx11 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx11 =
   mkBlockFakeVRF
     (bhHash $ blockHeader blockEx10)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 490)
-    [MkShelleyTx txEx11]
+    [txEx11]
     (SlotNo 490)
     (BlockNo 11)
     epoch4Nonce

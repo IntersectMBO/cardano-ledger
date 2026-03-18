@@ -24,7 +24,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   Prices (..),
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData, mkAlonzoTxAuxData)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), TxBody (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -170,38 +169,40 @@ exampleTx txBody scriptPurpose nativeScript =
 
 exampleTxBodyAlonzo :: TxBody TopTx AlonzoEra
 exampleTxBodyAlonzo =
-  AlonzoTxBody
-    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]) -- inputs
-    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 2)) 1]) -- collateral
-    ( StrictSeq.fromList
-        [ AlonzoTxOut
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]
+    & collateralInputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 2)) 1]
+    & outputsTxBodyL
+      .~ StrictSeq.fromList
+        [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
             (exampleMultiAssetValue 2)
-            (SJust $ mkDummySafeHash 1) -- outputs
+            & dataHashTxOutL .~ SJust (mkDummySafeHash 1)
         ]
-    )
-    exampleCerts -- txcerts
-    ( Withdrawals $
-        Map.singleton
-          (AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey)))
-          (Coin 100) -- txwdrls
-    )
-    (Coin 999) -- txfee
-    (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))) -- txvldt
-    ( SJust $
-        Update
-          ( ProposedPPUpdates $
-              Map.singleton
-                (mkKeyHash 1)
-                (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
-          )
-          (EpochNo 0)
-    ) -- txUpdates
-    (Set.singleton $ mkKeyHash 212) -- reqSignerHashes
-    exampleMultiAsset -- mint
-    (SJust $ mkDummySafeHash 42) -- scriptIntegrityHash
-    (SJust . TxAuxDataHash $ mkDummySafeHash 42) -- adHash
-    (SJust Mainnet) -- txnetworkid
+    & certsTxBodyL .~ exampleCerts
+    & withdrawalsTxBodyL
+      .~ Withdrawals
+        ( Map.singleton
+            (AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey)))
+            (Coin 100)
+        )
+    & feeTxBodyL .~ Coin 999
+    & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))
+    & updateTxBodyL
+      .~ SJust
+        ( Update
+            ( ProposedPPUpdates $
+                Map.singleton
+                  (mkKeyHash 1)
+                  (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
+            )
+            (EpochNo 0)
+        )
+    & reqSignerHashesTxBodyL .~ Set.singleton (mkKeyHash 212)
+    & mintTxBodyL .~ exampleMultiAsset
+    & scriptIntegrityHashTxBodyL .~ SJust (mkDummySafeHash 42)
+    & auxDataHashTxBodyL .~ SJust (TxAuxDataHash $ mkDummySafeHash 42)
+    & networkIdTxBodyL .~ SJust Mainnet
   where
     MaryValue _ exampleMultiAsset = exampleMultiAssetValue 3
 

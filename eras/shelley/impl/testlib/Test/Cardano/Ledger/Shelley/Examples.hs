@@ -6,7 +6,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Examples (
@@ -56,7 +55,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
-import Cardano.Ledger.Shelley.TxWits
 import Cardano.Slotting.EpochInfo
 import qualified Data.ByteString as Strict
 import Data.Coerce (coerce)
@@ -324,18 +322,18 @@ exampleCoin = Coin 10
 
 exampleTxBodyShelley :: TxBody TopTx ShelleyEra
 exampleTxBodyShelley =
-  ShelleyTxBody
-    exampleTxIns
-    ( StrictSeq.fromList
-        [ ShelleyTxOut (mkAddr examplePayKey exampleStakeKey) (Coin 100000)
+  mkBasicTxBody
+    & inputsTxBodyL .~ exampleTxIns
+    & outputsTxBodyL
+      .~ StrictSeq.fromList
+        [ mkBasicTxOut (mkAddr examplePayKey exampleStakeKey) (Coin 100000)
         ]
-    )
-    exampleCerts
-    exampleWithdrawals
-    (Coin 3)
-    (SlotNo 10)
-    (SJust (Update exampleProposedPPUpdates (EpochNo 0)))
-    (SJust auxiliaryDataHash)
+    & certsTxBodyL .~ exampleCerts
+    & withdrawalsTxBodyL .~ exampleWithdrawals
+    & feeTxBodyL .~ Coin 3
+    & ttlTxBodyL .~ SlotNo 10
+    & updateTxBodyL .~ SJust (Update exampleProposedPPUpdates (EpochNo 0))
+    & auxDataHashTxBodyL .~ SJust auxiliaryDataHash
   where
     -- Dummy hash to decouple from the auxiliaryData in 'exampleTx'.
     auxiliaryDataHash :: TxAuxDataHash
@@ -343,7 +341,8 @@ exampleTxBodyShelley =
       TxAuxDataHash $ mkDummySafeHash @EraIndependentTxAuxData 30
 
 exampleAuxiliaryDataShelley :: TxAuxData ShelleyEra
-exampleAuxiliaryDataShelley = ShelleyTxAuxData exampleAuxDataMap
+exampleAuxiliaryDataShelley =
+  mkBasicTxAuxData & metadataTxAuxDataL .~ exampleAuxDataMap
 
 exampleAuxDataMap :: Map Word64 Metadatum
 exampleAuxDataMap =
@@ -438,12 +437,10 @@ mkWitnessesPreAlonzo ::
   Proxy era ->
   TxBody TopTx era ->
   [KeyPair Witness] ->
-  ShelleyTxWits era
+  TxWits era
 mkWitnessesPreAlonzo _ txBody keyPairWits =
-  mempty
-    { addrWits =
-        mkWitnessesVKey (coerce (txIdTxBody txBody)) keyPairWits
-    }
+  mkBasicTxWits
+    & addrTxWitsL .~ mkWitnessesVKey (coerce (txIdTxBody txBody)) keyPairWits
 
 -- | @mkKeyPair'@ from @Test.Cardano.Ledger.Shelley.Utils@ doesn't work for real
 -- crypto:
