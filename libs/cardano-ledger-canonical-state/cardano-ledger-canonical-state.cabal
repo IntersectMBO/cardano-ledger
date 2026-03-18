@@ -43,6 +43,7 @@ library
     Cardano.Ledger.CanonicalState.BasicTypes
     Cardano.Ledger.CanonicalState.LedgerCBOR
     Cardano.Ledger.CanonicalState.Namespace
+    Cardano.Ledger.CanonicalState.Namespace.Accounts.V0
     Cardano.Ledger.CanonicalState.Namespace.Blocks.V0
     Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0
     Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
