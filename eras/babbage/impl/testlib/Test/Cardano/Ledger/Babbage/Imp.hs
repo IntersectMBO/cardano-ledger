@@ -24,7 +24,13 @@ import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
-spec :: forall era. (BabbageEraImp era, EraSpecificSpec era) => Spec
+spec ::
+  forall era.
+  ( BabbageEraImp era
+  , EraSpecificSpec era
+  , Event (EraRule "RUPD" era) ~ RupdEvent
+  ) =>
+  Spec
 spec = do
   AlonzoImp.spec @era
   withEachEraVersion @era $
