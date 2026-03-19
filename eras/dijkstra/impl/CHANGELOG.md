@@ -2,6 +2,9 @@
 
 ## 0.3.0.0
 
+* Add `WrongNetworkInDirectDeposit` constructor to `DijkstraUtxoPredFailure`
+* Add `SubWrongNetworkInDirectDeposit` constructor to `DijkstraSubUtxoPredFailure`
+* Add `validateWrongNetworkInDirectDeposit`
 * Add `EraForecast` instance for `DijkstraEra`.
 * Deprecate `BHeaderView` in favour of `DijkstraEraBlockHeader` typeclass.
   - Add `PerasCert`, `PerasKey` and `validatePerasCert` to `Dijkstra.BlockBody` (moved from core).
