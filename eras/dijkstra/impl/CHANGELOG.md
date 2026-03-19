@@ -2,6 +2,9 @@
 
 ## 0.3.0.0
 
+* Add `WrongNetworkInDirectDeposit` constructor to `DijkstraUtxoPredFailure`
+* Add `SubWrongNetworkInDirectDeposit` constructor to `DijkstraSubUtxoPredFailure`
+* Add `validateWrongNetworkInDirectDeposit`
 * Add `SubLedgerEnv` and `SubUtxoEnv`
 * Remove `OutputTooSmallUTxO` constructor from `DijkstraUtxoPredFailure`
 * Remove `SubOutputTooSmallUTxO` constructor from `DijkstraSubUtxoPredFailure`
