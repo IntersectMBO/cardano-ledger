@@ -1,0 +1,62 @@
+name: Install released binaries from GitHub
+
+inputs:
+  repo:
+    description: The GitHub repo name
+  release:
+    description: The release version to download
+  pattern:
+    description: Download only artifacts with names matching this pattern
+    required: false
+  name:
+    description: The name the installed binary should have
+    required: false
+
+runs:
+  using: composite
+  steps:
+  - name: Install gh if necessary
+    shell: bash
+    run: type gh || { sudo apt-get update && sudo apt-get install -y gh; }
+
+  - name: Install binaries
+    shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+    run: |
+      set -u
+
+      BINDIR=$HOME/.local/bin
+      mkdir -p "$BINDIR"
+      echo "$BINDIR" >> ${GITHUB_PATH}
+
+      WORKDIR=$(mktemp -d)
+      PATTERN=${{ inputs.pattern }}
+      gh release download -R ${{ inputs.repo }} ${{ inputs.release }} -D "$WORKDIR" ${PATTERN+--pattern=$PATTERN}
+
+      recursive-unpack()
+      {
+        find "$1" -type f | while read -r F
+        do
+          case $F in
+            *.tar.*|*.tgz|*.tbz|*.txz)
+              local WORKDIR=$(mktemp -d)
+              tar -xf "$F" --strip-components=1 -C "$WORKDIR"
+              find "$WORKDIR" -type f ! -perm -u+x -delete
+              recursive-unpack "$WORKDIR"
+              ;;
+            *.zip)
+              local WORKDIR=$(mktemp -d)
+              unzip "$F" -j -d "$WORKDIR"
+              find "$WORKDIR" -type f ! -perm -u+x -delete
+              recursive-unpack "$WORKDIR"
+              ;;
+            *)
+              install -p "$F" "$BINDIR/${{ inputs.name }}"
+              ;;
+          esac
+        done
+        rm -rf "$1"
+      }
+
+      recursive-unpack "$WORKDIR"
