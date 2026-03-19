@@ -29,7 +29,9 @@ import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
 
-spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "BBODY" $ do
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->

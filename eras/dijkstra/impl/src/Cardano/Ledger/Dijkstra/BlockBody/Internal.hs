@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -30,14 +31,18 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   alignedValidFlags,
   mkBasicBlockBodyDijkstra,
   DijkstraEraBlockBody (..),
+  PerasCert (..),
+  PerasKey (..),
+  validatePerasCert,
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (PerasCert)
+import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
+  EncCBOR,
   EncCBORGroup (..),
   decodeListLen,
   encCBOR,
@@ -354,3 +359,33 @@ dijkstraSegwitTx txBodyAnn txWitsAnn txIsValid txAuxDataAnn = Annotator $ \bytes
         .~ maybeToStrictMaybe txAuxData
       & isValidTxL
         .~ txIsValid
+
+-- | Placeholder for Peras certificates
+--
+-- NOTE: The real type will be brought from 'cardano-base' once it's ready.
+data PerasCert = PerasCert
+  deriving (Eq, Show, Generic, NoThunks)
+
+instance NFData PerasCert
+
+instance EncCBOR PerasCert where
+  encCBOR PerasCert =
+    encCBOR ()
+
+instance DecCBOR PerasCert where
+  decCBOR = do
+    () <- decCBOR
+    pure PerasCert
+
+-- | Placeholder for Peras public keys
+--
+-- NOTE: The real type will be brought from 'cardano-base' once it's ready.
+data PerasKey = PerasKey
+  deriving (Eq, Show, Generic, NoThunks)
+
+-- | Mocked-up Peras certificate validation routine
+--
+-- NOTE: this function will be replaced with the real implementation from
+-- 'cardano-base' once it's ready.
+validatePerasCert :: Nonce -> PerasKey -> PerasCert -> Bool
+validatePerasCert _ _ _ = True

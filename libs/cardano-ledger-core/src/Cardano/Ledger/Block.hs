@@ -3,8 +3,10 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -13,15 +15,19 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Block (
   Block (..),
   bheader,
   bbody,
+  BbodySignal (..),
+  EraBlockHeader (..),
   neededTxInsForBlock,
 ) where
 
 import Cardano.Base.Proxy (asProxy)
+import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -34,13 +40,15 @@ import Cardano.Ledger.Binary (
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Slotting.Slot (SlotNo)
 import Control.DeepSeq (NFData)
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro (Lens', SimpleGetter, (^.))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era = Block
@@ -132,3 +140,13 @@ neededTxInsForBlock Block {blockBody} = Set.filter isNotNewInput allTxIns
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txIdTxBody txBodies
     isNotNewInput (TxIn txId _) = txId `Set.notMember` newTxIds
+
+data BbodySignal era = forall h. EraBlockHeader h era => BbodySignal (Block h era)
+
+class Era era => EraBlockHeader h era where
+  blockIssuerBlockHeaderG :: SimpleGetter (Block h era) (KeyHash BlockIssuer)
+  blockHeaderSizeBlockHeaderG :: SimpleGetter (Block h era) Int
+  blockBodySizeBlockHeaderL :: Lens' (Block h era) Word32
+  blockBodyHashBlockHeaderL :: Lens' (Block h era) (Hash HASH EraIndependentBlockBody)
+  slotNoBlockHeaderL :: Lens' (Block h era) SlotNo
+  protVerBlockHeaderL :: Lens' (Block h era) ProtVer
