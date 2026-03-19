@@ -2,6 +2,9 @@
 
 ## 0.3.0.0
 
+* Add `WrongNetworkInDirectDeposit` constructor to `DijkstraUtxoPredFailure`
+* Add `SubWrongNetworkInDirectDeposit` constructor to `DijkstraSubUtxoPredFailure`
+* Add `validateWrongNetworkInDirectDeposit`
 * Add `checkPointerPresentInOutput`
 * Add `SubTxIsNotSupported` and `transFailSubTxIsNotSupported`
 * Remove `transPlutusPurposeV3` and `transPlutusPurposeV1V2`.

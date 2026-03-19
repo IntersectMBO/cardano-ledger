@@ -19,8 +19,10 @@ module Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUTXO,
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
+  validateWrongNetworkInDirectDeposit,
 ) where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.Rules (
@@ -41,6 +43,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   SlotNo,
   StrictMaybe (..),
+  networkId,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -68,8 +71,9 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Plutus (ExUnits)
-import Cardano.Ledger.Rules.ValidationMode (failOnJustStatic)
+import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
@@ -83,17 +87,21 @@ import Cardano.Ledger.State (
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   Rule,
   STS (..),
   TRC (..),
   TransitionRule,
+  failureOnNonEmptySet,
   judgmentContext,
+  liftSTS,
   trans,
  )
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
+import qualified Data.Map.Strict as Map
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
@@ -165,6 +173,11 @@ data DijkstraUtxoPredFailure era
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs (NonEmpty TxIn)
   | PtrPresentInCollateralReturn (TxOut era)
+  | WrongNetworkInDirectDeposit
+      -- | the expected network id
+      Network
+      -- | the set of account addresses with incorrect network IDs
+      (NonEmptySet AccountAddress)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" DijkstraEra = DijkstraUtxoPredFailure DijkstraEra
@@ -244,11 +257,25 @@ validateNoPtrInCollateralReturn txBody = do
         Just collateralReturn
   failOnJustStatic hasCollateralTxOut (injectFailure . PtrPresentInCollateralReturn)
 
+validateWrongNetworkInDirectDeposit ::
+  DijkstraEraTxBody era =>
+  Network ->
+  TxBody t era ->
+  Test (DijkstraUtxoPredFailure era)
+validateWrongNetworkInDirectDeposit netId txb =
+  failureOnNonEmptySet depositsWrongNetwork (WrongNetworkInDirectDeposit netId)
+  where
+    depositsWrongNetwork =
+      Map.keysSet $
+        Map.filterWithKey
+          (\a _ -> aaNetworkId a /= netId)
+          (unDirectDeposits $ txb ^. directDepositsTxBodyL)
+
 dijkstraUtxoTransition ::
   forall era.
   ( EraUTxO era
   , EraCertState era
-  , BabbageEraTxBody era
+  , DijkstraEraTxBody era
   , AlonzoEraTx era
   , EraStake era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
@@ -273,6 +300,8 @@ dijkstraUtxoTransition = do
   TRC (UtxoEnv _ pp certState, utxos, tx) <- judgmentContext
   babbageUtxoValidation
   validateNoPtrInCollateralReturn $ tx ^. bodyTxL
+  netId <- liftSTS $ asks networkId
+  runTestOnSignal $ validateWrongNetworkInDirectDeposit netId (tx ^. bodyTxL)
   updatedUtxos <- trans @(EraRule "UTXOS" era) $ TRC (pp, utxos, tx)
   updateUTxOStateByTxValidity pp certState (utxosGovState utxos) tx updatedUtxos
 
@@ -281,7 +310,7 @@ instance
   ( EraTx era
   , EraUTxO era
   , EraStake era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , AlonzoEraTx era
   , EraRule "UTXO" era ~ DijkstraUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
@@ -367,6 +396,7 @@ instance
       BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 20 !> To x
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 21 !> To x
       PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 22 !> To x
+      WrongNetworkInDirectDeposit right wrongs -> Sum (WrongNetworkInDirectDeposit @era) 23 !> To right !> To wrongs
 
 instance
   ( Era era
@@ -401,6 +431,7 @@ instance
     20 -> SumD BabbageOutputTooSmallUTxO <! From
     21 -> SumD BabbageNonDisjointRefInputs <! From
     22 -> SumD PtrPresentInCollateralReturn <! From
+    23 -> SumD WrongNetworkInDirectDeposit <! From <! From
     n -> Invalid n
 
 -- =====================================================
