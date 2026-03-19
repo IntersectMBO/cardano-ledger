@@ -829,7 +829,7 @@ instance
                 & ppA0L .~ (3 %! 10)
                 & ppRhoL .~ (3 %! 1000)
                 & ppTauL .~ (2 %! 10)
-                & ppDL .~ (1 %! 1)
+                & ppDL .~ minBound
                 & ppExtraEntropyL .~ NeutralNonce
                 & ppMinUTxOValueL .~ Coin 2_000_000
                 & ppMinPoolCostL .~ Coin 340_000_000
