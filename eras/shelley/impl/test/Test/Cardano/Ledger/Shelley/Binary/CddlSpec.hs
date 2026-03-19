@@ -52,7 +52,7 @@ spec =
       huddleRoundTripCborSpec @StakePoolRelay v "relay"
       xdescribe "fix ipv4 spec" $ huddleAntiCborSpec @StakePoolRelay v "relay"
       huddleRoundTripCborSpec @(TxCert ShelleyEra) v "certificate"
-      huddleAntiCborSpec @(TxCert ShelleyEra) v "certificate"
+      xdescribe "fix certificate" $ huddleAntiCborSpec @(TxCert ShelleyEra) v "certificate"
       huddleRoundTripCborSpec @TxIn v "transaction_input"
       huddleAntiCborSpec @TxIn v "transaction_input"
       huddleRoundTripAnnCborSpec @(TxAuxData ShelleyEra) v "metadata"

@@ -93,9 +93,12 @@ test-suite cardano-data-tests
   main-is: Main.hs
   hs-source-dirs: test
   other-modules:
+    Test.Cardano.Data.JSON.Utils
+    Test.Cardano.Data.Map.NonEmpty
     Test.Cardano.Data.MapExtrasSpec
     Test.Cardano.Data.OMap.StrictSpec
     Test.Cardano.Data.OSet.StrictSpec
+    Test.Cardano.Data.Set.NonEmpty
 
   default-language: Haskell2010
   ghc-options:
@@ -110,7 +113,9 @@ test-suite cardano-data-tests
 
   build-depends:
     QuickCheck,
+    aeson,
     base,
+    bytestring,
     cardano-data,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-strict-containers:{cardano-strict-containers, testlib},
@@ -118,3 +123,4 @@ test-suite cardano-data-tests
     hspec,
     quickcheck-classes,
     testlib,
+    text,
