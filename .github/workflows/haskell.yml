@@ -376,13 +376,12 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Install fourmolu
-      run: |
-        FOURMOLU_VERSION="0.17.0.0"
-        BINDIR=$HOME/.local/bin
-        mkdir -p "$BINDIR"
-        curl -sSfL "https://github.com/fourmolu/fourmolu/releases/download/v${FOURMOLU_VERSION}/fourmolu-${FOURMOLU_VERSION}-linux-x86_64" -o "$BINDIR/fourmolu"
-        chmod a+x "$BINDIR/fourmolu"
-        echo "$BINDIR" >> $GITHUB_PATH
+      uses: ./.github/actions/install-binary
+      with:
+        repo: fourmolu/fourmolu
+        release: v0.17.0.0 # Should match `fourmoluVersion` in flake.nix
+        pattern: '*-linux-x86_64'
+        name: fourmolu
 
     - name: Run fourmolu
       run: ./scripts/fourmolize.sh
@@ -394,14 +393,11 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Install shellcheck
-      run: |
-        SHELLCHECK_VERSION=0.10.0
-        BINDIR=$HOME/.local/bin
-        mkdir -p "$BINDIR"
-        curl -sSfL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" -o shellcheck.tar.xz
-        tar -xf shellcheck.tar.xz --strip-components=1 --wildcards -C "$BINDIR" '*/shellcheck'
-        rm shellcheck.tar.xz
-        echo "$BINDIR" >> $GITHUB_PATH
+      uses: ./.github/actions/install-binary
+      with:
+        repo: koalaman/shellcheck
+        release: v0.10.0
+        pattern: '*.linux.x86_64.tar.xz'
 
     - name: Run shellcheck
       run: scripts/shellcheck.sh

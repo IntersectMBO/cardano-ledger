@@ -1,0 +1,75 @@
+name: Install released binaries from GitHub
+
+inputs:
+  repo:
+    description: The GitHub repo name
+  release:
+    description: The release version to download
+  pattern:
+    description: Download only artifacts with names matching this pattern
+    required: false
+  name:
+    description: The name the installed binary should have
+    required: false
+
+runs:
+  using: composite
+  steps:
+  - name: Install gh if necessary
+    shell: bash
+    run: type gh || { sudo apt-get update && sudo apt-get install -y gh; }
+
+  - name: Install binaries
+    shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+    run: |
+      set -u
+
+      BINDIR=$HOME/.local/bin
+      mkdir -p "$BINDIR"
+      echo "$BINDIR" >>"${GITHUB_PATH}"
+
+      WORKDIR=$(mktemp -d)
+      trap 'rm -rf "$WORKDIR"' EXIT
+      SUBDIR=0
+
+      mkdir "$WORKDIR/$((++SUBDIR))"
+      PATTERN='${{ inputs.pattern }}'
+      gh release download -R '${{ inputs.repo }}' '${{ inputs.release }}' \
+        -D "$WORKDIR/$SUBDIR" ${PATTERN+--pattern="$PATTERN"}
+
+      recursive-unpack()
+      {
+        while read -r F
+        do
+          case $F in
+            *.tar.*|*.tgz|*.tbz|*.txz)
+              mkdir "$WORKDIR/$((++SUBDIR))"
+              tar -xf "$F" --strip-components=1 -C "$WORKDIR/$SUBDIR"
+              find "$WORKDIR/$SUBDIR" -type f ! -perm -u+x -delete
+              recursive-unpack "$WORKDIR/$SUBDIR"
+              ;;
+            *.zip)
+              mkdir "$WORKDIR/$((++SUBDIR))"
+              unzip "$F" -j -d "$WORKDIR/$SUBDIR"
+              find "$WORKDIR/$SUBDIR" -type f ! -perm -u+x -delete
+              recursive-unpack "$WORKDIR/$SUBDIR"
+              ;;
+            *)
+              echo "$F"
+              ;;
+          esac
+        done < <(find "$1" -type f)
+      }
+
+      mapfile -t FILES < <(recursive-unpack "$WORKDIR/$SUBDIR")
+
+      if [[ -n '${{ inputs.name }}' ]] && [[ ${#FILES[@]} -gt 1 ]]
+      then
+        echo 'An explicit name (${{ inputs.name }}) was used with multiple installables:' >&2
+        printf '  %s\n' "${FILES[@]}" >&2
+        exit 1
+      fi
+
+      install -p "${FILES[@]}" "$BINDIR/${{ inputs.name }}"
