@@ -65,7 +65,6 @@ jobs:
       run: |
         # Remove software and language runtimes we're not using
         sudo rm -rf \
-          "$AGENT_TOOLSDIRECTORY" \
           /opt/google/chrome \
           /opt/microsoft/msedge \
           /opt/microsoft/powershell \
@@ -146,13 +145,11 @@ jobs:
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-
 
-    - name: Install build tools and helpers
-      run: |
-        cabal install doctest --flag cabal-doctest --ignore-project --overwrite-policy=always
-        cabal path --installdir >> "$GITHUB_PATH"
+    - name: Install cleret
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.2.0.2
 
     - name: Check workflow test matrix
-      run: cabal build all --dry-run && scripts/check-workflow-test-matrix.hs
+      run: cabal build all --dry-run -v0 && cleret workflow check-test-matrix
 
     - name: Build dependencies
       id: build-dependencies
@@ -244,7 +241,6 @@ jobs:
       run: |
         # Remove software and language runtimes we're not using
         sudo rm -rf \
-          "$AGENT_TOOLSDIRECTORY" \
           /opt/google/chrome \
           /opt/microsoft/msedge \
           /opt/microsoft/powershell \
@@ -334,6 +330,15 @@ jobs:
           TRIES=3
           scripts/cabal-test-with-retries.sh "${{ matrix.package }}" "$TRIES"
         fi
+
+    - name: Install cleret
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.2.0.2
+
+    - name: Install doctest
+      run: |
+        BINDIR=$(cabal path --installdir)
+        cabal install doctest --flag cabal-doctest --ignore-project --overwrite-policy=always
+        echo "$BINDIR" >> ${GITHUB_PATH}
 
     - name: Run doctests
       run: scripts/doctest.sh "${{ matrix.package }}"
@@ -428,7 +433,6 @@ jobs:
       run: |
         # Remove software and language runtimes we're not using
         sudo rm -rf \
-          "$AGENT_TOOLSDIRECTORY" \
           /opt/google/chrome \
           /opt/microsoft/msedge \
           /opt/microsoft/powershell \
@@ -643,16 +647,8 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: Install changelog linter
-      run: |
-        REPO=cardano-ledger-release-tool
-        RELEASE=0.1.1.0 # Should match nix/pkgs/cardano-ledger-release-tool.nix
-        curl -sSfL "https://github.com/input-output-hk/$REPO/releases/download/$RELEASE/$REPO-Linux-x86_64-$RELEASE.tgz" -o $REPO.tgz
-        BINDIR=$HOME/.local/bin
-        mkdir -p "$BINDIR"
-        tar -xvf $REPO.tgz --strip-components=1 -C "$BINDIR"
-        rm $REPO.tgz
-        echo "$BINDIR" >> ${GITHUB_PATH-/dev/null}
+    - name: Install cleret
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.2.0.2
 
     - name: Run linter
       run: scripts/format-changelogs.sh || (git diff; false)
