@@ -62,6 +62,8 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedger (
   SubLedgerEnv (..),
  )
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
@@ -166,7 +168,7 @@ dijkstraSubLedgersTransition = do
 instance
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
   , ConwayEraPParams era
@@ -201,6 +203,7 @@ instance
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   , TxCert era ~ DijkstraTxCert era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>

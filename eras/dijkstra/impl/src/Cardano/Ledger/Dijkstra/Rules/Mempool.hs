@@ -295,6 +295,7 @@ instance
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   , TxCert era ~ DijkstraTxCert era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>

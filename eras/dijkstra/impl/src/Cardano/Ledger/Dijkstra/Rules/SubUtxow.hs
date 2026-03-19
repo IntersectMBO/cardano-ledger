@@ -61,6 +61,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
  )
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosUtxo)
@@ -268,7 +269,7 @@ instance
   , EraCertState era
   , AlonzoEraTxWits era
   , ConwayEraGov era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
@@ -276,6 +277,7 @@ instance
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   ) =>
   Embed (DijkstraSUBUTXO era) (DijkstraSUBUTXOW era)
   where
