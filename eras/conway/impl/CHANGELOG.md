@@ -2,6 +2,8 @@
 
 ## 1.22.0.0
 
+* Change `ConwayBBODY` `Signal` to `BbodySignal`.
+* Add `validateRefScriptSize`.
 * Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
 
 ## 1.21.0.0
