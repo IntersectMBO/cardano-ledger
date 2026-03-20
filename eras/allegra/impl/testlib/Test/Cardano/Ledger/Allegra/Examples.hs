@@ -3,22 +3,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Allegra.Examples (
   ledgerExamples,
-  exampleAllegraTxBody,
-  exampleAllegraTxAuxData,
+  mkAllegraBasedExampleTx,
+  exampleAllegraBasedTxBody,
+  exampleAllegraBasedShelleyTxBody,
 ) where
 
 import Cardano.Ledger.Allegra
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
-import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
-import Cardano.Ledger.Coin
 import Cardano.Ledger.Genesis (NoGenesis (..))
-import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegPredFailure (DelegateeNotRegisteredDELEG),
   ShelleyDelegsPredFailure (DelplFailure),
@@ -27,61 +24,69 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Slotting.Slot
-import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
-import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
-import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples,
-  exampleAuxDataMap,
-  exampleCerts,
   exampleCoin,
-  examplePayKey,
-  exampleProposedPPUpdates,
-  exampleStakeKey,
-  exampleTxIns,
-  exampleWithdrawals,
+  exampleShelleyBasedShelleyTxBody,
+  exampleShelleyBasedTxBody,
   mkKeyHash,
-  mkLedgerExamples,
-  mkWitnessesPreAlonzo,
+  mkShelleyBasedExampleTx,
+  mkShelleyBasedLedgerExamples,
  )
 
 ledgerExamples :: LedgerExamples AllegraEra
 ledgerExamples =
-  mkLedgerExamples
+  mkShelleyBasedLedgerExamples
     ( AllegraApplyTxError . pure . DelegsFailure . DelplFailure . DelegFailure $
         DelegateeNotRegisteredDELEG @AllegraEra (mkKeyHash 1)
     )
-    (mkWitnessesPreAlonzo (Proxy @AllegraEra))
     exampleCoin
-    (exampleAllegraTxBody exampleCoin)
-    exampleAllegraTxAuxData
+    (mkAllegraBasedExampleTx $ exampleAllegraBasedShelleyTxBody exampleCoin)
     NoGenesis
 
-exampleAllegraTxBody ::
+mkAllegraBasedExampleTx ::
+  forall era.
+  ( EraTx era
+  , AllegraEraTxAuxData era
+  , AllegraEraScript era
+  ) =>
+  TxBody TopTx era ->
+  Tx TopTx era
+mkAllegraBasedExampleTx txBody =
+  mkShelleyBasedExampleTx @era txBody
+    & auxDataTxL
+      %~ fmap
+        ( \auxData ->
+            auxData & nativeScriptsTxAuxDataL %~ (<> StrictSeq.singleton exampleTimelock)
+        )
+
+exampleAllegraBasedShelleyTxBody ::
   forall era.
   ( AllegraEraTxBody era
   , ShelleyEraTxBody era
   ) =>
   Value era ->
   TxBody TopTx era
-exampleAllegraTxBody value =
-  mkBasicTxBody
-    & inputsTxBodyL .~ exampleTxIns
-    & outputsTxBodyL
-      .~ StrictSeq.singleton (mkBasicTxOut (mkAddr examplePayKey exampleStakeKey) value)
-    & certsTxBodyL .~ exampleCerts
-    & withdrawalsTxBodyL .~ exampleWithdrawals
-    & feeTxBodyL .~ Coin 3
-    & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))
-    & updateTxBodyL .~ SJust (Update exampleProposedPPUpdates (EpochNo 0))
-    & auxDataHashTxBodyL .~ SJust auxiliaryDataHash
-  where
-    -- Dummy hash to decouple from the auxiliary data in 'exampleTx'.
-    auxiliaryDataHash :: TxAuxDataHash
-    auxiliaryDataHash =
-      TxAuxDataHash $ mkDummySafeHash 30
+exampleAllegraBasedShelleyTxBody value =
+  mkAllegraBasedExampleTxBody (exampleShelleyBasedShelleyTxBody value)
+
+exampleAllegraBasedTxBody ::
+  forall era.
+  AllegraEraTxBody era =>
+  Value era ->
+  TxBody TopTx era
+exampleAllegraBasedTxBody value =
+  mkAllegraBasedExampleTxBody (exampleShelleyBasedTxBody value)
+
+mkAllegraBasedExampleTxBody ::
+  forall era.
+  AllegraEraTxBody era =>
+  TxBody TopTx era ->
+  TxBody TopTx era
+mkAllegraBasedExampleTxBody txBody =
+  txBody & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))
 
 exampleTimelock :: AllegraEraScript era => NativeScript era
 exampleTimelock =
@@ -99,7 +104,3 @@ exampleTimelock =
             ]
       , RequireSignature (mkKeyHash 100)
       ]
-
-exampleAllegraTxAuxData ::
-  (AllegraEraScript era, NativeScript era ~ Timelock era) => AllegraTxAuxData era
-exampleAllegraTxAuxData = AllegraTxAuxData exampleAuxDataMap (StrictSeq.fromList [exampleTimelock])

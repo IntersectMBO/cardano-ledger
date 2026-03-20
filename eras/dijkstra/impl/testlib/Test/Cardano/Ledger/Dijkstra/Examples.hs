@@ -4,22 +4,30 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Examples (
   ledgerExamples,
+  mkDijkstraBasedExampleTx,
+  mkDijkstraBasedExampleTxBody,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
-import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
+import Cardano.Ledger.BaseTypes (Exclusive (..), Inclusive (..), Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Rules (DijkstraLEDGER, DijkstraMEMPOOL)
-import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..), DijkstraPlutusPurpose (..))
+import Cardano.Ledger.Dijkstra.Scripts (
+  AccountBalanceInterval (..),
+  AccountBalanceIntervals (..),
+  DijkstraPlutusPurpose (..),
+ )
 import Cardano.Ledger.Dijkstra.TxBody (
+  DijkstraEraTxBody,
   accountBalanceIntervalsTxBodyL,
   directDepositsTxBodyL,
   guardsTxBodyL,
@@ -31,40 +39,36 @@ import Cardano.Ledger.Plutus.Data (
   Datum (..),
   dataToBinaryData,
  )
-import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
+import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
 import Control.State.Transition.Extended (Embed (..))
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((%~), (&), (.~))
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Examples (
   exampleDatum,
-  exampleTx,
-  mkLedgerExamples,
+  mkAlonzoBasedLedgerExamples,
  )
-import Test.Cardano.Ledger.Babbage.Examples (exampleBabbageNewEpochState, exampleCollateralOutput)
+import Test.Cardano.Ledger.Babbage.Examples (exampleBabbageNewEpochState)
+import Test.Cardano.Ledger.Conway.Examples (exampleConwayBasedTxBody, mkConwayBasedExampleTx)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
-import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
-import Test.Cardano.Ledger.Dijkstra.Era ()
 import Test.Cardano.Ledger.Dijkstra.ImpTest (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
+import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   examplePayKey,
   exampleStakeKey,
   exampleStakePoolParams,
-  keyToCredential,
   mkKeyHash,
   mkScriptHash,
  )
 
 ledgerExamples :: LedgerExamples DijkstraEra
 ledgerExamples =
-  mkLedgerExamples
+  mkAlonzoBasedLedgerExamples
     ( DijkstraApplyTxError $
         pure $
           wrapFailed @(DijkstraLEDGER DijkstraEra) @(DijkstraMEMPOOL DijkstraEra) $
@@ -77,53 +81,90 @@ ledgerExamples =
 
 exampleTxDijkstra :: Tx TopTx DijkstraEra
 exampleTxDijkstra =
-  exampleTx
-    exampleTxBodyDijkstra
+  mkDijkstraBasedExampleTx
+    (mkDijkstraBasedExampleTxBody $ exampleConwayBasedTxBody exampleDijkstraCerts)
     (DijkstraSpending $ AsIx 0)
-    (RequireAllOf mempty)
 
-exampleTxBodyDijkstra :: TxBody TopTx DijkstraEra
-exampleTxBodyDijkstra =
-  mkBasicTxBody
-    & inputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]
-    & collateralInputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 2)) 1]
-    & referenceInputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 3]
-    & outputsTxBodyL
-      .~ StrictSeq.fromList
-        [ mkBasicTxOut
-            (mkAddr examplePayKey exampleStakeKey)
-            (exampleMultiAssetValue 2)
-            & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
-            & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV2 3)
-        ]
-    & collateralReturnTxBodyL .~ SJust exampleCollateralOutput
-    & totalCollateralTxBodyL .~ SJust (Coin 8675309)
-    & certsTxBodyL .~ exampleDijkstraCerts
-    & withdrawalsTxBodyL
-      .~ Withdrawals
-        ( Map.singleton
-            (AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey)))
-            (Coin 100)
+-- | Reusable Tx builder for Dijkstra onwards with PlutusV4 script witness.
+mkDijkstraBasedExampleTx ::
+  forall era.
+  ( AlonzoEraTx era
+  , AlonzoEraTxAuxData era
+  , EraPlutusTxInfo 'PlutusV1 era
+  , EraPlutusTxInfo 'PlutusV2 era
+  , EraPlutusTxInfo 'PlutusV3 era
+  , EraPlutusTxInfo 'PlutusV4 era
+  ) =>
+  TxBody TopTx era ->
+  PlutusPurpose AsIx era ->
+  Tx TopTx era
+mkDijkstraBasedExampleTx txBody scriptPurpose =
+  mkConwayBasedExampleTx txBody scriptPurpose
+    & witsTxL
+      %~ ( <>
+             ( mkBasicTxWits
+                 & scriptTxWitsL
+                   .~ Map.singleton
+                     (hashScript @era $ alwaysSucceeds @'PlutusV4 3)
+                     (alwaysSucceeds @'PlutusV4 3)
+             )
+         )
+    & auxDataTxL
+      %~ fmap
+        ( \auxData ->
+            auxData
+              & plutusScriptsTxAuxDataL
+                %~ (<> Map.singleton PlutusV4 (NE.singleton (plutusBinary (alwaysSucceedsPlutus @'PlutusV4 3))))
         )
-    & feeTxBodyL .~ Coin 999
-    & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))
+
+mkDijkstraBasedExampleTxBody ::
+  forall era.
+  ( DijkstraEraTxBody era
+  , EraTx era
+  , Value era ~ MaryValue
+  , EraPlutusTxInfo PlutusV4 era
+  ) =>
+  TxBody TopTx era ->
+  TxBody TopTx era
+mkDijkstraBasedExampleTxBody txBody =
+  txBody
+    & outputsTxBodyL
+      %~ ( <>
+             StrictSeq.fromList
+               [ mkBasicTxOut
+                   (mkAddr examplePayKey exampleStakeKey)
+                   (exampleMultiAssetValue 2)
+                   & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
+                   & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV4 3)
+               ]
+         )
     & guardsTxBodyL .~ OSet.fromList [KeyHashObj $ mkKeyHash 212, ScriptHashObj $ mkScriptHash 213]
-    & mintTxBodyL .~ exampleMultiAsset
-    & scriptIntegrityHashTxBodyL .~ SJust (mkDummySafeHash 42)
-    & auxDataHashTxBodyL .~ SJust (TxAuxDataHash $ mkDummySafeHash 42)
-    & networkIdTxBodyL .~ SJust Mainnet
-    & votingProceduresTxBodyL .~ VotingProcedures mempty
-    & proposalProceduresTxBodyL .~ mempty
-    & currentTreasuryValueTxBodyL .~ SJust (Coin 867530900000)
-    & treasuryDonationTxBodyL .~ mempty
-    & subTransactionsTxBodyL .~ mempty
-    & directDepositsTxBodyL .~ DirectDeposits mempty
-    & accountBalanceIntervalsTxBodyL .~ AccountBalanceIntervals mempty
-  where
-    MaryValue _ exampleMultiAsset = exampleMultiAssetValue 3
+    & subTransactionsTxBodyL .~ mempty -- Sub-transactions require complex recursive setup
+    & directDepositsTxBodyL .~ exampleDirectDeposits
+    & accountBalanceIntervalsTxBodyL .~ exampleAccountBalanceIntervals
+
+exampleDirectDeposits :: DirectDeposits
+exampleDirectDeposits =
+  DirectDeposits $
+    Map.singleton
+      (AccountAddress Mainnet (AccountId $ KeyHashObj $ mkKeyHash 300))
+      (Coin 1000000)
+
+exampleAccountBalanceIntervals :: AccountBalanceIntervals era
+exampleAccountBalanceIntervals =
+  AccountBalanceIntervals $
+    Map.fromList
+      [ (AccountId $ KeyHashObj $ mkKeyHash 400, AccountBalanceLowerBound (Inclusive $ Coin 500))
+      , (AccountId $ KeyHashObj $ mkKeyHash 401, AccountBalanceUpperBound (Exclusive $ Coin 10000))
+      ,
+        ( AccountId $ ScriptHashObj $ mkScriptHash 402
+        , AccountBalanceBothBounds (Inclusive $ Coin 100) (Exclusive $ Coin 5000)
+        )
+      ]
 
 exampleDijkstraCerts :: StrictSeq.StrictSeq (DijkstraTxCert era)
 exampleDijkstraCerts =
-  StrictSeq.fromList -- TODO should I add the new certs here?
+  -- TODO should I add the new certs here?
+  StrictSeq.fromList
     [ DijkstraTxCertPool (RegPool exampleStakePoolParams)
     ]

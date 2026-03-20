@@ -7,10 +7,11 @@
 
 module Test.Cardano.Ledger.Alonzo.Examples (
   ledgerExamples,
-  mkLedgerExamples,
-  exampleTx,
+  mkAlonzoBasedLedgerExamples,
+  mkAlonzoBasedExampleTx,
+  exampleAlonzoBasedShelleyTxBody,
+  exampleAlonzoBasedTxBody,
   exampleDatum,
-  exampleAlonzoGenesis,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra, ApplyTxError (AlonzoApplyTxError))
@@ -19,25 +20,20 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
-  AlonzoScript (..),
   ExUnits (..),
   Prices (..),
  )
-import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData, mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
 import Cardano.Ledger.Shelley.API (
   Credential (..),
   Network (..),
   NewEpochState (..),
   ProposedPPUpdates (..),
-  TxId (..),
-  Update (..),
  )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegPredFailure (DelegateeNotRegisteredDELEG),
@@ -45,30 +41,31 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyDelplPredFailure (DelegFailure),
   ShelleyLedgerPredFailure (DelegsFailure),
  )
-import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.TxIn (mkTxInPartial)
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.Default (def)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
-import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
+import Test.Cardano.Ledger.Allegra.Examples (mkAllegraBasedExampleTx)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
+import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, unsafeBoundRational)
-import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
-import Test.Cardano.Ledger.Plutus (zeroTestingCostModelV1)
+import Test.Cardano.Ledger.Mary.Examples (
+  exampleMaryBasedShelleyTxBody,
+  exampleMaryBasedTxBody,
+  exampleMultiAssetValue,
+ )
+import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, zeroTestingCostModelV1)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
-  exampleAuxDataMap,
-  exampleCerts,
   exampleNewEpochState,
   exampleNonMyopicRewards,
   examplePayKey,
   examplePoolDistr,
   exampleStakeKey,
-  keyToCredential,
+  exampleTxIns,
   mkKeyHash,
   mkScriptHash,
   testShelleyGenesis,
@@ -76,7 +73,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
 
 ledgerExamples :: LedgerExamples AlonzoEra
 ledgerExamples =
-  mkLedgerExamples
+  mkAlonzoBasedLedgerExamples
     ( AlonzoApplyTxError $
         pure $
           DelegsFailure $
@@ -88,7 +85,7 @@ ledgerExamples =
     exampleTxAlonzo
     exampleAlonzoGenesis
 
-mkLedgerExamples ::
+mkAlonzoBasedLedgerExamples ::
   forall era.
   AlonzoEraPParams era =>
   ApplyTxError era ->
@@ -96,7 +93,7 @@ mkLedgerExamples ::
   Tx TopTx era ->
   TranslationContext era ->
   LedgerExamples era
-mkLedgerExamples
+mkAlonzoBasedLedgerExamples
   applyTxError
   newEpochState
   tx
@@ -132,79 +129,95 @@ exampleAlonzoNewEpochState =
 
 exampleTxAlonzo :: Tx TopTx AlonzoEra
 exampleTxAlonzo =
-  exampleTx
-    exampleTxBodyAlonzo
+  mkAlonzoBasedExampleTx
+    exampleAlonzoBasedShelleyTxBody
     (AlonzoSpending $ AsIx 0)
-    (RequireAllOf @AlonzoEra mempty)
 
-exampleTx ::
+mkAlonzoBasedExampleTx ::
   forall era.
   ( AlonzoEraTx era
+  , AlonzoEraTxAuxData era
   , EraPlutusTxInfo 'PlutusV1 era
-  , TxAuxData era ~ AlonzoTxAuxData era
-  , Script era ~ AlonzoScript era
   ) =>
-  TxBody TopTx era -> PlutusPurpose AsIx era -> NativeScript era -> Tx TopTx era
-exampleTx txBody scriptPurpose nativeScript =
-  mkBasicTx @era txBody
+  TxBody TopTx era ->
+  PlutusPurpose AsIx era ->
+  Tx TopTx era
+mkAlonzoBasedExampleTx txBody scriptPurpose =
+  mkAllegraBasedExampleTx
+    txBody
     & witsTxL
-      .~ ( mkBasicTxWits
-             & addrTxWitsL .~ mkWitnessesVKey (hashAnnotated txBody) [asWitness examplePayKey]
-             & bootAddrTxWitsL .~ mempty
-             & scriptTxWitsL
-               .~ Map.singleton
-                 (hashScript @era $ alwaysSucceeds @'PlutusV1 3)
-                 (alwaysSucceeds @'PlutusV1 3)
-             & datsTxWitsL .~ TxDats (Map.singleton (hashData (exampleDatum @era)) exampleDatum)
-             & rdmrsTxWitsL
-               .~ Redeemers (Map.singleton scriptPurpose (exampleRedeemer, ExUnits 5000 5000))
+      %~ ( <>
+             ( mkBasicTxWits
+                 & scriptTxWitsL
+                   .~ Map.singleton
+                     (hashScript @era $ alwaysSucceeds @'PlutusV1 3)
+                     (alwaysSucceeds @'PlutusV1 3)
+                 & datsTxWitsL .~ TxDats (Map.singleton (hashData (exampleDatum @era)) exampleDatum)
+                 & rdmrsTxWitsL
+                   .~ Redeemers (Map.singleton scriptPurpose (exampleRedeemer, ExUnits 5000 5000))
+             )
          )
-    & isValidTxL .~ IsValid True
     & auxDataTxL
-      .~ SJust
-        ( mkAlonzoTxAuxData
-            exampleAuxDataMap
-            [alwaysFails @'PlutusV1 2, NativeScript nativeScript]
+      %~ fmap
+        ( \auxData ->
+            auxData
+              & plutusScriptsTxAuxDataL
+                %~ (<> Map.singleton PlutusV1 (NE.singleton (plutusBinary (alwaysFailsPlutus @'PlutusV1 2))))
         )
+    & isValidTxL .~ IsValid True
 
-exampleTxBodyAlonzo :: TxBody TopTx AlonzoEra
-exampleTxBodyAlonzo =
-  mkBasicTxBody
-    & inputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]
-    & collateralInputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 2)) 1]
-    & outputsTxBodyL
-      .~ StrictSeq.fromList
-        [ mkBasicTxOut
-            (mkAddr examplePayKey exampleStakeKey)
-            (exampleMultiAssetValue 2)
-            & dataHashTxOutL .~ SJust (mkDummySafeHash 1)
-        ]
-    & certsTxBodyL .~ exampleCerts
-    & withdrawalsTxBodyL
-      .~ Withdrawals
-        ( Map.singleton
-            (AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey)))
-            (Coin 100)
-        )
-    & feeTxBodyL .~ Coin 999
-    & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))
-    & updateTxBodyL
-      .~ SJust
-        ( Update
-            ( ProposedPPUpdates $
-                Map.singleton
-                  (mkKeyHash 1)
-                  (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
-            )
-            (EpochNo 0)
-        )
+exampleAlonzoBasedTxBody ::
+  forall era.
+  ( AlonzoEraTxBody era
+  , Value era ~ MaryValue
+  ) =>
+  TxBody TopTx era
+exampleAlonzoBasedTxBody =
+  mkAlonzoBasedExampleTxBody exampleMaryBasedTxBody
+
+exampleAlonzoBasedShelleyTxBody ::
+  forall era.
+  ( AlonzoEraTxBody era
+  , ShelleyEraTxBody era
+  , Value era ~ MaryValue
+  ) =>
+  TxBody TopTx era
+exampleAlonzoBasedShelleyTxBody =
+  mkAlonzoBasedPreConwayExampleTxBody exampleMaryBasedShelleyTxBody
+
+mkAlonzoBasedPreConwayExampleTxBody ::
+  forall era.
+  ( AlonzoEraTxBody era
+  , Value era ~ MaryValue
+  , AtMostEra "Conway" era
+  ) =>
+  TxBody TopTx era ->
+  TxBody TopTx era
+mkAlonzoBasedPreConwayExampleTxBody txBody =
+  mkAlonzoBasedExampleTxBody txBody
     & reqSignerHashesTxBodyL .~ Set.singleton (mkKeyHash 212)
-    & mintTxBodyL .~ exampleMultiAsset
+
+mkAlonzoBasedExampleTxBody ::
+  forall era.
+  ( AlonzoEraTxBody era
+  , Value era ~ MaryValue
+  ) =>
+  TxBody TopTx era ->
+  TxBody TopTx era
+mkAlonzoBasedExampleTxBody txBody =
+  txBody
+    & collateralInputsTxBodyL .~ exampleTxIns
+    & outputsTxBodyL
+      %~ ( <>
+             StrictSeq.fromList
+               [ mkBasicTxOut
+                   (mkAddr examplePayKey exampleStakeKey)
+                   (exampleMultiAssetValue 3)
+                   & dataHashTxOutL .~ SJust (mkDummySafeHash 1)
+               ]
+         )
     & scriptIntegrityHashTxBodyL .~ SJust (mkDummySafeHash 42)
-    & auxDataHashTxBodyL .~ SJust (TxAuxDataHash $ mkDummySafeHash 42)
     & networkIdTxBodyL .~ SJust Mainnet
-  where
-    MaryValue _ exampleMultiAsset = exampleMultiAssetValue 3
 
 exampleDatum :: Era era => Data era
 exampleDatum = Data (P.I 191)
