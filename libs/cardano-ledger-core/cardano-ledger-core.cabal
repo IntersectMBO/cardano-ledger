@@ -147,7 +147,7 @@ library
     scientific,
     serialise,
     small-steps >=1.1,
-    text,
+    text >=2.0,
     time,
     transformers,
     utf8-string,
@@ -202,7 +202,7 @@ library cddl
     heredoc,
     mempack,
     random,
-    text,
+    text >=2.0,
 
 library testlib
   import: warnings
@@ -263,7 +263,7 @@ library testlib
     quickcheck-transformer,
     random >=1.2,
     small-steps >=1.1,
-    text,
+    text >=2.0,
     time,
     tree-diff,
     unliftio,

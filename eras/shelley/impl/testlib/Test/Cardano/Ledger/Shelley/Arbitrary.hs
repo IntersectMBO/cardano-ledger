@@ -84,12 +84,12 @@ import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Control.Exception (assert)
 import Control.Monad.Identity (Identity)
-import qualified Data.ByteString.Char8 as BS (length, pack)
+import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map (fromList)
 import Data.Sequence.Strict (fromList)
 import qualified Data.Text as T (pack)
-import qualified Data.Text.Encoding as T (encodeUtf8)
+import qualified Data.Text.Foreign as T (lengthWord8)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
@@ -382,7 +382,7 @@ genDatumString =
     n <- choose (0, min sz 64)
     cs <- genUtf8StringOfSize n
     let s = T.pack cs
-    assert (BS.length (T.encodeUtf8 s) == n) $
+    assert (T.lengthWord8 s == n) $
       return (S s)
 
 -- | Produce an arbitrary Unicode string such that it's UTF8 encoding size in
