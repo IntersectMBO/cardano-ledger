@@ -62,6 +62,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack, callStack)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
@@ -104,13 +105,13 @@ bodyBytesSize :: EraSegWits era => ProtVer -> Body era -> Int
 bodyBytesSize pv (BodyInline txs) = bBodySize pv txs
 bodyBytesSize pv (BodyCertificate cert _) = certByteSize pv cert
 
-bodyTxs :: Body era -> TxSeq era
+bodyTxs :: HasCallStack => Body era -> TxSeq era
 bodyTxs (BodyInline txs) = txs
 bodyTxs (BodyCertificate cert mayCertifiedEbTxClosure) = case mayCertifiedEbTxClosure of
   Nothing ->
     error $
       "Certificate body must include EB transaction closure (I was expecting this to be resolved) "
-        <> show cert
+        <> show (cert, callStack)
   Just txs -> txs
 
 data Block h era
