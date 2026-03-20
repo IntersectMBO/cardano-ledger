@@ -66,7 +66,9 @@ spec = describe "UTXO" $ do
           -- including random garbage. Auxiliary data fits the bill quite nicely
           metadata <-
             Map.fromList
-              <$> forM [1 .. (12 * 1024 `div` 64)] (\ix -> (,) ix . M.B <$> uniformByteStringM 64)
+              <$> forM
+                [1 .. (12 * 1024 `div` 64)]
+                (\ix -> (,) ix . M.B <$> uniformByteArrayM 64)
           let auxData = mkAlonzoTxAuxData @[] @era metadata []
               tx =
                 mkBasicTx mkBasicTxBody

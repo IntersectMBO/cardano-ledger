@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Change `Metadatum.B` from `ByteString` to `ByteArray` for more efficient memory allocation
+* Add orphan instance `NoThunks ByteArray`
 * Remove orphan `NoThunks`, `NFData`, `FromJSON`, `ToJSON` instances for `IPv4` and `IPv6`
   - Moved to `cardano-base:Cardano.Base.IP`
 * Remove `ToCBOR` and `FromCBOR` instances for `Nonce`

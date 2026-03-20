@@ -84,7 +84,7 @@ import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Control.Exception (assert)
 import Control.Monad.Identity (Identity)
-import qualified Data.ByteString.Char8 as BS (length, pack)
+import qualified Data.ByteString as BS
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map (fromList)
 import Data.Sequence.Strict (fromList)
@@ -92,6 +92,7 @@ import qualified Data.Text as T (pack)
 import qualified Data.Text.Encoding as T (encodeUtf8)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
+import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -408,7 +409,7 @@ genDatumBytestring :: Gen Metadatum
 genDatumBytestring =
   sized $ \sz -> do
     n <- choose (0, min sz 64)
-    B . BS.pack <$> vectorOf n arbitrary
+    B <$> genByteArray n
 
 -- | Generate a 'MD.List [Metadatum]'
 --

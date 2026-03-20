@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Shelley.Generator.TxAuxData (
   genMetadata,
@@ -14,11 +15,12 @@ import Cardano.Ledger.Shelley.TxAuxData (
   ShelleyTxAuxData (..),
  )
 import Control.Exception (assert)
-import qualified Data.ByteString.Char8 as BS (length, pack)
+import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T (pack)
 import qualified Data.Text.Encoding as T
 import Data.Word (Word64)
+import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -105,7 +107,7 @@ genDatumBytestring :: Gen Metadatum
 genDatumBytestring =
   QC.sized $ \sz -> do
     n <- QC.choose (0, min sz 64)
-    B . BS.pack <$> QC.vectorOf n QC.arbitrary
+    B <$> genByteArray n
 
 -- | Generate a 'MD.List [Metadatum]'
 --

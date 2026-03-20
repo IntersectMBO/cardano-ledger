@@ -80,6 +80,7 @@ library
     QuickCheck >=2.13.2,
     base >=4.18 && <5,
     bytestring,
+    cardano-base:testlib,
     cardano-crypto,
     cardano-crypto-class,
     cardano-crypto-wrapper,
