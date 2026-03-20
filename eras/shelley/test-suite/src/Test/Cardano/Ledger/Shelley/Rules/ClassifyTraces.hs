@@ -21,7 +21,7 @@ where
 
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary.Plain as Plain (serialize')
-import Cardano.Ledger.Block (Block (..), bheader)
+import Cardano.Ledger.Block (Block (..), bheader, bodyTxs)
 import Cardano.Ledger.Shelley.API (
   Addr (..),
   Credential (..),
@@ -137,7 +137,7 @@ relevantCasesAreCoveredForTrace ::
   Property
 relevantCasesAreCoveredForTrace tr = do
   let blockTxs' :: Block (BHeader MockCrypto) era -> [Tx era]
-      blockTxs' (UnserialisedBlock _ txSeq) = toList (fromTxSeq @era txSeq)
+      blockTxs' (UnserialisedBlock _ body) = toList (fromTxSeq @era . bodyTxs $ body)
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs' <$> bs)
       certsByTx_ = certsByTx @era txs

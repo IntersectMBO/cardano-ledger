@@ -17,6 +17,7 @@ import Cardano.Crypto.KES as KES
 import Cardano.Crypto.Seed as Seed
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Block (Body (BodyInline), hashBody)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys hiding (hashVerKeyVRF)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -167,7 +168,7 @@ exampleShelleyLedgerBlock ::
   EraSegWits era =>
   Tx era ->
   Block (BHeader StandardCrypto) era
-exampleShelleyLedgerBlock tx = Block blockHeader' blockBody Nothing False -- FIXME(bladyjoker): Revise
+exampleShelleyLedgerBlock tx = Block blockHeader' blockBody' Nothing False -- FIXME(bladyjoker): Revise
   where
     keys :: AllIssuerKeys StandardCrypto 'StakePool
     keys = exampleKeys
@@ -189,12 +190,12 @@ exampleShelleyLedgerBlock tx = Block blockHeader' blockBody Nothing False -- FIX
         , bheaderEta = mkCertifiedVRF (mkBytes 0) (vrfSignKey $ aikVrf keys)
         , bheaderL = mkCertifiedVRF (mkBytes 1) (vrfSignKey $ aikVrf keys)
         , bsize = 2345
-        , bhash = hashTxSeq @era blockBody
+        , bhash = hashBody @era blockBody'
         , bheaderOCert = mkOCert keys 0 (KESPeriod 0)
         , bprotver = ProtVer (natVersion @2) 0
         }
 
-    blockBody = toTxSeq @era (StrictSeq.fromList [tx])
+    blockBody' = BodyInline $ toTxSeq @era (StrictSeq.fromList [tx])
 
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
     mkBytes = Seed . mkDummyHash @Blake2b_256

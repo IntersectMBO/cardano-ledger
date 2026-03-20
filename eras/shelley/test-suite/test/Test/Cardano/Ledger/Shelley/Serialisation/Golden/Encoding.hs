@@ -60,7 +60,7 @@ import Cardano.Ledger.Binary.Crypto (
   encodeVerKeyDSIGN,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), Body (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (
@@ -1004,7 +1004,7 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "empty_block"
-            (Block @C bh txns Nothing False)
+            (Block @C bh (BodyInline txns) Nothing False)
             ( (T $ TkListLen 4)
                 <> S bh
                 <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
@@ -1070,7 +1070,7 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "rich_block"
-            (Block @C bh txns Nothing False)
+            (Block @C bh (BodyInline txns) Nothing False)
             ( (T $ TkListLen 4)
                 -- header
                 <> S bh

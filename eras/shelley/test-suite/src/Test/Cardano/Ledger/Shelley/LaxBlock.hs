@@ -19,7 +19,7 @@ import Cardano.Ledger.Binary (
   annotatorSlice,
   decodeRecordNamed,
  )
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), Body (BodyInline))
 import Cardano.Ledger.Core (Era, EraSegWits (TxSeq), EraTx)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq, txSeqDecoder)
 import Data.Typeable (Typeable)
@@ -48,8 +48,8 @@ blockDecoder ::
 blockDecoder lax = annotatorSlice $
   decodeRecordNamed "Block" (const 4) $ do
     header <- decCBOR
-    txns <- txSeqDecoder lax
-    pure $ Block' <$> header <*> txns <*> pure Nothing <*> pure False -- FIXME(bladyjoker): Revise
+    txs <- txSeqDecoder lax -- FIXME(bladyjoker): Wrong
+    pure $ Block' <$> header <*> (BodyInline <$> txs) <*> pure Nothing <*> pure False -- FIXME(bladyjoker): Revise
 
 deriving stock instance (Era era, Show (TxSeq era), Show h) => Show (LaxBlock h era)
 

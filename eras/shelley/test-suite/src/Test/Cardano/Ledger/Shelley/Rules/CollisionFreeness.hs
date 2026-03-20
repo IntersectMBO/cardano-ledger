@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness (
   tests,
 ) where
 
-import Cardano.Ledger.Block (bbody)
+import Cardano.Ledger.Block (bbody, bodyTxs)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (witVKeyHash)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -175,7 +175,7 @@ noDoubleSpend SourceSignalTarget {signal} =
   counterexample "noDoubleSpend" $
     [] === getDoubleInputs txs
   where
-    txs = toList $ (fromTxSeq @era . bbody) signal
+    txs = toList $ (fromTxSeq @era . bodyTxs . bbody) signal
 
     getDoubleInputs :: [Tx era] -> [(Tx era, [Tx era])]
     getDoubleInputs [] = []

@@ -323,7 +323,7 @@ chainTransition =
                   etaC
                   etaH
                   lab
-              , Block bh txs _ _ -- FIXME(bladyjoker): Revise
+              , Block bh body _ _ -- FIXME(bladyjoker): Revise
               )
           ) -> do
         case prtlSeqChecks lab bh of
@@ -376,7 +376,7 @@ chainTransition =
         let thouShaltNot = error "A block with a header view should never be hashed"
         BbodyState ls' bcur' <-
           trans @(EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, Block' bhView txs Nothing False thouShaltNot) -- FIXME(bladyjoker): Revise
+            TRC (BbodyEnv pp' account, BbodyState ls bcur, Block' bhView body Nothing False thouShaltNot) -- FIXME(bladyjoker): Revise
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh
             lab' =
