@@ -965,6 +965,7 @@ genStakePoolParams ::
   GenRS era StakePoolParams
 genStakePoolParams sppId = do
   sppVrf <- lift arbitrary
+  let sppBls = SNothing
   sppPledge <- lift genPositiveVal
   sppCost <- lift genPositiveVal
   sppMargin <- lift arbitrary

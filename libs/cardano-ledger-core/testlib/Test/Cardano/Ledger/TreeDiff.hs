@@ -72,6 +72,9 @@ instance ToExpr (KeyHash keyrole) where
 instance ToExpr (VRFVerKeyHash keyrole) where
   toExpr (VRFVerKeyHash x) = App "VRFVerKeyHash" [toExpr x]
 
+instance ToExpr (BLSVerKeyHash keyrole) where
+  toExpr (BLSVerKeyHash x) = App "BLSVerKeyHash" [toExpr x]
+
 -- PoolDist
 instance ToExpr PoolDistr
 

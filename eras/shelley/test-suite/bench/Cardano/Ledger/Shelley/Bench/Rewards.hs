@@ -142,6 +142,7 @@ genChainInEpoch epoch = do
                       StakePoolParams
                         { sppId = aikColdKeyHash
                         , sppVrf = hashVerKeyVRF @MockCrypto $ vrfVerKey aikVrf
+                        , sppBls = SNothing
                         , sppPledge = Coin 1
                         , sppCost = Coin 1
                         , sppMargin = minBound

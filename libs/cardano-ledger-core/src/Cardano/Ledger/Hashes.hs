@@ -60,6 +60,12 @@ module Cardano.Ledger.Hashes (
   toVRFVerKeyHash,
   fromVRFVerKeyHash,
 
+  -- ** @BLS@ Verification Key Hashes
+  KeyRoleBLS (..),
+  BLSVerKeyHash (..),
+  toBLSVerKeyHash,
+  fromBLSVerKeyHash,
+
   -- ** Genesis @DSIGN@ and @VRF@ Verification Key Hashes
   GenDelegPair (..),
   GenDelegs (..),
@@ -243,6 +249,38 @@ toVRFVerKeyHash = VRFVerKeyHash . Hash.castHash
 
 fromVRFVerKeyHash :: VRFVerKeyHash (r :: KeyRoleVRF) -> Hash.Hash HASH (VRF.VerKeyVRF v)
 fromVRFVerKeyHash = Hash.castHash . unVRFVerKeyHash
+
+--------------------------------------------------------------------------------
+-- BLS Key Hashes
+--------------------------------------------------------------------------------
+
+type data KeyRoleBLS
+  = StakePoolBLS
+
+-- | Discriminated hash of BLS Verification Key
+newtype BLSVerKeyHash (r :: KeyRoleBLS) = BLSVerKeyHash
+  {unBLSVerKeyHash :: Hash.Hash HASH KeyRoleBLS}
+  deriving (Show, Eq, Ord)
+  deriving newtype
+    ( NFData
+    , NoThunks
+    , Generic
+    , ToCBOR
+    , FromCBOR
+    , EncCBOR
+    , DecCBOR
+    , ToJSONKey
+    , FromJSONKey
+    , ToJSON
+    , FromJSON
+    , Default
+    )
+
+toBLSVerKeyHash :: Hash.Hash HASH (DSIGN.VerKeyDSIGN v) -> BLSVerKeyHash (r :: KeyRoleBLS)
+toBLSVerKeyHash = BLSVerKeyHash . Hash.castHash
+
+fromBLSVerKeyHash :: BLSVerKeyHash (r :: KeyRoleBLS) -> Hash.Hash HASH (DSIGN.VerKeyDSIGN v)
+fromBLSVerKeyHash = Hash.castHash . unBLSVerKeyHash
 
 --------------------------------------------------------------------------------
 -- Auxiliary Data Hashes

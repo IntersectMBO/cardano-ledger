@@ -309,6 +309,7 @@ poolParamsGroup pname p =
       =.~ grp
         [ "operator" ==> huddleRule @"pool_keyhash" p
         , "vrf_keyhash" ==> huddleRule @"vrf_keyhash" p
+        , "bls_keyhash" ==> huddleRule @"bls_keyhash" p / VNil
         , "pledge" ==> huddleRule @"coin" p
         , "cost" ==> huddleRule @"coin" p
         , "margin" ==> huddleRule @"unit_interval" p

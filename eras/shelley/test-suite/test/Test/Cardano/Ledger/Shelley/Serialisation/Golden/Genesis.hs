@@ -252,6 +252,7 @@ exampleShelleyGenesis =
         { L.sppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
         , L.sppVrf =
             hashVerKeyVRF @StandardCrypto . vrfVerKey $ mkVRFKeyPair @StandardCrypto (RawSeed 1 0 0 0 2)
+        , L.sppBls = L.SNothing
         , L.sppPledge = L.Coin 1
         , L.sppCost = L.Coin 5
         , L.sppMargin = unsafeBoundRational 0.25

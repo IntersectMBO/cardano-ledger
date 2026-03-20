@@ -52,7 +52,7 @@ pStateSpec univ = constrained $ \ps ->
     , witness univ (dom_ retiring)
     , assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
         dom_ retiring `subset_` dom_ stakePools
-    , forAll' (rng_ stakePools) $ \_ _ _ _ _ _ _ _ [var|d|] _ ->
+    , forAll' (rng_ stakePools) $ \_ _ _ _ _ _ _ _ _ [var|d|] _ ->
         assertExplain (pure "all deposits are greater then (Coin 0)") $ d >=. lit 0
     , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
         dom_ stakePools `disjoint_` dom_ futureStakePools
@@ -70,7 +70,7 @@ poolCertSpec univ (PoolEnv e pp) ps =
     (caseOn pc)
       -- RegPool !(PoolParams c)
       ( branchW 1 $ \poolParams ->
-          match poolParams $ \_ _ _ cost _ accountAddr _ _ mMetadata ->
+          match poolParams $ \_ _ _ _ cost _ accountAddr _ _ mMetadata ->
             [ witness univ poolParams
             , match accountAddr $ \net' _ ->
                 net' ==. lit Testnet

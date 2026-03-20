@@ -29,6 +29,7 @@ module Cardano.Ledger.State.StakePool (
 
   -- * Lenses
   spsVrfL,
+  spsBlsL,
   spsPledgeL,
   spsCostL,
   spsMarginL,
@@ -52,6 +53,7 @@ module Cardano.Ledger.State.StakePool (
     PoolParams,
     ppId,
     ppVrf,
+    ppBls,
     ppPledge,
     ppCost,
     ppMargin,
@@ -64,6 +66,7 @@ module Cardano.Ledger.State.StakePool (
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
   SizeOfPoolOwners (..),
+  sppBlsL,
   sppCostL,
   sppMetadataL,
   sppVrfL,
@@ -104,7 +107,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
+import Cardano.Ledger.Keys (BLSVerKeyHash, KeyHash (..), KeyRole (..), KeyRoleBLS (StakePoolBLS), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
 import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
@@ -135,6 +138,8 @@ import NoThunks.Class (NoThunks (..))
 data StakePoolState = StakePoolState
   { spsVrf :: !(VRFVerKeyHash StakePoolVRF)
   -- ^ VRF verification key hash for leader election
+  , spsBls :: !(StrictMaybe (BLSVerKeyHash StakePoolBLS))
+  -- ^ BLS verification key hash
   , spsPledge :: !Coin
   -- ^ Pledge amount committed by the pool operator
   , spsCost :: !Coin
@@ -158,6 +163,9 @@ data StakePoolState = StakePoolState
 
 spsVrfL :: Lens' StakePoolState (VRFVerKeyHash StakePoolVRF)
 spsVrfL = lens spsVrf (\sps u -> sps {spsVrf = u})
+
+spsBlsL :: Lens' StakePoolState (StrictMaybe (BLSVerKeyHash StakePoolBLS))
+spsBlsL = lens spsBls (\sps u -> sps {spsBls = u})
 
 spsPledgeL :: Lens' StakePoolState Coin
 spsPledgeL = lens spsPledge $ \sps c -> sps {spsPledge = c}
@@ -191,6 +199,7 @@ instance EncCBOR StakePoolState where
     encode $
       Rec StakePoolState
         !> To (spsVrf sps)
+        !> To (spsBls sps)
         !> To (spsPledge sps)
         !> To (spsCost sps)
         !> To (spsMargin sps)
@@ -215,13 +224,15 @@ instance DecCBOR StakePoolState where
         <! From
         <! From
         <! From
+        <! From
 
 instance DecShareCBOR StakePoolState where
   type Share StakePoolState = Interns (Credential Staking)
   decSharePlusCBOR =
-    decodeRecordNamedT "StakePoolState" (const 10) $
+    decodeRecordNamedT "StakePoolState" (const 11) $
       StakePoolState
         <$> lift decCBOR
+        <*> lift decCBOR
         <*> lift decCBOR
         <*> lift decCBOR
         <*> lift decCBOR
@@ -236,6 +247,7 @@ instance Default StakePoolState where
   def =
     StakePoolState
       { spsVrf = def
+      , spsBls = SNothing
       , spsPledge = Coin 0
       , spsCost = Coin 0
       , spsMargin = def
@@ -255,6 +267,7 @@ mkStakePoolState ::
 mkStakePoolState deposit delegators spp =
   StakePoolState
     { spsVrf = sppVrf spp
+    , spsBls = sppBls spp
     , spsPledge = sppPledge spp
     , spsCost = sppCost spp
     , spsMargin = sppMargin spp
@@ -274,6 +287,7 @@ stakePoolStateToStakePoolParams networkId poolId sps =
   StakePoolParams
     { sppId = poolId
     , sppVrf = spsVrf sps
+    , sppBls = spsBls sps
     , sppPledge = spsPledge sps
     , sppCost = spsCost sps
     , sppMargin = spsMargin sps
@@ -421,6 +435,7 @@ instance DecCBOR StakePoolRelay where
 data StakePoolParams = StakePoolParams
   { sppId :: !(KeyHash StakePool)
   , sppVrf :: !(VRFVerKeyHash StakePoolVRF)
+  , sppBls :: !(StrictMaybe (BLSVerKeyHash StakePoolBLS))
   , sppPledge :: !Coin
   , sppCost :: !Coin
   , sppMargin :: !UnitInterval
@@ -436,6 +451,9 @@ data StakePoolParams = StakePoolParams
 sppVrfL :: Lens' StakePoolParams (VRFVerKeyHash StakePoolVRF)
 sppVrfL = lens sppVrf (\spp u -> spp {sppVrf = u})
 
+sppBlsL :: Lens' StakePoolParams (StrictMaybe (BLSVerKeyHash StakePoolBLS))
+sppBlsL = lens sppBls (\spp u -> spp {sppBls = u})
+
 sppCostL :: Lens' StakePoolParams Coin
 sppCostL = lens sppCost (\spp u -> spp {sppCost = u})
 
@@ -443,7 +461,7 @@ sppMetadataL :: Lens' StakePoolParams (StrictMaybe PoolMetadata)
 sppMetadataL = lens sppMetadata (\spp u -> spp {sppMetadata = u})
 
 instance Default StakePoolParams where
-  def = StakePoolParams def def (Coin 0) (Coin 0) def def def def def
+  def = StakePoolParams def def SNothing (Coin 0) (Coin 0) def def def def def
 
 instance NoThunks StakePoolParams
 
@@ -454,6 +472,7 @@ instance ToJSON StakePoolParams where
     Aeson.object
       [ "poolId" .= sppId spp
       , "vrf" .= sppVrf spp
+      , "bls" .= sppBls spp
       , "pledge" .= sppPledge spp
       , "cost" .= sppCost spp
       , "margin" .= sppMargin spp
@@ -471,6 +490,7 @@ instance FromJSON StakePoolParams where
       StakePoolParams
         <$> ((obj .: "poolId") <|> (obj .: "publicKey"))
         <*> obj .: "vrf"
+        <*> obj .:? "bls" .!= SNothing
         <*> obj .: "pledge"
         <*> obj .: "cost"
         <*> obj .: "margin"
@@ -484,6 +504,7 @@ type PoolParams = StakePoolParams
 pattern PoolParams ::
   KeyHash StakePool ->
   VRFVerKeyHash StakePoolVRF ->
+  StrictMaybe (BLSVerKeyHash StakePoolBLS) ->
   Coin ->
   Coin ->
   UnitInterval ->
@@ -492,8 +513,8 @@ pattern PoolParams ::
   StrictSeq StakePoolRelay ->
   StrictMaybe PoolMetadata ->
   PoolParams
-pattern PoolParams {ppId, ppVrf, ppPledge, ppCost, ppMargin, ppAccountAddress, ppOwners, ppRelays, ppMetadata} =
-  StakePoolParams ppId ppVrf ppPledge ppCost ppMargin ppAccountAddress ppOwners ppRelays ppMetadata
+pattern PoolParams {ppId, ppVrf, ppBls, ppPledge, ppCost, ppMargin, ppAccountAddress, ppOwners, ppRelays, ppMetadata} =
+  StakePoolParams ppId ppVrf ppBls ppPledge ppCost ppMargin ppAccountAddress ppOwners ppRelays ppMetadata
 
 {-# COMPLETE PoolParams #-}
 
@@ -502,6 +523,7 @@ pattern PoolParams {ppId, ppVrf, ppPledge, ppCost, ppMargin, ppAccountAddress, p
 {-# DEPRECATED
   ppId
   , ppVrf
+  , ppBls
   , ppPledge
   , ppCost
   , ppMargin
@@ -540,6 +562,7 @@ instance EncCBORGroup StakePoolParams where
   encCBORGroup poolParams =
     encCBOR (sppId poolParams)
       <> encCBOR (sppVrf poolParams)
+      <> encodeNullStrictMaybe encCBOR (sppBls poolParams)
       <> encCBOR (sppPledge poolParams)
       <> encCBOR (sppCost poolParams)
       <> encCBOR (sppMargin poolParams)
@@ -547,12 +570,13 @@ instance EncCBORGroup StakePoolParams where
       <> encCBOR (sppOwners poolParams)
       <> encCBOR (sppRelays poolParams)
       <> encodeNullStrictMaybe encCBOR (sppMetadata poolParams)
-  listLen _ = 9
+  listLen _ = 10
 
 instance DecCBORGroup StakePoolParams where
   decCBORGroup = do
     hk <- decCBOR
     vrf <- decCBOR
+    bls <- decodeNullStrictMaybe decCBOR
     pledge <- decCBOR
     cost <- decCBOR
     margin <- decCBOR
@@ -564,6 +588,7 @@ instance DecCBORGroup StakePoolParams where
       StakePoolParams
         { sppId = hk
         , sppVrf = vrf
+        , sppBls = bls
         , sppPledge = pledge
         , sppCost = cost
         , sppMargin = margin

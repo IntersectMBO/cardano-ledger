@@ -600,6 +600,7 @@ aliceStakePoolParamsSmallCost =
   StakePoolParams
     { sppId = hashKey $ vKey alicePoolColdKeys
     , sppVrf = hashVerKeyVRF @MockCrypto vkVrf
+    , sppBls = SNothing
     , sppPledge = Coin 1
     , sppCost = Coin 5 -- Too Small!
     , sppMargin = unsafeBoundRational 0.1

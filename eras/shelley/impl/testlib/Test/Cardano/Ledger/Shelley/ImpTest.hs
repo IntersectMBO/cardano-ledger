@@ -1969,6 +1969,7 @@ freshPoolParams khPool accountAddress = do
   pure
     StakePoolParams
       { sppVrf = vrfHash
+      , sppBls = SNothing
       , sppAccountAddress = accountAddress
       , sppRelays = mempty
       , sppPledge = pledge

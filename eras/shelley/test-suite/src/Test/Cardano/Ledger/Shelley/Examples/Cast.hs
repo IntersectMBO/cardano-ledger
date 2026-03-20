@@ -125,6 +125,7 @@ aliceStakePoolParams =
   StakePoolParams
     { sppId = hashKey . vKey $ aikCold alicePoolKeys
     , sppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf alicePoolKeys
+    , sppBls = SNothing
     , sppPledge = Coin 1
     , sppCost = Coin 5
     , sppMargin = unsafeBoundRational 0.1
@@ -180,6 +181,7 @@ bobStakePoolParams =
   StakePoolParams
     { sppId = hashKey . vKey $ aikCold bobPoolKeys
     , sppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf bobPoolKeys
+    , sppBls = SNothing
     , sppPledge = Coin 2
     , sppCost = Coin 1
     , sppMargin = unsafeBoundRational 0.1

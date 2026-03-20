@@ -325,6 +325,9 @@ instance Arbitrary (KeyHash r) where
 instance Arbitrary (VRFVerKeyHash r) where
   arbitrary = VRFVerKeyHash <$> genHash
 
+instance Arbitrary (BLSVerKeyHash r) where
+  arbitrary = BLSVerKeyHash <$> genHash
+
 instance Arbitrary (VKey kd) where
   arbitrary = VKey <$> arbitrary
 
@@ -454,11 +457,13 @@ instance Arbitrary StakePoolParams where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary StakePoolState where
   arbitrary =
     StakePoolState
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

@@ -270,6 +270,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
         StakePoolParams
           { sppId = hashKey . vKey $ coldKey
           , sppVrf = hashVerKeyVRF @MockCrypto $ snd vrfKey
+          , sppBls = SNothing
           , sppPledge = pledge
           , sppCost = cost
           , sppMargin = margin

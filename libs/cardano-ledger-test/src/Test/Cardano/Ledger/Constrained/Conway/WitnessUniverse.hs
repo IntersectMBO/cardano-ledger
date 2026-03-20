@@ -409,7 +409,7 @@ witAccountAddressSpec univ =
 
 owners_ ::
   Term StakePoolParams -> Term (Set (KeyHash Staking))
-owners_ = sel @6
+owners_ = sel @7
 
 witStakePoolParamsSpec ::
   forall era.
@@ -427,8 +427,8 @@ witPoolStateSpec ::
 witPoolStateSpec univ =
   explainWit "poolstate :: StakePoolState" univ $
     constrained $ \ [var|poolparams|] ->
-      [ forAll (sel @5 poolparams) $ \ [var|ownerKeyHash|] -> satisfies ownerKeyHash (witKeyHashSpec univ)
-      , satisfies (sel @5 poolparams) (hasSize (rangeSize 1 3))
+      [ forAll (sel @6 poolparams) $ \ [var|ownerKeyHash|] -> satisfies ownerKeyHash (witKeyHashSpec univ)
+      , satisfies (sel @6 poolparams) (hasSize (rangeSize 1 3))
       ]
 
 witGenDelegPairSpec ::

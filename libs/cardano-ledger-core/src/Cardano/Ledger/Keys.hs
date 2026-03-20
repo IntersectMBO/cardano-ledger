@@ -29,6 +29,12 @@ module Cardano.Ledger.Keys (
   toVRFVerKeyHash,
   fromVRFVerKeyHash,
 
+  -- * BLS Key Hashes
+  KeyRoleBLS (..),
+  BLSVerKeyHash (..),
+  toBLSVerKeyHash,
+  fromBLSVerKeyHash,
+
   -- * Genesis delegations
   GenDelegPair (..),
   GenDelegs (..),
@@ -45,13 +51,17 @@ module Cardano.Ledger.Keys (
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Hashes (
+  BLSVerKeyHash (..),
   GenDelegPair (..),
   GenDelegs (..),
   KeyHash (..),
+  KeyRoleBLS (..),
   KeyRoleVRF (..),
   VRFVerKeyHash (..),
+  fromBLSVerKeyHash,
   fromVRFVerKeyHash,
   hashKey,
+  toBLSVerKeyHash,
   toVRFVerKeyHash,
  )
 import Cardano.Ledger.Keys.Bootstrap

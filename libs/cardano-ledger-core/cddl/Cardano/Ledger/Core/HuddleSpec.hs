@@ -142,6 +142,9 @@ instance Era era => HuddleRule "pool_keyhash" era where
 instance Era era => HuddleRule "vrf_keyhash" era where
   huddleRuleNamed pname p = pname =.= huddleRule @"hash32" p
 
+instance Era era => HuddleRule "bls_keyhash" era where
+  huddleRuleNamed pname p = pname =.= huddleRule @"hash32" p
+
 instance Era era => HuddleRule "vkey" era where
   huddleRuleNamed pname _ = pname =.= VBytes `sized` (32 :: Word64)
 

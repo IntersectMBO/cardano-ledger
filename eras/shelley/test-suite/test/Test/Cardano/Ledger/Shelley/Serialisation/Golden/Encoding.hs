@@ -522,6 +522,7 @@ tests =
                 ( StakePoolParams
                     { sppId = hashKey $ vKey testStakePoolKey
                     , sppVrf = vrfKeyHash
+                    , sppBls = SNothing
                     , sppPledge = poolPledge
                     , sppCost = poolCost
                     , sppMargin = poolMargin

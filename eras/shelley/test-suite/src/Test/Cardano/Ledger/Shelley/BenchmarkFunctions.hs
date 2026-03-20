@@ -354,6 +354,7 @@ mkStakePoolParams keys =
   StakePoolParams
     { sppId = hashKey (vKey keys)
     , sppVrf = vrfKeyHash
+    , sppBls = SNothing
     , sppPledge = Coin 0
     , sppCost = Coin 0
     , sppMargin = unsafeBoundRational 0

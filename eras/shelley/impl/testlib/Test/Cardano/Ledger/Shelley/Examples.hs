@@ -394,6 +394,7 @@ exampleStakePoolParams =
   StakePoolParams
     { sppId = hashKey $ vKey $ mkDSIGNKeyPair 1
     , sppVrf = exampleVrfVerKeyHash
+    , sppBls = SNothing
     , sppPledge = Coin 1
     , sppCost = Coin 5
     , sppMargin = unsafeBoundRational 0.1
