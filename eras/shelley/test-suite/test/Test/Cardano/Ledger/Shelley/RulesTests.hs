@@ -31,7 +31,6 @@ import Test.Cardano.Ledger.Shelley.Examples.MirTransfer (testMIRTransfer)
 import Test.Cardano.Ledger.Shelley.Examples.NetworkID (testPoolNetworkId)
 import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (poolLifetimeExample)
 import Test.Cardano.Ledger.Shelley.Examples.PoolReReg (poolReRegExample)
-import Test.Cardano.Ledger.Shelley.Examples.TwoPools (twoPoolsExample)
 import Test.Cardano.Ledger.Shelley.Examples.Updates (updatesExample)
 import Test.Cardano.Ledger.Shelley.MultiSigExamples (
   aliceAndBob,
@@ -54,7 +53,6 @@ chainExamples =
     "CHAIN examples"
     [ testCase "empty block" $ testCHAINExample exEmptyBlock
     , poolLifetimeExample
-    , twoPoolsExample
     , poolReRegExample
     , updatesExample
     , genesisDelegExample
