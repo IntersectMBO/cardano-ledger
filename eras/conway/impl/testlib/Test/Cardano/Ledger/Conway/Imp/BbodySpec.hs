@@ -92,7 +92,7 @@ spec = describe "BBODY" $ do
       tryRunImpRule @"BBODY"
         (BbodyEnv pp account)
         (BbodyState ls (BlocksMade Map.empty))
-        (UnsafeUnserialisedBlock bhView txSeq)
+        (UnsafeUnserialisedBlock bhView (BodyInline txSeq))
     predFailures
       `shouldBe` NE.fromList
         [ injectFailure
@@ -120,8 +120,10 @@ spec = describe "BBODY" $ do
       pure $
         mkBasicTx $
           mkBasicTxBody
-            & referenceInputsTxBodyL .~ Set.fromList txIns
-            & inputsTxBodyL .~ [txIn]
+            & referenceInputsTxBodyL
+              .~ Set.fromList txIns
+            & inputsTxBodyL
+              .~ [txIn]
 
 -- Generate a list of integers such that the sum of their multiples by scale is greater than toExceed
 -- and each individual value multiplied by the scale is smaller than maxSingle

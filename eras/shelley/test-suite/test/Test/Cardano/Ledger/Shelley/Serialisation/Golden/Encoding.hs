@@ -60,7 +60,7 @@ import Cardano.Ledger.Binary.Crypto (
   encodeVerKeyDSIGN,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), Body (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (
@@ -642,23 +642,40 @@ tests =
             shelleyProtVer
             "pparams_update_all"
             ( emptyPParamsUpdate @ShelleyEra
-                & ppuMinFeeAL .~ SJust minfeea
-                & ppuMinFeeBL .~ SJust minfeeb
-                & ppuMaxBBSizeL .~ SJust maxbbsize
-                & ppuMaxTxSizeL .~ SJust maxtxsize
-                & ppuMaxBHSizeL .~ SJust maxbhsize
-                & ppuKeyDepositL .~ SJust keydeposit
-                & ppuPoolDepositL .~ SJust pooldeposit
-                & ppuEMaxL .~ SJust emax
-                & ppuNOptL .~ SJust nopt
-                & ppuA0L .~ SJust a0
-                & ppuRhoL .~ SJust rho
-                & ppuTauL .~ SJust tau
-                & ppuDL .~ SJust d
-                & ppuExtraEntropyL .~ SJust extraEntropy
-                & ppuProtocolVersionL .~ SJust protocolVersion
-                & ppuMinUTxOValueL .~ SJust minUTxOValue
-                & ppuMinPoolCostL .~ SJust minPoolCost
+                & ppuMinFeeAL
+                  .~ SJust minfeea
+                & ppuMinFeeBL
+                  .~ SJust minfeeb
+                & ppuMaxBBSizeL
+                  .~ SJust maxbbsize
+                & ppuMaxTxSizeL
+                  .~ SJust maxtxsize
+                & ppuMaxBHSizeL
+                  .~ SJust maxbhsize
+                & ppuKeyDepositL
+                  .~ SJust keydeposit
+                & ppuPoolDepositL
+                  .~ SJust pooldeposit
+                & ppuEMaxL
+                  .~ SJust emax
+                & ppuNOptL
+                  .~ SJust nopt
+                & ppuA0L
+                  .~ SJust a0
+                & ppuRhoL
+                  .~ SJust rho
+                & ppuTauL
+                  .~ SJust tau
+                & ppuDL
+                  .~ SJust d
+                & ppuExtraEntropyL
+                  .~ SJust extraEntropy
+                & ppuProtocolVersionL
+                  .~ SJust protocolVersion
+                & ppuMinUTxOValueL
+                  .~ SJust minUTxOValue
+                & ppuMinPoolCostL
+                  .~ SJust minPoolCost
             )
             ( (T $ TkMapLen 17)
                 <> (T $ TkWord 0)
@@ -987,7 +1004,7 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "empty_block"
-            (Block @C bh txns)
+            (Block @C bh (BodyInline txns) Nothing False)
             ( (T $ TkListLen 4)
                 <> S bh
                 <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
@@ -1020,10 +1037,12 @@ tests =
           tx1, tx2, tx3, tx4, tx5 :: ShelleyTx C
           tx1 =
             mkBasicTx txb1
-              & witsTxL @C .~ (mkBasicTxWits @C & addrTxWitsL .~ Set.singleton w1)
+              & witsTxL @C
+                .~ (mkBasicTxWits @C & addrTxWitsL .~ Set.singleton w1)
           tx2 =
             mkBasicTx txb2
-              & witsTxL @C .~ (mkBasicTxWits @C & addrTxWitsL .~ ws)
+              & witsTxL @C
+                .~ (mkBasicTxWits @C & addrTxWitsL .~ ws)
           tx3 =
             mkBasicTx txb3
               & witsTxL @C
@@ -1038,17 +1057,20 @@ tests =
               ]
           tx4 =
             mkBasicTx txb4
-              & witsTxL @C .~ (mkBasicTxWits @C & scriptTxWitsL .~ ss)
+              & witsTxL @C
+                .~ (mkBasicTxWits @C & scriptTxWitsL .~ ss)
           tx5MD = TxAuxData.ShelleyTxAuxData @C $ Map.singleton 17 (TxAuxData.I 42)
           tx5 =
             mkBasicTx txb5
-              & witsTxL @C .~ (mkBasicTxWits @C & addrTxWitsL .~ ws & scriptTxWitsL .~ ss)
-              & auxDataTxL @C .~ SJust tx5MD
+              & witsTxL @C
+                .~ (mkBasicTxWits @C & addrTxWitsL .~ ws & scriptTxWitsL .~ ss)
+              & auxDataTxL @C
+                .~ SJust tx5MD
           txns = ShelleyTxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "rich_block"
-            (Block @C bh txns)
+            (Block @C bh (BodyInline txns) Nothing False)
             ( (T $ TkListLen 4)
                 -- header
                 <> S bh

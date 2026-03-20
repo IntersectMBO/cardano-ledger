@@ -279,7 +279,7 @@ mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
       bodyHash = hashTxSeq @era txseq
       bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
       bHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
-   in Block bHeader txseq
+   in Block bHeader (BodyInline txseq) Nothing False -- FIXME(bladyjoker): Revise
 
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
@@ -320,4 +320,4 @@ mkBlockFakeVRF prev pKeys txns slotNo blockNo enonce bnonce l kesPeriod keyRegKe
       bhBody =
         mkBHBodyFakeVRF bnonce l protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
       bHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
-   in Block bHeader txSeq
+   in Block bHeader (BodyInline txSeq) Nothing False -- FIXME(bladyjoker): Revise

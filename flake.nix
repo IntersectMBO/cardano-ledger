@@ -129,7 +129,7 @@
                 haskellPackages.implicit-hie
               ];
             # disable Hoogle until someone request it
-            withHoogle = false;
+            withHoogle = true;
             # Skip cross compilers for the shell
             crossPlatforms = _: [];
           };

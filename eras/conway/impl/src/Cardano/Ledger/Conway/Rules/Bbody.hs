@@ -42,7 +42,7 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFai
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), bodyTxs)
 import Cardano.Ledger.Conway.Era (ConwayBBODY, ConwayEra)
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsPredFailure)
@@ -278,11 +278,11 @@ conwayBbodyTransition = do
     >>= \( TRC
             ( _
               , state@(BbodyState ls _)
-              , UnserialisedBlock _ txsSeq
+              , UnserialisedBlock _ body
               )
           ) -> do
         let utxo = utxosUtxo (lsUTxOState ls)
-            txs = txSeqTxns txsSeq
+            txs = txSeqTxns $ bodyTxs body
             totalRefScriptSize =
               getSum $ foldMap' (Monoid.Sum . txNonDistinctRefScriptsSize utxo) txs
         totalRefScriptSize

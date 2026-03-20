@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), bodyTxs)
 import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
@@ -247,10 +247,10 @@ instance
   Same era (ShelleyLedgerExamples era)
   where
   same proof x1 x2 = case (sleBlock x1, sleBlock x2) of
-    (Block' h1 a1 _, Block' h2 a2 _) ->
+    (Block' h1 a1 _ _ _, Block' h2 a2 _ _ _) ->
       sameWithDependency
         [ SomeM "Tx" (sameTx proof) (sleTx x1) (sleTx x2)
-        , SomeM "TxSeq" (sameTxSeq proof) a1 a2
+        , SomeM "TxSeq" (sameTxSeq proof) (bodyTxs a1) (bodyTxs a2)
         ]
         ++ [ ("BlockHeader", if h1 == h2 then Nothing else Just ("UnequalBlockHeader"))
            ,

@@ -26,6 +26,7 @@ import Cardano.Ledger.BaseTypes (Globals, SlotNo (..))
 import Cardano.Ledger.Block (
   Block (..),
   bheader,
+  bodyTxs,
   neededTxInsForBlock,
  )
 import Cardano.Ledger.CertState (EraCertState (..))
@@ -254,7 +255,8 @@ ledgerTraceBase chainSt block =
   , txs
   )
   where
-    (UnserialisedBlock (BHeader bhb _) txSeq) = block
+    (UnserialisedBlock (BHeader bhb _) body) = block
+    txSeq = bodyTxs body
     slot = bheaderSlotNo bhb
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt
