@@ -15,10 +15,9 @@ import Cardano.Ledger.Shelley.TxAuxData (
   ShelleyTxAuxData (..),
  )
 import Control.Exception (assert)
-import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T (pack)
-import qualified Data.Text.Encoding as T
+import qualified Data.Text.Foreign as T (lengthWord8)
 import Data.Word (Word64)
 import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
@@ -81,7 +80,7 @@ genDatumString =
     n <- QC.choose (0, min sz 64)
     cs <- genUtf8StringOfSize n
     let s = T.pack cs
-    assert (BS.length (T.encodeUtf8 s) == n) $
+    assert (T.lengthWord8 s == n) $
       return (S s)
 
 -- | Produce an arbitrary Unicode string such that it's UTF8 encoding size in

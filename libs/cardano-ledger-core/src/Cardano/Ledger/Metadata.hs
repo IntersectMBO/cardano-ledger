@@ -38,10 +38,9 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData (rnf))
 import Data.Array.Byte (ByteArray (..))
-import qualified Data.ByteString as BS
 import qualified Data.Primitive.ByteArray as Prim
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import qualified Data.Text.Foreign as T (lengthWord8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -76,7 +75,7 @@ validMetadatum :: Metadatum -> Bool
 -- The integer size/representation checks are enforced in the decoder.
 validMetadatum (I _) = True
 validMetadatum (B ba) = Prim.sizeofByteArray ba <= 64
-validMetadatum (S s) = BS.length (T.encodeUtf8 s) <= 64
+validMetadatum (S s) = T.lengthWord8 s <= 64
 validMetadatum (List xs) = all validMetadatum xs
 validMetadatum (Map kvs) =
   all
