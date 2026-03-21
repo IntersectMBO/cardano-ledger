@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.15.0.1
+## 1.16.0.0
 
-*
+* Add `EraForecast` and `ShelleyEraForecast` instances for `AlonzoEra`.
 
 ## 1.15.0.0
 

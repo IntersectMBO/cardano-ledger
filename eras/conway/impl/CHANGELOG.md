@@ -2,6 +2,8 @@
 
 ## 1.22.0.0
 
+* Add `EraForecast` instance for `ConwayEra`.
+* Update `PredicateFailure` for `ConwayTICKF` to `Void` and remove `ConwayTickfPredFailure`.
 * Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
 
 ## 1.21.0.0

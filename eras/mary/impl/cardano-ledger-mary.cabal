@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-mary
-version: 1.10.0.0
+version: 1.11.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -39,6 +39,7 @@ library
   other-modules:
     Cardano.Ledger.Mary.BlockBody
     Cardano.Ledger.Mary.Era
+    Cardano.Ledger.Mary.Forecast
     Cardano.Ledger.Mary.PParams
     Cardano.Ledger.Mary.Rules
     Cardano.Ledger.Mary.Rules.Bbody
@@ -82,10 +83,10 @@ library
     bytestring,
     cardano-crypto-class ^>=2.3,
     cardano-data ^>=1.3,
-    cardano-ledger-allegra ^>=1.9,
+    cardano-ledger-allegra ^>=1.10,
     cardano-ledger-binary >=1.4,
     cardano-ledger-core:{cardano-ledger-core, internal} >=1.19,
-    cardano-ledger-shelley ^>=1.18,
+    cardano-ledger-shelley ^>=1.19,
     cardano-strict-containers,
     containers,
     deepseq,

@@ -87,7 +87,7 @@ genBlock ::
   forall era c.
   ( MinLEDGER_STS era
   , ApplyBlock era
-  , GetLedgerView era
+  , ShelleyEraForecast era
   , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv c era)
   , EraGen era
   , PraosCrypto c
@@ -105,7 +105,7 @@ genBlock ge = genBlockWithTxGen genTxs ge
 
 genBlockWithTxGen ::
   forall era c.
-  ( GetLedgerView era
+  ( ShelleyEraForecast era
   , ApplyBlock era
   , EraGen era
   , PraosCrypto c
@@ -197,7 +197,7 @@ genBlockWithTxGen
 selectNextSlotWithLeader ::
   forall era c.
   ( EraGen era
-  , GetLedgerView era
+  , ShelleyEraForecast era
   , ApplyBlock era
   , PraosCrypto c
   ) =>
@@ -274,7 +274,8 @@ selectNextSlotWithLeader
 -- | The chain state is a composite of the new epoch state and the chain dep
 -- state. We tick both.
 tickChainState ::
-  (GetLedgerView era, ApplyBlock era) =>
+  forall era.
+  (ShelleyEraForecast era, ApplyBlock era) =>
   SlotNo ->
   ChainState era ->
   ChainState era
@@ -297,10 +298,10 @@ tickChainState
                 Origin -> NeutralNonce
                 At (LastAppliedBlock {labHash}) -> hashHeaderToNonce labHash
             }
-        lv = either (error . show) id $ futureLedgerView testGlobals chainNes slotNo
+        forecast = futureForecast testGlobals slotNo chainNes
         isNewEpoch = epochFromSlotNo slotNo /= nesEL chainNes
         ChainDepState {csProtocol, csTickn} =
-          tickChainDepState testGlobals lv isNewEpoch cds
+          tickChainDepState testGlobals (forecastToTPraosLedgerView @Future @era forecast) isNewEpoch cds
         PrtclState ocertIssue evNonce candNonce = csProtocol
         nes' = applyTickNoEvents testGlobals chainNes slotNo
      in ChainState

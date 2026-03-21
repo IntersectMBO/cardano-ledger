@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -34,7 +33,6 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.Val ((<->))
-import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader (
   LastAppliedBlock (..),
   hashHeaderToNonce,
@@ -50,6 +48,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
+import Data.Void (Void)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
@@ -86,7 +85,7 @@ instance
   ( EraGen era
   , EraBlockBody era
   , ApplyBlock era
-  , GetLedgerView era
+  , ShelleyEraForecast era
   , MinLEDGER_STS era
   , MinCHAIN_STS era
   , Embed (EraRule "BBODY" era) (CHAIN era)
@@ -102,6 +101,7 @@ instance
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv MockCrypto era)
+  , PredicateFailure (EraRule "TICKF" era) ~ Void
   ) =>
   HasTrace (CHAIN era) (GenEnv MockCrypto era)
   where
