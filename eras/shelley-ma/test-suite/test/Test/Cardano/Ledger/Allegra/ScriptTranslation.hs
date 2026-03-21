@@ -56,7 +56,7 @@ testScriptPostTranslation =
             S.UTxO $
               Map.singleton
                 (S.TxIn bootstrapTxId minBound)
-                (S.ShelleyTxOut addr (Val.inject (S.Coin 1)))
+                (mkBasicTxOut addr (Val.inject (S.Coin 1)))
           env =
             S.LedgerEnv
               (SlotNo 0)
@@ -66,16 +66,12 @@ testScriptPostTranslation =
               (ChainAccountState (S.Coin 0) (S.Coin 0))
           utxoStShelley = def {S.utxosUtxo = utxo}
           utxoStAllegra = fromRight . runExcept $ translateEra @AllegraEra NoGenesis utxoStShelley
+          txb :: TxBody TopTx ShelleyEra
           txb =
-            S.ShelleyTxBody
-              (Set.singleton $ S.TxIn bootstrapTxId minBound)
-              StrictSeq.empty
-              StrictSeq.empty
-              (S.Withdrawals mempty)
-              (S.Coin 1)
-              (SlotNo 1)
-              S.SNothing
-              S.SNothing
+            mkBasicTxBody
+              & inputsTxBodyL .~ Set.singleton (S.TxIn bootstrapTxId minBound)
+              & feeTxBodyL .~ S.Coin 1
+              & ttlTxBodyL .~ SlotNo 1
           wits = mkBasicTxWits & scriptTxWitsL .~ Map.singleton scriptHash script
           txs = mkBasicTx txb & witsTxL .~ wits
           txa = fromRight . runExcept $ translateEra @AllegraEra NoGenesis txs

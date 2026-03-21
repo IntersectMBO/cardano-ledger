@@ -45,12 +45,9 @@ import Cardano.Ledger.Alonzo.Tx (
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (
-  AlonzoTxOut (..),
-  TxBody (..),
   utxoEntrySize,
  )
 import Cardano.Ledger.Alonzo.TxWits (
-  AlonzoTxWits (..),
   Redeemers (..),
   TxDats (..),
   unRedeemersL,
@@ -312,25 +309,26 @@ genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals 
       txouts3 = fmap addMaybeDataHashToTxOut txouts2
   validityInterval <- genValidityInterval currentslot
   return
-    ( AlonzoTxBody
-        input
-        (Set.filter (okAsCollateral utxo) input) -- Set.empty -- collateral -- TODO do something better here (use genenv ?)
-        txouts3
-        certs
-        withdrawals
-        fee
-        validityInterval -- (ValidityInterval SNothing SNothing) -- (ValidityInterval low high)
-        updates
-        -- reqSignerHashes
-        Set.empty -- TODO do something better here
-        minted2
+    ( mkBasicTxBody
+        & inputsTxBodyL .~ input
+        & collateralInputsTxBodyL .~ Set.filter (okAsCollateral utxo) input -- TODO do something better here (use genenv ?)
+        & outputsTxBodyL .~ txouts3
+        & certsTxBodyL .~ certs
+        & withdrawalsTxBodyL .~ withdrawals
+        & feeTxBodyL .~ fee
+        & vldtTxBodyL .~ validityInterval
+        & updateTxBodyL .~ updates
+        & reqSignerHashesTxBodyL .~ Set.empty -- TODO do something better here
+        & mintTxBodyL .~ minted2
         -- scriptIntegrityHash starts out with empty Redeemers,
         -- as Remdeemers are added it is recomputed in updateEraTxBody
-        ( SJust . hashScriptIntegrity @AlonzoEra $
-            ScriptIntegrity (Redeemers Map.empty) (TxDats Map.empty) Set.empty
-        )
-        auxDHash
-        netid
+        & scriptIntegrityHashTxBodyL
+          .~ SJust
+            ( hashScriptIntegrity @AlonzoEra $
+                ScriptIntegrity (Redeemers Map.empty) (TxDats Map.empty) Set.empty
+            )
+        & auxDataHashTxBodyL .~ auxDHash
+        & networkIdTxBodyL .~ netid
     , List.map NativeScript scriptsFromPolicies <> plutusScripts
     )
 
@@ -426,18 +424,18 @@ instance EraGen AlonzoEra where
   genEraTxBody = genAlonzoTxBody
   updateEraTxBody utxo pp wits txb coinx txin txout =
     txb
-      { atbInputs = newInputs
-      , atbCollateral = newCollaterals
-      , atbTxFee = coinx
-      , atbOutputs = newOutputs
-      , -- The wits may have changed, recompute the scriptIntegrityHash.
-        atbScriptIntegrityHash =
-          hashScriptIntegrity
-            <$> computeScriptIntegrity
-              pp
-              utxo
-              (mkBasicTx txb & witsTxL .~ wits)
-      }
+      & inputsTxBodyL .~ newInputs
+      & collateralInputsTxBodyL .~ newCollaterals
+      & feeTxBodyL .~ coinx
+      & outputsTxBodyL .~ newOutputs
+      -- The wits may have changed, recompute the scriptIntegrityHash.
+      & scriptIntegrityHashTxBodyL
+        .~ ( hashScriptIntegrity
+               <$> computeScriptIntegrity
+                 pp
+                 utxo
+                 (mkBasicTx txb & witsTxL .~ wits)
+           )
     where
       requiredCollateral = ceiling $ fromIntegral (pp ^. ppCollateralPercentageL) * unCoin coinx % 100
       potentialCollateral = Set.filter (okAsCollateral utxo) txin
@@ -448,24 +446,23 @@ instance EraGen AlonzoEra where
         if null $ wits ^. rdmrsTxWitsL . unRedeemersL
           then mempty
           else Set.fromList . takeUntilSum requiredCollateral $ txInAmounts potentialCollateral
-      newInputs = atbInputs txb <> txin
-      newOutputs = atbOutputs txb :|> txout
+      newInputs = (txb ^. inputsTxBodyL) <> txin
+      newOutputs = (txb ^. outputsTxBodyL) :|> txout
 
-  addInputs txb txin = txb {atbInputs = atbInputs txb <> txin}
+  addInputs txb txin = txb & inputsTxBodyL %~ (<> txin)
 
   genEraPParamsUpdate = genAlonzoPParamsUpdate
   genEraPParams = genAlonzoPParams
   genEraTxWits (utxo, txbody, scriptinfo) setWitVKey mapScriptWit = new
     where
       new =
-        AlonzoTxWits
-          setWitVKey
-          Set.empty
-          mapScriptWit
+        mkBasicTxWits
+          & addrTxWitsL .~ setWitVKey
+          & scriptTxWitsL .~ mapScriptWit
           -- (dataMapFromTxOut (Prelude.foldr (:) [] (outputs' txbody)) (TxDats (getDataMap scriptinfo mapScriptWit)))
-          (dataMapFromTxOut smallUtxo (TxDats (getDataMap scriptinfo mapScriptWit)))
+          & datsTxWitsL .~ dataMapFromTxOut smallUtxo (TxDats (getDataMap scriptinfo mapScriptWit))
           -- The data hashes come from two places
-          (Redeemers rdmrMap)
+          & rdmrsTxWitsL .~ Redeemers rdmrMap
       txinputs = txbody ^. inputsTxBodyL
       smallUtxo :: [TxOut AlonzoEra]
       smallUtxo = Map.elems (unUTxO (txInsFilter utxo txinputs))
@@ -485,7 +482,7 @@ instance EraGen AlonzoEra where
 
   constructTx bod wit auxdata = MkAlonzoTx $ AlonzoTx bod wit (IsValid v) auxdata
     where
-      v = all twoPhaseValidates (txscripts wit)
+      v = all twoPhaseValidates (wit ^. scriptTxWitsL)
       twoPhaseValidates script =
         isNativeScript @AlonzoEra script
           || (phase2scripts3ArgSucceeds script && phase2scripts2ArgSucceeds script)
@@ -575,14 +572,16 @@ getDataMap (scriptInfo3, _) = Map.foldlWithKey' accum Map.empty
 
 instance MinGenTxout AlonzoEra where
   calcEraMinUTxO txOut pp = utxoEntrySize txOut <×> unCoinPerWord (pp ^. ppCoinsPerUTxOWordL)
-  addValToTxOut v (AlonzoTxOut a u _b) = AlonzoTxOut a (v <+> u) (dataFromAddr a)
+  addValToTxOut v txout =
+    let addr = txout ^. addrTxOutL
+     in txout & valueTxOutL %~ (v <+>) & dataHashTxOutL .~ dataFromAddr addr
   genEraTxOut genv genVal addrs = do
     values <- replicateM (length addrs) genVal
     let makeTxOut addr val =
           case addr of
             Addr _network (ScriptHashObj shash) _stakeref ->
-              AlonzoTxOut addr val $ snd $ findPlutus genv shash
-            _ -> AlonzoTxOut addr val SNothing
+              mkBasicTxOut addr val & dataHashTxOutL .~ snd (findPlutus genv shash)
+            _ -> mkBasicTxOut addr val
     pure (zipWith makeTxOut addrs values)
 
 -- | If an Address is script address, we can find a potential data hash for it from
@@ -605,14 +604,17 @@ dataMapFromTxOut ::
 dataMapFromTxOut txouts datahashmap = F.foldl' accum datahashmap txouts
   where
     f dhash info = hashData (getData3 info) == dhash
-    accum !ans (AlonzoTxOut _ _ SNothing) = ans
-    accum ans@(TxDats m) (AlonzoTxOut _ _ (SJust dhash)) =
-      case List.find (f dhash) (genEraTwoPhase3Arg @AlonzoEra) of
-        Just info -> TxDats (Map.insert dhash (Data (getData3 info)) m)
-        Nothing -> ans
+    accum !ans txout =
+      case txout ^. dataHashTxOutL of
+        SNothing -> ans
+        SJust dhash ->
+          let TxDats m = ans
+           in case List.find (f dhash) (genEraTwoPhase3Arg @AlonzoEra) of
+                Just info -> TxDats (Map.insert dhash (Data (getData3 info)) m)
+                Nothing -> ans
 
 addMaybeDataHashToTxOut :: TxOut AlonzoEra -> TxOut AlonzoEra
-addMaybeDataHashToTxOut (AlonzoTxOut addr val _) = AlonzoTxOut addr val (dataFromAddr addr)
+addMaybeDataHashToTxOut txout = txout & dataHashTxOutL .~ dataFromAddr (txout ^. addrTxOutL)
 
 someLeaf ::
   forall era.

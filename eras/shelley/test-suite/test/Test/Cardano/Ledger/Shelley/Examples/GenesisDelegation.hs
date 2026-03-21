@@ -10,17 +10,14 @@ module Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation (
   genesisDelegExample,
 ) where
 
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes ()
 import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), asWitness)
-import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<->))
@@ -29,9 +26,9 @@ import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default (Default)
-import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
@@ -108,49 +105,45 @@ feeTx1 = Coin 1
 
 txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
-  ShelleyTxBody
-    (Set.fromList [TxIn genesisId minBound])
-    (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr aliceCoinEx1)
-    ( StrictSeq.fromList
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [TxIn genesisId minBound]
+    & outputsTxBodyL .~ StrictSeq.singleton (mkBasicTxOut Cast.aliceAddr aliceCoinEx1)
+    & certsTxBodyL
+      .~ StrictSeq.fromList
         [ GenesisDelegTxCert
             (hashKey (coreNodeVK 0))
             (hashKey (vKey newGenDelegate))
             newGenesisVrfKH
         ]
-    )
-    (Withdrawals Map.empty)
-    (Coin 1)
-    (SlotNo 10)
-    SNothing
-    SNothing
+    & feeTxBodyL .~ Coin 1
+    & ttlTxBodyL .~ SlotNo 10
   where
     aliceCoinEx1 = aliceInitCoin <-> Val.inject feeTx1
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
-txEx1 :: ShelleyTx TopTx ShelleyEra
-txEx1 = ShelleyTx txbodyEx1 txwits SNothing
-  where
-    txwits :: ShelleyTxWits ShelleyEra
-    txwits =
-      mempty
-        { addrWits =
-            mkWitnessesVKey
-              (hashAnnotated txbodyEx1)
-              ( [asWitness Cast.alicePay]
-                  <> [ asWitness $
-                         KeyPair @GenesisRole
-                           (coreNodeVK 0)
-                           (coreNodeSK 0)
-                     ]
-              )
-        }
+txEx1 :: Tx TopTx ShelleyEra
+txEx1 =
+  mkBasicTx txbodyEx1
+    & witsTxL
+      .~ ( mkBasicTxWits
+             & addrTxWitsL
+               .~ mkWitnessesVKey
+                 (hashAnnotated txbodyEx1)
+                 ( [asWitness Cast.alicePay]
+                     <> [ asWitness $
+                            KeyPair @GenesisRole
+                              (coreNodeVK 0)
+                              (coreNodeSK 0)
+                        ]
+                 )
+         )
 
 blockEx1 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx1 =
   mkBlockFakeVRF @ShelleyEra
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [MkShelleyTx txEx1]
+    [txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0

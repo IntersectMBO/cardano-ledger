@@ -15,9 +15,9 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Babbage (ApplyTxError (BabbageApplyTxError), BabbageEra)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (..))
+import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
-import Cardano.Ledger.Binary (mkSized)
+import Cardano.Ledger.Binary ()
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..))
@@ -68,7 +68,7 @@ ledgerExamples =
           DelegsFailure $
             DelplFailure $
               DelegFailure $
-                DelegateeNotRegisteredDELEG @BabbageEra (mkKeyHash 1)
+                DelegateeNotRegisteredDELEG (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
     exampleTxBabbage
@@ -90,47 +90,48 @@ exampleTxBabbage =
   exampleTx
     exampleTxBodyBabbage
     (AlonzoSpending $ AsIx 0)
-    (RequireAllOf @BabbageEra mempty)
+    (RequireAllOf mempty)
 
 exampleTxBodyBabbage :: TxBody TopTx BabbageEra
 exampleTxBodyBabbage =
-  BabbageTxBody
-    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]) -- spending inputs
-    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 2)) 1]) -- collateral inputs
-    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 3]) -- reference inputs
-    ( StrictSeq.fromList
-        [ mkSized (eraProtVerHigh @BabbageEra) $
-            BabbageTxOut
-              (mkAddr examplePayKey exampleStakeKey)
-              (exampleMultiAssetValue 2)
-              (Datum $ dataToBinaryData exampleDatum) -- inline datum
-              (SJust $ alwaysSucceeds @'PlutusV2 3) -- reference script
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]
+    & collateralInputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 2)) 1]
+    & referenceInputsTxBodyL .~ Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 3]
+    & outputsTxBodyL
+      .~ StrictSeq.fromList
+        [ mkBasicTxOut
+            (mkAddr examplePayKey exampleStakeKey)
+            (exampleMultiAssetValue 2)
+            & datumTxOutL .~ Datum (dataToBinaryData exampleDatum) -- inline datum
+            & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV2 3) -- reference script
         ]
-    )
-    (SJust $ mkSized (eraProtVerHigh @BabbageEra) exampleCollateralOutput) -- collateral return
-    (SJust $ Coin 8675309) -- collateral tot
-    exampleCerts
-    ( Withdrawals $
-        Map.singleton
-          (AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey)))
-          (Coin 100)
-    )
-    (Coin 999) -- txfee
-    (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))) -- txvldt
-    ( SJust $
-        Update
-          ( ProposedPPUpdates $
-              Map.singleton
-                (mkKeyHash 1)
-                (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
-          )
-          (EpochNo 0)
-    ) -- txUpdates
-    (Set.singleton $ mkKeyHash 212) -- reqSignerHashes
-    exampleMultiAsset -- mint
-    (SJust $ mkDummySafeHash 42) -- scriptIntegrityHash
-    (SJust . TxAuxDataHash $ mkDummySafeHash 42) -- adHash
-    (SJust Mainnet) -- txnetworkid
+    & collateralReturnTxBodyL .~ SJust exampleCollateralOutput
+    & totalCollateralTxBodyL .~ SJust (Coin 8675309)
+    & certsTxBodyL .~ exampleCerts
+    & withdrawalsTxBodyL
+      .~ Withdrawals
+        ( Map.singleton
+            (AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey)))
+            (Coin 100)
+        )
+    & feeTxBodyL .~ Coin 999
+    & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))
+    & updateTxBodyL
+      .~ SJust
+        ( Update
+            ( ProposedPPUpdates $
+                Map.singleton
+                  (mkKeyHash 1)
+                  (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
+            )
+            (EpochNo 0)
+        )
+    & reqSignerHashesTxBodyL .~ Set.singleton (mkKeyHash 212)
+    & mintTxBodyL .~ exampleMultiAsset
+    & scriptIntegrityHashTxBodyL .~ SJust (mkDummySafeHash 42)
+    & auxDataHashTxBodyL .~ SJust (TxAuxDataHash $ mkDummySafeHash 42)
+    & networkIdTxBodyL .~ SJust Mainnet
   where
     MaryValue _ exampleMultiAsset = exampleMultiAssetValue 3
 
@@ -138,10 +139,8 @@ exampleCollateralOutput ::
   ( BabbageEraTxOut era
   , Value era ~ MaryValue
   ) =>
-  BabbageTxOut era
+  TxOut era
 exampleCollateralOutput =
-  BabbageTxOut
+  mkBasicTxOut
     (mkAddr examplePayKey exampleStakeKey)
     (MaryValue (Coin 8675309) mempty)
-    NoDatum
-    SNothing

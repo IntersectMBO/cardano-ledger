@@ -14,12 +14,10 @@ module Test.Cardano.Ledger.Babbage.Translation.TranslatableGen (
 
 import Cardano.Ledger.Alonzo.Plutus.Context (SupportedLanguage (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
-import Cardano.Ledger.Alonzo.TxWits
-import Cardano.Ledger.Babbage (BabbageEra, Tx (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, Redeemers (..))
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (BabbageTxBody))
-import Cardano.Ledger.Binary (mkSized)
+import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
@@ -29,7 +27,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genScripts)
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (TranslatableGen (..))
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
@@ -48,15 +46,15 @@ import Test.QuickCheck (
 
 instance TranslatableGen BabbageEra where
   tgRedeemers = genRedeemers
-  tgTx l = MkBabbageTx <$> genTx @BabbageEra (asSTxTopLevel <$> genTxBody l)
+  tgTx l = genTx @BabbageEra (asSTxTopLevel <$> genTxBody l)
   tgUtxo = utxoWithTx @BabbageEra
 
 utxoWithTx ::
   forall era.
   ( EraTx era
+  , BabbageEraTxOut era
   , Arbitrary (Value era)
   , Arbitrary (Script era)
-  , TxOut era ~ BabbageTxOut era
   ) =>
   SupportedLanguage era ->
   Tx TopTx era ->
@@ -69,26 +67,31 @@ utxoWithTx l tx = do
 genTx ::
   forall era.
   ( TranslatableGen era
+  , AlonzoEraTx era
   , Arbitrary (TxAuxData era)
   , AlonzoTxWits era ~ TxWits era
   ) =>
   Gen (TxBody TopTx era) ->
-  Gen (AlonzoTx TopTx era)
-genTx txbGen =
-  AlonzoTx
-    <$> txbGen
-    <*> genTxWits @era
-    <*> arbitrary
-    <*> arbitrary
+  Gen (Tx TopTx era)
+genTx txbGen = do
+  txb <- txbGen
+  wits <- genTxWits @era
+  isValid <- arbitrary
+  auxData <- arbitrary
+  pure $
+    mkBasicTx txb
+      & witsTxL .~ wits
+      & isValidTxL .~ isValid
+      & auxDataTxL .~ auxData
 
 genTxOut ::
   forall era.
-  ( EraTxOut era
+  ( BabbageEraTxOut era
   , Arbitrary (Value era)
   , Arbitrary (Script era)
   ) =>
   SupportedLanguage era ->
-  Gen (BabbageTxOut era)
+  Gen (TxOut era)
 genTxOut (SupportedLanguage slang) = do
   addr <- genNonByronAddr
   value <- scale (`div` 15) arbitrary
@@ -98,32 +101,51 @@ genTxOut (SupportedLanguage slang) = do
   datum <- case slang of
     SPlutusV1 -> oneof [pure NoDatum, DatumHash <$> (arbitrary :: Gen DataHash)]
     _ -> arbitrary
-  pure $ BabbageTxOut addr value datum script
+  pure $
+    mkBasicTxOut addr value
+      & datumTxOutL .~ datum
+      & referenceScriptTxOutL .~ script
 
 genTxBody :: SupportedLanguage BabbageEra -> Gen (TxBody TopTx BabbageEra)
 genTxBody l@(SupportedLanguage slang) = do
-  let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @BabbageEra) <$> genTxOut @BabbageEra l)
+  let genTxOuts = fromList <$> listOf1 (genTxOut @BabbageEra l)
   let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen TxIn)
-  BabbageTxBody
-    <$> genTxIns
-    <*> arbitrary
-    <*> ( case slang of -- refinputs
-            SPlutusV1 -> pure Set.empty
-            _ -> arbitrary
-        )
-    <*> genTxOuts
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> scale (`div` 15) arbitrary
-    <*> arbitrary
-    <*> scale (`div` 15) arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
+  txIns <- genTxIns
+  collIns <- arbitrary
+  refIns <- case slang of
+    SPlutusV1 -> pure Set.empty
+    _ -> arbitrary
+  txOuts <- genTxOuts
+  collReturn <- arbitrary
+  totColl <- arbitrary
+  certs <- arbitrary
+  withdrawals <- arbitrary
+  fee <- arbitrary
+  vldt <- arbitrary
+  update <- scale (`div` 15) arbitrary
+  reqSignerHashes <- arbitrary
+  mint <- scale (`div` 15) arbitrary
+  scriptIntegrityHash <- arbitrary
+  adHash <- arbitrary
+  txNetworkId <- arbitrary
+  pure $
+    mkBasicTxBody
+      & inputsTxBodyL .~ txIns
+      & collateralInputsTxBodyL .~ collIns
+      & referenceInputsTxBodyL .~ refIns
+      & outputsTxBodyL .~ txOuts
+      & collateralReturnTxBodyL .~ collReturn
+      & totalCollateralTxBodyL .~ totColl
+      & certsTxBodyL .~ certs
+      & withdrawalsTxBodyL .~ withdrawals
+      & feeTxBodyL .~ fee
+      & vldtTxBodyL .~ vldt
+      & updateTxBodyL .~ update
+      & reqSignerHashesTxBodyL .~ reqSignerHashes
+      & mintTxBodyL .~ mint
+      & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+      & auxDataHashTxBodyL .~ adHash
+      & networkIdTxBodyL .~ txNetworkId
 
 genNonByronAddr :: Gen Addr
 genNonByronAddr =
@@ -136,15 +158,23 @@ genNonByronAddr =
       ]
 
 genTxWits ::
-  TranslatableGen era =>
-  Gen (AlonzoTxWits era)
-genTxWits =
-  AlonzoTxWits
-    <$> arbitrary
-    <*> arbitrary
-    <*> genScripts
-    <*> arbitrary
-    <*> tgRedeemers
+  ( TranslatableGen era
+  , AlonzoEraTxWits era
+  ) =>
+  Gen (TxWits era)
+genTxWits = do
+  addrWits <- arbitrary
+  bootAddrWits <- arbitrary
+  scripts <- genScripts
+  datums <- arbitrary
+  redeemers <- tgRedeemers
+  pure $
+    mkBasicTxWits
+      & addrTxWitsL .~ addrWits
+      & bootAddrTxWitsL .~ bootAddrWits
+      & scriptTxWitsL .~ scripts
+      & datsTxWitsL .~ datums
+      & rdmrsTxWitsL .~ redeemers
 
 genRedeemers ::
   forall era.

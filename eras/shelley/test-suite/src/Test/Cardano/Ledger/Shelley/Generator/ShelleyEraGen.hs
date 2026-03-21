@@ -5,7 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -18,6 +17,7 @@ import Cardano.Ledger.Shelley.API (
   Coin (..),
   Update,
  )
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
   pattern RequireAllOf,
@@ -28,7 +28,6 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Shelley.TxBody (
   TxBody (..),
  )
-import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -37,6 +36,7 @@ import Control.Monad (replicateM)
 import Data.Foldable (toList)
 import Data.Sequence.Strict (StrictSeq ((:|>)), fromList)
 import Data.Set (Set)
+import Lens.Micro ((&), (.~))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
@@ -111,15 +111,15 @@ genTxBody ::
 genTxBody _pparams slot inputs outputs certs withdrawals fee update adHash = do
   ttl <- genTimeToLive slot
   return
-    ( ShelleyTxBody
-        inputs
-        outputs
-        certs
-        withdrawals
-        fee
-        ttl
-        update
-        adHash
+    ( mkBasicTxBody
+        & inputsTxBodyL .~ inputs
+        & outputsTxBodyL .~ outputs
+        & certsTxBodyL .~ certs
+        & withdrawalsTxBodyL .~ withdrawals
+        & feeTxBodyL .~ fee
+        & ttlTxBodyL .~ ttl
+        & updateTxBodyL .~ update
+        & auxDataHashTxBodyL .~ adHash
     , [] -- Shelley does not need any additional script witnesses
     )
 
@@ -130,7 +130,7 @@ genTimeToLive currentSlot = do
 
 instance MinGenTxout ShelleyEra where
   calcEraMinUTxO _txout = view ppMinUTxOValueL
-  addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
+  addValToTxOut v txout = txout & valueTxOutL .~ (v <+> view valueTxOutL txout)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal
     pure (zipWith mkBasicTxOut addrs values)

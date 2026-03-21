@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.PParams (
  )
 import Cardano.Ledger.Alonzo.Rules (FailureDescription (..), TagMismatchDescription (..))
 import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
+import Cardano.Ledger.Alonzo.TxBody (utxoEntrySize)
 import Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
@@ -77,7 +77,7 @@ coinsPerUTxOWordLocal = quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
     utxoEntrySizeWithoutValLocal = 29
     Coin minUTxOValueShelleyMA = minUTxO
 
-calcMinUTxO :: AlonzoTxOut AlonzoEra -> Coin
+calcMinUTxO :: TxOut AlonzoEra -> Coin
 calcMinUTxO tout = Coin (utxoEntrySize tout * coinsPerUTxOWordLocal)
 
 tests :: Spec
@@ -96,31 +96,21 @@ goldenUTxOEntryMinAda =
   describe "golden tests - UTxOEntryMinAda" $ do
     it "one policy, one (smallest) name, yes datum hash" $
       calcMinUTxO
-        ( AlonzoTxOut
-            carlAddr
-            (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
-            (SJust $ hashData @AlonzoEra (Data (PV1.List [])))
+        ( mkBasicTxOut carlAddr (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
+            & dataHashTxOutL .~ SJust (hashData @AlonzoEra (Data (PV1.List [])))
         )
         `shouldBe` Coin 1655136
     it "one policy, one (smallest) name, no datum hash" $
       calcMinUTxO
-        ( AlonzoTxOut
-            bobAddr
-            (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
-            SNothing
-        )
+        (mkBasicTxOut bobAddr (valueFromList (Coin 1407406) [(pid1, smallestName, 1)]))
         `shouldBe` Coin 1310316
     it "one policy, one (small) name" $
       calcMinUTxO
-        ( AlonzoTxOut
-            aliceAddr
-            (valueFromList (Coin 1444443) [(pid1, smallName 1, 1)])
-            SNothing
-        )
+        (mkBasicTxOut aliceAddr (valueFromList (Coin 1444443) [(pid1, smallName 1, 1)]))
         `shouldBe` Coin 1344798
     it "one policy, three (small) names" $
       calcMinUTxO
-        ( AlonzoTxOut
+        ( mkBasicTxOut
             aliceAddr
             ( valueFromList
                 (Coin 1555554)
@@ -129,20 +119,15 @@ goldenUTxOEntryMinAda =
                 , (pid1, smallName 3, 1)
                 ]
             )
-            SNothing
         )
         `shouldBe` Coin 1448244
     it "one policy, one (largest) name" $
       calcMinUTxO
-        ( AlonzoTxOut
-            carlAddr
-            (valueFromList (Coin 1555554) [(pid1, largestName 65, 1)])
-            SNothing
-        )
+        (mkBasicTxOut carlAddr (valueFromList (Coin 1555554) [(pid1, largestName 65, 1)]))
         `shouldBe` Coin 1448244
     it "one policy, three (largest) name, with hash" $
       calcMinUTxO
-        ( AlonzoTxOut
+        ( mkBasicTxOut
             carlAddr
             ( valueFromList
                 (Coin 1962961)
@@ -151,36 +136,31 @@ goldenUTxOEntryMinAda =
                 , (pid1, largestName 67, 1)
                 ]
             )
-            (SJust $ hashData @AlonzoEra (Data (PV1.Constr 0 [PV1.Constr 0 []])))
+            & dataHashTxOutL .~ SJust (hashData @AlonzoEra (Data (PV1.Constr 0 [PV1.Constr 0 []])))
         )
         `shouldBe` Coin 2172366
     it "two policies, one (smallest) name" $
       calcMinUTxO
-        ( AlonzoTxOut
+        ( mkBasicTxOut
             aliceAddr
             (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
-            SNothing
         )
         `shouldBe` Coin 1482726
     it "two policies, one (smallest) name, with hash" $
       calcMinUTxO
-        ( AlonzoTxOut
+        ( mkBasicTxOut
             aliceAddr
             (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
-            (SJust $ hashData @AlonzoEra (Data (PV1.Constr 0 [])))
+            & dataHashTxOutL .~ SJust (hashData @AlonzoEra (Data (PV1.Constr 0 [])))
         )
         `shouldBe` Coin 1827546
     it "two policies, two (small) names" $
       calcMinUTxO
-        ( AlonzoTxOut
-            bobAddr
-            (valueFromList (Coin 1629628) [(pid1, smallName 1, 1), (pid2, smallName 2, 1)])
-            SNothing
-        )
+        (mkBasicTxOut bobAddr (valueFromList (Coin 1629628) [(pid1, smallName 1, 1), (pid2, smallName 2, 1)]))
         `shouldBe` Coin 1517208
     it "three policies, ninety-six (small) names" $
       calcMinUTxO
-        ( AlonzoTxOut
+        ( mkBasicTxOut
             aliceAddr
             ( let f i c = (i, smallName c, 1)
                in valueFromList
@@ -191,7 +171,6 @@ goldenUTxOEntryMinAda =
                     , c <- cs
                     ]
             )
-            SNothing
         )
         `shouldBe` Coin 6896400
     it "utxo entry size of ada-only" $
@@ -199,7 +178,7 @@ goldenUTxOEntryMinAda =
       -- with the old parameter minUTxOValue.
       -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
       -- we can divide minUTxOValue by 29 and round.
-      utxoEntrySize @AlonzoEra (AlonzoTxOut aliceAddr mempty SNothing) `shouldBe` 29
+      utxoEntrySize @AlonzoEra (mkBasicTxOut aliceAddr mempty) `shouldBe` 29
 
 goldenCborSerialization :: Spec
 goldenCborSerialization =
