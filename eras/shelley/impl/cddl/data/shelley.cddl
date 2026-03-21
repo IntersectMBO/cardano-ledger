@@ -176,11 +176,7 @@ vrf_keyhash = hash32
 ; 
 ; The relation between numerator and denominator can be
 ; expressed in CDDL, but we have a limitation currently
-; (see: https://github.com/input-output-hk/cuddle/issues/30)
-; which poses a problem for testing. We need to be able to
-; generate random valid data for testing implementation of
-; our encoders/decoders. Which means we cannot use the actual
-; definition here and we hard code the value to 1/2
+; (see: https://github.com/input-output-hk/cuddle/issues/30). 
 unit_interval = #6.30([uint, uint])
 
 reward_account = bytes
@@ -191,9 +187,15 @@ single_host_addr = (0, port/ nil, ipv4/ nil, ipv6/ nil)
 
 port = uint .le 65535
 
-ipv4 = bytes .size 4
+;  It is not possible to express a bytestring with no upper bound
+;  in CDDL, that's why the upper bound is set to 1024. In reality
+;  there is no such upper bound on the bytestring.
+ipv4 = bytes .size (4 .. 1024)
 
-ipv6 = bytes .size 16
+;  It is not possible to express a bytestring with no upper bound
+;  in CDDL, that's why the upper bound is set to 1024. In reality
+;  there is no such upper bound on the bytestring.
+ipv6 = bytes .size (16 .. 1024)
 
 ; dns_name: An A or AAAA DNS record
 single_host_name = (1, port/ nil, dns_name)
@@ -281,7 +283,7 @@ vkeywitness = [vkey, signature]
 ;   - Disjunctions (script_any)
 ;   - M-of-N thresholds (script_n_of_k)
 ; 
-; Note: Shelley uses VUInt for the threshold in script_n_of_k.
+; Note: Shelley uses VInt for the threshold in script_n_of_k.
 native_script = [script_pubkey// script_all// script_any// script_n_of_k]
 
 script_pubkey = (0, addr_keyhash)
@@ -290,7 +292,7 @@ script_all = (1, [* native_script])
 
 script_any = (2, [* native_script])
 
-script_n_of_k = (3, n : uint, [* native_script])
+script_n_of_k = (3, n : int, [* native_script])
 
 bootstrap_witness = 
   [ public_key : vkey          

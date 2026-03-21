@@ -45,8 +45,7 @@ spec = do
         huddleRoundTripAnnCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
         huddleRoundTripCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
         huddleRoundTripArbitraryValidate @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
-      -- TODO enable this once map/list expansion has been optimized in cuddle
-      -- TODO fails because of plutus scripts
+      -- AuxData
       huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
       xdescribe "fix metadatum" $
         huddleRoundTripArbitraryValidate @(TxAuxData DijkstraEra) v "auxiliary_data"
@@ -62,26 +61,23 @@ spec = do
         huddleRoundTripArbitraryValidate @(TxOut DijkstraEra) v "transaction_output"
       huddleRoundTripAnnCborSpec @(Script DijkstraEra) v "script"
       huddleRoundTripCborSpec @(Script DijkstraEra) v "script"
-      -- TODO fails because of `plutus_v1_script`
-      xdescribe "fix plutus_v1_script" $ huddleRoundTripArbitraryValidate @(Script DijkstraEra) v "script"
+      huddleRoundTripArbitraryValidate @(Script DijkstraEra) v "script"
       huddleRoundTripCborSpec @(Datum DijkstraEra) v "datum_option"
       -- TODO NoDatum is encoded as an empty bytestring
       xdescribe "fix NoDatum" $ huddleRoundTripArbitraryValidate @(Datum DijkstraEra) v "datum_option"
-      -- TODO enable once CDDL sets no longer generate duplicate elements
-      xdescribe "fix duplicates in maps" $ do
+      -- TxWits
+      xdescribe "fix plutus_v4_script" $ do
         huddleRoundTripAnnCborSpec @(TxWits DijkstraEra) v "transaction_witness_set"
         huddleRoundTripCborSpec @(TxWits DijkstraEra) v "transaction_witness_set"
-      -- TODO fails because of plutus_v1_script
-      xdescribe "fix plutus_v1_script" $
-        huddleRoundTripArbitraryValidate @(TxWits DijkstraEra) v "transaction_witness_set"
+      huddleRoundTripArbitraryValidate @(TxWits DijkstraEra) v "transaction_witness_set"
       huddleRoundTripCborSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
-      -- TODO enable this once map/list expansion has been optimized in cuddle
       huddleRoundTripArbitraryValidate @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       huddleRoundTripCborSpec @CostModels v "cost_models"
       huddleRoundTripArbitraryValidate @CostModels v "cost_models"
       huddleRoundTripAnnCborSpec @(Redeemers DijkstraEra) v "redeemers"
       -- TODO arbitrary can generate empty redeemers, which is not allowed in the CDDL
-      xdescribe "fix redeemers" $ huddleRoundTripArbitraryValidate @(Redeemers DijkstraEra) v "redeemers"
+      xdescribe "fix empty redeemers" $
+        huddleRoundTripArbitraryValidate @(Redeemers DijkstraEra) v "redeemers"
       huddleRoundTripCborSpec @(Redeemers DijkstraEra) v "redeemers"
       xdescribe "fix Transaction" $ do
         huddleRoundTripAnnCborSpec @(Tx TopTx DijkstraEra) v "transaction"
@@ -91,18 +87,15 @@ spec = do
       huddleRoundTripCborSpec @(VotingProcedure DijkstraEra) v "voting_procedure"
       huddleRoundTripArbitraryValidate @(VotingProcedure DijkstraEra) v "voting_procedure"
       huddleRoundTripCborSpec @(ProposalProcedure DijkstraEra) v "proposal_procedure"
-      -- TODO This fails because of the hard-coded `reward_account` in the CDDL
       huddleRoundTripArbitraryValidate @(ProposalProcedure DijkstraEra) v "proposal_procedure"
       huddleRoundTripCborSpec @(GovAction DijkstraEra) v "gov_action"
-      -- TODO enable this once map/list expansion has been optimized in cuddle
       huddleRoundTripArbitraryValidate @(GovAction DijkstraEra) v "gov_action"
       huddleRoundTripCborSpec @(TxCert DijkstraEra) v "certificate"
       huddleRoundTripArbitraryValidate @(TxCert DijkstraEra) v "certificate"
       describe "DecCBOR instances equivalence via CDDL" $ do
         huddleDecoderEquivalenceSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
         huddleDecoderEquivalenceSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
-        xdescribe "Fix decoder equivalence of TxAuxData" $ do
-          huddleDecoderEquivalenceSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
+        huddleDecoderEquivalenceSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
         huddleDecoderEquivalenceSpec @(NativeScript DijkstraEra) v "native_script"
         huddleDecoderEquivalenceSpec @(Data DijkstraEra) v "plutus_data"
         huddleDecoderEquivalenceSpec @(Script DijkstraEra) v "script"

@@ -55,7 +55,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   untaggedSet,
 ) where
 
-import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule)
+import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule, plutusScriptGen)
 import Cardano.Ledger.Huddle
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Data.Proxy (Proxy (..))
@@ -544,7 +544,7 @@ instance HuddleGroup "script_any" ShelleyEra where
 instance HuddleGroup "script_n_of_k" ShelleyEra where
   huddleGroupNamed pname p =
     pname
-      =.~ grp [3, "n" ==> VUInt, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
+      =.~ grp [3, "n" ==> VInt, a $ arr [0 <+ a (huddleRule @"native_script" p)]]
 
 instance HuddleRule "native_script" ShelleyEra where
   huddleRuleNamed pname p =
@@ -555,7 +555,7 @@ instance HuddleRule "native_script" ShelleyEra where
           |  - Disjunctions (script_any)
           |  - M-of-N thresholds (script_n_of_k)
           |
-          |Note: Shelley uses VUInt for the threshold in script_n_of_k.
+          |Note: Shelley uses VInt for the threshold in script_n_of_k.
           |]
       $ pname
         =.= arr [a $ huddleGroup @"script_pubkey" p]

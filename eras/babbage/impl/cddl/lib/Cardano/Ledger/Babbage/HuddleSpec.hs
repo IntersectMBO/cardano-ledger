@@ -282,9 +282,6 @@ instance HuddleRule "big_nint" BabbageEra where
 instance HuddleRule "big_int" BabbageEra where
   huddleRuleNamed = bigIntRule
 
-instance HuddleRule "distinct_bytes" BabbageEra where
-  huddleRuleNamed pname _ = distinctBytesRule pname
-
 instance HuddleRule "redeemers" BabbageEra where
   huddleRuleNamed pname p = pname =.= arr [0 <+ a (huddleRule @"redeemer" p)]
 
@@ -524,13 +521,14 @@ instance HuddleGroup "script_invalid_before" BabbageEra where
 instance HuddleGroup "script_invalid_hereafter" BabbageEra where
   huddleGroupNamed = scriptInvalidHereafterGroup
 
-instance (Era era, HuddleRule "distinct_bytes" era) => HuddleRule "plutus_v2_script" era where
-  huddleRuleNamed pname p =
+instance Era era => HuddleRule "plutus_v2_script" era where
+  huddleRuleNamed pname _ =
     comment
       [str|Babbage introduces Plutus V2 with improved cost model
           |and additional builtins.
           |]
-      $ pname =.= huddleRule @"distinct_bytes" p
+      . withGenerator (const plutusScriptGen)
+      $ pname =.= VBytes
 
 instance HuddleRule "script" BabbageEra where
   huddleRuleNamed = babbageScript
