@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo,
   LedgerTxInfo (..),
   toPlutusArgs,
-  toPlutusTxInfo,
+  toPlutusTxInfoForPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..), collectPlutusScriptsWithContext)
 import Cardano.Ledger.Alonzo.Scripts (
@@ -95,7 +95,9 @@ collectTwoPhaseScriptInputsOutputOrdering = do
           , pwcScript = Left plutus
           , pwcScriptHash = hashPlutusScript plutus
           , pwcArgs = either (error . show) id $ do
-              txInfo <- toPlutusTxInfo plutus lti
+              txInfo <-
+                toPlutusTxInfoForPurpose plutus lti $
+                  error "PlutusV1 ScriptPurpose should be unevaluated"
               toPlutusArgs
                 plutus
                 (defaultPParams @AlonzoEra ^. ppProtocolVersionL)

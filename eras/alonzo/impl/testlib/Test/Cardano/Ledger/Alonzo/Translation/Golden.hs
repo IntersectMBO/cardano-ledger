@@ -11,7 +11,6 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
 import Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   SupportedLanguage (..),
-  toPlutusTxInfo,
  )
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
@@ -21,6 +20,7 @@ import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
   epochInfo,
+  mkPlutusTxInfo,
   systemStart,
   toVersionedTxInfo,
   translationInstances,
@@ -65,12 +65,11 @@ assertTranslationComparison ::
   ) =>
   TranslationInstance era ->
   Assertion
-assertTranslationComparison (TranslationInstance protVer supportedLanguage utxo tx expected) =
+assertTranslationComparison (TranslationInstance protVer supportedLanguage utxo tx plutusPurpose expected) =
   case supportedLanguage of
     SupportedLanguage slang -> do
-      case toPlutusTxInfo slang lti of
-        Left e -> error $ show e
-        Right actual -> assertEqual errorMessage expected $ toVersionedTxInfo slang actual
+      let actual = mkPlutusTxInfo slang lti plutusPurpose
+      assertEqual errorMessage expected $ toVersionedTxInfo slang actual
   where
     lti =
       LedgerTxInfo
@@ -87,4 +86,5 @@ assertTranslationComparison (TranslationInstance protVer supportedLanguage utxo 
         , " Language: " <> show supportedLanguage
         , " UTxO: " <> show utxo
         , " Tx: " <> show tx
+        , " PlutusPurpose: " <> show plutusPurpose
         ]
