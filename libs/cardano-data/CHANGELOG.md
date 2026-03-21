@@ -2,7 +2,7 @@
 
 ## 1.3.0.1
 
-*
+* Add `ToJSON` and `FromJSON` instances for `Data.Map.NonEmpty` and `Data.Set.NonEmpty`
 
 ## 1.3.0.0
 

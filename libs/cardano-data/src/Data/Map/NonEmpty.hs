@@ -13,6 +13,7 @@ module Data.Map.NonEmpty (
 
 import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR)
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (parseJSON), FromJSONKey, ToJSON)
 import qualified Data.Foldable as Foldable
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -21,7 +22,14 @@ import Prelude hiding (map)
 
 newtype NonEmptyMap k v = NonEmptyMap (Map k v)
   deriving stock (Show, Eq)
-  deriving newtype (EncCBOR, NoThunks, NFData)
+  deriving newtype (EncCBOR, NoThunks, NFData, ToJSON)
+
+instance (FromJSONKey k, Ord k, FromJSON v) => FromJSON (NonEmptyMap k v) where
+  parseJSON v = do
+    m <- parseJSON v
+    case fromMap m of
+      Nothing -> fail "Empty map found, expected non-empty"
+      Just nem -> pure nem
 
 instance (Ord k, DecCBOR k, DecCBOR v) => DecCBOR (NonEmptyMap k v) where
   decCBOR = do
@@ -41,7 +49,7 @@ fromMap x = if Map.null x then Nothing else Just (NonEmptyMap x)
 
 -- | \(O(1)\).
 toMap :: forall k v. NonEmptyMap k v -> Map k v
-toMap (NonEmptyMap set) = set
+toMap (NonEmptyMap map) = map
 
 -- | \(O(n \log n)\).
 fromFoldable :: forall f k v. (Foldable f, Ord k) => f (k, v) -> Maybe (NonEmptyMap k v)

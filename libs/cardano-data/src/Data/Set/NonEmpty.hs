@@ -13,6 +13,7 @@ module Data.Set.NonEmpty (
 
 import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR, decodeSet)
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (parseJSON), ToJSON)
 import qualified Data.Foldable as Foldable
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -21,7 +22,14 @@ import NoThunks.Class (NoThunks)
 
 newtype NonEmptySet a = NonEmptySet (Set a)
   deriving stock (Show, Eq)
-  deriving newtype (EncCBOR, NoThunks, NFData)
+  deriving newtype (EncCBOR, NoThunks, NFData, ToJSON)
+
+instance (Ord a, FromJSON a) => FromJSON (NonEmptySet a) where
+  parseJSON v = do
+    s <- parseJSON v
+    case fromSet s of
+      Nothing -> fail "Empty set found, expected non-empty"
+      Just nes -> pure nes
 
 instance (Typeable a, Ord a, DecCBOR a) => DecCBOR (NonEmptySet a) where
   decCBOR = do

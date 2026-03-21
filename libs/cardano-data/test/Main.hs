@@ -9,9 +9,11 @@ import System.IO (
   stdout,
   utf8,
  )
+import Test.Cardano.Data.Map.NonEmpty qualified as Map.NonEmpty
 import Test.Cardano.Data.MapExtrasSpec (mapExtrasSpec)
 import Test.Cardano.Data.OMap.StrictSpec qualified as OMap
 import Test.Cardano.Data.OSet.StrictSpec qualified as OSet
+import Test.Cardano.Data.Set.NonEmpty qualified as Set.NonEmpty
 import Test.Hspec
 import Test.Hspec.Runner
 
@@ -25,9 +27,11 @@ conf =
 spec :: Spec
 spec =
   describe "cardano-data" $ do
-    describe "MapExtras" mapExtrasSpec
-    describe "OSet.Strict" OSet.spec
-    describe "OMap.Strict" OMap.spec
+    mapExtrasSpec
+    Set.NonEmpty.spec
+    OSet.spec
+    Map.NonEmpty.spec
+    OMap.spec
 
 main :: IO ()
 main = do
