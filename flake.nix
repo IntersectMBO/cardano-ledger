@@ -72,6 +72,7 @@
         # see flake `variants` below for alternative compilers
         defaultCompiler = "ghc967";
         fourmoluVersion = "0.17.0.0";
+        cabalGildVersion = "1.5.0.1";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -270,9 +271,13 @@
                   src = ./.;
                   hooks = {
                     fourmolu.enable = true;
+                    cabal-gild.enable = true;
+                    shellcheck.enable = true;
                   };
                   tools = {
                     fourmolu = p.tool "fourmolu" fourmoluVersion;
+                    cabal-gild = p.tool "cabal-gild" cabalGildVersion;
+                    shellcheck = nixpkgs.shellcheck;
                   };
                 };
               in
