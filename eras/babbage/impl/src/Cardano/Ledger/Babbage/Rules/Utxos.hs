@@ -61,6 +61,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPPUP,
   ShelleyPpupPredFailure,
  )
+import Control.Monad (forM_)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (nonEmpty)
@@ -178,11 +179,15 @@ expectScriptsToPass pp tx utxo = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
   {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
-  case collectPlutusScriptsWithContext ei sysSt pp tx utxo of
-    Right sLst -> do
-      {- isValid tx = evalScripts tx sLst = True -}
-      whenFailureFree $
-        when2Phase $ case evalPlutusScripts sLst of
+  let
+    scriptsWithContextEither =
+      collectPlutusScriptsWithContext ei sysSt pp tx utxo
+  (() <$ scriptsWithContextEither) ?!: (injectFailure . CollectErrors)
+  {- isValid tx = evalScripts tx sLst = True -}
+  when2Phase $
+    whenFailureFree $
+      forM_ scriptsWithContextEither $ \scriptsWithContext ->
+        case evalPlutusScripts scriptsWithContext of
           Fails _ fs ->
             failBecause $
               injectFailure $
@@ -190,7 +195,6 @@ expectScriptsToPass pp tx utxo = do
                   (tx ^. isValidTxL)
                   (FailedUnexpectedly (scriptFailureToFailureDescription <$> fs))
           Passes ps -> mapM_ (tellEvent . injectEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
-    Left info -> failBecause (injectFailure $ CollectErrors info)
 
 babbageEvalScriptsTxValid ::
   forall era.
@@ -248,12 +252,16 @@ babbageEvalScriptsTxInvalid pp tx utxo = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
   () <- pure $! Debug.traceEvent invalidBegin ()
-  case collectPlutusScriptsWithContext @era ei sysSt pp tx utxo of
-    Right sLst ->
-      {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
-      {- isValid tx = evalScripts tx sLst = False -}
-      whenFailureFree $
-        when2Phase $ case evalPlutusScripts sLst of
+  {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
+  let
+    scriptsWithContextEither =
+      collectPlutusScriptsWithContext ei sysSt pp tx utxo
+  (() <$ scriptsWithContextEither) ?!: (injectFailure . CollectErrors)
+  {- isValid tx = evalScripts tx sLst = False -}
+  when2Phase $
+    whenFailureFree $
+      forM_ scriptsWithContextEither $ \scriptsWithContext ->
+        case evalPlutusScripts scriptsWithContext of
           Passes _ ->
             failBecause $
               injectFailure $
@@ -264,5 +272,4 @@ babbageEvalScriptsTxInvalid pp tx utxo = do
               (nonEmpty ps)
             tellEvent . injectEvent $
               FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs)
-    Left info -> failBecause (injectFailure (CollectErrors info))
   pure $! Debug.traceEvent invalidEnd ()
