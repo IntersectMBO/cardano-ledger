@@ -27,6 +27,7 @@ spec ::
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
+  , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
   Spec
 spec = do
