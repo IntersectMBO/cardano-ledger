@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.18.0.1
+## 1.19.0.0
 
-*
+### `testlib`
+
+* Add `withIssuerAndTxsInBlock_` and `withIssuerAndTxsInBlock`
+* Change the type of `withTxsInBlockEither` to accept an optional `KeyHash BlockIssuer`
 
 ## 1.18.0.0
 

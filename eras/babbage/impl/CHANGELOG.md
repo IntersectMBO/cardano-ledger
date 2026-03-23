@@ -4,6 +4,10 @@
 
 * Add `validateScriptsWellFormedTxOuts`
 
+### `testlib`
+
+* Add `Test.Cardano.Ledger.Babbage.Imp.PoolSpec` module
+
 ## 1.13.0.0
 
 * Add `updateUTxOStateByTxValidity`
