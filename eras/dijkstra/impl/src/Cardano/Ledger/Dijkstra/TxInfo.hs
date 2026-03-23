@@ -18,6 +18,7 @@
 
 module Cardano.Ledger.Dijkstra.TxInfo (
   DijkstraContextError (..),
+  guardDijkstraFeaturesForPlutusV1toV3,
   transFailSubTxIsNotSupported,
 ) where
 
@@ -73,7 +74,7 @@ import Cardano.Ledger.State (StakePoolParams (..))
 import Cardano.Ledger.TxIn (TxId)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
-import Control.Monad (forM, zipWithM)
+import Control.Monad (forM, unless, zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
@@ -236,6 +237,7 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailSubTxIsNotSupported $ \tx -> PlutusTxInfoResult $ do
       let txBody = tx ^. bodyTxL
+      guardDijkstraFeaturesForPlutusV1toV3 tx
       Conway.guardConwayFeaturesForPlutusV1V2 tx
       timeRange <- Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputs <- mapM (Conway.transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
@@ -297,6 +299,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailSubTxIsNotSupported $ \tx -> PlutusTxInfoResult $ do
       let txBody = tx ^. bodyTxL
+      guardDijkstraFeaturesForPlutusV1toV3 tx
       Conway.guardConwayFeaturesForPlutusV1V2 tx
       timeRange <-
         Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
@@ -343,6 +346,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
         txBody = tx ^. bodyTxL
         txInputs = txBody ^. inputsTxBodyL
         refInputs = txBody ^. referenceInputsTxBodyL
+      guardDijkstraFeaturesForPlutusV1toV3 tx
       timeRange <-
         Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList txInputs)
@@ -390,6 +394,20 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusArgs = Conway.toPlutusV3Args
 
   toPlutusTxInInfo _ = transTxInInfoV3
+
+guardDijkstraFeaturesForPlutusV1toV3 ::
+  forall era.
+  ( EraTx era
+  , DijkstraEraTxBody era
+  , Inject (DijkstraContextError era) (ContextError era)
+  ) =>
+  Tx TopTx era ->
+  Either (ContextError era) ()
+guardDijkstraFeaturesForPlutusV1toV3 tx =
+  unless (null (tx ^. bodyTxL . subTransactionsTxBodyL)) $
+    Left $
+      inject $
+        SubTxIsNotSupported @era (txIdTx tx)
 
 transFailSubTxIsNotSupported ::
   forall l era.
