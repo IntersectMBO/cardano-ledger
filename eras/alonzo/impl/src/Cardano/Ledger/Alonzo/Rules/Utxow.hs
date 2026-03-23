@@ -220,12 +220,12 @@ missingRequiredDatums ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   ) =>
+  ScriptsProvided era ->
   UTxO era ->
   Tx l era ->
   Test (AlonzoUtxowPredFailure era)
-missingRequiredDatums utxo tx = do
+missingRequiredDatums scriptsProvided utxo tx = do
   let txBody = tx ^. bodyTxL
-      scriptsProvided = getScriptsProvided utxo tx
       (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptsProvided
       txHashes = Map.keysSet (tx ^. witsTxL . datsTxWitsL . unTxDatsL)
       unmatchedDatumHashes = Set.difference inputHashes txHashes
@@ -340,7 +340,7 @@ alonzoStyleWitness = do
 
   {- inputHashes := { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} -}
   {-  inputHashes ⊆ dom(txdats txw)  -}
-  runTest $ missingRequiredDatums utxo tx
+  runTest $ missingRequiredDatums scriptsProvided utxo tx
 
   {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx -}
   -- This is incorporated into missingRequiredDatums, see the
