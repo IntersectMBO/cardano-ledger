@@ -295,10 +295,10 @@ script_any = (2, [* native_script])
 script_n_of_k = (3, n : int, [* native_script])
 
 bootstrap_witness = 
-  [ public_key : vkey          
-  , signature  : signature     
-  , chain_code : bytes .size 32
-  , attributes : bytes         
+  [ public_key : vkey     
+  , signature  : signature
+  , chain_code : bytes    
+  , attributes : bytes    
   ]
 
 
