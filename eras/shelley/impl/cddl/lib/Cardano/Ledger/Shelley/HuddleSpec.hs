@@ -176,7 +176,7 @@ bootstrapWitnessRule pname p =
     =.= arr
       [ "public_key" ==> huddleRule @"vkey" p
       , "signature" ==> huddleRule @"signature" p
-      , "chain_code" ==> VBytes `sized` (32 :: Word64)
+      , "chain_code" ==> VBytes
       , "attributes" ==> VBytes
       ]
 
