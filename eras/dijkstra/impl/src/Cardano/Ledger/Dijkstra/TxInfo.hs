@@ -396,12 +396,12 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusTxInInfo _ = transTxInInfoV3
 
 guardDijkstraFeaturesForPlutusV1toV3 ::
-  forall era l.
+  forall era.
   ( EraTx era
   , DijkstraEraTxBody era
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
-  Tx l era ->
+  Tx TopTx era ->
   Either (ContextError era) ()
 guardDijkstraFeaturesForPlutusV1toV3 tx = do
   let txBody = tx ^. bodyTxL
@@ -413,6 +413,10 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
   unless (null $ unAccountBalanceIntervals accountBalanceIntervals) $
     Left $
       inject (AccountBalanceIntervalsNotSupported accountBalanceIntervals :: DijkstraContextError era)
+  unless (null (tx ^. bodyTxL . subTransactionsTxBodyL)) $
+    Left $
+      inject $
+        SubTxIsNotSupported @era (txIdTx tx)
 
 transFailSubTxIsNotSupported ::
   forall l era.
