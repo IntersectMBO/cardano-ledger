@@ -319,11 +319,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
         Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList txInputs)
       refInputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList refInputs)
-      let
-        commonInputs = txInputs `Set.intersection` refInputs
-      case toList commonInputs of
-        (x : xs) -> Left . inject $ ReferenceInputsNotDisjointFromInputs @DijkstraEra $ x :| xs
-        _ -> Right ()
+      Conway.checkReferenceInputsNotDisjointFromInputs txBody
       outputs <-
         zipWithM
           (Babbage.transTxOutV2 . TxOutFromOutput)
@@ -441,11 +437,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
           Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
         inputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList txInputs)
         refInputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList refInputs)
-        let
-          commonInputs = txInputs `Set.intersection` refInputs
-        case toList commonInputs of
-          (x : xs) -> Left . inject $ ReferenceInputsNotDisjointFromInputs @DijkstraEra $ x :| xs
-          _ -> Right ()
+        Conway.checkReferenceInputsNotDisjointFromInputs txBody
         let ledgerOutputs = txBody ^. outputsTxBodyL
         outputs <-
           zipWithM

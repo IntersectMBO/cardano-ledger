@@ -40,6 +40,7 @@ module Cardano.Ledger.Conway.TxInfo (
   guardConwayFeaturesForPlutusV1V2,
   transTxInInfoV3,
   scriptPurposeToScriptInfo,
+  checkReferenceInputsNotDisjointFromInputs,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
@@ -485,11 +486,7 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
         transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputsInfo <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList txInputs)
       refInputsInfo <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList refInputs)
-      let
-        commonInputs = txInputs `Set.intersection` refInputs
-      unless (pvMajor ltiProtVer < natVersion @11) $ case toList commonInputs of
-        (x : xs) -> Left $ ReferenceInputsNotDisjointFromInputs $ x :| xs
-        _ -> Right ()
+      when (pvMajor ltiProtVer >= natVersion @11) $ checkReferenceInputsNotDisjointFromInputs txBody
       outputs <-
         zipWithM
           (Babbage.transTxOutV2 . TxOutFromOutput)
@@ -807,3 +804,16 @@ transValidityInterval _ epochInfo systemStart = \case
     transSlotToPOSIXTime =
       left (inject . TimeTranslationPastHorizon @era)
         . slotToPOSIXTime epochInfo systemStart
+
+checkReferenceInputsNotDisjointFromInputs ::
+  forall l era.
+  (BabbageEraTxBody era, Inject (ConwayContextError era) (ContextError era)) =>
+  TxBody l era ->
+  Either (ContextError era) ()
+checkReferenceInputsNotDisjointFromInputs txBody =
+  case toList (txInputs `Set.intersection` refInputs) of
+    (x : xs) -> Left . inject $ ReferenceInputsNotDisjointFromInputs @era $ x :| xs
+    [] -> Right ()
+  where
+    txInputs = txBody ^. inputsTxBodyL
+    refInputs = txBody ^. referenceInputsTxBodyL

@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `checkReferenceInputsNotDisjointFromInputs`
 * Add `ConwayEraScript` superclass to `ConwayEraPlutusTxInfo`
 * Change `transPlutusPurposeV1V2` to work only with `ScriptPurpose` for any era and change it from `AsItem` to `AsIxItem`.
 * Change `transPlutusPurposeV3` to work only with `PlutusV3`, but with `ScriptPurpose` for any era.
