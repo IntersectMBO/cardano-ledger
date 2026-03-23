@@ -26,6 +26,7 @@ import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Plutus (Language (..), SLanguage (..))
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
@@ -142,3 +143,23 @@ spec = describe "TxInfo" $ do
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (AccountBalanceIntervalsNotSupported @era abi)
+      it "TopTx with non-empty subTransactionsTxBodyL" $ do
+        let
+          subTx = mkBasicTx @era @SubTx mkBasicTxBody
+          tx =
+            mkBasicTx @era @TopTx $
+              mkBasicTxBody
+                & subTransactionsTxBodyL .~ OMap.singleton subTx
+          ledgerTxInfo =
+            LedgerTxInfo
+              { ltiProtVer = ProtVer (eraProtVerLow @era) 0
+              , ltiEpochInfo = epochInfo testGlobals
+              , ltiSystemStart = systemStart testGlobals
+              , ltiUTxO = mempty
+              , ltiTx = tx
+              , ltiMemoizedSubTransactions = mempty
+              }
+          txInfoResult =
+            ($ SpendingPurpose AsPurpose)
+              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+        txInfoResult `shouldBeLeft` inject (SubTxIsNotSupported @era (txIdTx tx))
