@@ -536,8 +536,8 @@ sizedMetadatum :: Int -> Gen Metadatum
 sizedMetadatum 0 =
   oneof
     [ I <$> arbitrary
-    , B <$> arbitrary
-    , S . T.pack <$> arbitrary
+    , genDatumBytestring
+    , genDatumString
     ]
 sizedMetadatum n =
   let xsGen = listOf (sizedMetadatum (n - 1))
@@ -545,8 +545,8 @@ sizedMetadatum n =
         [ Map <$> (zip <$> resize maxMetadatumListLens xsGen <*> xsGen)
         , List <$> resize maxMetadatumListLens xsGen
         , I <$> arbitrary
-        , B <$> arbitrary
-        , S . T.pack <$> arbitrary
+        , genDatumBytestring
+        , genDatumString
         ]
 
 instance Arbitrary VotingPeriod where
