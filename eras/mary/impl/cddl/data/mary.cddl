@@ -329,10 +329,10 @@ script_invalid_before = (4, slot)
 script_invalid_hereafter = (5, slot)
 
 bootstrap_witness = 
-  [ public_key : vkey          
-  , signature  : signature     
-  , chain_code : bytes .size 32
-  , attributes : bytes         
+  [ public_key : vkey     
+  , signature  : signature
+  , chain_code : bytes    
+  , attributes : bytes    
   ]
 
 
