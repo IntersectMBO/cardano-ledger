@@ -47,8 +47,7 @@ spec = do
         huddleRoundTripArbitraryValidate @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
       -- AuxData
       huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
-      xdescribe "fix metadatum" $
-        huddleRoundTripArbitraryValidate @(TxAuxData DijkstraEra) v "auxiliary_data"
+      huddleRoundTripArbitraryValidate @(TxAuxData DijkstraEra) v "auxiliary_data"
       huddleRoundTripCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
       huddleRoundTripAnnCborSpec @(NativeScript DijkstraEra) v "native_script"
       huddleRoundTripArbitraryValidate @(NativeScript DijkstraEra) v "native_script"

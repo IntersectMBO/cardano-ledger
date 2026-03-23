@@ -37,6 +37,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData (rnf))
+import Control.Monad (when)
 import Data.Array.Byte (ByteArray (..))
 import qualified Data.Primitive.ByteArray as Prim
 import qualified Data.Text as T
@@ -117,9 +118,10 @@ encodeMetadatum (Map kvs) =
 -- >   / { * transaction_metadatum => transaction_metadatum }
 --
 -- We do not require canonical representations, just like everywhere else
--- on the chain. We accept both definte and indefinite representations.
+-- on the chain. We accept both definite and indefinite representations.
 --
--- The byte and string length checks are not enforced in this decoder, but
+-- The byte and string length checks are enforced in this decoder as per
+-- the CDDL spec.
 decodeMetadatum :: Decoder s Metadatum
 decodeMetadatum = do
   tkty <- peekTokenType
@@ -130,18 +132,27 @@ decodeMetadatum = do
     TypeUInt64 -> I <$> decodeInteger
     TypeNInt -> I <$> decodeInteger
     TypeNInt64 -> I <$> decodeInteger
-    -- Note that we do not enforce byte and string lengths here in the
-    -- decoder. We enforce that in the tx validation rules.
-    TypeBytes -> B <$> decCBOR
+    TypeBytes -> do
+      !ba <- decCBOR
+      when (Prim.sizeofByteArray ba > 64) $
+        decodeError "bytes .size (0..64): bytestring exceeds 64 bytes"
+      return (B ba)
     TypeBytesIndef -> do
       decodeBytesIndef
-      B <$> decodeBytesIndefLen []
+      !ba <- decodeBytesIndefLen []
+      when (Prim.sizeofByteArray ba > 64) $
+        decodeError "bytes .size (0..64): bytestring exceeds 64 bytes"
+      return (B ba)
     TypeString -> do
       !x <- decodeString
+      when (BS.length (T.encodeUtf8 x) > 64) $
+        decodeError "text .size (0..64): text exceeds 64 bytes"
       return (S x)
     TypeStringIndef -> do
       decodeStringIndef
       !x <- decodeStringIndefLen []
+      when (BS.length (T.encodeUtf8 x) > 64) $
+        decodeError "text .size (0..64): text exceeds 64 bytes"
       return (S x)
 
     -- Why does it work to do the same thing here for 32 and 64bit list len

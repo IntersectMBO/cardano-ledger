@@ -56,8 +56,7 @@ spec =
       huddleAntiCborSpec @TxIn v "transaction_input"
       huddleRoundTripAnnCborSpec @(TxAuxData ShelleyEra) v "metadata"
       huddleRoundTripCborSpec @(TxAuxData ShelleyEra) v "metadata"
-      xdescribe "fix metadatum" $
-        huddleAntiCborSpec @(TxAuxData ShelleyEra) v "metadata"
+      huddleAntiCborSpec @(TxAuxData ShelleyEra) v "metadata"
       huddleRoundTripAnnCborSpec @(MultiSig ShelleyEra) v "native_script"
       huddleRoundTripCborSpec @(MultiSig ShelleyEra) v "native_script"
       huddleAntiCborSpec @(MultiSig ShelleyEra) v "native_script"
@@ -72,7 +71,7 @@ spec =
         huddleAntiCborSpec @(PParamsUpdate ShelleyEra) v "protocol_param_update"
       huddleRoundTripAnnCborSpec @(Tx TopTx ShelleyEra) v "transaction"
       huddleRoundTripCborSpec @(Tx TopTx ShelleyEra) v "transaction"
-      xdescribe "fix metadatum" $
+      xdescribe "fix transaction fields" $
         huddleAntiCborSpec @(Tx TopTx ShelleyEra) v "transaction"
       huddleRoundTripAnnCborSpec @(TxWits ShelleyEra) v "transaction_witness_set"
       huddleRoundTripCborSpec @(TxWits ShelleyEra) v "transaction_witness_set"
