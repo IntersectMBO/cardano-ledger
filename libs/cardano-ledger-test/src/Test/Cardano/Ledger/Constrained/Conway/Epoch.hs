@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Epoch where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core (ppProtocolVersionL)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Shelley.API.Types
 import Constrained.API
@@ -21,7 +22,10 @@ import Data.Foldable
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Lens.Micro.Extras
-import Test.Cardano.Ledger.Constrained.Conway.Gov
+import Test.Cardano.Ledger.Constrained.Conway.Gov (
+  proposalsSpec,
+  succVersionOrCurrent,
+ )
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 
 data EpochExecEnv era = EpochExecEnv
@@ -40,9 +44,10 @@ epochStateSpec epochNo = constrained $ \es ->
   match es $ \_accountState ledgerState _snapShots _nonMyopic ->
     match ledgerState $ \utxoState certState ->
       match utxoState $ \_utxo _deposited _fees govState _stakeDistr _donation ->
-        match govState $ \ [var|proposals|] _committee constitution _curPParams _prevPParams _futPParams drepPulsingState ->
+        match govState $ \ [var|proposals|] _committee constitution curPParams _prevPParams _futPParams drepPulsingState ->
           [ match constitution $ \_ policy ->
-              proposals `satisfies` proposalsSpec epochNo policy certState
+              reify curPParams (\pp -> succVersionOrCurrent (view ppProtocolVersionL pp)) $ \maxHardForkVer ->
+                proposals `satisfies` proposalsSpec epochNo maxHardForkVer policy certState
           , caseOn
               drepPulsingState
               -- DRPulsing
