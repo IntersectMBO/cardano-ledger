@@ -344,7 +344,9 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: failures-${{ matrix.package }}-${{ matrix.ghc }}-${{ matrix.os }}
-        path: failures.json
+        path: |
+          failures.json
+          dist-newstyle/build/x86_64-linux/*/*/t/tests/test/*.log
 
     - name: Install doctest
       run: |
