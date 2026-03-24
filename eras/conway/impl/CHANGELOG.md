@@ -5,6 +5,7 @@
 * Change `ConwayBBODY` `Signal` to `BbodySignal`.
 * Add `validateRefScriptSize`.
 * Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
+* Make `ConwayContextError` constructors lazy
 
 ## 1.21.0.0
 

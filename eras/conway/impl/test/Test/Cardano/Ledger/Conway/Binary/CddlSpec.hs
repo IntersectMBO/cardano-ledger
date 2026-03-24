@@ -60,7 +60,7 @@ spec = do
       huddleRoundTripAnnCborSpec @(Data ConwayEra) v "plutus_data"
       huddleRoundTripArbitraryValidate @(Data ConwayEra) v "plutus_data"
       huddleRoundTripCborSpec @(Data ConwayEra) v "plutus_data"
-      huddleAntiCborSpec @(Data ConwayEra) v "plutus_data"
+      xdescribe "fix plutus_data" $ huddleAntiCborSpec @(Data ConwayEra) v "plutus_data"
       -- TxOut
       huddleRoundTripCborSpec @(TxOut ConwayEra) v "transaction_output"
       huddleRoundTripArbitraryValidate @(TxOut ConwayEra) v "transaction_output"

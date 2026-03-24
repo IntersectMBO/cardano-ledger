@@ -170,14 +170,14 @@ instance EraPlutusContext ConwayEra where
     ConwayPlutusV3 p -> toPlutusWithContext $ Left p
 
 data ConwayContextError era
-  = BabbageContextError !(BabbageContextError era)
-  | CertificateNotSupported !(TxCert era)
-  | PlutusPurposeNotSupported !(PlutusPurpose AsItem era)
-  | CurrentTreasuryFieldNotSupported !Coin
-  | VotingProceduresFieldNotSupported !(VotingProcedures era)
-  | ProposalProceduresFieldNotSupported !(OSet.OSet (ProposalProcedure era))
-  | TreasuryDonationFieldNotSupported !Coin
-  | ReferenceInputsNotDisjointFromInputs !(NonEmpty TxIn)
+  = BabbageContextError (BabbageContextError era)
+  | CertificateNotSupported (TxCert era)
+  | PlutusPurposeNotSupported (PlutusPurpose AsItem era)
+  | CurrentTreasuryFieldNotSupported Coin
+  | VotingProceduresFieldNotSupported (VotingProcedures era)
+  | ProposalProceduresFieldNotSupported (OSet.OSet (ProposalProcedure era))
+  | TreasuryDonationFieldNotSupported Coin
+  | ReferenceInputsNotDisjointFromInputs (NonEmpty TxIn)
   deriving (Generic)
 
 deriving instance

@@ -4,6 +4,7 @@
 
 * Change `AlonzoBBODY` `Signal` to `BbodySignal`.
 * Add `validateExUnits`.
+* Make `AlonzoContextError` constructors lazy
 
 ## 1.15.0.0
 
