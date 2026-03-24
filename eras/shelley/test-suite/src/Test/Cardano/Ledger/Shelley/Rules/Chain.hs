@@ -395,7 +395,7 @@ instance
 instance
   ( Era era
   , Era era
-  , PredicateFailure (EraRule "TICKN" era) ~ TicknPredicateFailure
+  , PredicateFailure (EraRule "TICKN" era) ~ Void
   , Event (EraRule "TICKN" era) ~ Void
   ) =>
   Embed TICKN (CHAIN era)

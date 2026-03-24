@@ -5,8 +5,10 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module BenchValidation (
@@ -16,6 +18,7 @@ module BenchValidation (
   benchreValidate,
   applyBlock,
   sizes,
+  UpdateInputs,
   updateChain,
   updateAndTickChain,
   genUpdateInputs,
@@ -37,9 +40,8 @@ import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.API (
   ChainDepState (..),
   ChainTransitionError,
-  GetLedgerView,
-  LedgerView (..),
-  currentLedgerView,
+  TPraosLedgerView,
+  forecastToTPraosLedgerView,
   tickChainDepState,
   updateChainDepState,
  )
@@ -80,7 +82,7 @@ validateInput ::
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
   , API.ApplyBlock TestBlockHeader era
-  , GetLedgerView era
+  , API.ShelleyEraForecast era
   , MinLEDGER_STS era
   , EraBlockHeader (BHeader MockCrypto) era
   ) =>
@@ -129,21 +131,16 @@ benchreValidate ::
 benchreValidate (ValidateInput globals state blk@(Block _ txs)) =
   API.applyBlockNoValidaton globals state (Block (mkTestBlockHeaderNoNonce blk) txs)
 
--- ==============================================================
-
 data UpdateInputs
   = UpdateInputs
       !Globals
-      !LedgerView
+      !TPraosLedgerView
       !(BHeader MockCrypto)
       !ChainDepState
 
 instance Show UpdateInputs where
   show (UpdateInputs _globals vl bh st) =
     show vl ++ "\n" ++ show bh ++ "\n" ++ show st
-
-instance NFData LedgerView where
-  rnf (LedgerView _D _extraEntropy _pool _delegs _ccd) = ()
 
 -- TODO: move upstream
 instance Crypto c => NFData (BHeader c) where
@@ -164,7 +161,7 @@ genUpdateInputs ::
   ( EraGen era
   , EraStake era
   , MinLEDGER_STS era
-  , GetLedgerView era
+  , API.ShelleyEraForecast era
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
   , API.ApplyBlock TestBlockHeader era
@@ -176,7 +173,7 @@ genUpdateInputs utxoSize = do
   let ge = genEnv (Proxy :: Proxy era) defaultConstants
   chainstate <- genChainState utxoSize ge
   (Block blockheader _) <- genBlock ge chainstate
-  let ledgerview = currentLedgerView (chainNes chainstate)
+  let forecast = API.currentForecast (chainNes chainstate)
   let (ChainState _newepochState keys eta0 etaV etaC etaH slot) = chainstate
   let prtclState = PrtclState keys eta0 etaV
   let ticknState = TicknState etaC etaH
@@ -186,7 +183,7 @@ genUpdateInputs utxoSize = do
   pure
     ( UpdateInputs
         testGlobals
-        ledgerview
+        (forecastToTPraosLedgerView forecast)
         blockheader
         (ChainDepState prtclState ticknState nonce)
     )
@@ -200,6 +197,5 @@ updateAndTickChain ::
   UpdateInputs ->
   Either (ChainTransitionError MockCrypto) ChainDepState
 updateAndTickChain (UpdateInputs gl lv bh st) =
-  updateChainDepState gl lv bh
-    . tickChainDepState gl lv True
-    $ st
+  updateChainDepState gl lv bh $
+    tickChainDepState gl lv True st
