@@ -10,6 +10,17 @@ module Cardano.Ledger.Shelley (
   hardforkAlonzoAllowMIRTransfer,
   hardforkAlonzoValidatePoolAccountAddressNetID,
   hardforkBabbageForgoRewardPrefilter,
+
+  -- * Forecast
+  ShelleyForecast (..),
+  mkShelleyForecast,
+  sfPoolDistrL,
+  sfMaxBlockHeaderSizeL,
+  sfMaxBlockBodySizeL,
+  sfProtocolVersionL,
+  sfGenDelegsL,
+  sfDecentralizationL,
+  sfExtraEntropyL,
 ) where
 
 import Cardano.Ledger.Shelley.BlockBody ()
@@ -19,6 +30,17 @@ import Cardano.Ledger.Shelley.Era (
   hardforkAlonzoAllowMIRTransfer,
   hardforkAlonzoValidatePoolAccountAddressNetID,
   hardforkBabbageForgoRewardPrefilter,
+ )
+import Cardano.Ledger.Shelley.Forecast (
+  ShelleyForecast (..),
+  mkShelleyForecast,
+  sfDecentralizationL,
+  sfExtraEntropyL,
+  sfGenDelegsL,
+  sfMaxBlockBodySizeL,
+  sfMaxBlockHeaderSizeL,
+  sfPoolDistrL,
+  sfProtocolVersionL,
  )
 import Cardano.Ledger.Shelley.Genesis ()
 import Cardano.Ledger.Shelley.Governance ()
