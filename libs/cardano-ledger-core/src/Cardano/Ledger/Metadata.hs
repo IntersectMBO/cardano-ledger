@@ -9,7 +9,6 @@
 
 module Cardano.Ledger.Metadata (
   Metadatum (..),
-  validMetadatum,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -70,21 +69,6 @@ instance EncCBOR Metadatum where
 instance DecCBOR Metadatum where
   decCBOR = decodeMetadatum
 
--- Validation of sizes
-
-validMetadatum :: Metadatum -> Bool
--- The integer size/representation checks are enforced in the decoder.
-validMetadatum (I _) = True
-validMetadatum (B ba) = Prim.sizeofByteArray ba <= 64
-validMetadatum (S s) = T.lengthWord8 s <= 64
-validMetadatum (List xs) = all validMetadatum xs
-validMetadatum (Map kvs) =
-  all
-    ( \(k, v) ->
-        validMetadatum k
-          && validMetadatum v
-    )
-    kvs
 
 -------------------------------------------------------------------------------
 -- CBOR encoding and decoding
