@@ -44,6 +44,10 @@ import Cardano.Ledger.Conway.Scripts (AlonzoScript (..), ConwayPlutusPurpose (..
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.HKD (HKD)
+import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
+import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Rules (Identity)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -76,6 +80,70 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (committeeCredentialToStrictMaybe)
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
+instance SpecTranslate ctx TxId where
+  type SpecRep TxId = Agda.TxId
+
+  toSpecRep (TxId x) = toSpecRep @ctx x
+
+instance SpecTranslate ctx TxIn where
+  type SpecRep TxIn = Agda.TxIn
+
+  toSpecRep (TxIn txId txIx) = toSpecRep @ctx (txId, txIx)
+
+instance SpecTranslate ctx (SafeHash a) where
+  type SpecRep (SafeHash a) = Agda.DataHash
+
+  toSpecRep = toSpecRep @ctx . extractHash
+
+instance SpecTranslate ctx Language where
+  type SpecRep Language = Agda.HSLanguage
+
+  toSpecRep l = case l of
+    PlutusV1 -> return Agda.PV1
+    PlutusV2 -> return Agda.PV2
+    PlutusV3 -> return Agda.PV3
+    PlutusV4 -> error "PlutusV4 not supported"
+
+instance SpecTranslate ctx CostModels where
+  type SpecRep CostModels = Agda.LanguageCostModels
+
+  toSpecRep cm =
+    -- filter out PlutusV4 language
+    let validCostModels = filter ((/= PlutusV4) . fst) $ Map.toList (costModelsValid cm)
+     in Agda.MkLanguageCostModels <$> mapM (\(l, _) -> (,()) <$> toSpecRep @ctx l) validCostModels
+
+instance SpecTranslate ctx ExUnits where
+  type SpecRep ExUnits = Agda.ExUnits
+
+  toSpecRep (ExUnits a b) = pure (toInteger a, toInteger b)
+
+instance
+  ( SpecRep DataHash ~ Agda.DataHash
+  , Era era
+  ) =>
+  SpecTranslate ctx (BinaryData era)
+  where
+  type SpecRep (BinaryData era) = Agda.DataHash
+
+  toSpecRep = toSpecRep @ctx . hashBinaryData
+
+instance Era era => SpecTranslate ctx (Datum era) where
+  type SpecRep (Datum era) = Maybe (Either Agda.Datum Agda.DataHash)
+
+  toSpecRep NoDatum = pure Nothing
+  toSpecRep (Datum d) = Just . Left <$> toSpecRep d
+  toSpecRep (DatumHash h) = Just . Right <$> toSpecRep @ctx h
+
+instance Era era => SpecTranslate ctx (Data era) where
+  type SpecRep (Data era) = Agda.DataHash
+
+  toSpecRep = toSpecRep @ctx . hashAnnotated
+
+instance SpecTranslate ctx TxAuxDataHash where
+  type SpecRep TxAuxDataHash = Agda.DataHash
+
+  toSpecRep (TxAuxDataHash x) = toSpecRep @ctx x
+
 instance
   ( AlonzoEraScript era
   , NativeScript era ~ Timelock era
@@ -88,7 +156,7 @@ instance
   toSpecRep tl =
     Agda.HSTimelock
       <$> timelockToSpecRep tl
-      <*> toSpecRep (hashScript @era $ NativeScript tl)
+      <*> toSpecRep (hashScript $ NativeScript tl)
       <*> pure (fromIntegral $ originalBytesSize tl)
     where
       timelockToSpecRep x =
