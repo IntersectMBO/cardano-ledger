@@ -42,29 +42,19 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   ADDRHASH,
-  DataHash,
-  Era,
   Hash,
   KeyHash (..),
   KeyRole (..),
   PParams (..),
   PParamsHKD,
   PParamsUpdate (..),
-  SafeHash,
   ScriptHash (..),
-  TxAuxDataHash (..),
-  extractHash,
-  hashAnnotated,
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
-import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
-import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
-import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices)
-import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.Plutus.ExUnits (Prices)
 import Control.Monad (forM)
 import Control.Monad.Except (throwError)
 import Data.Functor.Identity (Identity (..))
@@ -78,25 +68,10 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
  )
 import Test.Cardano.Ledger.Conformance.Utils
 
-instance SpecTranslate ctx TxId where
-  type SpecRep TxId = Agda.TxId
-
-  toSpecRep (TxId x) = toSpecRep x
-
 instance SpecTranslate ctx TxIx where
   type SpecRep TxIx = Integer
 
   toSpecRep (TxIx x) = pure $ toInteger x
-
-instance SpecTranslate ctx TxIn where
-  type SpecRep TxIn = Agda.TxIn
-
-  toSpecRep (TxIn txId txIx) = toSpecRep (txId, txIx)
-
-instance SpecTranslate ctx (SafeHash a) where
-  type SpecRep (SafeHash a) = Agda.DataHash
-
-  toSpecRep = toSpecRep . extractHash
 
 instance SpecTranslate ctx StakeReference where
   type SpecRep StakeReference = Maybe Agda.Credential
@@ -157,59 +132,15 @@ instance SpecTranslate ctx ProtVer where
 
   toSpecRep (ProtVer ver minor) = pure (getVersion ver, toInteger minor)
 
-instance SpecTranslate ctx Language where
-  type SpecRep Language = Agda.HSLanguage
-
-  toSpecRep l = case l of
-    PlutusV1 -> return Agda.PV1
-    PlutusV2 -> return Agda.PV2
-    PlutusV3 -> return Agda.PV3
-    PlutusV4 -> error "PlutusV4 not supported"
-
-instance SpecTranslate ctx CostModels where
-  type SpecRep CostModels = Agda.LanguageCostModels
-
-  toSpecRep cm =
-    -- filter out PlutusV4 language
-    let validCostModels = filter ((/= PlutusV4) . fst) $ Map.toList (costModelsValid cm)
-     in Agda.MkLanguageCostModels <$> mapM (\(l, _) -> (,()) <$> toSpecRep l) validCostModels
-
 instance SpecTranslate ctx Prices where
   type SpecRep Prices = ()
 
   toSpecRep _ = pure ()
 
-instance SpecTranslate ctx ExUnits where
-  type SpecRep ExUnits = Agda.ExUnits
-
-  toSpecRep (ExUnits a b) = pure (toInteger a, toInteger b)
-
 instance SpecTranslate ctx AccountAddress where
   type SpecRep AccountAddress = Agda.RewardAddress
 
   toSpecRep (AccountAddress n (AccountId c)) = Agda.RewardAddress <$> toSpecRep n <*> toSpecRep c
-
-instance
-  ( SpecRep DataHash ~ Agda.DataHash
-  , Era era
-  ) =>
-  SpecTranslate ctx (BinaryData era)
-  where
-  type SpecRep (BinaryData era) = Agda.DataHash
-
-  toSpecRep = toSpecRep . hashBinaryData
-
-instance Era era => SpecTranslate ctx (Datum era) where
-  type SpecRep (Datum era) = Maybe (Either Agda.Datum Agda.DataHash)
-
-  toSpecRep NoDatum = pure Nothing
-  toSpecRep (Datum d) = Just . Left <$> toSpecRep d
-  toSpecRep (DatumHash h) = Just . Right <$> toSpecRep h
-
-instance Era era => SpecTranslate ctx (Data era) where
-  type SpecRep (Data era) = Agda.DataHash
-
-  toSpecRep = toSpecRep . hashAnnotated
 
 instance
   SpecTranslate ctx (PParamsHKD Identity era) =>
@@ -256,11 +187,6 @@ instance SpecTranslate ctx (WitVKey k) where
   type SpecRep (WitVKey k) = (SpecRep (VKey k), Integer)
 
   toSpecRep (WitVKey vk sk) = toSpecRep (vk, sk)
-
-instance SpecTranslate ctx TxAuxDataHash where
-  type SpecRep TxAuxDataHash = Agda.DataHash
-
-  toSpecRep (TxAuxDataHash x) = toSpecRep x
 
 instance SpecTranslate ctx CommitteeAuthorization where
   type
