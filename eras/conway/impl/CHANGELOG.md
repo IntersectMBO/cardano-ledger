@@ -28,6 +28,7 @@
   - `ConwayUtxosPredFailure`
   - `ConwayUtxowPredFailure`
 * Remove `NoThunks` instance for `ConwayContextError`
+* Make `ConwayContextError` constructors lazy
 
 ## 1.21.0.0
 

@@ -22,6 +22,7 @@
 * Remove `NoThunks` instance for `AlonzoContextError`
 * Remove `NoThunks (ContextError era)` constraint from `EraPlutusContext` class
 * Remove `NoThunks` deriving instance for `CollectError`
+* Make `AlonzoContextError` constructors lazy
 
 ### `testlib`
 

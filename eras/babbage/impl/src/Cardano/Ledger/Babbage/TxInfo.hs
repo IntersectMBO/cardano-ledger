@@ -246,12 +246,12 @@ instance EraPlutusContext BabbageEra where
     BabbagePlutusV2 p -> toPlutusWithContext $ Left p
 
 data BabbageContextError era
-  = AlonzoContextError !(AlonzoContextError era)
-  | ByronTxOutInContext !TxOutSource
-  | RedeemerPointerPointsToNothing !(PlutusPurpose AsIx era)
-  | InlineDatumsNotSupported !TxOutSource
-  | ReferenceScriptsNotSupported !TxOutSource
-  | ReferenceInputsNotSupported !(Set.Set TxIn)
+  = AlonzoContextError (AlonzoContextError era)
+  | ByronTxOutInContext TxOutSource
+  | RedeemerPointerPointsToNothing (PlutusPurpose AsIx era)
+  | InlineDatumsNotSupported TxOutSource
+  | ReferenceScriptsNotSupported TxOutSource
+  | ReferenceInputsNotSupported (Set.Set TxIn)
   deriving (Generic)
 
 deriving instance
