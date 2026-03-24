@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -19,6 +21,7 @@ module Cardano.Ledger.Mary (
 ) where
 
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Mary.BlockBody ()
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
@@ -46,4 +49,4 @@ instance ApplyTx MaryEra where
     first MaryApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
 
-instance ApplyBlock MaryEra
+instance EraBlockHeader h MaryEra => ApplyBlock h MaryEra

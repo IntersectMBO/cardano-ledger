@@ -2,6 +2,11 @@
 
 ## 1.20.0.0
 
+* Deprecate `BHeaderView` in favour `*EraBlockHeader` typeclasses.
+  - Move `isOverlaySlot` to `Cardano.Ledger.Slot`.
+  - Remove `PerasCert`, `PerasKey` and `validatePerasCert` to `dijkstra`.
+  - Add `BbodySignal` datatype and the `EraBlockHeader` typeclass.
+  - Add `slotToEpochBoundary`.
 * Change `Metadatum.B` from `ByteString` to `ByteArray` for more efficient memory allocation
 * Add orphan instance `NoThunks ByteArray`
 * Remove orphan `NoThunks`, `NFData`, `FromJSON`, `ToJSON` instances for `IPv4` and `IPv6`
@@ -11,6 +16,7 @@
 
 ### `testlib`
 
+* Add `TestBlockHeader` and `mkTestBlockHeaderNoNonce` as a replacement to deprecated `BHeaderView` and `makeHeaderView`.
 * Modify `ToExpr` instance for `Mismatch` to display type-level `r` parameter using `Typeable`
 
 ## 1.19.0.0

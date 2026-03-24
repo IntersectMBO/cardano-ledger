@@ -12,9 +12,8 @@ module Test.Cardano.Ledger.Shelley.PropertyTests (
   commonTests,
 ) where
 
-import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, SlotNo)
-import Cardano.Ledger.Block (Block)
+import Cardano.Ledger.Block (BbodySignal, EraBlockHeader)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyPOOL)
 import Cardano.Ledger.Shelley.Core
@@ -29,9 +28,11 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.API (GetLedgerView)
+import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknEnv, TicknState)
 import Control.State.Transition
 import Data.Sequence (Seq)
+import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import qualified Test.Cardano.Ledger.Shelley.ByronTranslation as ByronTranslation (
   testGroupByronTranslation,
  )
@@ -66,7 +67,7 @@ commonTests ::
   ( EraGen era
   , EraStake era
   , ShelleyEraAccounts era
-  , ApplyBlock era
+  , ApplyBlock TestBlockHeader era
   , GetLedgerView era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Embed (EraRule "TICK" era) (CHAIN era)
@@ -93,10 +94,11 @@ commonTests ::
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  , Signal (EraRule "BBODY" era) ~ BbodySignal era
   , EraRule "POOL" era ~ ShelleyPOOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era
+  , EraBlockHeader (BHeader MockCrypto) era
   ) =>
   [TestTree]
 commonTests =
