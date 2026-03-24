@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.BinarySpec (spec) where
@@ -10,11 +11,16 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (EraIndependentData, SafeHash, ScriptHash)
 import Cardano.Ledger.Keys
+import Cardano.Ledger.Metadata (Metadatum)
 import Cardano.Ledger.TxIn
+import qualified Data.ByteString as BS
+import Data.Either (isLeft, isRight)
+import qualified Data.Text as T
 import Data.Word (Word32, Word64)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
+import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (E))
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -58,6 +64,24 @@ spec = do
     roundTripCborSpec @DRep
     roundTripCborSpec @ScriptHash
     roundTripCborSpec @(SafeHash EraIndependentData)
+
+  describe "Metadatum" $ do
+    prop "Accepts bytes up to 64 bytes" $
+      forAll (choose (0, 64)) $ \n ->
+        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E (BS.replicate n 0))
+          `shouldSatisfy` isRight
+    prop "Rejects bytes exceeding 64 bytes" $
+      forAll (choose (65, 1000)) $ \n ->
+        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E (BS.replicate n 0))
+          `shouldSatisfy` isLeft
+    prop "Accepts text up to 64 bytes" $
+      forAll (choose (0, 64)) $ \n ->
+        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E (T.replicate n "a"))
+          `shouldSatisfy` isRight
+    prop "Rejects text exceeding 64 bytes" $
+      forAll (choose (65, 1000)) $ \n ->
+        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E (T.replicate n "a"))
+          `shouldSatisfy` isLeft
 
   describe "DecCBOR instances equivalence" $ do
     decoderEquivalenceSpec @BootstrapWitness minBound maxBound
