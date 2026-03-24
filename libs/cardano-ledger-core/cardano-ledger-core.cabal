@@ -337,7 +337,6 @@ test-suite tests
     quickcheck-instances,
     scientific,
     testlib,
-    text,
 
 benchmark addr
   import: warnings, rtsopts

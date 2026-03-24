@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Metadata (
   Metadatum (..),
@@ -32,6 +34,8 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   encodeMapLen,
   encodeString,
+  getDecoderVersion,
+  natVersion,
   peekTokenType,
  )
 import Cardano.Ledger.Orphans ()
@@ -107,6 +111,8 @@ encodeMetadatum (Map kvs) =
 -- the CDDL spec.
 decodeMetadatum :: Decoder s Metadatum
 decodeMetadatum = do
+  dv <- getDecoderVersion
+  let checkSizes = dv > natVersion @2
   tkty <- peekTokenType
   case tkty of
     -- We support -(2^64-1) .. 2^64-1, but not big integers
@@ -117,24 +123,24 @@ decodeMetadatum = do
     TypeNInt64 -> I <$> decodeInteger
     TypeBytes -> do
       !ba <- decCBOR
-      when (Prim.sizeofByteArray ba > 64) $
+      when (checkSizes && Prim.sizeofByteArray ba > 64) $
         decodeError "bytes .size (0..64): bytestring exceeds 64 bytes"
       return (B ba)
     TypeBytesIndef -> do
       decodeBytesIndef
       !ba <- decodeBytesIndefLen []
-      when (Prim.sizeofByteArray ba > 64) $
+      when (checkSizes && Prim.sizeofByteArray ba > 64) $
         decodeError "bytes .size (0..64): bytestring exceeds 64 bytes"
       return (B ba)
     TypeString -> do
       !x <- decodeString
-      when (BS.length (T.encodeUtf8 x) > 64) $
+      when (checkSizes && BS.length (T.encodeUtf8 x) > 64) $
         decodeError "text .size (0..64): text exceeds 64 bytes"
       return (S x)
     TypeStringIndef -> do
       decodeStringIndef
       !x <- decodeStringIndefLen []
-      when (BS.length (T.encodeUtf8 x) > 64) $
+      when (checkSizes && BS.length (T.encodeUtf8 x) > 64) $
         decodeError "text .size (0..64): text exceeds 64 bytes"
       return (S x)
 
