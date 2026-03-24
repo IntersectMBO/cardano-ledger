@@ -60,13 +60,13 @@ import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Plutus (PlutusWithContext)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import qualified Debug.Trace as Debug
 import GHC.Generics (Generic)
-import Lens.Micro
+import Lens.Micro ((^.))
 
 data ConwayUtxosPredFailure era
   = -- | The 'isValid' tag on the transaction is incorrect. The tag given
@@ -177,7 +177,7 @@ instance
 instance
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ConwayEraTxBody era
+  , ConwayEraScript era
   , ConwayEraPParams era
   , EraGov era
   , EraStake era
@@ -205,7 +205,7 @@ instance
 instance
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ConwayEraTxBody era
+  , ConwayEraScript era
   , ConwayEraPParams era
   , EraGov era
   , EraStake era
@@ -229,7 +229,6 @@ utxosTransition ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ConwayEraTxBody era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
@@ -253,7 +252,6 @@ conwayEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ConwayEraTxBody era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
@@ -267,10 +265,9 @@ conwayEvalScriptsTxValid ::
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do
   TRC (pp, utxos, tx) <- judgmentContext
-  let txBody = tx ^. bodyTxL
 
   () <- pure $! Debug.traceEvent validBegin ()
   expectScriptsToPass pp tx (utxosUtxo utxos)
   () <- pure $! Debug.traceEvent validEnd ()
 
-  pure $! utxos & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL
+  pure utxos
