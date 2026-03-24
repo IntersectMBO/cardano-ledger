@@ -162,7 +162,6 @@ import Data.Aeson (
  )
 import Data.Aeson.Types (Pair)
 import qualified Data.Binary.Put as B
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.Default (Default (def))
@@ -182,7 +181,7 @@ import Data.Scientific (
  )
 import Data.Text (Text)
 import qualified Data.Text as Text
-import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Foreign (lengthWord8)
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Exception.Type (Exception)
@@ -597,7 +596,7 @@ infix 1 ==>
 
 textSizeN :: MonadFail m => Int -> Text -> m Text
 textSizeN n t =
-  let len = BS.length (encodeUtf8 t)
+  let len = lengthWord8 t
    in if len <= n
         then pure t
         else
