@@ -70,7 +70,6 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 data DelegEnv era = DelegEnv
   { slotNo :: SlotNo
@@ -149,8 +148,6 @@ instance
   type Event (ShelleyDELEG era) = ShelleyDelegEvent era
 
   transitionRules = [delegationTransition]
-
-instance NoThunks (ShelleyDelegPredFailure era)
 
 instance NFData (ShelleyDelegPredFailure era)
 

@@ -48,7 +48,6 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 data DijkstraSubUtxoPredFailure era
   = -- | The bad transaction inputs
@@ -102,11 +101,6 @@ deriving stock instance
   , Show TxIn
   ) =>
   Show (DijkstraSubUtxoPredFailure era)
-
-deriving via
-  InspectHeapNamed "DijkstraUtxosPred" (DijkstraSubUtxoPredFailure era)
-  instance
-    NoThunks (DijkstraSubUtxoPredFailure era)
 
 instance
   ( Era era

@@ -82,7 +82,6 @@ import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
-import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 -- ======================================================
 
@@ -206,11 +205,6 @@ deriving instance
   , Eq TxIn
   ) =>
   Eq (ConwayUtxoPredFailure era)
-
-deriving via
-  InspectHeapNamed "ConwayUtxoPred" (ConwayUtxoPredFailure era)
-  instance
-    NoThunks (ConwayUtxoPredFailure era)
 
 instance
   ( Era era

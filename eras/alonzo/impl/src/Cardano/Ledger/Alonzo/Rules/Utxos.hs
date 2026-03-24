@@ -425,15 +425,6 @@ deriving stock instance
 
 instance
   ( AlonzoEraScript era
-  , NoThunks (TxCert era)
-  , NoThunks (ContextError era)
-  , NoThunks (Shelley.UTxOState era)
-  , NoThunks (EraRuleFailure "PPUP" era)
-  ) =>
-  NoThunks (AlonzoUtxosPredFailure era)
-
-instance
-  ( AlonzoEraScript era
   , NFData (TxCert era)
   , NFData (ContextError era)
   , NFData (Shelley.UTxOState era)

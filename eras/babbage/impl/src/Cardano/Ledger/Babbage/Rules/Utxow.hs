@@ -91,7 +91,6 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
-import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 data BabbageUtxowPredFailure era
   = AlonzoInBabbageUtxowPredFailure (AlonzoUtxowPredFailure era) -- TODO: embed and translate
@@ -190,11 +189,6 @@ instance
     4 -> SumD MalformedReferenceScripts <! From
     5 -> SumD ScriptIntegrityHashMismatch <! From <! From
     n -> Invalid n
-
-deriving via
-  InspectHeapNamed "BabbageUtxowPred" (BabbageUtxowPredFailure era)
-  instance
-    NoThunks (BabbageUtxowPredFailure era)
 
 instance
   ( AlonzoEraScript era

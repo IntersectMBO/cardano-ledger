@@ -45,10 +45,9 @@ import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure, conwayToDijkst
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 newtype DijkstraSubGovPredFailure era = DijkstraSubGovPredFailure (DijkstraGovPredFailure era)
-  deriving (Generic, Eq, Show, NoThunks, NFData, EncCBOR, DecCBOR)
+  deriving (Generic, Eq, Show, NFData, EncCBOR, DecCBOR)
 
 type instance EraRuleFailure "SUBGOV" DijkstraEra = DijkstraSubGovPredFailure DijkstraEra
 

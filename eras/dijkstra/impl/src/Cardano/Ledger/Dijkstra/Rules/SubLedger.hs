@@ -101,7 +101,6 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 data SubLedgerEnv era = SubLedgerEnv
   { sleSlotNo :: SlotNo
@@ -133,13 +132,6 @@ deriving stock instance
   , Show (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   Show (DijkstraSubLedgerPredFailure era)
-
-instance
-  ( NoThunks (PredicateFailure (EraRule "SUBGOV" era))
-  , NoThunks (PredicateFailure (EraRule "SUBCERTS" era))
-  , NoThunks (PredicateFailure (EraRule "SUBUTXOW" era))
-  ) =>
-  NoThunks (DijkstraSubLedgerPredFailure era)
 
 instance
   ( NFData (PredicateFailure (EraRule "SUBGOV" era))

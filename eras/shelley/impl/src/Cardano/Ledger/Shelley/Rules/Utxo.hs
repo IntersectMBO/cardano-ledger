@@ -101,7 +101,6 @@ import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
-import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
 data UtxoEnv era = UtxoEnv
@@ -208,13 +207,6 @@ deriving stock instance
   , Eq (EraRuleFailure "PPUP" era)
   ) =>
   Eq (ShelleyUtxoPredFailure era)
-
-instance
-  ( NoThunks (Value era)
-  , NoThunks (TxOut era)
-  , NoThunks (EraRuleFailure "PPUP" era)
-  ) =>
-  NoThunks (ShelleyUtxoPredFailure era)
 
 instance
   ( Era era

@@ -109,7 +109,6 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 data ConwayBbodyPredFailure era
   = WrongBlockBodySizeBBODY (Mismatch RelEQ Int)
@@ -132,10 +131,6 @@ deriving instance
 deriving anyclass instance
   (Era era, NFData (PredicateFailure (EraRule "LEDGERS" era))) =>
   NFData (ConwayBbodyPredFailure era)
-
-deriving anyclass instance
-  (Era era, NoThunks (PredicateFailure (EraRule "LEDGERS" era))) =>
-  NoThunks (ConwayBbodyPredFailure era)
 
 instance
   ( Era era

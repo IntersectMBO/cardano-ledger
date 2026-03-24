@@ -87,10 +87,6 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
-import NoThunks.Class (
-  InspectHeapNamed (..),
-  NoThunks (..),
- )
 
 -- ================================
 
@@ -196,11 +192,6 @@ deriving instance
   , Eq (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Eq (DijkstraUtxowPredFailure era)
-
-deriving via
-  InspectHeapNamed "ConwayUtxowPred" (DijkstraUtxowPredFailure era)
-  instance
-    NoThunks (DijkstraUtxowPredFailure era)
 
 instance
   ( ConwayEraScript era

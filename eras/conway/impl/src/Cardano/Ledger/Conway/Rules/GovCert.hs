@@ -78,7 +78,6 @@ import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro ((%~), (&), (.~), (^.))
-import NoThunks.Class (NoThunks (..))
 
 data ConwayGovCertEnv era = ConwayGovCertEnv
   { cgcePParams :: PParams era
@@ -123,8 +122,6 @@ type instance EraRuleFailure "GOVCERT" ConwayEra = ConwayGovCertPredFailure Conw
 type instance EraRuleEvent "GOVCERT" ConwayEra = VoidEraRule "GOVCERT" ConwayEra
 
 instance InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure ConwayEra
-
-instance NoThunks (ConwayGovCertPredFailure era)
 
 instance NFData (ConwayGovCertPredFailure era)
 

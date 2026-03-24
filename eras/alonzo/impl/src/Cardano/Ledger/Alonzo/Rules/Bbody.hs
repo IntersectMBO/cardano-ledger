@@ -75,7 +75,6 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
-import NoThunks.Class (NoThunks (..))
 
 data AlonzoBbodyPredFailure era
   = ShelleyInAlonzoBbodyPredFailure (ShelleyBbodyPredFailure era)
@@ -145,10 +144,6 @@ deriving instance
 deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
   Eq (AlonzoBbodyPredFailure era)
-
-deriving anyclass instance
-  (Era era, NoThunks (PredicateFailure (EraRule "LEDGERS" era))) =>
-  NoThunks (AlonzoBbodyPredFailure era)
 
 instance
   (Era era, EncCBOR (PredicateFailure (EraRule "LEDGERS" era))) =>

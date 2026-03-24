@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -178,8 +177,6 @@ prtclTransition = do
       cs'
       etaV'
       etaC'
-
-instance Crypto c => NoThunks (PrtclPredicateFailure c)
 
 instance
   ( Crypto c

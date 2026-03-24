@@ -63,7 +63,6 @@ import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks)
 import Validation
 
 -- ==========================================================
@@ -115,13 +114,6 @@ deriving stock instance
   , Eq (EraRuleFailure "PPUP" era)
   ) =>
   Eq (AllegraUtxoPredFailure era)
-
-instance
-  ( NoThunks (TxOut era)
-  , NoThunks (Value era)
-  , NoThunks (EraRuleFailure "PPUP" era)
-  ) =>
-  NoThunks (AllegraUtxoPredFailure era)
 
 instance
   ( Era era

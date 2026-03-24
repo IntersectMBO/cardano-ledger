@@ -83,7 +83,6 @@ import qualified Data.OSet.Strict as OSet
 import Data.Sequence (Seq (..))
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 data CertsEnv era = CertsEnv
   { certsTx :: Tx TopTx era
@@ -144,10 +143,6 @@ deriving stock instance
 deriving stock instance
   Show (PredicateFailure (EraRule "CERT" era)) =>
   Show (ConwayCertsPredFailure era)
-
-instance
-  NoThunks (PredicateFailure (EraRule "CERT" era)) =>
-  NoThunks (ConwayCertsPredFailure era)
 
 instance
   NFData (PredicateFailure (EraRule "CERT" era)) =>

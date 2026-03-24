@@ -7,6 +7,10 @@
   - Update `tickChainDepState`, `updateChainDepState`, and `reupdateChainDepState` to use the new `TPraosLedgerView`.
   - Deprecate `mkInitialShelleyLedgerView`.
 * Remove `TicknPredicateFailure` and make `PredicateFailure TICKN` be `Void`.
+* Remove `NoThunks` instance for
+  - `UpdnPredicateFailure`
+  - `OverlayPredicateFailure`
+  - `ChainTransitionError`
 
 ### `testlib`
 

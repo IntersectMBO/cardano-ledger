@@ -49,10 +49,9 @@ import Control.State.Transition.Extended (
  )
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 newtype DijkstraSubDelegPredFailure era = DijkstraSubDelegPredFailure (ConwayDelegPredFailure era)
-  deriving (Generic, Eq, Show, NFData, NoThunks, EncCBOR, DecCBOR)
+  deriving (Generic, Eq, Show, NFData, EncCBOR, DecCBOR)
 
 type instance EraRuleFailure "SUBDELEG" DijkstraEra = DijkstraSubDelegPredFailure DijkstraEra
 

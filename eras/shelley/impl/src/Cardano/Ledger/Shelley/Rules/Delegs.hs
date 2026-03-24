@@ -63,7 +63,6 @@ import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: SlotNo
@@ -140,10 +139,6 @@ instance
   type Event (ShelleyDELEGS era) = ShelleyDelegsEvent era
 
   transitionRules = [delegsTransition]
-
-instance
-  NoThunks (PredicateFailure (EraRule "DELPL" era)) =>
-  NoThunks (ShelleyDelegsPredFailure era)
 
 instance
   ( Era era

@@ -107,7 +107,6 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 import Validation
 
 -- =========================================
@@ -152,12 +151,6 @@ newtype ShelleyUtxowEvent era
 deriving instance Eq (Event (EraRule "UTXO" era)) => Eq (ShelleyUtxowEvent era)
 
 instance NFData (Event (EraRule "UTXO" era)) => NFData (ShelleyUtxowEvent era)
-
-instance
-  ( NoThunks (PredicateFailure (EraRule "UTXO" era))
-  , Era era
-  ) =>
-  NoThunks (ShelleyUtxowPredFailure era)
 
 instance
   ( NFData (PredicateFailure (EraRule "UTXO" era))

@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-shelley-test`
 
-## 1.8.0.1
+## 1.9.0.0
 
-*
+* Remove `NoThunks` instance for `TestChainPredicateFailure`
 
 ## 1.8.0.0
 

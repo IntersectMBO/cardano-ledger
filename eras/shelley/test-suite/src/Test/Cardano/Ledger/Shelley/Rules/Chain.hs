@@ -108,7 +108,6 @@ import Data.Void (Void)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (&), (.~), (^.))
-import NoThunks.Class (NoThunks (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
@@ -166,14 +165,6 @@ deriving stock instance
   , Eq (PredicateFailure (EraRule "TICKN" era))
   ) =>
   Eq (TestChainPredicateFailure era)
-
-instance
-  ( Era era
-  , NoThunks (PredicateFailure (EraRule "BBODY" era))
-  , NoThunks (PredicateFailure (EraRule "TICK" era))
-  , NoThunks (PredicateFailure (EraRule "TICKN" era))
-  ) =>
-  NoThunks (TestChainPredicateFailure era)
 
 -- | Creates a valid initial chain state
 initialShelleyState ::

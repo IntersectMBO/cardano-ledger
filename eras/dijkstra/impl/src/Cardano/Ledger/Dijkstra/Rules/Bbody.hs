@@ -99,7 +99,6 @@ import Data.Sequence (Seq)
 import Data.Sequence.Strict (fromStrict)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
-import NoThunks.Class (NoThunks (..))
 
 data DijkstraBbodyPredFailure era
   = WrongBlockBodySizeBBODY (Mismatch RelEQ Int)
@@ -120,10 +119,6 @@ deriving instance
 deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
   Eq (DijkstraBbodyPredFailure era)
-
-deriving anyclass instance
-  (Era era, NoThunks (PredicateFailure (EraRule "LEDGERS" era))) =>
-  NoThunks (DijkstraBbodyPredFailure era)
 
 instance
   ( Era era
