@@ -32,6 +32,7 @@ import Cardano.Ledger.Conway.Era (
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
   hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
  )
+import Cardano.Ledger.Conway.Forecast ()
 import Cardano.Ledger.Conway.Governance (RunConwayRatify (..))
 import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure)
 import Cardano.Ledger.Conway.State ()

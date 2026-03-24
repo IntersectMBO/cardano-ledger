@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `EraForecast` instance for `DijkstraEra`.
 * Deprecate `BHeaderView` in favour of `DijkstraEraBlockHeader` typeclass.
   - Add `PerasCert`, `PerasKey` and `validatePerasCert` to `Dijkstra.BlockBody` (moved from core).
   - Add `DijkstraEraBlockHeader` typeclass and the `DijkstraBbodySignal` GADT.
