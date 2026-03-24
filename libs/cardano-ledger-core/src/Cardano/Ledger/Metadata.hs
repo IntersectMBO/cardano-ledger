@@ -69,7 +69,6 @@ instance EncCBOR Metadatum where
 instance DecCBOR Metadatum where
   decCBOR = decodeMetadatum
 
-
 -------------------------------------------------------------------------------
 -- CBOR encoding and decoding
 

@@ -66,21 +66,23 @@ spec = do
     roundTripCborSpec @(SafeHash EraIndependentData)
 
   describe "Metadatum" $ do
+    let genBytes n = BS.pack <$> vectorOf n arbitrary
+        genAsciiText n = T.pack <$> vectorOf n (choose ('a', 'z'))
     prop "Accepts bytes up to 64 bytes" $
-      forAll (choose (0, 64)) $ \n ->
-        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E (BS.replicate n 0))
+      forAll (choose (0, 64) >>= genBytes) $ \bs ->
+        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E bs)
           `shouldSatisfy` isRight
     prop "Rejects bytes exceeding 64 bytes" $
-      forAll (choose (65, 1000)) $ \n ->
-        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E (BS.replicate n 0))
+      forAll (choose (65, 1000) >>= genBytes) $ \bs ->
+        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E bs)
           `shouldSatisfy` isLeft
     prop "Accepts text up to 64 bytes" $
-      forAll (choose (0, 64)) $ \n ->
-        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E (T.replicate n "a"))
+      forAll (choose (0, 64) >>= genAsciiText) $ \txt ->
+        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E txt)
           `shouldSatisfy` isRight
     prop "Rejects text exceeding 64 bytes" $
-      forAll (choose (65, 1000)) $ \n ->
-        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E (T.replicate n "a"))
+      forAll (choose (65, 1000) >>= genAsciiText) $ \txt ->
+        decodeFull @Metadatum shelleyProtVer (toLazyByteString $ toCBOR $ E txt)
           `shouldSatisfy` isLeft
 
   describe "DecCBOR instances equivalence" $ do
