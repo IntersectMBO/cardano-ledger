@@ -2,6 +2,8 @@
 
 ## 0.3.0.0
 
+* Remove `SubMissingRequiredDatums`, `SubNotAllowedSupplementalDatums`, and
+  `SubUnspendableUTxONoDatumHash` constructors from `DijkstraSubUtxowPredFailure`
 * Add `WrongNetworkInDirectDeposit` constructor to `DijkstraUtxoPredFailure`
 * Add `SubWrongNetworkInDirectDeposit` constructor to `DijkstraSubUtxoPredFailure`
 * Add `validateWrongNetworkInDirectDeposit`
