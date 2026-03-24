@@ -4,6 +4,13 @@ description: Update CHANGELOG.md files and cabal version numbers for all package
 argument-hint: "[package-root]"
 disable-model-invocation: true
 allowed-tools: Bash(git *), Read, Grep, Glob, Edit
+model: opus
+effort: max
+hooks:
+  Stop:
+    - hooks:
+      - type: command
+        command: "scripts/format-changelogs.sh"
 ---
 
 Update `CHANGELOG.md` files and `.cabal` version numbers for packages changed since `origin/master`.
