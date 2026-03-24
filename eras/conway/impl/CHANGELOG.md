@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `updateTreasuryDonation`
 * Add `EraForecast` instance for `ConwayEra`.
 * Update `PredicateFailure` for `ConwayTICKF` to `Void` and remove `ConwayTickfPredFailure`.
 * Change `ConwayBBODY` `Signal` to `BbodySignal`.

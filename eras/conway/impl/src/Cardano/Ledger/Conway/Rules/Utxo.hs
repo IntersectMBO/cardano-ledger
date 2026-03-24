@@ -21,6 +21,7 @@ module Cardano.Ledger.Conway.Rules.Utxo (
   alonzoToConwayUtxoPredFailure,
   ConwayUtxoPredFailure (..),
   UtxoEnv (..),
+  updateTreasuryDonation,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
@@ -67,7 +68,7 @@ import Cardano.Ledger.Conway.Rules.Utxos (
   ConwayUtxosPredFailure (..),
  )
 import Cardano.Ledger.Plutus (ExUnits)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   UtxoEnv (..),
@@ -82,6 +83,7 @@ import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
+import Lens.Micro ((&), (<>~), (^.))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 -- ======================================================
@@ -220,12 +222,23 @@ instance
   ) =>
   NFData (ConwayUtxoPredFailure era)
 
+-- | Accumulate treasury donation for valid transactions
+updateTreasuryDonation ::
+  (AlonzoEraTx era, ConwayEraTxBody era) =>
+  Tx TopTx era ->
+  UTxOState era ->
+  UTxOState era
+updateTreasuryDonation tx utxos =
+  case tx ^. isValidTxL of
+    IsValid True -> utxos & utxosDonationL <>~ tx ^. bodyTxL . treasuryDonationTxBodyL
+    IsValid False -> utxos
+
 conwayUtxoTransition ::
   forall era.
   ( EraUTxO era
   , EraCertState era
-  , BabbageEraTxBody era
   , AlonzoEraTx era
+  , ConwayEraTxBody era
   , EraStake era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
@@ -248,7 +261,12 @@ conwayUtxoTransition = do
   TRC (UtxoEnv _ pp certState, utxos, tx) <- judgmentContext
   babbageUtxoValidation
   updatedUtxos <- trans @(EraRule "UTXOS" era) $ TRC (pp, utxos, tx)
-  updateUTxOStateByTxValidity pp certState (utxosGovState utxos) tx updatedUtxos
+  updateUTxOStateByTxValidity
+    pp
+    certState
+    (utxosGovState utxos)
+    tx
+    (updateTreasuryDonation tx updatedUtxos)
 
 --------------------------------------------------------------------------------
 -- ConwayUTXO STS

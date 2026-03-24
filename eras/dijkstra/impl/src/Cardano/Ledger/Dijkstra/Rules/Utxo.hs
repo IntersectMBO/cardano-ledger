@@ -63,6 +63,7 @@ import Cardano.Ledger.Conway.Rules (
   allegraToConwayUtxoPredFailure,
   alonzoToConwayUtxoPredFailure,
   babbageToConwayUtxoPredFailure,
+  updateTreasuryDonation,
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (StakeReference (..))
@@ -254,8 +255,8 @@ dijkstraUtxoTransition ::
   forall era.
   ( EraUTxO era
   , EraCertState era
-  , BabbageEraTxBody era
   , AlonzoEraTx era
+  , ConwayEraTxBody era
   , EraStake era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
@@ -280,7 +281,12 @@ dijkstraUtxoTransition = do
   babbageUtxoValidation
   validateNoPtrInCollateralReturn $ tx ^. bodyTxL
   updatedUtxos <- trans @(EraRule "UTXOS" era) $ TRC (pp, utxos, tx)
-  updateUTxOStateByTxValidity pp certState (utxosGovState utxos) tx updatedUtxos
+  updateUTxOStateByTxValidity
+    pp
+    certState
+    (utxosGovState utxos)
+    tx
+    (updateTreasuryDonation tx updatedUtxos)
 
 instance
   forall era.
