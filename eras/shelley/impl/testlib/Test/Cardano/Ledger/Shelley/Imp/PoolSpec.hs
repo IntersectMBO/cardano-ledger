@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.PoolSpec (spec) where
@@ -11,18 +13,28 @@ import Cardano.Crypto.Hash.Class (hashSize)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
+import Cardano.Ledger.Shelley.Rewards
+import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.State
-import Data.Map.Strict as Map
+import Data.Coerce
+import qualified Data.Map.Strict as Map
 import Data.Proxy
+import qualified Data.Set as Set
+import Data.Typeable (cast)
 import Lens.Micro
 import Test.Cardano.Base.Bytes (genByteArray)
+import Test.Cardano.Ledger.Core.KeyPair
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec :: forall era. ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  ( ShelleyEraImp era
+  , Event (EraRule "RUPD" era) ~ RupdEvent
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "POOL" $ do
   describe "Register and re-register pools" $ do
     it "register a pool with too low cost" $ do
@@ -364,6 +376,122 @@ spec = describe "POOL" $ do
       expectPool khNew (Just vrf)
       expectRetiring False khNew
       expectVRFs [vrf]
+  -- \| Example demonstrating a particular delegation scenario involving two pools.
+  -- Both pools select an account address which is *not* a pool owner, and which
+  -- delegates to one of the pools.
+  it "Two Pools" $ do
+    let aliceInitCoin = Coin 10_000_000_000
+        bobInitCoin = Coin 1_000_000_000
+        carlInitCoin = Coin 5_000_000_000
+    [acpk, bcpk] <- replicateM 2 freshKeyHash
+    [aliceSHK, bobSHK, carlSHK] <- replicateM 3 (KeyHashObj <$> freshKeyHash)
+    [alicePay, bobPay, carlPay] <- replicateM 3 (freshKeyHash @Payment)
+    let aliceAddr = mkAddr alicePay aliceSHK
+        bobAddr = mkAddr bobPay bobSHK
+        carlAddr = mkAddr carlPay carlSHK
+        carlAccAddr = AccountAddress Testnet (AccountId carlSHK)
+
+    -- === Block 1, Epoch 0
+    --
+    -- In the first block, Alice, Bob, and Carl register stake credentials,
+    -- Alice and Bob register stake pools (both pointing to Carl's account
+    -- address), Alice and Carl delegate to Alice's pool, and Bob delegates
+    -- to Bob's pool.  This is the only block that includes a transaction.
+    withTxsInBlock_ $ do
+      void $ registerStakeCredential aliceSHK
+      void $ registerStakeCredential bobSHK
+      void $ registerStakeCredential carlSHK
+      registerPoolWithPledge acpk carlAccAddr
+      registerPoolWithPledge bcpk carlAccAddr
+      delegateStake aliceSHK acpk
+      delegateStake bobSHK bcpk
+      delegateStake carlSHK acpk
+      sendCoinTo_ aliceAddr aliceInitCoin
+      sendCoinTo_ bobAddr bobInitCoin
+      sendCoinTo_ carlAddr carlInitCoin
+
+    expectRegisteredAccountAddress carlAccAddr
+    expectStakeCredRegistered aliceSHK
+    expectStakeCredRegistered bobSHK
+    expectStakeCredRegistered carlSHK
+    expectDelegatedToPool aliceSHK acpk
+    expectDelegatedToPool bobSHK bcpk
+    expectDelegatedToPool carlSHK acpk
+
+    -- === Epoch 1
+    evs1 <- impEventsFrom passEpoch
+    logDoc $ ansiExpr evs1
+
+    -- === Block 2, Epoch 1
+    --
+    -- Block 2 is produced by Alice's pool — this creates the first
+    -- non-empty pool distribution heading into epoch 2.
+    withIssuerAndTxsInBlock_ (coerce acpk) $ pure ()
+
+    -- === Epoch 2
+    evs2 <- impEventsFrom passEpoch
+    logDoc $ ansiExpr evs2
+
+    -- Verify the pool distribution reflects all delegated stake.
+    pd <- getsNES nesPdL
+    unNonZero (pdTotalActiveStake pd) `shouldBe` (aliceInitCoin <> bobInitCoin <> carlInitCoin)
+
+    -- === Blocks 3–4, Epoch 2
+    --
+    -- Alice's pool produces a second block; Bob's pool produces one block;
+    -- The reward pulser will use these
+    -- three blocks (2 Alice, 1 Bob) when computing rewards for epoch 3.
+    withIssuerAndTxsInBlock_ (coerce acpk) $ pure ()
+    withIssuerAndTxsInBlock_ (coerce bcpk) $ pure ()
+
+    -- === Epoch 3
+    --
+    -- The reward pulser is built during epoch 3 using the block production
+    -- record from epoch 2 (two blocks from Alice's pool, one from Bob's).
+    evs3 <- impEventsFrom passEpoch
+    logDoc $ ansiExpr evs3
+
+    -- Pass epochs 3→4 and 4→5. The reward update is computed via the
+    -- pulser during one of these epochs and applied at the boundary.
+    evs4 <- impEventsFrom $ passNEpochs 2
+
+    let extractRupdMap (SomeSTSEvent ev)
+          | Just (TickRupdEvent (RupdEvent _ m)) <- cast ev :: Maybe (ShelleyTickEvent era) =
+              m
+        extractRupdMap _ = mempty
+
+    let rewardMap =
+          foldr (Map.unionWith Set.union . extractRupdMap) Map.empty evs4
+    rewardMap `shouldSatisfy` (not . Map.null)
+
+    -- Carl is the account address for both pools, so carl receives a leader
+    -- reward from each pool.  Carl also delegates to acpk and is not a pool
+    -- owner, so carl additionally receives a member reward from acpk.
+    carlRewards <- expectJust $ Map.lookup carlSHK rewardMap
+    Set.size carlRewards `shouldBe` 3
+
+    let leaderRews = Set.filter ((== LeaderReward) . rewardType) carlRewards
+        memberRews = Set.filter ((== MemberReward) . rewardType) carlRewards
+
+    -- Carl has exactly two leader rewards (one from each pool) and one member reward.
+    Set.size leaderRews `shouldBe` 2
+    Set.size memberRews `shouldBe` 1
+    Set.map rewardPool leaderRews `shouldBe` Set.fromList [acpk, bcpk]
+    rewardPool (Set.findMin memberRews) `shouldBe` acpk
+
+    -- Aggregated rewards — legacy behavior (pv <= 2): only the minimum
+    -- Reward (by Ord) is kept.  Ord Reward: LeaderReward < MemberReward;
+    -- among LeaderRewards, ordered by pool hash.  So the aggregate is the
+    -- amount of the LeaderReward with the smaller pool hash.
+    let legacyAgg = aggregateRewards (ProtVer (natVersion @2) 0) rewardMap
+    Map.lookup carlSHK legacyAgg `shouldBe` Just (rewardAmount (Set.findMin carlRewards))
+
+    -- Aggregated rewards — new behavior (pv >= 3): all rewards are summed.
+    let newAgg = aggregateRewards (ProtVer (natVersion @3) 0) rewardMap
+    Map.lookup carlSHK newAgg `shouldBe` Just (foldMap rewardAmount carlRewards)
+
+    -- New aggregation gives strictly more than legacy, since carl holds multiple rewards.
+    (newAgg Map.! carlSHK) `shouldSatisfy` (> legacyAgg Map.! carlSHK)
   where
     registerNewPool = do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
@@ -402,5 +530,10 @@ spec = describe "POOL" $ do
       ImpTestM era StakePoolParams
     poolParams kh vrf = do
       pps <- registerAccountAddress >>= freshPoolParams kh
-      pure $ pps & sppVrfL .~ vrf
+      pure $ (pps & sppVrfL .~ vrf) {sppPledge = Coin 0}
+    registerPoolWithPledge pk accAddr = do
+      pps <- freshPoolParams pk accAddr
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ [RegPoolTxCert pps {sppPledge = Coin 0}]
     getPState = getsNES @era $ nesEsL . esLStateL . lsCertStateL . certPStateL

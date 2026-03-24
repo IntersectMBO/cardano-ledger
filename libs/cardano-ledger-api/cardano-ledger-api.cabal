@@ -72,7 +72,7 @@ library
     cardano-ledger-core:{cardano-ledger-core, internal} >=1.17,
     cardano-ledger-dijkstra >=0.2,
     cardano-ledger-mary ^>=1.10,
-    cardano-ledger-shelley ^>=1.18,
+    cardano-ledger-shelley ^>=1.19,
     cardano-strict-containers,
     containers,
     data-default,

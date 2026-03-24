@@ -94,7 +94,7 @@ library
     cardano-ledger-binary >=1.6,
     cardano-ledger-core:{cardano-ledger-core, internal} >=1.19,
     cardano-ledger-mary ^>=1.10,
-    cardano-ledger-shelley ^>=1.18,
+    cardano-ledger-shelley ^>=1.19,
     cardano-strict-containers,
     containers,
     deepseq,
@@ -157,6 +157,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.Era
     Test.Cardano.Ledger.Babbage.Examples
     Test.Cardano.Ledger.Babbage.Imp
+    Test.Cardano.Ledger.Babbage.Imp.PoolSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxoSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxosSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxowSpec
@@ -199,7 +200,7 @@ library testlib
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.13.2,
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
-    cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.18,
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.19,
     cardano-slotting,
     cardano-strict-containers,
     containers,
