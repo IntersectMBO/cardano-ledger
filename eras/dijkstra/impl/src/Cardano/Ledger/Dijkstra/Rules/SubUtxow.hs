@@ -28,7 +28,6 @@ import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailur
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   checkScriptIntegrityHash,
   hasExactSetOfRedeemers,
-  missingRequiredDatums,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
@@ -72,11 +71,9 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateVerifiedWits,
  )
 import Cardano.Ledger.State (EraCertState, EraStake, EraUTxO (..))
-import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
-import Data.Set (Set)
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -98,21 +95,8 @@ data DijkstraSubUtxowPredFailure era
   | -- | Contains out of range values (string`s too long)
     SubInvalidMetadata
   | SubMissingRedeemers (NonEmpty (PlutusPurpose AsItem era, ScriptHash))
-  | SubMissingRequiredDatums
-      -- | Set of missing data hashes
-      (NonEmptySet DataHash)
-      -- | Set of received data hashes
-      (Set DataHash)
-  | SubNotAllowedSupplementalDatums
-      -- | Set of unallowed data hashes.
-      (NonEmptySet DataHash)
-      -- | Set of acceptable supplemental data hashes
-      (Set DataHash)
   | SubPPViewHashesDontMatch
       (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
-  | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
-    SubUnspendableUTxONoDatumHash
-      (NonEmptySet TxIn)
   | -- | List of redeemers not needed
     SubExtraRedeemers (NonEmpty (PlutusPurpose AsIx era))
   | -- | Embed UTXO rule failures
@@ -244,9 +228,6 @@ dijkstraSubUtxowTransition = do
   {- vKeyHashesNeeded ⊆ vKeyHashesProvided -}
   runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState originalUtxo txBody
 
-  {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
-  runTest $ Alonzo.missingRequiredDatums originalUtxo tx
-
   {- txADhash ≡ map hash txAuxData -}
   runTestOnSignal $ Shelley.validateMetadata pp tx
 
@@ -301,10 +282,7 @@ instance
       SubConflictingMetadataHash mm -> Sum SubConflictingMetadataHash 6 !> To mm
       SubInvalidMetadata -> Sum SubInvalidMetadata 7
       SubMissingRedeemers x -> Sum SubMissingRedeemers 8 !> To x
-      SubMissingRequiredDatums x y -> Sum SubMissingRequiredDatums 9 !> To x !> To y
-      SubNotAllowedSupplementalDatums x y -> Sum SubNotAllowedSupplementalDatums 10 !> To x !> To y
       SubPPViewHashesDontMatch mm -> Sum SubPPViewHashesDontMatch 11 !> To mm
-      SubUnspendableUTxONoDatumHash x -> Sum SubUnspendableUTxONoDatumHash 12 !> To x
       SubExtraRedeemers x -> Sum SubExtraRedeemers 13 !> To x
       SubMalformedScriptWitnesses x -> Sum SubMalformedScriptWitnesses 14 !> To x
       SubMalformedReferenceScripts x -> Sum SubMalformedReferenceScripts 15 !> To x
@@ -326,10 +304,7 @@ instance
     6 -> SumD SubConflictingMetadataHash <! From
     7 -> SumD SubInvalidMetadata
     8 -> SumD SubMissingRedeemers <! From
-    9 -> SumD SubMissingRequiredDatums <! From <! From
-    10 -> SumD SubNotAllowedSupplementalDatums <! From <! From
     11 -> SumD SubPPViewHashesDontMatch <! From
-    12 -> SumD SubUnspendableUTxONoDatumHash <! From
     13 -> SumD SubExtraRedeemers <! From
     14 -> SumD SubMalformedScriptWitnesses <! From
     15 -> SumD SubMalformedReferenceScripts <! From
@@ -354,10 +329,10 @@ dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
   InvalidMetadata -> SubInvalidMetadata
   ExtraneousScriptWitnessesUTXOW _ -> error "Impossible: `ExtraneousScriptWitnessesUTXOW` for SUBUTXOW"
   MissingRedeemers pps -> SubMissingRedeemers pps
-  MissingRequiredDatums hs1 hs2 -> SubMissingRequiredDatums hs1 hs2
-  NotAllowedSupplementalDatums hs1 hs2 -> SubNotAllowedSupplementalDatums hs1 hs2
+  MissingRequiredDatums _ _ -> error "Impossible: `MissingRequiredDatums` for SUBUTXOW"
+  NotAllowedSupplementalDatums _ _ -> error "Impossible: `NotAllowedSupplementalDatums` for SUBUTXOW"
   PPViewHashesDontMatch mm -> SubPPViewHashesDontMatch mm
-  UnspendableUTxONoDatumHash txs -> SubUnspendableUTxONoDatumHash txs
+  UnspendableUTxONoDatumHash _ -> error "Impossible: `UnspendableUTxONoDatumHash` for SUBUTXOW"
   ExtraRedeemers pps -> SubExtraRedeemers pps
   MalformedScriptWitnesses hs -> SubMalformedScriptWitnesses hs
   MalformedReferenceScripts hs -> SubMalformedReferenceScripts hs
