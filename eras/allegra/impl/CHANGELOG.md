@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.9.0.1
+## 1.9.1.0
 
-*
+* Add `EraForecast` and `ShelleyEraForecast` instances for `AllegraEra`.
 
 ## 1.9.0.0
 

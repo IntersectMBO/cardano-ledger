@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `EraForecast` and `ShelleyEraForecast` instances for `AlonzoEra`.
 * Change `AlonzoBBODY` `Signal` to `BbodySignal`.
 * Add `validateExUnits`.
 

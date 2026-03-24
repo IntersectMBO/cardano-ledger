@@ -24,6 +24,7 @@ module Cardano.Ledger.Alonzo (
 
 import Cardano.Ledger.Alonzo.BlockBody ()
 import Cardano.Ledger.Alonzo.Era
+import Cardano.Ledger.Alonzo.Forecast ()
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Plutus.TxInfo ()
 import Cardano.Ledger.Alonzo.Rules ()

@@ -18,6 +18,7 @@ module Cardano.Ledger.Allegra (
 
 import Cardano.Ledger.Allegra.BlockBody ()
 import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.Forecast ()
 import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Allegra.Rules ()
 import Cardano.Ledger.Allegra.Scripts ()
