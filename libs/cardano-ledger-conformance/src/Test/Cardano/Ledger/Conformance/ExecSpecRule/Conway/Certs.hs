@@ -32,7 +32,7 @@ instance ExecSpecRule "CERTS" ConwayEra where
 
   runAgdaRule = runFromAgdaFunction Agda.certsStep
 
-  translateOutput ctx@ConwayCertExecContext {..} _ = runSpecTransM ctx . toSpecRep . fixRewards
+  translateOutput ctx@ConwayCertExecContext {..} _ = runSpecTransM ctx . toSpecRep @_ @ConwayEra . fixRewards
     where
       -- This is necessary because the implementation zeroes out the rewards
       -- in the CERTS rule, but the spec does it in a different rule

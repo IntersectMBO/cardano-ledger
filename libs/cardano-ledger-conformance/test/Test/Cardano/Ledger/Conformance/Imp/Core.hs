@@ -98,13 +98,13 @@ submitTxConformanceHook ::
   ( ConwayEraImp era
   , ExecSpecRule "LEDGER" era
   , ExecContext "LEDGER" era ~ ConwayLedgerExecContext era
-  , SpecTranslate (ExecContext "LEDGER" era) (TxWits era)
+  , SpecTranslate (ExecContext "LEDGER" era) era (TxWits era)
   , HasCallStack
-  , SpecRep (TxWits era) ~ Agda.TxWitnesses
-  , SpecRep (TxBody TopTx era) ~ Agda.TxBody
-  , SpecTranslate TxId (TxBody TopTx era)
-  , SpecTranslate (ConwayLedgerExecContext era) (Tx TopTx era)
-  , ToExpr (SpecRep (Tx TopTx era))
+  , SpecRep era (TxWits era) ~ Agda.TxWitnesses
+  , SpecRep era (TxBody TopTx era) ~ Agda.TxBody
+  , SpecTranslate TxId era (TxBody TopTx era)
+  , SpecTranslate (ConwayLedgerExecContext era) era (Tx TopTx era)
+  , ToExpr (SpecRep era (Tx TopTx era))
   , SpecNormalize (SpecState "LEDGER" era)
   , Eq (SpecState "LEDGER" era)
   ) =>

@@ -43,7 +43,11 @@ import Test.Cardano.Ledger.Imp.Common
 conformsToImplAccepted ::
   era ~ ConwayEra =>
   (RatifyEnv era -> RatifyState era -> GovActionState era -> Bool) ->
-  (SpecRep (RatifyEnv era) -> SpecRep (EnactState era) -> SpecRep (GovActionState era) -> Bool) ->
+  ( SpecRep ConwayEra (RatifyEnv era) ->
+    SpecRep ConwayEra (EnactState era) ->
+    SpecRep ConwayEra (GovActionState era) ->
+    Bool
+  ) ->
   Property
 conformsToImplAccepted impl agda = property $ do
   let ConstrainedGeneratorBundle {..} = constrainedRatify
@@ -51,12 +55,12 @@ conformsToImplAccepted impl agda = property $ do
   govActions <- cgbContextGen
   ratifyEnv <- genFromSpec $ cgbEnvironmentSpec govActions
   ratifySt <- genFromSpec $ cgbStateSpec govActions ratifyEnv
-  let specEnv = fromSpecTransM $ runSpecTransM @Coin 0 $ toSpecRep ratifyEnv
+  let specEnv = fromSpecTransM $ runSpecTransM @Coin 0 $ toSpecRep @_ @ConwayEra ratifyEnv
       specSt =
         fromSpecTransM $
           runSpecTransM govActions $
-            toSpecRep (ratifySt ^. rsEnactStateL)
-      specGovActions = fromSpecTransM $ runSpecTransM () $ toSpecRep govActions
+            toSpecRep @_ @ConwayEra (ratifySt ^. rsEnactStateL)
+      specGovActions = fromSpecTransM $ runSpecTransM () $ toSpecRep @_ @ConwayEra govActions
   return $
     conjoin $
       zipWith

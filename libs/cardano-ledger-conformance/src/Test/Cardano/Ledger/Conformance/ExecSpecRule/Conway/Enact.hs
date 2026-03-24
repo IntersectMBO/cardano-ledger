@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -28,11 +30,11 @@ instance ExecSpecRule "ENACT" ConwayEra where
 
   translateInputs ctx (TRC (_, st@EnactState {..}, sig@EnactSignal {..})) =
     runSpecTransM () $ do
-      agdaSt <- toSpecRep st
-      agdaSig <- toSpecRep sig
-      treasury <- toSpecRep ensTreasury
-      gaId <- toSpecRep esGovActionId
-      curEpoch <- toSpecRep ctx
+      agdaSt <- toSpecRep @_ @ConwayEra st
+      agdaSig <- toSpecRep @_ @ConwayEra sig
+      treasury <- toSpecRep @_ @ConwayEra ensTreasury
+      gaId <- toSpecRep @_ @ConwayEra esGovActionId
+      curEpoch <- toSpecRep @_ @ConwayEra ctx
       pure $
         SpecTRC
           (Agda.MkEnactEnv gaId treasury curEpoch)
