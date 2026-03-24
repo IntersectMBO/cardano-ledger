@@ -26,8 +26,8 @@ module Data.VMap.KVVector (
   fromDistinctAscListN,
   fromList,
   fromListN,
-  -- mapValsKVVector,
-  -- mapWithKeyKVVector,
+  mapValsKVVector,
+  mapWithKeyKVVector,
   memberKVVector,
   lookupKVVector,
   lookupDefaultKVVector,
@@ -181,28 +181,29 @@ fromAscListWithKeyN n f xs
       VG.create $ VGM.unsafeNew n >>= fillWithList xs >>= removeDuplicates (\k v1 v2 -> f k v2 v1)
 {-# INLINE fromAscListWithKeyN #-}
 
--- These guys are too lazy for the KVVector and would require `Data.Vector.Strict`
---
--- mapValsKVVector ::
---   (VG.Vector vv a, VG.Vector vv b) =>
---   (a -> b) ->
---   KVVector kv vv (k, a) ->
---   KVVector kv vv (k, b)
--- mapValsKVVector f vec =
---   KVVector {keysVector = keysVector vec, valsVector = VG.map f (valsVector vec)}
--- {-# INLINE mapValsKVVector #-}
+mapValsKVVector ::
+  (VG.Vector vv a, VG.Vector vv b) =>
+  (a -> b) ->
+  KVVector kv vv (k, a) ->
+  KVVector kv vv (k, b)
+mapValsKVVector f vec =
+  KVVector
+    { keysVector = keysVector vec
+    , valsVector = VG.map f (valsVector vec)
+    }
+{-# NOINLINE mapValsKVVector #-}
 
--- mapWithKeyKVVector ::
---   (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
---   (k -> a -> b) ->
---   KVVector kv vv (k, a) ->
---   KVVector kv vv (k, b)
--- mapWithKeyKVVector f KVVector {..} =
---   KVVector
---     { keysVector = keysVector
---     , valsVector = VG.imap (\i -> f (keysVector VG.! i)) valsVector
---     }
--- {-# INLINE mapWithKeyKVVector #-}
+mapWithKeyKVVector ::
+  (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
+  (k -> a -> b) ->
+  KVVector kv vv (k, a) ->
+  KVVector kv vv (k, b)
+mapWithKeyKVVector f KVVector {..} =
+  KVVector
+    { keysVector = keysVector
+    , valsVector = VG.imap (\i -> f (keysVector VG.! i)) valsVector
+    }
+{-# NOINLINE mapWithKeyKVVector #-}
 
 internKVVectorMaybe :: (VG.Vector kv k, Ord k) => k -> KVVector kv vv (k, v) -> Maybe k
 internKVVectorMaybe key (KVVector keys _values) =

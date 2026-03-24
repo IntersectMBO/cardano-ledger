@@ -61,10 +61,10 @@ import Data.Maybe as Maybe hiding (mapMaybe)
 import qualified Data.Set as Set
 import Data.VMap.KVVector (KVVector (..))
 import qualified Data.VMap.KVVector as KV
-import qualified Data.Vector as V
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Primitive as VP
 import qualified Data.Vector.Storable as VS
+import qualified Data.Vector.Strict as V
 import qualified Data.Vector.Unboxed as VU
 import qualified GHC.Exts as Exts
 import GHC.Generics (Generic)
@@ -232,14 +232,11 @@ fromDistinctAscListN n = VMap . KV.fromDistinctAscListN n
 {-# INLINE fromDistinctAscListN #-}
 
 map ::
-  (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
+  (VG.Vector vv a, VG.Vector vv b) =>
   (a -> b) ->
   VMap kv vv k a ->
   VMap kv vv k b
-map f (VMap vec) = VMap (VG.map (\(k, v) -> let v' = f v in v' `seq` (k, v')) vec)
--- TODO: benchmark and switch to this implementation when we switch to Data.Vector.Strict
--- VMap (KV.mapValsKVVector f vec)
---
+map f (VMap vec) = VMap (KV.mapValsKVVector f vec)
 -- This is marked as NOINLINE because there is some strange issue in `vector`, likely due to stream
 -- fusion, that prevents elements from being forced. This needs further investigation, but for now
 -- we can get away with NOINLINE. FTR. `Data.Vector.Strict` is also susceptible to this problem.
@@ -266,10 +263,10 @@ mapWithKey ::
   (k -> a -> b) ->
   VMap kv vv k a ->
   VMap kv vv k b
-mapWithKey f (VMap vec) = VMap (VG.map (\(k, v) -> (k, f k v)) vec)
--- TODO: benchmark and switch to this implementation when we switch to Data.Vector.Strict
--- VMap (KV.mapWithKeyKVVector f vec)
-{-# INLINE mapWithKey #-}
+mapWithKey f (VMap vec) = VMap (KV.mapWithKeyKVVector f vec)
+-- Keep NOINLINE for now, mirroring `map`, until strictness/benchmark behavior
+-- is re-validated for the helper-based implementation.
+{-# NOINLINE mapWithKey #-}
 
 foldMapWithKey ::
   (VG.Vector kv k, VG.Vector vv v, Monoid m) =>

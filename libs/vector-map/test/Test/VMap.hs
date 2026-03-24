@@ -78,6 +78,16 @@ vMapTests =
         evaluate vmapKeyThunk `shouldThrow` (== ThunkException)
         evaluate vmapValueThunk `shouldThrow` (== ThunkException)
     describe "asMap" $ do
+      prop "map" $ \xs f ->
+        prop_AsMapFrom
+          (\m -> VMap.map (applyFun f) (VMap.fromMap m))
+          (Map.map (applyFun f) :: MapT -> MapT)
+          (Map.fromList xs)
+      prop "mapWithKey" $ \xs f ->
+        prop_AsMapFrom
+          (\m -> VMap.mapWithKey (applyFun2 f) (VMap.fromMap m))
+          (Map.mapWithKey (applyFun2 f) :: MapT -> MapT)
+          (Map.fromList xs)
       prop "mapMaybeWithKey" $ \xs f ->
         prop_AsMapFrom
           (\m -> VMap.mapMaybeWithKey (applyFun2 f) (VMap.fromMap m))
