@@ -32,7 +32,7 @@ fi
 # Ensure the cabal-doctest executable can be found
 PATH=$(cabal path --installdir):$PATH
 
-# Ensure other scripts (eg cabal-targets.hs) can be found
+# Ensure other scripts can be found
 case "$0" in
   */*) PATH=$(dirname "$(which "$0")"):$PATH;;
 esac
@@ -45,7 +45,7 @@ cardano-ledger-api:lib:cardano-ledger-api --build-depends=cardano-ledger-babbage
 EOF
 
 # Run the doctests for some or all packages
-cabal-targets.hs "${PACKAGES[@]}" |
+cleret cabal targets "${PACKAGES[@]}" |
 sort | join -t' ' -a1 -j1 - "$EXTRA_ARGS" |
 while read -ra ARGS
 do
