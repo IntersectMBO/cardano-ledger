@@ -65,6 +65,7 @@ import Cardano.Ledger.Coin (Coin, DeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXO, ConwayUTXOS)
 import Cardano.Ledger.Conway.Rules.Utxos (
+  ConwayUtxosEnv (..),
   ConwayUtxosPredFailure (..),
  )
 import Cardano.Ledger.Plutus (ExUnits)
@@ -251,8 +252,8 @@ conwayUtxoTransition ::
   , STS (EraRule "UTXO" era)
   , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
   , -- In this function we we call the UTXOS rule, so we need some assumptions
-    Environment (EraRule "UTXOS" era) ~ PParams era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+    Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   ) =>
@@ -260,13 +261,13 @@ conwayUtxoTransition ::
 conwayUtxoTransition = do
   TRC (UtxoEnv _ pp certState, utxos, tx) <- judgmentContext
   babbageUtxoValidation
-  updatedUtxos <- trans @(EraRule "UTXOS" era) $ TRC (pp, utxos, tx)
+  () <- trans @(EraRule "UTXOS" era) $ TRC (ConwayUtxosEnv pp (utxosUtxo utxos), (), tx)
   updateUTxOStateByTxValidity
     pp
     certState
     (utxosGovState utxos)
     tx
-    (updateTreasuryDonation tx updatedUtxos)
+    (updateTreasuryDonation tx utxos)
 
 --------------------------------------------------------------------------------
 -- ConwayUTXO STS
@@ -286,8 +287,8 @@ instance
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXO" ConwayUtxoPredFailure era
   , Embed (EraRule "UTXOS" era) (ConwayUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ PParams era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , PredicateFailure (EraRule "UTXO" era) ~ ConwayUtxoPredFailure era
   , EraCertState era
