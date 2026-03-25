@@ -101,6 +101,41 @@
         "type": "github"
       }
     },
+    "cardano-ledger-release-tool": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "hackage": [
+          "hackageNix"
+        ],
+        "haskell-nix": [
+          "haskellNix"
+        ],
+        "nixpkgs": [
+          "cardano-ledger-release-tool",
+          "haskell-nix",
+          "nixpkgs"
+        ],
+        "pre-commit-hooks": [
+          "pre-commit-hooks"
+        ]
+      },
+      "locked": {
+        "lastModified": 1774040590,
+        "narHash": "sha256-hgGRPVtciAAsT96ATgWjEDnmCHP/MthQ23TBwxuDtUo=",
+        "owner": "input-output-hk",
+        "repo": "cardano-ledger-release-tool",
+        "rev": "1c6bd73fc43993112cb47a728d4a72465a66d998",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "ref": "0.2.0.2",
+        "repo": "cardano-ledger-release-tool",
+        "type": "github"
+      }
+    },
     "cardano-mainnet-mirror": {
       "flake": false,
       "locked": {
@@ -801,6 +836,7 @@
     "root": {
       "inputs": {
         "CHaP": "CHaP",
+        "cardano-ledger-release-tool": "cardano-ledger-release-tool",
         "cardano-mainnet-mirror": "cardano-mainnet-mirror",
         "flake-compat": "flake-compat",
         "flake-utils": "flake-utils",

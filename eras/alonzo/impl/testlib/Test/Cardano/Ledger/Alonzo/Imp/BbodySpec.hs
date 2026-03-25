@@ -117,3 +117,5 @@ spec = describe "BBODY" $ do
           withTxsInFailingBlock
             buildTxs
             [injectFailure $ TooManyExUnits mismatch]
+
+          expectationFailure "Deliberate failure"

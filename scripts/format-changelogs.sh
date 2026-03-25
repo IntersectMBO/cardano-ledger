@@ -9,7 +9,7 @@ then
   mapfile -t FILES < <(git ls-files '*CHANGELOG.md')
 fi
 
-clrt changelogs -i "${FILES[@]}"
+cleret changelogs format -i "${FILES[@]}"
 
 if ! git diff -s --exit-code "${FILES[@]}"
 then

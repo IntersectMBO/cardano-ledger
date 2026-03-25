@@ -35,6 +35,15 @@
 
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
 
+    cardano-ledger-release-tool = {
+      # Tag should match the one used in .github/workflows/haskell.yml
+      url = "github:input-output-hk/cardano-ledger-release-tool?ref=0.2.0.2";
+      inputs.haskell-nix.follows = "haskellNix";
+      inputs.hackage.follows = "hackageNix";
+      inputs.pre-commit-hooks.follows = "pre-commit-hooks";
+      inputs.flake-utils.follows = "flake-utils";
+    };
+
     formal-ledger-specifications = {
       url = "github:IntersectMBO/formal-ledger-specifications";
       flake = false;
@@ -71,7 +80,7 @@
 
         # see flake `variants` below for alternative compilers
         defaultCompiler = "ghc967";
-        fourmoluVersion = "0.17.0.0";
+        fourmoluVersion = "0.17.0.0"; # Should match the tag used in .github/workflows/haskell.yml
         cabalGildVersion = "1.5.0.1";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
@@ -98,7 +107,8 @@
 
           shell = {
             # Due to plutus-tx-plugin being a bit special, we need to augment the default package selection.
-            packages = ps: builtins.attrValues (nixpkgs.haskell-nix.haskellLib.selectLocalPackages ps) ++ lib.optional (ps ? plutus-tx-plugin) ps.plutus-tx-plugin;
+            packages = ps: builtins.attrValues (nixpkgs.haskell-nix.haskellLib.selectLocalPackages ps)
+              ++ lib.optional (ps ? plutus-tx-plugin) ps.plutus-tx-plugin;
 
             # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
             shellHook = ''
@@ -138,7 +148,7 @@
                 (python3.withPackages (ps: with ps; [sphinx sphinx-rtd-theme recommonmark sphinx-markdown-tables sphinxemoji]))
                 haskellPackages.implicit-hie
                 shellcheck
-                cardano-ledger-release-tool
+                inputs.cardano-ledger-release-tool.packages.${system}.default
               ] ++
               (let
                 doctest = haskell-nix.hackage-package {
