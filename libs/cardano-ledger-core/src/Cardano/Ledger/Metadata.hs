@@ -42,9 +42,10 @@ import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData (rnf))
 import Control.Monad (when)
 import Data.Array.Byte (ByteArray (..))
+import qualified Data.ByteString as BS
 import qualified Data.Primitive.ByteArray as Prim
 import qualified Data.Text as T
-import qualified Data.Text.Foreign as T (lengthWord8)
+import qualified Data.Text.Encoding as T
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
