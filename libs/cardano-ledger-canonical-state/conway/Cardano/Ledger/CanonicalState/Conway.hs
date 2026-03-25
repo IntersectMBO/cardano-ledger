@@ -33,7 +33,6 @@ import Cardano.Ledger.CanonicalState.BasicTypes (
   mkOnChain,
  )
 import Cardano.Ledger.CanonicalState.Namespace
-import Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 ()
 import Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
 import Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0
 import Cardano.Ledger.CanonicalState.Namespace.GovProposals.V0
