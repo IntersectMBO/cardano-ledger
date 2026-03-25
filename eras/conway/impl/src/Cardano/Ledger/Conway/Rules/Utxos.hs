@@ -17,6 +17,7 @@
 
 module Cardano.Ledger.Conway.Rules.Utxos (
   ConwayUTXOS,
+  ConwayUtxosEnv (..),
   ConwayUtxosPredFailure (..),
   ConwayUtxosEvent (..),
   alonzoToConwayUtxosPredFailure,
@@ -60,13 +61,24 @@ import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Plutus (PlutusWithContext)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import qualified Debug.Trace as Debug
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+
+data ConwayUtxosEnv era = ConwayUtxosEnv
+  { cuePParams :: !(PParams era)
+  , cueUTxO :: !(UTxO era)
+  }
+  deriving (Generic)
+
+deriving instance (Show (PParams era), Show (UTxO era)) => Show (ConwayUtxosEnv era)
+
+deriving instance (Eq (PParams era), Eq (UTxO era)) => Eq (ConwayUtxosEnv era)
+
+instance (Era era, NFData (PParams era), NFData (UTxO era)) => NFData (ConwayUtxosEnv era)
 
 data ConwayUtxosPredFailure era
   = -- | The 'isValid' tag on the transaction is incorrect. The tag given
@@ -154,7 +166,6 @@ deriving stock instance
   ( ConwayEraScript era
   , Show (TxCert era)
   , Show (ContextError era)
-  , Show (UTxOState era)
   ) =>
   Show (ConwayUtxosPredFailure era)
 
@@ -162,7 +173,6 @@ deriving stock instance
   ( ConwayEraScript era
   , Eq (TxCert era)
   , Eq (ContextError era)
-  , Eq (UTxOState era)
   ) =>
   Eq (ConwayUtxosPredFailure era)
 
@@ -170,7 +180,6 @@ instance
   ( ConwayEraScript era
   , NFData (TxCert era)
   , NFData (ContextError era)
-  , NFData (UTxOState era)
   ) =>
   NFData (ConwayUtxosPredFailure era)
 
@@ -194,8 +203,8 @@ instance
   STS (ConwayUTXOS era)
   where
   type BaseM (ConwayUTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
-  type Environment (ConwayUTXOS era) = PParams era
-  type State (ConwayUTXOS era) = UTxOState era
+  type Environment (ConwayUTXOS era) = ConwayUtxosEnv era
+  type State (ConwayUTXOS era) = ()
   type Signal (ConwayUTXOS era) = Tx TopTx era
   type PredicateFailure (ConwayUTXOS era) = ConwayUtxosPredFailure era
   type Event (ConwayUTXOS era) = ConwayUtxosEvent era
@@ -233,20 +242,19 @@ utxosTransition ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , STS (EraRule "UTXOS" era)
-  , Environment (EraRule "UTXOS" era) ~ PParams era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ()
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
-  judgmentContext >>= \(TRC (pp, utxos, tx)) -> do
+  judgmentContext >>= \(TRC (ConwayUtxosEnv pp utxo, (), tx)) -> do
     case tx ^. isValidTxL of
       IsValid True -> conwayEvalScriptsTxValid
       IsValid False -> do
-        babbageEvalScriptsTxInvalid @era pp tx (utxosUtxo utxos)
-        pure utxos
+        babbageEvalScriptsTxInvalid @era pp tx utxo
 
 conwayEvalScriptsTxValid ::
   forall era.
@@ -256,18 +264,16 @@ conwayEvalScriptsTxValid ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , STS (EraRule "UTXOS" era)
-  , State (EraRule "UTXOS" era) ~ UTxOState era
-  , Environment (EraRule "UTXOS" era) ~ PParams era
+  , State (EraRule "UTXOS" era) ~ ()
+  , Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do
-  TRC (pp, utxos, tx) <- judgmentContext
+  TRC (ConwayUtxosEnv pp utxo, (), tx) <- judgmentContext
 
   () <- pure $! Debug.traceEvent validBegin ()
-  expectScriptsToPass pp tx (utxosUtxo utxos)
-  () <- pure $! Debug.traceEvent validEnd ()
-
-  pure utxos
+  expectScriptsToPass pp tx utxo
+  pure $! Debug.traceEvent validEnd ()

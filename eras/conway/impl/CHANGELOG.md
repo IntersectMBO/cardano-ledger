@@ -2,6 +2,8 @@
 
 ## 1.22.0.0
 
+* Add `ConwayUtxosEnv`
+* Change `STS` instance of `ConwayUTXOS`: use `ConwayUtxosEnv` as `Environment` and `()` as `State`
 * Add `updateTreasuryDonation`
 * Add `checkReferenceInputsNotDisjointFromInputs`
 * Add `ConwayEraScript` superclass to `ConwayEraPlutusTxInfo`
