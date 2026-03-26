@@ -29,7 +29,6 @@ import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GovCert
 import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
 import qualified Test.Cardano.Ledger.Conway.Imp.HardForkSpec as HardFork
 import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as Ledger
-import qualified Test.Cardano.Ledger.Conway.Imp.PoolSpec as Pool
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
@@ -78,7 +77,6 @@ conwayEraSpecificSpec :: SpecWith (ImpInit (LedgerSpec ConwayEra))
 conwayEraSpecificSpec = do
   describe "Conway era specific Imp spec" $ do
     describe "UTXO" Utxo.conwayEraSpecificSpec
-    describe "POOL" Pool.conwayEraSpecificSpec
 
 instance EraSpecificSpec ConwayEra where
   eraSpecificSpec =

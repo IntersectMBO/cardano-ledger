@@ -118,12 +118,10 @@ test-suite cardano-ledger-shelley-test
     Paths_cardano_ledger_shelley_test
     Test.Cardano.Ledger.Shelley.Examples.Chain
     Test.Cardano.Ledger.Shelley.Examples.Combinators
-    Test.Cardano.Ledger.Shelley.Examples.EmptyBlock
     Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation
     Test.Cardano.Ledger.Shelley.Examples.Init
     Test.Cardano.Ledger.Shelley.Examples.Mir
     Test.Cardano.Ledger.Shelley.Examples.MirTransfer
-    Test.Cardano.Ledger.Shelley.Examples.NetworkID
     Test.Cardano.Ledger.Shelley.Examples.PoolLifetime
     Test.Cardano.Ledger.Shelley.Examples.Updates
     Test.Cardano.Ledger.Shelley.MultiSigExamples

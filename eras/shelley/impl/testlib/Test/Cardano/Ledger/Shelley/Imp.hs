@@ -49,11 +49,9 @@ shelleyEraSpecificSpec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 shelleyEraSpecificSpec = do
-  describe "Shelley era specific Imp spec" $ do
+  describe "Shelley era specific Imp spec" $
     describe "DELEG" $
       Deleg.shelleyEraSpecificSpec
-    describe "POOL" $
-      Pool.shelleyEraSpecificSpec
 
 instance EraSpecificSpec ShelleyEra where
   eraSpecificSpec = shelleyEraSpecificSpec
