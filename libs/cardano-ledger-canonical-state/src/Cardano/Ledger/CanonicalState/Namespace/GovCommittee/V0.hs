@@ -1,9 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -16,7 +20,7 @@ module Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 (
   CanonicalCommittee (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..), UnitInterval)
+import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe, UnitInterval)
 import Cardano.Ledger.CanonicalState.BasicTypes ()
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Credential (Credential (..))
@@ -55,8 +59,16 @@ instance
 newtype GovCommitteeIn = GovCommitteeIn EpochNo
   deriving (Eq, Ord, Show)
 
-newtype GovCommitteeOut = GovCommitteeOut CanonicalCommittee
-  deriving (Eq, Show, Generic)
+newtype GovCommitteeOut = GovCommitteeOut (StrictMaybe CanonicalCommittee)
+  deriving (Generic, Eq, Show)
+
+deriving newtype instance
+  ToCanonicalCBOR "gov/committee/v0" (StrictMaybe CanonicalCommittee) =>
+  ToCanonicalCBOR "gov/committee/v0" GovCommitteeOut
+
+deriving newtype instance
+  FromCanonicalCBOR "gov/committee/v0" (StrictMaybe CanonicalCommittee) =>
+  FromCanonicalCBOR "gov/committee/v0" GovCommitteeOut
 
 instance IsKey GovCommitteeIn where
   keySize = namespaceKeySize @"gov/committee/v0"
