@@ -82,6 +82,37 @@ spec = describe "POOL" $ do
             expectPool khNew Nothing
       expectPool kh (Just vrf)
 
+    it "re-register a pool with new cost adopts params at epoch boundary" $ do
+      (kh, vrf) <- registerNewPool
+      -- Read the initial cost
+      initialCost <- do
+        pools <- psStakePools <$> getPState
+        case Map.lookup kh pools of
+          Just sps -> pure $ spsCost sps
+          Nothing -> assertFailure "Pool not found after registration"
+      -- Re-register with a different cost
+      pps <- poolParams kh vrf
+      let newCost = initialCost <> Coin 100
+          newPps = pps & sppCostL .~ newCost
+      submitTx_ $ registerPoolTx newPps
+      -- Before epoch boundary, current pool still has old cost
+      do
+        pools <- psStakePools <$> getPState
+        spsCost <$> Map.lookup kh pools `shouldBe` Just initialCost
+      -- Future pool params should have the new cost
+      do
+        fps <- psFutureStakePoolParams <$> getPState
+        sppCost <$> Map.lookup kh fps `shouldBe` Just newCost
+      passEpoch
+      -- After epoch boundary, pool should have adopted the new cost
+      do
+        pools <- psStakePools <$> getPState
+        spsCost <$> Map.lookup kh pools `shouldBe` Just newCost
+      -- Future params should be cleared
+      do
+        fps <- psFutureStakePoolParams <$> getPState
+        Map.lookup kh fps `shouldBe` Nothing
+
     it "re-register a pool and change its delegations in the same epoch" $ do
       (poolKh, _) <- registerNewPool
       (poolKh2, _) <- registerNewPool
@@ -340,6 +371,96 @@ spec = describe "POOL" $ do
 
       passNEpochs (fromIntegral retirement)
       expectPoolDelegs poolKh Nothing
+
+  describe "Pool lifetime" $ do
+    it "full lifecycle: register, delegate, earn rewards, retire" $ do
+      -- Register a pool
+      poolKh <- freshKeyHash
+      registerPool poolKh
+
+      -- Register a stake credential and delegate to the pool
+      stakeCred <- KeyHashObj <$> freshKeyHash
+      _ <- registerStakeCredential stakeCred
+      delegateStake stakeCred poolKh
+
+      -- Earn rewards by registering and retiring a temporary pool
+      registerAndRetirePoolToMakeReward stakeCred
+
+      -- Verify rewards have been earned
+      balance <- getBalance stakeCred
+      balance `shouldSatisfy` (> Coin 0)
+
+      -- Withdraw rewards
+      accountAddress <- getAccountAddressFor stakeCred
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . withdrawalsTxBodyL
+            .~ Withdrawals (Map.singleton accountAddress balance)
+      getBalance stakeCred `shouldReturn` Coin 0
+
+      -- Retire the pool
+      curEpochNo <- getsNES nesELL
+      let retirement = EpochInterval 1
+          retireEpoch = addEpochInterval curEpochNo retirement
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh retireEpoch]
+
+      -- Advance past retirement epoch
+      passNEpochs (fromIntegral $ unEpochInterval retirement)
+
+      -- Pool should be retired (removed from stake pools)
+      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+      Map.lookup poolKh (psStakePools pState) `shouldBe` Nothing
+
+    it "delegators earn rewards after epoch advancement" $ do
+      -- Register a pool with a specific operator reward account
+      poolKh <- freshKeyHash
+      operatorCred <- KeyHashObj <$> freshKeyHash
+      operatorAccountAddress <- do
+        _ <- registerStakeCredential operatorCred
+        getAccountAddressFor operatorCred
+      registerPoolWithAccountAddress poolKh operatorAccountAddress
+
+      -- Register a member and delegate to the pool
+      memberCred <- KeyHashObj <$> freshKeyHash
+      _ <- registerStakeCredential memberCred
+      delegateStake memberCred poolKh
+
+      -- Earn rewards
+      registerAndRetirePoolToMakeReward memberCred
+
+      -- Member should have earned rewards
+      memberBalance <- getBalance memberCred
+      memberBalance `shouldSatisfy` (> Coin 0)
+
+    it "withdraw rewards and deregister in same transaction" $ do
+      -- Register a pool
+      poolKh <- freshKeyHash
+      registerPool poolKh
+
+      -- Register a stake credential and delegate
+      stakeCred <- KeyHashObj <$> freshKeyHash
+      _ <- registerStakeCredential stakeCred
+      delegateStake stakeCred poolKh
+
+      -- Earn rewards
+      registerAndRetirePoolToMakeReward stakeCred
+
+      -- Check that balance is positive
+      balance <- getBalance stakeCred
+      balance `shouldSatisfy` (> Coin 0)
+
+      -- Unregister the stake credential (must withdraw first)
+      accountAddress <- getAccountAddressFor stakeCred
+      unRegTxCert <- genUnRegTxCert stakeCred
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ [unRegTxCert]
+          & bodyTxL . withdrawalsTxBodyL
+            .~ Withdrawals (Map.singleton accountAddress balance)
+      expectStakeCredNotRegistered stakeCred
+      expectNotDelegatedToAnyPool stakeCred
 
   describe "Retired pools" $ do
     it "re-register a pool with the same keyhash and VRF " $ do
