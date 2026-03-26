@@ -215,7 +215,7 @@ jobs:
         - non-integral
         - small-steps
         - vector-map
-        ghc: ["9.6.7", "9.8.4", "9.10.3", "9.12.2"]
+        ghc: ["9.6.7", "9.8.4", "9.10.3", "9.12.2", "9.14.1"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -341,6 +341,7 @@ jobs:
         echo "$BINDIR" >> ${GITHUB_PATH}
 
     - name: Run doctests
+      if: matrix.ghc != '9.14.1'
       run: scripts/doctest.sh "${{ matrix.package }}"
 
   complete:
