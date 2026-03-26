@@ -438,19 +438,12 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
         inputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList txInputs)
         refInputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList refInputs)
         Conway.checkReferenceInputsNotDisjointFromInputs txBody
-        let ledgerOutputs = txBody ^. outputsTxBodyL
+        checkPointerPresentInOutput $ txBody ^. outputsTxBodyL
         outputs <-
           zipWithM
             (Babbage.transTxOutV2 . TxOutFromOutput)
             [minBound ..]
-            (F.toList ledgerOutputs)
-        let
-          outputHasPtr txOut = case txOut ^. addrTxOutL of
-            Addr _ _ (StakeRefPtr _) -> True
-            _ -> False
-        case NE.nonEmpty (filter outputHasPtr $ toList ledgerOutputs) of
-          Nothing -> pure ()
-          Just ptrOutputs -> Left $ PointerPresentInOutput ptrOutputs
+            (F.toList (txBody ^. outputsTxBodyL))
         txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
         plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
         Right $
@@ -502,3 +495,16 @@ toPlutusV4Args proxy pv txInfo plutusPurpose maybeSpendingData redeemerData = do
         , PV3.scriptContextRedeemer = Babbage.transRedeemer redeemerData
         , PV3.scriptContextScriptInfo = scriptInfo
         }
+
+checkPointerPresentInOutput ::
+  Foldable f =>
+  f (TxOut DijkstraEra) ->
+  Either (ContextError DijkstraEra) ()
+checkPointerPresentInOutput outputs =
+  case NE.nonEmpty (filter outputHasPtr $ toList outputs) of
+    Nothing -> pure ()
+    Just ptrOutputs -> Left $ PointerPresentInOutput ptrOutputs
+  where
+    outputHasPtr txOut = case txOut ^. addrTxOutL of
+      Addr _ _ (StakeRefPtr _) -> True
+      _ -> False
