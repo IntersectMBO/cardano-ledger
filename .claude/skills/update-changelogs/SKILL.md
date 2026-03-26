@@ -42,7 +42,7 @@ Ignore files in excluded packages (see `RELEASING.md`) and files outside any pac
 
 For each package, read the top-most `## <version>` heading in `CHANGELOG.md` (the current unreleased version) and the `version:` field in the `.cabal` file.
 
-The `.cabal` version may legitimately lag behind the CHANGELOG. After a CHaP release, `./scripts/bump-changelogs.sh` adds a new empty patch-bump section to the CHANGELOG but does **not** update the `.cabal`. The **CHANGELOG version is authoritative**. When you bump, update both.
+The `.cabal` version may lag behind the CHANGELOG. After a CHaP release, `./scripts/bump-changelogs.sh` adds a new empty patch-bump section to the CHANGELOG but does **not** update the `.cabal`. The **CHANGELOG version is authoritative**. When you bump, update both.
 
 ### Step 3 — Classify the changes
 
