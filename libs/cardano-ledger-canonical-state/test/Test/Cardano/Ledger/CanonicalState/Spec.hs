@@ -50,6 +50,8 @@ spec = do
     describe "gov/committee/v0" $ do
       isCanonical @"gov/committee/v0" @GovCommittee.V0.CanonicalCommittee
       validateType @"gov/committee/v0" @GovCommittee.V0.CanonicalCommittee "committee"
+      isCanonical @"gov/committee/v0" @GovCommittee.V0.GovCommitteeOut
+      validateType @"gov/committee/v0" @GovCommittee.V0.GovCommitteeOut "record_entry"
     describe "gov/constitution/v0" $ do
       isCanonical @"gov/constitution/v0" @GovConstitution.V0.CanonicalConstitution
       validateType @"gov/constitution/v0" @GovConstitution.V0.CanonicalConstitution "record_entry"
