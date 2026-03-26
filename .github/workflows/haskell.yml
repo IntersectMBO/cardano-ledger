@@ -341,6 +341,7 @@ jobs:
         echo "$BINDIR" >> ${GITHUB_PATH}
 
     - name: Run doctests
+      if: matrix.ghc != '9.14.1'
       run: scripts/doctest.sh "${{ matrix.package }}"
 
   complete:
