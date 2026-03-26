@@ -82,6 +82,37 @@ spec = describe "POOL" $ do
             expectPool khNew Nothing
       expectPool kh (Just vrf)
 
+    it "re-register a pool with new cost adopts params at epoch boundary" $ do
+      (kh, vrf) <- registerNewPool
+      -- Read the initial cost
+      initialCost <- do
+        pools <- psStakePools <$> getPState
+        case Map.lookup kh pools of
+          Just sps -> pure $ spsCost sps
+          Nothing -> assertFailure "Pool not found after registration"
+      -- Re-register with a different cost
+      pps <- poolParams kh vrf
+      let newCost = initialCost <> Coin 100
+          newPps = pps & sppCostL .~ newCost
+      submitTx_ $ registerPoolTx newPps
+      -- Before epoch boundary, current pool still has old cost
+      do
+        pools <- psStakePools <$> getPState
+        spsCost <$> Map.lookup kh pools `shouldBe` Just initialCost
+      -- Future pool params should have the new cost
+      do
+        fps <- psFutureStakePoolParams <$> getPState
+        sppCost <$> Map.lookup kh fps `shouldBe` Just newCost
+      passEpoch
+      -- After epoch boundary, pool should have adopted the new cost
+      do
+        pools <- psStakePools <$> getPState
+        spsCost <$> Map.lookup kh pools `shouldBe` Just newCost
+      -- Future params should be cleared
+      do
+        fps <- psFutureStakePoolParams <$> getPState
+        Map.lookup kh fps `shouldBe` Nothing
+
     it "re-register a pool and change its delegations in the same epoch" $ do
       (poolKh, _) <- registerNewPool
       (poolKh2, _) <- registerNewPool
