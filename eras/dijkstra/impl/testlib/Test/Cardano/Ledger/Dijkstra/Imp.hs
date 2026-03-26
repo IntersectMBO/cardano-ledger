@@ -14,6 +14,7 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Shelley.Rules
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
+import qualified Test.Cardano.Ledger.Conway.Imp.PoolSpec as ConwayPool
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as Cert
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec as Utxo
@@ -44,4 +45,5 @@ dijkstraEraGenericSpec = do
   describe "UTXOW" Utxow.spec
   describe "UTXO" Utxo.spec
 
-instance EraSpecificSpec DijkstraEra
+instance EraSpecificSpec DijkstraEra where
+  eraSpecificSpec = describe "POOL" ConwayPool.conwayEraSpecificSpec
