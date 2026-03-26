@@ -86,13 +86,8 @@ data VoidEraRule (rule :: Symbol) era
 instance NFData (VoidEraRule (rule :: Symbol) era) where
   rnf = absurdEraRule
 
-instance (KnownSymbol rule, Era era) => ToCBOR (VoidEraRule (rule :: Symbol) era) where
-  toCBOR = absurdEraRule
-
-instance (KnownSymbol rule, Era era) => EncCBOR (VoidEraRule (rule :: Symbol) era)
-
-instance (KnownSymbol rule, Era era) => FromCBOR (VoidEraRule (rule :: Symbol) era) where
-  fromCBOR = cborError DecoderErrorVoid
+instance (KnownSymbol rule, Era era) => EncCBOR (VoidEraRule (rule :: Symbol) era) where
+  encCBOR = absurdEraRule
 
 instance (KnownSymbol rule, Era era) => DecCBOR (VoidEraRule (rule :: Symbol) era) where
   decCBOR = cborError DecoderErrorVoid

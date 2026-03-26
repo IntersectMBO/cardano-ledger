@@ -78,7 +78,7 @@ currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | otherwise = Nothing
 
 newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
-  deriving (Eq, Generic, Ord, NoThunks, DecCBOR, EncCBOR, ToCBOR, FromCBOR)
+  deriving (Eq, Generic, Ord, NoThunks, DecCBOR, EncCBOR, ToCBOR)
   deriving (Show) via Quiet KESPeriod
 
 data OCert c = OCert
@@ -131,7 +131,7 @@ decodeOCertFields =
   OCert
     <$> KES.decodeVerKeyKES
     <*> Plain.fromCBOR
-    <*> Plain.fromCBOR
+    <*> (KESPeriod <$> Plain.fromCBOR)
     <*> DSIGN.decodeSignedDSIGN
 
 kesPeriod :: SlotNo -> ShelleyBase KESPeriod

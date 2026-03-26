@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `PulsingSnapshot`, `EnactState`, `ConwayGovPredFailure`
 * Change `ConwayBBODY` `Signal` to `BbodySignal`.
 * Add `validateRefScriptSize`.
 * Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`

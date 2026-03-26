@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.13.1.0
+## 1.14.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `BabbageTxOut`
 * Add `validateScriptsWellFormedTxOuts`
 
 ## 1.13.0.0

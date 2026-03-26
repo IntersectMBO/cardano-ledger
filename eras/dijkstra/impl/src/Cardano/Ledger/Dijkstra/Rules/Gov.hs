@@ -36,8 +36,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -207,12 +205,6 @@ instance EraPParams era => EncCBOR (DijkstraGovPredFailure era) where
         Sum TreasuryWithdrawalReturnAccountsDoNotExist 17 !> To accounts
       UnelectedCommitteeVoters committee ->
         Sum UnelectedCommitteeVoters 18 !> To committee
-
-instance EraPParams era => ToCBOR (DijkstraGovPredFailure era) where
-  toCBOR = toEraCBOR @era
-
-instance EraPParams era => FromCBOR (DijkstraGovPredFailure era) where
-  fromCBOR = fromEraCBOR @era
 
 instance
   ( ConwayEraTxCert era

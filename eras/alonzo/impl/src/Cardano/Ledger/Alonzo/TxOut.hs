@@ -57,9 +57,7 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (Share, decShareCBOR),
   DecoderError (DecoderErrorCustom),
   EncCBOR (encCBOR),
-  FromCBOR (..),
   Interns,
-  ToCBOR (..),
   TokenType (..),
   cborError,
   decodeBreakOr,
@@ -434,14 +432,6 @@ internAlonzoTxOut internCred = \case
     TxOut_AddrHash28_AdaOnly_DataHash32 (internCred cred) addr28Extra ada dataHash32
   txOut -> txOut
 {-# INLINE internAlonzoTxOut #-}
-
-instance (Era era, Val (Value era)) => ToCBOR (AlonzoTxOut era) where
-  toCBOR = toEraCBOR @era
-  {-# INLINE toCBOR #-}
-
-instance (Era era, Val (Value era)) => FromCBOR (AlonzoTxOut era) where
-  fromCBOR = fromEraCBOR @era
-  {-# INLINE fromCBOR #-}
 
 instance (Era era, Val (Value era)) => ToJSON (AlonzoTxOut era) where
   toJSON (AlonzoTxOut addr v dataHash) =

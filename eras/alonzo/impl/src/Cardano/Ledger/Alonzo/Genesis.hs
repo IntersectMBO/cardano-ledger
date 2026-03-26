@@ -95,16 +95,10 @@ instance DecCBOR AlonzoExtraConfig where
   decCBOR = decode (RecD AlonzoExtraConfig <! D (decodeNullMaybe decodeCostModelsLenient))
   {-# INLINE decCBOR #-}
 
-instance EncCBOR AlonzoExtraConfig
-
-instance FromCBOR AlonzoExtraConfig where
-  fromCBOR = fromEraCBOR @AlonzoEra
-  {-# INLINE fromCBOR #-}
-
-instance ToCBOR AlonzoExtraConfig where
-  toCBOR x@(AlonzoExtraConfig _) =
+instance EncCBOR AlonzoExtraConfig where
+  encCBOR x@(AlonzoExtraConfig _) =
     let AlonzoExtraConfig {..} = x
-     in toEraCBOR @AlonzoEra . encode $
+     in encode $
           Rec AlonzoExtraConfig
             !> E (encodeNullMaybe encCBOR) aecCostModels
 

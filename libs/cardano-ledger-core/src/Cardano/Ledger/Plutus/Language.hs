@@ -60,7 +60,6 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
   EncCBOR (..),
-  FromCBOR (..),
   ToCBOR (..),
   Version,
   decodeEnumBounded,
@@ -73,7 +72,7 @@ import Cardano.Ledger.Binary (
   natVersion,
   unlessDecoderVersionAtLeast,
  )
-import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Binary.Plain ()
 import Cardano.Ledger.Hashes (SafeToHash (..), ScriptHash (..))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (when)
@@ -203,7 +202,7 @@ plutusFromRunnable = Plutus . PlutusBinary . P.serialisedScript . plutusRunnable
 -- | Binary representation of a Plutus script.
 newtype PlutusBinary = PlutusBinary {unPlutusBinary :: ShortByteString}
   deriving stock (Eq, Ord, Generic)
-  deriving newtype (ToCBOR, FromCBOR, EncCBOR, DecCBOR, NFData, NoThunks, MemPack)
+  deriving newtype (ToCBOR, EncCBOR, DecCBOR, NFData, NoThunks, MemPack)
 
 instance DecCBOR (Annotator PlutusBinary) where
   decCBOR = pure <$> decCBOR
@@ -279,13 +278,8 @@ languageFromText "PlutusV3" = pure PlutusV3
 languageFromText "PlutusV4" = pure PlutusV4
 languageFromText lang = fail $ "Error decoding Language: " ++ show lang
 
-instance ToCBOR Language where
-  toCBOR = Plain.encodeEnum
-
-instance FromCBOR Language where
-  fromCBOR = Plain.decodeEnumBounded
-
-instance EncCBOR Language
+instance EncCBOR Language where
+  encCBOR = encodeEnum
 
 instance DecCBOR Language where
   decCBOR = decodeEnumBounded
@@ -305,13 +299,8 @@ deriving instance Eq (SLanguage l)
 
 deriving instance Show (SLanguage l)
 
-instance PlutusLanguage l => ToCBOR (SLanguage l) where
-  toCBOR = toCBOR . plutusLanguage
-
-instance PlutusLanguage l => FromCBOR (SLanguage l) where
-  fromCBOR = toSLanguage =<< fromCBOR @Language
-
-instance PlutusLanguage l => EncCBOR (SLanguage l)
+instance PlutusLanguage l => EncCBOR (SLanguage l) where
+  encCBOR = encCBOR . plutusLanguage
 
 instance PlutusLanguage l => DecCBOR (SLanguage l) where
   decCBOR = toSLanguage =<< decCBOR @Language

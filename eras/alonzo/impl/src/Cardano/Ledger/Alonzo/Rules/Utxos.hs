@@ -55,9 +55,9 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  serialize',
  )
 import Cardano.Ledger.Binary.Coders
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext,
   ScriptFailure (..),
@@ -322,7 +322,7 @@ instance ToJSON FailureDescription where
 
 scriptFailureToFailureDescription :: ScriptFailure -> FailureDescription
 scriptFailureToFailureDescription (ScriptFailure msg pwc) =
-  PlutusFailure msg (B64.encode $ Plain.serialize' pwc)
+  PlutusFailure msg (B64.encode $ serialize' maxBound pwc)
 
 data TagMismatchDescription
   = PassedUnexpectedly

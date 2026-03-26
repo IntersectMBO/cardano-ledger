@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `AlonzoExtraConfig` and `AlonzoTxOut`
 * Change `AlonzoBBODY` `Signal` to `BbodySignal`.
 * Add `validateExUnits`.
 

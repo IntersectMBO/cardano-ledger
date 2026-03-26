@@ -278,7 +278,6 @@ class
   , DecCBOR (CompactForm (Value era))
   , MemPack (CompactForm (Value era))
   , EncCBOR (Value era)
-  , ToCBOR (TxOut era)
   , EncCBOR (TxOut era)
   , DecCBOR (TxOut era)
   , DecShareCBOR (TxOut era)

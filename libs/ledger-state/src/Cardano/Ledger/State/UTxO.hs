@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans -funbox-strict-fields #-}
 
@@ -15,6 +16,7 @@ module Cardano.Ledger.State.UTxO where
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes
+import qualified Cardano.Ledger.Binary as Binary
 import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway
@@ -62,14 +64,14 @@ readHexUTxO ::
   IO (UTxO CurrentEra)
 readHexUTxO = readDecCBORHex
 
-readDecCBOR :: FromCBOR a => FilePath -> IO a
-readDecCBOR = either throwIO pure . Plain.decodeFull <=< LBS.readFile
+readDecCBOR :: Binary.DecCBOR a => FilePath -> IO a
+readDecCBOR = either throwIO pure . Binary.decodeFull (eraProtVerHigh @CurrentEra) <=< LBS.readFile
 
-readDecCBORHex :: FromCBOR a => FilePath -> IO a
+readDecCBORHex :: Binary.DecCBOR a => FilePath -> IO a
 readDecCBORHex = either throwIO pure . decodeFullHex <=< LBS.readFile
   where
     decodeFullHex =
-      Plain.decodeFull
+      Binary.decodeFull (eraProtVerHigh @CurrentEra)
         <=< first (DecoderErrorCustom "Invalid Hex encoding:" . T.pack) . Base16.decode
 
 writeEpochState :: FilePath -> EpochState CurrentEra -> IO ()
