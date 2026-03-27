@@ -50,16 +50,16 @@
     };
   };
 
-  outputs = inputs: let
-    supportedSystems = [
-      "x86_64-linux"
-      "x86_64-darwin"
-      # "aarch64-linux" - disable these temporarily because the build is broken
-      "aarch64-darwin"
-    ];
-  in
-    inputs.flake-utils.lib.eachSystem supportedSystems (
-      system: let
+  outputs = inputs:
+    let
+      supportedSystems = [
+        "x86_64-linux"
+        "x86_64-darwin"
+        # "aarch64-linux" - disable these temporarily because the build is broken
+        "aarch64-darwin"
+      ];
+    in inputs.flake-utils.lib.eachSystem supportedSystems (system:
+      let
         # setup our nixpkgs with the haskell.nix overlays, and the iohk-nix
         # overlays...
         nixpkgs = import inputs.nixpkgs {
@@ -80,11 +80,15 @@
 
         # see flake `variants` below for alternative compilers
         defaultCompiler = "ghc967";
-        fourmoluVersion = "0.17.0.0"; # Should match the tag used in .github/workflows/haskell.yml
-        cabalGildVersion = "1.5.0.1";
+        fourmoluVersion =
+          "0.17.0.0"; # Should match the tag used in .github/workflows/haskell.yml
+        cabalGildVersion =
+          "1.5.0.1"; # Should match the tag used in .github/workflows/haskell.yml
+        nixfmtVersion =
+          "0.6.0"; # Should match the tag used in .github/workflows/haskell.yml
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
-        cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
+        cabalProject = nixpkgs.haskell-nix.cabalProject' ({ config, ... }: {
           src = ./.;
           name = "cardano-ledger";
           compiler-nix-name = lib.mkDefault defaultCompiler;
@@ -96,7 +100,8 @@
           #
           inputMap = {
             "https://chap.intersectmbo.org/" = inputs.CHaP;
-            "https://github.com/IntersectMBO/formal-ledger-specifications.git" = inputs.formal-ledger-specifications;
+            "https://github.com/IntersectMBO/formal-ledger-specifications.git" =
+              inputs.formal-ledger-specifications;
           };
           cabalProjectLocal = ''
             repository cardano-haskell-packages-local
@@ -107,92 +112,105 @@
 
           shell = {
             # Due to plutus-tx-plugin being a bit special, we need to augment the default package selection.
-            packages = ps: builtins.attrValues (nixpkgs.haskell-nix.haskellLib.selectLocalPackages ps)
+            packages = ps:
+              builtins.attrValues
+              (nixpkgs.haskell-nix.haskellLib.selectLocalPackages ps)
               ++ lib.optional (ps ? plutus-tx-plugin) ps.plutus-tx-plugin;
 
             # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
             shellHook = ''
               export LANG=en_US.UTF-8
               export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
-            '' + lib.optionalString (nixpkgs.glibcLocales != null && nixpkgs.stdenv.hostPlatform.libc == "glibc") ''
-              export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"
-              DEFAULT_PS1="\n\[\033[1;32m\][nix-shell:\w]\$\[\033[0m\] "
-              prompt() {
-                local EXIT="$?"
-                if [ $EXIT != 0 ]; then
-                  PS1="$DEFAULT_PS1\[\033[1;31m\]($EXIT)\[\033[00m\] "
-                else
-                  PS1="$DEFAULT_PS1"
-                fi
-              }
-              PROMPT_COMMAND=prompt
-            '';
+            '' + lib.optionalString (nixpkgs.glibcLocales != null
+              && nixpkgs.stdenv.hostPlatform.libc == "glibc") ''
+                export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"
+                DEFAULT_PS1="\n\[\033[1;32m\][nix-shell:\w]\$\[\033[0m\] "
+                prompt() {
+                  local EXIT="$?"
+                  if [ $EXIT != 0 ]; then
+                    PS1="$DEFAULT_PS1\[\033[1;31m\]($EXIT)\[\033[00m\] "
+                  else
+                    PS1="$DEFAULT_PS1"
+                  fi
+                }
+                PROMPT_COMMAND=prompt
+              '';
 
             # tools we want in our shell, from hackage
-            tools =
-              {
-                cabal = "3.16.1.0";
-              }
-              // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
+            tools = {
+              cabal = "3.16.1.0";
+            } // lib.optionalAttrs
+              (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
                 cabal-gild = "1.5.0.1";
                 cuddle = "latest";
                 fourmolu = fourmoluVersion;
                 haskell-language-server = "2.12.0.0";
                 hlint = "3.8";
+                nixfmt = nixfmtVersion;
               };
 
             # and from nixpkgs or other inputs
             nativeBuildInputs = with nixpkgs;
               [
-                (python3.withPackages (ps: with ps; [sphinx sphinx-rtd-theme recommonmark sphinx-markdown-tables sphinxemoji]))
+                (python3.withPackages (ps:
+                  with ps; [
+                    sphinx
+                    sphinx-rtd-theme
+                    recommonmark
+                    sphinx-markdown-tables
+                    sphinxemoji
+                  ]))
                 haskellPackages.implicit-hie
                 shellcheck
+                act
                 inputs.cardano-ledger-release-tool.packages.${system}.default
-              ] ++
-              (let
+              ] ++ (let
                 doctest = haskell-nix.hackage-package {
                   name = "doctest";
                   version = "0.24.3";
                   configureArgs = "-f cabal-doctest";
                   inherit (config) compiler-nix-name;
                 };
-              in
-                [
-                  (doctest.getComponent "exe:cabal-doctest")
-                  (doctest.getComponent "exe:doctest")
-                ]);
+              in [
+                (doctest.getComponent "exe:cabal-doctest")
+                (doctest.getComponent "exe:doctest")
+              ]);
             # disable Hoogle until someone request it
             withHoogle = false;
             # Skip cross compilers for the shell
-            crossPlatforms = _: [];
+            crossPlatforms = _: [ ];
           };
 
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.
           modules = [
-            ({pkgs, ...}: {
+            ({ pkgs, ... }: {
               # packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
               # uncomment if necessary when profiling
-              packages.byron-spec-chain.configureFlags = ["--ghc-option=-Werror"];
-              packages.byron-spec-ledger.configureFlags = ["--ghc-option=-Werror"];
-              packages.non-integral.configureFlags = ["--ghc-option=-Werror"];
-              packages.cardano-ledger-shelley.configureFlags = ["--ghc-option=-Werror"];
-              packages.cardano-ledger-shelley-ma-test.configureFlags = ["--ghc-option=-Werror"];
-              packages.small-steps.configureFlags = ["--ghc-option=-Werror"];
+              packages.byron-spec-chain.configureFlags =
+                [ "--ghc-option=-Werror" ];
+              packages.byron-spec-ledger.configureFlags =
+                [ "--ghc-option=-Werror" ];
+              packages.non-integral.configureFlags = [ "--ghc-option=-Werror" ];
+              packages.cardano-ledger-shelley.configureFlags =
+                [ "--ghc-option=-Werror" ];
+              packages.cardano-ledger-shelley-ma-test.configureFlags =
+                [ "--ghc-option=-Werror" ];
+              packages.small-steps.configureFlags = [ "--ghc-option=-Werror" ];
               packages.cardano-ledger-byron = {
-                configureFlags = ["--ghc-option=-Werror"];
+                configureFlags = [ "--ghc-option=-Werror" ];
                 components = {
                   tests.tests = {
                     preCheck = ''
                       export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
                     '';
-                    testFlags = ["--scenario=ContinuousIntegration"];
+                    testFlags = [ "--scenario=ContinuousIntegration" ];
                   };
                 };
               };
             })
-            ({pkgs, ...}:
+            ({ pkgs, ... }:
               lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
                 packages.plutus-preprocessor.buildable = lib.mkForce false;
                 packages.cardano-ledger-test.buildable = lib.mkForce false;
@@ -208,54 +226,52 @@
           ];
         });
         # ... and construct a flake from the cabal project
-        flake =
-          cabalProject.flake (
-            lib.optionalAttrs (system == "x86_64-linux") {
-              # on linux, build/test other supported compilers
-              variants = lib.genAttrs ["ghc967" "ghc9141"] (compiler-nix-name: {
-                inherit compiler-nix-name;
-              });
-            }
-          );
-      in
-        lib.recursiveUpdate flake rec {
-          project = cabalProject;
-          # add a required job, that's basically all hydraJobs.
-          hydraJobs =
-            nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates
-            {
-              ciJobs =
-                flake.hydraJobs
-                // {
-                  inherit (legacyPackages) doc specs;
+        flake = cabalProject.flake
+          (lib.optionalAttrs (system == "x86_64-linux") {
+            # on linux, build/test other supported compilers
+            variants = lib.genAttrs [ "ghc967" "ghc9141" ]
+              (compiler-nix-name: { inherit compiler-nix-name; });
+          });
+      in lib.recursiveUpdate flake rec {
+        project = cabalProject;
+        # add a required job, that's basically all hydraJobs.
+        hydraJobs = nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates {
+          ciJobs = flake.hydraJobs // {
+            inherit (legacyPackages) doc specs;
 
-                  # This ensure hydra send a status for the required job (even if no change other than commit hash)
-                  revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
-                };
-            };
-          legacyPackages = rec {
-            inherit cabalProject nixpkgs;
-            # also provide hydraJobs through legacyPackages to allow building without system prefix:
-            inherit hydraJobs;
-            doc.site = ((import ./doc/flake.nix).outputs {main = inputs.self;}).packages.${system}.default;
-            #
-            # PDF builds of LaTeX documentation.
-            #
-            # To download the latest PDF build from Hydra, use this link:
-            #   https://github.com/intersectmbo/cardano-ledger/releases/latest/download/NAME.pdf
-            #
-            # To get a shell where you can run pdflatex to build it yourself, use:
-            #   cd <spec directory>
-            #   nix develop
-            #
-            # To build all specs locally with Nix:
-            #  nix build .#specs -o spec
-            #
-            specs = nixpkgs.symlinkJoin {
-              name = "cardano-ledger-specs";
-              # XXX: make use of flake relative path inputs once this is fixed: https://github.com/NixOS/nix/issues/6352
-              # (so that we can ditch flake-compat.nix)
-              paths = map (d: ((import "${./.}/${d}/flake.nix").outputs {main = inputs.self;}).packages.${system}.default) [
+            # This ensure hydra send a status for the required job (even if no change other than commit hash)
+            revision =
+              nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
+          };
+        };
+        legacyPackages = rec {
+          inherit cabalProject nixpkgs;
+          # also provide hydraJobs through legacyPackages to allow building without system prefix:
+          inherit hydraJobs;
+          doc.site = ((import ./doc/flake.nix).outputs {
+            main = inputs.self;
+          }).packages.${system}.default;
+          #
+          # PDF builds of LaTeX documentation.
+          #
+          # To download the latest PDF build from Hydra, use this link:
+          #   https://github.com/intersectmbo/cardano-ledger/releases/latest/download/NAME.pdf
+          #
+          # To get a shell where you can run pdflatex to build it yourself, use:
+          #   cd <spec directory>
+          #   nix develop
+          #
+          # To build all specs locally with Nix:
+          #  nix build .#specs -o spec
+          #
+          specs = nixpkgs.symlinkJoin {
+            name = "cardano-ledger-specs";
+            # XXX: make use of flake relative path inputs once this is fixed: https://github.com/NixOS/nix/issues/6352
+            # (so that we can ditch flake-compat.nix)
+            paths = map (d:
+              ((import "${./.}/${d}/flake.nix").outputs {
+                main = inputs.self;
+              }).packages.${system}.default) [
                 "eras/byron/ledger/formal-spec"
                 "eras/byron/chain/formal-spec"
                 "eras/shelley/formal-spec"
@@ -268,53 +284,48 @@
                 "docs/non-integer-calculations"
                 "eras/byron/ledger/impl/cddl-spec"
               ];
-            };
           };
+        };
 
-          devShells = let
-            mkDevShells = p: {
-              # `nix develop .#profiling` (or `.#ghc967.profiling): a shell with profiling enabled
-              profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
-              # `nix develop .#pre-commit` (or `.#ghc967.pre-commit): a shell with pre-commit enabled
-              pre-commit = let
-                pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
-                  src = ./.;
-                  hooks = {
-                    fourmolu.enable = true;
-                    cabal-gild.enable = true;
-                    shellcheck.enable = true;
-                  };
-                  tools = {
-                    fourmolu = p.tool "fourmolu" fourmoluVersion;
-                    cabal-gild = p.tool "cabal-gild" cabalGildVersion;
-                    shellcheck = nixpkgs.shellcheck;
-                  };
+        devShells = let
+          mkDevShells = p: {
+            # `nix develop .#profiling` (or `.#ghc967.profiling): a shell with profiling enabled
+            profiling = (p.appendModule {
+              modules = [{ enableLibraryProfiling = true; }];
+            }).shell;
+            # `nix develop .#pre-commit` (or `.#ghc967.pre-commit): a shell with pre-commit enabled
+            pre-commit = let
+              pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
+                src = ./.;
+                hooks = {
+                  fourmolu.enable = true;
+                  cabal-gild.enable = true;
+                  shellcheck.enable = true;
+                  nixfmt-classic.enable = true;
                 };
-              in
-                p.shell.overrideAttrs (old: {
-                  shellHook = old.shellHook + pre-commit-check.shellHook;
-              });
-            };
-          in
-            mkDevShells cabalProject
-            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc9122`
-            // lib.mapAttrs (compiler-nix-name: _: let
-              p = cabalProject.appendModule {inherit compiler-nix-name;};
-            in
-              p.shell // (mkDevShells p))
-            nixpkgs.haskell-nix.compiler;
-          # formatter used by nix fmt
-          formatter = nixpkgs.alejandra;
-        }
-    );
+                tools = {
+                  fourmolu = p.tool "fourmolu" fourmoluVersion;
+                  cabal-gild = p.tool "cabal-gild" cabalGildVersion;
+                  shellcheck = nixpkgs.shellcheck;
+                  nixfmt = p.tool "nixfmt" nixfmtVersion;
+                };
+              };
+            in p.shell.overrideAttrs
+            (old: { shellHook = old.shellHook + pre-commit-check.shellHook; });
+          };
+        in mkDevShells cabalProject
+        # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc9122`
+        // lib.mapAttrs (compiler-nix-name: _:
+          let p = cabalProject.appendModule { inherit compiler-nix-name; };
+          in p.shell // (mkDevShells p)) nixpkgs.haskell-nix.compiler;
+        # formatter used by nix fmt
+        formatter = nixpkgs.alejandra;
+      });
 
   nixConfig = {
-    extra-substituters = [
-      "https://cache.iog.io"
-    ];
-    extra-trusted-public-keys = [
-      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
-    ];
+    extra-substituters = [ "https://cache.iog.io" ];
+    extra-trusted-public-keys =
+      [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
     allow-import-from-derivation = true;
   };
 }

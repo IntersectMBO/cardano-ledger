@@ -36,7 +36,7 @@ runs:
       SUBDIR=$(mktemp -d -p "$WORKDIR" XXX)
       PATTERN='${{ inputs.pattern }}'
       gh release download -R '${{ inputs.repo }}' '${{ inputs.release }}' \
-        ${PATTERN+--pattern="$PATTERN"} -D "$SUBDIR"
+        ${PATTERN:+--pattern="$PATTERN"} -D "$SUBDIR"
 
       recursive-unpack()
       {
