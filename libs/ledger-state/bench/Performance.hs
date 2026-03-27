@@ -15,6 +15,7 @@ import Cardano.Ledger.Conway
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool
+import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesis (..),
@@ -22,6 +23,7 @@ import Cardano.Ledger.Shelley.Genesis (
   mkShelleyGlobals,
  )
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Slot
 import Cardano.Ledger.State
 import Cardano.Ledger.State.UTxO (CurrentEra, readHexUTxO, readNewEpochState)
 import Cardano.Ledger.Val
@@ -86,6 +88,30 @@ main = do
       reapplyTx' mempoolEnv mempoolState =
         either (error . show) id
           . reapplyTx globals mempoolEnv mempoolState
+      slotsPerTick =
+        let f = positiveUnitIntervalNonZeroRational (activeSlotVal (activeSlotCoeff globals))
+         in round (1 /. f)
+
+      epochInfo = epochInfoPure globals
+      -- Assume we are at the very first slot number in the epoch and tick all the way to the very
+      -- last slot number. Note, that if the assumption was wrong, the whole reward computation and
+      -- other pulsers might restart, which shouldn't impact the final result at the end of the
+      -- epoch.
+      tickToEpochEnd nes =
+        let !lastSlotNo = epochInfoFirst epochInfo (succ (nesEL nes)) *- Duration slotsPerTick
+            go !curSlotNo !curNes
+              | nextSlotNo < lastSlotNo =
+                  go nextSlotNo (applyTickNoEvents @CurrentEra globals curNes nextSlotNo)
+              | otherwise = curNes
+              where
+                !nextSlotNo = curSlotNo +* Duration slotsPerTick
+         in go (epochInfoFirst epochInfo (nesEL nes)) nes
+      -- Assume we are at most `slotsPerTick` number of slots away from the first slot number of the
+      -- next epoch and perform one TICK over that many slot numbers, which has the net result of
+      -- crossing over the next epoch boundary.
+      tickOverTheEpochBoundary nes =
+        let !firstSlotNoOfTheNextEpoch = epochInfoFirst epochInfo (succ (nesEL nes))
+         in applyTickNoEvents @CurrentEra globals nes firstSlotNoOfTheNextEpoch
 
   when (utxoSize < largeKeysNum) $
     die $
@@ -93,7 +119,14 @@ main = do
   largeKeys <- selectRandomMapKeys 100000 stdGen utxoMap
 
   defaultMain
-    [ env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
+    [ env (pure $ tickOverTheEpochBoundary $ tickToEpochEnd es) $ \newEpochStateStart ->
+        bgroup
+          "applyTick"
+          [ bench "tickToEpochEnd" $ nf tickToEpochEnd newEpochStateStart
+          , env (pure $ tickToEpochEnd newEpochStateStart) $
+              bench "tickOverTheEpochBoundary" . nf tickOverTheEpochBoundary
+          ]
+    , env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
           "reapplyTx"
           [ env (pure validatedTx1) $
