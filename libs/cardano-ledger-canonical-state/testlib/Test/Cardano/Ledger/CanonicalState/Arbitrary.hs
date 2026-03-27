@@ -14,7 +14,8 @@ import Cardano.Ledger.CanonicalState.BasicTypes (
  )
 import Cardano.Ledger.CanonicalState.Conway ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
-import qualified Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 as Committee.V0
+import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesCommittee.V0 as EntitiesCommittee.V0
+import qualified Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 as GovCommittee.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0 as GovPParams.V0 ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UtxoOut.V0
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
@@ -34,13 +35,18 @@ instance (EraTxOut era, Arbitrary (TxOut era), Era era) => Arbitrary (UtxoOut.V0
 instance Arbitrary CanonicalCoin where
   arbitrary = CanonicalCoin . CompactCoin <$> arbitrary
 
-instance Arbitrary Committee.V0.GovCommitteeOut where
+instance Arbitrary EntitiesCommittee.V0.EntitiesCommitteeOut where
   arbitrary = genericArbitraryU
 
-instance Arbitrary Committee.V0.CanonicalCommitteeAuthorization where
-  arbitrary = fmap Committee.V0.mkCanonicalCommitteeAuthorization arbitrary
+instance Arbitrary EntitiesCommittee.V0.CanonicalCommitteeState where arbitrary = genericArbitraryU
 
-instance Arbitrary Committee.V0.CanonicalCommitteeState where arbitrary = genericArbitraryU
+instance Arbitrary EntitiesCommittee.V0.CanonicalCommitteeAuthorization where
+  arbitrary = fmap EntitiesCommittee.V0.mkCanonicalCommitteeAuthorization arbitrary
+
+instance Arbitrary GovCommittee.V0.GovCommitteeOut where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary GovCommittee.V0.CanonicalCommittee where arbitrary = genericArbitraryU
 
 instance Arbitrary CanonicalExUnits where
   arbitrary = mkCanonicalExUnits <$> arbitrary
