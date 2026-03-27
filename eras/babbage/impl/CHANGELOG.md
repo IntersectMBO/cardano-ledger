@@ -3,6 +3,7 @@
 ## 1.13.1.0
 
 * Add `validateScriptsWellFormedTxOuts`
+* Make `BabbageContextError` constructors lazy
 
 ## 1.13.0.0
 

@@ -85,8 +85,8 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
 data DijkstraContextError era
-  = ConwayContextError !(ConwayContextError era)
-  | PointerPresentInOutput !(NonEmpty (TxOut era))
+  = ConwayContextError (ConwayContextError era)
+  | PointerPresentInOutput (NonEmpty (TxOut era))
   deriving (Generic)
 
 deriving instance
