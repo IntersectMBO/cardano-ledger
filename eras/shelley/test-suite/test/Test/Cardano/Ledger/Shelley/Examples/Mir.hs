@@ -10,12 +10,12 @@ module Test.Cardano.Ledger.Shelley.Examples.Mir (
   mirExample,
 ) where
 
-import Cardano.Ledger.BaseTypes (Mismatch (..), Nonce, StrictMaybe (..), mkCertIxPartial)
+import Cardano.Ledger.BaseTypes (Mismatch (..), Nonce, mkCertIxPartial)
 import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -28,10 +28,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure (..),
  )
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
-import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -41,6 +38,7 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
@@ -75,8 +73,8 @@ initUTxO :: UTxO ShelleyEra
 initUTxO =
   genesisCoins
     genesisId
-    [ ShelleyTxOut Cast.aliceAddr aliceInitCoin
-    , ShelleyTxOut Cast.bobAddr bobInitCoin
+    [ mkBasicTxOut Cast.aliceAddr aliceInitCoin
+    , mkBasicTxOut Cast.bobAddr bobInitCoin
     ]
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -109,19 +107,16 @@ feeTx1 = Coin 1
 
 txbodyEx1 :: MIRPot -> TxBody TopTx ShelleyEra
 txbodyEx1 pot =
-  ShelleyTxBody
-    (Set.fromList [TxIn genesisId minBound])
-    (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr aliceCoinEx1)
-    ( StrictSeq.fromList
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [TxIn genesisId minBound]
+    & outputsTxBodyL .~ StrictSeq.singleton (mkBasicTxOut Cast.aliceAddr aliceCoinEx1)
+    & certsTxBodyL
+      .~ StrictSeq.fromList
         [ ShelleyTxCertMir (MIRCert pot ir)
         , RegTxCert Cast.aliceSHK
         ]
-    )
-    (Withdrawals Map.empty)
-    (Coin 1)
-    (SlotNo 10)
-    SNothing
-    SNothing
+    & feeTxBodyL .~ Coin 1
+    & ttlTxBodyL .~ SlotNo 10
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     aliceCoinEx1 = aliceInitCoin <-> Val.inject (feeTx1 <+> Coin 7)
@@ -135,24 +130,23 @@ sufficientMIRWits = mirWits [0 .. 4]
 insufficientMIRWits :: [KeyPair Witness]
 insufficientMIRWits = mirWits [0 .. 3]
 
-txEx1 :: [KeyPair Witness] -> MIRPot -> ShelleyTx TopTx ShelleyEra
+txEx1 :: [KeyPair Witness] -> MIRPot -> Tx TopTx ShelleyEra
 txEx1 txwits pot =
-  ShelleyTx
-    (txbodyEx1 pot)
-    mempty
-      { addrWits =
-          mkWitnessesVKey
-            (hashAnnotated $ txbodyEx1 pot)
-            ([asWitness Cast.alicePay] <> txwits)
-      }
-    SNothing
+  mkBasicTx (txbodyEx1 pot)
+    & witsTxL
+      .~ ( mkBasicTxWits
+             & addrTxWitsL
+               .~ mkWitnessesVKey
+                 (hashAnnotated $ txbodyEx1 pot)
+                 ([asWitness Cast.alicePay] <> txwits)
+         )
 
 blockEx1' :: [KeyPair Witness] -> MIRPot -> Block (BHeader MockCrypto) ShelleyEra
 blockEx1' txwits pot =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [MkShelleyTx $ txEx1 txwits pot]
+    [txEx1 txwits pot]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
