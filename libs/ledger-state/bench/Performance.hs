@@ -18,6 +18,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool
+import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesis (..),
@@ -25,6 +26,7 @@ import Cardano.Ledger.Shelley.Genesis (
   mkShelleyGlobals,
  )
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Slot
 import Cardano.Ledger.State
 import Cardano.Ledger.State.UTxO (CurrentEra, readHexUTxO, readNewEpochState)
 import Cardano.Ledger.Val
@@ -89,6 +91,28 @@ main = do
       reapplyTx' mempoolEnv mempoolState =
         either (error . show) id
           . reapplyTx globals mempoolEnv mempoolState
+      slotsPerTick =
+        let f = positiveUnitIntervalNonZeroRational (activeSlotVal (activeSlotCoeff globals))
+         in round (1 /. f)
+      -- ticksPerSlot =
+      --   let k = securityParameter globals
+      --    in 10 * k
+
+      epochInfo = epochInfoPure globals
+      -- Assume we are at the very first slot number in the epoch and tick all the way to the very
+      -- last slot number.
+      tickToEpochEnd nes =
+        let lastSlotNo = epochInfoFirst epochInfo (succ (nesEL nes)) *- Duration slotsPerTick
+            go !curSlotNo !curNes
+              | nextSlotNo < lastSlotNo =
+                  go nextSlotNo (applyTickNoEvents @CurrentEra globals curNes nextSlotNo)
+              | otherwise = curNes
+              where
+                !nextSlotNo = curSlotNo +* Duration slotsPerTick
+         in go (epochInfoFirst epochInfo (nesEL nes)) nes
+      tickOverTheEpochBoundary nes =
+        let firstSlotNoNextEpoch = epochInfoFirst epochInfo (succ (nesEL nes))
+         in applyTickNoEvents @CurrentEra globals nes firstSlotNoNextEpoch
 
   when (utxoSize < largeKeysNum) $
     die $
@@ -96,7 +120,14 @@ main = do
   largeKeys <- selectRandomMapKeys 100000 stdGen utxoMap
 
   defaultMain
-    [ env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
+    [ env (pure $ tickOverTheEpochBoundary $ tickToEpochEnd es) $ \newEpochStateStart ->
+        bgroup
+          "applyTick"
+          [ bench "tickToEpochEnd" $ nf tickToEpochEnd newEpochStateStart
+          , env (pure $ tickToEpochEnd newEpochStateStart) $
+              bench "tickOverTheEpochBoundary" . nf tickOverTheEpochBoundary
+          ]
+    , env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
           "reapplyTx"
           [ env (pure validatedTx1) $
