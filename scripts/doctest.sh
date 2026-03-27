@@ -44,11 +44,15 @@ cat <<EOF >"$EXTRA_ARGS"
 cardano-ledger-api:lib:cardano-ledger-api --build-depends=cardano-ledger-babbage:testlib
 EOF
 
+# Build the packages
+echo "***** cabal build ${PACKAGES[*]:-all} *****"
+cabal build "${PACKAGES[@]:-all}"
+
 # Run the doctests for some or all packages
 cleret cabal targets "${PACKAGES[@]}" |
 sort | join -t' ' -a1 -j1 - "$EXTRA_ARGS" |
 while read -ra ARGS
 do
   echo "***** cabal doctest ${ARGS[0]} *****"
-  cabal doctest --repl-options='-w -Wdefault' "${ARGS[@]}"
+  cabal doctest "${ARGS[@]}"
 done
