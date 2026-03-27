@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -109,28 +110,32 @@ stsPropertyV2' ::
   (env -> st -> sig -> st -> p) ->
   Property
 stsPropertyV2' specEnv specState specSig specPostState theProp =
-  uncurry forAllShrinkBlind (genShrinkFromSpec specEnv) $ \env ->
-    counterexample (show $ toExpr env) $
-      uncurry forAllShrinkBlind (genShrinkFromSpec $ specState env) $ \st ->
-        counterexample (show $ toExpr st) $
-          uncurry forAllShrinkBlind (genShrinkFromSpec $ specSig env st) $ \sig ->
-            counterexample (show $ toExpr sig) $
-              runShelleyBase $ do
-                res <- applySTS @(EraRule r ConwayEra) $ TRC (env, st, sig)
-                pure $ case res of
-                  Left pfailures -> counterexample (show $ toExpr pfailures) $ property False
-                  Right st' ->
-                    case conformsToSpecE
-                      st
-                      (specPostState env st sig)
-                      (pure "conformsToSpecE fails in STS tests") of
-                      Just es -> counterexample (unlines (NE.toList es)) False
-                      Nothing ->
-                        counterexample
-                          ( show
-                              (toExpr st', show (specState env))
-                          )
-                          $ theProp env st sig st'
+  -- Cap total shrink steps to prevent infinite shrink loops when
+  -- a structural spec/rule mismatch causes every shrunk state to
+  -- still fail.
+  withMaxShrinks 200 $
+    uncurry forAllShrinkBlind (genShrinkFromSpec specEnv) $ \env ->
+      counterexample (show $ toExpr env) $
+        uncurry forAllShrinkBlind (genShrinkFromSpec $ specState env) $ \st ->
+          counterexample (show $ toExpr st) $
+            uncurry forAllShrinkBlind (genShrinkFromSpec $ specSig env st) $ \sig ->
+              counterexample (show $ toExpr sig) $
+                runShelleyBase $ do
+                  res <- applySTS @(EraRule r ConwayEra) $ TRC (env, st, sig)
+                  pure $ case res of
+                    Left pfailures -> counterexample (show $ toExpr pfailures) $ property False
+                    Right st' ->
+                      case conformsToSpecE
+                        st
+                        (specPostState env st sig)
+                        (pure "conformsToSpecE fails in STS tests") of
+                        Just es -> counterexample (unlines (NE.toList es)) False
+                        Nothing ->
+                          counterexample
+                            ( show
+                                (toExpr st', show (specState env))
+                            )
+                            $ theProp env st sig st'
 
 -- STS properties ---------------------------------------------------------
 

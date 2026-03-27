@@ -23,11 +23,16 @@ import Constrained.API
 import Data.Coerce
 import Data.Foldable
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Lens.Micro
 import Lens.Micro qualified as L
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
+
+-- | Return succVersion of the major version, capped at maxBound
+succVersionOrCurrent :: ProtVer -> Version
+succVersionOrCurrent pv = fromMaybe (pvMajor pv) (succVersion (pvMajor pv))
 
 govEnvSpec ::
   Specification (GovEnv ConwayEra)
@@ -41,15 +46,20 @@ govEnvSpec = constrained $ \ge ->
 govProposalsSpec ::
   GovEnv ConwayEra ->
   Specification (Proposals ConwayEra)
-govProposalsSpec GovEnv {geEpoch, geGuardrailsScriptHash, geCertState} =
-  proposalsSpec (lit geEpoch) (lit geGuardrailsScriptHash) (lit geCertState)
+govProposalsSpec GovEnv {geEpoch, gePParams, geGuardrailsScriptHash, geCertState} =
+  proposalsSpec
+    (lit geEpoch)
+    (lit (succVersionOrCurrent (gePParams ^. ppProtocolVersionL)))
+    (lit geGuardrailsScriptHash)
+    (lit geCertState)
 
 proposalsSpec ::
   Term EpochNo ->
+  Term Version ->
   Term (StrictMaybe ScriptHash) ->
   Term (CertState ConwayEra) ->
   Specification (Proposals ConwayEra)
-proposalsSpec geEpoch geGuardrailsScriptHash geCertState =
+proposalsSpec geEpoch maxHardForkMajorVersion geGuardrailsScriptHash geCertState =
   constrained $ \ [var|props|] ->
     -- Note each of ppupTree, hardForkTree, committeeTree, constitutionTree
     -- have the pair type ProposalTree = (StrictMaybe (GovActionId StandardCrypto), [Tree GAS])
@@ -80,7 +90,13 @@ proposalsSpec geEpoch geGuardrailsScriptHash geCertState =
           ( allGASInTree
               ( \ [var|gasHfork|] ->
                   -- Extract the GovAction from the GovActionID and match against the constructor HardForkInitiation
-                  isCon @"HardForkInitiation" (pProcGovAction_ . gasProposalProcedure_ $ gasHfork)
+                  [ isCon @"HardForkInitiation" (pProcGovAction_ . gasProposalProcedure_ $ gasHfork)
+                  , -- Cap the major version: the GOV rule rejects HardForkInitiation proposals
+                    -- whose major version exceeds succVersion of the current PParams version.
+                    onHardFork gasHfork $ \_ pv ->
+                      match pv $ \majV _ ->
+                        assert $ majV <=. maxHardForkMajorVersion
+                  ]
               )
           )
       , allGASAndChildInTree hardForkTree $ \gas gas' ->
@@ -453,9 +469,18 @@ wfGovAction GovEnv {geGuardrailsScriptHash, geEpoch, gePParams, geCertState} ps 
           | HardForkInitiation _ protVer <- pProcGovAction $ gasProposalProcedure gas -> protVer
         _ -> gePParams ^. ppProtocolVersionL
 
+    -- The GOV rule (preceedingHardFork) rejects proposals whose major version
+    -- exceeds succVersion of the PParams major version. Cap the successor
+    -- accordingly so we never generate versions the rule would reject.
+    maxMajorVersion = succVersion @Maybe (pvMajor (gePParams ^. ppProtocolVersionL))
+
     hfIdMajorVer mId =
       let ProtVer currentMajorVersion _ = findProtVer (coerce mId)
-       in (currentMajorVersion, succVersion @Maybe currentMajorVersion)
+          -- can have a Maybe here; Nothing forces a minor-version-only increment in the caseOn for HardForkInitiation
+          cappedSucc = case succVersion @Maybe currentMajorVersion of
+            Just v | Just v > maxMajorVersion -> Nothing
+            other -> other
+       in (currentMajorVersion, cappedSucc)
 
     hfIdMinorVer mId =
       let ProtVer _ currentMinorVersion = findProtVer (coerce mId)

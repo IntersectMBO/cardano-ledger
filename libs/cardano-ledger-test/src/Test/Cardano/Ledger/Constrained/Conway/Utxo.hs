@@ -45,7 +45,7 @@ import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common (Arbitrary (..), Gen, ToExpr, oneof)
-import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec)
+import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec, succVersionOrCurrent)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
@@ -129,7 +129,7 @@ utxoStateSpec ::
   UtxoExecContext ConwayEra ->
   UtxoEnv ConwayEra ->
   Specification (UTxOState ConwayEra)
-utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, ueCertState} =
+utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, uePParams, ueCertState} =
   constrained $ \utxoState ->
     match utxoState $
       \utxosUtxo
@@ -141,7 +141,12 @@ utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, ueCertState} =
           [ assert $ utxosUtxo ==. lit uecUTxO
           , match utxosGovState $ \props _ constitution _ _ _ _ ->
               match constitution $ \_ policy ->
-                satisfies props $ proposalsSpec (lit curEpoch) policy (lit ueCertState)
+                satisfies props $
+                  proposalsSpec
+                    (lit curEpoch)
+                    (lit (succVersionOrCurrent (uePParams ^. ppProtocolVersionL)))
+                    policy
+                    (lit ueCertState)
           ]
   where
     curEpoch = runReader (epochFromSlot ueSlot) testGlobals
