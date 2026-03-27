@@ -2,12 +2,17 @@
 
 ## 0.3.0.0
 
+* Remove `SubMissingRequiredDatums`, `SubNotAllowedSupplementalDatums`, and
+  `SubUnspendableUTxONoDatumHash` constructors from `DijkstraSubUtxowPredFailure`
+* Add `WrongNetworkInDirectDeposit` constructor to `DijkstraUtxoPredFailure`
+* Add `SubWrongNetworkInDirectDeposit` constructor to `DijkstraSubUtxoPredFailure`
+* Add `validateWrongNetworkInDirectDeposit`
 * Add `EraForecast` instance for `DijkstraEra`.
 * Deprecate `BHeaderView` in favour of `DijkstraEraBlockHeader` typeclass.
   - Add `PerasCert`, `PerasKey` and `validatePerasCert` to `Dijkstra.BlockBody` (moved from core).
   - Add `DijkstraEraBlockHeader` typeclass and the `DijkstraBbodySignal` GADT.
   - Remove `PrevEpochNonceNotPresent` from `DijkstraBbodyPredFailure`.
-* Add `SubLedgerEnv` and `SubUtxowEnv`
+* Add `SubLedgerEnv` and `SubUtxoEnv`
 * Remove `OutputTooSmallUTxO` constructor from `DijkstraUtxoPredFailure`
 * Remove `SubOutputTooSmallUTxO` constructor from `DijkstraSubUtxoPredFailure`
 

@@ -19,19 +19,18 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
   DijkstraSUBUTXOW,
   DijkstraSubUtxowPredFailure (..),
   DijkstraSubUtxowEvent (..),
-  SubUtxowEnv (..),
 ) where
 
 import Cardano.Crypto.Hash (ByteString)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   checkScriptIntegrityHash,
   hasExactSetOfRedeemers,
-  missingRequiredDatums,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   validateFailedBabbageScripts,
   validateScriptsWellFormedTxOuts,
@@ -47,7 +46,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
   ConwayUtxowPredFailure,
-  UtxoEnv (..),
   alonzoToConwayUtxowPredFailure,
   babbageToConwayUtxowPredFailure,
   shelleyToConwayUtxowPredFailure,
@@ -62,21 +60,20 @@ import Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
  )
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
-import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosUtxo)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateMetadata,
   validateNeededWitnesses,
   validateVerifiedWits,
  )
-import Cardano.Ledger.State (CertState, EraUTxO (..), ScriptsProvided (..))
-import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.State (EraCertState, EraStake, EraUTxO (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
-import Data.Set (Set)
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -84,13 +81,6 @@ import NoThunks.Class (
   InspectHeapNamed (..),
   NoThunks (..),
  )
-
-data SubUtxowEnv era = SubUtxowEnv
-  { sueSlot :: SlotNo
-  , suePParams :: PParams era
-  , sueCertState :: CertState era
-  , sueScriptsProvided :: ScriptsProvided era
-  }
 
 data DijkstraSubUtxowPredFailure era
   = SubUtxoFailure (PredicateFailure (EraRule "SUBUTXO" era))
@@ -109,21 +99,8 @@ data DijkstraSubUtxowPredFailure era
   | -- | Contains out of range values (string`s too long)
     SubInvalidMetadata
   | SubMissingRedeemers (NonEmpty (PlutusPurpose AsItem era, ScriptHash))
-  | SubMissingRequiredDatums
-      -- | Set of missing data hashes
-      (NonEmptySet DataHash)
-      -- | Set of received data hashes
-      (Set DataHash)
-  | SubNotAllowedSupplementalDatums
-      -- | Set of unallowed data hashes.
-      (NonEmptySet DataHash)
-      -- | Set of acceptable supplemental data hashes
-      (Set DataHash)
   | SubPPViewHashesDontMatch
       (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
-  | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
-    SubUnspendableUTxONoDatumHash
-      (NonEmptySet TxIn)
   | -- | List of redeemers not needed
     SubExtraRedeemers (NonEmpty (PlutusPurpose AsIx era))
   | -- | Embed UTXO rule failures
@@ -221,7 +198,7 @@ instance
   where
   type State (DijkstraSUBUTXOW era) = UTxOState era
   type Signal (DijkstraSUBUTXOW era) = Tx SubTx era
-  type Environment (DijkstraSUBUTXOW era) = SubUtxowEnv era
+  type Environment (DijkstraSUBUTXOW era) = SubUtxoEnv era
   type BaseM (DijkstraSUBUTXOW era) = ShelleyBase
   type PredicateFailure (DijkstraSUBUTXOW era) = DijkstraSubUtxowPredFailure era
   type Event (DijkstraSUBUTXOW era) = DijkstraSubUtxowEvent era
@@ -243,25 +220,22 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (SubUtxowEnv slot pp certState scriptsProvided, utxoState, tx) <- judgmentContext
-  let utxo = utxosUtxo utxoState
-      txBody = tx ^. bodyTxL
+  TRC (env@(SubUtxoEnv _ pp certState scriptsProvided originalUtxo _), utxoState, tx) <-
+    judgmentContext
+  let txBody = tx ^. bodyTxL
       witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
 
   {- ∀[ (vk , σ) ∈ vKeySigs ] isSigned vk (txidBytes txId) σ -}
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
-  let scriptsNeeded = getScriptsNeeded utxo txBody
+  let scriptsNeeded = getScriptsNeeded originalUtxo txBody
       scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
 
   {- ∀[ s ∈ p1ScriptsNeeded ] validP1Script vKeyHashesProvided txVldt s -}
   runTest $ Babbage.validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
 
   {- vKeyHashesNeeded ⊆ vKeyHashesProvided -}
-  runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState utxo txBody
-
-  {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
-  runTest $ Alonzo.missingRequiredDatums utxo tx
+  runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState originalUtxo txBody
 
   {- txADhash ≡ map hash txAuxData -}
   runTestOnSignal $ Shelley.validateMetadata pp tx
@@ -277,14 +251,23 @@ dijkstraSubUtxowTransition = do
       (tx ^. witsTxL . scriptTxWitsL)
       (tx ^. bodyTxL . outputsTxBodyL)
 
-  trans @(EraRule "SUBUTXO" era) $ TRC (UtxoEnv slot pp certState, utxoState, tx)
+  trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
 
 instance
-  ( ConwayEraGov era
-  , ConwayEraTxBody era
+  ( EraTx era
+  , EraStake era
+  , EraCertState era
+  , AlonzoEraTxWits era
+  , ConwayEraGov era
+  , DijkstraEraTxBody era
   , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   ) =>
   Embed (DijkstraSUBUTXO era) (DijkstraSUBUTXOW era)
   where
@@ -308,10 +291,7 @@ instance
       SubConflictingMetadataHash mm -> Sum SubConflictingMetadataHash 6 !> To mm
       SubInvalidMetadata -> Sum SubInvalidMetadata 7
       SubMissingRedeemers x -> Sum SubMissingRedeemers 8 !> To x
-      SubMissingRequiredDatums x y -> Sum SubMissingRequiredDatums 9 !> To x !> To y
-      SubNotAllowedSupplementalDatums x y -> Sum SubNotAllowedSupplementalDatums 10 !> To x !> To y
       SubPPViewHashesDontMatch mm -> Sum SubPPViewHashesDontMatch 11 !> To mm
-      SubUnspendableUTxONoDatumHash x -> Sum SubUnspendableUTxONoDatumHash 12 !> To x
       SubExtraRedeemers x -> Sum SubExtraRedeemers 13 !> To x
       SubMalformedScriptWitnesses x -> Sum SubMalformedScriptWitnesses 14 !> To x
       SubMalformedReferenceScripts x -> Sum SubMalformedReferenceScripts 15 !> To x
@@ -333,10 +313,7 @@ instance
     6 -> SumD SubConflictingMetadataHash <! From
     7 -> SumD SubInvalidMetadata
     8 -> SumD SubMissingRedeemers <! From
-    9 -> SumD SubMissingRequiredDatums <! From <! From
-    10 -> SumD SubNotAllowedSupplementalDatums <! From <! From
     11 -> SumD SubPPViewHashesDontMatch <! From
-    12 -> SumD SubUnspendableUTxONoDatumHash <! From
     13 -> SumD SubExtraRedeemers <! From
     14 -> SumD SubMalformedScriptWitnesses <! From
     15 -> SumD SubMalformedReferenceScripts <! From
@@ -361,10 +338,10 @@ dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
   InvalidMetadata -> SubInvalidMetadata
   ExtraneousScriptWitnessesUTXOW _ -> error "Impossible: `ExtraneousScriptWitnessesUTXOW` for SUBUTXOW"
   MissingRedeemers pps -> SubMissingRedeemers pps
-  MissingRequiredDatums hs1 hs2 -> SubMissingRequiredDatums hs1 hs2
-  NotAllowedSupplementalDatums hs1 hs2 -> SubNotAllowedSupplementalDatums hs1 hs2
+  MissingRequiredDatums _ _ -> error "Impossible: `MissingRequiredDatums` for SUBUTXOW"
+  NotAllowedSupplementalDatums _ _ -> error "Impossible: `NotAllowedSupplementalDatums` for SUBUTXOW"
   PPViewHashesDontMatch mm -> SubPPViewHashesDontMatch mm
-  UnspendableUTxONoDatumHash txs -> SubUnspendableUTxONoDatumHash txs
+  UnspendableUTxONoDatumHash _ -> error "Impossible: `UnspendableUTxONoDatumHash` for SUBUTXOW"
   ExtraRedeemers pps -> SubExtraRedeemers pps
   MalformedScriptWitnesses hs -> SubMalformedScriptWitnesses hs
   MalformedReferenceScripts hs -> SubMalformedReferenceScripts hs
