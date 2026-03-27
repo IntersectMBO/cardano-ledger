@@ -22,6 +22,18 @@
   - Update `incrBlocks` to `:: SlotNo -> UnitInterval -> SlotNo -> KeyHash StakePool -> BlocksMake -> BlocksMade`.
   - Change `ShelleyBBODY` `Signal` to `BbodySignal`.
   - Add `validateBlockBodySize` and `validateBlockBodyHash`.
+* Remove `NoThunks` instances for all predicate failure types:
+  - `ShelleyUtxoPredFailure`
+  - `ShelleyUtxowPredFailure`
+  - `ShelleyBbodyPredFailure`
+  - `ShelleyDelegPredFailure`
+  - `ShelleyDelegsPredFailure`
+  - `ShelleyDelplPredFailure`
+  - `ShelleyLedgerPredFailure`
+  - `ShelleyLedgersPredFailure`
+  - `ShelleyPoolPredFailure`
+  - `ShelleyPpupPredFailure`
+  - `ChainPredicateFailure`
 
 ## 1.18.0.0
 

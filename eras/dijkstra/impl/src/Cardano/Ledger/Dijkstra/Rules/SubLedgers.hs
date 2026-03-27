@@ -74,7 +74,6 @@ import Control.Monad (foldM)
 import Control.State.Transition.Extended
 import Data.OMap.Strict (OMap)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 newtype DijkstraSubLedgersPredFailure era
   = SubLedgerFailure (PredicateFailure (EraRule "SUBLEDGER" era))
@@ -85,10 +84,6 @@ deriving stock instance
 
 deriving stock instance
   Show (PredicateFailure (EraRule "SUBLEDGER" era)) => Show (DijkstraSubLedgersPredFailure era)
-
-instance
-  NoThunks (PredicateFailure (EraRule "SUBLEDGER" era)) =>
-  NoThunks (DijkstraSubLedgersPredFailure era)
 
 instance NFData (PredicateFailure (EraRule "SUBLEDGER" era)) => NFData (DijkstraSubLedgersPredFailure era)
 

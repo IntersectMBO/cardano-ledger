@@ -94,7 +94,6 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
-import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 
@@ -181,8 +180,6 @@ data AlonzoContextError era
   = TranslationLogicMissingInput !TxIn
   | TimeTranslationPastHorizon !Text
   deriving (Eq, Show, Generic)
-
-instance NoThunks (AlonzoContextError era)
 
 instance Era era => NFData (AlonzoContextError era)
 

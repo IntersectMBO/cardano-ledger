@@ -78,7 +78,6 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
-import NoThunks.Class (NoThunks (..))
 
 data ShelleyBbodyState era
   = BbodyState !(State (EraRule "LEDGERS" era)) !BlocksMade
@@ -179,12 +178,6 @@ deriving stock instance
   , Eq (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
   Eq (ShelleyBbodyPredFailure era)
-
-instance
-  ( Era era
-  , NoThunks (PredicateFailure (EraRule "LEDGERS" era))
-  ) =>
-  NoThunks (ShelleyBbodyPredFailure era)
 
 instance
   ( EraBlockBody era

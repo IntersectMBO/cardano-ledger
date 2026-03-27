@@ -88,7 +88,6 @@ import Data.Set.NonEmpty (NonEmptySet)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class
 import Validation
 
 -- =================================================
@@ -159,13 +158,6 @@ deriving instance
   , Eq (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Eq (AlonzoUtxowPredFailure era)
-
-instance
-  ( AlonzoEraScript era
-  , NoThunks (TxCert era)
-  , NoThunks (PredicateFailure (EraRule "UTXO" era))
-  ) =>
-  NoThunks (AlonzoUtxowPredFailure era)
 
 instance
   ( AlonzoEraScript era

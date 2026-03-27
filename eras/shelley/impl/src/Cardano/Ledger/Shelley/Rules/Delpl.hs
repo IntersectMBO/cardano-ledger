@@ -49,7 +49,6 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
-import NoThunks.Class (NoThunks (..))
 
 data DelplEnv era = DelplEnv
   { delplSlotNo :: SlotNo
@@ -102,12 +101,6 @@ deriving stock instance
   , Show (PredicateFailure (EraRule "POOL" era))
   ) =>
   Show (ShelleyDelplPredFailure era)
-
-instance
-  ( NoThunks (PredicateFailure (EraRule "DELEG" era))
-  , NoThunks (PredicateFailure (EraRule "POOL" era))
-  ) =>
-  NoThunks (ShelleyDelplPredFailure era)
 
 instance
   ( NFData (PredicateFailure (EraRule "DELEG" era))

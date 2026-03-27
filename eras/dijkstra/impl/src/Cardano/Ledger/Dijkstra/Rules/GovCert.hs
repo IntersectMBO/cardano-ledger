@@ -50,7 +50,6 @@ import Control.State.Transition.Extended (
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 data DijkstraGovCertPredFailure era
   = DijkstraDRepAlreadyRegistered (Credential DRepRole)
@@ -72,8 +71,6 @@ instance InjectRuleFailure "GOVCERT" DijkstraGovCertPredFailure DijkstraEra
 
 instance InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraGovCertPredFailure
-
-instance NoThunks (DijkstraGovCertPredFailure era)
 
 instance NFData (DijkstraGovCertPredFailure era)
 

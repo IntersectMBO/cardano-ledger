@@ -94,7 +94,6 @@ import qualified Data.Set as Set
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 -- ========================================================
 
@@ -203,13 +202,6 @@ deriving stock instance
   , Era era
   ) =>
   Eq (ShelleyLedgerPredFailure era)
-
-instance
-  ( NoThunks (PredicateFailure (EraRule "DELEGS" era))
-  , NoThunks (PredicateFailure (EraRule "UTXOW" era))
-  , Era era
-  ) =>
-  NoThunks (ShelleyLedgerPredFailure era)
 
 instance
   ( NFData (PredicateFailure (EraRule "DELEGS" era))

@@ -146,7 +146,6 @@ import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
 import qualified Lens.Micro as L
-import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
 data GovEnv era = GovEnv
@@ -234,8 +233,6 @@ instance InjectRuleFailure "GOV" ConwayGovPredFailure ConwayEra
 instance InjectRuleEvent "GOV" ConwayGovEvent ConwayEra
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
-
-instance EraPParams era => NoThunks (ConwayGovPredFailure era)
 
 instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
   decCBOR = decode $ Summands "ConwayGovPredFailure" $ \case

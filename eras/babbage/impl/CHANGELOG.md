@@ -1,6 +1,6 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.13.1.0
+## 1.14.0.0
 
 * Deprecate the use of `GetLedgerView`:
   - Add `BabbageForecast` to deprecate `LedgerView` for Praos.
@@ -11,6 +11,10 @@
     + `bfProtocolVersionL`
   - Add `EraForecast` instance with `BabbageForecast`.
 * Add `validateScriptsWellFormedTxOuts`
+* Remove `NoThunks` instances for predicate failure types:
+  - `BabbageUtxoPredFailure`
+  - `BabbageUtxowPredFailure`
+* Remove `NoThunks` instance for `BabbageContextError`
 
 ## 1.13.0.0
 

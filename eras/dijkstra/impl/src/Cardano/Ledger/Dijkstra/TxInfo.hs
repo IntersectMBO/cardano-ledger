@@ -79,7 +79,6 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
-import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
@@ -109,13 +108,6 @@ instance
   , EraTxOut era
   ) =>
   NFData (DijkstraContextError era)
-
-instance
-  ( AlonzoEraScript era
-  , EraTxCert era
-  , EraTxOut era
-  ) =>
-  NoThunks (DijkstraContextError era)
 
 instance
   ( ToJSON (TxCert era)

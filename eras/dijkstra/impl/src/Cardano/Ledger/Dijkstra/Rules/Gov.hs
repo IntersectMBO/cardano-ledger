@@ -78,7 +78,6 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 data DijkstraGovPredFailure era
   = GovActionsDoNotExist (NonEmpty GovActionId)
@@ -140,8 +139,6 @@ instance InjectRuleFailure "GOV" ConwayGovPredFailure DijkstraEra where
 instance InjectRuleEvent "GOV" ConwayGovEvent DijkstraEra
 
 instance EraPParams era => NFData (DijkstraGovPredFailure era)
-
-instance EraPParams era => NoThunks (DijkstraGovPredFailure era)
 
 instance EraPParams era => DecCBOR (DijkstraGovPredFailure era) where
   decCBOR = decode $ Summands "DijkstraGovPredFailure" $ \case

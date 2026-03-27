@@ -58,7 +58,6 @@ import Control.State.Transition.Extended
 import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 data DijkstraSubCertPredFailure era
   = SubDelegFailure (PredicateFailure (EraRule "SUBDELEG" era))
@@ -79,13 +78,6 @@ deriving stock instance
   , Show (PredicateFailure (EraRule "SUBGOVCERT" era))
   ) =>
   Show (DijkstraSubCertPredFailure era)
-
-instance
-  ( NoThunks (PredicateFailure (EraRule "SUBDELEG" era))
-  , NoThunks (PredicateFailure (EraRule "SUBPOOL" era))
-  , NoThunks (PredicateFailure (EraRule "SUBGOVCERT" era))
-  ) =>
-  NoThunks (DijkstraSubCertPredFailure era)
 
 instance
   ( NFData (PredicateFailure (EraRule "SUBDELEG" era))

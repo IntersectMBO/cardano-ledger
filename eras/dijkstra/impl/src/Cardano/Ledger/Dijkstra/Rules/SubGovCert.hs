@@ -53,11 +53,10 @@ import Control.State.Transition.Extended (
  )
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 newtype DijkstraSubGovCertPredFailure era
   = DijkstraSubGovCertPredFailure (DijkstraGovCertPredFailure era)
-  deriving (Show, Eq, Generic, NFData, NoThunks, EncCBOR, DecCBOR)
+  deriving (Show, Eq, Generic, NFData, EncCBOR, DecCBOR)
 
 type instance EraRuleFailure "SUBGOVCERT" DijkstraEra = DijkstraSubGovCertPredFailure DijkstraEra
 

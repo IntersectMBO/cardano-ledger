@@ -60,8 +60,6 @@ data ChainPredicateFailure
       Version -- max protocol version
   deriving (Generic, Show, Eq, Ord)
 
-instance NoThunks ChainPredicateFailure
-
 chainChecks ::
   (MonadError ChainPredicateFailure m, EraBlockHeader h era) =>
   Version ->

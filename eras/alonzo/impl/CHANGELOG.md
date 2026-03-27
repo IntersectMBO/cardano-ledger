@@ -5,6 +5,14 @@
 * Add `EraForecast` and `ShelleyEraForecast` instances for `AlonzoEra`.
 * Change `AlonzoBBODY` `Signal` to `BbodySignal`.
 * Add `validateExUnits`.
+* Remove `NoThunks` instances for all predicate failure types:
+  - `AlonzoBbodyPredFailure`
+  - `AlonzoUtxoPredFailure`
+  - `AlonzoUtxosPredFailure`
+  - `AlonzoUtxowPredFailure`
+* Remove `NoThunks` instance for `AlonzoContextError`
+* Remove `NoThunks (ContextError era)` constraint from `EraPlutusContext` class
+* Remove `NoThunks` deriving instance for `CollectError`
 
 ## 1.15.0.0
 

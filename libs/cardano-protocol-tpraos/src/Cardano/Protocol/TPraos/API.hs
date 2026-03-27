@@ -495,8 +495,6 @@ newtype ChainTransitionError c
   = ChainTransitionError (NonEmpty (PredicateFailure (STS.Prtcl.PRTCL c)))
   deriving (Generic)
 
-instance Crypto c => NoThunks (ChainTransitionError c)
-
 deriving instance Crypto c => Eq (ChainTransitionError c)
 
 deriving instance Crypto c => Show (ChainTransitionError c)

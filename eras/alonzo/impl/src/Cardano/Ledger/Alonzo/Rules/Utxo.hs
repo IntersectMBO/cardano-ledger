@@ -120,7 +120,6 @@ import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks)
 import Validation
 
 -- ==========================================================
@@ -213,14 +212,6 @@ deriving stock instance
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Eq (AlonzoUtxoPredFailure era)
-
-instance
-  ( NoThunks (Value era)
-  , NoThunks (UTxO era)
-  , NoThunks (PredicateFailure (EraRule "UTXOS" era))
-  , NoThunks (TxOut era)
-  ) =>
-  NoThunks (AlonzoUtxoPredFailure era)
 
 instance
   ( Era era

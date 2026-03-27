@@ -132,7 +132,6 @@ import Data.Text (Text)
 import Data.Word (Word32)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
-import NoThunks.Class (NoThunks (..))
 import Validation
 
 data ConwayLedgerPredFailure era
@@ -230,14 +229,6 @@ deriving instance
   , Show (PredicateFailure (EraRule "GOV" era))
   ) =>
   Show (ConwayLedgerPredFailure era)
-
-instance
-  ( Era era
-  , NoThunks (PredicateFailure (EraRule "UTXOW" era))
-  , NoThunks (PredicateFailure (EraRule "CERTS" era))
-  , NoThunks (PredicateFailure (EraRule "GOV" era))
-  ) =>
-  NoThunks (ConwayLedgerPredFailure era)
 
 instance
   ( Era era

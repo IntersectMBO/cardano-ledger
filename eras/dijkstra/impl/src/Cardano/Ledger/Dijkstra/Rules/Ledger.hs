@@ -134,7 +134,6 @@ import Data.Set.NonEmpty (NonEmptySet)
 import qualified Data.Set.NonEmpty as NES
 import GHC.Generics (Generic (..))
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 data DijkstraLedgerPredFailure era
   = DijkstraUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
@@ -246,15 +245,6 @@ deriving instance
   , Show (PredicateFailure (EraRule "SUBLEDGERS" era))
   ) =>
   Show (DijkstraLedgerPredFailure era)
-
-instance
-  ( Era era
-  , NoThunks (PredicateFailure (EraRule "UTXOW" era))
-  , NoThunks (PredicateFailure (EraRule "CERTS" era))
-  , NoThunks (PredicateFailure (EraRule "GOV" era))
-  , NoThunks (PredicateFailure (EraRule "SUBLEDGERS" era))
-  ) =>
-  NoThunks (DijkstraLedgerPredFailure era)
 
 instance
   ( Era era

@@ -71,7 +71,6 @@ import Data.Primitive.ByteArray (sizeofByteArray)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 data PoolEnv era
   = PoolEnv EpochNo (PParams era)
@@ -122,8 +121,6 @@ instance InjectRuleFailure "POOL" ShelleyPoolPredFailure ShelleyEra
 type instance EraRuleEvent "POOL" ShelleyEra = PoolEvent ShelleyEra
 
 instance InjectRuleEvent "POOL" PoolEvent ShelleyEra
-
-instance NoThunks (ShelleyPoolPredFailure era)
 
 instance NFData (ShelleyPoolPredFailure era)
 

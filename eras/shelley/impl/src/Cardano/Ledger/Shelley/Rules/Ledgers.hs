@@ -57,7 +57,6 @@ import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 data ShelleyLedgersEnv era = LedgersEnv
   { ledgersSlotNo :: SlotNo
@@ -140,12 +139,6 @@ deriving stock instance
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   Eq (ShelleyLedgersPredFailure era)
-
-instance
-  ( Era era
-  , NoThunks (PredicateFailure (EraRule "LEDGER" era))
-  ) =>
-  NoThunks (ShelleyLedgersPredFailure era)
 
 instance
   ( Era era

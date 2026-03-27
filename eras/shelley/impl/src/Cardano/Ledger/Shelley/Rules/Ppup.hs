@@ -111,8 +111,6 @@ type instance EraRuleFailure "PPUP" ShelleyEra = ShelleyPpupPredFailure ShelleyE
 
 instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure ShelleyEra
 
-instance NoThunks (ShelleyPpupPredFailure era)
-
 instance NFData (ShelleyPpupPredFailure era)
 
 newtype PpupEvent era = PpupNewEpoch EpochNo

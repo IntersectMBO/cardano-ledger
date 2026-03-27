@@ -73,7 +73,6 @@ import Data.Typeable (Typeable)
 import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
-import NoThunks.Class (NoThunks)
 
 data CertEnv era = CertEnv
   { cePParams :: PParams era
@@ -134,13 +133,6 @@ deriving stock instance
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   ) =>
   Eq (ConwayCertPredFailure era)
-
-instance
-  ( NoThunks (PredicateFailure (EraRule "DELEG" era))
-  , NoThunks (PredicateFailure (EraRule "POOL" era))
-  , NoThunks (PredicateFailure (EraRule "GOVCERT" era))
-  ) =>
-  NoThunks (ConwayCertPredFailure era)
 
 instance
   ( NFData (PredicateFailure (EraRule "DELEG" era))

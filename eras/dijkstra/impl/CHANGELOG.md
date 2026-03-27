@@ -10,6 +10,24 @@
 * Add `SubLedgerEnv` and `SubUtxowEnv`
 * Remove `OutputTooSmallUTxO` constructor from `DijkstraUtxoPredFailure`
 * Remove `SubOutputTooSmallUTxO` constructor from `DijkstraSubUtxoPredFailure`
+* Remove `NoThunks` instances for all predicate failure types:
+  - `DijkstraBbodyPredFailure`
+  - `DijkstraGovPredFailure`
+  - `DijkstraGovCertPredFailure`
+  - `DijkstraLedgerPredFailure`
+  - `DijkstraSubCertPredFailure`
+  - `DijkstraSubCertsPredFailure`
+  - `DijkstraSubDelegPredFailure`
+  - `DijkstraSubGovPredFailure`
+  - `DijkstraSubGovCertPredFailure`
+  - `DijkstraSubLedgerPredFailure`
+  - `DijkstraSubLedgersPredFailure`
+  - `DijkstraSubPoolPredFailure`
+  - `DijkstraSubUtxoPredFailure`
+  - `DijkstraSubUtxowPredFailure`
+  - `DijkstraUtxoPredFailure`
+  - `DijkstraUtxowPredFailure`
+* Remove `NoThunks` instance for `DijkstraContextError`
 
 ## 0.2.0.0
 

@@ -68,7 +68,6 @@ import Data.Text (Text)
 import qualified Debug.Trace as Debug
 import GHC.Generics
 import Lens.Micro
-import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.Common as P
 
 -- ===============================================================
@@ -90,10 +89,6 @@ deriving instance
 deriving instance
   (AlonzoEraScript era, Show (ContextError era)) =>
   Show (CollectError era)
-
-deriving instance
-  (AlonzoEraScript era, NoThunks (ContextError era)) =>
-  NoThunks (CollectError era)
 
 deriving instance
   (AlonzoEraScript era, NFData (ContextError era)) =>

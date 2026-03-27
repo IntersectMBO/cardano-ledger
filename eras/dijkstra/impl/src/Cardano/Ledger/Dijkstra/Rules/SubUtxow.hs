@@ -80,10 +80,6 @@ import Data.Set (Set)
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (
-  InspectHeapNamed (..),
-  NoThunks (..),
- )
 
 data SubUtxowEnv era = SubUtxowEnv
   { sueSlot :: SlotNo
@@ -147,11 +143,6 @@ deriving stock instance
   , Show (PredicateFailure (EraRule "SUBUTXO" era))
   ) =>
   Show (DijkstraSubUtxowPredFailure era)
-
-deriving via
-  InspectHeapNamed "DijkstraSubUtxowPred" (DijkstraSubUtxowPredFailure era)
-  instance
-    NoThunks (DijkstraSubUtxowPredFailure era)
 
 instance
   ( ConwayEraScript era

@@ -98,7 +98,6 @@ import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
-import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 -- ======================================================
 
@@ -219,11 +218,6 @@ deriving instance
   , Eq TxIn
   ) =>
   Eq (DijkstraUtxoPredFailure era)
-
-deriving via
-  InspectHeapNamed "ConwayUtxoPred" (DijkstraUtxoPredFailure era)
-  instance
-    NoThunks (DijkstraUtxoPredFailure era)
 
 instance
   ( Era era

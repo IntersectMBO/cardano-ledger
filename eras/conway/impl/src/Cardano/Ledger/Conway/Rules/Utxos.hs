@@ -67,7 +67,6 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Debug.Trace as Debug
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks)
 
 data ConwayUtxosPredFailure era
   = -- | The 'isValid' tag on the transaction is incorrect. The tag given
@@ -166,14 +165,6 @@ deriving stock instance
   , Eq (UTxOState era)
   ) =>
   Eq (ConwayUtxosPredFailure era)
-
-instance
-  ( ConwayEraScript era
-  , NoThunks (TxCert era)
-  , NoThunks (ContextError era)
-  , NoThunks (UTxOState era)
-  ) =>
-  NoThunks (ConwayUtxosPredFailure era)
 
 instance
   ( ConwayEraScript era

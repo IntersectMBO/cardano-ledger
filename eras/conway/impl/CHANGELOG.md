@@ -7,6 +7,19 @@
 * Change `ConwayBBODY` `Signal` to `BbodySignal`.
 * Add `validateRefScriptSize`.
 * Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`
+* Remove `NoThunks` instances for all predicate failure types:
+  - `ConwayBbodyPredFailure`
+  - `ConwayCertPredFailure`
+  - `ConwayCertsPredFailure`
+  - `ConwayDelegPredFailure`
+  - `ConwayGovPredFailure`
+  - `ConwayGovCertPredFailure`
+  - `ConwayLedgerPredFailure`
+  - `ConwayTickfPredFailure`
+  - `ConwayUtxoPredFailure`
+  - `ConwayUtxosPredFailure`
+  - `ConwayUtxowPredFailure`
+* Remove `NoThunks` instance for `ConwayContextError`
 
 ## 1.21.0.0
 

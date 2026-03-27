@@ -75,7 +75,6 @@ import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Text (Text)
 import GHC.Stack
-import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
@@ -127,7 +126,6 @@ class
   , Eq (ContextError era)
   , Show (ContextError era)
   , NFData (ContextError era)
-  , NoThunks (ContextError era)
   , EncCBOR (ContextError era)
   , DecCBOR (ContextError era)
   , ToJSON (ContextError era)

@@ -81,7 +81,6 @@ import Data.Set as Set
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro ((%~), (&), (.~), (?~), (^.))
-import NoThunks.Class (NoThunks)
 
 data ConwayDelegEnv era = ConwayDelegEnv
   { cdePParams :: PParams era
@@ -119,8 +118,6 @@ type instance EraRuleFailure "DELEG" ConwayEra = ConwayDelegPredFailure ConwayEr
 type instance EraRuleEvent "DELEG" ConwayEra = VoidEraRule "DELEG" ConwayEra
 
 instance InjectRuleFailure "DELEG" ConwayDelegPredFailure ConwayEra
-
-instance NoThunks (ConwayDelegPredFailure era)
 
 instance NFData (ConwayDelegPredFailure era)
 

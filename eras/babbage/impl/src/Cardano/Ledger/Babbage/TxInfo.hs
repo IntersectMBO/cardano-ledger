@@ -90,7 +90,6 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Generics
 import Lens.Micro
-import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 
@@ -260,8 +259,6 @@ deriving instance
 deriving instance
   (Show (AlonzoContextError era), Show (PlutusPurpose AsIx era)) =>
   Show (BabbageContextError era)
-
-instance NoThunks (PlutusPurpose AsIx era) => NoThunks (BabbageContextError era)
 
 instance (Era era, NFData (PlutusPurpose AsIx era)) => NFData (BabbageContextError era)
 

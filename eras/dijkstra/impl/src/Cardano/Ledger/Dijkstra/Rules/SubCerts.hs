@@ -60,7 +60,6 @@ import Control.State.Transition.Extended
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 newtype DijkstraSubCertsPredFailure era = SubCertFailure (PredicateFailure (EraRule "SUBCERT" era))
   deriving (Generic)
@@ -70,10 +69,6 @@ deriving stock instance
 
 deriving stock instance
   Show (PredicateFailure (EraRule "SUBCERT" era)) => Show (DijkstraSubCertsPredFailure era)
-
-instance
-  NoThunks (PredicateFailure (EraRule "SUBCERT" era)) =>
-  NoThunks (DijkstraSubCertsPredFailure era)
 
 instance
   NFData (PredicateFailure (EraRule "SUBCERT" era)) =>

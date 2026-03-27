@@ -17,7 +17,6 @@ import Cardano.Protocol.Crypto
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 data UPDN c
 
@@ -31,8 +30,6 @@ data UpdnState = UpdnState Nonce Nonce
 
 data UpdnPredicateFailure c -- No predicate failures
   deriving (Generic, Show, Eq)
-
-instance NoThunks (UpdnPredicateFailure c)
 
 newtype UpdnEvent c = NewEpoch EpochNo
 

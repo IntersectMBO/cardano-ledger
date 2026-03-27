@@ -132,7 +132,6 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Generics hiding (to)
 import Lens.Micro ((^.))
-import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
@@ -203,14 +202,6 @@ instance Inject (BabbageContextError era) (ConwayContextError era) where
 
 instance Inject (AlonzoContextError era) (ConwayContextError era) where
   inject = BabbageContextError . inject
-
-instance
-  ( NoThunks (TxCert era)
-  , NoThunks (PlutusPurpose AsIx era)
-  , NoThunks (PlutusPurpose AsItem era)
-  , EraPParams era
-  ) =>
-  NoThunks (ConwayContextError era)
 
 instance
   ( EraPParams era

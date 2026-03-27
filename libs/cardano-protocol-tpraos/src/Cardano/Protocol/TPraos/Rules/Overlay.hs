@@ -274,10 +274,6 @@ overlayTransition =
         trans @(OCERT c) $ TRC (oce, cs, bh)
 
 instance
-  VRF.VRFAlgorithm (VRF c) =>
-  NoThunks (OverlayPredicateFailure c)
-
-instance
   ( Crypto c
   , KES.Signable (KES c) (BHBody c)
   , VRF.Signable (VRF c) Seed

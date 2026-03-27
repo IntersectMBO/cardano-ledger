@@ -99,7 +99,6 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (Validation, failureIf, failureUnless)
 
 -- ======================================================
@@ -596,8 +595,3 @@ instance
     3 -> SumD BabbageOutputTooSmallUTxO <! From
     4 -> SumD BabbageNonDisjointRefInputs <! From
     n -> Invalid n
-
-deriving via
-  InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPredFailure era)
-  instance
-    NoThunks (BabbageUtxoPredFailure era)
