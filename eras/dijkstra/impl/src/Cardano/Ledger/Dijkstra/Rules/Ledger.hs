@@ -435,7 +435,7 @@ dijkstraLedgerTransition = do
   ledgerStateAfterSubledgers <-
     trans @(EraRule "SUBLEDGERS" era) $
       TRC
-        ( SubLedgerEnv slot mbCurEpochNo txIx pp chainAccountState scriptsProvided
+        ( SubLedgerEnv slot mbCurEpochNo txIx pp chainAccountState scriptsProvided utxo (tx ^. isValidTxL)
         , ledgerState
         , subTxs
         )
@@ -514,6 +514,11 @@ instance
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   , TxCert era ~ DijkstraTxCert era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
@@ -595,7 +600,7 @@ instance
 instance
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
   , EraPlutusContext era
@@ -630,6 +635,11 @@ instance
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   , TxCert era ~ DijkstraTxCert era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
