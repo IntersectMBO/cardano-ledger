@@ -33,7 +33,7 @@ import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.DeepSeq
-import Control.Monad (when)
+import Control.Monad (forM)
 import Criterion.Main
 import Data.Aeson
 import Data.Bifunctor (bimap, first)
@@ -49,8 +49,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
-import System.Environment (getEnv)
-import System.Exit (die)
+import System.Environment (getEnv, lookupEnv)
 import System.Random.Stateful
 
 main :: IO ()
@@ -59,19 +58,24 @@ main = do
       utxoVarName = "BENCH_UTXO_PATH"
       ledgerStateVarName = "BENCH_LEDGER_STATE_PATH"
   genesisFilePath <- getEnv genesisVarName
-  utxoFilePath <- getEnv utxoVarName
+  mUtxoFilePath <- lookupEnv utxoVarName
   ledgerStateFilePath <- getEnv ledgerStateVarName
 
-  genesis <- either error id <$> eitherDecodeFileStrict' genesisFilePath
-  putStrLn $ "Importing UTxO from: " ++ show utxoFilePath
-  utxo <- readHexUTxO utxoFilePath
-  putStrLn "Done importing UTxO"
   putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
-  es' <- readNewEpochState ledgerStateFilePath
+  nesFromFile <- readNewEpochState ledgerStateFilePath
   putStrLn "Done importing NewEpochState"
 
-  let nesUTxOL = nesEsL . esLStateL . lsUTxOStateL . utxoL
-      es = es' & nesUTxOL .~ utxo
+  mUtxo <- forM mUtxoFilePath $ \utxoFilePath -> do
+    putStrLn $ "Importing UTxO from: " ++ show utxoFilePath
+    utxo <- readHexUTxO utxoFilePath
+    utxo <$ putStrLn "Done importing UTxO"
+
+  genesis <- either error id <$> eitherDecodeFileStrict' genesisFilePath
+
+  let es = case mUtxo of
+        Nothing -> nesFromFile
+        Just utxoFromFile -> nesFromFile & utxoL .~ utxoFromFile
+      utxo = es ^. utxoL
       utxoMap = unUTxO utxo
       utxoSize = Map.size utxoMap
       largeKeysNum = 100000
@@ -114,12 +118,7 @@ main = do
         let firstSlotNoNextEpoch = epochInfoFirst epochInfo (succ (nesEL nes))
          in applyTickNoEvents @CurrentEra globals nes firstSlotNoNextEpoch
 
-  when (utxoSize < largeKeysNum) $
-    die $
-      "UTxO size is too small (" <> show utxoSize <> " < " <> show largeKeysNum <> ")"
-  largeKeys <- selectRandomMapKeys 100000 stdGen utxoMap
-
-  defaultMain
+  defaultMain $
     [ env (pure $ tickOverTheEpochBoundary $ tickToEpochEnd es) $ \newEpochStateStart ->
         bgroup
           "applyTick"
@@ -178,14 +177,17 @@ main = do
               , env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
               ]
-    , bgroup
-        "DeleteTxOuts"
-        [ extractKeysBench utxoMap largeKeysNum largeKeys
-        , extractKeysBench utxoMap 9 (Set.take 9 largeKeys)
-        , extractKeysBench utxoMap 5 (Set.take 5 largeKeys)
-        , extractKeysBench utxoMap 2 (Set.take 2 largeKeys)
-        ]
     ]
+      ++ [ env (selectRandomMapKeys largeKeysNum stdGen utxoMap) $ \largeKeys ->
+             bgroup
+               "DeleteTxOuts"
+               [ extractKeysBench utxoMap largeKeysNum largeKeys
+               , extractKeysBench utxoMap 9 (Set.take 9 largeKeys)
+               , extractKeysBench utxoMap 5 (Set.take 5 largeKeys)
+               , extractKeysBench utxoMap 2 (Set.take 2 largeKeys)
+               ]
+         | utxoSize >= largeKeysNum
+         ]
 
 extractKeysBench ::
   (NFData k, NFData a, Ord k) =>
