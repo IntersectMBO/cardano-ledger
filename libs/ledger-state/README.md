@@ -113,3 +113,5 @@ $ cabal bench ledger-state:performance --benchmark-option=--csv=ledger-state:per
 The csv file will be saved in the `libs/ledger-state` directory.
 
 Since the `performance` benchmark uses only `new-epoch-state.bin` you don't need to run the `sqlite.db` steps above if you want to run only the `performance` benchmark.
+
+Not all benchmarks require `UTxO` to be loaded, therefore `BENCH_UTXO_PATH` does not need to be set for such benchmarks.
