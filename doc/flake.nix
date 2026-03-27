@@ -1,11 +1,11 @@
 {
   outputs = inputs: {
-    packages =
-      builtins.mapAttrs (_: {nixpkgs, ...}: {
+    packages = builtins.mapAttrs (_:
+      { nixpkgs, ... }: {
         default = with nixpkgs;
           stdenv.mkDerivation {
             name = "ledger-docs";
-            src = lib.sourceFilesBySuffices ./. [".py" ".rst" ".hs" ".png"];
+            src = lib.sourceFilesBySuffices ./. [ ".py" ".rst" ".hs" ".png" ];
             buildInputs = with python3Packages; [
               sphinx
               sphinx-rtd-theme
@@ -21,7 +21,7 @@
             '';
             dontInstall = true;
           };
-      })
-      (inputs.main or (import ../nix/flake-compat.nix).defaultNix).legacyPackages;
+      }) (inputs.main or (import
+        ../nix/flake-compat.nix).defaultNix).legacyPackages;
   };
 }

@@ -1,11 +1,11 @@
 {
   outputs = inputs: {
-    packages =
-      builtins.mapAttrs (_: {nixpkgs, ...}: {
+    packages = builtins.mapAttrs (_:
+      { nixpkgs, ... }: {
         default = with nixpkgs;
           buildLatex {
             name = "delegation-design-spec";
-            texFiles = ["shelley-delegation"];
+            texFiles = [ "shelley-delegation" ];
             meta = with lib; {
               description = "Delegation Design Specification";
               license = licenses.asl20;
@@ -14,43 +14,33 @@
             src = filterLatex ./.;
 
             texInputs = {
-              inherit
-                (texlive)
+              inherit (texlive)
                 scheme-small
                 # fonts
-                
+
                 cm-super
                 # libraries
-                
-                stmaryrd
-                lm-math
-                amsmath
-                extarrows
-                cleveref
-                titlesec
+
+                stmaryrd lm-math amsmath extarrows cleveref titlesec
                 # font libraries `mathpazo` seems to depend on palatino, but it isn't pulled.
-                
-                mathpazo
-                palatino
-                microtype
+
+                mathpazo palatino microtype
                 # libraries for marginal notes
-                
-                xargs
-                todonotes
+
+                xargs todonotes
                 # drawing
-                
+
                 pgf
                 # build tools
-                
+
                 latexmk
                 # Referencing
-                
-                zref
-                ;
+
+                zref;
             };
-            buildInputs = [gitMinimal];
+            buildInputs = [ gitMinimal ];
           };
-      })
-      (inputs.main or (import ../../../nix/flake-compat.nix).defaultNix).legacyPackages;
+      }) (inputs.main or (import
+        ../../../nix/flake-compat.nix).defaultNix).legacyPackages;
   };
 }

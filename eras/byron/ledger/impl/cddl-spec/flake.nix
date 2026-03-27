@@ -1,11 +1,11 @@
 {
   outputs = inputs: {
-    packages =
-      builtins.mapAttrs (_: {nixpkgs, ...}: {
+    packages = builtins.mapAttrs (_:
+      { nixpkgs, ... }: {
         default = with nixpkgs;
           buildLatex {
             name = "blocks-cddl-spec";
-            texFiles = ["byron-binary"];
+            texFiles = [ "byron-binary" ];
             meta = with lib; {
               description = "Byron blocks CDDL specification";
               license = licenses.asl20;
@@ -14,33 +14,22 @@
             src = ./.;
 
             texInputs = {
-              inherit
-                (texlive)
+              inherit (texlive)
                 scheme-small
                 # Fonts
-                
+
                 cm-super
                 # libraries
-                
-                unicode-math
-                lm-math
-                amsmath
-                enumitem
-                bclogo
-                xcolor
-                newunicodechar
-                appendix
-                syntax
+
+                unicode-math lm-math amsmath enumitem bclogo xcolor
+                newunicodechar appendix syntax
                 # build tools
-                
-                latexmk
-                ;
+
+                latexmk;
             };
-            buildInputs = [
-              gitMinimal
-            ];
+            buildInputs = [ gitMinimal ];
           };
-      })
-      (inputs.main or (import ../../../nix/flake-compat.nix).defaultNix).legacyPackages;
+      }) (inputs.main or (import
+        ../../../nix/flake-compat.nix).defaultNix).legacyPackages;
   };
 }

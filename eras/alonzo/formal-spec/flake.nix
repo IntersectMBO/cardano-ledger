@@ -1,11 +1,11 @@
 {
   outputs = inputs: {
-    packages =
-      builtins.mapAttrs (_: {nixpkgs, ...}: {
+    packages = builtins.mapAttrs (_:
+      { nixpkgs, ... }: {
         default = with nixpkgs;
           buildLatex {
             name = "alonzo-spec";
-            texFiles = ["alonzo-ledger"];
+            texFiles = [ "alonzo-ledger" ];
             meta = with lib; {
               description = "Goguen ledger specification";
               license = licenses.asl20;
@@ -14,17 +14,12 @@
             src = filterLatex ./.;
 
             texInputs = {
-              inherit
-                (texlive)
-                scheme-small
-                collection-latexextra
-                collection-latexrecommended
-                collection-mathscience
-                bclogo
-                ;
+              inherit (texlive)
+                scheme-small collection-latexextra collection-latexrecommended
+                collection-mathscience bclogo;
             };
           };
-      })
-      (inputs.main or (import ../../../nix/flake-compat.nix).defaultNix).legacyPackages;
+      }) (inputs.main or (import
+        ../../../nix/flake-compat.nix).defaultNix).legacyPackages;
   };
 }
