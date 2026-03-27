@@ -403,6 +403,22 @@ jobs:
     - name: Run shellcheck
       run: scripts/shellcheck.sh
 
+  nix-formatter:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install nix formatter
+      uses: ./.github/actions/install-binary
+      with:
+        repo: NixOS/nixfmt
+        release: v0.6.0 # Should match `nixfmtVersion` in flake.nix
+        name: 'nixfmt'
+
+    - name: Run nix formatter
+      run: scripts/nix-format.sh
+
   codegen:
     needs: build
 
@@ -506,7 +522,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: tfausak/cabal-gild-setup-action@v2
         with:
-          version: 1.5.0.1
+          version: 1.5.0.1 # Should match `cabalGildVersion` in flake.nix
       - name: Format all cabal files
         run: ./scripts/cabal-format.sh check
 

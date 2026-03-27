@@ -81,7 +81,8 @@
         # see flake `variants` below for alternative compilers
         defaultCompiler = "ghc967";
         fourmoluVersion = "0.17.0.0"; # Should match the tag used in .github/workflows/haskell.yml
-        cabalGildVersion = "1.5.0.1";
+        cabalGildVersion = "1.5.0.1"; # Should match the tag used in .github/workflows/haskell.yml
+        nixfmtVersion = "0.6.0"; # Should match the tag used in .github/workflows/haskell.yml
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -140,6 +141,7 @@
                 fourmolu = fourmoluVersion;
                 haskell-language-server = "2.12.0.0";
                 hlint = "3.8";
+                nixfmt = nixfmtVersion;
               };
 
             # and from nixpkgs or other inputs
@@ -148,6 +150,7 @@
                 (python3.withPackages (ps: with ps; [sphinx sphinx-rtd-theme recommonmark sphinx-markdown-tables sphinxemoji]))
                 haskellPackages.implicit-hie
                 shellcheck
+                act
                 inputs.cardano-ledger-release-tool.packages.${system}.default
               ] ++
               (let
@@ -283,11 +286,13 @@
                     fourmolu.enable = true;
                     cabal-gild.enable = true;
                     shellcheck.enable = true;
+                    nixfmt-classic.enable = true;
                   };
                   tools = {
                     fourmolu = p.tool "fourmolu" fourmoluVersion;
                     cabal-gild = p.tool "cabal-gild" cabalGildVersion;
                     shellcheck = nixpkgs.shellcheck;
+                    nixfmt = p.tool "nixfmt" nixfmtVersion;
                   };
                 };
               in

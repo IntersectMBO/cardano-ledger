@@ -70,3 +70,4 @@ specs/**/.ghc.environment.x86_64-linux-*
 .pre-commit-config.yaml
 /.direnv
 /.envrc
+.actrc

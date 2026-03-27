@@ -5,9 +5,12 @@
 }: {
   # Build a latex derivation using latexmk.
   buildLatex = {
-    texFiles ? [], # The specific tex files to build, will try and build all of them if absent
-    texInputs ? {inherit (texlive) scheme-small;}, # Tex dependencies as an attrset
-    buildInputs ? [], # Additional build inputs
+    # The specific tex files to build, will try and build all of them if absent
+    texFiles ? [],
+    # Tex dependencies as an attrset
+    texInputs ? {inherit (texlive) scheme-small;},
+    # Additional build inputs
+    buildInputs ? [],
     ...
   } @ attrs: let
     tex = texlive.combine (texInputs // {inherit (texlive) latexmk;});
