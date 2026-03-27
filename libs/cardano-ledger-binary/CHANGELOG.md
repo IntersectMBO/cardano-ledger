@@ -7,6 +7,7 @@
 
 ### `testlib`
 
+* Remove `roundTripFailureExpectation`, `roundTripCborExpectation`, and `cborTrip`
 * Replace `CuddleData` with `CTreeRoot MonoReferenced`
 * Remove `numExamples` argument from `specWithHuddle`
 * Add `huddleAntiCborSpec`

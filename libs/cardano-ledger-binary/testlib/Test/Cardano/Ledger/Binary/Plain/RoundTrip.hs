@@ -12,9 +12,9 @@
 -- | Defines reusable abstractions for testing RoundTrip properties of plain encoders/decoders
 module Test.Cardano.Ledger.Binary.Plain.RoundTrip (
   roundTripSpec,
-  roundTripFailureExpectation,
+  -- roundTripFailureExpectation,
   roundTripExpectation,
-  roundTripCborExpectation,
+  -- roundTripCborExpectation,
   embedTripSpec,
   embedTripExpectation,
   RoundTripFailure (..),
@@ -22,7 +22,7 @@ module Test.Cardano.Ledger.Binary.Plain.RoundTrip (
   showFailedTermsWithReSerialization,
   Trip (..),
   mkTrip,
-  cborTrip,
+  -- cborTrip,
   roundTrip,
   embedTrip,
   embedTripLabel,
@@ -36,7 +36,6 @@ import qualified Data.Text as Text
 import Data.Typeable
 import qualified Formatting.Buildable as B (Buildable (..))
 import Test.Cardano.Ledger.Binary.TreeDiff (
-  CBORBytes (..),
   ansiExprString,
   diffExprString,
   showHexBytesGrouped,
@@ -68,16 +67,6 @@ embedTripSpec trip f =
   prop ("From: " ++ show (typeRep $ Proxy @a) ++ " To " ++ show (typeRep $ Proxy @b)) $
     embedTripExpectation trip f
 
--- Tests that a decoder error happens
-roundTripFailureExpectation :: forall a. (Eq a, ToCBOR a, FromCBOR a) => a -> Expectation
-roundTripFailureExpectation x =
-  case roundTrip (cborTrip @a) x of
-    Left _ -> pure ()
-    Right _ ->
-      expectationFailure $
-        "Should not have deserialized: "
-          <> ansiExprString (CBORBytes (serialize' x))
-
 -- | Verify that round triping through the binary form holds
 roundTripExpectation ::
   (Show t, Eq t, Typeable t, HasCallStack) =>
@@ -88,13 +77,6 @@ roundTripExpectation trip t =
   case roundTrip trip t of
     Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
     Right tDecoded -> tDecoded `shouldBe` t
-
-roundTripCborExpectation ::
-  forall t.
-  (Show t, Eq t, FromCBOR t, ToCBOR t, HasCallStack) =>
-  t ->
-  Expectation
-roundTripCborExpectation = roundTripExpectation (cborTrip @t)
 
 embedTripExpectation ::
   forall a b.
@@ -174,9 +156,6 @@ data Trip a b = Trip
   { tripEncoder :: a -> Encoding
   , tripDecoder :: forall s. Decoder s b
   }
-
-cborTrip :: forall a b. (ToCBOR a, FromCBOR b) => Trip a b
-cborTrip = Trip toCBOR fromCBOR
 
 -- | Construct a `Trip` using encoder and decoder, with dropper set to the decoder which
 -- drops the value

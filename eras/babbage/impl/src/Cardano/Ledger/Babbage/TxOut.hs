@@ -80,10 +80,8 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   EncCBOR (..),
   Encoding,
-  FromCBOR (..),
   Interns,
   Sized (..),
-  ToCBOR (..),
   TokenType (..),
   cborError,
   decodeBreakOr,
@@ -495,14 +493,6 @@ pattern TxOutCompactDH addr vl dh <-
       | otherwise = TxOutCompactDH' cAddr cVal dh
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
-
-instance (EraScript era, Val (Value era)) => ToCBOR (BabbageTxOut era) where
-  toCBOR = toEraCBOR @era
-  {-# INLINE toCBOR #-}
-
-instance (EraScript era, Val (Value era)) => FromCBOR (BabbageTxOut era) where
-  fromCBOR = fromEraCBOR @era
-  {-# INLINE fromCBOR #-}
 
 instance (EraScript era, Val (Value era)) => EncCBOR (BabbageTxOut era) where
   encCBOR = \case

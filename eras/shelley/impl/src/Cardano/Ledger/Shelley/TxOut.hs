@@ -31,9 +31,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
-  FromCBOR (..),
   Interns (..),
-  ToCBOR (..),
   TokenType (..),
   decodeMemPack,
   decodeRecordNamed,
@@ -174,12 +172,6 @@ instance
       TypeBytes -> decodeMemPack
       TypeBytesIndef -> decodeMemPack
       _ -> decCBOR
-
-instance (Era era, EncCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut era) where
-  toCBOR = toEraCBOR @era
-
-instance (Era era, DecCBOR (CompactForm (Value era))) => FromCBOR (ShelleyTxOut era) where
-  fromCBOR = fromEraCBOR @era
 
 deriving via
   KeyValuePairs (ShelleyTxOut era)

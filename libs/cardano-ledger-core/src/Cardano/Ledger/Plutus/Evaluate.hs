@@ -36,13 +36,13 @@ module Cardano.Ledger.Plutus.Evaluate (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
   Version,
-  toPlainDecoder,
-  toPlainEncoding,
+  decodeFull,
+  decodeRecordNamed,
+  encodeListLen,
+  enforceDecoderVersion,
+  enforceEncodingVersion,
  )
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
@@ -74,6 +74,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.UTF8 as BSU
 import Data.Either (fromRight)
@@ -186,20 +187,20 @@ instance Semigroup ScriptResult where
 instance Monoid ScriptResult where
   mempty = Passes mempty
 
-instance ToCBOR PlutusWithContext where
-  toCBOR (PlutusWithContext {..}) =
-    Plain.encodeListLen 6
-      <> toCBOR pwcProtocolVersion
-      <> toPlainEncoding pwcProtocolVersion (either encCBOR encCBOR pwcScript)
-      <> toPlainEncoding pwcProtocolVersion (encCBOR pwcScriptHash)
-      <> toPlainEncoding pwcProtocolVersion (encCBOR pwcArgs)
-      <> toPlainEncoding pwcProtocolVersion (encCBOR pwcExUnits)
-      <> toPlainEncoding pwcProtocolVersion (encodeCostModel pwcCostModel)
+instance EncCBOR PlutusWithContext where
+  encCBOR (PlutusWithContext {..}) =
+    encodeListLen 6
+      <> encCBOR pwcProtocolVersion
+      <> enforceEncodingVersion pwcProtocolVersion (either encCBOR encCBOR pwcScript)
+      <> enforceEncodingVersion pwcProtocolVersion (encCBOR pwcScriptHash)
+      <> enforceEncodingVersion pwcProtocolVersion (encCBOR pwcArgs)
+      <> enforceEncodingVersion pwcProtocolVersion (encCBOR pwcExUnits)
+      <> enforceEncodingVersion pwcProtocolVersion (encodeCostModel pwcCostModel)
 
-instance FromCBOR PlutusWithContext where
-  fromCBOR = Plain.decodeRecordNamed "PlutusWithContext" (const 6) $ do
-    pwcProtocolVersion <- fromCBOR
-    toPlainDecoder Nothing pwcProtocolVersion $ decodeWithPlutus $ \plutus -> do
+instance DecCBOR PlutusWithContext where
+  decCBOR = decodeRecordNamed "PlutusWithContext" (const 6) $ do
+    pwcProtocolVersion <- decCBOR
+    enforceDecoderVersion pwcProtocolVersion $ decodeWithPlutus $ \plutus -> do
       let lang = plutusLanguage plutus
           pwcScript = Left plutus
           scriptHash = hashPlutusScript plutus
@@ -214,6 +215,7 @@ instance FromCBOR PlutusWithContext where
       pwcExUnits <- decCBOR
       pwcCostModel <- decodeCostModel lang
       pure PlutusWithContext {..}
+  {-# INLINE decCBOR #-}
 
 data PlutusDebugInfo
   = DebugBadHex String
@@ -356,7 +358,7 @@ debugPlutusUnbounded scriptsWithContext opts =
   case B64.decode (BSU.fromString scriptsWithContext) of
     Left e -> DebugBadHex e
     Right bs ->
-      case Plain.decodeFull' bs of
+      case decodeFull maxBound (BSL.fromStrict bs) of
         Left e -> DebugCannotDecode $ show e
         Right pwcOriginal ->
           let pwc = overrideContext pwcOriginal opts

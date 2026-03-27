@@ -2,7 +2,7 @@
 
 ## 1.6.0.0
 
-*
+* Remove `FromCBOR` instances for `KESPeriod`, `PrtclState`, `TicknState`
 
 ### `testlib`
 

@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `UTxOState`, `LedgerState`, `ShelleyTxOut`
 * Deprecate `BHeaderView` in favour of `EraBlockHeader`.
   - Add `wrapBlockSignal` to `ApplyBlock` typeclass for use within `applyBlock` to generalise over `Signal`.
   - `chainChecks` now takes a `Block h era` instead.
