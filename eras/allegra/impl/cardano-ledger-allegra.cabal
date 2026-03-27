@@ -140,7 +140,6 @@ library testlib
     Test.Cardano.Ledger.Allegra.Era
     Test.Cardano.Ledger.Allegra.Examples
     Test.Cardano.Ledger.Allegra.Imp
-    Test.Cardano.Ledger.Allegra.Imp.UtxowSpec
     Test.Cardano.Ledger.Allegra.ImpTest
     Test.Cardano.Ledger.Allegra.TreeDiff
 
@@ -170,7 +169,6 @@ library testlib
     QuickCheck,
     base,
     bytestring,
-    cardano-base:testlib,
     cardano-ledger-allegra,
     cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib},
@@ -181,7 +179,6 @@ library testlib
     generic-random,
     microlens,
     small-steps,
-    text,
     tree-diff,
 
 test-suite tests

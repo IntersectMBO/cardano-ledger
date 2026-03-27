@@ -48,9 +48,8 @@ spec = do
       -- AuxData
       huddleRoundTripAnnCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
       huddleRoundTripCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
-      xdescribe "fix chain_code, metadatum" $ do
-        huddleRoundTripArbitraryValidate @(TxAuxData ConwayEra) v "auxiliary_data"
-        huddleAntiCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
+      huddleRoundTripArbitraryValidate @(TxAuxData ConwayEra) v "auxiliary_data"
+      huddleAntiCborSpec @(TxAuxData ConwayEra) v "auxiliary_data"
       -- NativeScript
       huddleRoundTripAnnCborSpec @(Timelock ConwayEra) v "native_script"
       huddleRoundTripArbitraryValidate @(Timelock ConwayEra) v "native_script"
@@ -77,8 +76,7 @@ spec = do
       xdescribe "fix NoDatum" $ huddleRoundTripArbitraryValidate @(Datum ConwayEra) v "datum_option"
       -- TxWits
       huddleRoundTripAnnCborSpec @(TxWits ConwayEra) v "transaction_witness_set"
-      xdescribe "fix chain_code" $
-        huddleAntiCborSpec @(TxWits ConwayEra) v "transaction_witness_set"
+      huddleAntiCborSpec @(TxWits ConwayEra) v "transaction_witness_set"
       huddleRoundTripArbitraryValidate @(TxWits ConwayEra) v "transaction_witness_set"
       huddleRoundTripCborSpec @(TxWits ConwayEra) v "transaction_witness_set"
       -- PParamsUpdate

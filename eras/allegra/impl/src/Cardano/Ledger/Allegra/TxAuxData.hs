@@ -50,7 +50,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoizedEra,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
 import Codec.CBOR.Decoding (
   TokenType (
     TypeListLen,
@@ -97,7 +97,7 @@ instance EraTxAuxData AllegraEra where
 
   metadataTxAuxDataL = metadataAllegraTxAuxDataL
 
-  validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
+  validateTxAuxData _ (AllegraTxAuxData _ as) = as `deepseq` True
 
 metadataAllegraTxAuxDataL ::
   forall era.
