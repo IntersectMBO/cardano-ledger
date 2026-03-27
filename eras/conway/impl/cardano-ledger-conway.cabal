@@ -118,6 +118,8 @@ library
     containers,
     data-default,
     deepseq,
+    fs-api ^>=0.4,
+    io-classes,
     mempack,
     microlens,
     mtl,

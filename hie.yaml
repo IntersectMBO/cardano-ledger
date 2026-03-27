@@ -183,6 +183,9 @@ cradle:
     - path: "eras/shelley/impl/test"
       component: "cardano-ledger-shelley:test:tests"
 
+    - path: "eras/shelley/impl/test/memory"
+      component: "cardano-ledger-shelley:test:memory"
+
     - path: "eras/shelley/test-suite/src"
       component: "lib:cardano-ledger-shelley-test"
 
