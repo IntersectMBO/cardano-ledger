@@ -16,6 +16,7 @@ import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   Block,
   DelplEnv,
+  ShelleyEraForecast,
   ShelleyLEDGERS,
  )
 import Cardano.Ledger.Shelley.Core
@@ -24,7 +25,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
  )
 import Cardano.Ledger.Shelley.State
-import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended
 import Data.Either (fromRight)
@@ -80,7 +80,7 @@ genChainState n ge =
 genBlock ::
   ( EraGen era
   , MinLEDGER_STS era
-  , GetLedgerView era
+  , ShelleyEraForecast era
   , EraRule "LEDGERS" era ~ ShelleyLEDGERS era
   , QC.HasTrace (ShelleyLEDGERS era) (GenEnv MockCrypto era)
   , ApplyBlock TestBlockHeader era

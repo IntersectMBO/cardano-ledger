@@ -47,6 +47,7 @@ library
   hs-source-dirs: src
   other-modules:
     Cardano.Ledger.Babbage.Era
+    Cardano.Ledger.Babbage.Forecast
     Cardano.Ledger.Babbage.Rules.Bbody
     Cardano.Ledger.Babbage.Rules.Deleg
     Cardano.Ledger.Babbage.Rules.Delegs
@@ -89,11 +90,11 @@ library
     base >=4.18 && <5,
     bytestring,
     cardano-data >=1.2,
-    cardano-ledger-allegra ^>=1.9,
+    cardano-ledger-allegra ^>=1.9.1,
     cardano-ledger-alonzo ^>=1.16,
     cardano-ledger-binary >=1.6,
     cardano-ledger-core:{cardano-ledger-core, internal} >=1.20,
-    cardano-ledger-mary ^>=1.10,
+    cardano-ledger-mary ^>=1.10.1,
     cardano-ledger-shelley ^>=1.19,
     cardano-strict-containers,
     containers,

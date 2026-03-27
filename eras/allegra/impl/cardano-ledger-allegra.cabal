@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-allegra
-version: 1.9.0.0
+version: 1.9.1.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -36,6 +36,7 @@ library
   other-modules:
     Cardano.Ledger.Allegra.BlockBody
     Cardano.Ledger.Allegra.Era
+    Cardano.Ledger.Allegra.Forecast
     Cardano.Ledger.Allegra.PParams
     Cardano.Ledger.Allegra.Rules.Bbody
     Cardano.Ledger.Allegra.Rules.Deleg

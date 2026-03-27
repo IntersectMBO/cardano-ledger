@@ -1,47 +1,21 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+-- | Like TICK, called only by consensus. But, ticks ledger state to a __future__ slot.
 module Cardano.Ledger.Conway.Rules.Tickf (
   ConwayTICKF,
-  ConwayTickfPredFailure,
   ConwayTickfEvent,
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, SlotNo)
 import Cardano.Ledger.Conway.Era
-import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (solidifyNextEpochPParams)
 import Cardano.Ledger.State (SnapShots (ssStakeMarkPoolDistr))
 import Control.State.Transition
-import GHC.Generics (Generic)
+import Data.Void (Void)
 import Lens.Micro ((&), (.~), (^.))
-import NoThunks.Class (NoThunks (..))
-
--- ==================================================
-
-{------------------------------------------------------------------------------
--- TICKF transition
-
--- This is a variant on the TICK transition called only by the consensus layer
-to tick the ledger state to a future slot.
-------------------------------------------------------------------------------}
-
-data ConwayTickfPredFailure era
-  deriving (Generic)
-
-deriving instance
-  Era era =>
-  Show (ConwayTickfPredFailure era)
-
-deriving instance
-  Era era =>
-  Eq (ConwayTickfPredFailure era)
-
-instance NoThunks (ConwayTickfPredFailure era)
 
 data ConwayTickfEvent era
 
@@ -53,7 +27,7 @@ instance
   type Signal (ConwayTICKF era) = SlotNo
   type Environment (ConwayTICKF era) = ()
   type BaseM (ConwayTICKF era) = ShelleyBase
-  type PredicateFailure (ConwayTICKF era) = ConwayTickfPredFailure era
+  type PredicateFailure (ConwayTICKF era) = Void
   type Event (ConwayTICKF era) = ConwayTickfEvent era
 
   initialRules = []

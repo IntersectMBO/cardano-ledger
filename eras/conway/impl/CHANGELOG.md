@@ -2,6 +2,8 @@
 
 ## 1.22.0.0
 
+* Add `EraForecast` instance for `ConwayEra`.
+* Update `PredicateFailure` for `ConwayTICKF` to `Void` and remove `ConwayTickfPredFailure`.
 * Change `ConwayBBODY` `Signal` to `BbodySignal`.
 * Add `validateRefScriptSize`.
 * Remove `ToCBOR` and `FromCBOR` instances for `DefaultVote`

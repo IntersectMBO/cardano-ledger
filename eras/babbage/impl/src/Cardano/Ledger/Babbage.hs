@@ -18,12 +18,28 @@ module Cardano.Ledger.Babbage (
   ApplyTxError (..),
   AlonzoScript,
   AlonzoTxAuxData,
+
+  -- * Forecast
+  BabbageForecast (..),
+  mkBabbageForecast,
+  bfPoolDistrL,
+  bfMaxBlockHeaderSizeL,
+  bfMaxBlockBodySizeL,
+  bfProtocolVersionL,
 ) where
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
 import Cardano.Ledger.Babbage.BlockBody ()
 import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.Forecast (
+  BabbageForecast (..),
+  bfMaxBlockBodySizeL,
+  bfMaxBlockHeaderSizeL,
+  bfPoolDistrL,
+  bfProtocolVersionL,
+  mkBabbageForecast,
+ )
 import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.State ()
 import Cardano.Ledger.Babbage.Transition ()

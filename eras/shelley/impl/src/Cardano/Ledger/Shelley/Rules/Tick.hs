@@ -202,9 +202,9 @@ validatingTickTransitionFORECAST ::
 validatingTickTransitionFORECAST nes0 slot = do
   -- This whole function is a specialization of an inlined 'NEWEPOCH'.
   --
-  -- The ledger view, 'LedgerView', is built entirely from the 'nesPd' and 'esPp' and
-  -- 'dsGenDelegs', so the correctness of 'validatingTickTransitionFORECAST' only
-  -- depends on getting these three fields correct.
+  -- The forecast is built entirely from the 'nesPd' and 'esPp' and
+  -- 'dsGenDelegs', so the correctness of 'validatingTickTransitionFORECAST'
+  -- only depends on getting these three fields correct.
 
   (curEpochNo, nes) <- liftSTS $ solidifyNextEpochPParams nes0 slot
 
