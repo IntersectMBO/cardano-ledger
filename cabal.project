@@ -86,6 +86,8 @@ package cardano-ledger-conway
 
 -- Always write GHC env files, because they are needed for repl and by the doctests.
 write-ghc-environment-files: always
+-- Build shared libraries so that `cabal doctest` (which uses `cabal repl` internally) can reuse them.
+shared: True
 -- Always build tests and benchmarks.
 tests: true
 benchmarks: true
