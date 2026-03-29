@@ -169,6 +169,7 @@ hardForkSpec =
       it "Hardfork minorFollow" (secondHardForkFollows minorFollow)
       it "Hardfork majorFollow" (secondHardForkFollows majorFollow)
       it "Hardfork cantFollow" secondHardForkCantFollow
+      it "Hardfork cantFollow major" secondHardForkCantFollowMajor
 
 pparamUpdateSpec ::
   forall era.
@@ -1197,6 +1198,30 @@ secondHardForkCantFollow = do
               , mismatchExpected = nextProtVer
               }
       ]
+  genCantFollowCurrent >>= \case
+    Nothing ->
+      -- This is the end of the line. Next era is not even defined yet
+      pvMajor curProtVer `shouldBe` eraProtVerHigh @era
+    Just protVerMajorTooHigh -> do
+      mkProposal (HardForkInitiation (SJust (GovPurposeId gaid1)) protVerMajorTooHigh)
+        >>= flip
+          submitFailingProposal
+          [ injectFailure $
+              ProposalCantFollow (SJust (GovPurposeId gaid1)) $
+                Mismatch
+                  { mismatchSupplied = protVerMajorTooHigh
+                  , mismatchExpected = curProtVer
+                  }
+          ]
+
+secondHardForkCantFollowMajor ::
+  forall era.
+  (HasCallStack, ConwayEraImp era) =>
+  ImpTestM era ()
+secondHardForkCantFollowMajor = do
+  curProtVer <- getProtVer
+  let nextProtVer = majorFollow curProtVer
+  gaid1 <- mkProposal (HardForkInitiation SNothing nextProtVer) >>= submitProposal
   genCantFollowCurrent >>= \case
     Nothing ->
       -- This is the end of the line. Next era is not even defined yet
