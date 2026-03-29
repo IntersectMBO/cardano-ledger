@@ -9,15 +9,16 @@ module Main where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Api.Era
-import Cardano.Ledger.Api.State.Query (queryStakePoolDelegsAndRewards)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Rules (
   ConwayLedgerPredFailure (ConwayUtxowFailure),
   ConwayUtxowPredFailure (InvalidWitnessesUTXOW),
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool
+import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesis (..),
@@ -25,13 +26,14 @@ import Cardano.Ledger.Shelley.Genesis (
   mkShelleyGlobals,
  )
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Slot
 import Cardano.Ledger.State
 import Cardano.Ledger.State.UTxO (CurrentEra, readHexUTxO, readNewEpochState)
 import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.DeepSeq
-import Control.Monad (when)
+import Control.Monad (forM)
 import Criterion.Main
 import Data.Aeson
 import Data.Bifunctor (bimap, first)
@@ -46,12 +48,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
-import System.Environment (getEnv)
-import System.Exit (die)
+import System.Environment (getEnv, lookupEnv)
 import System.Random.Stateful
-import Test.Cardano.Ledger.Api.State.Query (getFilteredDelegationsAndRewardAccounts)
-import Test.Cardano.Ledger.Conway.Era (accountsToUMap)
-import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
 
 main :: IO ()
 main = do
@@ -59,19 +57,24 @@ main = do
       utxoVarName = "BENCH_UTXO_PATH"
       ledgerStateVarName = "BENCH_LEDGER_STATE_PATH"
   genesisFilePath <- getEnv genesisVarName
-  utxoFilePath <- getEnv utxoVarName
+  mUtxoFilePath <- lookupEnv utxoVarName
   ledgerStateFilePath <- getEnv ledgerStateVarName
 
-  genesis <- either error id <$> eitherDecodeFileStrict' genesisFilePath
-  putStrLn $ "Importing UTxO from: " ++ show utxoFilePath
-  utxo <- readHexUTxO utxoFilePath
-  putStrLn "Done importing UTxO"
   putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
-  es' <- readNewEpochState ledgerStateFilePath
+  nesFromFile <- readNewEpochState ledgerStateFilePath
   putStrLn "Done importing NewEpochState"
 
-  let nesUTxOL = nesEsL . esLStateL . lsUTxOStateL . utxoL
-      es = es' & nesUTxOL .~ utxo
+  mUtxo <- forM mUtxoFilePath $ \utxoFilePath -> do
+    putStrLn $ "Importing UTxO from: " ++ show utxoFilePath
+    utxo <- readHexUTxO utxoFilePath
+    utxo <$ putStrLn "Done importing UTxO"
+
+  genesis <- either error id <$> eitherDecodeFileStrict' genesisFilePath
+
+  let es = case mUtxo of
+        Nothing -> nesFromFile
+        Just utxoFromFile -> nesFromFile & utxoL .~ utxoFromFile
+      utxo = es ^. utxoL
       utxoMap = unUTxO utxo
       utxoSize = Map.size utxoMap
       largeKeysNum = 100000
@@ -91,14 +94,38 @@ main = do
       reapplyTx' mempoolEnv mempoolState =
         either (error . show) id
           . reapplyTx globals mempoolEnv mempoolState
+      slotsPerTick =
+        let f = positiveUnitIntervalNonZeroRational (activeSlotVal (activeSlotCoeff globals))
+         in round (1 /. f)
+      -- ticksPerSlot =
+      --   let k = securityParameter globals
+      --    in 10 * k
 
-  when (utxoSize < largeKeysNum) $
-    die $
-      "UTxO size is too small (" <> show utxoSize <> " < " <> show largeKeysNum <> ")"
-  largeKeys <- selectRandomMapKeys 100000 stdGen utxoMap
+      epochInfo = epochInfoPure globals
+      -- Assume we are at the very first slot number in the epoch and tick all the way to the very
+      -- last slot number.
+      tickToEpochEnd nes =
+        let lastSlotNo = epochInfoFirst epochInfo (succ (nesEL nes)) *- Duration slotsPerTick
+            go !curSlotNo !curNes
+              | nextSlotNo < lastSlotNo =
+                  go nextSlotNo (applyTickNoEvents @CurrentEra globals curNes nextSlotNo)
+              | otherwise = curNes
+              where
+                !nextSlotNo = curSlotNo +* Duration slotsPerTick
+         in go (epochInfoFirst epochInfo (nesEL nes)) nes
+      tickOverTheEpochBoundary nes =
+        let firstSlotNoNextEpoch = epochInfoFirst epochInfo (succ (nesEL nes))
+         in applyTickNoEvents @CurrentEra globals nes firstSlotNoNextEpoch
 
-  defaultMain
-    [ env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
+  defaultMain $
+    [ env (pure $ tickOverTheEpochBoundary $ tickToEpochEnd es) $ \newEpochStateStart ->
+        bgroup
+          "applyTick"
+          [ bench "tickToEpochEnd" $ nf tickToEpochEnd newEpochStateStart
+          , env (pure $ tickToEpochEnd newEpochStateStart) $
+              bench "tickOverTheEpochBoundary" . nf tickOverTheEpochBoundary
+          ]
+    , env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
           "reapplyTx"
           [ env (pure validatedTx1) $
@@ -149,34 +176,17 @@ main = do
               , env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
               ]
-    , env (pure es) $ \newEpochState ->
-        let accounts = newEpochState ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-            accountsMap =
-              newEpochState ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
-            umap = accountsToUMap accounts
-            creds = runStateGen_ stdGen (uniformSubSet (Just 10) (Map.keysSet accountsMap))
-         in bgroup
-              ( "GetFilteredDelegationsAndRewardAccounts ("
-                  ++ show (Set.size creds)
-                  ++ "/"
-                  ++ show (Map.size accountsMap)
-                  ++ ")"
-              )
-              [ env (pure (umap, creds)) $
-                  bench "getFilteredDelegationsAndRewardAccounts"
-                    . nf (uncurry getFilteredDelegationsAndRewardAccounts)
-              , env (pure creds) $
-                  bench "queryStakePoolDelegsAndRewards"
-                    . nf (queryStakePoolDelegsAndRewards newEpochState)
-              ]
-    , bgroup
-        "DeleteTxOuts"
-        [ extractKeysBench utxoMap largeKeysNum largeKeys
-        , extractKeysBench utxoMap 9 (Set.take 9 largeKeys)
-        , extractKeysBench utxoMap 5 (Set.take 5 largeKeys)
-        , extractKeysBench utxoMap 2 (Set.take 2 largeKeys)
-        ]
     ]
+      ++ [ env (selectRandomMapKeys largeKeysNum stdGen utxoMap) $ \largeKeys ->
+             bgroup
+               "DeleteTxOuts"
+               [ extractKeysBench utxoMap largeKeysNum largeKeys
+               , extractKeysBench utxoMap 9 (Set.take 9 largeKeys)
+               , extractKeysBench utxoMap 5 (Set.take 5 largeKeys)
+               , extractKeysBench utxoMap 2 (Set.take 2 largeKeys)
+               ]
+         | utxoSize >= largeKeysNum
+         ]
 
 extractKeysBench ::
   (NFData k, NFData a, Ord k) =>
