@@ -2,6 +2,15 @@
 
 ## 1.16.0.0
 
+* Add `mkPlutusTxInfoFromResult` and `toPlutusTxInfoForPurpose` helpers
+* Make `PlutusPurpose` injective in the selector type.
+* `LedgerTxInfo` now supports any transaction level
+* Add new type `PlutusTxInfoResult`
+* `toPlutusTxInfo` changed its return type to `PlutusTxInfoResult`
+* Support for both transaction levels in `collectPlutusScriptsWithContext`
+* Add `AsPurpose` and `toAsPurpose`
+* `AlonzoTxInfoResult` changed its content type to `PlutusTxInfoResult`
+* `AlonzoPlutusPurpose` supplied to `transPlutusPurpose` changed from `AsItem` to `AsIxItem`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `AlonzoEra`.
 * Change `AlonzoBBODY` `Signal` to `BbodySignal`.
 * Add `validateExUnits`.
@@ -13,6 +22,10 @@
 * Remove `NoThunks` instance for `AlonzoContextError`
 * Remove `NoThunks (ContextError era)` constraint from `EraPlutusContext` class
 * Remove `NoThunks` deriving instance for `CollectError`
+
+### `testlib`
+
+* `TranslationInstance` has a new field `tiPlutusPurpose`
 
 ## 1.15.0.0
 

@@ -136,7 +136,7 @@ instance
       kindObject "BadTranslation" ["error" .= toJSON err]
 
 collectPlutusScriptsWithContext ::
-  forall era.
+  forall era l.
   ( AlonzoEraTxBody era
   , AlonzoEraTxWits era
   , AlonzoEraUTxO era
@@ -146,7 +146,7 @@ collectPlutusScriptsWithContext ::
   EpochInfo (Either Text) ->
   SystemStart ->
   PParams era ->
-  Tx TopTx era ->
+  Tx l era ->
   UTxO era ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =

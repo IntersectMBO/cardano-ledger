@@ -49,7 +49,7 @@ import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), PlutusScript (..), toAsItem)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), PlutusScript (..))
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -100,30 +100,33 @@ import qualified PlutusLedgerApi.V2 as PV2
 instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxCert _ _ = pure . transTxCert
 
-  toPlutusScriptPurpose proxy pv = transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
+  toPlutusScriptPurpose = transPlutusPurpose
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
-    timeRange <-
-      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-    txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ toPlutusTxInInfo proxy ltiUTxO
-    txCerts <- transTxBodyCerts proxy ltiProtVer txBody
-    Right $
-      PV1.TxInfo
-        { -- A mistake was made in Alonzo of filtering out Byron addresses, so we need to
-          -- preserve this behavior by only retaining the Just case:
-          PV1.txInfoInputs = catMaybes txInsMaybes
-        , PV1.txInfoOutputs = mapMaybe transTxOut $ F.toList (txBody ^. outputsTxBodyL)
-        , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-        , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
-        , PV1.txInfoDCert = txCerts
-        , PV1.txInfoWdrl = transTxBodyWithdrawals txBody
-        , PV1.txInfoValidRange = timeRange
-        , PV1.txInfoSignatories = transTxBodyReqSignerHashes txBody
-        , PV1.txInfoData = transTxWitsDatums (ltiTx ^. witsTxL)
-        , PV1.txInfoId = transTxBodyId txBody
-        }
-    where
-      txBody = ltiTx ^. bodyTxL
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+    PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
+      let txBody = tx ^. bodyTxL
+      timeRange <-
+        transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ toPlutusTxInInfo proxy ltiUTxO
+      txCerts <- transTxBodyCerts proxy ltiProtVer txBody
+      -- It is important for memoization for `txInfo` to be a let binding
+      let
+        txInfo =
+          PV1.TxInfo
+            { -- A mistake was made in Alonzo of filtering out Byron addresses, so we need to
+              -- preserve this behavior by only retaining the Just case:
+              PV1.txInfoInputs = catMaybes txInsMaybes
+            , PV1.txInfoOutputs = mapMaybe transTxOut $ F.toList (txBody ^. outputsTxBodyL)
+            , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+            , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
+            , PV1.txInfoDCert = txCerts
+            , PV1.txInfoWdrl = transTxBodyWithdrawals txBody
+            , PV1.txInfoValidRange = timeRange
+            , PV1.txInfoSignatories = transTxBodyReqSignerHashes txBody
+            , PV1.txInfoData = transTxWitsDatums (tx ^. witsTxL)
+            , PV1.txInfoId = transTxBodyId txBody
+            }
+      Right $ \_ -> Right txInfo
 
   toPlutusArgs = toPlutusV1Args
 
@@ -163,7 +166,7 @@ toLegacyPlutusArgs proxy pv mkScriptContext scriptPurpose maybeSpendingData rede
 instance EraPlutusContext AlonzoEra where
   type ContextError AlonzoEra = AlonzoContextError AlonzoEra
   newtype TxInfoResult AlonzoEra
-    = AlonzoTxInfoResult (Either (ContextError AlonzoEra) (PlutusTxInfo 'PlutusV1))
+    = AlonzoTxInfoResult (PlutusTxInfoResult 'PlutusV1 AlonzoEra)
 
   mkSupportedLanguage = \case
     PlutusV1 -> Just $ SupportedLanguage SPlutusV1
@@ -348,11 +351,11 @@ transPlutusPurpose ::
   (EraPlutusTxInfo l era, PlutusTxCert l ~ PV1.DCert) =>
   proxy l ->
   ProtVer ->
-  AlonzoPlutusPurpose AsItem era ->
+  AlonzoPlutusPurpose AsIxItem era ->
   Either (ContextError era) PV1.ScriptPurpose
 transPlutusPurpose proxy pv = \case
-  AlonzoSpending (AsItem txIn) -> pure $ PV1.Spending (transTxIn txIn)
-  AlonzoMinting (AsItem policyId) -> pure $ PV1.Minting (transPolicyID policyId)
-  AlonzoCertifying (AsItem txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert
-  AlonzoRewarding (AsItem accountAddress) ->
+  AlonzoSpending (AsIxItem _ txIn) -> pure $ PV1.Spending (transTxIn txIn)
+  AlonzoMinting (AsIxItem _ policyId) -> pure $ PV1.Minting (transPolicyID policyId)
+  AlonzoCertifying (AsIxItem _ txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert
+  AlonzoRewarding (AsIxItem _ accountAddress) ->
     pure $ PV1.Rewarding (PV1.StakingHash (transAccountAddress accountAddress))
