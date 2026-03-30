@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
@@ -109,6 +110,7 @@ import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import Data.MemPack
 import Data.Typeable
+import Foreign.Storable (Storable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -174,6 +176,7 @@ newtype KeyHash (r :: KeyRole) = KeyHash
     , FromJSON
     , Default
     , MemPack
+    , Storable
     )
 
 instance HasKeyRole KeyHash
@@ -208,6 +211,7 @@ newtype ScriptHash
     , ToJSONKey
     , FromJSONKey
     , MemPack
+    , Storable
     )
 
 --------------------------------------------------------------------------------

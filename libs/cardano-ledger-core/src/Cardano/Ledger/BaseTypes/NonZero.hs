@@ -47,6 +47,7 @@ import Data.Proxy (Proxy (..))
 import Data.Ratio (Ratio, numerator, (%))
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
+import Foreign.Storable (Storable)
 import GHC.TypeLits
 import NoThunks.Class (NoThunks)
 
@@ -73,8 +74,8 @@ instance KnownBounds Word64 where
 type WithinBounds n a = (MinBound a <= n, n <= MaxBound a)
 
 newtype NonZero a = NonZero {unNonZero :: a}
-  deriving (Eq, Ord, Show, NoThunks, NFData)
-  deriving newtype (EncCBOR, ToCBOR, ToJSON)
+  deriving (Show)
+  deriving newtype (Eq, Ord, EncCBOR, ToCBOR, ToJSON, NoThunks, NFData, Storable)
 
 class HasZero a where
   isZero :: a -> Bool
