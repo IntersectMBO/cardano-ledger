@@ -119,7 +119,7 @@ library
     bytestring >=0.10 && <0.11.3 || >=0.11.4,
     cardano-base >=0.1.2,
     cardano-crypto,
-    cardano-crypto-class ^>=2.3,
+    cardano-crypto-class ^>=2.4,
     cardano-crypto-wrapper,
     cardano-data >=1.3,
     cardano-ledger-binary ^>=1.9,
@@ -315,6 +315,7 @@ test-suite tests
     Test.Cardano.Ledger.JsonSpec
     Test.Cardano.Ledger.PlutusSpec
     Test.Cardano.Ledger.State.StakePoolSpec
+    Test.Cardano.Ledger.StorableSpec
     Test.Cardano.Ledger.ToolsSpec
 
   default-language: Haskell2010
@@ -325,6 +326,7 @@ test-suite tests
     base16-bytestring,
     binary,
     bytestring,
+    cardano-base:testlib >=0.1.3,
     cardano-crypto-class,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron,

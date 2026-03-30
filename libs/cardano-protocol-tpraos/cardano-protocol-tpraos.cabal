@@ -43,7 +43,7 @@ library
     base >=4.18 && <5,
     bytestring,
     cardano-base >=0.1.2,
-    cardano-crypto-class ^>=2.3,
+    cardano-crypto-class >=2.3 && <2.5,
     cardano-crypto-praos ^>=2.2,
     cardano-ledger-allegra >=1.10,
     cardano-ledger-alonzo >=1.16,

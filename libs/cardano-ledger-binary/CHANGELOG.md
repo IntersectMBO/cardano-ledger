@@ -15,6 +15,10 @@
 * Remove `Arbitrary` and `ToExpr` instances for `IPv4` and `IPv6` (now in `cardano-base:testlib`)
 * Remove `Arbitrary` and `ToExpr` instances for `IPv4` and `IPv6` (now in `cardano-base:testlib`)
 
+## 1.8.1.0
+
+* Add `DecShareCBOR` instance for `VMap VB VS`
+
 ## 1.8.0.0
 
 * Add `Uniform`, `UniformRange` instances and fix `Random` instance
