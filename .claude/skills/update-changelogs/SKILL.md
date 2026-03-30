@@ -69,8 +69,8 @@ See `RELEASING.md` § "CHANGELOG.md" for the version bump decision logic. In pra
 ### Step 5 — Write changelog entries
 
 1. Update `## <version>` heading if the version changed.
-2. Prepend entries after the heading, before existing entries.
-3. Sub-library changes go in a subsection (`### \`testlib\``, `### \`cddl\``) **after** main library entries.
+2. **ALWAYS prepend** new entries immediately after the heading, **before** all existing entries. Never append to the bottom of a section.
+3. Sub-library changes go in a subsection (`### \`testlib\``, `### \`cddl\``) **after** main library entries. Within that subsection, new entries are also **prepended** before existing sub-library entries.
 
 If no entry is warranted, leave the body as-is but still bump the heading if required.
 
