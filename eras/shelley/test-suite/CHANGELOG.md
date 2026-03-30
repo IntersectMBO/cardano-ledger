@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Remove `Test.Cardano.Ledger.Shelley.Examples.TwoPools` module
 * Remove `NoThunks` instance for `TestChainPredicateFailure`
 
 ## 1.8.0.0

@@ -37,6 +37,11 @@
   - `ShelleyPpupPredFailure`
   - `ChainPredicateFailure`
 
+### `testlib`
+
+* Add `withIssuerAndTxsInBlock_` and `withIssuerAndTxsInBlock`
+* Add a `Maybe (KeyHash BlockIssuer)` parameter to `withTxsInBlockEither`
+
 ## 1.18.0.0
 
 * Subsume delegations into `ActiveStake`.

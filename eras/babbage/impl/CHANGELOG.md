@@ -18,6 +18,10 @@
 * Remove `NoThunks` instance for `BabbageContextError`
 * Make `BabbageContextError` constructors lazy
 
+### `testlib`
+
+* Add `Test.Cardano.Ledger.Babbage.Imp.PoolSpec` module with `babbageEraSpecificSpec`
+
 ## 1.13.0.0
 
 * Add `updateUTxOStateByTxValidity`
