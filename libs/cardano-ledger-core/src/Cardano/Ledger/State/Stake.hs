@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -60,8 +61,10 @@ import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
-import Data.VMap (VB, VMap, VP)
+import Data.VMap (VB, VMap, VP, VS)
 import qualified Data.VMap as VMap
+import Foreign.Ptr (castPtr)
+import Foreign.Storable (Storable (..))
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -122,17 +125,26 @@ instance DecShareCBOR StakeWithDelegation where
   type Share StakeWithDelegation = Interns (Credential Staking)
   decShareCBOR _si = decCBOR
 
+instance Storable StakeWithDelegation where
+  sizeOf _ =
+    sizeOf (undefined :: (NonZero (CompactForm Coin)))
+      + sizeOf (undefined :: KeyHash StakePool)
+  alignment _ = 64
+  poke ptr swd@(StakeWithDelegation _ _) = do
+    let StakeWithDelegation {..} = swd
+    poke (castPtr ptr) swdStake
+    pokeByteOff (castPtr ptr) (sizeOf swdStake) swdDelegation
+  peek ptr = do
+    swdStake <- peek (castPtr ptr)
+    swdDelegation <- peekByteOff (castPtr ptr) (sizeOf swdStake)
+    pure StakeWithDelegation {..}
+
 -- | Active stake: maps staking credentials to their non-zero stake paired with delegation.
 -- Only credentials that are registered, delegated, and have non-zero stake appear here.
 newtype ActiveStake = ActiveStake
-  { unActiveStake :: VMap VB VB (Credential Staking) StakeWithDelegation
+  { unActiveStake :: VMap VS VS (Credential Staking) StakeWithDelegation
   }
-  deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR)
-
-instance DecShareCBOR ActiveStake where
-  type Share ActiveStake = Interns (Credential Staking)
-  getShare (ActiveStake m) = fst (getShare m)
-  decShareCBOR si = ActiveStake <$> decShareCBOR (si, mempty)
+  deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR, DecCBOR)
 
 -- | Sum all active stake. Returns @NonZero Coin@, defaulting to 1 lovelace if empty.
 sumAllActiveStake :: ActiveStake -> NonZero Coin

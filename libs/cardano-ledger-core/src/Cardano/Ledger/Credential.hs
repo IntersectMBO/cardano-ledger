@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Credential (
   Credential (KeyHashObj, ScriptHashObj),
@@ -48,7 +49,7 @@ import Cardano.Ledger.Binary (
   natVersion,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Hashes (ADDRHASH, Hash, ScriptHash (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
   KeyHash (..),
@@ -76,6 +77,8 @@ import Data.MemPack
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
+import Foreign.Ptr (castPtr)
+import Foreign.Storable (Storable (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import System.Random.Stateful (Random, Uniform (..), UniformRange (..))
@@ -107,6 +110,21 @@ instance Typeable kr => MemPack (Credential kr) where
       1 -> KeyHashObj <$> unpackM
       n -> unknownTagM @(Credential kr) n
   {-# INLINE unpackM #-}
+
+instance Storable (Credential r) where
+  sizeOf _ = 1 + sizeOf (undefined :: Hash ADDRHASH ())
+  alignment _ = 32 -- ADDRHASH is 28 bytes + 1 byte for the Tag. Next power of 2 is 32
+  poke ptr = \case
+    ScriptHashObj hash -> do
+      poke (castPtr ptr) (0 :: Word8)
+      pokeByteOff (castPtr ptr) 1 hash
+    KeyHashObj hash -> do
+      poke (castPtr ptr) (1 :: Word8)
+      pokeByteOff (castPtr ptr) 1 hash
+  peek ptr = do
+    peek (castPtr ptr) >>= \case
+      (0 :: Word8) -> ScriptHashObj <$> peekByteOff (castPtr ptr) 1
+      _ -> KeyHashObj <$> peekByteOff (castPtr ptr) 1
 
 instance Default (Credential r) where
   def = KeyHashObj def

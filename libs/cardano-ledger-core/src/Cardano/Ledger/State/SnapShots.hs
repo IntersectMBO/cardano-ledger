@@ -302,7 +302,7 @@ instance DecShareCBOR SnapShot where
     case n of
       2 -> do
         -- New format: [ActiveStake, StakePoolsSnapShot]
-        activeStake <- decSharePlusLensCBOR _1
+        activeStake <- lift decCBOR
         (stakeCredInterns, stakePoolIdInterns) <- get
         stakePoolsSnapShot <-
           lift $ decodeVMap (interns stakePoolIdInterns <$> decCBOR) (decShareCBOR stakeCredInterns)
