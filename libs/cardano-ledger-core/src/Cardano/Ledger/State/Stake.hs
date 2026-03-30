@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -31,6 +32,7 @@ module Cardano.Ledger.State.Stake (
   resolveActiveInstantStakeCredentials,
 ) where
 
+import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Ledger.BaseTypes (
   NonZero (..),
   nonZero,
@@ -49,6 +51,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
+import Cardano.Ledger.Keys (DSIGN)
 import Cardano.Ledger.State.Account
 import Cardano.Ledger.State.UTxO
 import Control.DeepSeq (NFData)
@@ -62,6 +65,8 @@ import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
+import Foreign.Ptr (castPtr)
+import Foreign.Storable (Storable (..))
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -121,6 +126,25 @@ instance DecCBOR StakeWithDelegation where
 instance DecShareCBOR StakeWithDelegation where
   type Share StakeWithDelegation = Interns (Credential Staking)
   decShareCBOR _si = decCBOR
+
+instance
+  Storable (Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN)) =>
+  Storable StakeWithDelegation
+  where
+  sizeOf _ =
+    sizeOf (undefined :: (NonZero (CompactForm Coin)))
+      + sizeOf (undefined :: Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN))
+  alignment _ =
+    alignment (undefined :: (NonZero (CompactForm Coin)))
+      + alignment (undefined :: Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN))
+  poke ptr swd@(StakeWithDelegation _ _) = do
+    let StakeWithDelegation {..} = swd
+    poke (castPtr ptr) swdStake
+    pokeByteOff (castPtr ptr) (sizeOf swdStake) swdDelegation
+  peek ptr = do
+    swdStake <- peek (castPtr ptr)
+    swdDelegation <- peekByteOff (castPtr ptr) (sizeOf swdStake)
+    pure StakeWithDelegation {..}
 
 -- | Active stake: maps staking credentials to their non-zero stake paired with delegation.
 -- Only credentials that are registered, delegated, and have non-zero stake appear here.

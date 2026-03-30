@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
@@ -109,6 +110,7 @@ import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import Data.MemPack
 import Data.Typeable
+import Foreign.Storable (Storable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -178,6 +180,9 @@ newtype KeyHash (r :: KeyRole) = KeyHash
 
 instance HasKeyRole KeyHash
 
+-- TODO: switch to regular deriving
+deriving instance Storable (Hash.Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN)) => Storable (KeyHash r)
+
 -- | Hash a given public key
 hashKey :: VKey kd -> KeyHash kd
 hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
@@ -208,7 +213,11 @@ newtype ScriptHash
     , ToJSONKey
     , FromJSONKey
     , MemPack
+    -- , Storable
     )
+
+-- TODO: switch to regular deriving
+deriving instance Storable (Hash.Hash ADDRHASH EraIndependentScript) => Storable ScriptHash
 
 --------------------------------------------------------------------------------
 -- VRF Key Hashes

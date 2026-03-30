@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Credential (
   Credential (KeyHashObj, ScriptHashObj),
@@ -27,6 +28,7 @@ module Cardano.Ledger.Credential (
   StakeReference (..),
 ) where
 
+import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashFromTextAsHex, hashToTextAsHex)
 import Cardano.Ledger.BaseTypes (
   CertIx (..),
@@ -48,8 +50,14 @@ import Cardano.Ledger.Binary (
   natVersion,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Hashes (
+  ADDRHASH,
+  EraIndependentScript,
+  Hash,
+  ScriptHash (..),
+ )
 import Cardano.Ledger.Keys (
+  DSIGN,
   HasKeyRole (..),
   KeyHash (..),
   KeyRole (..),
@@ -76,6 +84,8 @@ import Data.MemPack
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
+import Foreign.Ptr (castPtr)
+import Foreign.Storable (Storable (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import System.Random.Stateful (Random, Uniform (..), UniformRange (..))
@@ -107,6 +117,26 @@ instance Typeable kr => MemPack (Credential kr) where
       1 -> KeyHashObj <$> unpackM
       n -> unknownTagM @(Credential kr) n
   {-# INLINE unpackM #-}
+
+instance
+  ( Storable (Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN))
+  , Storable (Hash ADDRHASH EraIndependentScript)
+  ) =>
+  Storable (Credential r)
+  where
+  sizeOf _ = sizeOf (undefined :: Hash ADDRHASH EraIndependentScript)
+  alignment _ = alignment (undefined :: Hash ADDRHASH EraIndependentScript)
+  poke ptr = \case
+    ScriptHashObj hash -> do
+      poke (castPtr ptr) (0 :: Word8)
+      pokeByteOff (castPtr ptr) 1 hash
+    KeyHashObj hash -> do
+      poke (castPtr ptr) (1 :: Word8)
+      pokeByteOff (castPtr ptr) 1 hash
+  peek ptr = do
+    peek (castPtr ptr) >>= \case
+      (0 :: Word8) -> ScriptHashObj <$> peekByteOff (castPtr ptr) 1
+      _ -> KeyHashObj <$> peekByteOff (castPtr ptr) 1
 
 instance Default (Credential r) where
   def = KeyHashObj def

@@ -46,6 +46,7 @@ module Cardano.Ledger.Coin (
   knownNonZeroCompactCoin,
 ) where
 
+import Foreign.Storable
 import Cardano.Ledger.BaseTypes (
   HasZero (..),
   Inject (..),
@@ -141,7 +142,8 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin {unCompactCoin :: Word64}
-    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON, HasZero, Generic)
+    deriving stock (Show, Generic)
+    deriving newtype (Eq, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON, HasZero, Storable)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
