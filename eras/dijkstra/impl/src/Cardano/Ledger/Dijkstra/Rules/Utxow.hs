@@ -19,6 +19,7 @@
 module Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUTXOW,
   DijkstraUtxowPredFailure (..),
+  DijkstraUtxoEnv (..),
   conwayToDijkstraUtxowPredFailure,
 ) where
 
@@ -32,17 +33,29 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
   AlonzoUtxowPredFailure,
+  checkScriptIntegrityHash,
+  hasExactSetOfRedeemers,
  )
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
+import Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO (..),
+  AlonzoScriptsNeeded (..),
+  getInputDataHashesTxBody,
+ )
 import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
   BabbageUtxowPredFailure,
-  babbageUtxowTransition,
+  babbageMissingScripts,
+  validateFailedBabbageScripts,
+  validateScriptsWellFormed,
  )
+import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
+import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Relation (..),
   ShelleyBase,
+  SlotNo,
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -66,29 +79,57 @@ import Cardano.Ledger.Conway.Rules (
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO, DijkstraUTXOW)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Keys (VKey)
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
+import Cardano.Ledger.Rules.ValidationMode (runTest, runTestOnSignal)
+import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure,
+  UtxoEnv (..),
+  validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
-  UtxoEnv,
+  validateMetadata,
+  validateVerifiedWits,
  )
-import Cardano.Ledger.State (EraUTxO (..))
+import Cardano.Ledger.State (CertState, EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
+  TRC (..),
+  TransitionRule,
+  failureOnNonEmptySet,
+  judgmentContext,
+  trans,
  )
+import Data.Foldable (sequenceA_)
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 
 -- ================================
+
+-- | Environment for the Dijkstra UTXOW rule.
+-- Unlike the standard 'UtxoEnv', this carries the original UTxO (before
+-- subtransaction processing) and the aggregated scripts provided across
+-- all transaction levels. Per the formal spec, all UTXOW witness checks
+-- must use the original UTxO rather than the post-subtransaction state.
+data DijkstraUtxoEnv era = DijkstraUtxoEnv
+  { dueSlot :: !SlotNo
+  , duePParams :: !(PParams era)
+  , dueCertState :: !(CertState era)
+  , dueOriginalUtxo :: !(UTxO era)
+  , dueScriptsProvided :: !(ScriptsProvided era)
+  }
 
 -- | Predicate failure type for the Dijkstra Era
 data DijkstraUtxowPredFailure era
@@ -204,12 +245,140 @@ instance
 -- DijkstraUTXOW STS
 --------------------------------------------------------------------------------
 
+dijkstraUtxowTransition ::
+  forall era.
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , DijkstraEraTxBody era
+  , EraRule "UTXOW" era ~ DijkstraUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" DijkstraUtxowPredFailure era
+  , -- Allow UTXOW to call UTXO
+    Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  ) =>
+  TransitionRule (EraRule "UTXOW" era)
+dijkstraUtxowTransition = do
+  TRC (DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided, u, tx) <- judgmentContext
+
+  let txBody = tx ^. bodyTxL
+      subTxs = OMap.elems $ txBody ^. subTransactionsTxBodyL
+      witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
+
+  -- All lookups use originalUtxo.
+  -- A subtx may consume a txout that the top-level tx references,
+  -- so the UTXO threaded in the state may not contain it.
+
+  -- Per-level: scriptsNeeded for the top-level tx (used for redeemers and script integrity)
+  let topScriptHashesNeeded = getScriptsHashesNeeded $ getScriptsNeeded originalUtxo txBody
+
+  -- Aggregated across all levels: scripts needed, received, and referenced.
+  -- The missing/extraneous scripts check must be centralized because inside a
+  -- subtransaction you cannot tell if a script is extraneous — it might be
+  -- needed by another subtransaction or the top level.
+  let allScriptHashesNeeded =
+        Set.unions $
+          topScriptHashesNeeded
+            : [getScriptsHashesNeeded (getScriptsNeeded originalUtxo (subTx ^. bodyTxL)) | subTx <- subTxs]
+      allInputs =
+        Set.unions $
+          [ (subTx ^. bodyTxL . referenceInputsTxBodyL) `Set.union` (subTx ^. bodyTxL . inputsTxBodyL)
+          | subTx <- subTxs
+          ]
+            <> [ (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
+               ]
+      allSReceived =
+        Set.unions $
+          Map.keysSet (tx ^. witsTxL . scriptTxWitsL)
+            : [Map.keysSet (subTx ^. witsTxL . scriptTxWitsL) | subTx <- subTxs]
+      allSRefs = Map.keysSet $ getReferenceScripts originalUtxo allInputs
+
+  {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
+  -- Per-level: phase-1 script validation is per-tx (script execution)
+  runTest $ validateFailedBabbageScripts tx scriptsProvided topScriptHashesNeeded
+
+  {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
+  -- Aggregated: missing/extraneous scripts across all levels
+  runTest $ babbageMissingScripts pp allScriptHashesNeeded allSRefs allSReceived
+
+  {- inputHashes ⊆ dom(txdats txw) ⊆ allowed -}
+  -- Aggregated: missing/extraneous datums across all levels.
+  -- Same reasoning as scripts: extraneous detection requires global knowledge.
+  let allInputHashes =
+        Set.unions
+          [ fst $ getInputDataHashesTxBody originalUtxo (subTx ^. bodyTxL) scriptsProvided
+          | subTx <- subTxs
+          ]
+          `Set.union` fst (getInputDataHashesTxBody originalUtxo txBody scriptsProvided)
+      allTxInsNoDataHash =
+        Set.unions
+          [ snd $ getInputDataHashesTxBody originalUtxo (subTx ^. bodyTxL) scriptsProvided
+          | subTx <- subTxs
+          ]
+          `Set.union` snd (getInputDataHashesTxBody originalUtxo txBody scriptsProvided)
+      allTxDatumHashes =
+        Set.unions $
+          Map.keysSet (tx ^. witsTxL . datsTxWitsL . unTxDatsL)
+            : [Map.keysSet (subTx ^. witsTxL . datsTxWitsL . unTxDatsL) | subTx <- subTxs]
+      allSupplementalDataHashes =
+        Set.unions $
+          getSupplementalDataHashes originalUtxo txBody
+            : [getSupplementalDataHashes originalUtxo (subTx ^. bodyTxL) | subTx <- subTxs]
+      unmatchedDatumHashes = Set.difference allInputHashes allTxDatumHashes
+      supplementalDatumHashes = Set.difference allTxDatumHashes allInputHashes
+      (okSupplementalDHs, notOkSupplementalDHs) =
+        Set.partition (`Set.member` allSupplementalDataHashes) supplementalDatumHashes
+  runTest $
+    sequenceA_
+      [ failureOnNonEmptySet allTxInsNoDataHash UnspendableUTxONoDatumHash
+      , failureOnNonEmptySet
+          unmatchedDatumHashes
+          (\unmatched -> MissingRequiredDatums unmatched allTxDatumHashes)
+      , failureOnNonEmptySet
+          notOkSupplementalDHs
+          (\notOk -> NotAllowedSupplementalDatums notOk okSupplementalDHs)
+      ]
+
+  {- dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
+                          h ↦ s ∈ txscripts txw, s ∈ Scriptph2} -}
+  -- Per-level: redeemer indexing is per-tx
+  runTest $ hasExactSetOfRedeemers tx scriptsProvided topScriptsNeeded
+
+  -- check VKey witnesses
+  {- ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ -}
+  runTestOnSignal $ Shelley.validateVerifiedWits tx
+
+  {- witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes -}
+  runTest $ validateNeededWitnesses witsKeyHashes certState originalUtxo txBody
+
+  -- check metadata hash
+  {- ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad) -}
+  runTestOnSignal $ Shelley.validateMetadata pp tx
+
+  {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
+                       x ∈ Script ∪ Datum ⇒ isWellFormed x -}
+  runTest $ validateScriptsWellFormed pp tx
+
+  {- scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw) -}
+  -- Per-level: script integrity is per-tx (depends on that tx's redeemers and language views)
+  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided topScriptHashesNeeded
+  runTest $ checkScriptIntegrityHash tx pp scriptIntegrity
+
+  -- Pass through to UTXO sub-rule with standard UtxoEnv (state-based UTXO is correct
+  -- for minfee calculation and state update)
+  trans @(EraRule "UTXO" era) $ TRC (UtxoEnv slot pp certState, u, tx)
+
 instance
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , EraRule "UTXOW" era ~ DijkstraUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
@@ -218,21 +387,21 @@ instance
   , InjectRuleFailure "UTXOW" DijkstraUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
-  , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
-  , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   STS (DijkstraUTXOW era)
   where
-  type State (DijkstraUTXOW era) = Shelley.UTxOState era
+  type State (DijkstraUTXOW era) = UTxOState era
   type Signal (DijkstraUTXOW era) = Tx TopTx era
-  type Environment (DijkstraUTXOW era) = Shelley.UtxoEnv era
+  type Environment (DijkstraUTXOW era) = DijkstraUtxoEnv era
   type BaseM (DijkstraUTXOW era) = ShelleyBase
   type PredicateFailure (DijkstraUTXOW era) = DijkstraUtxowPredFailure era
   type Event (DijkstraUTXOW era) = AlonzoUtxowEvent era
-  transitionRules = [babbageUtxowTransition @era]
+  transitionRules = [dijkstraUtxowTransition @era]
   initialRules = []
 
 instance

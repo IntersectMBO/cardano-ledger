@@ -23,7 +23,7 @@ module Cardano.Ledger.Dijkstra.Rules.Ledger (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
-import Cardano.Ledger.Alonzo (AlonzoScript)
+import Cardano.Ledger.Alonzo ()
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowPredFailure,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage (BabbageTxOut)
+import Cardano.Ledger.Babbage ()
 import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
   BabbageUtxowPredFailure,
@@ -50,6 +50,9 @@ import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState,
   Proposals,
+  constitutionGuardrailsScriptHashL,
+  grCommitteeL,
+  proposalsWithPurpose,
  )
 import Cardano.Ledger.Conway.Rules (
   CertEnv,
@@ -70,7 +73,12 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxowPredFailure,
   GovEnv (..),
   GovSignal (..),
-  conwayLedgerTransitionTRC,
+  testIncompleteAndMissingWithdrawals,
+  updateDormantDRepExpiries,
+  updateVotingDRepExpiries,
+  validateRefScriptSize,
+  validateTreasuryValue,
+  validateWithdrawalsDelegated,
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
@@ -98,13 +106,15 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedgers
 import Cardano.Ledger.Dijkstra.Rules.SubPool
 import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxoEnv (..), DijkstraUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.Dijkstra.TxCert
+import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
   lsUTxOStateL,
+  utxosGovStateL,
   utxosUtxo,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -121,6 +131,7 @@ import Cardano.Ledger.Shelley.Rules (
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
  )
+import Cardano.Ledger.Slot (epochFromSlot)
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -129,6 +140,7 @@ import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import Data.Sequence (Seq)
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import qualified Data.Set.NonEmpty as NES
@@ -336,7 +348,7 @@ instance
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
-  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXOW" era) ~ DijkstraUtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
@@ -395,7 +407,7 @@ dijkstraLedgerTransition ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
-  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXOW" era) ~ DijkstraUtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
@@ -409,37 +421,117 @@ dijkstraLedgerTransition ::
   ) =>
   TransitionRule (DijkstraLEDGER era)
 dijkstraLedgerTransition = do
-  TRC (env@(LedgerEnv slot mbCurEpochNo txIx pp chainAccountState), ledgerState, tx) <-
+  TRC (LedgerEnv slot mbCurEpochNo txIx pp chainAccountState, ledgerState, tx) <-
     judgmentContext
 
   failOnNonEmptyMap (spentSubTxOutputs tx) DijkstraSpendingOutputFromSameTx
 
-  let utxo = utxosUtxo (ledgerState ^. lsUTxOStateL)
+  -- Capture the original UTxO before any subtransaction processing.
+  -- This is passed through the environment to UTXOW
+  -- and SUBLEDGERS, and used for all witness/validation lookups.
+  let originalUtxo = utxosUtxo (ledgerState ^. lsUTxOStateL)
       subTxs = tx ^. bodyTxL . subTransactionsTxBodyL
       scriptsProvided =
         ScriptsProvided $
           Map.unions $
-            unScriptsProvided (getScriptsProvided utxo tx)
-              : map (unScriptsProvided . getScriptsProvided utxo) (OMap.elems subTxs)
+            unScriptsProvided (getScriptsProvided originalUtxo tx)
+              : map (unScriptsProvided . getScriptsProvided originalUtxo) (OMap.elems subTxs)
 
-  ledgerStateAfterSubledgers <-
+  -- Process all subtransactions first
+  LedgerState utxoStateAfterSubLedgers certStateAfterSubLedgers <-
     trans @(EraRule "SUBLEDGERS" era) $
       TRC
-        ( SubLedgerEnv slot mbCurEpochNo txIx pp chainAccountState scriptsProvided utxo (tx ^. isValidTxL)
+        ( SubLedgerEnv
+            slot
+            mbCurEpochNo
+            txIx
+            pp
+            chainAccountState
+            scriptsProvided
+            originalUtxo
+            (tx ^. isValidTxL)
         , ledgerState
         , subTxs
         )
-  conwayLedgerTransitionTRC (TRC (env, ledgerStateAfterSubledgers, tx))
+
+  curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
+  let LedgerState _ certState = ledgerState
+
+  (utxoStateBeforeUtxow, certStateAfterCERTS) <-
+    if tx ^. isValidTxL == IsValid True
+      then do
+        let txBody = tx ^. bodyTxL
+        runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+        runTest $ validateRefScriptSize pp (utxoStateAfterSubLedgers ^. utxoL) tx
+
+        let govState = utxoStateAfterSubLedgers ^. utxosGovStateL
+            committee = govState ^. committeeGovStateL
+            proposals = govState ^. proposalsGovStateL
+            committeeProposals = proposalsWithPurpose grCommitteeL proposals
+            accounts = certState ^. certDStateL . accountsL
+
+        runTest $ validateWithdrawalsDelegated accounts tx
+
+        let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+        testIncompleteAndMissingWithdrawals accounts withdrawals
+
+        certStateAfterCERTS <-
+          trans @(EraRule "CERTS" era) $
+            TRC
+              ( CertsEnv tx pp curEpochNo committee committeeProposals
+              , certState
+                  & updateDormantDRepExpiries tx curEpochNo
+                  & updateVotingDRepExpiries tx curEpochNo (pp ^. ppDRepActivityL)
+                  & certDStateL . accountsL %~ drainAccounts withdrawals
+              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              )
+
+        let govSignal =
+              GovSignal
+                { gsVotingProcedures = txBody ^. votingProceduresTxBodyL
+                , gsProposalProcedures = txBody ^. proposalProceduresTxBodyL
+                , gsCertificates = txBody ^. certsTxBodyL
+                }
+        proposalsState <-
+          trans @(EraRule "GOV" era) $
+            TRC
+              ( GovEnv
+                  (txIdTxBody txBody)
+                  curEpochNo
+                  pp
+                  (govState ^. constitutionGovStateL . constitutionGuardrailsScriptHashL)
+                  certStateAfterCERTS
+                  (govState ^. committeeGovStateL)
+              , proposals
+              , govSignal
+              )
+        pure
+          ( utxoStateAfterSubLedgers
+              & utxosGovStateL . proposalsGovStateL .~ proposalsState
+          , certStateAfterCERTS
+          )
+      else pure (utxoStateAfterSubLedgers, certStateAfterSubLedgers)
+
+  -- Call UTXOW with DijkstraUtxoEnv, passing the original UTxO
+  -- and aggregated scriptsProvided. Per the formal spec, UTXOW witness
+  -- checks must use the original UTxO, not the post-subtransaction state.
+  utxoStateFinal <-
+    trans @(EraRule "UTXOW" era) $
+      TRC
+        ( DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided
+        , utxoStateBeforeUtxow
+        , tx
+        )
+  pure $ LedgerState utxoStateFinal certStateAfterCERTS
 
 instance
   ( AlonzoEraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , BabbageEraTxBody era
+  , ConwayEraTxBody era
   , Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , Script era ~ AlonzoScript era
-  , TxOut era ~ BabbageTxOut era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , PredicateFailure (EraRule "UTXOW" era) ~ DijkstraUtxowPredFailure era
@@ -463,7 +555,7 @@ instance
   , DijkstraEraTxBody era
   , EraPlutusContext era
   , GovState era ~ ConwayGovState era
-  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXOW" era) ~ DijkstraUtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
