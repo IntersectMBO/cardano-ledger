@@ -45,7 +45,7 @@ library
     cardano-base >=0.1.2,
     cardano-crypto-class ^>=2.3,
     cardano-crypto-praos ^>=2.2,
-    cardano-ledger-allegra >=1.9.1,
+    cardano-ledger-allegra >=1.10,
     cardano-ledger-alonzo >=1.16,
     cardano-ledger-babbage >=1.13.1,
     cardano-ledger-binary >=1.8,
