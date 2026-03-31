@@ -14,6 +14,7 @@ import Cardano.Ledger.CanonicalState.BasicTypes (
  )
 import Cardano.Ledger.CanonicalState.Conway ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
+import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesAccounts.V0 as EntitiesAccounts.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesCommittee.V0 as EntitiesCommittee.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesDReps.V0 as EntitiesDReps.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesStakePools.V0 as EntitiesStakePools.V0
@@ -71,4 +72,10 @@ instance Arbitrary EntitiesDReps.V0.CanonicalDRepState where
   arbitrary = genericArbitraryU
 
 instance Arbitrary EntitiesDReps.V0.EntitiesDRepsOut where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary EntitiesAccounts.V0.CanonicalAccountState where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary EntitiesAccounts.V0.EntitiesAccountsOut where
   arbitrary = genericArbitraryU

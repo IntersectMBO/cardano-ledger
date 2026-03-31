@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -7,8 +8,11 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.CanonicalState.Conway (
@@ -18,9 +22,11 @@ module Cardano.Ledger.CanonicalState.Conway (
   fromGovActionState,
   mkGovProposalIn,
   fromGovProposalIn,
+  fromCanonicalAccountState,
+  mkCanonicalAccountState,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), maybeToStrictMaybe, strictMaybeToMaybe)
 import Cardano.Ledger.Binary (decodeFull')
 import Cardano.Ledger.CanonicalState.BasicTypes (
   CanonicalCoin (..),
@@ -33,6 +39,7 @@ import Cardano.Ledger.CanonicalState.BasicTypes (
   mkOnChain,
  )
 import Cardano.Ledger.CanonicalState.Namespace
+import Cardano.Ledger.CanonicalState.Namespace.EntitiesAccounts.V0 (CanonicalAccountState (..))
 import Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
 import Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0
 import Cardano.Ledger.CanonicalState.Namespace.GovProposals.V0
@@ -41,6 +48,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway.State (ConwayAccountState (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.SCLS.CBOR.Canonical (
   assumeCanonicalDecoder,
@@ -69,6 +77,8 @@ type instance NamespaceEra "entities/stake_pools/v0" = ConwayEra
 type instance NamespaceEra "entities/dreps/v0" = ConwayEra
 
 type instance NamespaceEra "entities/stake_pools/vrf_key_hashes/v0" = ConwayEra
+
+type instance NamespaceEra "entities/accounts/v0" = ConwayEra
 
 type instance NamespaceEra "gov/committee/v0" = ConwayEra
 
@@ -344,3 +354,25 @@ instance FromCanonicalCBOR v Vote where
       1 -> return (Versioned VoteYes)
       2 -> return (Versioned Abstain)
       _ -> fail "Invalid CanonicalVote"
+
+mkCanonicalAccountState ::
+  ConwayAccountState era ->
+  CanonicalAccountState
+mkCanonicalAccountState ConwayAccountState {..} =
+  CanonicalAccountState
+    { casBalance = CanonicalCoin casBalance
+    , casDeposit = CanonicalCoin casDeposit
+    , casDRepDelegation = maybeToStrictMaybe casDRepDelegation
+    , casStakePoolDelegation = maybeToStrictMaybe casStakePoolDelegation
+    }
+
+fromCanonicalAccountState ::
+  CanonicalAccountState ->
+  ConwayAccountState era
+fromCanonicalAccountState CanonicalAccountState {..} =
+  ConwayAccountState
+    { casBalance = unCoin casBalance
+    , casDeposit = unCoin casDeposit
+    , casDRepDelegation = strictMaybeToMaybe casDRepDelegation
+    , casStakePoolDelegation = strictMaybeToMaybe casStakePoolDelegation
+    }
