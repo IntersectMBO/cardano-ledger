@@ -6,7 +6,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -42,12 +41,13 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (..),
-  EncCBORGroup (encCBORGroup),
+  EncCBORGroup (encCBORGroup, listLen),
   annotatorSlice,
+  decodeListLen,
   decodeRecordNamed,
-  decodeTag,
+  decodeWord8,
   encodeListLen,
-  encodeTag,
+  encodeWord8,
   serialize,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -105,6 +105,7 @@ bodyBytesSize :: EraSegWits era => ProtVer -> Body era -> Int
 bodyBytesSize pv (BodyInline txs) = bBodySize pv txs
 bodyBytesSize pv (BodyCertificate cert _) = certByteSize pv cert
 
+-- TODO(bladyjoker): Why didn't you name this bodyTxsUnsafe?
 bodyTxs :: HasCallStack => Body era -> TxSeq era
 bodyTxs (BodyInline txs) = txs
 bodyTxs (BodyCertificate cert mayCertifiedEbTxClosure) = case mayCertifiedEbTxClosure of
@@ -255,37 +256,52 @@ instance
   (DecCBOR (TxSeq era), EraSegWits era) =>
   DecCBOR (Body era)
   where
-  decCBOR =
-    decodeTag >>= \case
-      0 -> BodyInline <$> decCBOR @(TxSeq era)
-      1 -> (`BodyCertificate` Nothing) <$> decCBOR
-      tag -> fail $ "Body: unknown tag " ++ show tag
+  decCBOR = do
+    len <- decodeListLen
+    tag <- decodeWord8
+    case tag of
+      0 ->
+        if len == (1 + fromIntegral (numSegComponents @era))
+          then BodyInline <$> decCBOR @(TxSeq era)
+          else fail "Body: Got tag for BodyInline but the list length didn't match"
+      1 ->
+        if len == (1 + 1)
+          then (`BodyCertificate` Nothing) <$> decCBOR
+          else fail "Body: Got tag for BodyCertificate but the list length didn't match"
+      _ -> fail $ "Body: unknown tag " ++ show tag
 
 instance
   EraSegWits era =>
   DecCBOR (Annotator (Body era))
   where
   decCBOR = annotatorSlice $ do
-    tag <- decodeTag
+    len <- decodeListLen
+    tag <- decodeWord8
     case tag of
-      0 -> do
-        txSeq <- decCBOR @(Annotator (TxSeq era))
-        pure (const . BodyInline <$> txSeq)
-      1 -> do
-        cert <- decCBOR @Certificate
-        pure $ pure ((const . BodyCertificate cert) Nothing)
+      0 ->
+        if len == (1 + fromIntegral (numSegComponents @era))
+          then do
+            txSeq <- decCBOR @(Annotator (TxSeq era))
+            pure (const . BodyInline <$> txSeq)
+          else fail "Body: Got tag for BodyInline but the list length didn't match"
+      1 ->
+        if len == (1 + 1)
+          then do
+            cert <- decCBOR @Certificate
+            pure $ pure ((const . BodyCertificate cert) Nothing)
+          else fail "Body: Got tag for BodyCertificate but the list length didn't match"
       _ -> fail $ "Body: unknown tag " ++ show tag
 
 instance (Typeable era, EncCBORGroup (TxSeq era)) => EncCBOR (Body era) where
-  encCBOR = \case
-    BodyInline txs -> encodeTag 0 <> encCBORGroup txs
-    BodyCertificate cert _ -> encodeTag 1 <> encCBOR cert
+  encCBOR body =
+    case body of
+      BodyInline txs -> encodeListLen (1 + listLen txs) <> encodeWord8 0 <> encCBORGroup txs
+      BodyCertificate cert _ -> encodeListLen (1 + 1) <> encodeWord8 1 <> encCBOR cert
 
 instance
   ( EraSegWits era
   , DecCBOR h
   , DecCBOR (Body era)
-  --  , DecCBOR (TxSeq era)
   ) =>
   DecCBOR (Block h era)
   where
