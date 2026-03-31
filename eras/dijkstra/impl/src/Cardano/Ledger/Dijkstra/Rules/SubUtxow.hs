@@ -37,6 +37,7 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   validateScriptsWellFormedTxOuts,
  )
 import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
+import Cardano.Ledger.Babbage.UTxO (BabbageScriptsProvided (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -207,6 +208,7 @@ instance
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , ScriptsProvided era ~ BabbageScriptsProvided era
   ) =>
   STS (DijkstraSUBUTXOW era)
   where
@@ -231,6 +233,7 @@ dijkstraSubUtxowTransition ::
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , ScriptsProvided era ~ BabbageScriptsProvided era
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
@@ -265,7 +268,7 @@ dijkstraSubUtxowTransition = do
   runTest $
     Babbage.validateScriptsWellFormedTxOuts
       pp
-      (tx ^. witsTxL . scriptTxWitsL)
+      (bspWitnessScripts scriptsProvided)
       (tx ^. bodyTxL . outputsTxBodyL)
 
   trans @(EraRule "SUBUTXO" era) $ TRC (UtxoEnv slot pp certState, utxoState, tx)

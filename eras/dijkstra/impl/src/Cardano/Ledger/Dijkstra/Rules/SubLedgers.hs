@@ -23,6 +23,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
+import Cardano.Ledger.Babbage.UTxO (BabbageScriptsProvided)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
@@ -197,6 +198,7 @@ instance
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , ScriptsProvided era ~ BabbageScriptsProvided era
   ) =>
   Embed (DijkstraSUBLEDGER era) (DijkstraSUBLEDGERS era)
   where

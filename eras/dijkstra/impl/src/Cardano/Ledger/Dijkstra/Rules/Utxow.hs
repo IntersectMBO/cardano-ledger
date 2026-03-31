@@ -39,6 +39,7 @@ import Cardano.Ledger.Babbage.Rules (
   BabbageUtxowPredFailure,
   babbageUtxowTransition,
  )
+import Cardano.Ledger.Babbage.UTxO (BabbageScriptsProvided)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Relation (..),
@@ -209,6 +210,7 @@ instance
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , ScriptsProvided era ~ BabbageScriptsProvided era
   , ConwayEraTxBody era
   , EraRule "UTXOW" era ~ DijkstraUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era

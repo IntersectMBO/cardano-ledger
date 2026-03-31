@@ -41,7 +41,7 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
-import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
+import Cardano.Ledger.Babbage.UTxO (BabbageScriptsProvided (..))
 import Cardano.Ledger.BaseTypes (Mismatch, Relation (..), ShelleyBase, quorum, strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -318,6 +318,7 @@ babbageUtxowTransition ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , ScriptsProvided era ~ BabbageScriptsProvided era
   , BabbageEraTxBody era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
@@ -342,7 +343,6 @@ babbageUtxowTransition = do
   let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
       witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
-      inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
 
   -- check scripts
   {- neededHashes := {h | ( , h) ∈ scriptsNeeded utxo txb} -}
@@ -355,8 +355,8 @@ babbageUtxowTransition = do
   runTest $ validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
 
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
-  let sReceived = Map.keysSet $ tx ^. witsTxL . scriptTxWitsL
-      sRefs = Map.keysSet $ getReferenceScripts utxo inputs
+  let sReceived = Map.keysSet $ bspWitnessScripts scriptsProvided
+      sRefs = Map.keysSet $ bspReferenceScripts scriptsProvided
   runTest $ babbageMissingScripts pp scriptHashesNeeded sRefs sReceived
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
@@ -404,6 +404,7 @@ instance
   , AlonzoEraUTxO era
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , ScriptsProvided era ~ BabbageScriptsProvided era
   , BabbageEraTxBody era
   , EraRule "UTXOW" era ~ BabbageUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era

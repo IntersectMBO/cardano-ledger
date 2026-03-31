@@ -40,6 +40,7 @@ import Cardano.Ledger.Babbage.Rules (
   babbageUtxowTransition,
  )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
+import Cardano.Ledger.Babbage.UTxO (BabbageScriptsProvided)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -190,6 +191,7 @@ instance
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , ScriptsProvided era ~ BabbageScriptsProvided era
   , ConwayEraTxBody era
   , EraRule "UTXOW" era ~ ConwayUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
