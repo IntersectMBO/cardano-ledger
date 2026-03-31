@@ -19,6 +19,7 @@ import Cardano.Ledger.Mary.State ()
 import Cardano.Ledger.Mary.Value (MaryValue (..), filterMultiAsset, mapMaybeMultiAsset, policyID)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
+  ShelleyScriptsProvided (..),
   getShelleyMinFeeTxUtxo,
   getShelleyScriptsNeeded,
   getShelleyWitsVKeyNeeded,
@@ -27,7 +28,6 @@ import Cardano.Ledger.Shelley.UTxO (
  )
 import Cardano.Ledger.State (
   EraUTxO (..),
-  ScriptsProvided (..),
   UTxO,
   sumUTxO,
   txInsFilter,
@@ -39,6 +39,7 @@ import Lens.Micro
 
 instance EraUTxO MaryEra where
   type ScriptsNeeded MaryEra = ShelleyScriptsNeeded MaryEra
+  type ScriptsProvided MaryEra = ShelleyScriptsProvided MaryEra
 
   consumed = shelleyConsumed
 
@@ -47,7 +48,9 @@ instance EraUTxO MaryEra where
   getProducedValue pp isRegPoolId txBody =
     withTopTxLevelOnly txBody (getProducedMaryValue pp isRegPoolId)
 
-  getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
+  getScriptsProvided _ tx = ShelleyScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
+
+  getScriptsProvidedMap = unShelleyScriptsProvided
 
   getScriptsNeeded = getMaryScriptsNeeded
 

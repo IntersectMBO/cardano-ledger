@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `ShelleyScriptsProvided` type
 * Add `Shelley.API.Forecast` and `Shelley.Forecast`:
   - Add `EraForecast` and `ShelleyEraForecast` typeclasses to deprecate `GetLedgerView` from `cardano-ledger-tpraos`.
   - Add `currentForecast` and `futureForecast` functions to deprecate `currentLedgerView` and `futureLedgerView`.

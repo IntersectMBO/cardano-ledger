@@ -48,6 +48,7 @@ import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
 import Cardano.Ledger.Shelley.UTxO (
+  ShelleyScriptsProvided (..),
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
   shelleyConsumed,
@@ -55,7 +56,6 @@ import Cardano.Ledger.Shelley.UTxO (
 import Cardano.Ledger.State (
   EraCertState (..),
   EraUTxO (..),
-  ScriptsProvided (..),
   UTxO (..),
   getScriptHash,
  )
@@ -80,6 +80,7 @@ deriving instance AlonzoEraScript era => Show (AlonzoScriptsNeeded era)
 
 instance EraUTxO AlonzoEra where
   type ScriptsNeeded AlonzoEra = AlonzoScriptsNeeded AlonzoEra
+  type ScriptsProvided AlonzoEra = ShelleyScriptsProvided AlonzoEra
 
   consumed = shelleyConsumed
 
@@ -88,7 +89,9 @@ instance EraUTxO AlonzoEra where
   getProducedValue pp isRegPoolId txBody =
     withTopTxLevelOnly txBody (getProducedMaryValue pp isRegPoolId)
 
-  getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
+  getScriptsProvided _ tx = ShelleyScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
+
+  getScriptsProvidedMap = unShelleyScriptsProvided
 
   getScriptsNeeded = getAlonzoScriptsNeeded
 
@@ -163,14 +166,15 @@ getAlonzoScriptsHashesNeeded (AlonzoScriptsNeeded sn) = Set.fromList (map snd sn
 --
 -- @{ h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a}@
 getInputDataHashesTxBody ::
-  (EraTxBody era, AlonzoEraTxOut era, AlonzoEraScript era) =>
+  (EraUTxO era, AlonzoEraTxOut era, AlonzoEraScript era) =>
   UTxO era ->
   TxBody l era ->
   ScriptsProvided era ->
   (Set.Set DataHash, Set.Set TxIn)
-getInputDataHashesTxBody (UTxO utxo) txBody (ScriptsProvided scriptsProvided) =
+getInputDataHashesTxBody (UTxO utxo) txBody sp =
   Map.foldlWithKey' accum (Set.empty, Set.empty) spendUTxO
   where
+    scriptsProvided = getScriptsProvidedMap sp
     spendingPlutusScriptLanguage addr = do
       scriptHash <- getScriptHash addr
       plutusScript <- lookupPlutusScript scriptHash scriptsProvided

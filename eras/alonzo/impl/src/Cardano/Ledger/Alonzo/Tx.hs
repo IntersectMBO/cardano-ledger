@@ -116,7 +116,7 @@ import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
-import Cardano.Ledger.State (EraUTxO, ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..))
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..), deepseq)
@@ -327,14 +327,14 @@ mkScriptIntegrity ::
   ScriptsProvided era ->
   Set ScriptHash ->
   StrictMaybe (ScriptIntegrity era)
-mkScriptIntegrity pp tx (ScriptsProvided scriptsProvided) scriptsNeeded
+mkScriptIntegrity pp tx sp scriptsNeeded
   | null (txRedeemers ^. unRedeemersL)
   , null langViews
   , null (txDats ^. unTxDatsL) =
       SNothing
   | otherwise = SJust $ ScriptIntegrity txRedeemers txDats langViews
   where
-    scriptsUsed = Map.elems $ Map.restrictKeys scriptsProvided scriptsNeeded
+    scriptsUsed = Map.elems $ Map.restrictKeys (getScriptsProvidedMap sp) scriptsNeeded
     langs = Set.fromList $ plutusScriptLanguage <$> mapMaybe toPlutusScript scriptsUsed
     langViews = Set.map (getLanguageView pp) langs
     txWits = tx ^. witsTxL

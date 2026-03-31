@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Convert `ScriptsProvided` from a concrete newtype to an associated type family on `EraUTxO`
+* Add `getScriptsProvidedMap` method to `EraUTxO`
 * Deprecate `BHeaderView` in favour `*EraBlockHeader` typeclasses.
   - Move `isOverlaySlot` to `Cardano.Ledger.Slot`.
   - Remove `PerasCert`, `PerasKey` and `validatePerasCert` to `dijkstra`.

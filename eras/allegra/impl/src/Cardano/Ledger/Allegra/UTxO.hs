@@ -11,6 +11,7 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.State ()
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
+  ShelleyScriptsProvided (..),
   getConsumedCoin,
   getShelleyMinFeeTxUtxo,
   getShelleyScriptsNeeded,
@@ -18,11 +19,12 @@ import Cardano.Ledger.Shelley.UTxO (
   shelleyConsumed,
   shelleyProducedValue,
  )
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..))
 import Lens.Micro
 
 instance EraUTxO AllegraEra where
   type ScriptsNeeded AllegraEra = ShelleyScriptsNeeded AllegraEra
+  type ScriptsProvided AllegraEra = ShelleyScriptsProvided AllegraEra
 
   consumed = shelleyConsumed
 
@@ -31,7 +33,9 @@ instance EraUTxO AllegraEra where
   getProducedValue pp isRegPoolId txBody =
     withTopTxLevelOnly txBody (shelleyProducedValue pp isRegPoolId)
 
-  getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
+  getScriptsProvided _ tx = ShelleyScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
+
+  getScriptsProvidedMap = unShelleyScriptsProvided
 
   getScriptsNeeded = getShelleyScriptsNeeded
 

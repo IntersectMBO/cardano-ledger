@@ -17,6 +17,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   zipAsIxItem,
  )
 import Cardano.Ledger.Babbage.UTxO (
+  BabbageScriptsProvided (..),
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
@@ -105,6 +106,7 @@ getProducedDijkstraValue pp isRegPoolId txBody =
 
 instance EraUTxO DijkstraEra where
   type ScriptsNeeded DijkstraEra = AlonzoScriptsNeeded DijkstraEra
+  type ScriptsProvided DijkstraEra = BabbageScriptsProvided DijkstraEra
 
   consumed = conwayConsumed
 
@@ -113,6 +115,8 @@ instance EraUTxO DijkstraEra where
   getProducedValue = getProducedDijkstraValue
 
   getScriptsProvided = getBabbageScriptsProvided
+
+  getScriptsProvidedMap = bspAllScripts
 
   getScriptsNeeded = getDijkstraScriptsNeeded
 

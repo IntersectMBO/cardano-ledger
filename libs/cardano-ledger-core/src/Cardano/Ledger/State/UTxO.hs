@@ -23,7 +23,6 @@ module Cardano.Ledger.State.UTxO (
   -- * Primitives
   UTxO (..),
   EraUTxO (..),
-  ScriptsProvided (..),
 
   -- * Functions
   txins,
@@ -223,26 +222,13 @@ getScriptHash :: Addr -> Maybe ScriptHash
 getScriptHash (Addr _ (ScriptHashObj hs) _) = Just hs
 getScriptHash _ = Nothing
 
--- | The only reason it is a newtype instead of just a Map is becuase for later eras is
--- expensive to compute the actual map, so we want to use the type safety guidance to
--- avoid redundant work.
-newtype ScriptsProvided era = ScriptsProvided
-  { unScriptsProvided :: Map.Map ScriptHash (Script era)
-  }
-  deriving (Generic)
-
-deriving instance (Era era, Eq (Script era)) => Eq (ScriptsProvided era)
-
-deriving instance (Era era, Ord (Script era)) => Ord (ScriptsProvided era)
-
-deriving instance (Era era, Show (Script era)) => Show (ScriptsProvided era)
-
-deriving instance (Era era, NFData (Script era)) => NFData (ScriptsProvided era)
-
 class EraTx era => EraUTxO era where
   -- | A customizable type on per era basis for the information required to find all
   -- scripts needed for the transaction.
   type ScriptsNeeded era = (r :: Type) | r -> era
+
+  -- | A customizable type on per era basis for the scripts provided by a transaction.
+  type ScriptsProvided era = (r :: Type) | r -> era
 
   consumed :: PParams era -> CertState era -> UTxO era -> TxBody t era -> Value era
 
@@ -273,6 +259,9 @@ class EraTx era => EraUTxO era where
     UTxO era ->
     Tx t era ->
     ScriptsProvided era
+
+  -- | Extract the combined map of all provided scripts, regardless of source.
+  getScriptsProvidedMap :: ScriptsProvided era -> Map.Map ScriptHash (Script era)
 
   -- | Produce all the information required for figuring out which scripts are required
   -- for the transaction to be valid, once those scripts are evaluated

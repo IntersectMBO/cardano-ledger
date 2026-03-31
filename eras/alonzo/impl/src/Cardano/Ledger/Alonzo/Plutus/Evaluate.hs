@@ -50,7 +50,7 @@ import Cardano.Ledger.Plutus.Evaluate (
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -168,7 +168,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
 
-    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
+    scriptsProvided = getScriptsProvidedMap $ getScriptsProvided utxo tx
     AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededPlutusScripts =
       mapMaybe (\(sp, sh) -> (,) (sh, sp) <$> lookupPlutusScript sh scriptsProvided) scriptsNeeded
@@ -375,7 +375,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
     rdmrs = wits ^. rdmrsTxWitsL . unRedeemersL
     protVer = pp ^. ppProtocolVersionL
     costModels = costModelsValid $ pp ^. ppCostModelsL
-    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
+    scriptsProvided = getScriptsProvidedMap $ getScriptsProvided utxo tx
     AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo txBody
     findAndCount pointer (redeemerData, exUnits) = do
       (plutusPurpose, plutusScriptHash) <-

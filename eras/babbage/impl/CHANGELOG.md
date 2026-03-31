@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Add `BabbageScriptsProvided` type
+* Add `mkBabbageScriptsProvided`
 * `BabbageTxInfoResult` changed its content type to `PlutusTxInfoResult`
 * Deprecate the use of `GetLedgerView`:
   - Add `BabbageForecast` to deprecate `LedgerView` for Praos.

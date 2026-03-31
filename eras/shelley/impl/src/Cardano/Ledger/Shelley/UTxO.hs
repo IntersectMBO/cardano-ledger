@@ -10,6 +10,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -18,6 +19,7 @@
 module Cardano.Ledger.Shelley.UTxO (
   EraUTxO (..),
   ShelleyScriptsNeeded (..),
+  ShelleyScriptsProvided (..),
   getShelleyScriptsNeeded,
   getConsumedCoin,
   shelleyProducedValue,
@@ -53,7 +55,6 @@ import Cardano.Ledger.State as UTxO (
   CanGetUTxO (..),
   CanSetUTxO (..),
   EraUTxO (..),
-  ScriptsProvided (..),
   UTxO (..),
   areAllAdaOnly,
   getScriptHash,
@@ -70,6 +71,7 @@ import Cardano.Ledger.State as UTxO (
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
+import Control.DeepSeq (NFData)
 import Data.Foldable (Foldable (fold), foldr', toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -170,8 +172,22 @@ getConsumedCoin pp lookupRefund utxo txBody =
 newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set ScriptHash)
   deriving (Eq, Show, Generic)
 
+newtype ShelleyScriptsProvided era = ShelleyScriptsProvided
+  { unShelleyScriptsProvided :: Map.Map ScriptHash (Script era)
+  }
+  deriving (Generic)
+
+deriving instance (Era era, Eq (Script era)) => Eq (ShelleyScriptsProvided era)
+
+deriving instance (Era era, Ord (Script era)) => Ord (ShelleyScriptsProvided era)
+
+deriving instance (Era era, Show (Script era)) => Show (ShelleyScriptsProvided era)
+
+instance (Era era, NFData (Script era)) => NFData (ShelleyScriptsProvided era)
+
 instance EraUTxO ShelleyEra where
   type ScriptsNeeded ShelleyEra = ShelleyScriptsNeeded ShelleyEra
+  type ScriptsProvided ShelleyEra = ShelleyScriptsProvided ShelleyEra
 
   consumed = shelleyConsumed
 
@@ -180,7 +196,9 @@ instance EraUTxO ShelleyEra where
   getProducedValue pp isRegPoolId txBody =
     withTopTxLevelOnly txBody (shelleyProducedValue pp isRegPoolId)
 
-  getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
+  getScriptsProvided _ tx = ShelleyScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
+
+  getScriptsProvidedMap = unShelleyScriptsProvided
 
   getScriptsNeeded = getShelleyScriptsNeeded
 

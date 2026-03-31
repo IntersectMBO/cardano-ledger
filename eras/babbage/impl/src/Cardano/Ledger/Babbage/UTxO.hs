@@ -1,9 +1,14 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage.UTxO (
+  BabbageScriptsProvided (..),
+  mkBabbageScriptsProvided,
   getBabbageSupplementalDataHashes,
   getBabbageSpendingDatum,
   getBabbageScriptsProvided,
@@ -27,17 +32,46 @@ import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo, shelleyConsumed)
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Applicative
+import Control.DeepSeq (NFData)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import GHC.Generics (Generic)
 import Lens.Micro
+
+data BabbageScriptsProvided era = BabbageScriptsProvided
+  { bspWitnessScripts :: !(Map.Map ScriptHash (Script era))
+  , bspReferenceScripts :: !(Map.Map ScriptHash (Script era))
+  , bspAllScripts :: !(Map.Map ScriptHash (Script era)) -- cached union
+  }
+  deriving (Generic)
+
+mkBabbageScriptsProvided ::
+  Map.Map ScriptHash (Script era) ->
+  Map.Map ScriptHash (Script era) ->
+  BabbageScriptsProvided era
+mkBabbageScriptsProvided witnessScripts referenceScripts =
+  BabbageScriptsProvided
+    { bspWitnessScripts = witnessScripts
+    , bspReferenceScripts = referenceScripts
+    , bspAllScripts = referenceScripts `Map.union` witnessScripts
+    }
+
+deriving instance (Era era, Eq (Script era)) => Eq (BabbageScriptsProvided era)
+
+deriving instance (Era era, Ord (Script era)) => Ord (BabbageScriptsProvided era)
+
+deriving instance (Era era, Show (Script era)) => Show (BabbageScriptsProvided era)
+
+instance (Era era, NFData (Script era)) => NFData (BabbageScriptsProvided era)
 
 instance EraUTxO BabbageEra where
   type ScriptsNeeded BabbageEra = AlonzoScriptsNeeded BabbageEra
+  type ScriptsProvided BabbageEra = BabbageScriptsProvided BabbageEra
 
   consumed = shelleyConsumed
 
@@ -47,6 +81,8 @@ instance EraUTxO BabbageEra where
     withTopTxLevelOnly txBody (getProducedMaryValue pp isRegPoolId)
 
   getScriptsProvided = getBabbageScriptsProvided
+
+  getScriptsProvidedMap = bspAllScripts
 
   getScriptsNeeded = getAlonzoScriptsNeeded
   {-# INLINEABLE getScriptsNeeded #-}
@@ -130,12 +166,13 @@ getBabbageScriptsProvided ::
   ) =>
   UTxO era ->
   Tx l era ->
-  ScriptsProvided era
-getBabbageScriptsProvided utxo tx = ScriptsProvided ans
+  BabbageScriptsProvided era
+getBabbageScriptsProvided utxo tx = mkBabbageScriptsProvided witnessScripts referenceScripts
   where
     txBody = tx ^. bodyTxL
     ins = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
-    ans = getReferenceScripts utxo ins `Map.union` (tx ^. witsTxL . scriptTxWitsL)
+    referenceScripts = getReferenceScripts utxo ins
+    witnessScripts = tx ^. witsTxL . scriptTxWitsL
 
 -- | Collect all the reference scripts found in the TxOuts, pointed to by some input.
 getReferenceScripts ::

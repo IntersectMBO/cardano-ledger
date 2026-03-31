@@ -71,7 +71,6 @@ import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.Shelley.UTxO (
   EraUTxO (..),
-  ScriptsProvided (..),
   ShelleyScriptsNeeded (..),
   UTxO,
   verifyWitVKey,
@@ -366,28 +365,29 @@ instance
 
 {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
 validateFailedNativeScripts ::
-  EraTx era => ScriptsProvided era -> Tx l era -> Test (ShelleyUtxowPredFailure era)
-validateFailedNativeScripts (ScriptsProvided scriptsProvided) tx = do
+  EraUTxO era => ScriptsProvided era -> Tx l era -> Test (ShelleyUtxowPredFailure era)
+validateFailedNativeScripts sp tx = do
   let failedScripts =
         Map.filter -- we keep around only non-validating native scripts
           (maybe False (not . validateNativeScript tx) . getNativeScript)
-          scriptsProvided
+          (getScriptsProvidedMap sp)
   failureOnNonEmptySet (Map.keysSet failedScripts) ScriptWitnessNotValidatingUTXOW
 
 {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)    -}
 {-  sNeeded := scriptsNeeded utxo tx                             -}
 {-  sProvided := Map.keysSet (tx ^. witsTxL . scriptTxWitsL)     -}
 validateMissingScripts ::
+  EraUTxO era =>
   ShelleyScriptsNeeded era ->
   ScriptsProvided era ->
   Test (ShelleyUtxowPredFailure era)
-validateMissingScripts (ShelleyScriptsNeeded sNeeded) scriptsprovided =
+validateMissingScripts (ShelleyScriptsNeeded sNeeded) sp =
   sequenceA_
     [ failureOnNonEmptySet (sNeeded `Set.difference` sProvided) MissingScriptWitnessesUTXOW
     , failureOnNonEmptySet (sProvided `Set.difference` sNeeded) ExtraneousScriptWitnessesUTXOW
     ]
   where
-    sProvided = Map.keysSet $ unScriptsProvided scriptsprovided
+    sProvided = Map.keysSet $ getScriptsProvidedMap sp
 
 -- | Determine if the UTxO witnesses in a given transaction are correct.
 validateVerifiedWits :: EraTx era => Tx l era -> Test (ShelleyUtxowPredFailure era)

@@ -1050,7 +1050,7 @@ addNativeScriptTxWits ::
 addNativeScriptTxWits tx = impAnn "addNativeScriptTxWits" $ do
   scriptsRequired <- impNativeScriptsRequired tx
   utxo <- getUTxO
-  let ScriptsProvided provided = getScriptsProvided utxo tx
+  let provided = getScriptsProvidedMap $ getScriptsProvided utxo tx
       scriptsToAdd = scriptsRequired Map.\\ provided
   pure $
     tx

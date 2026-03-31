@@ -63,7 +63,7 @@ import Cardano.Ledger.Shelley.Rules (
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraCertState (..), EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraCertState (..), EraUTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
@@ -224,13 +224,14 @@ babbageMissingScripts _ sNeeded sRefs sReceived =
 
 {-  ∀ s ∈ (txscripts txw utxo ∩ Scriptnative), validateScript s tx   -}
 validateFailedBabbageScripts ::
-  EraTx era =>
+  EraUTxO era =>
   Tx l era ->
   ScriptsProvided era ->
   Set ScriptHash ->
   Test (ShelleyUtxowPredFailure era)
-validateFailedBabbageScripts tx (ScriptsProvided scriptsProvided) neededHashes =
-  let failedScripts =
+validateFailedBabbageScripts tx sp neededHashes =
+  let scriptsProvided = getScriptsProvidedMap sp
+      failedScripts =
         Map.filterWithKey
           ( \scriptHash script ->
               case getNativeScript script of

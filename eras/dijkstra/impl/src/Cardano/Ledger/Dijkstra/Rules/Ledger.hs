@@ -37,6 +37,7 @@ import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
   BabbageUtxowPredFailure,
  )
+import Cardano.Ledger.Babbage.UTxO (BabbageScriptsProvided (..), mkBabbageScriptsProvided)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Relation (..),
@@ -328,6 +329,7 @@ instance
   , ConwayEraGov era
   , DijkstraEraTxBody era
   , EraUTxO era
+  , ScriptsProvided era ~ BabbageScriptsProvided era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
   , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
@@ -387,6 +389,7 @@ dijkstraLedgerTransition ::
   , ConwayEraGov era
   , DijkstraEraTxBody era
   , EraUTxO era
+  , ScriptsProvided era ~ BabbageScriptsProvided era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
   , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
@@ -416,11 +419,11 @@ dijkstraLedgerTransition = do
 
   let utxo = utxosUtxo (ledgerState ^. lsUTxOStateL)
       subTxs = tx ^. bodyTxL . subTransactionsTxBodyL
+      allProvided = getScriptsProvided utxo tx : map (getScriptsProvided utxo) (OMap.elems subTxs)
       scriptsProvided =
-        ScriptsProvided $
-          Map.unions $
-            unScriptsProvided (getScriptsProvided utxo tx)
-              : map (unScriptsProvided . getScriptsProvided utxo) (OMap.elems subTxs)
+        mkBabbageScriptsProvided
+          (Map.unions $ map bspWitnessScripts allProvided)
+          (Map.unions $ map bspReferenceScripts allProvided)
 
   ledgerStateAfterSubledgers <-
     trans @(EraRule "SUBLEDGERS" era) $
@@ -462,6 +465,7 @@ instance
   , ConwayEraPParams era
   , DijkstraEraTxBody era
   , EraPlutusContext era
+  , ScriptsProvided era ~ BabbageScriptsProvided era
   , GovState era ~ ConwayGovState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era

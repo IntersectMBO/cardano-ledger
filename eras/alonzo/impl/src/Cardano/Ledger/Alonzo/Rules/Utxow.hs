@@ -70,7 +70,6 @@ import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.State (
   EraCertState (..),
   EraUTxO (..),
-  ScriptsProvided (..),
   UTxO (..),
   dsGenDelegsL,
  )
@@ -246,15 +245,16 @@ missingRequiredDatums utxo tx = do
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
 hasExactSetOfRedeemers ::
   forall era l.
-  AlonzoEraTx era =>
+  (AlonzoEraTx era, EraUTxO era) =>
   Tx l era ->
   ScriptsProvided era ->
   AlonzoScriptsNeeded era ->
   Test (AlonzoUtxowPredFailure era)
-hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded scriptsNeeded) = do
-  let redeemersNeeded =
-        [ (hoistPlutusPurpose toAsIx sp, (hoistPlutusPurpose toAsItem sp, sh))
-        | (sp, sh) <- scriptsNeeded
+hasExactSetOfRedeemers tx sp (AlonzoScriptsNeeded scriptsNeeded) = do
+  let scriptsProvided = getScriptsProvidedMap sp
+      redeemersNeeded =
+        [ (hoistPlutusPurpose toAsIx sp', (hoistPlutusPurpose toAsItem sp', sh))
+        | (sp', sh) <- scriptsNeeded
         , Just script <- [Map.lookup sh scriptsProvided]
         , not (isNativeScript script)
         ]

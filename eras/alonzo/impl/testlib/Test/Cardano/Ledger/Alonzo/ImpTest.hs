@@ -92,7 +92,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   utxoL,
  )
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..), txouts)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), txouts)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (forM)
 import qualified Data.List.NonEmpty as NonEmpty
@@ -258,7 +258,7 @@ fixupScriptWits ::
 fixupScriptWits tx = impAnn "fixupScriptWits" $ do
   contexts <- impGetPlutusContexts tx
   utxo <- getUTxO
-  let ScriptsProvided provided = getScriptsProvided utxo tx
+  let provided = getScriptsProvidedMap $ getScriptsProvided utxo tx
   let contextsToAdd = filter (\(_, sh, _) -> not (Map.member sh provided)) contexts
   scriptWits <- forM contextsToAdd $ \(_, sh, ScriptTestContext plutus _) ->
     (sh,) . fromPlutusScript <$> mkPlutusScript plutus

@@ -71,7 +71,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateNeededWitnesses,
   validateVerifiedWits,
  )
-import Cardano.Ledger.State (CertState, EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (CertState, EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended

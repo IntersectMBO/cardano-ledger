@@ -28,6 +28,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   zipAsIxItem,
  )
 import Cardano.Ledger.Babbage.UTxO (
+  BabbageScriptsProvided (..),
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
@@ -128,6 +129,7 @@ conwayProducedValue pp isStakePool txBody =
 
 instance EraUTxO ConwayEra where
   type ScriptsNeeded ConwayEra = AlonzoScriptsNeeded ConwayEra
+  type ScriptsProvided ConwayEra = BabbageScriptsProvided ConwayEra
 
   consumed = conwayConsumed
 
@@ -137,6 +139,8 @@ instance EraUTxO ConwayEra where
     withTopTxLevelOnly txBody (conwayProducedValue pp isRegPoolId)
 
   getScriptsProvided = getBabbageScriptsProvided
+
+  getScriptsProvidedMap = bspAllScripts
 
   getScriptsNeeded = getConwayScriptsNeeded
 

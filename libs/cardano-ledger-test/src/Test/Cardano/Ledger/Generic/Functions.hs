@@ -291,7 +291,7 @@ languages ::
   Set Language
 languages tx utxo sNeeded = Map.foldl' accum Set.empty allScripts
   where
-    allScripts = Map.restrictKeys (unScriptsProvided $ getScriptsProvided utxo tx) sNeeded
+    allScripts = Map.restrictKeys (getScriptsProvidedMap $ getScriptsProvided utxo tx) sNeeded
     accum ans script =
       case toPlutusScript script of
         Nothing -> ans
