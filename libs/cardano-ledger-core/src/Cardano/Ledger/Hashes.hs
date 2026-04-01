@@ -176,12 +176,10 @@ newtype KeyHash (r :: KeyRole) = KeyHash
     , FromJSON
     , Default
     , MemPack
+    , Storable
     )
 
 instance HasKeyRole KeyHash
-
--- TODO: switch to regular deriving
-deriving instance Storable (Hash.Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN)) => Storable (KeyHash r)
 
 -- | Hash a given public key
 hashKey :: VKey kd -> KeyHash kd
@@ -213,11 +211,8 @@ newtype ScriptHash
     , ToJSONKey
     , FromJSONKey
     , MemPack
-    -- , Storable
+    , Storable
     )
-
--- TODO: switch to regular deriving
-deriving instance Storable (Hash.Hash ADDRHASH EraIndependentScript) => Storable ScriptHash
 
 --------------------------------------------------------------------------------
 -- VRF Key Hashes

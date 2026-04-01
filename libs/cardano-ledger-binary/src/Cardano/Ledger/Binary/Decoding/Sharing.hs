@@ -38,8 +38,9 @@ import Data.Map.Strict.Internal (Map (..))
 import Data.Primitive.Types (Prim)
 import qualified Data.Set as Set (size)
 import qualified Data.Set.Internal as Set (Set (..))
-import Data.VMap (VB, VMap, VP)
+import Data.VMap (VB, VMap, VP, VS)
 import qualified Data.VMap as VMap
+import Foreign.Storable (Storable)
 import Lens.Micro
 
 -- =======================================
@@ -230,6 +231,12 @@ instance (Ord k, DecCBOR k, DecCBOR v) => DecShareCBOR (VMap VB VB k v) where
 
 instance (Ord k, DecCBOR k, DecCBOR v, Prim v) => DecShareCBOR (VMap VB VP k v) where
   type Share (VMap VB VP k v) = Interns k
+  decShareCBOR kis = do
+    decodeVMap (interns kis <$> decCBOR) decCBOR
+  getShare !m = internsFromVMap m
+
+instance (Ord k, DecCBOR k, DecCBOR v, Storable v) => DecShareCBOR (VMap VB VS k v) where
+  type Share (VMap VB VS k v) = Interns k
   decShareCBOR kis = do
     decodeVMap (interns kis <$> decCBOR) decCBOR
   getShare !m = internsFromVMap m

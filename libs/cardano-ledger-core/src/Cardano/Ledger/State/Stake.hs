@@ -32,7 +32,6 @@ module Cardano.Ledger.State.Stake (
   resolveActiveInstantStakeCredentials,
 ) where
 
-import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Ledger.BaseTypes (
   NonZero (..),
   nonZero,
@@ -51,7 +50,6 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Keys (DSIGN)
 import Cardano.Ledger.State.Account
 import Cardano.Ledger.State.UTxO
 import Control.DeepSeq (NFData)
@@ -63,7 +61,7 @@ import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
-import Data.VMap (VB, VMap, VP)
+import Data.VMap (VB, VMap, VP, VS)
 import qualified Data.VMap as VMap
 import Foreign.Ptr (castPtr)
 import Foreign.Storable (Storable (..))
@@ -127,16 +125,13 @@ instance DecShareCBOR StakeWithDelegation where
   type Share StakeWithDelegation = Interns (Credential Staking)
   decShareCBOR _si = decCBOR
 
-instance
-  Storable (Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN)) =>
-  Storable StakeWithDelegation
-  where
+instance Storable StakeWithDelegation where
   sizeOf _ =
     sizeOf (undefined :: (NonZero (CompactForm Coin)))
-      + sizeOf (undefined :: Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN))
+      + sizeOf (undefined :: KeyHash StakePool)
   alignment _ =
     alignment (undefined :: (NonZero (CompactForm Coin)))
-      + alignment (undefined :: Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN))
+      + alignment (undefined :: KeyHash StakePool)
   poke ptr swd@(StakeWithDelegation _ _) = do
     let StakeWithDelegation {..} = swd
     poke (castPtr ptr) swdStake
@@ -149,14 +144,14 @@ instance
 -- | Active stake: maps staking credentials to their non-zero stake paired with delegation.
 -- Only credentials that are registered, delegated, and have non-zero stake appear here.
 newtype ActiveStake = ActiveStake
-  { unActiveStake :: VMap VB VB (Credential Staking) StakeWithDelegation
+  { unActiveStake :: VMap VB VS (Credential Staking) StakeWithDelegation
   }
   deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR)
 
 instance DecShareCBOR ActiveStake where
   type Share ActiveStake = Interns (Credential Staking)
-  getShare (ActiveStake m) = fst (getShare m)
-  decShareCBOR si = ActiveStake <$> decShareCBOR (si, mempty)
+  getShare (ActiveStake m) = getShare m
+  decShareCBOR si = ActiveStake <$> decShareCBOR si
 
 -- | Sum all active stake. Returns @NonZero Coin@, defaulting to 1 lovelace if empty.
 sumAllActiveStake :: ActiveStake -> NonZero Coin

@@ -28,7 +28,6 @@ module Cardano.Ledger.Credential (
   StakeReference (..),
 ) where
 
-import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashFromTextAsHex, hashToTextAsHex)
 import Cardano.Ledger.BaseTypes (
   CertIx (..),
@@ -50,14 +49,8 @@ import Cardano.Ledger.Binary (
   natVersion,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Hashes (
-  ADDRHASH,
-  EraIndependentScript,
-  Hash,
-  ScriptHash (..),
- )
+import Cardano.Ledger.Hashes (ADDRHASH, Hash, ScriptHash (..))
 import Cardano.Ledger.Keys (
-  DSIGN,
   HasKeyRole (..),
   KeyHash (..),
   KeyRole (..),
@@ -118,14 +111,9 @@ instance Typeable kr => MemPack (Credential kr) where
       n -> unknownTagM @(Credential kr) n
   {-# INLINE unpackM #-}
 
-instance
-  ( Storable (Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN))
-  , Storable (Hash ADDRHASH EraIndependentScript)
-  ) =>
-  Storable (Credential r)
-  where
-  sizeOf _ = sizeOf (undefined :: Hash ADDRHASH EraIndependentScript)
-  alignment _ = alignment (undefined :: Hash ADDRHASH EraIndependentScript)
+instance Storable (Credential r) where
+  sizeOf _ = sizeOf (undefined :: Hash ADDRHASH ())
+  alignment _ = 32 -- ADDRHASH is 28 bytes + 1 byte for the Tag. Next power of 2 is 32
   poke ptr = \case
     ScriptHashObj hash -> do
       poke (castPtr ptr) (0 :: Word8)
