@@ -129,9 +129,7 @@ instance Storable StakeWithDelegation where
   sizeOf _ =
     sizeOf (undefined :: (NonZero (CompactForm Coin)))
       + sizeOf (undefined :: KeyHash StakePool)
-  alignment _ =
-    alignment (undefined :: (NonZero (CompactForm Coin)))
-      + alignment (undefined :: KeyHash StakePool)
+  alignment _ = 64
   poke ptr swd@(StakeWithDelegation _ _) = do
     let StakeWithDelegation {..} = swd
     poke (castPtr ptr) swdStake
