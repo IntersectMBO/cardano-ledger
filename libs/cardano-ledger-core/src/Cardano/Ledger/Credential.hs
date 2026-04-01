@@ -112,7 +112,7 @@ instance Typeable kr => MemPack (Credential kr) where
   {-# INLINE unpackM #-}
 
 instance Storable (Credential r) where
-  sizeOf _ = sizeOf (undefined :: Hash ADDRHASH ())
+  sizeOf _ = 1 + sizeOf (undefined :: Hash ADDRHASH ())
   alignment _ = 32 -- ADDRHASH is 28 bytes + 1 byte for the Tag. Next power of 2 is 32
   poke ptr = \case
     ScriptHashObj hash -> do
