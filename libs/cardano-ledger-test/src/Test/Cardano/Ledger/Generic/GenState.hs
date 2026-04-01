@@ -82,7 +82,6 @@ module Test.Cardano.Ledger.Generic.GenState (
 
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
-  Timelock (..),
   ValidityInterval (..),
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
@@ -742,7 +741,7 @@ genScript tag = case reify @era of
 -- Adds to gsScripts
 genTimelockScript ::
   forall era.
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
+  AllegraEraScript era =>
   GenRS era ScriptHash
 genTimelockScript = do
   vi@(ValidityInterval mBefore mAfter) <- gets gsValidityInterval
@@ -753,7 +752,7 @@ genTimelockScript = do
             elementsT $
               nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
-      nonRecTimelocks :: [GenRS era (Timelock era)]
+      nonRecTimelocks :: [GenRS era (NativeScript era)]
       nonRecTimelocks =
         [ r
         | SJust r <-
