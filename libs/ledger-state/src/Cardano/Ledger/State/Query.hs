@@ -399,9 +399,10 @@ getSnapShotWithSharing ::
   ReaderT SqlBackend m State.SnapShot
 getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
   let internOtherCredentials =
-        interns
-          (foldMap (internsFromVMap . State.unActiveStake . State.ssActiveStake) otherSnapShots)
-          . Keys.coerceKeyRole
+        -- interns
+        --   (foldMap (internsFromVMap . State.unActiveStake . State.ssActiveStake) otherSnapShots)
+        --   . 
+        Keys.coerceKeyRole
   let internOtherPoolParams =
         interns (foldMap (internsFromVMap . State.ssStakePoolsSnapShot) otherSnapShots)
           . Keys.coerceKeyRole
