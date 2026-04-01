@@ -51,64 +51,17 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data ConwayAccountState era
-  = CASNoDelegation
-      -- | Current balance of the account
-      {-# UNPACK #-} !(CompactForm Coin)
-      -- | Deposit amount that was left when staking credential was registered
-      {-# UNPACK #-} !(CompactForm Coin)
-  | CASStakePool
-      -- | Current balance of the account
-      {-# UNPACK #-} !(CompactForm Coin)
-      -- | Deposit amount that was left when staking credential was registered
-      {-# UNPACK #-} !(CompactForm Coin)
-      -- | Delegation to a stake pool
-      !(KeyHash StakePool)
-  | CASDRep
-      -- | Current balance of the account
-      {-# UNPACK #-} !(CompactForm Coin)
-      -- | Deposit amount that was left when staking credential was registered
-      {-# UNPACK #-} !(CompactForm Coin)
-      -- | Delegation to a DRep
-      !DRep
-  | CASStakePoolAndDRep
-      -- | Current balance of the account
-      {-# UNPACK #-} !(CompactForm Coin)
-      {-# UNPACK #-} !(CompactForm Coin)
-      -- | Delegation to a stake pool
-      -- ^ Deposit amount that was left when staking credential was registered
-      !(KeyHash StakePool)
-      -- | Delegation to a DRep
-      !DRep
+  = ConwayAccountState
+  { casBalance :: {-# UNPACK #-} !(CompactForm Coin)
+  -- ^ Current balance of the account
+  , casDeposit :: {-# UNPACK #-} !(CompactForm Coin)
+  -- ^ Deposit amount that was left when staking credential was registered
+  , casStakePoolDelegation :: !(StrictMaybe (KeyHash StakePool))
+  -- ^ Potential delegation to a stake pool
+  , casDRepDelegation :: !(StrictMaybe DRep)
+  -- ^ Potential delegation to a DRep
+  }
   deriving (Show, Eq, Generic)
-
-viewConwayAccountState ::
-  ConwayAccountState era ->
-  (CompactForm Coin, CompactForm Coin, StrictMaybe (KeyHash StakePool), StrictMaybe DRep)
-viewConwayAccountState (CASNoDelegation x y) = (x, y, SNothing, SNothing)
-viewConwayAccountState (CASStakePool x y z) = (x, y, SJust z, SNothing)
-viewConwayAccountState (CASDRep x y w) = (x, y, SNothing, SJust w)
-viewConwayAccountState (CASStakePoolAndDRep x y z w) = (x, y, SJust z, SJust w)
-
-pattern ConwayAccountState ::
-  CompactForm Coin ->
-  CompactForm Coin ->
-  StrictMaybe (KeyHash StakePool) ->
-  StrictMaybe DRep ->
-  ConwayAccountState era
-pattern ConwayAccountState
-  { casBalance
-  , casDeposit
-  , casStakePoolDelegation
-  , casDRepDelegation
-  } <-
-  (viewConwayAccountState -> (casBalance, casDeposit, casStakePoolDelegation, casDRepDelegation))
-  where
-    ConwayAccountState x y SNothing SNothing = CASNoDelegation x y
-    ConwayAccountState x y (SJust z) SNothing = CASStakePool x y z
-    ConwayAccountState x y SNothing (SJust w) = CASDRep x y w
-    ConwayAccountState x y (SJust z) (SJust w) = CASStakePoolAndDRep x y z w
-
-{-# COMPLETE ConwayAccountState #-}
 
 instance NoThunks (ConwayAccountState era)
 
