@@ -32,6 +32,7 @@
   - `DijkstraUtxoPredFailure`
   - `DijkstraUtxowPredFailure`
 * Remove `NoThunks` instance for `DijkstraContextError`
+* Make `DijkstraContextError` constructors lazy
 
 ## 0.2.0.0
 

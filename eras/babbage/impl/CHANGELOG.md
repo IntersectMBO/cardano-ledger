@@ -16,6 +16,7 @@
   - `BabbageUtxoPredFailure`
   - `BabbageUtxowPredFailure`
 * Remove `NoThunks` instance for `BabbageContextError`
+* Make `BabbageContextError` constructors lazy
 
 ## 1.13.0.0
 

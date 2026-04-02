@@ -86,10 +86,10 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
 data DijkstraContextError era
-  = ConwayContextError !(ConwayContextError era)
-  | PointerPresentInOutput !(NonEmpty (TxOut era))
+  = ConwayContextError (ConwayContextError era)
+  | PointerPresentInOutput (NonEmpty (TxOut era))
   | -- | Attempt to use PlutusV1-V3 in a sub-transaction will result in this failure
-    SubTxIsNotSupported !TxId
+    SubTxIsNotSupported TxId
   deriving (Generic)
 
 deriving instance
