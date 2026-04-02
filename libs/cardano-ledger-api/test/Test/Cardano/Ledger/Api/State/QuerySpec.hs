@@ -67,6 +67,10 @@ latestErasSpec =
       describe "Roundtrip" $ do
         prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
         prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
+        prop "QueryResultCommitteeMemberState" $
+          roundTripEraExpectation @era @QueryResultCommitteeMemberState
+        prop "QueryResultCommitteeMembersState" $
+          roundTripEraExpectation @era @QueryResultCommitteeMembersState
       describe "Queries" $ do
         committeeMembersStateSpec @era
         queryStakeSnapshotsSpec @era
@@ -80,7 +84,7 @@ committeeMembersStateSpec ::
   ) =>
   Spec
 committeeMembersStateSpec =
-  prop "GetCommitteeMembersState" $ \statusFilter -> do
+  prop "GetQueryResultCommitteeMembersState" $ \statusFilter -> do
     forAll genCommittee $ \committee ->
       -- half of the committee members in the next epoch will overlap with the current ones
       forAll (genNextCommittee @era committee) $ \nextCommittee ->
@@ -121,7 +125,7 @@ propEmpty ::
 propEmpty nes = do
   withCommitteeInfo nes $
     \comMembers (CommitteeState comStateMembers) nextComMembers noFilterResult -> do
-      Map.null (csCommittee noFilterResult)
+      Map.null (qrcmsCommittee noFilterResult)
         `shouldBe` (Map.null comMembers && Map.null comStateMembers && Map.null nextComMembers)
 
 propComplete ::
@@ -135,7 +139,7 @@ propComplete nes = do
       -- if a credential appears in either Committee or CommitteeState, it should appear
       -- in the result
       Set.unions [Map.keysSet comMembers, Map.keysSet nextComMembers, Map.keysSet comStateMembers]
-        `shouldBe` Map.keysSet (csCommittee noFilterResult)
+        `shouldBe` Map.keysSet (qrcmsCommittee noFilterResult)
 
 propNotAuthorized ::
   forall era.
@@ -148,10 +152,10 @@ propNotAuthorized nes = do
       let notAuthorized =
             Map.filter
               ( \case
-                  CommitteeMemberState MemberNotAuthorized _ _ _ -> True
+                  QueryResultCommitteeMemberState MemberNotAuthorized _ _ _ -> True
                   _ -> False
               )
-              (csCommittee noFilterResult)
+              (qrcmsCommittee noFilterResult)
       -- if the member is NotAuthorized, it should not have an associated hot credential in the committeeState
       Map.intersection comStateMembers notAuthorized `shouldBe` Map.empty
 
@@ -165,7 +169,8 @@ propAuthorized nes = do
     \_ (CommitteeState comStateMembers) _ noFilterResult -> do
       let ckHk =
             [ (ck, hk)
-            | (ck, CommitteeMemberState (MemberAuthorized hk) _ _ _) <- Map.toList (csCommittee noFilterResult)
+            | (ck, QueryResultCommitteeMemberState (MemberAuthorized hk) _ _ _) <-
+                Map.toList (qrcmsCommittee noFilterResult)
             ]
       -- if the member is Authorized, it should appear in the committeeState
       ckHk `shouldBe` [(ck, hk) | (ck, CommitteeHotCredential hk) <- Map.toList comStateMembers]
@@ -180,7 +185,8 @@ propResigned nes = do
     \_ (CommitteeState comStateMembers) _ noFilterResult -> do
       let resigned =
             [ ck
-            | (ck, CommitteeMemberState (MemberResigned _) _ _ _) <- Map.toList (csCommittee noFilterResult)
+            | (ck, QueryResultCommitteeMemberState (MemberResigned _) _ _ _) <-
+                Map.toList (qrcmsCommittee noFilterResult)
             ]
       -- if the member is Resignd, it should appear in the committeeState as Nothing
       resigned `shouldBe` [ck | (ck, CommitteeMemberResigned _) <- Map.toList comStateMembers]
@@ -196,10 +202,10 @@ propUnrecognized nes = do
       let unrecognized =
             Map.filter
               ( \case
-                  CommitteeMemberState _ Unrecognized _ _ -> True
+                  QueryResultCommitteeMemberState _ Unrecognized _ _ -> True
                   _ -> False
               )
-              (csCommittee noFilterResult)
+              (qrcmsCommittee noFilterResult)
       let nextComMembers = Map.keysSet nextComMembers'
       -- if the member is Unrecognized, it should not be in the committe, but it should be
       -- in the committeeState or in the nextCommittee
@@ -207,11 +213,11 @@ propUnrecognized nes = do
       Map.keysSet unrecognized
         `shouldSatisfy` (`Set.isSubsetOf` (Map.keysSet comStateMembers `Set.union` nextComMembers))
       -- all Unrecognized members will be either enacted or removed in the next epoch
-      Set.fromList (cmsNextEpochChange <$> Map.elems unrecognized)
+      Set.fromList (qrcmsNextEpochChange <$> Map.elems unrecognized)
         `shouldSatisfy` (`Set.isSubsetOf` Set.fromList [ToBeEnacted, ToBeRemoved])
-      Map.keysSet (Map.filter (\x -> cmsNextEpochChange x == ToBeEnacted) unrecognized)
+      Map.keysSet (Map.filter (\x -> qrcmsNextEpochChange x == ToBeEnacted) unrecognized)
         `shouldSatisfy` (`Set.isSubsetOf` nextComMembers)
-      Map.keysSet (Map.filter (\x -> cmsNextEpochChange x == ToBeRemoved) unrecognized)
+      Map.keysSet (Map.filter (\x -> qrcmsNextEpochChange x == ToBeRemoved) unrecognized)
         `shouldSatisfy` (\s -> Set.null s || not (s `Set.isSubsetOf` nextComMembers))
 
 propActiveAuthorized ::
@@ -225,10 +231,10 @@ propActiveAuthorized nes = do
       let activeAuthorized =
             Map.mapMaybe
               ( \case
-                  CommitteeMemberState (MemberAuthorized hk) Active _ _ -> Just hk
+                  QueryResultCommitteeMemberState (MemberAuthorized hk) Active _ _ -> Just hk
                   _ -> Nothing
               )
-              (csCommittee noFilterResult)
+              (qrcmsCommittee noFilterResult)
       let epochNo = nes ^. nesELL
 
       -- if a member is active and authorized, then it should be:
@@ -247,7 +253,7 @@ propActiveAuthorized nes = do
               _ -> False
           )
 
-      csEpochNo noFilterResult `shouldBe` epochNo
+      qrcmsEpochNo noFilterResult `shouldBe` epochNo
 
 propFilters ::
   forall era.
@@ -258,13 +264,13 @@ propFilters ::
   NewEpochState era ->
   Expectation
 propFilters ckFilter hkFilter statusFilter nes = do
-  let (CommitteeMembersState result _ _) = queryCommitteeMembersState @era ckFilter hkFilter statusFilter nes
+  let (QueryResultCommitteeMembersState result _ _) = queryCommitteeMembersState @era ckFilter hkFilter statusFilter nes
   let allCks = Map.keysSet result
   let (allHks, allMemberStatuses) =
         foldMap'
           ( \case
-              CommitteeMemberState (MemberAuthorized hk) ms _ _ -> (Set.singleton hk, Set.singleton ms)
-              CommitteeMemberState _ ms _ _ -> (Set.empty, Set.singleton ms)
+              QueryResultCommitteeMemberState (MemberAuthorized hk) ms _ _ -> (Set.singleton hk, Set.singleton ms)
+              QueryResultCommitteeMemberState _ ms _ _ -> (Set.empty, Set.singleton ms)
           )
           result
   unless (Set.null ckFilter) $
@@ -300,7 +306,7 @@ propNextEpoch nes = do
         ]
         `shouldSatisfy` (== (comMembers `Set.intersection` nextComMembers))
 
-      let currentEpoch = csEpochNo noFilterResult
+      let currentEpoch = qrcmsEpochNo noFilterResult
       let expiring =
             Map.keysSet $
               Map.union
@@ -311,25 +317,25 @@ propNextEpoch nes = do
       Map.keysSet (filterNext ToBeExpired noFilterResult)
         `shouldSatisfy` (`Set.isSubsetOf` expiring)
 
-      cmsExpiration
+      qrcmsExpiration
         <$> filterNext NoChangeExpected noFilterResult
           `shouldSatisfy` all (all (>= currentEpoch + 1))
   where
     filterNext nextEpochChange cms =
       Map.filter
         ( \case
-            CommitteeMemberState _ _ _ nextEpochChange' ->
+            QueryResultCommitteeMemberState _ _ _ nextEpochChange' ->
               nextEpochChange == nextEpochChange'
         )
-        (csCommittee cms)
+        (qrcmsCommittee cms)
     termAdjusted cms =
       Map.mapMaybeWithKey
         ( \k cm ->
             case cm of
-              CommitteeMemberState _ _ _ (TermAdjusted _) -> Just k
+              QueryResultCommitteeMemberState _ _ _ (TermAdjusted _) -> Just k
               _ -> Nothing
         )
-        (csCommittee cms)
+        (qrcmsCommittee cms)
 
 propNoExpiration ::
   forall era.
@@ -339,10 +345,10 @@ propNoExpiration ::
 propNoExpiration nes =
   withCommitteeInfo nes $
     \_ _ _ noFilterResult -> do
-      let noExpiration = Map.filter (isNothing . cmsExpiration) (csCommittee noFilterResult)
+      let noExpiration = Map.filter (isNothing . qrcmsExpiration) (qrcmsCommittee noFilterResult)
       unless (Map.null noExpiration) $
         -- only Unrecognized members should have no expiration
-        Set.fromList (cmsStatus <$> Map.elems noExpiration) `shouldBe` Set.singleton Unrecognized
+        Set.fromList (qrcmsStatus <$> Map.elems noExpiration) `shouldBe` Set.singleton Unrecognized
 
 genCommittee ::
   forall era.
@@ -415,7 +421,7 @@ withCommitteeInfo ::
   ( Map.Map (Credential ColdCommitteeRole) EpochNo -> -- current committee members
     CommitteeState era ->
     Map.Map (Credential ColdCommitteeRole) EpochNo -> -- next epoch committee members
-    CommitteeMembersState ->
+    QueryResultCommitteeMembersState ->
     Expectation
   ) ->
   Expectation
@@ -446,7 +452,7 @@ queryCommitteeMembersStateNoFilters ::
   forall era.
   (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
-  CommitteeMembersState
+  QueryResultCommitteeMembersState
 queryCommitteeMembersStateNoFilters =
   queryCommitteeMembersState @era
     Set.empty

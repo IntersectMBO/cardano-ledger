@@ -4,17 +4,19 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Api.State.Query.CommitteeMembersState (
-  CommitteeMemberState (..),
-  CommitteeMembersState (..),
+module Cardano.Ledger.Api.State.Query.Governance (
+  -- * Committee members state
+  QueryResultCommitteeMemberState (..),
+  QueryResultCommitteeMembersState (..),
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
+
+  -- * Deprecated
+  CommitteeMemberState,
+  CommitteeMembersState,
 ) where
 
 import Cardano.Ledger.BaseTypes (Anchor, KeyValuePairs (..), ToKeyValuePairs (..), UnitInterval)
@@ -28,12 +30,14 @@ import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Slot (EpochNo (..))
+import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks)
 
 data MemberStatus
-  = -- Votes of this member will count during ratification
+  = -- | Votes of this member will count during ratification
     Active
   | Expired
   | -- | This can happen when a hot credential for an unknown cold credential exists.
@@ -41,6 +45,10 @@ data MemberStatus
     -- epoch boundary or enacted as a new member.
     Unrecognized
   deriving (Show, Eq, Enum, Bounded, Generic, Ord, ToJSON)
+
+instance NFData MemberStatus
+
+instance NoThunks MemberStatus
 
 instance EncCBOR MemberStatus where
   encCBOR = encodeEnum
@@ -54,6 +62,10 @@ data HotCredAuthStatus
     MemberNotAuthorized
   | MemberResigned (Maybe Anchor)
   deriving (Show, Eq, Generic, Ord, ToJSON)
+
+instance NFData HotCredAuthStatus
+
+instance NoThunks HotCredAuthStatus
 
 instance EncCBOR HotCredAuthStatus where
   encCBOR =
@@ -80,6 +92,10 @@ data NextEpochChange
   | TermAdjusted EpochNo
   deriving (Show, Eq, Generic, Ord, ToJSON)
 
+instance NFData NextEpochChange
+
+instance NoThunks NextEpochChange
+
 instance EncCBOR NextEpochChange where
   encCBOR =
     encode . \case
@@ -99,78 +115,93 @@ instance DecCBOR NextEpochChange where
       4 -> SumD TermAdjusted <! From
       k -> Invalid k
 
-data CommitteeMemberState = CommitteeMemberState
-  { cmsHotCredAuthStatus :: !HotCredAuthStatus
-  , cmsStatus :: !MemberStatus
-  , cmsExpiration :: !(Maybe EpochNo)
+-- | Per-member committee state including authorization, member status, and expiration.
+data QueryResultCommitteeMemberState = QueryResultCommitteeMemberState
+  { qrcmsHotCredAuthStatus :: !HotCredAuthStatus
+  , qrcmsStatus :: !MemberStatus
+  , qrcmsExpiration :: !(Maybe EpochNo)
   -- ^ Absolute epoch number when the member expires
-  , cmsNextEpochChange :: !NextEpochChange
+  , qrcmsNextEpochChange :: !NextEpochChange
   -- ^ Changes to the member at the next epoch
   }
   deriving (Show, Eq, Generic)
-  deriving (ToJSON) via KeyValuePairs CommitteeMemberState
+  deriving (ToJSON) via KeyValuePairs QueryResultCommitteeMemberState
 
-deriving instance Ord CommitteeMemberState
+deriving instance Ord QueryResultCommitteeMemberState
 
-instance EncCBOR CommitteeMemberState where
-  encCBOR (CommitteeMemberState cStatus mStatus ex nec) =
+instance NFData QueryResultCommitteeMemberState
+
+instance NoThunks QueryResultCommitteeMemberState
+
+instance EncCBOR QueryResultCommitteeMemberState where
+  encCBOR (QueryResultCommitteeMemberState hotCredAuth status expiration nextEpoch) =
     encode $
-      Rec CommitteeMemberState
-        !> To cStatus
-        !> To mStatus
-        !> To ex
-        !> To nec
+      Rec QueryResultCommitteeMemberState
+        !> To hotCredAuth
+        !> To status
+        !> To expiration
+        !> To nextEpoch
 
-instance DecCBOR CommitteeMemberState where
+instance DecCBOR QueryResultCommitteeMemberState where
   decCBOR =
     decode $
-      RecD CommitteeMemberState
+      RecD QueryResultCommitteeMemberState
         <! From
         <! From
         <! From
         <! From
 
-instance ToKeyValuePairs CommitteeMemberState where
-  toKeyValuePairs c@(CommitteeMemberState _ _ _ _) =
-    let CommitteeMemberState {..} = c
-     in [ "hotCredsAuthStatus" .= cmsHotCredAuthStatus
-        , "status" .= cmsStatus
-        , "expiration" .= cmsExpiration
-        , "nextEpochChange" .= cmsNextEpochChange
-        ]
+instance ToKeyValuePairs QueryResultCommitteeMemberState where
+  toKeyValuePairs (QueryResultCommitteeMemberState hotCredAuth status expiration nextEpoch) =
+    [ "hotCredsAuthStatus" .= hotCredAuth
+    , "status" .= status
+    , "expiration" .= expiration
+    , "nextEpochChange" .= nextEpoch
+    ]
 
-data CommitteeMembersState = CommitteeMembersState
-  { csCommittee :: !(Map (Credential ColdCommitteeRole) CommitteeMemberState)
-  , csThreshold :: !(Maybe UnitInterval)
-  , csEpochNo :: !EpochNo
+type CommitteeMemberState = QueryResultCommitteeMemberState
+
+{-# DEPRECATED CommitteeMemberState "Use QueryResultCommitteeMemberState instead" #-}
+
+-- | Committee members state with the committee map, threshold, and current epoch.
+data QueryResultCommitteeMembersState = QueryResultCommitteeMembersState
+  { qrcmsCommittee :: !(Map (Credential ColdCommitteeRole) QueryResultCommitteeMemberState)
+  , qrcmsThreshold :: !(Maybe UnitInterval)
+  , qrcmsEpochNo :: !EpochNo
   -- ^ Current epoch number. This is necessary to interpret committee member states
   }
   deriving (Eq, Show, Generic)
-  deriving (ToJSON) via KeyValuePairs CommitteeMembersState
+  deriving (ToJSON) via KeyValuePairs QueryResultCommitteeMembersState
 
-deriving instance Ord CommitteeMembersState
+deriving instance Ord QueryResultCommitteeMembersState
 
-instance EncCBOR CommitteeMembersState where
-  encCBOR c@(CommitteeMembersState _ _ _) =
-    let CommitteeMembersState {..} = c
-     in encode $
-          Rec CommitteeMembersState
-            !> To csCommittee
-            !> To csThreshold
-            !> To csEpochNo
+instance NFData QueryResultCommitteeMembersState
 
-instance DecCBOR CommitteeMembersState where
+instance NoThunks QueryResultCommitteeMembersState
+
+instance EncCBOR QueryResultCommitteeMembersState where
+  encCBOR (QueryResultCommitteeMembersState committee threshold epoch) =
+    encode $
+      Rec QueryResultCommitteeMembersState
+        !> To committee
+        !> To threshold
+        !> To epoch
+
+instance DecCBOR QueryResultCommitteeMembersState where
   decCBOR =
     decode $
-      RecD CommitteeMembersState
+      RecD QueryResultCommitteeMembersState
         <! From
         <! From
         <! From
 
-instance ToKeyValuePairs CommitteeMembersState where
-  toKeyValuePairs c@(CommitteeMembersState _ _ _) =
-    let CommitteeMembersState {..} = c
-     in [ "committee" .= csCommittee
-        , "threshold" .= csThreshold
-        , "epoch" .= csEpochNo
-        ]
+instance ToKeyValuePairs QueryResultCommitteeMembersState where
+  toKeyValuePairs (QueryResultCommitteeMembersState committee threshold epoch) =
+    [ "committee" .= committee
+    , "threshold" .= threshold
+    , "epoch" .= epoch
+    ]
+
+type CommitteeMembersState = QueryResultCommitteeMembersState
+
+{-# DEPRECATED CommitteeMembersState "Use QueryResultCommitteeMembersState instead" #-}

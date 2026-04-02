@@ -45,11 +45,9 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetChainAccountState@
   module Cardano.Ledger.Api.State.Query.Epoch,
-  CommitteeMemberState (..),
-  CommitteeMembersState (..),
-  HotCredAuthStatus (..),
-  MemberStatus (..),
-  NextEpochChange (..),
+
+  -- * Committee types
+  module Cardano.Ledger.Api.State.Query.Governance,
 
   -- * @GetCurrentPParams@ / @GetFuturePParams@
   module Cardano.Ledger.Api.State.Query.PParams,
@@ -79,14 +77,8 @@ module Cardano.Ledger.Api.State.Query (
   getNextEpochCommitteeMembers,
 ) where
 
-import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
-  CommitteeMemberState (..),
-  CommitteeMembersState (..),
-  HotCredAuthStatus (..),
-  MemberStatus (..),
-  NextEpochChange (..),
- )
 import Cardano.Ledger.Api.State.Query.Epoch
+import Cardano.Ledger.Api.State.Query.Governance
 import Cardano.Ledger.Api.State.Query.PParams
 import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, ProtVer (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary
@@ -286,7 +278,7 @@ queryCommitteeMembersState ::
   -- (useful, for discovering, for example, only active members)
   Set MemberStatus ->
   NewEpochState era ->
-  CommitteeMembersState
+  QueryResultCommitteeMembersState
 queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
   let
     committee = queryGovState nes ^. committeeGovStateL
@@ -326,7 +318,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
 
     mkMaybeMemberState ::
       Credential ColdCommitteeRole ->
-      Maybe CommitteeMemberState
+      Maybe QueryResultCommitteeMemberState
     mkMaybeMemberState coldCred = do
       let mbExpiry = Map.lookup coldCred comMembers
       let status = case mbExpiry of
@@ -340,7 +332,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
               Nothing -> MemberNotAuthorized
               Just (CommitteeMemberResigned anchor) -> MemberResigned (strictMaybeToMaybe anchor)
               Just (CommitteeHotCredential hk) -> MemberAuthorized hk
-      pure $ CommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
+      pure $ QueryResultCommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
 
     nextEpochChange :: Credential ColdCommitteeRole -> NextEpochChange
     nextEpochChange ck
@@ -363,10 +355,10 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
         expiringCurrent = lookupCurrent == Just currentEpoch
         expiringNext = lookupNext == Just currentEpoch
    in
-    CommitteeMembersState
-      { csCommittee = cms
-      , csThreshold = strictMaybeToMaybe $ (^. committeeThresholdL) <$> committee
-      , csEpochNo = currentEpoch
+    QueryResultCommitteeMembersState
+      { qrcmsCommittee = cms
+      , qrcmsThreshold = strictMaybeToMaybe $ (^. committeeThresholdL) <$> committee
+      , qrcmsEpochNo = currentEpoch
       }
 
 getNextEpochCommitteeMembers ::

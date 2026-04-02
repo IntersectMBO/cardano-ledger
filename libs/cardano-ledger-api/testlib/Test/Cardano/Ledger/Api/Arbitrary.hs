@@ -10,6 +10,18 @@ import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 instance Arbitrary MemberStatus where
   arbitrary = arbitraryBoundedEnum
 
+instance Arbitrary HotCredAuthStatus where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary NextEpochChange where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary QueryResultCommitteeMemberState where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary QueryResultCommitteeMembersState where
+  arbitrary = genericArbitraryU
+
 instance Arbitrary QueryPoolStateResult where
   arbitrary = QueryPoolStateResult <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 

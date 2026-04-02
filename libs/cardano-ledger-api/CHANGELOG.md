@@ -5,6 +5,9 @@
 * Refactor `Query` into sub-modules for consolidation.
   - `Query.Pool` - stake-pool queries and stake distribution
   - `Query.Epoch` - chain account state
+  - `Query.Governance` - governance, constitution, committee, and drep queries
+    + Rename `Query.CommitteeMembersState` module to `Query.Governance`.
+    + Add `QueryResultCommitteeMemberState` and `QueryResultCommitteeMembersState` stable query types and deprecate old ones.
 
 ## 1.13.0.0
 
@@ -34,6 +37,7 @@
 
 ### `testlib`
 
+* Add `CBOR` round-trip tests for `QueryResultCommittee*` types.
 * Remove the `State.Query` module and `getFilteredDelegationsAndRewardAccounts` function.
 
 ## 1.12.1.0
