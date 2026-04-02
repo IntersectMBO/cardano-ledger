@@ -59,10 +59,12 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
   ConwayUTXOS,
   ConwayUtxoPredFailure,
+  ConwayUtxosEnv (..),
   ConwayUtxosPredFailure (..),
   allegraToConwayUtxoPredFailure,
   alonzoToConwayUtxoPredFailure,
   babbageToConwayUtxoPredFailure,
+  updateTreasuryDonation,
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (StakeReference (..))
@@ -248,8 +250,8 @@ dijkstraUtxoTransition ::
   forall era.
   ( EraUTxO era
   , EraCertState era
-  , BabbageEraTxBody era
   , AlonzoEraTx era
+  , ConwayEraTxBody era
   , EraStake era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
@@ -263,8 +265,8 @@ dijkstraUtxoTransition ::
   , STS (EraRule "UTXO" era)
   , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
   , -- In this function we we call the UTXOS rule, so we need some assumptions
-    Environment (EraRule "UTXOS" era) ~ PParams era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+    Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   ) =>
@@ -273,8 +275,13 @@ dijkstraUtxoTransition = do
   TRC (UtxoEnv _ pp certState, utxos, tx) <- judgmentContext
   babbageUtxoValidation
   validateNoPtrInCollateralReturn $ tx ^. bodyTxL
-  updatedUtxos <- trans @(EraRule "UTXOS" era) $ TRC (pp, utxos, tx)
-  updateUTxOStateByTxValidity pp certState (utxosGovState utxos) tx updatedUtxos
+  () <- trans @(EraRule "UTXOS" era) $ TRC (ConwayUtxosEnv pp (utxosUtxo utxos), (), tx)
+  updateUTxOStateByTxValidity
+    pp
+    certState
+    (utxosGovState utxos)
+    tx
+    (updateTreasuryDonation tx utxos)
 
 instance
   forall era.
@@ -297,8 +304,8 @@ instance
   , STS (EraRule "UTXO" era)
   , -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (DijkstraUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ PParams era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , EraCertState era
   , EraRule "UTXO" era ~ DijkstraUTXO era

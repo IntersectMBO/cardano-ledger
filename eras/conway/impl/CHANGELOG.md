@@ -2,6 +2,9 @@
 
 ## 1.22.0.0
 
+* Add `ConwayUtxosEnv`
+* Change `STS` instance of `ConwayUTXOS`: use `ConwayUtxosEnv` as `Environment` and `()` as `State`
+* Add `updateTreasuryDonation`
 * Add `checkReferenceInputsNotDisjointFromInputs`
 * Add `ConwayEraScript` superclass to `ConwayEraPlutusTxInfo`
 * Change `transPlutusPurposeV1V2` to work only with `ScriptPurpose` for any era and change it from `AsItem` to `AsIxItem`.
