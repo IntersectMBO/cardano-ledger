@@ -49,3 +49,12 @@ instance Arbitrary QueryResultCommitteeMembersState where
 
 instance Arbitrary DefaultVote where
   arbitrary = elements [DefaultNo, DefaultAbstain, DefaultNoConfidence]
+
+instance Arbitrary QueryResultConstitution where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary QueryResultDRepState where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary QueryResultDRepStates where
+  arbitrary = genericArbitraryU

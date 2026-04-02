@@ -15,6 +15,8 @@ import Cardano.Ledger.Api.State.Query (
   NextEpochChange (..),
   QueryResultCommitteeMemberState (..),
   QueryResultCommitteeMembersState (..),
+  QueryResultDRepState (..),
+  QueryResultDRepStates (..),
   queryCommitteeMembersState,
   queryDRepDelegations,
   queryDRepState,
@@ -51,9 +53,9 @@ spec = withEachEraVersion @era $ do
             (HasCallStack, Monad m) =>
             Credential DRepRole ->
             NewEpochState era ->
-            m DRepState
+            m QueryResultDRepState
           drepStateFromQuery drep nes =
-            case Map.lookup drep (queryDRepState nes mempty) of
+            case Map.lookup drep (qrdrssStates (queryDRepState nes mempty)) of
               Nothing -> error $ "Expected for DRep " ++ show drep ++ " to be present in the query result"
               Just state -> pure state
       it "simple expiry" $ do
@@ -63,7 +65,7 @@ spec = withEachEraVersion @era $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
         drepState <- drepStateFromQuery drep nes
-        drepState ^. drepExpiryL `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
+        qrdrsExpiry drepState `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
         let n = 4
         passNEpochsChecking n $
           isDRepExpired drep `shouldReturn` False
@@ -96,7 +98,7 @@ spec = withEachEraVersion @era $ do
 
         expectedExpiry >>= expectDRepExpiry drep
         drepState <- drepStateFromQuery drep nes
-        expectedExpiry >>= shouldBe (drepState ^. drepExpiryL)
+        expectedExpiry >>= shouldBe (qrdrsExpiry drepState)
 
       it "proposals are made and numDormantEpochs are added" $ do
         curEpochNo <- getsNES nesELL
@@ -105,7 +107,7 @@ spec = withEachEraVersion @era $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
         drepState <- drepStateFromQuery drep nes
-        drepState ^. drepExpiryL `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
+        qrdrsExpiry drepState `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
         let n = 2
             actualExpiry = addEpochInterval curEpochNo $ EpochInterval (drepActivity + fromIntegral n)
         passNEpochsChecking n $
@@ -116,7 +118,7 @@ spec = withEachEraVersion @era $ do
         expectDRepExpiry drep actualExpiry
         nes1 <- getsNES id
         drepState1 <- drepStateFromQuery drep nes1
-        drepState1 ^. drepExpiryL `shouldBe` actualExpiry
+        qrdrsExpiry drepState1 `shouldBe` actualExpiry
         passNEpochsChecking (fromIntegral drepActivity) $
           isDRepExpired drep `shouldReturn` False
         passEpoch
@@ -128,7 +130,7 @@ spec = withEachEraVersion @era $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
         drepState <- drepStateFromQuery drep nes
-        drepState ^. drepExpiryL `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
+        qrdrsExpiry drepState `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
         let n = 3
         passNEpochsChecking n $
           isDRepExpired drep `shouldReturn` False
@@ -145,11 +147,10 @@ spec = withEachEraVersion @era $ do
         expectNumDormantEpochs $ EpochNo (fromIntegral n)
         nes1 <- getsNES id
         drepState1 <- drepStateFromQuery drep nes1
-        drepState1
-          ^. drepExpiryL
-            `shouldBe` addEpochInterval
-              curEpochNo
-              (EpochInterval (drepActivity + fromIntegral n))
+        qrdrsExpiry drepState1
+          `shouldBe` addEpochInterval
+            curEpochNo
+            (EpochInterval (drepActivity + fromIntegral n))
         expectDRepExpiry drep $ addEpochInterval curEpochNo $ EpochInterval drepActivity
         passEpoch
         expectNumDormantEpochs $ EpochNo (fromIntegral n + 1)
@@ -158,7 +159,7 @@ spec = withEachEraVersion @era $ do
         nes2 <- getsNES id
         drepState2 <- drepStateFromQuery drep nes2
         let drepExpiry2 = addEpochInterval curEpochNo $ EpochInterval (drepActivity + fromIntegral n + 1)
-        drepState2 ^. drepExpiryL `shouldBe` drepExpiry2
+        qrdrsExpiry drepState2 `shouldBe` drepExpiry2
         expectActualDRepExpiry drep drepExpiry2
         passNEpochsChecking (fromIntegral drepActivity) $ do
           isDRepExpired drep `shouldReturn` False
