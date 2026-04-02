@@ -75,16 +75,16 @@ spec = describe "Query Golden" $ do
     describe "DefaultAbstain" $ goldenRoundTrip DefaultAbstain "01"
     describe "DefaultNoConfidence" $ goldenRoundTrip DefaultNoConfidence "02"
 
-  describe "CommitteeMemberState" $
+  describe "QueryResultCommitteeMemberState" $
     describe "canonical" $
       goldenRoundTrip
-        (CommitteeMemberState MemberNotAuthorized Active (Just (EpochNo 100)) NoChangeExpected)
+        (QueryResultCommitteeMemberState MemberNotAuthorized Active (Just (EpochNo 100)) NoChangeExpected)
         "848101008118648102"
 
-  describe "CommitteeMembersState" $
+  describe "QueryResultCommitteeMembersState" $
     describe "canonical" $
       goldenRoundTrip
-        (CommitteeMembersState Map.empty Nothing (EpochNo 5))
+        (QueryResultCommitteeMembersState Map.empty Nothing (EpochNo 5))
         "83a08005"
 
   describe "RewardInfoPool" $

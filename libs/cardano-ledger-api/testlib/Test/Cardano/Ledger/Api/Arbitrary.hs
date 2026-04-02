@@ -41,13 +41,11 @@ instance Arbitrary NextEpochChange where
       ]
   shrink = genericShrink
 
-instance Arbitrary CommitteeMemberState where
+instance Arbitrary QueryResultCommitteeMemberState where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
 
-instance Arbitrary CommitteeMembersState where
+instance Arbitrary QueryResultCommitteeMembersState where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
 
 instance Arbitrary DefaultVote where
   arbitrary = elements [DefaultNo, DefaultAbstain, DefaultNoConfidence]

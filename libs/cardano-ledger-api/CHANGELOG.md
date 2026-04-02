@@ -2,10 +2,14 @@
 
 ## 1.14.0.0
 
-* Refactor `Query` module into sub-modules to re-export, and consolidate more queries from downstream.
-  - Move from `Query` into a sub-module.
+* Refactor `Query` module into sub-modules to re-export, and consolidate more queries from downstream:
+  - Move from `Query` into a sub-module:
     + `queryCurrentPParams` (`GetCurrentPParams`) and `queryFuturePParams` (`GetFuturePParams`) into `Query.PParams`.
     + `queryChainAccountState` (`GetAccountState`) into `Query.Epoch`.
+  - Rename `Query.CommitteeMembersState` module to `Query.Governance`.
+    + Replace:
+      * `CommitteeMemberState` with `QueryResultCommitteeMemberState`.
+      * `CommitteeMembersState` with `QueryResultCommitteeMembersState`.
 
 ### `testlib`
 
@@ -39,6 +43,7 @@
 
 ### `testlib`
 
+* Add `CBOR` round-trip tests for `QueryResultCommittee*` types.
 * Remove the `State.Query` module and `getFilteredDelegationsAndRewardAccounts` function.
 
 ## 1.12.1.0
