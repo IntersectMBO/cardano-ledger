@@ -61,6 +61,7 @@ library
     cardano-data,
     cardano-ledger-binary,
     cardano-ledger-core,
+    cardano-strict-containers,
     cborg,
     containers,
     mempack-scls,

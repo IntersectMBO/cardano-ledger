@@ -64,7 +64,9 @@ import qualified Codec.CBOR.Decoding as D
 import Control.Monad (unless)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base16 as Base16
+import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
+import Data.Sequence.Strict (StrictSeq, fromList)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
@@ -133,6 +135,14 @@ instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictMaybe a) where
         Versioned () <- fromCanonicalCBOR
         pure (Versioned SNothing)
       _ -> fmap SJust <$> fromCanonicalCBOR
+
+instance ToCanonicalCBOR v a => ToCanonicalCBOR v (StrictSeq a) where
+  toCanonicalCBOR v = toCanonicalCBOR v . toList
+
+instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictSeq a) where
+  fromCanonicalCBOR = do
+    Versioned xs <- fromCanonicalCBOR @v
+    pure $ Versioned (fromList xs)
 
 deriving via
   LedgerCBOR v EpochNo
