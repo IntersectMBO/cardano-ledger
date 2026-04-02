@@ -2,6 +2,9 @@
 
 ## 0.3.0.0
 
+* Add `WrongNetworkInDirectDeposit` constructor to `DijkstraUtxoPredFailure`
+* Add `SubWrongNetworkInDirectDeposit` constructor to `DijkstraSubUtxoPredFailure`
+* Add `validateWrongNetworkInDirectDeposit`
 * Add `checkPointerPresentInOutput`
 * Add `SubTxIsNotSupported` and `transFailSubTxIsNotSupported`
 * Remove `transPlutusPurposeV3` and `transPlutusPurposeV1V2`.
@@ -11,7 +14,7 @@
   - Add `PerasCert`, `PerasKey` and `validatePerasCert` to `Dijkstra.BlockBody` (moved from core).
   - Add `DijkstraEraBlockHeader` typeclass and the `DijkstraBbodySignal` GADT.
   - Remove `PrevEpochNonceNotPresent` from `DijkstraBbodyPredFailure`.
-* Add `SubLedgerEnv` and `SubUtxowEnv`
+* Add `SubLedgerEnv` and `SubUtxoEnv`
 * Remove `OutputTooSmallUTxO` constructor from `DijkstraUtxoPredFailure`
 * Remove `SubOutputTooSmallUTxO` constructor from `DijkstraSubUtxoPredFailure`
 * Remove `NoThunks` instances for all predicate failure types:

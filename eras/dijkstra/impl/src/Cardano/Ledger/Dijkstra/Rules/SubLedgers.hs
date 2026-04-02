@@ -19,10 +19,11 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedgers (
   DijkstraSubLedgersEvent (..),
 ) where
 
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
@@ -61,11 +62,14 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedger (
   SubLedgerEnv (..),
  )
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
   PoolEvent,
   ShelleyPoolPredFailure,
+  ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
  )
 import Cardano.Ledger.TxIn (TxId)
@@ -164,7 +168,7 @@ dijkstraSubLedgersTransition = do
 instance
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
   , ConwayEraPParams era
@@ -195,6 +199,11 @@ instance
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   , TxCert era ~ DijkstraTxCert era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>

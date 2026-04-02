@@ -21,10 +21,11 @@ module Cardano.Ledger.Dijkstra.Rules.Mempool (
   DijkstraMempoolEvent (..),
 ) where
 
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -86,6 +87,7 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEvent,
   ShelleyLedgerPredFailure,
   ShelleyPoolPredFailure,
+  ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
   UtxoEnv,
  )
@@ -289,6 +291,11 @@ instance
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   , TxCert era ~ DijkstraTxCert era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>

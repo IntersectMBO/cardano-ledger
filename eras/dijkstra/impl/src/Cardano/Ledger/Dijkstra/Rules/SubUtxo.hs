@@ -19,18 +19,42 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxo (
   DijkstraSUBUTXO,
   DijkstraSubUtxoPredFailure (..),
   DijkstraSubUtxoEvent (..),
+  SubUtxoEnv (..),
 ) where
 
+import Cardano.Ledger.Allegra.Rules (
+  AllegraUtxoPredFailure,
+  shelleyToAllegraUtxoPredFailure,
+ )
+import qualified Cardano.Ledger.Allegra.Rules as Allegra (
+  validateOutsideValidityIntervalUTxO,
+ )
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure)
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
+  validateOutputTooBigUTxO,
+  validateOutsideForecast,
+  validateWrongNetworkInTxBody,
+ )
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage (
+  validateOutputTooSmallUTxO,
+ )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  sizedValue,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (ConwayUtxoPredFailure)
+import Cardano.Ledger.Conway.Rules (
+  ConwayUtxoPredFailure,
+  allegraToConwayUtxoPredFailure,
+  alonzoToConwayUtxoPredFailure,
+  babbageToConwayUtxoPredFailure,
+ )
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXO,
@@ -38,16 +62,39 @@ import Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
+  validateWrongNetworkInDirectDeposit,
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState)
-import Cardano.Ledger.Shelley.Rules (UtxoEnv)
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
+import Cardano.Ledger.Rules.ValidationMode
+import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosGovState, utxosUtxo)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, updateUTxOStateNoFees)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley (
+  validateBadInputsUTxO,
+  validateInputSetEmptyUTxO,
+  validateOutputBootAddrAttrsTooBig,
+  validateWrongNetwork,
+  validateWrongNetworkWithdrawal,
+ )
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
+import Lens.Micro
+
+data SubUtxoEnv era = SubUtxoEnv
+  { sueSlot :: SlotNo
+  , suePParams :: PParams era
+  , sueCertState :: CertState era
+  , sueScriptsProvided :: ScriptsProvided era
+  , sueOriginalUtxo :: UTxO era
+  , sueTopTxIsValid :: IsValid
+  }
 
 data DijkstraSubUtxoPredFailure era
   = -- | The bad transaction inputs
@@ -82,6 +129,11 @@ data DijkstraSubUtxoPredFailure era
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     SubBabbageOutputTooSmallUTxO (NonEmpty (TxOut era, Coin))
+  | SubWrongNetworkInDirectDeposit
+      -- | the expected network id
+      Network
+      -- | the set of account addresses with incorrect network IDs
+      (NonEmptySet AccountAddress)
   deriving (Generic)
 
 deriving stock instance
@@ -121,6 +173,31 @@ instance InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure DijkstraEra where
 instance InjectRuleFailure "SUBUTXO" ConwayUtxoPredFailure DijkstraEra where
   injectFailure = dijkstraUtxoToDijkstraSubUtxoPredFailure . conwayToDijkstraUtxoPredFailure
 
+instance InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . alonzoToConwayUtxoPredFailure
+
+instance InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . babbageToConwayUtxoPredFailure
+
+instance InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . allegraToConwayUtxoPredFailure
+
+instance InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure DijkstraEra where
+  injectFailure =
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      . conwayToDijkstraUtxoPredFailure
+      . allegraToConwayUtxoPredFailure
+      . shelleyToAllegraUtxoPredFailure
+
 instance InjectRuleEvent "SUBUTXO" DijkstraSubUtxoEvent DijkstraEra
 
 data DijkstraSubUtxoEvent era
@@ -138,15 +215,24 @@ deriving instance (Era era, Eq (TxOut era)) => Eq (DijkstraSubUtxoEvent era)
 instance (Era era, NFData (TxOut era)) => NFData (DijkstraSubUtxoEvent era)
 
 instance
-  ( ConwayEraGov era
+  ( EraTx era
+  , EraStake era
+  , EraCertState era
+  , DijkstraEraTxBody era
+  , AlonzoEraTxWits era
+  , ConwayEraGov era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
-  , BabbageEraTxBody era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   ) =>
   STS (DijkstraSUBUTXO era)
   where
   type State (DijkstraSUBUTXO era) = UTxOState era
   type Signal (DijkstraSUBUTXO era) = Tx SubTx era
-  type Environment (DijkstraSUBUTXO era) = UtxoEnv era
+  type Environment (DijkstraSUBUTXO era) = SubUtxoEnv era
   type BaseM (DijkstraSUBUTXO era) = ShelleyBase
   type PredicateFailure (DijkstraSUBUTXO era) = DijkstraSubUtxoPredFailure era
   type Event (DijkstraSUBUTXO era) = DijkstraSubUtxoEvent era
@@ -155,11 +241,65 @@ instance
 
 dijkstraSubUtxoTransition ::
   forall era.
-  EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era =>
+  ( EraTx era
+  , EraStake era
+  , EraCertState era
+  , DijkstraEraTxBody era
+  , AlonzoEraTxWits era
+  , STS (EraRule "SUBUTXO" era)
+  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
+  ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (_, state, _) <- judgmentContext
-  pure state
+  TRC (SubUtxoEnv slot pp certState _ originalUtxo (IsValid isValid), utxoState, tx) <-
+    judgmentContext
+
+  let txBody = tx ^. bodyTxL
+
+  runTest $ Allegra.validateOutsideValidityIntervalUTxO slot txBody
+
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfo
+  runTest $ Alonzo.validateOutsideForecast ei slot sysSt tx
+
+  let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
+  let allOutputs = fmap sizedValue allSizedOutputs
+  runTest $ Alonzo.validateOutputTooBigUTxO pp allOutputs
+
+  runTest $ Shelley.validateInputSetEmptyUTxO txBody
+
+  let inputs = txBody ^. inputsTxBodyL
+  let refInputs = txBody ^. referenceInputsTxBodyL
+  runTest $ Shelley.validateBadInputsUTxO originalUtxo (inputs `Set.union` refInputs)
+  runTest $ Shelley.validateBadInputsUTxO (utxosUtxo utxoState) inputs
+
+  runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
+
+  runTestOnSignal $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
+
+  netId <- liftSTS $ asks networkId
+  runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
+  runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
+  runTestOnSignal $ validateWrongNetworkInDirectDeposit netId txBody
+  runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
+
+  if isValid
+    then
+      updateUTxOStateNoFees
+        pp
+        utxoState
+        txBody
+        certState
+        (utxosGovState utxoState)
+        (tellEvent . TotalDeposits (hashAnnotated txBody))
+        (\a b -> tellEvent $ TxUTxODiff a b)
+    else
+      pure utxoState
 
 instance
   ( Era era
@@ -180,6 +320,7 @@ instance
       SubWrongNetworkInTxBody mm -> Sum SubWrongNetworkInTxBody 8 !> To mm
       SubOutsideForecast a -> Sum SubOutsideForecast 9 !> To a
       SubBabbageOutputTooSmallUTxO x -> Sum SubBabbageOutputTooSmallUTxO 10 !> To x
+      SubWrongNetworkInDirectDeposit right wrongs -> Sum (SubWrongNetworkInDirectDeposit @era) 11 !> To right !> To wrongs
 
 instance
   ( Era era
@@ -201,6 +342,7 @@ instance
     8 -> SumD SubWrongNetworkInTxBody <! From
     9 -> SumD SubOutsideForecast <! From
     10 -> SumD SubBabbageOutputTooSmallUTxO <! From
+    11 -> SumD SubWrongNetworkInDirectDeposit <! From <! From
     n -> Invalid n
 
 dijkstraUtxoToDijkstraSubUtxoPredFailure ::
@@ -226,6 +368,7 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   TooManyCollateralInputs _ -> error "Impossible: `TooManyCollateralInputs` for SUBUTXO"
   NoCollateralInputs -> error "Impossible: `NoCollateralInputs` for SUBUTXO"
   IncorrectTotalCollateralField _ _ -> error "Impossible: `IncorrectTotalCollateralField` for SUBUTXO"
-  BabbageOutputTooSmallUTxO txouts -> SubBabbageOutputTooSmallUTxO txouts
+  BabbageOutputTooSmallUTxO outs -> SubBabbageOutputTooSmallUTxO outs
   BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
+  WrongNetworkInDirectDeposit x y -> SubWrongNetworkInDirectDeposit x y
