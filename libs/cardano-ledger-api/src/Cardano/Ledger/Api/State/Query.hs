@@ -1,11 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -16,47 +14,17 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetFilteredDelegationsAndRewardAccounts@
   queryStakePoolDelegsAndRewards,
 
-  -- * @GetGovState@
-  queryGovState,
-
-  -- * @GetConstitution@
-  queryConstitution,
-
-  -- * @GetConstitutionHash@
-  queryConstitutionHash,
-
-  -- * @GetDRepState@
-  queryDRepState,
-
-  -- * @GetDRepDelegations@
-  queryDRepDelegations,
-
-  -- * @GetDRepStakeDistr@
-  queryDRepStakeDistr,
-
-  -- * @GetRegisteredDRepStakeDistr@
-  queryRegisteredDRepStakeDistr,
-
   -- * @GetSPOStakeDistr@
   querySPOStakeDistr,
-
-  -- * @GetCommitteeMembersState@
-  queryCommitteeMembersState,
 
   -- * @GetChainAccountState@
   module Cardano.Ledger.Api.State.Query.Epoch,
 
-  -- * Committee types
+  -- * Governance queries
   module Cardano.Ledger.Api.State.Query.Governance,
 
   -- * @GetCurrentPParams@ / @GetFuturePParams@
   module Cardano.Ledger.Api.State.Query.PParams,
-
-  -- * @GetProposals@
-  queryProposals,
-
-  -- * @GetRatifyState@
-  queryRatifyState,
 
   -- * @GetStakePoolDefaultVote@
   queryStakePoolDefaultVote,
@@ -72,56 +40,31 @@ module Cardano.Ledger.Api.State.Query (
   queryStakeSnapshots,
   StakeSnapshot (..),
   StakeSnapshots (..),
-
-  -- * For testing
-  getNextEpochCommitteeMembers,
 ) where
 
 import Cardano.Ledger.Api.State.Query.Epoch
 import Cardano.Ledger.Api.State.Query.Governance
 import Cardano.Ledger.Api.State.Query.PParams
-import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, ProtVer (..), strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, ProtVer (..))
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
-  Committee (committeeMembers),
-  Constitution (constitutionAnchor),
-  ConwayEraGov (..),
-  DRepPulser (..),
-  DRepPulsingState (..),
+  ConwayEraGov,
   DefaultVote (..),
-  GovActionId,
-  GovActionState (..),
-  PulsingSnapshot,
-  RatifyState,
-  committeeThresholdL,
   defaultStakePoolVote,
-  ensCommitteeL,
-  finishDRepPulser,
-  proposalsDeposits,
-  psDRepDistr,
   psPoolDistr,
-  psProposalsL,
-  rsEnactStateL,
  )
-import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep (credToDRep, dRepToCred)
 import Cardano.Ledger.Shelley.LedgerState
 import Control.DeepSeq
 import Control.Monad (guard)
-import Data.Foldable (fold, foldMap')
+import Data.Foldable (fold)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, isJust)
-import Data.Sequence (Seq (..))
-import qualified Data.Sequence as Seq
-import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
-import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Generics
 import Lens.Micro
@@ -141,116 +84,6 @@ queryStakePoolDelegsAndRewards nes creds =
       , Map.map (fromCompact . (^. balanceAccountStateL)) accountsMapFiltered
       )
 
-queryConstitution :: ConwayEraGov era => NewEpochState era -> Constitution era
-queryConstitution = (^. constitutionGovStateL) . queryGovState
-
-queryConstitutionHash ::
-  ConwayEraGov era =>
-  NewEpochState era ->
-  SafeHash AnchorData
-queryConstitutionHash nes =
-  anchorDataHash . constitutionAnchor $ queryConstitution nes
-
--- | This query returns all of the state related to governance
-queryGovState :: NewEpochState era -> GovState era
-queryGovState nes = nes ^. nesEpochStateL . epochStateGovStateL
-
--- | Query DRep state.
-queryDRepState ::
-  ConwayEraCertState era =>
-  NewEpochState era ->
-  -- | Specify a set of DRep credentials whose state should be returned. When this set is
-  -- empty, states for all of the DReps will be returned.
-  Set (Credential DRepRole) ->
-  Map (Credential DRepRole) DRepState
-queryDRepState nes creds
-  | null creds = updateDormantDRepExpiry' vState ^. vsDRepsL
-  | otherwise = updateDormantDRepExpiry' vStateFiltered ^. vsDRepsL
-  where
-    vStateFiltered = vState & vsDRepsL %~ (`Map.restrictKeys` creds)
-    vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
-    updateDormantDRepExpiry' = updateDormantDRepExpiry (nes ^. nesELL)
-
--- | Query the delegators delegated to each DRep, including
--- @AlwaysAbstain@ and @NoConfidence@.
-queryDRepDelegations ::
-  forall era.
-  ConwayEraCertState era =>
-  NewEpochState era ->
-  -- | Specify a set of DReps whose state should be returned. When this set is
-  -- empty, states for all of the DReps will be returned.
-  Set DRep ->
-  Map DRep (Set (Credential Staking))
-queryDRepDelegations nes dreps =
-  case getDRepCreds dreps of
-    Just creds ->
-      Map.map drepDelegs $
-        Map.mapKeys credToDRep ((vState ^. vsDRepsL) `Map.restrictKeys` creds)
-    Nothing ->
-      -- Whenever predefined `AlwaysAbstain` or `AlwaysNoConfidence` are
-      -- requested we are forced to iterate over all accounts and find those
-      -- delegations.
-      Map.foldlWithKey'
-        ( \m cred cas ->
-            case cas ^. dRepDelegationAccountStateL of
-              Just drep
-                | Set.null dreps || drep `Set.member` dreps ->
-                    Map.insertWith (<>) drep (Set.singleton cred) m
-              _ ->
-                m
-        )
-        Map.empty
-        (dState ^. accountsL . accountsMapL)
-  where
-    dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
-    vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
-    -- Find all credentials for requested DReps, but only when we don't care
-    -- about predefined DReps
-    getDRepCreds ds = do
-      guard $ not $ Set.null ds
-      Set.fromList <$> traverse dRepToCred (Set.elems ds)
-
--- | Query DRep stake distribution. Note that this can be an expensive query because there
--- is a chance that current distribution has not been fully computed yet.
-queryDRepStakeDistr ::
-  ConwayEraGov era =>
-  NewEpochState era ->
-  -- | Specify DRep Ids whose stake distribution should be returned. When this set is
-  -- empty, distributions for all of the DReps will be returned.
-  Set DRep ->
-  Map DRep Coin
-queryDRepStakeDistr nes creds
-  | null creds = Map.map fromCompact distr
-  | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` creds
-  where
-    distr = psDRepDistr . fst $ finishedPulserState nes
-
--- | Query the stake distribution of the registered DReps. This does not
--- include the @AlwaysAbstain@ and @NoConfidence@ DReps.
-queryRegisteredDRepStakeDistr ::
-  (ConwayEraGov era, ConwayEraCertState era) =>
-  NewEpochState era ->
-  -- | Specify DRep Ids whose stake distribution should be returned. When this set is
-  -- empty, distributions for all of the registered DReps will be returned.
-  Set (Credential DRepRole) ->
-  Map (Credential DRepRole) Coin
-queryRegisteredDRepStakeDistr nes creds =
-  Map.foldlWithKey' computeDistr mempty selectedDReps
-  where
-    selectedDReps
-      | null creds = registeredDReps
-      | otherwise = registeredDReps `Map.restrictKeys` creds
-    registeredDReps = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
-    computeDistr distrAcc dRepCred (DRepState {..}) =
-      Map.insert dRepCred (totalDelegations drepDelegs) distrAcc
-    totalDelegations =
-      fromCompact . foldMap stakeAndDeposits
-    instantStake = nes ^. instantStakeL . instantStakeCredentialsL
-    proposalDeposits = proposalsDeposits $ nes ^. newEpochStateGovStateL . proposalsGovStateL
-    stakeAndDeposits stakeCred =
-      fromMaybe (CompactCoin 0) $
-        Map.lookup stakeCred instantStake <> Map.lookup stakeCred proposalDeposits
-
 -- | Query pool stake distribution.
 querySPOStakeDistr ::
   ConwayEraGov era =>
@@ -264,139 +97,6 @@ querySPOStakeDistr nes keys
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` keys
   where
     distr = psPoolDistr . fst $ finishedPulserState nes
-
--- | Query committee members. Whenever the system is in No Confidence mode this query will
--- return `Nothing`.
-queryCommitteeMembersState ::
-  forall era.
-  (ConwayEraGov era, ConwayEraCertState era) =>
-  -- | filter by cold credentials (don't filter when empty)
-  Set (Credential ColdCommitteeRole) ->
-  -- | filter by hot credentials (don't filter when empty)
-  Set (Credential HotCommitteeRole) ->
-  -- | filter by status (don't filter when empty)
-  -- (useful, for discovering, for example, only active members)
-  Set MemberStatus ->
-  NewEpochState era ->
-  QueryResultCommitteeMembersState
-queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
-  let
-    committee = queryGovState nes ^. committeeGovStateL
-    comMembers = foldMap' committeeMembers committee
-    nextComMembers = getNextEpochCommitteeMembers nes
-    comStateMembers =
-      csCommitteeCreds $
-        nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
-
-    withFilteredColdCreds s
-      | Set.null coldCredsFilter = s
-      | otherwise = s `Set.intersection` coldCredsFilter
-
-    relevantColdKeys
-      | Set.null statusFilter || Set.member Unrecognized statusFilter =
-          withFilteredColdCreds $
-            Set.unions
-              [ Map.keysSet comMembers
-              , Map.keysSet comStateMembers
-              , Map.keysSet nextComMembers
-              ]
-      | otherwise = withFilteredColdCreds $ Map.keysSet comMembers
-
-    relevantHotKeys =
-      Set.fromList
-        [ ck
-        | (ck, CommitteeHotCredential hk) <- Map.toList comStateMembers
-        , hk `Set.member` hotCredsFilter
-        ]
-
-    relevant
-      | Set.null hotCredsFilter = relevantColdKeys
-      | otherwise = relevantColdKeys `Set.intersection` relevantHotKeys
-
-    cms = Map.mapMaybe id $ Map.fromSet mkMaybeMemberState relevant
-    currentEpoch = nes ^. nesELL
-
-    mkMaybeMemberState ::
-      Credential ColdCommitteeRole ->
-      Maybe QueryResultCommitteeMemberState
-    mkMaybeMemberState coldCred = do
-      let mbExpiry = Map.lookup coldCred comMembers
-      let status = case mbExpiry of
-            Nothing -> Unrecognized
-            Just expiry
-              | currentEpoch > expiry -> Expired
-              | otherwise -> Active
-      guard (null statusFilter || status `Set.member` statusFilter)
-      let hkStatus =
-            case Map.lookup coldCred comStateMembers of
-              Nothing -> MemberNotAuthorized
-              Just (CommitteeMemberResigned anchor) -> MemberResigned (strictMaybeToMaybe anchor)
-              Just (CommitteeHotCredential hk) -> MemberAuthorized hk
-      pure $ QueryResultCommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
-
-    nextEpochChange :: Credential ColdCommitteeRole -> NextEpochChange
-    nextEpochChange ck
-      | not inCurrent && inNext = ToBeEnacted
-      | not inNext = ToBeRemoved
-      | Just curTerm <- lookupCurrent
-      , Just nextTerm <- lookupNext
-      , curTerm /= nextTerm
-      , -- if the term is adjusted such that it expires in the next epoch,
-        -- we set it to ToBeExpired instead of TermAdjusted
-        not expiringNext =
-          TermAdjusted nextTerm
-      | expiringCurrent || expiringNext = ToBeExpired
-      | otherwise = NoChangeExpected
-      where
-        lookupCurrent = Map.lookup ck comMembers
-        lookupNext = Map.lookup ck nextComMembers
-        inCurrent = isJust lookupCurrent
-        inNext = isJust lookupNext
-        expiringCurrent = lookupCurrent == Just currentEpoch
-        expiringNext = lookupNext == Just currentEpoch
-   in
-    QueryResultCommitteeMembersState
-      { qrcmsCommittee = cms
-      , qrcmsThreshold = strictMaybeToMaybe $ (^. committeeThresholdL) <$> committee
-      , qrcmsEpochNo = currentEpoch
-      }
-
-getNextEpochCommitteeMembers ::
-  ConwayEraGov era =>
-  NewEpochState era ->
-  Map (Credential ColdCommitteeRole) EpochNo
-getNextEpochCommitteeMembers nes =
-  let ratifyState = queryRatifyState nes
-      committee = ratifyState ^. rsEnactStateL . ensCommitteeL
-   in foldMap' committeeMembers committee
-
--- | Query proposals that are considered for ratification.
-queryProposals ::
-  ConwayEraGov era =>
-  NewEpochState era ->
-  -- | Specify a set of Governance Action IDs to filter the proposals. When this set is
-  -- empty, all the proposals considered for ratification will be returned.
-  Set GovActionId ->
-  Seq (GovActionState era)
-queryProposals nes gids
-  | null gids = proposals
-  -- TODO: Add `filter` to `cardano-strict-containers`
-  | otherwise =
-      Seq.filter (\GovActionState {..} -> gasId `Set.member` gids) proposals
-  where
-    proposals = fromStrict $ case nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL of
-      DRComplete snap _rs -> snap ^. psProposalsL
-      DRPulsing DRepPulser {..} -> dpProposals
-
--- | Query ratification state.
-queryRatifyState :: ConwayEraGov era => NewEpochState era -> RatifyState era
-queryRatifyState = snd . finishedPulserState
-
-finishedPulserState ::
-  ConwayEraGov era =>
-  NewEpochState era ->
-  (PulsingSnapshot era, RatifyState era)
-finishedPulserState nes = finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)
 
 -- | Query a stake pool's account address delegatee which determines the pool's default vote
 -- in absence of an explicit vote. Note that this is different from the delegatee determined

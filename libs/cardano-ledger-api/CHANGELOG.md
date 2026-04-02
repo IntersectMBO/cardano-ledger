@@ -8,6 +8,11 @@
   - `Query.Governance` - governance, constitution, committee, and drep queries
     + Rename `Query.CommitteeMembersState` module to `Query.Governance`.
     + Add `QueryResultCommitteeMemberState` and `QueryResultCommitteeMembersState` stable query types and deprecate old ones.
+    + Add `QueryResultConstitution` stable query type with `toQueryResultConstitution`.
+    + Add `QueryResultDRepState` and `QueryResultDRepStates` stable query types with `toQueryResultDRepState`.
+    + Move governance query functions over: `queryGovState`, `queryConstitution`, `queryConstitutionHash`, `queryProposals`, `queryRatifyState`, `queryCommitteeMembersState`, `queryDRepState`, `queryDRepDelegations`, `queryDRepStakeDistr`, `queryRegisteredDRepStakeDistr`, `getNextEpochCommitteeMembers`.
+    + Change `queryConstitution` return type to `QueryResultConstitution`.
+    + Change `queryDRepState` return type to `QueryResultDRepStates`.
 
 ## 1.13.0.0
 
@@ -37,7 +42,7 @@
 
 ### `testlib`
 
-* Add `CBOR` round-trip tests for `QueryResultCommittee*` types.
+* Add `CBOR` round-trip tests for `QueryResult*` types.
 * Remove the `State.Query` module and `getFilteredDelegationsAndRewardAccounts` function.
 
 ## 1.12.1.0
