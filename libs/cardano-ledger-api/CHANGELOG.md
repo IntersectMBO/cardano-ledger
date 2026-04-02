@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.13.0.1
+## 1.14.0.0
 
-*
+* Refactor pool related queries into `Query.Pool` and re-export from `Query`.
 
 ## 1.13.0.0
 
