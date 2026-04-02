@@ -2,7 +2,9 @@
 
 ## 1.14.0.0
 
-* Refactor pool related queries into `Query.Pool` and re-export from `Query`.
+* Refactor `Query` into sub-modules for consolidation.
+  - `Query.Pool` - stake-pool queries and stake distribution
+  - `Query.Epoch` - chain account state
 
 ## 1.13.0.0
 

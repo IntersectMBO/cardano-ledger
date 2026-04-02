@@ -44,7 +44,7 @@ module Cardano.Ledger.Api.State.Query (
   queryCommitteeMembersState,
 
   -- * @GetChainAccountState@
-  queryChainAccountState,
+  module Cardano.Ledger.Api.State.Query.Epoch,
   CommitteeMemberState (..),
   CommitteeMembersState (..),
   HotCredAuthStatus (..),
@@ -86,6 +86,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   MemberStatus (..),
   NextEpochChange (..),
  )
+import Cardano.Ledger.Api.State.Query.Epoch
 import Cardano.Ledger.Api.State.Query.PParams
 import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, ProtVer (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary
@@ -132,7 +133,6 @@ import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Generics
 import Lens.Micro
-import Lens.Micro.Extras (view)
 
 -- | Implementation for @GetFilteredDelegationsAndRewardAccounts@ query.
 queryStakePoolDelegsAndRewards ::
@@ -368,11 +368,6 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
       , csThreshold = strictMaybeToMaybe $ (^. committeeThresholdL) <$> committee
       , csEpochNo = currentEpoch
       }
-
-queryChainAccountState ::
-  NewEpochState era ->
-  ChainAccountState
-queryChainAccountState = view chainAccountStateL
 
 getNextEpochCommitteeMembers ::
   ConwayEraGov era =>
