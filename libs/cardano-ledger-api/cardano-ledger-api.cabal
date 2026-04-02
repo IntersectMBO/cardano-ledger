@@ -43,6 +43,7 @@ library
   other-modules:
     Cardano.Ledger.Api.Scripts.ExUnits
     Cardano.Ledger.Api.State.Query.CommitteeMembersState
+    Cardano.Ledger.Api.State.Query.Epoch
     Cardano.Ledger.Api.State.Query.PParams
 
   default-language: Haskell2010

@@ -2,7 +2,10 @@
 
 ## 1.14.0.0
 
-* Move `GetCurrentPParams` and `GetFuturePParams` queries into `Query.PParams` and re-export from `Query`.
+* Refactor `Query` module into sub-modules to re-export, and consolidate more queries from downstream.
+  - Move from `Query` into a sub-module.
+    + `queryCurrentPParams` (`GetCurrentPParams`) and `queryFuturePParams` (`GetFuturePParams`) into `Query.PParams`.
+    + `queryChainAccountState` (`GetAccountState`) into `Query.Epoch`.
 
 ### `testlib`
 
