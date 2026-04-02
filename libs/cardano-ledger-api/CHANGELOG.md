@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.13.0.1
+## 1.14.0.0
 
-*
+* Move `GetCurrentPParams` and `GetFuturePParams` queries into `Query.PParams` and re-export from `Query`.
 
 ### `testlib`
 
