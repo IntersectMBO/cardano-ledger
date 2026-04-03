@@ -3,7 +3,6 @@
 
 module Cardano.Ledger.Dijkstra.State.Account () where
 
-import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era
 import qualified Data.Map.Strict as Map
@@ -22,12 +21,10 @@ instance EraAccounts DijkstraEra where
   depositAccountStateL = lens casDeposit $ \cas d -> cas {casDeposit = d}
 
   stakePoolDelegationAccountStateL =
-    lens (strictMaybeToMaybe . casStakePoolDelegation) $ \cas d ->
-      cas {casStakePoolDelegation = maybeToStrictMaybe d}
+    lens casStakePoolDelegation $ \cas d -> cas {casStakePoolDelegation = d}
 
   unregisterAccount = unregisterConwayAccount
 
 instance ConwayEraAccounts DijkstraEra where
   dRepDelegationAccountStateL =
-    lens (strictMaybeToMaybe . casDRepDelegation) $ \cas d ->
-      cas {casDRepDelegation = maybeToStrictMaybe d}
+    lens casDRepDelegation $ \cas d -> cas {casDRepDelegation = d}
