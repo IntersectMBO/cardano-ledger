@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.21.1.0
+
+* Fix performance regression that was introduced in [#5449](https://github.com/IntersectMBO/cardano-ledger/pull/5449)
+
 ## 1.21.0.0
 
 * Add `validateTreasuryValue`, `validateWithdrawalsDelegated`
