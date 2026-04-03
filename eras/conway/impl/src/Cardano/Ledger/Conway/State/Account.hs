@@ -12,7 +12,9 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+-- `unused-pattern-binds` warning is disabled to preserve safety of `RecordWildCards` "trick" while
+-- avoiding unnecessary pattern matching that is not zero cost with pattern synonyms.
+{-# OPTIONS_GHC -Wno-orphans -Wno-unused-pattern-binds #-}
 
 module Cardano.Ledger.Conway.State.Account (
   ConwayAccountState (
@@ -116,8 +118,8 @@ instance NFData (ConwayAccountState era) where
   rnf = rwhnf
 
 instance EncCBOR (ConwayAccountState era) where
-  encCBOR cas@(ConwayAccountState _ _ _ _) =
-    let ConwayAccountState {..} = cas
+  encCBOR cas@ConwayAccountState {..} =
+    let ConwayAccountState _ _ _ _ = cas
      in encodeListLen 4
           <> encCBOR casBalance
           <> encCBOR casDeposit
@@ -137,8 +139,8 @@ instance Typeable era => DecShareCBOR (ConwayAccountState era) where
         <*> decodeNullStrictMaybe (decShareCBOR cd)
 
 instance ToKeyValuePairs (ConwayAccountState era) where
-  toKeyValuePairs cas@(ConwayAccountState _ _ _ _) =
-    let ConwayAccountState {..} = cas
+  toKeyValuePairs cas@ConwayAccountState {..} =
+    let ConwayAccountState _ _ _ _ = cas
      in [ "reward" .= casBalance -- deprecated
         , "balance" .= casBalance
         , "deposit" .= casDeposit
