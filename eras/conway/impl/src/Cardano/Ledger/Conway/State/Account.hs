@@ -85,17 +85,17 @@ data ConwayAccountState era
 
 viewConwayAccountState ::
   ConwayAccountState era ->
-  (CompactForm Coin, CompactForm Coin, StrictMaybe (KeyHash StakePool), StrictMaybe DRep)
-viewConwayAccountState (CASNoDelegation x y) = (x, y, SNothing, SNothing)
-viewConwayAccountState (CASStakePool x y z) = (x, y, SJust z, SNothing)
-viewConwayAccountState (CASDRep x y w) = (x, y, SNothing, SJust w)
-viewConwayAccountState (CASStakePoolAndDRep x y z w) = (x, y, SJust z, SJust w)
+  (CompactForm Coin, CompactForm Coin, Maybe (KeyHash StakePool), Maybe DRep)
+viewConwayAccountState (CASNoDelegation x y) = (x, y, Nothing, Nothing)
+viewConwayAccountState (CASStakePool x y z) = (x, y, Just z, Nothing)
+viewConwayAccountState (CASDRep x y w) = (x, y, Nothing, Just w)
+viewConwayAccountState (CASStakePoolAndDRep x y z w) = (x, y, Just z, Just w)
 
 pattern ConwayAccountState ::
   CompactForm Coin ->
   CompactForm Coin ->
-  StrictMaybe (KeyHash StakePool) ->
-  StrictMaybe DRep ->
+  Maybe (KeyHash StakePool) ->
+  Maybe DRep ->
   ConwayAccountState era
 pattern ConwayAccountState
   { casBalance
@@ -105,10 +105,10 @@ pattern ConwayAccountState
   } <-
   (viewConwayAccountState -> (casBalance, casDeposit, casStakePoolDelegation, casDRepDelegation))
   where
-    ConwayAccountState x y SNothing SNothing = CASNoDelegation x y
-    ConwayAccountState x y (SJust z) SNothing = CASStakePool x y z
-    ConwayAccountState x y SNothing (SJust w) = CASDRep x y w
-    ConwayAccountState x y (SJust z) (SJust w) = CASStakePoolAndDRep x y z w
+    ConwayAccountState x y Nothing Nothing = CASNoDelegation x y
+    ConwayAccountState x y (Just z) Nothing = CASStakePool x y z
+    ConwayAccountState x y Nothing (Just w) = CASDRep x y w
+    ConwayAccountState x y (Just z) (Just w) = CASStakePoolAndDRep x y z w
 
 {-# COMPLETE ConwayAccountState #-}
 
@@ -123,8 +123,8 @@ instance EncCBOR (ConwayAccountState era) where
      in encodeListLen 4
           <> encCBOR casBalance
           <> encCBOR casDeposit
-          <> encodeNullStrictMaybe encCBOR casStakePoolDelegation
-          <> encodeNullStrictMaybe encCBOR casDRepDelegation
+          <> encodeNullMaybe encCBOR casStakePoolDelegation
+          <> encodeNullMaybe encCBOR casDRepDelegation
 
 instance Typeable era => DecShareCBOR (ConwayAccountState era) where
   type
@@ -135,8 +135,8 @@ instance Typeable era => DecShareCBOR (ConwayAccountState era) where
       ConwayAccountState
         <$> decCBOR
         <*> decCBOR
-        <*> decodeNullStrictMaybe (interns ks <$> decCBOR)
-        <*> decodeNullStrictMaybe (decShareCBOR cd)
+        <*> decodeNullMaybe (interns ks <$> decCBOR)
+        <*> decodeNullMaybe (decShareCBOR cd)
 
 instance ToKeyValuePairs (ConwayAccountState era) where
   toKeyValuePairs cas@ConwayAccountState {..} =
@@ -179,8 +179,7 @@ instance EraAccounts ConwayEra where
   depositAccountStateL = lens casDeposit $ \cas d -> cas {casDeposit = d}
 
   stakePoolDelegationAccountStateL =
-    lens (strictMaybeToMaybe . casStakePoolDelegation) $ \cas d ->
-      cas {casStakePoolDelegation = maybeToStrictMaybe d}
+    lens casStakePoolDelegation $ \cas d -> cas {casStakePoolDelegation = d}
 
   unregisterAccount = unregisterConwayAccount
 
@@ -194,16 +193,15 @@ class EraAccounts era => ConwayEraAccounts era where
     ConwayAccountState
       { casBalance = mempty
       , casDeposit = deposit
-      , casStakePoolDelegation = SNothing
-      , casDRepDelegation = SNothing
+      , casStakePoolDelegation = Nothing
+      , casDRepDelegation = Nothing
       }
 
   dRepDelegationAccountStateL :: Lens' (AccountState era) (Maybe DRep)
 
 instance ConwayEraAccounts ConwayEra where
   dRepDelegationAccountStateL =
-    lens (strictMaybeToMaybe . casDRepDelegation) $ \cas d ->
-      cas {casDRepDelegation = maybeToStrictMaybe d}
+    lens casDRepDelegation $ \cas d -> cas {casDRepDelegation = d}
 
 lookupDRepDelegation :: ConwayEraAccounts era => Credential Staking -> Accounts era -> Maybe DRep
 lookupDRepDelegation cred accounts = do
