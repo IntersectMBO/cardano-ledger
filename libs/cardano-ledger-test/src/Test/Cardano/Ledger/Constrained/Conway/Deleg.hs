@@ -94,7 +94,7 @@ conwayAccountsSpec univ poolreg = constrained $ \ [var|conwayAccounts|] ->
           , witness univ accountstate
           , match accountstate $ \ [var|_rewardbal|] [var|_depositbal|] [var|mStakeDelegKeyhash|] [var|mDRep|] ->
               [ ( caseOn
-                    (mStakeDelegKeyhash :: Term (StrictMaybe (KeyHash StakePool)))
+                    (mStakeDelegKeyhash :: Term (Maybe (KeyHash StakePool)))
                     (branchW 1 $ \_ -> True)
                     (branchW 3 $ \ [var|stakekeyhash|] -> mapMember_ stakekeyhash poolreg)
                 )

@@ -1092,8 +1092,8 @@ instance Typeable era => HasSpec (ShelleyAccounts era)
 type ConwayAccountStateTypes era =
   '[ CompactForm Coin
    , CompactForm Coin
-   , StrictMaybe (KeyHash StakePool)
-   , StrictMaybe DRep
+   , Maybe (KeyHash StakePool)
+   , Maybe DRep
    ]
 
 instance HasSimpleRep (ConwayAccountState era) where
