@@ -178,10 +178,13 @@ instance EraAccounts ConwayEra where
   accountsMapL = lens caStates $ \cas asMap -> cas {caStates = asMap}
 
   balanceAccountStateL = balanceConwayAccountStateL
+  {-# INLINE balanceAccountStateL #-}
 
   depositAccountStateL = depositConwayAccountStateL
+  {-# INLINE depositAccountStateL #-}
 
   stakePoolDelegationAccountStateL = stakePoolDelegationConwayAccountStateL
+  {-# INLINE stakePoolDelegationAccountStateL #-}
 
   unregisterAccount = unregisterConwayAccount
 
@@ -200,6 +203,7 @@ balanceConwayAccountStateL =
         CASStakePool _ deposit stakePool -> CASStakePool balance deposit stakePool
         CASDRep _ deposit dRep -> CASDRep balance deposit dRep
         CASStakePoolAndDRep _ deposit stakePool dRep -> CASStakePoolAndDRep balance deposit stakePool dRep
+{-# INLINE balanceConwayAccountStateL #-}
 
 depositConwayAccountStateL :: Lens' (ConwayAccountState era) (CompactForm Coin)
 depositConwayAccountStateL =
@@ -216,6 +220,7 @@ depositConwayAccountStateL =
         CASStakePool balance _ stakePool -> CASStakePool balance deposit stakePool
         CASDRep balance _ dRep -> CASDRep balance deposit dRep
         CASStakePoolAndDRep balance _ stakePool dRep -> CASStakePoolAndDRep balance deposit stakePool dRep
+{-# INLINE depositConwayAccountStateL #-}
 
 stakePoolDelegationConwayAccountStateL :: Lens' (ConwayAccountState era) (Maybe (KeyHash StakePool))
 stakePoolDelegationConwayAccountStateL =
@@ -240,6 +245,7 @@ stakePoolDelegationConwayAccountStateL =
         CASStakePoolAndDRep balance deposit _ dRep
           | Just stakePool <- mStakePool -> CASStakePoolAndDRep balance deposit stakePool dRep
           | otherwise -> CASDRep balance deposit dRep
+{-# INLINE stakePoolDelegationConwayAccountStateL #-}
 
 dRepDelegationConwayAccountStateL :: Lens' (ConwayAccountState era) (Maybe DRep)
 dRepDelegationConwayAccountStateL =
@@ -264,6 +270,7 @@ dRepDelegationConwayAccountStateL =
         CASStakePoolAndDRep balance deposit stakePool _
           | Just dRep <- mDRep -> CASStakePoolAndDRep balance deposit stakePool dRep
           | otherwise -> CASStakePool balance deposit stakePool
+{-# INLINE dRepDelegationConwayAccountStateL #-}
 
 class EraAccounts era => ConwayEraAccounts era where
   mkConwayAccountState :: CompactForm Coin -> AccountState era
@@ -283,6 +290,7 @@ class EraAccounts era => ConwayEraAccounts era where
 
 instance ConwayEraAccounts ConwayEra where
   dRepDelegationAccountStateL = dRepDelegationConwayAccountStateL
+  {-# INLINE dRepDelegationAccountStateL #-}
 
 lookupDRepDelegation :: ConwayEraAccounts era => Credential Staking -> Accounts era -> Maybe DRep
 lookupDRepDelegation cred accounts = do
