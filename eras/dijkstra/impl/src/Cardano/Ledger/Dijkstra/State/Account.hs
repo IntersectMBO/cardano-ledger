@@ -17,12 +17,16 @@ instance EraAccounts DijkstraEra where
   accountsMapL = lens caStates $ \cas asMap -> cas {caStates = asMap}
 
   balanceAccountStateL = balanceConwayAccountStateL
+  {-# INLINE balanceAccountStateL #-}
 
   depositAccountStateL = depositConwayAccountStateL
+  {-# INLINE depositAccountStateL #-}
 
   stakePoolDelegationAccountStateL = stakePoolDelegationConwayAccountStateL
+  {-# INLINE stakePoolDelegationAccountStateL #-}
 
   unregisterAccount = unregisterConwayAccount
 
 instance ConwayEraAccounts DijkstraEra where
   dRepDelegationAccountStateL = dRepDelegationConwayAccountStateL
+  {-# INLINE dRepDelegationAccountStateL #-}
