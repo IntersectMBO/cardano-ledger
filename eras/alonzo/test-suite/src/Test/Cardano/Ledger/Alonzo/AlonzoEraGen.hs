@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
-  Timelock (..),
   translateTimelock,
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
