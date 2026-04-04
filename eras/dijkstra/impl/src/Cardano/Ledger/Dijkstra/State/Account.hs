@@ -16,15 +16,13 @@ instance EraAccounts DijkstraEra where
 
   accountsMapL = lens caStates $ \cas asMap -> cas {caStates = asMap}
 
-  balanceAccountStateL = lens casBalance $ \cas b -> cas {casBalance = b}
+  balanceAccountStateL = balanceConwayAccountStateL
 
-  depositAccountStateL = lens casDeposit $ \cas d -> cas {casDeposit = d}
+  depositAccountStateL = depositConwayAccountStateL
 
-  stakePoolDelegationAccountStateL =
-    lens casStakePoolDelegation $ \cas d -> cas {casStakePoolDelegation = d}
+  stakePoolDelegationAccountStateL = stakePoolDelegationConwayAccountStateL
 
   unregisterAccount = unregisterConwayAccount
 
 instance ConwayEraAccounts DijkstraEra where
-  dRepDelegationAccountStateL =
-    lens casDRepDelegation $ \cas d -> cas {casDRepDelegation = d}
+  dRepDelegationAccountStateL = dRepDelegationConwayAccountStateL
