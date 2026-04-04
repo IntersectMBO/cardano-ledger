@@ -18,16 +18,21 @@ instance EraAccounts DijkstraEra where
   accountsMapL = lens caStates $ \cas asMap -> cas {caStates = asMap}
 
   balanceAccountStateL = lens casBalance $ \cas b -> cas {casBalance = b}
+  {-# INLINE balanceAccountStateL #-}
 
   depositAccountStateL = lens casDeposit $ \cas d -> cas {casDeposit = d}
+  {-# INLINE depositAccountStateL #-}
 
   stakePoolDelegationAccountStateL =
     lens (strictMaybeToMaybe . casStakePoolDelegation) $ \cas d ->
       cas {casStakePoolDelegation = maybeToStrictMaybe d}
+  {-# INLINE stakePoolDelegationAccountStateL #-}
 
   unregisterAccount = unregisterConwayAccount
 
 instance ConwayEraAccounts DijkstraEra where
+
   dRepDelegationAccountStateL =
     lens (strictMaybeToMaybe . casDRepDelegation) $ \cas d ->
       cas {casDRepDelegation = maybeToStrictMaybe d}
+  {-# INLINE dRepDelegationAccountStateL #-}
