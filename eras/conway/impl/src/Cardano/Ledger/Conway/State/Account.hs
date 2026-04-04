@@ -172,7 +172,7 @@ instance EraAccounts ConwayEra where
 
   accountsMapL = lens caStates $ \cas asMap -> cas {caStates = asMap}
 
-  balanceAccountStateL = lens casBalance $ \cas b -> cas {casBalance = b}
+  balanceAccountStateL = balanceConwayAccountStateL
 
   depositAccountStateL = lens casDeposit $ \cas d -> cas {casDeposit = d}
 
@@ -180,6 +180,9 @@ instance EraAccounts ConwayEra where
     lens casStakePoolDelegation $ \cas d -> cas {casStakePoolDelegation = d}
 
   unregisterAccount = unregisterConwayAccount
+
+balanceConwayAccountStateL :: Lens' (ConwayAccountState era) (CompactForm Coin)
+balanceConwayAccountStateL = lens casBalance $ \cas b -> cas {casBalance = b}
 
 class EraAccounts era => ConwayEraAccounts era where
   mkConwayAccountState :: CompactForm Coin -> AccountState era
