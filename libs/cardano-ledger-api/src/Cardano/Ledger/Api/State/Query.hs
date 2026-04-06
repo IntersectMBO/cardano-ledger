@@ -13,6 +13,9 @@ module Cardano.Ledger.Api.State.Query (
   -- * Pool queries
   module Cardano.Ledger.Api.State.Query.Pool,
 
+  -- * Reward queries
+  module Cardano.Ledger.Api.State.Query.Reward,
+
   -- * @GetStakeSnapshots@
   module Cardano.Ledger.Api.State.Query.Snapshot,
 
@@ -31,6 +34,7 @@ import Cardano.Ledger.Api.State.Query.Epoch
 import Cardano.Ledger.Api.State.Query.Governance
 import Cardano.Ledger.Api.State.Query.PParams
 import Cardano.Ledger.Api.State.Query.Pool
+import Cardano.Ledger.Api.State.Query.Reward
 import Cardano.Ledger.Api.State.Query.Snapshot
 import Cardano.Ledger.Api.State.Query.StakeDelegation
 import Cardano.Ledger.Api.State.Query.UTxO

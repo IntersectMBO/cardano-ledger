@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add new `Query.Reward` sub-module with `QueryResultRewardInfoPools`, `queryNonMyopicMemberRewards`, `queryRewardInfoPools`, `queryRewardProvenance` (deprecated).
 * Add new `Query.UTxO` sub-module with `queryUTxOFull`, `queryUTxOByAddress`, `queryUTxOByTxIn`.
 * Add new `Query.Debug` sub-module with `queryDebugEpochState`, `queryDebugNewEpochState`, `queryProposedPParamsUpdates` (deprecated).
 * Add to `Query.Pool`: `queryStakePools`, `queryStakePoolDistrByTotalSupply`, `queryStakePoolDistrFromSnapshot`, `queryStakePoolRelays`.

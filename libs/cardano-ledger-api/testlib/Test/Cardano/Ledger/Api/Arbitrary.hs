@@ -3,6 +3,7 @@
 module Test.Cardano.Ledger.Api.Arbitrary () where
 
 import Cardano.Ledger.Api.State.Query
+import Cardano.Ledger.Shelley.API.Wallet (RewardInfoPool, RewardParams)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
@@ -32,6 +33,15 @@ instance Arbitrary QueryResultDelegsAndRewards where
   arbitrary = genericArbitraryU
 
 instance Arbitrary QueryResultDRepStates where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary QueryResultRewardInfoPools where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary RewardInfoPool where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary RewardParams where
   arbitrary = genericArbitraryU
 
 instance Arbitrary QueryResultPoolState where
