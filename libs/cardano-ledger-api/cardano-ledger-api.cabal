@@ -48,6 +48,8 @@ library
     Cardano.Ledger.Api.State.Query.Pool
     Cardano.Ledger.Api.State.Query.Snapshot
     Cardano.Ledger.Api.State.Query.StakeDelegation
+    Cardano.Ledger.Api.State.Query.UTxO
+    Cardano.Ledger.Api.State.Query.Debug
 
   default-language: Haskell2010
   ghc-options:

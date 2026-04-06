@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Add new `Query.UTxO` sub-module with `queryUTxOFull`, `queryUTxOByAddress`, `queryUTxOByTxIn`.
+* Add new `Query.Debug` sub-module with `queryDebugEpochState`, `queryDebugNewEpochState`, `queryProposedPParamsUpdates` (deprecated).
 * Add to `Query.Pool`: `queryStakePools`, `queryStakePoolDistrByTotalSupply`, `queryStakePoolDistrFromSnapshot`, `queryStakePoolRelays`.
 * Add new queries to `Query` sub-modules:
   - Add `queryEpochNo` to `Query.Epoch`.
