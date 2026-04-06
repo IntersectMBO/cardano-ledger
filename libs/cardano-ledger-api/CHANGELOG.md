@@ -34,6 +34,11 @@
     + `queryEpochNo` (`GetEpochNo`) to `Query.Epoch`.
     + `queryStakeDelegDeposits` (`GetStakeDelegDeposits`) to `Query.StakeDelegation`, returns the account deposit, for all credentials given an empty set.
     + `queryDRepDelegatees` (`GetDRepStakeDistr`) to `Query.Governance`, returns all DReps delegatees given an empty set.
+    + To `Query.Pool`:
+      * `queryStakePools` (`GetStakePools`).
+      * `queryStakePoolDistrByTotalSupply` (`GetStakeDistribution2`).
+      * `queryStakePoolDistrFromSnapshot` (`GetPoolDistr2`).
+      * `queryStakePoolRelays` (`getPeers from LedgerSupportsPeerSelection used in GetLedgerPeerSnapshot`).
   - Move queries from `Cardano.Ledger.Shelley.API.Wallet`:
     + `queryCurrentSnapshot` to `Query.Snapshot`, replacing `currentSnapshot`.
 
