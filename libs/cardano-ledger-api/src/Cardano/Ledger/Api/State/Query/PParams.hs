@@ -18,6 +18,8 @@ import Lens.Micro ((^.))
 -- see if we are aware of any upcoming changes.
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:418
 --   answerPureBlockQuery case for GetCurrentPParams
+--
+-- /O(1)/
 queryCurrentPParams :: EraGov era => NewEpochState era -> PParams era
 queryCurrentPParams nes = nes ^. nesEpochStateL . epochStateGovStateL . curPParamsGovStateL
 
@@ -30,6 +32,8 @@ queryCurrentPParams nes = nes ^. nesEpochStateL . epochStateGovStateL . curPPara
 --   queryFuturePParams cardano-api wrapper
 -- Also: cardano-cli:cardano-cli/src/Cardano/CLI/EraBased/Query/Run.hs:1673
 --   CLI invocation
+--
+-- /O(1)/
 queryFuturePParams :: EraGov era => NewEpochState era -> Maybe (PParams era)
 queryFuturePParams nes =
   case nes ^. nesEpochStateL . epochStateGovStateL . futurePParamsGovStateL of

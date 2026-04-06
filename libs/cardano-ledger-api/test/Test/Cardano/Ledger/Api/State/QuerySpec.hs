@@ -13,12 +13,16 @@ import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.State.Query
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
+  Constitution,
   ConwayEraGov (..),
   ConwayGovState,
   DRepPulsingState (..),
   RatifyState (..),
+  constitutionAnchor,
+  constitutionGuardrailsScriptHash,
   ensCommitteeL,
   newEpochStateDRepPulsingStateL,
   rsEnactStateL,
@@ -80,6 +84,22 @@ latestErasSpec =
         prop "QueryResultDRepStates" $
           roundTripEraExpectation @era @QueryResultDRepStates
         prop "QueryResultRewardInfoPools" $ roundTripEraExpectation @era @QueryResultRewardInfoPools
+      describe "Extraction functions" $ do
+        describe "toQueryResultConstitution" $ do
+          prop "preserves anchor" $ \(c :: Constitution ConwayEra) ->
+            qrcAnchor (toQueryResultConstitution c) === constitutionAnchor c
+          prop "converts guardrails script" $ \(c :: Constitution ConwayEra) ->
+            qrcGuardrailsScript (toQueryResultConstitution c)
+              === strictMaybeToMaybe (constitutionGuardrailsScriptHash c)
+        describe "toQueryResultDRepState" $ do
+          prop "preserves expiry" $ \(d :: DRepState) ->
+            qrdrsExpiry (toQueryResultDRepState d) === drepExpiry d
+          prop "converts anchor" $ \(d :: DRepState) ->
+            qrdrsAnchor (toQueryResultDRepState d) === strictMaybeToMaybe (drepAnchor d)
+          prop "converts deposit" $ \(d :: DRepState) ->
+            qrdrsDeposit (toQueryResultDRepState d) === fromCompact (drepDeposit d)
+          prop "preserves delegations" $ \(d :: DRepState) ->
+            qrdrsDelegs (toQueryResultDRepState d) === drepDelegs d
       describe "Queries" $ do
         committeeMembersStateSpec @era
         queryStakeSnapshotsSpec @era

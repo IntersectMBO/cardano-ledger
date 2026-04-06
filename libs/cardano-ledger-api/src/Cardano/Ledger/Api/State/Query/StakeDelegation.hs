@@ -83,6 +83,13 @@ instance DecCBOR QueryResultDelegsAndRewards where
 -- contains all selected registered credentials regardless of delegation status.
 --
 -- Empty 'Set' returns all registered credentials.
+--
+-- @
+--   O(c + k)
+-- @
+-- where,
+--   (c) is the total staking credentials, Map.restrictKeys
+--   (k) is the requested credential set, Map.restrictKeys
 queryStakePoolDelegsAndRewards ::
   EraCertState era =>
   NewEpochState era ->
@@ -108,6 +115,13 @@ queryStakePoolDelegsAndRewards nes creds =
 --
 -- Returns the deposit for each given credential that is currently registered.
 -- Empty 'Set' returns all registered credentials.
+--
+-- @
+--   O(c + k)
+-- @
+-- where,
+--   (c) is the total staking credentials, Map.restrictKeys
+--   (k) is the requested credential set, Map.restrictKeys
 queryStakeDelegDeposits ::
   EraCertState era =>
   NewEpochState era ->

@@ -5,7 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Api.State.Query.Pool (
   -- * Stable query result types
@@ -166,6 +165,13 @@ mkQueryPoolStateResult = toQueryResultPoolState
 --   CLI invocation
 --
 -- Empty 'Set' returns all pools.
+--
+-- @
+--   O(p + k)
+-- @
+-- where,
+--   (p) is the total registered stake pools, Map.restrictKeys and Map.mapWithKey
+--   (k) is the requested pool key set, Map.restrictKeys
 queryPoolState ::
   EraCertState era =>
   NewEpochState era ->
@@ -185,6 +191,13 @@ queryPoolState nes poolKeys network =
 --   queryStakePoolParameters cardano-api wrapper
 --
 -- Empty 'Set' returns all pools.
+--
+-- @
+--   O(p + k)
+-- @
+-- where,
+--   (p) is the total registered stake pools, Map.restrictKeys and Map.mapWithKey
+--   (k) is the requested pool key set, Map.restrictKeys
 queryStakePoolParams ::
   EraCertState era =>
   Network ->
@@ -218,6 +231,13 @@ queryPoolParameters = queryStakePoolParams
 --   queryStakePoolDefaultVote cardano-api wrapper
 -- Also: cardano-cli:cardano-cli/src/Cardano/CLI/EraBased/Query/Run.hs:2003
 --   CLI invocation
+--
+-- @
+--   O(log(p) + log(c))
+-- @
+-- where,
+--   (p) is the registered stake pools, Map.lookup
+--   (c) is the staking credentials, Map.lookup for reward account
 queryStakePoolDefaultVote ::
   (EraCertState era, ConwayEraAccounts era) =>
   NewEpochState era ->
@@ -237,6 +257,14 @@ queryStakePoolDefaultVote nes poolId =
 --   CLI invocation
 --
 -- Empty 'Set' returns all pools.
+--
+-- @
+--   O(P + p + k)
+-- @
+-- where,
+--   (P) is the DRep pulser completion cost, finishedPulserState
+--   (p) is the total pools in the distribution, Map.map
+--   (k) is the requested pool set, Map.restrictKeys
 querySPOStakeDistr ::
   ConwayEraGov era =>
   NewEpochState era ->
@@ -255,6 +283,8 @@ querySPOStakeDistr nes keys
 --   queryStakePools cardano-api wrapper (CLI via Convenience.hs:148)
 --
 -- Returns the key hashes of every pool in the current PState.
+--
+-- /O(p)/ where (p) is the registered stake pools, Map.keysSet.
 queryStakePools ::
   EraCertState era =>
   NewEpochState era ->
@@ -276,6 +306,13 @@ queryStakePools nes =
 -- memoized @nesPd@ (the __set__ snapshot computed at the last epoch boundary).
 --
 -- Needs @maxLovelaceSupply@ from genesis config.
+--
+-- @
+--   O(c + p)
+-- @
+-- where,
+--   (c) is the staking credentials, queryCurrentSnapshot
+--   (p) is the registered stake pools, calculatePoolDistr and Map.map
 queryStakePoolDistrByTotalSupply ::
   (EraStake era, EraCertState era) =>
   -- | maxLovelaceSupply from genesis config
@@ -325,6 +362,13 @@ queryStakePoolDistrByTotalSupply maxLovelaceSupply nes =
 -- This approach is more efficient: the expensive @calculatePoolDistr@
 -- computation happens once at the epoch boundary (ADR-7), and the query
 -- performs only an O(n+m) @Map.restrictKeys@.
+--
+-- @
+--   O(p + k)
+-- @
+-- where,
+--   (p) is the total pools in the memoized distribution, Map.restrictKeys
+--   (k) is the requested pool set, Map.restrictKeys
 queryStakePoolDistrFromSnapshot ::
   NewEpochState era ->
   Set (KeyHash StakePool) ->
@@ -346,6 +390,12 @@ queryStakePoolDistrFromSnapshot nes poolIds
 --
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/PeerSelection.hs:32
 --   getPeers (LedgerSupportsPeerSelection instance)
+--
+-- @
+--   O(p * log(p))
+-- @
+-- where,
+--   (p) is the pools in the distribution, Map.mapMaybeWithKey with Map.lookup per pool
 queryStakePoolRelays ::
   EraCertState era =>
   NewEpochState era ->

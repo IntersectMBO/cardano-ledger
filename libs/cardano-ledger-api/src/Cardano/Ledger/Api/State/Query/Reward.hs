@@ -121,6 +121,14 @@ instance DecCBOR QueryResultRewardInfoPools where
 --
 -- This uses a fresh snapshot derived from the current ledger state, not the
 -- stored mark\/set\/go snapshots.
+--
+-- @
+--   O(c + k * p)
+-- @
+-- where,
+--   (c) is the staking credentials, queryCurrentSnapshot
+--   (k) is the input credential\/coin set, iterate over
+--   (p) is the registered stake pools, VMap.mapWithKey per credential
 queryNonMyopicMemberRewards ::
   (EraGov era, EraStake era, EraCertState era) =>
   -- | maxLovelaceSupply from genesis config
@@ -172,6 +180,13 @@ queryNonMyopicMemberRewards maxLovelaceSupply ss = Map.fromSet nmmRewards
 --
 -- Uses a fresh snapshot from 'queryCurrentSnapshot' rather than the stored
 -- epoch-boundary snapshots, so the data reflects the most recent ledger state.
+--
+-- @
+--   O(c + p)
+-- @
+-- where,
+--   (c) is the staking credentials, queryCurrentSnapshot
+--   (p) is the registered stake pools, VMap.mapWithKey
 queryRewardInfoPools ::
   (EraGov era, EraStake era, EraCertState era) =>
   -- | maxLovelaceSupply from genesis config
@@ -220,6 +235,13 @@ queryRewardInfoPools maxLovelaceSupply nes =
 -- This function requires the full 'Globals' because it internally runs
 -- 'createRUpd' in a 'Reader' monad that needs access to 'epochInfo',
 -- 'activeSlotCoeff', 'securityParameter', and 'maxLovelaceSupply'.
+--
+-- @
+--   O(c * log(p))
+-- @
+-- where,
+--   (c) is the staking credentials, createRUpd reward computation
+--   (p) is the registered stake pools, reward calculation per credential
 queryRewardProvenance ::
   (EraGov era, EraCertState era) =>
   Globals ->

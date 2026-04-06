@@ -19,6 +19,8 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 --
 -- __Warning:__ This returns internal, era-parameterized state that is not
 -- covered by CBOR stability guarantees. Use only for debugging and tooling.
+--
+-- /O(1)/
 queryDebugEpochState :: NewEpochState era -> EpochState era
 queryDebugEpochState = nesEs
 
@@ -28,12 +30,16 @@ queryDebugEpochState = nesEs
 --
 -- __Warning:__ This returns internal, era-parameterized state that is not
 -- covered by CBOR stability guarantees. Use only for debugging and tooling.
+--
+-- /O(1)/
 queryDebugNewEpochState :: NewEpochState era -> NewEpochState era
 queryDebugNewEpochState = id
 
 -- | Query proposed protocol parameter updates.
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:420
 --   answerPureBlockQuery case for GetProposedPParamsUpdates
+--
+-- /O(1)/
 queryProposedPParamsUpdates :: NewEpochState era -> ProposedPPUpdates era
 queryProposedPParamsUpdates _ = emptyPPPUpdates
 {-# DEPRECATED

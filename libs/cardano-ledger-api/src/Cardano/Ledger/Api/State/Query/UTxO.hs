@@ -26,6 +26,8 @@ import Lens.Micro ((^.))
 --
 -- __Warning:__ This is an expensive query — it returns the entire UTxO map.
 -- Prefer 'queryUTxOByAddress' or 'queryUTxOByTxIn' when possible.
+--
+-- /O(1)/
 queryUTxOFull ::
   NewEpochState era ->
   UTxO era
@@ -37,6 +39,13 @@ queryUTxOFull nes = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxoL
 --
 -- Returns only UTxO entries whose address is in the given set.
 -- An empty set returns an empty UTxO (use 'queryUTxOFull' for everything).
+--
+-- @
+--   O(u * log(k))
+-- @
+-- where,
+--   (u) is the size of the full UTxO map, Map.filter with Set.member per entry
+--   (k) is the size of the address set, Set.member lookup per UTxO entry
 queryUTxOByAddress ::
   EraTxOut era =>
   NewEpochState era ->
@@ -58,6 +67,13 @@ queryUTxOByAddress nes addrSet =
 --
 -- Returns only UTxO entries whose 'TxIn' is in the given set.
 -- An empty set returns an empty UTxO (use 'queryUTxOFull' for everything).
+--
+-- @
+--   O(u + k)
+-- @
+-- where,
+--   (u) is the size of the full UTxO map, Map.restrictKeys
+--   (k) is the size of the TxIn set, Map.restrictKeys
 queryUTxOByTxIn ::
   NewEpochState era ->
   Set TxIn ->

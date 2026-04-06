@@ -382,6 +382,8 @@ instance DecCBOR QueryResultDRepStates where
 --   queryGovState cardano-api wrapper
 -- Also: cardano-cli:cardano-cli/src/Cardano/CLI/EraBased/Query/Run.hs:1617
 --   CLI invocation
+--
+-- /O(1)/
 queryGovState :: NewEpochState era -> GovState era
 queryGovState nes = nes ^. nesEpochStateL . epochStateGovStateL
 
@@ -392,12 +394,16 @@ queryGovState nes = nes ^. nesEpochStateL . epochStateGovStateL
 --   queryConstitution cardano-api wrapper
 -- Also: cardano-cli:cardano-cli/src/Cardano/CLI/EraBased/Query/Run.hs:1589
 --   CLI invocation
+--
+-- /O(1)/
 queryConstitution :: ConwayEraGov era => NewEpochState era -> QueryResultConstitution
 queryConstitution nes = toQueryResultConstitution $ queryGovState nes ^. constitutionGovStateL
 
 -- | Query the constitution hash.
 --
 -- Convenience extraction — no corresponding standalone query in @ouroboros-consensus@.
+--
+-- /O(1)/
 queryConstitutionHash ::
   ConwayEraGov era =>
   NewEpochState era ->
@@ -414,6 +420,8 @@ queryConstitutionHash nes =
 --   CLI invocation
 --
 -- Empty 'Set' returns all proposals.
+--
+-- /O(g)/ where (g) is the proposals considered for ratification, Seq.filter.
 queryProposals ::
   ConwayEraGov era =>
   NewEpochState era ->
@@ -438,6 +446,8 @@ queryProposals nes gids
 --   queryRatifyState cardano-api wrapper
 -- Also: cardano-cli:cardano-cli/src/Cardano/CLI/EraBased/Query/Run.hs:1645
 --   CLI invocation
+--
+-- /O(P)/ where (P) is the DRep pulser completion cost, finishedPulserState.
 queryRatifyState :: ConwayEraGov era => NewEpochState era -> RatifyState era
 queryRatifyState = snd . finishedPulserState
 
@@ -445,12 +455,19 @@ queryRatifyState = snd . finishedPulserState
 -- return no committee members.
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:471
 --   answerPureBlockQuery case for GetCommitteeMembersState
--- Also: cardano-api:cardano-api/src/Cardano/Api/Query/Internal/Expr.hs:452
+-- Also: cardano-api:cardano-api/src/Cardano/Api/Query/Internal/Expr.hs:454
 --   queryCommitteeMembersState cardano-api wrapper
 -- Also: cardano-cli:cardano-cli/src/Cardano/CLI/EraBased/Query/Run.hs:1887
 --   CLI invocation
 --
 -- Empty 'Set' returns all matches (i.e. no filtering).
+--
+-- @
+--   O(P + m)
+-- @
+-- where,
+--   (P) is the DRep pulser completion cost, finishedPulserState
+--   (m) is the committee members (current + next + state), Map.union and Map.mapWithKey
 queryCommitteeMembersState ::
   forall era.
   (ConwayEraGov era, ConwayEraCertState era) =>
@@ -546,6 +563,8 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
       }
 
 -- | Get the committee members that will be in effect at the next epoch boundary.
+--
+-- /O(P)/ where (P) is the DRep pulser completion cost, finishedPulserState.
 getNextEpochCommitteeMembers ::
   ConwayEraGov era =>
   NewEpochState era ->
@@ -564,6 +583,13 @@ getNextEpochCommitteeMembers nes =
 --   CLI invocation
 --
 -- Empty 'Set' returns all DReps.
+--
+-- @
+--   O(d + k)
+-- @
+-- where,
+--   (d) is the total registered DReps, Map.restrictKeys and Map.map
+--   (k) is the requested DRep credential set, Map.restrictKeys
 queryDRepState ::
   ConwayEraCertState era =>
   NewEpochState era ->
@@ -590,6 +616,15 @@ queryDRepState nes creds =
 --   queryDRepDelegations cardano-api wrapper (not publicly exported)
 --
 -- Empty 'Set' returns all DReps.
+--
+-- @
+--   O(d + k)  when all requested DReps are DRepCredentials
+--   O(c)      when AlwaysAbstain or AlwaysNoConfidence are requested
+-- @
+-- where,
+--   (d) is the registered DReps, Map.restrictKeys
+--   (k) is the requested DRep set, Map.restrictKeys
+--   (c) is the total staking credentials, Map.foldlWithKey' (full accounts scan)
 queryDRepDelegations ::
   forall era.
   ConwayEraCertState era =>
@@ -637,6 +672,14 @@ queryDRepDelegations nes dreps =
 --   CLI invocation
 --
 -- Empty 'Set' returns all DReps.
+--
+-- @
+--   O(P + d + k)
+-- @
+-- where,
+--   (P) is the DRep pulser completion cost, finishedPulserState
+--   (d) is the total DReps in the distribution, Map.map
+--   (k) is the requested DRep set, Map.restrictKeys
 queryDRepStakeDistr ::
   ConwayEraGov era =>
   NewEpochState era ->
@@ -656,6 +699,15 @@ queryDRepStakeDistr nes creds
 --   No consensus BlockQuery constructor exists yet (GetRegisteredDRepStakeDistr was planned but not added).
 --
 -- Empty 'Set' returns all registered DReps.
+--
+-- @
+--   O(d + k + d * c_avg * log(c))
+-- @
+-- where,
+--   (d) is the registered DReps, Map.restrictKeys and Map.foldlWithKey'
+--   (k) is the requested DRep credential set, Map.restrictKeys
+--   (c_avg) is the average delegators per DRep, foldMap over drepDelegs
+--   (c) is the total staking credentials, Map.lookup in instantStake per delegator
 queryRegisteredDRepStakeDistr ::
   (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
@@ -683,13 +735,20 @@ queryRegisteredDRepStakeDistr nes creds =
 -- | Query the DRep delegatee for each given staking credential.
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:457
 --   answerPureBlockQuery case for GetDRepStakeDistr (partial — delegatees extracted separately)
--- Also: cardano-api:cardano-api/src/Cardano/Api/Query/Internal/Expr.hs:459
+-- Also: cardano-api:cardano-api/src/Cardano/Api/Query/Internal/Expr.hs:469
 --   queryStakeVoteDelegatees cardano-api wrapper
 -- Also: cardano-cli:cardano-cli/src/Cardano/CLI/EraBased/Query/Run.hs:1042
 --   CLI invocation
 --
 -- Returns the DRep each credential has delegated to. Credentials with no
 -- DRep delegation are omitted from the result. Empty 'Set' returns all.
+--
+-- @
+--   O(c + k)
+-- @
+-- where,
+--   (c) is the total staking credentials, Map.restrictKeys
+--   (k) is the requested credential set, Map.restrictKeys
 queryDRepDelegatees ::
   (EraCertState era, ConwayEraAccounts era) =>
   NewEpochState era ->
@@ -704,6 +763,8 @@ queryDRepDelegatees nes creds =
 
 -- | Force the DRep pulser to completion and return the resulting snapshot and
 -- ratify state. Shared across governance query sub-modules.
+--
+-- /O(P)/ where (P) is the remaining DRep pulser work, amortised across the epoch.
 finishedPulserState ::
   ConwayEraGov era =>
   NewEpochState era ->

@@ -5,7 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Api.State.Query.Snapshot (
   -- * Stable query result types
@@ -167,6 +166,13 @@ type StakeSnapshots = QueryResultStakeSnapshots
 -- * Empty 'Set': collects pools with non-zero stake in any of the three snapshots.
 -- * Specific pool IDs: pools with zero stake across all three snapshots are filtered out
 --   and will not appear in the result, even if explicitly requested.
+--
+-- @
+--   O(v + k * log(v))
+-- @
+-- where,
+--   (v) is the size of the snapshot VMaps, VMap.filter and VMap.keysSet
+--   (k) is the number of result pools, VMap.lookup (×3 snapshots per pool)
 queryStakeSnapshots ::
   EraGov era =>
   NewEpochState era ->
@@ -234,6 +240,13 @@ queryStakeSnapshots nes requestedPoolIds =
 --
 -- Source: eras/shelley/impl/src/Cardano/Ledger/Shelley/API/Wallet.hs:296
 --   currentSnapshot (now deprecated)
+--
+-- @
+--   O(c + p)
+-- @
+-- where,
+--   (c) is the total staking credentials, instantStake traversal
+--   (p) is the number of registered stake pools, snapShotFromInstantStake
 queryCurrentSnapshot ::
   (EraStake era, EraCertState era) =>
   NewEpochState era ->
