@@ -187,7 +187,7 @@ genValidityInterval cs@(SlotNo currentSlot) =
 -- valid sub-branch of script.
 someLeaf ::
   forall era.
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
+  AllegraEraScript era =>
   KeyHash Witness ->
   NativeScript era
 someLeaf x =

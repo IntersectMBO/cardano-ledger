@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
-  Timelock (..),
   translateTimelock,
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
@@ -618,9 +617,7 @@ addMaybeDataHashToTxOut txout = txout & dataHashTxOutL .~ dataFromAddr (txout ^.
 
 someLeaf ::
   forall era.
-  ( AllegraEraScript era
-  , NativeScript era ~ Timelock era
-  ) =>
+  AllegraEraScript era =>
   Proxy era ->
   KeyHash Witness ->
   AlonzoScript era

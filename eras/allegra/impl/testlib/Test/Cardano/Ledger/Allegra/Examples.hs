@@ -101,5 +101,5 @@ exampleTimelock =
       ]
 
 exampleAllegraTxAuxData ::
-  (AllegraEraScript era, NativeScript era ~ Timelock era) => AllegraTxAuxData era
+  AllegraEraScript era => AllegraTxAuxData era
 exampleAllegraTxAuxData = AllegraTxAuxData exampleAuxDataMap (StrictSeq.fromList [exampleTimelock])

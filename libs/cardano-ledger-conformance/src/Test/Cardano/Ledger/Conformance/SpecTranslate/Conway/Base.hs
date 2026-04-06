@@ -110,7 +110,6 @@ instance
 
 instance
   ( AlonzoEraScript era
-  , NativeScript era ~ Timelock era
   , Script era ~ AlonzoScript era
   ) =>
   SpecTranslate ctx (PlutusScript era)
