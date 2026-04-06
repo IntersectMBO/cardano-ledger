@@ -30,6 +30,12 @@
       * `queryPoolParameters` (`GetStakePoolParams`), renamed to `queryStakePoolParams`, and returns all pools given an empty set.
       * `queryStakePoolDefaultVote` (`QueryStakePoolDefaultVote`)
       * `querySPOStakeDistr` (`GetSPOStakeDistr`), returns all pools given an empty set.
+  - Add new queries:
+    + `queryEpochNo` (`GetEpochNo`) to `Query.Epoch`.
+    + `queryStakeDelegDeposits` (`GetStakeDelegDeposits`) to `Query.StakeDelegation`, returns the account deposit, for all credentials given an empty set.
+    + `queryDRepDelegatees` (`GetDRepStakeDistr`) to `Query.Governance`, returns all DReps delegatees given an empty set.
+  - Move queries from `Cardano.Ledger.Shelley.API.Wallet`:
+    + `queryCurrentSnapshot` to `Query.Snapshot`, replacing `currentSnapshot`.
 
 ### `testlib`
 
