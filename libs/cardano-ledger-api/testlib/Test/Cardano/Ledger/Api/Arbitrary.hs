@@ -34,8 +34,8 @@ instance Arbitrary QueryResultDelegsAndRewards where
 instance Arbitrary QueryResultDRepStates where
   arbitrary = genericArbitraryU
 
-instance Arbitrary QueryPoolStateResult where
-  arbitrary = QueryPoolStateResult <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+instance Arbitrary QueryResultPoolState where
+  arbitrary = QueryResultPoolState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary QueryResultStakeSnapshot where
   arbitrary = genericArbitraryU

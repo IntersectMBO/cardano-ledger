@@ -65,7 +65,7 @@ latestErasSpec =
   describe "QuerySpec" $ do
     describe (eraName @era) $ do
       describe "Roundtrip" $ do
-        prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
+        prop "QueryResultPoolState" $ roundTripEraExpectation @era @QueryResultPoolState
         prop "QueryResultStakeSnapshot" $ roundTripEraExpectation @era @QueryResultStakeSnapshot
         prop "QueryResultStakeSnapshots" $ roundTripEraExpectation @era @QueryResultStakeSnapshots
         prop "QueryResultCommitteeMemberState" $

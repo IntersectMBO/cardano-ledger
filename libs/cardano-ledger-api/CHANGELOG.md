@@ -18,6 +18,10 @@
     + `queryStakeSnapshots` now takes `Set (KeyHash StakePool)` where and empty set returns all pools.
   - `Query.StakeDelegation` - stake pool delegations and reward accounts.
     + Add `QueryResultDelegsAndRewards` stable type for `queryStakePoolDelegsAndRewards`. Returns all registered credentials when given an empty set.
+  - `Query.Pool` - stake pool queries and stake distribution
+    + Rename `QueryPoolStateResult` to `QueryResultPoolState`.
+    + Rename `queryPoolParameters` to `queryStakePoolParams`.
+    + `queryPoolState` now returns all pools states when give an empty set.
 
 ## 1.13.0.0
 
