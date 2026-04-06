@@ -28,6 +28,9 @@ instance Arbitrary QueryResultConstitution where
 instance Arbitrary QueryResultDRepState where
   arbitrary = genericArbitraryU
 
+instance Arbitrary QueryResultDelegsAndRewards where
+  arbitrary = genericArbitraryU
+
 instance Arbitrary QueryResultDRepStates where
   arbitrary = genericArbitraryU
 

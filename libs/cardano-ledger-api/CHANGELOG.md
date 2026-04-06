@@ -3,9 +3,9 @@
 ## 1.14.0.0
 
 * Refactor `Query` into sub-modules for consolidation.
-  - `Query.Pool` - stake-pool queries and stake distribution
-  - `Query.Epoch` - chain account state
-  - `Query.Governance` - governance, constitution, committee, and drep queries
+  - `Query.Pool` - stake-pool queries and stake distribution.
+  - `Query.Epoch` - chain account state.
+  - `Query.Governance` - governance, constitution, committee, and drep queries.
     + Rename `Query.CommitteeMembersState` module to `Query.Governance`.
     + Add `QueryResultCommitteeMemberState` and `QueryResultCommitteeMembersState` stable query types and deprecate old ones.
     + Add `QueryResultConstitution` stable query type with `toQueryResultConstitution`.
@@ -13,9 +13,11 @@
     + Move governance query functions over: `queryGovState`, `queryConstitution`, `queryConstitutionHash`, `queryProposals`, `queryRatifyState`, `queryCommitteeMembersState`, `queryDRepState`, `queryDRepDelegations`, `queryDRepStakeDistr`, `queryRegisteredDRepStakeDistr`, `getNextEpochCommitteeMembers`.
     + Change `queryConstitution` return type to `QueryResultConstitution`.
     + Change `queryDRepState` return type to `QueryResultDRepStates`.
-  - `Query.Snapshot` - mark/set/go stake snapshots
+  - `Query.Snapshot` - mark/set/go stake snapshots.
     + Add `QueryResultStakeSnapshot(s)` stable types.
     + `queryStakeSnapshots` now takes `Set (KeyHash StakePool)` where and empty set returns all pools.
+  - `Query.StakeDelegation` - stake pool delegations and reward accounts.
+    + Add `QueryResultDelegsAndRewards` stable type for `queryStakePoolDelegsAndRewards`. Returns all registered credentials when given an empty set.
 
 ## 1.13.0.0
 

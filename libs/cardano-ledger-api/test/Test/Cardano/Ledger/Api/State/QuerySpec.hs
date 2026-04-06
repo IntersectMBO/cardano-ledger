@@ -74,6 +74,7 @@ latestErasSpec =
           roundTripEraExpectation @era @QueryResultCommitteeMembersState
         prop "QueryResultConstitution" $
           roundTripEraExpectation @era @QueryResultConstitution
+        prop "QueryResultDelegsAndRewards" $ roundTripEraExpectation @era @QueryResultDelegsAndRewards
         prop "QueryResultDRepState" $
           roundTripEraExpectation @era @QueryResultDRepState
         prop "QueryResultDRepStates" $
