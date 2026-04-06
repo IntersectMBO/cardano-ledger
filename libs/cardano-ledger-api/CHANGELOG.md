@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add to `Query.Pool`: `queryStakePools`, `queryStakePoolDistrByTotalSupply`, `queryStakePoolDistrFromSnapshot`, `queryStakePoolRelays`.
 * Add new queries to `Query` sub-modules:
   - Add `queryEpochNo` to `Query.Epoch`.
   - Add `queryDRepDelegatees` to `Query.Governance`.
