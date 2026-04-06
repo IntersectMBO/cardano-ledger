@@ -122,16 +122,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1774040590,
-        "narHash": "sha256-hgGRPVtciAAsT96ATgWjEDnmCHP/MthQ23TBwxuDtUo=",
+        "lastModified": 1775087180,
+        "narHash": "sha256-eAwb3ZXkcRO83gP9/fiiWxC05eAhSZ4ntkLVxpv7qEY=",
         "owner": "input-output-hk",
         "repo": "cardano-ledger-release-tool",
-        "rev": "1c6bd73fc43993112cb47a728d4a72465a66d998",
+        "rev": "e8011391f49e927f1b69878b75b69cc656e6b9cb",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "0.2.0.2",
+        "ref": "0.3.0.0",
         "repo": "cardano-ledger-release-tool",
         "type": "github"
       }
