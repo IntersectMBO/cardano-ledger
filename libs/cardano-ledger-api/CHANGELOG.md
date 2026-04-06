@@ -13,6 +13,9 @@
     + Move governance query functions over: `queryGovState`, `queryConstitution`, `queryConstitutionHash`, `queryProposals`, `queryRatifyState`, `queryCommitteeMembersState`, `queryDRepState`, `queryDRepDelegations`, `queryDRepStakeDistr`, `queryRegisteredDRepStakeDistr`, `getNextEpochCommitteeMembers`.
     + Change `queryConstitution` return type to `QueryResultConstitution`.
     + Change `queryDRepState` return type to `QueryResultDRepStates`.
+  - `Query.Snapshot` - mark/set/go stake snapshots
+    + Add `QueryResultStakeSnapshot(s)` stable types.
+    + `queryStakeSnapshots` now takes `Set (KeyHash StakePool)` where and empty set returns all pools.
 
 ## 1.13.0.0
 
