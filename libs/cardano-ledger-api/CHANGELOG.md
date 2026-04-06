@@ -39,6 +39,13 @@
       * `queryStakePoolDistrByTotalSupply` (`GetStakeDistribution2`).
       * `queryStakePoolDistrFromSnapshot` (`GetPoolDistr2`).
       * `queryStakePoolRelays` (`getPeers from LedgerSupportsPeerSelection used in GetLedgerPeerSnapshot`).
+    + To `Query.UTxO`:
+      * `queryUTxOFull` (`GetUTxOWhole`).
+      * `queryUTxOByAddress` (`GetUTxOByAddress`), returns an empty UTxO given an empty set.
+      * `queryUTxOByTxIn` (`GetUTxOByTxIn`), returns an empty UTxO given an empty set.
+    + To `Query.Debug`:
+      * `queryDebugEpochState` (`DebugEpochState`).
+      * `queryDebugNewEpochState` (`DebugNewEpochState`)
   - Move queries from `Cardano.Ledger.Shelley.API.Wallet`:
     + `queryCurrentSnapshot` to `Query.Snapshot`, replacing `currentSnapshot`.
 
