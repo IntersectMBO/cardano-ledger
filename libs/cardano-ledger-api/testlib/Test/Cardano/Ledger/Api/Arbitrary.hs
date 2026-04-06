@@ -13,11 +13,11 @@ instance Arbitrary MemberStatus where
 instance Arbitrary QueryPoolStateResult where
   arbitrary = QueryPoolStateResult <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
-instance Arbitrary StakeSnapshot where
+instance Arbitrary QueryResultStakeSnapshot where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary StakeSnapshots where
+instance Arbitrary QueryResultStakeSnapshots where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 

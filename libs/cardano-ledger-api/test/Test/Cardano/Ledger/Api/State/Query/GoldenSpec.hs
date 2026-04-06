@@ -138,16 +138,16 @@ spec = describe "Query Golden" $ do
         (QueryPoolStateResult Map.empty Map.empty Map.empty Map.empty)
         "84a0a0a0a0"
 
-  describe "StakeSnapshot" $
+  describe "QueryResultStakeSnapshot" $
     describe "canonical" $
       goldenRoundTrip
-        (StakeSnapshot (Coin 100) (Coin 200) (Coin 300))
+        (QueryResultStakeSnapshot (Coin 100) (Coin 200) (Coin 300))
         "83186418c819012c"
 
-  describe "StakeSnapshots" $ do
+  describe "QueryResultStakeSnapshots" $ do
     describe "canonical" $
       goldenRoundTrip
-        ( StakeSnapshots
+        ( QueryResultStakeSnapshots
             Map.empty
             (unsafeNonZero (Coin 1000))
             (unsafeNonZero (Coin 2000))
@@ -156,8 +156,8 @@ spec = describe "Query Golden" $ do
         "84a01903e81907d0190bb8"
     describe "non-empty snapshots" $
       goldenRoundTrip
-        ( StakeSnapshots
-            (Map.singleton (mkKeyHash 0) (StakeSnapshot (Coin 100) (Coin 200) (Coin 300)))
+        ( QueryResultStakeSnapshots
+            (Map.singleton (mkKeyHash 0) (QueryResultStakeSnapshot (Coin 100) (Coin 200) (Coin 300)))
             (unsafeNonZero (Coin 1000))
             (unsafeNonZero (Coin 2000))
             (unsafeNonZero (Coin 3000))
