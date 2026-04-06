@@ -3,6 +3,7 @@
 module Test.Cardano.Ledger.Api.Arbitrary () where
 
 import Cardano.Ledger.Api.State.Query
+import Cardano.Ledger.Conway.Governance (DefaultVote (..))
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
@@ -10,8 +11,8 @@ import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 instance Arbitrary MemberStatus where
   arbitrary = arbitraryBoundedEnum
 
-instance Arbitrary QueryPoolStateResult where
-  arbitrary = QueryPoolStateResult <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+instance Arbitrary QueryResultPoolState where
+  arbitrary = QueryResultPoolState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary QueryResultStakeSnapshot where
   arbitrary = genericArbitraryU

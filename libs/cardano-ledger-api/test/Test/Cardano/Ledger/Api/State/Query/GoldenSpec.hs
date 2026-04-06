@@ -17,6 +17,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, Version, decodeFull)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Governance (DefaultVote (..))
 import Cardano.Ledger.Core (eraProtVerHigh)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (ADDRHASH, HASH, ScriptHash (..), VRFVerKeyHash (..))
@@ -140,10 +141,10 @@ spec = describe "Query Golden" $ do
         (ChainAccountState (Coin 5000000) (Coin 3000000))
         "821a004c4b401a002dc6c0"
 
-  describe "QueryPoolStateResult" $ do
+  describe "QueryResultPoolState" $ do
     describe "canonical" $
       goldenRoundTrip
-        (QueryPoolStateResult Map.empty Map.empty Map.empty Map.empty)
+        (QueryResultPoolState Map.empty Map.empty Map.empty Map.empty)
         "84a0a0a0a0"
     describe "non-empty pools" $
       let poolId = mkKeyHash 0
@@ -160,7 +161,7 @@ spec = describe "Query Golden" $ do
               , sppMetadata = SNothing
               }
        in goldenRoundTrip
-            ( QueryPoolStateResult
+            ( QueryResultPoolState
                 (Map.singleton poolId sampleParams)
                 Map.empty
                 (Map.singleton poolId (EpochNo 100))

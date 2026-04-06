@@ -24,6 +24,12 @@
     + `queryStakeSnapshots` (`GetStakeSnapshots`) into `Query.Snapshot`, now returns a stable type `QueryResultStakeSnapshot`, and returns all pools given an empty set.
       * Remove `StakeSnapshot(s)` types with stable ones `QueryResultStakeSnapshot(s)`.
     + `queryStakePoolDelegsAndRewards` (`GetFilteredDelegationsAndRewardAccounts`) into `Query.StakeDelegation`, now returns `QueryResultDelegsAndRewards`, and returns all registered credentials when given an empty set.
+    + Into `Query.Pool`:
+      * `queryPoolState` (`GetPoolState`), now returns a `QueryResultPoolState` with the `toQueryResultPoolState` helper, and returns all pools given an empty set.
+        - Remove `QueryStakePoolResult` and `mkQueryStakePoolResult`.
+      * `queryPoolParameters` (`GetStakePoolParams`), renamed to `queryStakePoolParams`, and returns all pools given an empty set.
+      * `queryStakePoolDefaultVote` (`QueryStakePoolDefaultVote`)
+      * `querySPOStakeDistr` (`GetSPOStakeDistr`), returns all pools given an empty set.
 
 ### `testlib`
 
