@@ -62,3 +62,6 @@ instance Arbitrary QueryResultDRepStates where
 
 instance Arbitrary QueryResultDelegsAndRewards where
   arbitrary = genericArbitraryU
+
+instance Arbitrary QueryResultRewardInfoPools where
+  arbitrary = genericArbitraryU

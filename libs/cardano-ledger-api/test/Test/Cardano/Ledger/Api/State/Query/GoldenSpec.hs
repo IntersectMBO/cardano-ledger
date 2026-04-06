@@ -258,3 +258,22 @@ spec = describe "Query Golden" $ do
             )
         )
         "a18200581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c084186481827368747470733a2f2f6578616d706c652e636f6d582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c1113141901f4d9010280"
+
+  describe "QueryResultRewardInfoPools" $ do
+    describe "canonical" $
+      goldenRoundTrip
+        ( QueryResultRewardInfoPools
+            (RewardParams 500 (unsafeBoundRational (3 % 10)) (Coin 10000) (Coin 1000000))
+            Map.empty
+        )
+        "82841901f4d81e82030a1927101a000f4240a0"
+    describe "non-empty pools" $
+      goldenRoundTrip
+        ( QueryResultRewardInfoPools
+            (RewardParams 500 (unsafeBoundRational (3 % 10)) (Coin 10000) (Coin 1000000))
+            ( Map.singleton
+                (mkKeyHash 0)
+                (RewardInfoPool (Coin 1000) (Coin 500) (Coin 300) (Coin 100) (unsafeBoundRational (1 % 2)) 1.5)
+            )
+        )
+        "82841901f4d81e82030a1927101a000f4240a1581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c0861903e81901f419012c1864d81e820102fb3ff8000000000000"

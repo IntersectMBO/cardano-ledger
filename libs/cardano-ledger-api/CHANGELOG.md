@@ -45,7 +45,10 @@
       * `queryUTxOByTxIn` (`GetUTxOByTxIn`), returns an empty UTxO given an empty set.
     + To `Query.Debug`:
       * `queryDebugEpochState` (`DebugEpochState`).
-      * `queryDebugNewEpochState` (`DebugNewEpochState`)
+      * `queryDebugNewEpochState` (`DebugNewEpochState`).
+    + To `Query.Reward`:
+      * `queryNonMyopicMemberRewards` (`GetNonMyopicMemberRewards`).
+      * `queryRewardInfoPools` (`GetRewardInfoPools`).
   - Move queries from `Cardano.Ledger.Shelley.API.Wallet`:
     + `queryCurrentSnapshot` to `Query.Snapshot`, replacing `currentSnapshot`.
 

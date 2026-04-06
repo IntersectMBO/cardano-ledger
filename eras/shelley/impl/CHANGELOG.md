@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `Ord` instance for `RewardInfoPool` and `RewardParams`.
 * Remove `validMetadata` from `SoftForks`
 * Add `updateUTxOStateNoFees`
 * Add `Shelley.API.Forecast` and `Shelley.Forecast`:
