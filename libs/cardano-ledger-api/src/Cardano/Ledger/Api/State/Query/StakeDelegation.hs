@@ -11,6 +11,7 @@ module Cardano.Ledger.Api.State.Query.StakeDelegation (
 
   -- * Queries
   queryStakePoolDelegsAndRewards,
+  queryStakeDelegDeposits,
 ) where
 
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -31,6 +32,7 @@ import Cardano.Ledger.State (
   accountsL,
   accountsMapL,
   balanceAccountStateL,
+  depositAccountStateL,
   stakePoolDelegationAccountStateL,
  )
 import Control.DeepSeq (NFData)
@@ -95,3 +97,25 @@ queryStakePoolDelegsAndRewards nes creds =
         { qrdarDelegations = Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMapFiltered
         , qrdarRewards = Map.map (fromCompact . (^. balanceAccountStateL)) accountsMapFiltered
         }
+
+-- | Query staking delegation deposits.
+-- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:455
+--   answerPureBlockQuery case for GetStakeDelegDeposits
+-- Also: cardano-api:cardano-api/src/Cardano/Api/Query/Internal/Convenience.hs:154
+--   queryStakeDelegDeposits cardano-api convenience wrapper
+-- Also: cardano-cli:cardano-cli/src/Cardano/CLI/EraBased/Query/Run.hs:1036
+--   CLI invocation
+--
+-- Returns the deposit for each given credential that is currently registered.
+-- Empty 'Set' returns all registered credentials.
+queryStakeDelegDeposits ::
+  EraCertState era =>
+  NewEpochState era ->
+  Set (Credential Staking) ->
+  Map (Credential Staking) Coin
+queryStakeDelegDeposits nes creds =
+  let accountsMap = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+      selected
+        | Set.null creds = accountsMap
+        | otherwise = accountsMap `Map.restrictKeys` creds
+   in Map.map (fromCompact . (^. depositAccountStateL)) selected

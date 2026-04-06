@@ -18,6 +18,7 @@ module Cardano.Ledger.Api.State.Query.Snapshot (
 
   -- * Queries
   queryStakeSnapshots,
+  queryCurrentSnapshot,
 ) where
 
 import Cardano.Ledger.BaseTypes (NonZero, natVersion, pvMajor)
@@ -36,14 +37,23 @@ import Cardano.Ledger.Core (ppProtocolVersionL)
 import Cardano.Ledger.Keys (KeyHash, StakePool)
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
+  certDStateL,
+  certPStateL,
   curPParamsEpochStateL,
+  esLStateL,
   esSnapshots,
+  lsCertStateL,
   nesEs,
   nesEsL,
  )
 import Cardano.Ledger.State (
+  EraCertState,
   EraGov,
+  EraStake,
+  SnapShot,
   SnapShots (..),
+  instantStakeG,
+  snapShotFromInstantStake,
   spssNumDelegators,
   spssStake,
   ssStakePoolsSnapShot,
@@ -215,3 +225,23 @@ queryStakeSnapshots nes requestedPoolIds =
         , qrssSetTotal = ssTotalActiveStake ssStakeSet
         , qrssGoTotal = ssTotalActiveStake ssStakeGo
         }
+
+-- | Compute a snapshot from the current (live) ledger state, rather than
+-- from one of the stored epoch-boundary snapshots (mark / set / go).
+--
+-- Used when ranking pools and reporting their saturation level: the most
+-- recent state is more relevant than a potentially stale snapshot.
+--
+-- Source: eras/shelley/impl/src/Cardano/Ledger/Shelley/API/Wallet.hs:296
+--   currentSnapshot (now deprecated)
+queryCurrentSnapshot ::
+  (EraStake era, EraCertState era) =>
+  NewEpochState era ->
+  SnapShot
+queryCurrentSnapshot nes =
+  snapShotFromInstantStake instantStake dstate pstate
+  where
+    ledgerState = nesEs nes ^. esLStateL
+    instantStake = ledgerState ^. instantStakeG
+    dstate = ledgerState ^. lsCertStateL . certDStateL
+    pstate = ledgerState ^. lsCertStateL . certPStateL

@@ -2,6 +2,11 @@
 
 ## 1.14.0.0
 
+* Add new queries to `Query` sub-modules:
+  - Add `queryEpochNo` to `Query.Epoch`.
+  - Add `queryDRepDelegatees` to `Query.Governance`.
+  - Add `queryStakeDelegDeposits` to `Query.StakeDelegation`.
+  - Add `queryCurrentSnapshot` to `Query.Snapshot`.
 * Refactor `Query` into sub-modules for consolidation.
   - `Query.Pool` - stake-pool queries and stake distribution.
   - `Query.Epoch` - chain account state.
