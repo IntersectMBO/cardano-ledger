@@ -42,10 +42,9 @@ import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData (rnf))
 import Control.Monad (when)
 import Data.Array.Byte (ByteArray (..))
-import qualified Data.ByteString as BS
 import qualified Data.Primitive.ByteArray as Prim
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import qualified Data.Text.Foreign as TF
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -96,15 +95,6 @@ encodeMetadatum (Map kvs) =
 
 -- | Decode a transaction matadatum value from its CBOR representation.
 --
--- The CDDL for the CBOR is
---
--- > transaction_metadatum =
--- >     int
--- >   / bytes .size (0..64)
--- >   / text .size (0..64)
--- >   / [ * transaction_metadatum ]
--- >   / { * transaction_metadatum => transaction_metadatum }
---
 -- We do not require canonical representations, just like everywhere else
 -- on the chain. We accept both definite and indefinite representations.
 --
@@ -135,13 +125,13 @@ decodeMetadatum = do
       return (B ba)
     TypeString -> do
       !x <- decodeString
-      when (checkSizes && BS.length (T.encodeUtf8 x) > 64) $
+      when (checkSizes && TF.lengthWord8 x > 64) $
         decodeError "text .size (0..64): text exceeds 64 bytes"
       return (S x)
     TypeStringIndef -> do
       decodeStringIndef
       !x <- decodeStringIndefLen []
-      when (checkSizes && BS.length (T.encodeUtf8 x) > 64) $
+      when (checkSizes && TF.lengthWord8 x > 64) $
         decodeError "text .size (0..64): text exceeds 64 bytes"
       return (S x)
 
