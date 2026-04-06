@@ -2,6 +2,19 @@
 
 ## 1.19.0.0
 
+* Export `currentSnapshot` from `Shelley.API.Wallet`.
+* Deprecate `Shelley.API.Wallet` query functions in favour of `Cardano.Ledger.Api.State.Query` sub-modules:
+  - `getUTxO`
+  - `getFilteredUTxO`
+  - `getUTxOSubset`
+  - `getPools`
+  - `getStakePools`
+  - `poolsByTotalStakeFraction`
+  - `getTotalStake`
+  - `getNonMyopicMemberRewards`
+  - `currentSnapshot`
+  - `getRewardInfoPools`
+  - `getRewardProvenance`.
 * Add `Ord` instance for `RewardInfoPool` and `RewardParams`.
 * Add `updateUTxOStateNoFees`
 * Add `Shelley.API.Forecast` and `Shelley.Forecast`:

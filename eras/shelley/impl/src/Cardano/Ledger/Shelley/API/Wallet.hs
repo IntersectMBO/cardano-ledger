@@ -37,6 +37,9 @@ module Cardano.Ledger.Shelley.API.Wallet (
   totalAdaES,
   totalAdaPotsES,
   getStakePools,
+
+  -- * Snapshots
+  currentSnapshot,
 ) where
 
 import Cardano.Ledger.Address (compactAddr)
@@ -122,6 +125,10 @@ getUTxO ::
   NewEpochState era ->
   UTxO era
 getUTxO = utxosUtxo . lsUTxOState . esLState . nesEs
+{-# DEPRECATED
+  getUTxO
+  "Use queryUTxOFull from Cardano.Ledger.Api.State.Query.UTxO instead."
+  #-}
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
@@ -139,12 +146,20 @@ getFilteredUTxO ss addrSet =
         Left addr -> addr `Set.member` addrSet
         Right cAddr -> cAddr `Set.member` compactAddrSet
 {-# INLINEABLE getFilteredUTxO #-}
+{-# DEPRECATED
+  getFilteredUTxO
+  "Use queryUTxOByAddress from Cardano.Ledger.Api.State.Query.UTxO instead."
+  #-}
 
 getUTxOSubset ::
   NewEpochState era ->
   Set TxIn ->
   UTxO era
 getUTxOSubset nes = txInsFilter (getUTxO nes)
+{-# DEPRECATED
+  getUTxOSubset
+  "Use queryUTxOByTxIn from Cardano.Ledger.Api.State.Query.UTxO instead."
+  #-}
 
 --------------------------------------------------------------------------------
 -- Stake pools and pool rewards
@@ -158,6 +173,10 @@ getPools ::
 getPools = Map.keysSet . f
   where
     f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+{-# DEPRECATED
+  getPools
+  "Use queryStakePools from Cardano.Ledger.Api.State.Query.Pool instead."
+  #-}
 
 -- | Get the /current/ registered stake pool state for a given set of
 -- stake pools. The result map will contain entries for all the given stake
@@ -170,6 +189,10 @@ getStakePools ::
 getStakePools = Map.restrictKeys . f
   where
     f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+{-# DEPRECATED
+  getStakePools
+  "Use queryPoolState or queryStakePoolParams from Cardano.Ledger.Api.State.Query.Pool instead."
+  #-}
 
 -- | Get pool sizes, but in terms of total stake
 --
@@ -200,6 +223,10 @@ poolsByTotalStakeFraction globals nes =
       IndividualPoolStake
     toTotalStakeFrac (IndividualPoolStake s c vrf) =
       IndividualPoolStake (s * stakeRatio) c vrf
+{-# DEPRECATED
+  poolsByTotalStakeFraction
+  "Use queryStakePoolDistrByTotalSupply from Cardano.Ledger.Api.State.Query.Pool instead"
+  #-}
 
 -- | Calculate the current total stake.
 getTotalStake :: Globals -> NewEpochState era -> Coin
@@ -207,6 +234,10 @@ getTotalStake globals ss =
   let supply = Coin . fromIntegral $ maxLovelaceSupply globals
       es = nesEs ss
    in circulation es supply
+{-# DEPRECATED
+  getTotalStake
+  "Use 'circulation' from Cardano.Ledger.Shelley.LedgerState instead."
+  #-}
 
 -- | Calculate the Non-Myopic Pool Member Rewards for a set of credentials.
 -- For each given credential, this function returns a map from each stake
@@ -252,6 +283,10 @@ getNonMyopicMemberRewards globals ss = Map.fromSet nmmRewards
       getTopRankedPools rPot totalStakeCoin pp $
         Map.intersectionWith (,) (VMap.toMap (VMap.map percentile' ls)) $
           VMap.toMap stakePoolsSnapShot
+{-# DEPRECATED
+  getNonMyopicMemberRewards
+  "Use queryNonMyopicMemberRewards from Cardano.Ledger.Api.State.Query.Reward instead"
+  #-}
 
 -- | Create a current snapshot of the ledger state.
 --
@@ -266,6 +301,10 @@ currentSnapshot nes =
     instantStake = ledgerState ^. instantStakeG
     dstate = ledgerState ^. lsCertStateL . certDStateL
     pstate = ledgerState ^. lsCertStateL . certPStateL
+{-# DEPRECATED
+  currentSnapshot
+  "Use queryCurrentSnapshot from Cardano.Ledger.Api.State.Query.Snapshot instead."
+  #-}
 
 -- | Information about a stake pool
 data RewardInfoPool = RewardInfoPool
@@ -359,6 +398,7 @@ getRewardInfoPools globals nes =
         , performanceEstimate =
             unPerformanceEstimate $ percentile' $ histLookup poolId
         }
+{-# DEPRECATED getRewardInfoPools "Use queryRewardInfoPools from Cardano.Ledger.Api.State.Query.Reward instead" #-}
 
 -- | Calculate stake pool rewards from the snapshot labeled `go`.
 -- Also includes information on how the rewards were calculated
@@ -366,10 +406,6 @@ getRewardInfoPools globals nes =
 --
 -- For a calculation of rewards based on the current stake distribution,
 -- see 'getRewardInfoPools'.
---
--- TODO: Deprecate 'getRewardProvenance', because wallets are more
--- likely to use 'getRewardInfoPools' for up-to-date information
--- on stake pool rewards.
 getRewardProvenance ::
   forall era.
   (EraGov era, EraCertState era) =>
@@ -391,6 +427,7 @@ getRewardProvenance globals newEpochState =
     slotsPerEpoch = epochInfoSize (epochInfoPure globals) epochNo
     asc = activeSlotCoeff globals
     secparam = securityParameter globals
+{-# DEPRECATED getRewardProvenance "Use queryRewardProvenance from Cardano.Ledger.Api.State.Query.Reward instead" #-}
 
 --------------------------------------------------------------------------------
 -- Transaction helpers
