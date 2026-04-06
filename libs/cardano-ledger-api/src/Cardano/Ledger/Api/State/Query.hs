@@ -9,7 +9,7 @@
 
 module Cardano.Ledger.Api.State.Query (
   -- * @GetFilteredDelegationsAndRewardAccounts@
-  queryStakePoolDelegsAndRewards,
+  module Cardano.Ledger.Api.State.Query.StakeDelegation,
 
   -- * @GetSPOStakeDistr@
   querySPOStakeDistr,
@@ -41,6 +41,7 @@ import Cardano.Ledger.Api.State.Query.Epoch
 import Cardano.Ledger.Api.State.Query.Governance
 import Cardano.Ledger.Api.State.Query.PParams
 import Cardano.Ledger.Api.State.Query.Snapshot
+import Cardano.Ledger.Api.State.Query.StakeDelegation
 import Cardano.Ledger.BaseTypes (EpochNo, Network)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..))
@@ -53,27 +54,11 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Lens.Micro
-
--- | Implementation for @GetFilteredDelegationsAndRewardAccounts@ query.
-queryStakePoolDelegsAndRewards ::
-  EraCertState era =>
-  NewEpochState era ->
-  Set (Credential Staking) ->
-  ( Map (Credential Staking) (KeyHash StakePool)
-  , Map (Credential Staking) Coin
-  )
-queryStakePoolDelegsAndRewards nes creds =
-  let accountsMap = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
-      accountsMapFiltered = accountsMap `Map.restrictKeys` creds
-   in ( Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMapFiltered
-      , Map.map (fromCompact . (^. balanceAccountStateL)) accountsMapFiltered
-      )
 
 -- | Query pool stake distribution.
 querySPOStakeDistr ::

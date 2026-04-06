@@ -23,6 +23,7 @@
       * `queryRegisteredDRepStakeDistr` (No consensus BlockQuery constructor exists yet, `GetRegisteredDRepStakeDistr` was planned but not added).
     + `queryStakeSnapshots` (`GetStakeSnapshots`) into `Query.Snapshot`, now returns a stable type `QueryResultStakeSnapshot`, and returns all pools given an empty set.
       * Remove `StakeSnapshot(s)` types with stable ones `QueryResultStakeSnapshot(s)`.
+    + `queryStakePoolDelegsAndRewards` (`GetFilteredDelegationsAndRewardAccounts`) into `Query.StakeDelegation`, now returns `QueryResultDelegsAndRewards`, and returns all registered credentials when given an empty set.
 
 ### `testlib`
 

@@ -58,3 +58,6 @@ instance Arbitrary QueryResultDRepState where
 
 instance Arbitrary QueryResultDRepStates where
   arbitrary = genericArbitraryU
+
+instance Arbitrary QueryResultDelegsAndRewards where
+  arbitrary = genericArbitraryU

@@ -168,6 +168,19 @@ spec = describe "Query Golden" $ do
             )
             "84a1581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c089581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c0582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c1113141903e81901f4d81e82010a581de0903884936fec86ccd3e6133e289e7f950b709a60bf64af0f9dc64410d9010281581c8a209f61d4a1a3fa94418e4a402880b758cf52552f13fe212a94b43680f6a0a1581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c01864a1581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c01901f4"
 
+  describe "QueryResultDelegsAndRewards" $ do
+    describe "canonical" $
+      goldenRoundTrip
+        (QueryResultDelegsAndRewards Map.empty Map.empty)
+        "82a0a0"
+    describe "non-empty delegations and rewards" $
+      goldenRoundTrip
+        ( QueryResultDelegsAndRewards
+            (Map.singleton (KeyHashObj (mkKeyHash 0)) (mkKeyHash 1))
+            (Map.singleton (KeyHashObj (mkKeyHash 0)) (Coin 1000))
+        )
+        "82a18200581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c0581c903884936fec86ccd3e6133e289e7f950b709a60bf64af0f9dc64410a18200581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c01903e8"
+
   describe "QueryResultStakeSnapshot" $
     describe "canonical" $
       goldenRoundTrip
