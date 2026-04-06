@@ -63,9 +63,7 @@ spec = do
   conwayFeaturesPlutusV1V2FailureSpec
   describe "Spending script without a Datum" $ do
     forM_ ([minBound .. eraMaxLanguage @era] :: [Language]) $ \lang -> do
-      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1103
-      -- TODO: Re-enable after issue is resolved, by removing this override
-      disableInConformanceIt (show lang) $ do
+      it (show lang) $ do
         let scriptHash = withSLanguage lang (hashPlutusScript . evenRedeemerNoDatum)
             addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
         amount <- uniformRM (Coin 10_000_000, Coin 100_000_000)
