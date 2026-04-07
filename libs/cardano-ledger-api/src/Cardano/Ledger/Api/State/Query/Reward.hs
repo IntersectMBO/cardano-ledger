@@ -100,6 +100,8 @@ instance DecCBOR QueryResultRewardInfoPools where
         <! From
 
 -- | Query non-myopic pool member rewards for a set of credentials.
+-- Replaces @getNonMyopicMemberRewards@ from @Cardano.Ledger.Shelley.API.Wallet@.
+--
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:415
 --   answerPureBlockQuery case for GetNonMyopicMemberRewards
 --
@@ -170,6 +172,8 @@ queryNonMyopicMemberRewards maxLovelaceSupply ss = Map.fromSet nmmRewards
           VMap.toMap stakePoolsSnapShot
 
 -- | Query per-pool reward information from the current stake distribution.
+-- Replaces @getRewardInfoPools@ from @Cardano.Ledger.Shelley.API.Wallet@.
+--
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:447
 --   answerPureBlockQuery case for GetRewardInfoPools
 --
@@ -225,6 +229,8 @@ queryRewardInfoPools maxLovelaceSupply nes =
         }
 
 -- | Query reward provenance by computing a reward update (internally based on the go snapshot).
+-- Replaces @getRewardProvenance@ from @Cardano.Ledger.Shelley.API.Wallet@.
+--
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:441
 --   answerPureBlockQuery case for GetRewardProvenance
 --
@@ -261,7 +267,3 @@ queryRewardProvenance globals newEpochState =
     slotsPerEpoch = epochInfoSize (epochInfoPure globals) epochNo
     asc = activeSlotCoeff globals
     secparam = securityParameter globals
-{-# DEPRECATED
-  queryRewardProvenance
-  "Wallets should prefer 'queryRewardInfoPools' for up-to-date reward information based on the current stake distribution."
-  #-}

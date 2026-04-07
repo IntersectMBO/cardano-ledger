@@ -10,7 +10,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Api.State.Query.Governance (
   -- * Constitution
@@ -44,10 +43,6 @@ module Cardano.Ledger.Api.State.Query.Governance (
 
   -- * For testing
   getNextEpochCommitteeMembers,
-
-  -- * Deprecated
-  CommitteeMemberState,
-  CommitteeMembersState,
 
   -- * Internal helpers (shared across Query sub-modules)
   finishedPulserState,
@@ -267,10 +262,6 @@ instance ToKeyValuePairs QueryResultCommitteeMemberState where
     , "nextEpochChange" .= nextEpoch
     ]
 
-type CommitteeMemberState = QueryResultCommitteeMemberState
-
-{-# DEPRECATED CommitteeMemberState "Use QueryResultCommitteeMemberState instead" #-}
-
 -- | Committee members state with the committee map, threshold, and current epoch.
 data QueryResultCommitteeMembersState = QueryResultCommitteeMembersState
   { qrcmsCommittee :: !(Map (Credential ColdCommitteeRole) QueryResultCommitteeMemberState)
@@ -309,10 +300,6 @@ instance ToKeyValuePairs QueryResultCommitteeMembersState where
     , "threshold" .= threshold
     , "epoch" .= epoch
     ]
-
-type CommitteeMembersState = QueryResultCommitteeMembersState
-
-{-# DEPRECATED CommitteeMembersState "Use QueryResultCommitteeMembersState instead" #-}
 
 -- | Stable query result for a single DRep's state.
 data QueryResultDRepState = QueryResultDRepState

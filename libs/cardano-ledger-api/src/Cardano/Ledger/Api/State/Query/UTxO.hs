@@ -21,6 +21,8 @@ import qualified Data.Set as Set
 import Lens.Micro ((^.))
 
 -- | Query the full UTxO set.
+-- Replaces @getUTxO@ from @Cardano.Ledger.Shelley.API.Wallet@.
+--
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:1259
 --   answerShelleyTraversingQueries case for GetUTxOWhole
 --
@@ -34,6 +36,8 @@ queryUTxOFull ::
 queryUTxOFull nes = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxoL
 
 -- | Query UTxO entries filtered by address.
+-- Replaces @getFilteredUTxO@ from @Cardano.Ledger.Shelley.API.Wallet@.
+--
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:1258
 --   answerShelleyTraversingQueries case for GetUTxOByAddress
 --
@@ -65,6 +69,8 @@ queryUTxOByAddress nes addrSet =
         Right cAddr -> cAddr `Set.member` compactAddrSet
 
 -- | Query UTxO entries filtered by transaction input.
+-- Replaces @getUTxOSubset@ from @Cardano.Ledger.Shelley.API.Wallet@.
+--
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:1180
 --   answerShelleyLookupQueries case for GetUTxOByTxIn
 --

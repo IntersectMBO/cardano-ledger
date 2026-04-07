@@ -2,20 +2,11 @@
 
 ## 1.19.0.0
 
-* Remove query functions from `Shelley.API.Wallet` in favour of `Cardano.Ledger.Api.State.Query` sub-modules:
-  - `getUTxO` → `queryUTxOFull` in `Query.UTxO`
-  - `getFilteredUTxO` → `queryUTxOByAddress` in `Query.UTxO`
-  - `getUTxOSubset` → `queryUTxOByTxIn` in `Query.UTxO`
-  - `getPools` → `queryStakePools` in `Query.Pool`
-  - `getStakePools` → `queryPoolState` / `queryStakePoolParams` in `Query.Pool`
-  - `poolsByTotalStakeFraction` → `queryStakePoolDistrByTotalSupply` in `Query.Pool`
-  - `getTotalStake` → use `circulation` from `Cardano.Ledger.Shelley.LedgerState`
-  - `getNonMyopicMemberRewards` → `queryNonMyopicMemberRewards` in `Query.Reward`
-  - `currentSnapshot` → `queryCurrentSnapshot` in `Query.Snapshot`
-  - `getRewardInfoPools` → `queryRewardInfoPools` in `Query.Reward`
-  - `getRewardProvenance` → `queryRewardProvenance` in `Query.Reward`
-* Add `Ord` instance for `RewardInfoPool` and `RewardParams`.
+<<<<<<< HEAD
 * Add `updateUTxOStateNoFees`
+=======
+* Add `Ord` instance for `RewardInfoPool` and `RewardParams`.
+>>>>>>> 0b2a8412c (Add Query.Reward.)
 * Add `Shelley.API.Forecast` and `Shelley.Forecast`:
   - Add `EraForecast` and `ShelleyEraForecast` typeclasses to deprecate `GetLedgerView` from `cardano-ledger-tpraos`.
   - Add `currentForecast` and `futureForecast` functions to deprecate `currentLedgerView` and `futureLedgerView`.

@@ -2,16 +2,12 @@ module Cardano.Ledger.Api.State.Query.Debug (
   -- * Debug queries
   queryDebugEpochState,
   queryDebugNewEpochState,
-
-  -- * Deprecated queries
-  queryProposedPParamsUpdates,
 ) where
 
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   NewEpochState (nesEs),
  )
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 
 -- | Query the full 'EpochState' for debugging.
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:424
@@ -34,15 +30,3 @@ queryDebugEpochState = nesEs
 -- /O(1)/
 queryDebugNewEpochState :: NewEpochState era -> NewEpochState era
 queryDebugNewEpochState = id
-
--- | Query proposed protocol parameter updates.
--- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:420
---   answerPureBlockQuery case for GetProposedPParamsUpdates
---
--- /O(1)/
-queryProposedPParamsUpdates :: NewEpochState era -> ProposedPPUpdates era
-queryProposedPParamsUpdates _ = emptyPPPUpdates
-{-# DEPRECATED
-  queryProposedPParamsUpdates
-  "Shelley-era PParams update mechanism was replaced by Conway governance."
-  #-}

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
 -- | Ledger state queries consolidated from @ouroboros-consensus@, @cardano-api@,
 -- @cardano-cli@, and @cardano-db-sync@.
 --

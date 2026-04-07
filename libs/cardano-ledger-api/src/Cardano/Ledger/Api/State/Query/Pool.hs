@@ -10,11 +10,6 @@ module Cardano.Ledger.Api.State.Query.Pool (
   -- * Stable query result types
   QueryResultPoolState (..),
 
-  -- * Deprecated aliases
-  QueryPoolStateResult,
-  mkQueryPoolStateResult,
-  queryPoolParameters,
-
   -- * Conversion
   toQueryResultPoolState,
 
@@ -127,10 +122,6 @@ instance DecCBOR QueryResultPoolState where
         <! From
         <! From
 
-type QueryPoolStateResult = QueryResultPoolState
-
-{-# DEPRECATED QueryPoolStateResult "Use QueryResultPoolState instead" #-}
-
 -- | Convert 'PState' to 'QueryResultPoolState'.
 toQueryResultPoolState ::
   (forall x. Map (KeyHash StakePool) x -> Map (KeyHash StakePool) x) ->
@@ -148,15 +139,9 @@ toQueryResultPoolState f ps network =
   where
     restrictedStakePools = f $ psStakePools ps
 
-mkQueryPoolStateResult ::
-  (forall x. Map (KeyHash StakePool) x -> Map (KeyHash StakePool) x) ->
-  PState era ->
-  Network ->
-  QueryResultPoolState
-mkQueryPoolStateResult = toQueryResultPoolState
-{-# DEPRECATED mkQueryPoolStateResult "Use toQueryResultPoolState instead" #-}
-
 -- | Query stake pool state.
+-- Replaces @getStakePools@ from @Cardano.Ledger.Shelley.API.Wallet@.
+--
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:449
 --   answerPureBlockQuery case for GetPoolState
 -- Also: cardano-api:cardano-api/src/Cardano/Api/Query/Internal/Expr.hs:202
@@ -185,6 +170,8 @@ queryPoolState nes poolKeys network =
    in toQueryResultPoolState f pstate network
 
 -- | Query stake pool parameters.
+-- Replaces @getStakePools@ from @Cardano.Ledger.Shelley.API.Wallet@.
+--
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:445
 --   answerPureBlockQuery case for GetStakePoolParams
 -- Also: cardano-api:cardano-api/src/Cardano/Api/Query/Internal/Expr.hs:299
@@ -210,15 +197,6 @@ queryStakePoolParams network nes poolKeys =
         | Set.null poolKeys = pools
         | otherwise = Map.restrictKeys pools poolKeys
    in Map.mapWithKey (stakePoolStateToStakePoolParams network) filtered
-
-queryPoolParameters ::
-  EraCertState era =>
-  Network ->
-  NewEpochState era ->
-  Set (KeyHash StakePool) ->
-  Map (KeyHash StakePool) StakePoolParams
-queryPoolParameters = queryStakePoolParams
-{-# DEPRECATED queryPoolParameters "Use queryStakePoolParams instead" #-}
 
 -- | Query a stake pool's default vote, determined by the DRep delegatee of the
 -- pool's reward account. In the absence of an explicit vote, this default vote
@@ -277,6 +255,8 @@ querySPOStakeDistr nes keys
     distr = psPoolDistr . fst $ finishedPulserState nes
 
 -- | Query the set of all currently registered stake pools.
+-- Replaces @getPools@ from @Cardano.Ledger.Shelley.API.Wallet@.
+--
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:443
 --   answerPureBlockQuery case for GetStakePools
 -- Also: cardano-api:cardano-api/src/Cardano/Api/Query/Internal/Expr.hs:325
@@ -293,6 +273,8 @@ queryStakePools nes =
   Map.keysSet $ nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
 -- | Query stake pool distribution with fractions relative to total ADA supply.
+-- Replaces @poolsByTotalStakeFraction@ from @Cardano.Ledger.Shelley.API.Wallet@.
+--
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:523
 --   answerPureBlockQuery case for GetStakeDistribution2
 --
@@ -301,7 +283,7 @@ queryStakePools nes =
 -- of the total supply including undelegated ADA. Used by wallets to display
 -- pool saturation.
 --
--- This query uses 'currentSnapshot' (the __mark__ snapshot computed from the
+-- This query uses 'queryCurrentSnapshot' (the __mark__ snapshot computed from the
 -- current ledger state), whereas 'queryStakePoolDistrFromSnapshot' reads the
 -- memoized @nesPd@ (the __set__ snapshot computed at the last epoch boundary).
 --

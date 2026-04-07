@@ -11,10 +11,6 @@ module Cardano.Ledger.Api.State.Query.Snapshot (
   QueryResultStakeSnapshot (..),
   QueryResultStakeSnapshots (..),
 
-  -- * Deprecated aliases
-  StakeSnapshot,
-  StakeSnapshots,
-
   -- * Queries
   queryStakeSnapshots,
   queryCurrentSnapshot,
@@ -101,10 +97,6 @@ instance DecCBOR QueryResultStakeSnapshot where
         <! From
         <! From
 
-type StakeSnapshot = QueryResultStakeSnapshot
-
-{-# DEPRECATED StakeSnapshot "Use QueryResultStakeSnapshot instead" #-}
-
 -- | Stake snapshots for all pools plus total active stake per snapshot.
 data QueryResultStakeSnapshots = QueryResultStakeSnapshots
   { qrssStakeSnapshots :: !(Map (KeyHash StakePool) QueryResultStakeSnapshot)
@@ -137,10 +129,6 @@ instance DecCBOR QueryResultStakeSnapshots where
         <! From
         <! From
         <! From
-
-type StakeSnapshots = QueryResultStakeSnapshots
-
-{-# DEPRECATED StakeSnapshots "Use QueryResultStakeSnapshots instead" #-}
 
 -- | Report stake per pool per snapshot as well as total active stake per snapshot.
 -- Source: ouroboros-consensus:ouroboros-consensus-cardano/src/shelley/Ouroboros/Consensus/Shelley/Ledger/Query.hs:451
@@ -234,12 +222,10 @@ queryStakeSnapshots nes requestedPoolIds =
 
 -- | Compute a snapshot from the current (live) ledger state, rather than
 -- from one of the stored epoch-boundary snapshots (mark / set / go).
+-- Replaces @currentSnapshot@ from @Cardano.Ledger.Shelley.API.Wallet@.
 --
 -- Used when ranking pools and reporting their saturation level: the most
 -- recent state is more relevant than a potentially stale snapshot.
---
--- Source: eras/shelley/impl/src/Cardano/Ledger/Shelley/API/Wallet.hs:296
---   currentSnapshot (now deprecated)
 --
 -- @
 --   O(c + p)
