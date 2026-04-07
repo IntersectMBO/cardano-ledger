@@ -1337,3 +1337,6 @@ instance HuddleRule1 "nonempty_oset" ConwayEra where
 
 instance HuddleRule1 "multiasset" ConwayEra where
   huddleRule1Named = conwayMultiasset
+
+instance HuddleRule "metadatum" ConwayEra where
+  huddleRuleNamed = allegraMetadatumRule

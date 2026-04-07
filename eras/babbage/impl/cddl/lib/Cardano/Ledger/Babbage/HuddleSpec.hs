@@ -616,3 +616,6 @@ instance HuddleRule1 "set" BabbageEra where
 
 instance HuddleRule1 "multiasset" BabbageEra where
   huddleRule1Named = maryMultiasset
+
+instance HuddleRule "metadatum" BabbageEra where
+  huddleRuleNamed = allegraMetadatumRule
