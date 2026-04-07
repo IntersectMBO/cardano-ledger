@@ -17,7 +17,8 @@ import Cardano.Ledger.BaseTypes (EpochInterval, NonNegativeInterval, UnitInterva
 import Cardano.Ledger.CanonicalState.BasicTypes (CanonicalExUnits (..))
 import Cardano.Ledger.CanonicalState.Conway ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
-import qualified Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 as Committee.V0
+import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesCommittee.V0 as Committee.V0
+import qualified Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 as GovCommittee.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0 as GovConstitution.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0 as GovPParams.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UTxO.V0
@@ -40,12 +41,17 @@ spec = do
     describe "utxo/v0" $ do
       isCanonical @"utxo/v0" @(UTxO.V0.UtxoOut ConwayEra)
       validateType @"utxo/v0" @(UTxO.V0.UtxoOut ConwayEra) "record_entry"
-    describe "gov/committee/v0" $ do
-      isCanonical @"gov/committee/v0" @Committee.V0.CanonicalCommitteeState
-      validateType @"gov/committee/v0" @Committee.V0.CanonicalCommitteeState "committee"
-      isCanonical @"gov/committee/v0" @Committee.V0.CanonicalCommitteeAuthorization
-      validateType @"gov/committee/v0" @Committee.V0.CanonicalCommitteeAuthorization
+    describe "entities/committee/v0" $ do
+      isCanonical @"entities/committee/v0" @Committee.V0.CanonicalCommitteeState
+      validateType @"entities/committee/v0" @Committee.V0.CanonicalCommitteeState "committee_state"
+      isCanonical @"entities/committee/v0" @Committee.V0.CanonicalCommitteeAuthorization
+      validateType @"entities/committee/v0" @Committee.V0.CanonicalCommitteeAuthorization
         "committee_authorization"
+    describe "gov/committee/v0" $ do
+      isCanonical @"gov/committee/v0" @GovCommittee.V0.CanonicalCommittee
+      validateType @"gov/committee/v0" @GovCommittee.V0.CanonicalCommittee "committee"
+      isCanonical @"gov/committee/v0" @GovCommittee.V0.GovCommitteeOut
+      validateType @"gov/committee/v0" @GovCommittee.V0.GovCommitteeOut "record_entry"
     describe "gov/constitution/v0" $ do
       isCanonical @"gov/constitution/v0" @GovConstitution.V0.CanonicalConstitution
       validateType @"gov/constitution/v0" @GovConstitution.V0.CanonicalConstitution "record_entry"
@@ -63,6 +69,7 @@ spec = do
   describe "namespaces" $ do
     testNS @"blocks/v0"
     testNS @"utxo/v0"
+    testNS @"entities/committee/v0"
     testNS @"gov/constitution/v0"
     testNS @"gov/committee/v0"
     testNS @"gov/pparams/v0"
