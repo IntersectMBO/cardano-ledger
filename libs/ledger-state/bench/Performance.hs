@@ -9,6 +9,7 @@ module Main where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Api.Era
+import Cardano.Ledger.Api.State.Query (queryUTxOByAddress, queryUTxOFull)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Conway
@@ -18,7 +19,6 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool
-import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesis (..),
   fromNominalDiffTimeMicro,
@@ -143,7 +143,7 @@ main = do
          in bgroup
               "MinMaxTxId"
               [ env (pure setAddr) $
-                  bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState)
+                  bench "queryUTxOByAddress" . nf (queryUTxOByAddress newEpochState)
               , env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
               ]
@@ -270,7 +270,7 @@ getFilteredOldUTxO ss addrs =
   UTxO $
     Map.filter (\txOut -> (txOut ^. compactAddrTxOutL) `Set.member` addrSBSs) fullUTxO
   where
-    UTxO fullUTxO = getUTxO ss
+    UTxO fullUTxO = queryUTxOFull ss
     addrSBSs = Set.map compactAddr addrs
 
 seqTuple :: (a, b) -> (a, b)

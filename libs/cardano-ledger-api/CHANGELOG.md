@@ -1,8 +1,53 @@
 # Version history for `cardano-ledger-api`
 
-## 1.13.0.1
+## 1.14.0.0
 
-*
+* Add new `Query.Reward` sub-module with:
+  - `QueryResultRewardInfoPools`
+  - `queryNonMyopicMemberRewards` (replaces `getNonMyopicMemberRewards`)
+  - `queryRewardInfoPools` (replaces `getRewardInfoPools`)
+  - `queryRewardProvenance` (replaces `getRewardProvenance`)
+* Add new `Query.UTxO` sub-module with:
+  - `queryUTxOFull` (replaces `getUTxO`)
+  - `queryUTxOByAddress` (replaces `getFilteredUTxO`)
+  - `queryUTxOByTxIn` (replaces `getUTxOSubset`)
+* Add new `Query.Debug` sub-module with `queryDebugEpochState`, `queryDebugNewEpochState`.
+* Add to `Query.Pool`:
+  - `queryStakePools` (replaces `getPools`)
+  - `queryStakePoolDistrByTotalSupply` (replaces `poolsByTotalStakeFraction`)
+  - `queryStakePoolDistrFromSnapshot`
+  - `queryStakePoolRelays`
+* Add new queries to `Query` sub-modules:
+  - Add `queryEpochNo` to `Query.Epoch`.
+  - Add `queryDRepDelegatees` to `Query.Governance`.
+  - Add `queryStakeDelegDeposits` to `Query.StakeDelegation`.
+  - Add `queryCurrentSnapshot` to `Query.Snapshot` (replaces `currentSnapshot`).
+* Remove deprecated `queryProposedPParamsUpdates` from `Query.Debug` (Shelley-era PParams update mechanism was replaced by Conway governance).
+* Remove deprecated type aliases:
+  - `CommitteeMemberState`, `CommitteeMembersState` from `Query.Governance`
+  - `QueryPoolStateResult`, `mkQueryPoolStateResult`, `queryPoolParameters` from `Query.Pool`
+  - `StakeSnapshot`, `StakeSnapshots` from `Query.Snapshot`
+* Refactor `Query` into sub-modules for consolidation.
+  - `Query.Pool` - stake-pool queries and stake distribution.
+  - `Query.Epoch` - chain account state.
+  - `Query.Governance` - governance, constitution, committee, and drep queries.
+    + Rename `Query.CommitteeMembersState` module to `Query.Governance`.
+    + Add `QueryResultCommitteeMemberState` and `QueryResultCommitteeMembersState` stable query types (replace `CommitteeMemberState` and `CommitteeMembersState`).
+    + Add `QueryResultConstitution` stable query type with `toQueryResultConstitution`.
+    + Add `QueryResultDRepState` and `QueryResultDRepStates` stable query types with `toQueryResultDRepState`.
+    + Move governance query functions over: `queryGovState`, `queryConstitution`, `queryConstitutionHash`, `queryProposals`, `queryRatifyState`, `queryCommitteeMembersState`, `queryDRepState`, `queryDRepDelegations`, `queryDRepStakeDistr`, `queryRegisteredDRepStakeDistr`, `getNextEpochCommitteeMembers`.
+    + Change `queryConstitution` return type to `QueryResultConstitution`.
+    + Change `queryDRepState` return type to `QueryResultDRepStates`.
+  - `Query.Snapshot` - mark/set/go stake snapshots.
+    + Add `QueryResultStakeSnapshot(s)` stable types (replace `StakeSnapshot` and `StakeSnapshots`).
+    + `queryStakeSnapshots` now takes `Set (KeyHash StakePool)` where an empty set returns all pools.
+  - `Query.StakeDelegation` - stake pool delegations and reward accounts.
+    + Add `QueryResultDelegsAndRewards` stable type for `queryStakePoolDelegsAndRewards`. Returns all registered credentials when given an empty set.
+  - `Query.Pool` - stake pool queries and stake distribution
+    + Rename `QueryPoolStateResult` to `QueryResultPoolState` (remove old alias).
+    + Rename `queryPoolParameters` to `queryStakePoolParams` (remove old alias).
+    + Rename `mkQueryPoolStateResult` to `toQueryResultPoolState` (remove old alias).
+    + `queryPoolState` (replaces `getStakePools`) now returns all pool states when given an empty set.
 
 ## 1.13.0.0
 
@@ -32,6 +77,7 @@
 
 ### `testlib`
 
+* Add `CBOR` round-trip tests for `QueryResult*` types.
 * Remove the `State.Query` module and `getFilteredDelegationsAndRewardAccounts` function.
 
 ## 1.12.1.0

@@ -10,11 +10,13 @@
 module Test.Cardano.Ledger.Api.State.Imp.QuerySpec where
 
 import Cardano.Ledger.Api.State.Query (
-  CommitteeMemberState (..),
-  CommitteeMembersState (..),
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
+  QueryResultCommitteeMemberState (..),
+  QueryResultCommitteeMembersState (..),
+  QueryResultDRepState (..),
+  QueryResultDRepStates (..),
   queryCommitteeMembersState,
   queryDRepDelegations,
   queryDRepState,
@@ -51,9 +53,9 @@ spec = withEachEraVersion @era $ do
             (HasCallStack, Monad m) =>
             Credential DRepRole ->
             NewEpochState era ->
-            m DRepState
+            m QueryResultDRepState
           drepStateFromQuery drep nes =
-            case Map.lookup drep (queryDRepState nes mempty) of
+            case Map.lookup drep (qrdrssStates (queryDRepState nes mempty)) of
               Nothing -> error $ "Expected for DRep " ++ show drep ++ " to be present in the query result"
               Just state -> pure state
       it "simple expiry" $ do
@@ -63,7 +65,7 @@ spec = withEachEraVersion @era $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
         drepState <- drepStateFromQuery drep nes
-        drepState ^. drepExpiryL `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
+        qrdrsExpiry drepState `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
         let n = 4
         passNEpochsChecking n $
           isDRepExpired drep `shouldReturn` False
@@ -96,7 +98,7 @@ spec = withEachEraVersion @era $ do
 
         expectedExpiry >>= expectDRepExpiry drep
         drepState <- drepStateFromQuery drep nes
-        expectedExpiry >>= shouldBe (drepState ^. drepExpiryL)
+        expectedExpiry >>= shouldBe (qrdrsExpiry drepState)
 
       it "proposals are made and numDormantEpochs are added" $ do
         curEpochNo <- getsNES nesELL
@@ -105,7 +107,7 @@ spec = withEachEraVersion @era $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
         drepState <- drepStateFromQuery drep nes
-        drepState ^. drepExpiryL `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
+        qrdrsExpiry drepState `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
         let n = 2
             actualExpiry = addEpochInterval curEpochNo $ EpochInterval (drepActivity + fromIntegral n)
         passNEpochsChecking n $
@@ -116,7 +118,7 @@ spec = withEachEraVersion @era $ do
         expectDRepExpiry drep actualExpiry
         nes1 <- getsNES id
         drepState1 <- drepStateFromQuery drep nes1
-        drepState1 ^. drepExpiryL `shouldBe` actualExpiry
+        qrdrsExpiry drepState1 `shouldBe` actualExpiry
         passNEpochsChecking (fromIntegral drepActivity) $
           isDRepExpired drep `shouldReturn` False
         passEpoch
@@ -128,7 +130,7 @@ spec = withEachEraVersion @era $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
         drepState <- drepStateFromQuery drep nes
-        drepState ^. drepExpiryL `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
+        qrdrsExpiry drepState `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
         let n = 3
         passNEpochsChecking n $
           isDRepExpired drep `shouldReturn` False
@@ -145,11 +147,10 @@ spec = withEachEraVersion @era $ do
         expectNumDormantEpochs $ EpochNo (fromIntegral n)
         nes1 <- getsNES id
         drepState1 <- drepStateFromQuery drep nes1
-        drepState1
-          ^. drepExpiryL
-            `shouldBe` addEpochInterval
-              curEpochNo
-              (EpochInterval (drepActivity + fromIntegral n))
+        qrdrsExpiry drepState1
+          `shouldBe` addEpochInterval
+            curEpochNo
+            (EpochInterval (drepActivity + fromIntegral n))
         expectDRepExpiry drep $ addEpochInterval curEpochNo $ EpochInterval drepActivity
         passEpoch
         expectNumDormantEpochs $ EpochNo (fromIntegral n + 1)
@@ -158,7 +159,7 @@ spec = withEachEraVersion @era $ do
         nes2 <- getsNES id
         drepState2 <- drepStateFromQuery drep nes2
         let drepExpiry2 = addEpochInterval curEpochNo $ EpochInterval (drepActivity + fromIntegral n + 1)
-        drepState2 ^. drepExpiryL `shouldBe` drepExpiry2
+        qrdrsExpiry drepState2 `shouldBe` drepExpiry2
         expectActualDRepExpiry drep drepExpiry2
         passNEpochsChecking (fromIntegral drepActivity) $ do
           isDRepExpired drep `shouldReturn` False
@@ -172,7 +173,7 @@ spec = withEachEraVersion @era $ do
           UpdateCommittee SNothing mempty (Map.singleton c1 (EpochNo 4321)) (1 %! 1)
         hk1 <- registerCommitteeHotKey c1
         expectQueryResult (Set.singleton c1) mempty mempty $
-          [(c1, CommitteeMemberState (MemberAuthorized hk1) Unrecognized Nothing ToBeRemoved)]
+          [(c1, QueryResultCommitteeMemberState (MemberAuthorized hk1) Unrecognized Nothing ToBeRemoved)]
         passEpoch
         expectQueryResult (Set.singleton c1) mempty mempty Map.empty
 
@@ -196,10 +197,11 @@ spec = withEachEraVersion @era $ do
         passEpoch
         hk1 <- registerCommitteeHotKey c1
         expectQueryResult (Set.singleton c1) mempty mempty $
-          [(c1, CommitteeMemberState (MemberAuthorized hk1) Unrecognized Nothing ToBeEnacted)]
+          [(c1, QueryResultCommitteeMemberState (MemberAuthorized hk1) Unrecognized Nothing ToBeEnacted)]
         passEpoch
         expectQueryResult (Set.singleton c1) mempty mempty $
-          [(c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) NoChangeExpected)]
+          [ (c1, QueryResultCommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) NoChangeExpected)
+          ]
 
   it "queryDRepDelegationState" $ do
     (credDrep, delegator, _) <- setupSingleDRep 1_000_000
@@ -272,26 +274,26 @@ spec = withEachEraVersion @era $ do
     expectMembers $ Map.keysSet newMembers
     -- members for which the expiration epoch is the current epoch are `ToBeExpired`
     expectNoFilterQueryResult
-      [ (c1, CommitteeMemberState MemberNotAuthorized Active (Just c1Expiry) NoChangeExpected)
-      , (c2, CommitteeMemberState MemberNotAuthorized Active (Just c2Expiry) ToBeExpired)
-      , (c3, CommitteeMemberState MemberNotAuthorized Active (Just c3Expiry) NoChangeExpected)
-      , (c4, CommitteeMemberState MemberNotAuthorized Active (Just c4Expiry) NoChangeExpected)
+      [ (c1, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c1Expiry) NoChangeExpected)
+      , (c2, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c2Expiry) ToBeExpired)
+      , (c3, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c3Expiry) NoChangeExpected)
+      , (c4, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c4Expiry) NoChangeExpected)
       ]
     -- hot cred status of members with registered hot keys becomes `MemberAuthorized`
     hk1 <- registerCommitteeHotKey c1
     hk2 <- registerCommitteeHotKey c2
     expectNoFilterQueryResult
-      [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) NoChangeExpected)
-      , (c2, CommitteeMemberState (MemberAuthorized hk2) Active (Just c2Expiry) ToBeExpired)
-      , (c3, CommitteeMemberState MemberNotAuthorized Active (Just c3Expiry) NoChangeExpected)
-      , (c4, CommitteeMemberState MemberNotAuthorized Active (Just c4Expiry) NoChangeExpected)
+      [ (c1, QueryResultCommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) NoChangeExpected)
+      , (c2, QueryResultCommitteeMemberState (MemberAuthorized hk2) Active (Just c2Expiry) ToBeExpired)
+      , (c3, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c3Expiry) NoChangeExpected)
+      , (c4, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c4Expiry) NoChangeExpected)
       ]
     expectQueryResult
       [c2, c3, c5]
       mempty
       [Active, Unrecognized]
-      [ (c3, CommitteeMemberState MemberNotAuthorized Active (Just c3Expiry) NoChangeExpected)
-      , (c2, CommitteeMemberState (MemberAuthorized hk2) Active (Just c2Expiry) ToBeExpired)
+      [ (c3, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c3Expiry) NoChangeExpected)
+      , (c2, QueryResultCommitteeMemberState (MemberAuthorized hk2) Active (Just c2Expiry) ToBeExpired)
       ]
 
     c3Anchor <- arbitrary
@@ -309,11 +311,18 @@ spec = withEachEraVersion @era $ do
     -- registering a hot key for a credential that's not part of the committee will yield `Unrecognized` member status
     -- and expected change of `ToBeRemoved`
     expectNoFilterQueryResult
-      [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) NoChangeExpected)
-      , (c2, CommitteeMemberState (MemberAuthorized hk2) Active (Just c2Expiry) ToBeExpired)
-      , (c3, CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just c3Expiry) NoChangeExpected)
-      , (c4, CommitteeMemberState MemberNotAuthorized Active (Just c4Expiry) NoChangeExpected)
-      , (c5, CommitteeMemberState (MemberAuthorized hk5) Unrecognized Nothing ToBeRemoved)
+      [ (c1, QueryResultCommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) NoChangeExpected)
+      , (c2, QueryResultCommitteeMemberState (MemberAuthorized hk2) Active (Just c2Expiry) ToBeExpired)
+      ,
+        ( c3
+        , QueryResultCommitteeMemberState
+            (MemberResigned (Just c3Anchor))
+            Active
+            (Just c3Expiry)
+            NoChangeExpected
+        )
+      , (c4, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c4Expiry) NoChangeExpected)
+      , (c5, QueryResultCommitteeMemberState (MemberAuthorized hk5) Unrecognized Nothing ToBeRemoved)
       ]
     expectQueryResult
       [c2, c3, c5]
@@ -321,17 +330,27 @@ spec = withEachEraVersion @era $ do
       [Unrecognized]
       ( Map.singleton
           c5
-          (CommitteeMemberState (MemberAuthorized hk5) Unrecognized Nothing ToBeRemoved)
+          (QueryResultCommitteeMemberState (MemberAuthorized hk5) Unrecognized Nothing ToBeRemoved)
       )
 
     passEpoch -- epoch 3
     -- the `Unrecognized` member gets removed from the query result
     -- the member which in the previous epoch was expected `ToBeEpired`, has now MemberStatus `Expired` and `NoChangeExpected`
     expectNoFilterQueryResult
-      [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) NoChangeExpected)
-      , (c2, CommitteeMemberState (MemberAuthorized hk2) Expired (Just c2Expiry) NoChangeExpected)
-      , (c3, CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just c3Expiry) NoChangeExpected)
-      , (c4, CommitteeMemberState MemberNotAuthorized Active (Just c4Expiry) NoChangeExpected)
+      [ (c1, QueryResultCommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) NoChangeExpected)
+      ,
+        ( c2
+        , QueryResultCommitteeMemberState (MemberAuthorized hk2) Expired (Just c2Expiry) NoChangeExpected
+        )
+      ,
+        ( c3
+        , QueryResultCommitteeMemberState
+            (MemberResigned (Just c3Anchor))
+            Active
+            (Just c3Expiry)
+            NoChangeExpected
+        )
+      , (c4, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c4Expiry) NoChangeExpected)
       ]
 
     -- elect new committee to be: c1 (term extended ), c3 (no changes), c4 (term shortened, expiring next epoch), c6, c7 (new)
@@ -361,20 +380,41 @@ spec = withEachEraVersion @era $ do
     -- members that are part of both current and next committee have `NoChangeExpected` or `TermAdjusted`
     -- members that part of only next committee are `ToBeEnacted`
     expectNoFilterQueryResult
-      [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) (TermAdjusted c1NewExpiry))
-      , (c2, CommitteeMemberState (MemberAuthorized hk2) Expired (Just c2Expiry) ToBeRemoved)
-      , (c3, CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just c3Expiry) NoChangeExpected)
+      [
+        ( c1
+        , QueryResultCommitteeMemberState
+            (MemberAuthorized hk1)
+            Active
+            (Just c1Expiry)
+            (TermAdjusted c1NewExpiry)
+        )
+      , (c2, QueryResultCommitteeMemberState (MemberAuthorized hk2) Expired (Just c2Expiry) ToBeRemoved)
+      ,
+        ( c3
+        , QueryResultCommitteeMemberState
+            (MemberResigned (Just c3Anchor))
+            Active
+            (Just c3Expiry)
+            NoChangeExpected
+        )
       , -- though its term was adjusted, `ToBeExpired` takes precedence
-        (c4, CommitteeMemberState MemberNotAuthorized Active (Just c4Expiry) ToBeExpired)
-      , (c6, CommitteeMemberState (MemberAuthorized hk6) Unrecognized Nothing ToBeEnacted)
-      , (c7, CommitteeMemberState MemberNotAuthorized Unrecognized Nothing ToBeEnacted)
-      , (c8, CommitteeMemberState (MemberAuthorized hk8) Unrecognized Nothing ToBeRemoved)
+        (c4, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c4Expiry) ToBeExpired)
+      , (c6, QueryResultCommitteeMemberState (MemberAuthorized hk6) Unrecognized Nothing ToBeEnacted)
+      , (c7, QueryResultCommitteeMemberState MemberNotAuthorized Unrecognized Nothing ToBeEnacted)
+      , (c8, QueryResultCommitteeMemberState (MemberAuthorized hk8) Unrecognized Nothing ToBeRemoved)
       ]
     expectQueryResult
       [c1]
       mempty
       mempty
-      [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) (TermAdjusted c1NewExpiry))
+      [
+        ( c1
+        , QueryResultCommitteeMemberState
+            (MemberAuthorized hk1)
+            Active
+            (Just c1Expiry)
+            (TermAdjusted c1NewExpiry)
+        )
       ]
     expectQueryResult
       [c2]
@@ -382,18 +422,31 @@ spec = withEachEraVersion @era $ do
       [Expired]
       ( Map.singleton
           c2
-          (CommitteeMemberState (MemberAuthorized hk2) Expired (Just c2Expiry) ToBeRemoved)
+          (QueryResultCommitteeMemberState (MemberAuthorized hk2) Expired (Just c2Expiry) ToBeRemoved)
       )
 
     passNEpochs 2 -- epoch 6
     -- the new committee is in place with the adjusted terms
     expectMembers [c1, c3, c4, c6, c7]
     expectNoFilterQueryResult
-      [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just c1NewExpiry) NoChangeExpected)
-      , (c3, CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just c3Expiry) NoChangeExpected)
-      , (c4, CommitteeMemberState MemberNotAuthorized Expired (Just c4NewExpiry) NoChangeExpected)
-      , (c6, CommitteeMemberState (MemberAuthorized hk6) Active (Just c6Expiry) ToBeExpired)
-      , (c7, CommitteeMemberState MemberNotAuthorized Active (Just c7Expiry) NoChangeExpected)
+      [
+        ( c1
+        , QueryResultCommitteeMemberState (MemberAuthorized hk1) Active (Just c1NewExpiry) NoChangeExpected
+        )
+      ,
+        ( c3
+        , QueryResultCommitteeMemberState
+            (MemberResigned (Just c3Anchor))
+            Active
+            (Just c3Expiry)
+            NoChangeExpected
+        )
+      ,
+        ( c4
+        , QueryResultCommitteeMemberState MemberNotAuthorized Expired (Just c4NewExpiry) NoChangeExpected
+        )
+      , (c6, QueryResultCommitteeMemberState (MemberAuthorized hk6) Active (Just c6Expiry) ToBeExpired)
+      , (c7, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c7Expiry) NoChangeExpected)
       ]
     expectQueryResult
       Set.empty
@@ -422,10 +475,10 @@ spec = withEachEraVersion @era $ do
     passEpoch -- epoch 7
     -- members whose term changed have next epoch change `TermAdjusted`
     expectNoFilterQueryResult
-      [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just c1NewExpiry) ToBeRemoved)
+      [ (c1, QueryResultCommitteeMemberState (MemberAuthorized hk1) Active (Just c1NewExpiry) ToBeRemoved)
       ,
         ( c3
-        , CommitteeMemberState
+        , QueryResultCommitteeMemberState
             (MemberResigned (Just c3Anchor))
             Active
             (Just c3Expiry)
@@ -433,21 +486,42 @@ spec = withEachEraVersion @era $ do
         )
       ,
         ( c4
-        , CommitteeMemberState MemberNotAuthorized Expired (Just c4NewExpiry) (TermAdjusted c4NewNewExpiry)
+        , QueryResultCommitteeMemberState
+            MemberNotAuthorized
+            Expired
+            (Just c4NewExpiry)
+            (TermAdjusted c4NewNewExpiry)
         )
-      , (c6, CommitteeMemberState (MemberAuthorized hk6) Expired (Just c6Expiry) (TermAdjusted c6NewExpiry))
-      , (c7, CommitteeMemberState MemberNotAuthorized Active (Just c7Expiry) ToBeExpired)
+      ,
+        ( c6
+        , QueryResultCommitteeMemberState
+            (MemberAuthorized hk6)
+            Expired
+            (Just c6Expiry)
+            (TermAdjusted c6NewExpiry)
+        )
+      , (c7, QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c7Expiry) ToBeExpired)
       ]
     passEpoch -- epoch 8
     expectMembers [c3, c4, c6, c7]
     expectNoFilterQueryResult
       [
         ( c3
-        , CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just c3NewExpiry) NoChangeExpected
+        , QueryResultCommitteeMemberState
+            (MemberResigned (Just c3Anchor))
+            Active
+            (Just c3NewExpiry)
+            NoChangeExpected
         )
-      , (c4, CommitteeMemberState MemberNotAuthorized Active (Just c4NewNewExpiry) NoChangeExpected)
-      , (c6, CommitteeMemberState (MemberAuthorized hk6) Active (Just c6NewExpiry) NoChangeExpected)
-      , (c7, CommitteeMemberState MemberNotAuthorized Expired (Just c7Expiry) NoChangeExpected)
+      ,
+        ( c4
+        , QueryResultCommitteeMemberState MemberNotAuthorized Active (Just c4NewNewExpiry) NoChangeExpected
+        )
+      ,
+        ( c6
+        , QueryResultCommitteeMemberState (MemberAuthorized hk6) Active (Just c6NewExpiry) NoChangeExpected
+        )
+      , (c7, QueryResultCommitteeMemberState MemberNotAuthorized Expired (Just c7Expiry) NoChangeExpected)
       ]
   where
     expectQueryResult ::
@@ -455,22 +529,22 @@ spec = withEachEraVersion @era $ do
       Set.Set (Credential ColdCommitteeRole) ->
       Set.Set (Credential HotCommitteeRole) ->
       Set.Set MemberStatus ->
-      Map.Map (Credential ColdCommitteeRole) CommitteeMemberState ->
+      Map.Map (Credential ColdCommitteeRole) QueryResultCommitteeMemberState ->
       ImpTestM era ()
     expectQueryResult ckFilter hkFilter statusFilter expResult = do
       nes <- use impNESL
-      let CommitteeMembersState {csCommittee} =
+      let QueryResultCommitteeMembersState {qrcmsCommittee} =
             queryCommitteeMembersState
               ckFilter
               hkFilter
               statusFilter
               nes
       impAnn "Expecting query result" $
-        csCommittee `shouldBe` expResult
+        qrcmsCommittee `shouldBe` expResult
 
     expectNoFilterQueryResult ::
       HasCallStack =>
-      Map.Map (Credential ColdCommitteeRole) CommitteeMemberState ->
+      Map.Map (Credential ColdCommitteeRole) QueryResultCommitteeMemberState ->
       ImpTestM era ()
     expectNoFilterQueryResult =
       expectQueryResult mempty mempty mempty
