@@ -37,7 +37,8 @@ instance Arbitrary CanonicalCoin where
 instance Arbitrary GovCommittee.V0.GovCommitteeOut where
   arbitrary = genericArbitraryU
 
-instance Arbitrary GovCommittee.V0.CanonicalCommittee where arbitrary = genericArbitraryU
+instance Arbitrary GovCommittee.V0.CanonicalCommittee where
+  arbitrary = genericArbitraryU
 
 instance Arbitrary CanonicalExUnits where
   arbitrary = mkCanonicalExUnits <$> arbitrary
