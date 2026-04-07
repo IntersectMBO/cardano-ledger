@@ -38,7 +38,7 @@ library
     containers,
     hashable,
     hedgehog >=1.0.4,
-    microlens,
+    microlens >=0.5,
     microlens-th,
     small-steps:{small-steps, testlib} >=1.1,
 
