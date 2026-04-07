@@ -121,10 +121,12 @@ instance Storable (Credential r) where
     KeyHashObj hash -> do
       poke (castPtr ptr) (1 :: Word8)
       pokeByteOff (castPtr ptr) 1 hash
+  {-# INLINE poke #-}
   peek ptr = do
     peek (castPtr ptr) >>= \case
       (0 :: Word8) -> ScriptHashObj <$> peekByteOff (castPtr ptr) 1
       _ -> KeyHashObj <$> peekByteOff (castPtr ptr) 1
+  {-# INLINE peek #-}
 
 instance Default (Credential r) where
   def = KeyHashObj def

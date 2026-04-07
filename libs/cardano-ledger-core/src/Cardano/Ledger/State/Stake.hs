@@ -134,10 +134,12 @@ instance Storable StakeWithDelegation where
     let StakeWithDelegation {..} = swd
     poke (castPtr ptr) swdStake
     pokeByteOff (castPtr ptr) (sizeOf swdStake) swdDelegation
+  {-# INLINE poke #-}
   peek ptr = do
     swdStake <- peek (castPtr ptr)
     swdDelegation <- peekByteOff (castPtr ptr) (sizeOf swdStake)
     pure StakeWithDelegation {..}
+  {-# INLINE peek #-}
 
 -- | Active stake: maps staking credentials to their non-zero stake paired with delegation.
 -- Only credentials that are registered, delegated, and have non-zero stake appear here.
