@@ -15,6 +15,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayNewEpochEvent,
  )
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
+import Cardano.Ledger.Shelley.Rules (RupdEvent)
 import Control.State.Transition (STS (..))
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
@@ -40,6 +41,7 @@ spec ::
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
   Spec
 spec =

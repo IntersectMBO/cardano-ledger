@@ -4,16 +4,25 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Allegra.Imp (spec) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.Rules
 import Test.Cardano.Ledger.Allegra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
-spec :: forall era. (ShelleyEraImp era, EraSpecificSpec era) => Spec
+spec ::
+  forall era.
+  ( ShelleyEraImp era
+  , EraSpecificSpec era
+  , Event (EraRule "RUPD" era) ~ RupdEvent
+  ) =>
+  Spec
 spec = do
   ShelleyImp.spec @era
 
