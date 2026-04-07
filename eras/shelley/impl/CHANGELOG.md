@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Remove `validMetadata` from `SoftForks`
 * Add `updateUTxOStateNoFees`
 * Add `Shelley.API.Forecast` and `Shelley.Forecast`:
   - Add `EraForecast` and `ShelleyEraForecast` typeclasses to deprecate `GetLedgerView` from `cardano-ledger-tpraos`.

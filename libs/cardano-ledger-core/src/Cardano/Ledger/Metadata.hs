@@ -101,7 +101,7 @@ encodeMetadatum (Map kvs) =
 -- The byte and string length checks are enforced in this decoder as per
 -- the CDDL spec.
 --
--- starting with Allegra era we enforce the length of strings and bytestrings 
+-- starting with Allegra era we enforce the length of strings and bytestrings
 -- to be no more than 64 bytes
 decodeMetadatum :: Decoder s Metadatum
 decodeMetadatum = do

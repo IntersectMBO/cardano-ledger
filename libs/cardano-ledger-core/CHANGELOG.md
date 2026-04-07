@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Remove `validMetadatum`
 * Deprecate `BHeaderView` in favour `*EraBlockHeader` typeclasses.
   - Move `isOverlaySlot` to `Cardano.Ledger.Slot`.
   - Remove `PerasCert`, `PerasKey` and `validatePerasCert` to `dijkstra`.

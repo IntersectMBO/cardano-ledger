@@ -15,15 +15,21 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Keys.Bootstrap
+import Cardano.Ledger.Metadata (Metadatum (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
+import qualified Data.Text as T
+import Data.Word (Word64)
 import Lens.Micro
+import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..))
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Shelley.Arbitrary (genUtf8StringOfSize)
 import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec :: forall era. ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
@@ -135,3 +141,23 @@ spec = describe "UTXOW" $ do
           [ injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash
           , injectFailure $ ExtraneousScriptWitnessesUTXOW $ NES.singleton scriptHash
           ]
+  it "A malformed metadatum does nothing" $ do
+    invalidMetadatum <- genInvalidMetadata
+    let
+      auxData = mkBasicTxAuxData & metadataTxAuxDataL .~ invalidMetadatum
+      auxDataHash = hashTxAuxData auxData
+      tx =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . auxDataHashTxBodyL .~ SJust auxDataHash
+          & auxDataTxL .~ SJust auxData
+    submitTx_ tx
+
+genInvalidMetadata :: ImpTestM era (Map.Map Word64 Metadatum)
+genInvalidMetadata = do
+  size <- choose (65, 1000)
+  let genM =
+        oneof
+          [ B <$> liftGen (genByteArray size)
+          , S . T.pack <$> liftGen (genUtf8StringOfSize size)
+          ]
+  Map.fromList <$> listOf1 ((,) <$> arbitrary <*> genM)

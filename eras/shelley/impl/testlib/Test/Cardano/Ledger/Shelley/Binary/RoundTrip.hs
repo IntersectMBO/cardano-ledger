@@ -9,7 +9,6 @@
 module Test.Cardano.Ledger.Shelley.Binary.RoundTrip (
   roundTripShelleyCommonSpec,
   roundTripStateEraTypesSpec,
-  metadatumSizeLimitSpec,
 ) where
 
 import Cardano.Ledger.Binary
@@ -18,10 +17,8 @@ import Cardano.Ledger.Metadata (Metadatum)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.State
-import qualified Data.ByteString as BS
-import Data.Either (isLeft, isRight)
 import qualified Data.Text as T
-import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (E))
+import Test.Cardano.Base.Bytes (genByteString)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
@@ -70,31 +67,31 @@ roundTripStateEraTypesSpec = do
 
 metadatumSizeLimitSpec :: Version -> Spec
 metadatumSizeLimitSpec v = do
-  let genBytes n = BS.pack <$> vectorOf n arbitrary
-      genAsciiText n = T.pack <$> vectorOf n (choose ('a', 'z'))
-      dec :: ToCBOR a => a -> Either DecoderError Metadatum
-      dec = decodeFull v . toLazyByteString . toCBOR . E
+  let
+    genAsciiText n = T.pack <$> vectorOf n (choose ('a', 'z'))
+    dec :: ToCBOR a => a -> Either DecoderError Metadatum
+    dec = decodeFull v . toLazyByteString . toCBOR
   prop "Accepts bytes up to 64 bytes" $
-    forAll (choose (0, 64) >>= genBytes) $ \bs ->
-      dec bs `shouldSatisfy` isRight
+    forAll (choose (0, 64) >>= genByteString) $ \bs ->
+      expectRightDeepExpr_ $ dec bs
   prop "Accepts text up to 64 bytes" $
     forAll (choose (0, 64) >>= genAsciiText) $ \txt ->
-      dec txt `shouldSatisfy` isRight
+      expectRightDeepExpr_ $ dec txt
   if v > natVersion @2
     then do
       prop "Rejects bytes exceeding 64 bytes" $
-        forAll (choose (65, 1000) >>= genBytes) $ \bs ->
-          dec bs `shouldSatisfy` isLeft
+        forAll (choose (65, 1000) >>= genByteString) $ \bs ->
+          void . expectLeftExpr $ dec bs
       prop "Rejects text exceeding 64 bytes" $
         forAll (choose (65, 1000) >>= genAsciiText) $ \txt ->
-          dec txt `shouldSatisfy` isLeft
+          void . expectLeftExpr $ dec txt
     else do
       prop "Accepts bytes exceeding 64 bytes" $
-        forAll (choose (65, 1000) >>= genBytes) $ \bs ->
-          dec bs `shouldSatisfy` isRight
+        forAll (choose (65, 1000) >>= genByteString) $ \bs ->
+          expectRightDeepExpr_ $ dec bs
       prop "Accepts text exceeding 64 bytes" $
         forAll (choose (65, 1000) >>= genAsciiText) $ \txt ->
-          dec txt `shouldSatisfy` isRight
+          expectRightDeepExpr_ $ dec txt
 
 instance RuleListEra ShelleyEra where
   type
