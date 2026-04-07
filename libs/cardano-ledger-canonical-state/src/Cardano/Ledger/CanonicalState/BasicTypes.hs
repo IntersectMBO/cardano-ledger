@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -21,6 +22,8 @@ module Cardano.Ledger.CanonicalState.BasicTypes (
   OnChain (..),
   DecodeOnChain (..),
   mkOnChain,
+
+  -- * Canonical wrappers for basic types
   CanonicalCoin (..),
   CanonicalExUnits (..),
   mkCanonicalExUnits,
@@ -46,7 +49,7 @@ import Cardano.Ledger.Binary (EncCBOR, encCBOR, serialize')
 import Cardano.Ledger.CanonicalState.LedgerCBOR
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
-import Cardano.Ledger.Core (eraProtVerLow)
+import Cardano.Ledger.Core (AccountAddress (..), eraProtVerLow)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..))
 import qualified Cardano.Ledger.Hashes as H
@@ -275,3 +278,13 @@ decodeNamespacedTag :: forall v a s. FromCanonicalCBOR v a => Word -> CanonicalD
 decodeNamespacedTag expectedTag = do
   decodeWordCanonicalOf expectedTag
   unVer <$> fromCanonicalCBOR @v
+
+deriving via
+  LedgerCBOR v AccountAddress
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v AccountAddress
+
+deriving via
+  LedgerCBOR v AccountAddress
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v AccountAddress
