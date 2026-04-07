@@ -143,7 +143,7 @@ main = do
          in bgroup
               "MinMaxTxId"
               [ env (pure setAddr) $
-                  bench "getFilteredNewUTxO" . nf (queryUTxOByAddress newEpochState)
+                  bench "queryUTxOByAddress" . nf (queryUTxOByAddress newEpochState)
               , env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
               ]

@@ -191,7 +191,7 @@ instance DecCBOR HotCredAuthStatus where
       k -> Invalid k
 
 data NextEpochChange
-  = --- | Member not enacted yet, but will be at the next epoch
+  = -- | Member not enacted yet, but will be at the next epoch
     ToBeEnacted
   | -- | Member will be removed
     ToBeRemoved

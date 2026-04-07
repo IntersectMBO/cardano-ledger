@@ -271,7 +271,7 @@ querySPOStakeDistr ::
   Set (KeyHash StakePool) ->
   Map (KeyHash StakePool) Coin
 querySPOStakeDistr nes keys
-  | null keys = Map.map fromCompact distr
+  | Set.null keys = Map.map fromCompact distr
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` keys
   where
     distr = psPoolDistr . fst $ finishedPulserState nes
