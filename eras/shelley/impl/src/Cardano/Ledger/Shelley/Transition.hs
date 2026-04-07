@@ -65,6 +65,7 @@ import Cardano.Ledger.Shelley.Translation (
   toFromByronTranslationContext,
  )
 import Cardano.Ledger.Val
+import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, withObject, (.:))
 import qualified Data.Aeson as Aeson (Value (..))
 import Data.Aeson.Key (Key, fromString)
@@ -323,7 +324,9 @@ deriving instance NoThunks (TransitionConfig ShelleyEra)
 -- | Helper function for constructing the initial state for any era
 --
 -- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
--- when NetworkId is set to Mainnet
+-- when
+--  * 'NetworkId' is set to 'Mainnet'
+--  * protocol version in `curPParams` is not within the bounds of what the era expects
 --
 -- This function does not register any initial funds or delegates.
 createInitialState ::
@@ -332,36 +335,41 @@ createInitialState ::
   TransitionConfig era ->
   NewEpochState era
 createInitialState tc =
-  protectMainnet
-    "InitialState"
-    tc
-    (const False)
-    NewEpochState
-      { nesEL = initialEpochNo
-      , nesBprev = BlocksMade Map.empty
-      , nesBcur = BlocksMade Map.empty
-      , nesEs =
-          EpochState
-            { esChainAccountState =
-                ChainAccountState
-                  { casTreasury = zero
-                  , casReserves = reserves
-                  }
-            , esSnapshots = emptySnapShots
-            , esLState =
-                LedgerState
-                  { lsUTxOState =
-                      smartUTxOState pp initialUtxo zero zero govState zero
-                  , lsCertState =
-                      def & certDStateL . dsGenDelegsL .~ GenDelegs (sgGenDelegs sg)
-                  }
-            , esNonMyopic = def
-            }
-      , nesRu = SNothing
-      , nesPd = def
-      , stashedAVVMAddresses = def
-      }
+  either error id $
+    validateProtVerBounds $
+      protectMainnet
+        "InitialState"
+        tc
+        (const False)
+        nes
   where
+    nes :: NewEpochState era
+    nes =
+      NewEpochState
+        { nesEL = initialEpochNo
+        , nesBprev = BlocksMade mempty
+        , nesBcur = BlocksMade mempty
+        , nesEs =
+            EpochState
+              { esChainAccountState =
+                  ChainAccountState
+                    { casTreasury = zero
+                    , casReserves = reserves
+                    }
+              , esSnapshots = emptySnapShots
+              , esLState =
+                  LedgerState
+                    { lsUTxOState =
+                        smartUTxOState pp initialUtxo zero zero govState zero
+                    , lsCertState =
+                        def & certDStateL . dsGenDelegsL .~ GenDelegs (sgGenDelegs sg)
+                    }
+              , esNonMyopic = def
+              }
+        , nesRu = SNothing
+        , nesPd = def
+        , stashedAVVMAddresses = def
+        }
     govState :: GovState era
     govState =
       emptyGovState
@@ -377,6 +385,31 @@ createInitialState tc =
     initialUtxo = mempty
     reserves :: Coin
     reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> sumCoinUTxO initialUtxo
+
+-- | Validate protocol version bounds in the initial state.
+--
+-- This function ensures that protocol versions in current PParams
+-- are within acceptable ranges for the era. This prevents incorrect protocol versions
+-- during era transitions.
+validateProtVerBounds ::
+  forall era.
+  EraTransition era =>
+  NewEpochState era ->
+  Either String (NewEpochState era)
+validateProtVerBounds nes = do
+  let curProtVerLow = eraProtVerLow @era
+      curProtVerHigh = eraProtVerHigh @era
+      curProtVer = nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+  unless (pvMajor curProtVer >= curProtVerLow && pvMajor curProtVer <= curProtVerHigh) $
+    Left $
+      "Current protocol version "
+        <> show (pvMajor curProtVer)
+        <> " is out of current era bounds: ["
+        <> show curProtVerLow
+        <> ", "
+        <> show curProtVerHigh
+        <> "]"
+  pure nes
 
 -- | Register initial stake pools from the `ShelleyGenesisStaking`
 registerInitialStakePools ::
