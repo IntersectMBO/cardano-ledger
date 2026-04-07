@@ -176,7 +176,7 @@ bootstrapWitnessRule pname p =
     =.= arr
       [ "public_key" ==> huddleRule @"vkey" p
       , "signature" ==> huddleRule @"signature" p
-      , "chain_code" ==> VBytes `sized` (32 :: Word64)
+      , "chain_code" ==> VBytes
       , "attributes" ==> VBytes
       ]
 
@@ -610,3 +610,14 @@ instance HuddleRule "block" ShelleyEra where
 
 instance HuddleRule1 "set" ShelleyEra where
   huddleRule1Named pname _ = untaggedSet pname
+
+instance HuddleRule "metadatum" ShelleyEra where
+  huddleRuleNamed pname p =
+    pname
+      =.= smp
+        [ 0 <+ asKey (huddleRule @"metadatum" p) ==> huddleRule @"metadatum" p
+        ]
+      / sarr [0 <+ a (huddleRule @"metadatum" p)]
+      / VInt
+      / VBytes
+      / VText

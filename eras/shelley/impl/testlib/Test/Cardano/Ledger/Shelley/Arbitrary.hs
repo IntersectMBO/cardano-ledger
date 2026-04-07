@@ -357,8 +357,8 @@ genMetadatum = do
     <$> arbitrary
     <*> oneof
       [ genDatumInt
-      , genDatumString
-      , genDatumBytestring
+      , genMetadatumText
+      , genMetadatumByteArray
       , genMetadatumList
       , genMetadatumMap
       ]
@@ -376,8 +376,8 @@ genDatumInt =
     minVal = -maxVal
     maxVal = fromIntegral (maxBound :: Word64)
 
-genDatumString :: Gen Metadatum
-genDatumString =
+genMetadatumText :: Gen Metadatum
+genMetadatumText =
   sized $ \sz -> do
     n <- choose (0, min sz 64)
     cs <- genUtf8StringOfSize n
@@ -404,8 +404,8 @@ genUtf8StringOfSize n = do
   cs <- genUtf8StringOfSize (n - cz)
   return (c : cs)
 
-genDatumBytestring :: Gen Metadatum
-genDatumBytestring =
+genMetadatumByteArray :: Gen Metadatum
+genMetadatumByteArray =
   sized $ \sz -> do
     n <- choose (0, min sz 64)
     B <$> genByteArray n
@@ -430,8 +430,8 @@ vectorOfMetadatumSimple = do
     n
     ( oneof
         [ genDatumInt
-        , genDatumString
-        , genDatumBytestring
+        , genMetadatumText
+        , genMetadatumByteArray
         ]
     )
 
@@ -536,8 +536,8 @@ sizedMetadatum :: Int -> Gen Metadatum
 sizedMetadatum 0 =
   oneof
     [ I <$> arbitrary
-    , B <$> arbitrary
-    , S . T.pack <$> arbitrary
+    , genMetadatumByteArray
+    , genMetadatumText
     ]
 sizedMetadatum n =
   let xsGen = listOf (sizedMetadatum (n - 1))
@@ -545,8 +545,8 @@ sizedMetadatum n =
         [ Map <$> (zip <$> resize maxMetadatumListLens xsGen <*> xsGen)
         , List <$> resize maxMetadatumListLens xsGen
         , I <$> arbitrary
-        , B <$> arbitrary
-        , S . T.pack <$> arbitrary
+        , genMetadatumByteArray
+        , genMetadatumText
         ]
 
 instance Arbitrary VotingPeriod where

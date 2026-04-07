@@ -67,7 +67,6 @@ import Cardano.Ledger.Shelley.Rules.Utxo (
   UtxoEnv (..),
   UtxoEvent,
  )
-import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.Shelley.UTxO (
   EraUTxO (..),
@@ -78,7 +77,6 @@ import Cardano.Ledger.Shelley.UTxO (
  )
 import Cardano.Ledger.State (EraCertState (..), dsGenDelegs)
 import Control.DeepSeq
-import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed,
@@ -440,9 +438,7 @@ validateMetadata pp tx =
             [ failureUnless (hashTxAuxData md' == mdh) $
                 ConflictingMetadataHash $
                   Mismatch {mismatchSupplied = mdh, mismatchExpected = hashTxAuxData md'}
-            , -- check metadata value sizes
-              when (SoftForks.validMetadata pv) $
-                failureUnless (validateTxAuxData pv md') InvalidMetadata
+            , failureUnless (validateTxAuxData pv md') InvalidMetadata
             ]
 
 -- | check genesis keys signatures for instantaneous rewards certificates

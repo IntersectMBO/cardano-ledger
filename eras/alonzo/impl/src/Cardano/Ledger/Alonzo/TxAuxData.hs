@@ -84,7 +84,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoizedEra,
  )
 import Cardano.Ledger.Plutus.Language (Language (..), PlutusBinary (..), guardPlutus)
-import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
 import Control.DeepSeq (NFData, deepseq)
 import Data.List (intercalate)
 import qualified Data.List.NonEmpty as NE
@@ -297,9 +297,8 @@ validateAlonzoTxAuxData ::
   ProtVer ->
   AlonzoTxAuxData era ->
   Bool
-validateAlonzoTxAuxData pv auxData@AlonzoTxAuxData {atadMetadata = metadata} =
-  all validMetadatum metadata
-    && all (validScript pv) (getAlonzoTxAuxDataScripts auxData)
+validateAlonzoTxAuxData pv auxData =
+  all (validScript pv) (getAlonzoTxAuxDataScripts auxData)
 
 instance AllegraEraTxAuxData AlonzoEra where
   nativeScriptsTxAuxDataL = nativeScriptsAlonzoTxAuxDataL

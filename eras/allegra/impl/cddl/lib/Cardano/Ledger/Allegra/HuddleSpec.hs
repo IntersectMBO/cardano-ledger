@@ -23,11 +23,13 @@ module Cardano.Ledger.Allegra.HuddleSpec (
   scriptNOfKGroup,
   scriptInvalidBeforeGroup,
   scriptInvalidHereafterGroup,
+  allegraMetadatumRule,
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Shelley.HuddleSpec
 import Data.Proxy (Proxy (..))
+import Data.Word (Word64)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -86,7 +88,10 @@ auxiliaryScriptsRule pname p = pname =.= arr [0 <+ a (huddleRule @"native_script
 
 auxiliaryDataArrayRule ::
   forall era.
-  HuddleRule "auxiliary_scripts" era => Proxy "auxiliary_data_array" -> Proxy era -> Rule
+  ( HuddleRule "auxiliary_scripts" era
+  , HuddleRule "metadatum" era
+  ) =>
+  Proxy "auxiliary_data_array" -> Proxy era -> Rule
 auxiliaryDataArrayRule pname p =
   pname
     =.= arr
@@ -96,7 +101,10 @@ auxiliaryDataArrayRule pname p =
 
 auxiliaryDataRule ::
   forall era.
-  HuddleRule "auxiliary_data_array" era => Proxy "auxiliary_data" -> Proxy era -> Rule
+  ( HuddleRule "auxiliary_data_array" era
+  , HuddleRule "metadatum" era
+  ) =>
+  Proxy "auxiliary_data" -> Proxy era -> Rule
 auxiliaryDataRule pname p =
   pname
     =.= huddleRule @"metadata" p
@@ -336,3 +344,17 @@ instance HuddleRule "block" AllegraEra where
 
 instance HuddleRule1 "set" AllegraEra where
   huddleRule1Named pname _ = untaggedSet pname
+
+allegraMetadatumRule :: Era era => Proxy "metadatum" -> Proxy era -> Rule
+allegraMetadatumRule pname p =
+  pname
+    =.= smp
+      [ 0 <+ asKey (allegraMetadatumRule pname p) ==> allegraMetadatumRule pname p
+      ]
+    / sarr [0 <+ a (allegraMetadatumRule pname p)]
+    / VInt
+    / (VBytes `sized` (0 :: Word64, 64 :: Word64))
+    / (VText `sized` (0 :: Word64, 64 :: Word64))
+
+instance HuddleRule "metadatum" AllegraEra where
+  huddleRuleNamed = allegraMetadatumRule

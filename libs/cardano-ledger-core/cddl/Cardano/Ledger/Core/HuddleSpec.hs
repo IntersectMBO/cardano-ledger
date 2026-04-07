@@ -265,18 +265,7 @@ instance Era era => HuddleRule "transaction_index" era where
 instance Era era => HuddleRule "metadatum_label" era where
   huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
 
-instance Era era => HuddleRule "metadatum" era where
-  huddleRuleNamed pname p =
-    pname
-      =.= smp
-        [ 0 <+ asKey (huddleRule @"metadatum" p) ==> huddleRule @"metadatum" p
-        ]
-      / sarr [0 <+ a (huddleRule @"metadatum" p)]
-      / VInt
-      / (VBytes `H.sized` (0 :: Word64, 64 :: Word64))
-      / (VText `H.sized` (0 :: Word64, 64 :: Word64))
-
-instance Era era => HuddleRule "metadata" era where
+instance (Era era, HuddleRule "metadatum" era) => HuddleRule "metadata" era where
   huddleRuleNamed pname p =
     pname
       =.= mp

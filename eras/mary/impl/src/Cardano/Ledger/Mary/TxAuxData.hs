@@ -20,7 +20,6 @@ import Cardano.Ledger.Allegra.TxAuxData (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts ()
-import Cardano.Ledger.Shelley.TxAuxData (validMetadatum)
 import Control.DeepSeq (deepseq)
 
 -- =======================================
@@ -32,7 +31,7 @@ instance EraTxAuxData MaryEra where
 
   metadataTxAuxDataL = metadataAllegraTxAuxDataL
 
-  validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
+  validateTxAuxData _ (AllegraTxAuxData _ as) = as `deepseq` True
 
 instance AllegraEraTxAuxData MaryEra where
   nativeScriptsTxAuxDataL = nativeScriptsAllegraTxAuxDataL

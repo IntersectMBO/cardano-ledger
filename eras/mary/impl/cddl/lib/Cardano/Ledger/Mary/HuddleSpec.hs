@@ -252,3 +252,6 @@ instance HuddleRule1 "set" MaryEra where
 
 instance HuddleRule1 "multiasset" MaryEra where
   huddleRule1Named = maryMultiasset
+
+instance HuddleRule "metadatum" MaryEra where
+  huddleRuleNamed = allegraMetadatumRule

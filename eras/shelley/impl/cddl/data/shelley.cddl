@@ -295,10 +295,10 @@ script_any = (2, [* native_script])
 script_n_of_k = (3, n : int, [* native_script])
 
 bootstrap_witness = 
-  [ public_key : vkey          
-  , signature  : signature     
-  , chain_code : bytes .size 32
-  , attributes : bytes         
+  [ public_key : vkey     
+  , signature  : signature
+  , chain_code : bytes    
+  , attributes : bytes    
   ]
 
 
@@ -308,12 +308,7 @@ metadata = {* metadatum_label => metadatum}
 
 metadatum_label = uint .size 8
 
-metadatum = 
-  {* metadatum => metadatum}
-  / [* metadatum]       
-  / int                     
-  / bytes .size (0 .. 64)
-  / text .size (0 .. 64) 
+metadatum = {* metadatum => metadatum}/ [* metadatum]/ int/ bytes/ text
 
 transaction = [transaction_body, transaction_witness_set, metadata/ nil]
 

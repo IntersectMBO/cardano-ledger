@@ -1015,3 +1015,6 @@ instance HuddleRule1 "nonempty_oset" DijkstraEra where
 
 instance HuddleRule1 "multiasset" DijkstraEra where
   huddleRule1Named = dijkstraMultiasset
+
+instance HuddleRule "metadatum" DijkstraEra where
+  huddleRuleNamed = allegraMetadatumRule
