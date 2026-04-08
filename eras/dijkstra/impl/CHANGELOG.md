@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `DijkstraUtxoEnv` and use it as `Environemnt` in `STS` instance of `UTXOW`
 * Add `ApplyTick` instance for `DijkstraEra`
 * Add `WrongNetworkInDirectDeposit` constructor to `DijkstraUtxoPredFailure`
 * Add `SubWrongNetworkInDirectDeposit` constructor to `DijkstraSubUtxoPredFailure`

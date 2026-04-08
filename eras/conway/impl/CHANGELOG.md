@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Add `validateRefScriptSize`, `updateDormantDRepExpiries`, `updateVotingDRepExpiries`
 * Add `ApplyTick` instance for `ConwayEra`
 * Add `ConwayUtxosEnv`
 * Change `STS` instance of `ConwayUTXOS`: use `ConwayUtxosEnv` as `Environment` and `()` as `State`

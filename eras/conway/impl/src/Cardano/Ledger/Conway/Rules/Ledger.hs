@@ -22,7 +22,10 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   conwayLedgerTransition,
   conwayLedgerTransitionTRC,
   validateTreasuryValue,
+  validateRefScriptSize,
   validateWithdrawalsDelegated,
+  updateDormantDRepExpiries,
+  updateVotingDRepExpiries,
 ) where
 
 import Cardano.Ledger.Address (accountAddressCredentialL)
