@@ -76,6 +76,7 @@ import Cardano.Ledger.Conway.Rules (
   shelleyToConwayUtxowPredFailure,
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO, DijkstraUTXOW)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
@@ -101,12 +102,14 @@ import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
   TransitionRule,
+  failureOnNonEmptySet,
   judgmentContext,
   trans,
  )
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
+import qualified Data.OSet.Strict as OSet
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
@@ -173,6 +176,8 @@ data DijkstraUtxowPredFailure era
     ScriptIntegrityHashMismatch
       (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
       (StrictMaybe ByteString)
+  | -- | Guards required by subtransactions but missing from top-level guards
+    MissingRequiredGuards (NonEmptySet (Credential Guard))
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" DijkstraEra = DijkstraUtxowPredFailure DijkstraEra
@@ -250,6 +255,7 @@ dijkstraUtxowTransition ::
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" DijkstraUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -329,6 +335,13 @@ dijkstraUtxowTransition = do
   -- Per-level: script integrity is per-tx (depends on that tx's redeemers and language views)
   let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided topScriptHashesNeeded
   runTest $ checkScriptIntegrityHash tx pp scriptIntegrity
+
+  {- concatMapˡ (λ txSub → mapˢ proj₁ (TopLevelGuardsOf txSub)) (SubTransactionsOf txTop) ⊆ GuardsOf txTop -}
+  let requiredGuardsBySubTxs =
+        foldMap (Map.keysSet . (^. bodyTxL . requiredTopLevelGuardsL)) subTxs
+      topLevelGuards = OSet.toSet (txBody ^. guardsTxBodyL)
+      missingGuards = requiredGuardsBySubTxs `Set.difference` topLevelGuards
+  runTestOnSignal $ failureOnNonEmptySet missingGuards MissingRequiredGuards
 
   -- Pass through to UTXO sub-rule with standard UtxoEnv (state-based UTXO is correct
   -- for minfee calculation and state update)
@@ -410,6 +423,7 @@ instance
       MalformedScriptWitnesses x -> Sum MalformedScriptWitnesses 16 !> To x
       MalformedReferenceScripts x -> Sum MalformedReferenceScripts 17 !> To x
       ScriptIntegrityHashMismatch x y -> Sum ScriptIntegrityHashMismatch 18 !> To x !> To y
+      MissingRequiredGuards x -> Sum MissingRequiredGuards 19 !> To x
 
 instance
   ( ConwayEraScript era
@@ -437,6 +451,7 @@ instance
     16 -> SumD MalformedScriptWitnesses <! From
     17 -> SumD MalformedReferenceScripts <! From
     18 -> SumD ScriptIntegrityHashMismatch <! From <! From
+    19 -> SumD MissingRequiredGuards <! From
     n -> Invalid n
 
 -- =====================================================

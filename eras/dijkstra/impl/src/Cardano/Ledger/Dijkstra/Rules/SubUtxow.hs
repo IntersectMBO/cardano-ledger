@@ -362,3 +362,4 @@ dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
   MalformedScriptWitnesses hs -> SubMalformedScriptWitnesses hs
   MalformedReferenceScripts hs -> SubMalformedReferenceScripts hs
   ScriptIntegrityHashMismatch mm f -> SubScriptIntegrityHashMismatch mm f
+  MissingRequiredGuards _ -> error "Impossible: `MissingRequiredGuards` for SUBUTXOW"
