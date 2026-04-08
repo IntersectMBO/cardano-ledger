@@ -14,7 +14,7 @@ spec :: Spec
 spec =
   describe "CDDL" $ do
     let v = eraProtVerLow @AllegraEra
-    describe "Huddle" $ specWithHuddle allegraCDDL $ do
+    describe "Huddle" $ specWithHuddle allegraCDDL . noTwiddle $ do
       huddleRoundTripCborSpec @(Value AllegraEra) v "coin"
       huddleRoundTripAnnCborSpec @(TxBody TopTx AllegraEra) v "transaction_body"
       huddleRoundTripCborSpec @(TxBody TopTx AllegraEra) v "transaction_body"

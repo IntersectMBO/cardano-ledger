@@ -320,7 +320,7 @@ ex_unit_prices = [mem_price : positive_interval, step_price : positive_interval]
 
 positive_interval = #6.30([positive_int, positive_int])
 
-ex_units = [mem : uint, steps : uint]
+ex_units = [mem : 0 .. max_int64, steps : 0 .. max_int64]
 
 auxiliary_data_hash = hash32
 

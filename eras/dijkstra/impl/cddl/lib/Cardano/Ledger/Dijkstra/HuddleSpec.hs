@@ -428,7 +428,7 @@ instance HuddleRule "bootstrap_witness" DijkstraEra where
   huddleRuleNamed = bootstrapWitnessRule
 
 instance HuddleRule "ex_units" DijkstraEra where
-  huddleRuleNamed pname _ = exUnitsRule pname
+  huddleRuleNamed = exUnitsRule
 
 instance HuddleRule "positive_interval" DijkstraEra where
   huddleRuleNamed = positiveIntervalRule

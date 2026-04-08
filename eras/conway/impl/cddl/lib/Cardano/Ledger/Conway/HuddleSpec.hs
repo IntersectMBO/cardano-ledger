@@ -741,7 +741,7 @@ instance HuddleRule "bootstrap_witness" ConwayEra where
   huddleRuleNamed = bootstrapWitnessRule
 
 instance HuddleRule "ex_units" ConwayEra where
-  huddleRuleNamed pname _ = exUnitsRule pname
+  huddleRuleNamed = exUnitsRule
 
 instance HuddleRule "positive_interval" ConwayEra where
   huddleRuleNamed = positiveIntervalRule

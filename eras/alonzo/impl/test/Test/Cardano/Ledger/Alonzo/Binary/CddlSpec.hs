@@ -15,6 +15,7 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
   huddleRoundTripCborSpec,
+  noTwiddle,
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
@@ -23,7 +24,7 @@ spec :: Spec
 spec =
   describe "CDDL" $ do
     let v = eraProtVerHigh @AlonzoEra
-    describe "Huddle" $ specWithHuddle alonzoCDDL $ do
+    describe "Huddle" $ specWithHuddle alonzoCDDL . noTwiddle $ do
       huddleRoundTripCborSpec @(Value AlonzoEra) v "coin"
       huddleRoundTripAnnCborSpec @(TxBody TopTx AlonzoEra) v "transaction_body"
       huddleRoundTripCborSpec @(TxBody TopTx AlonzoEra) v "transaction_body"

@@ -296,7 +296,7 @@ instance HuddleRule "redeemer_tag" BabbageEra where
   huddleRuleNamed pname _ = alonzoRedeemerTag pname
 
 instance HuddleRule "ex_units" BabbageEra where
-  huddleRuleNamed pname _ = exUnitsRule pname
+  huddleRuleNamed = exUnitsRule
 
 instance HuddleRule "ex_unit_prices" BabbageEra where
   huddleRuleNamed = exUnitPricesRule

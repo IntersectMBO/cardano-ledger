@@ -48,8 +48,13 @@ alonzoCDDL =
     , HIRule $ huddleRule @"signkey_kes" (Proxy @AlonzoEra)
     ]
 
-exUnitsRule :: Proxy "ex_units" -> Rule
-exUnitsRule pname = pname =.= arr ["mem" ==> VUInt, "steps" ==> VUInt]
+exUnitsRule :: Era era => Proxy "ex_units" -> Proxy era -> Rule
+exUnitsRule pname era =
+  pname
+    =.= arr
+      [ "mem" ==> (0 :: Integer) ... huddleRule @"max_int64" era
+      , "steps" ==> (0 :: Integer) ... huddleRule @"max_int64" era
+      ]
 
 networkIdRule :: Proxy "network_id" -> Rule
 networkIdRule pname = pname =.= int 0 / int 1
@@ -549,7 +554,7 @@ instance HuddleRule "redeemer_tag" AlonzoEra where
   huddleRuleNamed pname _ = alonzoRedeemerTag pname
 
 instance HuddleRule "ex_units" AlonzoEra where
-  huddleRuleNamed pname _ = exUnitsRule pname
+  huddleRuleNamed = exUnitsRule
 
 instance HuddleRule "ex_unit_prices" AlonzoEra where
   huddleRuleNamed = exUnitPricesRule
