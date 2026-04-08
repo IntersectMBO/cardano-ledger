@@ -4,9 +4,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Mary.Examples (
   ledgerExamples,
+  exampleMaryBasedShelleyTxBody,
+  exampleMaryBasedTxBody,
   exampleMultiAssetValue,
 ) where
 
@@ -22,30 +25,56 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgerPredFailure (DelegsFailure),
  )
 import qualified Data.Map.Strict as Map (singleton)
-import Data.Proxy
 import Lens.Micro
-import Test.Cardano.Ledger.Allegra.Examples (exampleAllegraTxAuxData, exampleAllegraTxBody)
+import Test.Cardano.Ledger.Allegra.Examples (
+  exampleAllegraBasedShelleyTxBody,
+  exampleAllegraBasedTxBody,
+  mkAllegraBasedExampleTx,
+ )
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples,
   mkKeyHash,
-  mkLedgerExamples,
   mkScriptHash,
-  mkWitnessesPreAlonzo,
+  mkShelleyBasedLedgerExamples,
  )
 
 ledgerExamples :: LedgerExamples MaryEra
 ledgerExamples =
-  mkLedgerExamples
+  mkShelleyBasedLedgerExamples
     ( MaryApplyTxError . pure . DelegsFailure . DelplFailure . DelegFailure $
         DelegateeNotRegisteredDELEG @MaryEra (mkKeyHash 1)
     )
-    (mkWitnessesPreAlonzo (Proxy @MaryEra))
     (exampleMultiAssetValue 1)
-    ( exampleAllegraTxBody (exampleMultiAssetValue 1)
-        & mintTxBodyL .~ exampleMultiAsset 1
-    )
-    exampleAllegraTxAuxData
+    (mkAllegraBasedExampleTx exampleMaryBasedShelleyTxBody)
     NoGenesis
+
+exampleMaryBasedShelleyTxBody ::
+  forall era.
+  ( MaryEraTxBody era
+  , ShelleyEraTxBody era
+  , Value era ~ MaryValue
+  ) =>
+  TxBody TopTx era
+exampleMaryBasedShelleyTxBody =
+  mkMaryBasedExampleTxBody (exampleAllegraBasedShelleyTxBody (exampleMultiAssetValue 1))
+
+exampleMaryBasedTxBody ::
+  forall era.
+  ( MaryEraTxBody era
+  , Value era ~ MaryValue
+  ) =>
+  TxBody TopTx era
+exampleMaryBasedTxBody =
+  mkMaryBasedExampleTxBody (exampleAllegraBasedTxBody (exampleMultiAssetValue 1))
+
+mkMaryBasedExampleTxBody ::
+  forall era.
+  MaryEraTxBody era =>
+  TxBody TopTx era ->
+  TxBody TopTx era
+mkMaryBasedExampleTxBody txBody =
+  txBody
+    & mintTxBodyL .~ exampleMultiAsset 1
 
 exampleMultiAssetValue :: Int -> MaryValue
 exampleMultiAssetValue x = MaryValue (Coin 100) $ exampleMultiAsset x
