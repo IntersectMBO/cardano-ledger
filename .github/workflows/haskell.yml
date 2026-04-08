@@ -669,4 +669,5 @@ jobs:
       run: scripts/format-changelogs.sh || (git diff; false)
 
     - name: Check if changelogs need a bump
+      if: ${{ !startsWith(github.base_ref, 'release/') && !startsWith(github.ref, 'refs/heads/release/') }}
       run: scripts/bump-changelogs.sh || (git diff; false)
