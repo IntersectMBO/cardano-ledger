@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -67,7 +68,7 @@ import Prettyprinter.Render.Text (hPutDoc)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
 import System.IO (IOMode (..), hPutStrLn, withFile)
-import Test.AntiGen (runAntiGen, tryZapAntiGen)
+import Test.AntiGen (ZapResult (..), runAntiGen, zapAntiGenResult)
 import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
 import Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (RoundTripFailure),
@@ -154,29 +155,30 @@ huddleAntiCborSpec version ruleName =
    in describe "Decoding fails when term is zapped"
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
         $ \cddl -> property @(Gen Property) $ do
-          mTerm <- tryZapAntiGen 1 . generateFromName (mapIndex cddl) $ Name ruleName
+          mTerm <- zapAntiGenResult 1 . generateFromName (mapIndex cddl) $ Name ruleName
           case mTerm of
-            Just term -> do
-              let
-                encoding = toPlainEncoding version $ encodeTerm term
-                bs = C.toStrictByteString encoding
-              case validateCBOR bs (Name ruleName) (mapIndex cddl) of
-                Evidenced SInvalid trc -> do
+            ZapResult {..}
+              | zrZapped > 0 -> do
                   let
-                    errMsg =
-                      unlines
-                        [ "Generated term:"
-                        , prettyHexEnc encoding
-                        , mempty
-                        , "Validation result:"
-                        , T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
-                            prettyValidationTrace (defaultTraceOptions {toFoldValid = True}) trc
-                        , mempty
-                        , "Decoding succeeded, expected failure"
-                        ]
-                  pure . counterexample errMsg . isLeft $ decodeFull' @a version bs
-                Evidenced SValid _ -> discard
-            Nothing -> discard
+                    encoding = toPlainEncoding version $ encodeTerm zrValue
+                    bs = C.toStrictByteString encoding
+                  case validateCBOR bs (Name ruleName) (mapIndex cddl) of
+                    Evidenced SInvalid trc -> do
+                      let
+                        errMsg =
+                          unlines
+                            [ "Generated term:"
+                            , prettyHexEnc encoding
+                            , mempty
+                            , "Validation result:"
+                            , T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
+                                prettyValidationTrace (defaultTraceOptions {toFoldValid = True}) trc
+                            , mempty
+                            , "Decoding succeeded, expected failure"
+                            ]
+                      pure . counterexample errMsg . isLeft $ decodeFull' @a version bs
+                    Evidenced SValid _ -> discard
+              | otherwise -> discard
 
 specWithHuddle :: Cuddle.Huddle -> SpecWith (CTreeRoot MonoReferenced) -> Spec
 specWithHuddle h =

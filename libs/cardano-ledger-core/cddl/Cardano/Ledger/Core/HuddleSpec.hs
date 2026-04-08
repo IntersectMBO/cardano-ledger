@@ -22,7 +22,12 @@ import Cardano.Ledger.BaseTypes (getVersion, natVersion)
 import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
 import Cardano.Ledger.Huddle
 import Codec.CBOR.Cuddle.CDDL (Name (..))
-import Codec.CBOR.Cuddle.CDDL.CBORGenerator (CustomValidatorResult (..), WrappedTerm (..))
+import Codec.CBOR.Cuddle.CDDL.CBORGenerator (
+  CBORGen,
+  CustomValidatorResult (..),
+  WrappedTerm (..),
+  liftAntiGen,
+ )
 import Codec.CBOR.Cuddle.Huddle as H
 import Codec.CBOR.Term (Term (..))
 import Data.Bits (Bits (..))
@@ -34,7 +39,7 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import Data.Word (Word16, Word32, Word64)
 import GHC.TypeLits (KnownSymbol, Symbol)
-import Test.AntiGen (AntiGen, (|!))
+import Test.AntiGen ((|!))
 import Test.QuickCheck (Arbitrary (..), Gen, oneof, vectorOf)
 import Test.QuickCheck.GenT (MonadGen (..))
 import Text.Heredoc
@@ -78,7 +83,7 @@ instance Era era => HuddleRule "unit_interval" era where
           |expressed in CDDL, but we have a limitation currently
           |(see: https://github.com/input-output-hk/cuddle/issues/30). 
           |]
-      . withGenerator (const generator)
+      . withCBORGen generator
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
     where
       generator = do
@@ -88,13 +93,14 @@ instance Era era => HuddleRule "unit_interval" era where
               pure (n, d)
             max64 = toInteger (maxBound @Word64)
         (n, d) <-
-          oneof
-            [ genUnitInterval64 0 max64
-            , genUnitInterval64 0 1000
-            , genUnitInterval64 (max64 - 1000) max64
-            ]
+          liftGen $
+            oneof
+              [ genUnitInterval64 0 max64
+              , genUnitInterval64 0 1000
+              , genUnitInterval64 (max64 - 1000) max64
+              ]
         S . TTagged 30
-          <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d]
+          <$> liftGen (genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d])
 
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
@@ -216,7 +222,7 @@ instance Era era => HuddleRule "address" era where
           |     1111: account address: scripthash28
           |1001-1101: future formats
           |]
-      . withGenerator (const generator)
+      . withCBORGen generator
       $ pname =.= VBytes
     where
       generator = do
@@ -224,15 +230,15 @@ instance Era era => HuddleRule "address" era where
         let
           stakeRefMask = stakeRef `shiftL` 5 -- 0b0xx00000
           mkMask mask isMask = if isMask then mask else 0
-        isPaymentScriptMask <- mkMask 0b00010000 <$> arbitrary
-        isMainnetMask <- mkMask 0b00000001 <$> arbitrary
+        isPaymentScriptMask <- mkMask 0b00010000 <$> liftGen arbitrary
+        isMainnetMask <- mkMask 0b00000001 <$> liftGen arbitrary
         let
           header = stakeRefMask .|. isPaymentScriptMask .|. isMainnetMask
-          genVar32 = VarLen <$> arbitrary @Word32
-          genVar16 = VarLen <$> arbitrary @Word16
+          genVar32 = VarLen <$> liftGen (arbitrary @Word32)
+          genVar16 = VarLen <$> liftGen (arbitrary @Word16)
         stakeCred <- case stakeRef of
-          0b00 -> genHash28 -- staking payment hash
-          0b01 -> genHash28 -- staking script hash
+          0b00 -> liftGen genHash28 -- staking payment hash
+          0b01 -> liftGen genHash28 -- staking script hash
           0b10 -> do
             -- Ptr
             slotNo <- genVar32
@@ -240,22 +246,22 @@ instance Era era => HuddleRule "address" era where
             certIx <- genVar16
             pure $ packByteString slotNo <> packByteString txIx <> packByteString certIx
           _ -> pure mempty
-        paymentCred <- genHash28
+        paymentCred <- liftGen genHash28
         -- TODO use genBytesTerm once indefinite bytestring decoding has been fixed
         let bytesTerm = TBytes . BS.cons header $ paymentCred <> stakeCred
         pure $ S bytesTerm
 
 instance Era era => HuddleRule "reward_account" era where
-  huddleRuleNamed pname _ = withGenerator (const generator) $ pname =.= VBytes
+  huddleRuleNamed pname _ = withCBORGen generator $ pname =.= VBytes
     where
       generator = do
-        isMainnet <- arbitrary
-        isScript <- arbitrary
+        isMainnet <- liftGen arbitrary
+        isScript <- liftGen arbitrary
         let
           mainnetMask | isMainnet = 0b00000001 | otherwise = 0x00
           scriptMask | isScript = 0b00010000 | otherwise = 0x00
           header = 0b11100000 .|. mainnetMask .|. scriptMask
-        payload <- genHash28
+        payload <- liftGen genHash28
         let term = TBytes $ BS.cons header payload
         pure $ S term
 
@@ -305,9 +311,9 @@ instance Era era => HuddleRule "stake_credential" era where
 instance Era era => HuddleRule "port" era where
   huddleRuleNamed pname _ = pname =.= VUInt `le` 65535
 
-ipGen :: Int -> AntiGen WrappedTerm
+ipGen :: Int -> CBORGen WrappedTerm
 ipGen n = do
-  l <- choose (n, 1024) |! choose (0, pred n)
+  l <- liftAntiGen $ choose (n, 1024) |! choose (0, pred n)
   bs <- liftGen $ genByteString l
   -- TODO Also generate with TBytesI
   pure . S $ TBytes bs
@@ -329,7 +335,7 @@ ipRule n pname _
              | there is no such upper bound on the bytestring.
              |]
         . withValidator (ipValidator n)
-        . withAntiGen (\_ -> ipGen n)
+        . withCBORGen (ipGen n)
         $ pname =.= VBytes `H.sized` (fromIntegral n :: Word64, 1024 :: Word64)
   | otherwise = pname =.= VBytes `H.sized` (fromIntegral n :: Word64)
 
