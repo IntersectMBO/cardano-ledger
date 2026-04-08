@@ -8,6 +8,7 @@
 
 module Cardano.Ledger.Dijkstra.UTxO (
   getDijkstraScriptsNeeded,
+  getDijkstraScriptsProvided,
 ) where
 
 import Cardano.Ledger.Alonzo.UTxO (
@@ -40,7 +41,9 @@ import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Data.Foldable (Foldable (..))
+import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
+import qualified Data.OMap.Strict as OMap
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 
@@ -112,7 +115,7 @@ instance EraUTxO DijkstraEra where
 
   getProducedValue = getProducedDijkstraValue
 
-  getScriptsProvided = getBabbageScriptsProvided
+  getScriptsProvided = getDijkstraScriptsProvided
 
   getScriptsNeeded = getDijkstraScriptsNeeded
 
@@ -121,6 +124,29 @@ instance EraUTxO DijkstraEra where
   getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
 
   getMinFeeTxUtxo = getConwayMinFeeTxUtxo
+
+-- | Like 'getBabbageScriptsProvided', but for 'TopTx' also aggregates
+-- scripts from all subtransactions.
+getDijkstraScriptsProvided ::
+  ( EraTx era
+  , DijkstraEraTxBody era
+  , STxLevel l era ~ STxBothLevels l era
+  ) =>
+  UTxO era ->
+  Tx l era ->
+  ScriptsProvided era
+getDijkstraScriptsProvided utxo tx =
+  withBothTxLevels
+    tx
+    ( \topTx ->
+        ScriptsProvided $
+          Map.unions $
+            unScriptsProvided (getBabbageScriptsProvided utxo topTx)
+              : [ unScriptsProvided (getBabbageScriptsProvided utxo subTx)
+                | subTx <- OMap.elems (topTx ^. bodyTxL . subTransactionsTxBodyL)
+                ]
+    )
+    (getBabbageScriptsProvided utxo)
 
 getDijkstraScriptsNeeded ::
   (DijkstraEraTxBody era, DijkstraEraScript era) =>

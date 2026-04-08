@@ -431,11 +431,8 @@ dijkstraLedgerTransition = do
   -- and SUBLEDGERS, and used for all witness/validation lookups.
   let originalUtxo = utxosUtxo (ledgerState ^. lsUTxOStateL)
       subTxs = tx ^. bodyTxL . subTransactionsTxBodyL
-      scriptsProvided =
-        ScriptsProvided $
-          Map.unions $
-            unScriptsProvided (getScriptsProvided originalUtxo tx)
-              : map (unScriptsProvided . getScriptsProvided originalUtxo) (OMap.elems subTxs)
+      -- getScriptsProvided is recursive for Dijkstra
+      scriptsProvided = getScriptsProvided originalUtxo tx
 
   -- Process all subtransactions first
   LedgerState utxoStateAfterSubLedgers certStateAfterSubLedgers <-
