@@ -64,4 +64,6 @@ instance ApplyTx BabbageEra where
     first BabbageApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
 
+instance ApplyTick BabbageEra
+
 instance EraBlockHeader h BabbageEra => ApplyBlock h BabbageEra

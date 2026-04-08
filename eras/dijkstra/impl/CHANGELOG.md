@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `ApplyTick` instance for `DijkstraEra`
 * Add `WrongNetworkInDirectDeposit` constructor to `DijkstraUtxoPredFailure`
 * Add `SubWrongNetworkInDirectDeposit` constructor to `DijkstraSubUtxoPredFailure`
 * Add `validateWrongNetworkInDirectDeposit`

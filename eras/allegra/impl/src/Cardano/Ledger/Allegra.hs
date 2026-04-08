@@ -43,4 +43,6 @@ instance ApplyTx AllegraEra where
     first AllegraApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
 
+instance ApplyTick AllegraEra
+
 instance EraBlockHeader h AllegraEra => ApplyBlock h AllegraEra
