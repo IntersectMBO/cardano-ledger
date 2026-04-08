@@ -41,7 +41,6 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (encCBORGroup, listLen),
   annotatorSlice,
   decodeListLen,
-  decodeRecordNamed,
   decodeWord8,
   encodeListLen,
   encodeWord8,
@@ -190,19 +189,14 @@ instance
   ( EraSegWits era
   , DecCBOR (Annotator h)
   , DecCBOR (Annotator (Body era))
+  , DecCBOR (Annotator (TxSeq era))
   , Typeable h
   ) =>
   DecCBOR (Annotator (Block h era))
   where
-  decCBOR = annotatorSlice $
-    decodeRecordNamed "Block" (const blockSize) $ do
-      header <- decCBOR
-      body <- decCBOR
-      pure $ Block' <$> header <*> body
-    where
-      blockSize =
-        1 -- header
-          + 1 -- body -- NOTE(bladyjoker): This might be wrong
+  decCBOR = annotatorSlice $ do
+    braw <- decCBOR @(Annotator (BlockRaw h era))
+    pure $ (\(BlockRaw h body) -> Block' h body) <$> braw
 
 data BlockRaw h era = BlockRaw
   { _blockRawHeader :: !h
@@ -213,18 +207,66 @@ instance
   ( EraSegWits era
   , DecCBOR h
   , DecCBOR (Body era)
+  , DecCBOR (TxSeq era)
   ) =>
   DecCBOR (BlockRaw h era)
   where
-  decCBOR =
-    decodeRecordNamed "Block" (const blockSize) $ do
-      header <- decCBOR
-      body <- decCBOR
-      pure $ BlockRaw header body
-    where
-      blockSize =
-        1 -- header
-          + 1 -- body -- NOTE: Is this correct???
+  decCBOR = do
+    len <- decodeListLen
+    let oldLen = 1 + fromIntegral (numSegComponents @era)
+    if len == 2
+      then do
+        -- New leios format: [header, body]
+        header <- decCBOR @h
+        body <- decCBOR @(Body era)
+        pure $ BlockRaw header body
+      else
+        if len == oldLen
+          then do
+            -- Old pre-leios format: [header, txseq_components...]
+            header <- decCBOR @h
+            txSeq <- decCBOR @(TxSeq era)
+            pure $ BlockRaw header (BodyInline txSeq)
+          else
+            fail $
+              "Block: unexpected list length "
+                ++ show len
+                ++ ". Expected 2 (leios) or "
+                ++ show oldLen
+                ++ " (pre-leios)"
+
+instance
+  ( EraSegWits era
+  , DecCBOR (Annotator h)
+  , DecCBOR (Annotator (Body era))
+  , DecCBOR (Annotator (TxSeq era))
+  , Typeable h
+  ) =>
+  DecCBOR (Annotator (BlockRaw h era))
+  where
+  decCBOR = do
+    len <- decodeListLen
+    let oldLen = 1 + fromIntegral (numSegComponents @era)
+    if len == 2
+      then do
+        -- New leios format: [header, body]
+        header <- decCBOR @(Annotator h)
+        body <- decCBOR @(Annotator (Body era))
+        pure $ BlockRaw <$> header <*> body
+      else
+        if len == oldLen
+          then do
+            -- Old pre-leios format: [header, txseq_components...]
+            header <- decCBOR @(Annotator h)
+            txSeq <- decCBOR @(Annotator (TxSeq era))
+            pure $ BlockRaw <$> header <*> fmap BodyInline txSeq
+          else
+            fail $
+              "Block: unexpected list length "
+                ++ show len
+                ++ ". Expected 2 (leios) or "
+                ++ show oldLen
+                ++ " (pre-leios)"
 
 instance
   (DecCBOR (TxSeq era), EraSegWits era) =>
@@ -276,6 +318,7 @@ instance
   ( EraSegWits era
   , DecCBOR h
   , DecCBOR (Body era)
+  , DecCBOR (TxSeq era)
   ) =>
   DecCBOR (Block h era)
   where

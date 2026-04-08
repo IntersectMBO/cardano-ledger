@@ -73,6 +73,7 @@ test-suite cardano-ledger-alonzo-test
     Paths_cardano_ledger_alonzo_test
     Test.Cardano.Ledger.Alonzo.ChainTrace
     Test.Cardano.Ledger.Alonzo.Golden
+    Test.Cardano.Ledger.Alonzo.Leios
     Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
     Test.Cardano.Ledger.Alonzo.Translation
