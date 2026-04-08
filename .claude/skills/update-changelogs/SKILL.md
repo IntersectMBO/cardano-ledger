@@ -64,7 +64,7 @@ These are **never** API changes regardless of where they appear:
 
 See `RELEASING.md` § "CHANGELOG.md" for the version bump decision logic. In practice only **B** is bumped for breaking changes (`A.(B+1).0.0`). Bumping **A** is extremely rare — **always ask the user first**.
 
-**No bump needed** if the current unreleased version already reflects a bump at least as large as required.
+**Critical rule**: The top `## <version>` entry in every `CHANGELOG.md` is **always the current unreleased version** — it has not been published to CHaP yet. **Never add a new version section.** Instead, replace the existing top version number if your changes warrant a larger bump than what is already there. For example, if the top entry is `## 1.13.0.1` (a patch) but your changes are breaking, replace it with `## 1.14.0.0`. If the existing version already reflects a sufficient bump, leave it as-is and just add your changelog entries under it.
 
 ### Step 5 — Write changelog entries
 
