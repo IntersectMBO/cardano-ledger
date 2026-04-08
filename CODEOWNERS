@@ -7,4 +7,5 @@ flake.lock  @IntersectMBO/core-tech-devx
 .github     @IntersectMBO/cardano-ledger-maintainers
 
 
-* @IntersectMBO/cardano-ledger-maintainers
+# FIXME: disabled codeowners for leios-prototype
+# * @IntersectMBO/cardano-ledger-maintainers
