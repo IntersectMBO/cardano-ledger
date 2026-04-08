@@ -36,6 +36,126 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  export-cache:
+    strategy:
+      matrix:
+        ghc: ["9.6.7"]
+        os: [ubuntu-latest]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2024-09-23"
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Free up disk space
+      run: |
+        # Remove software and language runtimes we're not using
+        sudo rm -rf \
+          /opt/google/chrome \
+          /opt/microsoft/msedge \
+          /opt/microsoft/powershell \
+          /opt/pipx \
+          /usr/lib/mono \
+          /usr/local/julia* \
+          /usr/local/lib/android \
+          /usr/local/lib/node_modules \
+          /usr/local/share/chromium \
+          /usr/local/share/powershell \
+          /usr/share/dotnet \
+          /usr/share/swift
+        df -h /
+
+    - name: Install system dependencies
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: false # default is true
+
+    - name: Install Haskell
+      id: install-haskell
+      uses: input-output-hk/actions/haskell@latest
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: 3.16
+
+    - name: Configure to use libsodium
+      run: |
+        cat >> cabal.project.local <<EOF
+        package cardano-crypto-praos
+          flags: -external-libsodium-vrf
+        EOF
+
+    # Use this to debug "run canceled" build failures
+    - name: Configure to limit the ghc heap size
+      if: false
+      run: |
+        cat >> cabal.project.local <<EOF
+        with-compiler: $PWD/scripts/ghc-limited
+        with-hc-pkg: ghc-pkg
+        EOF
+        echo "GHC_HEAP_LIMIT=12" >> $GITHUB_ENV
+
+    - name: Cabal update
+      run: cabal update
+
+    # We create a dependencies.txt file that can be used to index the cabal
+    # store cache.
+    #
+    # We do not use plan.json directly because adding a dependency to our
+    # Cabal files which was already present somewhere else would result in a
+    # diferent plan, even though the set of dependencies is the same.
+    - name: Record dependencies to be used as cache keys
+      id: record-deps
+      run: |
+        cabal build all --enable-tests --dry-run --minimize-conflict-set
+        cat dist-newstyle/cache/plan.json \
+        | jq '.["install-plan"][].id' \
+        | sort \
+        | uniq \
+        | tee dependencies.txt
+
+    - name: Restore cache
+      uses: actions/cache/restore@v5
+      id: restore-cabal-cache
+      env:
+        cache-name: cache-cabal-build
+      with:
+        path: |
+          ${{ steps.install-haskell.outputs.cabal-store }}
+        # A new cache is created upon a change to the cabal build plan,
+        # cabal.project (and/or cabal.project.local), or a bump to
+        # CABAL_CACHE_VERSION.
+        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
+        # Restoring attempts are from current branch then master. The key above
+        # is by default already a restore-key.
+        restore-keys: |
+          ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}
+          ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-
+
+    - name: Archive cache
+      # pax format is needed because the
+      # default format uses a one-second resolution for timestamps
+      run:
+        tar --use-compress-program zstdmt --format posix -cf cache.tzst
+          '${{ steps.install-haskell.outputs.cabal-store }}'
+
+    - name: Upload cache
+      uses: actions/upload-artifact@v7
+      if: steps.restore-cabal-cache.outputs.cache-hit == 'true'
+      with:
+        name: ${{ steps.restore-cabal-cache.outputs.cache-primary-key }}
+        path: cache.tzst
+        overwrite: true
+        retention-days: 1
+
   build:
     strategy:
       matrix:
