@@ -201,8 +201,7 @@ stakeDistr ::
   PState era ->
   SnapShot
 stakeDistr u ds PState {psStakePools} =
-  resetStakePoolsSnapShot (VMap.fromMap psStakePools) $
-    mkSnapShot activeStake' VMap.empty
+  resetStakePoolsSnapShot psStakePools $ mkSnapShot activeStake' VMap.empty
   where
     activeStake' = mkActiveStake (Map.map fromCompact stakeRelation) activeDelegs
     accountsMap = ds ^. accountsL . accountsMapL
