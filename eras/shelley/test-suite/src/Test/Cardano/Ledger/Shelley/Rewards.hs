@@ -599,7 +599,7 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       , deltaROld = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2
       , rsOld = rs_
       , deltaFOld = invert (toDeltaCoin $ ssFee ss)
-      , nonMyopicOld = updateNonMyopic nm _R $ VMap.fromMap newLikelihoods
+      , nonMyopicOld = updateNonMyopic nm _R newLikelihoods
       }
 
 overrideProtocolVersionUsedInRewardCalc ::

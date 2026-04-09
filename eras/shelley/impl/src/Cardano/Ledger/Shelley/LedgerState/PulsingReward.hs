@@ -172,7 +172,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
             (poolBlocks info)
             (leaderProbability asc (getSigma info) $ pr ^. ppDG)
             slotsPerEpoch
-      newLikelihoods = VMap.map makeLikelihoods allPoolInfo
+      newLikelihoods = VMap.toMap $ VMap.map makeLikelihoods allPoolInfo
       -- We now compute the leader rewards for each stake pool.
       collectLRs acc poolRI =
         let account = unAccountId $ spssAccountId $ poolPs poolRI
@@ -311,7 +311,7 @@ decayFactor = 0.9
 updateNonMyopic ::
   NonMyopic ->
   Coin ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) Likelihood ->
+  Map.Map (KeyHash StakePool) Likelihood ->
   NonMyopic
 updateNonMyopic nm rPot_ newLikelihoods =
   nm
@@ -326,4 +326,4 @@ updateNonMyopic nm rPot_ newLikelihoods =
         (applyDecay decayFactor)
         (VMap.lookup kh history)
         <> newPerf
-    updatedLikelihoods = VMap.mapWithKey performance newLikelihoods
+    updatedLikelihoods = VMap.fromMap $ Map.mapWithKey performance newLikelihoods

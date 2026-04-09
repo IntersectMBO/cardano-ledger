@@ -165,7 +165,7 @@ data RewardSnapShot = RewardSnapShot
   , rewDeltaR1 :: !Coin -- deltaR1
   , rewR :: !Coin -- r
   , rewDeltaT1 :: !Coin -- deltaT1
-  , rewLikelihoods :: !(VMap VB VB (KeyHash StakePool) Likelihood)
+  , rewLikelihoods :: !(Map (KeyHash StakePool) Likelihood)
   , rewLeaders :: !(Map (Credential Staking) (Set Reward))
   }
   deriving (Show, Eq, Generic)
