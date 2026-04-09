@@ -144,9 +144,14 @@ instance Storable StakeWithDelegation where
 -- | Active stake: maps staking credentials to their non-zero stake paired with delegation.
 -- Only credentials that are registered, delegated, and have non-zero stake appear here.
 newtype ActiveStake = ActiveStake
-  { unActiveStake :: VMap VS VS (Credential Staking) StakeWithDelegation
+  { unActiveStake :: VMap VB VS (Credential Staking) StakeWithDelegation
   }
-  deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR, DecCBOR)
+  deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR)
+
+instance DecShareCBOR ActiveStake where
+  type Share ActiveStake = Interns (Credential Staking)
+  getShare (ActiveStake m) = getShare m
+  decShareCBOR si = ActiveStake <$> decShareCBOR si
 
 -- | Sum all active stake. Returns @NonZero Coin@, defaulting to 1 lovelace if empty.
 sumAllActiveStake :: ActiveStake -> NonZero Coin

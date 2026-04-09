@@ -286,7 +286,7 @@ data RewardPulser (m :: Type -> Type) ans where
     (ans ~ RewardAns, m ~ ShelleyBase) =>
     !Int ->
     !FreeVars ->
-    !(VMap.VMap VMap.VS VMap.VS (Credential Staking) StakeWithDelegation) ->
+    !(VMap.VMap VMap.VB VMap.VS (Credential Staking) StakeWithDelegation) ->
     !ans ->
     RewardPulser m ans
 

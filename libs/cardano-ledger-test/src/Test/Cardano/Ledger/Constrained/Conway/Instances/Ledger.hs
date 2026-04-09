@@ -1914,7 +1914,7 @@ instance HasSpec RewardUpdate
 type PulserTypes =
   '[ Int
    , FreeVars
-   , VMap VMap.VS VMap.VS (Credential Staking) StakeWithDelegation
+   , VMap VMap.VB VMap.VS (Credential Staking) StakeWithDelegation
    , RewardAns
    ]
 
