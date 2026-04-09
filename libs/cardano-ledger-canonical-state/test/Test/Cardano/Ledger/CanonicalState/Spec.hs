@@ -13,13 +13,14 @@
 
 module Test.Cardano.Ledger.CanonicalState.Spec (spec) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval, NonNegativeInterval, UnitInterval)
+import Cardano.Ledger.BaseTypes (EpochInterval, NonNegativeInterval, NonZero, UnitInterval)
 import Cardano.Ledger.CanonicalState.BasicTypes (CanonicalExUnits (..))
 import Cardano.Ledger.CanonicalState.Conway ()
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesCommittee.V0 as Committee.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesDReps.V0 as EntitiesDReps.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesStakePools.V0 as EntitiesStakePools.V0
+import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesStakePools.VRFKeyHashes.V0 as EntitiesStakePoolsVRFKeyHashes.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0 as GovCommittee.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0 as GovConstitution.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0 as GovPParams.V0
@@ -43,6 +44,7 @@ import Cardano.Ledger.TxIn (TxId)
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
 import Cardano.SCLS.Testlib
 import Data.Typeable
+import Data.Word (Word64)
 import GHC.TypeLits
 import Test.Cardano.Ledger.CanonicalState.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -106,6 +108,14 @@ spec = do
     describe "entities/dreps/v0" $ do
       isCanonical @"entities/dreps/v0" @EntitiesDReps.V0.CanonicalDRepState
       validateType @"entities/dreps/v0" @EntitiesDReps.V0.CanonicalDRepState "drep_state"
+    describe "entities/stake_pools/vrf_key_hashes/v0" $ do
+      isCanonical @"entities/stake_pools/vrf_key_hashes/v0" @(NonZero Word64)
+      validateType @"entities/stake_pools/vrf_key_hashes/v0" @(NonZero Word64) "positive_int"
+      isCanonical @"entities/stake_pools/vrf_key_hashes/v0"
+        @EntitiesStakePoolsVRFKeyHashes.V0.EntitiesStakePoolsVRFKeyHashesOut
+      validateType @"entities/stake_pools/vrf_key_hashes/v0"
+        @EntitiesStakePoolsVRFKeyHashes.V0.EntitiesStakePoolsVRFKeyHashesOut
+        "record_entry"
     describe "gov/committee/v0" $ do
       isCanonical @"gov/committee/v0" @GovCommittee.V0.CanonicalCommittee
       validateType @"gov/committee/v0" @GovCommittee.V0.CanonicalCommittee "committee"
@@ -138,6 +148,7 @@ spec = do
     testNS @"entities/committee/v0"
     testNS @"entities/stake_pools/v0"
     testNS @"entities/dreps/v0"
+    testNS @"entities/stake_pools/vrf_key_hashes/v0"
     testNS @"gov/constitution/v0"
     testNS @"gov/committee/v0"
     testNS @"gov/pparams/v0"

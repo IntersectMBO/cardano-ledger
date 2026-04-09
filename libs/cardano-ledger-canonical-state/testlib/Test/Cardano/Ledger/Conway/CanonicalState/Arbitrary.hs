@@ -12,6 +12,7 @@ import Cardano.Ledger.CanonicalState.Conway (
   fromGovActionState,
   mkCanonicalConstitution,
  )
+import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesStakePools.VRFKeyHashes.V0 as EntitiesStakePoolsVRFKeyHashes.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0 as GovConstitution.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0 as GovPParams.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.GovProposals.Roots.V0 as GovProposals.Roots.V0
@@ -41,4 +42,7 @@ instance Arbitrary GovProposals.V0.CanonicalGovActionId where
   arbitrary = genericArbitraryU
 
 instance Arbitrary GovProposals.Roots.V0.GovProposalsRootsOut where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary EntitiesStakePoolsVRFKeyHashes.V0.EntitiesStakePoolsVRFKeyHashesOut where
   arbitrary = genericArbitraryU
