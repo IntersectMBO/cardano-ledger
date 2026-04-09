@@ -405,13 +405,13 @@ mkSnapShot ssActiveStake ssStakePoolsSnapShot =
 
 -- | Given stake pools state and SnapShot completely overwrite the StakePoolsSnapShot
 resetStakePoolsSnapShot ::
-  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) StakePoolState ->
+  Map.Map (KeyHash StakePool) StakePoolState ->
   SnapShot ->
   SnapShot
 resetStakePoolsSnapShot stakePoolsState ss@SnapShot {..} =
   ss
     { ssStakePoolsSnapShot =
-        VMap.map (mkStakePoolSnapShot ssActiveStake ssTotalActiveStake) stakePoolsState
+        VMap.fromMap $ Map.map (mkStakePoolSnapShot ssActiveStake ssTotalActiveStake) stakePoolsState
     }
 {-# INLINE resetStakePoolsSnapShot #-}
 
@@ -423,8 +423,7 @@ snapShotFromInstantStake ::
   PState era ->
   SnapShot
 snapShotFromInstantStake instantStake dState PState {psStakePools} =
-  resetStakePoolsSnapShot (VMap.fromMap psStakePools) $
-    mkSnapShot activeStake VMap.empty
+  resetStakePoolsSnapShot psStakePools $ mkSnapShot activeStake VMap.empty
   where
     activeStake = resolveInstantStake instantStake $ dsAccounts dState
 {-# INLINE snapShotFromInstantStake #-}

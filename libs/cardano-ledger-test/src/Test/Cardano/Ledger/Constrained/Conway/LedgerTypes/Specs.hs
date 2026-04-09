@@ -51,7 +51,6 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.VMap (VB, VMap)
 import qualified Data.VMap as VMap
 import Lens.Micro ((^.))
 import System.IO.Unsafe (unsafePerformIO)
@@ -534,9 +533,8 @@ getMarkSnapShot ls =
         (Map.map fromCompact $ ls ^. instantStakeL . instantStakeCredentialsL)
         $ getDelegs
         $ ls ^. lsCertStateL
-    markStakePoolState :: VMap VB VB (KeyHash StakePool) StakePoolState
-    markStakePoolState =
-      VMap.fromMap $ psStakePools $ ls ^. lsCertStateL . certPStateL
+    markStakePoolState :: Map (KeyHash StakePool) StakePoolState
+    markStakePoolState = psStakePools $ ls ^. lsCertStateL . certPStateL
 
 -- ====================================================================
 -- Specs for EpochState and NewEpochState
