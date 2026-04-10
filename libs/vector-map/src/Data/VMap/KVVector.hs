@@ -157,8 +157,8 @@ fillWithList zs mv = go 0 zs
     n = VGM.length mv
     go i ys
       | i == n = pure mv
-      | x : xs <- ys = VGM.write mv i x >> go (i + 1) xs
-      | otherwise = pure $ VGM.slice 0 i mv
+      | x : xs <- ys = VGM.unsafeWrite mv i x >> go (i + 1) xs
+      | otherwise = pure $ VGM.unsafeSlice 0 i mv
 {-# INLINE fillWithList #-}
 
 fromAscListWithKey ::
@@ -206,7 +206,7 @@ fromAscListWithKeyN n f xs
 
 internKVVectorMaybe :: (VG.Vector kv k, Ord k) => k -> KVVector kv vv (k, v) -> Maybe k
 internKVVectorMaybe key (KVVector keys _values) =
-  VG.indexM keys =<< lookupIxSortedVector key keys
+  VG.unsafeIndex keys <$> lookupIxSortedVector key keys
 {-# INLINE internKVVectorMaybe #-}
 
 -- | Look up a value by the key in a __sorted__ key/value vector. Ensure it is
@@ -214,7 +214,7 @@ internKVVectorMaybe key (KVVector keys _values) =
 lookupKVVector ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => k -> KVVector kv vv (k, v) -> Maybe v
 lookupKVVector key (KVVector keys values) =
-  VG.indexM values =<< lookupIxSortedVector key keys
+  VG.unsafeIndex values <$> lookupIxSortedVector key keys
 {-# INLINE lookupKVVector #-}
 
 -- | Look up a value by the key in a __sorted__ key/value vector. Ensure it is
@@ -241,7 +241,7 @@ lookupIxSortedVector key keys = go 0 (VG.length keys)
     go !l !u = do
       guard (l < u)
       let !i = ((u - l) `div` 2) + l
-      case compare key (keys VG.! i) of
+      case compare key (keys `VG.unsafeIndex` i) of
         LT -> go l i
         GT -> go (i + 1) u
         EQ -> Just i
@@ -272,22 +272,22 @@ removeDuplicates f mv
   | otherwise = do
       let n = VGM.length mv
           goMoved lastIx prev@(pk, pv) curIx = do
-            VGM.write mv lastIx prev
+            VGM.unsafeWrite mv lastIx prev
             if curIx < n
               then do
-                cur@(ck, cv) <- VGM.read mv curIx
+                cur@(ck, cv) <- VGM.unsafeRead mv curIx
                 if ck == pk
                   then goMoved lastIx (ck, f ck pv cv) (curIx + 1)
                   else goMoved (lastIx + 1) cur (curIx + 1)
-              else pure $ VGM.slice 0 (lastIx + 1) mv
+              else pure $ VGM.unsafeSlice 0 (lastIx + 1) mv
           goUnmoved (pk, pv) curIx
             | curIx < n = do
-                cur@(ck, cv) <- VGM.read mv curIx
+                cur@(ck, cv) <- VGM.unsafeRead mv curIx
                 if ck == pk
                   then goMoved (curIx - 1) (ck, f ck pv cv) (curIx + 1)
                   else goUnmoved cur (curIx + 1)
             | otherwise = pure mv
-      x0 <- VGM.read mv 0
+      x0 <- VGM.unsafeRead mv 0
       goUnmoved x0 1
 {-# INLINE removeDuplicates #-}
 

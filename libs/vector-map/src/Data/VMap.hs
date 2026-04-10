@@ -118,7 +118,7 @@ size = VG.length . unVMap
 
 lookup ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => k -> VMap kv vv k v -> Maybe v
-lookup k = KV.lookupKVVector k . unVMap
+lookup k (VMap vm) = KV.lookupKVVector k vm
 {-# INLINE lookup #-}
 
 elemAt ::
