@@ -27,8 +27,8 @@ source-repository-package
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
-  , hackage.haskell.org 2026-02-24T18:41:42Z
-  , cardano-haskell-packages 2026-02-19T00:52:30Z
+  , hackage.haskell.org 2026-04-06T22:05:45Z
+  , cardano-haskell-packages 2026-04-06T22:05:45Z
 
 packages:
   -- == Byron era ==
@@ -106,6 +106,10 @@ source-repository-package
   subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
   --sha256: sha256-BoAotLgxMipOIMcZrmlr6EtQzqC5HyEA0ZpK8nvCmJs=
   tag: 5161deb34247a51160f2e8d58b6cc2d48044ea2c
+
+constraints:
+  -- Happy version 2.2.1 fails to compile haskell-src-exts
+  , happy < 2.2.1
 
 if impl(ghc >=9.14)
   source-repository-package

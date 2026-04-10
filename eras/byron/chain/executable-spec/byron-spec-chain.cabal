@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: byron-spec-chain
-version: 1.0.1.1
+version: 1.0.1.2
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -38,7 +38,7 @@ library
     containers,
     hashable,
     hedgehog >=1.0.4,
-    microlens,
+    microlens >=0.5,
     microlens-th,
     small-steps:{small-steps, testlib} >=1.1,
 

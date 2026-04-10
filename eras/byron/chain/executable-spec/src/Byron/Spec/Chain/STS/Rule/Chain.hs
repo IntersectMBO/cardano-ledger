@@ -42,7 +42,7 @@ import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Property (CoverPercentage)
 import qualified Hedgehog.Range as Range
 import Lens.Micro (Lens', (^.))
-import Lens.Micro.Internal (Field1 (..), Field5 (..))
+import Lens.Micro.FieldN (Field1 (..), Field5 (..))
 import Numeric.Natural (Natural)
 import Test.Control.State.Transition.Generator
 
@@ -359,15 +359,3 @@ coverInvalidBlockProofs coverPercentage =
     , InvalidUpdateProposalHash
     , InvalidUtxoHash
     ]
-
---------------------------------------------------------------------------------
--- FieldX instances for a 6-tuple
---------------------------------------------------------------------------------
-
-instance Field1 (a, b, c, d, e, f) (a', b, c, d, e, f) a a' where
-  _1 k ~(a, b, c, d, e, f) = (\a' -> (a', b, c, d, e, f)) <$> k a
-  {-# INLINE _1 #-}
-
-instance Field5 (a, b, c, d, e, f) (a, b, c, d, e', f) e e' where
-  _5 k ~(a, b, c, d, e, f) = (\e' -> (a, b, c, d, e', f)) <$> k e
-  {-# INLINE _5 #-}
