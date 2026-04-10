@@ -211,7 +211,7 @@ data FreeVars = FreeVars
   { fvAddrsRew :: !(Set (Credential Staking))
   , fvTotalStake :: !Coin
   , fvProtVer :: !ProtVer
-  , fvPoolRewardInfo :: !(VMap VB VB (KeyHash StakePool) PoolRewardInfo)
+  , fvPoolRewardInfo :: !(Map (KeyHash StakePool) PoolRewardInfo)
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
@@ -262,7 +262,7 @@ rewardStakePoolMember freeVars inputAnswer@(RewardAns accum recent) cred swd =
           , fvProtVer
           } = freeVars
         poolId = swdDelegation swd
-    poolRI <- VMap.lookup poolId fvPoolRewardInfo
+    poolRI <- Map.lookup poolId fvPoolRewardInfo
     r <-
       rewardOnePoolMember fvProtVer fvTotalStake fvAddrsRew poolRI cred $
         fromCompact $

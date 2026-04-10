@@ -792,7 +792,7 @@ mkRewardAns
           { fvAddrsRew = addrsRew
           , fvTotalStake = totalStake
           , fvPoolRewardInfo =
-              VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') stakePools
+              VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') stakePools
           , fvProtVer = pp ^. ppProtocolVersionL
           }
       pulser :: Pulser
