@@ -21,6 +21,7 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   huddleRoundTripArbitraryValidate,
   huddleRoundTripCborSpec,
   specWithHuddle,
+  noTwiddle,
  )
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
@@ -30,7 +31,7 @@ spec :: Spec
 spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @DijkstraEra
-    describe "Huddle" $ specWithHuddle dijkstraCDDL $ do
+    describe "Huddle" $ specWithHuddle dijkstraCDDL . noTwiddle $ do
       huddleRoundTripCborSpec @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
       huddleRoundTripCborSpec @(AccountBalanceIntervals DijkstraEra) v "account_balance_intervals"
       huddleRoundTripArbitraryValidate @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
