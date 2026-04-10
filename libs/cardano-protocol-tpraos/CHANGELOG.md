@@ -14,7 +14,7 @@
 
 ### `testlib`
 
-* Replace `CuddleData` with `CTreeRoot MonoReferenced`
+* Replace `CuddleData` with `HuddleEnv`
 
 ## 1.5.0.0
 

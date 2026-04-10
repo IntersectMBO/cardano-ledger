@@ -20,8 +20,8 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   huddleRoundTripAnnCborSpec,
   huddleRoundTripArbitraryValidate,
   huddleRoundTripCborSpec,
-  specWithHuddle,
   noTwiddle,
+  specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()

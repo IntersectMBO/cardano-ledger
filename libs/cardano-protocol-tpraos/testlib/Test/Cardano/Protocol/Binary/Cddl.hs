@@ -30,7 +30,7 @@ huddleBlockSpec ::
   , DecCBOR (bhbody c)
   , EncCBOR (bhbody c)
   ) =>
-  SpecWith MonoGenEnv
+  SpecWith HuddleEnv
 huddleBlockSpec = do
   let v = eraProtVerLow @era
   huddleRoundTripAnnCborSpec @(bh c) v "header"
@@ -54,7 +54,7 @@ praosBlockHuddleSpec ::
   , DecCBOR (bhbody c)
   , EncCBOR (bhbody c)
   ) =>
-  SpecWith MonoGenEnv
+  SpecWith HuddleEnv
 praosBlockHuddleSpec = do
   let v = eraProtVerLow @era
   huddleBlockSpec @era @c @bh @bhbody
