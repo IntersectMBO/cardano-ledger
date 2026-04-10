@@ -145,7 +145,6 @@ instance DecShareCBOR ActiveStake where
 sumAllActiveStake :: ActiveStake -> NonZero Coin
 sumAllActiveStake (ActiveStake m) =
   VMap.foldMap (fromCompact . unNonZero . swdStake) m `nonZeroOr` knownNonZeroCoin @1
-{-# INLINE sumAllActiveStake #-}
 
 -- | Sum the compact stake for a set of credentials from an @ActiveStake@.
 sumCredentialsCompactActiveStake ::

@@ -154,9 +154,9 @@ maxPool pp r sigma pR = maxPool' a0 nOpt r sigma pR
 -- `StakePoolState`, `InstantStake` and `Accounts` that is later used for reward
 -- calculation
 data StakePoolSnapShot = StakePoolSnapShot
-  { spssStake :: !(CompactForm Coin)
+  { spssStake :: CompactForm Coin
   -- ^ Total stake delegated to this stake pool.
-  , spssStakeRatio :: !Rational
+  , spssStakeRatio :: Rational
   -- ^ Ratio of the stake pool stake `spssStake` over the total `ssTotalActiveStake` for that snapshot
   , spssSelfDelegatedOwners :: !(Set (KeyHash Staking))
   -- ^ Unlike owners that are specified in the `StakePoolParams`, the owners listed in this field
@@ -215,7 +215,7 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
       stakePoolState
     !selfDelegatedOwners =
       Set.filter (\ownerKeyHash -> KeyHashObj ownerKeyHash `Set.member` spsDelegators) spsOwners
-    !stakePoolStake = sumCredentialsCompactActiveStake activeStake spsDelegators
+    stakePoolStake = sumCredentialsCompactActiveStake activeStake spsDelegators
 {-# INLINE mkStakePoolSnapShot #-}
 
 instance NoThunks StakePoolSnapShot
@@ -274,7 +274,7 @@ instance DecShareCBOR StakePoolSnapShot where
 data SnapShot = SnapShot
   { ssActiveStake :: !ActiveStake
   -- ^ All of the stake for registered staking credentials that have a delegation to a stake pool.
-  , ssTotalActiveStake :: !(NonZero Coin)
+  , ssTotalActiveStake :: NonZero Coin
   -- ^ Total active stake, which is the sum of all of the stake from `ssActiveStake`. It is primarily used
   -- in a denominator, therefore it cannot be zero and is defaulted to 1. This is a reasonable
   -- assumption for a system that relies on non-zero active stake to produce blocks.
@@ -410,10 +410,14 @@ resetStakePoolsSnapShot ::
   SnapShot ->
   SnapShot
 resetStakePoolsSnapShot stakePoolsState ss@SnapShot {..} =
-  ss
-    { ssStakePoolsSnapShot =
-        VMap.fromMap $ Map.map (mkStakePoolSnapShot ssActiveStake ssTotalActiveStake) stakePoolsState
-    }
+  let stakePoolsSnapShot =
+        VMap.fromMap $ Map.map (mkStakePoolSnapShot ssActiveStake totalActiveStake) stakePoolsState
+      totalActiveStake =
+        fromCompact (VMap.foldMap spssStake stakePoolsSnapShot) `nonZeroOr` knownNonZeroCoin @1
+   in ss
+        { ssTotalActiveStake = totalActiveStake
+        , ssStakePoolsSnapShot = stakePoolsSnapShot
+        }
 {-# INLINE resetStakePoolsSnapShot #-}
 
 snapShotFromInstantStake ::
@@ -427,7 +431,7 @@ snapShotFromInstantStake instantStake dState PState {psStakePools} =
   resetStakePoolsSnapShot psStakePools $ mkSnapShot activeStake VMap.empty
   where
     !activeStake = resolveInstantStake instantStake $ dsAccounts dState
-{-# INLINE snapShotFromInstantStake #-}
+{-# INLINEABLE snapShotFromInstantStake #-}
 
 -- =======================================
 
