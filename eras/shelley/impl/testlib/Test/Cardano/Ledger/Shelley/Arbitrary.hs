@@ -39,6 +39,7 @@ import Cardano.Ledger.Shelley.API (
   ShelleyTx (ShelleyTx),
   TxBody (ShelleyTxBody),
  )
+import Cardano.Ledger.Shelley.API.Wallet (RewardInfoPool (..), RewardParams (..))
 import Cardano.Ledger.Shelley.BlockBody
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Genesis
@@ -767,3 +768,18 @@ instance
   Arbitrary (ShelleyBlockBody era)
   where
   arbitrary = ShelleyBlockBody <$> arbitrary
+
+instance Arbitrary RewardInfoPool where
+  arbitrary =
+    RewardInfoPool
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+  shrink = genericShrink
+
+instance Arbitrary RewardParams where
+  arbitrary = RewardParams <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink

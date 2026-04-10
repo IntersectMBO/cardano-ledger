@@ -4,6 +4,10 @@
 
 *
 
+### `testlib`
+
+* Add `Arbitrary` instances for `HotCredAuthStatus`, `NextEpochChange`, `CommitteeMemberState`, `CommitteeMembersState`, and `DefaultVote`
+
 ## 1.13.0.0
 
 * Add `queryStakeSnapshots` and the types produced by it:

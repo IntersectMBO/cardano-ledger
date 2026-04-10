@@ -28,6 +28,7 @@ import Cardano.Ledger.Conway.State (
   vsCommitteeStateL,
  )
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Shelley.API.Wallet (RewardInfoPool, RewardParams)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
@@ -67,6 +68,16 @@ latestErasSpec =
       describe "Roundtrip" $ do
         prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
         prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
+        prop "StakeSnapshot" $ roundTripEraExpectation @era @StakeSnapshot
+        prop "MemberStatus" $ roundTripEraExpectation @era @MemberStatus
+        prop "HotCredAuthStatus" $ roundTripEraExpectation @era @HotCredAuthStatus
+        prop "NextEpochChange" $ roundTripEraExpectation @era @NextEpochChange
+        prop "CommitteeMemberState" $ roundTripEraExpectation @era @CommitteeMemberState
+        prop "CommitteeMembersState" $ roundTripEraExpectation @era @CommitteeMembersState
+        prop "RewardInfoPool" $ roundTripEraExpectation @era @RewardInfoPool
+        prop "RewardParams" $ roundTripEraExpectation @era @RewardParams
+        prop "ChainAccountState" $ roundTripEraExpectation @era @ChainAccountState
+        prop "DefaultVote" $ roundTripEraExpectation @era @DefaultVote
       describe "Queries" $ do
         committeeMembersStateSpec @era
         queryStakeSnapshotsSpec @era
