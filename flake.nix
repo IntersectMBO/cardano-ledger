@@ -314,7 +314,7 @@
             (old: { shellHook = old.shellHook + pre-commit-check.shellHook; });
           };
         in mkDevShells cabalProject
-        # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc9122`
+        # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc9124`
         // lib.mapAttrs (compiler-nix-name: _:
           let p = cabalProject.appendModule { inherit compiler-nix-name; };
           in p.shell // (mkDevShells p)) nixpkgs.haskell-nix.compiler;
