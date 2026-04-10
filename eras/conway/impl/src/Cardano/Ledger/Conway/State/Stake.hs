@@ -79,6 +79,7 @@ instance EraStake ConwayEra where
   addInstantStake = addConwayInstantStake
   deleteInstantStake = deleteConwayInstantStake
   resolveInstantStake = resolveConwayInstantStake
+  {-# INLINE resolveInstantStake #-}
 
 conwayInstantStakeCredentialsL ::
   Lens' (ConwayInstantStake era) (Map.Map (Credential Staking) (CompactForm Coin))

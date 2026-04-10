@@ -213,9 +213,10 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
   where
     StakePoolState {spsVrf, spsPledge, spsCost, spsMargin, spsAccountId, spsOwners, spsDelegators} =
       stakePoolState
-    selfDelegatedOwners =
+    !selfDelegatedOwners =
       Set.filter (\ownerKeyHash -> KeyHashObj ownerKeyHash `Set.member` spsDelegators) spsOwners
-    stakePoolStake = sumCredentialsCompactActiveStake activeStake spsDelegators
+    !stakePoolStake = sumCredentialsCompactActiveStake activeStake spsDelegators
+{-# INLINE mkStakePoolSnapShot #-}
 
 instance NoThunks StakePoolSnapShot
 
@@ -425,7 +426,7 @@ snapShotFromInstantStake ::
 snapShotFromInstantStake instantStake dState PState {psStakePools} =
   resetStakePoolsSnapShot psStakePools $ mkSnapShot activeStake VMap.empty
   where
-    activeStake = resolveInstantStake instantStake $ dsAccounts dState
+    !activeStake = resolveInstantStake instantStake $ dsAccounts dState
 {-# INLINE snapShotFromInstantStake #-}
 
 -- =======================================

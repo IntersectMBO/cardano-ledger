@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.Rewards (
   StakeShare (..),
@@ -152,9 +153,10 @@ calcStakePoolMemberReward ::
 calcStakePoolMemberReward (Coin f) (Coin cost) margin (StakeShare t) (StakeShare sigma)
   | f <= cost = mempty
   | otherwise =
-      rationalToCoinViaFloor $ fromIntegral (f - cost) * (1 - m) * t / sigma
+      rationalToCoinViaFloor $ fromInteger @Rational (f - cost) * (1 - m) * t / sigma
   where
     m = unboundRational margin
+{-# INLINE calcStakePoolMemberReward #-}
 
 sumRewards ::
   ProtVer ->
