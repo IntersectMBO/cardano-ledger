@@ -42,8 +42,12 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   Interns,
+  decNoShareCBOR,
   decodeRecordNamed,
+  decodeVMap,
   encodeListLen,
+  interns,
+  internsFromVMap,
  )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
@@ -114,13 +118,15 @@ instance EncCBOR StakeWithDelegation where
   encCBOR (StakeWithDelegation s d) = encodeListLen 2 <> encCBOR s <> encCBOR d
 
 instance DecCBOR StakeWithDelegation where
-  decCBOR =
-    decodeRecordNamed "SnapShot" (const 2) $
-      StakeWithDelegation <$> decCBOR <*> decCBOR
+  decCBOR = decNoShareCBOR
 
 instance DecShareCBOR StakeWithDelegation where
-  type Share StakeWithDelegation = Interns (Credential Staking)
-  decShareCBOR _si = decCBOR
+  type Share StakeWithDelegation = Interns (KeyHash StakePool)
+  decShareCBOR poolIdIntern =
+    decodeRecordNamed "StakeWithDelegation" (const 2) $ do
+      swdStake <- decCBOR
+      swdDelegation <- interns poolIdIntern <$> decCBOR
+      pure StakeWithDelegation {swdStake, swdDelegation}
 
 -- | Active stake: maps staking credentials to their non-zero stake paired with delegation.
 -- Only credentials that are registered, delegated, and have non-zero stake appear here.
@@ -130,9 +136,10 @@ newtype ActiveStake = ActiveStake
   deriving (Show, Eq, NFData, Generic, ToJSON, NoThunks, EncCBOR)
 
 instance DecShareCBOR ActiveStake where
-  type Share ActiveStake = Interns (Credential Staking)
-  getShare (ActiveStake m) = fst (getShare m)
-  decShareCBOR si = ActiveStake <$> decShareCBOR (si, mempty)
+  type Share ActiveStake = (Interns (Credential Staking), Interns (KeyHash StakePool))
+  getShare (ActiveStake m) = (internsFromVMap m, mempty)
+  decShareCBOR (kis, vis) =
+    ActiveStake <$> decodeVMap (interns kis <$> decCBOR) (decShareCBOR vis)
 
 -- | Sum all active stake. Returns @NonZero Coin@, defaulting to 1 lovelace if empty.
 sumAllActiveStake :: ActiveStake -> NonZero Coin
