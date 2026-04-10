@@ -34,6 +34,19 @@
 * Remove `NoThunks` instance for `ConwayContextError`
 * Make `ConwayContextError` constructors lazy
 
+### `testlib`
+
+* Export from `Test.Cardano.Ledger.Conway.Examples`:
+  - `exampleAnchor`
+  - `exampleVotingProcedures`
+  - `exampleProposalProcedure`
+  - `exampleProposalProcedureParameterChange`
+  - `exampleProposalProcedureHardForkInitiation`
+  - `exampleProposalProcedureTreasuryWithdrawals`
+  - `exampleProposalProcedureNoConfidence`
+  - `exampleProposalProcedureUpdateCommittee`
+  - `exampleProposalProcedureNewConstitution`
+
 ## 1.22.0.0
 
 * Switch `ConwayAccountState` to use `Maybe` instead of `StrictMaybe`

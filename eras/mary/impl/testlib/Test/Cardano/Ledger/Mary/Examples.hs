@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Mary.Examples (
   ledgerExamples,
   exampleMaryBasedShelleyTxBody,
   exampleMaryBasedTxBody,
+  exampleMultiAsset,
   exampleMultiAssetValue,
 ) where
 

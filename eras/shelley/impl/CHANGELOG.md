@@ -50,6 +50,7 @@
 * Add `HuddleRule "int32" ShelleyEra` instance
 * Add `withIssuerAndTxsInBlock_` and `withIssuerAndTxsInBlock`
 * Add a `Maybe (KeyHash BlockIssuer)` parameter to `withTxsInBlockEither`
+* Export `exampleShelleyScript` and `exampleBootstrapWitness` from `Test.Cardano.Ledger.Shelley.Examples`
 
 ## 1.18.0.0
 
