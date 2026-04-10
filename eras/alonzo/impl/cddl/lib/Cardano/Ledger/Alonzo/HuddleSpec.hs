@@ -532,7 +532,7 @@ alonzoRedeemer pname p =
   pname
     =.= arr
       [ "tag" ==> huddleRule @"redeemer_tag" p
-      , "index" ==> VUInt
+      , "index" ==> VUInt `sized` (4 :: Word64)
       , "data" ==> huddleRule @"plutus_data" p
       , "ex_units" ==> huddleRule @"ex_units" p
       ]

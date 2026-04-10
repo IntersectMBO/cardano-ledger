@@ -509,7 +509,12 @@ redeemers = [* redeemer]
 
 ; NEW
 redeemer = 
-  [tag : redeemer_tag, index : uint, data : plutus_data, ex_units : ex_units]
+  [ tag      : redeemer_tag
+  , index    : uint .size 4
+  , data     : plutus_data 
+  , ex_units : ex_units    
+  ]
+
 
 ; 0: spend
 ; 1: mint

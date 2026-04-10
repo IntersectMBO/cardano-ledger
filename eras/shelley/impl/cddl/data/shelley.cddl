@@ -242,8 +242,8 @@ proposed_protocol_parameter_updates = {* genesis_hash => protocol_param_update}
 protocol_param_update = 
   { ? 0  : uint                   ; minfee A
   , ? 1  : uint                   ; minfee B
-  , ? 2  : uint                   ; max block body size
-  , ? 3  : uint                   ; max transaction size
+  , ? 2  : uint .size 4           ; max block body size
+  , ? 3  : uint .size 4           ; max transaction size
   , ? 4  : uint .size 2           ; max block header size
   , ? 5  : coin                   ; key deposit
   , ? 6  : coin                   ; pool deposit
@@ -292,7 +292,9 @@ script_all = (1, [* native_script])
 
 script_any = (2, [* native_script])
 
-script_n_of_k = (3, n : int, [* native_script])
+script_n_of_k = (3, n : int32, [* native_script])
+
+int32 = -2147483648 .. 2147483647
 
 bootstrap_witness = 
   [ public_key : vkey     
