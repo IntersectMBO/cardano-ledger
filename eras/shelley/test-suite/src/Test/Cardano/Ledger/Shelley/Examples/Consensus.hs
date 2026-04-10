@@ -168,7 +168,7 @@ exampleShelleyLedgerBlock ::
   EraSegWits era =>
   Tx era ->
   Block (BHeader StandardCrypto) era
-exampleShelleyLedgerBlock tx = Block blockHeader' blockBody' Nothing False -- FIXME(bladyjoker): Revise
+exampleShelleyLedgerBlock tx = Block blockHeader' blockBody'
   where
     keys :: AllIssuerKeys StandardCrypto 'StakePool
     keys = exampleKeys

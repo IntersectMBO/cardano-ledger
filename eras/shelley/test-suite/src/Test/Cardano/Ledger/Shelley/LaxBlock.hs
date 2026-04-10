@@ -49,7 +49,7 @@ blockDecoder lax = annotatorSlice $
   decodeRecordNamed "Block" (const 4) $ do
     header <- decCBOR
     txs <- txSeqDecoder lax -- FIXME(bladyjoker): Wrong
-    pure $ Block' <$> header <*> (BodyInline <$> txs) <*> pure Nothing <*> pure False -- FIXME(bladyjoker): Revise
+    pure $ Block' <$> header <*> (BodyInline <$> txs)
 
 deriving stock instance (Era era, Show (TxSeq era), Show h) => Show (LaxBlock h era)
 

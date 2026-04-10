@@ -473,7 +473,7 @@ tests =
             shelleyProtVer
             "withdrawal"
             (Map.singleton r (Coin 123))
-            ( (T $ TkMapLen 1)
+            ( T (TkMapLen 1)
                 <> S r
                 <> S (Coin 123)
             )
@@ -484,7 +484,7 @@ tests =
             shelleyProtVer
             "withdrawal"
             (Map.singleton r (Coin 123))
-            ( (T $ TkMapLen 1)
+            ( T (TkMapLen 1)
                 <> S r
                 <> S (Coin 123)
             )
@@ -567,8 +567,8 @@ tests =
                 <> S poolOwner -- owners
                 <> T (TkListLen 3) -- relays
                 <> T (TkListLen 4 . TkWord 0 . TkNull . TkBytes ipv4Bytes . TkNull)
-                <> T (TkListLen 3 . TkWord 1 . (TkWord 42) . TkString ("singlehost.relay.com"))
-                <> T (TkListLen 2 . TkWord 2 . TkString ("multihost.relay.com"))
+                <> T (TkListLen 3 . TkWord 1 . TkWord 42 . TkString "singlehost.relay.com")
+                <> T (TkListLen 2 . TkWord 2 . TkString "multihost.relay.com")
                 <> T (TkListLen 2) -- metadata present
                 <> S poolUrl -- metadata url
                 <> S poolMDHash -- metadata hash
@@ -619,7 +619,7 @@ tests =
         shelleyProtVer
         "pparams_update_key_deposit_only"
         (emptyPParamsUpdate @ShelleyEra & ppuKeyDepositL .~ SJust (Coin 5))
-        ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5))
+        (T (TkMapLen 1 . TkWord 5) <> S (Coin 5))
     , -- checkEncodingCBOR "pparams_update_all"
       let minfeea = Coin 0
           minfeeb = Coin 1
@@ -677,40 +677,40 @@ tests =
                 & ppuMinPoolCostL
                   .~ SJust minPoolCost
             )
-            ( (T $ TkMapLen 17)
-                <> (T $ TkWord 0)
+            ( T (TkMapLen 17)
+                <> T (TkWord 0)
                 <> S minfeea
-                <> (T $ TkWord 1)
+                <> T (TkWord 1)
                 <> S minfeeb
-                <> (T $ TkWord 2)
+                <> T (TkWord 2)
                 <> S maxbbsize
-                <> (T $ TkWord 3)
+                <> T (TkWord 3)
                 <> S maxtxsize
-                <> (T $ TkWord 4)
+                <> T (TkWord 4)
                 <> S maxbhsize
-                <> (T $ TkWord 5)
+                <> T (TkWord 5)
                 <> S keydeposit
-                <> (T $ TkWord 6)
+                <> T (TkWord 6)
                 <> S pooldeposit
-                <> (T $ TkWord 7)
+                <> T (TkWord 7)
                 <> S emax
-                <> (T $ TkWord 8)
+                <> T (TkWord 8)
                 <> S nopt
-                <> (T $ TkWord 9 . TkTag 30)
+                <> T (TkWord 9 . TkTag 30)
                 <> S (unboundRational a0)
-                <> (T $ TkWord 10)
+                <> T (TkWord 10)
                 <> S rho
-                <> (T $ TkWord 11)
+                <> T (TkWord 11)
                 <> S tau
-                <> (T $ TkWord 12)
+                <> T (TkWord 12)
                 <> S d
-                <> (T $ TkWord 13)
+                <> T (TkWord 13)
                 <> S extraEntropy
-                <> (T $ TkWord 14)
+                <> T (TkWord 14)
                 <> S protocolVersion
-                <> (T $ TkWord 15)
+                <> T (TkWord 15)
                 <> S minUTxOValue
-                <> (T $ TkWord 16)
+                <> T (TkWord 16)
                 <> S minPoolCost
             )
     , -- checkEncodingCBOR "full_update"
@@ -854,12 +854,12 @@ tests =
               (SlotNo 500)
               SNothing
               SNothing
-          txbh = (hashAnnotated txb)
+          txbh = hashAnnotated txb
           w = mkWitnessVKey txbh testKey1
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "tx_min"
-            ( ShelleyTx @(ShelleyEra)
+            ( ShelleyTx @ShelleyEra
                 txb
                 (mempty {addrWits = Set.singleton w} :: ShelleyTxWits C)
                 SNothing
@@ -992,7 +992,7 @@ tests =
             shelleyProtVer
             "block_header"
             (BHeader (testBHB @C) sig)
-            ( (T $ TkListLen 2)
+            ( T (TkListLen 2)
                 <> S (testBHB @C)
                 <> T (testBHBSigTokens @C)
             )
@@ -1004,8 +1004,8 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "empty_block"
-            (Block @C bh (BodyInline txns) Nothing False)
-            ( (T $ TkListLen 4)
+            (Block @C bh (BodyInline txns))
+            ( T (TkListLen 4)
                 <> S bh
                 <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
             )
@@ -1070,8 +1070,8 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "rich_block"
-            (Block @C bh (BodyInline txns) Nothing False)
-            ( (T $ TkListLen 4)
+            (Block @C bh (BodyInline txns))
+            ( T (TkListLen 4)
                 -- header
                 <> S bh
                 -- bodies

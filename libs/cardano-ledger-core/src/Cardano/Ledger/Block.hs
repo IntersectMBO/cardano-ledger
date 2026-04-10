@@ -19,9 +19,6 @@ module Cardano.Ledger.Block (
   Block (Block, Block', UnserialisedBlock, UnsafeUnserialisedBlock),
   blockHeader,
   blockBody,
-  blockMayAnnouncedEb,
-  blockCertifiesEb,
-  EbHash (..),
   Body (..),
   Certificate (..),
   bheader,
@@ -65,11 +62,6 @@ import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack, callStack)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
-
-newtype EbHash = EbHash {unEbHash :: BSL.ByteString}
-  deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NoThunks)
-  deriving newtype (DecCBOR, EncCBOR)
 
 newtype Certificate = Certificate {unCertificate :: BSL.ByteString}
   deriving stock (Show, Eq, Ord, Generic)
@@ -118,10 +110,7 @@ bodyTxs (BodyCertificate cert mayCertifiedEbTxClosure) = case mayCertifiedEbTxCl
 data Block h era
   = Block'
   { blockHeader :: !h
-  , blockBody :: !(Body era)
-  , -- FIXME(bladyjoker): This goes into the header
-    blockMayAnnouncedEb :: Maybe EbHash
-  , blockCertifiesEb :: Bool
+  , blockBody :: !(Body era) -- FIXME(bladyjoker): This doesn't belong here, this should remain a "ledger block of transactions"
   , blockBytes :: BSL.ByteString
   }
   deriving (Generic)
@@ -150,21 +139,17 @@ pattern Block ::
   ) =>
   h ->
   Body era ->
-  Maybe EbHash ->
-  Bool ->
   Block h era
-pattern Block h body mayAnnouncedEb certifiesEb <-
-  Block' h body mayAnnouncedEb certifiesEb _
+pattern Block h body <-
+  Block' h body _
   where
-    Block h body mayAnnouncedEb certifiesEb =
+    Block h body =
       let bytes =
             serialize (eraProtVerLow @era) $
-              encodeListLen 4
+              encodeListLen 2
                 <> encCBOR h
                 <> encCBOR body
-                <> encCBOR mayAnnouncedEb
-                <> encCBOR certifiesEb
-       in Block' h body mayAnnouncedEb certifiesEb bytes
+       in Block' h body bytes
 
 {-# COMPLETE Block #-}
 
@@ -174,7 +159,7 @@ pattern UnserialisedBlock ::
   h ->
   Body era ->
   Block h era
-pattern UnserialisedBlock h body <- Block' h body _ _ _
+pattern UnserialisedBlock h body <- Block' h body _
 
 {-# COMPLETE UnserialisedBlock #-}
 
@@ -188,11 +173,11 @@ pattern UnsafeUnserialisedBlock ::
   Body era ->
   Block h era
 pattern UnsafeUnserialisedBlock h body <-
-  Block' h body _ _ _
+  Block' h body _
   where
     UnsafeUnserialisedBlock h body =
       let bytes = error "`UnsafeUnserialisedBlock` used to construct a block which was later serialised."
-       in Block' h body (error "FIXME(bladyjoker): annEb") (error "FIXME(bladyjoker): cert") bytes
+       in Block' h body bytes
 
 {-# COMPLETE UnsafeUnserialisedBlock #-}
 
@@ -213,22 +198,15 @@ instance
     decodeRecordNamed "Block" (const blockSize) $ do
       header <- decCBOR
       body <- decCBOR
-      mayAnnouncedEb <- decCBOR @(Maybe EbHash)
-      certifiesEb <- decCBOR @Bool
-      pure $ Block' <$> header <*> body <*> pure mayAnnouncedEb <*> pure certifiesEb
+      pure $ Block' <$> header <*> body
     where
       blockSize =
         1 -- header
           + 1 -- body -- NOTE(bladyjoker): This might be wrong
-          + 1 -- announced EB
-          + 1 -- certified EB
 
 data BlockRaw h era = BlockRaw
   { _blockRawHeader :: !h
   , _blockRawBody :: !(Body era)
-  , -- FIXME(bladyjoker): Same as for Block
-    _blockRawMayAnnouncedEb :: Maybe EbHash
-  , _blockRawUseCertifiedEb :: Bool
   }
 
 instance
@@ -242,15 +220,11 @@ instance
     decodeRecordNamed "Block" (const blockSize) $ do
       header <- decCBOR
       body <- decCBOR
-      mayAnnouncedEb <- decCBOR
-      certifiesEb <- decCBOR
-      pure $ BlockRaw header body mayAnnouncedEb certifiesEb
+      pure $ BlockRaw header body
     where
       blockSize =
         1 -- header
           + 1 -- body -- NOTE: Is this correct???
-          + 1 -- announced EB
-          + 1 -- certified EB
 
 instance
   (DecCBOR (TxSeq era), EraSegWits era) =>
@@ -306,9 +280,9 @@ instance
   DecCBOR (Block h era)
   where
   decCBOR = do
-    Memo (BlockRaw h body mayAnnouncedEb certifiesEb) bs <-
+    Memo (BlockRaw h body) bs <-
       decodeMemoized (decCBOR @(BlockRaw h era))
-    pure $ Block' h body mayAnnouncedEb certifiesEb (BSL.fromStrict (SBS.fromShort bs))
+    pure $ Block' h body (BSL.fromStrict (SBS.fromShort bs))
 
 bheader :: Block h era -> h
 bheader = blockHeader
@@ -330,8 +304,8 @@ neededTxInsForBlock ::
   EraSegWits era =>
   Block h era ->
   Set TxIn
-neededTxInsForBlock (Block' _ (BodyInline txsSeq) _ _ _) = neededTxInsForTxs txsSeq
-neededTxInsForBlock (Block' _ (BodyCertificate cert mayTxsSeq) _ _ _) = case mayTxsSeq of
+neededTxInsForBlock (Block' _ (BodyInline txsSeq) _) = neededTxInsForTxs txsSeq
+neededTxInsForBlock (Block' _ (BodyCertificate cert mayTxsSeq) _) = case mayTxsSeq of
   Nothing -> error $ "Must have EB transaction closure associated with a Certificate " <> show cert
   Just txsSeq -> neededTxInsForTxs txsSeq
 

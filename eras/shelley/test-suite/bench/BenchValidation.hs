@@ -93,7 +93,7 @@ benchValidate ::
   (API.ApplyBlock era, Show (PredicateFailure (EraRule "BBODY" era))) =>
   ValidateInput era ->
   IO (NewEpochState era)
-benchValidate (ValidateInput globals state (Block bh txs _ _)) =
+benchValidate (ValidateInput globals state (Block bh txs)) =
   let block = UnsafeUnserialisedBlock (makeHeaderView bh) txs
    in case API.applyBlockEitherNoEvents ValidateAll globals state block of
         Right x -> pure x
@@ -111,7 +111,7 @@ applyBlock ::
   ValidateInput era ->
   Int ->
   Int
-applyBlock (ValidateInput globals state (Block bh txs _ _)) n =
+applyBlock (ValidateInput globals state (Block bh txs)) n =
   let block = UnsafeUnserialisedBlock (makeHeaderView bh) txs
    in case API.applyBlockEitherNoEvents ValidateAll globals state block of
         Right x -> seq (rnf x) (n + 1)
@@ -121,7 +121,7 @@ benchreValidate ::
   API.ApplyBlock era =>
   ValidateInput era ->
   NewEpochState era
-benchreValidate (ValidateInput globals state (Block bh txs _ _)) =
+benchreValidate (ValidateInput globals state (Block bh txs)) =
   API.applyBlockNoValidaton globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs)
 
 -- ==============================================================
@@ -145,7 +145,7 @@ instance Crypto c => NFData (BHeader c) where
   rnf (BHeader _ _) = ()
 
 instance NFData ChainDepState where
-  rnf (ChainDepState _ _ _) = ()
+  rnf (ChainDepState {}) = ()
 
 instance NFData (ChainTransitionError c) where
   rnf _ = ()
@@ -169,7 +169,7 @@ genUpdateInputs ::
 genUpdateInputs utxoSize = do
   let ge = genEnv (Proxy :: Proxy era) defaultConstants
   chainstate <- genChainState utxoSize ge
-  (Block blockheader _ _ _) <- genBlock ge chainstate
+  (Block blockheader _) <- genBlock ge chainstate
   let ledgerview = currentLedgerView (chainNes chainstate)
   let (ChainState _newepochState keys eta0 etaV etaC etaH slot) = chainstate
   let prtclState = PrtclState keys eta0 etaV

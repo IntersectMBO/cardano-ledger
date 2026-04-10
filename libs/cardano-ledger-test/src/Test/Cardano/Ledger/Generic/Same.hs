@@ -247,17 +247,17 @@ instance
   Same era (ShelleyLedgerExamples era)
   where
   same proof x1 x2 = case (sleBlock x1, sleBlock x2) of
-    (Block' h1 a1 _ _ _, Block' h2 a2 _ _ _) ->
+    (Block' h1 a1 _, Block' h2 a2 _) ->
       sameWithDependency
         [ SomeM "Tx" (sameTx proof) (sleTx x1) (sleTx x2)
         , SomeM "TxSeq" (sameTxSeq proof) (bodyTxs a1) (bodyTxs a2)
         ]
-        ++ [ ("BlockHeader", if h1 == h2 then Nothing else Just ("UnequalBlockHeader"))
+        ++ [ ("BlockHeader", if h1 == h2 then Nothing else Just "UnequalBlockHeader")
            ,
              ( "HashHeader"
-             , if (sleHashHeader x1) == (sleHashHeader x2)
+             , if sleHashHeader x1 == sleHashHeader x2
                 then Nothing
-                else Just ("UnequalHashHeader")
+                else Just "UnequalHashHeader"
              )
            , ("ApplyTxError", sameLedgerFail proof (sleApplyTxError x1) (sleApplyTxError x2))
            , ("RewardsCredentials", eqByShow (sleRewardsCredentials x1) (sleRewardsCredentials x2))
@@ -618,7 +618,7 @@ sameShelleyTxSeq ::
 sameShelleyTxSeq proof (ShelleyTxSeq ss1) (ShelleyTxSeq ss2) =
   sameWithDependency (zipWith3 f ints (toList ss1) (toList ss2))
   where
-    f n t1 t2 = SomeM (show n) (sameTx proof) t1 t2
+    f n = SomeM (show n) (sameTx proof)
 
 sameAlonzoTxSeq ::
   ( Reflect era
@@ -632,7 +632,7 @@ sameAlonzoTxSeq ::
 sameAlonzoTxSeq proof (AlonzoTxSeq ss1) (AlonzoTxSeq ss2) =
   sameWithDependency (zipWith3 f ints (toList ss1) (toList ss2))
   where
-    f n t1 t2 = SomeM (show n) (sameTx proof) t1 t2
+    f n = SomeM (show n) (sameTx proof)
 
 sameTxSeq :: Reflect era => Proof era -> TxSeq era -> TxSeq era -> [(String, Maybe PDoc)]
 sameTxSeq proof@Shelley x y = sameShelleyTxSeq proof x y
