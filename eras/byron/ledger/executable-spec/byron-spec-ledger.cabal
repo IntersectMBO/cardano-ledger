@@ -50,7 +50,7 @@ library
     crypton,
     hashable,
     hedgehog >=1.0.4,
-    microlens,
+    microlens <0.5,
     microlens-th,
     nothunks,
     small-steps:{small-steps, testlib} >=1.1,
