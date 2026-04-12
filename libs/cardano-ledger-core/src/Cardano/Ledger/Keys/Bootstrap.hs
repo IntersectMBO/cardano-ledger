@@ -35,7 +35,8 @@ import Cardano.Ledger.Binary (
   shelleyProtVer,
   toPlainDecoder,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
+import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
+import Cardano.Ledger.Binary.Decoding (decodeRecordNamed)
 import Cardano.Ledger.Binary.Plain (
   FromCBOR (..),
   ToCBOR (..),
@@ -93,7 +94,9 @@ instance FromCBOR BootstrapWitness where
   {-# INLINE fromCBOR #-}
 
 instance DecCBOR BootstrapWitness where
-  decCBOR = decode (RecD BootstrapWitness <! From <! From <! From <! From)
+  decCBOR =
+    decodeRecordNamed "BootstrapWitness" (const 4) $
+      BootstrapWitness <$> decCBOR <*> decodeSignedDSIGN <*> decCBOR <*> decCBOR
   {-# INLINE decCBOR #-}
 
 instance DecCBOR (Annotator BootstrapWitness) where

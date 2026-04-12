@@ -21,10 +21,11 @@ import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
   EncCBOR (..),
+  decodeRecordNamed,
   shelleyProtVer,
   toPlainDecoder,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
+import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Hashes (
   EraIndependentTxBody,
@@ -84,7 +85,9 @@ instance Typeable kr => Plain.FromCBOR (WitVKey kr) where
 instance Typeable kr => EncCBOR (WitVKey kr)
 
 instance Typeable kr => DecCBOR (WitVKey kr) where
-  decCBOR = decode (RecD WitVKey <! From <! From)
+  decCBOR =
+    decodeRecordNamed "WitVKey" (const 2) $
+      WitVKey <$> decCBOR <*> decodeSignedDSIGN
   {-# INLINE decCBOR #-}
 
 instance Typeable kr => DecCBOR (Annotator (WitVKey kr)) where
