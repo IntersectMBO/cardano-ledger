@@ -19,6 +19,10 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.State
 import qualified Data.Text as T
 import Test.Cardano.Base.Bytes (genByteString)
+import Test.Cardano.Ledger.Binary.RoundTrip (
+  roundTripCborRangeExpectation,
+  roundTripCborRangeFailureExpectation,
+ )
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
@@ -37,6 +41,8 @@ roundTripShelleyCommonSpec = do
   roundTripAllPredicateFailures @era
   describe "Metadatum size limits" $
     forEachEraVersion @era metadatumSizeLimitSpec
+  describe "Metadatum int range" $
+    metadatumIntRangeSpec (eraProtVerLow @era) (eraProtVerHigh @era)
 
 roundTripStateEraTypesSpec ::
   forall era.
@@ -92,6 +98,26 @@ metadatumSizeLimitSpec v = do
       prop "Accepts text exceeding 64 bytes" $
         forAll (choose (65, 1000) >>= genAsciiText) $ \txt ->
           expectRightDeepExpr_ $ dec txt
+
+metadatumIntRangeSpec :: Version -> Version -> Spec
+metadatumIntRangeSpec fromVersion toVersion = do
+  let
+    -- CBOR int range: -2^64 .. 2^64-1
+    maxInt :: Integer
+    maxInt = 2 ^ (64 :: Int) - 1
+    minInt :: Integer
+    minInt = -(2 ^ (64 :: Int))
+  it "Accepts max int (2^64-1)" $
+    roundTripCborRangeExpectation fromVersion toVersion maxInt
+  it "Accepts min int (-(2^64))" $
+    roundTripCborRangeExpectation fromVersion toVersion minInt
+  it "Rejects positive big integer (2^64)" $
+    roundTripCborRangeFailureExpectation fromVersion toVersion (maxInt + 1)
+  it "Rejects negative big integer (-(2^64+1))" $
+    roundTripCborRangeFailureExpectation fromVersion toVersion (minInt - 1)
+  prop "Accepts any int in CBOR range" $
+    forAll (choose (minInt, maxInt)) $ \n ->
+      property $ roundTripCborRangeExpectation fromVersion toVersion n
 
 instance RuleListEra ShelleyEra where
   type

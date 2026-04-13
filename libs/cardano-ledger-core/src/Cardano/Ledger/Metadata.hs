@@ -109,7 +109,7 @@ decodeMetadatum = do
   let checkSizes = dv > natVersion @2
   tkty <- peekTokenType
   case tkty of
-    -- We support -(2^64-1) .. 2^64-1, but not big integers
+    -- We support -(2^64) .. 2^64-1, but not big integers
     -- not even big integer representation of values within range
     TypeUInt -> I <$> decodeInteger
     TypeUInt64 -> I <$> decodeInteger
