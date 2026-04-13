@@ -19,6 +19,7 @@
 -- | Interface to the block validation and chain extension logic in the Shelley
 -- API.
 module Cardano.Ledger.Shelley.API.Validation (
+  ApplyTick (..),
   ApplyBlock (..),
   applyBlockEither,
   applyBlockEitherNoEvents,
@@ -49,11 +50,40 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
-{-------------------------------------------------------------------------------
-  Block validation API
--------------------------------------------------------------------------------}
+class EraGov era => ApplyTick era where
+  -- | Run the `TICK` rule with `globalAssertionPolicy` and without any
+  -- validation, since it can't fail anyways.
+  applyTick ::
+    SingEP ep ->
+    Globals ->
+    NewEpochState era ->
+    SlotNo ->
+    (NewEpochState era, [Event (EraRule "TICK" era)])
+  default applyTick ::
+    ( STS (EraRule "TICK" era)
+    , BaseM (EraRule "TICK" era) ~ ShelleyBase
+    , Environment (EraRule "TICK" era) ~ ()
+    , State (EraRule "TICK" era) ~ NewEpochState era
+    , Signal (EraRule "TICK" era) ~ SlotNo
+    ) =>
+    SingEP ep ->
+    Globals ->
+    NewEpochState era ->
+    SlotNo ->
+    (NewEpochState era, [Event (EraRule "TICK" era)])
+  applyTick eventsPolicy globals newEpochState slotNo = (stsResultState, stsResultEvents)
+    where
+      opts =
+        ApplySTSOpts
+          { asoAssertions = globalAssertionPolicy
+          , asoValidation = ValidateNone
+          , asoEvents = eventsPolicy
+          }
+      STSResult {stsResultState, stsResultEvents} =
+        flip runReader globals . applySTSOptsResult @(EraRule "TICK" era) opts $
+          TRC ((), newEpochState, slotNo)
 
-class (EraGov era, EraBlockBody era, EraBlockHeader h era) => ApplyBlock h era where
+class (ApplyTick era, EraBlockBody era, EraBlockHeader h era) => ApplyBlock h era where
   wrapBlockSignal :: Block h era -> Signal (EraRule "BBODY" era)
   default wrapBlockSignal ::
     Signal (EraRule "BBODY" era) ~ BbodySignal era =>
@@ -102,38 +132,6 @@ class (EraGov era, EraBlockBody era, EraBlockHeader h era) => ApplyBlock h era w
           (LedgerState.esLState $ LedgerState.nesEs newEpochState)
           (LedgerState.nesBcur newEpochState)
 
-  -- | Run the `TICK` rule with `globalAssertionPolicy` and without any validation, since it can't
-  -- fail anyways.
-  applyTick ::
-    SingEP ep ->
-    Globals ->
-    NewEpochState era ->
-    SlotNo ->
-    (NewEpochState era, [Event (EraRule "TICK" era)])
-  default applyTick ::
-    ( STS (EraRule "TICK" era)
-    , BaseM (EraRule "TICK" era) ~ ShelleyBase
-    , Environment (EraRule "TICK" era) ~ ()
-    , State (EraRule "TICK" era) ~ NewEpochState era
-    , Signal (EraRule "TICK" era) ~ SlotNo
-    ) =>
-    SingEP ep ->
-    Globals ->
-    NewEpochState era ->
-    SlotNo ->
-    (NewEpochState era, [Event (EraRule "TICK" era)])
-  applyTick eventsPolicy globals newEpochState slotNo = (stsResultState, stsResultEvents)
-    where
-      opts =
-        ApplySTSOpts
-          { asoAssertions = globalAssertionPolicy
-          , asoValidation = ValidateNone
-          , asoEvents = eventsPolicy
-          }
-      STSResult {stsResultState, stsResultEvents} =
-        flip runReader globals . applySTSOptsResult @(EraRule "TICK" era) opts $
-          TRC ((), newEpochState, slotNo)
-
 -- | Same as `applyBlock`, except it produces a Left when there are failures present and `Right`
 -- with result otherwise.
 applyBlockEither ::
@@ -180,20 +178,17 @@ applyBlockNoValidaton globals newEpochState block = newEpochStateResult
 
 -- | Same as `applyTick`, but do not retain any ledger events
 applyTickNoEvents ::
-  forall era h.
-  ApplyBlock h era =>
+  ApplyTick era =>
   Globals ->
   NewEpochState era ->
   SlotNo ->
   NewEpochState era
 applyTickNoEvents globals newEpochState slotNo =
-  fst $ applyTick @h EPDiscard globals newEpochState slotNo
+  fst $ applyTick EPDiscard globals newEpochState slotNo
+
+instance ApplyTick ShelleyEra
 
 instance EraBlockHeader h ShelleyEra => ApplyBlock h ShelleyEra
-
-{-------------------------------------------------------------------------------
-  CHAIN Transition checks
--------------------------------------------------------------------------------}
 
 chainChecks ::
   forall m h era.
@@ -204,10 +199,6 @@ chainChecks ::
   Block h era ->
   m ()
 chainChecks = STS.chainChecks
-
-{-------------------------------------------------------------------------------
-  Applying blocks
--------------------------------------------------------------------------------}
 
 mkBbodyEnv ::
   EraGov era =>

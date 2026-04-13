@@ -55,4 +55,6 @@ instance ApplyTx AlonzoEra where
     first AlonzoApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
 
+instance ApplyTick AlonzoEra
+
 instance EraBlockHeader h AlonzoEra => ApplyBlock h AlonzoEra

@@ -37,6 +37,7 @@ import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Shelley.API (
   ApplyBlock (..),
+  ApplyTick (..),
   ApplyTx (..),
   ruleApplyTxValidation,
  )
@@ -51,6 +52,8 @@ instance ApplyTx DijkstraEra where
   applyTxValidation validationPolicy globals env state tx =
     first DijkstraApplyTxError $
       ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx
+
+instance ApplyTick DijkstraEra
 
 -- Even though `EraBlockHeader` looks like it is implied there is a
 -- loopy superclasses warning that suggests to add it here

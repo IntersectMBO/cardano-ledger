@@ -50,4 +50,6 @@ instance ApplyTx MaryEra where
     first MaryApplyTxError $
       ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
 
+instance ApplyTick MaryEra
+
 instance EraBlockHeader h MaryEra => ApplyBlock h MaryEra

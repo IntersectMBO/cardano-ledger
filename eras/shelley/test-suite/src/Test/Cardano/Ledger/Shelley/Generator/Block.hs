@@ -279,7 +279,7 @@ selectNextSlotWithLeader
 -- state. We tick both.
 tickChainState ::
   forall era.
-  (ShelleyEraForecast era, ApplyBlock TestBlockHeader era) =>
+  (ShelleyEraForecast era, ApplyTick era) =>
   SlotNo ->
   ChainState era ->
   ChainState era
@@ -307,7 +307,7 @@ tickChainState
         ChainDepState {csProtocol, csTickn} =
           tickChainDepState testGlobals (forecastToTPraosLedgerView @Future @era forecast) isNewEpoch cds
         PrtclState ocertIssue evNonce candNonce = csProtocol
-        nes' = fst $ applyTick @TestBlockHeader EPDiscard testGlobals chainNes slotNo
+        nes' = fst $ applyTick EPDiscard testGlobals chainNes slotNo
      in ChainState
           { chainNes = nes'
           , chainOCertIssue = ocertIssue

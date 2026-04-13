@@ -55,6 +55,8 @@ instance ApplyTx ConwayEra where
     first ConwayApplyTxError $
       ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx
 
+instance ApplyTick ConwayEra
+
 instance EraBlockHeader h ConwayEra => ApplyBlock h ConwayEra
 
 instance RunConwayRatify ConwayEra
