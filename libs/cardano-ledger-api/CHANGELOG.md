@@ -1,8 +1,26 @@
 # Version history for `cardano-ledger-api`
 
-## 1.13.0.1
+## 1.14.0.0
 
-*
+* Refactor `Query` module into sub-modules to re-export, and consolidate more queries from downstream:
+  - Move from `Query` into a sub-module:
+    + `queryCurrentPParams` (`GetCurrentPParams`) and `queryFuturePParams` (`GetFuturePParams`) into `Query.PParams`.
+    + `queryChainAccountState` (`GetAccountState`) into `Query.Epoch`.
+    + Into `Query.Governance`:
+      * `queryGovState` (`GetGovState`).
+      * `queryConstitution` (`GetConstitution`), now returns a stable type `QueryResultConstitution` with the `toQueryResultConstitution` helper.
+      * `queryConstitutionHash`.
+      * `queryProposals` (`GetProposals`).
+      * `queryRatifyState` (`GetRatifyState`).
+      * `queryCommitteeMembersState` (`GetCommitteeMembersState`).
+      * `queryDRepState` (`GetDRepState`), now returns stable types `QueryResultDRepState(s)` with the `toQueryResultDRepState` helper.
+      * `queryDRepDelegations` (`GetDRepDelegations`).
+      * `queryDRepStakeDistr` (`GetDRepStakeDistr`).
+      * `queryRegisteredDRepStakeDistr` (No consensus BlockQuery constructor exists yet, `GetRegisteredDRepStakeDistr` was planned but not added).
+  - Move `Query.CommitteeMembersState` module to `Query.Governance`.
+    + Replace:
+      * `CommitteeMemberState` with `QueryResultCommitteeMemberState`.
+      * `CommitteeMembersState` with `QueryResultCommitteeMembersState`.
 
 ### `testlib`
 
@@ -36,6 +54,7 @@
 
 ### `testlib`
 
+* Add `CBOR` round-trip tests for `QueryResult*` types.
 * Remove the `State.Query` module and `getFilteredDelegationsAndRewardAccounts` function.
 
 ## 1.12.1.0
