@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.22.0.0
+
+* Switch `ConwayAccountState` to use `Maybe` instead of `StrictMaybe`
+* Add `balanceConwayAccountStateL`, `depositConwayAccountStateL`, `stakePoolDelegationConwayAccountStateL` and `dRepDelegationConwayAccountStateL`.
+
 ## 1.21.0.0
 
 * Add `validateTreasuryValue`, `validateWithdrawalsDelegated`
