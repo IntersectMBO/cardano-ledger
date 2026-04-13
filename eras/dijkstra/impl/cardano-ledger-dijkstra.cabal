@@ -110,7 +110,7 @@ library
     cardano-ledger-alonzo ^>=1.16,
     cardano-ledger-babbage ^>=1.14,
     cardano-ledger-binary ^>=1.9,
-    cardano-ledger-conway ^>=1.22,
+    cardano-ledger-conway ^>=1.23,
     cardano-ledger-core:{cardano-ledger-core, internal} >=1.20,
     cardano-ledger-mary,
     cardano-ledger-shelley,
