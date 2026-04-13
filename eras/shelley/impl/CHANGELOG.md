@@ -39,6 +39,7 @@
 
 ### `testlib`
 
+* Add `Arbitrary` instances for `RewardInfoPool` and `RewardParams`
 * Add `withIssuerAndTxsInBlock_` and `withIssuerAndTxsInBlock`
 * Add a `Maybe (KeyHash BlockIssuer)` parameter to `withTxsInBlockEither`
 

@@ -20,3 +20,34 @@ instance Arbitrary StakeSnapshot where
 instance Arbitrary StakeSnapshots where
   arbitrary = genericArbitraryU
   shrink = genericShrink
+
+instance Arbitrary HotCredAuthStatus where
+  arbitrary =
+    oneof
+      [ MemberAuthorized <$> arbitrary
+      , pure MemberNotAuthorized
+      , MemberResigned <$> arbitrary
+      ]
+  shrink = genericShrink
+
+instance Arbitrary NextEpochChange where
+  arbitrary =
+    oneof
+      [ pure ToBeEnacted
+      , pure ToBeRemoved
+      , pure NoChangeExpected
+      , pure ToBeExpired
+      , TermAdjusted <$> arbitrary
+      ]
+  shrink = genericShrink
+
+instance Arbitrary CommitteeMemberState where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Arbitrary CommitteeMembersState where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Arbitrary DefaultVote where
+  arbitrary = elements [DefaultNo, DefaultAbstain, DefaultNoConfidence]

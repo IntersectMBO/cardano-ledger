@@ -116,6 +116,7 @@ test-suite cardano-ledger-api-test
   hs-source-dirs: test
   other-modules:
     Test.Cardano.Ledger.Api.State.Imp.QuerySpec
+    Test.Cardano.Ledger.Api.State.Query.GoldenSpec
     Test.Cardano.Ledger.Api.State.QuerySpec
     Test.Cardano.Ledger.Api.Tx
     Test.Cardano.Ledger.Api.Tx.Body
@@ -135,6 +136,7 @@ test-suite cardano-ledger-api-test
 
   build-depends:
     base,
+    base16-bytestring,
     bytestring,
     cardano-data,
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
