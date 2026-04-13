@@ -48,8 +48,13 @@ alonzoCDDL =
     , HIRule $ huddleRule @"signkey_kes" (Proxy @AlonzoEra)
     ]
 
-exUnitsRule :: Proxy "ex_units" -> Rule
-exUnitsRule pname = pname =.= arr ["mem" ==> VUInt, "steps" ==> VUInt]
+exUnitsRule :: Era era => Proxy "ex_units" -> Proxy era -> Rule
+exUnitsRule pname era =
+  pname
+    =.= arr
+      [ "mem" ==> (0 :: Integer) ... huddleRule @"max_int64" era
+      , "steps" ==> (0 :: Integer) ... huddleRule @"max_int64" era
+      ]
 
 networkIdRule :: Proxy "network_id" -> Rule
 networkIdRule pname = pname =.= int 0 / int 1
@@ -481,7 +486,7 @@ instance Era era => HuddleRule "plutus_v1_script" era where
       [str|Alonzo introduces Plutus smart contracts.
           |Plutus V1 scripts are opaque bytestrings.
           |]
-      . withGenerator (const plutusScriptGen)
+      . withCBORGen plutusScriptGen
       $ pname =.= VBytes
 
 instance HuddleRule "bounded_bytes" AlonzoEra where
@@ -527,7 +532,7 @@ alonzoRedeemer pname p =
   pname
     =.= arr
       [ "tag" ==> huddleRule @"redeemer_tag" p
-      , "index" ==> VUInt
+      , "index" ==> VUInt `sized` (4 :: Word64)
       , "data" ==> huddleRule @"plutus_data" p
       , "ex_units" ==> huddleRule @"ex_units" p
       ]
@@ -549,7 +554,7 @@ instance HuddleRule "redeemer_tag" AlonzoEra where
   huddleRuleNamed pname _ = alonzoRedeemerTag pname
 
 instance HuddleRule "ex_units" AlonzoEra where
-  huddleRuleNamed pname _ = exUnitsRule pname
+  huddleRuleNamed = exUnitsRule
 
 instance HuddleRule "ex_unit_prices" AlonzoEra where
   huddleRuleNamed = exUnitPricesRule

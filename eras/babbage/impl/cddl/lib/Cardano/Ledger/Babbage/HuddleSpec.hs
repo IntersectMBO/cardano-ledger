@@ -296,7 +296,7 @@ instance HuddleRule "redeemer_tag" BabbageEra where
   huddleRuleNamed pname _ = alonzoRedeemerTag pname
 
 instance HuddleRule "ex_units" BabbageEra where
-  huddleRuleNamed pname _ = exUnitsRule pname
+  huddleRuleNamed = exUnitsRule
 
 instance HuddleRule "ex_unit_prices" BabbageEra where
   huddleRuleNamed = exUnitPricesRule
@@ -527,7 +527,7 @@ instance Era era => HuddleRule "plutus_v2_script" era where
       [str|Babbage introduces Plutus V2 with improved cost model
           |and additional builtins.
           |]
-      . withGenerator (const plutusScriptGen)
+      . withCBORGen plutusScriptGen
       $ pname =.= VBytes
 
 instance HuddleRule "script" BabbageEra where

@@ -741,7 +741,7 @@ instance HuddleRule "bootstrap_witness" ConwayEra where
   huddleRuleNamed = bootstrapWitnessRule
 
 instance HuddleRule "ex_units" ConwayEra where
-  huddleRuleNamed pname _ = exUnitsRule pname
+  huddleRuleNamed = exUnitsRule
 
 instance HuddleRule "positive_interval" ConwayEra where
   huddleRuleNamed = positiveIntervalRule
@@ -789,7 +789,7 @@ instance Era era => HuddleRule "plutus_v3_script" era where
     comment
       [str|Conway introduces Plutus V3 with support for new governance features.
           |]
-      . withGenerator (const plutusScriptGen)
+      . withCBORGen plutusScriptGen
       $ pname =.= VBytes
 
 instance Era era => HuddleRule "negative_int64" era where

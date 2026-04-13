@@ -3,10 +3,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
@@ -17,6 +17,9 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   huddleRoundTripGenValidate,
   huddleRoundTripArbitraryValidate,
   specWithHuddle,
+  noTwiddle,
+  HuddleEnv (..),
+  toGenEnv,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -44,6 +47,7 @@ import Codec.CBOR.Cuddle.CBOR.Validator.Trace (
   prettyValidationTrace,
  )
 import Codec.CBOR.Cuddle.CDDL (Name (..))
+import Codec.CBOR.Cuddle.CDDL.CBORGenerator (GenEnv (..), runCBORGen)
 import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
 import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
@@ -67,7 +71,7 @@ import Prettyprinter.Render.Text (hPutDoc)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
 import System.IO (IOMode (..), hPutStrLn, withFile)
-import Test.AntiGen (runAntiGen, tryZapAntiGen)
+import Test.AntiGen (ZapResult (..), prettyZapResult, runAntiGen, zapAntiGenResult)
 import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
 import Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (RoundTripFailure),
@@ -84,6 +88,7 @@ import Test.Hspec (
   describe,
   expectationFailure,
   it,
+  mapSubject,
   shouldBe,
  )
 import Test.QuickCheck (
@@ -103,11 +108,11 @@ huddleDecoderEquivalenceSpec ::
   Version ->
   -- | Name of the CDDL rule to test
   T.Text ->
-  SpecWith (CTreeRoot MonoReferenced)
+  SpecWith HuddleEnv
 huddleDecoderEquivalenceSpec version ruleName =
   let lbl = label $ Proxy @a
-   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \(mapIndex -> cddl) -> property $ do
-        term <- runAntiGen . generateFromName cddl $ Name ruleName
+   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \env -> property $ do
+        term <- runAntiGen . runCBORGen (toGenEnv env) . generateFromName $ Name ruleName
         let encoding = CBOR.encodeTerm term
             initCborBytes = CBOR.toLazyByteString encoding
         pure $ decoderEquivalenceExpectation @a version initCborBytes
@@ -119,13 +124,13 @@ huddleRoundTripCborSpec ::
   Version ->
   -- | Name of the CDDL rule to test
   T.Text ->
-  SpecWith (CTreeRoot MonoReferenced)
+  SpecWith HuddleEnv
 huddleRoundTripCborSpec version ruleName =
   let lbl = label $ Proxy @a
       trip = cborTrip @a
    in describe "Generate bytestring from CDDL and decode -> encode" $
-        it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \(mapIndex -> cddl) -> property $ do
-          term <- runAntiGen . generateFromName cddl $ Name ruleName
+        it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \env -> property $ do
+          term <- runAntiGen . runCBORGen (toGenEnv env) . generateFromName $ Name ruleName
           pure $ roundTripExample lbl version version trip term
 
 huddleRoundTripAnnCborSpec ::
@@ -135,58 +140,76 @@ huddleRoundTripAnnCborSpec ::
   Version ->
   -- | Name of the CDDL rule to test
   T.Text ->
-  SpecWith (CTreeRoot MonoReferenced)
+  SpecWith HuddleEnv
 huddleRoundTripAnnCborSpec version ruleName =
   let lbl = label $ Proxy @(Annotator a)
       trip = cborTrip @a
-   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \(mapIndex -> cddl) -> property $ do
-        term <- runAntiGen . generateFromName cddl $ Name ruleName
+   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \env -> property $ do
+        term <- runAntiGen . runCBORGen (toGenEnv env) . generateFromName $ Name ruleName
         pure $ roundTripAnnExample lbl version version trip term
+
+data HuddleEnv = HuddleEnv
+  { heTwiddle :: Bool
+  , heRoot :: CTreeRoot MonoReferenced
+  }
+
+toGenEnv :: HuddleEnv -> GenEnv
+toGenEnv HuddleEnv {..} =
+  GenEnv
+    { geTwiddle = heTwiddle
+    , geRoot = mapIndex heRoot
+    }
 
 huddleAntiCborSpec ::
   forall a.
   DecCBOR a =>
   Version ->
   T.Text ->
-  SpecWith (CTreeRoot MonoReferenced)
+  SpecWith HuddleEnv
 huddleAntiCborSpec version ruleName =
   let lbl = label $ Proxy @a
    in describe "Decoding fails when term is zapped"
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
-        $ \cddl -> property @(Gen Property) $ do
-          mTerm <- tryZapAntiGen 1 . generateFromName (mapIndex cddl) $ Name ruleName
+        $ \env@HuddleEnv {heRoot} -> property @(Gen Property) $ do
+          mTerm <- zapAntiGenResult 1 . runCBORGen (toGenEnv env) . generateFromName $ Name ruleName
           case mTerm of
-            Just term -> do
-              let
-                encoding = toPlainEncoding version $ encodeTerm term
-                bs = C.toStrictByteString encoding
-              case validateCBOR bs (Name ruleName) (mapIndex cddl) of
-                Evidenced SInvalid trc -> do
+            zr@ZapResult {..}
+              | zrZapped > 0 -> do
                   let
-                    errMsg =
-                      unlines
-                        [ "Generated term:"
-                        , prettyHexEnc encoding
-                        , mempty
-                        , "Validation result:"
-                        , T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
-                            prettyValidationTrace (defaultTraceOptions {toFoldValid = True}) trc
-                        , mempty
-                        , "Decoding succeeded, expected failure"
-                        ]
-                  pure . counterexample errMsg . isLeft $ decodeFull' @a version bs
-                Evidenced SValid _ -> discard
-            Nothing -> discard
+                    encoding = toPlainEncoding version $ encodeTerm zrValue
+                    bs = C.toStrictByteString encoding
+                  case validateCBOR bs (Name ruleName) (mapIndex heRoot) of
+                    Evidenced SInvalid trc -> do
+                      let
+                        errMsg =
+                          unlines
+                            [ "Generated term:"
+                            , prettyHexEnc encoding
+                            , mempty
+                            , "Validation result:"
+                            , T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
+                                prettyValidationTrace (defaultTraceOptions {toFoldValid = True}) trc
+                            , mempty
+                            , T.unpack $ prettyZapResult zr
+                            , mempty
+                            , "Decoding succeeded, expected failure"
+                            ]
+                      pure . counterexample errMsg . isLeft $ decodeFull' @a version bs
+                    Evidenced SValid _ -> discard
+              | otherwise -> discard
 
-specWithHuddle :: Cuddle.Huddle -> SpecWith (CTreeRoot MonoReferenced) -> Spec
+specWithHuddle :: Cuddle.Huddle -> SpecWith HuddleEnv -> Spec
 specWithHuddle h =
   beforeAll $
     let cddl = Cuddle.toCDDL h
         rCddl = Cuddle.fullResolveCDDL (mapCDDLDropExt cddl)
      in case rCddl of
           Right ct ->
-            pure ct
+            pure $ HuddleEnv True ct
           Left nrf -> error $ show nrf
+
+noTwiddle :: SpecWith HuddleEnv -> SpecWith HuddleEnv
+noTwiddle = mapSubject $ \env -> env {heTwiddle = False}
 
 -- | Verify that random data generated is:
 --
@@ -270,12 +293,12 @@ showValidationTrace (Evidenced _ t) =
 
 huddleRoundTripGenValidate ::
   forall a.
-  (DecCBOR a, Show a, EncCBOR a) => Gen a -> Version -> T.Text -> SpecWith (CTreeRoot MonoReferenced)
+  (DecCBOR a, Show a, EncCBOR a) => Gen a -> Version -> T.Text -> SpecWith HuddleEnv
 huddleRoundTripGenValidate gen version ruleName =
   let lbl = label $ Proxy @a
    in describe "Encode an arbitrary value and check against CDDL"
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
-        $ \cddl -> property . forAll gen $
+        $ \HuddleEnv {heRoot = cddl} -> property . forAll gen $
           \(val :: a) -> do
             let
               bs = serialize' version val
@@ -292,7 +315,7 @@ huddleRoundTripArbitraryValidate ::
   ) =>
   Version ->
   T.Text ->
-  SpecWith (CTreeRoot MonoReferenced)
+  SpecWith HuddleEnv
 huddleRoundTripArbitraryValidate = huddleRoundTripGenValidate $ arbitrary @a
 
 --------------------------------------------------------------------------------

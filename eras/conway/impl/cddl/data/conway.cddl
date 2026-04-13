@@ -604,7 +604,7 @@ cost_models =
 ex_unit_prices = 
   [mem_price : nonnegative_interval, step_price : nonnegative_interval]
 
-ex_units = [mem : uint, steps : uint]
+ex_units = [mem : 0 .. max_int64, steps : 0 .. max_int64]
 
 pool_voting_thresholds = 
   [ unit_interval ; motion no confidence

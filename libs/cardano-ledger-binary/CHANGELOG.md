@@ -7,6 +7,8 @@
 
 ### `testlib`
 
+* Add `noTwiddle`, `HuddleEnv`, `toGenEnv`
+* Replace `SpecWith (CTreeRoot MonoReferenced)` with `SpecWith HuddleEnv` in Huddle tests
 * Replace `CuddleData` with `CTreeRoot MonoReferenced`
 * Remove `numExamples` argument from `specWithHuddle`
 * Add `huddleAntiCborSpec`

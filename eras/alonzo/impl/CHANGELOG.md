@@ -27,6 +27,7 @@
 
 ### `testlib`
 
+* Added `Proxy era` argument to `exUnitsRule`
 * `TranslationInstance` has a new field `tiPlutusPurpose`
 
 ## 1.15.0.0

@@ -113,7 +113,7 @@ library testlib
   build-depends:
     ImpSpec,
     QuickCheck,
-    antigen >=0.3.1.0 && <0.4,
+    antigen ^>=0.4,
     base,
     base16-bytestring,
     bytestring,
@@ -126,7 +126,7 @@ library testlib
     cardano-strict-containers,
     cborg,
     containers,
-    cuddle >=1.2,
+    cuddle >=1.5,
     directory,
     filepath,
     formatting,

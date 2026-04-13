@@ -428,7 +428,7 @@ instance HuddleRule "bootstrap_witness" DijkstraEra where
   huddleRuleNamed = bootstrapWitnessRule
 
 instance HuddleRule "ex_units" DijkstraEra where
-  huddleRuleNamed pname _ = exUnitsRule pname
+  huddleRuleNamed = exUnitsRule
 
 instance HuddleRule "positive_interval" DijkstraEra where
   huddleRuleNamed = positiveIntervalRule
@@ -940,7 +940,7 @@ instance Era era => HuddleRule "plutus_v4_script" era where
     comment
       [str|Dijkstra introduces Plutus V4.
           |]
-      . withGenerator (const plutusScriptGen)
+      . withCBORGen plutusScriptGen
       $ pname =.= VBytes
 
 instance HuddleRule "auxiliary_data" DijkstraEra where
