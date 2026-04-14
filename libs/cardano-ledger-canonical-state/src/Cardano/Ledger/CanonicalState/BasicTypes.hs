@@ -121,6 +121,19 @@ instance FromCanonicalCBOR v CanonicalCoin where
 instance ToCanonicalCBOR v CanonicalCoin where
   toCanonicalCBOR v (CanonicalCoin (CompactCoin c)) = toCanonicalCBOR v c
 
+instance ToCanonicalCBOR v a => ToCanonicalCBOR v (Maybe a) where
+  toCanonicalCBOR v Nothing = toCanonicalCBOR v ()
+  toCanonicalCBOR v (Just x) = toCanonicalCBOR v x
+
+instance FromCanonicalCBOR v a => FromCanonicalCBOR v (Maybe a) where
+  fromCanonicalCBOR = do
+    mt <- peekTokenType
+    case mt of
+      D.TypeNull -> do
+        Versioned () <- fromCanonicalCBOR
+        pure (Versioned Nothing)
+      _ -> fmap Just <$> fromCanonicalCBOR
+
 instance ToCanonicalCBOR v a => ToCanonicalCBOR v (StrictMaybe a) where
   toCanonicalCBOR v SNothing = toCanonicalCBOR v ()
   toCanonicalCBOR v (SJust x) = toCanonicalCBOR v x
