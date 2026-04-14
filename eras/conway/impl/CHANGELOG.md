@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.22.0.1
+
+*
+
 ## 1.22.0.0
 
 * Add `ApplyTick` instance for `ConwayEra`
