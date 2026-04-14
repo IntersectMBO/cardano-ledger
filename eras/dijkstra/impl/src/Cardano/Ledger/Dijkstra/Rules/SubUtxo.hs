@@ -296,6 +296,7 @@ dijkstraSubUtxoTransition = do
         txBody
         certState
         (utxosGovState utxoState)
+        (txBody ^. treasuryDonationTxBodyL)
         (tellEvent . TotalDeposits (hashAnnotated txBody))
         (\a b -> tellEvent $ TxUTxODiff a b)
     else

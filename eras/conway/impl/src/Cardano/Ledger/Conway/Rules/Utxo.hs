@@ -261,7 +261,8 @@ conwayUtxoTransition = do
     certState
     (utxosGovState utxos)
     tx
-    (updateTreasuryDonation tx utxos)
+    (tx ^. bodyTxL . treasuryDonationTxBodyL)
+    utxos
 
 --------------------------------------------------------------------------------
 -- ConwayUTXO STS

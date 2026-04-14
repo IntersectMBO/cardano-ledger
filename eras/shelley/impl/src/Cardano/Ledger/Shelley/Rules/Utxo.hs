@@ -402,6 +402,7 @@ utxoInductive = do
     txBody
     certState
     ppup'
+    mempty
     (tellEvent . TotalDeposits (hashAnnotated txBody))
     (\a b -> tellEvent $ TxUTxODiff a b)
 
@@ -575,9 +576,9 @@ validateMaxTxSizeUTxO pp tx =
 
 -- | This monadic action captures the final stages of the UTXO(S) rule. In particular it
 -- applies all of the UTxO related aditions and removals, gathers all of the fees into the
--- fee pot `utxosFees` and updates the `utxosDeposited` field. Continuation supplied will
--- be called on the @deposit - refund@ change, which is normally used to emit the
--- `TotalDeposits` event.
+-- fee pot `utxosFees`, updates the `utxosDeposited` field and the treasury donations.
+-- Continuation supplied will be called on the @deposit - refund@ change,
+-- which is normally used to emit the `TotalDeposits` event.
 updateUTxOState ::
   ( EraTxBody era
   , EraStake era
@@ -589,12 +590,14 @@ updateUTxOState ::
   TxBody TopTx era ->
   CertState era ->
   GovState era ->
+  -- | Treasury donation to accumulate
+  Coin ->
   (Coin -> m ()) ->
   (UTxO era -> UTxO era -> m ()) ->
   m (UTxOState era)
-updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
+updateUTxOState pp utxos txBody certState govState donation depositChangeEvent txUtxODiffEvent = do
   newUtxoState <-
-    updateUTxOStateNoFees pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent
+    updateUTxOStateNoFees pp utxos txBody certState govState donation depositChangeEvent txUtxODiffEvent
   pure $ newUtxoState {utxosFees = utxosFees newUtxoState <> txBody ^. feeTxBodyL}
 
 -- | Like 'updateUTxOState', but does not collect fees. This is used for sub-transactions
@@ -610,10 +613,12 @@ updateUTxOStateNoFees ::
   TxBody l era ->
   CertState era ->
   GovState era ->
+  -- | Treasury donation to accumulate
+  Coin ->
   (Coin -> m ()) ->
   (UTxO era -> UTxO era -> m ()) ->
   m (UTxOState era)
-updateUTxOStateNoFees pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
+updateUTxOStateNoFees pp utxos txBody certState govState donation depositChangeEvent txUtxODiffEvent = do
   let UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosDonation} = utxos
       UTxO utxo = utxosUtxo
       !utxoAdd = txouts txBody -- These will be inserted into the UTxO
@@ -635,7 +640,7 @@ updateUTxOStateNoFees pp utxos txBody certState govState depositChangeEvent txUt
       , utxosGovState = govState
       , utxosInstantStake =
           deleteInstantStake deletedUTxO (addInstantStake utxoAdd (utxos ^. instantStakeL))
-      , utxosDonation = utxosDonation
+      , utxosDonation = utxosDonation <> donation
       }
 
 instance

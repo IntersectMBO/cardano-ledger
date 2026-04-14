@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add `Coin` parameter to `updateUTxOStateByTxValidity` for treasury donation accumulation
 * Remove `ToCBOR` and `FromCBOR` instances for `BabbageTxOut`
 * Add `ApplyTick` instance for `BabbageEra`
 * `BabbageTxInfoResult` changed its content type to `PlutusTxInfoResult`

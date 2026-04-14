@@ -464,7 +464,7 @@ utxoTransition = do
   updatedGovState <-
     trans @(EraRule "UTXOS" era) $
       TRC (UtxosEnv slot pp certState (utxosUtxo utxos), utxosGovState utxos, tx)
-  updateUTxOStateByTxValidity pp certState updatedGovState tx utxos
+  updateUTxOStateByTxValidity pp certState updatedGovState tx mempty utxos
 
 updateUTxOStateByTxValidity ::
   forall era.
@@ -478,9 +478,11 @@ updateUTxOStateByTxValidity ::
   CertState era ->
   GovState era ->
   Tx TopTx era ->
+  -- | Treasury donation to accumulate
+  Coin ->
   UTxOState era ->
   Rule (EraRule "UTXO" era) 'Transition (UTxOState era)
-updateUTxOStateByTxValidity pp certState govState tx utxoState =
+updateUTxOStateByTxValidity pp certState govState tx donation utxoState =
   let txBody = tx ^. bodyTxL
       utxo = utxosUtxo utxoState
    in case tx ^. isValidTxL of
@@ -491,6 +493,7 @@ updateUTxOStateByTxValidity pp certState govState tx utxoState =
             txBody
             certState
             govState
+            donation
             (tellEvent . TotalDeposits (hashAnnotated txBody))
             (\a b -> tellEvent $ TxUTxODiff a b)
         IsValid False ->

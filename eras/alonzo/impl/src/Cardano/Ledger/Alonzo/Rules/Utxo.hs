@@ -587,6 +587,7 @@ utxoTransition = do
         txBody
         certState
         updatedGovState
+        mempty
         (tellEvent . TotalDeposits (hashAnnotated txBody))
         (\a b -> tellEvent (TxUTxODiff a b))
     IsValid False ->

@@ -67,7 +67,6 @@ import Cardano.Ledger.Conway.Rules (
   allegraToConwayUtxoPredFailure,
   alonzoToConwayUtxoPredFailure,
   babbageToConwayUtxoPredFailure,
-  updateTreasuryDonation,
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (StakeReference (..))
@@ -310,7 +309,8 @@ dijkstraUtxoTransition = do
     certState
     (utxosGovState utxos)
     tx
-    (updateTreasuryDonation tx utxos)
+    (tx ^. bodyTxL . treasuryDonationTxBodyL)
+    utxos
 
 instance
   forall era.

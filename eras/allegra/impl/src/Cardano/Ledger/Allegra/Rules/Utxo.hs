@@ -225,6 +225,7 @@ utxoTransition = do
     txBody
     certState
     ppup'
+    mempty
     (tellEvent . TotalDeposits (hashAnnotated txBody))
     (\a b -> tellEvent $ TxUTxODiff a b)
 
