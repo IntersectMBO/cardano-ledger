@@ -41,7 +41,7 @@ import Cardano.SCLS.Versioned (Versioned (..))
 import Data.MemPack
 import Data.MemPack.ByteOrdered
 import Data.Proxy (Proxy (..))
-import Data.Word (Word16)
+import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
 
 newtype CanonicalGovActionIx = CanonicalGovActionIx Word16
@@ -76,9 +76,7 @@ instance IsKey GovProposalIn where
     gaidGovActionIx <- unpackM
     return $ GovProposalIn CanonicalGovActionId {..}
 
--- | Canonical wrapper over gov action state. Because this is on-chain data
--- we create a wrapper for that.
-newtype GovProposalOut v = GovProposalOut v
+newtype GovProposalOut v = GovProposalOut (Word64, v)
   deriving (Eq, Show, Generic)
   deriving newtype (ToCanonicalCBOR "gov/proposals/v0")
   deriving newtype (FromCanonicalCBOR "gov/proposals/v0")
