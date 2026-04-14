@@ -57,7 +57,7 @@ import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import Data.Map (Map)
 import Data.Text (Text)
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
 import Lens.Micro
 
 type instance NamespaceEra "blocks/v0" = ConwayEra
@@ -253,24 +253,29 @@ instance KnownNamespace "gov/proposals/v0" where
   type NamespaceEntry "gov/proposals/v0" = GovProposalOut CanonicalGovActionState
 
 fromGovActionState ::
-  GovActionState ConwayEra -> (GovProposalIn, GovProposalOut CanonicalGovActionState)
-fromGovActionState GovActionState {..} =
+  Word64 -> GovActionState ConwayEra -> (GovProposalIn, GovProposalOut CanonicalGovActionState)
+fromGovActionState gpoProposalOrder GovActionState {..} =
   ( mkGovProposalIn gasId
-  , GovProposalOut $
-      CanonicalGovActionState
-        { gasProposalProcedure = mkOnChain @ConwayEra gasProposalProcedure
-        , ..
-        }
+  , GovProposalOut
+      { gpoProposalOrder
+      , gpoProposal =
+          CanonicalGovActionState
+            { gasProposalProcedure = mkOnChain @ConwayEra gasProposalProcedure
+            , ..
+            }
+      }
   )
 
 toGovActionState ::
-  (GovProposalIn, GovProposalOut CanonicalGovActionState) -> GovActionState ConwayEra
-toGovActionState (govIn, GovProposalOut CanonicalGovActionState {..}) =
-  GovActionState
-    { gasProposalProcedure = getValue gasProposalProcedure
-    , gasId = fromGovProposalIn govIn
-    , ..
-    }
+  (GovProposalIn, GovProposalOut CanonicalGovActionState) -> (Word64, GovActionState ConwayEra)
+toGovActionState (govIn, GovProposalOut {gpoProposalOrder, gpoProposal = CanonicalGovActionState {..}}) =
+  ( gpoProposalOrder
+  , GovActionState
+      { gasProposalProcedure = getValue gasProposalProcedure
+      , gasId = fromGovProposalIn govIn
+      , ..
+      }
+  )
 
 mkGovProposalIn :: GovActionId -> GovProposalIn
 mkGovProposalIn GovActionId {gaidGovActionIx = GovActionIx idx, gaidTxId} =
