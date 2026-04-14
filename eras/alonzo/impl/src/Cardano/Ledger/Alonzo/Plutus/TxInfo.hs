@@ -134,6 +134,10 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
     txOut <- transLookupTxOut utxo txIn
     pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
 
+  -- PlutusTxOut AlonzoEra 'PlutusV1 = Maybe PV1.TxOut
+  -- transTxOut returns Nothing for Byron addresses (preserved historical behavior)
+  toPlutusTxOut _ _ txOut = Right (transTxOut txOut)
+
 toPlutusV1Args ::
   EraPlutusTxInfo 'PlutusV1 era =>
   proxy 'PlutusV1 ->

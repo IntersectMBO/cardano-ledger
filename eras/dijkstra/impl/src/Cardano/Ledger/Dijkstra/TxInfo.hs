@@ -42,8 +42,6 @@ import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Conway.TxInfo (
   ConwayContextError (..),
   ConwayEraPlutusTxInfo (..),
-  transTxInInfoV1,
-  transTxInInfoV3,
  )
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
 import Cardano.Ledger.Credential (StakeReference (..))
@@ -237,7 +235,9 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
-  toPlutusTxInInfo _ = transTxInInfoV1
+  toPlutusTxInInfo _ = Conway.transTxInInfoV1
+
+  toPlutusTxOut _ = Conway.transTxOutV1
 
 transTxCertV1V2 ::
   ( ConwayEraTxCert era
@@ -304,6 +304,8 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
 
   toPlutusTxInInfo _ = Babbage.transTxInInfoV2
 
+  toPlutusTxOut _ = Babbage.transTxOutV2
+
 instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusTxCert _ _ = pure . transTxCert
 
@@ -357,7 +359,9 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
 
   toPlutusArgs = Conway.toPlutusV3Args
 
-  toPlutusTxInInfo _ = transTxInInfoV3
+  toPlutusTxInInfo _ = Conway.transTxInInfoV3
+
+  toPlutusTxOut _ = Babbage.transTxOutV2
 
 transFailSubTxIsNotSupported ::
   forall l era.
@@ -473,7 +477,9 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
   toPlutusArgs = toPlutusV4Args
 
-  toPlutusTxInInfo _ = transTxInInfoV3
+  toPlutusTxInInfo _ = Conway.transTxInInfoV3
+
+  toPlutusTxOut _ = Babbage.transTxOutV2
 
 toPlutusV4Args ::
   EraPlutusTxInfo 'PlutusV4 era =>

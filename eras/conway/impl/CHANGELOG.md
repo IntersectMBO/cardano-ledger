@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.24.0.0
+
+* Add `EraPlutusTxInfo 'PlutusV1 ConwayEra`, `EraPlutusTxInfo 'PlutusV2 ConwayEra` and `EraPlutusTxInfo 'PlutusV3 ConwayEra` instances for `toPlutusTxOut`
+
 ## 1.23.0.0
 
 * Add `ApplyTick` instance for `ConwayEra`

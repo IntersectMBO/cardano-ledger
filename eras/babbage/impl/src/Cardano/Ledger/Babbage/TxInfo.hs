@@ -353,6 +353,8 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
 
   toPlutusTxInInfo _ = transTxInInfoV1
 
+  toPlutusTxOut _ = transTxOutV1
+
 instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusTxCert _ _ = pure . Alonzo.transTxCert
 
@@ -394,6 +396,8 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusArgs = toPlutusV2Args
 
   toPlutusTxInInfo _ = transTxInInfoV2
+
+  toPlutusTxOut _ = transTxOutV2
 
 toPlutusV2Args ::
   EraPlutusTxInfo 'PlutusV2 era =>

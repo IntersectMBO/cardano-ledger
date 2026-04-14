@@ -36,6 +36,7 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusScriptPurpose,
   PlutusScriptContext,
   PlutusTxInInfo,
+  PlutusTxOut,
 ) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -66,6 +67,7 @@ import Cardano.Ledger.Plutus (
   PlutusScriptContext,
   PlutusWithContext (..),
   SLanguage (..),
+  TxOutSource,
   asSLanguage,
   isLanguage,
   plutusLanguage,
@@ -137,6 +139,12 @@ class
     UTxO era ->
     TxIn ->
     Either (ContextError era) (PlutusTxInInfo era l)
+
+  toPlutusTxOut ::
+    proxy l ->
+    TxOutSource ->
+    TxOut era ->
+    Either (ContextError era) (PlutusTxOut era l)
 
 -- | This is the helper type that captures translation of `Tx` to `PlutusTxInfo`.
 --
@@ -287,6 +295,15 @@ type family PlutusTxInInfo era (l :: Language) where
   PlutusTxInInfo _ 'PlutusV2 = PV2.TxInInfo
   PlutusTxInInfo _ 'PlutusV3 = PV3.TxInInfo
   PlutusTxInInfo _ 'PlutusV4 = PV3.TxInInfo
+
+type family PlutusTxOut era (l :: Language) where
+  -- This special case is here because Alonzo does not have a ContextError
+  -- for the case where it encounters a Byron address in a TxOut
+  PlutusTxOut AlonzoEra 'PlutusV1 = Maybe PV1.TxOut
+  PlutusTxOut _ 'PlutusV1 = PV1.TxOut
+  PlutusTxOut _ 'PlutusV2 = PV2.TxOut
+  PlutusTxOut _ 'PlutusV3 = PV3.TxOut
+  PlutusTxOut _ 'PlutusV4 = PV3.TxOut
 
 -- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
 -- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus

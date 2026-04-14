@@ -1,5 +1,9 @@
 # Revision history for cardano-ledger-dijkstra
 
+## 0.4.0.0
+
+* Add `EraPlutusTxInfo 'PlutusV1 DijkstraEra`, `EraPlutusTxInfo 'PlutusV2 DijkstraEra`, `EraPlutusTxInfo 'PlutusV3 DijkstraEra` and `EraPlutusTxInfo 'PlutusV4 DijkstraEra` instances for `toPlutusTxOut`
+
 ## 0.3.0.0
 
 * Add `ApplyTick` instance for `DijkstraEra`

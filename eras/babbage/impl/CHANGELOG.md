@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.15.0.0
+
+* Add `EraPlutusTxInfo 'PlutusV1 BabbageEra` and `EraPlutusTxInfo 'PlutusV2 BabbageEra` instances for `toPlutusTxOut`
+
 ## 1.14.0.0
 
 * Add `ApplyTick` instance for `BabbageEra`

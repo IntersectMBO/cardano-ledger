@@ -1,5 +1,11 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.17.0.0
+
+* Add `PlutusTxOut` type family to `Cardano.Ledger.Alonzo.Plutus.Context`
+* Add `toPlutusTxOut` method to `EraPlutusTxInfo` typeclass
+* Add `EraPlutusTxInfo 'PlutusV1 AlonzoEra` instance for `toPlutusTxOut`
+
 ## 1.16.0.0
 
 * Add `ApplyTick` instance for `AlonzoEra`
