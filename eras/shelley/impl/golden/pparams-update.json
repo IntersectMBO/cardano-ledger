@@ -1,16 +1,18 @@
 {
-    "decentralization": 0.79,
-    "extraPraosEntropy": null,
-    "maxBlockBodySize": 292445202,
-    "maxBlockHeaderSize": 53249,
-    "minPoolCost": 794548,
-    "monetaryExpansion": 0.8855156,
-    "poolPledgeInfluence": 3.8777413926852632e7,
-    "poolRetireMaxEpoch": 2414041002,
-    "stakeAddressDeposit": 9604294329594137974,
-    "stakePoolDeposit": 4729380140346080457,
-    "stakePoolTargetNum": 52993,
-    "treasuryCut": 0.3,
-    "txFeeFixed": 29,
-    "txFeePerByte": 360044
+    "decentralization": 0.68265,
+    "extraPraosEntropy": "0eecc0f627fcac2a4b9bb53d3661496f9f0ab83d860653945f64708094344d57",
+    "maxBlockBodySize": 938825652,
+    "maxBlockHeaderSize": 7400,
+    "maxTxSize": 1863034707,
+    "minUTxOValue": 851497,
+    "monetaryExpansion": 0.78,
+    "poolRetireMaxEpoch": 3903347188,
+    "protocolVersion": {
+        "major": 2,
+        "minor": 46
+    },
+    "stakePoolDeposit": 751882,
+    "stakePoolTargetNum": 31910,
+    "treasuryCut": 2.3e-3,
+    "txFeePerByte": 4197483115719285921
 }

@@ -95,7 +95,7 @@ import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer)
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
@@ -104,11 +104,17 @@ import Test.QuickCheck.Hedgehog (hedgehog)
 ------------------------------------------------------------------------------------------
 
 instance Era era => Arbitrary (ShelleyPParams Identity era) where
-  arbitrary = genericArbitraryU
+  arbitrary = do
+    p <- genericArbitraryU @(ShelleyPParams Identity era)
+    pv <- genEraProtVer @era
+    pure (p {sppProtocolVersion = pv})
   shrink = genericShrink
 
 instance Era era => Arbitrary (ShelleyPParams StrictMaybe era) where
-  arbitrary = genericArbitraryU
+  arbitrary = do
+    p <- genericArbitraryU @(ShelleyPParams StrictMaybe era)
+    pv <- oneof [pure SNothing, SJust <$> genEraProtVer @era]
+    pure (p {sppProtocolVersion = pv})
   shrink = genericShrink
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposedPPUpdates era) where

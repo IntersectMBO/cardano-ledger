@@ -37,7 +37,7 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
-import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Conway (ApplyTxError (ConwayApplyTxError), ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -76,7 +76,7 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidAndUnknownCostModels, genVa
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Arbitrary (uniformSubMap)
+import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer, uniformSubMap)
 
 instance
   (Era era, Arbitrary (PParamsUpdate era)) =>
@@ -453,9 +453,11 @@ genPParamUpdateGovAction ::
 genPParamUpdateGovAction parent = ParameterChange parent <$> arbitrary <*> arbitrary
 
 genHardForkGovAction ::
+  forall era.
+  Era era =>
   StrictMaybe (GovPurposeId 'HardForkPurpose) ->
   Gen (GovAction era)
-genHardForkGovAction parent = HardForkInitiation parent <$> arbitrary
+genHardForkGovAction parent = HardForkInitiation parent <$> genEraProtVer @era
 
 genCommitteeGovAction ::
   StrictMaybe (GovPurposeId 'CommitteePurpose) ->
@@ -506,10 +508,7 @@ genParameterChange :: Arbitrary (PParamsUpdate era) => Gen (GovAction era)
 genParameterChange = ParameterChange <$> arbitrary <*> arbitrary <*> arbitrary
 
 genHardForkInitiation :: forall era. Era era => Gen (GovAction era)
-genHardForkInitiation =
-  HardForkInitiation
-    <$> arbitrary
-    <*> (ProtVer <$> elements [eraProtVerLow @era .. succ $ eraProtVerHigh @era] <*> arbitrary)
+genHardForkInitiation = genHardForkGovAction @era =<< arbitrary
 
 genTreasuryWithdrawals :: Gen (GovAction era)
 genTreasuryWithdrawals = TreasuryWithdrawals <$> arbitrary <*> arbitrary

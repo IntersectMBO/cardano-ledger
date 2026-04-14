@@ -16,6 +16,7 @@ import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval, AccountBalanceIntervals)
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Test.Cardano.Ledger.Binary.Cuddle (
+  huddleAntiCborSpec,
   huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
   huddleRoundTripArbitraryValidate,
@@ -72,6 +73,7 @@ spec = do
       huddleRoundTripArbitraryValidate @(TxWits DijkstraEra) v "transaction_witness_set"
       huddleRoundTripCborSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       huddleRoundTripArbitraryValidate @(PParamsUpdate DijkstraEra) v "protocol_param_update"
+      huddleAntiCborSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       huddleRoundTripCborSpec @CostModels v "cost_models"
       huddleRoundTripArbitraryValidate @CostModels v "cost_models"
       huddleRoundTripAnnCborSpec @(Redeemers DijkstraEra) v "redeemers"

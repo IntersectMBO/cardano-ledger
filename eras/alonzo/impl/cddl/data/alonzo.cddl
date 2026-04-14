@@ -316,9 +316,8 @@ min_int64 = -9223372036854775808
 
 max_int64 = 9223372036854775807
 
-ex_unit_prices = [mem_price : positive_interval, step_price : positive_interval]
-
-positive_interval = #6.30([positive_int, positive_int])
+ex_unit_prices = 
+  [mem_price : nonnegative_interval, step_price : nonnegative_interval]
 
 ex_units = [mem : 0 .. max_int64, steps : 0 .. max_int64]
 

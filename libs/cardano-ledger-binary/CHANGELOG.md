@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `decodeIntegralRational`
 * Add `decodeNonEmptySetLikeEnforceNoDuplicates`
 * Change `decodeIPv4`, `decodeIPv6`, `encodeIPv4`, `encodeIPv6`, `ipv4ToBytes`, `ipv6ToBytes` to work on `Cardano.Base.IP.IPv4/IPv6`
 * Remove default implementation for `DecCBOR` class

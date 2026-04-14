@@ -90,6 +90,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer,
   ToKeyValuePairs (..),
   UnitInterval,
+  decodeProtVer,
   maybeToStrictMaybe,
  )
 import Cardano.Ledger.Binary (
@@ -860,7 +861,10 @@ instance EraPParams era => DecCBOR (GovAction era) where
           <! D (decodeNullStrictMaybe decCBOR)
           <! From
           <! D (decodeNullStrictMaybe decCBOR)
-      1 -> SumD HardForkInitiation <! D (decodeNullStrictMaybe decCBOR) <! From
+      1 ->
+        SumD HardForkInitiation
+          <! D (decodeNullStrictMaybe decCBOR)
+          <! D (decodeProtVer @era)
       2 -> SumD TreasuryWithdrawals <! From <! D (decodeNullStrictMaybe decCBOR)
       3 -> SumD NoConfidence <! D (decodeNullStrictMaybe decCBOR)
       4 -> SumD UpdateCommittee <! D (decodeNullStrictMaybe decCBOR) <! From <! From <! From

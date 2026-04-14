@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Fix `ex_unit_prices` CDDL to use `nonnegative_interval` instead of `positive_interval`
 * Remove `ToCBOR` and `FromCBOR` instances for `AlonzoExtraConfig` and `AlonzoTxOut`
 * Add `ApplyTick` instance for `AlonzoEra`
 * Add `mkPlutusTxInfoFromResult` and `toPlutusTxInfoForPurpose` helpers
