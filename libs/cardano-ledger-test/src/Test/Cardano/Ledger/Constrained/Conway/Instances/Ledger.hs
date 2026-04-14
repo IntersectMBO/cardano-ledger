@@ -1092,8 +1092,8 @@ instance Typeable era => HasSpec (ShelleyAccounts era)
 type ConwayAccountStateTypes era =
   '[ CompactForm Coin
    , CompactForm Coin
-   , StrictMaybe (KeyHash StakePool)
-   , StrictMaybe DRep
+   , Maybe (KeyHash StakePool)
+   , Maybe DRep
    ]
 
 instance HasSimpleRep (ConwayAccountState era) where
@@ -1914,7 +1914,7 @@ instance HasSpec RewardUpdate
 type PulserTypes =
   '[ Int
    , FreeVars
-   , VMap VMap.VB VMap.VB (Credential Staking) StakeWithDelegation
+   , VMap VMap.VB VMap.VS (Credential Staking) StakeWithDelegation
    , RewardAns
    ]
 

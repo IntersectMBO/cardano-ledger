@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-core
-version: 1.19.0.0
+version: 1.20.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -119,10 +119,10 @@ library
     bytestring >=0.10 && <0.11.3 || >=0.11.4,
     cardano-base >=0.1.1.0,
     cardano-crypto,
-    cardano-crypto-class ^>=2.3,
+    cardano-crypto-class >=2.3.2 && <2.5,
     cardano-crypto-wrapper,
     cardano-data >=1.3,
-    cardano-ledger-binary ^>=1.8,
+    cardano-ledger-binary ^>=1.8.1,
     cardano-ledger-byron,
     cardano-ledger-core:internal,
     cardano-slotting,

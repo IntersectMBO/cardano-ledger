@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -12,7 +13,9 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+-- `unused-pattern-binds` warning is disabled to preserve safety of `RecordWildCards` "trick" while
+-- avoiding unnecessary pattern matching that is not zero cost with pattern synonyms.
+{-# OPTIONS_GHC -Wno-orphans -Wno-unused-pattern-binds #-}
 
 module Cardano.Ledger.Conway.State.Account (
   ConwayAccountState (
@@ -22,6 +25,10 @@ module Cardano.Ledger.Conway.State.Account (
     casStakePoolDelegation,
     casDRepDelegation
   ),
+  balanceConwayAccountStateL,
+  depositConwayAccountStateL,
+  stakePoolDelegationConwayAccountStateL,
+  dRepDelegationConwayAccountStateL,
   ConwayAccounts (..),
   ConwayEraAccounts (..),
   accountStateDelegatee,
@@ -83,17 +90,17 @@ data ConwayAccountState era
 
 viewConwayAccountState ::
   ConwayAccountState era ->
-  (CompactForm Coin, CompactForm Coin, StrictMaybe (KeyHash StakePool), StrictMaybe DRep)
-viewConwayAccountState (CASNoDelegation x y) = (x, y, SNothing, SNothing)
-viewConwayAccountState (CASStakePool x y z) = (x, y, SJust z, SNothing)
-viewConwayAccountState (CASDRep x y w) = (x, y, SNothing, SJust w)
-viewConwayAccountState (CASStakePoolAndDRep x y z w) = (x, y, SJust z, SJust w)
+  (CompactForm Coin, CompactForm Coin, Maybe (KeyHash StakePool), Maybe DRep)
+viewConwayAccountState (CASNoDelegation x y) = (x, y, Nothing, Nothing)
+viewConwayAccountState (CASStakePool x y z) = (x, y, Just z, Nothing)
+viewConwayAccountState (CASDRep x y w) = (x, y, Nothing, Just w)
+viewConwayAccountState (CASStakePoolAndDRep x y z w) = (x, y, Just z, Just w)
 
 pattern ConwayAccountState ::
   CompactForm Coin ->
   CompactForm Coin ->
-  StrictMaybe (KeyHash StakePool) ->
-  StrictMaybe DRep ->
+  Maybe (KeyHash StakePool) ->
+  Maybe DRep ->
   ConwayAccountState era
 pattern ConwayAccountState
   { casBalance
@@ -103,12 +110,14 @@ pattern ConwayAccountState
   } <-
   (viewConwayAccountState -> (casBalance, casDeposit, casStakePoolDelegation, casDRepDelegation))
   where
-    ConwayAccountState x y SNothing SNothing = CASNoDelegation x y
-    ConwayAccountState x y (SJust z) SNothing = CASStakePool x y z
-    ConwayAccountState x y SNothing (SJust w) = CASDRep x y w
-    ConwayAccountState x y (SJust z) (SJust w) = CASStakePoolAndDRep x y z w
+    ConwayAccountState x y Nothing Nothing = CASNoDelegation x y
+    ConwayAccountState x y (Just z) Nothing = CASStakePool x y z
+    ConwayAccountState x y Nothing (Just w) = CASDRep x y w
+    ConwayAccountState x y (Just z) (Just w) = CASStakePoolAndDRep x y z w
 
 {-# COMPLETE ConwayAccountState #-}
+
+{-# INLINE ConwayAccountState #-}
 
 instance NoThunks (ConwayAccountState era)
 
@@ -116,13 +125,13 @@ instance NFData (ConwayAccountState era) where
   rnf = rwhnf
 
 instance EncCBOR (ConwayAccountState era) where
-  encCBOR cas@(ConwayAccountState _ _ _ _) =
-    let ConwayAccountState {..} = cas
+  encCBOR cas@ConwayAccountState {..} =
+    let ConwayAccountState _ _ _ _ = cas
      in encodeListLen 4
           <> encCBOR casBalance
           <> encCBOR casDeposit
-          <> encodeNullStrictMaybe encCBOR casStakePoolDelegation
-          <> encodeNullStrictMaybe encCBOR casDRepDelegation
+          <> encodeNullMaybe encCBOR casStakePoolDelegation
+          <> encodeNullMaybe encCBOR casDRepDelegation
 
 instance Typeable era => DecShareCBOR (ConwayAccountState era) where
   type
@@ -133,12 +142,12 @@ instance Typeable era => DecShareCBOR (ConwayAccountState era) where
       ConwayAccountState
         <$> decCBOR
         <*> decCBOR
-        <*> decodeNullStrictMaybe (interns ks <$> decCBOR)
-        <*> decodeNullStrictMaybe (decShareCBOR cd)
+        <*> decodeNullMaybe (interns ks <$> decCBOR)
+        <*> decodeNullMaybe (decShareCBOR cd)
 
 instance ToKeyValuePairs (ConwayAccountState era) where
-  toKeyValuePairs cas@(ConwayAccountState _ _ _ _) =
-    let ConwayAccountState {..} = cas
+  toKeyValuePairs cas@ConwayAccountState {..} =
+    let ConwayAccountState _ _ _ _ = cas
      in [ "reward" .= casBalance -- deprecated
         , "balance" .= casBalance
         , "deposit" .= casDeposit
@@ -172,15 +181,100 @@ instance EraAccounts ConwayEra where
 
   accountsMapL = lens caStates $ \cas asMap -> cas {caStates = asMap}
 
-  balanceAccountStateL = lens casBalance $ \cas b -> cas {casBalance = b}
+  balanceAccountStateL = balanceConwayAccountStateL
+  {-# INLINE balanceAccountStateL #-}
 
-  depositAccountStateL = lens casDeposit $ \cas d -> cas {casDeposit = d}
+  depositAccountStateL = depositConwayAccountStateL
+  {-# INLINE depositAccountStateL #-}
 
-  stakePoolDelegationAccountStateL =
-    lens (strictMaybeToMaybe . casStakePoolDelegation) $ \cas d ->
-      cas {casStakePoolDelegation = maybeToStrictMaybe d}
+  stakePoolDelegationAccountStateL = stakePoolDelegationConwayAccountStateL
+  {-# INLINE stakePoolDelegationAccountStateL #-}
 
   unregisterAccount = unregisterConwayAccount
+
+balanceConwayAccountStateL :: Lens' (ConwayAccountState era) (CompactForm Coin)
+balanceConwayAccountStateL =
+  lens
+    ( \case
+        CASNoDelegation balance _ -> balance
+        CASStakePool balance _ _ -> balance
+        CASDRep balance _ _ -> balance
+        CASStakePoolAndDRep balance _ _ _ -> balance
+    )
+    $ \cas balance ->
+      case cas of
+        CASNoDelegation _ deposit -> CASNoDelegation balance deposit
+        CASStakePool _ deposit stakePool -> CASStakePool balance deposit stakePool
+        CASDRep _ deposit dRep -> CASDRep balance deposit dRep
+        CASStakePoolAndDRep _ deposit stakePool dRep -> CASStakePoolAndDRep balance deposit stakePool dRep
+{-# INLINE balanceConwayAccountStateL #-}
+
+depositConwayAccountStateL :: Lens' (ConwayAccountState era) (CompactForm Coin)
+depositConwayAccountStateL =
+  lens
+    ( \case
+        CASNoDelegation _ deposit -> deposit
+        CASStakePool _ deposit _ -> deposit
+        CASDRep _ deposit _ -> deposit
+        CASStakePoolAndDRep _ deposit _ _ -> deposit
+    )
+    $ \cas deposit ->
+      case cas of
+        CASNoDelegation balance _ -> CASNoDelegation balance deposit
+        CASStakePool balance _ stakePool -> CASStakePool balance deposit stakePool
+        CASDRep balance _ dRep -> CASDRep balance deposit dRep
+        CASStakePoolAndDRep balance _ stakePool dRep -> CASStakePoolAndDRep balance deposit stakePool dRep
+{-# INLINE depositConwayAccountStateL #-}
+
+stakePoolDelegationConwayAccountStateL :: Lens' (ConwayAccountState era) (Maybe (KeyHash StakePool))
+stakePoolDelegationConwayAccountStateL =
+  lens
+    ( \case
+        CASNoDelegation _ _ -> Nothing
+        CASStakePool _ _ stakePool -> Just stakePool
+        CASDRep _ _ _ -> Nothing
+        CASStakePoolAndDRep _ _ stakePool _ -> Just stakePool
+    )
+    $ \cas mStakePool ->
+      case cas of
+        CASNoDelegation balance deposit
+          | Just stakePool <- mStakePool -> CASStakePool balance deposit stakePool
+          | otherwise -> CASNoDelegation balance deposit
+        CASStakePool balance deposit _
+          | Just stakePool <- mStakePool -> CASStakePool balance deposit stakePool
+          | otherwise -> CASNoDelegation balance deposit
+        CASDRep balance deposit dRep
+          | Just stakePool <- mStakePool -> CASStakePoolAndDRep balance deposit stakePool dRep
+          | otherwise -> CASDRep balance deposit dRep
+        CASStakePoolAndDRep balance deposit _ dRep
+          | Just stakePool <- mStakePool -> CASStakePoolAndDRep balance deposit stakePool dRep
+          | otherwise -> CASDRep balance deposit dRep
+{-# INLINE stakePoolDelegationConwayAccountStateL #-}
+
+dRepDelegationConwayAccountStateL :: Lens' (ConwayAccountState era) (Maybe DRep)
+dRepDelegationConwayAccountStateL =
+  lens
+    ( \case
+        CASNoDelegation _ _ -> Nothing
+        CASStakePool _ _ _ -> Nothing
+        CASDRep _ _ dRep -> Just dRep
+        CASStakePoolAndDRep _ _ _ dRep -> Just dRep
+    )
+    $ \cas mDRep ->
+      case cas of
+        CASNoDelegation balance deposit
+          | Just dRep <- mDRep -> CASDRep balance deposit dRep
+          | otherwise -> CASNoDelegation balance deposit
+        CASStakePool balance deposit stakePool
+          | Just dRep <- mDRep -> CASStakePoolAndDRep balance deposit stakePool dRep
+          | otherwise -> CASStakePool balance deposit stakePool
+        CASDRep balance deposit _
+          | Just dRep <- mDRep -> CASDRep balance deposit dRep
+          | otherwise -> CASNoDelegation balance deposit
+        CASStakePoolAndDRep balance deposit stakePool _
+          | Just dRep <- mDRep -> CASStakePoolAndDRep balance deposit stakePool dRep
+          | otherwise -> CASStakePool balance deposit stakePool
+{-# INLINE dRepDelegationConwayAccountStateL #-}
 
 class EraAccounts era => ConwayEraAccounts era where
   mkConwayAccountState :: CompactForm Coin -> AccountState era
@@ -192,16 +286,15 @@ class EraAccounts era => ConwayEraAccounts era where
     ConwayAccountState
       { casBalance = mempty
       , casDeposit = deposit
-      , casStakePoolDelegation = SNothing
-      , casDRepDelegation = SNothing
+      , casStakePoolDelegation = Nothing
+      , casDRepDelegation = Nothing
       }
 
   dRepDelegationAccountStateL :: Lens' (AccountState era) (Maybe DRep)
 
 instance ConwayEraAccounts ConwayEra where
-  dRepDelegationAccountStateL =
-    lens (strictMaybeToMaybe . casDRepDelegation) $ \cas d ->
-      cas {casDRepDelegation = maybeToStrictMaybe d}
+  dRepDelegationAccountStateL = dRepDelegationConwayAccountStateL
+  {-# INLINE dRepDelegationAccountStateL #-}
 
 lookupDRepDelegation :: ConwayEraAccounts era => Credential Staking -> Accounts era -> Maybe DRep
 lookupDRepDelegation cred accounts = do

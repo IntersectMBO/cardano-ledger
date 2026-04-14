@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-dijkstra
-version: 0.2.0.0
+version: 0.2.0.1
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -109,7 +109,7 @@ library
     cardano-ledger-alonzo ^>=1.15,
     cardano-ledger-babbage,
     cardano-ledger-binary ^>=1.8,
-    cardano-ledger-conway,
+    cardano-ledger-conway ^>=1.22,
     cardano-ledger-core:{cardano-ledger-core, internal} >=1.19,
     cardano-ledger-mary,
     cardano-ledger-shelley,
