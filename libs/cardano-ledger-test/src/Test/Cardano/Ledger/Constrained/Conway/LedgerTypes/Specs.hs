@@ -341,8 +341,8 @@ conwayAccountMapSpec univ whoDelegates poolreg wdrl =
                   [ dependsOn deposit cred
                   , dependsOn bal cred
                   , satisfies deposit (geqSpec 0)
-                  , onCon @"SJust" mpool $ \ [var|khashStakePool|] -> member_ khashStakePool (dom_ poolreg)
-                  , reify cred isKeyHash $ \bool -> whenTrue bool [assert $ onCon @"SJust" mdrep $ \x -> member_ x (lit (dRepsOf whoDelegates))]
+                  , onCon @"Just" mpool $ \ [var|khashStakePool|] -> member_ khashStakePool (dom_ poolreg)
+                  , reify cred isKeyHash $ \bool -> whenTrue bool [assert $ onCon @"Just" mdrep $ \x -> member_ x (lit (dRepsOf whoDelegates))]
                   , (caseOn (lookup_ cred (lit withdrawalMap)))
                       -- Nothing
                       ( branch $ \_ ->
@@ -363,15 +363,15 @@ conwayAccountMapSpec univ whoDelegates poolreg wdrl =
                       (member_ cred (lit withdrawalKeys))
                       ( satisfies
                           mdrep
-                          ( constrained $ \(x :: Term (StrictMaybe DRep)) ->
+                          ( constrained $ \(x :: Term (Maybe DRep)) ->
                               (caseOn x)
-                                -- SNothing
+                                -- Nothing
                                 (branch $ \_ -> False)
-                                -- SJust
+                                -- Just
                                 (branch $ \drep -> member_ drep (lit (dRepsOf whoDelegates)))
                           )
                       )
-                      (onCon @"SJust" mdrep $ \ [var|drep|] -> member_ drep (lit (dRepsOf whoDelegates)))
+                      (onCon @"Just" mdrep $ \ [var|drep|] -> member_ drep (lit (dRepsOf whoDelegates)))
                   ]
               ]
         ]

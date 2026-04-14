@@ -15,6 +15,7 @@
 module Cardano.Ledger.Conway.Translation () where
 
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -134,8 +135,8 @@ instance TranslateEra ConwayEra DState where
         ConwayAccountState
           { casBalance = sasBalance
           , casDeposit = sasDeposit
-          , casStakePoolDelegation = sasStakePoolDelegation
-          , casDRepDelegation = SNothing
+          , casStakePoolDelegation = strictMaybeToMaybe sasStakePoolDelegation
+          , casDRepDelegation = Nothing
           }
 
 instance TranslateEra ConwayEra PState where
