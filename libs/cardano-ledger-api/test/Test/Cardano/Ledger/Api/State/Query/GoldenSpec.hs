@@ -4,16 +4,25 @@
 
 module Test.Cardano.Ledger.Api.State.Query.GoldenSpec (spec) where
 
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.Api.State.Query
-import Cardano.Ledger.BaseTypes (Anchor (..), EpochNo (..), textToUrl, unsafeNonZero)
+import Cardano.Ledger.BaseTypes (
+  Anchor (..),
+  EpochNo (..),
+  Network (..),
+  StrictMaybe (..),
+  textToUrl,
+  unsafeNonZero,
+ )
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, Version, decodeFull)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Governance (DefaultVote (..))
 import Cardano.Ledger.Core (eraProtVerHigh)
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Hashes (ADDRHASH, ScriptHash (..))
+import Cardano.Ledger.Hashes (ADDRHASH, HASH, ScriptHash (..), VRFVerKeyHash (..))
 import Cardano.Ledger.Shelley.API.Wallet (RewardInfoPool (..), RewardParams (..))
-import Cardano.Ledger.State (ChainAccountState (..))
+import Cardano.Ledger.State (ChainAccountState (..), StakePoolParams (..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Lazy as BSL
@@ -132,22 +141,57 @@ spec = describe "Query Golden" $ do
         (ChainAccountState (Coin 5000000) (Coin 3000000))
         "821a004c4b401a002dc6c0"
 
-  describe "QueryPoolStateResult" $
+  describe "QueryResultPoolState" $ do
     describe "canonical" $
       goldenRoundTrip
-        (QueryPoolStateResult Map.empty Map.empty Map.empty Map.empty)
+        (QueryResultPoolState Map.empty Map.empty Map.empty Map.empty)
         "84a0a0a0a0"
+    describe "non-empty pools" $
+      let poolId = mkKeyHash 0
+          sampleParams =
+            StakePoolParams
+              { sppId = poolId
+              , sppVrf = VRFVerKeyHash (mkDummyHash @HASH (0 :: Int))
+              , sppPledge = Coin 1000
+              , sppCost = Coin 500
+              , sppMargin = unsafeBoundRational (1 % 10)
+              , sppAccountAddress = AccountAddress Testnet (AccountId (KeyHashObj (mkKeyHash 1)))
+              , sppOwners = Set.singleton (mkKeyHash 2)
+              , sppRelays = mempty
+              , sppMetadata = SNothing
+              }
+       in goldenRoundTrip
+            ( QueryResultPoolState
+                (Map.singleton poolId sampleParams)
+                Map.empty
+                (Map.singleton poolId (EpochNo 100))
+                (Map.singleton poolId (Coin 500))
+            )
+            "84a1581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c089581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c0582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c1113141903e81901f4d81e82010a581de0903884936fec86ccd3e6133e289e7f950b709a60bf64af0f9dc64410d9010281581c8a209f61d4a1a3fa94418e4a402880b758cf52552f13fe212a94b43680f6a0a1581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c01864a1581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c01901f4"
 
-  describe "StakeSnapshot" $
+  describe "QueryResultDelegsAndRewards" $ do
     describe "canonical" $
       goldenRoundTrip
-        (StakeSnapshot (Coin 100) (Coin 200) (Coin 300))
+        (QueryResultDelegsAndRewards Map.empty Map.empty)
+        "82a0a0"
+    describe "non-empty delegations and rewards" $
+      goldenRoundTrip
+        ( QueryResultDelegsAndRewards
+            (Map.singleton (KeyHashObj (mkKeyHash 0)) (mkKeyHash 1))
+            (Map.singleton (KeyHashObj (mkKeyHash 0)) (Coin 1000))
+        )
+        "82a18200581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c0581c903884936fec86ccd3e6133e289e7f950b709a60bf64af0f9dc64410a18200581c73dedba5efd33678f941c6ee48cdf2b35ff4f40653e9ed01d6c5e3c01903e8"
+
+  describe "QueryResultStakeSnapshot" $
+    describe "canonical" $
+      goldenRoundTrip
+        (QueryResultStakeSnapshot (Coin 100) (Coin 200) (Coin 300))
         "83186418c819012c"
 
-  describe "StakeSnapshots" $ do
+  describe "QueryResultStakeSnapshots" $ do
     describe "canonical" $
       goldenRoundTrip
-        ( StakeSnapshots
+        ( QueryResultStakeSnapshots
             Map.empty
             (unsafeNonZero (Coin 1000))
             (unsafeNonZero (Coin 2000))
@@ -156,8 +200,8 @@ spec = describe "Query Golden" $ do
         "84a01903e81907d0190bb8"
     describe "non-empty snapshots" $
       goldenRoundTrip
-        ( StakeSnapshots
-            (Map.singleton (mkKeyHash 0) (StakeSnapshot (Coin 100) (Coin 200) (Coin 300)))
+        ( QueryResultStakeSnapshots
+            (Map.singleton (mkKeyHash 0) (QueryResultStakeSnapshot (Coin 100) (Coin 200) (Coin 300)))
             (unsafeNonZero (Coin 1000))
             (unsafeNonZero (Coin 2000))
             (unsafeNonZero (Coin 3000))

@@ -3,6 +3,10 @@
 ## 1.14.0.0
 
 * Refactor `Query` module into sub-modules to re-export, and consolidate more queries from downstream:
+  - Move `Query.CommitteeMembersState` module to `Query.Governance`.
+    + Replace:
+      * `CommitteeMemberState` with `QueryResultCommitteeMemberState`.
+      * `CommitteeMembersState` with `QueryResultCommitteeMembersState`.
   - Move from `Query` into a sub-module:
     + `queryCurrentPParams` (`GetCurrentPParams`) and `queryFuturePParams` (`GetFuturePParams`) into `Query.PParams`.
     + `queryChainAccountState` (`GetAccountState`) into `Query.Epoch`.
@@ -17,10 +21,15 @@
       * `queryDRepDelegations` (`GetDRepDelegations`).
       * `queryDRepStakeDistr` (`GetDRepStakeDistr`).
       * `queryRegisteredDRepStakeDistr` (No consensus BlockQuery constructor exists yet, `GetRegisteredDRepStakeDistr` was planned but not added).
-  - Move `Query.CommitteeMembersState` module to `Query.Governance`.
-    + Replace:
-      * `CommitteeMemberState` with `QueryResultCommitteeMemberState`.
-      * `CommitteeMembersState` with `QueryResultCommitteeMembersState`.
+    + `queryStakeSnapshots` (`GetStakeSnapshots`) into `Query.Snapshot`, now returns a stable type `QueryResultStakeSnapshot`, and returns all pools given an empty set.
+      * Remove `StakeSnapshot(s)` types with stable ones `QueryResultStakeSnapshot(s)`.
+    + `queryStakePoolDelegsAndRewards` (`GetFilteredDelegationsAndRewardAccounts`) into `Query.StakeDelegation`, now returns `QueryResultDelegsAndRewards`, and returns all registered credentials when given an empty set.
+    + Into `Query.Pool`:
+      * `queryPoolState` (`GetPoolState`), now returns a `QueryResultPoolState` with the `toQueryResultPoolState` helper, and returns all pools given an empty set.
+        - Remove `QueryStakePoolResult` and `mkQueryStakePoolResult`.
+      * `queryPoolParameters` (`GetStakePoolParams`), renamed to `queryStakePoolParams`, and returns all pools given an empty set.
+      * `queryStakePoolDefaultVote` (`QueryStakePoolDefaultVote`)
+      * `querySPOStakeDistr` (`GetSPOStakeDistr`), returns all pools given an empty set.
 
 ### `testlib`
 

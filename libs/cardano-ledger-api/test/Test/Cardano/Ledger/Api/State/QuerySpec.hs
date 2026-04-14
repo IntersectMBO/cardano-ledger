@@ -18,6 +18,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState,
   DRepPulsingState (..),
+  DefaultVote,
   RatifyState (..),
   ensCommitteeL,
   newEpochStateDRepPulsingStateL,
@@ -66,9 +67,9 @@ latestErasSpec =
   describe "QuerySpec" $ do
     describe (eraName @era) $ do
       describe "Roundtrip" $ do
-        prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
-        prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
-        prop "StakeSnapshot" $ roundTripEraExpectation @era @StakeSnapshot
+        prop "QueryResultPoolState" $ roundTripEraExpectation @era @QueryResultPoolState
+        prop "QueryResultStakeSnapshot" $ roundTripEraExpectation @era @QueryResultStakeSnapshot
+        prop "QueryResultStakeSnapshots" $ roundTripEraExpectation @era @QueryResultStakeSnapshots
         prop "MemberStatus" $ roundTripEraExpectation @era @MemberStatus
         prop "HotCredAuthStatus" $ roundTripEraExpectation @era @HotCredAuthStatus
         prop "NextEpochChange" $ roundTripEraExpectation @era @NextEpochChange
@@ -82,6 +83,7 @@ latestErasSpec =
           roundTripEraExpectation @era @QueryResultCommitteeMembersState
         prop "QueryResultConstitution" $
           roundTripEraExpectation @era @QueryResultConstitution
+        prop "QueryResultDelegsAndRewards" $ roundTripEraExpectation @era @QueryResultDelegsAndRewards
         prop "QueryResultDRepState" $
           roundTripEraExpectation @era @QueryResultDRepState
         prop "QueryResultDRepStates" $
@@ -484,10 +486,10 @@ queryStakeSnapshotsSpec ::
   Spec
 queryStakeSnapshotsSpec =
   describe "GetStakeSnapshots" $ do
-    prop "ssStakeSnapshots has all poolIds" $ \ss -> do
+    prop "qrssStakeSnapshots has all poolIds" $ \ss -> do
       let
         nes = (def :: NewEpochState era) & nesEsL . esSnapshotsL .~ ss
-        result = queryStakeSnapshots nes Nothing
+        result = queryStakeSnapshots nes Set.empty
         getPoolIdsWithNonZeroDelegators =
           Map.filter ((> 0) . spssNumDelegators) . VMap.toMap . ssStakePoolsSnapShot
         getPoolIdsWithNonZeroStake =
@@ -502,22 +504,24 @@ queryStakeSnapshotsSpec =
           | otherwise = allPoolIdsFiltered getPoolIdsWithNonZeroDelegators
         nonZeroTotal = ssTotalActiveStake
         nonZeroSubTotal ssWhich =
-          nonZeroOr (foldMap ssWhich (ssStakeSnapshots result)) (knownNonZeroCoin @1)
+          nonZeroOr (foldMap ssWhich (qrssStakeSnapshots result)) (knownNonZeroCoin @1)
       subPoolIds <- uniformSubSet Nothing allPoolIds QC
       -- Tricky bit about the query is when all pool ids are requested then ones that do not have
       -- delegations are filtered out, while when poolIds are specified, then they are retained even
       -- if they don't have any delegations
       let
-        subResult = queryStakeSnapshots nes (Just subPoolIds)
+        subResult = queryStakeSnapshots nes subPoolIds
       pure @Gen $
         conjoin
           [ counterexample "AllPoolIds" $
-              Map.keysSet (ssStakeSnapshots result) === allPoolIds
-          , counterexample "SubTotal Mark" $ nonZeroSubTotal ssMarkPool === ssMarkTotal result
-          , counterexample "SubTotal Set" $ nonZeroSubTotal ssSetPool === ssSetTotal result
-          , counterexample "SubTotal Go" $ nonZeroSubTotal ssGoPool === ssGoTotal result
-          , counterexample "Total Mark" $ ssMarkTotal result === nonZeroTotal (ssStakeMark ss)
-          , counterexample "Total Set" $ ssSetTotal result === nonZeroTotal (ssStakeSet ss)
-          , counterexample "Total Go" $ ssGoTotal result === nonZeroTotal (ssStakeGo ss)
-          , counterexample "subPoolIds" $ Map.keysSet (ssStakeSnapshots subResult) === subPoolIds
+              Map.keysSet (qrssStakeSnapshots result) === allPoolIds
+          , counterexample "SubTotal Mark" $ nonZeroSubTotal qrssMarkPool === qrssMarkTotal result
+          , counterexample "SubTotal Set" $ nonZeroSubTotal qrssSetPool === qrssSetTotal result
+          , counterexample "SubTotal Go" $ nonZeroSubTotal qrssGoPool === qrssGoTotal result
+          , counterexample "Total Mark" $ qrssMarkTotal result === nonZeroTotal (ssStakeMark ss)
+          , counterexample "Total Set" $ qrssSetTotal result === nonZeroTotal (ssStakeSet ss)
+          , counterexample "Total Go" $ qrssGoTotal result === nonZeroTotal (ssStakeGo ss)
+          , counterexample "subPoolIds" $
+              Map.keysSet (qrssStakeSnapshots subResult)
+                === if Set.null subPoolIds then allPoolIds else subPoolIds
           ]
