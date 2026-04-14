@@ -172,12 +172,30 @@ jobs:
     - name: Build
       run: cabal build all
 
-    # Pass working directory to test jobs
-    - name: Archive working directory
-      # pax format is needed to avoid unnecessary rebuilding, because the
-      # default format uses a one-second resolution for timestamps
-      run: tar --use-compress-program zstdmt --format posix --exclude-vcs -cf /var/tmp/state.tzst . && mv /var/tmp/state.tzst .
-    - name: Upload working directory archive
+    - name: Create state archive
+      id: state
+      run: |
+        extract-components()
+        {
+          jq -c --arg root "$PWD/" '
+            ."install-plan"[] |
+              select((."component-name" // "") | match("'"$1"'")) | {
+                pkg: ."pkg-name",
+                src: ."pkg-src".path | ltrimstr($root),
+                bin: ."bin-file" | ltrimstr($root)
+              }
+          ' dist-newstyle/cache/plan.json
+        }
+        component-bins() { jq -r '.bin' "$@"; }
+        component-pkgs() { jq -sc 'map(.pkg) | unique' "$@"; }
+        extract-components test: >test-components.json
+        extract-components exe:generate-cddl >cddl-components.json
+        extract-components exe:plutus-preprocessor >plutus-components.json
+        tar -caf state.tzst dist-newstyle/cache/plan.json \
+          *-components.json $(component-bins *-components.json)
+        echo "test-packages=$(component-pkgs test-components.json)" >> "$GITHUB_OUTPUT"
+
+    - name: Upload state archive
       uses: actions/upload-artifact@v7
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
@@ -225,12 +243,8 @@ jobs:
     name: ${{ matrix.package }}-${{ matrix.ghc }}-${{ matrix.os }}
 
     env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-09-23"
-
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
-
       SECP_CACHE_VERSION: "2022-12-30"
 
     defaults:
@@ -238,35 +252,12 @@ jobs:
         shell: bash
 
     steps:
-    - name: Free up disk space
-      run: |
-        # Remove software and language runtimes we're not using
-        sudo rm -rf \
-          /opt/google/chrome \
-          /opt/microsoft/msedge \
-          /opt/microsoft/powershell \
-          /opt/pipx \
-          /usr/lib/mono \
-          /usr/local/julia* \
-          /usr/local/lib/android \
-          /usr/local/lib/node_modules \
-          /usr/local/share/chromium \
-          /usr/local/share/powershell \
-          /usr/share/dotnet \
-          /usr/share/swift
-        df -h /
+    - uses: actions/checkout@v6
 
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: false # default is true
-
-    - name: Install Haskell
-      id: install-haskell
-      uses: input-output-hk/actions/haskell@latest
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.16
 
     - name: Download Mainnet Mirror
       if: matrix.package == 'cardano-ledger-byron'
@@ -284,6 +275,7 @@ jobs:
           mv epochs ..
           cd ..
         }
+        echo CARDANO_MAINNET_MIRROR=$PWD/epochs >> $GITHUB_ENV
 
     - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
       if: "${{ github.event_name == 'schedule'
@@ -292,59 +284,27 @@ jobs:
       run: |
         echo "NIGHTLY=true" >> $GITHUB_ENV
 
-    # Retrieve working directory from build jobs
-    - name: Download working directory archive
+    - name: Download state archive
       uses: actions/download-artifact@v8
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
 
-    - name: Unarchive working directory
-      run: tar -xf state.tzst --use-compress-program unzstd && rm state.tzst
-
-    - name: Cabal update
-      run: cabal update
-
-    # A dependencies.txt file should have been created by the build job, so we
-    # check if it exists and is not empty.
-    - name: Check dependencies to be used as cache keys
-      id: check-deps
-      run: |
-        ./scripts/file-not-null.sh dependencies.txt
-
-    - name: Restore cache
-      uses: actions/cache/restore@v5
-      id: restore-cabal-cache
-      env:
-        cache-name: cache-cabal-build
-      with:
-        path: |
-          ${{ steps.install-haskell.outputs.cabal-store }}
-        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
-        fail-on-cache-miss: true
+    - name: Unarchive state
+      run: tar -xf state.tzst && rm state.tzst
 
     - name: Run tests
       run: |
-        export CARDANO_MAINNET_MIRROR="$(pwd)/epochs"
-        if [ -z "$NIGHTLY" ]; then
-          cabal test "${{ matrix.package }}"
-        else
-          TRIES=3
-          scripts/cabal-test-with-retries.sh "${{ matrix.package }}" "$TRIES"
-        fi
-
-    - name: Install cleret
-      # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.3.0.0
-
-    - name: Install doctest
-      run: |
-        BINDIR=$(cabal path --installdir)
-        cabal install doctest --flag cabal-doctest --ignore-project --overwrite-policy=always
-        echo "$BINDIR" >> ${GITHUB_PATH}
-
-    - name: Run doctests
-      if: matrix.ghc != '9.14.1'
-      run: scripts/doctest.sh "${{ matrix.package }}"
+        jq -r --arg pkg '${{ matrix.package }}' \
+          'select(.pkg == $pkg) | "\(.pkg) \(.src) \(.bin)"' test-components.json |
+        while read -r PKG SRC BIN
+        do
+          SRC=$(readlink -f "$SRC")
+          BIN=$(readlink -f "$BIN")
+          set -x
+          export ${PKG//-/_}_datadir=$SRC
+          (cd "$SRC" && "$BIN")
+          { set +x; } &>/dev/null
+        done
 
   complete:
     name: Tests completed
@@ -364,6 +324,71 @@ jobs:
             echo 'Tests were ${{ needs.test.result }}'
             false;;
         esac
+
+  codegen:
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    env:
+      # current ref from: 27.02.2022
+      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+      SECP_CACHE_VERSION: "2022-12-30"
+      ghc-version: "9.6.7"
+      os: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install system dependencies
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: false # default is true
+
+    - name: Download state archive
+      uses: actions/download-artifact@v8
+      with:
+        name: state-${{ env.ghc-version }}-${{ env.os }}
+
+    - name: Unarchive state
+      run: tar -xf state.tzst && rm state.tzst
+
+    - name: Generate CDDL files
+      run: |
+        jq -r '"\(.pkg) \(.src) \(.bin)"' cddl-components.json |
+        while read -r PKG SRC BIN
+        do
+          SRC=$(readlink -f "$SRC")
+          BIN=$(readlink -f "$BIN")
+          ERA=${PKG#cardano-ledger-}
+          echo "Generating cddl for $ERA..."
+          set -x
+          export ${PKG//-/_}_datadir=$SRC
+          "$BIN"
+          { set +x; } &>/dev/null
+          echo "Regenerated $ERA.cddl"
+        done
+        git diff
+
+    - name: Generate Plutus examples
+      run: |
+        jq -r '"\(.pkg) \(.src) \(.bin)"' plutus-components.json |
+        while read -r PKG SRC BIN
+        do
+          SRC=$(readlink -f "$SRC")
+          BIN=$(readlink -f "$BIN")
+          echo "Generating plutus examples..."
+          set -x
+          export ${PKG//-/_}_datadir=$SRC
+          "$BIN"
+          { set +x; } &>/dev/null
+          echo "Regenerated plutus examples"
+        done
+        git diff
 
   fourmolu:
     runs-on: ubuntu-latest
@@ -420,95 +445,6 @@ jobs:
 
     - name: Run nix formatter
       run: scripts/nix-format.sh
-
-  codegen:
-    needs: build
-
-    runs-on: ubuntu-latest
-
-    env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-09-23"
-
-      # current ref from: 27.02.2022
-      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
-
-      SECP_CACHE_VERSION: "2022-12-30"
-      ghc-version: "9.6.7"
-      os: ubuntu-latest
-
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Free up disk space
-      run: |
-        # Remove software and language runtimes we're not using
-        sudo rm -rf \
-          /opt/google/chrome \
-          /opt/microsoft/msedge \
-          /opt/microsoft/powershell \
-          /opt/pipx \
-          /usr/lib/mono \
-          /usr/local/julia* \
-          /usr/local/lib/android \
-          /usr/local/lib/node_modules \
-          /usr/local/share/chromium \
-          /usr/local/share/powershell \
-          /usr/share/dotnet \
-          /usr/share/swift
-        df -h /
-
-    - name: Install system dependencies
-      uses: input-output-hk/actions/base@latest
-      with:
-        use-sodium-vrf: false # default is true
-
-    - name: Install Haskell
-      id: install-haskell
-      uses: input-output-hk/actions/haskell@latest
-      with:
-        ghc-version: ${{ env.ghc-version }}
-        cabal-version: 3.16
-
-    # Retrieve working directory from build jobs
-    - name: Download working directory archive
-      uses: actions/download-artifact@v8
-      with:
-        name: state-${{ env.ghc-version }}-${{ env.os }}
-
-    - name: Unarchive working directory
-      run: tar -xf state.tzst --use-compress-program unzstd && rm state.tzst
-
-    - name: Cabal update
-      run: cabal update
-
-    # A dependencies.txt file should have been created by the build job, so we
-    # check if it exists and is not empty.
-    - name: Check dependencies to be used as cache keys
-      id: check-deps
-      run: |
-        ./scripts/file-not-null.sh dependencies.txt
-
-    - name: Restore cache
-      uses: actions/cache/restore@v5
-      id: restore-cabal-cache
-      env:
-        cache-name: cache-cabal-build
-      with:
-        path: |
-          ${{ steps.install-haskell.outputs.cabal-store }}
-        key: ${{ env.cache-name }}-${{ runner.os }}-${{ env.ghc-version }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
-        fail-on-cache-miss: true
-
-    - name: Run gen-cddl
-      run: ./scripts/gen-cddl.sh
-
-    - name: Run gen-plutus
-      run: ./scripts/gen-plutus.sh
 
   cabal-format:
     runs-on: ubuntu-latest
