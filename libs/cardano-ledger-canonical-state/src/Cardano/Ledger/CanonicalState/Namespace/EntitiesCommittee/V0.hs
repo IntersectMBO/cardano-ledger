@@ -3,12 +3,10 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -24,7 +22,7 @@ module Cardano.Ledger.CanonicalState.Namespace.EntitiesCommittee.V0 (
   fromCanonicalCommitteeAuthorization,
 ) where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), EpochNo (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Anchor (..), StrictMaybe (..))
 import Cardano.Ledger.CanonicalState.BasicTypes ()
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Credential (Credential (..))
@@ -41,7 +39,7 @@ import Cardano.SCLS.NamespaceCodec (
  )
 import Cardano.SCLS.Versioned (Versioned (..))
 import qualified Data.Map.Strict as Map
-import Data.MemPack.ByteOrdered (packWord64beM, unpackBigEndianM)
+import Data.MemPack (MemPack (packM, unpackM))
 import Data.Proxy (Proxy (..))
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -62,19 +60,18 @@ instance
   where
   decodeEntry = fmap EntitiesCommitteeOut <$> fromCanonicalCBOR
 
-data EntitiesCommitteeIn = EntitiesCommitteeIn EpochNo
-  deriving (Eq, Ord, Show)
+data EntitiesCommitteeIn = EntitiesCommitteeIn
+  deriving (Eq, Ord, Show, Enum)
 
 newtype EntitiesCommitteeOut = EntitiesCommitteeOut CanonicalCommitteeState
   deriving (Eq, Show, Generic)
 
 instance IsKey EntitiesCommitteeIn where
   keySize = namespaceKeySize @"entities/committee/v0"
-  packKeyM (EntitiesCommitteeIn (EpochNo no)) = do
-    packWord64beM no
-  unpackKeyM = do
-    no <- unpackBigEndianM
-    return $ EntitiesCommitteeIn (EpochNo no)
+  packKeyM = do
+    packM . fromIntegral @_ @Word8 . fromEnum
+  unpackKeyM =
+    toEnum . fromIntegral @Word8 <$> unpackM
 
 newtype CanonicalCommitteeState = CanonicalCommitteeState
   { csCommitteeCreds :: Map.Map (Credential ColdCommitteeRole) CanonicalCommitteeAuthorization
