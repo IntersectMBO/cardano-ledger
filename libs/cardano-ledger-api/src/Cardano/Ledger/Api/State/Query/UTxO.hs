@@ -40,7 +40,10 @@ queryUTxOByAddress ::
   Set Addr ->
   UTxO era
 queryUTxOByAddress nes addrSet =
-  UTxO $ Map.filter checkAddr fullUTxO
+  UTxO $
+    if Set.null addrSet
+      then mempty
+      else Map.filter checkAddr fullUTxO
   where
     UTxO fullUTxO = queryUTxOFull nes
     compactAddrSet = Set.map compactAddr addrSet
@@ -57,4 +60,6 @@ queryUTxOByTxIn ::
   NewEpochState era ->
   Set TxIn ->
   UTxO era
-queryUTxOByTxIn nes = txInsFilter (queryUTxOFull nes)
+queryUTxOByTxIn nes txIns
+  | Set.null txIns = UTxO mempty
+  | otherwise = txInsFilter (queryUTxOFull nes) txIns
