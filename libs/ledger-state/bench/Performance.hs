@@ -9,6 +9,7 @@ module Main where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Api.Era
+import Cardano.Ledger.Api.State.Query
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Conway
@@ -144,6 +145,8 @@ main = do
               "MinMaxTxId"
               [ env (pure setAddr) $
                   bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState)
+              , env (pure setAddr) $
+                  bench "queryUTxOByAddress" . nf (queryUTxOByAddress newEpochState)
               , env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
               ]

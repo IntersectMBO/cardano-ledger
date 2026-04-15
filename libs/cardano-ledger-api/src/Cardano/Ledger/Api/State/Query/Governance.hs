@@ -39,6 +39,7 @@ module Cardano.Ledger.Api.State.Query.Governance (
   queryDRepDelegations,
   queryDRepStakeDistr,
   queryRegisteredDRepStakeDistr,
+  queryDRepDelegatees,
 
   -- * For testing
   getNextEpochCommitteeMembers,
@@ -185,7 +186,7 @@ instance DecCBOR HotCredAuthStatus where
       k -> Invalid k
 
 data NextEpochChange
-  = --- | Member not enacted yet, but will be at the next epoch
+  = -- | Member not enacted yet, but will be at the next epoch
     ToBeEnacted
   | -- | Member will be removed
     ToBeRemoved
@@ -626,6 +627,23 @@ queryRegisteredDRepStakeDistr nes creds =
     stakeAndDeposits stakeCred =
       fromMaybe (CompactCoin 0) $
         Map.lookup stakeCred instantStake <> Map.lookup stakeCred proposalDeposits
+
+-- | Query the DRep delegatee for each given staking credential.
+--
+-- Returns the DRep each credential has delegated to. Credentials with
+-- no DRep delegation are omitted from the result. Empty 'Set' returns
+-- all.
+queryDRepDelegatees ::
+  (EraCertState era, ConwayEraAccounts era) =>
+  NewEpochState era ->
+  Set (Credential Staking) ->
+  Map (Credential Staking) DRep
+queryDRepDelegatees nes creds =
+  let accountsMap = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+      selected
+        | Set.null creds = accountsMap
+        | otherwise = accountsMap `Map.restrictKeys` creds
+   in Map.mapMaybe (^. dRepDelegationAccountStateL) selected
 
 -- | Force the DRep pulser to completion and return the resulting
 -- snapshot and ratify state. Shared across governance query

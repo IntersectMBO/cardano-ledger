@@ -42,12 +42,15 @@ library
   hs-source-dirs: src
   other-modules:
     Cardano.Ledger.Api.Scripts.ExUnits
+    Cardano.Ledger.Api.State.Query.Debug
     Cardano.Ledger.Api.State.Query.Epoch
     Cardano.Ledger.Api.State.Query.Governance
     Cardano.Ledger.Api.State.Query.PParams
     Cardano.Ledger.Api.State.Query.Pool
+    Cardano.Ledger.Api.State.Query.Reward
     Cardano.Ledger.Api.State.Query.Snapshot
     Cardano.Ledger.Api.State.Query.StakeDelegation
+    Cardano.Ledger.Api.State.Query.UTxO
 
   default-language: Haskell2010
   ghc-options:

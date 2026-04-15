@@ -284,7 +284,7 @@ data RewardInfoPool = RewardInfoPool
   -- Can be larger than @1.0@ for pool that gets lucky.
   -- (If some pools get unlucky, some pools must get lucky.)
   }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 instance NoThunks RewardInfoPool
 
@@ -305,7 +305,7 @@ data RewardParams = RewardParams
   , totalStake :: Coin
   -- ^ Maximum lovelace supply minus treasury
   }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 instance NoThunks RewardParams
 

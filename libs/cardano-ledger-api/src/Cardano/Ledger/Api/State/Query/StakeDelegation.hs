@@ -10,6 +10,7 @@ module Cardano.Ledger.Api.State.Query.StakeDelegation (
 
   -- * Queries
   queryStakePoolDelegsAndRewards,
+  queryStakeDelegDeposits,
 ) where
 
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -30,6 +31,7 @@ import Cardano.Ledger.State (
   accountsL,
   accountsMapL,
   balanceAccountStateL,
+  depositAccountStateL,
   stakePoolDelegationAccountStateL,
  )
 import Control.DeepSeq (NFData)
@@ -92,3 +94,19 @@ queryStakePoolDelegsAndRewards nes creds =
         { qrdarDelegations = Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMapFiltered
         , qrdarRewards = Map.map (fromCompact . (^. balanceAccountStateL)) accountsMapFiltered
         }
+
+-- | Query staking delegation deposits.
+--
+-- Returns the deposit for each given credential that is currently
+-- registered. Empty 'Set' returns all registered credentials.
+queryStakeDelegDeposits ::
+  EraCertState era =>
+  NewEpochState era ->
+  Set (Credential Staking) ->
+  Map (Credential Staking) Coin
+queryStakeDelegDeposits nes creds =
+  let accountsMap = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+      selected
+        | Set.null creds = accountsMap
+        | otherwise = accountsMap `Map.restrictKeys` creds
+   in Map.map (fromCompact . (^. depositAccountStateL)) selected

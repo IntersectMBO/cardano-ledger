@@ -30,6 +30,27 @@
       * `queryPoolParameters` (`GetStakePoolParams`), renamed to `queryStakePoolParams`, and returns all pools given an empty set.
       * `queryStakePoolDefaultVote` (`QueryStakePoolDefaultVote`)
       * `querySPOStakeDistr` (`GetSPOStakeDistr`), returns all pools given an empty set.
+  - Add new queries:
+    + `queryEpochNo` (`GetEpochNo`) to `Query.Epoch`.
+    + `queryStakeDelegDeposits` (`GetStakeDelegDeposits`) to `Query.StakeDelegation`, returns the account deposit, for all credentials given an empty set.
+    + `queryDRepDelegatees` (`GetDRepStakeDistr`) to `Query.Governance`, returns all DReps delegatees given an empty set.
+    + To `Query.Pool`:
+      * `queryStakePools` (`GetStakePools`).
+      * `queryStakePoolDistrByTotalSupply` (`GetStakeDistribution2`).
+      * `queryStakePoolDistrFromSnapshot` (`GetPoolDistr2`).
+      * `queryStakePoolRelays` (`getPeers from LedgerSupportsPeerSelection used in GetLedgerPeerSnapshot`).
+    + To `Query.UTxO`:
+      * `queryUTxOFull` (`GetUTxOWhole`).
+      * `queryUTxOByAddress` (`GetUTxOByAddress`), returns an empty UTxO given an empty set.
+      * `queryUTxOByTxIn` (`GetUTxOByTxIn`), returns an empty UTxO given an empty set.
+    + To `Query.Debug`:
+      * `queryDebugEpochState` (`DebugEpochState`).
+      * `queryDebugNewEpochState` (`DebugNewEpochState`).
+    + To `Query.Reward`:
+      * `queryNonMyopicMemberRewards` (`GetNonMyopicMemberRewards`).
+      * `queryRewardInfoPools` (`GetRewardInfoPools`).
+  - Move queries from `Cardano.Ledger.Shelley.API.Wallet`:
+    + `queryCurrentSnapshot` to `Query.Snapshot`, replacing `currentSnapshot`.
 
 ### `testlib`
 
