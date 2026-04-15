@@ -36,13 +36,15 @@ import Cardano.Ledger.BaseTypes (
   Anchor (..),
   EpochInterval,
   EpochNo (..),
+  HasZero,
   NonNegativeInterval,
+  NonZero,
   ProtVer (..),
   SlotNo (..),
   StrictMaybe (..),
   UnitInterval,
  )
-import Cardano.Ledger.Binary (EncCBOR, encCBOR, serialize')
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, encCBOR, serialize')
 import Cardano.Ledger.CanonicalState.LedgerCBOR
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
@@ -240,6 +242,16 @@ deriving via
   LedgerCBOR v EpochInterval
   instance
     (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v EpochInterval
+
+deriving via
+  LedgerCBOR v (NonZero a)
+  instance
+    (Era era, NamespaceEra v ~ era, EncCBOR a) => ToCanonicalCBOR v (NonZero a)
+
+deriving via
+  LedgerCBOR v (NonZero a)
+  instance
+    (Era era, NamespaceEra v ~ era, DecCBOR a, HasZero a) => FromCanonicalCBOR v (NonZero a)
 
 data CanonicalExUnits = CanonicalExUnits
   { exUnitsMem :: !Natural
