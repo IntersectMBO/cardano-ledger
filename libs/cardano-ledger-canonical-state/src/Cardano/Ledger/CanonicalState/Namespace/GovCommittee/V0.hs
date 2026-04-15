@@ -36,8 +36,9 @@ import Cardano.SCLS.NamespaceCodec (
  )
 import Cardano.SCLS.Versioned (Versioned (Versioned))
 import qualified Data.Map.Strict as Map
-import Data.MemPack.ByteOrdered (packWord64beM, unpackBigEndianM)
+import Data.MemPack (MemPack (unpackM), packM)
 import Data.Proxy (Proxy (..))
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 
 instance (Era era, NamespaceEra "gov/committee/v0" ~ era) => KnownNamespace "gov/committee/v0" where
@@ -56,8 +57,8 @@ instance
   where
   decodeEntry = fmap GovCommitteeOut <$> fromCanonicalCBOR
 
-newtype GovCommitteeIn = GovCommitteeIn EpochNo
-  deriving (Eq, Ord, Show)
+data GovCommitteeIn = GovCommitteeIn
+  deriving (Eq, Ord, Show, Enum)
 
 newtype GovCommitteeOut = GovCommitteeOut (StrictMaybe CanonicalCommittee)
   deriving (Generic, Eq, Show)
@@ -72,9 +73,10 @@ deriving newtype instance
 
 instance IsKey GovCommitteeIn where
   keySize = namespaceKeySize @"gov/committee/v0"
-  packKeyM (GovCommitteeIn (EpochNo no)) = packWord64beM no
-  unpackKeyM = do
-    GovCommitteeIn . EpochNo <$> unpackBigEndianM
+  packKeyM =
+    packM . fromIntegral @_ @Word8 . fromEnum
+  unpackKeyM =
+    toEnum . fromIntegral @Word8 <$> unpackM
 
 data CanonicalCommittee = CanonicalCommittee
   { committeeMembers :: !(Map.Map (Credential ColdCommitteeRole) EpochNo)
