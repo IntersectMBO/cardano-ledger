@@ -40,7 +40,7 @@ spec ::
   forall era.
   ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = do
-  xit "BodyRefScriptsSizeTooBig" $ do
+  it "BodyRefScriptsSizeTooBig" $ do
     plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
     let scriptSize = originalBytesSize plutusScript
     pp <- getsPParams id
@@ -83,7 +83,7 @@ spec = do
           )
       ]
 
-  xit "BodyRefScriptsSizeTooBig with reference scripts in the same block" $
+  it "BodyRefScriptsSizeTooBig with reference scripts in the same block" $
     whenMajorVersionAtLeast @11 $ do
       Just plutusScript <- pure $ mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
       let scriptSize = originalBytesSize plutusScript
