@@ -46,7 +46,13 @@ import Cardano.Ledger.Binary (EncCBOR, encCBOR, serialize')
 import Cardano.Ledger.CanonicalState.LedgerCBOR
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
-import Cardano.Ledger.Core (AccountId, KeyRoleVRF (StakePoolVRF), VRFVerKeyHash, eraProtVerLow)
+import Cardano.Ledger.Core (
+  AccountAddress,
+  AccountId,
+  KeyRoleVRF (StakePoolVRF),
+  VRFVerKeyHash,
+  eraProtVerLow,
+ )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..))
 import qualified Cardano.Ledger.Hashes as H
@@ -291,6 +297,16 @@ deriving via
   LedgerCBOR v AccountId
   instance
     (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v AccountId
+
+deriving via
+  LedgerCBOR v AccountAddress
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v AccountAddress
+
+deriving via
+  LedgerCBOR v AccountAddress
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v AccountAddress
 
 data CanonicalExUnits = CanonicalExUnits
   { exUnitsMem :: !Natural
