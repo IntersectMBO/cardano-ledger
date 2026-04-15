@@ -1,10 +1,6 @@
 # Version history for `cardano-ledger-core`
 
-## 1.20.0.1
-
-*
-
-## 1.20.0.0
+## 1.21.0.0
 
 * Remove `validMetadatum`
 * Deprecate `BHeaderView` in favour `*EraBlockHeader` typeclasses.
@@ -23,6 +19,11 @@
 
 * Add `TestBlockHeader` and `mkTestBlockHeaderNoNonce` as a replacement to deprecated `BHeaderView` and `makeHeaderView`.
 * Modify `ToExpr` instance for `Mismatch` to display type-level `r` parameter using `Typeable`
+
+## 1.20.0.0
+
+* Add `Storable` instance for `NonZero`, `CompactForm Coin`, `KeyHash`, `ScriptHash`, `Credential` and `StakeWithDelegation`
+* Switch `ActiveStake` to use `VS` for the value in the `VMap`
 
 ## 1.19.0.0
 

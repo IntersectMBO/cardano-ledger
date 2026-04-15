@@ -79,6 +79,7 @@ import Data.PartialOrd (PartialOrd)
 import Data.Primitive.Types
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
+import Foreign.Storable
 import GHC.Generics (Generic)
 import GHC.Stack
 import GHC.TypeLits
@@ -144,7 +145,8 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin {unCompactCoin :: Word64}
-    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON, HasZero, Generic)
+    deriving stock (Show, Generic)
+    deriving newtype (Eq, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON, HasZero, Storable)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
