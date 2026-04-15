@@ -2,12 +2,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -20,7 +17,7 @@ module Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0 (
   GovConstitutionOut (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), EpochNo (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Anchor (..), StrictMaybe (..))
 import Cardano.Ledger.CanonicalState.BasicTypes ()
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Hashes (ScriptHash (..))
@@ -34,23 +31,23 @@ import Cardano.SCLS.NamespaceCodec (
   namespaceKeySize,
  )
 import Cardano.SCLS.Versioned (Versioned (..))
-import Data.MemPack.ByteOrdered (packWord64beM, unpackBigEndianM)
+import Data.MemPack (MemPack (packM, unpackM))
 import Data.Proxy (Proxy (..))
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 
-newtype GovConstitutionIn = GovConstitutionIn EpochNo
-  deriving (Eq, Ord, Show)
+data GovConstitutionIn = GovConstitutionIn
+  deriving (Eq, Ord, Show, Enum)
 
 newtype GovConstitutionOut = GovConstitutionOut CanonicalConstitution
   deriving (Eq, Show, Generic)
 
 instance IsKey GovConstitutionIn where
   keySize = namespaceKeySize @"gov/constitution/v0"
-  packKeyM (GovConstitutionIn (EpochNo epochNo)) = do
-    packWord64beM epochNo
-  unpackKeyM = do
-    epochNo <- unpackBigEndianM
-    return $ GovConstitutionIn (EpochNo epochNo)
+  packKeyM =
+    packM . fromIntegral @_ @Word8 . fromEnum
+  unpackKeyM =
+    toEnum . fromIntegral @Word8 <$> unpackM
 
 data CanonicalConstitution = CanonicalConstitution
   { constitutionAnchor :: !Anchor
