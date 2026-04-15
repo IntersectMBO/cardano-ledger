@@ -64,6 +64,8 @@ type instance NamespaceEra "blocks/v0" = ConwayEra
 
 type instance NamespaceEra "entities/committee/v0" = ConwayEra
 
+type instance NamespaceEra "entities/dormant_epochs/v0" = ConwayEra
+
 type instance NamespaceEra "gov/committee/v0" = ConwayEra
 
 type instance NamespaceEra "gov/constitution/v0" = ConwayEra
