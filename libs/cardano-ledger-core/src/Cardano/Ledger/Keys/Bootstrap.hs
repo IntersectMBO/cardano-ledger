@@ -24,23 +24,18 @@ module Cardano.Ledger.Keys.Bootstrap (
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN (SignedDSIGN (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import qualified Cardano.Crypto.DSIGN.Class as C
+import Cardano.Crypto.DSIGN.Class ()
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.Binary (
-  Annotator,
   DecCBOR (..),
   EncCBOR (..),
-  shelleyProtVer,
-  toPlainDecoder,
+  encodeListLen,
  )
 import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
 import Cardano.Ledger.Binary.Decoding (decodeRecordNamed)
 import Cardano.Ledger.Binary.Plain (
-  FromCBOR (..),
-  ToCBOR (..),
-  encodeListLen,
   serialize',
  )
 import Cardano.Ledger.Hashes (ADDRHASH, EraIndependentTxBody, HASH, Hash, KeyHash (..))
@@ -63,7 +58,7 @@ import Quiet
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Eq, Generic)
   deriving (Show) via Quiet ChainCode
-  deriving newtype (NoThunks, ToCBOR, FromCBOR, EncCBOR, DecCBOR, NFData)
+  deriving newtype (NoThunks, EncCBOR, DecCBOR, NFData)
 
 data BootstrapWitness = BootstrapWitness
   { bwKey :: !(VKey Witness)
@@ -78,29 +73,19 @@ instance NFData BootstrapWitness where
 
 instance NoThunks BootstrapWitness
 
-instance ToCBOR BootstrapWitness where
-  toCBOR cwr@(BootstrapWitness _ _ _ _) =
-    let BootstrapWitness {..} = cwr
+instance EncCBOR BootstrapWitness where
+  encCBOR bw@(BootstrapWitness _ _ _ _) =
+    let BootstrapWitness {..} = bw
      in encodeListLen 4
-          <> toCBOR bwKey
-          <> C.encodeSignedDSIGN bwSignature
-          <> toCBOR bwChainCode
-          <> toCBOR bwAttributes
-
-instance EncCBOR BootstrapWitness
-
-instance FromCBOR BootstrapWitness where
-  fromCBOR = toPlainDecoder Nothing shelleyProtVer decCBOR
-  {-# INLINE fromCBOR #-}
+          <> encCBOR bwKey
+          <> encCBOR bwSignature
+          <> encCBOR bwChainCode
+          <> encCBOR bwAttributes
 
 instance DecCBOR BootstrapWitness where
   decCBOR =
     decodeRecordNamed "BootstrapWitness" (const 4) $
       BootstrapWitness <$> decCBOR <*> decodeSignedDSIGN <*> decCBOR <*> decCBOR
-  {-# INLINE decCBOR #-}
-
-instance DecCBOR (Annotator BootstrapWitness) where
-  decCBOR = pure <$> decCBOR
   {-# INLINE decCBOR #-}
 
 instance Ord BootstrapWitness where

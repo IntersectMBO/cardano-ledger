@@ -283,12 +283,6 @@ instance (EraTxOut era, EraGov era, EraStake era) => DecShareCBOR (UTxOState era
       utxosDonation <- decCBOR
       pure UTxOState {..}
 
-instance (EraTxOut era, EraGov era, EraStake era) => ToCBOR (UTxOState era) where
-  toCBOR = toEraCBOR @era
-
-instance (EraTxOut era, EraGov era, EraStake era) => FromCBOR (UTxOState era) where
-  fromCBOR = fromEraShareCBOR @era
-
 deriving via
   KeyValuePairs (UTxOState era)
   instance
@@ -534,12 +528,6 @@ instance
       lsCertState <- decSharePlusCBOR
       lsUTxOState <- decSharePlusCBOR
       pure LedgerState {lsUTxOState, lsCertState}
-
-instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToCBOR (LedgerState era) where
-  toCBOR = toEraCBOR @era
-
-instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => FromCBOR (LedgerState era) where
-  fromCBOR = fromEraShareCBOR @era
 
 deriving via
   KeyValuePairs (LedgerState era)

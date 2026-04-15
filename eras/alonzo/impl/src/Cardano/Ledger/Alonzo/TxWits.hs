@@ -81,6 +81,7 @@ import Cardano.Ledger.Binary (
   decodeMapLenOrIndef,
   decodeMapLikeEnforceNoDuplicates,
   decodeNonEmptyList,
+  decodeNonEmptySetLikeEnforceNoDuplicates,
   decodeNonEmptySetLikeEnforceNoDuplicatesAnn,
   encodeFoldableEncoder,
   encodeListLen,
@@ -607,42 +608,38 @@ instance
         txWitnessField
         []
     where
-      addrWitsSetDecoder ::
-        (Ord a, DecCBOR (Annotator a), DecCBOR a) => Decoder s (Annotator (Set a))
+      addrWitsSetDecoder :: (Ord a, DecCBOR a) => Decoder s (Set a)
       addrWitsSetDecoder = do
         let
           nonEmptyDecoder = do
             allowTag setTag
-            s <- Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
-            pure $ pure s
+            Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
 
           nonEmptyNoDuplicatesDecoder =
-            decodeNonEmptySetLikeEnforceNoDuplicatesAnn
-              Set.insert
-              (\s -> (Set.size s, s))
+            decodeNonEmptySetLikeEnforceNoDuplicates Set.insert (\s -> (Set.size s, s)) decCBOR
 
         ifDecoderVersionAtLeast (natVersion @12) nonEmptyNoDuplicatesDecoder nonEmptyDecoder
       {-# INLINE addrWitsSetDecoder #-}
 
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
       txWitnessField 0 =
-        fieldAA
+        fieldA
           (\x wits -> wits {atwrAddrTxWits = x})
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
                 addrWitsSetDecoder
-                (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
+                (Set.fromList <$> decodeList decCBOR)
           )
       txWitnessField 1 = fieldAA addScriptsTxWitsRaw (D nativeScriptsDecoder)
       txWitnessField 2 =
-        fieldAA
+        fieldA
           (\x wits -> wits {atwrBootAddrTxWits = x})
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
                 addrWitsSetDecoder
-                (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
+                (Set.fromList <$> decodeList decCBOR)
           )
       txWitnessField 3 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV1)
       txWitnessField 4 = fieldAA (\x wits -> wits {atwrDatsTxWits = x}) From

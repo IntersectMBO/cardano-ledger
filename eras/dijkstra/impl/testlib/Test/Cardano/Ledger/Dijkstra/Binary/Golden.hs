@@ -15,7 +15,13 @@ import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, SupportedLanguage 
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptBinary)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.BaseTypes (Version)
-import Cardano.Ledger.Binary (Annotator, DecoderError (..), DeserialiseFailure (..), Tokens (..))
+import Cardano.Ledger.Binary (
+  Annotator,
+  DecoderError (..),
+  DeserialiseFailure (..),
+  Tokens (..),
+  shelleyProtVer,
+ )
 import qualified Cardano.Ledger.Binary as Binary
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
@@ -64,11 +70,11 @@ goldenEmptyFields version =
           (DeserialiseFailure n msg)
     describe "Untagged" $ do
       it "addrTxWits" . expectFailureOnTxWitsEmptyField @era version 0 $
-        decoderFailure 4 "Empty list found, expected non-empty"
+        decoderFailure 4 "Expected a non-empty set, but got an empty set"
       it "nativeScripts" . expectFailureOnTxWitsEmptyField @era version 1 $
         decoderFailure 4 "Empty list found, expected non-empty"
       it "bootstrapWitness" . expectFailureOnTxWitsEmptyField @era version 2 $
-        decoderFailure 4 "Empty list found, expected non-empty"
+        decoderFailure 4 "Expected a non-empty set, but got an empty set"
       it "plutusV1Script" . expectFailureOnTxWitsEmptyField @era version 3 $
         decoderFailure 4 "Empty list of scripts is not allowed"
       it "plutusData" . expectFailureOnTxWitsEmptyField @era version 4 $
@@ -81,11 +87,11 @@ goldenEmptyFields version =
         decoderFailure 4 "Empty list of scripts is not allowed"
     describe "Tagged" $ do
       it "addrTxWits" . expectFailureOnTxWitsEmptyFieldWithTag @era version 0 $
-        decoderFailure 7 "Empty list found, expected non-empty"
+        decoderFailure 7 "Expected a non-empty set, but got an empty set"
       it "nativeScripts" . expectFailureOnTxWitsEmptyFieldWithTag @era version 1 $
         decoderFailure 7 "Empty list found, expected non-empty"
       it "bootstrapWitness" . expectFailureOnTxWitsEmptyFieldWithTag @era version 2 $
-        decoderFailure 7 "Empty list found, expected non-empty"
+        decoderFailure 7 "Expected a non-empty set, but got an empty set"
       it "plutusV1Script" . expectFailureOnTxWitsEmptyFieldWithTag @era version 3 $
         decoderFailure 7 "Empty list of scripts is not allowed"
       it "plutusData" . expectFailureOnTxWitsEmptyFieldWithTag @era version 4 $
@@ -104,8 +110,8 @@ witsDuplicateVKeyWits =
     , Em
         [ E $ TkTag 258
         , E $ TkListLen 2
-        , E vkeywit
-        , E vkeywit
+        , Ev shelleyProtVer vkeywit
+        , Ev shelleyProtVer vkeywit
         ]
     ]
   where
@@ -181,7 +187,13 @@ goldenDuplicateVKeyWitsDisallowed version =
     expectDecoderFailureAnn @(TxWits era)
       version
       witsDuplicateVKeyWits
-      (DecoderErrorCustom "Annotator" "Duplicates found, expected no duplicates")
+      ( DecoderErrorDeserialiseFailure
+          (Binary.label $ Proxy @(Annotator (TxWits era)))
+          ( DeserialiseFailure
+              208
+              "Final number of elements: 1 does not match the total count that was decoded: 2"
+          )
+      )
 
 goldenDuplicateNativeScriptsDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
 goldenDuplicateNativeScriptsDisallowed version =

@@ -49,7 +49,6 @@ spec = do
     roundTripCborSpec @TxIx
     roundTripCborSpec @CertIx
     roundTripCborSpec @Anchor
-    roundTripAnnCborSpec @BootstrapWitness
     roundTripCborSpec @BootstrapWitness
     roundTripCborSpec @TxId
     roundTripCborSpec @GenDelegPair
@@ -60,6 +59,4 @@ spec = do
     roundTripCborSpec @(SafeHash EraIndependentData)
 
   describe "DecCBOR instances equivalence" $ do
-    decoderEquivalenceSpec @BootstrapWitness minBound maxBound
-    decoderEquivalenceSpec @(WitVKey Witness) minBound maxBound
     decoderEquivalenceSpec @PV1.Data minBound maxBound

@@ -232,9 +232,9 @@ instance
       emptyWitnessSet = ShelleyTxWitsRaw mempty mempty mempty
       witField :: Word -> Field (Annotator (ShelleyTxWitsRaw era))
       witField 0 =
-        fieldAA
+        fieldA
           (\x wits -> wits {stwrAddrTxWits = x})
-          (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
+          (D $ Set.fromList <$> decodeList decCBOR)
       witField 1 =
         fieldAA
           (\x wits -> wits {stwrScriptTxWits = x})
@@ -244,9 +244,9 @@ instance
                 (Map.fromElems (hashScript @era))
           )
       witField 2 =
-        fieldAA
+        fieldA
           (\x wits -> wits {stwrBootAddrTxWits = x})
-          (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
+          (D $ Set.fromList <$> decodeList decCBOR)
       witField n = fieldAA (\(_ :: Void) wits -> wits) (Invalid n)
 
 mapTraverseableDecoderA ::

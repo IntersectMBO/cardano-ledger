@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `PulsingSnapshot`, `EnactState`, `ConwayGovPredFailure`
 * Add `validateRefScriptSize`, `updateDormantDRepExpiries`, `updateVotingDRepExpiries`
 * Add `ApplyTick` instance for `ConwayEra`
 * Add `ConwayUtxosEnv`

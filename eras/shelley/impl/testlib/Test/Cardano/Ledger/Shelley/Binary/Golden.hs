@@ -100,7 +100,7 @@ goldenNewEpochStateExpectation
                 , E casTreasury
                 , E casReserves
                 ]
-            , E esLState
+            , Ev ver esLState
             , Em
                 [ E (TkListLen 4)
                 , snapShotEnc ssStakeMark

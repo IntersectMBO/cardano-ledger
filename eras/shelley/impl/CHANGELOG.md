@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `UTxOState`, `LedgerState`, `ShelleyTxOut`
 * Add `ApplyTick` typeclass with `applyTick` method, extracted from `ApplyBlock`.
 * Remove `validMetadata` from `SoftForks`
 * Add `updateUTxOStateNoFees`

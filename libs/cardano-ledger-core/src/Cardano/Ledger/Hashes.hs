@@ -203,7 +203,6 @@ newtype ScriptHash
     ( NFData
     , NoThunks
     , ToCBOR
-    , FromCBOR
     , EncCBOR
     , DecCBOR
     , ToJSON
@@ -231,8 +230,6 @@ newtype VRFVerKeyHash (r :: KeyRoleVRF) = VRFVerKeyHash
     ( NFData
     , NoThunks
     , Generic
-    , ToCBOR
-    , FromCBOR
     , EncCBOR
     , DecCBOR
     , ToJSONKey
@@ -341,8 +338,6 @@ newtype SafeHash i = SafeHash (Hash.Hash HASH i)
     , NoThunks
     , NFData
     , SafeToHash
-    , ToCBOR
-    , FromCBOR
     , EncCBOR
     , DecCBOR
     , ToJSON

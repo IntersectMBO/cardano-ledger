@@ -871,7 +871,7 @@ newtype BlocksMade = BlocksMade
 newtype TxIx = TxIx {unTxIx :: Word16}
   deriving stock (Eq, Ord, Show, Generic)
   deriving newtype
-    (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, DecCBOR, ToJSON, MemPack)
+    (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToJSON, MemPack)
 
 instance Random TxIx
 
@@ -899,7 +899,7 @@ mkTxIxPartial i =
 -- from other integral types that are larger than `Word16`
 newtype CertIx = CertIx {unCertIx :: Word16}
   deriving stock (Eq, Ord, Show)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, ToJSON)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToJSON)
 
 instance Random CertIx
 

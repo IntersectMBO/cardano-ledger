@@ -45,13 +45,14 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   FromCBOR (..),
   ToCBOR (..),
+  encodeListLen,
   ifDecoderVersionAtLeast,
   natVersion,
   shelleyProtVer,
   toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Hashes (ADDRHASH, Hash, ScriptHash (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
@@ -230,7 +231,17 @@ instance NoThunks StakeReference
 newtype SlotNo32 = SlotNo32 Word32
   deriving stock (Show, Generic)
   deriving newtype
-    (Eq, Ord, Num, Bounded, NFData, NoThunks, EncCBOR, DecCBOR, FromCBOR, ToCBOR, FromJSON, ToJSON)
+    ( Eq
+    , Ord
+    , Num
+    , Bounded
+    , NFData
+    , NoThunks
+    , EncCBOR
+    , DecCBOR
+    , FromJSON
+    , ToJSON
+    )
 
 instance Random SlotNo32
 
@@ -271,14 +282,6 @@ mkPtrNormalized slotNo txIx certIx =
     certIx16 <- integralToBounded certIx
     pure $ Ptr (SlotNo32 slotNo32) (TxIx txIx16) (CertIx certIx16)
 
-instance ToCBOR Ptr where
-  toCBOR (Ptr slotNo txIx certIx) = toCBOR (slotNo, txIx, certIx)
-
-instance FromCBOR Ptr where
-  fromCBOR = do
-    (slotNo, txIx, certIx) <- fromCBOR
-    pure $ Ptr slotNo txIx certIx
-
 instance ToJSONKey Ptr
 
 instance ToKeyValuePairs Ptr where
@@ -314,7 +317,10 @@ ptrCertIx (Ptr _ _ cIx) = cIx
 -- NOTE: Credential serialization is unversioned, because it is needed for node-to-client
 -- communication. It would be ok to change it in the future, but that will require change
 -- in consensus
-instance Typeable kr => EncCBOR (Credential kr)
+instance EncCBOR (Credential kr) where
+  encCBOR = \case
+    KeyHashObj kh -> encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR kh
+    ScriptHashObj hs -> encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR hs
 
 instance Typeable kr => DecCBOR (Credential kr) where
   decCBOR =
@@ -326,9 +332,7 @@ instance Typeable kr => DecCBOR (Credential kr) where
   {-# INLINE decCBOR #-}
 
 instance Typeable kr => ToCBOR (Credential kr) where
-  toCBOR = \case
-    KeyHashObj kh -> Plain.encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
-    ScriptHashObj hs -> Plain.encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
+  toCBOR = toPlainEncoding shelleyProtVer . encCBOR
 
 instance Typeable kr => FromCBOR (Credential kr) where
   fromCBOR = toPlainDecoder Nothing shelleyProtVer decCBOR

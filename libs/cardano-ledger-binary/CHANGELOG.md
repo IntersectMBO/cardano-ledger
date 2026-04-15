@@ -2,11 +2,13 @@
 
 ## 1.9.0.0
 
+* Add `decodeNonEmptySetLikeEnforceNoDuplicates`
 * Change `decodeIPv4`, `decodeIPv6`, `encodeIPv4`, `encodeIPv6`, `ipv4ToBytes`, `ipv6ToBytes` to work on `Cardano.Base.IP.IPv4/IPv6`
 * Remove default implementation for `DecCBOR` class
 
 ### `testlib`
 
+* Remove `roundTripFailureExpectation`, `roundTripCborExpectation`, and `cborTrip`
 * Add `noTwiddle`, `HuddleEnv`, `toGenEnv`
 * Replace `SpecWith (CTreeRoot MonoReferenced)` with `SpecWith HuddleEnv` in Huddle tests
 * Replace `CuddleData` with `CTreeRoot MonoReferenced`
