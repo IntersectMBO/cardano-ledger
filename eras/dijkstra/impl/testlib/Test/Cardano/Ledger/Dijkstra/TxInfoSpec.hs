@@ -20,6 +20,7 @@ import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
 import Cardano.Ledger.BaseTypes (Globals (..), Inject (..), Network (..), ProtVer (..))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..))
 import Cardano.Ledger.Dijkstra.State (UTxO (..))
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Plutus (Language (..), SLanguage (..))
@@ -120,3 +121,23 @@ spec = describe "TxInfo" $ do
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
         pure $
           txInfoResult `shouldBeLeft` inject (DirectDepositsNotSupported @era dd)
+      prop "AccountBalanceIntervalsNotSupported" $ do
+        abi <- arbitrary `suchThat` (not . null . unAccountBalanceIntervals)
+        let
+          tx =
+            mkBasicTx @era @TopTx $
+              mkBasicTxBody & accountBalanceIntervalsTxBodyL .~ abi
+          ledgerTxInfo =
+            LedgerTxInfo
+              { ltiProtVer = ProtVer (eraProtVerLow @era) 0
+              , ltiEpochInfo = epochInfo testGlobals
+              , ltiSystemStart = systemStart testGlobals
+              , ltiUTxO = mempty
+              , ltiTx = tx
+              , ltiMemoizedSubTransactions = mempty
+              }
+          txInfoResult =
+            ($ SpendingPurpose AsPurpose)
+              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+        pure $
+          txInfoResult `shouldBeLeft` inject (AccountBalanceIntervalsNotSupported @era abi)
