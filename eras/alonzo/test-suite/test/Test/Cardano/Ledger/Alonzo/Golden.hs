@@ -35,8 +35,10 @@ import Cardano.Ledger.Plutus.ExUnits (
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
+import Control.Monad ((>=>))
 import Data.Aeson (eitherDecodeFileStrict)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as B16L
 import qualified Data.ByteString.Lazy as BSL
@@ -66,6 +68,31 @@ import Test.Cardano.Protocol.TPraos.Examples (
   ledgerExamplesAlonzo,
  )
 import Test.Hspec (Expectation, Spec, describe, it, shouldBe)
+import Test.Hspec.Golden
+
+goldenBsTest :: String -> BSL.ByteString -> Golden BSL.ByteString
+goldenBsTest goldenFileName actualOutput =
+  Golden
+    { output = actualOutput
+    , encodePretty = show
+    , writeToFile = BSL.writeFile
+    , readFromFile = BSL.readFile
+    , goldenFile = goldenFileName
+    , actualFile = Nothing
+    , failFirstTime = False
+    }
+
+goldenJsonTest :: (Aeson.FromJSON a, Aeson.ToJSON a) => String -> a -> Golden a
+goldenJsonTest goldenFileName actualOutput =
+  Golden
+    { output = actualOutput
+    , encodePretty = show . Aeson.encodePretty
+    , writeToFile = \fp content -> BSL.writeFile fp $ Aeson.encode content
+    , readFromFile = BSL.readFile >=> Aeson.throwDecode
+    , goldenFile = goldenFileName
+    , actualFile = Nothing
+    , failFirstTime = False
+    }
 
 readDataFile :: FilePath -> IO BSL.ByteString
 readDataFile name = getDataFileName name >>= BSL.readFile
@@ -184,11 +211,13 @@ goldenCborSerialization :: Spec
 goldenCborSerialization =
   describe "golden tests - CBOR serialization" $ do
     it "Alonzo Block" $ do
-      expected <- readDataFile "golden/block.cbor"
-      Plain.serialize (pleBlock ledgerExamplesAlonzo) `shouldBe` expected
+      goldenFileName <- getDataFileName "golden/block.cbor"
+      return $ goldenBsTest goldenFileName $ Plain.serialize (pleBlock ledgerExamplesAlonzo)
     it "Alonzo Tx" $ do
-      expected <- readDataFile "golden/tx.cbor"
-      Plain.serialize (leTx $ pleLedgerExamples ledgerExamplesAlonzo) `shouldBe` expected
+      goldenFileName <- getDataFileName "golden/tx.cbor"
+      return $
+        goldenBsTest goldenFileName $
+          Plain.serialize (leTx $ pleLedgerExamples ledgerExamplesAlonzo)
 
 goldenJsonSerialization :: Spec
 goldenJsonSerialization =
@@ -212,34 +241,34 @@ goldenJsonSerialization =
                 , invalidHereafter = SJust (SlotNo 12354)
                 }
             ]
-      expected <- Aeson.throwDecode =<< readDataFile "golden/ValidityInterval.json"
-      Aeson.toJSON value `shouldBe` expected
+      goldenFileName <- getDataFileName "golden/ValidityInterval.json"
+      return $ goldenJsonTest goldenFileName $ Aeson.toJSON value
     it "IsValid" $ do
       let value =
             [ IsValid True
             , IsValid False
             ]
-      expected <- Aeson.throwDecode =<< readDataFile "golden/IsValid.json"
-      Aeson.toJSON value `shouldBe` expected
+      goldenFileName <- getDataFileName "golden/IsValid.json"
+      return $ goldenJsonTest goldenFileName $ Aeson.toJSON value
     it "FailureDescription" $ do
       let value =
             [ PlutusFailure "A description" "A reconstruction"
             ]
-      expected <- Aeson.throwDecode =<< readDataFile "golden/FailureDescription.json"
-      Aeson.toJSON value `shouldBe` expected
+      goldenFileName <- getDataFileName "golden/FailureDescription.json"
+      return $ goldenJsonTest goldenFileName $ Aeson.toJSON value
     it "TagMismatchDescription" $ do
       let value =
             [ PassedUnexpectedly
             , FailedUnexpectedly (NE.fromList [PlutusFailure "A description" "A reconstruction"])
             ]
-      expected <- Aeson.throwDecode =<< readDataFile "golden/TagMismatchDescription.json"
-      Aeson.toJSON value `shouldBe` expected
+      goldenFileName <- getDataFileName "golden/TagMismatchDescription.json"
+      return $ goldenJsonTest goldenFileName $ Aeson.toJSON value
 
 goldenGenesisSerialization :: Spec
 goldenGenesisSerialization =
   describe "golden tests - Alonzo Genesis serialization" $ do
     it "JSON deserialization" $ do
-      let file = "golden/mainnet-alonzo-genesis.json"
+      file <- getDataFileName "golden/mainnet-alonzo-genesis.json"
       deserialized <- (eitherDecodeFileStrict file :: IO (Either String AlonzoGenesis))
       deserialized `shouldBe` Right expectedGenesis
 
