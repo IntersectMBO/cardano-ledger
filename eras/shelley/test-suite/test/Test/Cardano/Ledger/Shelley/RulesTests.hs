@@ -23,14 +23,9 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set.NonEmpty as NES
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
-import Test.Cardano.Ledger.Shelley.Examples.Chain (testCHAINExample)
-import Test.Cardano.Ledger.Shelley.Examples.EmptyBlock (exEmptyBlock)
 import Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation (genesisDelegExample)
 import Test.Cardano.Ledger.Shelley.Examples.Mir (mirExample)
 import Test.Cardano.Ledger.Shelley.Examples.MirTransfer (testMIRTransfer)
-import Test.Cardano.Ledger.Shelley.Examples.NetworkID (testPoolNetworkId)
-import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (poolLifetimeExample)
-import Test.Cardano.Ledger.Shelley.Examples.PoolReReg (poolReRegExample)
 import Test.Cardano.Ledger.Shelley.Examples.Updates (updatesExample)
 import Test.Cardano.Ledger.Shelley.MultiSigExamples (
   aliceAndBob,
@@ -51,14 +46,10 @@ chainExamples :: TestTree
 chainExamples =
   testGroup
     "CHAIN examples"
-    [ testCase "empty block" $ testCHAINExample exEmptyBlock
-    , poolLifetimeExample
-    , poolReRegExample
-    , updatesExample
+    [ updatesExample
     , genesisDelegExample
     , mirExample
     , testMIRTransfer
-    , testPoolNetworkId
     ]
 
 multisigExamples :: TestTree

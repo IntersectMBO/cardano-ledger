@@ -5,7 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.PoolSpec (spec) where
 
@@ -93,6 +92,32 @@ spec = describe "POOL" $ do
             submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
             expectPool khNew Nothing
       expectPool kh (Just vrf)
+
+    it "new pool parameters are adopted at the epoch boundary after re-registration" $ do
+      (kh, vrf) <- registerNewPool
+      -- Read the initial cost
+      pools <- psStakePools <$> getPState
+      initialCost <- case Map.lookup kh pools of
+        Just sps -> pure $ spsCost sps
+        Nothing -> assertFailure "Pool not found after registration"
+      -- Re-register with a different cost
+      pps <- poolParams kh vrf
+      let newCost = initialCost <> Coin 100
+          newPps = pps & sppCostL .~ newCost
+      submitTx_ $ registerPoolTx newPps
+      -- Before epoch boundary, current pool still has old cost
+      pools' <- psStakePools <$> getPState
+      spsCost <$> Map.lookup kh pools' `shouldBe` Just initialCost
+      -- Future pool params should have the new cost
+      fps <- psFutureStakePoolParams <$> getPState
+      sppCost <$> Map.lookup kh fps `shouldBe` Just newCost
+      passEpoch
+      -- After epoch boundary, pool should have adopted the new cost
+      adoptedPools <- psStakePools <$> getPState
+      spsCost <$> Map.lookup kh adoptedPools `shouldBe` Just newCost
+      -- Future params should be cleared
+      fps' <- psFutureStakePoolParams <$> getPState
+      Map.lookup kh fps' `shouldBe` Nothing
 
     it "re-register a pool and change its delegations in the same epoch" $ do
       (poolKh, _) <- registerNewPool
