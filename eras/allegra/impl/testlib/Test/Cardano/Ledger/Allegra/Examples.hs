@@ -24,6 +24,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Slotting.Slot
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Examples (
@@ -56,11 +57,14 @@ mkAllegraBasedExampleTx ::
   Tx TopTx era
 mkAllegraBasedExampleTx txBody =
   mkShelleyBasedExampleTx @era txBody
+    & witsTxL . scriptTxWitsL <>~ Map.singleton (hashScript script) script
     & auxDataTxL
       %~ fmap
         ( \auxData ->
             auxData & nativeScriptsTxAuxDataL <>~ StrictSeq.singleton exampleTimelock
         )
+  where
+    script = fromNativeScript exampleTimelock
 
 exampleAllegraBasedShelleyTxBody ::
   forall era.

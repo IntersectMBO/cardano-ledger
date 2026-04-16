@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -29,6 +30,8 @@ module Test.Cardano.Ledger.Shelley.Examples (
   exampleTxIns,
   exampleProposedPPUpdates,
   exampleByronAddress,
+  exampleShelleyScript,
+  exampleBootstrapWitness,
   testShelleyGenesis,
   -- utility functions
   keyToCredential,
@@ -56,6 +59,13 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Shelley.Scripts (
+  ShelleyEraScript,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
 import Cardano.Slotting.EpochInfo
@@ -73,7 +83,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Time
 import Data.Word (Word64, Word8)
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((&), (.~), (<>~))
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, unsafeBoundRational)
@@ -120,8 +130,13 @@ ledgerExamples =
         DelegateeNotRegisteredDELEG @ShelleyEra (mkKeyHash 1)
     )
     exampleCoin
-    (mkShelleyBasedExampleTx $ exampleTxBodyShelley $ Coin 100000)
+    ( mkShelleyBasedExampleTx (exampleTxBodyShelley (Coin 100000))
+        & witsTxL . scriptTxWitsL .~ Map.singleton scriptHash script
+    )
     emptyFromByronTranslationContext
+  where
+    script = fromNativeScript @ShelleyEra exampleShelleyScript
+    scriptHash = hashScript script
 
 mkShelleyBasedLedgerExamples ::
   forall era.
@@ -358,8 +373,9 @@ exampleAuxDataMap =
   Map.fromList
     [ (1, S "string")
     , (2, B $ byteArrayFromShortByteString "bytes")
-    , (3, List [I 1, I 2])
-    , (4, Map [(I 3, B $ byteArrayFromShortByteString "b")])
+    , (3, I 1)
+    , (4, List [I 1, I 2])
+    , (5, Map [(I 3, B $ byteArrayFromShortByteString "b")])
     ]
 
 exampleTxIns :: Set TxIn
@@ -372,13 +388,27 @@ exampleCerts :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => StrictSeq (Tx
 exampleCerts =
   StrictSeq.fromList
     [ RegTxCert (keyToCredential exampleStakeKey)
+    , UnRegTxCert (ScriptHashObj (mkScriptHash 1))
+    , DelegStakeTxCert (keyToCredential exampleStakeKey) (sppId exampleStakePoolParams)
     , RegPoolTxCert exampleStakePoolParams
+    , RetirePoolTxCert (sppId exampleStakePoolParams) (EpochNo 2)
+    , GenesisDelegTxCert
+        (mkKeyHash 3)
+        (mkKeyHash 4)
+        (coerce exampleVrfVerKeyHash :: VRFVerKeyHash GenDelegVRF)
     , MirTxCert $
         MIRCert ReservesMIR $
           StakeAddressesMIR $
             Map.fromList
-              [ (keyToCredential (mkDSIGNKeyPair 2), DeltaCoin 110)
+              [ (keyToCredential (mkDSIGNKeyPair 2), DeltaCoin 1)
               ]
+    , MirTxCert $
+        MIRCert TreasuryMIR $
+          StakeAddressesMIR $
+            Map.fromList
+              [ (keyToCredential (mkDSIGNKeyPair 3), DeltaCoin 1)
+              ]
+    , MirTxCert $ MIRCert ReservesMIR $ SendToOppositePotMIR (Coin 1)
     ]
 
 exampleWithdrawals :: Withdrawals
@@ -428,18 +458,43 @@ exampleVrfVerKeyHash = VRFVerKeyHash "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652
 exampleAccountAddress :: AccountAddress
 exampleAccountAddress = AccountAddress Testnet (AccountId (keyToCredential exampleStakeKey))
 
-exampleByronAddress :: Addr
-exampleByronAddress = AddrBootstrap (BootstrapAddress byronAddr)
+exampleByronSigningKey :: Byron.SigningKey
+exampleByronSigningKey = Byron.SigningKey $ Byron.generate seed (mempty :: ByteString)
   where
-    byronAddr = Byron.makeAddress asd attrs
-    asd = Byron.VerKeyASD byronVerificationKey
-    attrs =
-      Byron.AddrAttributes
+    seed = "12345678901234567890123456789012" :: ByteString
+
+exampleByronAddr :: Byron.Address
+exampleByronAddr =
+  Byron.makeAddress
+    (Byron.VerKeyASD (Byron.toVerification exampleByronSigningKey))
+    ( Byron.AddrAttributes
         (Just (Byron.HDAddressPayload "a compressed lenna.png"))
         (Byron.NetworkTestnet 0)
-    byronVerificationKey = Byron.toVerification signingKey
-    signingKey = Byron.SigningKey $ Byron.generate seed (mempty :: ByteString)
-    seed = "12345678901234567890123456789012" :: ByteString
+    )
+
+exampleByronAddress :: Addr
+exampleByronAddress = AddrBootstrap (BootstrapAddress exampleByronAddr)
+
+exampleBootstrapWitness :: Hash HASH EraIndependentTxBody -> BootstrapWitness
+exampleBootstrapWitness txBodyHash =
+  makeBootstrapWitness txBodyHash exampleByronSigningKey (Byron.addrAttributes exampleByronAddr)
+
+exampleShelleyScript :: ShelleyEraScript era => NativeScript era
+exampleShelleyScript =
+  RequireMOf 2 $
+    StrictSeq.fromList
+      [ RequireSignature (mkKeyHash 0)
+      , RequireAllOf $
+          StrictSeq.fromList
+            [ RequireSignature (mkKeyHash 1)
+            , RequireSignature (mkKeyHash 2)
+            ]
+      , RequireAnyOf $
+          StrictSeq.fromList
+            [ RequireSignature (mkKeyHash 3)
+            , RequireSignature (mkKeyHash 4)
+            ]
+      ]
 
 mkShelleyBasedWitnesses ::
   EraTx era =>
@@ -449,7 +504,9 @@ mkShelleyBasedWitnesses ::
 mkShelleyBasedWitnesses txBody keyPairWits =
   mkBasicTxWits
     & addrTxWitsL .~ mkWitnessesVKey (coerce (txIdTxBody txBody)) keyPairWits
-    & bootAddrTxWitsL .~ mempty
+    & bootAddrTxWitsL <>~ Set.singleton (exampleBootstrapWitness txBodyHash)
+  where
+    txBodyHash = extractHash (unTxId (txIdTxBody txBody))
 
 -- | @mkKeyPair'@ from @Test.Cardano.Ledger.Shelley.Utils@ doesn't work for real
 -- crypto:
