@@ -5,6 +5,7 @@
 
 module Test.Cardano.Ledger.Binary.Plain.Golden (
   Enc (E, Ev, Em),
+  goldenPrettyCBOR,
   DiffView (..),
   expectGoldenEncoding,
   expectGoldenToCBOR,
@@ -15,11 +16,14 @@ module Test.Cardano.Ledger.Binary.Plain.Golden (
 
 import Cardano.Ledger.Binary (EncCBOR (encCBOR), Version, toPlainEncoding)
 import Cardano.Ledger.Binary.Plain
+import Codec.CBOR.Pretty (prettyHexEnc)
 import qualified Data.ByteString as BS
 import Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Lazy as BSL
+import System.FilePath (replaceExtension)
 import Test.Cardano.Ledger.Binary.TreeDiff
 import Test.Hspec
+import Test.Hspec.Golden (Golden (..))
 
 data Enc where
   E :: ToCBOR a => a -> Enc
@@ -93,3 +97,18 @@ expectGoldenEncHexBytes viewDiff actual hexBytes = do
     Left err -> expectationFailure $ "Unexpected failure during Base16 decoding: " ++ err
     Right expectedBytes ->
       expectGoldenEncBytes viewDiff actual expectedBytes
+
+-- | Compare the pretty-printed CBOR encoding of a value against a golden file.
+-- Uses 'Codec.CBOR.Pretty.prettyHexEnc' for human-readable annotated hex output.
+-- Returns a 'Golden' value for use with hspec-golden's @it@.
+goldenPrettyCBOR :: ToCBOR a => a -> FilePath -> Golden String
+goldenPrettyCBOR actual goldenFilePath =
+  Golden
+    { output = prettyHexEnc (toCBOR actual) <> "\n"
+    , encodePretty = id
+    , writeToFile = writeFile
+    , readFromFile = readFile
+    , goldenFile = goldenFilePath
+    , actualFile = Just (replaceExtension goldenFilePath ".actual")
+    , failFirstTime = True
+    }

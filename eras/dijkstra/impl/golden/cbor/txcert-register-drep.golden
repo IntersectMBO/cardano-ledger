@@ -1,0 +1,9 @@
+
+84  # list(4)
+   10  # word(16)
+   82  # list(2)
+      00  # word(0)
+      58 1c ac df 47 16 62 38 23 85 72 5e 8a d8 b2 a4 
+      b8 5d db 61 a4 e0 7d 7f c1 b5 68 21 3c a8  # bytes(28)
+   1a 1d cd 65 00  # integer(500000000)
+   f6  # null

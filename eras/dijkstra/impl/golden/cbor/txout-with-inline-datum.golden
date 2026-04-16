@@ -1,0 +1,20 @@
+
+a3  # map(3)
+    # key
+   00  # word(0)
+    # value
+   58 39 00 90 38 84 93 6f ec 86 cc d3 e6 13 3e 28 
+   9e 7f 95 0b 70 9a 60 bf 64 af 0f 9d c6 44 10 8a 
+   20 9f 61 d4 a1 a3 fa 94 41 8e 4a 40 28 80 b7 58 
+   cf 52 55 2f 13 fe 21 2a 94 b4 36  # bytes(57)
+    # key
+   01  # word(1)
+    # value
+   1a 00 26 25 a0  # integer(2500000)
+    # key
+   02  # word(2)
+    # value
+   82  # list(2)
+      01  # word(1)
+      d8 18  # tag(24)
+         42 18 63  # bytes(2)

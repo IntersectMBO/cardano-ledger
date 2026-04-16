@@ -14,6 +14,7 @@ build-type: Simple
 data-files:
   cddl/data/dijkstra.cddl
   golden/*.json
+  golden/cbor/*.golden
 
 extra-source-files: CHANGELOG.md
 
@@ -172,6 +173,7 @@ library testlib
   build-depends:
     base,
     bytestring,
+    cardano-crypto-class,
     cardano-data,
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
@@ -186,6 +188,7 @@ library testlib
     containers,
     generic-random,
     microlens,
+    plutus-ledger-api,
     small-steps,
     tree-diff,
 
@@ -255,7 +258,7 @@ test-suite tests
 
   build-depends:
     base,
-    cardano-ledger-alonzo,
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-babbage:testlib,
     cardano-ledger-binary:testlib,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},

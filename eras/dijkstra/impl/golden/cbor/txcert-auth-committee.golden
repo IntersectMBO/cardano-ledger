@@ -1,0 +1,11 @@
+
+83  # list(3)
+   0e  # word(14)
+   82  # list(2)
+      00  # word(0)
+      58 1c 02 77 98 8e 2e f9 01 0b a6 7e f2 d6 a4 9d 
+      7c ca a6 5b 05 cc 1a 75 87 59 9a 7d a0 44  # bytes(28)
+   82  # list(2)
+      00  # word(0)
+      58 1c 79 75 f5 7c 20 f1 57 14 a1 3a 49 4e 9c 25 
+      a9 a1 46 2d 47 13 d4 9c ba 04 32 53 06 5f  # bytes(28)
