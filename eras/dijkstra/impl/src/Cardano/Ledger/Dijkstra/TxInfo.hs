@@ -50,6 +50,7 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (
+  AccountBalanceIntervals (..),
   PlutusScript (..),
   pattern GuardingPurpose,
  )
@@ -98,6 +99,8 @@ data DijkstraContextError era
     SubTxIsNotSupported !TxId
   | -- | Attempt to use PlutusV1-V3 with non-empty direct deposits will result in this failure
     DirectDepositsNotSupported !DirectDeposits
+  | -- | Attempt to use PlutusV1-V3 with non-empty account balance intervals will result in this failure
+    AccountBalanceIntervalsNotSupported !(AccountBalanceIntervals era)
   deriving (Generic)
 
 deriving instance
@@ -146,6 +149,8 @@ instance
     SubTxIsNotSupported txId -> kindObject "SubTxIsNotSupported" ["txId" .= toJSON txId]
     DirectDepositsNotSupported dd ->
       kindObject "DirectDepositsNotSupported" ["direct_deposits" .= show dd]
+    AccountBalanceIntervalsNotSupported abi ->
+      kindObject "AccountBalanceIntervalsNotSupported" ["account_balance_intervals" .= show abi]
 
 instance
   ( EraPParams era
@@ -163,6 +168,7 @@ instance
     18 -> SumD PointerPresentInOutput <! From
     19 -> SumD SubTxIsNotSupported <! From
     20 -> SumD DirectDepositsNotSupported <! From
+    21 -> SumD AccountBalanceIntervalsNotSupported <! From
     k -> Invalid k
 
 instance
@@ -182,6 +188,7 @@ instance
       PointerPresentInOutput x -> Sum PointerPresentInOutput 18 !> To x
       SubTxIsNotSupported txId -> Sum SubTxIsNotSupported 19 !> To txId
       DirectDepositsNotSupported dd -> Sum DirectDepositsNotSupported 20 !> To dd
+      AccountBalanceIntervalsNotSupported abi -> Sum AccountBalanceIntervalsNotSupported 21 !> To abi
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
@@ -402,6 +409,11 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
   unless (null $ unDirectDeposits directDeposits) $
     Left $
       inject (DirectDepositsNotSupported directDeposits :: DijkstraContextError era)
+  let accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
+  unless (null $ unAccountBalanceIntervals accountBalanceIntervals) $
+    Left $
+      inject (AccountBalanceIntervalsNotSupported accountBalanceIntervals :: DijkstraContextError era)
+
 transFailSubTxIsNotSupported ::
   forall l era.
   (EraTx era, Inject (DijkstraContextError era) (ContextError era)) =>
