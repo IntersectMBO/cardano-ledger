@@ -841,6 +841,7 @@ instance
             sgGenDelegs = mempty
           , sgInitialFunds = mempty
           , sgStaking = mempty
+          , sgExtraConfig = SNothing
           }
     case validateGenesis gen of
       Right () -> pure gen

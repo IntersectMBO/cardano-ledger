@@ -2,6 +2,10 @@
 
 ## 1.19.0.0
 
+* Add `InjectionData`, `foldInjectionData`, `InjectionError` to `Cardano.Ledger.Shelley.Genesis`
+* Add `ShelleyExtraConfig` type to `Cardano.Ledger.Shelley.Genesis`
+* Add `sgExtraConfig` field to `ShelleyGenesis`
+* Change `registerInitialFunds`, `shelleyRegisterInitialFundsThenStaking`, and `injectIntoTestState` to require `MonadIO` and `MonadThrow`, and accept a `HasFS m h` parameter for streaming initial funds from external files
 * Remove `ToCBOR` and `FromCBOR` instances for `UTxOState`, `LedgerState`, `ShelleyTxOut`
 * Add `ApplyTick` typeclass with `applyTick` method, extracted from `ApplyBlock`.
 * Remove `validMetadata` from `SoftForks`

@@ -128,7 +128,10 @@ library
     containers,
     data-default,
     deepseq,
+    fs-api ^>=0.4,
     groups,
+    io-classes,
+    json-stream >=0.4,
     mempack,
     microlens,
     mtl,
@@ -136,6 +139,7 @@ library
     primitive,
     quiet,
     small-steps >=1.1.1,
+    streaming >=0.2,
     text,
     time,
     transformers,
@@ -295,3 +299,33 @@ test-suite tests
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, cddl},
     testlib,
+
+test-suite memory
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: test/memory
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -threaded
+    -rtsopts
+
+  build-depends:
+    aeson,
+    base,
+    bytestring,
+    cardano-crypto-class,
+    cardano-ledger-shelley,
+    containers,
+    directory,
+    filepath,
+    fs-api,
+    temporary,
+    text,
+    weigh,
