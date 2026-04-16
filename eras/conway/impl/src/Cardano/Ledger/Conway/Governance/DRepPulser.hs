@@ -49,9 +49,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
-  FromCBOR (..),
   Interns,
-  ToCBOR (..),
   decNoShareCBOR,
   decodeMap,
   decodeStrictSeq,
@@ -173,12 +171,6 @@ instance EraPParams era => DecShareCBOR (PulsingSnapshot era) where
 
 instance EraPParams era => DecCBOR (PulsingSnapshot era) where
   decCBOR = decNoShareCBOR
-
-instance EraPParams era => ToCBOR (PulsingSnapshot era) where
-  toCBOR = toEraCBOR @era
-
-instance EraPParams era => FromCBOR (PulsingSnapshot era) where
-  fromCBOR = fromEraCBOR @era
 
 -- | We iterate over a pulse-sized chunk of the Accounts.
 --

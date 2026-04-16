@@ -415,7 +415,7 @@ tests =
             )
     , case mkWitnessVKey testTxbHash testKey1 of
         w@(WitVKey vk _sig) ->
-          checkEncodingCBORAnnotated
+          checkEncodingCBOR
             shelleyProtVer
             "vkey_witnesses"
             w -- Transaction _witnessVKeySet element

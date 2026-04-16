@@ -186,6 +186,9 @@ instance Semigroup ScriptResult where
 instance Monoid ScriptResult where
   mempty = Passes mempty
 
+-- Note: we only have ToCBOR/FromCBOR for this type and no EncCBOR/DecCBOR,
+-- because its first field is the protocol version, which is used to decode the
+-- other fields in a version-aware way.
 instance ToCBOR PlutusWithContext where
   toCBOR (PlutusWithContext {..}) =
     Plain.encodeListLen 6

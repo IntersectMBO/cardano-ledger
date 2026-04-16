@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `DijkstraGovPredFailure`
 * Add `getDijkstraScriptsProvided`
 * Add `MissingRequiredGuards` constructor to `DijkstraUtxowPredFailure`
 * Add `DijkstraUtxoEnv` and use it as `Environemnt` in `STS` instance of `UTXOW`

@@ -78,6 +78,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeListLikeWithCount,
   decodeListLikeWithCountT,
   decodeSetLikeEnforceNoDuplicates,
+  decodeNonEmptySetLikeEnforceNoDuplicates,
   decodeListLikeEnforceNoDuplicates,
   decodeMapContents,
 
@@ -1048,6 +1049,27 @@ decodeSetLikeEnforceNoDuplicates insert getFinalWithLen decodeElement = do
   allowTag setTag
   decodeListLikeEnforceNoDuplicates decodeListLenOrIndef insert getFinalWithLen decodeElement
 {-# INLINE decodeSetLikeEnforceNoDuplicates #-}
+
+-- | Same as `decodeSetLikeEnforceNoDuplicates`, but also enforces that the set is non-empty.
+decodeNonEmptySetLikeEnforceNoDuplicates ::
+  forall s a b c.
+  Monoid b =>
+  -- | Add an element into the decoded Set like data structure
+  (a -> b -> b) ->
+  -- | Get the final data structure and the number of elements it has.
+  (b -> (Int, c)) ->
+  Decoder s a ->
+  Decoder s c
+decodeNonEmptySetLikeEnforceNoDuplicates insert getFinalWithLen decodeElement = do
+  (len, result) <-
+    decodeSetLikeEnforceNoDuplicates
+      insert
+      (\b -> let (n, c) = getFinalWithLen b in (n, (n, c)))
+      decodeElement
+  when (len == 0) $
+    fail "Expected a non-empty set, but got an empty set"
+  pure result
+{-# INLINE decodeNonEmptySetLikeEnforceNoDuplicates #-}
 
 decodeContainerSkelWithReplicate ::
   -- | How to get the size of the container

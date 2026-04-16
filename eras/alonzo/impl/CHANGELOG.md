@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove `ToCBOR` and `FromCBOR` instances for `AlonzoExtraConfig` and `AlonzoTxOut`
 * Add `ApplyTick` instance for `AlonzoEra`
 * Add `mkPlutusTxInfoFromResult` and `toPlutusTxInfoForPurpose` helpers
 * Make `PlutusPurpose` injective in the selector type.

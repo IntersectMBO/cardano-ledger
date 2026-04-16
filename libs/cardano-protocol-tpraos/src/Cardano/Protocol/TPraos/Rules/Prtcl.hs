@@ -28,16 +28,16 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   UnitInterval,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), shelleyProtVer, toPlainEncoding)
-import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
-import Cardano.Ledger.Binary.Plain (
-  FromCBOR (..),
-  ToCBOR (..),
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
   encodeListLen,
+  shelleyProtVer,
+  toPlainEncoding,
  )
-import Cardano.Ledger.Core (fromEraCBOR)
+import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
+import Cardano.Ledger.Binary.Plain (ToCBOR (..))
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
 import Cardano.Ledger.State (PoolDistr)
 import Cardano.Protocol.Crypto
@@ -74,24 +74,19 @@ data PrtclState
       !Nonce
   deriving (Generic, Show, Eq)
 
-instance EncCBOR PrtclState
-
 instance ToCBOR PrtclState where
-  toCBOR (PrtclState m n1 n2) =
-    mconcat
-      [ encodeListLen 3
-      , toCBOR m
-      , toPlainEncoding shelleyProtVer (encCBOR n1)
-      , toPlainEncoding shelleyProtVer (encCBOR n2)
-      ]
+  toCBOR = toPlainEncoding shelleyProtVer . encCBOR
+
+instance EncCBOR PrtclState where
+  encCBOR (PrtclState m n1 n2) =
+    encodeListLen 3
+      <> encCBOR m
+      <> encCBOR n1
+      <> encCBOR n2
 
 instance DecCBOR PrtclState where
   decCBOR = decode (RecD PrtclState <! From <! From <! From)
   {-# INLINE decCBOR #-}
-
-instance FromCBOR PrtclState where
-  fromCBOR = fromEraCBOR @ShelleyEra
-  {-# INLINE fromCBOR #-}
 
 instance NoThunks PrtclState
 

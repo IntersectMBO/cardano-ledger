@@ -72,9 +72,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
-  FromCBOR (..),
   Interns,
-  ToCBOR (..),
   decNoShareCBOR,
   decodeMap,
   decodeSeq,
@@ -239,12 +237,6 @@ instance EraPParams era => EncCBOR (EnactState era) where
         !> To ensTreasury
         !> To ensWithdrawals
         !> To ensPrevGovActionIds
-
-instance EraPParams era => ToCBOR (EnactState era) where
-  toCBOR = toEraCBOR @era
-
-instance EraPParams era => FromCBOR (EnactState era) where
-  fromCBOR = fromEraCBOR @era
 
 instance EraPParams era => NFData (EnactState era)
 

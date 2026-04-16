@@ -36,7 +36,6 @@ spec =
     describe "Huddle" . specWithHuddle shelleyCDDL . noTwiddle $ do
       huddleRoundTripCborSpec @Addr v "address"
       huddleRoundTripArbitraryValidate @Addr v "address"
-      huddleRoundTripAnnCborSpec @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripArbitraryValidate @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripCborSpec @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripCborSpec @AccountAddress v "reward_account"
@@ -79,7 +78,6 @@ spec =
       huddleRoundTripCborSpec @(TxWits ShelleyEra) v "transaction_witness_set"
       huddleAntiCborSpec @(TxWits ShelleyEra) v "transaction_witness_set"
       describe "DecCBOR instances equivalence via CDDL" $ do
-        huddleDecoderEquivalenceSpec @BootstrapWitness v "bootstrap_witness"
         huddleDecoderEquivalenceSpec @(TxBody TopTx ShelleyEra) v "transaction_body"
         huddleDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "metadata"
         huddleDecoderEquivalenceSpec @(MultiSig ShelleyEra) v "native_script"

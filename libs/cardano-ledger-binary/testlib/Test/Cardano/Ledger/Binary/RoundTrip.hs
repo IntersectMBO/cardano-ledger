@@ -14,7 +14,6 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   -- * Spec
   roundTripSpec,
   roundTripCborSpec,
-  roundTripAnnCborSpec,
   roundTripRangeSpec,
 
   -- * Expectations
@@ -103,14 +102,6 @@ roundTripCborSpec ::
   (Show t, Eq t, Arbitrary t, EncCBOR t, DecCBOR t) =>
   Spec
 roundTripCborSpec = roundTripSpec (cborTrip @t)
-
--- | Tests the roundtrip property using QuickCheck generators for all possible versions
--- starting with `shelleyProtVer`.
-roundTripAnnCborSpec ::
-  forall t.
-  (Show t, Eq t, Arbitrary t, ToCBOR t, DecCBOR (Annotator t)) =>
-  Spec
-roundTripAnnCborSpec = prop (show (typeRep $ Proxy @t)) (roundTripAnnExpectation @t)
 
 -- | Tests the roundtrip property using QuickCheck generators for specific range of versions
 roundTripRangeSpec ::

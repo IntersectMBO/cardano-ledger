@@ -12,11 +12,9 @@ module Cardano.Protocol.TPraos.Rules.Tickn (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), toPlainEncoding)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, toPlainEncoding)
 import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
-import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.Core (fromEraCBOR)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Binary.Plain (ToCBOR (..))
 import Control.State.Transition
 import Data.Void (Void)
 import GHC.Generics (Generic)
@@ -43,23 +41,14 @@ instance DecCBOR TicknState where
   decCBOR = decode (RecD TicknState <! From <! From)
   {-# INLINE decCBOR #-}
 
-instance FromCBOR TicknState where
-  fromCBOR = fromEraCBOR @ShelleyEra
-  {-# INLINE fromCBOR #-}
-
-instance EncCBOR TicknState
-
 instance ToCBOR TicknState where
-  toCBOR
-    ( TicknState
-        ηv
-        ηc
-      ) =
-      mconcat
-        [ encodeListLen 2
-        , toPlainEncoding shelleyProtVer (encCBOR ηv)
-        , toPlainEncoding shelleyProtVer (encCBOR ηc)
-        ]
+  toCBOR = toPlainEncoding shelleyProtVer . encCBOR
+
+instance EncCBOR TicknState where
+  encCBOR (TicknState ηv ηc) =
+    encodeListLen 2
+      <> encCBOR ηv
+      <> encCBOR ηc
 
 instance STS TICKN where
   type State TICKN = TicknState
