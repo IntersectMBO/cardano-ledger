@@ -345,6 +345,7 @@ instance
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
   , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era

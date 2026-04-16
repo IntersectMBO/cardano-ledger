@@ -62,6 +62,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedger (
   SubLedgerEnv (..),
  )
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Dijkstra.TxCert
@@ -199,6 +200,7 @@ instance
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
   , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era

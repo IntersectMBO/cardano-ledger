@@ -51,6 +51,7 @@ import Cardano.Ledger.Conway.Rules (
   babbageToConwayUtxowPredFailure,
   shelleyToConwayUtxowPredFailure,
  )
+import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXOW,
@@ -61,7 +62,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
  )
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
@@ -71,12 +72,14 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateNeededWitnesses,
   validateVerifiedWits,
  )
-import Cardano.Ledger.State (EraCertState, EraStake, EraUTxO (..))
+import Cardano.Ledger.State (EraCertState, EraStake, EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -123,6 +126,8 @@ data DijkstraSubUtxowPredFailure era
     SubScriptIntegrityHashMismatch
       (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
       (StrictMaybe ByteString)
+  | -- | Guard credentials with incorrect datum presence in requiredTopLevelGuards
+    SubMalformedGuardDatums (NonEmptySet (Credential Guard))
   deriving (Generic)
 
 deriving stock instance
@@ -192,6 +197,7 @@ instance
   , BabbageEraTxOut era
   , ConwayEraGov era
   , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , EraPlutusContext era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
@@ -199,6 +205,7 @@ instance
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   STS (DijkstraSUBUTXOW era)
@@ -212,17 +219,53 @@ instance
 
   transitionRules = [dijkstraSubUtxowTransition @era]
 
+-- | Validate that requiredTopLevelGuards datums are consistent with the credential type:
+-- Plutus script credentials must have a datum, key/native script credentials must not.
+validateGuardDatums ::
+  forall era.
+  DijkstraEraTxBody era =>
+  ScriptsProvided era ->
+  TxBody SubTx era ->
+  Test (DijkstraSubUtxowPredFailure era)
+validateGuardDatums (ScriptsProvided scripts) txBody =
+  failureOnNonEmptySet malformed SubMalformedGuardDatums
+  where
+    malformed =
+      Map.foldlWithKey' accum mempty (txBody ^. requiredTopLevelGuardsL)
+    accum acc cred mbDatum =
+      case credScriptHash cred of
+        Nothing ->
+          -- Key hash: datum must be SNothing
+          case mbDatum of
+            SNothing -> acc
+            SJust _ -> Set.insert cred acc
+        Just scriptHash ->
+          case Map.lookup scriptHash scripts of
+            Just script
+              | isNativeScript script ->
+                  -- Native script: datum must be SNothing
+                  case mbDatum of
+                    SNothing -> acc
+                    SJust _ -> Set.insert cred acc
+              | otherwise ->
+                  -- Plutus script: datum must be SJust
+                  case mbDatum of
+                    SJust _ -> acc
+                    SNothing -> Set.insert cred acc
+            Nothing -> acc
+
 dijkstraSubUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , BabbageEraTxOut era
+  , DijkstraEraTxBody era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
@@ -260,6 +303,8 @@ dijkstraSubUtxowTransition = do
       pp
       (tx ^. witsTxL . scriptTxWitsL)
       (tx ^. bodyTxL . outputsTxBodyL)
+
+  runTest $ validateGuardDatums scriptsProvided txBody
 
   trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
 
@@ -309,6 +354,7 @@ instance
       SubMalformedScriptWitnesses x -> Sum SubMalformedScriptWitnesses 14 !> To x
       SubMalformedReferenceScripts x -> Sum SubMalformedReferenceScripts 15 !> To x
       SubScriptIntegrityHashMismatch x y -> Sum SubScriptIntegrityHashMismatch 16 !> To x !> To y
+      SubMalformedGuardDatums x -> Sum SubMalformedGuardDatums 17 !> To x
 
 instance
   ( ConwayEraScript era
@@ -334,6 +380,7 @@ instance
     14 -> SumD SubMalformedScriptWitnesses <! From
     15 -> SumD SubMalformedReferenceScripts <! From
     16 -> SumD SubScriptIntegrityHashMismatch <! From <! From
+    17 -> SumD SubMalformedGuardDatums <! From
     n -> Invalid n
 
 dijkstraUtxowToDijkstraSubUtxowPredFailure ::
@@ -362,3 +409,4 @@ dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
   MalformedScriptWitnesses hs -> SubMalformedScriptWitnesses hs
   MalformedReferenceScripts hs -> SubMalformedReferenceScripts hs
   ScriptIntegrityHashMismatch mm f -> SubScriptIntegrityHashMismatch mm f
+  MissingRequiredGuards _ -> error "Impossible: `MissingRequiredGuards` for SUBUTXOW"
