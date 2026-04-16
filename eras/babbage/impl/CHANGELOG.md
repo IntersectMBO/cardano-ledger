@@ -3,6 +3,9 @@
 ## 1.14.0.0
 
 * Fix `ex_unit_prices` CDDL to use `nonnegative_interval` instead of `positive_interval`
+
+### `cddl`
+
 * Remove `ToCBOR` and `FromCBOR` instances for `BabbageTxOut`
 * Add `ApplyTick` instance for `BabbageEra`
 * `BabbageTxInfoResult` changed its content type to `PlutusTxInfoResult`
@@ -20,6 +23,7 @@
   - `BabbageUtxowPredFailure`
 * Remove `NoThunks` instance for `BabbageContextError`
 * Make `BabbageContextError` constructors lazy
+* Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
 
 ### `testlib`
 

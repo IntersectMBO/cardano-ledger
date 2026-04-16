@@ -3,6 +3,10 @@
 ## 1.10.0.0
 
 * Add `FromJSON` instance for `ValidityInterval`
+
+### `cddl`
+
+* Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
 * Add `ApplyTick` instance for `AllegraEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `AllegraEra`.
 * Remove `NoThunks` instance for `AllegraUtxoPredFailure`

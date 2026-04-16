@@ -196,7 +196,7 @@ vrf_keyhash = hash32
 ; 
 ; The relation between numerator and denominator can be
 ; expressed in CDDL, but we have a limitation currently
-; (see: https://github.com/input-output-hk/cuddle/issues/30). 
+; (see: https://github.com/input-output-hk/cuddle/issues/30).
 unit_interval = #6.30([uint, uint])
 
 reward_account = bytes
@@ -207,15 +207,9 @@ single_host_addr = (0, port/ nil, ipv4/ nil, ipv6/ nil)
 
 port = uint .le 65535
 
-;  It is not possible to express a bytestring with no upper bound
-;  in CDDL, that's why the upper bound is set to 1024. In reality
-;  there is no such upper bound on the bytestring.
-ipv4 = bytes .size (4 .. 1024)
+ipv4 = bytes .size 4
 
-;  It is not possible to express a bytestring with no upper bound
-;  in CDDL, that's why the upper bound is set to 1024. In reality
-;  there is no such upper bound on the bytestring.
-ipv6 = bytes .size (16 .. 1024)
+ipv6 = bytes .size 16
 
 ; dns_name: An A or AAAA DNS record
 single_host_name = (1, port/ nil, dns_name)

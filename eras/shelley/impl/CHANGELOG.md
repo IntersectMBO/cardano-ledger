@@ -3,6 +3,10 @@
 ## 1.19.0.0
 
 * Add `mkStAnnTx` to `ApplyTx`
+
+### `cddl`
+
+* Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
 * Add `InjectionData`, `foldInjectionData`, `InjectionError` to `Cardano.Ledger.Shelley.Genesis`
 * Add `ShelleyExtraConfig` type to `Cardano.Ledger.Shelley.Genesis`
 * Add `sgExtraConfig` field to `ShelleyGenesis`
