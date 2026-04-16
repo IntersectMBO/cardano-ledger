@@ -15,6 +15,7 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval, AccountBalanceIntervals)
 import Cardano.Ledger.Plutus.Data (Data, Datum)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genNonEmptyRedeemers)
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
@@ -24,6 +25,7 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Binary.Huddle (huddleCodecSpecFull)
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 
@@ -74,11 +76,7 @@ spec = do
       huddleRoundTripArbitraryValidate @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       huddleRoundTripCborSpec @CostModels v "cost_models"
       huddleRoundTripArbitraryValidate @CostModels v "cost_models"
-      huddleRoundTripAnnCborSpec @(Redeemers DijkstraEra) v "redeemers"
-      -- TODO arbitrary can generate empty redeemers, which is not allowed in the CDDL
-      xdescribe "fix empty redeemers" $
-        huddleRoundTripArbitraryValidate @(Redeemers DijkstraEra) v "redeemers"
-      huddleRoundTripCborSpec @(Redeemers DijkstraEra) v "redeemers"
+      huddleCodecSpecFull @DijkstraEra @(Redeemers DijkstraEra) genNonEmptyRedeemers v "redeemers"
       xdescribe "fix Transaction" $ do
         huddleRoundTripAnnCborSpec @(Tx TopTx DijkstraEra) v "transaction"
         huddleRoundTripCborSpec @(Tx TopTx DijkstraEra) v "transaction"
@@ -100,6 +98,5 @@ spec = do
         huddleDecoderEquivalenceSpec @(Data DijkstraEra) v "plutus_data"
         huddleDecoderEquivalenceSpec @(Script DijkstraEra) v "script"
         huddleDecoderEquivalenceSpec @(TxWits DijkstraEra) v "transaction_witness_set"
-        huddleDecoderEquivalenceSpec @(Redeemers DijkstraEra) v "redeemers"
         xdescribe "Fix decoder equivalence of Tx" $ do
           huddleDecoderEquivalenceSpec @(Tx TopTx DijkstraEra) v "transaction"
