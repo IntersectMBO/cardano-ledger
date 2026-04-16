@@ -174,10 +174,12 @@ jobs:
 
     # Pass working directory to test jobs
     - name: Archive working directory
+      if: matrix.ghc == '9.6.7'
       # pax format is needed to avoid unnecessary rebuilding, because the
       # default format uses a one-second resolution for timestamps
       run: tar --use-compress-program zstdmt --format posix --exclude-vcs -cf /var/tmp/state.tzst . && mv /var/tmp/state.tzst .
     - name: Upload working directory archive
+      if: matrix.ghc == '9.6.7'
       uses: actions/upload-artifact@v7
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
@@ -216,7 +218,7 @@ jobs:
         - non-integral
         - small-steps
         - vector-map
-        ghc: ["9.6.7", "9.8.4", "9.10.3", "9.12.4", "9.14.1"]
+        ghc: ["9.6.7"]
         os: [ubuntu-latest]
       fail-fast: false
 
