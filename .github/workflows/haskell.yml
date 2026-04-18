@@ -175,25 +175,19 @@ jobs:
     - name: Create state archive
       id: state
       run: |
-        extract-components()
-        {
-          jq -c --arg root "$PWD/" '
-            ."install-plan"[] |
-              select((."component-name" // "") | match("'"$1"'")) | {
-                pkg: ."pkg-name",
-                src: ."pkg-src".path | ltrimstr($root),
-                bin: ."bin-file" | ltrimstr($root)
-              }
-          ' dist-newstyle/cache/plan.json
-        }
-        component-bins() { jq -r '.bin' "$@"; }
-        component-pkgs() { jq -sc 'map(.pkg) | unique' "$@"; }
-        extract-components test: >test-components.json
-        extract-components exe:generate-cddl >cddl-components.json
-        extract-components exe:plutus-preprocessor >plutus-components.json
-        tar -caf state.tzst dist-newstyle/cache/plan.json \
-          *-components.json $(component-bins *-components.json)
-        echo "test-packages=$(component-pkgs test-components.json)" >> "$GITHUB_OUTPUT"
+        # Make all plan.json file paths relative
+        jq -c --arg root "$PWD/" '(.. | strings) |= ltrimstr($root)' \
+          dist-newstyle/cache/plan.json >plan.json
+        mv plan.json dist-newstyle/cache/plan.json
+
+        # Archive plan.json and local binaries
+        jq -r '
+          ."install-plan"[]
+          | select(.style == "local")
+          | select(."component-name" // "" | match("(test|exe):"))
+          | ."bin-file"
+        ' dist-newstyle/cache/plan.json \
+        | xargs -d\\n tar -caf state.tzst dist-newstyle/cache/plan.json
 
     - name: Upload state archive
       uses: actions/upload-artifact@v7
@@ -280,7 +274,7 @@ jobs:
     - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
       if: "${{ github.event_name == 'schedule'
             || contains(github.event.pull_request.title, 'nightly')
-            || github.event_name == 'workflow_dispatch' && github.event.inputs.nightly }}"
+            || github.event_name == 'workflow_dispatch' && inputs.nightly }}"
       run: |
         echo "NIGHTLY=true" >> $GITHUB_ENV
 
@@ -294,8 +288,13 @@ jobs:
 
     - name: Run tests
       run: |
-        jq -r --arg pkg '${{ matrix.package }}' \
-          'select(.pkg == $pkg) | "\(.pkg) \(.src) \(.bin)"' test-components.json |
+        jq -r --arg pkg '${{ matrix.package }}' '
+          ."install-plan"[]
+          | select(.style == "local")
+          | select(."pkg-name" == $pkg)
+          | select(."component-name" // "" | match("test:"))
+          | "\(."pkg-name") \(."pkg-src".path) \(."bin-file")"
+        ' dist-newstyle/cache/plan.json |
         while read -r PKG SRC BIN
         do
           SRC=$(readlink -f "$SRC")
@@ -359,7 +358,12 @@ jobs:
 
     - name: Generate CDDL files
       run: |
-        jq -r '"\(.pkg) \(.src) \(.bin)"' cddl-components.json |
+        jq -r --arg pkg '${{ matrix.package }}' '
+          ."install-plan"[]
+          | select(.style == "local")
+          | select(."component-name" // "" | match("exe:generate-cddl"))
+          | "\(."pkg-name") \(."pkg-src".path) \(."bin-file")"
+        ' dist-newstyle/cache/plan.json |
         while read -r PKG SRC BIN
         do
           SRC=$(readlink -f "$SRC")
@@ -376,7 +380,12 @@ jobs:
 
     - name: Generate Plutus examples
       run: |
-        jq -r '"\(.pkg) \(.src) \(.bin)"' plutus-components.json |
+        jq -r --arg pkg '${{ matrix.package }}' '
+          ."install-plan"[]
+          | select(.style == "local")
+          | select(."component-name" // "" | match("exe:plutus-preprocessor"))
+          | "\(."pkg-name") \(."pkg-src".path) \(."bin-file")"
+        ' dist-newstyle/cache/plan.json |
         while read -r PKG SRC BIN
         do
           SRC=$(readlink -f "$SRC")
