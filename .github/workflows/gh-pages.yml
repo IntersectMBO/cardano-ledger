@@ -59,7 +59,7 @@ jobs:
       run: echo cardano-ledger.cardano.intersectmbo.org >haddocks/CNAME
 
     - name: Upload pages artifact
-      uses: actions/upload-pages-artifact@v4
+      uses: actions/upload-pages-artifact@v5
       with:
         path: haddocks
 
