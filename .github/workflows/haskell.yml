@@ -276,6 +276,7 @@ jobs:
             || contains(github.event.pull_request.title, 'nightly')
             || github.event_name == 'workflow_dispatch' && inputs.nightly }}"
       run: |
+        echo 'github.event.inputs is ${{ toJSON(github.event.inputs) }}'
         echo "NIGHTLY=true" >> $GITHUB_ENV
 
     - name: Download state archive
