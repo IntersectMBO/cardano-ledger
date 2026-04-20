@@ -259,6 +259,7 @@ library testlib
     genvalidity,
     hedgehog-quickcheck,
     hspec,
+    hspec-golden,
     microlens,
     mtl,
     nothunks <0.3.2,

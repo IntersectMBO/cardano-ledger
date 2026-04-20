@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Binary.Golden (
   expectDecoderSuccessAnnWith,
   expectDecoderFailureAnn,
   expectDecoderResultOn,
+  toPackageGolden,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -27,6 +28,7 @@ import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc)
 import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation)
 import Test.Hspec (Expectation, expectationFailure, shouldBe)
+import qualified Test.Hspec.Golden as Golden (Golden (..))
 
 decodeEnc :: forall a. DecCBOR (Annotator a) => Version -> Enc -> Either DecoderError a
 decodeEnc version enc = decodeFullAnnotator @a version (Binary.label $ Proxy @(Annotator a)) decCBOR bytes
@@ -88,3 +90,13 @@ expectDecoderResultOn version enc expected f =
     version
     (\x _ -> f x `shouldBe` f expected)
     enc
+
+toPackageGolden :: (FilePath -> IO FilePath) -> Golden.Golden g -> IO (Golden.Golden g)
+toPackageGolden mkFullPath g = do
+  fullPathGoldenFile <- mkFullPath $ Golden.goldenFile g
+  fullPathActualFile <- mapM mkFullPath $ Golden.actualFile g
+  pure $
+    g
+      { Golden.goldenFile = fullPathGoldenFile
+      , Golden.actualFile = fullPathActualFile
+      }
