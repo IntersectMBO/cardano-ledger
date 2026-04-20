@@ -1160,30 +1160,24 @@ decodeUTCTime =
 
 -- | Convert a `Get` monad from @binary@ package into a `Decoder`
 binaryGetDecoder ::
-  -- | Flag to allow left over at the end or not
-  Bool ->
   -- | Name of the function or type for error reporting
   Text.Text ->
   -- | Deserializer for the @binary@ package
   Get a ->
   Decoder s a
-binaryGetDecoder allowLeftOver name getter = do
+binaryGetDecoder name getter = do
   bs <- decodeBytes
   case runGetOrFail getter (BSL.fromStrict bs) of
     Left (_, _, err) -> cborError $ DecoderErrorCustom name (Text.pack err)
     Right (leftOver, _, ha)
-      | allowLeftOver || BSL.null leftOver -> pure ha
+      | BSL.null leftOver -> pure ha
       | otherwise ->
           cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
 {-# INLINE binaryGetDecoder #-}
 
 decodeIPv4 :: Decoder s IPv4
 decodeIPv4 =
-  fromHostAddress
-    <$> ifDecoderVersionAtLeast
-      (natVersion @9)
-      (binaryGetDecoder False "decodeIPv4" getWord32le)
-      (binaryGetDecoder True "decodeIPv4" getWord32le)
+  fromHostAddress <$> binaryGetDecoder "decodeIPv4" getWord32le
 {-# INLINE decodeIPv4 #-}
 
 getHostAddress6 :: Get HostAddress6
@@ -1197,11 +1191,7 @@ getHostAddress6 = do
 
 decodeIPv6 :: Decoder s IPv6
 decodeIPv6 =
-  fromHostAddress6
-    <$> ifDecoderVersionAtLeast
-      (natVersion @9)
-      (binaryGetDecoder False "decodeIPv6" getHostAddress6)
-      (binaryGetDecoder True "decodeIPv6" getHostAddress6)
+  fromHostAddress6 <$> binaryGetDecoder "decodeIPv6" getHostAddress6
 {-# INLINE decodeIPv6 #-}
 
 --------------------------------------------------------------------------------
