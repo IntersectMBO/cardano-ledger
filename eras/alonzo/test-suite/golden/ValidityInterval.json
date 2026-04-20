@@ -1,1 +1,13 @@
-[{},{"invalidBefore":12345},{"invalidHereafter":12354},{"invalidBefore":12345,"invalidHereafter":12354}]
+[
+    {},
+    {
+        "invalidBefore": 12345
+    },
+    {
+        "invalidHereafter": 12354
+    },
+    {
+        "invalidBefore": 12345,
+        "invalidHereafter": 12354
+    }
+]

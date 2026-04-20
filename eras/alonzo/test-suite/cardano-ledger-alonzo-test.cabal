@@ -87,7 +87,6 @@ test-suite cardano-ledger-alonzo-test
 
   build-depends:
     aeson >=2,
-    aeson-pretty,
     base,
     base16-bytestring,
     bytestring,
@@ -103,7 +102,6 @@ test-suite cardano-ledger-alonzo-test
     cardano-slotting,
     cardano-strict-containers,
     containers,
-    hspec,
     hspec-golden,
     microlens,
     plutus-ledger-api,
