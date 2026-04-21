@@ -23,6 +23,7 @@
   - Moved to `cardano-base:Cardano.Base.IP`
 * Remove `ToCBOR` and `FromCBOR` instances for `Nonce`
 * Remove default implementation of `fromPlutusData` in `ToPlutusData` typeclass.
+* Add `modifyTxAuxData` in `Cardano.Ledger.Core`.
 
 ### `cddl`
 
