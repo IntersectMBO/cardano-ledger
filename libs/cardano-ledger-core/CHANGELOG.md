@@ -25,6 +25,7 @@
 
 ### `testlib`
 
+* Add `fullAnnCddlSpec`, `fullAnnGenCddlSpec`, `fullCddlSpec` and `fullGenCddlSpec`
 * Add `TestBlockHeader` and `mkTestBlockHeaderNoNonce` as a replacement to deprecated `BHeaderView` and `makeHeaderView`.
 * Modify `ToExpr` instance for `Mismatch` to display type-level `r` parameter using `Typeable`
 

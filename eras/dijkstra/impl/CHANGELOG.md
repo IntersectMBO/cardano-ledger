@@ -42,6 +42,10 @@
 * Remove `NoThunks` instance for `DijkstraContextError`
 * Make `DijkstraContextError` constructors lazy
 
+### testlib
+
+* Add `genNonEmptyAccountBalanceIntervals`
+
 ## 0.2.0.0
 
 * Expose `conwayToDijkstraUtxowPredFailure`

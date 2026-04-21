@@ -66,8 +66,7 @@ spec = do
       xdescribe "fix plutus_v4_script" $ do
         fullAnnCddlSpec @(TxWits DijkstraEra) v "transaction_witness_set"
       -- PParamsUpdate
-      xdescribe "fix pparamupdate" $
-        fullCddlSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
+      fullCddlSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       -- CostModels
       xdescribe "not enough decision points" $ do
         fullCddlSpec @CostModels v "cost_models"
@@ -81,7 +80,6 @@ spec = do
       -- ProposalProcedure
       fullCddlSpec @(ProposalProcedure DijkstraEra) v "proposal_procedure"
       -- GovAction
-      xdescribe "fix pparamupdate" $
-        fullCddlSpec @(GovAction DijkstraEra) v "gov_action"
+      fullCddlSpec @(GovAction DijkstraEra) v "gov_action"
       -- TxCert
       fullCddlSpec @(TxCert DijkstraEra) v "certificate"
