@@ -116,10 +116,11 @@ toPackageGolden mkFullPath g = do
 -- | `Golden` specification for `ToCBOR`
 goldenForToCBOR ::
   ToCBOR a =>
-  -- | Path to the golden file relative to the package
+  -- | Path to the golden file relative to the root of the package
   FilePath ->
+  -- | Value, which in an encoded form will be expected to produce the same contents as in the
+  -- golden file.
   a ->
-  -- | Value, when encoded will be expected to produce same golden file.
   Golden.Golden BSL.ByteString
 goldenForToCBOR goldenFileName t =
   Golden.Golden
@@ -137,9 +138,11 @@ goldenForEncCBOR ::
   EncCBOR a =>
   -- | Path to the golden file relative to the package
   FilePath ->
+  -- | Protocol version to be used for encoding
   Version ->
+  -- | Value, which in an encoded form will be expected to produce the same contents as in the
+  -- golden file.
   a ->
-  -- | Value, when encoded will be expected to produce same golden file.
   Golden.Golden BSL.ByteString
 goldenForEncCBOR goldenFileName version t =
   Golden.Golden
@@ -161,7 +164,16 @@ cborGoldenSpec ::
   , DecCBOR a
   , HasCallStack
   ) =>
-  (FilePath -> IO FilePath) -> FilePath -> Version -> a -> Spec
+  -- | Action to get the full path, usually will be @Paths_<package_name>.getDataFileName@
+  (FilePath -> IO FilePath) ->
+  -- | File path to the golden file relative to the root of the package
+  FilePath ->
+  -- | Protocol version to be used for encoding
+  Version ->
+  -- | Value, which in an encoded form will be expected to produce the same contents as in the
+  -- golden file.
+  a ->
+  Spec
 cborGoldenSpec mkFullPath goldenFileName version a = do
   describe (show (typeOf a)) $ do
     it "Golden" $ toPackageGolden mkFullPath $ goldenForEncCBOR goldenFileName version a
@@ -177,7 +189,16 @@ cborAnnGoldenSpec ::
   , DecCBOR (Annotator a)
   , HasCallStack
   ) =>
-  (FilePath -> IO FilePath) -> FilePath -> Version -> a -> Spec
+  -- | Action to get the full path, usually will be @Paths_<package_name>.getDataFileName@
+  (FilePath -> IO FilePath) ->
+  -- | File path to the golden file relative to the root of the package
+  FilePath ->
+  -- | Protocol version to be used for decoding
+  Version ->
+  -- | Value, which in an encoded form will be expected to produce the same contents as in the
+  -- golden file.
+  a ->
+  Spec
 cborAnnGoldenSpec mkFullPath goldenFileName version a = do
   describe (show (typeOf a)) $ do
     it "Golden" $ toPackageGolden mkFullPath $ goldenForToCBOR goldenFileName a

@@ -19,7 +19,6 @@ import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx)
 import Cardano.Ledger.Alonzo.TxBody (utxoEntrySize)
 import Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
-import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Mary.Value (valueFromList)
@@ -48,6 +47,7 @@ import Lens.Micro
 import Paths_cardano_ledger_alonzo_test
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
+import Test.Cardano.Ledger.Binary.Golden (cborAnnGoldenSpec)
 import Test.Cardano.Ledger.Common hiding (output)
 import Test.Cardano.Ledger.Mary.Golden (
   largestName,
@@ -65,19 +65,6 @@ import Test.Cardano.Protocol.TPraos.Examples (
   ProtocolLedgerExamples (..),
   ledgerExamplesAlonzo,
  )
-import Test.Hspec.Golden
-
-goldenBsTest :: String -> BSL.ByteString -> Golden BSL.ByteString
-goldenBsTest goldenFileName actualOutput =
-  Golden
-    { output = actualOutput
-    , encodePretty = show
-    , writeToFile = BSL.writeFile
-    , readFromFile = BSL.readFile
-    , goldenFile = goldenFileName
-    , actualFile = Nothing
-    , failFirstTime = False
-    }
 
 readDataFile :: FilePath -> IO BSL.ByteString
 readDataFile name = getDataFileName name >>= BSL.readFile
@@ -194,15 +181,17 @@ goldenUTxOEntryMinAda =
 
 goldenCborSerialization :: Spec
 goldenCborSerialization =
-  describe "golden tests - CBOR serialization" $ do
-    it "Alonzo Block" $ do
-      goldenFileName <- getDataFileName "golden/block.cbor"
-      return $ goldenBsTest goldenFileName $ Plain.serialize (pleBlock ledgerExamplesAlonzo)
-    it "Alonzo Tx" $ do
-      goldenFileName <- getDataFileName "golden/tx.cbor"
-      return $
-        goldenBsTest goldenFileName $
-          Plain.serialize (leTx $ pleLedgerExamples ledgerExamplesAlonzo)
+  describe "Golden tests - CBOR serialization" $ do
+    cborAnnGoldenSpec
+      getDataFileName
+      "golden/block.cbor"
+      (eraProtVerLow @AlonzoEra)
+      (pleBlock ledgerExamplesAlonzo)
+    cborAnnGoldenSpec
+      getDataFileName
+      "golden/tx.cbor"
+      (eraProtVerLow @AlonzoEra)
+      (leTx $ pleLedgerExamples ledgerExamplesAlonzo)
 
 goldenJsonSerialization :: Spec
 goldenJsonSerialization =
