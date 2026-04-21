@@ -66,7 +66,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Rules.ValidationMode
-import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosGovState, utxosUtxo)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosGovState, utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, updateUTxOStateNoFees)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateBadInputsUTxO,
@@ -289,15 +289,17 @@ dijkstraSubUtxoTransition = do
   runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
 
   if isValid
-    then
-      updateUTxOStateNoFees
-        pp
-        utxoState
-        txBody
-        certState
-        (utxosGovState utxoState)
-        (tellEvent . TotalDeposits (hashAnnotated txBody))
-        (\a b -> tellEvent $ TxUTxODiff a b)
+    then do
+      newState <-
+        updateUTxOStateNoFees
+          pp
+          utxoState
+          txBody
+          certState
+          (utxosGovState utxoState)
+          (tellEvent . TotalDeposits (hashAnnotated txBody))
+          (\a b -> tellEvent $ TxUTxODiff a b)
+      pure $ newState & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL
     else
       pure utxoState
 
