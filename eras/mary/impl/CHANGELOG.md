@@ -9,6 +9,12 @@
 
 * Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
 
+### `testlib`
+
+* In `Test.Cardano.Ledger.Mary.Examples`:
+  - Remove `exampleMaryBasedShelleyTxBody`, `exampleMaryBasedTxBody`
+  - Add `exampleMaryBasedTx`
+
 ## 1.10.0.0
 
 * Add `Generic` instance for `ApplyTxError`
