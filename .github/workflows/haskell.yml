@@ -147,7 +147,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.3.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@e08d26c6aa06a7008e6e67116441d4b3b0597021
 
     - name: Check workflow test matrix
       run: cabal build all --dry-run -v0 && cleret workflow check-test-matrix
@@ -179,17 +179,11 @@ jobs:
         mv plan.json dist-newstyle/cache/plan.json
 
     # Archive plan.json and local binaries
-    # To be replaced by: cleret cabal list-bin -i test -i exe | xargs ...
     - name: Create state archive
       if: matrix.ghc == '9.6.7'
       run: |
-        jq -r '
-          ."install-plan"[]
-          | select(.style == "local")
-          | select(."component-name" // "" | match("(test|exe):"))
-          | ."bin-file"
-        ' dist-newstyle/cache/plan.json \
-        | xargs -d\\n tar -caf state.tzst dist-newstyle/cache/plan.json
+        cleret cabal list-bins -i test -i exe |
+          xargs tar -caf state.tzst dist-newstyle/cache/plan.json
 
     - name: Upload state archive
       if: matrix.ghc == '9.6.7'
@@ -256,6 +250,10 @@ jobs:
       with:
         use-sodium-vrf: false # default is true
 
+    - name: Install cleret
+      # Tag should match the one that's used in flake.nix
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@e08d26c6aa06a7008e6e67116441d4b3b0597021
+
     - name: Download Mainnet Mirror
       if: matrix.package == 'cardano-ledger-byron'
       run: |
@@ -289,24 +287,8 @@ jobs:
     - name: Unarchive state
       run: tar -xf state.tzst && rm state.tzst
 
-    # To be replaced by: cleret cabal test '${{ matrix.package }}'
     - name: Run tests
-      run: |
-        jq -r --arg pkg '${{ matrix.package }}' '
-          ."install-plan"[]
-          | select(.style == "local")
-          | select(."pkg-name" == $pkg)
-          | select(."component-name" // "" | match("test:"))
-          | "\(."pkg-name") \(."pkg-src".path) \(."bin-file")"
-        ' dist-newstyle/cache/plan.json |
-        while read -r PKG SRC BIN
-        do
-          SRC=$(readlink -f "$SRC")
-          BIN=$(readlink -f "$BIN")
-          export ${PKG//-/_}_datadir=$SRC
-          echo "Testing $PKG:test:$(basename $BIN)"
-          (cd "$SRC" && "$BIN")
-        done
+      run: cleret cabal test '${{ matrix.package }}'
 
   complete:
     name: Tests completed
@@ -351,6 +333,10 @@ jobs:
       with:
         use-sodium-vrf: false # default is true
 
+    - name: Install cleret
+      # Tag should match the one that's used in flake.nix
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@e08d26c6aa06a7008e6e67116441d4b3b0597021
+
     - name: Download state archive
       uses: actions/download-artifact@v8
       with:
@@ -359,42 +345,14 @@ jobs:
     - name: Unarchive state
       run: tar -xf state.tzst && rm state.tzst
 
-    # To be replaced by: cleret cabal run generate-cddl
     - name: Generate CDDL files
       run: |
-        jq -r '
-          ."install-plan"[]
-          | select(.style == "local")
-          | select(."component-name" // "" | match("exe:generate-cddl"))
-          | "\(."pkg-name") \(."pkg-src".path) \(."bin-file")"
-        ' dist-newstyle/cache/plan.json |
-        while read -r PKG SRC BIN
-        do
-          SRC=$(readlink -f "$SRC")
-          BIN=$(readlink -f "$BIN")
-          export ${PKG//-/_}_datadir=$SRC
-          echo "Running $PKG:exe:$(basename $BIN)"
-          "$BIN"
-        done
+        cleret cabal run generate-cddl
         git diff
 
-    # To be replaced by: cleret cabal run plutus-preprocessor
     - name: Generate Plutus examples
       run: |
-        jq -r '
-          ."install-plan"[]
-          | select(.style == "local")
-          | select(."component-name" // "" | match("exe:plutus-preprocessor"))
-          | "\(."pkg-name") \(."pkg-src".path) \(."bin-file")"
-        ' dist-newstyle/cache/plan.json |
-        while read -r PKG SRC BIN
-        do
-          SRC=$(readlink -f "$SRC")
-          BIN=$(readlink -f "$BIN")
-          export ${PKG//-/_}_datadir=$SRC
-          echo "Running $PKG:exe:$(basename $BIN)"
-          "$BIN"
-        done
+        cleret cabal run plutus-preprocessor
         git diff
 
   fourmolu:
@@ -606,7 +564,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.3.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@e08d26c6aa06a7008e6e67116441d4b3b0597021
 
     - name: Run linter
       run: scripts/format-changelogs.sh || (git diff; false)
