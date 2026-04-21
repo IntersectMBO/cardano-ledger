@@ -51,6 +51,9 @@
 ### testlib
 
 * Add `genNonEmptyAccountBalanceIntervals`
+* In `Test.Cardano.Ledger.Dijkstra.Examples`:
+  - Remove `mkDijkstraBasedExampleTx`, `mkDijkstraBasedExampleTxBody`
+  - Add `exampleDijkstraBasedTopTx`, `exampleDijkstraBasedSubTx`
 
 ## 0.2.0.0
 
@@ -177,7 +180,7 @@
 * Move `cddl-files` to `cddl/data`.
 * Add full `HuddleSpec`.
 
-### `testlib`
+### testlib
 
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec`

@@ -187,6 +187,7 @@ library testlib
     containers,
     generic-random,
     microlens,
+    plutus-ledger-api,
     small-steps,
     tree-diff,
 

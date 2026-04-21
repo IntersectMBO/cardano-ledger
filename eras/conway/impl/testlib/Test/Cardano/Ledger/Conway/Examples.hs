@@ -7,27 +7,21 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
+-- | The example transactions in this module are not valid transactions. We
+-- don't care, we are only interested in serialisation, not validation.
 module Test.Cardano.Ledger.Conway.Examples (
   ledgerExamples,
-  mkConwayBasedExampleTx,
-  exampleConwayBasedTxBody,
-  exampleAnchor,
-  exampleVotingProcedures,
-  exampleProposalProcedure,
-  exampleProposalProcedureParameterChange,
-  exampleProposalProcedureHardForkInitiation,
-  exampleProposalProcedureTreasuryWithdrawals,
-  exampleProposalProcedureNoConfidence,
-  exampleProposalProcedureUpdateCommittee,
-  exampleProposalProcedureNewConstitution,
+  exampleConwayBasedTx,
+  exampleConwayBasedTopTx,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ApplyTxError (ConwayApplyTxError), ConwayEra)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (
   Constitution (..),
   GovAction (..),
@@ -41,12 +35,12 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
  )
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
-import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (
+  Data (..),
   Datum (..),
   dataToBinaryData,
  )
@@ -55,19 +49,24 @@ import Cardano.Ledger.State (StakePoolParams (sppId))
 import Cardano.Ledger.TxIn (TxId (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
+import qualified Data.MapExtras as Map
 import Data.Maybe (fromJust)
 import qualified Data.OSet.Strict as OSet
+import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Typeable (Typeable)
 import Lens.Micro
+import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Examples (
+  addAlonzoToConwayExampleReqSigners,
   exampleDatum,
   mkAlonzoBasedLedgerExamples,
  )
 import Test.Cardano.Ledger.Babbage.Examples (
-  exampleBabbageBasedTxBody,
+  exampleBabbageBasedTopTx,
+  exampleBabbageBasedTx,
   exampleBabbageNewEpochState,
-  mkBabbageBasedExampleTx,
  )
 import Test.Cardano.Ledger.Conway.Era ()
 import Test.Cardano.Ledger.Conway.Genesis (expectedConwayGenesis)
@@ -78,6 +77,8 @@ import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
 import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
+  addShelleyBasedTopTxExampleFee,
+  addShelleyToConwayTxCerts,
   examplePayKey,
   exampleStakeKey,
   exampleStakePoolParams,
@@ -94,66 +95,72 @@ ledgerExamples =
             DelegateeStakePoolNotRegisteredDELEG @ConwayEra (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
-    ( mkConwayBasedExampleTx
-        (exampleConwayBasedTxBody exampleConwayCerts)
-        (ConwaySpending $ AsIx 0)
-    )
-    exampleConwayGenesis
+    exampleConwayTx
+    expectedConwayGenesis
+  where
+    exampleConwayTx =
+      exampleConwayBasedTopTx
+        & addShelleyBasedTopTxExampleFee
+        & addShelleyToConwayTxCerts
+        & addAlonzoToConwayExampleReqSigners
 
-mkConwayBasedExampleTx ::
+exampleConwayBasedTopTx ::
   forall era.
   ( AlonzoEraTx era
+  , ConwayEraTxBody era
   , AlonzoEraTxAuxData era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   , EraPlutusTxInfo 'PlutusV3 era
+  , Value era ~ MaryValue
   ) =>
-  TxBody TopTx era ->
-  PlutusPurpose AsIx era ->
   Tx TopTx era
-mkConwayBasedExampleTx txBody scriptPurpose =
-  mkBabbageBasedExampleTx
-    txBody
-    scriptPurpose
+exampleConwayBasedTopTx =
+  exampleBabbageBasedTopTx
+    & addConwayBasedTxFeatures
+
+exampleConwayBasedTx ::
+  forall era l.
+  ( AlonzoEraTx era
+  , ConwayEraTxBody era
+  , AlonzoEraTxAuxData era
+  , EraPlutusTxInfo 'PlutusV1 era
+  , EraPlutusTxInfo 'PlutusV2 era
+  , EraPlutusTxInfo 'PlutusV3 era
+  , Value era ~ MaryValue
+  , Typeable l
+  ) =>
+  Tx l era
+exampleConwayBasedTx =
+  exampleBabbageBasedTx
+    & addConwayBasedTxFeatures
+
+addConwayBasedTxFeatures ::
+  forall era l.
+  ( EraTx era
+  , ConwayEraTxBody era
+  , Value era ~ MaryValue
+  , EraPlutusTxInfo PlutusV3 era
+  , AlonzoEraTxAuxData era
+  , AlonzoEraTxWits era
+  ) =>
+  Tx l era ->
+  Tx l era
+addConwayBasedTxFeatures tx =
+  tx
     & witsTxL
       <>~ ( mkBasicTxWits
-              & scriptTxWitsL
-                .~ Map.singleton
-                  (hashScript @era $ alwaysSucceeds @'PlutusV3 3)
-                  (alwaysSucceeds @'PlutusV3 3)
+              & scriptTxWitsL <>~ Map.fromElems hashScript [alwaysSucceeds @'PlutusV3 3]
+              & rdmrsTxWitsL <>~ redeemers
           )
-    & auxDataTxL
-      %~ fmap
-        ( \auxData ->
-            auxData
-              & plutusScriptsTxAuxDataL
-                <>~ Map.singleton PlutusV3 (NE.singleton (plutusBinary (alwaysSucceedsPlutus @'PlutusV3 3)))
-        )
-
-exampleConwayBasedTxBody ::
-  forall era.
-  ( ConwayEraTxBody era
-  , EraPlutusTxInfo PlutusV1 era
-  , EraPlutusTxInfo PlutusV2 era
-  , EraPlutusTxInfo PlutusV3 era
-  , Value era ~ MaryValue
-  ) =>
-  StrictSeq.StrictSeq (TxCert era) ->
-  TxBody TopTx era
-exampleConwayBasedTxBody certs = mkConwayBasedExampleTxBody certs exampleBabbageBasedTxBody
-
-mkConwayBasedExampleTxBody ::
-  forall era.
-  ( ConwayEraTxBody era
-  , Value era ~ MaryValue
-  , EraPlutusTxInfo PlutusV3 era
-  ) =>
-  StrictSeq.StrictSeq (TxCert era) ->
-  TxBody TopTx era ->
-  TxBody TopTx era
-mkConwayBasedExampleTxBody certs txBody =
-  txBody
-    & outputsTxBodyL
+    & modifyTxAuxData
+      ( plutusScriptsTxAuxDataL
+          %~ Map.insertWith
+            (<>)
+            PlutusV3
+            (NE.singleton (plutusBinary (alwaysSucceedsPlutus @'PlutusV3 3)))
+      )
+    & bodyTxL . outputsTxBodyL
       <>~ StrictSeq.fromList
         [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
@@ -161,10 +168,10 @@ mkConwayBasedExampleTxBody certs txBody =
             & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
             & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV3 3)
         ]
-    & certsTxBodyL .~ certs
-    & votingProceduresTxBodyL .~ exampleVotingProcedures
-    & proposalProceduresTxBodyL
-      .~ OSet.fromList
+    & bodyTxL . certsTxBodyL <>~ exampleConwayCerts
+    & bodyTxL . votingProceduresTxBodyL .~ exampleVotingProcedures
+    & bodyTxL . proposalProceduresTxBodyL
+      <>~ OSet.fromList
         [ exampleProposalProcedure
         , exampleProposalProcedureParameterChange
         , exampleProposalProcedureHardForkInitiation
@@ -173,34 +180,39 @@ mkConwayBasedExampleTxBody certs txBody =
         , exampleProposalProcedureUpdateCommittee
         , exampleProposalProcedureNewConstitution
         ]
-    & currentTreasuryValueTxBodyL .~ SJust (Coin 867530900000)
-    & treasuryDonationTxBodyL .~ Coin 1000000
+    & bodyTxL . currentTreasuryValueTxBodyL .~ SJust (Coin 867530900000)
+    & bodyTxL . treasuryDonationTxBodyL .~ Coin 1000000
+  where
+    redeemers =
+      Redeemers $
+        Map.fromList
+          [ (VotingPurpose $ AsIx 0, (redeemerData, ExUnits 5000 5000))
+          , (ProposingPurpose $ AsIx 0, (redeemerData, ExUnits 5000 5000))
+          ]
+    redeemerData = Data (P.Constr 1 [P.List [P.I 1], P.Map [(P.I 2, P.B "2")]])
 
-exampleConwayCerts :: StrictSeq.StrictSeq (ConwayTxCert era)
+exampleConwayCerts :: ConwayEraTxCert era => StrictSeq (TxCert era)
 exampleConwayCerts =
   StrictSeq.fromList
-    [ ConwayTxCertDeleg $ ConwayRegCert (KeyHashObj (mkKeyHash 2)) (SJust (Coin 2000000))
-    , ConwayTxCertDeleg $ ConwayUnRegCert (KeyHashObj (mkKeyHash 2)) (SJust (Coin 2000000))
-    , ConwayTxCertDeleg $
-        ConwayDelegCert (KeyHashObj (mkKeyHash 3)) (DelegStake (sppId exampleStakePoolParams))
-    , ConwayTxCertDeleg $
-        ConwayDelegCert (KeyHashObj (mkKeyHash 4)) (DelegVote (DRepKeyHash (mkKeyHash 5)))
-    , ConwayTxCertDeleg $
-        ConwayDelegCert
-          (KeyHashObj (mkKeyHash 6))
-          (DelegStakeVote (sppId exampleStakePoolParams) (DRepKeyHash (mkKeyHash 7)))
-    , ConwayTxCertDeleg $
-        ConwayRegDelegCert
-          (KeyHashObj (mkKeyHash 8))
-          (DelegStake (sppId exampleStakePoolParams))
-          (Coin 2000000)
-    , ConwayTxCertPool $ RegPool exampleStakePoolParams
-    , ConwayTxCertPool $ RetirePool (sppId exampleStakePoolParams) (EpochNo 2)
-    , ConwayTxCertGov $ ConwayRegDRep (KeyHashObj (mkKeyHash 9)) (Coin 500000) (SJust exampleAnchor)
-    , ConwayTxCertGov $ ConwayUnRegDRep (KeyHashObj (mkKeyHash 9)) (Coin 500000)
-    , ConwayTxCertGov $ ConwayUpdateDRep (KeyHashObj (mkKeyHash 9)) (SJust exampleAnchor)
-    , ConwayTxCertGov $ ConwayAuthCommitteeHotKey (KeyHashObj (mkKeyHash 10)) (KeyHashObj (mkKeyHash 11))
-    , ConwayTxCertGov $ ConwayResignCommitteeColdKey (KeyHashObj (mkKeyHash 10)) (SJust exampleAnchor)
+    [ RegDepositTxCert (KeyHashObj (mkKeyHash 2)) (Coin 2000000)
+    , UnRegDepositTxCert (KeyHashObj (mkKeyHash 2)) (Coin 2000000)
+    , DelegTxCert (KeyHashObj (mkKeyHash 3)) (DelegStake (sppId exampleStakePoolParams))
+    , DelegTxCert (KeyHashObj (mkKeyHash 4)) (DelegVote (DRepKeyHash (mkKeyHash 5)))
+    , DelegTxCert
+        (KeyHashObj (mkKeyHash 6))
+        (DelegStakeVote (sppId exampleStakePoolParams) (DRepKeyHash (mkKeyHash 7)))
+    , DelegTxCert (KeyHashObj (mkKeyHash 13)) (DelegVote (DRepScriptHash (mkScriptHash 1)))
+    , DelegTxCert (KeyHashObj (mkKeyHash 14)) (DelegVote DRepAlwaysAbstain)
+    , DelegTxCert (KeyHashObj (mkKeyHash 15)) (DelegVote DRepAlwaysNoConfidence)
+    , RegDepositDelegTxCert
+        (KeyHashObj (mkKeyHash 8))
+        (DelegStake (sppId exampleStakePoolParams))
+        (Coin 2000000)
+    , RegDRepTxCert (KeyHashObj (mkKeyHash 9)) (Coin 500000) (SJust exampleAnchor)
+    , UnRegDRepTxCert (KeyHashObj (mkKeyHash 9)) (Coin 500000)
+    , UpdateDRepTxCert (KeyHashObj (mkKeyHash 9)) (SJust exampleAnchor)
+    , AuthCommitteeHotKeyTxCert (KeyHashObj (mkKeyHash 10)) (KeyHashObj (mkKeyHash 11))
+    , ResignCommitteeColdTxCert (KeyHashObj (mkKeyHash 10)) (SJust exampleAnchor)
     ]
 
 exampleAnchor :: Anchor
@@ -318,6 +330,3 @@ exampleProposalProcedureNewConstitution =
             }
     , pProcAnchor = exampleAnchor
     }
-
-exampleConwayGenesis :: ConwayGenesis
-exampleConwayGenesis = expectedConwayGenesis
