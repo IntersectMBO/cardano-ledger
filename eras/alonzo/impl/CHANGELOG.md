@@ -38,6 +38,9 @@
 * Add `genDatumPresent`
 * Added `Proxy era` argument to `exUnitsRule`
 * `TranslationInstance` has a new field `tiPlutusPurpose`
+* In `Test.Cardano.Ledger.Alonzo.Examples`:
+  - Remove `mkAlonzoBasedExampleTx`, `exampleAlonzoBasedShelleyTxBody`, `exampleAlonzoBasedTxBody`, `exampleRedeemer`
+  - Add `exampleAlonzoBasedTx`, `exampleAlonzoToBabbageTx`, `exampleAlonzoToConwayTx`
 
 ## 1.15.0.0
 

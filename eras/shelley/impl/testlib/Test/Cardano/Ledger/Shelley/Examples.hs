@@ -9,17 +9,17 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-- | The example transactions in this module are not valid transactions. We
+-- don't care, we are only interested in serialisation, not validation.
 module Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   ledgerExamples,
   -- functions used in building examples for other eras
   mkShelleyBasedLedgerExamples,
-  mkShelleyBasedExampleTx,
-  exampleShelleyBasedShelleyTxBody,
-  exampleShelleyBasedTxBody,
-  exampleCerts,
-  exampleWithdrawals,
-  exampleAuxDataMap,
+  exampleShelleyTx,
+  exampleShelleyBasedTx,
+  exampleShelleyToBabbageTx,
+  exampleShelleyToConwayTx,
   exampleNonMyopicRewards,
   exampleCoin,
   examplePayKey,
@@ -28,21 +28,18 @@ module Test.Cardano.Ledger.Shelley.Examples (
   examplePoolDistr,
   exampleStakePoolParams,
   exampleTxIns,
-  exampleProposedPPUpdates,
   exampleByronAddress,
   exampleShelleyScript,
-  exampleBootstrapWitness,
   testShelleyGenesis,
   -- utility functions
-  keyToCredential,
   mkDSIGNKeyPair,
   mkKeyHash,
   mkScriptHash,
-  mkShelleyBasedWitnesses,
   seedFromByte,
   seedFromWords,
 ) where
 
+import Cardano.Base.IP (toIPv4, toIPv6)
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash as Hash
@@ -53,6 +50,7 @@ import Cardano.Ledger.Address (BootstrapAddress (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder)
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Credential (SlotNo32 (..))
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
@@ -77,7 +75,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Proxy (Proxy (Proxy))
-import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -130,8 +127,8 @@ ledgerExamples =
         DelegateeNotRegisteredDELEG @ShelleyEra (mkKeyHash 1)
     )
     exampleCoin
-    ( mkShelleyBasedExampleTx (exampleTxBodyShelley (Coin 100000))
-        & witsTxL . scriptTxWitsL .~ Map.singleton scriptHash script
+    ( exampleShelleyTx
+        & witsTxL . scriptTxWitsL <>~ Map.singleton scriptHash script
     )
     emptyFromByronTranslationContext
   where
@@ -182,25 +179,6 @@ mkShelleyBasedLedgerExamples
       , leTranslationContext = translationContext
       , leShelleyGenesis = testShelleyGenesis
       }
-
--- | This is not a valid transaction. We don't care, we are only interested in
--- serialisation, not validation.
-mkShelleyBasedExampleTx ::
-  forall era.
-  EraTx era =>
-  TxBody TopTx era ->
-  Tx TopTx era
-mkShelleyBasedExampleTx txBody =
-  mkBasicTx @era txBody
-    & witsTxL
-      .~ mkShelleyBasedWitnesses txBody keyPairWits
-    & auxDataTxL .~ SJust exampleAuxiliaryDataShelley
-  where
-    keyPairWits =
-      [ asWitness examplePayKey
-      , asWitness exampleStakeKey
-      , asWitness $ mkDSIGNKeyPair 1
-      ]
 
 -- | This is probably not a valid ledger. We don't care, we are only
 -- interested in serialisation, not validation.
@@ -328,41 +306,128 @@ testShelleyGenesis =
 exampleCoin :: Coin
 exampleCoin = Coin 10
 
-exampleTxBodyShelley :: Value ShelleyEra -> TxBody TopTx ShelleyEra
-exampleTxBodyShelley value =
-  exampleShelleyBasedShelleyTxBody value
-    & ttlTxBodyL .~ SlotNo 10
-
--- | Shelley era TxBody which is compatible with TxBody of future eras. Doesn't have
--- the ttl field, since that field only exists in Shelley era. For an example
--- which includes the ttl field, use 'exampleTxBodyShelley'.
-exampleShelleyBasedShelleyTxBody ::
+-- Complete transaction which is compatible with any era starting with Shelley.
+-- This transaction forms the basis on which future era transactions will be
+-- at the very least based on.
+exampleShelleyBasedTx ::
   forall era.
-  ShelleyEraTxBody era =>
-  Value era ->
-  TxBody TopTx era
-exampleShelleyBasedShelleyTxBody value =
-  exampleShelleyBasedTxBody value
-    & certsTxBodyL .~ exampleCerts
-    & updateTxBodyL .~ SJust (Update exampleProposedPPUpdates (EpochNo 0))
-
-exampleShelleyBasedTxBody ::
-  forall era.
-  EraTxBody era =>
-  Value era ->
-  TxBody TopTx era
-exampleShelleyBasedTxBody value =
-  mkBasicTxBody
-    & inputsTxBodyL .~ exampleTxIns
-    & outputsTxBodyL
-      .~ StrictSeq.fromList
-        [ mkBasicTxOut (mkAddr examplePayKey exampleStakeKey) value
-        ]
-    & withdrawalsTxBodyL .~ exampleWithdrawals
-    & feeTxBodyL .~ Coin 3
-    & auxDataHashTxBodyL .~ SJust exampleAuxDataHash
+  EraTx era =>
+  Tx TopTx era
+exampleShelleyBasedTx =
+  mkBasicTx @era txBody
+    & witsTxL
+      .~ mkShelleyBasedWitnesses txBody keyPairWits
+    & auxDataTxL .~ SJust exampleAuxiliaryDataShelley
   where
+    keyPairWits =
+      [ asWitness examplePayKey
+      , asWitness exampleStakeKey
+      , asWitness $ mkDSIGNKeyPair 1
+      ]
+    txBody :: TxBody TopTx era
+    txBody =
+      mkBasicTxBody
+        & inputsTxBodyL .~ exampleTxIns
+        & outputsTxBodyL
+          .~ StrictSeq.fromList
+            [ mkBasicTxOut (mkAddr examplePayKey exampleStakeKey) $ inject $ Coin 100000
+            , mkBasicTxOut
+                ( Addr
+                    Testnet
+                    (keyToCredential examplePayKey)
+                    (StakeRefPtr (Ptr (SlotNo32 10) (mkTxIxPartial 0) (mkCertIxPartial 0)))
+                )
+                $ inject
+                $ Coin 100000
+            , mkBasicTxOut (Addr Testnet (keyToCredential examplePayKey) StakeRefNull) $ inject $ Coin 100000
+            , mkBasicTxOut exampleByronAddress $ inject $ Coin 100000
+            ]
+        & withdrawalsTxBodyL .~ exampleWithdrawals
+        & feeTxBodyL .~ Coin 3
+        & auxDataHashTxBodyL .~ SJust exampleAuxDataHash
     exampleAuxDataHash = TxAuxDataHash $ mkDummySafeHash @EraIndependentTxAuxData 30
+
+-- Complete Shelley transaction that is only compatible in Shelley era. In addition of
+-- all shelley era fields from 'exampleShelleyToBabbageTx', we set the `ttl`
+-- field which is only available in Shelley.
+exampleShelleyTx ::
+  (ExactEra ShelleyEra era, EraTx era, ShelleyEraTxBody era) =>
+  Tx TopTx era
+exampleShelleyTx =
+  exampleShelleyToBabbageTx
+    & bodyTxL . ttlTxBodyL .~ SlotNo 10
+
+-- Complete Shelley transaction that is compatible until Babbage era ('ConwayEra' is not
+-- an instance of 'ShelleyEraTxBody'). In addition of all shelley based era
+-- fields from 'exampleShelleyToBabbageTx', we set the `update` field which was
+-- removed starting from Conway.
+exampleShelleyToBabbageTx ::
+  forall era.
+  (EraTx era, ShelleyEraTxBody era) =>
+  Tx TopTx era
+exampleShelleyToBabbageTx =
+  addShelleyToBabbageCerts exampleShelleyBasedTx
+    & bodyTxL . updateTxBodyL .~ SJust (Update exampleProposedPPUpdates (EpochNo 0))
+
+-- Complete Shelley transaction that is compatible until Conway era ('DijkstraEra' is not
+-- an instance of 'ShelleyEraTxCert'). In addition of all shelley based era
+-- fields from 'exampleShelleyBasedTx', we add all certificates that are known
+-- to work until Conway.
+exampleShelleyToConwayTx ::
+  forall era.
+  (EraTx era, ShelleyEraTxCert era) =>
+  Tx TopTx era
+exampleShelleyToConwayTx =
+  addShelleyToConwayCerts exampleShelleyBasedTx
+
+-- Add certificates to a given transaction that are compatible until Babbage
+-- era.
+addShelleyToBabbageCerts ::
+  (EraTx era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
+  Tx l era ->
+  Tx l era
+addShelleyToBabbageCerts tx =
+  addShelleyToConwayCerts $
+    tx & bodyTxL . certsTxBodyL <>~ certs
+  where
+    certs =
+      StrictSeq.fromList
+        [ GenesisDelegTxCert
+            (mkKeyHash 3)
+            (mkKeyHash 4)
+            (coerce exampleVrfVerKeyHash :: VRFVerKeyHash GenDelegVRF)
+        , MirTxCert $
+            MIRCert ReservesMIR $
+              StakeAddressesMIR $
+                Map.fromList
+                  [ (keyToCredential (mkDSIGNKeyPair 2), DeltaCoin 1)
+                  ]
+        , MirTxCert $
+            MIRCert TreasuryMIR $
+              StakeAddressesMIR $
+                Map.fromList
+                  [ (keyToCredential (mkDSIGNKeyPair 3), DeltaCoin 1)
+                  ]
+        , MirTxCert $ MIRCert ReservesMIR $ SendToOppositePotMIR (Coin 1)
+        ]
+
+-- Add certificates to a given transaction that are compatible until Conway
+-- era (DijkstraEra is not an instance of ShelleyEraTxCert).
+addShelleyToConwayCerts ::
+  (EraTx era, ShelleyEraTxCert era) =>
+  Tx l era ->
+  Tx l era
+addShelleyToConwayCerts tx =
+  tx & bodyTxL . certsTxBodyL <>~ certs
+  where
+    certs =
+      StrictSeq.fromList
+        [ RegTxCert (keyToCredential exampleStakeKey)
+        , UnRegTxCert (ScriptHashObj (mkScriptHash 1))
+        , DelegStakeTxCert (keyToCredential exampleStakeKey) (sppId exampleStakePoolParams)
+        , RegPoolTxCert exampleStakePoolParams
+        , RetirePoolTxCert (sppId exampleStakePoolParams) (EpochNo 2)
+        ]
 
 exampleAuxiliaryDataShelley :: EraTxAuxData era => TxAuxData era
 exampleAuxiliaryDataShelley =
@@ -382,33 +447,6 @@ exampleTxIns :: Set TxIn
 exampleTxIns =
   Set.fromList
     [ TxIn (TxId (mkDummySafeHash @EraIndependentTxBody 1)) minBound
-    ]
-
-exampleCerts :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => StrictSeq (TxCert era)
-exampleCerts =
-  StrictSeq.fromList
-    [ RegTxCert (keyToCredential exampleStakeKey)
-    , UnRegTxCert (ScriptHashObj (mkScriptHash 1))
-    , DelegStakeTxCert (keyToCredential exampleStakeKey) (sppId exampleStakePoolParams)
-    , RegPoolTxCert exampleStakePoolParams
-    , RetirePoolTxCert (sppId exampleStakePoolParams) (EpochNo 2)
-    , GenesisDelegTxCert
-        (mkKeyHash 3)
-        (mkKeyHash 4)
-        (coerce exampleVrfVerKeyHash :: VRFVerKeyHash GenDelegVRF)
-    , MirTxCert $
-        MIRCert ReservesMIR $
-          StakeAddressesMIR $
-            Map.fromList
-              [ (keyToCredential (mkDSIGNKeyPair 2), DeltaCoin 1)
-              ]
-    , MirTxCert $
-        MIRCert TreasuryMIR $
-          StakeAddressesMIR $
-            Map.fromList
-              [ (keyToCredential (mkDSIGNKeyPair 3), DeltaCoin 1)
-              ]
-    , MirTxCert $ MIRCert ReservesMIR $ SendToOppositePotMIR (Coin 1)
     ]
 
 exampleWithdrawals :: Withdrawals
@@ -437,7 +475,15 @@ exampleStakePoolParams =
     , sppMargin = unsafeBoundRational 0.1
     , sppAccountAddress = exampleAccountAddress
     , sppOwners = Set.singleton $ hashKey $ vKey exampleStakeKey
-    , sppRelays = StrictSeq.empty
+    , sppRelays =
+        StrictSeq.fromList
+          [ SingleHostAddr
+              (SJust (Port 3000))
+              (SJust (toIPv4 [127, 0, 0, 1]))
+              (SJust (toIPv6 [0x2001, 0xdb8, 0, 0, 0, 0, 0, 1]))
+          , SingleHostName (SJust (Port 3001)) (fromJust $ textToDns 64 "relay.example.com")
+          , MultiHostName (fromJust $ textToDns 64 "relay.example.com")
+          ]
     , sppMetadata =
         SJust $
           PoolMetadata

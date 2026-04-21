@@ -5,6 +5,12 @@
 * Add `ApplyTick` instance for `MaryEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `MaryEra`.
 
+### `testlib`
+
+* In `Test.Cardano.Ledger.Mary.Examples`:
+  - Remove `exampleMaryBasedShelleyTxBody`, `exampleMaryBasedTxBody`
+  - Add `exampleMaryBasedTx`, `exampleMaryToBabbageTx`, `exampleMaryToConwayTx`
+
 ## 1.10.0.0
 
 * Add `Generic` instance for `ApplyTxError`

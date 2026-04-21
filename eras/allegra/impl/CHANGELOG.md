@@ -6,6 +6,12 @@
 * Add `EraForecast` and `ShelleyEraForecast` instances for `AllegraEra`.
 * Remove `NoThunks` instance for `AllegraUtxoPredFailure`
 
+### `testlib`
+
+* In `Test.Cardano.Ledger.Allegra.Examples`:
+  - Remove `mkAllegraBasedExampleTx`, `exampleAllegraBasedTxBody`, `exampleAllegraBasedShelleyTxBody`
+  - Add `exampleAllegraBasedTx`, `exampleAllegraToBabbageTx`, `exampleAllegraToConwayTx`
+
 ## 1.9.0.0
 
 * Add `Generic` instance for `ApplyTxError`
