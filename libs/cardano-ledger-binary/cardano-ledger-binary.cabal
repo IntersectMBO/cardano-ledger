@@ -133,6 +133,7 @@ library testlib
     half,
     hedgehog,
     hspec,
+    optparse-applicative,
     pretty-show,
     prettyprinter,
     prettyprinter-ansi-terminal,

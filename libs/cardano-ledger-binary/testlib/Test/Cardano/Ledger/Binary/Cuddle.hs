@@ -17,6 +17,8 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   huddleRoundTripGenValidate,
   huddleRoundTripArbitraryValidate,
   specWithHuddle,
+  generateCBORMain,
+  resolveHuddle,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -54,19 +56,23 @@ import qualified Codec.CBOR.Encoding as CBOR
 import Codec.CBOR.Pretty (prettyHexEnc)
 import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
-import qualified Codec.CBOR.Write as C
 import qualified Codec.CBOR.Write as CBOR
-import Control.Monad (unless)
+import Control.Monad (unless, when)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BS8
 import Data.Data (Proxy (..))
 import Data.Either (isLeft)
 import qualified Data.Text as T
 import GHC.Stack (HasCallStack)
+import qualified Options.Applicative as Opt
 import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)
 import qualified Prettyprinter.Render.Terminal as Ansi
 import Prettyprinter.Render.Text (hPutDoc)
 import System.Directory (createDirectoryIfMissing)
+import System.Exit (exitFailure)
 import System.FilePath (takeDirectory)
-import System.IO (IOMode (..), hPutStrLn, withFile)
+import System.IO (IOMode (..), hPutStrLn, hSetBinaryMode, stderr, stdout, withFile)
 import Test.AntiGen (runAntiGen, tryZapAntiGen)
 import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
 import Test.Cardano.Ledger.Binary.RoundTrip (
@@ -94,7 +100,10 @@ import Test.QuickCheck (
   counterexample,
   discard,
   forAll,
+  generate,
  )
+import Test.QuickCheck.Gen (unGen)
+import Test.QuickCheck.Random (mkQCGen)
 
 huddleDecoderEquivalenceSpec ::
   forall a.
@@ -159,7 +168,7 @@ huddleAntiCborSpec version ruleName =
             Just term -> do
               let
                 encoding = toPlainEncoding version $ encodeTerm term
-                bs = C.toStrictByteString encoding
+                bs = CBOR.toStrictByteString encoding
               case validateCBOR bs (Name ruleName) (mapIndex cddl) of
                 Evidenced SInvalid trc -> do
                   let
@@ -181,12 +190,9 @@ huddleAntiCborSpec version ruleName =
 specWithHuddle :: Cuddle.Huddle -> SpecWith (CTreeRoot MonoReferenced) -> Spec
 specWithHuddle h =
   beforeAll $
-    let cddl = Cuddle.toCDDL h
-        rCddl = Cuddle.fullResolveCDDL (mapCDDLDropExt cddl)
-     in case rCddl of
-          Right ct ->
-            pure ct
-          Left nrf -> error $ show nrf
+    case resolveHuddle h of
+      Right ct -> pure ct
+      Left err -> error err
 
 -- | Verify that random data generated is:
 --
@@ -313,3 +319,119 @@ writeSpec hddl path = do
     hPutStrLn h ""
   -- Write log to stdout
   putStrLn $ "Generated CDDL file at: " <> path
+
+--------------------------------------------------------------------------------
+-- Generating CBOR from CDDL
+--------------------------------------------------------------------------------
+
+-- | Options for CBOR generation CLI
+data GenerateCBOROpts = GenerateCBOROpts
+  { gcboRuleNames :: ![T.Text]
+  , gcboZap :: !(Maybe Int)
+  , gcboCount :: !Int
+  , gcboSeed :: !(Maybe Int)
+  , gcboBinary :: !Bool
+  }
+
+generateCBOROptsParser :: Opt.Parser GenerateCBOROpts
+generateCBOROptsParser =
+  GenerateCBOROpts
+    <$> Opt.some
+      ( Opt.strArgument
+          ( Opt.metavar "RULE_NAME..."
+              <> Opt.help "CDDL rule names to generate CBOR for"
+          )
+      )
+    <*> Opt.optional
+      ( Opt.option
+          Opt.auto
+          ( Opt.long "zap"
+              <> Opt.metavar "DEPTH"
+              <> Opt.help "Generate corrupted (zapped) CBOR with given zap depth"
+          )
+      )
+    <*> Opt.option
+      Opt.auto
+      ( Opt.long "count"
+          <> Opt.short 'n'
+          <> Opt.metavar "N"
+          <> Opt.value 1
+          <> Opt.showDefault
+          <> Opt.help "Number of samples to generate per rule"
+      )
+    <*> Opt.optional
+      ( Opt.option
+          Opt.auto
+          ( Opt.long "seed"
+              <> Opt.metavar "SEED"
+              <> Opt.help "Fixed random seed for reproducibility"
+          )
+      )
+    <*> Opt.switch
+      ( Opt.long "binary"
+          <> Opt.help "Output raw CBOR bytes instead of hex encoding"
+      )
+
+-- | Resolve a Huddle spec into a fully resolved CTree, suitable for CBOR generation.
+resolveHuddle :: Cuddle.Huddle -> Either String (CTreeRoot MonoReferenced)
+resolveHuddle h =
+  let cddl = Cuddle.toCDDL h
+   in case Cuddle.fullResolveCDDL (mapCDDLDropExt cddl) of
+        Right ct -> Right ct
+        Left nrf -> Left (show nrf)
+
+-- | Main entry point for generate-cbor executables.
+generateCBORMain :: Cuddle.Huddle -> IO ()
+generateCBORMain huddle = do
+  opts <-
+    Opt.execParser $
+      Opt.info
+        (generateCBOROptsParser Opt.<**> Opt.helper)
+        ( Opt.fullDesc
+            <> Opt.progDesc "Generate CBOR data from CDDL rules"
+            <> Opt.header "generate-cbor - CBOR data generator from CDDL specifications"
+        )
+  case resolveHuddle huddle of
+    Left err -> do
+      hPutStrLn stderr $ "Failed to resolve CDDL: " <> err
+      exitFailure
+    Right cddl -> do
+      when (gcboBinary opts) $ hSetBinaryMode stdout True
+      mapM_ (generateForRule opts cddl) (gcboRuleNames opts)
+
+generateForRule :: GenerateCBOROpts -> CTreeRoot MonoReferenced -> T.Text -> IO ()
+generateForRule opts cddl ruleName = do
+  let name = Name ruleName
+      showHeader = length (gcboRuleNames opts) > 1 && not (gcboBinary opts)
+  when showHeader $
+    putStrLn $
+      "# " <> T.unpack ruleName
+  mapM_ (generateOneSample opts cddl name) [0 .. gcboCount opts - 1]
+
+generateOneSample :: GenerateCBOROpts -> CTreeRoot MonoReferenced -> Name -> Int -> IO ()
+generateOneSample opts cddl name sampleIndex = do
+  let gen = case gcboZap opts of
+        Nothing -> fmap Just . runAntiGen $ generateFromName (mapIndex cddl) name
+        Just depth -> tryZapAntiGen depth $ generateFromName (mapIndex cddl) name
+  mTerm <- case gcboSeed opts of
+    Nothing -> generate gen
+    Just seed ->
+      let qcGen = mkQCGen (seed + sampleIndex)
+       in pure $ unGen gen qcGen 30
+  case mTerm of
+    Nothing ->
+      hPutStrLn stderr $
+        "Warning: zap produced Nothing for rule "
+          <> T.unpack (unName name)
+          <> " (sample "
+          <> show sampleIndex
+          <> ")"
+    Just term -> do
+      let encoding = CBOR.encodeTerm term
+          bs = CBOR.toStrictByteString encoding
+      if gcboBinary opts
+        then BS.hPut stdout bs
+        else
+          BS8.putStrLn (Base16.encode bs)
+  where
+    unName (Name t) = t
