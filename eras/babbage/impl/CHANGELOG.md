@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Fix `ex_unit_prices` CDDL to use `nonnegative_interval` instead of `positive_interval`
 * Remove `ToCBOR` and `FromCBOR` instances for `BabbageTxOut`
 * Add `ApplyTick` instance for `BabbageEra`
 * `BabbageTxInfoResult` changed its content type to `PlutusTxInfoResult`

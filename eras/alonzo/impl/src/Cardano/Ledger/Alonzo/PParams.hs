@@ -660,6 +660,7 @@ ppCoinsPerUTxOWord =
   PParam
     { ppName = "utxoCostPerByte"
     , ppLens = ppCoinsPerUTxOWordL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 17 ppuCoinsPerUTxOWordL
     }
 
@@ -668,6 +669,7 @@ ppCostModels =
   PParam
     { ppName = "costModels"
     , ppLens = ppCostModelsL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 18 ppuCostModelsL
     }
 
@@ -676,6 +678,7 @@ ppPrices =
   PParam
     { ppName = "executionUnitPrices"
     , ppLens = ppPricesL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 19 ppuPricesL
     }
 
@@ -684,6 +687,7 @@ ppMaxTxExUnits =
   PParam
     { ppName = "maxTxExecutionUnits"
     , ppLens = ppMaxTxExUnitsL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 20 ppuMaxTxExUnitsL
     }
 
@@ -692,6 +696,7 @@ ppMaxBlockExUnits =
   PParam
     { ppName = "maxBlockExecutionUnits"
     , ppLens = ppMaxBlockExUnitsL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 21 ppuMaxBlockExUnitsL
     }
 
@@ -700,6 +705,7 @@ ppMaxValSize =
   PParam
     { ppName = "maxValueSize"
     , ppLens = ppMaxValSizeL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 22 ppuMaxValSizeL
     }
 
@@ -708,6 +714,7 @@ ppCollateralPercentage =
   PParam
     { ppName = "collateralPercentage"
     , ppLens = ppCollateralPercentageL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 23 ppuCollateralPercentageL
     }
 
@@ -716,5 +723,6 @@ ppMaxCollateralInputs =
   PParam
     { ppName = "maxCollateralInputs"
     , ppLens = ppMaxCollateralInputsL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 24 ppuMaxCollateralInputsL
     }

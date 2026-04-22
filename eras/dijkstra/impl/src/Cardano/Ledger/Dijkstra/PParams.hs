@@ -462,6 +462,7 @@ ppMaxRefScriptSizePerBlock =
   PParam
     { ppName = "maxRefScriptSizePerBlock"
     , ppLens = ppMaxRefScriptSizePerBlockL
+    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
@@ -475,6 +476,7 @@ ppMaxRefScriptSizePerTx =
   PParam
     { ppName = "maxRefScriptSizePerTx"
     , ppLens = ppMaxRefScriptSizePerTxL
+    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
@@ -488,6 +490,7 @@ ppRefScriptCostStride =
   PParam
     { ppName = "refScriptCostStride"
     , ppLens = ppRefScriptCostStrideL
+    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
@@ -501,6 +504,7 @@ ppRefScriptCostMultiplier =
   PParam
     { ppName = "refScriptCostMultiplier"
     , ppLens = ppRefScriptCostMultiplierL
+    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate

@@ -2,6 +2,9 @@
 
 ## 1.21.0.0
 
+* Add `decodeProtVer` to `Cardano.Ledger.BaseTypes`
+* Add `EraDecoder` type and `ppEraDecoder` field to `PParam`
+* Fix `DecCBOR` instance for `PParamsUpdate` to reject `ProtVer` values exceeding the era maximum
 * Remove `ToCBOR` and `FromCBOR` instances for `TxIx`, `CertIx`, `SlotNo32`, `Ptr`, `VRFVerKeyHash`, `SafeHash`, `VoidEraRule`, `Language`, `SLanguage`
 * Remove `FromCBOR` instances for `ScriptHash`, `ChainCode`, `PlutusBinary`, `BootstrapWitness`, `WitVKey`
 * Remove `ToCBOR` and `FromCBOR` instances for `PlutusWithContext`

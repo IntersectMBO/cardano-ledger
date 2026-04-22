@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -16,6 +17,7 @@ module Cardano.Ledger.Binary.Decoding.DecCBOR (
   DecCBOR (..),
   fromByronCBOR,
   decodeScriptContextFromData,
+  decodeIntegralRational,
 ) where
 
 import qualified Cardano.Binary as Plain (Decoder)
@@ -64,6 +66,7 @@ import Data.ByteString.Short (ShortByteString(SBS))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Cardano.Base.IP (IPv4, IPv6)
+import Control.Monad (when)
 import Data.Fixed (Fixed (..))
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
@@ -71,6 +74,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe.Strict as SMaybe
 import qualified Data.Primitive.ByteArray as Prim
+import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -206,6 +210,17 @@ instance DecCBOR IPv4 where
 instance DecCBOR IPv6 where
   decCBOR = decodeIPv6
   {-# INLINE decCBOR #-}
+
+decodeIntegralRational :: forall a s. (DecCBOR a, Integral a) => Decoder s Rational
+decodeIntegralRational = do
+  assertTag 30
+  values <- decodeList (decCBOR @a)
+  case values of
+    [n, d] -> do
+      when (d == 0) $ fail "Denominator cannot be zero"
+      pure $! toInteger n % toInteger d
+    xs ->
+      cborError $ DecoderErrorSizeMismatch "Rational" 2 (length xs)
 
 --------------------------------------------------------------------------------
 -- Tagged

@@ -1267,6 +1267,7 @@ ppPoolVotingThresholds =
   PParam
     { ppName = "poolVotingThresholds"
     , ppLens = ppPoolVotingThresholdsL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 25 ppuPoolVotingThresholdsL
     }
 
@@ -1275,6 +1276,7 @@ ppDRepVotingThresholds =
   PParam
     { ppName = "dRepVotingThresholds"
     , ppLens = ppDRepVotingThresholdsL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 26 ppuDRepVotingThresholdsL
     }
 
@@ -1283,6 +1285,7 @@ ppCommitteeMinSize =
   PParam
     { ppName = "committeeMinSize"
     , ppLens = ppCommitteeMinSizeL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 27 ppuCommitteeMinSizeL
     }
 
@@ -1291,6 +1294,7 @@ ppCommitteeMaxTermLength =
   PParam
     { ppName = "committeeMaxTermLength"
     , ppLens = ppCommitteeMaxTermLengthL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 28 ppuCommitteeMaxTermLengthL
     }
 
@@ -1299,6 +1303,7 @@ ppGovActionLifetime =
   PParam
     { ppName = "govActionLifetime"
     , ppLens = ppGovActionLifetimeL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 29 ppuGovActionLifetimeL
     }
 
@@ -1307,6 +1312,7 @@ ppGovActionDeposit =
   PParam
     { ppName = "govActionDeposit"
     , ppLens = ppGovActionDepositCompactL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 30 ppuGovActionDepositCompactL
     }
 
@@ -1315,6 +1321,7 @@ ppDRepDeposit =
   PParam
     { ppName = "dRepDeposit"
     , ppLens = ppDRepDepositCompactL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 31 ppuDRepDepositCompactL
     }
 
@@ -1323,6 +1330,7 @@ ppDRepActivity =
   PParam
     { ppName = "dRepActivity"
     , ppLens = ppDRepActivityL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 32 ppuDRepActivityL
     }
 
@@ -1331,6 +1339,7 @@ ppMinFeeRefScriptCostPerByte =
   PParam
     { ppName = "minFeeRefScriptCostPerByte"
     , ppLens = ppMinFeeRefScriptCostPerByteL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 33 ppuMinFeeRefScriptCostPerByteL
     }
 
@@ -1339,5 +1348,6 @@ ppGovProtocolVersion =
   PParam
     { ppName = "protocolVersion"
     , ppLens = ppProtocolVersionL
+    , ppEraDecoder = Nothing
     , ppUpdate = Nothing
     }

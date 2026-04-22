@@ -98,6 +98,7 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (
+  genEraProtVer,
   genValidAndUnknownCostModels,
   genValidCostModel,
   genValidCostModels,
@@ -247,7 +248,7 @@ genPlutusScript lang =
     , (5, alwaysFailsLang lang <$> elements [1, 2, 3])
     ]
 
-instance Arbitrary (AlonzoPParams Identity era) where
+instance Era era => Arbitrary (AlonzoPParams Identity era) where
   arbitrary =
     AlonzoPParams
       <$> arbitrary
@@ -264,7 +265,7 @@ instance Arbitrary (AlonzoPParams Identity era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> genEraProtVer @era
       <*> arbitrary
       <*> arbitrary
       <*> genValidCostModels [PlutusV1, PlutusV2]
@@ -277,7 +278,7 @@ instance Arbitrary (AlonzoPParams Identity era) where
 
 deriving instance Arbitrary OrdExUnits
 
-instance Arbitrary (AlonzoPParams StrictMaybe era) where
+instance Era era => Arbitrary (AlonzoPParams StrictMaybe era) where
   arbitrary =
     AlonzoPParams
       <$> arbitrary
@@ -294,7 +295,7 @@ instance Arbitrary (AlonzoPParams StrictMaybe era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> oneof [pure SNothing, SJust <$> genEraProtVer @era]
       <*> arbitrary
       <*> arbitrary
       <*> oneof [pure SNothing, SJust <$> genValidCostModels [PlutusV1, PlutusV2]]

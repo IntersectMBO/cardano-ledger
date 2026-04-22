@@ -62,6 +62,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
+  decodeProtVer,
   succVersion,
  )
 import Cardano.Ledger.Binary (
@@ -339,6 +340,7 @@ ppTxFeePerByte =
   PParam
     { ppName = "txFeePerByte"
     , ppLens = ppTxFeePerByteL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 0 ppuTxFeePerByteL
     }
 
@@ -351,6 +353,7 @@ ppTxFeeFixed =
   PParam
     { ppName = "txFeeFixed"
     , ppLens = ppTxFeeFixedCompactL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 1 ppuTxFeeFixedCompactL
     }
 
@@ -363,6 +366,7 @@ ppMaxBBSize =
   PParam
     { ppName = "maxBlockBodySize"
     , ppLens = ppMaxBBSizeL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 2 ppuMaxBBSizeL
     }
 
@@ -371,6 +375,7 @@ ppMaxTxSize =
   PParam
     { ppName = "maxTxSize"
     , ppLens = ppMaxTxSizeL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 3 ppuMaxTxSizeL
     }
 
@@ -379,6 +384,7 @@ ppMaxBHSize =
   PParam
     { ppName = "maxBlockHeaderSize"
     , ppLens = ppMaxBHSizeL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 4 ppuMaxBHSizeL
     }
 
@@ -387,6 +393,7 @@ ppKeyDeposit =
   PParam
     { ppName = "stakeAddressDeposit"
     , ppLens = ppKeyDepositCompactL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 5 ppuKeyDepositCompactL
     }
 
@@ -395,6 +402,7 @@ ppPoolDeposit =
   PParam
     { ppName = "stakePoolDeposit"
     , ppLens = ppPoolDepositCompactL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 6 ppuPoolDepositCompactL
     }
 
@@ -403,6 +411,7 @@ ppEMax =
   PParam
     { ppName = "poolRetireMaxEpoch"
     , ppLens = ppEMaxL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 7 ppuEMaxL
     }
 
@@ -411,6 +420,7 @@ ppNOpt =
   PParam
     { ppName = "stakePoolTargetNum"
     , ppLens = ppNOptL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 8 ppuNOptL
     }
 
@@ -419,6 +429,7 @@ ppA0 =
   PParam
     { ppName = "poolPledgeInfluence"
     , ppLens = ppA0L
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 9 ppuA0L
     }
 
@@ -427,6 +438,7 @@ ppRho =
   PParam
     { ppName = "monetaryExpansion"
     , ppLens = ppRhoL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 10 ppuRhoL
     }
 
@@ -435,6 +447,7 @@ ppTau =
   PParam
     { ppName = "treasuryCut"
     , ppLens = ppTauL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 11 ppuTauL
     }
 
@@ -443,6 +456,7 @@ ppD =
   PParam
     { ppName = "decentralization"
     , ppLens = ppDL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 12 ppuDL
     }
 
@@ -451,14 +465,16 @@ ppExtraEntropy =
   PParam
     { ppName = "extraPraosEntropy"
     , ppLens = ppExtraEntropyL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 13 ppuExtraEntropyL
     }
 
-ppProtocolVersion :: (EraPParams era, AtMostEra "Babbage" era) => PParam era
+ppProtocolVersion :: forall era. (EraPParams era, AtMostEra "Babbage" era) => PParam era
 ppProtocolVersion =
   PParam
     { ppName = "protocolVersion"
     , ppLens = ppProtocolVersionL
+    , ppEraDecoder = Just (EraDecoder (decodeProtVer @era))
     , ppUpdate = Just $ PParamUpdate 14 ppuProtocolVersionL
     }
 
@@ -467,6 +483,7 @@ ppMinUTxOValue =
   PParam
     { ppName = "minUTxOValue"
     , ppLens = ppMinUTxOValueCompactL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 15 ppuMinUTxOValueCompactL
     }
 
@@ -475,6 +492,7 @@ ppMinPoolCost =
   PParam
     { ppName = "minPoolCost"
     , ppLens = ppMinPoolCostCompactL
+    , ppEraDecoder = Nothing
     , ppUpdate = Just $ PParamUpdate 16 ppuMinPoolCostCompactL
     }
 

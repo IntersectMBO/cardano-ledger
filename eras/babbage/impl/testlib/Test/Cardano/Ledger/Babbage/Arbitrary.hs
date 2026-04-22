@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -24,10 +25,10 @@ import Control.State.Transition (STS (PredicateFailure))
 import Data.Functor.Identity (Identity)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)
+import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer, genValidCostModels)
 import Test.QuickCheck
 
-instance Arbitrary (BabbagePParams Identity era) where
+instance Era era => Arbitrary (BabbagePParams Identity era) where
   arbitrary =
     BabbagePParams
       <$> arbitrary
@@ -42,7 +43,7 @@ instance Arbitrary (BabbagePParams Identity era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> genEraProtVer @era
       <*> arbitrary
       <*> arbitrary
       <*> genValidCostModels [PlutusV1, PlutusV2]
@@ -53,7 +54,7 @@ instance Arbitrary (BabbagePParams Identity era) where
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary (BabbagePParams StrictMaybe era) where
+instance Era era => Arbitrary (BabbagePParams StrictMaybe era) where
   arbitrary =
     BabbagePParams
       <$> arbitrary
@@ -68,7 +69,7 @@ instance Arbitrary (BabbagePParams StrictMaybe era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> oneof [pure SNothing, SJust <$> genEraProtVer @era]
       <*> arbitrary
       <*> arbitrary
       <*> oneof [pure SNothing, SJust <$> genValidCostModels [PlutusV1, PlutusV2]]

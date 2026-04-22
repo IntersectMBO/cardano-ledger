@@ -107,12 +107,12 @@ boundedBytesRule pname =
 
 exUnitPricesRule ::
   forall era.
-  HuddleRule "positive_interval" era => Proxy "ex_unit_prices" -> Proxy era -> Rule
+  HuddleRule "nonnegative_interval" era => Proxy "ex_unit_prices" -> Proxy era -> Rule
 exUnitPricesRule pname p =
   pname
     =.= arr
-      [ "mem_price" ==> huddleRule @"positive_interval" p
-      , "step_price" ==> huddleRule @"positive_interval" p
+      [ "mem_price" ==> huddleRule @"nonnegative_interval" p
+      , "step_price" ==> huddleRule @"nonnegative_interval" p
       ]
 
 requiredSignersRule ::

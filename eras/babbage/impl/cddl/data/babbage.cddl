@@ -407,9 +407,8 @@ max_word64 = 18446744073709551615
 
 cost_models = {? 0 : [166*166 int64], ? 1 : [175*175 int64]}
 
-ex_unit_prices = [mem_price : positive_interval, step_price : positive_interval]
-
-positive_interval = #6.30([positive_int, positive_int])
+ex_unit_prices = 
+  [mem_price : nonnegative_interval, step_price : nonnegative_interval]
 
 ex_units = [mem : 0 .. max_int64, steps : 0 .. max_int64]
 

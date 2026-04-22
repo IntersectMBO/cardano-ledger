@@ -32,6 +32,9 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   uniformSubSet,
   uniformSubMap,
   uniformSubMapElems,
+
+  -- * Era-aware generators
+  genEraProtVer,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -261,6 +264,13 @@ instance Arbitrary CertIx where
 
 instance Arbitrary ProtVer where
   arbitrary = ProtVer <$> arbitrary <*> arbitrary
+
+-- | Generate a 'ProtVer' whose major version falls within the era's accepted range.
+genEraProtVer :: forall era. Era era => Gen ProtVer
+genEraProtVer =
+  ProtVer
+    <$> elements [eraProtVerLow @era .. succ (eraProtVerHigh @era)]
+    <*> arbitrary
 
 instance Arbitrary Nonce where
   arbitrary =
