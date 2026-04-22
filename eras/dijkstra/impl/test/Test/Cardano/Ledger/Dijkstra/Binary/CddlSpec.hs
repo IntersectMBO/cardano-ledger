@@ -15,17 +15,19 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval, AccountBalanceIntervals)
 import Cardano.Ledger.Plutus.Data (Data, Datum)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genDatumPresent, genNonEmptyRedeemers)
 import Test.Cardano.Ledger.Binary.Cuddle (
-  huddleAntiCborSpec,
-  huddleDecoderEquivalenceSpec,
-  huddleRoundTripAnnCborSpec,
-  huddleRoundTripArbitraryValidate,
-  huddleRoundTripCborSpec,
   noTwiddle,
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
+import Test.Cardano.Ledger.Core.Binary (
+  fullAnnCddlSpec,
+  fullAnnGenCddlSpec,
+  fullCddlSpec,
+  fullGenCddlSpec,
+ )
+import Test.Cardano.Ledger.Dijkstra.Arbitrary (genNonEmptyAccountBalanceIntervals)
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 
 spec :: Spec
@@ -33,75 +35,51 @@ spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @DijkstraEra
     describe "Huddle" $ specWithHuddle dijkstraCDDL . noTwiddle $ do
-      huddleRoundTripCborSpec @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
-      huddleRoundTripCborSpec @(AccountBalanceIntervals DijkstraEra) v "account_balance_intervals"
-      huddleRoundTripArbitraryValidate @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
-      huddleRoundTripCborSpec @(Value DijkstraEra) v "positive_coin"
-      huddleRoundTripArbitraryValidate @(Value DijkstraEra) v "value"
-      describe "MultiAsset" $ do
-        huddleRoundTripCborSpec @(Value DijkstraEra) v "value"
+      -- AccountBalanceInterval
+      fullCddlSpec @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
+      -- AccountBalanceIntervals
+      fullGenCddlSpec @(AccountBalanceIntervals DijkstraEra)
+        genNonEmptyAccountBalanceIntervals
+        v
+        "account_balance_intervals"
+      -- Value
+      fullCddlSpec @(Value DijkstraEra) v "value"
+      -- TxBody TopTx
       xdescribe "fix TxBody" $ do
-        huddleRoundTripAnnCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
-        huddleRoundTripCborSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
-        huddleRoundTripArbitraryValidate @(TxBody TopTx DijkstraEra) v "transaction_body"
-        huddleRoundTripAnnCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
-        huddleRoundTripCborSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
-        huddleRoundTripArbitraryValidate @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
-      -- AuxData
-      huddleRoundTripAnnCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
-      huddleRoundTripArbitraryValidate @(TxAuxData DijkstraEra) v "auxiliary_data"
-      huddleRoundTripCborSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
-      huddleRoundTripAnnCborSpec @(NativeScript DijkstraEra) v "native_script"
-      huddleRoundTripArbitraryValidate @(NativeScript DijkstraEra) v "native_script"
-      huddleRoundTripCborSpec @(NativeScript DijkstraEra) v "native_script"
-      huddleRoundTripAnnCborSpec @(Data DijkstraEra) v "plutus_data"
-      huddleRoundTripArbitraryValidate @(Data DijkstraEra) v "plutus_data"
-      huddleRoundTripCborSpec @(Data DijkstraEra) v "plutus_data"
-      xdescribe "fix NoDatum" $ do
-        huddleRoundTripCborSpec @(TxOut DijkstraEra) v "transaction_output"
-        huddleRoundTripArbitraryValidate @(TxOut DijkstraEra) v "transaction_output"
-      huddleRoundTripAnnCborSpec @(Script DijkstraEra) v "script"
-      huddleRoundTripCborSpec @(Script DijkstraEra) v "script"
-      huddleRoundTripArbitraryValidate @(Script DijkstraEra) v "script"
-      huddleRoundTripCborSpec @(Datum DijkstraEra) v "datum_option"
-      -- TODO NoDatum is encoded as an empty bytestring
-      xdescribe "fix NoDatum" $ huddleRoundTripArbitraryValidate @(Datum DijkstraEra) v "datum_option"
+        fullAnnCddlSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
+      -- TxBody SubTx
+      xdescribe "fix TxBody" $ do
+        fullAnnCddlSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
+      -- TxAuxData
+      fullAnnCddlSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
+      -- NativeScript
+      fullAnnCddlSpec @(NativeScript DijkstraEra) v "native_script"
+      -- Data
+      fullAnnCddlSpec @(Data DijkstraEra) v "plutus_data"
+      -- TxOut
+      fullCddlSpec @(TxOut DijkstraEra) v "transaction_output"
+      -- Script
+      fullAnnCddlSpec @(Script DijkstraEra) v "script"
+      -- Datum
+      fullGenCddlSpec @(Datum DijkstraEra) genDatumPresent v "datum_option"
       -- TxWits
       xdescribe "fix plutus_v4_script" $ do
-        huddleRoundTripAnnCborSpec @(TxWits DijkstraEra) v "transaction_witness_set"
-        huddleRoundTripCborSpec @(TxWits DijkstraEra) v "transaction_witness_set"
-      huddleRoundTripArbitraryValidate @(TxWits DijkstraEra) v "transaction_witness_set"
-      huddleRoundTripCborSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
-      huddleRoundTripArbitraryValidate @(PParamsUpdate DijkstraEra) v "protocol_param_update"
-      huddleAntiCborSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
-      huddleRoundTripCborSpec @CostModels v "cost_models"
-      huddleRoundTripArbitraryValidate @CostModels v "cost_models"
-      huddleRoundTripAnnCborSpec @(Redeemers DijkstraEra) v "redeemers"
-      -- TODO arbitrary can generate empty redeemers, which is not allowed in the CDDL
-      xdescribe "fix empty redeemers" $
-        huddleRoundTripArbitraryValidate @(Redeemers DijkstraEra) v "redeemers"
-      huddleRoundTripCborSpec @(Redeemers DijkstraEra) v "redeemers"
+        fullAnnCddlSpec @(TxWits DijkstraEra) v "transaction_witness_set"
+      -- PParamsUpdate
+      fullCddlSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
+      -- CostModels
+      xdescribe "not enough decision points" $ do
+        fullCddlSpec @CostModels v "cost_models"
+      -- Redeemers
+      fullAnnGenCddlSpec @(Redeemers DijkstraEra) genNonEmptyRedeemers v "redeemers"
+      -- Tx
       xdescribe "fix Transaction" $ do
-        huddleRoundTripAnnCborSpec @(Tx TopTx DijkstraEra) v "transaction"
-        huddleRoundTripCborSpec @(Tx TopTx DijkstraEra) v "transaction"
-      -- TODO enable this once map/list expansion has been optimized in cuddle
-      xdescribe "hangs" $ huddleRoundTripArbitraryValidate @(Tx TopTx DijkstraEra) v "transaction"
-      huddleRoundTripCborSpec @(VotingProcedure DijkstraEra) v "voting_procedure"
-      huddleRoundTripArbitraryValidate @(VotingProcedure DijkstraEra) v "voting_procedure"
-      huddleRoundTripCborSpec @(ProposalProcedure DijkstraEra) v "proposal_procedure"
-      huddleRoundTripArbitraryValidate @(ProposalProcedure DijkstraEra) v "proposal_procedure"
-      huddleRoundTripCborSpec @(GovAction DijkstraEra) v "gov_action"
-      huddleRoundTripArbitraryValidate @(GovAction DijkstraEra) v "gov_action"
-      huddleRoundTripCborSpec @(TxCert DijkstraEra) v "certificate"
-      huddleRoundTripArbitraryValidate @(TxCert DijkstraEra) v "certificate"
-      describe "DecCBOR instances equivalence via CDDL" $ do
-        huddleDecoderEquivalenceSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
-        huddleDecoderEquivalenceSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
-        huddleDecoderEquivalenceSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
-        huddleDecoderEquivalenceSpec @(NativeScript DijkstraEra) v "native_script"
-        huddleDecoderEquivalenceSpec @(Data DijkstraEra) v "plutus_data"
-        huddleDecoderEquivalenceSpec @(Script DijkstraEra) v "script"
-        huddleDecoderEquivalenceSpec @(TxWits DijkstraEra) v "transaction_witness_set"
-        huddleDecoderEquivalenceSpec @(Redeemers DijkstraEra) v "redeemers"
-        xdescribe "Fix decoder equivalence of Tx" $ do
-          huddleDecoderEquivalenceSpec @(Tx TopTx DijkstraEra) v "transaction"
+        fullAnnCddlSpec @(Tx TopTx DijkstraEra) v "transaction"
+      -- VotingProcedure
+      fullCddlSpec @(VotingProcedure DijkstraEra) v "voting_procedure"
+      -- ProposalProcedure
+      fullCddlSpec @(ProposalProcedure DijkstraEra) v "proposal_procedure"
+      -- GovAction
+      fullCddlSpec @(GovAction DijkstraEra) v "gov_action"
+      -- TxCert
+      fullCddlSpec @(TxCert DijkstraEra) v "certificate"

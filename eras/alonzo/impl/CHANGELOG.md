@@ -29,6 +29,7 @@
 
 ### `testlib`
 
+* Add `genDatumPresent`
 * Added `Proxy era` argument to `exUnitsRule`
 * `TranslationInstance` has a new field `tiPlutusPurpose`
 

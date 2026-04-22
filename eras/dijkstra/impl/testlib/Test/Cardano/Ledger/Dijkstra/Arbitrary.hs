@@ -14,7 +14,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Dijkstra.Arbitrary () where
+module Test.Cardano.Ledger.Dijkstra.Arbitrary (genNonEmptyAccountBalanceIntervals) where
 
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
@@ -37,6 +37,7 @@ import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Data.Functor.Identity (Identity)
+import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
@@ -308,6 +309,9 @@ instance Arbitrary (DijkstraMempoolPredFailure DijkstraEra) where
 instance Arbitrary (AccountBalanceIntervals era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
+
+genNonEmptyAccountBalanceIntervals :: Gen (AccountBalanceIntervals era)
+genNonEmptyAccountBalanceIntervals = AccountBalanceIntervals . Map.fromList . getNonEmpty <$> arbitrary
 
 instance Arbitrary (AccountBalanceInterval era) where
   arbitrary = genericArbitraryU

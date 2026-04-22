@@ -30,6 +30,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   genValidCostModel,
   genValidAndUnknownCostModels,
   genAlonzoPlutusPurposePointer,
+  genDatumPresent,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra, ApplyTxError (..), Tx (..))
@@ -78,7 +79,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   TxDats (TxDats),
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Plutus.Data (hashData)
+import Cardano.Ledger.Plutus.Data (Datum (..), hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (
   Language (..),
@@ -485,3 +486,6 @@ instance Arbitrary LangDepView where
   arbitrary = LangDepView <$> arbitrary <*> arbitrary
 
 deriving instance Arbitrary AlonzoExtraConfig
+
+genDatumPresent :: Era era => Gen (Datum era)
+genDatumPresent = oneof [DatumHash <$> arbitrary, Datum <$> arbitrary]
