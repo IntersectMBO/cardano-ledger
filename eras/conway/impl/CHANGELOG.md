@@ -2,6 +2,10 @@
 
 ## 1.22.0.0
 
+* Relax requirement for major protocol version in the block header for `Testnet`s.
+
+## 1.22.0.0
+
 * Switch `ConwayAccountState` to use `Maybe` instead of `StrictMaybe`
 * Add `balanceConwayAccountStateL`, `depositConwayAccountStateL`, `stakePoolDelegationConwayAccountStateL` and `dRepDelegationConwayAccountStateL`.
 
