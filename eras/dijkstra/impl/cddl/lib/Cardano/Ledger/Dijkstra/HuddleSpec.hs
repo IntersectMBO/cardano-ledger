@@ -32,11 +32,23 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
   auxiliaryDataMapRule,
 ) where
 
+import Cardano.Ledger.Binary (Term (..))
 import Cardano.Ledger.Conway.HuddleSpec hiding ()
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
+import Codec.CBOR.Cuddle.CDDL.CBORGenerator (
+  WrappedTerm (..),
+  liftAntiGen,
+  withAntiGen,
+ )
+import Control.Monad (forM)
 import Data.Proxy (Proxy (..))
 import Data.Text ()
 import Data.Word (Word64)
+import Test.AntiGen (replicateMNorm, (|!))
+import Test.Cardano.Ledger.Common (getSize, oneof, shuffle)
+import Test.Cardano.Ledger.Imp.Common (MonadGen (choose, liftGen))
+import Test.QuickCheck.GenT qualified as G
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -995,6 +1007,7 @@ instance HuddleRule "cost_models" DijkstraEra where
           |
           |Any 8-bit unsigned number can be used as a key.
           |]
+      $ withCBORGen generator
       $ pname
         =.= mp
           [ opt $ idx 0 ==> arr [0 <+ a (huddleRule @"int64" p)]
@@ -1003,6 +1016,27 @@ instance HuddleRule "cost_models" DijkstraEra where
           , opt $ idx 3 ==> arr [0 <+ a (huddleRule @"int64" p)]
           , 0 <+ asKey ((4 :: Integer) ... (255 :: Integer)) ==> arr [0 <+ a (huddleRule @"int64" p)]
           ]
+    where
+      generator = do
+        size <- liftGen getSize
+        nKeys <- G.choose (0, size)
+        initialKeys <- liftGen $ take nKeys <$> shuffle [0 :: Int .. 255]
+        keys <- forM initialKeys $ \i ->
+          liftAntiGen $
+            pure i
+              |! G.sized
+                ( \sz ->
+                    oneof
+                      [ choose (-1 - sz, -1)
+                      , choose (256, 256 + sz)
+                      ]
+                )
+        kvs <- forM keys $ \k -> G.resize (size `div` 2) $ do
+          nVals <- G.sized $ \sz -> choose (0, sz)
+          v <- withAntiGen (replicateMNorm nVals) $ generateFromName "int64"
+          vs <- genArrayTerm v
+          pure (TInt k, vs)
+        S <$> genMapTerm kvs
 
 instance HuddleRule1 "set" DijkstraEra where
   huddleRule1Named pname _ = maybeTaggedSet pname

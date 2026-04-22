@@ -24,7 +24,7 @@ module Cardano.Ledger.Huddle (
   genArrayTerm,
   genBytesTerm,
   genStringTerm,
-  pickOne,
+  genMapTerm,
 ) where
 
 import Cardano.Ledger.Binary (Term (..))
@@ -35,14 +35,12 @@ import Codec.CBOR.Cuddle.Huddle
 import qualified Codec.CBOR.Cuddle.Huddle as Huddle hiding ((=:=), (=:~))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
-import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NE
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-import System.Random.Stateful (StatefulGen, UniformRange (..))
-import Test.QuickCheck (Gen, elements)
+import Test.QuickCheck.GenT (MonadGen)
+import qualified Test.QuickCheck.GenT as GenT
 
 class (KnownSymbol name, Era era) => HuddleRule (name :: Symbol) era where
   huddleRuleNamed :: Proxy name -> Proxy era -> Rule
@@ -78,16 +76,14 @@ infixr 0 =.=
 
 infixr 0 =.~
 
-genArrayTerm :: [Term] -> Gen Term
-genArrayTerm es = elements [TList es, TListI es]
+genArrayTerm :: MonadGen m => [Term] -> m Term
+genArrayTerm es = GenT.elements [TList es, TListI es]
 
-pickOne :: StatefulGen g m => NonEmpty a -> g -> m a
-pickOne es g = do
-  i <- uniformRM (0, length es - 1) g
-  pure $ es NE.!! i
+genBytesTerm :: MonadGen m => ByteString -> m Term
+genBytesTerm bs = GenT.elements [TBytes bs, TBytesI $ LBS.fromStrict bs]
 
-genBytesTerm :: StatefulGen g m => ByteString -> g -> m Term
-genBytesTerm bs = pickOne [TBytes bs, TBytesI $ LBS.fromStrict bs]
+genStringTerm :: MonadGen m => T.Text -> m Term
+genStringTerm t = GenT.elements [TString t, TStringI $ LT.fromStrict t]
 
-genStringTerm :: StatefulGen g m => T.Text -> g -> m Term
-genStringTerm t = pickOne [TString t, TStringI $ LT.fromStrict t]
+genMapTerm :: MonadGen m => [(Term, Term)] -> m Term
+genMapTerm m = GenT.elements [TMap m, TMapI m]

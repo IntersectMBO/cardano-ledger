@@ -20,7 +20,7 @@ module Cardano.Ledger.Core.HuddleSpec where
 
 import Cardano.Ledger.BaseTypes (getVersion)
 import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
-import Cardano.Ledger.Huddle
+import Cardano.Ledger.Huddle hiding (withAntiGen)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CBORGenerator (
   CustomValidatorResult (..),
