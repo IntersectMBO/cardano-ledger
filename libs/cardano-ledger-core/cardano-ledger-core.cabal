@@ -203,7 +203,6 @@ library cddl
     heredoc,
     mempack,
     quickcheck-transformer,
-    random,
     text >=2.0,
 
 library testlib

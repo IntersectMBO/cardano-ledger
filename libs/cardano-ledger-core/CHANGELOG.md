@@ -24,6 +24,12 @@
 * Remove `ToCBOR` and `FromCBOR` instances for `Nonce`
 * Remove default implementation of `fromPlutusData` in `ToPlutusData` typeclass.
 
+### `cddl`
+
+* Remove `pickOne`
+* Add `genMapTerm`
+* Modify `genBytesTerm`, `genArrayTerm` and `genStringTerm` so it works with `MonadGen` instead of `StatefulGen`
+
 ### `testlib`
 
 * Add `toPackageGolden` and `itGolden`

@@ -50,6 +50,10 @@
 * Add protocol version validation to `createInitialState`:
   - Validate that current protocol version is within the era's bounds
 
+### `cddl`
+
+* Remove `withAntiGen` re-export, since it's deprecated
+
 ### `testlib`
 
 * Add `HuddleRule "int32" ShelleyEra` instance
