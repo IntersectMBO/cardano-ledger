@@ -45,12 +45,13 @@ import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
-  ProtVer,
+  Network (..),
+  ProtVer (..),
   Relation (..),
   ShelleyBase,
   Version,
   natVersion,
-  pvMajor,
+  networkId,
   succVersion,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -85,7 +86,8 @@ import Cardano.Ledger.Shelley.Rules (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyBbodyPredFailure (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), txouts, unUTxO)
 import Control.DeepSeq (NFData)
-import Control.Monad (guard)
+import Control.Monad (guard, when)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -93,6 +95,7 @@ import Control.State.Transition (
   TransitionRule,
   failOnJust,
   judgmentContext,
+  liftSTS,
   (?!),
  )
 import Data.Foldable (Foldable (foldMap'))
@@ -106,6 +109,7 @@ import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+import Numeric.Natural (Natural)
 
 data ConwayBbodyPredFailure era
   = WrongBlockBodySizeBBODY (Mismatch RelEQ Int)
@@ -291,6 +295,8 @@ conwayBbodyTransition ::
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , BaseM (EraRule "BBODY" era) ~ ShelleyBase
+  , STS (EraRule "BBODY" era)
   , AlonzoEraTx era
   , EraBlockBody era
   , BabbageEraTxBody era
@@ -309,12 +315,12 @@ conwayBbodyTransition = do
             txs = txsSeq ^. txSeqBlockBodyL
             totalRefScriptSize = totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs utxo
             maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+            curVerMajor = pvMajor $ pp ^. ppProtocolVersionL
+            headerMajorVer = pvMajor (bhviewProtVer bhView)
             checkHeaderMajorProtVerTooHigh = do
               let
-                curMajorVer = pvMajor (pp ^. ppProtocolVersionL)
-                headerMajorVer = pvMajor (bhviewProtVer bhView)
               -- There is always next version higher than the current one used
-              nextMajorVer <- succVersion curMajorVer
+              nextMajorVer <- succVersion curVerMajor
               -- If header version is less then or equal to the next version, then we are OK.
               guard (headerMajorVer > nextMajorVer)
               Just $
@@ -322,7 +328,22 @@ conwayBbodyTransition = do
                   { mismatchSupplied = headerMajorVer
                   , mismatchExpected = nextMajorVer
                   }
-        failOnJust checkHeaderMajorProtVerTooHigh $ injectFailure . HeaderProtVerTooHigh @era
+        netId <- liftSTS $ asks networkId
+
+        -- Disable protocol version check for testnets until we are in Dijksta
+        -- https://github.com/IntersectMBO/cardano-ledger/issues/5763
+        when (netId == Mainnet || curVerMajor >= natVersion @12) $ do
+          failOnJust checkHeaderMajorProtVerTooHigh $ injectFailure . HeaderProtVerTooHigh @era
+        let maxMinorVal = fromIntegral @Word32 @Natural (maxBound :: Word32)
+        when (curVerMajor >= natVersion @11) $ do
+          (pvMinor (bhviewProtVer bhView) <= maxMinorVal)
+            ?! injectFailure
+              ( HeaderProtVerTooHigh @era $
+                  Mismatch
+                    { mismatchSupplied = headerMajorVer
+                    , mismatchExpected = curVerMajor
+                    }
+              )
         totalRefScriptSize
           <= maxRefScriptSizePerBlock
             ?! injectFailure
