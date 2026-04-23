@@ -11,6 +11,8 @@
 * Remove `ToCBOR` and `FromCBOR` instances for `PlutusWithContext`
   - Add `EncCBOR` and `DecCBOR` instances as replacement
 * Remove `ToCBOR (TxOut era)` superclass constraint from `EraTxOut`
+* Remove `EncCBORGroup (BlockBody era)` superclass constraint from `EraBlockBody`
+* Remove `bBodySize` in favour of the new `blockBodySize` method on `EraBlockBody`
 * Remove `validMetadatum`
 * Deprecate `BHeaderView` in favour `*EraBlockHeader` typeclasses.
   - Move `isOverlaySlot` to `Cardano.Ledger.Slot`.

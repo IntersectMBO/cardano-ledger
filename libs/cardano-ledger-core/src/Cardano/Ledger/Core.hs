@@ -63,7 +63,6 @@ module Cardano.Ledger.Core (
   module Cardano.Ledger.Core.Era,
   -- $erablockbody
   EraBlockBody (..),
-  bBodySize,
 
   -- * Re-exports
   Addr (..),
@@ -626,7 +625,6 @@ class
   , Eq (BlockBody era)
   , Show (BlockBody era)
   , Typeable (BlockBody era)
-  , EncCBORGroup (BlockBody era)
   , DecCBOR (Annotator (BlockBody era))
   ) =>
   EraBlockBody era
@@ -645,8 +643,9 @@ class
   -- | The number of segregated components
   numSegComponents :: Word64
 
-bBodySize :: forall era. EraBlockBody era => ProtVer -> BlockBody era -> Int
-bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
+  blockBodySize :: ProtVer -> BlockBody era -> Int
+  default blockBodySize :: EncCBORGroup (BlockBody era) => ProtVer -> BlockBody era -> Int
+  blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 txIdTx :: EraTx era => Tx l era -> TxId
 txIdTx tx = txIdTxBody (tx ^. bodyTxL)

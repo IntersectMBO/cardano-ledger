@@ -8,6 +8,7 @@ module Test.Cardano.Protocol.Binary.BinarySpec (spec) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
@@ -38,6 +39,7 @@ blockEraSpec ::
   ( EraBlockBody era
   , Arbitrary (Tx TopTx era)
   , Arbitrary (BlockBody era)
+  , EncCBORGroup (BlockBody era)
   ) =>
   Spec
 blockEraSpec =

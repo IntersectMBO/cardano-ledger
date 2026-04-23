@@ -328,8 +328,6 @@ nonValidatingIndices (StrictSeq.fromStrict -> xs) =
 -- | Given the number of transactions, and the set of indices for which these
 -- transactions do not validate, create an aligned sequence of `IsValid`
 -- flags.
---
--- This function operates much as the inverse of 'nonValidatingIndices'.
 alignedValidFlags :: Int -> [Int] -> Seq.Seq IsValid
 alignedValidFlags = alignedValidFlags' (-1)
   where

@@ -277,7 +277,7 @@ mkBlock ::
 mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
       blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList txns
-      bodySize = fromIntegral $ bBodySize protVer blockBody
+      bodySize = fromIntegral $ blockBodySize protVer blockBody
       bodyHash = hashBlockBody @era blockBody
       bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
       blockHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
@@ -317,7 +317,7 @@ mkBlockFakeVRF ::
 mkBlockFakeVRF prev pKeys txns slotNo blockNo enonce bnonce l kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
       blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList txns
-      bodySize = fromIntegral $ bBodySize protVer blockBody
+      bodySize = fromIntegral $ blockBodySize protVer blockBody
       bodyHash = hashBlockBody blockBody
       bhBody =
         mkBHBodyFakeVRF bnonce l protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
