@@ -27,7 +27,7 @@ import Cardano.Ledger.Dijkstra.Core (
   AlonzoEraTx,
   AsItem,
   AsIx,
-  DijkstraBlockBody,
+  DijkstraBlockBody (..),
   Era,
   EraPParams (..),
   EraRule,
