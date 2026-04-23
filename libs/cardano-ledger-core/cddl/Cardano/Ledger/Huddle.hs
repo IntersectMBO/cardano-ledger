@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -21,26 +20,16 @@ module Cardano.Ledger.Huddle (
   (=.=),
   (=.~),
   Era,
-  genArrayTerm,
-  genBytesTerm,
-  genStringTerm,
-  genMapTerm,
 ) where
 
-import Cardano.Ledger.Binary (Term (..))
 import Cardano.Ledger.Core (Era)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.Comments ((//-))
-import Codec.CBOR.Cuddle.Huddle
+import Codec.CBOR.Cuddle.Huddle hiding (withAntiGen)
 import qualified Codec.CBOR.Cuddle.Huddle as Huddle hiding ((=:=), (=:~))
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as LBS
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-import Test.QuickCheck.GenT (MonadGen)
-import qualified Test.QuickCheck.GenT as GenT
 
 class (KnownSymbol name, Era era) => HuddleRule (name :: Symbol) era where
   huddleRuleNamed :: Proxy name -> Proxy era -> Rule
@@ -75,15 +64,3 @@ infixr 0 =.=
 (=.~) pname group = Name (T.pack (symbolVal pname)) =:~ group
 
 infixr 0 =.~
-
-genArrayTerm :: MonadGen m => [Term] -> m Term
-genArrayTerm es = GenT.elements [TList es, TListI es]
-
-genBytesTerm :: MonadGen m => ByteString -> m Term
-genBytesTerm bs = GenT.elements [TBytes bs, TBytesI $ LBS.fromStrict bs]
-
-genStringTerm :: MonadGen m => T.Text -> m Term
-genStringTerm t = GenT.elements [TString t, TStringI $ LT.fromStrict t]
-
-genMapTerm :: MonadGen m => [(Term, Term)] -> m Term
-genMapTerm m = GenT.elements [TMap m, TMapI m]
