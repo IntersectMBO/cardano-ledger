@@ -31,7 +31,6 @@ module Cardano.Ledger.Shelley.BlockBody.Internal (
   txSeqBlockBodyShelleyL,
   auxDataSeqDecoder,
   hashShelleySegWits,
-  bBodySize,
   slotToNonce,
   --
   incrBlocks,

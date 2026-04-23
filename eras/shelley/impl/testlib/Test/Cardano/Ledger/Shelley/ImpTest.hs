@@ -1493,7 +1493,7 @@ tryTxsInBlock' txs finalState blockIssuer = do
     blockHeader =
       TestBlockHeader
         { tbhIssuer = blockIssuer
-        , tbhBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
+        , tbhBSize = fromIntegral $ blockBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
         , tbhHSize = 0
         , tbhBHash = hashBlockBody blockBody
         , tbhSlot = slotNo
