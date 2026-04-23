@@ -56,7 +56,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
 ) where
 
 import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule, plutusScriptGen)
-import Cardano.Ledger.Huddle hiding (withAntiGen)
+import Cardano.Ledger.Huddle
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Data.Int (Int32)
 import Data.Proxy (Proxy (..))

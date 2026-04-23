@@ -20,12 +20,20 @@ module Cardano.Ledger.Core.HuddleSpec where
 
 import Cardano.Ledger.BaseTypes (getVersion)
 import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
-import Cardano.Ledger.Huddle hiding (withAntiGen)
-import Codec.CBOR.Cuddle.CDDL (Name (..))
-import Codec.CBOR.Cuddle.CDDL.CBORGenerator (
+import Cardano.Ledger.Huddle
+import Cardano.Ledger.Huddle.Gen (
+  CBORGen,
   CustomValidatorResult (..),
+  MonadGen (..),
   WrappedTerm (..),
+  arbitrary,
+  genArrayTerm,
+  liftAntiGen,
+  oneof,
+  vectorOf,
+  (|!),
  )
+import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.Huddle as H
 import Codec.CBOR.Term (Term (..))
 import Data.Bits (Bits (..))
@@ -37,18 +45,16 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import Data.Word (Word16, Word32, Word64)
 import GHC.TypeLits (KnownSymbol, Symbol)
-import Test.QuickCheck (Arbitrary (..), Gen, oneof, vectorOf)
-import Test.QuickCheck.GenT (MonadGen (..))
 import Text.Heredoc
 import Prelude hiding ((/))
 
-genByteString :: Int -> Gen ByteString
+genByteString :: MonadGen m => Int -> m ByteString
 genByteString n = BS.pack <$> vectorOf n arbitrary
 
 -- | Generator for plutus scripts that produces random bytestrings.
 -- This avoids collisions when scripts appear in sets (tag 258).
 plutusScriptGen :: MonadGen m => m WrappedTerm
-plutusScriptGen = S . TBytes <$> (liftGen . genByteString =<< choose (8, 1024))
+plutusScriptGen = S . TBytes <$> (genByteString =<< choose (8, 1024))
 
 instance Era era => HuddleRule "hash28" era where
   huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (28 :: Word64)
@@ -90,14 +96,13 @@ instance Era era => HuddleRule "unit_interval" era where
               pure (n, d)
             max64 = toInteger (maxBound @Word64)
         (n, d) <-
-          liftGen $
-            oneof
-              [ genUnitInterval64 0 max64
-              , genUnitInterval64 0 1000
-              , genUnitInterval64 (max64 - 1000) max64
-              ]
+          oneof
+            [ genUnitInterval64 0 max64
+            , genUnitInterval64 0 1000
+            , genUnitInterval64 (max64 - 1000) max64
+            ]
         S . TTagged 30
-          <$> liftGen (genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d])
+          <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d]
 
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
@@ -182,7 +187,7 @@ instance Era era => HuddleRule "coin" era where
 instance Era era => HuddleRule "positive_coin" era where
   huddleRuleNamed pname p = pname =.= (1 :: Integer) ... huddleRule @"max_word64" p
 
-genHash28 :: Gen ByteString
+genHash28 :: MonadGen m => m ByteString
 genHash28 = genByteString 28
 
 instance Era era => HuddleRule "address" era where
@@ -227,15 +232,15 @@ instance Era era => HuddleRule "address" era where
         let
           stakeRefMask = stakeRef `shiftL` 5 -- 0b0xx00000
           mkMask mask isMask = if isMask then mask else 0
-        isPaymentScriptMask <- mkMask 0b00010000 <$> liftGen arbitrary
-        isMainnetMask <- mkMask 0b00000001 <$> liftGen arbitrary
+        isPaymentScriptMask <- mkMask 0b00010000 <$> arbitrary
+        isMainnetMask <- mkMask 0b00000001 <$> arbitrary
         let
           header = stakeRefMask .|. isPaymentScriptMask .|. isMainnetMask
-          genVar32 = VarLen <$> liftGen (arbitrary @Word32)
-          genVar16 = VarLen <$> liftGen (arbitrary @Word16)
+          genVar32 = VarLen <$> arbitrary @Word32
+          genVar16 = VarLen <$> arbitrary @Word16
         stakeCred <- case stakeRef of
-          0b00 -> liftGen genHash28 -- staking payment hash
-          0b01 -> liftGen genHash28 -- staking script hash
+          0b00 -> genHash28 -- staking payment hash
+          0b01 -> genHash28 -- staking script hash
           0b10 -> do
             -- Ptr
             slotNo <- genVar32
@@ -243,7 +248,7 @@ instance Era era => HuddleRule "address" era where
             certIx <- genVar16
             pure $ packByteString slotNo <> packByteString txIx <> packByteString certIx
           _ -> pure mempty
-        paymentCred <- liftGen genHash28
+        paymentCred <- genHash28
         -- TODO use genBytesTerm once indefinite bytestring decoding has been fixed
         let bytesTerm = TBytes . BS.cons header $ paymentCred <> stakeCred
         pure $ S bytesTerm
@@ -252,13 +257,13 @@ instance Era era => HuddleRule "reward_account" era where
   huddleRuleNamed pname _ = withCBORGen generator $ pname =.= VBytes
     where
       generator = do
-        isMainnet <- liftGen arbitrary
-        isScript <- liftGen arbitrary
+        isMainnet <- arbitrary
+        isScript <- arbitrary
         let
           mainnetMask | isMainnet = 0b00000001 | otherwise = 0x00
           scriptMask | isScript = 0b00010000 | otherwise = 0x00
           header = 0b11100000 .|. mainnetMask .|. scriptMask
-        payload <- liftGen genHash28
+        payload <- genHash28
         let term = TBytes $ BS.cons header payload
         pure $ S term
 
@@ -307,6 +312,13 @@ instance Era era => HuddleRule "stake_credential" era where
 
 instance Era era => HuddleRule "port" era where
   huddleRuleNamed pname _ = pname =.= VUInt `le` 65535
+
+ipGen :: Int -> CBORGen WrappedTerm
+ipGen n = do
+  l <- liftAntiGen $ choose (n, 1024) |! choose (0, pred n)
+  bs <- genByteString l
+  -- TODO Also generate with TBytesI
+  pure . S $ TBytes bs
 
 ipValidator :: Int -> Term -> CustomValidatorResult
 ipValidator n = \case
