@@ -5,14 +5,7 @@
 ;      the same
 ;   2) every transaction_index must be strictly smaller than the length of
 ;      transaction_bodies
-block = 
-  [ header                 
-  , transaction_bodies       : [* transaction_body]                   
-  , transaction_witness_sets : [* transaction_witness_set]            
-  , auxiliary_data_set       : {* transaction_index => auxiliary_data}
-  , invalid_transactions     : [* transaction_index]                  
-  ]
-
+block = [header, block_body]
 
 transaction = 
   [  transaction_body, transaction_witness_set, true, auxiliary_data/ nil
@@ -98,6 +91,15 @@ signature = bytes .size 64
 protocol_version = [major_protocol_version, uint .size 4]
 
 major_protocol_version = 0 .. 13
+
+block_body = 
+  [ invalid_transactions : [* transaction_index]
+  , transactions      : [* transaction]
+  , peras_certificate : peras_certificate  
+  ]
+
+
+transaction_index = uint .size 2
 
 transaction_body = 
   {   0  : set<transaction_input>         
@@ -783,5 +785,5 @@ auxiliary_data_map =
   )
 
 
-transaction_index = uint .size 2
+peras_certificate = bytes/ nil
 

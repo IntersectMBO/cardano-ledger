@@ -54,8 +54,14 @@
 * Remove `NoThunks` instance for `DijkstraContextError`
 * Make `DijkstraContextError` constructors lazy
 
+### cddl
+
+* Add `peras_certificate`, `block_body`
+
 ### testlib
 
+* Add `ToExpr` instance for `DijkstraBlockBody`
+* Add `DecCBOR` instance for `DijkstraBlockBodyRaw`
 * Add `genNonEmptyAccountBalanceIntervals`
 * In `Test.Cardano.Ledger.Dijkstra.Examples`:
   - Remove `mkDijkstraBasedExampleTx`, `mkDijkstraBasedExampleTxBody`
