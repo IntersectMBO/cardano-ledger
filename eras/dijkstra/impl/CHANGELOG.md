@@ -49,9 +49,15 @@
 * Remove `NoThunks` instance for `DijkstraContextError`
 * Make `DijkstraContextError` constructors lazy
 
+### cddl
+
+* Add `peras_certificate`, `block_body`
+
 ### testlib
 
 * Add `genNonEmptyAccountBalanceIntervals`
+* Add `ToExpr` instance for `DijkstraBlockBody`
+* Add `DecCBOR` instance for `DijkstraBlockBodyRaw`
 
 ## 0.2.0.0
 
