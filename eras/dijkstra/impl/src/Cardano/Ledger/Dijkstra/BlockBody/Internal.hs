@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -66,7 +67,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoizedEra,
  )
 import Control.DeepSeq (NFData)
-import Control.Monad (unless)
+import Control.Monad (forM_, unless)
 import qualified Data.ByteString as BS
 import qualified Data.IntSet as IntSet
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -74,6 +75,7 @@ import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
+import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -184,7 +186,7 @@ instance
     case mLen of
       Just len | len /= 3 -> fail "expected 3 elements"
       _ -> pure ()
-    invalidTxs <- decCBOR
+    invalidTxs :: [Word16] <- decCBOR
     txs <- decCBOR
     perasCert <- decodeNullStrictMaybe decCBOR
     case mLen of
@@ -194,15 +196,12 @@ instance
       _ -> pure ()
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x < txsLength
-    unless (all inRange invalidTxs) $
-      fail $
-        "Some IsValid index is not in the range: 0 .. "
-          ++ show (txsLength - 1)
-          ++ ", "
-          ++ show invalidTxs
+    forM_ invalidTxs $ \i ->
+      unless (inRange $ fromIntegral @Word16 @Int i) . fail $
+        "index is out of range: " <> show i
     let
       setValidityFlag tx isValid = set isValidTxL isValid <$> tx
-      validityFlags = alignedValidFlags txsLength invalidTxs
+      validityFlags = alignedValidFlags txsLength (fromIntegral <$> invalidTxs)
       txsWithIsValid = Seq.zipWith setValidityFlag txs validityFlags
     pure $
       DijkstraBlockBodyRaw
