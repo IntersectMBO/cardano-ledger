@@ -42,7 +42,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import System.Random.Stateful (StatefulGen, UniformRange (..))
-import Test.QuickCheck (Gen, elements)
+import Test.QuickCheck.GenT (MonadGen, elements)
 
 class (KnownSymbol name, Era era) => HuddleRule (name :: Symbol) era where
   huddleRuleNamed :: Proxy name -> Proxy era -> Rule
@@ -78,7 +78,7 @@ infixr 0 =.=
 
 infixr 0 =.~
 
-genArrayTerm :: [Term] -> Gen Term
+genArrayTerm :: MonadGen m => [Term] -> m Term
 genArrayTerm es = elements [TList es, TListI es]
 
 pickOne :: StatefulGen g m => NonEmpty a -> g -> m a
