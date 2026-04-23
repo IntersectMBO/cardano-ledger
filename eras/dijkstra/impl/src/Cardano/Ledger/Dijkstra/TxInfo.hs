@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -35,8 +36,14 @@ import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (Inject (..), ProtVer (..), kindObject, strictMaybe)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
+  invalidKey,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Conway.TxInfo (
@@ -136,11 +143,11 @@ instance
   ) =>
   DecCBOR (DijkstraContextError era)
   where
-  decCBOR = decode $ Summands "ContextError" $ \case
-    16 -> SumD ConwayContextError <! From
-    17 -> SumD PointerPresentInOutput <! From
-    18 -> SumD SubTxIsNotSupported <! From
-    k -> Invalid k
+  decCBOR = decodeRecordSum "ContextError" $ \case
+    16 -> fmap (2,) $ ConwayContextError <$> decCBOR
+    17 -> fmap (2,) $ PointerPresentInOutput <$> decCBOR
+    18 -> fmap (2,) $ SubTxIsNotSupported <$> decCBOR
+    k -> invalidKey k
 
 instance
   ( EraPParams era
@@ -152,10 +159,10 @@ instance
   EncCBOR (DijkstraContextError era)
   where
   encCBOR =
-    encode . \case
-      ConwayContextError x -> Sum ConwayContextError 16 !> To x
-      PointerPresentInOutput x -> Sum PointerPresentInOutput 17 !> To x
-      SubTxIsNotSupported txId -> Sum SubTxIsNotSupported 18 !> To txId
+    \case
+      ConwayContextError x -> encodeListLen 2 <> encodeWord 16 <> encCBOR x
+      PointerPresentInOutput x -> encodeListLen 2 <> encodeWord 17 <> encCBOR x
+      SubTxIsNotSupported txId -> encodeListLen 2 <> encodeWord 18 <> encCBOR txId
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError

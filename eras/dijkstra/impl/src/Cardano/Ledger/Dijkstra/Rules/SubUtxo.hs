@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -43,9 +44,11 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
   sizedValue,
  )
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -310,19 +313,19 @@ instance
   EncCBOR (DijkstraSubUtxoPredFailure era)
   where
   encCBOR =
-    encode . \case
-      SubBadInputsUTxO ins -> Sum (SubBadInputsUTxO @era) 0 !> To ins
-      SubOutsideValidityIntervalUTxO a b -> Sum SubOutsideValidityIntervalUTxO 1 !> To a !> To b
-      SubMaxTxSizeUTxO mm -> Sum SubMaxTxSizeUTxO 2 !> To mm
-      SubInputSetEmptyUTxO -> Sum SubInputSetEmptyUTxO 3
-      SubWrongNetwork right wrongs -> Sum (SubWrongNetwork @era) 4 !> To right !> To wrongs
-      SubWrongNetworkWithdrawal right wrongs -> Sum (SubWrongNetworkWithdrawal @era) 5 !> To right !> To wrongs
-      SubOutputBootAddrAttrsTooBig outs -> Sum (SubOutputBootAddrAttrsTooBig @era) 6 !> To outs
-      SubOutputTooBigUTxO outs -> Sum (SubOutputTooBigUTxO @era) 7 !> To outs
-      SubWrongNetworkInTxBody mm -> Sum SubWrongNetworkInTxBody 8 !> To mm
-      SubOutsideForecast a -> Sum SubOutsideForecast 9 !> To a
-      SubBabbageOutputTooSmallUTxO x -> Sum SubBabbageOutputTooSmallUTxO 10 !> To x
-      SubWrongNetworkInDirectDeposit right wrongs -> Sum (SubWrongNetworkInDirectDeposit @era) 11 !> To right !> To wrongs
+    \case
+      SubBadInputsUTxO ins -> encodeListLen 2 <> encodeWord 0 <> encCBOR ins
+      SubOutsideValidityIntervalUTxO a b -> encodeListLen 3 <> encodeWord 1 <> encCBOR a <> encCBOR b
+      SubMaxTxSizeUTxO mm -> encodeListLen 2 <> encodeWord 2 <> encCBOR mm
+      SubInputSetEmptyUTxO -> encodeListLen 1 <> encodeWord 3
+      SubWrongNetwork right wrongs -> encodeListLen 3 <> encodeWord 4 <> encCBOR right <> encCBOR wrongs
+      SubWrongNetworkWithdrawal right wrongs -> encodeListLen 3 <> encodeWord 5 <> encCBOR right <> encCBOR wrongs
+      SubOutputBootAddrAttrsTooBig outs -> encodeListLen 2 <> encodeWord 6 <> encCBOR outs
+      SubOutputTooBigUTxO outs -> encodeListLen 2 <> encodeWord 7 <> encCBOR outs
+      SubWrongNetworkInTxBody mm -> encodeListLen 2 <> encodeWord 8 <> encCBOR mm
+      SubOutsideForecast a -> encodeListLen 2 <> encodeWord 9 <> encCBOR a
+      SubBabbageOutputTooSmallUTxO x -> encodeListLen 2 <> encodeWord 10 <> encCBOR x
+      SubWrongNetworkInDirectDeposit right wrongs -> encodeListLen 3 <> encodeWord 11 <> encCBOR right <> encCBOR wrongs
 
 instance
   ( Era era
@@ -332,20 +335,20 @@ instance
   ) =>
   DecCBOR (DijkstraSubUtxoPredFailure era)
   where
-  decCBOR = decode . Summands "DijkstraSubUtxoPredFailure" $ \case
-    0 -> SumD SubBadInputsUTxO <! From
-    1 -> SumD SubOutsideValidityIntervalUTxO <! From <! From
-    2 -> SumD SubMaxTxSizeUTxO <! From
-    3 -> SumD SubInputSetEmptyUTxO
-    4 -> SumD SubWrongNetwork <! From <! From
-    5 -> SumD SubWrongNetworkWithdrawal <! From <! From
-    6 -> SumD SubOutputBootAddrAttrsTooBig <! From
-    7 -> SumD SubOutputTooBigUTxO <! From
-    8 -> SumD SubWrongNetworkInTxBody <! From
-    9 -> SumD SubOutsideForecast <! From
-    10 -> SumD SubBabbageOutputTooSmallUTxO <! From
-    11 -> SumD SubWrongNetworkInDirectDeposit <! From <! From
-    n -> Invalid n
+  decCBOR = decodeRecordSum "DijkstraSubUtxoPredFailure" $ \case
+    0 -> fmap (2,) $ SubBadInputsUTxO <$> decCBOR
+    1 -> fmap (3,) $ SubOutsideValidityIntervalUTxO <$> decCBOR <*> decCBOR
+    2 -> fmap (2,) $ SubMaxTxSizeUTxO <$> decCBOR
+    3 -> pure (1, SubInputSetEmptyUTxO)
+    4 -> fmap (3,) $ SubWrongNetwork <$> decCBOR <*> decCBOR
+    5 -> fmap (3,) $ SubWrongNetworkWithdrawal <$> decCBOR <*> decCBOR
+    6 -> fmap (2,) $ SubOutputBootAddrAttrsTooBig <$> decCBOR
+    7 -> fmap (2,) $ SubOutputTooBigUTxO <$> decCBOR
+    8 -> fmap (2,) $ SubWrongNetworkInTxBody <$> decCBOR
+    9 -> fmap (2,) $ SubOutsideForecast <$> decCBOR
+    10 -> fmap (2,) $ SubBabbageOutputTooSmallUTxO <$> decCBOR
+    11 -> fmap (3,) $ SubWrongNetworkInDirectDeposit <$> decCBOR <*> decCBOR
+    n -> invalidKey n
 
 dijkstraUtxoToDijkstraSubUtxoPredFailure ::
   DijkstraUtxoPredFailure era -> DijkstraSubUtxoPredFailure era

@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -26,8 +27,11 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
+  invalidKey,
  )
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (ConwayGovCertEnv, ConwayGovCertPredFailure (..))
@@ -76,23 +80,23 @@ instance NFData (DijkstraGovCertPredFailure era)
 
 instance Era era => EncCBOR (DijkstraGovCertPredFailure era) where
   encCBOR =
-    encode @_ @(DijkstraGovCertPredFailure era) . \case
-      DijkstraDRepAlreadyRegistered cred -> Sum DijkstraDRepAlreadyRegistered 0 !> To cred
-      DijkstraDRepNotRegistered cred -> Sum DijkstraDRepNotRegistered 1 !> To cred
-      DijkstraDRepIncorrectDeposit mm -> Sum DijkstraDRepIncorrectDeposit 2 !> To mm
-      DijkstraCommitteeHasPreviouslyResigned coldCred -> Sum DijkstraCommitteeHasPreviouslyResigned 3 !> To coldCred
-      DijkstraDRepIncorrectRefund mm -> Sum DijkstraDRepIncorrectRefund 4 !> To mm
-      DijkstraCommitteeIsUnknown coldCred -> Sum DijkstraCommitteeIsUnknown 5 !> To coldCred
+    \case
+      DijkstraDRepAlreadyRegistered cred -> encodeListLen 2 <> encodeWord 0 <> encCBOR cred
+      DijkstraDRepNotRegistered cred -> encodeListLen 2 <> encodeWord 1 <> encCBOR cred
+      DijkstraDRepIncorrectDeposit mm -> encodeListLen 2 <> encodeWord 2 <> encCBOR mm
+      DijkstraCommitteeHasPreviouslyResigned coldCred -> encodeListLen 2 <> encodeWord 3 <> encCBOR coldCred
+      DijkstraDRepIncorrectRefund mm -> encodeListLen 2 <> encodeWord 4 <> encCBOR mm
+      DijkstraCommitteeIsUnknown coldCred -> encodeListLen 2 <> encodeWord 5 <> encCBOR coldCred
 
 instance Typeable era => DecCBOR (DijkstraGovCertPredFailure era) where
-  decCBOR = decode . Summands "DijkstraGovCertPredFailure" $ \case
-    0 -> SumD DijkstraDRepAlreadyRegistered <! From
-    1 -> SumD DijkstraDRepNotRegistered <! From
-    2 -> SumD DijkstraDRepIncorrectDeposit <! From
-    3 -> SumD DijkstraCommitteeHasPreviouslyResigned <! From
-    4 -> SumD DijkstraDRepIncorrectRefund <! From
-    5 -> SumD DijkstraCommitteeIsUnknown <! From
-    n -> Invalid n
+  decCBOR = decodeRecordSum "DijkstraGovCertPredFailure" $ \case
+    0 -> fmap (2,) $ DijkstraDRepAlreadyRegistered <$> decCBOR
+    1 -> fmap (2,) $ DijkstraDRepNotRegistered <$> decCBOR
+    2 -> fmap (2,) $ DijkstraDRepIncorrectDeposit <$> decCBOR
+    3 -> fmap (2,) $ DijkstraCommitteeHasPreviouslyResigned <$> decCBOR
+    4 -> fmap (2,) $ DijkstraDRepIncorrectRefund <$> decCBOR
+    5 -> fmap (2,) $ DijkstraCommitteeIsUnknown <$> decCBOR
+    n -> invalidKey n
 
 instance
   ( ConwayEraPParams era

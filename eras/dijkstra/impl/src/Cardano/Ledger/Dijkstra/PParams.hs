@@ -47,8 +47,12 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
   knownNonZeroBounded,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  decodeRecordNamed,
+  encodeListLen,
+ )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams
@@ -284,22 +288,20 @@ instance NFData (UpgradeDijkstraPParams Identity era)
 instance NoThunks (UpgradeDijkstraPParams Identity era)
 
 instance Era era => DecCBOR (UpgradeDijkstraPParams Identity era) where
-  decCBOR =
-    decode $
-      RecD UpgradeDijkstraPParams
-        <! From
-        <! From
-        <! From
-        <! From
+  decCBOR = decodeRecordNamed "UpgradeDijkstraPParams" (const 4) $ do
+    udppMaxRefScriptSizePerBlock <- decCBOR
+    udppMaxRefScriptSizePerTx <- decCBOR
+    udppRefScriptCostStride <- decCBOR
+    udppRefScriptCostMultiplier <- decCBOR
+    pure UpgradeDijkstraPParams {..}
 
 instance Era era => EncCBOR (UpgradeDijkstraPParams Identity era) where
   encCBOR UpgradeDijkstraPParams {..} =
-    encode $
-      Rec (UpgradeDijkstraPParams @Identity)
-        !> To udppMaxRefScriptSizePerBlock
-        !> To udppMaxRefScriptSizePerTx
-        !> To udppRefScriptCostStride
-        !> To udppRefScriptCostMultiplier
+    encodeListLen 4
+      <> encCBOR udppMaxRefScriptSizePerBlock
+      <> encCBOR udppMaxRefScriptSizePerTx
+      <> encCBOR udppRefScriptCostStride
+      <> encCBOR udppRefScriptCostMultiplier
 
 emptyDijkstraUpgradePParamsUpdate :: UpgradeDijkstraPParams StrictMaybe era
 emptyDijkstraUpgradePParamsUpdate = UpgradeDijkstraPParams SNothing SNothing SNothing SNothing

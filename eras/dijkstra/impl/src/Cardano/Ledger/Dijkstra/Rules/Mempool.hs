@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -27,14 +28,13 @@ import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailur
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
+  invalidKey,
  )
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
@@ -150,10 +150,10 @@ instance
   EncCBOR (DijkstraMempoolPredFailure era)
   where
   encCBOR =
-    encode . \case
-      LedgerFailure x -> Sum (LedgerFailure @era) 1 !> To x
-      MempoolFailure t -> Sum MempoolFailure 2 !> To t
-      AllInputsAreSpent -> Sum AllInputsAreSpent 3
+    \case
+      LedgerFailure x -> encodeListLen 2 <> encodeWord 1 <> encCBOR x
+      MempoolFailure t -> encodeListLen 2 <> encodeWord 2 <> encCBOR t
+      AllInputsAreSpent -> encodeListLen 1 <> encodeWord 3
 
 instance
   ( Era era
@@ -161,11 +161,11 @@ instance
   ) =>
   DecCBOR (DijkstraMempoolPredFailure era)
   where
-  decCBOR = decode . Summands "DijkstraMempoolPredFailure" $ \case
-    1 -> SumD (LedgerFailure @era) <! From
-    2 -> SumD MempoolFailure <! From
-    3 -> SumD AllInputsAreSpent
-    n -> Invalid n
+  decCBOR = decodeRecordSum "DijkstraMempoolPredFailure" $ \case
+    1 -> fmap (2,) $ LedgerFailure @era <$> decCBOR
+    2 -> fmap (2,) $ MempoolFailure <$> decCBOR
+    3 -> pure (1, AllInputsAreSpent)
+    n -> invalidKey n
 
 newtype DijkstraMempoolEvent era
   = LedgerEvent (Event (EraRule "LEDGER" era))

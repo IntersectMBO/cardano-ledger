@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -41,8 +42,10 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
  )
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
@@ -336,25 +339,25 @@ instance
   EncCBOR (DijkstraSubUtxowPredFailure era)
   where
   encCBOR =
-    encode . \case
-      SubUtxoFailure x -> Sum SubUtxoFailure 0 !> To x
-      SubInvalidWitnessesUTXOW xs -> Sum SubInvalidWitnessesUTXOW 1 !> To xs
-      SubMissingVKeyWitnessesUTXOW xs -> Sum SubMissingVKeyWitnessesUTXOW 2 !> To xs
-      SubScriptWitnessNotValidatingUTXOW xs -> Sum SubScriptWitnessNotValidatingUTXOW 3 !> To xs
-      SubMissingTxBodyMetadataHash xs -> Sum SubMissingTxBodyMetadataHash 4 !> To xs
-      SubMissingTxMetadata xs -> Sum SubMissingTxMetadata 5 !> To xs
-      SubConflictingMetadataHash mm -> Sum SubConflictingMetadataHash 6 !> To mm
-      SubInvalidMetadata -> Sum SubInvalidMetadata 7
-      SubMissingRedeemers x -> Sum SubMissingRedeemers 8 !> To x
-      SubMissingRequiredDatums x y -> Sum SubMissingRequiredDatums 9 !> To x !> To y
-      SubNotAllowedSupplementalDatums x y -> Sum SubNotAllowedSupplementalDatums 10 !> To x !> To y
-      SubPPViewHashesDontMatch mm -> Sum SubPPViewHashesDontMatch 11 !> To mm
-      SubUnspendableUTxONoDatumHash x -> Sum SubUnspendableUTxONoDatumHash 12 !> To x
-      SubExtraRedeemers x -> Sum SubExtraRedeemers 13 !> To x
-      SubMalformedScriptWitnesses x -> Sum SubMalformedScriptWitnesses 14 !> To x
-      SubMalformedReferenceScripts x -> Sum SubMalformedReferenceScripts 15 !> To x
-      SubScriptIntegrityHashMismatch x y -> Sum SubScriptIntegrityHashMismatch 16 !> To x !> To y
-      SubMalformedGuardDatums x -> Sum SubMalformedGuardDatums 17 !> To x
+    \case
+      SubUtxoFailure x -> encodeListLen 2 <> encodeWord 0 <> encCBOR x
+      SubInvalidWitnessesUTXOW xs -> encodeListLen 2 <> encodeWord 1 <> encCBOR xs
+      SubMissingVKeyWitnessesUTXOW xs -> encodeListLen 2 <> encodeWord 2 <> encCBOR xs
+      SubScriptWitnessNotValidatingUTXOW xs -> encodeListLen 2 <> encodeWord 3 <> encCBOR xs
+      SubMissingTxBodyMetadataHash xs -> encodeListLen 2 <> encodeWord 4 <> encCBOR xs
+      SubMissingTxMetadata xs -> encodeListLen 2 <> encodeWord 5 <> encCBOR xs
+      SubConflictingMetadataHash mm -> encodeListLen 2 <> encodeWord 6 <> encCBOR mm
+      SubInvalidMetadata -> encodeListLen 1 <> encodeWord 7
+      SubMissingRedeemers x -> encodeListLen 2 <> encodeWord 8 <> encCBOR x
+      SubMissingRequiredDatums x y -> encodeListLen 3 <> encodeWord 9 <> encCBOR x <> encCBOR y
+      SubNotAllowedSupplementalDatums x y -> encodeListLen 3 <> encodeWord 10 <> encCBOR x <> encCBOR y
+      SubPPViewHashesDontMatch mm -> encodeListLen 2 <> encodeWord 11 <> encCBOR mm
+      SubUnspendableUTxONoDatumHash x -> encodeListLen 2 <> encodeWord 12 <> encCBOR x
+      SubExtraRedeemers x -> encodeListLen 2 <> encodeWord 13 <> encCBOR x
+      SubMalformedScriptWitnesses x -> encodeListLen 2 <> encodeWord 14 <> encCBOR x
+      SubMalformedReferenceScripts x -> encodeListLen 2 <> encodeWord 15 <> encCBOR x
+      SubScriptIntegrityHashMismatch x y -> encodeListLen 3 <> encodeWord 16 <> encCBOR x <> encCBOR y
+      SubMalformedGuardDatums x -> encodeListLen 2 <> encodeWord 17 <> encCBOR x
 
 instance
   ( ConwayEraScript era
@@ -362,26 +365,26 @@ instance
   ) =>
   DecCBOR (DijkstraSubUtxowPredFailure era)
   where
-  decCBOR = decode . Summands "DijkstraUtxowPred" $ \case
-    0 -> SumD SubUtxoFailure <! From
-    1 -> SumD SubInvalidWitnessesUTXOW <! From
-    2 -> SumD SubMissingVKeyWitnessesUTXOW <! From
-    3 -> SumD SubScriptWitnessNotValidatingUTXOW <! From
-    4 -> SumD SubMissingTxBodyMetadataHash <! From
-    5 -> SumD SubMissingTxMetadata <! From
-    6 -> SumD SubConflictingMetadataHash <! From
-    7 -> SumD SubInvalidMetadata
-    8 -> SumD SubMissingRedeemers <! From
-    9 -> SumD SubMissingRequiredDatums <! From <! From
-    10 -> SumD SubNotAllowedSupplementalDatums <! From <! From
-    11 -> SumD SubPPViewHashesDontMatch <! From
-    12 -> SumD SubUnspendableUTxONoDatumHash <! From
-    13 -> SumD SubExtraRedeemers <! From
-    14 -> SumD SubMalformedScriptWitnesses <! From
-    15 -> SumD SubMalformedReferenceScripts <! From
-    16 -> SumD SubScriptIntegrityHashMismatch <! From <! From
-    17 -> SumD SubMalformedGuardDatums <! From
-    n -> Invalid n
+  decCBOR = decodeRecordSum "DijkstraUtxowPred" $ \case
+    0 -> fmap (2,) $ SubUtxoFailure <$> decCBOR
+    1 -> fmap (2,) $ SubInvalidWitnessesUTXOW <$> decCBOR
+    2 -> fmap (2,) $ SubMissingVKeyWitnessesUTXOW <$> decCBOR
+    3 -> fmap (2,) $ SubScriptWitnessNotValidatingUTXOW <$> decCBOR
+    4 -> fmap (2,) $ SubMissingTxBodyMetadataHash <$> decCBOR
+    5 -> fmap (2,) $ SubMissingTxMetadata <$> decCBOR
+    6 -> fmap (2,) $ SubConflictingMetadataHash <$> decCBOR
+    7 -> pure (1, SubInvalidMetadata)
+    8 -> fmap (2,) $ SubMissingRedeemers <$> decCBOR
+    9 -> fmap (3,) $ SubMissingRequiredDatums <$> decCBOR <*> decCBOR
+    10 -> fmap (3,) $ SubNotAllowedSupplementalDatums <$> decCBOR <*> decCBOR
+    11 -> fmap (2,) $ SubPPViewHashesDontMatch <$> decCBOR
+    12 -> fmap (2,) $ SubUnspendableUTxONoDatumHash <$> decCBOR
+    13 -> fmap (2,) $ SubExtraRedeemers <$> decCBOR
+    14 -> fmap (2,) $ SubMalformedScriptWitnesses <$> decCBOR
+    15 -> fmap (2,) $ SubMalformedReferenceScripts <$> decCBOR
+    16 -> fmap (3,) $ SubScriptIntegrityHashMismatch <$> decCBOR <*> decCBOR
+    17 -> fmap (2,) $ SubMalformedGuardDatums <$> decCBOR
+    n -> invalidKey n
 
 dijkstraUtxowToDijkstraSubUtxowPredFailure ::
   forall era.

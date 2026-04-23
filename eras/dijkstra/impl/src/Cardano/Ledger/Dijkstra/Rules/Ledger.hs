@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -42,8 +43,14 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
+  invalidKey,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -277,17 +284,17 @@ instance
   EncCBOR (DijkstraLedgerPredFailure era)
   where
   encCBOR =
-    encode . \case
-      DijkstraUtxowFailure x -> Sum (DijkstraUtxowFailure @era) 1 !> To x
-      DijkstraCertsFailure x -> Sum (DijkstraCertsFailure @era) 2 !> To x
-      DijkstraGovFailure x -> Sum (DijkstraGovFailure @era) 3 !> To x
-      DijkstraWdrlNotDelegatedToDRep x -> Sum (DijkstraWdrlNotDelegatedToDRep @era) 4 !> To x
-      DijkstraTreasuryValueMismatch mm -> Sum (DijkstraTreasuryValueMismatch @era) 5 !> To mm
-      DijkstraTxRefScriptsSizeTooBig mm -> Sum DijkstraTxRefScriptsSizeTooBig 6 !> To mm
-      DijkstraWithdrawalsMissingAccounts w -> Sum DijkstraWithdrawalsMissingAccounts 7 !> To w
-      DijkstraIncompleteWithdrawals w -> Sum DijkstraIncompleteWithdrawals 8 !> To w
-      DijkstraSubLedgersFailure w -> Sum DijkstraSubLedgersFailure 9 !> To w
-      DijkstraSpendingOutputFromSameTx txIds -> Sum DijkstraSpendingOutputFromSameTx 10 !> To txIds
+    \case
+      DijkstraUtxowFailure x -> encodeListLen 2 <> encodeWord 1 <> encCBOR x
+      DijkstraCertsFailure x -> encodeListLen 2 <> encodeWord 2 <> encCBOR x
+      DijkstraGovFailure x -> encodeListLen 2 <> encodeWord 3 <> encCBOR x
+      DijkstraWdrlNotDelegatedToDRep x -> encodeListLen 2 <> encodeWord 4 <> encCBOR x
+      DijkstraTreasuryValueMismatch mm -> encodeListLen 2 <> encodeWord 5 <> encCBOR mm
+      DijkstraTxRefScriptsSizeTooBig mm -> encodeListLen 2 <> encodeWord 6 <> encCBOR mm
+      DijkstraWithdrawalsMissingAccounts w -> encodeListLen 2 <> encodeWord 7 <> encCBOR w
+      DijkstraIncompleteWithdrawals w -> encodeListLen 2 <> encodeWord 8 <> encCBOR w
+      DijkstraSubLedgersFailure w -> encodeListLen 2 <> encodeWord 9 <> encCBOR w
+      DijkstraSpendingOutputFromSameTx txIds -> encodeListLen 2 <> encodeWord 10 <> encCBOR txIds
 
 instance
   ( Era era
@@ -298,18 +305,18 @@ instance
   ) =>
   DecCBOR (DijkstraLedgerPredFailure era)
   where
-  decCBOR = decode . Summands "DijkstraLedgerPredFailure" $ \case
-    1 -> SumD DijkstraUtxowFailure <! From
-    2 -> SumD DijkstraCertsFailure <! From
-    3 -> SumD DijkstraGovFailure <! From
-    4 -> SumD DijkstraWdrlNotDelegatedToDRep <! From
-    5 -> SumD DijkstraTreasuryValueMismatch <! From
-    6 -> SumD DijkstraTxRefScriptsSizeTooBig <! From
-    7 -> SumD DijkstraWithdrawalsMissingAccounts <! From
-    8 -> SumD DijkstraIncompleteWithdrawals <! From
-    9 -> SumD DijkstraSubLedgersFailure <! From
-    10 -> SumD DijkstraSpendingOutputFromSameTx <! From
-    n -> Invalid n
+  decCBOR = decodeRecordSum "DijkstraLedgerPredFailure" $ \case
+    1 -> fmap (2,) $ DijkstraUtxowFailure <$> decCBOR
+    2 -> fmap (2,) $ DijkstraCertsFailure <$> decCBOR
+    3 -> fmap (2,) $ DijkstraGovFailure <$> decCBOR
+    4 -> fmap (2,) $ DijkstraWdrlNotDelegatedToDRep <$> decCBOR
+    5 -> fmap (2,) $ DijkstraTreasuryValueMismatch <$> decCBOR
+    6 -> fmap (2,) $ DijkstraTxRefScriptsSizeTooBig <$> decCBOR
+    7 -> fmap (2,) $ DijkstraWithdrawalsMissingAccounts <$> decCBOR
+    8 -> fmap (2,) $ DijkstraIncompleteWithdrawals <$> decCBOR
+    9 -> fmap (2,) $ DijkstraSubLedgersFailure <$> decCBOR
+    10 -> fmap (2,) $ DijkstraSpendingOutputFromSameTx <$> decCBOR
+    n -> invalidKey n
 
 data DijkstraLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))

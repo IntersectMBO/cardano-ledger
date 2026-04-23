@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -57,14 +58,13 @@ import Cardano.Ledger.BaseTypes (
   SlotNo,
   StrictMaybe (..),
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
+  invalidKey,
  )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
@@ -403,27 +403,27 @@ instance
   EncCBOR (DijkstraUtxowPredFailure era)
   where
   encCBOR =
-    encode . \case
-      UtxoFailure x -> Sum UtxoFailure 0 !> To x
-      InvalidWitnessesUTXOW xs -> Sum InvalidWitnessesUTXOW 1 !> To xs
-      MissingVKeyWitnessesUTXOW xs -> Sum MissingVKeyWitnessesUTXOW 2 !> To xs
-      MissingScriptWitnessesUTXOW xs -> Sum MissingScriptWitnessesUTXOW 3 !> To xs
-      ScriptWitnessNotValidatingUTXOW xs -> Sum ScriptWitnessNotValidatingUTXOW 4 !> To xs
-      MissingTxBodyMetadataHash xs -> Sum MissingTxBodyMetadataHash 5 !> To xs
-      MissingTxMetadata xs -> Sum MissingTxMetadata 6 !> To xs
-      ConflictingMetadataHash mm -> Sum ConflictingMetadataHash 7 !> To mm
-      InvalidMetadata -> Sum InvalidMetadata 8
-      ExtraneousScriptWitnessesUTXOW xs -> Sum ExtraneousScriptWitnessesUTXOW 9 !> To xs
-      MissingRedeemers x -> Sum MissingRedeemers 10 !> To x
-      MissingRequiredDatums x y -> Sum MissingRequiredDatums 11 !> To x !> To y
-      NotAllowedSupplementalDatums x y -> Sum NotAllowedSupplementalDatums 12 !> To x !> To y
-      PPViewHashesDontMatch mm -> Sum PPViewHashesDontMatch 13 !> To mm
-      UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 14 !> To x
-      ExtraRedeemers x -> Sum ExtraRedeemers 15 !> To x
-      MalformedScriptWitnesses x -> Sum MalformedScriptWitnesses 16 !> To x
-      MalformedReferenceScripts x -> Sum MalformedReferenceScripts 17 !> To x
-      ScriptIntegrityHashMismatch x y -> Sum ScriptIntegrityHashMismatch 18 !> To x !> To y
-      MissingRequiredGuards x -> Sum MissingRequiredGuards 19 !> To x
+    \case
+      UtxoFailure x -> encodeListLen 2 <> encodeWord 0 <> encCBOR x
+      InvalidWitnessesUTXOW xs -> encodeListLen 2 <> encodeWord 1 <> encCBOR xs
+      MissingVKeyWitnessesUTXOW xs -> encodeListLen 2 <> encodeWord 2 <> encCBOR xs
+      MissingScriptWitnessesUTXOW xs -> encodeListLen 2 <> encodeWord 3 <> encCBOR xs
+      ScriptWitnessNotValidatingUTXOW xs -> encodeListLen 2 <> encodeWord 4 <> encCBOR xs
+      MissingTxBodyMetadataHash xs -> encodeListLen 2 <> encodeWord 5 <> encCBOR xs
+      MissingTxMetadata xs -> encodeListLen 2 <> encodeWord 6 <> encCBOR xs
+      ConflictingMetadataHash mm -> encodeListLen 2 <> encodeWord 7 <> encCBOR mm
+      InvalidMetadata -> encodeListLen 1 <> encodeWord 8
+      ExtraneousScriptWitnessesUTXOW xs -> encodeListLen 2 <> encodeWord 9 <> encCBOR xs
+      MissingRedeemers x -> encodeListLen 2 <> encodeWord 10 <> encCBOR x
+      MissingRequiredDatums x y -> encodeListLen 3 <> encodeWord 11 <> encCBOR x <> encCBOR y
+      NotAllowedSupplementalDatums x y -> encodeListLen 3 <> encodeWord 12 <> encCBOR x <> encCBOR y
+      PPViewHashesDontMatch mm -> encodeListLen 2 <> encodeWord 13 <> encCBOR mm
+      UnspendableUTxONoDatumHash x -> encodeListLen 2 <> encodeWord 14 <> encCBOR x
+      ExtraRedeemers x -> encodeListLen 2 <> encodeWord 15 <> encCBOR x
+      MalformedScriptWitnesses x -> encodeListLen 2 <> encodeWord 16 <> encCBOR x
+      MalformedReferenceScripts x -> encodeListLen 2 <> encodeWord 17 <> encCBOR x
+      ScriptIntegrityHashMismatch x y -> encodeListLen 3 <> encodeWord 18 <> encCBOR x <> encCBOR y
+      MissingRequiredGuards x -> encodeListLen 2 <> encodeWord 19 <> encCBOR x
 
 instance
   ( ConwayEraScript era
@@ -431,28 +431,28 @@ instance
   ) =>
   DecCBOR (DijkstraUtxowPredFailure era)
   where
-  decCBOR = decode . Summands "ConwayUtxowPred" $ \case
-    0 -> SumD UtxoFailure <! From
-    1 -> SumD InvalidWitnessesUTXOW <! From
-    2 -> SumD MissingVKeyWitnessesUTXOW <! From
-    3 -> SumD MissingScriptWitnessesUTXOW <! From
-    4 -> SumD ScriptWitnessNotValidatingUTXOW <! From
-    5 -> SumD MissingTxBodyMetadataHash <! From
-    6 -> SumD MissingTxMetadata <! From
-    7 -> SumD ConflictingMetadataHash <! From
-    8 -> SumD InvalidMetadata
-    9 -> SumD ExtraneousScriptWitnessesUTXOW <! From
-    10 -> SumD MissingRedeemers <! From
-    11 -> SumD MissingRequiredDatums <! From <! From
-    12 -> SumD NotAllowedSupplementalDatums <! From <! From
-    13 -> SumD PPViewHashesDontMatch <! From
-    14 -> SumD UnspendableUTxONoDatumHash <! From
-    15 -> SumD ExtraRedeemers <! From
-    16 -> SumD MalformedScriptWitnesses <! From
-    17 -> SumD MalformedReferenceScripts <! From
-    18 -> SumD ScriptIntegrityHashMismatch <! From <! From
-    19 -> SumD MissingRequiredGuards <! From
-    n -> Invalid n
+  decCBOR = decodeRecordSum "ConwayUtxowPred" $ \case
+    0 -> fmap (2,) $ UtxoFailure <$> decCBOR
+    1 -> fmap (2,) $ InvalidWitnessesUTXOW <$> decCBOR
+    2 -> fmap (2,) $ MissingVKeyWitnessesUTXOW <$> decCBOR
+    3 -> fmap (2,) $ MissingScriptWitnessesUTXOW <$> decCBOR
+    4 -> fmap (2,) $ ScriptWitnessNotValidatingUTXOW <$> decCBOR
+    5 -> fmap (2,) $ MissingTxBodyMetadataHash <$> decCBOR
+    6 -> fmap (2,) $ MissingTxMetadata <$> decCBOR
+    7 -> fmap (2,) $ ConflictingMetadataHash <$> decCBOR
+    8 -> pure (1, InvalidMetadata)
+    9 -> fmap (2,) $ ExtraneousScriptWitnessesUTXOW <$> decCBOR
+    10 -> fmap (2,) $ MissingRedeemers <$> decCBOR
+    11 -> fmap (3,) $ MissingRequiredDatums <$> decCBOR <*> decCBOR
+    12 -> fmap (3,) $ NotAllowedSupplementalDatums <$> decCBOR <*> decCBOR
+    13 -> fmap (2,) $ PPViewHashesDontMatch <$> decCBOR
+    14 -> fmap (2,) $ UnspendableUTxONoDatumHash <$> decCBOR
+    15 -> fmap (2,) $ ExtraRedeemers <$> decCBOR
+    16 -> fmap (2,) $ MalformedScriptWitnesses <$> decCBOR
+    17 -> fmap (2,) $ MalformedReferenceScripts <$> decCBOR
+    18 -> fmap (3,) $ ScriptIntegrityHashMismatch <$> decCBOR <*> decCBOR
+    19 -> fmap (2,) $ MissingRequiredGuards <$> decCBOR
+    n -> invalidKey n
 
 -- =====================================================
 -- Injecting from one PredicateFailure to another

@@ -10,6 +10,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -36,14 +37,10 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
+  invalidKey,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (
@@ -139,69 +136,69 @@ instance InjectRuleEvent "GOV" ConwayGovEvent DijkstraEra
 instance EraPParams era => NFData (DijkstraGovPredFailure era)
 
 instance EraPParams era => DecCBOR (DijkstraGovPredFailure era) where
-  decCBOR = decode $ Summands "DijkstraGovPredFailure" $ \case
-    0 -> SumD GovActionsDoNotExist <! From
-    1 -> SumD MalformedProposal <! From
-    2 -> SumD ProposalProcedureNetworkIdMismatch <! From <! From
-    3 -> SumD TreasuryWithdrawalsNetworkIdMismatch <! From <! From
-    4 -> SumD ProposalDepositIncorrect <! From
-    5 -> SumD DisallowedVoters <! From
-    6 -> SumD ConflictingCommitteeUpdate <! From
-    7 -> SumD ExpirationEpochTooSmall <! From
-    8 -> SumD InvalidPrevGovActionId <! From
-    9 -> SumD VotingOnExpiredGovAction <! From
-    10 -> SumD ProposalCantFollow <! From <! From
-    11 -> SumD InvalidGuardrailsScriptHash <! From <! From
-    12 -> SumD DisallowedProposalDuringBootstrap <! From
-    13 -> SumD DisallowedVotesDuringBootstrap <! From
-    14 -> SumD VotersDoNotExist <! From
-    15 -> SumD ZeroTreasuryWithdrawals <! From
-    16 -> SumD ProposalReturnAccountDoesNotExist <! From
-    17 -> SumD TreasuryWithdrawalReturnAccountsDoNotExist <! From
-    18 -> SumD UnelectedCommitteeVoters <! From
-    k -> Invalid k
+  decCBOR = decodeRecordSum "DijkstraGovPredFailure" $ \case
+    0 -> fmap (2,) $ GovActionsDoNotExist <$> decCBOR
+    1 -> fmap (2,) $ MalformedProposal <$> decCBOR
+    2 -> fmap (3,) $ ProposalProcedureNetworkIdMismatch <$> decCBOR <*> decCBOR
+    3 -> fmap (3,) $ TreasuryWithdrawalsNetworkIdMismatch <$> decCBOR <*> decCBOR
+    4 -> fmap (2,) $ ProposalDepositIncorrect <$> decCBOR
+    5 -> fmap (2,) $ DisallowedVoters <$> decCBOR
+    6 -> fmap (2,) $ ConflictingCommitteeUpdate <$> decCBOR
+    7 -> fmap (2,) $ ExpirationEpochTooSmall <$> decCBOR
+    8 -> fmap (2,) $ InvalidPrevGovActionId <$> decCBOR
+    9 -> fmap (2,) $ VotingOnExpiredGovAction <$> decCBOR
+    10 -> fmap (3,) $ ProposalCantFollow <$> decCBOR <*> decCBOR
+    11 -> fmap (3,) $ InvalidGuardrailsScriptHash <$> decCBOR <*> decCBOR
+    12 -> fmap (2,) $ DisallowedProposalDuringBootstrap <$> decCBOR
+    13 -> fmap (2,) $ DisallowedVotesDuringBootstrap <$> decCBOR
+    14 -> fmap (2,) $ VotersDoNotExist <$> decCBOR
+    15 -> fmap (2,) $ ZeroTreasuryWithdrawals <$> decCBOR
+    16 -> fmap (2,) $ ProposalReturnAccountDoesNotExist <$> decCBOR
+    17 -> fmap (2,) $ TreasuryWithdrawalReturnAccountsDoNotExist <$> decCBOR
+    18 -> fmap (2,) $ UnelectedCommitteeVoters <$> decCBOR
+    k -> invalidKey k
 
 instance EraPParams era => EncCBOR (DijkstraGovPredFailure era) where
   encCBOR =
-    encode . \case
+    \case
       GovActionsDoNotExist gid ->
-        Sum GovActionsDoNotExist 0 !> To gid
+        encodeListLen 2 <> encodeWord 0 <> encCBOR gid
       MalformedProposal ga ->
-        Sum MalformedProposal 1 !> To ga
+        encodeListLen 2 <> encodeWord 1 <> encCBOR ga
       ProposalProcedureNetworkIdMismatch acnt nid ->
-        Sum ProposalProcedureNetworkIdMismatch 2 !> To acnt !> To nid
+        encodeListLen 3 <> encodeWord 2 <> encCBOR acnt <> encCBOR nid
       TreasuryWithdrawalsNetworkIdMismatch acnts nid ->
-        Sum TreasuryWithdrawalsNetworkIdMismatch 3 !> To acnts !> To nid
+        encodeListLen 3 <> encodeWord 3 <> encCBOR acnts <> encCBOR nid
       ProposalDepositIncorrect mm ->
-        Sum ProposalDepositIncorrect 4 !> To mm
+        encodeListLen 2 <> encodeWord 4 <> encCBOR mm
       DisallowedVoters votes ->
-        Sum DisallowedVoters 5 !> To votes
+        encodeListLen 2 <> encodeWord 5 <> encCBOR votes
       ConflictingCommitteeUpdate members ->
-        Sum ConflictingCommitteeUpdate 6 !> To members
+        encodeListLen 2 <> encodeWord 6 <> encCBOR members
       ExpirationEpochTooSmall members ->
-        Sum ExpirationEpochTooSmall 7 !> To members
+        encodeListLen 2 <> encodeWord 7 <> encCBOR members
       InvalidPrevGovActionId proposal ->
-        Sum InvalidPrevGovActionId 8 !> To proposal
+        encodeListLen 2 <> encodeWord 8 <> encCBOR proposal
       VotingOnExpiredGovAction ga ->
-        Sum VotingOnExpiredGovAction 9 !> To ga
+        encodeListLen 2 <> encodeWord 9 <> encCBOR ga
       ProposalCantFollow prevgaid mm ->
-        Sum ProposalCantFollow 10 !> To prevgaid !> To mm
+        encodeListLen 3 <> encodeWord 10 <> encCBOR prevgaid <> encCBOR mm
       InvalidGuardrailsScriptHash got expected ->
-        Sum InvalidGuardrailsScriptHash 11 !> To got !> To expected
+        encodeListLen 3 <> encodeWord 11 <> encCBOR got <> encCBOR expected
       DisallowedProposalDuringBootstrap proposal ->
-        Sum DisallowedProposalDuringBootstrap 12 !> To proposal
+        encodeListLen 2 <> encodeWord 12 <> encCBOR proposal
       DisallowedVotesDuringBootstrap votes ->
-        Sum DisallowedVotesDuringBootstrap 13 !> To votes
+        encodeListLen 2 <> encodeWord 13 <> encCBOR votes
       VotersDoNotExist voters ->
-        Sum VotersDoNotExist 14 !> To voters
+        encodeListLen 2 <> encodeWord 14 <> encCBOR voters
       ZeroTreasuryWithdrawals ga ->
-        Sum ZeroTreasuryWithdrawals 15 !> To ga
+        encodeListLen 2 <> encodeWord 15 <> encCBOR ga
       ProposalReturnAccountDoesNotExist returnAccount ->
-        Sum ProposalReturnAccountDoesNotExist 16 !> To returnAccount
+        encodeListLen 2 <> encodeWord 16 <> encCBOR returnAccount
       TreasuryWithdrawalReturnAccountsDoNotExist accounts ->
-        Sum TreasuryWithdrawalReturnAccountsDoNotExist 17 !> To accounts
+        encodeListLen 2 <> encodeWord 17 <> encCBOR accounts
       UnelectedCommitteeVoters committee ->
-        Sum UnelectedCommitteeVoters 18 !> To committee
+        encodeListLen 2 <> encodeWord 18 <> encCBOR committee
 
 instance
   ( ConwayEraTxCert era

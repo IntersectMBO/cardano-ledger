@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -17,8 +18,9 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
+  decodeRecordNamed,
+  encodeListLen,
  )
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams)
@@ -43,13 +45,15 @@ instance FromCBOR DijkstraGenesis where
 
 instance ToCBOR DijkstraGenesis where
   toCBOR dg@(DijkstraGenesis _) =
-    let DijkstraGenesis {..} = dg
-     in toEraCBOR @DijkstraEra . encode $
-          Rec DijkstraGenesis
-            !> To dgUpgradePParams
+    toEraCBOR @DijkstraEra $
+      let DijkstraGenesis {..} = dg
+       in encodeListLen 1
+            <> encCBOR dgUpgradePParams
 
 instance DecCBOR DijkstraGenesis where
-  decCBOR = decode (RecD DijkstraGenesis <! From)
+  decCBOR =
+    decodeRecordNamed "DijkstraGenesis" (const 1) $
+      DijkstraGenesis <$> decCBOR
   {-# INLINE decCBOR #-}
 
 instance EncCBOR DijkstraGenesis

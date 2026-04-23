@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -27,8 +28,11 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
+  invalidKey,
  )
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ConwayEraGov)
 import Cardano.Ledger.Conway.Rules (
@@ -95,10 +99,10 @@ instance
   EncCBOR (DijkstraSubCertPredFailure era)
   where
   encCBOR =
-    encode . \case
-      SubDelegFailure x -> Sum (SubDelegFailure @era) 1 !> To x
-      SubPoolFailure x -> Sum (SubPoolFailure @era) 2 !> To x
-      SubGovCertFailure x -> Sum (SubGovCertFailure @era) 3 !> To x
+    \case
+      SubDelegFailure x -> encodeListLen 2 <> encodeWord 1 <> encCBOR x
+      SubPoolFailure x -> encodeListLen 2 <> encodeWord 2 <> encCBOR x
+      SubGovCertFailure x -> encodeListLen 2 <> encodeWord 3 <> encCBOR x
 
 instance
   ( Era era
@@ -109,11 +113,11 @@ instance
   DecCBOR (DijkstraSubCertPredFailure era)
   where
   decCBOR =
-    decode $ Summands "DijkstraSubCertPredFailure" $ \case
-      1 -> SumD SubDelegFailure <! From
-      2 -> SumD SubPoolFailure <! From
-      3 -> SumD SubGovCertFailure <! From
-      n -> Invalid n
+    decodeRecordSum "DijkstraSubCertPredFailure" $ \case
+      1 -> fmap (2,) $ SubDelegFailure <$> decCBOR
+      2 -> fmap (2,) $ SubPoolFailure <$> decCBOR
+      3 -> fmap (2,) $ SubGovCertFailure <$> decCBOR
+      n -> invalidKey n
 
 type instance EraRuleFailure "SUBCERT" DijkstraEra = DijkstraSubCertPredFailure DijkstraEra
 

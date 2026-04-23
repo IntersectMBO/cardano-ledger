@@ -11,6 +11,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -45,8 +46,14 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
+  invalidKey,
+ )
 import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (
@@ -127,14 +134,14 @@ instance
   EncCBOR (DijkstraBbodyPredFailure era)
   where
   encCBOR =
-    encode . \case
-      WrongBlockBodySizeBBODY mm -> Sum WrongBlockBodySizeBBODY 0 !> To mm
-      InvalidBodyHashBBODY mm -> Sum (InvalidBodyHashBBODY @era) 1 !> To mm
-      LedgersFailure x -> Sum (LedgersFailure @era) 2 !> To x
-      TooManyExUnits mm -> Sum TooManyExUnits 3 !> To mm
-      BodyRefScriptsSizeTooBig mm -> Sum BodyRefScriptsSizeTooBig 4 !> To mm
+    \case
+      WrongBlockBodySizeBBODY mm -> encodeListLen 2 <> encodeWord 0 <> encCBOR mm
+      InvalidBodyHashBBODY mm -> encodeListLen 2 <> encodeWord 1 <> encCBOR mm
+      LedgersFailure x -> encodeListLen 2 <> encodeWord 2 <> encCBOR x
+      TooManyExUnits mm -> encodeListLen 2 <> encodeWord 3 <> encCBOR mm
+      BodyRefScriptsSizeTooBig mm -> encodeListLen 2 <> encodeWord 4 <> encCBOR mm
       PerasCertValidationFailed cert nonce ->
-        Sum PerasCertValidationFailed 5 !> To cert !> To nonce
+        encodeListLen 3 <> encodeWord 5 <> encCBOR cert <> encCBOR nonce
 
 instance
   ( Era era
@@ -142,14 +149,14 @@ instance
   ) =>
   DecCBOR (DijkstraBbodyPredFailure era)
   where
-  decCBOR = decode . Summands "ConwayBbodyPred" $ \case
-    0 -> SumD WrongBlockBodySizeBBODY <! From
-    1 -> SumD InvalidBodyHashBBODY <! From
-    2 -> SumD LedgersFailure <! From
-    3 -> SumD TooManyExUnits <! From
-    4 -> SumD BodyRefScriptsSizeTooBig <! From
-    5 -> SumD PerasCertValidationFailed <! From <! From
-    n -> Invalid n
+  decCBOR = decodeRecordSum "ConwayBbodyPred" $ \case
+    0 -> fmap (2,) $ WrongBlockBodySizeBBODY <$> decCBOR
+    1 -> fmap (2,) $ InvalidBodyHashBBODY <$> decCBOR
+    2 -> fmap (2,) $ LedgersFailure <$> decCBOR
+    3 -> fmap (2,) $ TooManyExUnits <$> decCBOR
+    4 -> fmap (2,) $ BodyRefScriptsSizeTooBig <$> decCBOR
+    5 -> fmap (3,) $ PerasCertValidationFailed <$> decCBOR <*> decCBOR
+    n -> invalidKey n
 
 type instance EraRuleFailure "BBODY" DijkstraEra = DijkstraBbodyPredFailure DijkstraEra
 

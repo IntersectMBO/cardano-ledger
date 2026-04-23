@@ -28,8 +28,8 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  encodeListLen,
  )
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
@@ -187,13 +187,12 @@ data SubCertsEnv era = SubCertsEnv
 instance EraTx era => EncCBOR (SubCertsEnv era) where
   encCBOR x@(SubCertsEnv _ _ _ _ _) =
     let SubCertsEnv {..} = x
-     in encode $
-          Rec SubCertsEnv
-            !> To certsTx
-            !> To certsPParams
-            !> To certsCurrentEpoch
-            !> To certsCurrentCommittee
-            !> To certsCommitteeProposals
+     in encodeListLen 5
+          <> encCBOR certsTx
+          <> encCBOR certsPParams
+          <> encCBOR certsCurrentEpoch
+          <> encCBOR certsCurrentCommittee
+          <> encCBOR certsCommitteeProposals
 
 deriving instance (EraPParams era, Eq (Tx SubTx era)) => Eq (SubCertsEnv era)
 

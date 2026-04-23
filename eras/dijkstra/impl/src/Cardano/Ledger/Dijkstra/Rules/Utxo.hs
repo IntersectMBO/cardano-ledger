@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -48,14 +49,10 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
+  invalidKey,
  )
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
 import Cardano.Ledger.Conway.Core
@@ -379,31 +376,31 @@ instance
   EncCBOR (DijkstraUtxoPredFailure era)
   where
   encCBOR =
-    encode . \case
-      UtxosFailure a -> Sum (UtxosFailure @era) 0 !> To a
-      BadInputsUTxO ins -> Sum (BadInputsUTxO @era) 1 !> To ins
-      OutsideValidityIntervalUTxO a b -> Sum OutsideValidityIntervalUTxO 2 !> To a !> To b
-      MaxTxSizeUTxO mm -> Sum MaxTxSizeUTxO 3 !> To mm
-      InputSetEmptyUTxO -> Sum InputSetEmptyUTxO 4
-      FeeTooSmallUTxO mm -> Sum FeeTooSmallUTxO 5 !> To mm
-      ValueNotConservedUTxO mm -> Sum (ValueNotConservedUTxO @era) 6 !> To mm
-      WrongNetwork right wrongs -> Sum (WrongNetwork @era) 7 !> To right !> To wrongs
-      WrongNetworkWithdrawal right wrongs -> Sum (WrongNetworkWithdrawal @era) 8 !> To right !> To wrongs
-      OutputBootAddrAttrsTooBig outs -> Sum (OutputBootAddrAttrsTooBig @era) 9 !> To outs
-      OutputTooBigUTxO outs -> Sum (OutputTooBigUTxO @era) 10 !> To outs
-      InsufficientCollateral a b -> Sum InsufficientCollateral 11 !> To a !> To b
-      ScriptsNotPaidUTxO a -> Sum ScriptsNotPaidUTxO 12 !> To a
-      ExUnitsTooBigUTxO mm -> Sum ExUnitsTooBigUTxO 13 !> To mm
-      CollateralContainsNonADA a -> Sum CollateralContainsNonADA 14 !> To a
-      WrongNetworkInTxBody mm -> Sum WrongNetworkInTxBody 15 !> To mm
-      OutsideForecast a -> Sum OutsideForecast 16 !> To a
-      TooManyCollateralInputs mm -> Sum TooManyCollateralInputs 17 !> To mm
-      NoCollateralInputs -> Sum NoCollateralInputs 18
-      IncorrectTotalCollateralField c1 c2 -> Sum IncorrectTotalCollateralField 19 !> To c1 !> To c2
-      BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 20 !> To x
-      BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 21 !> To x
-      PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 22 !> To x
-      WrongNetworkInDirectDeposit right wrongs -> Sum (WrongNetworkInDirectDeposit @era) 23 !> To right !> To wrongs
+    \case
+      UtxosFailure a -> encodeListLen 2 <> encodeWord 0 <> encCBOR a
+      BadInputsUTxO ins -> encodeListLen 2 <> encodeWord 1 <> encCBOR ins
+      OutsideValidityIntervalUTxO a b -> encodeListLen 3 <> encodeWord 2 <> encCBOR a <> encCBOR b
+      MaxTxSizeUTxO mm -> encodeListLen 2 <> encodeWord 3 <> encCBOR mm
+      InputSetEmptyUTxO -> encodeListLen 1 <> encodeWord 4
+      FeeTooSmallUTxO mm -> encodeListLen 2 <> encodeWord 5 <> encCBOR mm
+      ValueNotConservedUTxO mm -> encodeListLen 2 <> encodeWord 6 <> encCBOR mm
+      WrongNetwork right wrongs -> encodeListLen 3 <> encodeWord 7 <> encCBOR right <> encCBOR wrongs
+      WrongNetworkWithdrawal right wrongs -> encodeListLen 3 <> encodeWord 8 <> encCBOR right <> encCBOR wrongs
+      OutputBootAddrAttrsTooBig outs -> encodeListLen 2 <> encodeWord 9 <> encCBOR outs
+      OutputTooBigUTxO outs -> encodeListLen 2 <> encodeWord 10 <> encCBOR outs
+      InsufficientCollateral a b -> encodeListLen 3 <> encodeWord 11 <> encCBOR a <> encCBOR b
+      ScriptsNotPaidUTxO a -> encodeListLen 2 <> encodeWord 12 <> encCBOR a
+      ExUnitsTooBigUTxO mm -> encodeListLen 2 <> encodeWord 13 <> encCBOR mm
+      CollateralContainsNonADA a -> encodeListLen 2 <> encodeWord 14 <> encCBOR a
+      WrongNetworkInTxBody mm -> encodeListLen 2 <> encodeWord 15 <> encCBOR mm
+      OutsideForecast a -> encodeListLen 2 <> encodeWord 16 <> encCBOR a
+      TooManyCollateralInputs mm -> encodeListLen 2 <> encodeWord 17 <> encCBOR mm
+      NoCollateralInputs -> encodeListLen 1 <> encodeWord 18
+      IncorrectTotalCollateralField c1 c2 -> encodeListLen 3 <> encodeWord 19 <> encCBOR c1 <> encCBOR c2
+      BabbageOutputTooSmallUTxO x -> encodeListLen 2 <> encodeWord 20 <> encCBOR x
+      BabbageNonDisjointRefInputs x -> encodeListLen 2 <> encodeWord 21 <> encCBOR x
+      PtrPresentInCollateralReturn x -> encodeListLen 2 <> encodeWord 22 <> encCBOR x
+      WrongNetworkInDirectDeposit right wrongs -> encodeListLen 3 <> encodeWord 23 <> encCBOR right <> encCBOR wrongs
 
 instance
   ( Era era
@@ -414,32 +411,32 @@ instance
   ) =>
   DecCBOR (DijkstraUtxoPredFailure era)
   where
-  decCBOR = decode . Summands "DijkstraUtxoPredFailure" $ \case
-    0 -> SumD UtxosFailure <! From
-    1 -> SumD BadInputsUTxO <! From
-    2 -> SumD OutsideValidityIntervalUTxO <! From <! From
-    3 -> SumD MaxTxSizeUTxO <! From
-    4 -> SumD InputSetEmptyUTxO
-    5 -> SumD FeeTooSmallUTxO <! From
-    6 -> SumD ValueNotConservedUTxO <! From
-    7 -> SumD WrongNetwork <! From <! From
-    8 -> SumD WrongNetworkWithdrawal <! From <! From
-    9 -> SumD OutputBootAddrAttrsTooBig <! From
-    10 -> SumD OutputTooBigUTxO <! From
-    11 -> SumD InsufficientCollateral <! From <! From
-    12 -> SumD ScriptsNotPaidUTxO <! From
-    13 -> SumD ExUnitsTooBigUTxO <! From
-    14 -> SumD CollateralContainsNonADA <! From
-    15 -> SumD WrongNetworkInTxBody <! From
-    16 -> SumD OutsideForecast <! From
-    17 -> SumD TooManyCollateralInputs <! From
-    18 -> SumD NoCollateralInputs
-    19 -> SumD IncorrectTotalCollateralField <! From <! From
-    20 -> SumD BabbageOutputTooSmallUTxO <! From
-    21 -> SumD BabbageNonDisjointRefInputs <! From
-    22 -> SumD PtrPresentInCollateralReturn <! From
-    23 -> SumD WrongNetworkInDirectDeposit <! From <! From
-    n -> Invalid n
+  decCBOR = decodeRecordSum "DijkstraUtxoPredFailure" $ \case
+    0 -> fmap (2,) $ UtxosFailure <$> decCBOR
+    1 -> fmap (2,) $ BadInputsUTxO <$> decCBOR
+    2 -> fmap (3,) $ OutsideValidityIntervalUTxO <$> decCBOR <*> decCBOR
+    3 -> fmap (2,) $ MaxTxSizeUTxO <$> decCBOR
+    4 -> pure (1, InputSetEmptyUTxO)
+    5 -> fmap (2,) $ FeeTooSmallUTxO <$> decCBOR
+    6 -> fmap (2,) $ ValueNotConservedUTxO <$> decCBOR
+    7 -> fmap (3,) $ WrongNetwork <$> decCBOR <*> decCBOR
+    8 -> fmap (3,) $ WrongNetworkWithdrawal <$> decCBOR <*> decCBOR
+    9 -> fmap (2,) $ OutputBootAddrAttrsTooBig <$> decCBOR
+    10 -> fmap (2,) $ OutputTooBigUTxO <$> decCBOR
+    11 -> fmap (3,) $ InsufficientCollateral <$> decCBOR <*> decCBOR
+    12 -> fmap (2,) $ ScriptsNotPaidUTxO <$> decCBOR
+    13 -> fmap (2,) $ ExUnitsTooBigUTxO <$> decCBOR
+    14 -> fmap (2,) $ CollateralContainsNonADA <$> decCBOR
+    15 -> fmap (2,) $ WrongNetworkInTxBody <$> decCBOR
+    16 -> fmap (2,) $ OutsideForecast <$> decCBOR
+    17 -> fmap (2,) $ TooManyCollateralInputs <$> decCBOR
+    18 -> pure (1, NoCollateralInputs)
+    19 -> fmap (3,) $ IncorrectTotalCollateralField <$> decCBOR <*> decCBOR
+    20 -> fmap (2,) $ BabbageOutputTooSmallUTxO <$> decCBOR
+    21 -> fmap (2,) $ BabbageNonDisjointRefInputs <$> decCBOR
+    22 -> fmap (2,) $ PtrPresentInCollateralReturn <$> decCBOR
+    23 -> fmap (3,) $ WrongNetworkInDirectDeposit <$> decCBOR <*> decCBOR
+    n -> invalidKey n
 
 -- =====================================================
 -- Injecting from one PredicateFailure to another

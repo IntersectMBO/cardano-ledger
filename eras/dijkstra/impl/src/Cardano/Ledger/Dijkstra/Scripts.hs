@@ -13,6 +13,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -55,21 +56,13 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeNullMaybe,
+  decodeRecordSum,
   decodeWord8,
   encodeListLen,
   encodeNull,
+  encodeWord,
   encodeWord8,
   enforceSize,
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  Wrapped (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
-  (<*!),
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (ConwayEra)
@@ -239,27 +232,32 @@ deriving instance Era era => NoThunks (DijkstraNativeScriptRaw era)
 
 instance Era era => EncCBOR (DijkstraNativeScriptRaw era) where
   encCBOR =
-    encode . \case
-      DijkstraRequireSignature hash -> Sum DijkstraRequireSignature 0 !> To hash
-      DijkstraRequireAllOf xs -> Sum DijkstraRequireAllOf 1 !> To xs
-      DijkstraRequireAnyOf xs -> Sum DijkstraRequireAnyOf 2 !> To xs
-      DijkstraRequireMOf m xs -> Sum DijkstraRequireMOf 3 !> To m !> To xs
-      DijkstraTimeStart m -> Sum DijkstraTimeStart 4 !> To m
-      DijkstraTimeExpire m -> Sum DijkstraTimeExpire 5 !> To m
-      DijkstraRequireGuard cred -> Sum DijkstraRequireGuard 6 !> To cred
+    \case
+      DijkstraRequireSignature hash -> encodeListLen 2 <> encodeWord 0 <> encCBOR hash
+      DijkstraRequireAllOf xs -> encodeListLen 2 <> encodeWord 1 <> encCBOR xs
+      DijkstraRequireAnyOf xs -> encodeListLen 2 <> encodeWord 2 <> encCBOR xs
+      DijkstraRequireMOf m xs -> encodeListLen 3 <> encodeWord 3 <> encCBOR m <> encCBOR xs
+      DijkstraTimeStart m -> encodeListLen 2 <> encodeWord 4 <> encCBOR m
+      DijkstraTimeExpire m -> encodeListLen 2 <> encodeWord 5 <> encCBOR m
+      DijkstraRequireGuard cred -> encodeListLen 2 <> encodeWord 6 <> encCBOR cred
 
 instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
-  decCBOR = decode (Summands "DijkstraNativeScriptRaw" decRaw)
-    where
-      decRaw :: Word -> Decode Open (Annotator (DijkstraNativeScriptRaw era))
-      decRaw 0 = Ann (SumD DijkstraRequireSignature <! From)
-      decRaw 1 = Ann (SumD DijkstraRequireAllOf) <*! D (sequence <$> decCBOR)
-      decRaw 2 = Ann (SumD DijkstraRequireAnyOf) <*! D (sequence <$> decCBOR)
-      decRaw 3 = Ann (SumD DijkstraRequireMOf) <*! Ann From <*! D (sequence <$> decCBOR)
-      decRaw 4 = Ann (SumD DijkstraTimeStart <! From)
-      decRaw 5 = Ann (SumD DijkstraTimeExpire <! From)
-      decRaw 6 = Ann (SumD DijkstraRequireGuard <! From)
-      decRaw n = Invalid n
+  decCBOR = decodeRecordSum "DijkstraNativeScriptRaw" $ \case
+    0 -> fmap (2,) $ pure . DijkstraRequireSignature <$> decCBOR
+    1 -> do
+      annSeq <- sequence <$> decCBOR
+      pure (2, DijkstraRequireAllOf <$> annSeq)
+    2 -> do
+      annSeq <- sequence <$> decCBOR
+      pure (2, DijkstraRequireAnyOf <$> annSeq)
+    3 -> do
+      n <- decCBOR
+      annSeq <- sequence <$> decCBOR
+      pure (3, DijkstraRequireMOf <$> pure n <*> annSeq)
+    4 -> fmap (2,) $ pure . DijkstraTimeStart <$> decCBOR
+    5 -> fmap (2,) $ pure . DijkstraTimeExpire <$> decCBOR
+    6 -> fmap (2,) $ pure . DijkstraRequireGuard <$> decCBOR
+    n -> invalidKey n
 
 newtype DijkstraNativeScript era = MkDijkstraNativeScript (MemoBytes (DijkstraNativeScriptRaw era))
   deriving (Eq, Generic)

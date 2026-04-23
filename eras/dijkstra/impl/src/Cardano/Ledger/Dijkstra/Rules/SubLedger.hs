@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -31,8 +32,10 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
  )
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -391,12 +394,12 @@ instance
   EncCBOR (DijkstraSubLedgerPredFailure era)
   where
   encCBOR =
-    encode . \case
-      SubUtxowFailure x -> Sum (SubUtxowFailure @era) 1 !> To x
-      SubCertsFailure x -> Sum (SubCertsFailure @era) 2 !> To x
-      SubGovFailure x -> Sum (SubGovFailure @era) 3 !> To x
-      SubWdrlNotDelegatedToDRep x -> Sum (SubWdrlNotDelegatedToDRep @era) 4 !> To x
-      SubTreasuryValueMismatch mm -> Sum (SubTreasuryValueMismatch @era) 5 !> To mm
+    \case
+      SubUtxowFailure x -> encodeListLen 2 <> encodeWord 1 <> encCBOR x
+      SubCertsFailure x -> encodeListLen 2 <> encodeWord 2 <> encCBOR x
+      SubGovFailure x -> encodeListLen 2 <> encodeWord 3 <> encCBOR x
+      SubWdrlNotDelegatedToDRep x -> encodeListLen 2 <> encodeWord 4 <> encCBOR x
+      SubTreasuryValueMismatch mm -> encodeListLen 2 <> encodeWord 5 <> encCBOR mm
 
 instance
   ( Era era
@@ -406,13 +409,13 @@ instance
   ) =>
   DecCBOR (DijkstraSubLedgerPredFailure era)
   where
-  decCBOR = decode . Summands "DijkstraSubLedgerPredFailure" $ \case
-    1 -> SumD SubUtxowFailure <! From
-    2 -> SumD SubCertsFailure <! From
-    3 -> SumD SubGovFailure <! From
-    4 -> SumD SubWdrlNotDelegatedToDRep <! From
-    5 -> SumD SubTreasuryValueMismatch <! From
-    n -> Invalid n
+  decCBOR = decodeRecordSum "DijkstraSubLedgerPredFailure" $ \case
+    1 -> fmap (2,) $ SubUtxowFailure <$> decCBOR
+    2 -> fmap (2,) $ SubCertsFailure <$> decCBOR
+    3 -> fmap (2,) $ SubGovFailure <$> decCBOR
+    4 -> fmap (2,) $ SubWdrlNotDelegatedToDRep <$> decCBOR
+    5 -> fmap (2,) $ SubTreasuryValueMismatch <$> decCBOR
+    n -> invalidKey n
 
 conwayToDijkstraSubLedgerPredFailure ::
   forall era.

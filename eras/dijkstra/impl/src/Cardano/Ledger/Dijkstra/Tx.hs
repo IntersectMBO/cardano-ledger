@@ -42,7 +42,6 @@ import Cardano.Ledger.Binary (
   encodeNullStrictMaybe,
   serialize,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<*!))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), Tx (..), getConwayMinFeeTx)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
@@ -149,12 +148,19 @@ instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where
               <*> sequence auxAnn
         n ->
           fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
-    SSubTx ->
-      decode $
-        Ann (RecD DijkstraSubTx)
-          <*! From
-          <*! From
-          <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
+    SSubTx -> do
+      decodeListLen >>= \case
+        3 -> do
+          bodyAnn <- decCBOR
+          witsAnn <- decCBOR
+          auxAnn <- sequence <$> decodeNullStrictMaybe decCBOR
+          pure $
+            DijkstraSubTx
+              <$> bodyAnn
+              <*> witsAnn
+              <*> auxAnn
+        n ->
+          fail $ "Unexpected list length: " <> show n <> ". Expected: 3."
 
 instance HasEraTxLevel DijkstraTx DijkstraEra where
   toSTxLevel DijkstraTx {} = STopTx
@@ -341,16 +347,13 @@ toCBORForMempoolSubmission ::
   DijkstraTx l era ->
   Encoding
 toCBORForMempoolSubmission = \case
-  DijkstraTx {dtBody, dtWits, dtAuxData, dtIsValid} ->
-    encode $
-      Rec DijkstraTx
-        !> To dtBody
-        !> To dtWits
-        !> OmitC dtIsValid
-        !> E (encodeNullStrictMaybe encCBOR) dtAuxData
+  DijkstraTx {dtBody, dtWits, dtAuxData} ->
+    encodeListLen 3
+      <> encCBOR dtBody
+      <> encCBOR dtWits
+      <> encodeNullStrictMaybe encCBOR dtAuxData
   DijkstraSubTx {dstBody, dstWits, dstAuxData} ->
-    encode $
-      Rec DijkstraSubTx
-        !> To dstBody
-        !> To dstWits
-        !> E (encodeNullStrictMaybe encCBOR) dstAuxData
+    encodeListLen 3
+      <> encCBOR dstBody
+      <> encCBOR dstWits
+      <> encodeNullStrictMaybe encCBOR dstAuxData
