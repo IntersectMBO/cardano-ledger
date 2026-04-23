@@ -21,8 +21,10 @@ import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Conway.Rules (ConwayGovEvent)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
+import Cardano.Ledger.Dijkstra.BlockBody.Internal (DijkstraBlockBodyRaw)
 import Cardano.Ledger.Dijkstra.Core (
   AlonzoEraScript (..),
+  AlonzoEraTx,
   AsItem,
   AsIx,
   DijkstraBlockBody,
@@ -127,7 +129,9 @@ instance ToExpr (TxBody l DijkstraEra)
 
 instance ToExpr PerasCert
 
-instance (ToExpr (Tx TopTx era), ToExpr PerasCert) => ToExpr (DijkstraBlockBody era)
+instance ToExpr (Tx TopTx era) => ToExpr (DijkstraBlockBodyRaw era)
+
+instance (AlonzoEraTx era, ToExpr (Tx TopTx era), ToExpr PerasCert) => ToExpr (DijkstraBlockBody era)
 
 instance ToExpr (DijkstraTx l DijkstraEra) where
   toExpr = \case
