@@ -15,6 +15,12 @@
 module Cardano.Ledger.Api.State.Query (
   module Governance,
 
+  -- * @GetEpochNo@
+  queryCurrentEpochNo,
+
+  -- * @GetAccountState@
+  queryChainAccountState,
+
   -- * @GetFilteredDelegationsAndRewardAccounts@
   queryStakePoolDelegsAndRewards,
 
@@ -44,9 +50,6 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetCommitteeMembersState@
   queryCommitteeMembersState,
-
-  -- * @GetChainAccountState@
-  queryChainAccountState,
 
   -- * @GetCurrentPParams@
   queryCurrentPParams,
@@ -125,7 +128,6 @@ import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Generics
 import Lens.Micro
-import Lens.Micro.Extras (view)
 
 -- | Implementation for @GetFilteredDelegationsAndRewardAccounts@ query.
 queryStakePoolDelegsAndRewards ::
@@ -361,11 +363,6 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
       , csThreshold = strictMaybeToMaybe $ (^. committeeThresholdL) <$> committee
       , csEpochNo = currentEpoch
       }
-
-queryChainAccountState ::
-  NewEpochState era ->
-  ChainAccountState
-queryChainAccountState = view chainAccountStateL
 
 getNextEpochCommitteeMembers ::
   ConwayEraGov era =>
@@ -634,3 +631,13 @@ queryStakeSnapshots nes mPoolIds =
         , ssSetTotal = ssTotalActiveStake ssStakeSet
         , ssGoTotal = ssTotalActiveStake ssStakeGo
         }
+
+-- | Query the current epoch number.
+queryCurrentEpochNo :: NewEpochState era -> EpochNo
+queryCurrentEpochNo = nesEL
+
+-- | Query chain account state (treasury and reserves).
+queryChainAccountState ::
+  NewEpochState era ->
+  ChainAccountState
+queryChainAccountState nes = nes ^. chainAccountStateL
