@@ -53,6 +53,7 @@ import Cardano.Ledger.Conway.Governance (
   grCommitteeL,
   proposalsWithPurpose,
  )
+import Cardano.Ledger.Conway.PParams (ppMaxRefScriptSizePerTxG)
 import Cardano.Ledger.Conway.Rules (
   CertsEnv (..),
   ConwayCERTS,
@@ -69,7 +70,6 @@ import Cardano.Ledger.Conway.Rules (
   GovSignal (..),
   updateDormantDRepExpiries,
   updateVotingDRepExpiries,
-  validateRefScriptSize,
   validateTreasuryValue,
   validateWithdrawalsDelegated,
  )
@@ -89,7 +89,8 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedgers
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody
-import Cardano.Ledger.Rules.ValidationMode (runTest)
+import Cardano.Ledger.Dijkstra.UTxO (batchNonDistinctRefScriptsSize)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -123,8 +124,10 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import qualified Data.Set.NonEmpty as NES
+import Data.Word (Word32)
 import GHC.Generics (Generic (..))
 import Lens.Micro
+import Validation (failureUnless)
 
 data DijkstraLedgerPredFailure era
   = DijkstraUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
@@ -356,6 +359,24 @@ instance
 
   assertions = shelleyLedgerAssertions @era @DijkstraLEDGER
 
+validateAllRefScriptSize ::
+  ( EraTx era
+  , DijkstraEraTxBody era
+  ) =>
+  PParams era ->
+  UTxO era ->
+  Tx TopTx era ->
+  Test (DijkstraLedgerPredFailure era)
+validateAllRefScriptSize pp utxo tx =
+  let totalRefScriptSize = batchNonDistinctRefScriptsSize utxo tx
+      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+   in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
+        DijkstraTxRefScriptsSizeTooBig
+          Mismatch
+            { mismatchSupplied = totalRefScriptSize
+            , mismatchExpected = maxRefScriptSizePerTx
+            }
+
 -- | A transaction should not be able to spend its own outputs.
 -- Finds all spendable inputs in the entire transaction that are sub-transaction outputs (TxIds).
 spentSubTxOutputs ::
@@ -397,6 +418,7 @@ dijkstraLedgerTransition ::
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   ) =>
   TransitionRule (DijkstraLEDGER era)
 dijkstraLedgerTransition = do
@@ -438,7 +460,7 @@ dijkstraLedgerTransition = do
       then do
         let txBody = tx ^. bodyTxL
         runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
-        runTest $ validateRefScriptSize pp (utxoStateAfterSubLedgers ^. utxoL) tx
+        runTest $ validateAllRefScriptSize pp originalUtxo tx
 
         let govState = utxoStateAfterSubLedgers ^. utxosGovStateL
             committee = govState ^. committeeGovStateL

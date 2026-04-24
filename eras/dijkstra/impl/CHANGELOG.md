@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Added `batchNonDistinctRefScriptsSize`
 * Add `guardDijkstraFeaturesForPlutusV1toV3`
 * Add `DirectDepositsNotSupported` and `AccountBalanceIntervalsNotSupported` constructors to `DijkstraContextError`
 * Add `SubTxContextError`
