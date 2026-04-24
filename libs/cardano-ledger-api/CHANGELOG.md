@@ -2,6 +2,7 @@
 
 ## 1.13.1.0
 
+* Add `querySetSnapshotStakePoolDistr` (`GetPoolDistr2`).
 * Add `queryDRepDelegatees` (`GetFilteredVoteDelegatees`).
 * Add `queryStakePoolRelays` (`GetLedgerPeerSnapshot`).
 * Add `queryAccountsDeposits` (`GetStakeDelegDeposits`).

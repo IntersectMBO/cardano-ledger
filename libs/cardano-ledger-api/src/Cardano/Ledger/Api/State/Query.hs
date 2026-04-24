@@ -74,6 +74,9 @@ module Cardano.Ledger.Api.State.Query (
   QueryPoolStateResult (..),
   mkQueryPoolStateResult,
 
+  -- * @GetPoolDistr2@
+  querySetSnapshotStakePoolDistr,
+
   -- * @GetStakeSnapshots@
   queryStakeSnapshots,
   StakeSnapshot (..),
@@ -672,3 +675,18 @@ queryStakePoolRelays nes =
        in if null allRelays
             then Nothing
             else Just (individualPoolStake ips, allRelays)
+
+-- | Query the pool distribution derived from the set-snapshot.
+--
+-- Returns the pre-computed 'PoolDistr' stored in 'NewEpochState'
+-- (@nesPd@), optionally filtered to the given set of pools. Empty set
+-- returns all pools.
+querySetSnapshotStakePoolDistr ::
+  NewEpochState era ->
+  Set (KeyHash StakePool) ->
+  PoolDistr
+querySetSnapshotStakePoolDistr nes poolIds
+  | Set.null poolIds = nesPd nes
+  | otherwise =
+      let pd = nesPd nes
+       in pd {unPoolDistr = Map.restrictKeys (unPoolDistr pd) poolIds}
