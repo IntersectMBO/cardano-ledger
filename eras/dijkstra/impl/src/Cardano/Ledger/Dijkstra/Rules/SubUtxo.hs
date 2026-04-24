@@ -374,3 +374,4 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
   WrongNetworkInDirectDeposit x y -> SubWrongNetworkInDirectDeposit x y
+  WithdrawalsExceedAccountBalance _ -> error "Impossible: `WithdrawalsExceedAccountBalance` for SUBUTXO"
