@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Added `batchNonDistinctRefScriptsSize`
 * Add `SubTxContextError`
 * Add `DijkstraStAnnTx`
 * Add `scriptsProvidedDijkstraStAnnTx`
