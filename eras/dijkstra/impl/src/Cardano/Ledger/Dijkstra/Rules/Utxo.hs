@@ -32,9 +32,11 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
   updateUTxOStateByTxValidity,
+  validateTotalCollateral,
  )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   validateOutputTooSmallUTxO,
@@ -82,7 +84,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxO (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   validSizeComputationCheck,
@@ -92,11 +94,12 @@ import Cardano.Ledger.State (
   CertState,
   EraCertState (..),
   EraStake,
-  EraUTxO,
+  EraUTxO (..),
   ScriptsProvided (..),
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
+import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
@@ -108,14 +111,17 @@ import Control.State.Transition.Extended (
   judgmentContext,
   liftSTS,
   trans,
+  validate,
  )
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import Validation (failureUnless)
 
 data DijkstraUtxoEnv era = DijkstraUtxoEnv
   { dueSlot :: SlotNo
@@ -270,6 +276,40 @@ validateNoPtrInCollateralReturn txBody = do
         Just collateralReturn
   failOnJustStatic hasCollateralTxOut (injectFailure . PtrPresentInCollateralReturn)
 
+validateFeeTooSmallUTxO ::
+  EraUTxO era =>
+  PParams era ->
+  Tx TopTx era ->
+  UTxO era ->
+  Test (DijkstraUtxoPredFailure era)
+validateFeeTooSmallUTxO pp tx utxo =
+  let minFee = getMinFeeTxUtxo pp tx utxo
+      theFee = tx ^. bodyTxL . feeTxBodyL
+   in failureUnless
+        (minFee <= theFee)
+        (FeeTooSmallUTxO Mismatch {mismatchSupplied = theFee, mismatchExpected = minFee})
+
+-- | Validate collateral if any transaction in the batch has redeemers.
+validateBatchCollateral ::
+  forall era rule.
+  ( AlonzoEraTx era
+  , DijkstraEraTxBody era
+  , InjectRuleFailure rule AlonzoUtxoPredFailure era
+  , InjectRuleFailure rule BabbageUtxoPredFailure era
+  ) =>
+  PParams era ->
+  Tx TopTx era ->
+  UTxO era ->
+  Test (EraRuleFailure rule era)
+validateBatchCollateral pp tx (UTxO utxo) =
+  when (hasAnyRedeemers tx) $
+    validateTotalCollateral pp (tx ^. bodyTxL) utxoCollateral
+  where
+    utxoCollateral = Map.restrictKeys utxo (tx ^. bodyTxL . collateralInputsTxBodyL)
+    hasAnyRedeemers t =
+      hasRedeemers t || any hasRedeemers (OMap.elems $ t ^. bodyTxL . subTransactionsTxBodyL)
+    hasRedeemers = not . null . (^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+
 validateWrongNetworkInDirectDeposit ::
   DijkstraEraTxBody era =>
   Network ->
@@ -332,6 +372,12 @@ dijkstraUtxoTransition = do
 
   {- SpendInputsOf txTop ⊆ dom(utxo_s) — prevents double-spend with subtxs -}
   runTest $ Shelley.validateBadInputsUTxO (utxosUtxo utxos) inputs
+
+  {- minfee pp txTop utxo₀ ≤ txfee txb -}
+  runTest $ validateFeeTooSmallUTxO pp tx originalUtxo
+
+  {- (RedeemersOf txTop ≠ ∅ ⊎ Any (λ txSub → RedeemersOf txSub ≠ ∅) subtxs) → collateralCheck -}
+  validate $ validateBatchCollateral pp tx originalUtxo
 
   {- consumed pp utxo₀ txb = produced pp certState txb -}
   runTest $ Shelley.validateValueNotConservedUTxO pp originalUtxo certState txBody
