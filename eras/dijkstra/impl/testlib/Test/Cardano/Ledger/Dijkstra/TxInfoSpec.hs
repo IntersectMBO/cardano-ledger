@@ -62,12 +62,14 @@ spec = describe "TxInfo" $ do
               & outputsTxBodyL .~ [txOut]
               & inputsTxBodyL .~ [txIn]
         ledgerTxInfo =
-          LedgerTxInfo @era
-            (ProtVer (eraProtVerLow @era) 0)
-            (epochInfo testGlobals)
-            (systemStart testGlobals)
-            utxo
-            tx
+          LedgerTxInfo
+            { ltiProtVer = ProtVer (eraProtVerLow @era) 0
+            , ltiEpochInfo = epochInfo testGlobals
+            , ltiSystemStart = systemStart testGlobals
+            , ltiUTxO = utxo
+            , ltiTx = tx
+            , ltiMemoizedSubTransactions = mempty
+            }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
           `shouldBeLeft` inject (PointerPresentInOutput @era [txOut])
@@ -83,12 +85,14 @@ spec = describe "TxInfo" $ do
         let
           tx = mkBasicTx @era @SubTx mkBasicTxBody
           ledgerTxInfo =
-            LedgerTxInfo @era
-              (ProtVer (eraProtVerLow @era) 0)
-              (epochInfo testGlobals)
-              (systemStart testGlobals)
-              mempty
-              tx
+            LedgerTxInfo
+              { ltiProtVer = ProtVer (eraProtVerLow @era) 0
+              , ltiEpochInfo = epochInfo testGlobals
+              , ltiSystemStart = systemStart testGlobals
+              , ltiUTxO = mempty
+              , ltiTx = tx
+              , ltiMemoizedSubTransactions = mempty
+              }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)

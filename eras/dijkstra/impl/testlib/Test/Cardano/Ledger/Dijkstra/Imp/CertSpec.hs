@@ -8,7 +8,6 @@ module Test.Cardano.Ledger.Dijkstra.Imp.CertSpec (spec) where
 import Cardano.Ledger.Conway.Governance (Voter (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OMap.Strict as OMap

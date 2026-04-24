@@ -52,9 +52,12 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
   lookupTxInfoResultImpossible,
+ )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
+  AlonzoContextError (..),
+  TxOutSource (..),
   toPlutusWithContext,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), toAsItem)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transTxOutV2)

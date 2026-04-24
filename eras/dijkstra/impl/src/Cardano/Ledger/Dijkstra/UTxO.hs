@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -9,6 +10,7 @@
 module Cardano.Ledger.Dijkstra.UTxO (
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
+  scriptsProvidedDijkstraStAnnTx,
 ) where
 
 import Cardano.Ledger.Alonzo.UTxO (
@@ -36,8 +38,7 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..), pattern GuardingPurpose)
 import Cardano.Ledger.Dijkstra.State
-import Cardano.Ledger.Dijkstra.Tx ()
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Data.Foldable (Foldable (..))
@@ -164,6 +165,21 @@ instance AlonzoEraUTxO DijkstraEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
 
   getSpendingDatum = getBabbageSpendingDatum
+
+  scriptsProvidedStAnnTx = scriptsProvidedDijkstraStAnnTx
+
+scriptsProvidedDijkstraStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxBothLevels l era
+  , STxLevel SubTx era ~ STxBothLevels SubTx era
+  , STxLevel TopTx era ~ STxBothLevels TopTx era
+  ) =>
+  DijkstraStAnnTx l era -> ScriptsProvided era
+scriptsProvidedDijkstraStAnnTx stAnnTx =
+  withBothTxLevels
+    stAnnTx
+    (\DijkstraStAnnTopTx {dsattScriptsProvided} -> dsattScriptsProvided)
+    (\DijkstraStAnnSubTx {dsastScriptsProvided} -> dsastScriptsProvided)
 
 dijkstraSubTxProducedValue ::
   (ConwayEraTxBody era, Value era ~ MaryValue) =>

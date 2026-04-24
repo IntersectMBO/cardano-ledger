@@ -37,7 +37,8 @@ data STxTopLevel (l :: TxLevel) era where
   STopTxOnly :: STxTopLevel TopTx era
 
 withSTxTopLevelM ::
-  forall l era a m. (Typeable l, Era era, MonadFail m) => (STxTopLevel l era -> m a) -> m a
+  forall (l :: TxLevel) era a m.
+  (Typeable l, Era era, MonadFail m) => (STxTopLevel l era -> m a) -> m a
 withSTxTopLevelM f =
   case eqT @l @TopTx of
     Just Refl -> f STopTxOnly
@@ -47,7 +48,9 @@ data STxBothLevels (l :: TxLevel) era where
   STopTx :: STxBothLevels TopTx era
   SSubTx :: STxBothLevels SubTx era
 
-withSTxBothLevels :: forall l era a. (Typeable l, HasCallStack) => (STxBothLevels l era -> a) -> a
+withSTxBothLevels ::
+  forall (l :: TxLevel) era a.
+  (Typeable l, HasCallStack) => (STxBothLevels l era -> a) -> a
 withSTxBothLevels f =
   case eqT @l @TopTx of
     Just Refl -> f STopTx
@@ -70,7 +73,7 @@ class EraTxLevel era => HasEraTxLevel (t :: TxLevel -> Type -> Type) era where
   toSTxLevel :: t l era -> STxLevel l era
 
 mkSTxTopLevelM ::
-  forall (l :: TxLevel) t m era.
+  forall (l :: TxLevel) era t m.
   (Typeable l, Monad m, HasEraTxLevel t era, STxLevel l era ~ STxTopLevel l era) =>
   m (t TopTx era) -> m (t l era)
 mkSTxTopLevelM mkTopTx = do
@@ -85,12 +88,13 @@ mkSTxTopLevelM mkTopTx = do
         pure res
 
 asSTxTopLevel ::
-  forall (l :: TxLevel) t era.
+  forall (l :: TxLevel) era t.
   (Typeable l, HasEraTxLevel t era, STxLevel l era ~ STxTopLevel l era) =>
   t TopTx era -> t l era
 asSTxTopLevel = runIdentity . mkSTxTopLevelM . pure
 
 withTopTxLevelOnly ::
+  forall (l :: TxLevel) era t a.
   (HasEraTxLevel t era, STxLevel l era ~ STxTopLevel l era) =>
   t l era -> (t TopTx era -> a) -> a
 withTopTxLevelOnly t f =
@@ -98,7 +102,7 @@ withTopTxLevelOnly t f =
     STopTxOnly -> f t
 
 mkSTxBothLevelsM ::
-  forall (l :: TxLevel) t m era.
+  forall (l :: TxLevel) era t m.
   (Typeable l, Monad m, HasEraTxLevel t era, STxLevel l era ~ STxBothLevels l era) =>
   m (t TopTx era) -> m (t SubTx era) -> m (t l era)
 mkSTxBothLevelsM mkTopTx mkSubTx =
@@ -111,12 +115,13 @@ mkSTxBothLevelsM mkTopTx mkSubTx =
     pure res
 
 asSTxBothLevels ::
-  forall (l :: TxLevel) t era.
+  forall (l :: TxLevel) era t.
   (Typeable l, HasEraTxLevel t era, STxLevel l era ~ STxBothLevels l era) =>
   t TopTx era -> t SubTx era -> t l era
 asSTxBothLevels mkTopTx mkSubTx = runIdentity $ mkSTxBothLevelsM (pure mkTopTx) (pure mkSubTx)
 
 withBothTxLevels ::
+  forall (l :: TxLevel) era t a.
   (HasEraTxLevel t era, STxLevel l era ~ STxBothLevels l era) =>
   t l era -> (t TopTx era -> a) -> (t SubTx era -> a) -> a
 withBothTxLevels t fTop fSub =

@@ -2,6 +2,10 @@
 
 ## 0.3.0.0
 
+* Add `SubTxContextError`
+* Add `DijkstraStAnnTx`
+* Add `scriptsProvidedDijkstraStAnnTx`
+* Add `mkDijkstraStAnnTopTx`
 * Remove `ToCBOR` and `FromCBOR` instances for `DijkstraGovPredFailure`
 * Add `getDijkstraScriptsProvided`
 * Add `MissingRequiredGuards` constructor to `DijkstraUtxowPredFailure`

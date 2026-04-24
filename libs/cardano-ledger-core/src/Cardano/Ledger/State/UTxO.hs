@@ -223,7 +223,7 @@ getScriptHash :: Addr -> Maybe ScriptHash
 getScriptHash (Addr _ (ScriptHashObj hs) _) = Just hs
 getScriptHash _ = Nothing
 
--- | The only reason it is a newtype instead of just a Map is becuase for later eras is
+-- | The only reason it is a newtype instead of just a Map is because for later eras it is
 -- expensive to compute the actual map, so we want to use the type safety guidance to
 -- avoid redundant work.
 newtype ScriptsProvided era = ScriptsProvided

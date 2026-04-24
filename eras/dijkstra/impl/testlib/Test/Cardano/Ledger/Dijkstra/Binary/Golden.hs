@@ -25,7 +25,6 @@ import Cardano.Ledger.Binary (
 import qualified Cardano.Ledger.Binary as Binary
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Data.Data (Proxy (..))
