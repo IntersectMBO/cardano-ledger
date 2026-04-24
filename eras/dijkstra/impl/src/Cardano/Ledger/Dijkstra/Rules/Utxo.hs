@@ -373,7 +373,7 @@ dijkstraUtxoTransition = do
   {- ‖collateral tx‖ ≤ maxCollInputs pp -}
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
 
-  () <- trans @(EraRule "UTXOS" era) $ TRC (ConwayUtxosEnv pp (utxosUtxo utxos), (), tx)
+  () <- trans @(EraRule "UTXOS" era) $ TRC (ConwayUtxosEnv pp originalUtxo, (), tx)
   updateUTxOStateByTxValidity
     pp
     certState
