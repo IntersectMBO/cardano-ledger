@@ -333,6 +333,9 @@ dijkstraUtxoTransition = do
   {- SpendInputsOf txTop ⊆ dom(utxo_s) — prevents double-spend with subtxs -}
   runTest $ Shelley.validateBadInputsUTxO (utxosUtxo utxos) inputs
 
+  {- consumed pp utxo₀ txb = produced pp certState txb -}
+  runTest $ Shelley.validateValueNotConservedUTxO pp originalUtxo certState txBody
+
   {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
   runTest $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
