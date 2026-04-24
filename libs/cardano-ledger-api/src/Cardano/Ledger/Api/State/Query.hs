@@ -13,6 +13,15 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Api.State.Query (
+  module Account,
+  module Governance,
+
+  -- * @GetEpochNo@
+  queryCurrentEpochNo,
+
+  -- * @GetAccountState@
+  queryChainAccountState,
+
   -- * @GetFilteredDelegationsAndRewardAccounts@
   queryStakePoolDelegsAndRewards,
 
@@ -43,14 +52,6 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetCommitteeMembersState@
   queryCommitteeMembersState,
 
-  -- * @GetChainAccountState@
-  queryChainAccountState,
-  CommitteeMemberState (..),
-  CommitteeMembersState (..),
-  HotCredAuthStatus (..),
-  MemberStatus (..),
-  NextEpochChange (..),
-
   -- * @GetCurrentPParams@
   queryCurrentPParams,
 
@@ -73,22 +74,23 @@ module Cardano.Ledger.Api.State.Query (
   QueryPoolStateResult (..),
   mkQueryPoolStateResult,
 
+  -- * @GetPoolDistr2@
+  querySetSnapshotStakePoolDistr,
+
   -- * @GetStakeSnapshots@
   queryStakeSnapshots,
   StakeSnapshot (..),
   StakeSnapshots (..),
 
+  -- * @GetLedgerPeerSnapshot@
+  queryStakePoolRelays,
+
   -- * For testing
   getNextEpochCommitteeMembers,
 ) where
 
-import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
-  CommitteeMemberState (..),
-  CommitteeMembersState (..),
-  HotCredAuthStatus (..),
-  MemberStatus (..),
-  NextEpochChange (..),
- )
+import Cardano.Ledger.Api.State.Query.Account as Account
+import Cardano.Ledger.Api.State.Query.Governance as Governance
 import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, ProtVer (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
@@ -134,7 +136,6 @@ import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Generics
 import Lens.Micro
-import Lens.Micro.Extras (view)
 
 -- | Implementation for @GetFilteredDelegationsAndRewardAccounts@ query.
 queryStakePoolDelegsAndRewards ::
@@ -370,11 +371,6 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
       , csThreshold = strictMaybeToMaybe $ (^. committeeThresholdL) <$> committee
       , csEpochNo = currentEpoch
       }
-
-queryChainAccountState ::
-  NewEpochState era ->
-  ChainAccountState
-queryChainAccountState = view chainAccountStateL
 
 getNextEpochCommitteeMembers ::
   ConwayEraGov era =>
@@ -643,3 +639,54 @@ queryStakeSnapshots nes mPoolIds =
         , ssSetTotal = ssTotalActiveStake ssStakeSet
         , ssGoTotal = ssTotalActiveStake ssStakeGo
         }
+
+-- | Query the current epoch number.
+queryCurrentEpochNo :: NewEpochState era -> EpochNo
+queryCurrentEpochNo = nesEL
+
+-- | Query chain account state (treasury and reserves).
+queryChainAccountState ::
+  NewEpochState era ->
+  ChainAccountState
+queryChainAccountState nes = nes ^. chainAccountStateL
+
+-- | Query pool relay information with associated stake fractions.
+-- Returns pools that have at least one registered relay, combining
+-- relays from both current and pending (future) pool registrations.
+--
+-- This provides the ledger-side data needed by consensus for
+-- peer discovery (GetLedgerPeerSnapshot). Consensus applies
+-- networking-specific transformations (relay type conversion, big-peer
+-- stake accumulation) on top of this result.
+queryStakePoolRelays ::
+  EraCertState era =>
+  NewEpochState era ->
+  Map (KeyHash StakePool) (Rational, StrictSeq StakePoolRelay)
+queryStakePoolRelays nes =
+  Map.mapMaybeWithKey getRelays (unPoolDistr (nesPd nes))
+  where
+    pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
+    pools = psStakePools pstate
+    futureParams = psFutureStakePoolParams pstate
+    getRelays poolId ips =
+      let curRelays = maybe mempty spsRelays $ Map.lookup poolId pools
+          futRelays = maybe mempty sppRelays $ Map.lookup poolId futureParams
+          allRelays = curRelays <> futRelays
+       in if null allRelays
+            then Nothing
+            else Just (individualPoolStake ips, allRelays)
+
+-- | Query the pool distribution derived from the set-snapshot.
+--
+-- Returns the pre-computed 'PoolDistr' stored in 'NewEpochState'
+-- (@nesPd@), optionally filtered to the given set of pools. Empty set
+-- returns all pools.
+querySetSnapshotStakePoolDistr ::
+  NewEpochState era ->
+  Set (KeyHash StakePool) ->
+  PoolDistr
+querySetSnapshotStakePoolDistr nes poolIds
+  | Set.null poolIds = nesPd nes
+  | otherwise =
+      let pd = nesPd nes
+       in pd {unPoolDistr = Map.restrictKeys (unPoolDistr pd) poolIds}
