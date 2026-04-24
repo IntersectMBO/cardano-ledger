@@ -144,10 +144,15 @@ pattern Block h body <-
   where
     Block h body =
       let bytes =
-            serialize (eraProtVerLow @era) $
-              encodeListLen 2
-                <> encCBOR h
-                <> encCBOR body
+            let (len, encBody) = case body of
+                  BodyCertificate cert _ -> (2, encCBOR cert)
+                  BodyInline txs -> (1 + listLen txs, encCBORGroup txs) -- NOTE(bladyjoker): Old format
+             in serialize (eraProtVerLow @era) $
+                  mconcat
+                    [ encodeListLen len
+                    , encCBOR h
+                    , encBody
+                    ]
        in Block' h body bytes
 
 {-# COMPLETE Block #-}
@@ -216,14 +221,14 @@ instance
     let oldLen = 1 + fromIntegral (numSegComponents @era)
     if len == 2
       then do
-        -- New leios format: [header, body]
+        -- NOTE(bladyjoker): New leios format: [header, cert]
         header <- decCBOR @h
-        body <- decCBOR @(Body era)
-        pure $ BlockRaw header body
+        cert <- decCBOR @Certificate
+        pure $ BlockRaw header (BodyCertificate cert Nothing)
       else
         if len == oldLen
           then do
-            -- Old pre-leios format: [header, txseq_components...]
+            -- NOTE(bladyjoker): Old pre-leios format: [header, txseq_components...]
             header <- decCBOR @h
             txSeq <- decCBOR @(TxSeq era)
             pure $ BlockRaw header (BodyInline txSeq)
@@ -249,14 +254,14 @@ instance
     let oldLen = 1 + fromIntegral (numSegComponents @era)
     if len == 2
       then do
-        -- New leios format: [header, body]
+        -- NOTE(bladyjoker): New leios format: [header, cert]
         header <- decCBOR @(Annotator h)
-        body <- decCBOR @(Annotator (Body era))
-        pure $ BlockRaw <$> header <*> body
+        cert <- decCBOR @Certificate
+        pure $ BlockRaw <$> header <*> pure (BodyCertificate cert Nothing)
       else
         if len == oldLen
           then do
-            -- Old pre-leios format: [header, txseq_components...]
+            -- NOTE(bladyjoker): Old pre-leios format: [header, txseq_components...]
             header <- decCBOR @(Annotator h)
             txSeq <- decCBOR @(Annotator (TxSeq era))
             pure $ BlockRaw <$> header <*> fmap BodyInline txSeq
