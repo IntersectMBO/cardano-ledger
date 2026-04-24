@@ -2,6 +2,7 @@
 
 ## 1.13.1.0
 
+* Add `queryAccountsDeposits` (`GetStakeDelegDeposits`).
 * Add `queryCurrentEpochNo` (`GetEpochNo`).
 
 ## 1.13.0.0

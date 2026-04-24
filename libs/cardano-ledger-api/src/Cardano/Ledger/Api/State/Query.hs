@@ -13,6 +13,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Api.State.Query (
+  module Account,
   module Governance,
 
   -- * @GetEpochNo@
@@ -82,6 +83,7 @@ module Cardano.Ledger.Api.State.Query (
   getNextEpochCommitteeMembers,
 ) where
 
+import Cardano.Ledger.Api.State.Query.Account as Account
 import Cardano.Ledger.Api.State.Query.Governance as Governance
 import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, ProtVer (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary
