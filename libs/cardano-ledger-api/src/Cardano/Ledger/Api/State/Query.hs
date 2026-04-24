@@ -13,6 +13,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Api.State.Query (
+  module Governance,
+
   -- * @GetFilteredDelegationsAndRewardAccounts@
   queryStakePoolDelegsAndRewards,
 
@@ -45,11 +47,6 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetChainAccountState@
   queryChainAccountState,
-  CommitteeMemberState (..),
-  CommitteeMembersState (..),
-  HotCredAuthStatus (..),
-  MemberStatus (..),
-  NextEpochChange (..),
 
   -- * @GetCurrentPParams@
   queryCurrentPParams,
@@ -82,13 +79,7 @@ module Cardano.Ledger.Api.State.Query (
   getNextEpochCommitteeMembers,
 ) where
 
-import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
-  CommitteeMemberState (..),
-  CommitteeMembersState (..),
-  HotCredAuthStatus (..),
-  MemberStatus (..),
-  NextEpochChange (..),
- )
+import Cardano.Ledger.Api.State.Query.Governance as Governance
 import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, ProtVer (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))

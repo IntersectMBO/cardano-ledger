@@ -7,9 +7,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Api.State.Query.CommitteeMembersState (
+module Cardano.Ledger.Api.State.Query.Governance (
   CommitteeMemberState (..),
   CommitteeMembersState (..),
   HotCredAuthStatus (..),
@@ -29,7 +28,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Data.Aeson (ToJSON (..), (.=))
-import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 
 data MemberStatus
@@ -140,7 +139,7 @@ instance ToKeyValuePairs CommitteeMemberState where
         ]
 
 data CommitteeMembersState = CommitteeMembersState
-  { csCommittee :: !(Map (Credential ColdCommitteeRole) CommitteeMemberState)
+  { csCommittee :: !(Map.Map (Credential ColdCommitteeRole) CommitteeMemberState)
   , csThreshold :: !(Maybe UnitInterval)
   , csEpochNo :: !EpochNo
   -- ^ Current epoch number. This is necessary to interpret committee member states
