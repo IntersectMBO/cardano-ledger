@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), bodyTxs)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (valueFromList)
 import Cardano.Ledger.Plutus.CostModels (
@@ -300,7 +300,7 @@ goldenMinFee =
             txsSeq =
               case decodeFullAnnotator (eraProtVerHigh @AlonzoEra) "Block" decCBOR cborBytesBlock of
                 Left err -> error (show err)
-                Right (Block _h txs :: Block (BHeader StandardCrypto) AlonzoEra) -> txs
+                Right (Block _h body :: Block (BHeader StandardCrypto) AlonzoEra) -> bodyTxs body
             firstTx =
               case fromTxSeq @AlonzoEra txsSeq of
                 tx :<| _ -> tx
@@ -313,9 +313,12 @@ goldenMinFee =
             pricesParam = Prices priceMem priceSteps
             pp =
               emptyPParams
-                & ppMinFeeAL .~ Coin 44
-                & ppMinFeeBL .~ Coin 155381
-                & ppPricesL .~ pricesParam
+                & ppMinFeeAL
+                  .~ Coin 44
+                & ppMinFeeBL
+                  .~ Coin 155381
+                & ppPricesL
+                  .~ pricesParam
 
         Coin 1006053 @?= alonzoMinFeeTx pp firstTx
     ]
@@ -327,7 +330,8 @@ fromRightError errorMsg =
 exPP :: PParams AlonzoEra
 exPP =
   emptyPParams
-    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1, PlutusV2]
+    & ppCostModelsL
+      .~ zeroTestingCostModels [PlutusV1, PlutusV2]
 
 exampleLangDepViewPV1 :: LangDepView
 exampleLangDepViewPV1 = LangDepView b1 b2

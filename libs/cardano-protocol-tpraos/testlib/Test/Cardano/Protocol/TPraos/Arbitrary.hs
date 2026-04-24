@@ -22,7 +22,7 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (BlockNo (..), Nonce, Seed, SlotNo (..))
-import Cardano.Ledger.Block (Block (Block))
+import Cardano.Ledger.Block (Block (Block), Body (..))
 import Cardano.Ledger.Core
 import Cardano.Protocol.Crypto (Crypto (KES, VRF), StandardCrypto)
 import Cardano.Protocol.TPraos.API (PraosCrypto)
@@ -156,7 +156,7 @@ instance
   ) =>
   Arbitrary (Block (BHeader c) era)
   where
-  arbitrary = Block <$> arbitrary <*> (toTxSeq <$> arbitrary)
+  arbitrary = Block <$> arbitrary <*> (BodyInline . toTxSeq <$> arbitrary)
 
 -- | Use supplied keys to generate a Block.
 genBlock ::
@@ -168,7 +168,8 @@ genBlock ::
   ) =>
   [AllIssuerKeys c r] ->
   Gen (Block (BHeader c) era)
-genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary)
+genBlock aiks =
+  Block <$> genBHeader aiks <*> (BodyInline . toTxSeq <$> arbitrary)
 
 -- | For some purposes, a totally random block generator may not be suitable.
 -- There are tests in the ouroboros-network repository, for instance, that

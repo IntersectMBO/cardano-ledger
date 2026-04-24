@@ -13,6 +13,7 @@ import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Alonzo.ChainTrace as ChainTrace
 import qualified Test.Cardano.Ledger.Alonzo.Golden as Golden
+import qualified Test.Cardano.Ledger.Alonzo.Leios as Leios
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
@@ -39,6 +40,7 @@ defaultTests =
     , Canonical.tests
     , Golden.tests
     , TxInfo.tests
+    , Leios.tests
     ]
 
 nightlyTests :: TestTree

@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
   natVersion,
   textToUrl,
  )
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), Body (BodyInline), bodyTxs, hashBody)
 import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
@@ -705,17 +705,17 @@ coldKeys = KeyPair vk sk
 
 makeNaiveBlock ::
   forall era. EraSegWits era => [Tx era] -> Block BHeaderView era
-makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txSeq
+makeNaiveBlock txs = UnsafeUnserialisedBlock bhView body
   where
     bhView =
       BHeaderView
         { bhviewID = hashKey (vKey coldKeys)
-        , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) txSeq
+        , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) (bodyTxs body)
         , bhviewHSize = 0
-        , bhviewBHash = hashTxSeq txSeq
+        , bhviewBHash = hashBody body
         , bhviewSlot = SlotNo 0
         }
-    txSeq = toTxSeq $ StrictSeq.fromList txs
+    body = BodyInline . toTxSeq $ StrictSeq.fromList txs
 
 scriptStakeCredFail :: forall era. Scriptic era => Proof era -> StakeCredential
 scriptStakeCredFail pf = ScriptHashObj (alwaysFailsHash 1 pf)

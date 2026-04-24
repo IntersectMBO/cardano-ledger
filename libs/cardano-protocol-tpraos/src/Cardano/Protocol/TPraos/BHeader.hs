@@ -372,8 +372,7 @@ checkLeaderValue ::
   Rational ->
   ActiveSlotCoeff ->
   Bool
-checkLeaderValue certVRF σ f =
-  checkLeaderNatValue (assertBoundedNatural certNatMax (VRF.getOutputVRFNatural certVRF)) σ f
+checkLeaderValue certVRF = checkLeaderNatValue (assertBoundedNatural certNatMax (VRF.getOutputVRFNatural certVRF))
   where
     certNatMax :: Natural
     certNatMax = (2 :: Natural) ^ (8 * VRF.sizeOutputVRF certVRF)
@@ -428,7 +427,7 @@ checkLeaderNatValue bn σ f =
       case nonZero . toInteger $ certNatMax - certNat of
         Just d -> fromRational (toInteger certNatMax %. d)
         Nothing -> fromIntegral @Natural @FixedPoint certNatMax
-    x = -fromRational σ * c
+    x = -(fromRational σ * c)
     certNatMax = bvMaxValue bn
     certNat = bvValue bn
 

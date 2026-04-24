@@ -17,6 +17,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (
   Block (..),
   bbody,
+  bodyTxs,
  )
 import Cardano.Ledger.CertState (
   EraCertState (..),
@@ -283,7 +284,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
                   <> toDeltaCoin (sumRewards prevPP (rs ru))
             ]
 
-    txs' = toList $ (fromTxSeq @era . bbody) signal
+    txs' = toList $ (fromTxSeq @era . bodyTxs . bbody) signal
     txs = zipWith dispTx txs' [0 :: Int ..]
 
     dispTx tx ix =
@@ -581,14 +582,14 @@ withdrawals ::
   EraGen era =>
   Block (BHeader MockCrypto) era ->
   Coin
-withdrawals (UnserialisedBlock _ txseq) =
+withdrawals (UnserialisedBlock _ body) =
   F.foldl'
     ( \c tx ->
         let wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
          in if hasFailedScripts tx then c else c <> fold wdrls
     )
     (Coin 0)
-    $ fromTxSeq @era txseq
+    $ fromTxSeq @era (bodyTxs body)
 
 txFees ::
   forall era ledger.

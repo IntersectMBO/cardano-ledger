@@ -30,13 +30,13 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
+import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), bodyBytesSize, bodyTxs, hashBody)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
@@ -193,12 +193,12 @@ alonzoBbodyTransition =
     >>= \( TRC
             ( BbodyEnv pp account
               , BbodyState ls b
-              , UnserialisedBlock bh txsSeq
+              , UnserialisedBlock bh body
               )
           ) -> do
-        let txs = txSeqTxns txsSeq
-            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxSeq @era txsSeq
+        let txs = fromTxSeq $ bodyTxs body
+            actualBodySize = bodyBytesSize (pp ^. ppProtocolVersionL) body
+            actualBodyHash = hashBody body
 
         actualBodySize
           == fromIntegral (bhviewBSize bh)

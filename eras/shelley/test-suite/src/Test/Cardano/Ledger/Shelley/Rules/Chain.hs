@@ -220,9 +220,12 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
             )
             emptySnapShots
             def
-            & curPParamsEpochStateL .~ pp
-            & prevPParamsEpochStateL .~ pp
-            & futurePParamsEpochStateL .~ PotentialPParamsUpdate Nothing
+            & curPParamsEpochStateL
+              .~ pp
+            & prevPParamsEpochStateL
+              .~ pp
+            & futurePParamsEpochStateL
+              .~ PotentialPParamsUpdate Nothing
         )
         SNothing
         (PoolDistr Map.empty mempty)
@@ -320,7 +323,7 @@ chainTransition =
                   etaC
                   etaH
                   lab
-              , Block bh txs
+              , Block bh body
               )
           ) -> do
         case prtlSeqChecks lab bh of
@@ -373,8 +376,7 @@ chainTransition =
         let thouShaltNot = error "A block with a header view should never be hashed"
         BbodyState ls' bcur' <-
           trans @(EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, Block' bhView txs thouShaltNot)
-
+            TRC (BbodyEnv pp' account, BbodyState ls bcur, Block' bhView body thouShaltNot)
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh
             lab' =

@@ -34,7 +34,6 @@
   outputs = inputs: let
     supportedSystems = [
       "x86_64-linux"
-      "x86_64-darwin"
       # "aarch64-linux" - disable these temporarily because the build is broken
       "aarch64-darwin"
     ];
@@ -129,7 +128,7 @@
                 haskellPackages.implicit-hie
               ];
             # disable Hoogle until someone request it
-            withHoogle = false;
+            withHoogle = true;
             # Skip cross compilers for the shell
             crossPlatforms = _: [];
           };
@@ -188,7 +187,7 @@
           cabalProject.flake (
             lib.optionalAttrs (system == "x86_64-linux") {
               # on linux, build/test other supported compilers
-              variants = lib.genAttrs ["ghc8107" "ghc984"] (compiler-nix-name: {
+              variants = lib.genAttrs ["ghc984"] (compiler-nix-name: {
                 inherit compiler-nix-name;
               });
             }
