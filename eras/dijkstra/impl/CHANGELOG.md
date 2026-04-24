@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `WithdrawalsExceedAccountBalance` to `DijkstraLedgerPredFailure`
 * Removed `DijkstraSpendingOutputFromSameTx` from `DijkstraLedgerPredFailure`
 * Added `batchNonDistinctRefScriptsSize`
 * Add `guardDijkstraFeaturesForPlutusV1toV3`
