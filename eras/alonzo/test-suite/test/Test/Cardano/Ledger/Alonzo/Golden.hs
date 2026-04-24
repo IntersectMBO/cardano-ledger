@@ -9,59 +9,26 @@ module Test.Cardano.Ledger.Alonzo.Golden (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.PParams (
-  LangDepView (..),
-  getLanguageView,
- )
-import Cardano.Ledger.Alonzo.Rules (FailureDescription (..), TagMismatchDescription (..))
 import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx)
-import Cardano.Ledger.Alonzo.TxBody (utxoEntrySize)
-import Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..), boundRational)
+import Cardano.Ledger.BaseTypes (boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
-import Cardano.Ledger.Mary.Value (valueFromList)
-import Cardano.Ledger.Plutus.CostModels (
-  CostModel,
-  mkCostModel,
- )
-import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.ExUnits (
-  ExUnits (..),
   Prices (..),
  )
-import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
-import Data.Aeson (eitherDecodeFileStrict)
-import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as B16L
 import qualified Data.ByteString.Lazy as BSL
-import Data.Either (fromRight)
-import Data.Int
-import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromJust)
 import Data.Sequence.Strict
 import Lens.Micro
 import Paths_cardano_ledger_alonzo_test
-import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Binary.Golden (cborAnnGoldenSpec)
 import Test.Cardano.Ledger.Common hiding (output)
-import Test.Cardano.Ledger.Mary.Golden (
-  largestName,
-  minUTxO,
-  pid1,
-  pid2,
-  pid3,
-  smallName,
-  smallestName,
- )
-import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
-import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
 import Test.Cardano.Protocol.TPraos.Examples (
-  LedgerExamples (..),
   ProtocolLedgerExamples (..),
   ledgerExamplesAlonzo,
  )
@@ -69,115 +36,11 @@ import Test.Cardano.Protocol.TPraos.Examples (
 readDataFile :: FilePath -> IO BSL.ByteString
 readDataFile name = getDataFileName name >>= BSL.readFile
 
--- | ada cost of storing a word8 of data as a UTxO entry, assuming no change to minUTxOValue
-coinsPerUTxOWordLocal :: Integer
-coinsPerUTxOWordLocal = quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
-  where
-    utxoEntrySizeWithoutValLocal = 29
-    Coin minUTxOValueShelleyMA = minUTxO
-
-calcMinUTxO :: TxOut AlonzoEra -> Coin
-calcMinUTxO tout = Coin (utxoEntrySize tout * coinsPerUTxOWordLocal)
-
 tests :: Spec
 tests =
   describe "Alonzo Golden Tests" $ do
     goldenCborSerialization
-    goldenJsonSerialization
     goldenMinFee
-    goldenScriptIntegrity
-    goldenGenesisSerialization
-    goldenUTxOEntryMinAda
-
--- | (heapWords of a DataHash) * coinsPerUTxOWordLocal is 344820
-goldenUTxOEntryMinAda :: Spec
-goldenUTxOEntryMinAda =
-  describe "golden tests - UTxOEntryMinAda" $ do
-    it "one policy, one (smallest) name, yes datum hash" $
-      calcMinUTxO
-        ( mkBasicTxOut carlAddr (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
-            & dataHashTxOutL .~ SJust (hashData @AlonzoEra (Data (PV1.List [])))
-        )
-        `shouldBe` Coin 1655136
-    it "one policy, one (smallest) name, no datum hash" $
-      calcMinUTxO
-        (mkBasicTxOut bobAddr (valueFromList (Coin 1407406) [(pid1, smallestName, 1)]))
-        `shouldBe` Coin 1310316
-    it "one policy, one (small) name" $
-      calcMinUTxO
-        (mkBasicTxOut aliceAddr (valueFromList (Coin 1444443) [(pid1, smallName 1, 1)]))
-        `shouldBe` Coin 1344798
-    it "one policy, three (small) names" $
-      calcMinUTxO
-        ( mkBasicTxOut
-            aliceAddr
-            ( valueFromList
-                (Coin 1555554)
-                [ (pid1, smallName 1, 1)
-                , (pid1, smallName 2, 1)
-                , (pid1, smallName 3, 1)
-                ]
-            )
-        )
-        `shouldBe` Coin 1448244
-    it "one policy, one (largest) name" $
-      calcMinUTxO
-        (mkBasicTxOut carlAddr (valueFromList (Coin 1555554) [(pid1, largestName 65, 1)]))
-        `shouldBe` Coin 1448244
-    it "one policy, three (largest) name, with hash" $
-      calcMinUTxO
-        ( mkBasicTxOut
-            carlAddr
-            ( valueFromList
-                (Coin 1962961)
-                [ (pid1, largestName 65, 1)
-                , (pid1, largestName 66, 1)
-                , (pid1, largestName 67, 1)
-                ]
-            )
-            & dataHashTxOutL .~ SJust (hashData @AlonzoEra (Data (PV1.Constr 0 [PV1.Constr 0 []])))
-        )
-        `shouldBe` Coin 2172366
-    it "two policies, one (smallest) name" $
-      calcMinUTxO
-        ( mkBasicTxOut
-            aliceAddr
-            (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
-        )
-        `shouldBe` Coin 1482726
-    it "two policies, one (smallest) name, with hash" $
-      calcMinUTxO
-        ( mkBasicTxOut
-            aliceAddr
-            (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
-            & dataHashTxOutL .~ SJust (hashData @AlonzoEra (Data (PV1.Constr 0 [])))
-        )
-        `shouldBe` Coin 1827546
-    it "two policies, two (small) names" $
-      calcMinUTxO
-        (mkBasicTxOut bobAddr (valueFromList (Coin 1629628) [(pid1, smallName 1, 1), (pid2, smallName 2, 1)]))
-        `shouldBe` Coin 1517208
-    it "three policies, ninety-six (small) names" $
-      calcMinUTxO
-        ( mkBasicTxOut
-            aliceAddr
-            ( let f i c = (i, smallName c, 1)
-               in valueFromList
-                    (Coin 7407400)
-                    [ f i c
-                    | (i, cs) <-
-                        [(pid1, [32 .. 63]), (pid2, [64 .. 95]), (pid3, [96 .. 127])]
-                    , c <- cs
-                    ]
-            )
-        )
-        `shouldBe` Coin 6896400
-    it "utxo entry size of ada-only" $
-      -- This value, 29, is helpful for comparing the alonzo protocol parameter utxoCostPerWord
-      -- with the old parameter minUTxOValue.
-      -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
-      -- we can divide minUTxOValue by 29 and round.
-      utxoEntrySize @AlonzoEra (mkBasicTxOut aliceAddr mempty) `shouldBe` 29
 
 goldenCborSerialization :: Spec
 goldenCborSerialization =
@@ -187,51 +50,6 @@ goldenCborSerialization =
       "golden/block.cbor"
       (eraProtVerLow @AlonzoEra)
       (pleBlock ledgerExamplesAlonzo)
-    cborAnnGoldenSpec
-      getDataFileName
-      "golden/tx.cbor"
-      (eraProtVerLow @AlonzoEra)
-      (leTx $ pleLedgerExamples ledgerExamplesAlonzo)
-
-goldenJsonSerialization :: Spec
-goldenJsonSerialization =
-  describe "Golden tests - JSON serialization" $ do
-    aesonGoldenSpec getDataFileName "golden/ValidityInterval.json" $
-      [ ValidityInterval
-          { invalidBefore = SNothing
-          , invalidHereafter = SNothing
-          }
-      , ValidityInterval
-          { invalidBefore = SJust (SlotNo 12345)
-          , invalidHereafter = SNothing
-          }
-      , ValidityInterval
-          { invalidBefore = SNothing
-          , invalidHereafter = SJust (SlotNo 12354)
-          }
-      , ValidityInterval
-          { invalidBefore = SJust (SlotNo 12345)
-          , invalidHereafter = SJust (SlotNo 12354)
-          }
-      ]
-    aesonGoldenSpec getDataFileName "golden/IsValid.json" $
-      [ IsValid True
-      , IsValid False
-      ]
-    itGoldenToJSON getDataFileName "golden/FailureDescription.json" $
-      PlutusFailure "A description" "A reconstruction"
-    itGoldenToJSON getDataFileName "golden/TagMismatchDescription.json" $
-      [ PassedUnexpectedly
-      , FailedUnexpectedly (NE.fromList [PlutusFailure "A description" "A reconstruction"])
-      ]
-
-goldenGenesisSerialization :: Spec
-goldenGenesisSerialization =
-  describe "golden tests - Alonzo Genesis serialization" $ do
-    it "JSON deserialization" $ do
-      file <- getDataFileName "golden/mainnet-alonzo-genesis.json"
-      deserialized <- (eitherDecodeFileStrict file :: IO (Either String AlonzoGenesis))
-      deserialized `shouldBe` Right expectedGenesis
 
 goldenMinFee :: Spec
 goldenMinFee =
@@ -272,248 +90,3 @@ goldenMinFee =
               & ppPricesL .~ pricesParam
 
       Coin 1006053 `shouldBe` alonzoMinFeeTx pp firstTx
-
-fromRightError :: (HasCallStack, Show a) => String -> Either a b -> b
-fromRightError errorMsg =
-  either (\e -> error $ errorMsg ++ ": " ++ show e) id
-
-exPP :: PParams AlonzoEra
-exPP =
-  emptyPParams
-    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1, PlutusV2]
-
-exampleLangDepViewPV1 :: LangDepView
-exampleLangDepViewPV1 = LangDepView b1 b2
-  where
-    b1 =
-      fromRightError "invalid hex encoding of the language inside exampleLangDepViewPV1" $
-        B16.decode "4100"
-    b2 =
-      fromRightError "invalid hex encoding of the cost model inside exampleLangDepViewPV1" $
-        B16.decode $
-          "58a89f0000000000000000000000000000000000000000000000000000000000"
-            <> "0000000000000000000000000000000000000000000000000000000000000000"
-            <> "0000000000000000000000000000000000000000000000000000000000000000"
-            <> "0000000000000000000000000000000000000000000000000000000000000000"
-            <> "0000000000000000000000000000000000000000000000000000000000000000"
-            <> "000000000000000000ff"
-
-exampleLangDepViewPV2 :: LangDepView
-exampleLangDepViewPV2 = LangDepView b1 b2
-  where
-    b1 =
-      fromRightError "invalid hex encoding of the language inside exampleLangDepViewPV2" $
-        B16.decode "01"
-    b2 =
-      fromRightError "invalid hex encoding of the cost model inside exampleLangDepViewPV2" $
-        B16.decode $
-          "98af000000000000000000000000000000000000000000000000000000000000"
-            <> "0000000000000000000000000000000000000000000000000000000000000000"
-            <> "0000000000000000000000000000000000000000000000000000000000000000"
-            <> "0000000000000000000000000000000000000000000000000000000000000000"
-            <> "0000000000000000000000000000000000000000000000000000000000000000"
-            <> "0000000000000000000000000000000000"
-
-testScriptIntegritpHash ::
-  HasCallStack =>
-  PParams AlonzoEra ->
-  Language ->
-  LangDepView ->
-  Expectation
-testScriptIntegritpHash pp lang view = getLanguageView pp lang `shouldBe` view
-
-goldenScriptIntegrity :: Spec
-goldenScriptIntegrity =
-  describe "golden tests - script integrity hash" $ do
-    it "PlutusV1" $ testScriptIntegritpHash exPP PlutusV1 exampleLangDepViewPV1
-    it "PlutusV2" $ testScriptIntegritpHash exPP PlutusV2 exampleLangDepViewPV2
-
-expectedGenesis :: AlonzoGenesis
-expectedGenesis =
-  AlonzoGenesis
-    { agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
-    , agPrices = Prices (fromJust $ boundRational 0.0577) (fromJust $ boundRational 0.0000721)
-    , agPlutusV1CostModel = expectedCostModel
-    , agMaxTxExUnits = ExUnits 10000000 10000000000
-    , agMaxBlockExUnits = ExUnits 50000000 40000000000
-    , agMaxValSize = 5000
-    , agCollateralPercentage = 150
-    , agMaxCollateralInputs = 3
-    , agExtraConfig = Nothing
-    }
-
-expectedCostModel :: CostModel
-expectedCostModel =
-  fromRight
-    (error ("Error creating CostModel from known parameters" <> show expectedPParams))
-    (mkCostModel PlutusV1 expectedPParams)
-
-expectedPParams :: [Int64]
-expectedPParams =
-  [ 197209
-  , 0
-  , 1
-  , 1
-  , 396231
-  , 621
-  , 0
-  , 1
-  , 150000
-  , 1000
-  , 0
-  , 1
-  , 150000
-  , 32
-  , 2477736
-  , 29175
-  , 4
-  , 29773
-  , 100
-  , 29773
-  , 100
-  , 29773
-  , 100
-  , 29773
-  , 100
-  , 29773
-  , 100
-  , 29773
-  , 100
-  , 100
-  , 100
-  , 29773
-  , 100
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 1000
-  , 0
-  , 1
-  , 150000
-  , 32
-  , 150000
-  , 1000
-  , 0
-  , 8
-  , 148000
-  , 425507
-  , 118
-  , 0
-  , 1
-  , 1
-  , 150000
-  , 1000
-  , 0
-  , 8
-  , 150000
-  , 112536
-  , 247
-  , 1
-  , 150000
-  , 10000
-  , 1
-  , 136542
-  , 1326
-  , 1
-  , 1000
-  , 150000
-  , 1000
-  , 1
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 1
-  , 1
-  , 150000
-  , 1
-  , 150000
-  , 4
-  , 103599
-  , 248
-  , 1
-  , 103599
-  , 248
-  , 1
-  , 145276
-  , 1366
-  , 1
-  , 179690
-  , 497
-  , 1
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 148000
-  , 425507
-  , 118
-  , 0
-  , 1
-  , 1
-  , 61516
-  , 11218
-  , 0
-  , 1
-  , 150000
-  , 32
-  , 148000
-  , 425507
-  , 118
-  , 0
-  , 1
-  , 1
-  , 148000
-  , 425507
-  , 118
-  , 0
-  , 1
-  , 1
-  , 2477736
-  , 29175
-  , 4
-  , 0
-  , 82363
-  , 4
-  , 150000
-  , 5000
-  , 0
-  , 1
-  , 150000
-  , 32
-  , 197209
-  , 0
-  , 1
-  , 1
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 150000
-  , 32
-  , 3345831
-  , 1
-  , 1
-  ]

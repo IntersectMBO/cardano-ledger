@@ -8,7 +8,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Alonzo.BinarySpec as BinarySpec
-import qualified Test.Cardano.Ledger.Alonzo.GoldenSpec as Golden
+import qualified Test.Cardano.Ledger.Alonzo.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Alonzo.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Imp
 import qualified Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec as TxInfoImp
@@ -27,7 +27,7 @@ main =
       roundTripJsonEraSpec @AlonzoEra
       roundTripJsonShelleyEraSpec @AlonzoEra
       GoldenTranslation.tests
-      Golden.spec
+      GoldenSpec.spec
       describe "Imp" $ do
         Imp.spec @AlonzoEra
       describe "CostModels" $ do

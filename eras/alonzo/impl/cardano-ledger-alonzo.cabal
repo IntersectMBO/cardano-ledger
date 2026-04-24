@@ -175,6 +175,7 @@ library testlib
     Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid
     Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid
     Test.Cardano.Ledger.Alonzo.ImpTest
+    Test.Cardano.Ledger.Alonzo.JSON.GoldenSpec
     Test.Cardano.Ledger.Alonzo.Translation.Golden
     Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen
     Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
@@ -204,6 +205,7 @@ library testlib
       -Wno-pattern-namespace-specifier
   build-depends:
     HUnit,
+    aeson,
     base,
     bytestring,
     cardano-data:{cardano-data, testlib},
@@ -255,6 +257,7 @@ test-suite tests
     Paths_cardano_ledger_alonzo
     Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec
     Test.Cardano.Ledger.Alonzo.Binary.CddlSpec
+    Test.Cardano.Ledger.Alonzo.Binary.GoldenSpec
     Test.Cardano.Ledger.Alonzo.BinarySpec
     Test.Cardano.Ledger.Alonzo.GoldenSpec
     Test.Cardano.Ledger.Alonzo.GoldenTranslation
@@ -273,6 +276,11 @@ test-suite tests
     -rtsopts
     -with-rtsopts=-N
 
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
+
   build-depends:
     HUnit,
     QuickCheck,
@@ -283,10 +291,12 @@ test-suite tests
     cardano-ledger-alonzo:{cardano-ledger-alonzo, cddl, testlib},
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-shelley:testlib,
+    cardano-ledger-mary,
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-strict-containers,
     containers,
     microlens,
     microlens-mtl,
+    plutus-ledger-api,
     testlib,
     text,
