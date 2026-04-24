@@ -310,7 +310,7 @@ dijkstraUtxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (DijkstraUtxoEnv slot pp certState _originalUtxo _scriptsProvided, utxos, tx) <- judgmentContext
+  TRC (DijkstraUtxoEnv slot pp certState originalUtxo _scriptsProvided, utxos, tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
   {- inInterval (SlotOf Γ) (ValidIntervalOf txTop) -}
@@ -323,6 +323,15 @@ dijkstraUtxoTransition = do
 
   {- SpendInputs ≠ ∅ -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
+
+  let allInputs = txBody ^. allInputsTxBodyF
+      inputs = txBody ^. inputsTxBodyL
+
+  {- SpendInputsOf txTop ∪ RefInputsOf txTop ∪ CollInputsOf txTop ⊆ dom(utxo₀) -}
+  runTest $ Shelley.validateBadInputsUTxO originalUtxo allInputs
+
+  {- SpendInputsOf txTop ⊆ dom(utxo_s) — prevents double-spend with subtxs -}
+  runTest $ Shelley.validateBadInputsUTxO (utxosUtxo utxos) inputs
 
   {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
