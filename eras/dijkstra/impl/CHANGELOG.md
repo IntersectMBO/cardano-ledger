@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Removed `DijkstraSpendingOutputFromSameTx` from `DijkstraLedgerPredFailure`
 * Added `batchNonDistinctRefScriptsSize`
 * Add `guardDijkstraFeaturesForPlutusV1toV3`
 * Add `DirectDepositsNotSupported` and `AccountBalanceIntervalsNotSupported` constructors to `DijkstraContextError`
