@@ -33,8 +33,10 @@ import Cardano.Ledger.Alonzo.Rules (
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
-  babbageUtxoValidation,
   updateUTxOStateByTxValidity,
+ )
+import qualified Cardano.Ledger.Babbage.Rules as Babbage (
+  validateOutputTooSmallUTxO,
  )
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -43,11 +45,14 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   SlotNo,
   StrictMaybe (..),
+  epochInfo,
   networkId,
+  systemStart,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  sizedValue,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -75,13 +80,14 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Plutus (ExUnits)
-import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTestOnSignal)
+import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   UtxoEnv (..),
   validSizeComputationCheck,
  )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (
   EraCertState (..),
   EraStake,
@@ -242,10 +248,6 @@ instance
   ) =>
   NFData (DijkstraUtxoPredFailure era)
 
---------------------------------------------------------------------------------
--- DijkstraUTXO STS
---------------------------------------------------------------------------------
-
 validateNoPtrInCollateralReturn ::
   ( BabbageEraTxBody era
   , InjectRuleFailure rule DijkstraUtxoPredFailure era
@@ -291,7 +293,7 @@ dijkstraUtxoTransition ::
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
   , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
-  , -- In this function we we call the UTXOS rule, so we need some assumptions
+  , -- In this function we call the UTXOS rule, so we need some assumptions
     Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
   , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
@@ -299,11 +301,57 @@ dijkstraUtxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (UtxoEnv _ pp certState, utxos, tx) <- judgmentContext
-  babbageUtxoValidation
-  validateNoPtrInCollateralReturn $ tx ^. bodyTxL
+  TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
+  let txBody = tx ^. bodyTxL
+
+  {- inInterval (SlotOf Γ) (ValidIntervalOf txTop) -}
+  runTest $ Allegra.validateOutsideValidityIntervalUTxO slot txBody
+
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfo
+
+  runTest $ Alonzo.validateOutsideForecast ei slot sysSt tx
+
+  {- SpendInputs ≠ ∅ -}
+  runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
+
+  {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
+  let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
+  runTest $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
+
+  let allOutputs = fmap sizedValue allSizedOutputs
+  {- ∀ txout ∈ allOuts txb, serSize (getValue txout) ≤ maxValSize pp -}
+  runTest $ Alonzo.validateOutputTooBigUTxO pp allOutputs
+
+  {- ∀ ( _ ↦ (a,_)) ∈ allOuts txb, a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
+  runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
+
   netId <- liftSTS $ asks networkId
-  runTestOnSignal $ validateWrongNetworkInDirectDeposit netId (tx ^. bodyTxL)
+
+  {- ∀(_ → (a, _)) ∈ allOuts txb, netId a = NetworkId -}
+  runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
+
+  {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
+  runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
+
+  {- (txnetworkid txb = NetworkId) ∨ (txnetworkid txb = ◇) -}
+  runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
+
+  {- direct deposit network IDs -}
+  runTestOnSignal $ validateWrongNetworkInDirectDeposit netId txBody
+
+  {- no Ptr in collateral return -}
+  validateNoPtrInCollateralReturn txBody
+
+  {- txsize tx ≤ maxTxSize pp -}
+  runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
+
+  {- totExunits tx ≤ maxTxExUnits pp -}
+  runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
+
+  {- ‖collateral tx‖ ≤ maxCollInputs pp -}
+  runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
+
   () <- trans @(EraRule "UTXOS" era) $ TRC (ConwayUtxosEnv pp (utxosUtxo utxos), (), tx)
   updateUTxOStateByTxValidity
     pp
@@ -311,6 +359,10 @@ dijkstraUtxoTransition = do
     (utxosGovState utxos)
     tx
     (updateTreasuryDonation tx utxos)
+
+--------------------------------------------------------------------------------
+-- DijkstraUTXO STS
+--------------------------------------------------------------------------------
 
 instance
   forall era.
