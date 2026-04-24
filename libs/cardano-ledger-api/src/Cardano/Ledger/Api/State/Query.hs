@@ -79,6 +79,9 @@ module Cardano.Ledger.Api.State.Query (
   StakeSnapshot (..),
   StakeSnapshots (..),
 
+  -- * @GetLedgerPeerSnapshot@
+  queryStakePoolRelays,
+
   -- * For testing
   getNextEpochCommitteeMembers,
 ) where
@@ -643,3 +646,29 @@ queryChainAccountState ::
   NewEpochState era ->
   ChainAccountState
 queryChainAccountState nes = nes ^. chainAccountStateL
+
+-- | Query pool relay information with associated stake fractions.
+-- Returns pools that have at least one registered relay, combining
+-- relays from both current and pending (future) pool registrations.
+--
+-- This provides the ledger-side data needed by consensus for
+-- peer discovery (GetLedgerPeerSnapshot). Consensus applies
+-- networking-specific transformations (relay type conversion, big-peer
+-- stake accumulation) on top of this result.
+queryStakePoolRelays ::
+  EraCertState era =>
+  NewEpochState era ->
+  Map (KeyHash StakePool) (Rational, StrictSeq StakePoolRelay)
+queryStakePoolRelays nes =
+  Map.mapMaybeWithKey getRelays (unPoolDistr (nesPd nes))
+  where
+    pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
+    pools = psStakePools pstate
+    futureParams = psFutureStakePoolParams pstate
+    getRelays poolId ips =
+      let curRelays = maybe mempty spsRelays $ Map.lookup poolId pools
+          futRelays = maybe mempty sppRelays $ Map.lookup poolId futureParams
+          allRelays = curRelays <> futRelays
+       in if null allRelays
+            then Nothing
+            else Just (individualPoolStake ips, allRelays)
