@@ -2,6 +2,7 @@
 
 ## 1.13.1.0
 
+* Add `queryDRepDelegatees` (`GetFilteredVoteDelegatees`).
 * Add `queryStakePoolRelays` (`GetLedgerPeerSnapshot`).
 * Add `queryAccountsDeposits` (`GetStakeDelegDeposits`).
 * Add `queryCurrentEpochNo` (`GetEpochNo`).
