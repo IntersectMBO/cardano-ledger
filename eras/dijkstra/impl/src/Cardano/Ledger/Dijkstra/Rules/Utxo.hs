@@ -17,6 +17,7 @@
 
 module Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUTXO,
+  DijkstraUtxoEnv (..),
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
   validateWrongNetworkInDirectDeposit,
@@ -81,17 +82,18 @@ import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
-  UtxoEnv (..),
   validSizeComputationCheck,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (
+  CertState,
   EraCertState (..),
   EraStake,
   EraUTxO,
+  ScriptsProvided (..),
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
@@ -115,7 +117,14 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
--- ======================================================
+data DijkstraUtxoEnv era = DijkstraUtxoEnv
+  { dueSlot :: SlotNo
+  , duePParams :: PParams era
+  , dueCertState :: CertState era
+  , dueOriginalUtxo :: UTxO era
+  , dueScriptsProvided :: ScriptsProvided era
+  -- ^ aggregated scripts provided across all transaction levels
+  }
 
 -- | Predicate failure for the Dijkstra Era
 data DijkstraUtxoPredFailure era
@@ -287,7 +296,7 @@ dijkstraUtxoTransition ::
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
-  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
@@ -301,7 +310,7 @@ dijkstraUtxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
+  TRC (DijkstraUtxoEnv slot pp certState _originalUtxo _scriptsProvided, utxos, tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
   {- inInterval (SlotOf Γ) (ValidIntervalOf txTop) -}
@@ -378,7 +387,7 @@ instance
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXO" ConwayUtxoPredFailure era
   , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
-  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
@@ -396,7 +405,7 @@ instance
   where
   type State (DijkstraUTXO era) = UTxOState era
   type Signal (DijkstraUTXO era) = Tx TopTx era
-  type Environment (DijkstraUTXO era) = UtxoEnv era
+  type Environment (DijkstraUTXO era) = DijkstraUtxoEnv era
   type BaseM (DijkstraUTXO era) = ShelleyBase
   type PredicateFailure (DijkstraUTXO era) = DijkstraUtxoPredFailure era
   type Event (DijkstraUTXO era) = AlonzoUtxoEvent era
