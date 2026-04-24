@@ -11,11 +11,9 @@ module Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec (spec) where
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (
-  DijkstraLedgerPredFailure (..),
   DijkstraUtxoPredFailure (BadInputsUTxO),
  )
 import Cardano.Ledger.TxIn (mkTxInPartial)
-import qualified Data.Map.NonEmpty as NEM
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
@@ -41,14 +39,9 @@ spec = do
               & bodyTxL . inputsTxBodyL .~ Set.fromList [txIn, badInput]
               & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
 
-      submitFailingTxM tx $ \txFixed ->
-        pure
-          [ injectFailure $ BadInputsUTxO $ NES.singleton badInput
-          , injectFailure $
-              DijkstraSpendingOutputFromSameTx $
-                NEM.singleton (txIdTx txFixed) $
-                  NES.singleton badInput
-          ]
+      submitFailingTx
+        tx
+        [injectFailure $ BadInputsUTxO $ NES.singleton badInput]
 
     it "Fails when sub-transaction spends output from another sub-transaction" $ do
       (_, addr1) <- freshKeyAddr
@@ -67,7 +60,6 @@ spec = do
           subTx2 =
             mkBasicTx mkBasicTxBody
               & bodyTxL . inputsTxBodyL .~ Set.fromList [txIn2, badInput]
-          subTx2Id = txIdTx subTx2
 
           tx =
             mkBasicTx mkBasicTxBody
@@ -75,7 +67,7 @@ spec = do
 
       submitFailingTx
         tx
-        [injectFailure $ DijkstraSpendingOutputFromSameTx $ NEM.singleton subTx2Id $ NES.singleton badInput]
+        [injectFailure $ BadInputsUTxO $ NES.singleton badInput]
 
     it "Succeeds when inputs don't reference sub-transaction outputs" $ do
       (_, addr1) <- freshKeyAddr
