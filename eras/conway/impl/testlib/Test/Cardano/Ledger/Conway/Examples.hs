@@ -40,7 +40,7 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedure (..),
   VotingProcedures (..),
  )
-import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..), ConwayLEDGER)
+import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
@@ -53,7 +53,6 @@ import Cardano.Ledger.Plutus.Data (
 import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
 import Cardano.Ledger.State (StakePoolParams (sppId))
 import Cardano.Ledger.TxIn (TxId (..))
-import Control.State.Transition.Extended (Embed (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -91,7 +90,7 @@ ledgerExamples =
   mkAlonzoBasedLedgerExamples
     ( ConwayApplyTxError $
         pure $
-          wrapFailed @(ConwayDELEG ConwayEra) @(ConwayLEDGER ConwayEra) $
+          injectFailure $
             DelegateeStakePoolNotRegisteredDELEG @ConwayEra (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
