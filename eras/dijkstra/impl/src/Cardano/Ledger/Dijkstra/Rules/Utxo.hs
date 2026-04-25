@@ -356,8 +356,7 @@ instance
   assertions = [validSizeComputationCheck]
 
 instance
-  ( Era era
-  , STS (ConwayUTXOS era)
+  ( STS (ConwayUTXOS era)
   , PredicateFailure (EraRule "UTXOS" era) ~ ConwayUtxosPredFailure era
   , Event (EraRule "UTXOS" era) ~ Event (ConwayUTXOS era)
   ) =>

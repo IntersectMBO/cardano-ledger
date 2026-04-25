@@ -22,11 +22,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedger (
   SubLedgerEnv (..),
 ) where
 
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -40,8 +36,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayCertsPredFailure,
   ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
-  ConwayGovEvent,
-  ConwayGovPredFailure,
   ConwayLedgerPredFailure (..),
   GovEnv (..),
   GovSignal (..),
@@ -65,24 +59,27 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBUTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure (..))
-import Cardano.Ledger.Dijkstra.Rules.SubCerts (DijkstraSubCertsPredFailure (..), SubCertsEnv (..))
+import Cardano.Ledger.Dijkstra.Rules.SubCerts (
+  DijkstraSubCertsEvent,
+  DijkstraSubCertsPredFailure (..),
+  SubCertsEnv (..),
+ )
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGov (DijkstraSubGovEvent, DijkstraSubGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubUtxo (SubUtxoEnv (..))
-import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure (..))
-import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubUtxow (
+  DijkstraSubUtxowEvent (..),
+  DijkstraSubUtxowPredFailure (..),
+ )
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure (..))
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
   PoolEvent,
   ShelleyPoolPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowPredFailure,
   epochFromSlot,
  )
 import Control.DeepSeq (NFData)
@@ -251,7 +248,6 @@ dijkstraSubLedgersTransition ::
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
-  , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   , STS (EraRule "SUBLEDGER" era)
   , TxCert era ~ DijkstraTxCert era
   ) =>
@@ -318,15 +314,9 @@ dijkstraSubLedgersTransition = do
       & lsCertStateL .~ certStateAfterSubCerts
 
 instance
-  ( ConwayEraGov era
-  , ConwayEraCertState era
-  , ConwayEraPParams era
-  , ConwayEraTxCert era
-  , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
-  , InjectRuleEvent "SUBGOV" DijkstraSubGovEvent era
-  , InjectRuleEvent "SUBGOV" ConwayGovEvent era
-  , InjectRuleFailure "SUBGOV" DijkstraSubGovPredFailure era
-  , InjectRuleFailure "SUBGOV" ConwayGovPredFailure era
+  ( STS (DijkstraSUBGOV era)
+  , PredicateFailure (EraRule "SUBGOV" era) ~ DijkstraSubGovPredFailure era
+  , Event (EraRule "SUBGOV" era) ~ DijkstraSubGovEvent era
   ) =>
   Embed (DijkstraSUBGOV era) (DijkstraSUBLEDGER era)
   where
@@ -334,24 +324,9 @@ instance
   wrapEvent = SubGovEvent
 
 instance
-  ( AlonzoEraTx era
-  , AlonzoEraUTxO era
-  , ConwayEraGov era
-  , ConwayEraCertState era
-  , DijkstraEraTxBody era
-  , EraPlutusContext era
-  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
-  , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
-  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  ( STS (DijkstraSUBUTXOW era)
+  , PredicateFailure (EraRule "SUBUTXOW" era) ~ DijkstraSubUtxowPredFailure era
+  , Event (EraRule "SUBUTXOW" era) ~ DijkstraSubUtxowEvent era
   ) =>
   Embed (DijkstraSUBUTXOW era) (DijkstraSUBLEDGER era)
   where
@@ -359,23 +334,9 @@ instance
   wrapEvent = SubUtxowEvent
 
 instance
-  ( ConwayEraGov era
-  , ConwayEraPParams era
-  , ConwayEraCertState era
-  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
-  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
-  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
-  , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
-  , InjectRuleEvent "SUBPOOL" PoolEvent era
-  , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
-  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
-  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
-  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
-  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
-  , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
-  , TxCert era ~ DijkstraTxCert era
+  ( STS (DijkstraSUBCERTS era)
+  , PredicateFailure (EraRule "SUBCERTS" era) ~ DijkstraSubCertsPredFailure era
+  , Event (EraRule "SUBCERTS" era) ~ DijkstraSubCertsEvent era
   ) =>
   Embed (DijkstraSUBCERTS era) (DijkstraSUBLEDGER era)
   where
