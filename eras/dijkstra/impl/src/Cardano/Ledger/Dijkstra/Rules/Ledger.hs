@@ -58,11 +58,8 @@ import Cardano.Ledger.Conway.Rules (
   CertEnv,
   CertsEnv (..),
   ConwayCERTS,
-  ConwayCertEvent (..),
   ConwayCertPredFailure (..),
-  ConwayCertsEvent (..),
   ConwayCertsPredFailure (..),
-  ConwayDELEG,
   ConwayDelegPredFailure,
   ConwayGovCertPredFailure,
   ConwayGovEvent,
@@ -659,21 +656,6 @@ instance
   where
   wrapFailed = DijkstraCertsFailure
   wrapEvent = CertsEvent
-
-instance
-  ( EraPParams era
-  , EraRule "DELEG" era ~ ConwayDELEG era
-  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
-  , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
-  , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
-  , Event (EraRule "CERT" era) ~ ConwayCertEvent era
-  , ConwayEraCertState era
-  , InjectRuleFailure "DELEG" ConwayDelegPredFailure era
-  ) =>
-  Embed (ConwayDELEG era) (DijkstraLEDGER era)
-  where
-  wrapFailed = DijkstraCertsFailure . CertFailure . DelegFailure
-  wrapEvent = CertsEvent . CertEvent . DelegEvent
 
 instance
   ( AlonzoEraTx era
