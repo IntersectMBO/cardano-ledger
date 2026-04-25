@@ -5,15 +5,17 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
+-- | The example transactions in this module are not valid transactions. We
+-- don't care, we are only interested in serialisation, not validation.
 module Test.Cardano.Ledger.Babbage.Examples (
   ledgerExamples,
-  mkBabbageBasedExampleTx,
-  exampleBabbageBasedTxBody,
   exampleBabbageNewEpochState,
+  exampleBabbageTx,
+  exampleBabbageBasedTx,
+  exampleBabbageToConwayTx,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
 import Cardano.Ledger.Babbage (ApplyTxError (BabbageApplyTxError), BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -38,10 +40,10 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Examples (
-  exampleAlonzoBasedShelleyTxBody,
-  exampleAlonzoBasedTxBody,
+  exampleAlonzoBasedTx,
+  exampleAlonzoToBabbageTx,
+  exampleAlonzoToConwayTx,
   exampleDatum,
-  mkAlonzoBasedExampleTx,
   mkAlonzoBasedLedgerExamples,
  )
 import Test.Cardano.Ledger.Babbage.Era
@@ -52,6 +54,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   exampleNewEpochState,
   examplePayKey,
+  exampleShelleyScript,
   exampleStakeKey,
   exampleTxIns,
   mkKeyHash,
@@ -68,10 +71,7 @@ ledgerExamples =
                 DelegateeNotRegisteredDELEG (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
-    ( mkBabbageBasedExampleTx
-        exampleBabbageBasedShelleyTxBody
-        (AlonzoSpending $ AsIx 0)
-    )
+    exampleBabbageTx
     NoGenesis
 
 exampleBabbageNewEpochState ::
@@ -85,18 +85,67 @@ exampleBabbageNewEpochState =
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 1))
 
-mkBabbageBasedExampleTx ::
+-- Complete transaction which is compatible with any era starting with Babbage.
+-- This transaction forms the basis on which future era transactions will be
+-- at the very least based on.
+exampleBabbageBasedTx ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraTxAuxData era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
+  , Value era ~ MaryValue
+  , BabbageEraTxBody era
   ) =>
-  TxBody TopTx era ->
-  PlutusPurpose AsIx era ->
   Tx TopTx era
-mkBabbageBasedExampleTx txBody scriptPurpose =
-  mkAlonzoBasedExampleTx txBody scriptPurpose
+exampleBabbageBasedTx =
+  addBabbageBasedTxFeatures exampleAlonzoBasedTx
+
+-- Complete Babbage transaction that is only compatible until Babbage era
+-- ('ConwayEra' is not an instance of 'ShelleyEraTxBody').
+exampleBabbageTx ::
+  forall era.
+  ( AlonzoEraTx era
+  , AlonzoEraTxAuxData era
+  , EraPlutusTxInfo 'PlutusV1 era
+  , EraPlutusTxInfo 'PlutusV2 era
+  , Value era ~ MaryValue
+  , ShelleyEraTxBody era
+  , BabbageEraTxBody era
+  ) =>
+  Tx TopTx era
+exampleBabbageTx =
+  addBabbageBasedTxFeatures exampleAlonzoToBabbageTx
+
+-- Complete Babbage transaction that is compatible until Conway era
+-- ('DijkstraEra' is not an instance of 'ShelleyEraTxCert').
+exampleBabbageToConwayTx ::
+  forall era.
+  ( AlonzoEraTx era
+  , AlonzoEraTxAuxData era
+  , EraPlutusTxInfo 'PlutusV1 era
+  , EraPlutusTxInfo 'PlutusV2 era
+  , Value era ~ MaryValue
+  , BabbageEraTxBody era
+  , ShelleyEraTxCert era
+  ) =>
+  Tx TopTx era
+exampleBabbageToConwayTx =
+  addBabbageBasedTxFeatures exampleAlonzoToConwayTx
+
+addBabbageBasedTxFeatures ::
+  forall era.
+  ( AlonzoEraTx era
+  , BabbageEraTxBody era
+  , AlonzoEraTxAuxData era
+  , Value era ~ MaryValue
+  , EraPlutusTxInfo PlutusV1 era
+  , EraPlutusTxInfo PlutusV2 era
+  ) =>
+  Tx TopTx era ->
+  Tx TopTx era
+addBabbageBasedTxFeatures tx =
+  tx
     & witsTxL
       <>~ ( mkBasicTxWits
               & scriptTxWitsL
@@ -111,57 +160,26 @@ mkBabbageBasedExampleTx txBody scriptPurpose =
               & plutusScriptsTxAuxDataL
                 <>~ Map.singleton PlutusV2 (NE.singleton (plutusBinary (alwaysSucceedsPlutus @'PlutusV2 3)))
         )
-
-exampleBabbageBasedShelleyTxBody ::
-  forall era.
-  ( BabbageEraTxBody era
-  , ShelleyEraTxBody era
-  , EraPlutusTxInfo PlutusV1 era
-  , EraPlutusTxInfo PlutusV2 era
-  , Value era ~ MaryValue
-  ) =>
-  TxBody TopTx era
-exampleBabbageBasedShelleyTxBody =
-  mkBabbageBasedExampleTxBody exampleAlonzoBasedShelleyTxBody
-
-exampleBabbageBasedTxBody ::
-  forall era.
-  ( BabbageEraTxBody era
-  , EraPlutusTxInfo PlutusV1 era
-  , EraPlutusTxInfo PlutusV2 era
-  , Value era ~ MaryValue
-  ) =>
-  TxBody TopTx era
-exampleBabbageBasedTxBody =
-  mkBabbageBasedExampleTxBody exampleAlonzoBasedTxBody
-
-mkBabbageBasedExampleTxBody ::
-  forall era.
-  ( BabbageEraTxBody era
-  , Value era ~ MaryValue
-  , EraPlutusTxInfo PlutusV1 era
-  , EraPlutusTxInfo PlutusV2 era
-  ) =>
-  TxBody TopTx era ->
-  TxBody TopTx era
-mkBabbageBasedExampleTxBody txBody =
-  txBody
-    & referenceInputsTxBodyL .~ exampleTxIns
-    & outputsTxBodyL
+    & bodyTxL . referenceInputsTxBodyL .~ exampleTxIns
+    & bodyTxL . outputsTxBodyL
       <>~ StrictSeq.fromList
         [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (exampleMultiAssetValue 2)
-            & datumTxOutL .~ Datum (dataToBinaryData exampleDatum) -- inline datum
+            (exampleMultiAssetValue 1)
+            & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
             & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV1 3)
         , mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
             (exampleMultiAssetValue 2)
-            & datumTxOutL .~ Datum (dataToBinaryData exampleDatum) -- inline datum
+            & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
             & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV2 3)
+        , mkBasicTxOut
+            (mkAddr examplePayKey exampleStakeKey)
+            (exampleMultiAssetValue 3)
+            & referenceScriptTxOutL .~ SJust (fromNativeScript exampleShelleyScript)
         ]
-    & collateralReturnTxBodyL .~ SJust exampleCollateralOutput
-    & totalCollateralTxBodyL .~ SJust (Coin 8675309)
+    & bodyTxL . collateralReturnTxBodyL .~ SJust exampleCollateralOutput
+    & bodyTxL . totalCollateralTxBodyL .~ SJust (Coin 8675309)
 
 exampleCollateralOutput ::
   ( BabbageEraTxOut era

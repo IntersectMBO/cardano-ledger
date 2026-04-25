@@ -1,16 +1,19 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
+-- | The example transactions in this module are not valid transactions. We
+-- don't care, we are only interested in serialisation, not validation.
 module Test.Cardano.Ledger.Alonzo.Examples (
   ledgerExamples,
   mkAlonzoBasedLedgerExamples,
-  mkAlonzoBasedExampleTx,
-  exampleAlonzoBasedShelleyTxBody,
-  exampleAlonzoBasedTxBody,
+  exampleAlonzoBasedTx,
+  exampleAlonzoToBabbageTx,
+  exampleAlonzoToConwayTx,
   exampleDatum,
 ) where
 
@@ -19,7 +22,6 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoPlutusPurpose (..),
   ExUnits (..),
   Prices (..),
  )
@@ -48,13 +50,13 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
-import Test.Cardano.Ledger.Allegra.Examples (mkAllegraBasedExampleTx)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, unsafeBoundRational)
 import Test.Cardano.Ledger.Mary.Examples (
-  exampleMaryBasedShelleyTxBody,
-  exampleMaryBasedTxBody,
+  exampleMaryBasedTx,
+  exampleMaryToBabbageTx,
+  exampleMaryToConwayTx,
   exampleMultiAssetValue,
  )
 import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, zeroTestingCostModelV1)
@@ -82,7 +84,7 @@ ledgerExamples =
                 DelegateeNotRegisteredDELEG @AlonzoEra (mkKeyHash 1)
     )
     exampleAlonzoNewEpochState
-    exampleTxAlonzo
+    exampleAlonzoToBabbageTx
     exampleAlonzoGenesis
 
 mkAlonzoBasedLedgerExamples ::
@@ -127,24 +129,68 @@ exampleAlonzoNewEpochState =
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOWordL .~ CoinPerWord (Coin 1))
 
-exampleTxAlonzo :: Tx TopTx AlonzoEra
-exampleTxAlonzo =
-  mkAlonzoBasedExampleTx
-    exampleAlonzoBasedShelleyTxBody
-    (AlonzoSpending $ AsIx 0)
-
-mkAlonzoBasedExampleTx ::
+-- Complete transaction which is compatible with any era starting with Alonzo.
+-- This transaction forms the basis on which future era transactions will be
+-- at the very least based on.
+exampleAlonzoBasedTx ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraTxAuxData era
   , EraPlutusTxInfo 'PlutusV1 era
+  , Value era ~ MaryValue
   ) =>
-  TxBody TopTx era ->
-  PlutusPurpose AsIx era ->
   Tx TopTx era
-mkAlonzoBasedExampleTx txBody scriptPurpose =
-  mkAllegraBasedExampleTx
-    txBody
+exampleAlonzoBasedTx =
+  addAlonzoBasedTxFeatures exampleMaryBasedTx
+
+-- Complete Alonzo transaction that is compatible until Babbage era
+-- ('ConwayEra' is not an instance of 'ShelleyEraTxBody').
+exampleAlonzoToBabbageTx ::
+  forall era.
+  ( AlonzoEraTx era
+  , AlonzoEraTxAuxData era
+  , Value era ~ MaryValue
+  , ShelleyEraTxBody era
+  ) =>
+  Tx TopTx era
+exampleAlonzoToBabbageTx =
+  addAlonzoToConwayTxFeatures exampleMaryToBabbageTx
+
+-- Complete Alonzo transaction that is compatible until Conway era
+-- ('DijkstraEra' is not an instance of 'ShelleyEraTxCert').
+exampleAlonzoToConwayTx ::
+  forall era.
+  ( AlonzoEraTx era
+  , AlonzoEraTxAuxData era
+  , Value era ~ MaryValue
+  , ShelleyEraTxCert era
+  ) =>
+  Tx TopTx era
+exampleAlonzoToConwayTx =
+  addAlonzoToConwayTxFeatures exampleMaryToConwayTx
+
+addAlonzoToConwayTxFeatures ::
+  forall era.
+  ( AlonzoEraTxBody era
+  , AtMostEra "Conway" era
+  , EraTx era
+  ) =>
+  Tx TopTx era ->
+  Tx TopTx era
+addAlonzoToConwayTxFeatures tx =
+  tx & bodyTxL . reqSignerHashesTxBodyL .~ Set.singleton (mkKeyHash 212)
+
+addAlonzoBasedTxFeatures ::
+  forall era.
+  ( AlonzoEraTx era
+  , AlonzoEraTxAuxData era
+  , Value era ~ MaryValue
+  , EraPlutusTxInfo 'PlutusV1 era
+  ) =>
+  Tx TopTx era ->
+  Tx TopTx era
+addAlonzoBasedTxFeatures tx =
+  tx
     & witsTxL
       <>~ ( mkBasicTxWits
               & scriptTxWitsL
@@ -152,8 +198,7 @@ mkAlonzoBasedExampleTx txBody scriptPurpose =
                   (hashScript @era $ alwaysSucceeds @'PlutusV1 3)
                   (alwaysSucceeds @'PlutusV1 3)
               & datsTxWitsL .~ TxDats (Map.singleton (hashData (exampleDatum @era)) exampleDatum)
-              & rdmrsTxWitsL
-                .~ Redeemers (Map.singleton scriptPurpose (exampleRedeemer, ExUnits 5000 5000))
+              & rdmrsTxWitsL .~ redeemers
           )
     & auxDataTxL
       %~ fmap
@@ -163,63 +208,29 @@ mkAlonzoBasedExampleTx txBody scriptPurpose =
                 <>~ Map.singleton PlutusV1 (NE.singleton (plutusBinary (alwaysFailsPlutus @'PlutusV1 2)))
         )
     & isValidTxL .~ IsValid True
-
-exampleAlonzoBasedTxBody ::
-  forall era.
-  ( AlonzoEraTxBody era
-  , Value era ~ MaryValue
-  ) =>
-  TxBody TopTx era
-exampleAlonzoBasedTxBody =
-  mkAlonzoBasedExampleTxBody exampleMaryBasedTxBody
-
-exampleAlonzoBasedShelleyTxBody ::
-  forall era.
-  ( AlonzoEraTxBody era
-  , ShelleyEraTxBody era
-  , Value era ~ MaryValue
-  ) =>
-  TxBody TopTx era
-exampleAlonzoBasedShelleyTxBody =
-  mkAlonzoBasedPreConwayExampleTxBody exampleMaryBasedShelleyTxBody
-
-mkAlonzoBasedPreConwayExampleTxBody ::
-  forall era.
-  ( AlonzoEraTxBody era
-  , Value era ~ MaryValue
-  , AtMostEra "Conway" era
-  ) =>
-  TxBody TopTx era ->
-  TxBody TopTx era
-mkAlonzoBasedPreConwayExampleTxBody txBody =
-  mkAlonzoBasedExampleTxBody txBody
-    & reqSignerHashesTxBodyL .~ Set.singleton (mkKeyHash 212)
-
-mkAlonzoBasedExampleTxBody ::
-  forall era.
-  ( AlonzoEraTxBody era
-  , Value era ~ MaryValue
-  ) =>
-  TxBody TopTx era ->
-  TxBody TopTx era
-mkAlonzoBasedExampleTxBody txBody =
-  txBody
-    & collateralInputsTxBodyL .~ exampleTxIns
-    & outputsTxBodyL
+    & bodyTxL . collateralInputsTxBodyL .~ exampleTxIns
+    & bodyTxL . outputsTxBodyL
       <>~ StrictSeq.fromList
         [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
             (exampleMultiAssetValue 3)
             & dataHashTxOutL .~ SJust (mkDummySafeHash 1)
         ]
-    & scriptIntegrityHashTxBodyL .~ SJust (mkDummySafeHash 42)
-    & networkIdTxBodyL .~ SJust Mainnet
+    & bodyTxL . scriptIntegrityHashTxBodyL .~ SJust (mkDummySafeHash 42)
+    & bodyTxL . networkIdTxBodyL .~ SJust Mainnet
+  where
+    redeemers =
+      Redeemers $
+        Map.fromList
+          [ (SpendingPurpose $ AsIx 0, (redeemerData, ExUnits 5000 5000))
+          , (MintingPurpose $ AsIx 1, (redeemerData, ExUnits 5000 5000))
+          , (CertifyingPurpose $ AsIx 2, (redeemerData, ExUnits 5000 5000))
+          , (RewardingPurpose $ AsIx 3, (redeemerData, ExUnits 5000 5000))
+          ]
+    redeemerData = Data (P.Constr 1 [P.List [P.I 1], P.Map [(P.I 2, P.B "2")]])
 
 exampleDatum :: Era era => Data era
-exampleDatum = Data (P.I 191)
-
-exampleRedeemer :: Era era => Data era
-exampleRedeemer = Data (P.I 919)
+exampleDatum = Data (P.Constr 0 [P.List [P.I 0], P.Map [(P.I 1, P.B "1")]])
 
 exampleAlonzoGenesis :: AlonzoGenesis
 exampleAlonzoGenesis =
