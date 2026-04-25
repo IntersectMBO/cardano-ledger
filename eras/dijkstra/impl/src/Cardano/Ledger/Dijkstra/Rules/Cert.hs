@@ -116,8 +116,7 @@ certTransition = do
         TRC (ConwayGovCertEnv pp currentEpoch committee committeeProposals, certState, govCert)
 
 instance
-  ( Era era
-  , STS (DijkstraGOVCERT era)
+  ( STS (DijkstraGOVCERT era)
   , PredicateFailure (EraRule "GOVCERT" era) ~ DijkstraGovCertPredFailure era
   ) =>
   Embed (DijkstraGOVCERT era) (DijkstraCERT era)

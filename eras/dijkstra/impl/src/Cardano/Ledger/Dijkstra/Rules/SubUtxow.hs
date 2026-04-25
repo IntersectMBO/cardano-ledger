@@ -22,16 +22,15 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
 ) where
 
 import Cardano.Crypto.Hash (ByteString)
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   checkScriptIntegrityHash,
   hasExactSetOfRedeemers,
   missingRequiredDatums,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   validateFailedBabbageScripts,
   validateScriptsWellFormedTxOuts,
@@ -66,13 +65,13 @@ import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateMetadata,
   validateNeededWitnesses,
   validateVerifiedWits,
  )
-import Cardano.Ledger.State (EraCertState, EraStake, EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -309,20 +308,9 @@ dijkstraSubUtxowTransition = do
   trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
 
 instance
-  ( EraTx era
-  , EraStake era
-  , EraCertState era
-  , AlonzoEraTxWits era
-  , ConwayEraGov era
-  , DijkstraEraTxBody era
-  , EraPlutusContext era
-  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
-  , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
-  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
+  ( STS (DijkstraSUBUTXO era)
+  , PredicateFailure (EraRule "SUBUTXO" era) ~ DijkstraSubUtxoPredFailure era
+  , Event (EraRule "SUBUTXO" era) ~ DijkstraSubUtxoEvent era
   ) =>
   Embed (DijkstraSUBUTXO era) (DijkstraSUBUTXOW era)
   where
