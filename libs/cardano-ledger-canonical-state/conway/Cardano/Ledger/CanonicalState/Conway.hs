@@ -60,6 +60,8 @@ import Data.Text (Text)
 import Data.Word (Word8)
 import Lens.Micro
 
+type instance NamespaceEra "accounts/v0" = ConwayEra
+
 type instance NamespaceEra "blocks/v0" = ConwayEra
 
 type instance NamespaceEra "entities/committee/v0" = ConwayEra
@@ -71,6 +73,8 @@ type instance NamespaceEra "gov/constitution/v0" = ConwayEra
 type instance NamespaceEra "gov/pparams/v0" = ConwayEra
 
 type instance NamespaceEra "gov/proposals/v0" = ConwayEra
+
+type instance NamespaceEra "snapshots/v0" = ConwayEra
 
 type instance NamespaceEra "utxo/v0" = ConwayEra
 
