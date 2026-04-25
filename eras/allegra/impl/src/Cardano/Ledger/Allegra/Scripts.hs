@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -60,7 +61,7 @@ module Cardano.Ledger.Allegra.Scripts (
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
-import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -101,7 +102,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
-import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Foldable as F (foldl')
 import Data.MemPack
@@ -149,6 +150,12 @@ instance ToJSON ValidityInterval where
           , ("invalidHereafter", invalidHereafter vi)
           ]
       ]
+
+instance FromJSON ValidityInterval where
+  parseJSON = withObject "ValidityInterval" $ \obj -> do
+    invalidBefore <- maybeToStrictMaybe <$> obj .:? "invalidBefore"
+    invalidHereafter <- maybeToStrictMaybe <$> obj .:? "invalidHereafter"
+    pure ValidityInterval {..}
 
 -- ==================================================================
 

@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `FromJSON` instance for `ValidityInterval`
 * Add `ApplyTick` instance for `AllegraEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `AllegraEra`.
 * Remove `NoThunks` instance for `AllegraUtxoPredFailure`

@@ -123,7 +123,7 @@ import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
-import Data.Aeson (ToJSON (..))
+import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
@@ -145,7 +145,7 @@ import NoThunks.Class (InspectHeap (..), NoThunks)
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
-  deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToJSON)
+  deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToJSON, FromJSON)
 
 data AlonzoTx l era where
   AlonzoTx ::

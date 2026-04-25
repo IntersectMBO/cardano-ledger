@@ -1,1 +1,5 @@
-[{"description":"A description","error":"PlutusFailure","kind":"FailureDescription"}]
+{
+    "description": "A description",
+    "error": "PlutusFailure",
+    "kind": "FailureDescription"
+}

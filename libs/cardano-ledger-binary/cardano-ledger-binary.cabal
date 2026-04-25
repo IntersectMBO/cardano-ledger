@@ -132,6 +132,7 @@ library testlib
     formatting,
     hedgehog,
     hspec,
+    hspec-golden,
     pretty-show,
     prettyprinter,
     prettyprinter-ansi-terminal,

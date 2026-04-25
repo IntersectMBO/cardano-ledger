@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `FromJSON` instance for `IsValid`
 * Add `ltiMemoizedSubTransactions` to `LedgerTxInfo`
 * Add `resolveNeededPlutusScriptsWithPurpose`
 * Add `scriptsWithContextFromLedgerTxInfo` and `scriptsWithContextFromLedgerTxInfoWithResult`

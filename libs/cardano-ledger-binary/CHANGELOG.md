@@ -9,6 +9,8 @@
 
 ### `testlib`
 
+* Add `goldenForEncCBOR` and `cborGoldenSpec`
+* Add `toPackageGolden`
 * Remove `roundTripFailureExpectation`, `roundTripCborExpectation`, and `cborTrip`
 * Add `noTwiddle`, `HuddleEnv`, `toGenEnv`
 * Replace `SpecWith (CTreeRoot MonoReferenced)` with `SpecWith HuddleEnv` in Huddle tests
