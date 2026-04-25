@@ -48,6 +48,7 @@ library
     Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0
     Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0
     Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0
+    Cardano.Ledger.CanonicalState.Namespace.GovProposals.Roots.V0
     Cardano.Ledger.CanonicalState.Namespace.GovProposals.V0
     Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
 
