@@ -8,7 +8,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Ledger.Binary.Decoding.Decoder (
   -- * Decoders
@@ -41,7 +40,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   matchSize,
 
   -- ** Compatibility tools
-  binaryGetDecoder,
   allowTag,
 
   -- ** Custom decoders
@@ -1181,30 +1179,24 @@ decodeUTCTime =
 
 -- | Convert a `Get` monad from @binary@ package into a `Decoder`
 binaryGetDecoder ::
-  -- | Flag to allow left over at the end or not
-  Bool ->
   -- | Name of the function or type for error reporting
   Text.Text ->
   -- | Deserializer for the @binary@ package
   Get a ->
   Decoder s a
-binaryGetDecoder allowLeftOver name getter = do
+binaryGetDecoder name getter = do
   bs <- decodeBytes
   case runGetOrFail getter (BSL.fromStrict bs) of
     Left (_, _, err) -> cborError $ DecoderErrorCustom name (Text.pack err)
     Right (leftOver, _, ha)
-      | allowLeftOver || BSL.null leftOver -> pure ha
+      | BSL.null leftOver -> pure ha
       | otherwise ->
           cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
 {-# INLINE binaryGetDecoder #-}
 
 decodeIPv4 :: Decoder s IPv4
 decodeIPv4 =
-  toIPv4w
-    <$> ifDecoderVersionAtLeast
-      (natVersion @9)
-      (binaryGetDecoder False "decodeIPv4" getWord32le)
-      (binaryGetDecoder True "decodeIPv4" getWord32le)
+  toIPv4w <$> binaryGetDecoder "decodeIPv4" getWord32le
 {-# INLINE decodeIPv4 #-}
 
 getHostAddress6 :: Get (Word32, Word32, Word32, Word32)
@@ -1218,11 +1210,7 @@ getHostAddress6 = do
 
 decodeIPv6 :: Decoder s IPv6
 decodeIPv6 =
-  toIPv6w
-    <$> ifDecoderVersionAtLeast
-      (natVersion @9)
-      (binaryGetDecoder False "decodeIPv6" getHostAddress6)
-      (binaryGetDecoder True "decodeIPv6" getHostAddress6)
+  toIPv6w <$> binaryGetDecoder "decodeIPv6" getHostAddress6
 {-# INLINE decodeIPv6 #-}
 
 --------------------------------------------------------------------------------

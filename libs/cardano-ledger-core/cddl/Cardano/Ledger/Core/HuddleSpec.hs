@@ -18,15 +18,13 @@
 
 module Cardano.Ledger.Core.HuddleSpec where
 
-import Cardano.Ledger.BaseTypes (getVersion, natVersion)
+import Cardano.Ledger.BaseTypes (getVersion)
 import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
 import Cardano.Ledger.Huddle
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CBORGenerator (
-  CBORGen,
   CustomValidatorResult (..),
   WrappedTerm (..),
-  liftAntiGen,
  )
 import Codec.CBOR.Cuddle.Huddle as H
 import Codec.CBOR.Term (Term (..))
@@ -39,7 +37,6 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import Data.Word (Word16, Word32, Word64)
 import GHC.TypeLits (KnownSymbol, Symbol)
-import Test.AntiGen ((|!))
 import Test.QuickCheck (Arbitrary (..), Gen, oneof, vectorOf)
 import Test.QuickCheck.GenT (MonadGen (..))
 import Text.Heredoc
@@ -81,7 +78,7 @@ instance Era era => HuddleRule "unit_interval" era where
           |
           |The relation between numerator and denominator can be
           |expressed in CDDL, but we have a limitation currently
-          |(see: https://github.com/input-output-hk/cuddle/issues/30). 
+          |(see: https://github.com/input-output-hk/cuddle/issues/30).
           |]
       . withCBORGen generator
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
@@ -311,13 +308,6 @@ instance Era era => HuddleRule "stake_credential" era where
 instance Era era => HuddleRule "port" era where
   huddleRuleNamed pname _ = pname =.= VUInt `le` 65535
 
-ipGen :: Int -> CBORGen WrappedTerm
-ipGen n = do
-  l <- liftAntiGen $ choose (n, 1024) |! choose (0, pred n)
-  bs <- liftGen $ genByteString l
-  -- TODO Also generate with TBytesI
-  pure . S $ TBytes bs
-
 ipValidator :: Int -> Term -> CustomValidatorResult
 ipValidator n = \case
   TBytes bs | BS.length bs >= n -> CustomValidatorSuccess
@@ -326,18 +316,8 @@ ipValidator n = \case
 
 ipRule ::
   forall era (r :: Symbol).
-  (Era era, KnownSymbol r) => Int -> Proxy r -> Proxy era -> Rule
-ipRule n pname _
-  | eraProtVerLow @era < natVersion @9 =
-      comment
-        [str| It is not possible to express a bytestring with no upper bound
-             | in CDDL, that's why the upper bound is set to 1024. In reality
-             | there is no such upper bound on the bytestring.
-             |]
-        . withValidator (ipValidator n)
-        . withCBORGen (ipGen n)
-        $ pname =.= VBytes `H.sized` (fromIntegral n :: Word64, 1024 :: Word64)
-  | otherwise = pname =.= VBytes `H.sized` (fromIntegral n :: Word64)
+  KnownSymbol r => Int -> Proxy r -> Proxy era -> Rule
+ipRule n pname _ = pname =.= VBytes `H.sized` (fromIntegral n :: Word64)
 
 instance Era era => HuddleRule "ipv4" era where
   huddleRuleNamed = ipRule 4

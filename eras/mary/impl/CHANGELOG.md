@@ -2,6 +2,9 @@
 
 ## 1.10.1.0
 
+### `cddl`
+
+* Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
 * Add `ApplyTick` instance for `MaryEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `MaryEra`.
 
