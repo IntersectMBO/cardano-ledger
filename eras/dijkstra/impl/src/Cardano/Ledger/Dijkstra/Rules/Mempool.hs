@@ -77,8 +77,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers (DijkstraSubLedgersPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubUtxow (DijkstraSubUtxowPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxoEnv)
+import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv, DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState

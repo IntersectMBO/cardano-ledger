@@ -19,7 +19,6 @@
 module Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUTXOW,
   DijkstraUtxowPredFailure (..),
-  DijkstraUtxoEnv (..),
   conwayToDijkstraUtxowPredFailure,
 ) where
 
@@ -54,7 +53,6 @@ import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Relation (..),
   ShelleyBase,
-  SlotNo,
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -78,23 +76,22 @@ import Cardano.Ledger.Conway.Rules (
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO, DijkstraUTXOW)
-import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode (runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.LedgerState (UTxO, UTxOState)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure,
-  UtxoEnv (..),
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   validateMetadata,
   validateVerifiedWits,
  )
-import Cardano.Ledger.State (CertState, EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
@@ -117,17 +114,6 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
 -- ================================
-
--- Unlike the standard 'UtxoEnv', this carries the original UTxO (before
--- subtransaction processing) and the aggregated scripts provided across
--- all transaction levels.
-data DijkstraUtxoEnv era = DijkstraUtxoEnv
-  { dueSlot :: !SlotNo
-  , duePParams :: !(PParams era)
-  , dueCertState :: !(CertState era)
-  , dueOriginalUtxo :: !(UTxO era)
-  , dueScriptsProvided :: !(ScriptsProvided era)
-  }
 
 -- | Predicate failure type for the Dijkstra Era
 data DijkstraUtxowPredFailure era
@@ -258,7 +244,7 @@ dijkstraUtxowTransition ::
   , InjectRuleFailure "UTXOW" DijkstraUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
-  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   ) =>
@@ -343,9 +329,9 @@ dijkstraUtxowTransition = do
       missingGuards = requiredGuardsBySubTxs `Set.difference` topLevelGuards
   runTestOnSignal $ failureOnNonEmptySet missingGuards MissingRequiredGuards
 
-  -- Pass through to UTXO sub-rule with standard UtxoEnv (state-based UTXO is correct
-  -- for minfee calculation and state update)
-  trans @(EraRule "UTXO" era) $ TRC (UtxoEnv slot pp certState, u, tx)
+  -- Pass through to UTXO sub-rule, carrying the original UTxO and scriptsProvided
+  trans @(EraRule "UTXO" era) $
+    TRC (DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided, u, tx)
 
 instance
   forall era.
@@ -361,7 +347,7 @@ instance
   , InjectRuleFailure "UTXOW" DijkstraUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
-  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
