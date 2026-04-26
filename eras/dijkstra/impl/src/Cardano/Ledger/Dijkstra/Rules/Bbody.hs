@@ -404,8 +404,7 @@ conwayToDijkstraBbodyPredFailure = \case
   Conway.HeaderProtVerTooHigh {} -> error "Impossible: HeaderProtVerTooHigh cannot be triggered in Dijkstra era"
 
 instance
-  ( Era era
-  , BaseM ledgers ~ ShelleyBase
+  ( BaseM ledgers ~ ShelleyBase
   , ledgers ~ EraRule "LEDGERS" era
   , STS ledgers
   ) =>

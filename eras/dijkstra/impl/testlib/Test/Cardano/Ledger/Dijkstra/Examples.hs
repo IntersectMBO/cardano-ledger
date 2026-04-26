@@ -24,12 +24,12 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..))
+import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
-import Cardano.Ledger.Dijkstra.Rules (DijkstraLEDGER, DijkstraMEMPOOL)
+import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceInterval (..),
   AccountBalanceIntervals (..),
@@ -51,7 +51,6 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
 import Cardano.Ledger.State (StakePoolParams (sppId))
-import Control.State.Transition.Extended (Embed (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
@@ -92,8 +91,8 @@ ledgerExamples =
   mkAlonzoBasedLedgerExamples
     ( DijkstraApplyTxError $
         pure $
-          wrapFailed @(DijkstraLEDGER DijkstraEra) @(DijkstraMEMPOOL DijkstraEra) $
-            wrapFailed @(ConwayDELEG DijkstraEra) @(DijkstraLEDGER DijkstraEra) $
+          Dijkstra.LedgerFailure $
+            injectFailure $
               DelegateeStakePoolNotRegisteredDELEG (mkKeyHash 1)
     )
     exampleBabbageNewEpochState

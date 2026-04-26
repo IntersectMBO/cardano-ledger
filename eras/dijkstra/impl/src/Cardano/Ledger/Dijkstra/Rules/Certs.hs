@@ -7,7 +7,6 @@
 
 module Cardano.Ledger.Dijkstra.Rules.Certs () where
 
-import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Rules (
   ConwayCERTS,
   ConwayCertEvent (..),
@@ -51,7 +50,6 @@ instance InjectRuleFailure "CERTS" ConwayGovCertPredFailure DijkstraEra where
 instance
   ( Era era
   , STS (DijkstraCERT era)
-  , BaseM (EraRule "CERT" era) ~ ShelleyBase
   , Event (EraRule "CERT" era) ~ ConwayCertEvent era
   , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
   ) =>
@@ -61,8 +59,7 @@ instance
   wrapEvent = CertEvent
 
 instance
-  ( Era era
-  , STS (ConwayDELEG era)
+  ( STS (ConwayDELEG era)
   , PredicateFailure (EraRule "DELEG" era) ~ ConwayDelegPredFailure era
   ) =>
   Embed (ConwayDELEG era) (DijkstraCERT era)
@@ -71,12 +68,9 @@ instance
   wrapEvent = absurd
 
 instance
-  ( Era era
-  , STS (ShelleyPOOL era)
-  , Event (EraRule "POOL" era) ~ PoolEvent era
+  ( STS (ShelleyPOOL era)
   , PredicateFailure (EraRule "POOL" era) ~ ShelleyPoolPredFailure era
-  , PredicateFailure (ShelleyPOOL era) ~ ShelleyPoolPredFailure era
-  , BaseM (ShelleyPOOL era) ~ ShelleyBase
+  , Event (EraRule "POOL" era) ~ PoolEvent era
   ) =>
   Embed (ShelleyPOOL era) (DijkstraCERT era)
   where
@@ -84,8 +78,7 @@ instance
   wrapEvent = PoolEvent
 
 instance
-  ( Era era
-  , STS (ConwayGOVCERT era)
+  ( STS (ConwayGOVCERT era)
   , PredicateFailure (EraRule "GOVCERT" era) ~ ConwayGovCertPredFailure era
   ) =>
   Embed (ConwayGOVCERT era) (DijkstraCERT era)
