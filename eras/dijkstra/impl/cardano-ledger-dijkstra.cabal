@@ -30,6 +30,7 @@ library
   exposed-modules:
     Cardano.Ledger.Dijkstra
     Cardano.Ledger.Dijkstra.BlockBody
+    Cardano.Ledger.Dijkstra.BlockBody.Internal
     Cardano.Ledger.Dijkstra.Core
     Cardano.Ledger.Dijkstra.Era
     Cardano.Ledger.Dijkstra.Genesis
@@ -49,7 +50,6 @@ library
     Cardano.Ledger.Dijkstra.UTxO
 
   other-modules:
-    Cardano.Ledger.Dijkstra.BlockBody.Internal
     Cardano.Ledger.Dijkstra.Forecast
     Cardano.Ledger.Dijkstra.Rules.Bbody
     Cardano.Ledger.Dijkstra.Rules.Cert
@@ -111,7 +111,7 @@ library
     cardano-ledger-babbage ^>=1.14,
     cardano-ledger-binary ^>=1.9,
     cardano-ledger-conway ^>=1.23,
-    cardano-ledger-core:{cardano-ledger-core, internal} >=1.20,
+    cardano-ledger-core:{cardano-ledger-core, internal} >=1.21,
     cardano-ledger-mary,
     cardano-ledger-shelley,
     cardano-slotting,
@@ -207,10 +207,15 @@ library cddl
     -Wunused-packages
 
   build-depends:
+    QuickCheck,
+    antigen,
     base,
     cardano-ledger-conway:cddl,
     cardano-ledger-dijkstra,
+    cborg,
+    cuddle,
     heredoc,
+    quickcheck-transformer,
     text,
 
 executable generate-cddl

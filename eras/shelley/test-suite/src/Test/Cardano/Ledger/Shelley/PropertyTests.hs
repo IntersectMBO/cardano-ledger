@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Shelley.PropertyTests (
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, SlotNo)
+import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (BbodySignal)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast, ShelleyPOOL)
@@ -95,6 +96,7 @@ commonTests ::
   , EraRule "POOL" era ~ ShelleyPOOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era
+  , EncCBORGroup (BlockBody era)
   ) =>
   [TestTree]
 commonTests =

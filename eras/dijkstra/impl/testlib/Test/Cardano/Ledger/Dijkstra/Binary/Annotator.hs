@@ -22,15 +22,23 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (decodePositiveCoin)
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.BlockBody.Internal (
+  DijkstraBlockBody (..),
+  DijkstraBlockBodyRaw (..),
+  alignedValidFlags,
+ )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Cardano.Ledger.Val (Val (..))
+import Control.Monad (unless)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
+import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
@@ -201,3 +209,26 @@ instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   {-# INLINE decCBOR #-}
 
 deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)
+
+instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
+ decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
+    invalidTxs  <- decCBOR
+    txs  <- decCBOR
+    perasCert  <- decodeNullStrictMaybe decCBOR
+
+    let txsLength = Seq.length txs
+        inRange x = 0 <= x && x <= txsLength - 1
+    unless (all inRange invalidTxs) $
+      fail $
+        "Some IsValid index is not in the range: 0 .. "
+          ++ show (txsLength - 1)
+          ++ ", "
+          ++ show invalidTxs
+    let
+      setValidityFlag tx isValid = tx & isValidTxL .~ isValid
+      validityFlags = alignedValidFlags txsLength invalidTxs
+      txsWithIsValid = Seq.zipWith setValidityFlag txs validityFlags
+    pure $ DijkstraBlockBodyRaw (StrictSeq.forceToStrict txsWithIsValid) perasCert
+
+instance DecCBOR (DijkstraBlockBody DijkstraEra) where
+  decCBOR = MkDijkstraBlockBody <$> decodeMemoized decCBOR
