@@ -46,11 +46,18 @@ import Cardano.Ledger.Binary (EncCBOR, encCBOR, serialize')
 import Cardano.Ledger.CanonicalState.LedgerCBOR
 import Cardano.Ledger.CanonicalState.Namespace (Era, NamespaceEra)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
-import Cardano.Ledger.Core (eraProtVerLow)
+import Cardano.Ledger.Core (
+  AccountAddress,
+  AccountId,
+  KeyRoleVRF (StakePoolVRF),
+  VRFVerKeyHash,
+  eraProtVerLow,
+ )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..))
 import qualified Cardano.Ledger.Hashes as H
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), ExUnits' (..))
+import Cardano.Ledger.State (PoolMetadata, StakePoolRelay)
 import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
@@ -64,7 +71,9 @@ import qualified Codec.CBOR.Decoding as D
 import Control.Monad (unless)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base16 as Base16
+import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
+import Data.Sequence.Strict (StrictSeq, fromList)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
@@ -133,6 +142,14 @@ instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictMaybe a) where
         Versioned () <- fromCanonicalCBOR
         pure (Versioned SNothing)
       _ -> fmap SJust <$> fromCanonicalCBOR
+
+instance ToCanonicalCBOR v a => ToCanonicalCBOR v (StrictSeq a) where
+  toCanonicalCBOR v = toCanonicalCBOR v . toList
+
+instance FromCanonicalCBOR v a => FromCanonicalCBOR v (StrictSeq a) where
+  fromCanonicalCBOR = do
+    Versioned xs <- fromCanonicalCBOR @v
+    pure $ Versioned (fromList xs)
 
 deriving via
   LedgerCBOR v EpochNo
@@ -240,6 +257,56 @@ deriving via
   LedgerCBOR v EpochInterval
   instance
     (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v EpochInterval
+
+deriving via
+  LedgerCBOR v (VRFVerKeyHash StakePoolVRF)
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v (VRFVerKeyHash StakePoolVRF)
+
+deriving via
+  LedgerCBOR v (VRFVerKeyHash StakePoolVRF)
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v (VRFVerKeyHash StakePoolVRF)
+
+deriving via
+  LedgerCBOR v StakePoolRelay
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v StakePoolRelay
+
+deriving via
+  LedgerCBOR v StakePoolRelay
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v StakePoolRelay
+
+deriving via
+  LedgerCBOR v PoolMetadata
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v PoolMetadata
+
+deriving via
+  LedgerCBOR v PoolMetadata
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v PoolMetadata
+
+deriving via
+  LedgerCBOR v AccountId
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v AccountId
+
+deriving via
+  LedgerCBOR v AccountId
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v AccountId
+
+deriving via
+  LedgerCBOR v AccountAddress
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v AccountAddress
+
+deriving via
+  LedgerCBOR v AccountAddress
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v AccountAddress
 
 data CanonicalExUnits = CanonicalExUnits
   { exUnitsMem :: !Natural
