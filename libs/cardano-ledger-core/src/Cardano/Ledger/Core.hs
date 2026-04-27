@@ -93,14 +93,11 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (Share),
   DecoderError,
   EncCBOR (..),
-  EncCBORGroup,
   Interns,
   Sized (sizedValue),
   ToCBOR,
-  encCBORGroup,
   mkSized,
   serialize,
-  serialize',
   translateViaCBORAnnotator,
  )
 import Cardano.Ledger.Coin (Coin)
@@ -630,8 +627,8 @@ class
   numSegComponents :: Word64
 
   blockBodySize :: ProtVer -> BlockBody era -> Int
-  default blockBodySize :: EncCBORGroup (BlockBody era) => ProtVer -> BlockBody era -> Int
-  blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
+  default blockBodySize :: SafeToHash (BlockBody era) => ProtVer -> BlockBody era -> Int
+  blockBodySize _ = originalBytesSize
 
 txIdTx :: EraTx era => Tx l era -> TxId
 txIdTx tx = txIdTxBody (tx ^. bodyTxL)

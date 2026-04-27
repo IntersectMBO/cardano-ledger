@@ -9,6 +9,8 @@
 
 module Cardano.Ledger.Mary.BlockBody () where
 
+import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.Binary (EncCBORGroup (..), serialize')
 import Cardano.Ledger.Core (EraBlockBody (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Tx ()
@@ -18,6 +20,7 @@ import Cardano.Ledger.Shelley.BlockBody (
   shelleyBlockBodyHash,
   txSeqBlockBodyShelleyL,
  )
+import qualified Data.ByteString as BS
 
 instance EraBlockBody MaryEra where
   type BlockBody MaryEra = ShelleyBlockBody MaryEra
@@ -25,3 +28,4 @@ instance EraBlockBody MaryEra where
   txSeqBlockBodyL = txSeqBlockBodyShelleyL
   hashBlockBody = shelleyBlockBodyHash
   numSegComponents = 3
+  blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup

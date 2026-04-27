@@ -41,6 +41,7 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Nonce (..),
+  ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
   maybeToStrictMaybe,
@@ -57,6 +58,7 @@ import Cardano.Ledger.Binary (
   encodeFoldableMapEncoder,
   encodePreEncoded,
   serialize,
+  serialize',
   withSlice,
  )
 import Cardano.Ledger.Block (Block, EraBlockHeader (..))
@@ -68,6 +70,7 @@ import Cardano.Ledger.Slot (SlotNo (..), isOverlaySlot)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
@@ -106,6 +109,7 @@ instance EraBlockBody ShelleyEra where
   txSeqBlockBodyL = txSeqBlockBodyShelleyL
   hashBlockBody = sbbHash
   numSegComponents = 3
+  blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 mkBasicBlockBodyShelley ::
   ( EraBlockBody era

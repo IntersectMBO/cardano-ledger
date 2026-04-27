@@ -11,6 +11,8 @@ module Cardano.Ledger.Allegra.BlockBody () where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Tx ()
+import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.Binary (EncCBORGroup (..), serialize')
 import Cardano.Ledger.Core (EraBlockBody (..))
 import Cardano.Ledger.Shelley.BlockBody (
   ShelleyBlockBody,
@@ -18,6 +20,7 @@ import Cardano.Ledger.Shelley.BlockBody (
   shelleyBlockBodyHash,
   txSeqBlockBodyShelleyL,
  )
+import qualified Data.ByteString as BS
 
 instance EraBlockBody AllegraEra where
   type BlockBody AllegraEra = ShelleyBlockBody AllegraEra
@@ -25,3 +28,4 @@ instance EraBlockBody AllegraEra where
   txSeqBlockBodyL = txSeqBlockBodyShelleyL
   hashBlockBody = shelleyBlockBodyHash
   numSegComponents = 3
+  blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
