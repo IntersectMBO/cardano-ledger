@@ -68,8 +68,7 @@ spec = do
       -- PParamsUpdate
       fullCddlSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       -- CostModels
-      xdescribe "not enough decision points" $ do
-        fullCddlSpec @CostModels v "cost_models"
+      fullCddlSpec @CostModels v "cost_models"
       -- Redeemers
       fullAnnGenCddlSpec @(Redeemers DijkstraEra) genNonEmptyRedeemers v "redeemers"
       -- Tx

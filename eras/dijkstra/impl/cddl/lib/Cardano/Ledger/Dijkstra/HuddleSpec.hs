@@ -995,6 +995,7 @@ instance HuddleRule "cost_models" DijkstraEra where
           |
           |Any 8-bit unsigned number can be used as a key.
           |]
+      $ withCBORGen (conwayCostModelsGenerator @DijkstraEra)
       $ pname
         =.= mp
           [ opt $ idx 0 ==> arr [0 <+ a (huddleRule @"int64" p)]

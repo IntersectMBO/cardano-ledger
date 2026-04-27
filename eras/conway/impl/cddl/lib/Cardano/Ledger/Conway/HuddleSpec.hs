@@ -64,6 +64,7 @@ module Cardano.Ledger.Conway.HuddleSpec (
   maybeTaggedSet,
   maybeTaggedNonemptySet,
   maybeTaggedNonemptyOset,
+  conwayCostModelsGenerator,
 ) where
 
 import Cardano.Ledger.Babbage.HuddleSpec hiding (
@@ -77,7 +78,24 @@ import Cardano.Ledger.Babbage.HuddleSpec hiding (
   urlRule,
  )
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Huddle.Gen (
+  CBORGen (..),
+  MonadGen (choose, resize),
+  Term (..),
+  WrappedTerm (..),
+  genArrayTerm,
+  genMapTerm,
+  genRule,
+  liftAntiGen,
+  oneof,
+  replicateMNorm,
+  shuffle,
+  withAntiGen,
+  (|!),
+ )
+import Cardano.Ledger.Huddle.Gen qualified as Gen
 import Data.Proxy (Proxy (..))
+import Data.Traversable (forM)
 import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)
 import Text.Heredoc
@@ -1034,6 +1052,27 @@ instance HuddleRule "language" ConwayEra where
 
 instance HuddleRule "potential_languages" ConwayEra where
   huddleRuleNamed pname _ = potentialLanguagesRule pname
+
+conwayCostModelsGenerator :: forall era. Era era => CBORGen WrappedTerm
+conwayCostModelsGenerator = Gen.sized $ \size -> do
+  nKeys <- choose (0, size)
+  initialKeys <- take nKeys <$> shuffle [0 :: Int .. 255]
+  keys <- forM initialKeys $ \i ->
+    liftAntiGen $
+      pure i
+        |! Gen.sized
+          ( \sz ->
+              oneof
+                [ choose (-1 - sz, -1)
+                , choose (256, 256 + sz)
+                ]
+          )
+  kvs <- forM keys $ \k -> resize (size `div` 2) $ do
+    nVals <- Gen.sized $ \sz -> choose (0, sz)
+    v <- withAntiGen (replicateMNorm nVals) $ genRule @"int64" @era
+    vs <- genArrayTerm v
+    pure (TInt k, vs)
+  S <$> genMapTerm kvs
 
 instance HuddleRule "cost_models" ConwayEra where
   huddleRuleNamed pname p =

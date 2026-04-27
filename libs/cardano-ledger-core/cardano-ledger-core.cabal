@@ -179,6 +179,7 @@ library cddl
   exposed-modules:
     Cardano.Ledger.Core.HuddleSpec
     Cardano.Ledger.Huddle
+    Cardano.Ledger.Huddle.Gen
 
   visibility: public
   hs-source-dirs: cddl
@@ -194,6 +195,7 @@ library cddl
 
   build-depends:
     QuickCheck,
+    antigen,
     base,
     bytestring,
     cardano-ledger-binary,
@@ -203,7 +205,6 @@ library cddl
     heredoc,
     mempack,
     quickcheck-transformer,
-    random,
     text >=2.0,
 
 library testlib
