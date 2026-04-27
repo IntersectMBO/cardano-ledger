@@ -44,9 +44,8 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
   EncCBOR,
-  decodeBreakOr,
-  decodeListLenOrIndef,
   decodeNullStrictMaybe,
+  decodeRecordNamed,
   encCBOR,
   encodeListLen,
   encodeNullStrictMaybe,
@@ -181,19 +180,10 @@ instance
   ) =>
   DecCBOR (Annotator (DijkstraBlockBodyRaw era))
   where
-  decCBOR = do
-    mLen <- decodeListLenOrIndef
-    case mLen of
-      Just len | len /= 3 -> fail "expected 3 elements"
-      _ -> pure ()
+  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
     invalidTxs :: [Word16] <- decCBOR
     txs <- decCBOR
     perasCert <- decodeNullStrictMaybe decCBOR
-    case mLen of
-      Nothing -> do
-        isBreak <- decodeBreakOr
-        unless isBreak $ fail "expected break"
-      _ -> pure ()
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x < txsLength
     forM_ invalidTxs $ \i ->

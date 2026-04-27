@@ -211,19 +211,11 @@ instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
 deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)
 
 instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
-  decCBOR = do
-    mLen <- decodeListLenOrIndef
-    case mLen of
-      Just len | len /= 3 -> fail "expected 3 elements"
-      _ -> pure ()
+  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
     invalidTxs <- decCBOR
     txs <- decCBOR
     perasCert <- decodeNullStrictMaybe decCBOR
-    case mLen of
-      Nothing -> do
-        isBreak <- decodeBreakOr
-        unless isBreak $ fail "expected break"
-      _ -> pure ()
+
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x <= txsLength - 1
     unless (all inRange invalidTxs) $
