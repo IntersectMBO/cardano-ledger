@@ -10,9 +10,10 @@ import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Rules.Delegs ()
 import Cardano.Ledger.Mary.Rules.Utxow ()
 import Cardano.Ledger.Shelley.Rules (
+  AccountAlreadyRegistered,
   ShelleyDelegPredFailure,
-  ShelleyDelegsPredFailure,
-  ShelleyDelplPredFailure,
+  ShelleyDelegsPredFailure (..),
+  ShelleyDelplPredFailure (..),
   ShelleyLedgerEvent,
   ShelleyLedgerPredFailure (..),
   ShelleyPoolPredFailure,
@@ -24,6 +25,9 @@ import Cardano.Ledger.Shelley.Rules (
 type instance EraRuleFailure "LEDGER" MaryEra = ShelleyLedgerPredFailure MaryEra
 
 instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure MaryEra
+
+instance InjectRuleFailure "LEDGER" AccountAlreadyRegistered MaryEra where
+  injectFailure = DelegsFailure . DelplFailure . DelegFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure MaryEra where
   injectFailure = UtxowFailure

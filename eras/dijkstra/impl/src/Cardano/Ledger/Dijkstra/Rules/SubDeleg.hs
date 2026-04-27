@@ -30,12 +30,14 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDelegPredFailure,
   conwayDelegTransition,
  )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBDELEG,
  )
 import Cardano.Ledger.Dijkstra.State
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -57,6 +59,9 @@ type instance EraRuleFailure "SUBDELEG" DijkstraEra = DijkstraSubDelegPredFailur
 
 type instance EraRuleEvent "SUBDELEG" DijkstraEra = VoidEraRule "SUBDELEG" DijkstraEra
 
+instance InjectRuleFailure "SUBDELEG" Shelley.AccountAlreadyRegistered DijkstraEra where
+  injectFailure = DijkstraSubDelegPredFailure . Conway.DelegAccountAlreadyRegistered
+
 instance InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure DijkstraEra where
@@ -67,6 +72,7 @@ instance
   , ConwayEraCertState era
   , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
   , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" Shelley.AccountAlreadyRegistered era
   ) =>
   STS (DijkstraSUBDELEG era)
   where

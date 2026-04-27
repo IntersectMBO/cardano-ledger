@@ -82,6 +82,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPoolPredFailure,
   epochFromSlot,
  )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -211,6 +212,7 @@ instance
   , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBDELEG" Shelley.AccountAlreadyRegistered era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   STS (DijkstraSUBLEDGER era)
@@ -248,6 +250,7 @@ dijkstraSubLedgersTransition ::
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
   , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" Shelley.AccountAlreadyRegistered era
   , STS (EraRule "SUBLEDGER" era)
   , TxCert era ~ DijkstraTxCert era
   ) =>

@@ -31,6 +31,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDelegPredFailure (..),
   PredicateFailure,
  )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Dijkstra (ApplyTxError, DijkstraEra)
@@ -125,7 +126,7 @@ instance InjectRuleFailure "CERT" ShelleyDelegPredFailure DijkstraEra where
   injectFailure = DelegFailure . injectFailure
 
 instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure DijkstraEra where
-  injectFailure (Shelley.StakeKeyAlreadyRegisteredDELEG c) = StakeKeyRegisteredDELEG c
+  injectFailure (Shelley.DelegAccountAlreadyRegistered c) = Conway.DelegAccountAlreadyRegistered c
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = StakeKeyNotRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = StakeKeyHasNonZeroAccountBalanceDELEG c
   injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into DijkstraEra"

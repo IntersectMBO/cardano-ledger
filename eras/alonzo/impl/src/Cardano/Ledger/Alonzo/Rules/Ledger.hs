@@ -30,11 +30,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (
+  AccountAlreadyRegistered,
   DelegsEnv (..),
   ShelleyDELEGS,
   ShelleyDelegPredFailure,
   ShelleyDelegsEvent,
-  ShelleyDelegsPredFailure,
+  ShelleyDelegsPredFailure (..),
   ShelleyDelplPredFailure (..),
   ShelleyLEDGERS,
   ShelleyPoolPredFailure,
@@ -70,6 +71,9 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
 
 type instance EraRuleFailure "LEDGER" AlonzoEra = ShelleyLedgerPredFailure AlonzoEra
+
+instance InjectRuleFailure "LEDGER" AccountAlreadyRegistered AlonzoEra where
+  injectFailure = DelegsFailure . DelplFailure . DelegFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure AlonzoEra
 

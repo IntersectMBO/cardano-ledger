@@ -8,9 +8,13 @@ module Cardano.Ledger.Babbage.Rules.Deleg () where
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
+  AccountAlreadyRegistered,
+  ShelleyDelegPredFailure (..),
  )
 
 type instance EraRuleFailure "DELEG" BabbageEra = ShelleyDelegPredFailure BabbageEra
 
 instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure BabbageEra
+
+instance InjectRuleFailure "DELEG" AccountAlreadyRegistered BabbageEra where
+  injectFailure = DelegAccountAlreadyRegistered
