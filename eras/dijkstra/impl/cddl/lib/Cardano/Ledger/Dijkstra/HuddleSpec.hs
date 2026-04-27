@@ -873,6 +873,7 @@ instance HuddleRule "block" DijkstraEra where
                     ==> huddleRule @"auxiliary_data" p
                 ]
           , "invalid_transactions" ==> arr [0 <+ a (huddleRule @"transaction_index" p)]
+          , "peras_cert" ==> (huddleRule @"peras_cert" p)
           ]
 
 instance HuddleRule "auxiliary_scripts" DijkstraEra where
@@ -1019,3 +1020,6 @@ instance HuddleRule1 "multiasset" DijkstraEra where
 
 instance HuddleRule "metadatum" DijkstraEra where
   huddleRuleNamed = allegraMetadatumRule
+
+instance HuddleRule "peras_cert" DijkstraEra where
+  huddleRuleNamed pname _ = pname =.= VBytes / VNil

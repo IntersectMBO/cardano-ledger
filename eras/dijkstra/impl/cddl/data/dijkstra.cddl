@@ -11,6 +11,7 @@ block =
   , transaction_witness_sets : [* transaction_witness_set]            
   , auxiliary_data_set       : {* transaction_index => auxiliary_data}
   , invalid_transactions     : [* transaction_index]                  
+  , peras_cert               : peras_cert                                 
   ]
 
 
@@ -784,4 +785,6 @@ auxiliary_data_map =
 
 
 transaction_index = uint .size 2
+
+peras_cert = bytes/ nil
 
