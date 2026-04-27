@@ -44,7 +44,6 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR,
   EncCBORGroup (..),
-  decodeListLen,
   encCBOR,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
@@ -58,10 +57,10 @@ import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
-import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Short (ShortByteString)
 import Data.Coerce (coerce)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (
@@ -252,7 +251,7 @@ instance
   DecCBOR (Annotator (DijkstraBlockBody era))
   where
   decCBOR = do
-    len <- decodeListLen
+    _ <- decodeListLen
 
     (bodies, bodiesAnn) <- withSlice decCBOR
     (wits, witsAnn) <- withSlice decCBOR
@@ -284,16 +283,17 @@ instance
             StrictSeq.forceToStrict $
               Seq.zipWith4 dijkstraSegwitTx bodies wits validFlags auxData
 
-    (mbPerasCert, mbPerasCertAnn) <-
-      case len of
-        4 -> return (pure SNothing, pure Nothing)
-        5 -> bimap (pure . SJust) (fmap Just) <$> withSlice decCBOR
-        _ -> fail $ "unexpected body length: " <> show len
+    (mbPerasCert, mbPerasCertAnn) <- do
+      mbPerasCert :: (Maybe PerasCert, Annotator BSL.ByteString) <-
+        withSlice decCBOR
+      case mbPerasCert of
+        (Nothing, _) -> pure (SNothing, pure Nothing)
+        (Just cert, certAnn) -> pure (SJust cert, Just <$> certAnn)
 
-    pure $
+    pure $!
       DijkstraBlockBodyInternal
         <$> txns
-        <*> mbPerasCert
+        <*> (pure mbPerasCert)
         <*> ( hashDijkstraSegWits
                 <$> bodiesAnn
                 <*> witsAnn
@@ -362,20 +362,24 @@ dijkstraSegwitTx txBodyAnn txWitsAnn txIsValid txAuxDataAnn = Annotator $ \bytes
 
 -- | Placeholder for Peras certificates
 --
--- NOTE: The real type will be brought from 'cardano-base' once it's ready.
-data PerasCert = PerasCert
+-- NOTE: We keep a placeholder implementation for now, to allow concrete implementation
+-- and validation to be done in consensus. As it would allow to optimise development
+-- workflow, as otherwise all PRs may require an effort of 3 teams. The ultimate goal however
+-- is to keep real implementation in this module as soon as it settles down (or move that to
+-- cardano-base if it is more appropriate).
+newtype PerasCert = PerasCert ShortByteString
   deriving (Eq, Show, Generic, NoThunks)
 
 instance NFData PerasCert
 
 instance EncCBOR PerasCert where
-  encCBOR PerasCert =
-    encCBOR ()
+  encCBOR (PerasCert bs) =
+    encCBOR bs
 
 instance DecCBOR PerasCert where
   decCBOR = do
-    () <- decCBOR
-    pure PerasCert
+    bs <- decCBOR
+    pure (PerasCert bs)
 
 -- | Placeholder for Peras public keys
 --
