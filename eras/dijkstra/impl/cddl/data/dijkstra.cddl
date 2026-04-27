@@ -89,11 +89,15 @@ major_protocol_version = 0 .. 13
 
 ; Note that every transaction_index must be strictly smaller than the length of transaction_bodies
 block_body = 
-  [ invalid_transactions : [* transaction_index]
+  [ invalid_transactions : invalid_transactions/ nil
   , transactions      : [* transaction]
   , peras_certificate : peras_certificate  
   ]
 
+
+invalid_transactions = nonempty_set<transaction_index>
+
+nonempty_set<a0> = #6.258([+ a0])/ [+ a0]
 
 transaction_index = uint .size 2
 
@@ -501,8 +505,6 @@ positive_int64 = 1 .. max_int64
 ; therefore there is no way to override this behavior by providing a custom
 ; representation for empty redeemers.
 script_data_hash = hash32
-
-nonempty_set<a0> = #6.258([+ a0])/ [+ a0]
 
 guards = nonempty_set<addr_keyhash>/ nonempty_oset<credential>
 

@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -39,11 +38,13 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
 ) where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
+import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..), maybeToStrictMaybe)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
   EncCBOR,
+  decodeNonEmptySetLikeEnforceNoDuplicates,
+  decodeNullMaybe,
   decodeNullStrictMaybe,
   decodeRecordNamed,
   encCBOR,
@@ -68,11 +69,14 @@ import Cardano.Ledger.MemoBytes (
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_, unless)
 import qualified Data.ByteString as BS
+import Data.Foldable (Foldable (..))
+import Data.IntSet (IntSet)
 import qualified Data.IntSet as IntSet
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set.NonEmpty as NonEmptySet
 import Data.Typeable (Typeable)
 import Data.Word (Word16)
 import GHC.Generics (Generic)
@@ -165,12 +169,13 @@ instance
   where
   encCBOR (DijkstraBlockBodyRaw txs perasCert) =
     encodeListLen 3
-      <> encCBOR invalidIndices
+      <> encodeNullStrictMaybe encCBOR invalidIndices
       <> encCBOR txs
       <> encodeNullStrictMaybe encCBOR perasCert
     where
       invalidIndices =
-        StrictSeq.findIndicesL (\tx -> tx ^. isValidTxL == IsValid False) txs
+        maybeToStrictMaybe . NonEmptySet.fromFoldable $
+          StrictSeq.findIndicesL (\tx -> tx ^. isValidTxL == IsValid False) txs
 
 instance
   ( AlonzoEraTx era
@@ -181,17 +186,23 @@ instance
   DecCBOR (Annotator (DijkstraBlockBodyRaw era))
   where
   decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
-    invalidTxs :: [Word16] <- decCBOR
+    let
+      decodeInvalidTxs =
+        decodeNonEmptySetLikeEnforceNoDuplicates
+          (IntSet.insert . fromIntegral @Word16 @Int)
+          (\x -> (IntSet.size x, x))
+          (decCBOR @Word16)
+    invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
     txs <- decCBOR
     perasCert <- decodeNullStrictMaybe decCBOR
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x < txsLength
-    forM_ invalidTxs $ \i ->
-      unless (inRange $ fromIntegral @Word16 @Int i) . fail $
+    forM_ (IntSet.toList invalidTxs) $ \i ->
+      unless (inRange i) . fail $
         "index is out of range: " <> show i
     let
       setValidityFlag tx isValid = set isValidTxL isValid <$> tx
-      validityFlags = alignedValidFlags txsLength (fromIntegral <$> invalidTxs)
+      validityFlags = alignedValidFlags txsLength invalidTxs
       txsWithIsValid = Seq.zipWith setValidityFlag txs validityFlags
     pure $
       DijkstraBlockBodyRaw
@@ -215,12 +226,9 @@ deriving via
 -- | Given the number of transactions, and the set of indices for which these
 -- transactions do not validate, create an aligned sequence of `IsValid`
 -- flags.
-alignedValidFlags :: Int -> [Int] -> Seq.Seq IsValid
-alignedValidFlags n idxs =
-  Seq.fromFunction n $ \i ->
-    IsValid (i `IntSet.notMember` invalidSet)
-  where
-    invalidSet = IntSet.fromList idxs
+alignedValidFlags :: Int -> IntSet -> Seq.Seq IsValid
+alignedValidFlags n invalidSet =
+  Seq.fromFunction n $ \i -> IsValid (i `IntSet.notMember` invalidSet)
 
 -- | Placeholder for Peras certificates
 --

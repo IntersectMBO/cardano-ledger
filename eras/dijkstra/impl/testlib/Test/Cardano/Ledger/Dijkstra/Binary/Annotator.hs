@@ -33,13 +33,17 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Cardano.Ledger.Val (Val (..))
-import Control.Monad (unless)
+import Control.Monad (forM_, unless)
+import Data.Foldable (Foldable (..))
+import Data.IntSet (IntSet)
+import qualified Data.IntSet as IntSet
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
+import Data.Word (Word16)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 
@@ -212,18 +216,21 @@ deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)
 
 instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
   decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
-    invalidTxs <- decCBOR
+    let
+      decodeInvalidTxs =
+        decodeNonEmptySetLikeEnforceNoDuplicates
+          (IntSet.insert . fromIntegral @Word16 @Int)
+          (\x -> (IntSet.size x, x))
+          (decCBOR @Word16)
+    invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
     txs <- decCBOR
     perasCert <- decodeNullStrictMaybe decCBOR
 
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x <= txsLength - 1
-    unless (all inRange invalidTxs) $
-      fail $
-        "Some IsValid index is not in the range: 0 .. "
-          ++ show (txsLength - 1)
-          ++ ", "
-          ++ show invalidTxs
+    forM_ (IntSet.toList invalidTxs) $ \i ->
+      unless (inRange i) . fail $
+        "index is out of range: " <> show i
     let
       setValidityFlag tx isValid = tx & isValidTxL .~ isValid
       validityFlags = alignedValidFlags txsLength invalidTxs

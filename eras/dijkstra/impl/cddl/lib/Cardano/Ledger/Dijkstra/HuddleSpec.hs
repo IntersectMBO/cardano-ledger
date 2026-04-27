@@ -873,6 +873,9 @@ instance HuddleRule "block" DijkstraEra where
 instance HuddleRule "peras_certificate" DijkstraEra where
   huddleRuleNamed pname _era = pname =.= VBytes / VNil
 
+instance HuddleRule "invalid_transactions" DijkstraEra where
+  huddleRuleNamed pname era = pname =.= huddleRule1 @"nonempty_set" era (huddleRule @"transaction_index" era)
+
 instance HuddleRule "block_body" DijkstraEra where
   huddleRuleNamed pname era =
     comment
@@ -881,7 +884,7 @@ instance HuddleRule "block_body" DijkstraEra where
       $ withCBORGen blockBodyGen
       $ pname
         =.= arr
-          [ "invalid_transactions" ==> arr [0 <+ a (huddleRule @"transaction_index" era)]
+          [ "invalid_transactions" ==> huddleRule @"invalid_transactions" era / VNil
           , "transactions" ==> arr [0 <+ a (huddleRule @"transaction" era)]
           , "peras_certificate" ==> huddleRule @"peras_certificate" era
           ]
