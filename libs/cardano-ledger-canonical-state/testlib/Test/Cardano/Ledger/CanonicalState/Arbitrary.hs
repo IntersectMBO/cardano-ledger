@@ -60,5 +60,8 @@ instance Arbitrary EntitiesStakePools.V0.CanonicalStakePoolState where
 instance Arbitrary EntitiesStakePools.V0.CanonicalStakePool where
   arbitrary = genericArbitraryU
 
+instance Arbitrary EntitiesStakePools.V0.CanonicalStakePoolParams where
+  arbitrary = genericArbitraryU
+
 instance Arbitrary EntitiesStakePools.V0.EntitiesStakePoolsOut where
   arbitrary = genericArbitraryU

@@ -27,9 +27,11 @@ import qualified Cardano.Ledger.CanonicalState.Namespace.GovProposals.V0 as GovP
 import qualified Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 as UTxO.V0
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (
+  AccountAddress,
   AccountId,
   KeyHash,
   PParams,
+  StakePool,
   StakePoolVRF,
   Staking,
   VRFVerKeyHash,
@@ -75,6 +77,25 @@ spec = do
       validateType @"entities/stake_pools/v0" @AccountId "account_id"
       isCanonical @"entities/stake_pools/v0" @(Credential Staking)
       validateType @"entities/stake_pools/v0" @(Credential Staking) "credential"
+      isCanonical @"entities/stake_pools/v0" @(KeyHash StakePool)
+      validateType @"entities/stake_pools/v0" @(KeyHash StakePool) "pool_keyhash"
+      isCanonical @"entities/stake_pools/v0" @(VRFVerKeyHash StakePoolVRF)
+      validateType @"entities/stake_pools/v0" @(VRFVerKeyHash StakePoolVRF) "vrf_keyhash"
+      isCanonical @"entities/stake_pools/v0" @UnitInterval
+      validateType @"entities/stake_pools/v0" @UnitInterval "unit_interval"
+      isCanonical @"entities/stake_pools/v0" @(KeyHash Staking)
+      validateType @"entities/stake_pools/v0" @(KeyHash Staking) "staking_keyhash"
+      isCanonical @"entities/stake_pools/v0" @StakePoolRelay
+      validateType @"entities/stake_pools/v0" @StakePoolRelay "relay"
+      isCanonical @"entities/stake_pools/v0" @PoolMetadata
+      validateType @"entities/stake_pools/v0" @PoolMetadata "pool_metadata"
+      isCanonical @"entities/stake_pools/v0" @AccountAddress
+      validateType @"entities/stake_pools/v0" @AccountAddress "address"
+      isCanonical @"entities/stake_pools/v0"
+        @EntitiesStakePools.V0.CanonicalStakePoolParams
+      validateType @"entities/stake_pools/v0"
+        @EntitiesStakePools.V0.CanonicalStakePoolParams
+        "stake_pool_params"
       isCanonical @"entities/stake_pools/v0" @EntitiesStakePools.V0.CanonicalStakePoolState
       validateType @"entities/stake_pools/v0" @EntitiesStakePools.V0.CanonicalStakePoolState
         "stake_pool_state"
