@@ -78,6 +78,7 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import Data.Word (Word32)
 
 data ShelleyBbodyState era
   = BbodyState !(State (EraRule "LEDGERS" era)) !BlocksMade
