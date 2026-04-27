@@ -24,6 +24,7 @@ import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..))
 import Cardano.Ledger.Dijkstra.State (UTxO (..))
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Plutus (Language (..), SLanguage (..))
+import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Common
@@ -121,9 +122,9 @@ spec = describe "TxInfo" $ do
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
         pure $
           txInfoResult `shouldBeLeft` inject (DirectDepositsNotSupported @era dd)
-      prop "AccountBalanceIntervalsNotSupported" $ do
-        abi <- arbitrary `suchThat` (not . null . unAccountBalanceIntervals)
+      prop "AccountBalanceIntervalsNotSupported" $ \neAccountBalanceIntervals ->
         let
+          abi = AccountBalanceIntervals $ NEM.toMap neAccountBalanceIntervals
           tx =
             mkBasicTx @era @TopTx $
               mkBasicTxBody & accountBalanceIntervalsTxBodyL .~ abi
@@ -139,5 +140,5 @@ spec = describe "TxInfo" $ do
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
-        pure $
+         in
           txInfoResult `shouldBeLeft` inject (AccountBalanceIntervalsNotSupported @era abi)

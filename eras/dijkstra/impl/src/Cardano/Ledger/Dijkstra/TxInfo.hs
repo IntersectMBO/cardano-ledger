@@ -96,11 +96,11 @@ data DijkstraContextError era
     SubTxContextError TxId (ContextError era)
   | PointerPresentInOutput (NonEmpty (TxOut era))
   | -- | Attempt to use PlutusV1-V3 in a sub-transaction will result in this failure
-    SubTxIsNotSupported !TxId
+    SubTxIsNotSupported TxId
   | -- | Attempt to use PlutusV1-V3 with non-empty direct deposits will result in this failure
-    DirectDepositsNotSupported !DirectDeposits
+    DirectDepositsNotSupported DirectDeposits
   | -- | Attempt to use PlutusV1-V3 with non-empty account balance intervals will result in this failure
-    AccountBalanceIntervalsNotSupported !(AccountBalanceIntervals era)
+    AccountBalanceIntervalsNotSupported (AccountBalanceIntervals era)
   deriving (Generic)
 
 deriving instance
