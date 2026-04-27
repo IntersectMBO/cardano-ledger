@@ -105,7 +105,7 @@ instance EraBlockBody DijkstraEra where
   mkBasicBlockBody = mkBasicBlockBodyDijkstra
   txSeqBlockBodyL = lensMemoRawType @DijkstraEra dbbrTxs (\bb p -> bb {dbbrTxs = p})
   hashBlockBody (MkDijkstraBlockBody m) = extractHash $ getMemoBytesHash m
-  numSegComponents = 5
+  numSegComponents = 1
   blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBOR
 
 mkBasicBlockBodyDijkstra :: forall era. AlonzoEraTx era => DijkstraBlockBody era
