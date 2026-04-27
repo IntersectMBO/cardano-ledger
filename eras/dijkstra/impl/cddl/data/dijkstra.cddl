@@ -1,10 +1,5 @@
 ; This file was auto-generated using generate-cddl. Please do not modify it directly!
 
-; Valid blocks must also satisfy the following two constraints:
-;   1) the length of transaction_bodies and transaction_witness_sets must be
-;      the same
-;   2) every transaction_index must be strictly smaller than the length of
-;      transaction_bodies
 block = [header, block_body]
 
 transaction = 
@@ -92,6 +87,7 @@ protocol_version = [major_protocol_version, uint .size 4]
 
 major_protocol_version = 0 .. 13
 
+; Note that every transaction_index must be strictly smaller than the length of transaction_bodies
 block_body = 
   [ invalid_transactions : [* transaction_index]
   , transactions      : [* transaction]

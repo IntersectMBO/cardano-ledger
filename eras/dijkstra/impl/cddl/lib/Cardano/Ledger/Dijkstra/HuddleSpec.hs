@@ -864,26 +864,22 @@ instance HuddleRule "header" DijkstraEra where
 
 instance HuddleRule "block" DijkstraEra where
   huddleRuleNamed pname p =
-    comment
-      [str|Valid blocks must also satisfy the following two constraints:
-          |  1) the length of transaction_bodies and transaction_witness_sets must be
-          |     the same
-          |  2) every transaction_index must be strictly smaller than the length of
-          |     transaction_bodies
-          |]
-      $ pname
-        =.= arr
-          [ a $ huddleRule @"header" p
-          , a $ huddleRule @"block_body" p
-          ]
+    pname
+      =.= arr
+        [ a $ huddleRule @"header" p
+        , a $ huddleRule @"block_body" p
+        ]
 
 instance HuddleRule "peras_certificate" DijkstraEra where
   huddleRuleNamed pname _era = pname =.= VBytes / VNil
 
 instance HuddleRule "block_body" DijkstraEra where
   huddleRuleNamed pname era =
-    withCBORGen blockBodyGen $
-      pname
+    comment
+      [str|Note that every transaction_index must be strictly smaller than the length of transaction_bodies
+          |]
+      $ withCBORGen blockBodyGen
+      $ pname
         =.= arr
           [ "invalid_transactions" ==> arr [0 <+ a (huddleRule @"transaction_index" era)]
           , "transactions" ==> arr [0 <+ a (huddleRule @"transaction" era)]
