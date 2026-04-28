@@ -20,9 +20,12 @@ import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
 import Cardano.Ledger.BaseTypes (Globals (..), Inject (..), Network (..), ProtVer (..))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..))
 import Cardano.Ledger.Dijkstra.State (UTxO (..))
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Plutus (Language (..), SLanguage (..))
+import qualified Data.Map.NonEmpty as NEM
+import qualified Data.Map.Strict as Map
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
@@ -35,7 +38,7 @@ spec ::
   , EraPlutusTxInfo PlutusV3 era
   , EraPlutusTxInfo PlutusV4 era
   , Inject (DijkstraContextError era) (ContextError era)
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , EraTx era
   , Arbitrary (Value era)
   ) =>
@@ -97,3 +100,45 @@ spec = describe "TxInfo" $ do
             ($ SpendingPurpose AsPurpose)
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
         txInfoResult `shouldBeLeft` inject (SubTxIsNotSupported @era (txIdTx tx))
+      prop "DirectDepositsNotSupported" $ do
+        accountAddr <- arbitrary
+        coin <- arbitrary
+        let
+          dd = DirectDeposits (Map.singleton accountAddr coin)
+          tx =
+            mkBasicTx @era @TopTx $
+              mkBasicTxBody & directDepositsTxBodyL .~ dd
+          ledgerTxInfo =
+            LedgerTxInfo
+              { ltiProtVer = ProtVer (eraProtVerLow @era) 0
+              , ltiEpochInfo = epochInfo testGlobals
+              , ltiSystemStart = systemStart testGlobals
+              , ltiUTxO = mempty
+              , ltiTx = tx
+              , ltiMemoizedSubTransactions = mempty
+              }
+          txInfoResult =
+            ($ SpendingPurpose AsPurpose)
+              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+        pure $
+          txInfoResult `shouldBeLeft` inject (DirectDepositsNotSupported @era dd)
+      prop "AccountBalanceIntervalsNotSupported" $ \neAccountBalanceIntervals ->
+        let
+          abi = AccountBalanceIntervals $ NEM.toMap neAccountBalanceIntervals
+          tx =
+            mkBasicTx @era @TopTx $
+              mkBasicTxBody & accountBalanceIntervalsTxBodyL .~ abi
+          ledgerTxInfo =
+            LedgerTxInfo
+              { ltiProtVer = ProtVer (eraProtVerLow @era) 0
+              , ltiEpochInfo = epochInfo testGlobals
+              , ltiSystemStart = systemStart testGlobals
+              , ltiUTxO = mempty
+              , ltiTx = tx
+              , ltiMemoizedSubTransactions = mempty
+              }
+          txInfoResult =
+            ($ SpendingPurpose AsPurpose)
+              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+         in
+          txInfoResult `shouldBeLeft` inject (AccountBalanceIntervalsNotSupported @era abi)

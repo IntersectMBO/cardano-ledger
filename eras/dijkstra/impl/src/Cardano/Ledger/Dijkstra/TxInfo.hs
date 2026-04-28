@@ -18,6 +18,7 @@
 
 module Cardano.Ledger.Dijkstra.TxInfo (
   DijkstraContextError (..),
+  guardDijkstraFeaturesForPlutusV1toV3,
   transFailSubTxIsNotSupported,
 ) where
 
@@ -49,6 +50,7 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (
+  AccountBalanceIntervals (..),
   PlutusScript (..),
   pattern GuardingPurpose,
  )
@@ -73,7 +75,7 @@ import Cardano.Ledger.State (StakePoolParams (..))
 import Cardano.Ledger.TxIn (TxId)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
-import Control.Monad (forM, zipWithM)
+import Control.Monad (forM, unless, zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
@@ -95,6 +97,10 @@ data DijkstraContextError era
   | PointerPresentInOutput (NonEmpty (TxOut era))
   | -- | Attempt to use PlutusV1-V3 in a sub-transaction will result in this failure
     SubTxIsNotSupported TxId
+  | -- | Attempt to use PlutusV1-V3 with non-empty direct deposits will result in this failure
+    DirectDepositsNotSupported DirectDeposits
+  | -- | Attempt to use PlutusV1-V3 with non-empty account balance intervals will result in this failure
+    AccountBalanceIntervalsNotSupported (AccountBalanceIntervals era)
   deriving (Generic)
 
 deriving instance
@@ -141,6 +147,10 @@ instance
         ]
     PointerPresentInOutput x -> kindObject "PointerPresentInOutput" ["txOut" .= toJSON x]
     SubTxIsNotSupported txId -> kindObject "SubTxIsNotSupported" ["txId" .= toJSON txId]
+    DirectDepositsNotSupported dd ->
+      kindObject "DirectDepositsNotSupported" ["direct_deposits" .= show dd]
+    AccountBalanceIntervalsNotSupported abi ->
+      kindObject "AccountBalanceIntervalsNotSupported" ["account_balance_intervals" .= show abi]
 
 instance
   ( EraPParams era
@@ -157,6 +167,8 @@ instance
     17 -> SumD SubTxContextError <! From <! From
     18 -> SumD PointerPresentInOutput <! From
     19 -> SumD SubTxIsNotSupported <! From
+    20 -> SumD DirectDepositsNotSupported <! From
+    21 -> SumD AccountBalanceIntervalsNotSupported <! From
     k -> Invalid k
 
 instance
@@ -175,6 +187,8 @@ instance
       SubTxContextError txId subTxError -> Sum SubTxContextError 17 !> To txId !> To subTxError
       PointerPresentInOutput x -> Sum PointerPresentInOutput 18 !> To x
       SubTxIsNotSupported txId -> Sum SubTxIsNotSupported 19 !> To txId
+      DirectDepositsNotSupported dd -> Sum DirectDepositsNotSupported 20 !> To dd
+      AccountBalanceIntervalsNotSupported abi -> Sum AccountBalanceIntervalsNotSupported 21 !> To abi
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
@@ -228,6 +242,7 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
     flip (withBothTxLevels ltiTx) transFailSubTxIsNotSupported $ \tx -> PlutusTxInfoResult $ do
       let txBody = tx ^. bodyTxL
       Conway.guardConwayFeaturesForPlutusV1V2 tx
+      guardDijkstraFeaturesForPlutusV1toV3 tx
       timeRange <- Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputs <- mapM (Conway.transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
       mapM_ (Conway.transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
@@ -289,6 +304,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
     flip (withBothTxLevels ltiTx) transFailSubTxIsNotSupported $ \tx -> PlutusTxInfoResult $ do
       let txBody = tx ^. bodyTxL
       Conway.guardConwayFeaturesForPlutusV1V2 tx
+      guardDijkstraFeaturesForPlutusV1toV3 tx
       timeRange <-
         Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
@@ -334,6 +350,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
         txBody = tx ^. bodyTxL
         txInputs = txBody ^. inputsTxBodyL
         refInputs = txBody ^. referenceInputsTxBodyL
+      guardDijkstraFeaturesForPlutusV1toV3 tx
       timeRange <-
         Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList txInputs)
@@ -377,6 +394,25 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusArgs = Conway.toPlutusV3Args
 
   toPlutusTxInInfo _ = transTxInInfoV3
+
+guardDijkstraFeaturesForPlutusV1toV3 ::
+  forall era l.
+  ( EraTx era
+  , DijkstraEraTxBody era
+  , Inject (DijkstraContextError era) (ContextError era)
+  ) =>
+  Tx l era ->
+  Either (ContextError era) ()
+guardDijkstraFeaturesForPlutusV1toV3 tx = do
+  let txBody = tx ^. bodyTxL
+      directDeposits = txBody ^. directDepositsTxBodyL
+  unless (null $ unDirectDeposits directDeposits) $
+    Left $
+      inject (DirectDepositsNotSupported directDeposits :: DijkstraContextError era)
+  let accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
+  unless (null $ unAccountBalanceIntervals accountBalanceIntervals) $
+    Left $
+      inject (AccountBalanceIntervalsNotSupported accountBalanceIntervals :: DijkstraContextError era)
 
 transFailSubTxIsNotSupported ::
   forall l era.
