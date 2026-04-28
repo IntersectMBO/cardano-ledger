@@ -29,7 +29,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
 
     - name: Check nix hashes
       run: cleret nix hashes -vp
