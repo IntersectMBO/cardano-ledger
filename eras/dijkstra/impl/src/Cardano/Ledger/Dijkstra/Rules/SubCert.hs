@@ -37,7 +37,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDelegEnv (..),
   ConwayDelegPredFailure,
   ConwayGovCertEnv (..),
-  ConwayGovCertPredFailure,
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
@@ -52,7 +51,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
 import Cardano.Ledger.Dijkstra.TxCert
-import Cardano.Ledger.Shelley.Rules (PoolEnv (..), PoolEvent, ShelleyPoolPredFailure)
+import Cardano.Ledger.Shelley.Rules (PoolEnv (..), ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.Void (absurd)
@@ -195,12 +194,8 @@ dijkstraSubCertTransition = do
         TRC (ConwayGovCertEnv pp currentEpoch committee committeeProposals, certState, govCert)
 
 instance
-  ( ConwayEraGov era
-  , ConwayEraCertState era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
-  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
-  , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
+  ( STS (DijkstraSUBDELEG era)
+  , PredicateFailure (EraRule "SUBDELEG" era) ~ DijkstraSubDelegPredFailure era
   ) =>
   Embed (DijkstraSUBDELEG era) (DijkstraSUBCERT era)
   where
@@ -208,13 +203,9 @@ instance
   wrapEvent = absurd
 
 instance
-  ( ConwayEraGov era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
-  , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
-  , InjectRuleEvent "SUBPOOL" PoolEvent era
-  , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
-  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
+  ( STS (DijkstraSUBPOOL era)
+  , PredicateFailure (EraRule "SUBPOOL" era) ~ DijkstraSubPoolPredFailure era
+  , Event (EraRule "SUBPOOL" era) ~ DijkstraSubPoolEvent era
   ) =>
   Embed (DijkstraSUBPOOL era) (DijkstraSUBCERT era)
   where
@@ -222,13 +213,9 @@ instance
   wrapEvent = SubPoolEvent
 
 instance
-  ( ConwayEraGov era
-  , ConwayEraPParams era
-  , ConwayEraCertState era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
-  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
-  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
+  ( Era era
+  , STS (DijkstraSUBGOVCERT era)
+  , PredicateFailure (EraRule "SUBGOVCERT" era) ~ DijkstraSubGovCertPredFailure era
   ) =>
   Embed (DijkstraSUBGOVCERT era) (DijkstraSUBCERT era)
   where

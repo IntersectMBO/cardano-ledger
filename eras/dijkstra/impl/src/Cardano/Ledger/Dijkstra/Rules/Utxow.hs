@@ -379,13 +379,9 @@ instance
   initialRules = []
 
 instance
-  ( Era era
-  , STS (DijkstraUTXO era)
+  ( STS (DijkstraUTXO era)
   , PredicateFailure (EraRule "UTXO" era) ~ DijkstraUtxoPredFailure era
   , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
-  , BaseM (DijkstraUTXOW era) ~ ShelleyBase
-  , PredicateFailure (DijkstraUTXOW era) ~ DijkstraUtxowPredFailure era
-  , Event (DijkstraUTXOW era) ~ AlonzoUtxowEvent era
   ) =>
   Embed (DijkstraUTXO era) (DijkstraUTXOW era)
   where

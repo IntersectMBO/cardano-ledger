@@ -36,25 +36,15 @@ import Cardano.Ledger.Conway.Rules (
   CertEnv (..),
   ConwayCertPredFailure,
   ConwayCertsPredFailure (..),
-  ConwayDelegPredFailure,
-  ConwayGovCertPredFailure,
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBCERT,
   DijkstraSUBCERTS,
-  DijkstraSUBDELEG,
-  DijkstraSUBGOVCERT,
-  DijkstraSUBPOOL,
  )
 import Cardano.Ledger.Dijkstra.Rules.Cert ()
-import Cardano.Ledger.Dijkstra.Rules.SubCert (DijkstraSubCertPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
-import Cardano.Ledger.Dijkstra.TxCert
-import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPoolPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubCert (DijkstraSubCertEvent, DijkstraSubCertPredFailure)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import qualified Data.Map.Strict as Map
@@ -150,23 +140,9 @@ dijkstraSubCertsTransition = do
         TRC (CertEnv pp currentEpoch committee committeeProposals, certStateRest, txCert)
 
 instance
-  ( ConwayEraGov era
-  , ConwayEraCertState era
-  , ConwayEraPParams era
-  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
-  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
-  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
-  , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
-  , InjectRuleEvent "SUBPOOL" PoolEvent era
-  , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
-  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
-  , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
-  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
-  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
-  , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
-  , TxCert era ~ DijkstraTxCert era
+  ( STS (DijkstraSUBCERT era)
+  , PredicateFailure (EraRule "SUBCERT" era) ~ DijkstraSubCertPredFailure era
+  , Event (EraRule "SUBCERT" era) ~ DijkstraSubCertEvent era
   ) =>
   Embed (DijkstraSUBCERT era) (DijkstraSUBCERTS era)
   where
