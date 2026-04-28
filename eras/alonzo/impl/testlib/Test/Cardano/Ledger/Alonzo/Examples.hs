@@ -158,7 +158,6 @@ exampleAlonzoNewEpochState =
 exampleAlonzoBasedTopTx ::
   forall era.
   ( AlonzoEraTx era
-  , AlonzoEraTxAuxData era
   , EraPlutusTxInfo 'PlutusV1 era
   , Value era ~ MaryValue
   ) =>
@@ -170,7 +169,6 @@ exampleAlonzoBasedTopTx =
 exampleAlonzoBasedTx ::
   forall era l.
   ( AlonzoEraTx era
-  , AlonzoEraTxAuxData era
   , EraPlutusTxInfo 'PlutusV1 era
   , Value era ~ MaryValue
   , Typeable l
@@ -193,7 +191,6 @@ addAlonzoBasedTopTxFeatureExamples tx =
 addAlonzoBasedTxFeatureExamples ::
   forall era l.
   ( AlonzoEraTx era
-  , AlonzoEraTxAuxData era
   , EraPlutusTxInfo 'PlutusV1 era
   , Value era ~ MaryValue
   ) =>
