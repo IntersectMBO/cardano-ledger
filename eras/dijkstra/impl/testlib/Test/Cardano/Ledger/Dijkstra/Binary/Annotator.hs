@@ -34,6 +34,7 @@ import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad (forM_, unless)
+import Data.Coerce (coerce)
 import Data.Foldable (Foldable (..))
 import Data.IntSet (IntSet)
 import qualified Data.IntSet as IntSet
@@ -185,25 +186,7 @@ instance Era era => DecCBOR (DijkstraNativeScript era) where
 instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   decCBOR =
     withSTxBothLevels @l $ \case
-      STopTx ->
-        decodeListLen >>= \case
-          4 -> do
-            body <- decCBOR
-            wits <- decCBOR
-            isValid <-
-              decCBOR
-                >>= \case
-                  True -> pure (IsValid True)
-                  False -> fail "value `false` not allowed for `isValid`"
-            aux <- decodeNullStrictMaybe decCBOR
-            pure $ DijkstraTx body wits isValid aux
-          3 -> do
-            DijkstraTx
-              <$> decCBOR
-              <*> decCBOR
-              <*> pure (IsValid True)
-              <*> decodeNullStrictMaybe decCBOR
-          n -> fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
+      STopTx -> decDijkstraTopTxCBOR True
       SSubTx ->
         decode $
           RecD DijkstraSubTx
@@ -214,6 +197,32 @@ instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
 
 deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)
 
+decDijkstraTopTxCBOR ::
+  ( DecCBOR (TxBody TopTx era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  Bool -> Decoder s (DijkstraTx TopTx era)
+decDijkstraTopTxCBOR allowIsValid =
+  decodeListLen >>= \case
+    4 | allowIsValid -> do
+      body <- decCBOR
+      wits <- decCBOR
+      isValid <-
+        decCBOR
+          >>= \case
+            True -> pure (IsValid True)
+            False -> fail "value `false` not allowed for `isValid`"
+      aux <- decodeNullStrictMaybe decCBOR
+      pure $ DijkstraTx body wits isValid aux
+    3 -> do
+      DijkstraTx
+        <$> decCBOR
+        <*> decCBOR
+        <*> pure (IsValid True)
+        <*> decodeNullStrictMaybe decCBOR
+    n -> fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
+
 instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
   decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
     let
@@ -223,7 +232,7 @@ instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
           (\x -> (IntSet.size x, x))
           (decCBOR @Word16)
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
-    txs <- decCBOR
+    txs <- decodeSeq (decDijkstraTopTxCBOR @DijkstraEra False)
     perasCert <- decodeNullStrictMaybe decCBOR
 
     let txsLength = Seq.length txs
@@ -232,9 +241,8 @@ instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
       unless (inRange i) . fail $
         "index is out of range: " <> show i
     let
-      setValidityFlag tx isValid = tx & isValidTxL .~ isValid
       validityFlags = alignedValidFlags txsLength invalidTxs
-      txsWithIsValid = Seq.zipWith setValidityFlag txs validityFlags
+      txsWithIsValid = Seq.zipWith (set isValidTxL) validityFlags (coerce <$> txs)
     pure $ DijkstraBlockBodyRaw (StrictSeq.forceToStrict txsWithIsValid) perasCert
 
 instance DecCBOR (DijkstraBlockBody DijkstraEra) where

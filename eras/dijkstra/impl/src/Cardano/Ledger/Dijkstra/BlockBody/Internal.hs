@@ -47,6 +47,7 @@ import Cardano.Ledger.Binary (
   decodeNullMaybe,
   decodeNullStrictMaybe,
   decodeRecordNamed,
+  decodeSeq,
   encCBOR,
   encodeListLen,
   encodeNullStrictMaybe,
@@ -54,7 +55,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
-import Cardano.Ledger.Dijkstra.Tx ()
+import Cardano.Ledger.Dijkstra.Tx (DijkstraTx, Tx (..), decDijkstraTopTxCBORAnn)
 import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
@@ -69,6 +70,7 @@ import Cardano.Ledger.MemoBytes (
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_, unless)
 import qualified Data.ByteString as BS
+import Data.Coerce (Coercible, coerce)
 import Data.Foldable (Foldable (..))
 import Data.IntSet (IntSet)
 import qualified Data.IntSet as IntSet
@@ -182,6 +184,7 @@ instance
   , DecCBOR (Annotator (TxAuxData era))
   , DecCBOR (Annotator (TxBody TopTx era))
   , DecCBOR (Annotator (TxWits era))
+  , Coercible (DijkstraTx TopTx era) (Tx TopTx era)
   ) =>
   DecCBOR (Annotator (DijkstraBlockBodyRaw era))
   where
@@ -193,7 +196,7 @@ instance
           (\x -> (IntSet.size x, x))
           (decCBOR @Word16)
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
-    txs <- decCBOR
+    txs <- decodeSeq (decDijkstraTopTxCBORAnn @era False)
     perasCert <- decodeNullStrictMaybe decCBOR
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x < txsLength
@@ -203,7 +206,7 @@ instance
     let
       setValidityFlag tx isValid = set isValidTxL isValid <$> tx
       validityFlags = alignedValidFlags txsLength invalidTxs
-      txsWithIsValid = Seq.zipWith setValidityFlag txs validityFlags
+      txsWithIsValid = Seq.zipWith setValidityFlag (coerce txs) validityFlags
     pure $
       DijkstraBlockBodyRaw
         <$> sequenceA (StrictSeq.forceToStrict txsWithIsValid)
@@ -213,6 +216,7 @@ deriving via
   Mem (DijkstraBlockBodyRaw era)
   instance
     ( AlonzoEraTx era
+    , Coercible (DijkstraTx TopTx era) (Tx TopTx era)
     , DecCBOR (Annotator (TxAuxData era))
     , DecCBOR (Annotator (TxBody TopTx era))
     , DecCBOR (Annotator (TxWits era))
