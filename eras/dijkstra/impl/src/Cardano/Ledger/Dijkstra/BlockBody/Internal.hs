@@ -67,8 +67,10 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
   mkMemoizedEra,
  )
+import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_, unless)
+import Data.Array.Byte (ByteArray)
 import qualified Data.ByteString as BS
 import Data.Coerce (Coercible, coerce)
 import Data.Foldable (Foldable (..))
@@ -237,18 +239,13 @@ alignedValidFlags n invalidSet =
 -- | Placeholder for Peras certificates
 --
 -- NOTE: The real type will be brought from 'cardano-base' once it's ready.
-data PerasCert = PerasCert
-  deriving (Eq, Show, Generic, NoThunks)
+newtype PerasCert = PerasCert ByteArray
+  deriving (Eq, Show, Generic)
+  deriving newtype (EncCBOR, DecCBOR)
+
+instance NoThunks PerasCert
 
 instance NFData PerasCert
-
-instance EncCBOR PerasCert where
-  encCBOR PerasCert = encCBOR BS.empty
-
-instance DecCBOR PerasCert where
-  decCBOR = do
-    (_ :: BS.ByteString) <- decCBOR
-    pure PerasCert
 
 -- | Placeholder for Peras public keys
 --

@@ -291,7 +291,7 @@ instance
   arbitrary = genericArbitraryU
 
 instance Arbitrary PerasCert where
-  arbitrary = pure PerasCert
+  arbitrary = PerasCert <$> arbitrary
 
 instance
   ( EraBlockBody era
