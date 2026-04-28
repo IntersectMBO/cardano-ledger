@@ -377,7 +377,7 @@ jobs:
         path: failures
 
     - name: Generate summary
-      run: cleret failures render failures/*/failures.json -o "$GITHUB_STEP_SUMMARY"
+      run: cleret failures render $(find failures -name failures.json) -o "$GITHUB_STEP_SUMMARY"
 
   complete:
     name: Tests completed
