@@ -49,11 +49,9 @@ spec = do
       -- Value
       fullCddlSpec @(Value DijkstraEra) v "value"
       -- TxBody TopTx
-      xdescribe "fix TxBody" $ do
-        fullAnnCddlSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
+      fullAnnCddlSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
       -- TxBody SubTx
-      xdescribe "fix TxBody" $ do
-        fullAnnCddlSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
+      fullAnnCddlSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
       -- TxAuxData
       fullAnnCddlSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
       -- NativeScript
@@ -76,8 +74,7 @@ spec = do
       -- Redeemers
       fullAnnGenCddlSpec @(Redeemers DijkstraEra) genNonEmptyRedeemers v "redeemers"
       -- Tx
-      xdescribe "fix Transaction" $ do
-        fullAnnCddlSpec @(Tx TopTx DijkstraEra) v "transaction"
+      fullAnnCddlSpec @(Tx TopTx DijkstraEra) v "transaction"
       -- VotingProcedure
       fullCddlSpec @(VotingProcedure DijkstraEra) v "voting_procedure"
       -- ProposalProcedure

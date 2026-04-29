@@ -79,7 +79,7 @@ import Cardano.Ledger.Babbage.HuddleSpec hiding (
  )
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Huddle.Gen (
-  CBORGen (..),
+  CBORGen,
   MonadGen (choose, resize),
   Term (..),
   WrappedTerm (..),

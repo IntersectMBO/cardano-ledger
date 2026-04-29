@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -32,7 +33,24 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Huddle.Gen (
+  MonadGen (choose),
+  Term (..),
+  WrappedTerm (..),
+  genArrayTerm,
+  generateFromGRef,
+  liftAntiGen,
+  listOf,
+  oneof,
+  scale,
+  validateArrayTerm,
+  validateFromGRef,
+  validateUInt,
+  (|!),
+ )
 import Cardano.Ledger.Mary.HuddleSpec
+import Control.Monad (forM_)
+import Data.Foldable (traverse_)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Text.Heredoc
@@ -124,15 +142,60 @@ requiredSignersRule pname p = pname =.= huddleRule1 @"set" p (huddleRule @"addr_
 constr :: IsType0 a => Proxy "constr" -> a -> GRuleCall
 constr pname =
   binding $ \x ->
-    pname
-      =.= tag 121 (arr [0 <+ a x])
-      / tag 122 (arr [0 <+ a x])
-      / tag 123 (arr [0 <+ a x])
-      / tag 124 (arr [0 <+ a x])
-      / tag 125 (arr [0 <+ a x])
-      / tag 126 (arr [0 <+ a x])
-      / tag 127 (arr [0 <+ a x])
-      / tag 102 (arr [a VUInt, a $ arr [0 <+ a x]])
+    comment
+      [str|In reality the supported tags are 121..127, 1280..1400 and 101.
+          |We only list some of the possible tags here.
+          |]
+      . withCBORGen (generator x)
+      . withValidator (validator x)
+      $ pname
+        =.= tag 121 (arr [0 <+ a x])
+        / tag 122 (arr [0 <+ a x])
+        / tag 123 (arr [0 <+ a x])
+        / tag 124 (arr [0 <+ a x])
+        / tag 125 (arr [0 <+ a x])
+        / tag 126 (arr [0 <+ a x])
+        / tag 127 (arr [0 <+ a x])
+        / tag 1280 (arr [0 <+ a x])
+        / tag 1400 (arr [0 <+ a x])
+        / tag 101 (arr [a VUInt, a $ arr [0 <+ a x]])
+  where
+    generator ref = do
+      t <-
+        liftAntiGen $
+          oneof [choose (121, 127), choose (1280, 1400)]
+            |! oneof [choose (0, 120), choose (128, 1279), choose (1401, 0xffffffffffffffff)]
+      let
+        unwrapElems = traverse $ \case
+          S e -> pure e
+          _ -> error "Expected single term"
+      elems <-
+        scale (`div` 2) $
+          if t == 101
+            then do
+              uInt <- TInt <$> choose (0, 2 ^ (64 :: Int) - 1)
+              elems <- genArrayTerm =<< unwrapElems =<< listOf (generateFromGRef ref)
+              pure . S <$> genArrayTerm [uInt, elems]
+            else listOf $ generateFromGRef ref
+      singleElems <- unwrapElems elems
+      S . TTagged t <$> genArrayTerm singleElems
+    validator ref = \case
+      S (TTagged t term)
+        | t >= 121 && t <= 127 || t >= 1280 && t <= 1400 -> do
+            elems <- validateArrayTerm term
+            forM_ elems $ validateFromGRef ref
+        | t == 101 -> do
+            elems <- validateArrayTerm term
+            forM_ elems $ \e -> do
+              pair <- validateArrayTerm e
+              case pair of
+                [i, x] -> do
+                  _ <- validateUInt i
+                  inner <- validateArrayTerm x
+                  traverse_ (validateFromGRef ref) inner
+                _ -> fail "Expected a two-element list"
+        | otherwise -> fail $ "invalid tag: " <> show t
+      _ -> fail "expected a tag"
 
 instance HuddleGroup "operational_cert" AlonzoEra where
   huddleGroupNamed = shelleyOperationalCertGroup
