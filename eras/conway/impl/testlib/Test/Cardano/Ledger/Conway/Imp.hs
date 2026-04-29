@@ -60,7 +60,6 @@ conwayEraGenericSpec ::
   SpecWith (ImpInit (LedgerSpec era))
 conwayEraGenericSpec = do
   describe "BBODY" Bbody.spec
-  describe "CERTS" Certs.spec
   describe "DELEG" Deleg.spec
   describe "ENACT" Enact.spec
   describe "EPOCH" Epoch.spec
@@ -76,6 +75,7 @@ conwayEraGenericSpec = do
 conwayEraSpecificSpec :: SpecWith (ImpInit (LedgerSpec ConwayEra))
 conwayEraSpecificSpec = do
   describe "Conway era specific Imp spec" $ do
+    describe "CERTS" Certs.spec
     describe "UTXO" Utxo.conwayEraSpecificSpec
 
 instance EraSpecificSpec ConwayEra where

@@ -11,6 +11,7 @@ module Cardano.Ledger.Dijkstra.UTxO (
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
   scriptsProvidedDijkstraStAnnTx,
+  batchNonDistinctRefScriptsSize,
 ) where
 
 import Cardano.Ledger.Alonzo.UTxO (
@@ -32,6 +33,7 @@ import Cardano.Ledger.Conway.UTxO (
   getConwayMinFeeTxUtxo,
   getConwayScriptsNeeded,
   getConwayWitsVKeyNeeded,
+  txNonDistinctRefScriptsSize,
  )
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Core
@@ -44,6 +46,7 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
+import Data.Monoid (Sum (..))
 import qualified Data.OMap.Strict as OMap
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
@@ -191,3 +194,19 @@ dijkstraSubTxProducedValue pp isRegPoolId txBody =
   sumAllValue (txBody ^. outputsTxBodyL)
     <> inject (getTotalDepositsTxBody pp isRegPoolId txBody <> txBody ^. treasuryDonationTxBodyL)
     <> burnedMultiAssets txBody
+
+-- | Total size of reference scripts across a top-level transaction and all its subtransactions.
+batchNonDistinctRefScriptsSize ::
+  ( EraTx era
+  , DijkstraEraTxBody era
+  ) =>
+  UTxO era ->
+  Tx TopTx era ->
+  Int
+batchNonDistinctRefScriptsSize utxo tx =
+  txNonDistinctRefScriptsSize utxo tx
+    + getSum
+      ( foldMap'
+          (Sum . txNonDistinctRefScriptsSize utxo)
+          (tx ^. bodyTxL . subTransactionsTxBodyL)
+      )

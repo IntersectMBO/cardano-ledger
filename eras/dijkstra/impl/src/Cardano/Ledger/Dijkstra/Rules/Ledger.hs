@@ -53,6 +53,7 @@ import Cardano.Ledger.Conway.Governance (
   grCommitteeL,
   proposalsWithPurpose,
  )
+import Cardano.Ledger.Conway.PParams (ppMaxRefScriptSizePerTxG)
 import Cardano.Ledger.Conway.Rules (
   CertsEnv (..),
   ConwayCERTS,
@@ -69,7 +70,6 @@ import Cardano.Ledger.Conway.Rules (
   GovSignal (..),
   updateDormantDRepExpiries,
   updateVotingDRepExpiries,
-  validateRefScriptSize,
   validateTreasuryValue,
   validateWithdrawalsDelegated,
  )
@@ -86,10 +86,11 @@ import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
-import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxoEnv (..), DijkstraUtxowPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody
-import Cardano.Ledger.Rules.ValidationMode (runTest)
+import Cardano.Ledger.Dijkstra.UTxO (batchNonDistinctRefScriptsSize)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -106,26 +107,21 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
-  UtxoEnv (..),
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
   testIncompleteAndMissingWithdrawals,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
-import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
-import qualified Data.Map.Strict as Map
-import qualified Data.OMap.Strict as OMap
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
-import Data.Set.NonEmpty (NonEmptySet)
-import qualified Data.Set.NonEmpty as NES
+import Data.Word (Word32)
 import GHC.Generics (Generic (..))
 import Lens.Micro
+import Validation (failureUnless)
 
 data DijkstraLedgerPredFailure era
   = DijkstraUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
@@ -137,7 +133,6 @@ data DijkstraLedgerPredFailure era
   | DijkstraWithdrawalsMissingAccounts Withdrawals
   | DijkstraIncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   | DijkstraSubLedgersFailure (PredicateFailure (EraRule "SUBLEDGERS" era))
-  | DijkstraSpendingOutputFromSameTx (NonEmptyMap TxId (NonEmptySet TxIn))
   deriving (Generic)
 
 type instance EraRuleFailure "LEDGER" DijkstraEra = DijkstraLedgerPredFailure DijkstraEra
@@ -267,7 +262,6 @@ instance
       DijkstraWithdrawalsMissingAccounts w -> Sum DijkstraWithdrawalsMissingAccounts 7 !> To w
       DijkstraIncompleteWithdrawals w -> Sum DijkstraIncompleteWithdrawals 8 !> To w
       DijkstraSubLedgersFailure w -> Sum DijkstraSubLedgersFailure 9 !> To w
-      DijkstraSpendingOutputFromSameTx txIds -> Sum DijkstraSpendingOutputFromSameTx 10 !> To txIds
 
 instance
   ( Era era
@@ -288,7 +282,6 @@ instance
     7 -> SumD DijkstraWithdrawalsMissingAccounts <! From
     8 -> SumD DijkstraIncompleteWithdrawals <! From
     9 -> SumD DijkstraSubLedgersFailure <! From
-    10 -> SumD DijkstraSpendingOutputFromSameTx <! From
     n -> Invalid n
 
 data DijkstraLedgerEvent era
@@ -357,20 +350,23 @@ instance
 
   assertions = shelleyLedgerAssertions @era @DijkstraLEDGER
 
--- | A transaction should not be able to spend its own outputs.
--- Finds all spendable inputs in the entire transaction that are sub-transaction outputs (TxIds).
-spentSubTxOutputs ::
-  (EraTx era, DijkstraEraTxBody era) => Tx TopTx era -> Map.Map TxId (NonEmptySet TxIn)
-spentSubTxOutputs tx =
-  filterBadInputs subTxs <> filterBadInputs (Map.singleton (txIdTx tx) tx)
-  where
-    subTxs = OMap.toMap $ tx ^. bodyTxL . subTransactionsTxBodyL
-    subTxIds = Map.keysSet subTxs -- None of these should be present as a spendable input in the entire transaction
-    filterBadInputs :: EraTx era => Map.Map TxId (Tx l era) -> Map.Map TxId (NonEmptySet TxIn)
-    filterBadInputs = Map.mapMaybe $ \curTx -> do
-      let spendableInputs = curTx ^. bodyTxL . spendableInputsTxBodyF
-      NES.fromSet $
-        Set.filter (\(TxIn txId _) -> txId `Set.member` subTxIds) spendableInputs
+validateAllRefScriptSize ::
+  ( EraTx era
+  , DijkstraEraTxBody era
+  ) =>
+  PParams era ->
+  UTxO era ->
+  Tx TopTx era ->
+  Test (DijkstraLedgerPredFailure era)
+validateAllRefScriptSize pp utxo tx =
+  let totalRefScriptSize = batchNonDistinctRefScriptsSize utxo tx
+      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+   in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
+        DijkstraTxRefScriptsSizeTooBig
+          Mismatch
+            { mismatchSupplied = totalRefScriptSize
+            , mismatchExpected = maxRefScriptSizePerTx
+            }
 
 dijkstraLedgerTransition ::
   forall era.
@@ -398,13 +394,12 @@ dijkstraLedgerTransition ::
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   ) =>
   TransitionRule (DijkstraLEDGER era)
 dijkstraLedgerTransition = do
   TRC (LedgerEnv slot mbCurEpochNo txIx pp chainAccountState, ledgerState, tx) <-
     judgmentContext
-
-  failOnNonEmptyMap (spentSubTxOutputs tx) DijkstraSpendingOutputFromSameTx
 
   -- Capture the original UTxO before any subtransaction processing.
   -- This is passed through the environment to UTXOW
@@ -439,7 +434,7 @@ dijkstraLedgerTransition = do
       then do
         let txBody = tx ^. bodyTxL
         runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
-        runTest $ validateRefScriptSize pp (utxoStateAfterSubLedgers ^. utxoL) tx
+        runTest $ validateAllRefScriptSize pp originalUtxo tx
 
         let govState = utxoStateAfterSubLedgers ^. utxosGovStateL
             committee = govState ^. committeeGovStateL
@@ -505,7 +500,7 @@ instance
   , BabbageEraTxBody era
   , Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , Script era ~ AlonzoScript era
   , TxOut era ~ BabbageTxOut era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
