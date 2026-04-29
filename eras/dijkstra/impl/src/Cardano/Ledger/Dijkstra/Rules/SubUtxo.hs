@@ -375,3 +375,4 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
   WrongNetworkInDirectDeposit x y -> SubWrongNetworkInDirectDeposit x y
   WithdrawalsExceedAccountBalance _ -> error "Impossible: `WithdrawalsExceedAccountBalance` for SUBUTXO"
+  TxRefScriptsSizeTooBig _ -> error "Impossible: `TxRefScriptsSizeTooBig` for SUBUTXO"

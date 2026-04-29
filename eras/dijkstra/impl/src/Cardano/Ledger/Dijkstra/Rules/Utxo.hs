@@ -68,6 +68,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.PParams (ppMaxRefScriptSizePerTxG)
 import Cardano.Ledger.Conway.Rules (
   ConwayUTXOS,
   ConwayUtxoPredFailure,
@@ -84,6 +85,7 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.UTxO (batchNonDistinctRefScriptsSize)
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
@@ -117,6 +119,7 @@ import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import Validation (failureUnless)
 
 data DijkstraUtxoEnv era = DijkstraUtxoEnv
   { dueSlot :: SlotNo
@@ -198,6 +201,8 @@ data DijkstraUtxoPredFailure era
       (NonEmptySet AccountAddress)
   | -- | Total withdrawals per account that exceed the original account balance
     WithdrawalsExceedAccountBalance (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
+  | -- | Total reference script size across the batch exceeds the limit
+    TxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" DijkstraEra = DijkstraUtxoPredFailure DijkstraEra
@@ -272,6 +277,24 @@ validateNoPtrInCollateralReturn txBody = do
         Addr _ _ (StakeRefPtr {}) <- pure $ collateralReturn ^. addrTxOutL
         Just collateralReturn
   failOnJustStatic hasCollateralTxOut (injectFailure . PtrPresentInCollateralReturn)
+
+validateAllRefScriptSize ::
+  ( EraTx era
+  , DijkstraEraTxBody era
+  ) =>
+  PParams era ->
+  UTxO era ->
+  Tx TopTx era ->
+  Test (DijkstraUtxoPredFailure era)
+validateAllRefScriptSize pp utxo tx =
+  let totalRefScriptSize = batchNonDistinctRefScriptsSize utxo tx
+      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+   in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
+        TxRefScriptsSizeTooBig
+          Mismatch
+            { mismatchSupplied = totalRefScriptSize
+            , mismatchExpected = maxRefScriptSizePerTx
+            }
 
 -- | For each account, the total withdrawals across the entire batch should not exceed the original account balance.
 -- Unregistered accounts are treated as having 0 balance.
@@ -436,6 +459,9 @@ dijkstraUtxoTransition = do
   {- txsize tx ≤ maxTxSize pp -}
   runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
+  {- ∑[ x ← allReferenceScripts txTop utxo₀ ] scriptSize x ≤ maxRefScriptSizePerTx -}
+  runTest $ validateAllRefScriptSize pp originalUtxo tx
+
   {- totExunits tx ≤ maxTxExUnits pp -}
   runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
 
@@ -546,6 +572,7 @@ instance
       PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 22 !> To x
       WrongNetworkInDirectDeposit right wrongs -> Sum (WrongNetworkInDirectDeposit @era) 23 !> To right !> To wrongs
       WithdrawalsExceedAccountBalance mm -> Sum WithdrawalsExceedAccountBalance 24 !> To mm
+      TxRefScriptsSizeTooBig mm -> Sum TxRefScriptsSizeTooBig 25 !> To mm
 
 instance
   ( Era era
@@ -582,6 +609,7 @@ instance
     22 -> SumD PtrPresentInCollateralReturn <! From
     23 -> SumD WrongNetworkInDirectDeposit <! From <! From
     24 -> SumD WithdrawalsExceedAccountBalance <! From
+    25 -> SumD TxRefScriptsSizeTooBig <! From
     n -> Invalid n
 
 -- =====================================================

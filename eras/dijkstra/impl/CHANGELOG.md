@@ -2,8 +2,9 @@
 
 ## 0.3.0.0
 
-* Add `WithdrawalsExceedAccountBalance` to `DijkstraLedgerPredFailure`
-* Removed `DijkstraSpendingOutputFromSameTx` from `DijkstraLedgerPredFailure`
+* Add constructors to `DijkstraUtxoPredFailure`: `WithdrawalsExceedAccountBalance`,`TxRefScriptsSizeTooBig`
+* Remove constructors from `DijkstraLedgerPredFailure`: `DijkstraSpendingOutputFromSameTx`, `DijkstraTxRefScriptsSizeTooBig`
+  from `Dijkstra`LedgerPredFailure`
 * Added `batchNonDistinctRefScriptsSize`
 * Add `guardDijkstraFeaturesForPlutusV1toV3`
 * Add `DirectDepositsNotSupported` and `AccountBalanceIntervalsNotSupported` constructors to `DijkstraContextError`

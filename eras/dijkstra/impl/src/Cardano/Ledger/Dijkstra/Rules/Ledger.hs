@@ -53,7 +53,6 @@ import Cardano.Ledger.Conway.Governance (
   grCommitteeL,
   proposalsWithPurpose,
  )
-import Cardano.Ledger.Conway.PParams (ppMaxRefScriptSizePerTxG)
 import Cardano.Ledger.Conway.Rules (
   CertsEnv (..),
   ConwayCERTS,
@@ -89,8 +88,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedgers
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody
-import Cardano.Ledger.Dijkstra.UTxO (batchNonDistinctRefScriptsSize)
-import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
+import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -118,10 +116,8 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Word (Word32)
 import GHC.Generics (Generic (..))
 import Lens.Micro
-import Validation (failureUnless)
 
 data DijkstraLedgerPredFailure era
   = DijkstraUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
@@ -129,7 +125,6 @@ data DijkstraLedgerPredFailure era
   | DijkstraGovFailure (PredicateFailure (EraRule "GOV" era))
   | DijkstraWdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
   | DijkstraTreasuryValueMismatch (Mismatch RelEQ Coin)
-  | DijkstraTxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | DijkstraWithdrawalsMissingAccounts Withdrawals
   | DijkstraIncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   | DijkstraSubLedgersFailure (PredicateFailure (EraRule "SUBLEDGERS" era))
@@ -258,10 +253,9 @@ instance
       DijkstraGovFailure x -> Sum (DijkstraGovFailure @era) 3 !> To x
       DijkstraWdrlNotDelegatedToDRep x -> Sum (DijkstraWdrlNotDelegatedToDRep @era) 4 !> To x
       DijkstraTreasuryValueMismatch mm -> Sum (DijkstraTreasuryValueMismatch @era) 5 !> To mm
-      DijkstraTxRefScriptsSizeTooBig mm -> Sum DijkstraTxRefScriptsSizeTooBig 6 !> To mm
-      DijkstraWithdrawalsMissingAccounts w -> Sum DijkstraWithdrawalsMissingAccounts 7 !> To w
-      DijkstraIncompleteWithdrawals w -> Sum DijkstraIncompleteWithdrawals 8 !> To w
-      DijkstraSubLedgersFailure w -> Sum DijkstraSubLedgersFailure 9 !> To w
+      DijkstraWithdrawalsMissingAccounts w -> Sum DijkstraWithdrawalsMissingAccounts 6 !> To w
+      DijkstraIncompleteWithdrawals w -> Sum DijkstraIncompleteWithdrawals 7 !> To w
+      DijkstraSubLedgersFailure w -> Sum DijkstraSubLedgersFailure 8 !> To w
 
 instance
   ( Era era
@@ -278,10 +272,9 @@ instance
     3 -> SumD DijkstraGovFailure <! From
     4 -> SumD DijkstraWdrlNotDelegatedToDRep <! From
     5 -> SumD DijkstraTreasuryValueMismatch <! From
-    6 -> SumD DijkstraTxRefScriptsSizeTooBig <! From
-    7 -> SumD DijkstraWithdrawalsMissingAccounts <! From
-    8 -> SumD DijkstraIncompleteWithdrawals <! From
-    9 -> SumD DijkstraSubLedgersFailure <! From
+    6 -> SumD DijkstraWithdrawalsMissingAccounts <! From
+    7 -> SumD DijkstraIncompleteWithdrawals <! From
+    8 -> SumD DijkstraSubLedgersFailure <! From
     n -> Invalid n
 
 data DijkstraLedgerEvent era
@@ -350,24 +343,6 @@ instance
 
   assertions = shelleyLedgerAssertions @era @DijkstraLEDGER
 
-validateAllRefScriptSize ::
-  ( EraTx era
-  , DijkstraEraTxBody era
-  ) =>
-  PParams era ->
-  UTxO era ->
-  Tx TopTx era ->
-  Test (DijkstraLedgerPredFailure era)
-validateAllRefScriptSize pp utxo tx =
-  let totalRefScriptSize = batchNonDistinctRefScriptsSize utxo tx
-      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
-   in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
-        DijkstraTxRefScriptsSizeTooBig
-          Mismatch
-            { mismatchSupplied = totalRefScriptSize
-            , mismatchExpected = maxRefScriptSizePerTx
-            }
-
 dijkstraLedgerTransition ::
   forall era.
   ( AlonzoEraTx era
@@ -394,7 +369,6 @@ dijkstraLedgerTransition ::
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
-  , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   ) =>
   TransitionRule (DijkstraLEDGER era)
 dijkstraLedgerTransition = do
@@ -434,7 +408,6 @@ dijkstraLedgerTransition = do
       then do
         let txBody = tx ^. bodyTxL
         runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
-        runTest $ validateAllRefScriptSize pp originalUtxo tx
 
         let govState = utxoStateAfterSubLedgers ^. utxosGovStateL
             committee = govState ^. committeeGovStateL
@@ -543,7 +516,7 @@ conwayToDijkstraLedgerPredFailure = \case
   Conway.ConwayGovFailure f -> DijkstraGovFailure f
   Conway.ConwayWdrlNotDelegatedToDRep kh -> DijkstraWdrlNotDelegatedToDRep kh
   Conway.ConwayTreasuryValueMismatch mm -> DijkstraTreasuryValueMismatch mm
-  Conway.ConwayTxRefScriptsSizeTooBig mm -> DijkstraTxRefScriptsSizeTooBig mm
+  Conway.ConwayTxRefScriptsSizeTooBig _ -> error "Impossible: TxRefScriptsSizeTooBig has been moved to UTXO rule in Dijkstra"
   Conway.ConwayMempoolFailure _ -> error "Impossible: MempoolFailure has been moved to MEMPOOL rule in Dijkstra"
   Conway.ConwayWithdrawalsMissingAccounts ws -> DijkstraWithdrawalsMissingAccounts ws
   Conway.ConwayIncompleteWithdrawals ws -> DijkstraIncompleteWithdrawals ws
