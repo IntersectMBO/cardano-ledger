@@ -147,7 +147,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
 
     - name: Check workflow test matrix
       run: cabal build all --dry-run -v0 && cleret workflow check-test-matrix
@@ -337,7 +337,7 @@ jobs:
     - name: Install cleret
       if: always()
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
 
     - name: Record test failures
       if: failure()
@@ -368,7 +368,7 @@ jobs:
 
     steps:
     - name: Install cleret
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
 
     - name: Download test failures artifacts
       uses: actions/download-artifact@v8
@@ -377,7 +377,7 @@ jobs:
         path: failures
 
     - name: Generate summary
-      run: cleret failures render failures/*/failures.json -o "$GITHUB_STEP_SUMMARY"
+      run: cleret failures render $(find failures -name failures.json) -o "$GITHUB_STEP_SUMMARY"
 
   complete:
     name: Tests completed
@@ -696,7 +696,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
 
     - name: Run linter
       run: scripts/format-changelogs.sh || (git diff; false)
