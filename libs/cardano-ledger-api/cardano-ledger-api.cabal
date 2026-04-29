@@ -13,6 +13,11 @@ description:
 
 build-type: Simple
 extra-source-files: CHANGELOG.md
+data-files:
+  golden/conway/cbor/*.cbor
+  golden/conway/json/*.json
+  golden/dijkstra/cbor/*.cbor
+  golden/dijkstra/json/*.json
 
 source-repository head
   type: git
@@ -86,6 +91,7 @@ library testlib
   exposed-modules:
     Test.Cardano.Ledger.Api.Arbitrary
     Test.Cardano.Ledger.Api.DebugTools
+    Test.Cardano.Ledger.Api.State.Query.Examples
     Test.Cardano.Ledger.Api.Upgrade
 
   visibility: public
@@ -105,8 +111,10 @@ library testlib
     bytestring,
     cardano-ledger-api,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-conway:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:testlib,
+    cardano-ledger-shelley:testlib,
     data-default,
     generic-random,
     prettyprinter,
@@ -116,6 +124,7 @@ test-suite cardano-ledger-api-test
   main-is: Tests.hs
   hs-source-dirs: test
   other-modules:
+    Paths_cardano_ledger_api
     Test.Cardano.Ledger.Api.State.Imp.QuerySpec
     Test.Cardano.Ledger.Api.State.QuerySpec
     Test.Cardano.Ledger.Api.Tx
@@ -135,6 +144,7 @@ test-suite cardano-ledger-api-test
     -threaded
 
   build-depends:
+    aeson,
     base,
     bytestring,
     cardano-data,
@@ -153,6 +163,7 @@ test-suite cardano-ledger-api-test
     cardano-strict-containers,
     containers,
     data-default,
+    filepath,
     microlens,
     microlens-mtl,
     testlib,
