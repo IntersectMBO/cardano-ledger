@@ -135,4 +135,5 @@ expectedConwayGenesis =
           , ucppMinFeeRefScriptCostPerByte = minBound
           , ucppPlutusV3CostModel = zeroTestingCostModelV3
           }
+    , cgExtraConfig = SNothing
     }

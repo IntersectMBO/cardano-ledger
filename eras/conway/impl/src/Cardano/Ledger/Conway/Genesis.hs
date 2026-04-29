@@ -12,10 +12,17 @@
 
 module Cardano.Ledger.Conway.Genesis (
   ConwayGenesis (..),
+  ConwayExtraConfig (..),
   cgDelegsL,
+  cgExtraConfigL,
 ) where
 
-import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
+import Cardano.Ledger.BaseTypes (
+  KeyValuePairs (..),
+  StrictMaybe (..),
+  ToKeyValuePairs (..),
+  maybeToStrictMaybe,
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -31,6 +38,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Genesis (EraGenesis (..))
+import Cardano.Ledger.Shelley.Genesis (InjectionData (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (
   FromJSON (..),
@@ -41,12 +49,57 @@ import Data.Aeson (
   (.!=),
   (.:),
   (.:?),
+  (.=),
  )
+import Data.Default (Default (..))
 import Data.Functor.Identity (Identity)
 import Data.ListMap (ListMap)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
+
+-- | Extra configuration for injecting Conway-specific Genesis data
+data ConwayExtraConfig = ConwayExtraConfig
+  { cecDelegs :: !(InjectionData (Credential Staking) Delegatee)
+  -- ^ Delegations to DReps and stake pools.
+  , cecInitialDReps :: !(InjectionData (Credential DRepRole) DRepState)
+  -- ^ Initial DRep registrations.
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs ConwayExtraConfig
+
+instance NFData ConwayExtraConfig
+
+instance NoThunks ConwayExtraConfig
+
+instance Default ConwayExtraConfig where
+  def = ConwayExtraConfig NoInjection NoInjection
+
+instance EncCBOR ConwayExtraConfig where
+  encCBOR (ConwayExtraConfig delegs dreps) =
+    encode $
+      Rec ConwayExtraConfig
+        !> To delegs
+        !> To dreps
+
+instance DecCBOR ConwayExtraConfig where
+  decCBOR =
+    decode $
+      RecD ConwayExtraConfig
+        <! From
+        <! From
+
+instance ToKeyValuePairs ConwayExtraConfig where
+  toKeyValuePairs (ConwayExtraConfig delegs dreps) =
+    [ "delegs" .= delegs
+    , "initialDReps" .= dreps
+    ]
+
+instance FromJSON ConwayExtraConfig where
+  parseJSON = withObject "ConwayExtraConfig" $ \obj ->
+    ConwayExtraConfig
+      <$> obj .:? "delegs" .!= NoInjection
+      <*> obj .:? "initialDReps" .!= NoInjection
 
 data ConwayGenesis = ConwayGenesis
   { cgUpgradePParams :: !(UpgradeConwayPParams Identity)
@@ -54,12 +107,17 @@ data ConwayGenesis = ConwayGenesis
   , cgCommittee :: !(Committee ConwayEra)
   , cgDelegs :: ListMap (Credential Staking) Delegatee
   , cgInitialDReps :: ListMap (Credential DRepRole) DRepState
+  , cgExtraConfig :: !(StrictMaybe ConwayExtraConfig)
+  -- ^ Optional extra configuration for streaming injection.
   }
   deriving (Eq, Generic, Show)
   deriving (ToJSON) via KeyValuePairs ConwayGenesis
 
 cgDelegsL :: Lens' ConwayGenesis (ListMap (Credential Staking) Delegatee)
 cgDelegsL = lens cgDelegs (\x y -> x {cgDelegs = y})
+
+cgExtraConfigL :: Lens' ConwayGenesis (StrictMaybe ConwayExtraConfig)
+cgExtraConfigL = lens cgExtraConfig (\x y -> x {cgExtraConfig = y})
 
 instance EraGenesis ConwayEra where
   type Genesis ConwayEra = ConwayGenesis
@@ -74,7 +132,7 @@ instance FromCBOR ConwayGenesis where
   {-# INLINE fromCBOR #-}
 
 instance ToCBOR ConwayGenesis where
-  toCBOR x@(ConwayGenesis _ _ _ _ _) =
+  toCBOR x@(ConwayGenesis _ _ _ _ _ _) =
     let ConwayGenesis {..} = x
      in toEraCBOR @ConwayEra . encode $
           Rec ConwayGenesis
@@ -83,9 +141,10 @@ instance ToCBOR ConwayGenesis where
             !> To cgCommittee
             !> To cgDelegs
             !> To cgInitialDReps
+            !> To cgExtraConfig
 
 instance DecCBOR ConwayGenesis where
-  decCBOR = decode (RecD ConwayGenesis <! From <! From <! From <! From <! From)
+  decCBOR = decode (RecD ConwayGenesis <! From <! From <! From <! From <! From <! From)
   {-# INLINE decCBOR #-}
 
 instance EncCBOR ConwayGenesis
@@ -98,14 +157,16 @@ instance FromJSON ConwayGenesis where
       cgCommittee <- obj .: "committee"
       cgDelegs <- obj .:? "delegs" .!= mempty
       cgInitialDReps <- obj .:? "initialDReps" .!= mempty
+      cgExtraConfig <- maybeToStrictMaybe <$> obj .:? "extraConfig"
       pure ConwayGenesis {..}
 
 instance ToKeyValuePairs ConwayGenesis where
-  toKeyValuePairs cg@(ConwayGenesis _ _ _ _ _) =
+  toKeyValuePairs cg@(ConwayGenesis _ _ _ _ _ _) =
     let ConwayGenesis {..} = cg
      in [ "constitution" .= cgConstitution
         , "committee" .= cgCommittee
         ]
-          ++ toKeyValuePairs cgUpgradePParams
-          ++ ["delegs" .= cgDelegs | not (null cgDelegs)]
-          ++ ["initialDReps" .= cgInitialDReps | not (null cgInitialDReps)]
+          <> toKeyValuePairs cgUpgradePParams
+          <> ["delegs" .= cgDelegs | not (null cgDelegs)]
+          <> ["initialDReps" .= cgInitialDReps | not (null cgInitialDReps)]
+          <> ["extraConfig" .= ec | SJust ec <- [cgExtraConfig]]

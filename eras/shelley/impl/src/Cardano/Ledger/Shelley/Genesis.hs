@@ -211,11 +211,13 @@ emptyGenesisStaking :: ShelleyGenesisStaking
 emptyGenesisStaking = mempty
 
 -- | Extra configuration for injecting Genesis data
---
--- TODO (#5549): Add secStakePools, secStakeCredentials, secDRepDelegations
 data ShelleyExtraConfig = ShelleyExtraConfig
   { secInitialFunds :: !(InjectionData Addr Coin)
   -- ^ Initial funds to inject.
+  , secStakePools :: !(InjectionData (KeyHash StakePool) StakePoolParams)
+  -- ^ Stake pools to register.
+  , secStakeCredentials :: !(InjectionData (KeyHash Staking) (KeyHash StakePool))
+  -- ^ Stake credential delegations to stake pools.
   }
   deriving stock (Eq, Show, Generic)
   deriving (ToJSON) via KeyValuePairs ShelleyExtraConfig
@@ -225,28 +227,37 @@ instance NFData ShelleyExtraConfig
 instance NoThunks ShelleyExtraConfig
 
 instance Default ShelleyExtraConfig where
-  def = ShelleyExtraConfig NoInjection
+  def = ShelleyExtraConfig NoInjection NoInjection NoInjection
 
 instance EncCBOR ShelleyExtraConfig where
-  encCBOR (ShelleyExtraConfig funds) =
+  encCBOR (ShelleyExtraConfig funds pools creds) =
     encode $
       Rec ShelleyExtraConfig
         !> To funds
+        !> To pools
+        !> To creds
 
 instance DecCBOR ShelleyExtraConfig where
   decCBOR =
     decode $
       RecD ShelleyExtraConfig
         <! From
+        <! From
+        <! From
 
 instance ToKeyValuePairs ShelleyExtraConfig where
-  toKeyValuePairs ShelleyExtraConfig {secInitialFunds} =
-    ["initialFunds" .= secInitialFunds]
+  toKeyValuePairs ShelleyExtraConfig {secInitialFunds, secStakePools, secStakeCredentials} =
+    [ "initialFunds" .= secInitialFunds
+    , "stakePools" .= secStakePools
+    , "stakeCredentials" .= secStakeCredentials
+    ]
 
 instance FromJSON ShelleyExtraConfig where
   parseJSON = Aeson.withObject "ShelleyExtraConfig" $ \obj ->
     ShelleyExtraConfig
       <$> obj .:? "initialFunds" .!= NoInjection
+      <*> obj .:? "stakePools" .!= NoInjection
+      <*> obj .:? "stakeCredentials" .!= NoInjection
 
 -- | Unlike @'NominalDiffTime'@ that supports @'Pico'@ precision, this type
 -- only supports @'Micro'@ precision.
