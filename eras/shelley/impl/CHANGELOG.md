@@ -2,6 +2,9 @@
 
 ## 1.19.0.0
 
+* Add `injectStakeCredentials`, `injectStakePools`, `resolveInjectionSource`, `injectInitialFundsAndStaking` to `Cardano.Ledger.Shelley.Transition`
+  - `injectStakeCredentials` and `injectStakePools` take a leading `Network` argument and throw `InjectionNotAllowedOnMainnet` when called with `Mainnet`
+* Deprecate `registerInitialStakePools`, `shelleyRegisterInitialAccounts`
 * Add `mkStAnnTx` to `ApplyTx`
 * Add `InjectionData`, `foldInjectionData`, `InjectionError` to `Cardano.Ledger.Shelley.Genesis`
 * Add `ShelleyExtraConfig` type to `Cardano.Ledger.Shelley.Genesis`

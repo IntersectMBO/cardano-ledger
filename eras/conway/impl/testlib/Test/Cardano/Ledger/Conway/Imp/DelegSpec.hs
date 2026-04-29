@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   Mismatch (..),
+  Network (..),
   ProtVer (..),
   StrictMaybe (..),
   addEpochInterval,
@@ -26,7 +27,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Conway.Transition (conwayRegisterInitialAccounts)
+import Cardano.Ledger.Conway.Transition (injectStakeCredentials)
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
@@ -34,14 +35,17 @@ import Cardano.Ledger.Plutus (
   SLanguage (..),
   hashPlutusScript,
  )
-import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
+import Cardano.Ledger.Shelley.Genesis (InjectionData (..), ShelleyGenesisStaking (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Val (Val (..))
+import Control.Monad.IO.Class (liftIO)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
+import qualified System.FS.Sim.MockFS as MockFS
+import System.FS.Sim.STM (simHasFS')
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -576,7 +580,9 @@ spec = do
             { sgsPools = LM.ListMap [(pool1, poolParams), (pool2, poolParams), (pool3, poolParams)]
             , sgsStake = LM.ListMap [(deleg1, pool1), (deleg2, pool1), (deleg3, pool2)]
             }
-    let updatedNES = conwayRegisterInitialAccounts sgs nes
+    updatedNES <- liftIO $ do
+      fs <- simHasFS' MockFS.empty
+      injectStakeCredentials Testnet fs (EmbeddedInjection (sgsStake sgs)) nes
     delegateStake (KeyHashObj deleg1) pool1
     delegateStake (KeyHashObj deleg2) pool1
     delegateStake (KeyHashObj deleg3) pool2

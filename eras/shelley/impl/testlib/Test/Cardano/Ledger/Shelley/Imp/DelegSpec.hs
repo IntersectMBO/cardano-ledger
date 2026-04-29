@@ -21,11 +21,14 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.State (ShelleyEraAccounts)
-import Cardano.Ledger.Shelley.Transition (shelleyRegisterInitialAccounts)
+import Cardano.Ledger.Shelley.Transition (injectStakeCredentials)
 import Cardano.Ledger.State (accountsL, accountsMapL, stakePoolDelegationAccountStateL)
+import Control.Monad.IO.Class (liftIO)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Lens.Micro
+import qualified System.FS.Sim.MockFS as MockFS
+import System.FS.Sim.STM (simHasFS')
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.ImpTest
@@ -120,7 +123,9 @@ shelleyEraSpecificSpec = do
             { sgsPools = LM.ListMap [(pool1, poolParams), (pool2, poolParams), (pool3, poolParams)]
             , sgsStake = LM.ListMap [(deleg1, pool1), (deleg2, pool1), (deleg3, pool2)]
             }
-    let updatedNES = shelleyRegisterInitialAccounts sgs nes
+    updatedNES <- liftIO $ do
+      fs <- simHasFS' MockFS.empty
+      injectStakeCredentials Testnet fs (EmbeddedInjection (sgsStake sgs)) nes
     delegateStake (KeyHashObj deleg1) pool1
     delegateStake (KeyHashObj deleg2) pool1
     delegateStake (KeyHashObj deleg3) pool2
