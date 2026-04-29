@@ -78,6 +78,7 @@ import Cardano.Ledger.Conway.Rules (
   alonzoToConwayUtxoPredFailure,
   babbageToConwayUtxoPredFailure,
   updateTreasuryDonation,
+  validateTreasuryValue,
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
@@ -128,6 +129,7 @@ data DijkstraUtxoEnv era = DijkstraUtxoEnv
   , dueOriginalUtxo :: UTxO era
   , dueScriptsProvided :: ScriptsProvided era
   -- ^ aggregated scripts provided across all transaction levels
+  , dueTreasury :: Coin
   }
 
 -- | Predicate failure for the Dijkstra Era
@@ -203,6 +205,8 @@ data DijkstraUtxoPredFailure era
     WithdrawalsExceedAccountBalance (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   | -- | Total reference script size across the batch exceeds the limit
     TxRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
+  | -- | The treasury value declared in the transaction body does not match the actual treasury value
+    TreasuryValueMismatch (Mismatch RelEQ Coin)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" DijkstraEra = DijkstraUtxoPredFailure DijkstraEra
@@ -391,7 +395,8 @@ dijkstraUtxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (DijkstraUtxoEnv slot pp certState originalUtxo _scriptsProvided, utxos, tx) <- judgmentContext
+  TRC (DijkstraUtxoEnv slot pp certState originalUtxo _scriptsProvided treasury, utxos, tx) <-
+    judgmentContext
   -- this is the original Accounts, before any transactions were applied
   let accounts = certState ^. certDStateL . accountsL
 
@@ -461,6 +466,9 @@ dijkstraUtxoTransition = do
 
   {- ∑[ x ← allReferenceScripts txTop utxo₀ ] scriptSize x ≤ maxRefScriptSizePerTx -}
   runTest $ validateAllRefScriptSize pp originalUtxo tx
+
+  {- CurrentTreasuryOf txTop ~ just (TreasuryOf Γ) -}
+  runTest $ validateTreasuryValue TreasuryValueMismatch (tx ^. bodyTxL) treasury
 
   {- totExunits tx ≤ maxTxExUnits pp -}
   runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
@@ -573,6 +581,7 @@ instance
       WrongNetworkInDirectDeposit right wrongs -> Sum (WrongNetworkInDirectDeposit @era) 23 !> To right !> To wrongs
       WithdrawalsExceedAccountBalance mm -> Sum WithdrawalsExceedAccountBalance 24 !> To mm
       TxRefScriptsSizeTooBig mm -> Sum TxRefScriptsSizeTooBig 25 !> To mm
+      TreasuryValueMismatch mm -> Sum TreasuryValueMismatch 26 !> To mm
 
 instance
   ( Era era
@@ -610,6 +619,7 @@ instance
     23 -> SumD WrongNetworkInDirectDeposit <! From <! From
     24 -> SumD WithdrawalsExceedAccountBalance <! From
     25 -> SumD TxRefScriptsSizeTooBig <! From
+    26 -> SumD TreasuryValueMismatch <! From
     n -> Invalid n
 
 -- =====================================================

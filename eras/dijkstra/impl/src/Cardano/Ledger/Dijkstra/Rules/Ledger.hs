@@ -69,7 +69,6 @@ import Cardano.Ledger.Conway.Rules (
   GovSignal (..),
   updateDormantDRepExpiries,
   updateVotingDRepExpiries,
-  validateTreasuryValue,
   validateWithdrawalsDelegated,
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -124,7 +123,6 @@ data DijkstraLedgerPredFailure era
   | DijkstraCertsFailure (PredicateFailure (EraRule "CERTS" era))
   | DijkstraGovFailure (PredicateFailure (EraRule "GOV" era))
   | DijkstraWdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
-  | DijkstraTreasuryValueMismatch (Mismatch RelEQ Coin)
   | DijkstraWithdrawalsMissingAccounts Withdrawals
   | DijkstraIncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   | DijkstraSubLedgersFailure (PredicateFailure (EraRule "SUBLEDGERS" era))
@@ -252,10 +250,9 @@ instance
       DijkstraCertsFailure x -> Sum (DijkstraCertsFailure @era) 2 !> To x
       DijkstraGovFailure x -> Sum (DijkstraGovFailure @era) 3 !> To x
       DijkstraWdrlNotDelegatedToDRep x -> Sum (DijkstraWdrlNotDelegatedToDRep @era) 4 !> To x
-      DijkstraTreasuryValueMismatch mm -> Sum (DijkstraTreasuryValueMismatch @era) 5 !> To mm
-      DijkstraWithdrawalsMissingAccounts w -> Sum DijkstraWithdrawalsMissingAccounts 6 !> To w
-      DijkstraIncompleteWithdrawals w -> Sum DijkstraIncompleteWithdrawals 7 !> To w
-      DijkstraSubLedgersFailure w -> Sum DijkstraSubLedgersFailure 8 !> To w
+      DijkstraWithdrawalsMissingAccounts w -> Sum DijkstraWithdrawalsMissingAccounts 5 !> To w
+      DijkstraIncompleteWithdrawals w -> Sum DijkstraIncompleteWithdrawals 6 !> To w
+      DijkstraSubLedgersFailure w -> Sum DijkstraSubLedgersFailure 7 !> To w
 
 instance
   ( Era era
@@ -271,10 +268,9 @@ instance
     2 -> SumD DijkstraCertsFailure <! From
     3 -> SumD DijkstraGovFailure <! From
     4 -> SumD DijkstraWdrlNotDelegatedToDRep <! From
-    5 -> SumD DijkstraTreasuryValueMismatch <! From
-    6 -> SumD DijkstraWithdrawalsMissingAccounts <! From
-    7 -> SumD DijkstraIncompleteWithdrawals <! From
-    8 -> SumD DijkstraSubLedgersFailure <! From
+    5 -> SumD DijkstraWithdrawalsMissingAccounts <! From
+    6 -> SumD DijkstraIncompleteWithdrawals <! From
+    7 -> SumD DijkstraSubLedgersFailure <! From
     n -> Invalid n
 
 data DijkstraLedgerEvent era
@@ -407,7 +403,6 @@ dijkstraLedgerTransition = do
     if tx ^. isValidTxL == IsValid True
       then do
         let txBody = tx ^. bodyTxL
-        runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
 
         let govState = utxoStateAfterSubLedgers ^. utxosGovStateL
             committee = govState ^. committeeGovStateL
@@ -461,7 +456,7 @@ dijkstraLedgerTransition = do
   utxoStateFinal <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided
+        ( DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided (chainAccountState ^. casTreasuryL)
         , utxoStateBeforeUtxow
         , tx
         )
@@ -515,7 +510,7 @@ conwayToDijkstraLedgerPredFailure = \case
   Conway.ConwayCertsFailure f -> DijkstraCertsFailure f
   Conway.ConwayGovFailure f -> DijkstraGovFailure f
   Conway.ConwayWdrlNotDelegatedToDRep kh -> DijkstraWdrlNotDelegatedToDRep kh
-  Conway.ConwayTreasuryValueMismatch mm -> DijkstraTreasuryValueMismatch mm
+  Conway.ConwayTreasuryValueMismatch _ -> error "Impossible: TreasuryValueMismatch has been moved to UTXO rule in Dijkstra"
   Conway.ConwayTxRefScriptsSizeTooBig _ -> error "Impossible: TxRefScriptsSizeTooBig has been moved to UTXO rule in Dijkstra"
   Conway.ConwayMempoolFailure _ -> error "Impossible: MempoolFailure has been moved to MEMPOOL rule in Dijkstra"
   Conway.ConwayWithdrawalsMissingAccounts ws -> DijkstraWithdrawalsMissingAccounts ws

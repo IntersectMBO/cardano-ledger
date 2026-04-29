@@ -376,3 +376,4 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   WrongNetworkInDirectDeposit x y -> SubWrongNetworkInDirectDeposit x y
   WithdrawalsExceedAccountBalance _ -> error "Impossible: `WithdrawalsExceedAccountBalance` for SUBUTXO"
   TxRefScriptsSizeTooBig _ -> error "Impossible: `TxRefScriptsSizeTooBig` for SUBUTXO"
+  TreasuryValueMismatch _ -> error "Impossible: `TreasuryValueMismatch` for SUBUTXO"

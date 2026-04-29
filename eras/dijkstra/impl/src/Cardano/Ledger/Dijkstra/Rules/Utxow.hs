@@ -250,7 +250,8 @@ dijkstraUtxowTransition ::
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 dijkstraUtxowTransition = do
-  TRC (DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided, u, tx) <- judgmentContext
+  TRC (DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided treasury, u, tx) <-
+    judgmentContext
 
   let txBody = tx ^. bodyTxL
       subTxs = OMap.elems $ txBody ^. subTransactionsTxBodyL
@@ -331,7 +332,7 @@ dijkstraUtxowTransition = do
 
   -- Pass through to UTXO sub-rule, carrying the original UTxO and scriptsProvided
   trans @(EraRule "UTXO" era) $
-    TRC (DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided, u, tx)
+    TRC (DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided treasury, u, tx)
 
 instance
   forall era.

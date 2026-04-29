@@ -210,6 +210,7 @@ instance
   , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
   , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "SUBLEDGER" DijkstraSubLedgerPredFailure era
   , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
@@ -241,6 +242,7 @@ dijkstraSubLedgersTransition ::
   , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
   , Embed (EraRule "SUBUTXOW" era) (DijkstraSUBLEDGER era)
   , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "SUBLEDGER" DijkstraSubLedgerPredFailure era
   , InjectRuleEvent "SUBPOOL" PoolEvent era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
   , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
@@ -267,7 +269,7 @@ dijkstraSubLedgersTransition = do
   let proposals = govState ^. proposalsGovStateL
       accounts = certState ^. certDStateL . accountsL
 
-  runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+  runTest $ validateTreasuryValue SubTreasuryValueMismatch txBody (chainAccountState ^. casTreasuryL)
 
   runTest $ validateWithdrawalsDelegated accounts tx
 
