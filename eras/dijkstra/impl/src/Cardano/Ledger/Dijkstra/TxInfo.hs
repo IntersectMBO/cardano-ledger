@@ -77,7 +77,7 @@ import Cardano.Ledger.State (StakePoolParams (..))
 import Cardano.Ledger.TxIn (TxId)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
-import Control.Monad (forM, forM_, unless, zipWithM)
+import Control.Monad (forM, unless, zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
@@ -421,15 +421,22 @@ guardDijkstraFeaturesForPlutusV1toV3 ::
 guardDijkstraFeaturesForPlutusV1toV3 tx = do
   let txBody = tx ^. bodyTxL
       directDeposits = txBody ^. directDepositsTxBodyL
+      accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
+      subTransactions = txBody ^. subTransactionsTxBodyL
   unless (null $ unDirectDeposits directDeposits) $
     Left $
-      inject (DirectDepositsNotSupported directDeposits :: DijkstraContextError era)
-  let accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
+      inject $
+        DirectDepositsNotSupported @era directDeposits
   unless (null $ unAccountBalanceIntervals accountBalanceIntervals) $
     Left $
-      inject (AccountBalanceIntervalsNotSupported accountBalanceIntervals :: DijkstraContextError era)
-  forM_ (NE.nonEmpty . toList . OMap.toStrictSeqOKeys $ txBody ^. subTransactionsTxBodyL) $ \subTxIds ->
-    Left $ inject $ SubTxsAreNotSupported @era subTxIds
+      inject $
+        AccountBalanceIntervalsNotSupported @era accountBalanceIntervals
+  case NE.nonEmpty . toList $ OMap.toStrictSeqOKeys subTransactions of
+    Nothing -> Right ()
+    Just subTxIds ->
+      Left $
+        inject $
+          SubTxsAreNotSupported @era subTxIds
 
 transFailUnsupportedScriptInSubTx ::
   forall l era.
