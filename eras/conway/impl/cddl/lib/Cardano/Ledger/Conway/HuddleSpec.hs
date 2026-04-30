@@ -67,6 +67,7 @@ module Cardano.Ledger.Conway.HuddleSpec (
   maybeTaggedNonemptySet,
   maybeTaggedNonemptyOset,
   conwayCostModelsGenerator,
+  generateMaybeTaggedSet,
 ) where
 
 import Cardano.Ledger.Babbage.HuddleSpec hiding (
@@ -720,6 +721,17 @@ conwayRedeemer pname p =
       , "ex_units" ==> huddleRule @"ex_units" p
       ]
 
+generateMaybeTaggedSet :: Int -> CBORGen Term -> CBORGen Term
+generateMaybeTaggedSet nElems gen = do
+  elems <- withAntiGen (antiVectorOfUnique nElems) gen
+  elemsArr <- genArrayTerm elems
+  tagged <- arbitrary
+  if tagged
+    then do
+      t <- liftAntiGen $ faultyNum 258
+      pure $ TTagged t elemsArr
+    else pure elemsArr
+
 mkMaybeTaggedSet ::
   forall name a. (KnownSymbol name, IsType0 a) => Proxy name -> Int -> a -> GRuleCall
 mkMaybeTaggedSet pname n = binding $ \x ->
@@ -730,14 +742,7 @@ mkMaybeTaggedSet pname n = binding $ \x ->
     generator :: GRef -> CBORGen WrappedTerm
     generator ref = do
       nElems <- liftAntiGen . Gen.sized $ \(fromIntegral -> sz) -> antiChoose (n, sz) (0, sz)
-      elems <- withAntiGen (antiVectorOfUnique nElems) $ unwrapSingleOrError <$> generateFromGRef ref
-      elemsArr <- genArrayTerm elems
-      tagged <- arbitrary
-      if tagged
-        then do
-          t <- liftAntiGen $ faultyNum 258
-          pure . S $ TTagged t elemsArr
-        else pure $ S elemsArr
+      fmap S . generateMaybeTaggedSet nElems $ unwrapSingleOrError <$> generateFromGRef ref
     validator ref term = do
       term_ <- unwrapSingle term
       let

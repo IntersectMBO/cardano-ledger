@@ -31,6 +31,7 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
   genCommitteeGovAction,
   genConstitutionGovAction,
   genProposals,
+  genNonEmptyVotingProcedures,
   ProposalsNewActions (..),
   ProposalsForEnactment (..),
   ShuffledGovActionStates (..),
@@ -896,3 +897,8 @@ instance Arbitrary (TransitionConfig ConwayEra) where
 deriving newtype instance Arbitrary (Tx TopTx ConwayEra)
 
 deriving newtype instance Arbitrary (ApplyTxError ConwayEra)
+
+genNonEmptyVotingProcedures :: Era era => Gen (VotingProcedures era)
+genNonEmptyVotingProcedures =
+  VotingProcedures . Map.fromList <$> do
+    listOf1 $ (,) <$> arbitrary <*> (Map.fromList <$> listOf1 arbitrary)

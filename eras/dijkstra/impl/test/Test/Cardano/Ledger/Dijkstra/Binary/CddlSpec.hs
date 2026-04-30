@@ -29,6 +29,7 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Conway.Arbitrary (genNonEmptyVotingProcedures)
 import Test.Cardano.Ledger.Core.Binary (
   fullAnnCddlSpec,
   fullAnnGenCddlSpec,
@@ -74,4 +75,4 @@ spec = do
       fullCddlSpec @(OSet (TxCert DijkstraEra)) v "certificates"
       fullCddlSpec @(OSet (ProposalProcedure DijkstraEra)) v "proposal_procedures"
       fullCddlSpec @(OSet (Credential Guard)) v "guards"
-      fullCddlSpec @(VotingProcedures DijkstraEra) v "voting_procedures"
+      fullGenCddlSpec @(VotingProcedures DijkstraEra) genNonEmptyVotingProcedures v "voting_procedures"
