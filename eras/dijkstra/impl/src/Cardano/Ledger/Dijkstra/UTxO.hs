@@ -169,8 +169,6 @@ instance AlonzoEraUTxO DijkstraEra where
 
   getSpendingDatum = getBabbageSpendingDatum
 
-  scriptsProvidedStAnnTx = scriptsProvidedDijkstraStAnnTx
-
 scriptsProvidedDijkstraStAnnTx ::
   ( EraTxLevel era
   , STxLevel l era ~ STxBothLevels l era

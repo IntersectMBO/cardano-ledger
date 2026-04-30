@@ -37,6 +37,10 @@ import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
 
 instance EraStAnnTx AllegraEra where
+  type StAnnTx l AllegraEra = Tx l AllegraEra
+
+  txStAnnTxG = id
+
   mkStAnnTx _ _ _ _ = id
 
 instance ApplyTx AllegraEra where

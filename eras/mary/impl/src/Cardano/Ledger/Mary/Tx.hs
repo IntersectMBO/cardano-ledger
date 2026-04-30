@@ -48,10 +48,6 @@ instance EraTx MaryEra where
     deriving newtype (Eq, NFData, NoThunks, Show, ToCBOR, EncCBOR)
     deriving (Generic)
 
-  type StAnnTx l MaryEra = Tx l MaryEra
-
-  txStAnnTxG = id
-
   mkBasicTx = MkMaryTx . mkBasicShelleyTx
 
   bodyTxL = maryTxL . bodyShelleyTxL

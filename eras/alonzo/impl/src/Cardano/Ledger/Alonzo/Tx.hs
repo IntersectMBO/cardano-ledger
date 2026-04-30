@@ -164,10 +164,6 @@ instance EraTx AlonzoEra where
     deriving newtype (Eq, NFData, EncCBOR, ToCBOR, NoThunks, Show)
     deriving (Generic)
 
-  type StAnnTx l AlonzoEra = AlonzoStAnnTx l AlonzoEra
-
-  txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
-
   mkBasicTx = MkAlonzoTx . mkBasicAlonzoTx
 
   bodyTxL = alonzoTxL . bodyAlonzoTxL

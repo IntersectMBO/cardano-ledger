@@ -28,7 +28,7 @@ import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq (NFData)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, to)
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 
 instance HasEraTxLevel Tx BabbageEra where
@@ -38,10 +38,6 @@ instance EraTx BabbageEra where
   newtype Tx l BabbageEra = MkBabbageTx {unBabbageTx :: AlonzoTx l BabbageEra}
     deriving newtype (Eq, NFData, Show, NoThunks, ToCBOR, EncCBOR)
     deriving (Generic)
-
-  type StAnnTx l BabbageEra = AlonzoStAnnTx l BabbageEra
-
-  txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
 
   mkBasicTx = MkBabbageTx . mkBasicAlonzoTx
 

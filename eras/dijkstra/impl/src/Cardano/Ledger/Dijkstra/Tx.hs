@@ -189,12 +189,6 @@ instance EraTx DijkstraEra where
     deriving newtype (Eq, Show, NFData, NoThunks, ToCBOR, EncCBOR)
     deriving (Generic)
 
-  type StAnnTx l DijkstraEra = DijkstraStAnnTx l DijkstraEra
-
-  txStAnnTxG = to $ \case
-    DijkstraStAnnTopTx {dsattTx} -> dsattTx
-    DijkstraStAnnSubTx {dsastTx} -> dsastTx
-
   mkBasicTx = MkDijkstraTx . mkBasicDijkstraTx
 
   bodyTxL = dijkstraTxL . bodyDijkstraTxL

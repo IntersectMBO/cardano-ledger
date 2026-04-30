@@ -44,6 +44,10 @@ import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
 
 instance EraStAnnTx MaryEra where
+  type StAnnTx l MaryEra = Tx l MaryEra
+
+  txStAnnTxG = id
+
   mkStAnnTx _ _ _ _ = id
 
 instance ApplyTx MaryEra where

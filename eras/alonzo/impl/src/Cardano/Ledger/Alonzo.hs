@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -67,6 +68,10 @@ import GHC.Generics (Generic)
 import Lens.Micro
 
 instance EraStAnnTx AlonzoEra where
+  type StAnnTx l AlonzoEra = AlonzoStAnnTx l AlonzoEra
+
+  txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
+
   mkStAnnTx = mkAlonzoStAnnTx
 
 instance ApplyTx AlonzoEra where

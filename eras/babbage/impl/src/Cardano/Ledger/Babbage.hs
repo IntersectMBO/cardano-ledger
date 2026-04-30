@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -28,7 +29,7 @@ module Cardano.Ledger.Babbage (
   bfProtocolVersionL,
 ) where
 
-import Cardano.Ledger.Alonzo (mkAlonzoStAnnTx)
+import Cardano.Ledger.Alonzo (AlonzoStAnnTx (..), mkAlonzoStAnnTx)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
 import Cardano.Ledger.Babbage.BlockBody ()
@@ -57,8 +58,13 @@ import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
+import Lens.Micro (to)
 
 instance EraStAnnTx BabbageEra where
+  type StAnnTx l BabbageEra = AlonzoStAnnTx l BabbageEra
+
+  txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
+
   mkStAnnTx = mkAlonzoStAnnTx
 
 instance ApplyTx BabbageEra where

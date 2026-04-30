@@ -57,10 +57,6 @@ instance EraTx AllegraEra where
     deriving newtype (Eq, NFData, NoThunks, Show, ToCBOR, EncCBOR)
     deriving (Generic)
 
-  type StAnnTx l AllegraEra = Tx l AllegraEra
-
-  txStAnnTxG = id
-
   mkBasicTx = MkAllegraTx . mkBasicShelleyTx
 
   bodyTxL = allegraTxL . bodyShelleyTxL

@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -20,7 +21,7 @@ module Cardano.Ledger.Conway (
   ApplyTxError (..),
 ) where
 
-import Cardano.Ledger.Alonzo (mkAlonzoStAnnTx)
+import Cardano.Ledger.Alonzo (AlonzoStAnnTx (..), mkAlonzoStAnnTx)
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
@@ -48,8 +49,13 @@ import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
+import Lens.Micro (to)
 
 instance EraStAnnTx ConwayEra where
+  type StAnnTx l ConwayEra = AlonzoStAnnTx l ConwayEra
+
+  txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
+
   mkStAnnTx = mkAlonzoStAnnTx
 
 instance ApplyTx ConwayEra where

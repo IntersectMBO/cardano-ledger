@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -74,6 +75,12 @@ import GHC.Generics (Generic)
 import Lens.Micro
 
 instance EraStAnnTx DijkstraEra where
+  type StAnnTx l DijkstraEra = DijkstraStAnnTx l DijkstraEra
+
+  txStAnnTxG = to $ \case
+    DijkstraStAnnTopTx {dsattTx} -> dsattTx
+    DijkstraStAnnSubTx {dsastTx} -> dsastTx
+
   mkStAnnTx = mkDijkstraStAnnTopTx
 
 instance ApplyTx DijkstraEra where

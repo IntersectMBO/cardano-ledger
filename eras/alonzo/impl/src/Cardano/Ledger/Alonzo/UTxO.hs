@@ -129,14 +129,10 @@ class EraUTxO era => AlonzoEraUTxO era where
     PlutusPurpose AsItem era ->
     Maybe (Data era)
 
-  scriptsProvidedStAnnTx :: StAnnTx l era -> ScriptsProvided era
-
 instance AlonzoEraUTxO AlonzoEra where
   getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
 
   getSpendingDatum = getAlonzoSpendingDatum
-
-  scriptsProvidedStAnnTx = scriptsProvidedAlonzoStAnnTx
 
 scriptsProvidedAlonzoStAnnTx ::
   ( EraTxLevel era

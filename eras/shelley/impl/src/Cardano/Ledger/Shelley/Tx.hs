@@ -202,10 +202,6 @@ instance EraTx ShelleyEra where
     deriving newtype (Eq, EncCBOR, NFData, NoThunks, Show, ToCBOR)
     deriving (Generic)
 
-  type StAnnTx l ShelleyEra = Tx l ShelleyEra
-
-  txStAnnTxG = id
-
   mkBasicTx = MkShelleyTx . mkBasicShelleyTx
 
   bodyTxL = shelleyTxL . bodyShelleyTxL
@@ -226,6 +222,10 @@ instance EraTx ShelleyEra where
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
 
 instance EraStAnnTx ShelleyEra where
+  type StAnnTx l ShelleyEra = Tx l ShelleyEra
+
+  txStAnnTxG = id
+
   mkStAnnTx _ _ _ _ = id
 
 shelleyTxEqRaw :: EraTx era => Tx l era -> Tx l era -> Bool
