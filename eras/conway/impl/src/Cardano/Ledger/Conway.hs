@@ -44,16 +44,18 @@ import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
+
+instance EraStAnnTx ConwayEra where
+  mkStAnnTx = mkAlonzoStAnnTx
 
 instance ApplyTx ConwayEra where
   newtype ApplyTxError ConwayEra = ConwayApplyTxError (NonEmpty (ConwayLedgerPredFailure ConwayEra))
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
-
-  mkStAnnTx = mkAlonzoStAnnTx
 
   applyTxValidation validationPolicy globals env state tx =
     first ConwayApplyTxError $

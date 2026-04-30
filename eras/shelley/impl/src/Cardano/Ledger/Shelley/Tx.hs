@@ -57,6 +57,7 @@ import Cardano.Ledger.Shelley.Scripts (validateMultiSig)
 import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody ()
 import Cardano.Ledger.Shelley.TxWits ()
+import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
@@ -223,6 +224,9 @@ instance EraTx ShelleyEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
+
+instance EraStAnnTx ShelleyEra where
+  mkStAnnTx _ _ _ _ = id
 
 shelleyTxEqRaw :: EraTx era => Tx l era -> Tx l era -> Bool
 shelleyTxEqRaw tx1 tx2 =

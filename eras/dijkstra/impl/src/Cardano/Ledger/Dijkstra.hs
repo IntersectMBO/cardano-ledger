@@ -60,6 +60,7 @@ import Cardano.Ledger.Shelley.API (
   ApplyTx (..),
   ruleApplyTxValidation,
  )
+import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided, UTxO)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -72,12 +73,13 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro
 
+instance EraStAnnTx DijkstraEra where
+  mkStAnnTx = mkDijkstraStAnnTopTx
+
 instance ApplyTx DijkstraEra where
   newtype ApplyTxError DijkstraEra = DijkstraApplyTxError (NonEmpty (DijkstraMempoolPredFailure DijkstraEra))
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
-
-  mkStAnnTx = mkDijkstraStAnnTopTx
 
   applyTxValidation validationPolicy globals env state tx =
     first DijkstraApplyTxError $

@@ -84,6 +84,7 @@ library
     Cardano.Ledger.Rewards
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.Slot
+    Cardano.Ledger.StAnnTx
     Cardano.Ledger.State
     Cardano.Ledger.Tools
     Cardano.Ledger.TxIn

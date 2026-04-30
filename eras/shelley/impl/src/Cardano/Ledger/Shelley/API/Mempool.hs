@@ -49,9 +49,7 @@ import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, ShelleyLedgerPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.State (UTxO)
-import Cardano.Slotting.EpochInfo (EpochInfo)
-import Cardano.Slotting.Time (SystemStart)
+import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (Except)
 import Control.Monad.Trans.Reader (runReader)
@@ -60,7 +58,6 @@ import Data.Bifunctor (Bifunctor (first))
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
-import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -95,7 +92,7 @@ translateValidated ::
 translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
 
 class
-  ( EraTx era
+  ( EraStAnnTx era
   , Eq (ApplyTxError era)
   , Show (ApplyTxError era)
   , Typeable (ApplyTxError era)
@@ -106,14 +103,6 @@ class
   ApplyTx era
   where
   data ApplyTxError era
-
-  mkStAnnTx ::
-    EpochInfo (Either Text) ->
-    SystemStart ->
-    PParams era ->
-    UTxO era ->
-    Tx TopTx era ->
-    StAnnTx TopTx era
 
   -- | Validate a transaction against a mempool state and for given STS options,
   -- and return the new mempool state, a "validated" 'TxInBlock' and,
@@ -157,8 +146,6 @@ instance ApplyTx ShelleyEra where
   newtype ApplyTxError ShelleyEra = ShelleyApplyTxError (NonEmpty (ShelleyLedgerPredFailure ShelleyEra))
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
-
-  mkStAnnTx _ _ _ _ = id
 
   applyTxValidation validationPolicy globals env state tx =
     first ShelleyApplyTxError $

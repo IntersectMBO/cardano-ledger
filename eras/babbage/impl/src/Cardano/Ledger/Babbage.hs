@@ -53,16 +53,18 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure)
+import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
+
+instance EraStAnnTx BabbageEra where
+  mkStAnnTx = mkAlonzoStAnnTx
 
 instance ApplyTx BabbageEra where
   newtype ApplyTxError BabbageEra = BabbageApplyTxError (NonEmpty (ShelleyLedgerPredFailure BabbageEra))
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
-
-  mkStAnnTx = mkAlonzoStAnnTx
 
   applyTxValidation validationPolicy globals env state tx =
     first BabbageApplyTxError $

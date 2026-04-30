@@ -55,6 +55,7 @@ import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data ()
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure)
+import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
 import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -65,12 +66,13 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro
 
+instance EraStAnnTx AlonzoEra where
+  mkStAnnTx = mkAlonzoStAnnTx
+
 instance ApplyTx AlonzoEra where
   newtype ApplyTxError AlonzoEra = AlonzoApplyTxError (NonEmpty (ShelleyLedgerPredFailure AlonzoEra))
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
-
-  mkStAnnTx = mkAlonzoStAnnTx
 
   applyTxValidation validationPolicy globals env state tx =
     first AlonzoApplyTxError $

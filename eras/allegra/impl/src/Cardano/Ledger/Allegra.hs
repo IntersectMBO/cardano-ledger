@@ -31,16 +31,18 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure)
+import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
+
+instance EraStAnnTx AllegraEra where
+  mkStAnnTx _ _ _ _ = id
 
 instance ApplyTx AllegraEra where
   newtype ApplyTxError AllegraEra = AllegraApplyTxError (NonEmpty (ShelleyLedgerPredFailure AllegraEra))
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
-
-  mkStAnnTx _ _ _ _ = id
 
   applyTxValidation validationPolicy globals env state tx =
     first AllegraApplyTxError $
