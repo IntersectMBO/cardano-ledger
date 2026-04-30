@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -11,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.HuddleSpec (
@@ -83,17 +85,29 @@ import Cardano.Ledger.Huddle.Gen (
   MonadGen (choose, resize),
   Term (..),
   WrappedTerm (..),
+  antiChoose,
+  antiVectorOfUnique,
+  arbitrary,
+  faultyNum,
   genArrayTerm,
   genMapTerm,
   genRule,
+  generateFromGRef,
   liftAntiGen,
   oneof,
   replicateMNorm,
   shuffle,
+  unwrapSingle,
+  unwrapSingleOrError,
+  validateArrayTerm,
+  validateFromGRef,
   withAntiGen,
   (|!),
  )
 import Cardano.Ledger.Huddle.Gen qualified as Gen
+import Control.Monad (unless)
+import Data.Foldable (traverse_)
+import Data.List (nub)
 import Data.Proxy (Proxy (..))
 import Data.Traversable (forM)
 import Data.Word (Word64)
@@ -707,8 +721,33 @@ conwayRedeemer pname p =
       ]
 
 mkMaybeTaggedSet ::
-  forall name a. (KnownSymbol name, IsType0 a) => Proxy name -> Word64 -> a -> GRuleCall
-mkMaybeTaggedSet pname n = binding $ \x -> pname =.= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
+  forall name a. (KnownSymbol name, IsType0 a) => Proxy name -> Int -> a -> GRuleCall
+mkMaybeTaggedSet pname n = binding $ \x ->
+  withCBORGen (generator x)
+    . withValidator (validator x)
+    $ pname =.= tag 258 (arr [fromIntegral n <+ a x]) / sarr [fromIntegral n <+ a x]
+  where
+    generator :: GRef -> CBORGen WrappedTerm
+    generator ref = do
+      nElems <- liftAntiGen . Gen.sized $ \(fromIntegral -> sz) -> antiChoose (n, sz) (0, sz)
+      elems <- withAntiGen (antiVectorOfUnique nElems) $ unwrapSingleOrError <$> generateFromGRef ref
+      elemsArr <- genArrayTerm elems
+      tagged <- arbitrary
+      if tagged
+        then do
+          t <- liftAntiGen $ faultyNum 258
+          pure . S $ TTagged t elemsArr
+        else pure $ S elemsArr
+    validator ref term = do
+      term_ <- unwrapSingle term
+      let
+        validateInner t = do
+          elems <- validateArrayTerm t
+          unless (elems == nub elems) $ fail "not all elements are unique"
+          traverse_ (validateFromGRef ref) elems
+      case term_ of
+        TTagged t x | t == 258 -> validateInner x
+        x -> validateInner x
 
 maybeTaggedSet :: IsType0 a => Proxy "set" -> a -> GRuleCall
 maybeTaggedSet pname = mkMaybeTaggedSet pname 0

@@ -23,6 +23,7 @@ module Cardano.Ledger.Huddle.Gen (
   genBytesTerm,
   genStringTerm,
   genMapTerm,
+  unwrapSingleOrError,
 
   -- * Term validators
   validateFromName,
@@ -43,6 +44,7 @@ module Cardano.Ledger.Huddle.Gen (
 
   -- * Antigen
   module AntiGen,
+  antiVectorOfUnique,
 ) where
 
 import Cardano.Ledger.Binary (Term (..))
@@ -80,6 +82,21 @@ shuffle :: MonadGen m => [a] -> m [a]
 shuffle = liftGen . QC.shuffle
 
 -- Term generators
+
+antiVectorOfUnique :: Eq a => Int -> AntiGen a -> AntiGen [a]
+antiVectorOfUnique n gen = do
+  disallowDuplicates <- faultyBool True
+  let
+    triesPerElement = 10 :: Int
+    go _ 0 _ = QC.discard
+    go m tries elems
+      | m > 0 = do
+          x <- gen
+          if disallowDuplicates && x `elem` elems
+            then go m (tries - 1) elems
+            else go (m - 1) triesPerElement (x : elems)
+      | otherwise = pure elems
+  go n triesPerElement []
 
 genArrayTerm :: MonadGen m => [Term] -> m Term
 genArrayTerm es = GenT.elements [TList es, TListI es]
@@ -136,3 +153,7 @@ validateMapTerm _ = fail "Expected map"
 unwrapSingle :: WrappedTerm -> CBORValidator Term
 unwrapSingle (S x) = pure x
 unwrapSingle _ = fail "Expected a single term"
+
+unwrapSingleOrError :: WrappedTerm -> Term
+unwrapSingleOrError (S x) = x
+unwrapSingleOrError _ = error "Expected a single term"
