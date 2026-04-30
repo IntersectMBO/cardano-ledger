@@ -406,13 +406,15 @@ guardDijkstraFeaturesForPlutusV1toV3 ::
 guardDijkstraFeaturesForPlutusV1toV3 tx = do
   let txBody = tx ^. bodyTxL
       directDeposits = txBody ^. directDepositsTxBodyL
+      accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
   unless (null $ unDirectDeposits directDeposits) $
     Left $
-      inject (DirectDepositsNotSupported directDeposits :: DijkstraContextError era)
-  let accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
+      inject $
+        DirectDepositsNotSupported @era directDeposits
   unless (null $ unAccountBalanceIntervals accountBalanceIntervals) $
     Left $
-      inject (AccountBalanceIntervalsNotSupported accountBalanceIntervals :: DijkstraContextError era)
+      inject $
+        AccountBalanceIntervalsNotSupported @era accountBalanceIntervals
 
 transFailSubTxIsNotSupported ::
   forall l era.
