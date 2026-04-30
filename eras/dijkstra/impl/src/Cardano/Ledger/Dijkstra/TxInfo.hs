@@ -46,7 +46,7 @@ import Cardano.Ledger.Conway.TxInfo (
   transTxInInfoV3,
  )
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
-import Cardano.Ledger.Credential (StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (
@@ -104,8 +104,10 @@ data DijkstraContextError era
     DirectDepositsNotSupported DirectDeposits
   | -- | Attempt to use PlutusV1-V3 with non-empty account balance intervals will result in this failure
     AccountBalanceIntervalsNotSupported (AccountBalanceIntervals era)
-  | -- | Attempt to use sub-transactions with PlutusV1-V3 scripts at the top level
+  | -- | Attempt to use sub-transactions with PlutusV1-V3 scripts at the top level will result in this failure
     SubTxsAreNotSupported (NonEmpty TxId)
+  | -- | Attempt to use PlutusV1-V3 with script hashes in guards will result in this failure
+    GuardScriptHashesNotSupported (NonEmpty ScriptHash)
   deriving (Generic)
 
 deriving instance
@@ -163,6 +165,8 @@ instance
       kindObject "AccountBalanceIntervalsNotSupported" ["account_balance_intervals" .= show abi]
     SubTxsAreNotSupported txIds ->
       kindObject "SubTxsAreNotSupported" ["txIds" .= toJSON txIds]
+    GuardScriptHashesNotSupported scriptHashes ->
+      kindObject "GuardScriptHashesNotSupported" ["script_hashes" .= toJSON scriptHashes]
 
 instance
   ( EraPParams era
@@ -182,6 +186,7 @@ instance
     20 -> SumD DirectDepositsNotSupported <! From
     21 -> SumD AccountBalanceIntervalsNotSupported <! From
     22 -> SumD SubTxsAreNotSupported <! From
+    23 -> SumD GuardScriptHashesNotSupported <! From
     k -> Invalid k
 
 instance
@@ -204,6 +209,8 @@ instance
       DirectDepositsNotSupported dd -> Sum DirectDepositsNotSupported 20 !> To dd
       AccountBalanceIntervalsNotSupported abi -> Sum AccountBalanceIntervalsNotSupported 21 !> To abi
       SubTxsAreNotSupported txIds -> Sum SubTxsAreNotSupported 22 !> To txIds
+      GuardScriptHashesNotSupported scriptHashes ->
+        Sum GuardScriptHashesNotSupported 23 !> To scriptHashes
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
@@ -423,6 +430,7 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
       directDeposits = txBody ^. directDepositsTxBodyL
       accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
       subTransactions = txBody ^. subTransactionsTxBodyL
+      scriptHashes = [sh | ScriptHashObj sh <- toList (txBody ^. guardsTxBodyL)]
   unless (null $ unDirectDeposits directDeposits) $
     Left $
       inject $
@@ -437,6 +445,12 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
       Left $
         inject $
           SubTxsAreNotSupported @era subTxIds
+  case NE.nonEmpty scriptHashes of
+    Nothing -> Right ()
+    Just neScriptHashes ->
+      Left $
+        inject $
+          GuardScriptHashesNotSupported @era neScriptHashes
 
 transFailUnsupportedScriptInSubTx ::
   forall l era.
