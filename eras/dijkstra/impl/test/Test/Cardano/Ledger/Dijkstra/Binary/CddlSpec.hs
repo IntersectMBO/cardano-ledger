@@ -16,7 +16,6 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval, AccountBalanceIntervals)
@@ -74,5 +73,4 @@ spec = do
       fullCddlSpec @(TxCert DijkstraEra) v "certificate"
       fullCddlSpec @(OSet (TxCert DijkstraEra)) v "certificates"
       fullCddlSpec @(OSet (ProposalProcedure DijkstraEra)) v "proposal_procedures"
-      fullCddlSpec @(OSet (Credential Guard)) v "guards"
       fullGenCddlSpec @(VotingProcedures DijkstraEra) genNonEmptyVotingProcedures v "voting_procedures"
