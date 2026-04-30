@@ -32,6 +32,7 @@ module Cardano.Ledger.Babbage (
 import Cardano.Ledger.Alonzo (AlonzoStAnnTx (..), mkAlonzoStAnnTx)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
+import Cardano.Ledger.Alonzo.UTxO (scriptsProvidedAlonzoStAnnTx)
 import Cardano.Ledger.Babbage.BlockBody ()
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Forecast (
@@ -66,6 +67,8 @@ instance EraStAnnTx BabbageEra where
   txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
 
   mkStAnnTx = mkAlonzoStAnnTx
+
+  scriptsProvidedStAnnTx = scriptsProvidedAlonzoStAnnTx
 
 instance ApplyTx BabbageEra where
   newtype ApplyTxError BabbageEra = BabbageApplyTxError (NonEmpty (ShelleyLedgerPredFailure BabbageEra))

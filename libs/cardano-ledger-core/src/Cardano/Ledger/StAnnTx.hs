@@ -9,7 +9,7 @@ module Cardano.Ledger.StAnnTx (
 ) where
 
 import Cardano.Ledger.Core (EraTx, PParams, TopTx, Tx, TxLevel)
-import Cardano.Ledger.State.UTxO (UTxO)
+import Cardano.Ledger.State.UTxO (ScriptsProvided, UTxO)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Kind (Type)
@@ -39,3 +39,9 @@ class EraTx era => EraStAnnTx era where
     UTxO era ->
     Tx TopTx era ->
     StAnnTx TopTx era
+
+  -- | Retrieve the `ScriptsProvided` for an annotated transaction. For eras with a real
+  -- annotation (Alonzo onward), this returns the value cached at construction time. For
+  -- pre-Alonzo eras (where `StAnnTx l era ~ Tx l era`), it computes directly from the
+  -- transaction's witness scripts.
+  scriptsProvidedStAnnTx :: StAnnTx l era -> ScriptsProvided era

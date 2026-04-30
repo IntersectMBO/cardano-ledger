@@ -58,6 +58,7 @@ import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody ()
 import Cardano.Ledger.Shelley.TxWits ()
 import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
+import Cardano.Ledger.State (ScriptsProvided (..))
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
@@ -227,6 +228,8 @@ instance EraStAnnTx ShelleyEra where
   txStAnnTxG = id
 
   mkStAnnTx _ _ _ _ = id
+
+  scriptsProvidedStAnnTx tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
 shelleyTxEqRaw :: EraTx era => Tx l era -> Tx l era -> Bool
 shelleyTxEqRaw tx1 tx2 =

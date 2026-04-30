@@ -22,6 +22,7 @@ module Cardano.Ledger.Conway (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoStAnnTx (..), mkAlonzoStAnnTx)
+import Cardano.Ledger.Alonzo.UTxO (scriptsProvidedAlonzoStAnnTx)
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
@@ -57,6 +58,8 @@ instance EraStAnnTx ConwayEra where
   txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
 
   mkStAnnTx = mkAlonzoStAnnTx
+
+  scriptsProvidedStAnnTx = scriptsProvidedAlonzoStAnnTx
 
 instance ApplyTx ConwayEra where
   newtype ApplyTxError ConwayEra = ConwayApplyTxError (NonEmpty (ConwayLedgerPredFailure ConwayEra))

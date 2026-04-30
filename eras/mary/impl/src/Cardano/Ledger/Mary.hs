@@ -22,6 +22,7 @@ module Cardano.Ledger.Mary (
 
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
+import Cardano.Ledger.Core (witsTxL)
 import Cardano.Ledger.Mary.BlockBody ()
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Forecast ()
@@ -37,11 +38,14 @@ import Cardano.Ledger.Mary.TxBody (TxBody (..))
 import Cardano.Ledger.Mary.UTxO ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.Core (scriptTxWitsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure)
 import Cardano.Ledger.StAnnTx (EraStAnnTx (..))
+import Cardano.Ledger.State (ScriptsProvided (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 
 instance EraStAnnTx MaryEra where
   type StAnnTx l MaryEra = Tx l MaryEra
@@ -49,6 +53,8 @@ instance EraStAnnTx MaryEra where
   txStAnnTxG = id
 
   mkStAnnTx _ _ _ _ = id
+
+  scriptsProvidedStAnnTx tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
 instance ApplyTx MaryEra where
   newtype ApplyTxError MaryEra = MaryApplyTxError (NonEmpty (ShelleyLedgerPredFailure MaryEra))

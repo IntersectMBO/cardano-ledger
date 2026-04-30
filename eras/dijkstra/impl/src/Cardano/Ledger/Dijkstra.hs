@@ -53,7 +53,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Dijkstra.TxInfo ()
 import Cardano.Ledger.Dijkstra.TxWits ()
-import Cardano.Ledger.Dijkstra.UTxO ()
+import Cardano.Ledger.Dijkstra.UTxO (scriptsProvidedDijkstraStAnnTx)
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Shelley.API (
   ApplyBlock (..),
@@ -82,6 +82,8 @@ instance EraStAnnTx DijkstraEra where
     DijkstraStAnnSubTx {dsastTx} -> dsastTx
 
   mkStAnnTx = mkDijkstraStAnnTopTx
+
+  scriptsProvidedStAnnTx = scriptsProvidedDijkstraStAnnTx
 
 instance ApplyTx DijkstraEra where
   newtype ApplyTxError DijkstraEra = DijkstraApplyTxError (NonEmpty (DijkstraMempoolPredFailure DijkstraEra))

@@ -49,6 +49,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO,
   AlonzoScriptsNeeded,
   resolveNeededPlutusScriptsWithPurpose,
+  scriptsProvidedAlonzoStAnnTx,
  )
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
@@ -73,6 +74,8 @@ instance EraStAnnTx AlonzoEra where
   txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
 
   mkStAnnTx = mkAlonzoStAnnTx
+
+  scriptsProvidedStAnnTx = scriptsProvidedAlonzoStAnnTx
 
 instance ApplyTx AlonzoEra where
   newtype ApplyTxError AlonzoEra = AlonzoApplyTxError (NonEmpty (ShelleyLedgerPredFailure AlonzoEra))
