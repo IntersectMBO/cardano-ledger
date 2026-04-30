@@ -23,6 +23,7 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceIntervals (..),
   DijkstraEraScript,
+  pattern RequireGuard,
  )
 import Cardano.Ledger.Dijkstra.State (UTxO (..))
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
@@ -169,3 +170,23 @@ spec = describe "TxInfo" $ do
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (GuardScriptHashesNotSupported @era neScriptHashes)
+      prop "RequireGuardNotSupported" $ \(guardCred :: Credential Guard) ->
+        let
+          nativeScript = RequireGuard guardCred :: NativeScript era
+          tx =
+            mkBasicTx @era @TopTx mkBasicTxBody
+              & witsTxL . hashScriptTxWitsL .~ [fromNativeScript nativeScript]
+          ledgerTxInfo =
+            LedgerTxInfo
+              { ltiProtVer = ProtVer (eraProtVerLow @era) 0
+              , ltiEpochInfo = epochInfo testGlobals
+              , ltiSystemStart = systemStart testGlobals
+              , ltiUTxO = mempty
+              , ltiTx = tx
+              , ltiMemoizedSubTransactions = mempty
+              }
+          txInfoResult =
+            ($ SpendingPurpose AsPurpose)
+              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+         in
+          txInfoResult `shouldBeLeft` inject (RequireGuardNotSupported @era (guardCred :| []))

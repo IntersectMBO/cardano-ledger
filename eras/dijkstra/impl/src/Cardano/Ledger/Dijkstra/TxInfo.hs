@@ -54,6 +54,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraEraScript,
   PlutusScript (..),
   pattern GuardingPurpose,
+  pattern RequireGuard,
  )
 import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCert)
 import Cardano.Ledger.Dijkstra.UTxO ()
@@ -72,6 +73,11 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+ )
 import Cardano.Ledger.State (StakePoolParams (..))
 import Cardano.Ledger.TxIn (TxId)
 import Control.Arrow (left)
@@ -83,6 +89,7 @@ import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -104,6 +111,8 @@ data DijkstraContextError era
     AccountBalanceIntervalsNotSupported (AccountBalanceIntervals era)
   | -- | Attempt to use PlutusV1-V3 with script hashes in guards will result in this failure
     GuardScriptHashesNotSupported (NonEmpty ScriptHash)
+  | -- | Attempt to use PlutusV1-V3 with `RequireGuard` native scripts will result in this failure
+    RequireGuardNotSupported (NonEmpty (Credential Guard))
   deriving (Generic)
 
 deriving instance
@@ -156,6 +165,8 @@ instance
       kindObject "AccountBalanceIntervalsNotSupported" ["account_balance_intervals" .= show abi]
     GuardScriptHashesNotSupported scriptHashes ->
       kindObject "GuardScriptHashesNotSupported" ["script_hashes" .= toJSON scriptHashes]
+    RequireGuardNotSupported guardCreds ->
+      kindObject "RequireGuardNotSupported" ["guards" .= toJSON guardCreds]
 
 instance
   ( EraPParams era
@@ -175,6 +186,7 @@ instance
     20 -> SumD DirectDepositsNotSupported <! From
     21 -> SumD AccountBalanceIntervalsNotSupported <! From
     22 -> SumD GuardScriptHashesNotSupported <! From
+    23 -> SumD RequireGuardNotSupported <! From
     k -> Invalid k
 
 instance
@@ -197,6 +209,8 @@ instance
       AccountBalanceIntervalsNotSupported abi -> Sum AccountBalanceIntervalsNotSupported 21 !> To abi
       GuardScriptHashesNotSupported scriptHashes ->
         Sum GuardScriptHashesNotSupported 22 !> To scriptHashes
+      RequireGuardNotSupported guardCreds ->
+        Sum RequireGuardNotSupported 23 !> To guardCreds
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
@@ -417,6 +431,10 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
       directDeposits = txBody ^. directDepositsTxBodyL
       accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
       scriptHashes = [sh | ScriptHashObj sh <- toList (txBody ^. guardsTxBodyL)]
+      guardCreds =
+        foldMap collectRequireGuards $
+          mapMaybe getNativeScript $
+            toList (tx ^. witsTxL . scriptTxWitsL)
   unless (null $ unDirectDeposits directDeposits) $
     Left $
       inject $
@@ -431,6 +449,19 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
       Left $
         inject $
           GuardScriptHashesNotSupported @era neScriptHashes
+  case NE.nonEmpty guardCreds of
+    Nothing -> Right ()
+    Just neGuardCreds ->
+      Left $
+        inject $
+          RequireGuardNotSupported @era neGuardCreds
+  where
+    collectRequireGuards = \case
+      RequireGuard cred -> [cred]
+      RequireAllOf scripts -> foldMap collectRequireGuards scripts
+      RequireAnyOf scripts -> foldMap collectRequireGuards scripts
+      RequireMOf _ scripts -> foldMap collectRequireGuards scripts
+      _ -> []
 
 transFailSubTxIsNotSupported ::
   forall l era.
