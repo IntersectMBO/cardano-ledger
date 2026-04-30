@@ -269,7 +269,7 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env@(SubUtxoEnv _ pp certState scriptsProvided originalUtxo _), utxoState, tx) <-
+  TRC (env@(SubUtxoEnv _ pp certState scriptsProvided originalUtxo _ _), utxoState, tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
       witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
