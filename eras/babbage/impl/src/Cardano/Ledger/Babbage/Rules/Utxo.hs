@@ -355,15 +355,16 @@ babbageUtxoValidation ::
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
   , EraCertState era
   ) =>
   Rule (EraRule "UTXO" era) 'Transition ()
 babbageUtxoValidation = do
-  TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
-  let utxo = utxosUtxo utxos
+  TRC (Shelley.UtxoEnv slot pp certState, utxos, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
+      utxo = utxosUtxo utxos
 
   {-   txb := txbody tx   -}
   let txBody = tx ^. bodyTxL
@@ -447,7 +448,7 @@ utxoTransition ::
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
   , STS (EraRule "UTXO" era)
@@ -455,15 +456,16 @@ utxoTransition ::
     Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
   , State (EraRule "UTXOS" era) ~ ShelleyGovState era
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
-  TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
+  TRC (UtxoEnv slot pp certState, utxos, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
   babbageUtxoValidation
   updatedGovState <-
     trans @(EraRule "UTXOS" era) $
-      TRC (UtxosEnv slot pp certState (utxosUtxo utxos), utxosGovState utxos, tx)
+      TRC (UtxosEnv slot pp certState (utxosUtxo utxos), utxosGovState utxos, stAnnTx)
   updateUTxOStateByTxValidity pp certState updatedGovState tx utxos
 
 updateUTxOStateByTxValidity ::
@@ -531,13 +533,13 @@ instance
     Embed (EraRule "UTXOS" era) (BabbageUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
   , State (EraRule "UTXOS" era) ~ ShelleyGovState era
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , SafeToHash (TxWits era)
   ) =>
   STS (BabbageUTXO era)
   where
   type State (BabbageUTXO era) = UTxOState era
-  type Signal (BabbageUTXO era) = Tx TopTx era
+  type Signal (BabbageUTXO era) = StAnnTx TopTx era
   type Environment (BabbageUTXO era) = UtxoEnv era
   type BaseM (BabbageUTXO era) = ShelleyBase
   type PredicateFailure (BabbageUTXO era) = BabbageUtxoPredFailure era

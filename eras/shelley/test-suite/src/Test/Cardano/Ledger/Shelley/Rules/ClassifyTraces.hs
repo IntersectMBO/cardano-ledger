@@ -345,8 +345,9 @@ propAbstractSizeBoundsBytes = property $ do
     (genEnv @era @MockCrypto p defaultConstants)
     genesisLedgerSt
     $ \tr -> do
-      let txs :: [Tx TopTx era]
-          txs = traceSignals OldestFirst tr
+      let stAnnTxs :: [StAnnTx TopTx era]
+          stAnnTxs = traceSignals OldestFirst tr
+          txs = (^. txStAnnTxG) <$> stAnnTxs
       all (\tx -> txSizeBound tx >= numBytes tx) txs
   where
     p :: Proxy era
@@ -379,8 +380,9 @@ propAbstractSizeNotTooBig = property $ do
     (genEnv @era @MockCrypto p defaultConstants)
     genesisLedgerSt
     $ \tr -> do
-      let txs :: [Tx TopTx era]
-          txs = traceSignals OldestFirst tr
+      let stAnnTxs :: [StAnnTx TopTx era]
+          stAnnTxs = traceSignals OldestFirst tr
+          txs = (^. txStAnnTxG) <$> stAnnTxs
       all notTooBig txs
   where
     p :: Proxy era

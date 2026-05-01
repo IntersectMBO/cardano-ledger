@@ -16,12 +16,15 @@
 
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
 
-import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (Globals, TxIx, epochInfo, mkTxIxPartial, systemStart)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState,
   genesisState,
+  lsUTxOState,
+  utxosUtxo,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv,
@@ -57,6 +60,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
 import Test.Cardano.Ledger.Shelley.Utils (
   applySTSTest,
   runShelleyBase,
+  testGlobals,
  )
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Test.QuickCheck (Gen)
@@ -72,7 +76,8 @@ genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
 instance
-  ( EraGen era
+  ( ApplyTx era
+  , EraGen era
   , EraGov era
   , EraUTxO era
   , EraCertState era
@@ -87,7 +92,7 @@ instance
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
@@ -102,7 +107,15 @@ instance
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
-  sigGen = genTx
+  sigGen ge ledgerEnv@(LedgerEnv _ _ _ pParams _) ls = do
+    tx <- genTx ge ledgerEnv ls
+    pure $
+      mkStAnnTx
+        (epochInfo testGlobals)
+        (systemStart testGlobals)
+        pParams
+        (utxosUtxo (lsUTxOState ls))
+        tx
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 
@@ -111,6 +124,7 @@ instance
 
 instance
   ( Crypto c
+  , ApplyTx era
   , EraGen era
   , EraGov era
   , EraUTxO era
@@ -156,10 +170,18 @@ instance
           let ledgerEnv = LedgerEnv slotNo (Just epochNo) txIx pParams reserves
           tx <- genTx ge ledgerEnv ls'
 
-          let res =
+          let utxo = utxosUtxo (lsUTxOState ls')
+              stAnnTx =
+                mkStAnnTx
+                  (epochInfo testGlobals)
+                  (systemStart testGlobals)
+                  pParams
+                  utxo
+                  tx
+              res =
                 runShelleyBase $
                   applySTSTest @(EraRule "LEDGER" era)
-                    (TRC (ledgerEnv, ls', tx))
+                    (TRC (ledgerEnv, ls', stAnnTx))
           case res of
             Left pf -> error ("LEDGER sigGen: " <> show pf)
             Right ls'' -> pure (ls'', tx : txs)

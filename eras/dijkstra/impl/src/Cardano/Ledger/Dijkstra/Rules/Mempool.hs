@@ -154,13 +154,13 @@ instance
   , Show (PredicateFailure (EraRule "UTXOW" era))
   , Show (PredicateFailure (EraRule "SUBLEDGERS" era))
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , EraRuleFailure "SUBLEDGERS" era ~ DijkstraSubLedgersPredFailure era
   ) =>
   STS (DijkstraMEMPOOL era)
   where
   type State (DijkstraMEMPOOL era) = LedgerState era
-  type Signal (DijkstraMEMPOOL era) = Tx TopTx era
+  type Signal (DijkstraMEMPOOL era) = StAnnTx TopTx era
   type Environment (DijkstraMEMPOOL era) = LedgerEnv era
   type BaseM (DijkstraMEMPOOL era) = ShelleyBase
   type PredicateFailure (DijkstraMEMPOOL era) = DijkstraMempoolPredFailure era
@@ -174,12 +174,13 @@ mempoolTransition ::
   , Embed (EraRule "LEDGER" era) (DijkstraMEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (DijkstraMEMPOOL era)
 mempoolTransition = do
-  TRC trc@(_ledgerEnv, ledgerState, tx) <-
+  TRC trc@(_ledgerEnv, ledgerState, stAnnTx) <-
     judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
 
   -- This rule only gets invoked on transactions within the mempool.
   -- Add checks here that sanitize undesired transactions.

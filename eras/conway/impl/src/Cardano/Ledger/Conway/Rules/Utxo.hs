@@ -241,21 +241,22 @@ conwayUtxoTransition ::
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
   , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
   , -- In this function we we call the UTXOS rule, so we need some assumptions
     Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
   , State (EraRule "UTXOS" era) ~ ()
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   ) =>
   TransitionRule (EraRule "UTXO" era)
 conwayUtxoTransition = do
-  TRC (UtxoEnv _ pp certState, utxos, tx) <- judgmentContext
+  TRC (UtxoEnv _ pp certState, utxos, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
   babbageUtxoValidation
-  () <- trans @(EraRule "UTXOS" era) $ TRC (ConwayUtxosEnv pp (utxosUtxo utxos), (), tx)
+  () <- trans @(EraRule "UTXOS" era) $ TRC (ConwayUtxosEnv pp (utxosUtxo utxos), (), stAnnTx)
   updateUTxOStateByTxValidity
     pp
     certState
@@ -283,7 +284,7 @@ instance
   , Embed (EraRule "UTXOS" era) (ConwayUTXO era)
   , Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
   , State (EraRule "UTXOS" era) ~ ()
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , PredicateFailure (EraRule "UTXO" era) ~ ConwayUtxoPredFailure era
   , EraCertState era
   , SafeToHash (TxWits era)
@@ -291,7 +292,7 @@ instance
   STS (ConwayUTXO era)
   where
   type State (ConwayUTXO era) = UTxOState era
-  type Signal (ConwayUTXO era) = Tx TopTx era
+  type Signal (ConwayUTXO era) = StAnnTx TopTx era
   type Environment (ConwayUTXO era) = UtxoEnv era
   type BaseM (ConwayUTXO era) = ShelleyBase
   type PredicateFailure (ConwayUTXO era) = ConwayUtxoPredFailure era

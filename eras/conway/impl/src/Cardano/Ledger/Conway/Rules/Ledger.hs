@@ -314,7 +314,7 @@ instance
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , ConwayEraCertState era
@@ -325,7 +325,7 @@ instance
   STS (ConwayLEDGER era)
   where
   type State (ConwayLEDGER era) = LedgerState era
-  type Signal (ConwayLEDGER era) = Tx TopTx era
+  type Signal (ConwayLEDGER era) = StAnnTx TopTx era
   type Environment (ConwayLEDGER era) = LedgerEnv era
   type BaseM (ConwayLEDGER era) = ShelleyBase
   type PredicateFailure (ConwayLEDGER era) = ConwayLedgerPredFailure era
@@ -344,7 +344,7 @@ conwayLedgerTransitionTRC ::
   , ConwayEraTxBody era
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
-  , Signal (someLEDGER era) ~ Tx TopTx era
+  , Signal (someLEDGER era) ~ StAnnTx TopTx era
   , State (someLEDGER era) ~ LedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
@@ -356,7 +356,7 @@ conwayLedgerTransitionTRC ::
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , BaseM (someLEDGER era) ~ ShelleyBase
@@ -372,9 +372,10 @@ conwayLedgerTransitionTRC
   ( TRC
       ( LedgerEnv slot mbCurEpochNo _txIx pp chainAccountState
         , LedgerState utxoState certState
-        , tx
+        , stAnnTx
         )
     ) = do
+    let tx = stAnnTx ^. txStAnnTxG
     curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
 
     (utxoState', certStateAfterCERTS) <-
@@ -455,7 +456,7 @@ conwayLedgerTransitionTRC
           -- AccountState.
           ( UtxoEnv @era slot pp certState
           , utxoState'
-          , tx
+          , stAnnTx
           )
     pure $ LedgerState utxoState'' certStateAfterCERTS
 
@@ -513,7 +514,7 @@ conwayLedgerTransition ::
   , ConwayEraTxBody era
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
-  , Signal (someLEDGER era) ~ Tx TopTx era
+  , Signal (someLEDGER era) ~ StAnnTx TopTx era
   , State (someLEDGER era) ~ LedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
@@ -525,7 +526,7 @@ conwayLedgerTransition ::
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , BaseM (someLEDGER era) ~ ShelleyBase
@@ -548,7 +549,7 @@ instance
   , Script era ~ AlonzoScript era
   , TxOut era ~ BabbageTxOut era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , PredicateFailure (EraRule "UTXOW" era) ~ ConwayUtxowPredFailure era
   , Event (EraRule "UTXOW" era) ~ AlonzoUtxowEvent era
   , STS (ConwayUTXOW era)
@@ -590,7 +591,7 @@ instance
   , GovState era ~ ConwayGovState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era

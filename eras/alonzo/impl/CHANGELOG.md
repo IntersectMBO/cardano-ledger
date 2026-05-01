@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Change `Signal` to `StAnnTx TopTx era` for: `AlonzoLEDGER`, `AlonzoUTXOW`, `AlonzoUTXO`, `AlonzoUTXOS`
 * Add `FromJSON` instance for `IsValid`
 * Add `ltiMemoizedSubTransactions` to `LedgerTxInfo`
 * Add `resolveNeededPlutusScriptsWithPurpose`

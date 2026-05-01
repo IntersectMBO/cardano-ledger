@@ -312,12 +312,13 @@ alonzoStyleWitness ::
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 alonzoStyleWitness = do
-  TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx) <- judgmentContext
+  TRC (utxoEnv@(UtxoEnv _ pp certState), u, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
@@ -378,7 +379,7 @@ alonzoStyleWitness = do
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ checkScriptIntegrityHash tx pp scriptIntegrity
 
-  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
+  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, stAnnTx)
 
 -- ================================
 
@@ -406,13 +407,13 @@ instance
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , EraCertState era
   ) =>
   STS (AlonzoUTXOW era)
   where
   type State (AlonzoUTXOW era) = UTxOState era
-  type Signal (AlonzoUTXOW era) = Tx TopTx era
+  type Signal (AlonzoUTXOW era) = StAnnTx TopTx era
   type Environment (AlonzoUTXOW era) = UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type PredicateFailure (AlonzoUTXOW era) = AlonzoUtxowPredFailure era

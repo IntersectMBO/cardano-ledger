@@ -83,10 +83,11 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
     alonzoSpecificPropsLEDGER
       SourceSignalTarget
         { source = LedgerState UTxOState {utxosUtxo = UTxO u, utxosDeposited = dp, utxosFees = f} ds
-        , signal = tx
+        , signal = stAnnTx
         , target = LedgerState UTxOState {utxosUtxo = UTxO u', utxosDeposited = dp', utxosFees = f'} ds'
         } =
-        let isValid' = tx ^. isValidTxL
+        let tx = stAnnTx ^. txStAnnTxG
+            isValid' = tx ^. isValidTxL
             noNewUTxO = u' `Map.isSubmapOf` u
             collateralInFees = f <> sumCollateral tx (UTxO u) == f'
             utxoConsumed = not $ u `Map.isSubmapOf` u'

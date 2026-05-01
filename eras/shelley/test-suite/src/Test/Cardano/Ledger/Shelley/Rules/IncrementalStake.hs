@@ -20,6 +20,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (StakeRefBase, StakeRefPtr))
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -78,7 +79,8 @@ incrStakeComputationTest ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
   , STS (EraRule "LEDGER" era)
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
+  , ApplyTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   TestTree
@@ -94,7 +96,8 @@ incrStakeComp ::
   , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , STS (EraRule "LEDGER" era)
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
+  , ApplyTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , ShelleyEraAccounts era
   ) =>
@@ -110,31 +113,32 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
     checkIncrStakeComp
       SourceSignalTarget
         { source = LedgerState UTxOState {utxosUtxo = u, utxosInstantStake = is} dp
-        , signal = tx
+        , signal = stAnnTx
         , target = LedgerState UTxOState {utxosUtxo = u', utxosInstantStake = is'} dp'
         } =
-        counterexample
-          ( unlines
-              [ "\nDetails:"
-              , "\ntx"
-              , show tx
-              , "size original utxo"
-              , show (Map.size $ unUTxO u)
-              , "original utxo"
-              , show u
-              , "original instantStake"
-              , show is
-              , "final utxo"
-              , show u'
-              , "final instantStake"
-              , show is'
-              , "original ptrs"
-              , show ptrs
-              , "final ptrs"
-              , show ptrs'
-              ]
-          )
-          $ utxoBalanace === fromCompact instantStakeBalanace
+        let tx = stAnnTx ^. txStAnnTxG
+         in counterexample
+              ( unlines
+                  [ "\nDetails:"
+                  , "\ntx"
+                  , show tx
+                  , "size original utxo"
+                  , show (Map.size $ unUTxO u)
+                  , "original utxo"
+                  , show u
+                  , "original instantStake"
+                  , show is
+                  , "final utxo"
+                  , show u'
+                  , "final instantStake"
+                  , show is'
+                  , "original ptrs"
+                  , show ptrs
+                  , "final ptrs"
+                  , show ptrs'
+                  ]
+              )
+              $ utxoBalanace === fromCompact instantStakeBalanace
         where
           utxoBalanace = sumCoinUTxO u'
           instantStakeBalanace = fold (sisCredentialStake is') <> fold (sisPtrStake is')

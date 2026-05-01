@@ -97,7 +97,7 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , Signal (BabbageUTXOS era) ~ Tx TopTx era
+  , Signal (BabbageUTXOS era) ~ StAnnTx TopTx era
   , EncCBOR (EraRuleFailure "PPUP" era)
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
@@ -110,7 +110,7 @@ instance
   type BaseM (BabbageUTXOS era) = ShelleyBase
   type Environment (BabbageUTXOS era) = UtxosEnv era
   type State (BabbageUTXOS era) = ShelleyGovState era
-  type Signal (BabbageUTXOS era) = Tx TopTx era
+  type Signal (BabbageUTXOS era) = StAnnTx TopTx era
   type PredicateFailure (BabbageUTXOS era) = AlonzoUtxosPredFailure era
   type Event (BabbageUTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
@@ -151,7 +151,8 @@ utxosTransition ::
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
-  judgmentContext >>= \(TRC (UtxosEnv _ pp _ utxo, pup, tx)) -> do
+  judgmentContext >>= \(TRC (UtxosEnv _ pp _ utxo, pup, stAnnTx)) -> do
+    let tx = stAnnTx ^. txStAnnTxG
     case tx ^. isValidTxL of
       IsValid True -> babbageEvalScriptsTxValid
       IsValid False -> do
@@ -215,9 +216,10 @@ babbageEvalScriptsTxValid ::
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
-  TRC (UtxosEnv slot pp certState utxo, pup, tx) <-
+  TRC (UtxosEnv slot pp certState utxo, pup, stAnnTx) <-
     judgmentContext
-  let txBody = tx ^. bodyTxL
+  let tx = stAnnTx ^. txStAnnTxG
+      txBody = tx ^. bodyTxL
       genDelegs = certState ^. certDStateL . dsGenDelegsL
 
   -- We intentionally run the PPUP rule before evaluating any Plutus scripts.
