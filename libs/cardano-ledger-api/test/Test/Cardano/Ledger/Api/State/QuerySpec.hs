@@ -47,6 +47,7 @@ import System.FilePath ((<.>), (</>))
 import Test.Cardano.Ledger.Api.Arbitrary ()
 import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryConstitutionExamples,
+  queryConstitutionHashExamples,
   queryCurrentEpochNoExamples,
  )
 import Test.Cardano.Ledger.Binary.Golden (cborGoldenSpec)
@@ -89,6 +90,7 @@ latestErasSpec =
   describe (eraName @era) $ do
     describe "Golden" $ do
       eraLedgerStateQueryGoldenSpec @era "queryConstitution" (queryConstitutionExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryConstitutionHash" queryConstitutionHashExamples
       eraLedgerStateQueryGoldenSpec @era "queryCurrentEpochNo" queryCurrentEpochNoExamples
     describe "Roundtrip" $ do
       prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
