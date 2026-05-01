@@ -13,6 +13,7 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledger () where
 
+import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
@@ -27,6 +28,7 @@ import Cardano.Ledger.Conway.Core (
   ScriptHash,
   TxLevel (..),
   txIdTx,
+  txStAnnTxG,
  )
 import Cardano.Ledger.Conway.Rules (EnactState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
@@ -108,3 +110,8 @@ instance SpecTranslate ctx (Tx TopTx ConwayEra) where
       <*> toSpecRep (tx ^. sizeTxF)
       <*> toSpecRep (tx ^. isValidTxL)
       <*> toSpecRep (tx ^. auxDataTxL)
+
+instance SpecTranslate ctx (AlonzoStAnnTx TopTx ConwayEra) where
+  type SpecRep (AlonzoStAnnTx TopTx ConwayEra) = Agda.Tx
+
+  toSpecRep stAnnTx = toSpecRep (stAnnTx ^. txStAnnTxG)
