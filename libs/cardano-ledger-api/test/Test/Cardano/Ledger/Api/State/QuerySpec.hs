@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Api.State.QuerySpec (spec) where
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.State.Query
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
@@ -31,6 +32,8 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Char (toLower)
 import Data.Default (Default (..))
 import Data.Foldable (foldMap')
 import qualified Data.Map.Strict as Map
@@ -39,10 +42,15 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import Lens.Micro ((&), (.~), (^.))
+import Paths_cardano_ledger_api (getDataFileName)
+import System.FilePath ((<.>), (</>))
 import Test.Cardano.Ledger.Api.Arbitrary ()
+import Test.Cardano.Ledger.Api.State.Query.Examples (queryConstitutionExamples)
+import Test.Cardano.Ledger.Binary.Golden (cborGoldenSpec)
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
@@ -50,8 +58,21 @@ import Test.Cardano.Slotting.Numeric ()
 
 spec :: Spec
 spec = do
-  latestErasSpec @ConwayEra
-  latestErasSpec @DijkstraEra
+  describe "QuerySpec" $ do
+    latestErasSpec @(PreviousEra LatestKnownEra)
+    latestErasSpec @LatestKnownEra
+
+eraLedgerStateQueryGoldenSpec ::
+  forall era q.
+  (Era era, Eq q, ToExpr q, NFData q, ToJSON q, Show q, FromJSON q, EncCBOR q, DecCBOR q) =>
+  String -> [q] -> Spec
+eraLedgerStateQueryGoldenSpec queryName queryResultExamples = do
+  let mkFilePath t = "golden" </> (toLower <$> eraName @era) </> t </> queryName <.> t
+  describe queryName $ do
+    describe "JSON" $
+      aesonGoldenSpec getDataFileName (mkFilePath "json") queryResultExamples
+    describe "CBOR" $
+      cborGoldenSpec getDataFileName (mkFilePath "cbor") (eraProtVerHigh @era) queryResultExamples
 
 latestErasSpec ::
   forall era.
@@ -62,14 +83,15 @@ latestErasSpec ::
   ) =>
   Spec
 latestErasSpec =
-  describe "QuerySpec" $ do
-    describe (eraName @era) $ do
-      describe "Roundtrip" $ do
-        prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
-        prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
-      describe "Queries" $ do
-        committeeMembersStateSpec @era
-        queryStakeSnapshotsSpec @era
+  describe (eraName @era) $ do
+    describe "Golden" $ do
+      eraLedgerStateQueryGoldenSpec @era "queryConstitution" (queryConstitutionExamples @era)
+    describe "Roundtrip" $ do
+      prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
+      prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
+    describe "Queries" $ do
+      committeeMembersStateSpec @era
+      queryStakeSnapshotsSpec @era
 
 committeeMembersStateSpec ::
   forall era.
