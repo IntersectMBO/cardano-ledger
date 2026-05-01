@@ -488,7 +488,7 @@ conwayGovTransition = do
         -- In a HardFork, check that the ProtVer can follow
         let badHardFork = do
               (prevGaid, newProtVer, prevProtVer) <-
-                preceedingHardFork @era pp prevGovActionIds st pProcGovAction
+                preceedingHardFork @era pp prevGovActionIds proposals pProcGovAction
               guard (not (pvCanFollow prevProtVer newProtVer))
               Just $
                 ProposalCantFollow @era prevGaid $
