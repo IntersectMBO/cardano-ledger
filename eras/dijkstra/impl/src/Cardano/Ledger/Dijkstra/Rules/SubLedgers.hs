@@ -46,11 +46,9 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEvent,
   ShelleyPoolPredFailure,
  )
-import Cardano.Ledger.TxIn (TxId)
 import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.State.Transition.Extended
-import Data.OMap.Strict (OMap)
 import GHC.Generics (Generic)
 
 newtype DijkstraSubLedgersPredFailure era
@@ -115,7 +113,7 @@ instance
   STS (DijkstraSUBLEDGERS era)
   where
   type State (DijkstraSUBLEDGERS era) = LedgerState era
-  type Signal (DijkstraSUBLEDGERS era) = OMap TxId (Tx SubTx era)
+  type Signal (DijkstraSUBLEDGERS era) = [StAnnTx SubTx era]
   type Environment (DijkstraSUBLEDGERS era) = SubLedgerEnv era
   type BaseM (DijkstraSUBLEDGERS era) = ShelleyBase
   type PredicateFailure (DijkstraSUBLEDGERS era) = DijkstraSubLedgersPredFailure era

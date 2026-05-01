@@ -122,7 +122,7 @@ instance
   type BaseM (AlonzoUTXOS era) = ShelleyBase
   type Environment (AlonzoUTXOS era) = UtxosEnv era
   type State (AlonzoUTXOS era) = ShelleyGovState era
-  type Signal (AlonzoUTXOS era) = Tx TopTx era
+  type Signal (AlonzoUTXOS era) = StAnnTx TopTx era
   type PredicateFailure (AlonzoUTXOS era) = AlonzoUtxosPredFailure era
   type Event (AlonzoUTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
@@ -179,7 +179,8 @@ utxosTransition ::
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
-  judgmentContext >>= \(TRC (_, _, tx)) -> do
+  judgmentContext >>= \(TRC (_, _, stAnnTx)) -> do
+    let tx = stAnnTx ^. txStAnnTxG
     case tx ^. isValidTxL of
       IsValid True -> alonzoEvalScriptsTxValid
       IsValid False -> alonzoEvalScriptsTxInvalid
@@ -237,9 +238,10 @@ alonzoEvalScriptsTxValid ::
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxValid = do
-  TRC (UtxosEnv slot pp certState utxo, pup, tx) <-
+  TRC (UtxosEnv slot pp certState utxo, pup, stAnnTx) <-
     judgmentContext
-  let txBody = tx ^. bodyTxL
+  let tx = stAnnTx ^. txStAnnTxG
+      txBody = tx ^. bodyTxL
       genDelegs = certState ^. certDStateL . Shelley.dsGenDelegsL
 
   () <- pure $! Debug.traceEvent validBegin ()
@@ -267,7 +269,8 @@ alonzoEvalScriptsTxInvalid ::
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxInvalid = do
-  TRC (UtxosEnv slot pp _ utxo, pup, tx) <- judgmentContext
+  TRC (UtxosEnv slot pp _ utxo, pup, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
 
   () <- pure $! Debug.traceEvent invalidBegin ()
 

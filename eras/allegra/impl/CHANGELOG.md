@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Change `Signal` to `StAnnTx TopTx era` for: `AllegraUTXOW`, `AllegraUTXO`
 * Add `FromJSON` instance for `ValidityInterval`
 * Add `ApplyTick` instance for `AllegraEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `AllegraEra`.

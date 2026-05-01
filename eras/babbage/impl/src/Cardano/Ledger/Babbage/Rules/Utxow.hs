@@ -296,12 +296,13 @@ babbageUtxowMirTransition ::
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , EraCertState era
   ) =>
   Rule (EraRule "UTXOW" era) 'Transition ()
 babbageUtxowMirTransition = do
-  TRC (UtxoEnv _ _ certState, _, tx) <- judgmentContext
+  TRC (UtxoEnv _ _ certState, _, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum  -}
@@ -319,7 +320,7 @@ babbageUtxowTransition ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
@@ -327,12 +328,13 @@ babbageUtxowTransition ::
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , State (EraRule "UTXO" era) ~ UTxOState era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 babbageUtxowTransition = do
-  TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx) <- judgmentContext
+  TRC (utxoEnv@(UtxoEnv _ pp certState), u, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
@@ -393,7 +395,7 @@ babbageUtxowTransition = do
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ checkScriptIntegrityHash tx pp scriptIntegrity
 
-  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
+  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, stAnnTx)
 
 -- ================================
 
@@ -412,7 +414,7 @@ instance
     Embed (EraRule "UTXO" era) (BabbageUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   , EraCertState era
@@ -420,7 +422,7 @@ instance
   STS (BabbageUTXOW era)
   where
   type State (BabbageUTXOW era) = UTxOState era
-  type Signal (BabbageUTXOW era) = Tx TopTx era
+  type Signal (BabbageUTXOW era) = StAnnTx TopTx era
   type Environment (BabbageUTXOW era) = UtxoEnv era
   type BaseM (BabbageUTXOW era) = ShelleyBase
   type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPredFailure era

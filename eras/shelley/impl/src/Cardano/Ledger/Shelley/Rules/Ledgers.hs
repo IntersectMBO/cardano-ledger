@@ -27,6 +27,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
+import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGERS)
 import Cardano.Ledger.Shelley.LedgerState (ChainAccountState, LedgerState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
@@ -43,6 +44,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.State (CertState, EraStake)
 import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (asks)
@@ -161,10 +163,13 @@ instance
 
 instance
   ( ApplyTx era
+  , EraGov era
+  , EraStake era
+  , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Default (LedgerState era)
   ) =>
   STS (ShelleyLEDGERS era)
@@ -181,10 +186,13 @@ instance
 ledgersTransition ::
   forall era.
   ( ApplyTx era
+  , EraGov era
+  , EraStake era
+  , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (ShelleyLEDGERS era)
 ledgersTransition = do

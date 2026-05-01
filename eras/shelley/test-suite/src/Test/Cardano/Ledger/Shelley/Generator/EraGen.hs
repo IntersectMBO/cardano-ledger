@@ -112,7 +112,7 @@ import Test.QuickCheck (Gen, choose, shuffle)
 type MinLEDGER_STS era =
   ( Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
@@ -136,10 +136,10 @@ type MinUTXO_STS era =
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   )
 
 class Show (TxOut era) => MinGenTxout era where

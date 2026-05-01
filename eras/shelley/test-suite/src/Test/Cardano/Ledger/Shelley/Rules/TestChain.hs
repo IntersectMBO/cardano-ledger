@@ -23,7 +23,7 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain (
   shortChainTrace,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals, SlotNo (..))
+import Cardano.Ledger.BaseTypes (Globals, SlotNo (..), epochInfo, systemStart)
 import Cardano.Ledger.Block (
   Block (..),
   neededTxInsForBlock,
@@ -31,6 +31,7 @@ import Cardano.Ledger.Block (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG, ShelleyEraForecast)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -47,6 +48,7 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEvent,
   ShelleyPOOL,
   ShelleyPoolPredFailure,
+  ledgerPpL,
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.BHeader (
@@ -141,12 +143,13 @@ shortChainTrace constants f = withMaxSuccess 100 $ forAllChainTrace @era 10 cons
 -- | Reconstruct a LEDGER trace from the transactions in a Block and ChainState
 ledgerTraceFromBlock ::
   forall era.
-  ( ChainProperty era
+  ( ApplyTx era
+  , ChainProperty era
   , STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
@@ -154,22 +157,29 @@ ledgerTraceFromBlock ::
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt
   , runShelleyBase $
-      Trace.closure @(EraRule "LEDGER" era) ledgerEnv ledgerSt0 txs
+      Trace.closure @(EraRule "LEDGER" era) ledgerEnv ledgerSt0 stAnnTxs
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
+    pp_ = ledgerEnv ^. ledgerPpL
+    utxo = utxosUtxo (lsUTxOState ledgerSt0)
+    stAnnTxs =
+      map
+        (mkStAnnTx (epochInfo testGlobals) (systemStart testGlobals) pp_ utxo)
+        txs
 
 -- | This function is nearly the same as ledgerTraceFromBlock, but
 -- it restricts the UTxO state to only those needed by the block.
 -- It also returns the unused UTxO for comparison later.
 ledgerTraceFromBlockWithRestrictedUTxO ::
   forall era.
-  ( ChainProperty era
+  ( ApplyTx era
+  , ChainProperty era
   , STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
@@ -177,7 +187,7 @@ ledgerTraceFromBlockWithRestrictedUTxO ::
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO
   , runShelleyBase $
-      Trace.closure @(EraRule "LEDGER" era) ledgerEnv ledgerSt0' txs
+      Trace.closure @(EraRule "LEDGER" era) ledgerEnv ledgerSt0' stAnnTxs
   )
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -186,6 +196,11 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
     utxo = unUTxO . utxosUtxo $ utxoSt
     (relevantUTxO, irrelevantUTxO) = Map.partitionWithKey (const . (`Set.member` txIns)) utxo
     ledgerSt0' = LedgerState (utxoSt {utxosUtxo = UTxO relevantUTxO}) delegationSt
+    pp_ = ledgerEnv ^. ledgerPpL
+    stAnnTxs =
+      map
+        (mkStAnnTx (epochInfo testGlobals) (systemStart testGlobals) pp_ (UTxO relevantUTxO))
+        txs
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
 poolTraceFromBlock ::
