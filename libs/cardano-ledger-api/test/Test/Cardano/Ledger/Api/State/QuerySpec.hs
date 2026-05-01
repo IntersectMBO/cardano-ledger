@@ -45,7 +45,10 @@ import Lens.Micro ((&), (.~), (^.))
 import Paths_cardano_ledger_api (getDataFileName)
 import System.FilePath ((<.>), (</>))
 import Test.Cardano.Ledger.Api.Arbitrary ()
-import Test.Cardano.Ledger.Api.State.Query.Examples (queryConstitutionExamples)
+import Test.Cardano.Ledger.Api.State.Query.Examples (
+  queryConstitutionExamples,
+  queryCurrentEpochNoExamples,
+ )
 import Test.Cardano.Ledger.Binary.Golden (cborGoldenSpec)
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.Common
@@ -86,6 +89,7 @@ latestErasSpec =
   describe (eraName @era) $ do
     describe "Golden" $ do
       eraLedgerStateQueryGoldenSpec @era "queryConstitution" (queryConstitutionExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryCurrentEpochNo" queryCurrentEpochNoExamples
     describe "Roundtrip" $ do
       prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
       prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
