@@ -557,9 +557,8 @@ conwayGovTransition = do
             -- Guardrails script hash check
             runTest $ checkGuardrailsScriptHash @era constitutionPolicy proposalPolicy
 
-            unless (hardforkConwayBootstrapPhase $ pp ^. ppProtocolVersionL) $
-              -- The sum of all withdrawals must be positive
-              F.fold wdrls /= mempty ?! (injectFailure . ZeroTreasuryWithdrawals) pProcGovAction
+            -- The sum of all withdrawals must be positive
+            F.fold wdrls /= mempty ?! (injectFailure . ZeroTreasuryWithdrawals) pProcGovAction
           UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do
             let conflicting = Set.intersection (Map.keysSet membersToAdd) membersToRemove
              in failOnNonEmptySet conflicting (injectFailure . ConflictingCommitteeUpdate)
