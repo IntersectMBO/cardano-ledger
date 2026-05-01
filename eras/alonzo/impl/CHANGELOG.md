@@ -9,10 +9,6 @@
 * Add `AlonzoStAnnTx`
 * Move `toPlutusWithContext` from `Cardano.Ledger.Alonzo.Plutus.Context` to `Cardano.Ledger.Alonzo.Plutus.TxInfo`
 * Add `scriptsProvidedStAnnTx` to `AlonzoEraUTxO` and a helper to implement it `scriptsProvidedAlonzoStAnnTx`
-* Fix `ex_unit_prices` CDDL to use `nonnegative_interval` instead of `positive_interval`
-
-### `cddl`
-
 * Remove `ToCBOR` and `FromCBOR` instances for `AlonzoExtraConfig` and `AlonzoTxOut`
 * Add `ApplyTick` instance for `AlonzoEra`
 * Add `mkPlutusTxInfoFromResult` and `toPlutusTxInfoForPurpose` helpers
@@ -36,13 +32,20 @@
 * Remove `NoThunks (ContextError era)` constraint from `EraPlutusContext` class
 * Remove `NoThunks` deriving instance for `CollectError`
 * Make `AlonzoContextError` constructors lazy
+
+### `cddl`
+
 * Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
+* Fix `ex_unit_prices` CDDL to use `nonnegative_interval` instead of `positive_interval`
 
 ### `testlib`
 
 * Add `genDatumPresent`
 * Added `Proxy era` argument to `exUnitsRule`
 * `TranslationInstance` has a new field `tiPlutusPurpose`
+* In `Test.Cardano.Ledger.Alonzo.Examples`:
+  - Remove `mkAlonzoBasedExampleTx`, `exampleAlonzoBasedShelleyTxBody`, `exampleAlonzoBasedTxBody`, `exampleRedeemer`
+  - Add `exampleAlonzoBasedTopTx`, `exampleAlonzoBasedTopTx`, `addAlonzoToConwayExampleReqSigners`
 
 ## 1.15.0.0
 

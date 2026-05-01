@@ -3,10 +3,6 @@
 ## 1.19.0.0
 
 * Add `mkStAnnTx` to `ApplyTx`
-
-### `cddl`
-
-* Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
 * Add `InjectionData`, `foldInjectionData`, `InjectionError` to `Cardano.Ledger.Shelley.Genesis`
 * Add `ShelleyExtraConfig` type to `Cardano.Ledger.Shelley.Genesis`
 * Add `sgExtraConfig` field to `ShelleyGenesis`
@@ -53,6 +49,7 @@
 ### `cddl`
 
 * Remove `withAntiGen` re-export, since it's deprecated
+* Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
 
 ### `testlib`
 
@@ -60,6 +57,9 @@
 * Add `withIssuerAndTxsInBlock_` and `withIssuerAndTxsInBlock`
 * Add a `Maybe (KeyHash BlockIssuer)` parameter to `withTxsInBlockEither`
 * Export `exampleShelleyScript` and `exampleBootstrapWitness` from `Test.Cardano.Ledger.Shelley.Examples`
+* In `Test.Cardano.Ledger.Shelley.Examples`:
+  - Remove `mkShelleyBasedExampleTx`, `exampleShelleyBasedShelleyTxBody`, `exampleShelleyBasedTxBody`, `exampleCerts`
+  - Add `exampleShelleyBasedTx`, `addShelleyBasedTopTxExampleFee`, `addShelleyToBabbageExampleProposedPUpdates`, `addShelleyToBabbageTxCerts`, `addShelleyToConwayTxCerts`
 
 ## 1.18.0.0
 

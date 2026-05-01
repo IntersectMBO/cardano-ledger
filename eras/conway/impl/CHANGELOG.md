@@ -36,16 +36,9 @@
 
 ### `testlib`
 
-* Export from `Test.Cardano.Ledger.Conway.Examples`:
-  - `exampleAnchor`
-  - `exampleVotingProcedures`
-  - `exampleProposalProcedure`
-  - `exampleProposalProcedureParameterChange`
-  - `exampleProposalProcedureHardForkInitiation`
-  - `exampleProposalProcedureTreasuryWithdrawals`
-  - `exampleProposalProcedureNoConfidence`
-  - `exampleProposalProcedureUpdateCommittee`
-  - `exampleProposalProcedureNewConstitution`
+* In `Test.Cardano.Ledger.Conway.Examples`:
+  - Remove `mkConwayBasedExampleTx`, `exampleConwayBasedTxBody`
+  - Add `exampleConwayBasedTx`, `exampleConwayBasedTopTx`
 
 ## 1.22.0.0
 

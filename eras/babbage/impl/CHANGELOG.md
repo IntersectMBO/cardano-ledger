@@ -2,10 +2,6 @@
 
 ## 1.14.0.0
 
-* Fix `ex_unit_prices` CDDL to use `nonnegative_interval` instead of `positive_interval`
-
-### `cddl`
-
 * Remove `ToCBOR` and `FromCBOR` instances for `BabbageTxOut`
 * Add `ApplyTick` instance for `BabbageEra`
 * `BabbageTxInfoResult` changed its content type to `PlutusTxInfoResult`
@@ -23,11 +19,18 @@
   - `BabbageUtxowPredFailure`
 * Remove `NoThunks` instance for `BabbageContextError`
 * Make `BabbageContextError` constructors lazy
+
+### `cddl`
+
 * Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
+* Fix `ex_unit_prices` CDDL to use `nonnegative_interval` instead of `positive_interval`
 
 ### `testlib`
 
 * Add `Test.Cardano.Ledger.Babbage.Imp.PoolSpec` module with `babbageEraSpecificSpec`
+* In `Test.Cardano.Ledger.Babbage.Examples`:
+  - Remove `mkBabbageBasedExampleTx`, `exampleBabbageBasedTxBody`
+  - Add `exampleBabbageBasedTx`, `exampleBabbageBasedTopTx`
 
 ## 1.13.0.0
 

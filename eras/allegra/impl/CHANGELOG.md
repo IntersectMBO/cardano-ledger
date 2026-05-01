@@ -3,13 +3,19 @@
 ## 1.10.0.0
 
 * Add `FromJSON` instance for `ValidityInterval`
+* Add `ApplyTick` instance for `AllegraEra`
+* Add `EraForecast` and `ShelleyEraForecast` instances for `AllegraEra`.
+* Remove `NoThunks` instance for `AllegraUtxoPredFailure`
 
 ### `cddl`
 
 * Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
-* Add `ApplyTick` instance for `AllegraEra`
-* Add `EraForecast` and `ShelleyEraForecast` instances for `AllegraEra`.
-* Remove `NoThunks` instance for `AllegraUtxoPredFailure`
+
+### `testlib`
+
+* In `Test.Cardano.Ledger.Allegra.Examples`:
+  - Remove `mkAllegraBasedExampleTx`, `exampleAllegraBasedTxBody`, `exampleAllegraBasedShelleyTxBody`
+  - Add `exampleAllegraBasedTx`
 
 ## 1.9.0.0
 

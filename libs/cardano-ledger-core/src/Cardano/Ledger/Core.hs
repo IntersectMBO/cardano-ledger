@@ -40,6 +40,7 @@ module Cardano.Ledger.Core (
   EraTxBody (..),
   txIdTxBody,
   EraTxAuxData (..),
+  modifyTxAuxData,
   hashTxAuxData,
   EraTxWits (..),
   EraScript (..),
@@ -129,7 +130,13 @@ import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
-import Data.Maybe.Strict (StrictMaybe, maybeToStrictMaybe, strictMaybe, strictMaybeToMaybe)
+import Data.Maybe.Strict (
+  StrictMaybe (SJust),
+  fromSMaybe,
+  maybeToStrictMaybe,
+  strictMaybe,
+  strictMaybeToMaybe,
+ )
 import Data.MemPack
 import Data.OMap.Strict (HasOKey (..))
 import Data.Sequence.Strict (StrictSeq)
@@ -476,6 +483,13 @@ class
   metadataTxAuxDataL :: Lens' (TxAuxData era) (Map Word64 Metadatum)
 
   validateTxAuxData :: ProtVer -> TxAuxData era -> Bool
+
+modifyTxAuxData ::
+  EraTx era =>
+  (TxAuxData era -> TxAuxData era) ->
+  Tx l era ->
+  Tx l era
+modifyTxAuxData f = auxDataTxL %~ (SJust . f . fromSMaybe mkBasicTxAuxData)
 
 -- | Compute a hash of `TxAuxData`
 hashTxAuxData :: EraTxAuxData era => TxAuxData era -> TxAuxDataHash
