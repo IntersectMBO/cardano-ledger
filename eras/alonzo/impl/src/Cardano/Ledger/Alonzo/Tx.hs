@@ -506,3 +506,23 @@ instance
   HasEraTxLevel AlonzoStAnnTx era
   where
   toSTxLevel (AlonzoStAnnTx {}) = STopTxOnly @era
+
+instance
+  ( AlonzoEraScript era
+  , NFData (Tx l era)
+  , NFData (ScriptsNeeded era)
+  , NFData (ScriptsProvided era)
+  , NFData (ContextError era)
+  ) =>
+  NFData (AlonzoStAnnTx l era)
+  where
+  rnf AlonzoStAnnTx {..} =
+    asatTx `deepseq`
+      asatProtocolVersion `deepseq`
+        asatScriptsNeeded `deepseq`
+          asatScriptsProvided `deepseq`
+            asatPlutusLanguagesUsed `deepseq`
+              rnf asatPlutusScriptsWithContext
+
+instance EncCBOR (Tx l era) => EncCBOR (AlonzoStAnnTx l era) where
+  encCBOR AlonzoStAnnTx {asatTx} = encCBOR asatTx
