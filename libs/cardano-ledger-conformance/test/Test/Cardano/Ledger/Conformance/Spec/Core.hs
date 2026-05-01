@@ -15,7 +15,7 @@ import Constrained.API
 import Control.Monad.Cont (ContT (..))
 import Control.Monad.Trans (MonadTrans (..))
 import Control.State.Transition.Extended (STS (..), TRC (..))
-import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), ForAllExecTypes, testConformance)
+import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), testConformance)
 import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   ConstrainedGeneratorBundle (..),
  )
@@ -44,7 +44,6 @@ conformsToImpl genInputs = property @(ImpTestM era Property) . (`runContT` pure)
 genFromBundle_ ::
   ( HasSpec (Environment (EraRule rule era))
   , HasSpec (State (EraRule rule era))
-  , HasSpec (Signal (EraRule rule era))
   , Arbitrary (ExecContext rule era)
   ) =>
   ConstrainedGeneratorBundle ctx rule era ->
@@ -52,7 +51,9 @@ genFromBundle_ ::
 genFromBundle_ x = genFromBundle x $ \_ _ _ _ -> arbitrary
 
 genFromBundle ::
-  ForAllExecTypes HasSpec rule era =>
+  ( HasSpec (Environment (EraRule rule era))
+  , HasSpec (State (EraRule rule era))
+  ) =>
   ConstrainedGeneratorBundle ctx rule era ->
   ( ctx ->
     Environment (EraRule rule era) ->
@@ -65,13 +66,14 @@ genFromBundle ConstrainedGeneratorBundle {..} genExecContext = do
   ctx <- cgbContextGen
   env <- genFromSpec $ cgbEnvironmentSpec ctx
   st <- genFromSpec $ cgbStateSpec ctx env
-  sig <- genFromSpec $ cgbSignalSpec ctx env st
+  sig <- cgbSignalGen ctx env st
   (,TRC (env, st, sig)) <$> genExecContext ctx env st sig
 
 conformsToImplConstrained ::
   forall ctx rule era.
   ( ExecSpecRule rule era
-  , ForAllExecTypes HasSpec rule era
+  , HasSpec (Environment (EraRule rule era))
+  , HasSpec (State (EraRule rule era))
   ) =>
   ConstrainedGeneratorBundle ctx rule era ->
   ( ctx ->
@@ -86,7 +88,8 @@ conformsToImplConstrained bundle genExecContext =
 
 conformsToImplConstrained_ ::
   ( ExecSpecRule rule era
-  , ForAllExecTypes HasSpec rule era
+  , HasSpec (Environment (EraRule rule era))
+  , HasSpec (State (EraRule rule era))
   , Arbitrary (ExecContext rule era)
   ) =>
   ConstrainedGeneratorBundle ctx rule era ->

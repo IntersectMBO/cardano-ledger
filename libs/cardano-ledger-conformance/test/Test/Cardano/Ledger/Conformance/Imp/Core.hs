@@ -124,7 +124,7 @@ submitTxConformanceHook globals trc@(TRC (env, state, signal)) =
         , clecEnactState = mkEnactState $ state ^. lsUTxOStateL . utxosGovStateL
         , clecUtxoExecContext =
             UtxoExecContext
-              { uecTx = signal
+              { uecTx = signal ^. txStAnnTxG
               , uecUTxO = state ^. utxoL
               , uecUtxoEnv =
                   UtxoEnv

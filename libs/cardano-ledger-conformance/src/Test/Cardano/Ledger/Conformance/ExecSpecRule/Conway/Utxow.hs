@@ -13,7 +13,7 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow () where
 
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core (EraTx (..))
+import Cardano.Ledger.Conway.Core (EraTx (..), txStAnnTxG)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
@@ -63,7 +63,7 @@ instance
         , "Impl:"
         , "witsVKeyNeeded"
         , PP.pretty . showExpr $
-            getConwayWitsVKeyNeeded @ConwayEra (utxosUtxo st) (sig ^. bodyTxL)
+            getConwayWitsVKeyNeeded @ConwayEra (utxosUtxo st) (sig ^. txStAnnTxG . bodyTxL)
         , "witsVKeyHashes"
         , "Spec:"
         , PP.pretty result
