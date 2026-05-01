@@ -7,6 +7,10 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 11.0
+
+* Lift restriction for testnets of having major protocol version in the block header enforced to be equal to the current one or one higher from current major protocol version: [#5785](https://github.com/IntersectMBO/cardano-ledger/pull/5785)
+
 ## 10.7
 
 * Finished implementation of all features needed for the upcoming intra-era hard fork into protocol version 11: [#5015](https://github.com/IntersectMBO/cardano-ledger/issues/5015):
