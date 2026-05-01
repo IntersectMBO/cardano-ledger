@@ -37,18 +37,18 @@ module Cardano.Ledger.Shelley.API.Mempool (
   overNewEpochState,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, epochInfo, systemStart)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, ShelleyLedgerPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, ShelleyLedgerPredFailure, ledgerPpL)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.State (UTxO)
+import Cardano.Ledger.State (UTxO, utxoG)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
@@ -114,7 +114,7 @@ class
     Tx TopTx era ->
     StAnnTx TopTx era
 
-  -- | Validate a transaction against a mempool state and for given STS options,
+  -- | Validate an annotated transaction against a mempool state for given STS options,
   -- and return the new mempool state, a "validated" 'TxInBlock' and,
   -- depending on the passed options, the emitted events.
   applyTxValidation ::
@@ -122,24 +122,25 @@ class
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
-    Tx TopTx era ->
+    StAnnTx TopTx era ->
     Either (ApplyTxError era) (MempoolState era, Validated (Tx TopTx era))
 
 ruleApplyTxValidation ::
   forall rule era.
-  ( STS (EraRule rule era)
+  ( EraTx era
+  , STS (EraRule rule era)
   , BaseM (EraRule rule era) ~ ShelleyBase
   , Environment (EraRule rule era) ~ LedgerEnv era
   , State (EraRule rule era) ~ MempoolState era
-  , Signal (EraRule rule era) ~ Tx TopTx era
+  , Signal (EraRule rule era) ~ StAnnTx TopTx era
   ) =>
   ValidationPolicy ->
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
-  Tx TopTx era ->
+  StAnnTx TopTx era ->
   Either (NonEmpty (PredicateFailure (EraRule rule era))) (MempoolState era, Validated (Tx TopTx era))
-ruleApplyTxValidation validationPolicy globals env state tx =
+ruleApplyTxValidation validationPolicy globals env state stAnnTx =
   let opts =
         ApplySTSOpts
           { asoAssertions = globalAssertionPolicy
@@ -149,8 +150,8 @@ ruleApplyTxValidation validationPolicy globals env state tx =
       result =
         flip runReader globals
           . applySTSOptsEither @(EraRule rule era) opts
-          $ TRC (env, state, tx)
-   in fmap (,Validated tx) result
+          $ TRC (env, state, stAnnTx)
+   in fmap (,Validated (stAnnTx ^. txStAnnTxG)) result
 
 instance ApplyTx ShelleyEra where
   newtype ApplyTxError ShelleyEra = ShelleyApplyTxError (NonEmpty (ShelleyLedgerPredFailure ShelleyEra))
@@ -159,9 +160,9 @@ instance ApplyTx ShelleyEra where
 
   mkStAnnTx _ _ _ _ = id
 
-  applyTxValidation validationPolicy globals env state tx =
+  applyTxValidation validationPolicy globals env state stAnnTx =
     first ShelleyApplyTxError $
-      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
+      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
 
 type MempoolEnv era = Ledger.LedgerEnv era
 
@@ -236,7 +237,15 @@ applyTx ::
   MempoolState era ->
   Tx TopTx era ->
   Either (ApplyTxError era) (MempoolState era, Validated (Tx TopTx era))
-applyTx = applyTxValidation ValidateAll
+applyTx globals env state tx =
+  let stAnnTx =
+        mkStAnnTx
+          (epochInfo globals)
+          (systemStart globals)
+          (env ^. ledgerPpL)
+          (state ^. utxoG)
+          tx
+   in applyTxValidation ValidateAll globals env state stAnnTx
 
 -- | Reapply a previously validated 'Tx'.
 --
@@ -249,7 +258,17 @@ reapplyTx ::
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
+  -- TODO: change to `Validated (StAnnTx TopTx era)` once we return this from `applyTx`
   Validated (Tx TopTx era) ->
   Either (ApplyTxError era) (MempoolState era)
 reapplyTx globals env state (Validated tx) =
-  fst <$> applyTxValidation (ValidateSuchThat (notElem lblStatic)) globals env state tx
+  -- TODO: replace `stAnnTx` creation with the argument,
+  -- once the signature is changed to take `Validated (StAnnTx TopTx era)`
+  let stAnnTx =
+        mkStAnnTx
+          (epochInfo globals)
+          (systemStart globals)
+          (env ^. ledgerPpL)
+          (state ^. utxoG)
+          tx
+   in fst <$> applyTxValidation (ValidateSuchThat (notElem lblStatic)) globals env state stAnnTx

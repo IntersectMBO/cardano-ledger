@@ -55,9 +55,9 @@ instance ApplyTx ConwayEra where
 
   mkStAnnTx = mkAlonzoStAnnTx
 
-  applyTxValidation validationPolicy globals env state tx =
+  applyTxValidation validationPolicy globals env state stAnnTx =
     first ConwayApplyTxError $
-      ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx
+      ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state stAnnTx
 
 instance ApplyTick ConwayEra
 
