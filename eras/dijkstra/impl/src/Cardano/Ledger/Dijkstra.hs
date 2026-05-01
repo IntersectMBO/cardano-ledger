@@ -79,9 +79,9 @@ instance ApplyTx DijkstraEra where
 
   mkStAnnTx = mkDijkstraStAnnTopTx
 
-  applyTxValidation validationPolicy globals env state tx =
+  applyTxValidation validationPolicy globals env state stAnnTx =
     first DijkstraApplyTxError $
-      ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state tx
+      ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state stAnnTx
 
 instance ApplyTick DijkstraEra
 

@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Change `applyTxValidation` and `ruleApplyTxValidation` to take `StAnnTx TopTx era` instead of `Tx TopTx era`
 * Add `mkStAnnTx` to `ApplyTx`
 * Add `InjectionData`, `foldInjectionData`, `InjectionError` to `Cardano.Ledger.Shelley.Genesis`
 * Add `ShelleyExtraConfig` type to `Cardano.Ledger.Shelley.Genesis`

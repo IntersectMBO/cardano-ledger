@@ -64,9 +64,9 @@ instance ApplyTx BabbageEra where
 
   mkStAnnTx = mkAlonzoStAnnTx
 
-  applyTxValidation validationPolicy globals env state tx =
+  applyTxValidation validationPolicy globals env state stAnnTx =
     first BabbageApplyTxError $
-      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
+      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
 
 instance ApplyTick BabbageEra
 
