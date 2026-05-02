@@ -1,4 +1,5 @@
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryAccountsDepositsExamples,
@@ -12,17 +13,24 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
   queryStakePoolDelegsAndRewardsExamples,
+  queryStakePoolRelaysExamples,
 ) where
 
+import Cardano.Base.IP (toIPv4, toIPv6)
 import Cardano.Ledger.Api.Governance (Constitution (..))
-import Cardano.Ledger.BaseTypes (AnchorData, EpochNo (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (AnchorData, EpochNo (..), Port (..), StrictMaybe (..), textToDns)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.State (StakePoolRelay (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
+import Data.Ratio ((%))
+import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Conway.Examples (exampleAnchor)
@@ -88,6 +96,38 @@ queryStakePoolDelegsAndRewardsExamples =
         , (ScriptHashObj (mkScriptHash 2), Coin 0)
         ]
     )
+  ]
+
+queryStakePoolRelaysExamples :: [Map (KeyHash StakePool) (Rational, StrictSeq StakePoolRelay)]
+queryStakePoolRelaysExamples =
+  [ Map.empty
+  , Map.fromList
+      [
+        ( mkKeyHash 1
+        ,
+          ( 1 % 4
+          , StrictSeq.fromList
+              [ SingleHostAddr
+                  (SJust (Port 3001))
+                  (SJust (toIPv4 [192, 168, 1, 1]))
+                  (SJust (toIPv6 [0x2001, 0xdb8, 0, 0, 0, 0, 0, 1]))
+              , SingleHostName
+                  (SJust (Port 3001))
+                  (fromJust (textToDns 64 "pool-1.relay.example"))
+              ]
+          )
+        )
+      ,
+        ( mkKeyHash 2
+        ,
+          ( 3 % 8
+          , StrictSeq.fromList
+              [ SingleHostAddr SNothing (SJust (toIPv4 [10, 0, 0, 5])) SNothing
+              , MultiHostName (fromJust (textToDns 64 "_relay._tcp.pool-2.example"))
+              ]
+          )
+        )
+      ]
   ]
 
 queryDRepDelegateesExamples :: [Map (Credential Staking) DRep]
