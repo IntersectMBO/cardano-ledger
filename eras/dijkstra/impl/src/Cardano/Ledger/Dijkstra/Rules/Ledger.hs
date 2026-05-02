@@ -82,6 +82,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraUTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
+import Cardano.Ledger.Dijkstra.Rules.Deleg ()
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
@@ -111,6 +112,7 @@ import Cardano.Ledger.Shelley.Rules (
   shelleyLedgerAssertions,
   testIncompleteAndMissingWithdrawals,
  )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -140,6 +142,9 @@ type instance EraRuleFailure "LEDGER" DijkstraEra = DijkstraLedgerPredFailure Di
 type instance EraRuleEvent "LEDGER" DijkstraEra = DijkstraLedgerEvent DijkstraEra
 
 instance InjectRuleEvent "LEDGER" DijkstraLedgerEvent DijkstraEra
+
+instance InjectRuleFailure "LEDGER" Shelley.AccountAlreadyRegistered DijkstraEra where
+  injectFailure = DijkstraCertsFailure . Conway.CertFailure . Conway.DelegFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure DijkstraEra
 

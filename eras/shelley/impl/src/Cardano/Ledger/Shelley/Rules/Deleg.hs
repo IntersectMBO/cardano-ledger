@@ -1,13 +1,19 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -17,6 +23,10 @@ module Cardano.Ledger.Shelley.Rules.Deleg (
   PredicateFailure,
   ShelleyDelegPredFailure (..),
   ShelleyDelegEvent (..),
+
+  -- * Predicate failures
+  AccountAlreadyRegistered (..),
+  checkAccountAlreadyRegistered,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -45,6 +55,7 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
+import Cardano.Ledger.Rules.ValidationMode ((?!.))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELEG, ShelleyEra, hardforkAlonzoAllowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
@@ -71,10 +82,37 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
 
+-- | Predicate failure that is reported upon an attempt to register an account with a staking
+-- credential that is already registered.
+newtype AccountAlreadyRegistered era
+  = AccountAlreadyRegistered (Credential Staking)
+  deriving stock (Show, Generic)
+  deriving newtype (Eq, NFData, EncCBOR, DecCBOR)
+
+instance InjectRuleFailure "DELEG" AccountAlreadyRegistered ShelleyEra where
+  injectFailure = DelegAccountAlreadyRegistered
+
+-- | `AccountAlreadyRegistered` predicate failure check.
+--
+-- In Shelley spec defined in:
+--
+-- === Figure 23: Delegation Inference Rules (8)
+--
+-- @
+-- (hk ∉ dom (rewards ds))
+-- @
+checkAccountAlreadyRegistered ::
+  forall rule era.
+  ( InjectRuleFailure rule AccountAlreadyRegistered era
+  , EraAccounts era
+  ) =>
+  Accounts era -> Credential Staking -> Rule (EraRule rule era) 'Transition ()
+checkAccountAlreadyRegistered accounts cred =
+  not (isAccountRegistered cred accounts) ?!. AccountAlreadyRegistered cred
+
 data DelegEnv era = DelegEnv
   { slotNo :: SlotNo
   , deCurEpochNo :: EpochNo
-  -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , ptr_ :: Ptr
   , deChainAccountState :: ChainAccountState
   , ppDE :: PParams era -- The protocol parameters are only used for the HardFork mechanism
@@ -88,8 +126,7 @@ deriving instance Eq (PParams era) => Eq (DelegEnv era)
 instance NFData (PParams era) => NFData (DelegEnv era)
 
 data ShelleyDelegPredFailure era
-  = StakeKeyAlreadyRegisteredDELEG
-      (Credential Staking) -- Credential which is already registered
+  = DelegAccountAlreadyRegistered (AccountAlreadyRegistered era)
   | StakeKeyNotRegisteredDELEG
       (Credential Staking) -- Credential which is not registered
   | StakeKeyNonZeroAccountBalanceDELEG
@@ -137,6 +174,9 @@ instance
   , ShelleyEraAccounts era
   , ShelleyEraTxCert era
   , AtMostEra "Babbage" era
+  , EraRule "DELEG" era ~ ShelleyDELEG era
+  , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
+  , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>
   STS (ShelleyDELEG era)
   where
@@ -147,13 +187,13 @@ instance
   type PredicateFailure (ShelleyDELEG era) = ShelleyDelegPredFailure era
   type Event (ShelleyDELEG era) = ShelleyDelegEvent era
 
-  transitionRules = [delegationTransition]
+  transitionRules = [delegationTransition @era]
 
 instance NFData (ShelleyDelegPredFailure era)
 
 instance Era era => EncCBOR (ShelleyDelegPredFailure era) where
   encCBOR = \case
-    StakeKeyAlreadyRegisteredDELEG cred ->
+    DelegAccountAlreadyRegistered cred ->
       encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR cred
     StakeKeyNotRegisteredDELEG cred ->
       encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR cred
@@ -203,7 +243,7 @@ instance
     \case
       0 -> do
         kh <- decCBOR
-        pure (2, StakeKeyAlreadyRegisteredDELEG kh)
+        pure (2, DelegAccountAlreadyRegistered kh)
       1 -> do
         kh <- decCBOR
         pure (2, StakeKeyNotRegisteredDELEG kh)
@@ -251,21 +291,24 @@ instance
       k -> invalidKey k
 
 delegationTransition ::
+  forall era.
   ( EraCertState era
   , ShelleyEraAccounts era
   , ShelleyEraTxCert era
   , EraPParams era
   , AtMostEra "Babbage" era
+  , EraRule "DELEG" era ~ ShelleyDELEG era
+  , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
+  , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>
-  TransitionRule (ShelleyDELEG era)
+  TransitionRule (EraRule "DELEG" era)
 delegationTransition = do
   TRC (DelegEnv slot epochNo ptr chainAccountState pp, certState, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
       ds = certState ^. certDStateL
   case c of
     RegTxCert cred -> do
-      -- (hk ∉ dom (rewards ds))
-      not (isAccountRegistered cred (ds ^. accountsL)) ?! StakeKeyAlreadyRegisteredDELEG cred
+      checkAccountAlreadyRegistered (ds ^. accountsL) cred
       let compactDeposit = compactCoinOrError (pp ^. ppKeyDepositL)
       pure $ certState & certDStateL . accountsL %~ registerShelleyAccount cred ptr compactDeposit Nothing
     UnRegTxCert cred -> do
@@ -386,15 +429,14 @@ delegationTransition = do
       pure certState
 
 checkSlotNotTooLate ::
-  ( EraCertState era
-  , ShelleyEraAccounts era
-  , ShelleyEraTxCert era
-  , EraPParams era
-  , AtMostEra "Babbage" era
+  ( PredicateFailure (EraRule rule era) ~ ShelleyDelegPredFailure era
+  , Event (EraRule rule era) ~ ShelleyDelegEvent era
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  , STS (EraRule rule era)
   ) =>
   SlotNo ->
   EpochNo ->
-  Rule (ShelleyDELEG era) 'Transition ()
+  Rule (EraRule rule era) 'Transition ()
 checkSlotNotTooLate slot curEpochNo = do
   sp <- liftSTS $ asks stabilityWindow
   ei <- liftSTS $ asks epochInfoPure

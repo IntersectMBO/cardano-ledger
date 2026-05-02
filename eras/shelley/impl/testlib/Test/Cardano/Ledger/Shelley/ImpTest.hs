@@ -226,6 +226,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosDonationL,
  )
 import Cardano.Ledger.Shelley.Rules (
+  AccountAlreadyRegistered,
   BbodyEnv (..),
   LedgerEnv (..),
   ShelleyBbodyState (..),
@@ -495,6 +496,7 @@ class
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   , EraRuleFailure "BBODY" era ~ PredicateFailure (EraRule "BBODY" era)
   , EraRuleFailure "LEDGER" era ~ PredicateFailure (EraRule "LEDGER" era)
+  , InjectRuleFailure "LEDGER" AccountAlreadyRegistered era
   , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
