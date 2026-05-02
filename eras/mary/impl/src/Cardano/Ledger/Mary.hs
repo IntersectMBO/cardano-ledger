@@ -49,9 +49,9 @@ instance ApplyTx MaryEra where
 
   mkStAnnTx _ _ _ _ = id
 
-  applyTxValidation validationPolicy globals env state tx =
+  applyTxValidation validationPolicy globals env state stAnnTx =
     first MaryApplyTxError $
-      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
+      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
 
 instance ApplyTick MaryEra
 

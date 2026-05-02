@@ -131,7 +131,7 @@ instance
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Eq (PredicateFailure (EraRule "LEDGER" era))
@@ -191,7 +191,7 @@ instance
   ( STS (ShelleyLEDGERS era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   Embed (ShelleyLEDGERS era) (MOCKCHAIN era)
   where

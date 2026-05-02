@@ -38,8 +38,10 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   ShelleyBase,
   addEpochInterval,
+  epochInfo,
   natVersion,
   nonZeroOr,
+  systemStart,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
 import Cardano.Ledger.Conway (ConwayEra)
@@ -56,6 +58,8 @@ import Cardano.Ledger.Conway.Rules (CertsEnv (..), EnactSignal)
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayGovCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
+import Cardano.Ledger.Shelley.API.Types (UtxoEnv (..))
 import Cardano.Ledger.State (
   CommitteeAuthorization (..),
   CommitteeState (..),
@@ -79,7 +83,7 @@ import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Common hiding (forAll)
 import Test.Cardano.Ledger.Constrained.Conway (
   EraSpecCert (..),
-  UtxoExecContext,
+  UtxoExecContext (..),
   certEnvSpec,
   certsEnvSpec,
   committeeMinSize_,
@@ -110,6 +114,7 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   whoDelegatesSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv, genWitUniv)
+import Test.Cardano.Ledger.Core.Utils (testGlobals)
 import Test.Cardano.Ledger.Generic.Proof (goSTS)
 
 data ConstrainedGeneratorBundle ctx rule era = ConstrainedGeneratorBundle
@@ -121,11 +126,13 @@ data ConstrainedGeneratorBundle ctx rule era = ConstrainedGeneratorBundle
       ctx ->
       Environment (EraRule rule era) ->
       Specification (State (EraRule rule era))
-  , cgbSignalSpec ::
+  , -- Accomodates signals that need post-processing after the constraint solver picks a value.
+    -- Such signals cannot have a HasSpec instance.
+    cgbSignalGen ::
       ctx ->
       Environment (EraRule rule era) ->
       State (EraRule rule era) ->
-      Specification (Signal (EraRule rule era))
+      Gen (Signal (EraRule rule era))
   }
 
 -- ====================================================================
@@ -135,7 +142,6 @@ minitraceEither ::
   forall rule era ctx.
   ( HasSpec (Environment (EraRule rule era))
   , HasSpec (State (EraRule rule era))
-  , HasSpec (Signal (EraRule rule era))
   , BaseM (EraRule rule era) ~ ShelleyBase
   , STS (EraRule rule era)
   , ToExpr (Signal (EraRule rule era))
@@ -151,7 +157,7 @@ minitraceEither n0 ConstrainedGeneratorBundle {..} = do
   let go :: State (EraRule rule era) -> Int -> Gen (Either [String] [Signal (EraRule rule era)])
       go _ 0 = pure (Right [])
       go st n = do
-        !signal <- genFromSpec $ cgbSignalSpec ctxt env st
+        !signal <- cgbSignalGen ctxt env st
         goSTS @rule @era @(Gen (Either [String] [Signal (EraRule rule era)]))
           env
           st
@@ -179,7 +185,6 @@ minitraceProp ::
   forall rule era ctx.
   ( HasSpec (Environment (EraRule rule era))
   , HasSpec (State (EraRule rule era))
-  , HasSpec (Signal (EraRule rule era))
   , BaseM (EraRule rule era) ~ ShelleyBase
   , STS (EraRule rule era)
   , ToExpr (Signal (EraRule rule era))
@@ -204,7 +209,6 @@ runMinitrace ::
   forall (rule :: Symbol) era ctx.
   ( HasSpec (Environment (EraRule rule era))
   , HasSpec (State (EraRule rule era))
-  , HasSpec (Signal (EraRule rule era))
   , BaseM (EraRule rule era) ~ ShelleyBase
   , KnownSymbol rule
   , STS (EraRule rule era)
@@ -492,7 +496,7 @@ constrainedPool =
     (genWitUniv 50)
     poolEnvSpec
     (\ctx _ -> pStateSpec ctx)
-    poolCertSpec
+    (\ctx env st -> genFromSpec (poolCertSpec ctx env st))
 
 constrainedDeleg ::
   ConstrainedGeneratorBundle
@@ -504,7 +508,7 @@ constrainedDeleg =
     genDelegCtx
     (const delegEnvSpec)
     (\ctx _ -> certStateSpec_ ctx)
-    (const conwayDelegCertSpec)
+    (\_ env st -> genFromSpec (conwayDelegCertSpec env st))
 
 constrainedGovCert ::
   ConstrainedGeneratorBundle
@@ -516,7 +520,7 @@ constrainedGovCert =
     genDelegCtx
     (\(u, _) -> govCertEnvSpec u)
     (\ctx _ -> certStateSpec_ ctx)
-    (\(u, _) -> govCertSpec u)
+    (\(u, _) env st -> genFromSpec (govCertSpec u env st))
 
 constrainedCert ::
   ConstrainedGeneratorBundle
@@ -528,7 +532,7 @@ constrainedCert =
     genDelegCtx
     (\(u, _) -> certEnvSpec u)
     (\ctx _ -> certStateSpec_ ctx)
-    (\(u, _) -> conwayTxCertSpec u)
+    (\(u, _) env st -> genFromSpec (conwayTxCertSpec u env st))
 
 constrainedCerts ::
   ConstrainedGeneratorBundle
@@ -542,7 +546,7 @@ constrainedCerts =
     ( \(u, ConwayCertGenContext {..}) CertsEnv {certsCurrentEpoch} ->
         conwayCertStateSpec u (ccccDelegatees, ccccWithdrawals) (lit certsCurrentEpoch)
     )
-    (\(u, _) -> txCertsSpec u)
+    (\(u, _) env st -> genFromSpec (txCertsSpec u env st))
 
 constrainedRatify :: ConstrainedGeneratorBundle [GovActionState ConwayEra] "RATIFY" ConwayEra
 constrainedRatify =
@@ -550,7 +554,7 @@ constrainedRatify =
     arbitrary
     ratifyEnvSpec
     (\_ env -> ratifyStateSpec env)
-    (\ctx _ _ -> ratifySignalSpec ctx)
+    (\ctx _ _ -> genFromSpec (ratifySignalSpec ctx))
 
 constrainedGov :: ConstrainedGeneratorBundle () "GOV" ConwayEra
 constrainedGov =
@@ -558,8 +562,11 @@ constrainedGov =
     (pure ())
     (const govEnvSpec)
     (const govProposalsSpec)
-    (const govProceduresSpec)
+    (\_ env st -> genFromSpec (govProceduresSpec env st))
 
+-- | Generate via the underlying 'Tx' (constraint-solved), then build the
+-- cached annotation with 'mkStAnnTx' so the cache is coherent with the Tx by
+-- construction.
 constrainedUtxo ::
   ConstrainedGeneratorBundle (UtxoExecContext ConwayEra) "UTXO" ConwayEra
 constrainedUtxo =
@@ -567,7 +574,16 @@ constrainedUtxo =
     genUtxoExecContext
     utxoEnvSpec
     utxoStateSpec
-    (\ctx _ _ -> utxoTxSpec ctx)
+    ( \ctx@UtxoExecContext {uecUTxO, uecUtxoEnv} _ _ -> do
+        tx <- genFromSpec (utxoTxSpec ctx)
+        pure $
+          mkStAnnTx
+            (epochInfo testGlobals)
+            (systemStart testGlobals)
+            (uePParams uecUtxoEnv)
+            uecUTxO
+            tx
+    )
 
 constrainedEpoch :: ConstrainedGeneratorBundle EpochNo "EPOCH" ConwayEra
 constrainedEpoch =
@@ -575,7 +591,7 @@ constrainedEpoch =
     arbitrary
     (const trueSpec)
     (\ctx _ -> epochStateSpec (lit ctx))
-    (\ctx _ _ -> epochSignalSpec ctx)
+    (\ctx _ _ -> genFromSpec (epochSignalSpec ctx))
 
 constrainedNewEpoch :: ConstrainedGeneratorBundle EpochNo "NEWEPOCH" ConwayEra
 constrainedNewEpoch =
@@ -583,7 +599,7 @@ constrainedNewEpoch =
     arbitrary
     (const trueSpec)
     (\_ _ -> newEpochStateSpec)
-    (\ctx _ _ -> epochSignalSpec ctx)
+    (\ctx _ _ -> genFromSpec (epochSignalSpec ctx))
 
 constrainedEnact :: ConstrainedGeneratorBundle EpochNo "ENACT" ConwayEra
 constrainedEnact =
@@ -591,4 +607,4 @@ constrainedEnact =
     arbitrary
     (const trueSpec)
     (\_ _ -> enactStateSpec)
-    (\epoch _ st -> enactSignalSpec epoch st)
+    (\epoch _ st -> genFromSpec (enactSignalSpec epoch st))

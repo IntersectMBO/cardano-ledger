@@ -17,6 +17,7 @@ import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (BbodySignal)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast, ShelleyPOOL)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (
@@ -63,10 +64,12 @@ import qualified Test.Tasty.QuickCheck as TQC
 
 commonTests ::
   forall era.
-  ( EraGen era
+  ( ApplyTx era
+  , EraGen era
   , EraStake era
   , ShelleyEraAccounts era
   , ApplyBlock TestBlockHeader era
+  , Show (StAnnTx TopTx era)
   , ShelleyEraForecast era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Embed (EraRule "TICK" era) (CHAIN era)
@@ -88,7 +91,7 @@ commonTests ::
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Environment (EraRule "TICK" era) ~ ()
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , Signal (EraRule "TICK" era) ~ SlotNo

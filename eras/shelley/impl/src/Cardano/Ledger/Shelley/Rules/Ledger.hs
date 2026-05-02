@@ -275,7 +275,7 @@ instance
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
@@ -287,7 +287,7 @@ instance
   STS (ShelleyLEDGER era)
   where
   type State (ShelleyLEDGER era) = LedgerState era
-  type Signal (ShelleyLEDGER era) = Tx TopTx era
+  type Signal (ShelleyLEDGER era) = StAnnTx TopTx era
   type Environment (ShelleyLEDGER era) = LedgerEnv era
   type BaseM (ShelleyLEDGER era) = ShelleyBase
   type PredicateFailure (ShelleyLEDGER era) = ShelleyLedgerPredFailure era
@@ -312,14 +312,15 @@ ledgerTransition ::
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , EraRule "LEDGER" era ~ ShelleyLEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot mbCurEpochNo txIx pp account, LedgerState utxoSt certState, tx) <-
+  TRC (LedgerEnv slot mbCurEpochNo txIx pp account, LedgerState utxoSt certState, stAnnTx) <-
     judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
   let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
   testIncompleteAndMissingWithdrawals (certState ^. certDStateL . accountsL) withdrawals
@@ -336,7 +337,7 @@ ledgerTransition = do
       TRC
         ( UtxoEnv slot pp certState
         , utxoSt
-        , tx
+        , stAnnTx
         )
   pure (LedgerState utxoSt' certState')
 
@@ -388,47 +389,48 @@ renderDepositEqualsObligationViolation ::
   , EraGov era
   , EraCertState era
   , Environment t ~ LedgerEnv era
-  , Signal t ~ Tx TopTx era
+  , Signal t ~ StAnnTx TopTx era
   , State t ~ LedgerState era
   ) =>
   AssertionViolation t ->
   String
 renderDepositEqualsObligationViolation
-  AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ _ pp _, _, tx), avState} =
-    case avState of
-      Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
-      Just lstate
-        | avMsg == "Deposit pot must equal obligation (LEDGER)" ->
-            let certstate = lsCertState lstate
-                utxoSt = lsUTxOState lstate
-                utxo = utxosUtxo utxoSt
-                txb = tx ^. bodyTxL
-                pot = utxoSt ^. utxosDepositedL
-             in "\n\nAssertionViolation ("
-                  <> avSTS
-                  <> ")\n\n  "
-                  <> avMsg
-                  <> "\n\nCERTS\n"
-                  <> showTxCerts txb
-                  <> "\n(slot,keyDeposit,poolDeposit) "
-                  <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
-                  <> "\nThe Pot (utxosDeposited) = "
-                  <> show pot
-                  <> "\n"
-                  <> show (allObligations certstate (utxosGovState utxoSt))
-                  <> "\nConsumed = "
-                  <> show (consumedTxBody txb pp certstate utxo)
-                  <> "\nProduced = "
-                  <> show (producedTxBody txb pp certstate)
-        | avMsg == "Reverse stake pool delegations must match" ->
-            case calculateDelegatorsPerStakePool (lsCertState lstate) of
-              (reverseDelegatorsPerStakePool, delegatorsPerStakePool) ->
-                avMsg
-                  <> "\nReverse Delegations: \n  "
-                  <> show reverseDelegatorsPerStakePool
-                  <> "\nForward Delegations:\n  "
-                  <> show delegatorsPerStakePool
-        | otherwise -> error $ "Unexpected assertion message: " <> avMsg
+  AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ _ pp _, _, stAnnTx), avState} =
+    let tx = stAnnTx ^. txStAnnTxG
+     in case avState of
+          Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
+          Just lstate
+            | avMsg == "Deposit pot must equal obligation (LEDGER)" ->
+                let certstate = lsCertState lstate
+                    utxoSt = lsUTxOState lstate
+                    utxo = utxosUtxo utxoSt
+                    txb = tx ^. bodyTxL
+                    pot = utxoSt ^. utxosDepositedL
+                 in "\n\nAssertionViolation ("
+                      <> avSTS
+                      <> ")\n\n  "
+                      <> avMsg
+                      <> "\n\nCERTS\n"
+                      <> showTxCerts txb
+                      <> "\n(slot,keyDeposit,poolDeposit) "
+                      <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
+                      <> "\nThe Pot (utxosDeposited) = "
+                      <> show pot
+                      <> "\n"
+                      <> show (allObligations certstate (utxosGovState utxoSt))
+                      <> "\nConsumed = "
+                      <> show (consumedTxBody txb pp certstate utxo)
+                      <> "\nProduced = "
+                      <> show (producedTxBody txb pp certstate)
+            | avMsg == "Reverse stake pool delegations must match" ->
+                case calculateDelegatorsPerStakePool (lsCertState lstate) of
+                  (reverseDelegatorsPerStakePool, delegatorsPerStakePool) ->
+                    avMsg
+                      <> "\nReverse Delegations: \n  "
+                      <> show reverseDelegatorsPerStakePool
+                      <> "\nForward Delegations:\n  "
+                      <> show delegatorsPerStakePool
+            | otherwise -> error $ "Unexpected assertion message: " <> avMsg
 
 calculateDelegatorsPerStakePool ::
   EraCertState era =>

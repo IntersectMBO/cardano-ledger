@@ -23,6 +23,7 @@ import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
 import Data.Proxy (Proxy)
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
@@ -73,7 +74,7 @@ generateApplyTxEnvForEra ::
   ( EraGen era
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , EraStake era
@@ -98,5 +99,5 @@ generateApplyTxEnvForEra eraProxy seed =
         { ateGlobals = testGlobals
         , ateMempoolEnv = applyTxMempoolEnv (ledgerPp (_traceEnv tr))
         , ateState = source sst
-        , ateTx = signal sst
+        , ateTx = signal sst ^. txStAnnTxG
         }

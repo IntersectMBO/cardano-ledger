@@ -16,8 +16,9 @@ module Test.Cardano.Ledger.Alonzo.Trace () where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
-import Cardano.Ledger.BaseTypes (Globals)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState)
+import Cardano.Ledger.BaseTypes (Globals, epochInfo, systemStart)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState, lsUTxOState, utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv,
   DelplEnv,
@@ -40,12 +41,14 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (genAccountState)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (CERTS)
 import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
+import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as TQC
 
 -- The AlonzoLEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
 instance
-  ( EraGen era
+  ( ApplyTx era
+  , EraGen era
   , EraGov era
   , EraUTxO era
   , AlonzoEraTx era
@@ -60,7 +63,7 @@ instance
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
@@ -77,7 +80,15 @@ instance
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
-  sigGen = genTx
+  sigGen ge ledgerEnv@(LedgerEnv _ _ _ pParams _) ls = do
+    tx <- genTx ge ledgerEnv ls
+    pure $
+      mkStAnnTx
+        (epochInfo testGlobals)
+        (systemStart testGlobals)
+        pParams
+        (utxosUtxo (lsUTxOState ls))
+        tx
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 

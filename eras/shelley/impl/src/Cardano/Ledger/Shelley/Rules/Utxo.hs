@@ -281,7 +281,7 @@ instance
   STS (ShelleyUTXO era)
   where
   type State (ShelleyUTXO era) = UTxOState era
-  type Signal (ShelleyUTXO era) = Tx TopTx era
+  type Signal (ShelleyUTXO era) = StAnnTx TopTx era
   type Environment (ShelleyUTXO era) = UtxoEnv era
   type BaseM (ShelleyUTXO era) = ShelleyBase
   type PredicateFailure (ShelleyUTXO era) = ShelleyUtxoPredFailure era
@@ -293,22 +293,23 @@ instance
     AssertionViolation
       { avSTS
       , avMsg
-      , avCtx = TRC (UtxoEnv _slot pp certState, UTxOState {utxosDeposited, utxosUtxo}, tx)
+      , avCtx = TRC (UtxoEnv _slot pp certState, UTxOState {utxosDeposited, utxosUtxo}, stAnnTx)
       } =
-      "AssertionViolation ("
-        <> avSTS
-        <> "): "
-        <> avMsg
-        <> "\n PParams\n"
-        <> show pp
-        <> "\n Certs\n"
-        <> showTxCerts (tx ^. bodyTxL)
-        <> "\n Deposits\n"
-        <> show utxosDeposited
-        <> "\n Consumed\n"
-        <> show (consumedTxBody (tx ^. bodyTxL) pp certState utxosUtxo)
-        <> "\n Produced\n"
-        <> show (producedTxBody (tx ^. bodyTxL) pp certState)
+      let tx = stAnnTx ^. txStAnnTxG
+       in "AssertionViolation ("
+            <> avSTS
+            <> "): "
+            <> avMsg
+            <> "\n PParams\n"
+            <> show pp
+            <> "\n Certs\n"
+            <> showTxCerts (tx ^. bodyTxL)
+            <> "\n Deposits\n"
+            <> show utxosDeposited
+            <> "\n Consumed\n"
+            <> show (consumedTxBody (tx ^. bodyTxL) pp certState utxosUtxo)
+            <> "\n Produced\n"
+            <> show (producedTxBody (tx ^. bodyTxL) pp certState)
 
   assertions =
     [ PreCondition
@@ -325,8 +326,9 @@ instance
           withdrawals txb = Val.inject $ F.foldl' (<>) mempty $ unWithdrawals $ txb ^. withdrawalsTxBodyL
        in PostCondition
             "Should preserve value in the UTxO state"
-            ( \(TRC (_, us, tx)) us' ->
-                utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us'
+            ( \(TRC (_, us, stAnnTx)) us' ->
+                let tx = stAnnTx ^. txStAnnTxG
+                 in utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us'
             )
     , validSizeComputationCheck @era
     ]
@@ -343,7 +345,7 @@ utxoInductive ::
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , Event (EraRule "UTXO" era) ~ UtxoEvent era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
@@ -353,8 +355,9 @@ utxoInductive ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoInductive = do
-  TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
-  let utxo = utxos ^. utxoL
+  TRC (UtxoEnv slot pp certState, utxos, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
+      utxo = utxos ^. utxoL
       UTxOState _ _ _ ppup _ _ = utxos
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
@@ -652,12 +655,13 @@ instance
 validSizeComputationCheck ::
   ( EraTx era
   , SafeToHash (TxWits era)
-  , Signal (rule era) ~ Tx TopTx era
+  , Signal (rule era) ~ StAnnTx TopTx era
   ) =>
   Assertion (rule era)
 validSizeComputationCheck =
   PreCondition
     "Tx size should be the length of the serialization bytestring"
-    ( \(TRC (_, _, tx)) ->
-        tx ^. sizeTxF == sizeTxForFeeCalculation tx
+    ( \(TRC (_, _, stAnnTx)) ->
+        let tx = stAnnTx ^. txStAnnTxG
+         in tx ^. sizeTxF == sizeTxForFeeCalculation tx
     )

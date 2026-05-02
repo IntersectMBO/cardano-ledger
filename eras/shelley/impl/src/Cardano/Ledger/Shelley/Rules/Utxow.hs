@@ -277,17 +277,18 @@ transitionRulesUTXOW ::
   , Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , STS (EraRule "UTXOW" era)
   , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 transitionRulesUTXOW = do
-  (TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx)) <- judgmentContext
+  (TRC (utxoEnv@(UtxoEnv _ pp certState), u, stAnnTx)) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
@@ -323,7 +324,7 @@ transitionRulesUTXOW = do
   runTest $
     validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
 
-  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
+  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, stAnnTx)
 
 instance
   ( Era era
@@ -345,7 +346,7 @@ instance
     Embed (EraRule "UTXO" era) (ShelleyUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , EraRule "UTXOW" era ~ ShelleyUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , EraGov era
@@ -354,7 +355,7 @@ instance
   STS (ShelleyUTXOW era)
   where
   type State (ShelleyUTXOW era) = UTxOState era
-  type Signal (ShelleyUTXOW era) = Tx TopTx era
+  type Signal (ShelleyUTXOW era) = StAnnTx TopTx era
   type Environment (ShelleyUTXOW era) = UtxoEnv era
   type BaseM (ShelleyUTXOW era) = ShelleyBase
   type PredicateFailure (ShelleyUTXOW era) = ShelleyUtxowPredFailure era

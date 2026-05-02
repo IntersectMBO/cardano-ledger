@@ -14,14 +14,16 @@
 module Test.Cardano.Ledger.Generic.Properties where
 
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, systemStart)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState,
   PulsingRewUpdate,
   UTxOState,
+  utxosUtxo,
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -75,6 +77,7 @@ import Test.Cardano.Ledger.Generic.TxGen (
  )
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
+import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.Control.State.Transition.Trace (Trace (..), lastState)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 
@@ -82,12 +85,13 @@ import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 -- Top level generators of TRC
 
 genTxAndUTXOState ::
-  ( Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  ( ApplyTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
+  , StAnnTx TopTx era ~ Signal (EraRule "UTXOW" era)
   , EraGenericGen era
   ) =>
   GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
@@ -97,7 +101,8 @@ genTxAndUTXOState gsize = do
 
 genTxAndLEDGERState ::
   forall era.
-  ( Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  ( ApplyTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , EraGenericGen era
@@ -115,7 +120,14 @@ genTxAndLEDGERState sizes = do
         pp <- gets (gePParams . gsGenEnv)
         let ledgerState = extract @(LedgerState era) model
             ledgerEnv = LedgerEnv slotNo Nothing txIx pp (ChainAccountState (Coin 0) (Coin 0))
-        pure $ TRC (ledgerEnv, ledgerState, tx)
+            stAnnTx =
+              mkStAnnTx
+                (epochInfo testGlobals)
+                (systemStart testGlobals)
+                pp
+                (utxosUtxo (lsUTxOState ledgerState))
+                tx
+        pure $ TRC (ledgerEnv, ledgerState, stAnnTx)
   (trc, genstate) <- runGenRS sizes (initStableFields >> genT)
   pure (trc, genstate)
 
@@ -125,7 +137,7 @@ genTxAndLEDGERState sizes = do
 testTxValidForLEDGER ::
   forall era.
   ( Reflect era
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
   , EraTest era
@@ -135,24 +147,25 @@ testTxValidForLEDGER ::
   ) =>
   (TRC (EraRule "LEDGER" era), GenState era) ->
   Property
-testTxValidForLEDGER (trc@(TRC (env, ledgerState, vtx)), _genstate) =
-  -- trc encodes the initial (generated) state, vtx is the transaction
-  case runSTSWithContext @era trc of
-    Right ledgerState' ->
-      -- UTxOState and CertState after applying the transaction $$$
-      classify (coerce (isValid' (reify @era) vtx)) "TxValid" $
-        totalAda ledgerState' === totalAda ledgerState
-    Left errs ->
-      counterexample
-        ( showExpr env
-            ++ "\n\n"
-            ++ showExpr ledgerState
-            ++ "\n\n"
-            ++ showExpr vtx
-            ++ "\n\n"
-            ++ showExpr errs
-        )
-        (property False)
+testTxValidForLEDGER (trc@(TRC (env, ledgerState, vstAnnTx)), _genstate) =
+  -- trc encodes the initial (generated) state, vstAnnTx is the transaction
+  let vtx = vstAnnTx ^. txStAnnTxG
+   in case runSTSWithContext @era trc of
+        Right ledgerState' ->
+          -- UTxOState and CertState after applying the transaction $$$
+          classify (coerce (isValid' (reify @era) vtx)) "TxValid" $
+            totalAda ledgerState' === totalAda ledgerState
+        Left errs ->
+          counterexample
+            ( showExpr env
+                ++ "\n\n"
+                ++ showExpr ledgerState
+                ++ "\n\n"
+                ++ showExpr vtx
+                ++ "\n\n"
+                ++ showExpr errs
+            )
+            (property False)
 
 -- =============================================
 -- Make some property tests
@@ -266,7 +279,7 @@ adaIsPreservedInEachEpoch ::
   , Signal (EraRule "RUPD" era) ~ SlotNo
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "NEWEPOCH" era) ~ ShelleyBase
   , Embed (EraRule "TICK" era) (MOCKCHAIN era)
   , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)

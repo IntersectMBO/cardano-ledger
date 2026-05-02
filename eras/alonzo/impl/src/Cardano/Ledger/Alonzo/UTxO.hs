@@ -66,6 +66,7 @@ import Cardano.Ledger.State (
   getScriptHash,
  )
 import Cardano.Ledger.TxIn
+import Control.DeepSeq (NFData)
 import Data.Foldable as F (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe, isJust)
@@ -83,6 +84,8 @@ newtype AlonzoScriptsNeeded era
 deriving instance AlonzoEraScript era => Eq (AlonzoScriptsNeeded era)
 
 deriving instance AlonzoEraScript era => Show (AlonzoScriptsNeeded era)
+
+deriving instance AlonzoEraScript era => NFData (AlonzoScriptsNeeded era)
 
 instance EraUTxO AlonzoEra where
   type ScriptsNeeded AlonzoEra = AlonzoScriptsNeeded AlonzoEra

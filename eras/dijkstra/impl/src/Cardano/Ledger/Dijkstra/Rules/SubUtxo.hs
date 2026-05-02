@@ -231,7 +231,7 @@ instance
   STS (DijkstraSUBUTXO era)
   where
   type State (DijkstraSUBUTXO era) = UTxOState era
-  type Signal (DijkstraSUBUTXO era) = Tx SubTx era
+  type Signal (DijkstraSUBUTXO era) = StAnnTx SubTx era
   type Environment (DijkstraSUBUTXO era) = SubUtxoEnv era
   type BaseM (DijkstraSUBUTXO era) = ShelleyBase
   type PredicateFailure (DijkstraSUBUTXO era) = DijkstraSubUtxoPredFailure era
@@ -256,8 +256,9 @@ dijkstraSubUtxoTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (SubUtxoEnv slot pp certState _ originalUtxo (IsValid isValid), utxoState, tx) <-
+  TRC (SubUtxoEnv slot pp certState _ originalUtxo (IsValid isValid), utxoState, stAnnTx) <-
     judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
 
   let txBody = tx ^. bodyTxL
 

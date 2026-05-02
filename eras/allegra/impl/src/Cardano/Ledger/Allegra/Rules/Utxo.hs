@@ -170,8 +170,9 @@ utxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
-  let Shelley.UTxOState utxo _ _ ppup _ _ = utxos
+  TRC (Shelley.UtxoEnv slot pp certState, utxos, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
+      Shelley.UTxOState utxo _ _ ppup _ _ = utxos
       txBody = tx ^. bodyTxL
       genDelegs = certState ^. Shelley.certDStateL . Shelley.dsGenDelegsL
 
@@ -306,7 +307,7 @@ instance
   STS (AllegraUTXO era)
   where
   type State (AllegraUTXO era) = Shelley.UTxOState era
-  type Signal (AllegraUTXO era) = Tx TopTx era
+  type Signal (AllegraUTXO era) = StAnnTx TopTx era
   type Environment (AllegraUTXO era) = Shelley.UtxoEnv era
   type BaseM (AllegraUTXO era) = ShelleyBase
   type PredicateFailure (AllegraUTXO era) = AllegraUtxoPredFailure era
