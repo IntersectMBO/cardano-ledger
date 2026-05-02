@@ -5,10 +5,11 @@ set -euo pipefail
 # Packages to run doctests for; defaults to all packages if none are specified
 PACKAGES=("$@")
 
-# Install doctest's Cabal integration, if it's not present already
-if [[ -z "$(type -t cabal-doctest)" ]]
+# Install doctest, if it's not present already
+if [[ -z "$(type -t doctest)" ]]
 then
-  cabal install doctest --flag cabal-doctest --ignore-project --overwrite-policy=always
+  cabal install doctest --ignore-project --overwrite-policy=always
+  PATH=$(cabal path --installdir):$PATH
 fi
 
 # Ensure doctest and PATH are using the same ghc version
@@ -29,14 +30,6 @@ then
   exit 1
 fi
 
-# Ensure the cabal-doctest executable can be found
-PATH=$(cabal path --installdir):$PATH
-
-# Ensure other scripts can be found
-case "$0" in
-  */*) PATH=$(dirname "$(which "$0")"):$PATH;;
-esac
-
 # Specify additional arguments needed for specific modules
 EXTRA_ARGS=$(mktemp)
 trap 'rm -f "$EXTRA_ARGS"' EXIT
@@ -44,11 +37,18 @@ cat <<EOF >"$EXTRA_ARGS"
 cardano-ledger-api:lib:cardano-ledger-api --build-depends=cardano-ledger-babbage:testlib
 EOF
 
+RESULT=0
+shopt -s lastpipe # Run the while loop in the current process, to enable setting RESULT=1
+
 # Run the doctests for some or all packages
 cleret cabal targets "${PACKAGES[@]}" |
 sort | join -t' ' -a1 -j1 - "$EXTRA_ARGS" |
 while read -ra ARGS
 do
   echo "***** cabal doctest ${ARGS[0]} *****"
-  cabal doctest --repl-options='-w -Wdefault' "${ARGS[@]}"
+  cabal repl --with-repl=doctest --repl-options='-w -Wdefault' \
+    --build-depends=QuickCheck --build-depends=template-haskell \
+      "${ARGS[@]}" || RESULT=1
 done
+
+exit "$RESULT"
