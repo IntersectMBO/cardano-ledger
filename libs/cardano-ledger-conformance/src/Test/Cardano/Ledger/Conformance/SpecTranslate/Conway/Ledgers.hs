@@ -13,6 +13,7 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledgers () where
 
 import Cardano.Ledger.BaseTypes (Inject)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (EraPParams (..))
 import Cardano.Ledger.Conway.Governance (Constitution (..), EnactState (..))
 import Cardano.Ledger.Shelley.Rules (Identity, ShelleyLedgersEnv (..))
@@ -26,21 +27,21 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecTranslate ctx ConwayEra (PParamsHKD Identity era)
   , Inject ctx (EnactState era)
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecRep ConwayEra (PParamsHKD Identity era) ~ Agda.PParams
   ) =>
-  SpecTranslate ctx (ShelleyLedgersEnv era)
+  SpecTranslate ctx ConwayEra (ShelleyLedgersEnv era)
   where
-  type SpecRep (ShelleyLedgersEnv era) = Agda.LEnv
+  type SpecRep ConwayEra (ShelleyLedgersEnv era) = Agda.LEnv
 
   toSpecRep LedgersEnv {..} = do
     enactState <- askCtx @(EnactState era)
     let
       guardrailsScriptHash = constitutionGuardrailsScriptHash $ ensConstitution enactState
     Agda.MkLEnv
-      <$> toSpecRep ledgersSlotNo
-      <*> toSpecRep guardrailsScriptHash
-      <*> toSpecRep ledgersPp
-      <*> toSpecRep enactState
-      <*> toSpecRep (casTreasury ledgersAccount)
+      <$> toSpecRep @_ @ConwayEra ledgersSlotNo
+      <*> toSpecRep @_ @ConwayEra guardrailsScriptHash
+      <*> toSpecRep @_ @ConwayEra ledgersPp
+      <*> toSpecRep @_ @ConwayEra enactState
+      <*> toSpecRep @_ @ConwayEra (casTreasury ledgersAccount)

@@ -51,13 +51,13 @@ instance ExecSpecRule "RATIFY" ConwayEra where
   translateInputs _ (TRC (env, st@RatifyState {..}, sig@(RatifySignal actions))) =
     runSpecTransM () $ do
       let treasury = ensTreasury rsEnactState
-      specEnv <- withCtx treasury (toSpecRep env)
-      specSt <- withCtx (toList actions) (toSpecRep st)
-      specSig <- toSpecRep sig
+      specEnv <- withCtx treasury (toSpecRep @_ @ConwayEra env)
+      specSt <- withCtx (toList actions) (toSpecRep @_ @ConwayEra st)
+      specSig <- toSpecRep @_ @ConwayEra sig
       pure $ SpecTRC specEnv specSt specSig
 
   translateOutput _ (TRC (_, _, RatifySignal actions)) out =
-    runSpecTransM () . withCtx (toList actions) $ toSpecRep out
+    runSpecTransM () . withCtx (toList actions) $ toSpecRep @_ @ConwayEra out
 
   extraInfo _ ctx trc@(TRC (env@RatifyEnv {..}, st@RatifyState {..}, RatifySignal actions)) _ =
     PP.vsep $ specExtraInfo : (actionAcceptedRatio <$> toList actions)

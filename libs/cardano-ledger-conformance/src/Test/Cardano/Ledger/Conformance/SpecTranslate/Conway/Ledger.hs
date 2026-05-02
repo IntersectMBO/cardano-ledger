@@ -44,51 +44,51 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD Identity era)
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx ConwayEra (PParamsHKD Identity era)
+  , SpecRep ConwayEra (PParamsHKD Identity era) ~ Agda.PParams
   , Inject ctx (StrictMaybe ScriptHash)
   , Inject ctx (EnactState era)
   ) =>
-  SpecTranslate ctx (LedgerEnv era)
+  SpecTranslate ctx ConwayEra (LedgerEnv era)
   where
-  type SpecRep (LedgerEnv era) = Agda.LEnv
+  type SpecRep ConwayEra (LedgerEnv era) = Agda.LEnv
 
   toSpecRep LedgerEnv {..} = do
     policyHash <- askCtx @(StrictMaybe ScriptHash)
     enactState <- askCtx @(EnactState era)
     Agda.MkLEnv
-      <$> toSpecRep ledgerSlotNo
-      <*> toSpecRep policyHash
-      <*> toSpecRep ledgerPp
-      <*> toSpecRep enactState
-      <*> toSpecRep (casTreasury ledgerAccount)
+      <$> toSpecRep @_ @ConwayEra ledgerSlotNo
+      <*> toSpecRep @_ @ConwayEra policyHash
+      <*> toSpecRep @_ @ConwayEra ledgerPp
+      <*> toSpecRep @_ @ConwayEra enactState
+      <*> toSpecRep @_ @ConwayEra (casTreasury ledgerAccount)
 
 instance
   Inject ctx TxId =>
-  SpecTranslate ctx (TxBody TopTx ConwayEra)
+  SpecTranslate ctx ConwayEra (TxBody TopTx ConwayEra)
   where
-  type SpecRep (TxBody TopTx ConwayEra) = Agda.TxBody
+  type SpecRep ConwayEra (TxBody TopTx ConwayEra) = Agda.TxBody
 
   toSpecRep txb = do
     txId <- askCtx @TxId
     Agda.MkTxBody
-      <$> toSpecRep (txb ^. inputsTxBodyL)
-      <*> toSpecRep (txb ^. referenceInputsTxBodyL)
-      <*> toSpecRep (txb ^. collateralInputsTxBodyL)
-      <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (txb ^. outputsTxBodyL))
-      <*> toSpecRep txId
-      <*> toSpecRep (txb ^. certsTxBodyL)
-      <*> toSpecRep (txb ^. feeTxBodyL)
-      <*> toSpecRep (txb ^. withdrawalsTxBodyL)
-      <*> toSpecRep (txb ^. vldtTxBodyL)
-      <*> toSpecRep (txb ^. auxDataHashTxBodyL)
-      <*> toSpecRep (txb ^. treasuryDonationTxBodyL)
-      <*> toSpecRep (txb ^. votingProceduresTxBodyL)
-      <*> toSpecRep (txb ^. proposalProceduresTxBodyL)
-      <*> toSpecRep (txb ^. networkIdTxBodyL)
-      <*> toSpecRep (txb ^. currentTreasuryValueTxBodyL)
+      <$> toSpecRep @_ @ConwayEra (txb ^. inputsTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. referenceInputsTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. collateralInputsTxBodyL)
+      <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep @_ @ConwayEra (txb ^. outputsTxBodyL))
+      <*> toSpecRep @_ @ConwayEra txId
+      <*> toSpecRep @_ @ConwayEra (txb ^. certsTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. feeTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. withdrawalsTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. vldtTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. auxDataHashTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. treasuryDonationTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. votingProceduresTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. proposalProceduresTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. networkIdTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. currentTreasuryValueTxBodyL)
       <*> pure 0
-      <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
+      <*> toSpecRep @_ @ConwayEra (txb ^. reqSignerHashesTxBodyL)
       -- The script integrity hash is computed using @const 0@ on the Agda
       -- side (@Hashable-ScriptIntegrity = record { hash = λ x → 0 }@).
       -- Until a proper hash function is used in Agda, we emulate the same
@@ -96,15 +96,15 @@ instance
       --
       -- The following PR documents the discrepancy on the Agda side:
       -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1086
-      <*> fmap (fmap (const 0)) (toSpecRep (txb ^. scriptIntegrityHashTxBodyL))
+      <*> fmap (fmap (const 0)) (toSpecRep @_ @ConwayEra (txb ^. scriptIntegrityHashTxBodyL))
 
-instance SpecTranslate ctx (Tx TopTx ConwayEra) where
-  type SpecRep (Tx TopTx ConwayEra) = Agda.Tx
+instance SpecTranslate ctx ConwayEra (Tx TopTx ConwayEra) where
+  type SpecRep ConwayEra (Tx TopTx ConwayEra) = Agda.Tx
 
   toSpecRep tx =
     Agda.MkTx
-      <$> withCtx (txIdTx tx) (toSpecRep (tx ^. bodyTxL))
-      <*> toSpecRep (tx ^. witsTxL)
-      <*> toSpecRep (tx ^. sizeTxF)
-      <*> toSpecRep (tx ^. isValidTxL)
-      <*> toSpecRep (tx ^. auxDataTxL)
+      <$> withCtx (txIdTx tx) (toSpecRep @_ @ConwayEra (tx ^. bodyTxL))
+      <*> toSpecRep @_ @ConwayEra (tx ^. witsTxL)
+      <*> toSpecRep @_ @ConwayEra (tx ^. sizeTxF)
+      <*> toSpecRep @_ @ConwayEra (tx ^. isValidTxL)
+      <*> toSpecRep @_ @ConwayEra (tx ^. auxDataTxL)

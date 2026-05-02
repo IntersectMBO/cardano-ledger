@@ -40,7 +40,7 @@ import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
 import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 
 instance
-  SpecTranslate TxId (ConwayTxCert ConwayEra) =>
+  SpecTranslate TxId ConwayEra (ConwayTxCert ConwayEra) =>
   ExecSpecRule "UTXOW" ConwayEra
   where
   type ExecContext "UTXOW" ConwayEra = UtxoExecContext ConwayEra
@@ -52,9 +52,9 @@ instance
       result =
         either show T.unpack . runSpecTransM ctx $
           Agda.utxowDebug externalFunctions
-            <$> toSpecRep env
-            <*> toSpecRep st
-            <*> toSpecRep sig
+            <$> toSpecRep @_ @ConwayEra env
+            <*> toSpecRep @_ @ConwayEra st
+            <*> toSpecRep @_ @ConwayEra sig
       stFinal = first (T.pack . show) $ runSTS @"UTXO" @ConwayEra globals env st sig
       utxoInfo = extraInfo @"UTXO" @ConwayEra globals ctx (coerce trc) stFinal
      in

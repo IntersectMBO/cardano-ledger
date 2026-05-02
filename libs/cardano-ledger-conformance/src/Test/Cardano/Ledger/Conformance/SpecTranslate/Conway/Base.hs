@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ConwayPParams (..), THKD (..))
@@ -44,6 +45,10 @@ import Cardano.Ledger.Conway.Scripts (AlonzoScript (..), ConwayPlutusPurpose (..
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.HKD (HKD)
+import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
+import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Rules (Identity)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -76,25 +81,95 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (committeeCredentialToStrictMaybe)
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
+instance SpecTranslate ctx ConwayEra TxId where
+  type SpecRep ConwayEra TxId = Agda.TxId
+
+  toSpecRep (TxId x) = toSpecRep @ctx @ConwayEra x
+
+instance SpecTranslate ctx era TxIx where
+  type SpecRep era TxIx = Integer
+
+  toSpecRep (TxIx x) = pure $ toInteger x
+
+instance SpecTranslate ctx ConwayEra TxIn where
+  type SpecRep ConwayEra TxIn = Agda.TxIn
+
+  toSpecRep (TxIn txId txIx) = toSpecRep @ctx @ConwayEra (txId, txIx)
+
+instance SpecTranslate ctx ConwayEra (SafeHash a) where
+  type SpecRep ConwayEra (SafeHash a) = Agda.DataHash
+
+  toSpecRep = toSpecRep @ctx @ConwayEra . extractHash
+
+instance SpecTranslate ctx ConwayEra Language where
+  type SpecRep ConwayEra Language = Agda.HSLanguage
+
+  toSpecRep l = case l of
+    PlutusV1 -> return Agda.PV1
+    PlutusV2 -> return Agda.PV2
+    PlutusV3 -> return Agda.PV3
+    PlutusV4 -> error "PlutusV4 not supported"
+
+instance SpecTranslate ctx ConwayEra CostModels where
+  type SpecRep ConwayEra CostModels = Agda.LanguageCostModels
+
+  toSpecRep cm =
+    -- filter out PlutusV4 language
+    let validCostModels = filter ((/= PlutusV4) . fst) $ Map.toList (costModelsValid cm)
+     in Agda.MkLanguageCostModels
+          <$> mapM (\(l, _) -> (,()) <$> toSpecRep @ctx @ConwayEra l) validCostModels
+
+instance SpecTranslate ctx ConwayEra ExUnits where
+  type SpecRep ConwayEra ExUnits = Agda.ExUnits
+
+  toSpecRep (ExUnits a b) = pure (toInteger a, toInteger b)
+
+instance
+  ( SpecRep ConwayEra DataHash ~ Agda.DataHash
+  , Era era
+  ) =>
+  SpecTranslate ctx ConwayEra (BinaryData era)
+  where
+  type SpecRep ConwayEra (BinaryData era) = Agda.DataHash
+
+  toSpecRep = toSpecRep @ctx @ConwayEra . hashBinaryData
+
+instance Era era => SpecTranslate ctx ConwayEra (Datum era) where
+  type SpecRep ConwayEra (Datum era) = Maybe (Either Agda.Datum Agda.DataHash)
+
+  toSpecRep NoDatum = pure Nothing
+  toSpecRep (Datum d) = Just . Left <$> toSpecRep @_ @ConwayEra d
+  toSpecRep (DatumHash h) = Just . Right <$> toSpecRep @ctx @ConwayEra h
+
+instance Era era => SpecTranslate ctx ConwayEra (Data era) where
+  type SpecRep ConwayEra (Data era) = Agda.DataHash
+
+  toSpecRep = toSpecRep @ctx @ConwayEra . hashAnnotated
+
+instance SpecTranslate ctx ConwayEra TxAuxDataHash where
+  type SpecRep ConwayEra TxAuxDataHash = Agda.DataHash
+
+  toSpecRep (TxAuxDataHash x) = toSpecRep @ctx @ConwayEra x
+
 instance
   ( AlonzoEraScript era
   , NativeScript era ~ Timelock era
   , Script era ~ AlonzoScript era
   ) =>
-  SpecTranslate ctx (Timelock era)
+  SpecTranslate ctx ConwayEra (Timelock era)
   where
-  type SpecRep (Timelock era) = Agda.HSTimelock
+  type SpecRep ConwayEra (Timelock era) = Agda.HSTimelock
 
   toSpecRep tl =
     Agda.HSTimelock
       <$> timelockToSpecRep tl
-      <*> toSpecRep (hashScript @era $ NativeScript tl)
+      <*> toSpecRep @_ @ConwayEra (hashScript $ NativeScript tl)
       <*> pure (fromIntegral $ originalBytesSize tl)
     where
       timelockToSpecRep x =
         case x of
           RequireSignature kh ->
-            Agda.RequireSig <$> toSpecRep kh
+            Agda.RequireSig <$> toSpecRep @_ @ConwayEra kh
           RequireAllOf ss -> do
             tls <- traverse timelockToSpecRep ss
             pure . Agda.RequireAllOf $ toList tls
@@ -104,171 +179,171 @@ instance
           RequireMOf m ss -> do
             tls <- traverse timelockToSpecRep ss
             pure . Agda.RequireMOf (toInteger m) $ toList tls
-          RequireTimeExpire slot -> Agda.RequireTimeExpire <$> toSpecRep slot
-          RequireTimeStart slot -> Agda.RequireTimeStart <$> toSpecRep slot
+          RequireTimeExpire slot -> Agda.RequireTimeExpire <$> toSpecRep @_ @ConwayEra slot
+          RequireTimeStart slot -> Agda.RequireTimeStart <$> toSpecRep @_ @ConwayEra slot
           _ -> error "Impossible: All NativeScripts should have been accounted for"
 
 instance
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
   ) =>
-  SpecTranslate ctx (PlutusScript era)
+  SpecTranslate ctx ConwayEra (PlutusScript era)
   where
-  type SpecRep (PlutusScript era) = Agda.HSPlutusScript
+  type SpecRep ConwayEra (PlutusScript era) = Agda.HSPlutusScript
 
   toSpecRep ps =
     Agda.MkHSPlutusScript
-      <$> toSpecRep (hashScript $ PlutusScript ps)
+      <$> toSpecRep @_ @ConwayEra (hashScript $ PlutusScript ps)
       <*> pure (fromIntegral $ originalBytesSize ps)
-      <*> toSpecRep (plutusScriptLanguage ps)
+      <*> toSpecRep @_ @ConwayEra (plutusScriptLanguage ps)
 
 instance
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
   , NativeScript era ~ Timelock era
   ) =>
-  SpecTranslate ctx (AlonzoScript era)
+  SpecTranslate ctx ConwayEra (AlonzoScript era)
   where
-  type SpecRep (AlonzoScript era) = Agda.Script
+  type SpecRep ConwayEra (AlonzoScript era) = Agda.Script
 
-  toSpecRep (NativeScript s) = Left <$> toSpecRep s
-  toSpecRep (PlutusScript s) = Right <$> toSpecRep s
+  toSpecRep (NativeScript s) = Left <$> toSpecRep @_ @ConwayEra s
+  toSpecRep (PlutusScript s) = Right <$> toSpecRep @_ @ConwayEra s
 
 instance
   ( EraTxOut era
-  , SpecRep (Value era) ~ Agda.Coin
+  , SpecRep ConwayEra (Value era) ~ Agda.Coin
   , Script era ~ AlonzoScript era
-  , SpecTranslate ctx (Value era)
-  , SpecTranslate ctx (Script era)
+  , SpecTranslate ctx ConwayEra (Value era)
+  , SpecTranslate ctx ConwayEra (Script era)
   ) =>
-  SpecTranslate ctx (BabbageTxOut era)
+  SpecTranslate ctx ConwayEra (BabbageTxOut era)
   where
-  type SpecRep (BabbageTxOut era) = Agda.TxOut
+  type SpecRep ConwayEra (BabbageTxOut era) = Agda.TxOut
 
   toSpecRep (BabbageTxOut addr val datum script) = do
-    addr' <- toSpecRep addr
-    val' <- toSpecRep val
-    datum' <- toSpecRep datum
-    script' <- toSpecRep script
+    addr' <- toSpecRep @_ @ConwayEra addr
+    val' <- toSpecRep @_ @ConwayEra val
+    datum' <- toSpecRep @_ @ConwayEra datum
+    script' <- toSpecRep @_ @ConwayEra script
     pure (addr', (val', (datum', script')))
 
 instance
-  ( SpecTranslate ctx (TxOut era)
-  , SpecRep (TxOut era) ~ Agda.TxOut
+  ( SpecTranslate ctx ConwayEra (TxOut era)
+  , SpecRep ConwayEra (TxOut era) ~ Agda.TxOut
   ) =>
-  SpecTranslate ctx (UTxO era)
+  SpecTranslate ctx ConwayEra (UTxO era)
   where
-  type SpecRep (UTxO era) = SpecRep (Map TxIn (TxOut era))
+  type SpecRep ConwayEra (UTxO era) = SpecRep ConwayEra (Map TxIn (TxOut era))
 
-  toSpecRep (UTxO m) = toSpecRep m
+  toSpecRep (UTxO m) = toSpecRep @_ @ConwayEra m
 
-deriving instance SpecTranslate ctx OrdExUnits
+deriving instance SpecTranslate ctx ConwayEra OrdExUnits
 
-deriving instance SpecTranslate ctx CoinPerByte
+deriving instance SpecTranslate ctx ConwayEra CoinPerByte
 
 instance
-  SpecTranslate ctx (HKD f a) =>
-  SpecTranslate ctx (THKD r f a)
+  SpecTranslate ctx ConwayEra (HKD f a) =>
+  SpecTranslate ctx ConwayEra (THKD r f a)
   where
-  type SpecRep (THKD r f a) = SpecRep (HKD f a)
+  type SpecRep ConwayEra (THKD r f a) = SpecRep ConwayEra (HKD f a)
 
-  toSpecRep = toSpecRep . unTHKD
+  toSpecRep = toSpecRep @_ @ConwayEra . unTHKD
 
-instance SpecTranslate ctx DRepVotingThresholds where
-  type SpecRep DRepVotingThresholds = Agda.DrepThresholds
+instance SpecTranslate ctx ConwayEra DRepVotingThresholds where
+  type SpecRep ConwayEra DRepVotingThresholds = Agda.DrepThresholds
 
   toSpecRep DRepVotingThresholds {..} =
     Agda.MkDrepThresholds
-      <$> toSpecRep dvtMotionNoConfidence
-      <*> toSpecRep dvtCommitteeNormal
-      <*> toSpecRep dvtCommitteeNoConfidence
-      <*> toSpecRep dvtUpdateToConstitution
-      <*> toSpecRep dvtHardForkInitiation
-      <*> toSpecRep dvtPPNetworkGroup
-      <*> toSpecRep dvtPPEconomicGroup
-      <*> toSpecRep dvtPPTechnicalGroup
-      <*> toSpecRep dvtPPGovGroup
-      <*> toSpecRep dvtTreasuryWithdrawal
+      <$> toSpecRep @_ @ConwayEra dvtMotionNoConfidence
+      <*> toSpecRep @_ @ConwayEra dvtCommitteeNormal
+      <*> toSpecRep @_ @ConwayEra dvtCommitteeNoConfidence
+      <*> toSpecRep @_ @ConwayEra dvtUpdateToConstitution
+      <*> toSpecRep @_ @ConwayEra dvtHardForkInitiation
+      <*> toSpecRep @_ @ConwayEra dvtPPNetworkGroup
+      <*> toSpecRep @_ @ConwayEra dvtPPEconomicGroup
+      <*> toSpecRep @_ @ConwayEra dvtPPTechnicalGroup
+      <*> toSpecRep @_ @ConwayEra dvtPPGovGroup
+      <*> toSpecRep @_ @ConwayEra dvtTreasuryWithdrawal
 
-instance SpecTranslate ctx PoolVotingThresholds where
-  type SpecRep PoolVotingThresholds = Agda.PoolThresholds
+instance SpecTranslate ctx ConwayEra PoolVotingThresholds where
+  type SpecRep ConwayEra PoolVotingThresholds = Agda.PoolThresholds
 
   toSpecRep PoolVotingThresholds {..} =
     Agda.MkPoolThresholds
-      <$> toSpecRep pvtMotionNoConfidence
-      <*> toSpecRep pvtCommitteeNormal
-      <*> toSpecRep pvtCommitteeNoConfidence
-      <*> toSpecRep pvtHardForkInitiation
-      <*> toSpecRep pvtPPSecurityGroup
+      <$> toSpecRep @_ @ConwayEra pvtMotionNoConfidence
+      <*> toSpecRep @_ @ConwayEra pvtCommitteeNormal
+      <*> toSpecRep @_ @ConwayEra pvtCommitteeNoConfidence
+      <*> toSpecRep @_ @ConwayEra pvtHardForkInitiation
+      <*> toSpecRep @_ @ConwayEra pvtPPSecurityGroup
 
 instance
   ( ConwayEraPParams era
   , PParamsHKD Identity era ~ ConwayPParams Identity era
   ) =>
-  SpecTranslate ctx (ConwayPParams Identity era)
+  SpecTranslate ctx ConwayEra (ConwayPParams Identity era)
   where
-  type SpecRep (ConwayPParams Identity era) = Agda.PParams
+  type SpecRep ConwayEra (ConwayPParams Identity era) = Agda.PParams
 
   toSpecRep cpp@ConwayPParams {..} = do
-    ppA <- toSpecRep cppTxFeePerByte
-    ppB <- toSpecRep cppTxFeeFixed
-    ppA0 <- toSpecRep cppA0
-    ppMinFeeRefScriptCoinsPerByte <- toSpecRep cppMinFeeRefScriptCostPerByte
-    ppCollateralPercentage <- toSpecRep cppCollateralPercentage
+    ppA <- toSpecRep @_ @ConwayEra cppTxFeePerByte
+    ppB <- toSpecRep @_ @ConwayEra cppTxFeeFixed
+    ppA0 <- toSpecRep @_ @ConwayEra cppA0
+    ppMinFeeRefScriptCoinsPerByte <- toSpecRep @_ @ConwayEra cppMinFeeRefScriptCostPerByte
+    ppCollateralPercentage <- toSpecRep @_ @ConwayEra cppCollateralPercentage
     let
       ppMaxBlockSize = toInteger $ unTHKD cppMaxBBSize
       ppMaxTxSize = toInteger $ unTHKD cppMaxTxSize
       ppMaxHeaderSize = toInteger $ unTHKD cppMaxBHSize
-    ppKeyDeposit <- toSpecRep cppKeyDeposit
-    ppPoolDeposit <- toSpecRep cppPoolDeposit
-    ppEmax <- toSpecRep cppEMax
-    ppNopt <- toSpecRep (toInteger $ unTHKD cppNOpt)
+    ppKeyDeposit <- toSpecRep @_ @ConwayEra cppKeyDeposit
+    ppPoolDeposit <- toSpecRep @_ @ConwayEra cppPoolDeposit
+    ppEmax <- toSpecRep @_ @ConwayEra cppEMax
+    ppNopt <- toSpecRep @_ @ConwayEra (toInteger $ unTHKD cppNOpt)
     let
       -- We don't really care about `ppPv` in conformance testing, because
       -- the actual protocol version is stored elsewhere starting from Conway
       -- and this is just here for backwards compatibility
       ppPv = (0, 0)
       ppMinUTxOValue = 0 -- minUTxOValue has been deprecated and is not supported in Conway
-    ppCoinsPerUTxOByte <- toSpecRep cppCoinsPerUTxOByte
-    ppCostmdlsAssoc <- toSpecRep cppCostModels
-    ppPrices <- toSpecRep cppPrices
+    ppCoinsPerUTxOByte <- toSpecRep @_ @ConwayEra cppCoinsPerUTxOByte
+    ppCostmdlsAssoc <- toSpecRep @_ @ConwayEra cppCostModels
+    ppPrices <- toSpecRep @_ @ConwayEra cppPrices
     let
       pp = PParams cpp
       ppMaxRefScriptSizePerTx = toInteger $ pp ^. ppMaxRefScriptSizePerTxG
       ppMaxRefScriptSizePerBlock = toInteger $ pp ^. ppMaxRefScriptSizePerBlockG
       ppRefScriptCostStride = toInteger . unNonZero $ pp ^. ppRefScriptCostStrideG
       ppRefScriptCostMultiplier = unboundRational $ pp ^. ppRefScriptCostMultiplierG
-    ppMaxTxExUnits <- toSpecRep cppMaxTxExUnits
-    ppMaxBlockExUnits <- toSpecRep cppMaxBlockExUnits
+    ppMaxTxExUnits <- toSpecRep @_ @ConwayEra cppMaxTxExUnits
+    ppMaxBlockExUnits <- toSpecRep @_ @ConwayEra cppMaxBlockExUnits
     let
       ppMaxValSize = toInteger . unTHKD $ cppMaxValSize
       ppMaxCollateralInputs = toInteger . unTHKD $ cppMaxCollateralInputs
-    ppPoolThresholds <- toSpecRep cppPoolVotingThresholds
-    ppDrepThresholds <- toSpecRep cppDRepVotingThresholds
+    ppPoolThresholds <- toSpecRep @_ @ConwayEra cppPoolVotingThresholds
+    ppDrepThresholds <- toSpecRep @_ @ConwayEra cppDRepVotingThresholds
     let
       ppCcMinSize = toInteger . unTHKD $ cppCommitteeMinSize
       ppCcMaxTermLength = toInteger . unEpochInterval . unTHKD $ cppCommitteeMaxTermLength
-    ppGovActionLifetime <- toSpecRep cppGovActionLifetime
-    ppGovActionDeposit <- toSpecRep cppGovActionDeposit
-    ppDrepDeposit <- toSpecRep cppDRepDeposit
-    ppDrepActivity <- toSpecRep cppDRepActivity
-    ppMonetaryExpansion <- toSpecRep cppRho
-    ppTreasuryCut <- toSpecRep cppTau
+    ppGovActionLifetime <- toSpecRep @_ @ConwayEra cppGovActionLifetime
+    ppGovActionDeposit <- toSpecRep @_ @ConwayEra cppGovActionDeposit
+    ppDrepDeposit <- toSpecRep @_ @ConwayEra cppDRepDeposit
+    ppDrepActivity <- toSpecRep @_ @ConwayEra cppDRepActivity
+    ppMonetaryExpansion <- toSpecRep @_ @ConwayEra cppRho
+    ppTreasuryCut <- toSpecRep @_ @ConwayEra cppTau
 
     pure Agda.MkPParams {..}
 
-instance SpecTranslate ctx ValidityInterval where
-  type SpecRep ValidityInterval = (Maybe Integer, Maybe Integer)
+instance SpecTranslate ctx ConwayEra ValidityInterval where
+  type SpecRep ConwayEra ValidityInterval = (Maybe Integer, Maybe Integer)
 
-  toSpecRep (ValidityInterval lo hi) = toSpecRep (lo, hi)
+  toSpecRep (ValidityInterval lo hi) = toSpecRep @_ @ConwayEra (lo, hi)
 
-instance Era era => SpecTranslate ctx (TxDats era) where
-  type SpecRep (TxDats era) = Agda.HSSet Agda.Datum
+instance Era era => SpecTranslate ctx ConwayEra (TxDats era) where
+  type SpecRep ConwayEra (TxDats era) = Agda.HSSet Agda.Datum
 
-  toSpecRep = fmap Agda.MkHSSet . traverse (toSpecRep . snd) . Map.toList . unTxDats
+  toSpecRep = fmap Agda.MkHSSet . traverse (toSpecRep @_ @ConwayEra . snd) . Map.toList . unTxDats
 
-instance SpecTranslate ctx (AlonzoPlutusPurpose AsIx era) where
-  type SpecRep (AlonzoPlutusPurpose AsIx era) = Agda.RdmrPtr
+instance SpecTranslate ctx ConwayEra (AlonzoPlutusPurpose AsIx era) where
+  type SpecRep ConwayEra (AlonzoPlutusPurpose AsIx era) = Agda.RdmrPtr
 
   toSpecRep = \case
     AlonzoSpending (AsIx i) -> pure (Agda.Spend, toInteger i)
@@ -276,8 +351,8 @@ instance SpecTranslate ctx (AlonzoPlutusPurpose AsIx era) where
     AlonzoCertifying (AsIx i) -> pure (Agda.Cert, toInteger i)
     AlonzoRewarding (AsIx i) -> pure (Agda.Rewrd, toInteger i)
 
-instance SpecTranslate ctx (ConwayPlutusPurpose AsIx era) where
-  type SpecRep (ConwayPlutusPurpose AsIx era) = Agda.RdmrPtr
+instance SpecTranslate ctx ConwayEra (ConwayPlutusPurpose AsIx era) where
+  type SpecRep ConwayEra (ConwayPlutusPurpose AsIx era) = Agda.RdmrPtr
 
   toSpecRep = \case
     ConwaySpending (AsIx i) -> pure (Agda.Spend, toInteger i)
@@ -289,100 +364,100 @@ instance SpecTranslate ctx (ConwayPlutusPurpose AsIx era) where
 
 instance
   ( AlonzoEraScript era
-  , SpecTranslate ctx (PlutusPurpose AsIx era)
+  , SpecTranslate ctx ConwayEra (PlutusPurpose AsIx era)
   ) =>
-  SpecTranslate ctx (Redeemers era)
+  SpecTranslate ctx ConwayEra (Redeemers era)
   where
   type
-    SpecRep (Redeemers era) =
-      Agda.HSMap (SpecRep (PlutusPurpose AsIx era)) (Agda.Redeemer, Agda.ExUnits)
+    SpecRep ConwayEra (Redeemers era) =
+      Agda.HSMap (SpecRep ConwayEra (PlutusPurpose AsIx era)) (Agda.Redeemer, Agda.ExUnits)
 
-  toSpecRep (Redeemers x) = toSpecRep x
+  toSpecRep (Redeemers x) = toSpecRep @_ @ConwayEra x
 
 instance
   ( AlonzoEraScript era
-  , SpecTranslate ctx (PlutusPurpose AsIx era)
-  , SpecRep (PlutusPurpose AsIx era) ~ Agda.RdmrPtr
+  , SpecTranslate ctx ConwayEra (PlutusPurpose AsIx era)
+  , SpecRep ConwayEra (PlutusPurpose AsIx era) ~ Agda.RdmrPtr
   , Script era ~ AlonzoScript era
   , NativeScript era ~ Timelock era
   ) =>
-  SpecTranslate ctx (AlonzoTxWits era)
+  SpecTranslate ctx ConwayEra (AlonzoTxWits era)
   where
-  type SpecRep (AlonzoTxWits era) = Agda.TxWitnesses
+  type SpecRep ConwayEra (AlonzoTxWits era) = Agda.TxWitnesses
 
   toSpecRep x =
     Agda.MkTxWitnesses
-      <$> fmap Agda.MkHSMap (toSpecRep txWitsMap)
-      <*> fmap Agda.MkHSSet (toSpecRep (Map.elems $ txscripts x))
-      <*> toSpecRep (txdats x)
-      <*> toSpecRep (txrdmrs x)
+      <$> fmap Agda.MkHSMap (toSpecRep @_ @ConwayEra txWitsMap)
+      <*> fmap Agda.MkHSSet (toSpecRep @_ @ConwayEra (Map.elems $ txscripts x))
+      <*> toSpecRep @_ @ConwayEra (txdats x)
+      <*> toSpecRep @_ @ConwayEra (txrdmrs x)
     where
       txWitsMap = toList (txwitsVKey x)
 
-instance Era era => SpecTranslate ctx (AlonzoTxAuxData era) where
-  type SpecRep (AlonzoTxAuxData era) = Agda.AuxiliaryData
+instance Era era => SpecTranslate ctx ConwayEra (AlonzoTxAuxData era) where
+  type SpecRep ConwayEra (AlonzoTxAuxData era) = Agda.AuxiliaryData
 
-  toSpecRep = toSpecRep . hashAnnotated
+  toSpecRep = toSpecRep @_ @ConwayEra . hashAnnotated
 
-instance SpecTranslate ctx StakePoolParams where
-  type SpecRep StakePoolParams = Agda.StakePoolParams
+instance SpecTranslate ctx ConwayEra StakePoolParams where
+  type SpecRep ConwayEra StakePoolParams = Agda.StakePoolParams
 
   toSpecRep StakePoolParams {..} =
     Agda.StakePoolParams
-      <$> toSpecRep sppOwners
-      <*> toSpecRep sppCost
-      <*> toSpecRep sppMargin
-      <*> toSpecRep sppPledge
-      <*> toSpecRep (sppAccountAddress ^. accountAddressCredentialL)
+      <$> toSpecRep @_ @ConwayEra sppOwners
+      <*> toSpecRep @_ @ConwayEra sppCost
+      <*> toSpecRep @_ @ConwayEra sppMargin
+      <*> toSpecRep @_ @ConwayEra sppPledge
+      <*> toSpecRep @_ @ConwayEra (sppAccountAddress ^. accountAddressCredentialL)
 
-instance SpecTranslate ctx DRep where
-  type SpecRep DRep = Agda.VDeleg
+instance SpecTranslate ctx ConwayEra DRep where
+  type SpecRep ConwayEra DRep = Agda.VDeleg
 
-  toSpecRep (DRepCredential c) = Agda.VDelegCredential <$> toSpecRep c
+  toSpecRep (DRepCredential c) = Agda.VDelegCredential <$> toSpecRep @_ @ConwayEra c
   toSpecRep DRepAlwaysAbstain = pure Agda.VDelegAbstain
   toSpecRep DRepAlwaysNoConfidence = pure Agda.VDelegNoConfidence
 
-instance SpecTranslate ctx Url where
-  type SpecRep Url = T.Text
+instance SpecTranslate ctx ConwayEra Url where
+  type SpecRep ConwayEra Url = T.Text
   toSpecRep = pure . urlToText
 
-instance SpecTranslate ctx Anchor where
-  type SpecRep Anchor = Agda.Anchor
-  toSpecRep (Anchor url h) = Agda.Anchor <$> toSpecRep url <*> toSpecRep h
+instance SpecTranslate ctx ConwayEra Anchor where
+  type SpecRep ConwayEra Anchor = Agda.Anchor
+  toSpecRep (Anchor url h) = Agda.Anchor <$> toSpecRep @_ @ConwayEra url <*> toSpecRep @_ @ConwayEra h
 
-instance SpecTranslate ctx Withdrawals where
-  type SpecRep Withdrawals = Agda.Withdrawals
+instance SpecTranslate ctx ConwayEra Withdrawals where
+  type SpecRep ConwayEra Withdrawals = Agda.Withdrawals
 
-  toSpecRep (Withdrawals w) = toSpecRep w
+  toSpecRep (Withdrawals w) = toSpecRep @_ @ConwayEra w
 
-instance SpecTranslate ctx IsValid where
-  type SpecRep IsValid = Bool
+instance SpecTranslate ctx ConwayEra IsValid where
+  type SpecRep ConwayEra IsValid = Bool
 
   toSpecRep (IsValid b) = pure b
 
-instance SpecTranslate ctx (GovPurposeId r) where
-  type SpecRep (GovPurposeId r) = (Agda.TxId, Integer)
+instance SpecTranslate ctx ConwayEra (GovPurposeId r) where
+  type SpecRep ConwayEra (GovPurposeId r) = (Agda.TxId, Integer)
 
-  toSpecRep (GovPurposeId gaId) = toSpecRep gaId
+  toSpecRep (GovPurposeId gaId) = toSpecRep @_ @ConwayEra gaId
 
-instance SpecTranslate ctx (Committee era) where
-  type SpecRep (Committee era) = (Agda.HSMap Agda.Credential Agda.Epoch, Agda.Rational)
+instance SpecTranslate ctx ConwayEra (Committee era) where
+  type SpecRep ConwayEra (Committee era) = (Agda.HSMap Agda.Credential Agda.Epoch, Agda.Rational)
 
-  toSpecRep (Committee members threshold) = toSpecRep (members, threshold)
+  toSpecRep (Committee members threshold) = toSpecRep @_ @ConwayEra (members, threshold)
 
-instance SpecTranslate ctx (Constitution era) where
-  type SpecRep (Constitution era) = (Agda.DataHash, Maybe Agda.ScriptHash)
+instance SpecTranslate ctx ConwayEra (Constitution era) where
+  type SpecRep ConwayEra (Constitution era) = (Agda.DataHash, Maybe Agda.ScriptHash)
 
-  toSpecRep (Constitution (Anchor _ h) policy) = toSpecRep (h, policy)
+  toSpecRep (Constitution (Anchor _ h) policy) = toSpecRep @_ @ConwayEra (h, policy)
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD Identity era)
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx ConwayEra (PParamsHKD Identity era)
+  , SpecRep ConwayEra (PParamsHKD Identity era) ~ Agda.PParams
   ) =>
-  SpecTranslate ctx (EnactState era)
+  SpecTranslate ctx ConwayEra (EnactState era)
   where
-  type SpecRep (EnactState era) = Agda.EnactState
+  type SpecRep ConwayEra (EnactState era) = Agda.EnactState
 
   toSpecRep EnactState {..} =
     Agda.MkEnactState
@@ -395,32 +470,32 @@ instance
       GovRelation {..} = ensPrevGovActionIds
       transWithdrawals ws = fmap Agda.MkHSMap . forM (Map.toList ws) $
         \(cred, Coin amount) -> do
-          agdaCred <- toSpecRep cred
-          network <- toSpecRep Testnet -- TODO where should this really come from?
+          agdaCred <- toSpecRep @_ @ConwayEra cred
+          network <- toSpecRep @_ @ConwayEra Testnet -- TODO where should this really come from?
           pure (Agda.RewardAddress network agdaCred, amount)
       transHashProtected x h = do
-        committee <- toSpecRep x
+        committee <- toSpecRep @_ @ConwayEra x
         agdaLastId <- case h of
-          SJust lastId -> toSpecRep lastId
+          SJust lastId -> toSpecRep @_ @ConwayEra lastId
           SNothing -> pure (0, 0)
         pure (committee, agdaLastId)
 
-instance SpecTranslate ctx Voter where
-  type SpecRep Voter = Agda.GovVoter
+instance SpecTranslate ctx ConwayEra Voter where
+  type SpecRep ConwayEra Voter = Agda.GovVoter
 
-  toSpecRep (CommitteeVoter c) = (Agda.CC,) <$> toSpecRep c
-  toSpecRep (DRepVoter c) = (Agda.DRep,) <$> toSpecRep c
-  toSpecRep (StakePoolVoter kh) = (Agda.SPO,) <$> toSpecRep (KeyHashObj kh)
+  toSpecRep (CommitteeVoter c) = (Agda.CC,) <$> toSpecRep @_ @ConwayEra c
+  toSpecRep (DRepVoter c) = (Agda.DRep,) <$> toSpecRep @_ @ConwayEra c
+  toSpecRep (StakePoolVoter kh) = (Agda.SPO,) <$> toSpecRep @_ @ConwayEra (KeyHashObj kh)
 
-instance SpecTranslate ctx Vote where
-  type SpecRep Vote = Agda.Vote
+instance SpecTranslate ctx ConwayEra Vote where
+  type SpecRep ConwayEra Vote = Agda.Vote
 
   toSpecRep VoteYes = pure Agda.Yes
   toSpecRep VoteNo = pure Agda.No
   toSpecRep Abstain = pure Agda.Abstain
 
-instance SpecTranslate ctx (VotingProcedures era) where
-  type SpecRep (VotingProcedures era) = [Agda.GovVote]
+instance SpecTranslate ctx ConwayEra (VotingProcedures era) where
+  type SpecRep ConwayEra (VotingProcedures era) = [Agda.GovVote]
 
   toSpecRep = foldrVotingProcedures go (pure [])
     where
@@ -433,104 +508,104 @@ instance SpecTranslate ctx (VotingProcedures era) where
       go voter gaId votingProcedure m =
         (:)
           <$> ( Agda.MkGovVote
-                  <$> toSpecRep gaId
-                  <*> toSpecRep voter
-                  <*> toSpecRep (vProcVote votingProcedure)
-                  <*> toSpecRep (vProcAnchor votingProcedure)
+                  <$> toSpecRep @_ @ConwayEra gaId
+                  <*> toSpecRep @_ @ConwayEra voter
+                  <*> toSpecRep @_ @ConwayEra (vProcVote votingProcedure)
+                  <*> toSpecRep @_ @ConwayEra (vProcAnchor votingProcedure)
               )
           <*> m
 
-instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
-  type SpecRep (ConwayPParams StrictMaybe era) = Agda.PParamsUpdate
+instance SpecTranslate ctx ConwayEra (ConwayPParams StrictMaybe era) where
+  type SpecRep ConwayEra (ConwayPParams StrictMaybe era) = Agda.PParamsUpdate
 
   toSpecRep (ConwayPParams {..}) = do
-    ppuA <- toSpecRep cppTxFeePerByte
-    ppuB <- toSpecRep cppTxFeeFixed
-    ppuA0 <- toSpecRep cppA0
-    ppuMinFeeRefScriptCoinsPerByte <- toSpecRep cppMinFeeRefScriptCostPerByte
-    ppuCollateralPercentage <- toSpecRep cppCollateralPercentage
+    ppuA <- toSpecRep @_ @ConwayEra cppTxFeePerByte
+    ppuB <- toSpecRep @_ @ConwayEra cppTxFeeFixed
+    ppuA0 <- toSpecRep @_ @ConwayEra cppA0
+    ppuMinFeeRefScriptCoinsPerByte <- toSpecRep @_ @ConwayEra cppMinFeeRefScriptCostPerByte
+    ppuCollateralPercentage <- toSpecRep @_ @ConwayEra cppCollateralPercentage
     let
       ppuMaxBlockSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxBBSize
       ppuMaxTxSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxTxSize
       ppuMaxHeaderSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxBHSize
-    ppuKeyDeposit <- toSpecRep cppKeyDeposit
-    ppuPoolDeposit <- toSpecRep cppPoolDeposit
-    ppuEmax <- toSpecRep cppEMax
-    ppuNopt <- toSpecRep (fmap toInteger . strictMaybeToMaybe $ unTHKD cppNOpt)
+    ppuKeyDeposit <- toSpecRep @_ @ConwayEra cppKeyDeposit
+    ppuPoolDeposit <- toSpecRep @_ @ConwayEra cppPoolDeposit
+    ppuEmax <- toSpecRep @_ @ConwayEra cppEMax
+    ppuNopt <- toSpecRep @_ @ConwayEra (fmap toInteger . strictMaybeToMaybe $ unTHKD cppNOpt)
     let
       ppuPv = Nothing
       ppuMinUTxOValue = Nothing -- minUTxOValue has been deprecated and is not supported in Conway
-    ppuCoinsPerUTxOByte <- toSpecRep cppCoinsPerUTxOByte
-    ppuCostmdls <- toSpecRep cppCostModels
-    ppuPrices <- toSpecRep cppPrices
+    ppuCoinsPerUTxOByte <- toSpecRep @_ @ConwayEra cppCoinsPerUTxOByte
+    ppuCostmdls <- toSpecRep @_ @ConwayEra cppCostModels
+    ppuPrices <- toSpecRep @_ @ConwayEra cppPrices
     let
       ppuMaxRefScriptSizePerTx = Nothing
       ppuMaxRefScriptSizePerBlock = Nothing
       ppuRefScriptCostStride = Nothing
       ppuRefScriptCostMultiplier = Nothing
-    ppuMaxTxExUnits <- toSpecRep cppMaxTxExUnits
-    ppuMaxBlockExUnits <- toSpecRep cppMaxBlockExUnits
+    ppuMaxTxExUnits <- toSpecRep @_ @ConwayEra cppMaxTxExUnits
+    ppuMaxBlockExUnits <- toSpecRep @_ @ConwayEra cppMaxBlockExUnits
     let
       ppuMaxValSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxValSize
       ppuMaxCollateralInputs = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxCollateralInputs
-    ppuPoolThresholds <- toSpecRep cppPoolVotingThresholds
-    ppuDrepThresholds <- toSpecRep cppDRepVotingThresholds
+    ppuPoolThresholds <- toSpecRep @_ @ConwayEra cppPoolVotingThresholds
+    ppuDrepThresholds <- toSpecRep @_ @ConwayEra cppDRepVotingThresholds
     let
       ppuCcMinSize = fmap toInteger . strictMaybeToMaybe $ unTHKD cppCommitteeMinSize
       ppuCcMaxTermLength =
         fmap (toInteger . unEpochInterval) . strictMaybeToMaybe $ unTHKD cppCommitteeMaxTermLength
-    ppuGovActionLifetime <- toSpecRep cppGovActionLifetime
-    ppuGovActionDeposit <- toSpecRep cppGovActionDeposit
-    ppuDrepDeposit <- toSpecRep cppDRepDeposit
-    ppuDrepActivity <- toSpecRep cppDRepActivity
-    ppuMonetaryExpansion <- toSpecRep cppRho
-    ppuTreasuryCut <- toSpecRep cppTau
+    ppuGovActionLifetime <- toSpecRep @_ @ConwayEra cppGovActionLifetime
+    ppuGovActionDeposit <- toSpecRep @_ @ConwayEra cppGovActionDeposit
+    ppuDrepDeposit <- toSpecRep @_ @ConwayEra cppDRepDeposit
+    ppuDrepActivity <- toSpecRep @_ @ConwayEra cppDRepActivity
+    ppuMonetaryExpansion <- toSpecRep @_ @ConwayEra cppRho
+    ppuTreasuryCut <- toSpecRep @_ @ConwayEra cppTau
 
     pure Agda.MkPParamsUpdate {..}
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecTranslate ctx ConwayEra (PParamsHKD StrictMaybe era)
+  , SpecRep ConwayEra (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   ) =>
-  SpecTranslate ctx (GovAction era)
+  SpecTranslate ctx ConwayEra (GovAction era)
   where
-  type SpecRep (GovAction era) = Agda.GovAction
+  type SpecRep ConwayEra (GovAction era) = Agda.GovAction
 
-  toSpecRep (ParameterChange _ ppu _) = Agda.ChangePParams <$> toSpecRep ppu
-  toSpecRep (HardForkInitiation _ pv) = Agda.TriggerHardFork <$> toSpecRep pv
+  toSpecRep (ParameterChange _ ppu _) = Agda.ChangePParams <$> toSpecRep @_ @ConwayEra ppu
+  toSpecRep (HardForkInitiation _ pv) = Agda.TriggerHardFork <$> toSpecRep @_ @ConwayEra pv
   toSpecRep (TreasuryWithdrawals withdrawals _) =
     Agda.TreasuryWithdrawal
-      <$> toSpecRep withdrawals
+      <$> toSpecRep @_ @ConwayEra withdrawals
   toSpecRep (NoConfidence _) = pure Agda.NoConfidence
   toSpecRep (UpdateCommittee _ remove add threshold) =
     Agda.UpdateCommittee
-      <$> toSpecRep add
-      <*> toSpecRep remove
-      <*> toSpecRep threshold
+      <$> toSpecRep @_ @ConwayEra add
+      <*> toSpecRep @_ @ConwayEra remove
+      <*> toSpecRep @_ @ConwayEra threshold
   toSpecRep (NewConstitution _ (Constitution (Anchor _ h) policy)) =
     Agda.NewConstitution
-      <$> toSpecRep h
-      <*> toSpecRep policy
+      <$> toSpecRep @_ @ConwayEra h
+      <*> toSpecRep @_ @ConwayEra policy
   toSpecRep InfoAction = pure Agda.Info
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecTranslate ctx ConwayEra (PParamsHKD StrictMaybe era)
+  , SpecRep ConwayEra (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   ) =>
-  SpecTranslate ctx (ProposalProcedure era)
+  SpecTranslate ctx ConwayEra (ProposalProcedure era)
   where
-  type SpecRep (ProposalProcedure era) = Agda.GovProposal
+  type SpecRep ConwayEra (ProposalProcedure era) = Agda.GovProposal
 
   toSpecRep ProposalProcedure {..} =
     Agda.MkGovProposal
-      <$> toSpecRep pProcGovAction
-      <*> toSpecRep (nullifyIfNotNeeded prevActionId pProcGovAction)
-      <*> toSpecRep policy
-      <*> toSpecRep pProcDeposit
-      <*> toSpecRep pProcReturnAddr
-      <*> toSpecRep pProcAnchor
+      <$> toSpecRep @_ @ConwayEra pProcGovAction
+      <*> toSpecRep @_ @ConwayEra (nullifyIfNotNeeded prevActionId pProcGovAction)
+      <*> toSpecRep @_ @ConwayEra policy
+      <*> toSpecRep @_ @ConwayEra pProcDeposit
+      <*> toSpecRep @_ @ConwayEra pProcReturnAddr
+      <*> toSpecRep @_ @ConwayEra pProcAnchor
     where
       prevActionId = prevGovActionId pProcGovAction
       policy =
@@ -561,95 +636,95 @@ nullifyIfNotNeeded (SJust gaId) = \case
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecTranslate ctx ConwayEra (PParamsHKD StrictMaybe era)
+  , SpecRep ConwayEra (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   ) =>
-  SpecTranslate ctx (GovActionState era)
+  SpecTranslate ctx ConwayEra (GovActionState era)
   where
-  type SpecRep (GovActionState era) = Agda.GovActionState
+  type SpecRep ConwayEra (GovActionState era) = Agda.GovActionState
 
   toSpecRep gas@GovActionState {..} = do
     Agda.MkGovActionState
       <$> ( Agda.GovVotes
-              <$> toSpecRep gasCommitteeVotes
-              <*> toSpecRep gasDRepVotes
-              <*> toSpecRep gasStakePoolVotes
+              <$> toSpecRep @_ @ConwayEra gasCommitteeVotes
+              <*> toSpecRep @_ @ConwayEra gasDRepVotes
+              <*> toSpecRep @_ @ConwayEra gasStakePoolVotes
           )
-      <*> toSpecRep (gasReturnAddr gas)
-      <*> toSpecRep gasExpiresAfter
-      <*> toSpecRep action
-      <*> toSpecRep (nullifyIfNotNeeded (prevGovActionId action) action)
+      <*> toSpecRep @_ @ConwayEra (gasReturnAddr gas)
+      <*> toSpecRep @_ @ConwayEra gasExpiresAfter
+      <*> toSpecRep @_ @ConwayEra action
+      <*> toSpecRep @_ @ConwayEra (nullifyIfNotNeeded (prevGovActionId action) action)
     where
       action = gasAction gas
 
-instance SpecTranslate ctx GovActionIx where
-  type SpecRep GovActionIx = Integer
+instance SpecTranslate ctx ConwayEra GovActionIx where
+  type SpecRep ConwayEra GovActionIx = Integer
 
   toSpecRep = pure . fromIntegral . unGovActionIx
 
-instance SpecTranslate ctx GovActionId where
-  type SpecRep GovActionId = Agda.GovActionID
+instance SpecTranslate ctx ConwayEra GovActionId where
+  type SpecRep ConwayEra GovActionId = Agda.GovActionID
 
-  toSpecRep (GovActionId txId gaIx) = toSpecRep (txId, gaIx)
+  toSpecRep (GovActionId txId gaIx) = toSpecRep @_ @ConwayEra (txId, gaIx)
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecTranslate ctx ConwayEra (PParamsHKD StrictMaybe era)
+  , SpecRep ConwayEra (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   ) =>
-  SpecTranslate ctx (Proposals era)
+  SpecTranslate ctx ConwayEra (Proposals era)
   where
-  type SpecRep (Proposals era) = Agda.GovState
+  type SpecRep ConwayEra (Proposals era) = Agda.GovState
 
   -- TODO get rid of `prioritySort` once we've changed the implementation so
   -- that the proposals are always sorted
-  toSpecRep = toSpecRep . prioritySort . view pPropsL
+  toSpecRep = toSpecRep @_ @ConwayEra . prioritySort . view pPropsL
     where
       prioritySort ::
         OMap GovActionId (GovActionState era) ->
         OMap GovActionId (GovActionState era)
       prioritySort = Exts.fromList . sortOn (actionPriority . gasAction) . Exts.toList
 
-instance SpecTranslate ctx MaryValue where
-  type SpecRep MaryValue = Agda.Coin
+instance SpecTranslate ctx ConwayEra MaryValue where
+  type SpecRep ConwayEra MaryValue = Agda.Coin
 
-  toSpecRep = toSpecRep . coin
+  toSpecRep = toSpecRep @_ @ConwayEra . coin
 
 instance
   (Inject ctx Coin, ConwayEraAccounts era) =>
-  SpecTranslate ctx (RatifyEnv era)
+  SpecTranslate ctx ConwayEra (RatifyEnv era)
   where
-  type SpecRep (RatifyEnv era) = Agda.RatifyEnv
+  type SpecRep ConwayEra (RatifyEnv era) = Agda.RatifyEnv
 
   toSpecRep RatifyEnv {..} = do
     let
       stakeDistrs =
         Agda.StakeDistrs
-          <$> toSpecRep reDRepDistr
-          <*> toSpecRep reStakePoolDistr
-      dreps = toSpecRep $ Map.map drepExpiry reDRepState
+          <$> toSpecRep @_ @ConwayEra reDRepDistr
+          <*> toSpecRep @_ @ConwayEra reStakePoolDistr
+      dreps = toSpecRep @_ @ConwayEra $ Map.map drepExpiry reDRepState
     treasury <- askCtx @Coin
     Agda.MkRatifyEnv
       <$> stakeDistrs
-      <*> toSpecRep reCurrentEpoch
+      <*> toSpecRep @_ @ConwayEra reCurrentEpoch
       <*> dreps
-      <*> toSpecRep reCommitteeState
-      <*> toSpecRep treasury
-      <*> toSpecRep (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) reStakePools)
-      <*> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
+      <*> toSpecRep @_ @ConwayEra reCommitteeState
+      <*> toSpecRep @_ @ConwayEra treasury
+      <*> toSpecRep @_ @ConwayEra (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) reStakePools)
+      <*> toSpecRep @_ @ConwayEra (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
 
 instance
   ( EraPParams era
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecRep ConwayEra (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx ConwayEra (PParamsHKD Identity era)
   , Inject ctx [GovActionState era]
   , ToExpr (PParamsHKD StrictMaybe era)
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep ConwayEra (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecTranslate ctx ConwayEra (PParamsHKD StrictMaybe era)
   ) =>
-  SpecTranslate ctx (RatifyState era)
+  SpecTranslate ctx ConwayEra (RatifyState era)
   where
-  type SpecRep (RatifyState era) = Agda.RatifyState
+  type SpecRep ConwayEra (RatifyState era) = Agda.RatifyState
 
   toSpecRep RatifyState {..} = do
     govActionMap <-
@@ -672,32 +747,32 @@ instance
         (pure Set.empty)
         (rsExpired `Set.union` Set.fromList (gasId <$> toList rsEnacted))
     Agda.MkRatifyState
-      <$> toSpecRep rsEnactState
-      <*> toSpecRep removed
-      <*> toSpecRep rsDelayed
+      <$> toSpecRep @_ @ConwayEra rsEnactState
+      <*> toSpecRep @_ @ConwayEra removed
+      <*> toSpecRep @_ @ConwayEra rsDelayed
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecTranslate ctx ConwayEra (PParamsHKD StrictMaybe era)
+  , SpecRep ConwayEra (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   ) =>
-  SpecTranslate ctx (RatifySignal era)
+  SpecTranslate ctx ConwayEra (RatifySignal era)
   where
   type
-    SpecRep (RatifySignal era) =
-      SpecRep [(GovActionId, GovActionState era)]
+    SpecRep ConwayEra (RatifySignal era) =
+      SpecRep ConwayEra [(GovActionId, GovActionState era)]
 
   toSpecRep (RatifySignal x) =
-    toSpecRep $
+    toSpecRep @_ @ConwayEra $
       (\gas@GovActionState {gasId} -> (gasId, gas)) <$> x
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecTranslate ctx ConwayEra (PParamsHKD StrictMaybe era)
+  , SpecRep ConwayEra (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   ) =>
-  SpecTranslate ctx (EnactSignal era)
+  SpecTranslate ctx ConwayEra (EnactSignal era)
   where
-  type SpecRep (EnactSignal era) = SpecRep (GovAction era)
+  type SpecRep ConwayEra (EnactSignal era) = SpecRep ConwayEra (GovAction era)
 
-  toSpecRep (EnactSignal _ ga) = toSpecRep ga
+  toSpecRep (EnactSignal _ ga) = toSpecRep @_ @ConwayEra ga

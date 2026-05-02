@@ -14,6 +14,7 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Gov () where
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
@@ -26,42 +27,42 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
 instance
-  ( SpecTranslate ctx (PParamsHKD Identity era)
+  ( SpecTranslate ctx ConwayEra (PParamsHKD Identity era)
   , Inject ctx (EnactState era)
   , EraPParams era
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate ctx (CertState era)
-  , SpecRep (CertState era) ~ Agda.CertState
+  , SpecRep ConwayEra (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx ConwayEra (CertState era)
+  , SpecRep ConwayEra (CertState era) ~ Agda.CertState
   , EraCertState era
   ) =>
-  SpecTranslate ctx (GovEnv era)
+  SpecTranslate ctx ConwayEra (GovEnv era)
   where
-  type SpecRep (GovEnv era) = Agda.GovEnv
+  type SpecRep ConwayEra (GovEnv era) = Agda.GovEnv
 
   toSpecRep GovEnv {..} = do
     enactState <- askCtx @(EnactState era)
     let rewardAccounts = Map.keysSet $ geCertState ^. certDStateL . accountsL . accountsMapL
     Agda.MkGovEnv
-      <$> toSpecRep geTxId
-      <*> toSpecRep geEpoch
-      <*> toSpecRep gePParams
-      <*> toSpecRep geGuardrailsScriptHash
-      <*> toSpecRep enactState
-      <*> toSpecRep geCertState
-      <*> toSpecRep rewardAccounts
+      <$> toSpecRep @_ @ConwayEra geTxId
+      <*> toSpecRep @_ @ConwayEra geEpoch
+      <*> toSpecRep @_ @ConwayEra gePParams
+      <*> toSpecRep @_ @ConwayEra geGuardrailsScriptHash
+      <*> toSpecRep @_ @ConwayEra enactState
+      <*> toSpecRep @_ @ConwayEra geCertState
+      <*> toSpecRep @_ @ConwayEra rewardAccounts
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecTranslate ctx ConwayEra (PParamsHKD StrictMaybe era)
+  , SpecRep ConwayEra (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   ) =>
-  SpecTranslate ctx (GovSignal era)
+  SpecTranslate ctx ConwayEra (GovSignal era)
   where
-  type SpecRep (GovSignal era) = [Either Agda.GovVote Agda.GovProposal]
+  type SpecRep ConwayEra (GovSignal era) = [Either Agda.GovVote Agda.GovProposal]
 
   toSpecRep GovSignal {gsVotingProcedures, gsProposalProcedures} = do
-    votingProcedures <- toSpecRep gsVotingProcedures
-    proposalProcedures <- toSpecRep gsProposalProcedures
+    votingProcedures <- toSpecRep @_ @ConwayEra gsVotingProcedures
+    proposalProcedures <- toSpecRep @_ @ConwayEra gsProposalProcedures
     pure $
       mconcat
         [ Left <$> votingProcedures

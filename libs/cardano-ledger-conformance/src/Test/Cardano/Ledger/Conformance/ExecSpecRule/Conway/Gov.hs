@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -30,9 +31,9 @@ instance ExecSpecRule "GOV" ConwayEra where
   translateInputs enactState (TRC (env@GovEnv {gePParams}, st, sig)) = do
     runSpecTransM ctx $
       SpecTRC
-        <$> toSpecRep env
-        <*> toSpecRep st
-        <*> toSpecRep sig
+        <$> toSpecRep @_ @ConwayEra env
+        <*> toSpecRep @_ @ConwayEra st
+        <*> toSpecRep @_ @ConwayEra sig
     where
       ctx =
         enactState

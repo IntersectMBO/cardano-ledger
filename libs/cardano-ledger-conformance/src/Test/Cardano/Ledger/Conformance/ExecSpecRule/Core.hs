@@ -122,13 +122,13 @@ class
   type ExecContext rule era = ()
 
   type SpecEnvironment rule era
-  type SpecEnvironment rule era = SpecRep (Environment (EraRule rule era))
+  type SpecEnvironment rule era = SpecRep era (Environment (EraRule rule era))
 
   type SpecState rule era
-  type SpecState rule era = SpecRep (State (EraRule rule era))
+  type SpecState rule era = SpecRep era (State (EraRule rule era))
 
   type SpecSignal rule era
-  type SpecSignal rule era = SpecRep (Signal (EraRule rule era))
+  type SpecSignal rule era = SpecRep era (Signal (EraRule rule era))
 
   runAgdaRule ::
     HasCallStack =>
@@ -148,19 +148,19 @@ class
     TRC (EraRule rule era) ->
     Either Text (SpecTRC rule era)
   default translateInputs ::
-    ( SpecTranslate (ExecContext rule era) (Environment (EraRule rule era))
-    , SpecTranslate (ExecContext rule era) (State (EraRule rule era))
-    , SpecTranslate (ExecContext rule era) (Signal (EraRule rule era))
-    , SpecRep (Environment (EraRule rule era)) ~ SpecEnvironment rule era
-    , SpecRep (State (EraRule rule era)) ~ SpecState rule era
-    , SpecRep (Signal (EraRule rule era)) ~ SpecSignal rule era
+    ( SpecTranslate (ExecContext rule era) era (Environment (EraRule rule era))
+    , SpecTranslate (ExecContext rule era) era (State (EraRule rule era))
+    , SpecTranslate (ExecContext rule era) era (Signal (EraRule rule era))
+    , SpecRep era (Environment (EraRule rule era)) ~ SpecEnvironment rule era
+    , SpecRep era (State (EraRule rule era)) ~ SpecState rule era
+    , SpecRep era (Signal (EraRule rule era)) ~ SpecSignal rule era
     ) =>
     ExecContext rule era ->
     TRC (EraRule rule era) ->
     Either Text (SpecTRC rule era)
   translateInputs ctx (TRC (env, st, sig)) = do
     runSpecTransM ctx $
-      SpecTRC <$> toSpecRep env <*> toSpecRep st <*> toSpecRep sig
+      SpecTRC <$> toSpecRep @_ @era env <*> toSpecRep @_ @era st <*> toSpecRep @_ @era sig
 
   translateOutput ::
     ExecContext rule era ->
@@ -168,14 +168,14 @@ class
     State (EraRule rule era) ->
     Either Text (SpecState rule era)
   default translateOutput ::
-    ( SpecTranslate (ExecContext rule era) (State (EraRule rule era))
-    , SpecRep (State (EraRule rule era)) ~ SpecState rule era
+    ( SpecTranslate (ExecContext rule era) era (State (EraRule rule era))
+    , SpecRep era (State (EraRule rule era)) ~ SpecState rule era
     ) =>
     ExecContext rule era ->
     TRC (EraRule rule era) ->
     State (EraRule rule era) ->
     Either Text (SpecState rule era)
-  translateOutput ctx _ st = runSpecTransM ctx $ toSpecRep st
+  translateOutput ctx _ st = runSpecTransM ctx $ toSpecRep @_ @era st
 
   extraInfo ::
     HasCallStack =>
@@ -378,8 +378,8 @@ generatesWithin gen timeout =
 
 -- | Translate a Haskell type 'a' whose translation context is 'ctx' into its Agda type, in the ImpTest monad.
 translateWithContext ::
-  SpecTranslate ctx a => ctx -> a -> ImpTestM era (Either Text (SpecRep a))
-translateWithContext ctx x = pure . runSpecTransM ctx $ toSpecRep x
+  forall ctx era a. SpecTranslate ctx era a => ctx -> a -> ImpTestM era (Either Text (SpecRep era a))
+translateWithContext ctx x = pure . runSpecTransM ctx $ toSpecRep @ctx @era x
 
 runFromAgdaFunction ::
   ( SpecEnvironment rule era ->

@@ -10,6 +10,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -62,131 +63,131 @@ newtype SpecTransM ctx a
 runSpecTransM :: ctx -> SpecTransM ctx a -> Either Text a
 runSpecTransM ctx (SpecTransM m) = runReader (runExceptT m) ctx
 
-class SpecTranslate ctx a where
-  type SpecRep a :: Type
+class SpecTranslate ctx era a where
+  type SpecRep era a :: Type
 
-  toSpecRep :: a -> SpecTransM ctx (SpecRep a)
+  toSpecRep :: a -> SpecTransM ctx (SpecRep era a)
 
-instance SpecTranslate ctx () where
-  type SpecRep () = ()
-
-  toSpecRep = pure
-
-instance SpecTranslate ctx Bool where
-  type SpecRep Bool = Bool
+instance SpecTranslate ctx era () where
+  type SpecRep era () = ()
 
   toSpecRep = pure
 
-instance SpecTranslate ctx Integer where
-  type SpecRep Integer = Integer
+instance SpecTranslate ctx era Bool where
+  type SpecRep era Bool = Bool
 
   toSpecRep = pure
 
-instance SpecTranslate ctx Void where
-  type SpecRep Void = Void
+instance SpecTranslate ctx era Integer where
+  type SpecRep era Integer = Integer
+
+  toSpecRep = pure
+
+instance SpecTranslate ctx era Void where
+  type SpecRep era Void = Void
 
   toSpecRep = absurd
 
-instance SpecTranslate ctx Word16 where
-  type SpecRep Word16 = Integer
+instance SpecTranslate ctx era Word16 where
+  type SpecRep era Word16 = Integer
 
   toSpecRep = pure . toInteger
 
-instance SpecTranslate ctx Word32 where
-  type SpecRep Word32 = Integer
+instance SpecTranslate ctx era Word32 where
+  type SpecRep era Word32 = Integer
 
   toSpecRep = pure . toInteger
 
-instance SpecTranslate ctx Word64 where
-  type SpecRep Word64 = Integer
+instance SpecTranslate ctx era Word64 where
+  type SpecRep era Word64 = Integer
 
   toSpecRep = pure . toInteger
 
 instance
-  ( SpecTranslate ctx a
-  , SpecTranslate ctx b
+  ( SpecTranslate ctx era a
+  , SpecTranslate ctx era b
   ) =>
-  SpecTranslate ctx (a, b)
+  SpecTranslate ctx era (a, b)
   where
-  type SpecRep (a, b) = (SpecRep a, SpecRep b)
+  type SpecRep era (a, b) = (SpecRep era a, SpecRep era b)
 
-  toSpecRep (x, y) = (,) <$> toSpecRep x <*> toSpecRep y
+  toSpecRep (x, y) = (,) <$> toSpecRep @ctx @era x <*> toSpecRep @ctx @era y
 
-instance SpecTranslate ctx a => SpecTranslate ctx [a] where
-  type SpecRep [a] = [SpecRep a]
+instance SpecTranslate ctx era a => SpecTranslate ctx era [a] where
+  type SpecRep era [a] = [SpecRep era a]
 
-  toSpecRep = traverse toSpecRep
+  toSpecRep = traverse (toSpecRep @ctx @era)
 
-instance SpecTranslate ctx a => SpecTranslate ctx (StrictMaybe a) where
-  type SpecRep (StrictMaybe a) = Maybe (SpecRep a)
+instance SpecTranslate ctx era a => SpecTranslate ctx era (StrictMaybe a) where
+  type SpecRep era (StrictMaybe a) = Maybe (SpecRep era a)
 
-  toSpecRep = toSpecRep . strictMaybeToMaybe
+  toSpecRep = toSpecRep @ctx @era . strictMaybeToMaybe
 
-instance SpecTranslate ctx a => SpecTranslate ctx (Maybe a) where
-  type SpecRep (Maybe a) = Maybe (SpecRep a)
+instance SpecTranslate ctx era a => SpecTranslate ctx era (Maybe a) where
+  type SpecRep era (Maybe a) = Maybe (SpecRep era a)
 
-  toSpecRep = traverse toSpecRep
+  toSpecRep = traverse (toSpecRep @ctx @era)
 
-instance SpecTranslate ctx a => SpecTranslate ctx (StrictSeq a) where
-  type SpecRep (StrictSeq a) = [SpecRep a]
+instance SpecTranslate ctx era a => SpecTranslate ctx era (StrictSeq a) where
+  type SpecRep era (StrictSeq a) = [SpecRep era a]
 
-  toSpecRep = traverse toSpecRep . toList
+  toSpecRep = traverse (toSpecRep @ctx @era) . toList
 
-instance SpecTranslate ctx a => SpecTranslate ctx (Seq a) where
-  type SpecRep (Seq a) = [SpecRep a]
+instance SpecTranslate ctx era a => SpecTranslate ctx era (Seq a) where
+  type SpecRep era (Seq a) = [SpecRep era a]
 
-  toSpecRep = traverse toSpecRep . toList
+  toSpecRep = traverse (toSpecRep @ctx @era) . toList
 
-instance SpecTranslate ctx a => SpecTranslate ctx (OSet a) where
-  type SpecRep (OSet a) = [SpecRep a]
+instance SpecTranslate ctx era a => SpecTranslate ctx era (OSet a) where
+  type SpecRep era (OSet a) = [SpecRep era a]
 
-  toSpecRep = traverse toSpecRep . toList
+  toSpecRep = traverse (toSpecRep @ctx @era) . toList
 
 instance
-  ( SpecTranslate ctx k
-  , SpecTranslate ctx v
+  ( SpecTranslate ctx era k
+  , SpecTranslate ctx era v
   , Ord k
   ) =>
-  SpecTranslate ctx (OMap k v)
+  SpecTranslate ctx era (OMap k v)
   where
-  type SpecRep (OMap k v) = [(SpecRep k, SpecRep v)]
+  type SpecRep era (OMap k v) = [(SpecRep era k, SpecRep era v)]
 
-  toSpecRep = traverse (bimapM toSpecRep toSpecRep) . OMap.assocList
+  toSpecRep = traverse (bimapM (toSpecRep @ctx @era) (toSpecRep @ctx @era)) . OMap.assocList
 
-instance (SpecTranslate ctx a, Compactible a) => SpecTranslate ctx (CompactForm a) where
-  type SpecRep (CompactForm a) = SpecRep a
+instance (SpecTranslate ctx era a, Compactible a) => SpecTranslate ctx era (CompactForm a) where
+  type SpecRep era (CompactForm a) = SpecRep era a
 
-  toSpecRep = toSpecRep . fromCompact
+  toSpecRep = toSpecRep @ctx @era . fromCompact
 
-instance SpecTranslate ctx a => SpecTranslate ctx (Sized a) where
-  type SpecRep (Sized a) = SpecRep a
+instance SpecTranslate ctx era a => SpecTranslate ctx era (Sized a) where
+  type SpecRep era (Sized a) = SpecRep era a
 
-  toSpecRep (Sized x _) = toSpecRep x
+  toSpecRep (Sized x _) = toSpecRep @ctx @era x
 
-instance SpecTranslate ctx a => SpecTranslate ctx (Set a) where
-  type SpecRep (Set a) = Agda.HSSet (SpecRep a)
+instance SpecTranslate ctx era a => SpecTranslate ctx era (Set a) where
+  type SpecRep era (Set a) = Agda.HSSet (SpecRep era a)
 
-  toSpecRep = fmap Agda.MkHSSet . traverse toSpecRep . Set.toList
+  toSpecRep = fmap Agda.MkHSSet . traverse (toSpecRep @ctx @era) . Set.toList
 
-instance SpecTranslate ctx UnitInterval where
-  type SpecRep UnitInterval = Agda.Rational
+instance SpecTranslate ctx era UnitInterval where
+  type SpecRep era UnitInterval = Agda.Rational
 
   toSpecRep = pure . unboundRational
 
-instance SpecTranslate ctx NonNegativeInterval where
-  type SpecRep NonNegativeInterval = Agda.Rational
+instance SpecTranslate ctx era NonNegativeInterval where
+  type SpecRep era NonNegativeInterval = Agda.Rational
 
   toSpecRep = pure . unboundRational
 
 instance
-  ( SpecTranslate ctx k
-  , SpecTranslate ctx v
+  ( SpecTranslate ctx era k
+  , SpecTranslate ctx era v
   ) =>
-  SpecTranslate ctx (Map k v)
+  SpecTranslate ctx era (Map k v)
   where
-  type SpecRep (Map k v) = Agda.HSMap (SpecRep k) (SpecRep v)
+  type SpecRep era (Map k v) = Agda.HSMap (SpecRep era k) (SpecRep era v)
 
-  toSpecRep = fmap Agda.MkHSMap . traverse (bimapM toSpecRep toSpecRep) . Map.toList
+  toSpecRep = fmap Agda.MkHSMap . traverse (bimapM (toSpecRep @ctx @era) (toSpecRep @ctx @era)) . Map.toList
 
 class GSpecNormalize f where
   genericSpecNormalize :: f a -> f a
@@ -248,9 +249,10 @@ unComputationResult_ (Agda.Success x) = Right x
 unComputationResult_ (Agda.Failure x) = case x of {}
 
 toSpecRep_ ::
-  SpecTranslate () a =>
+  forall era a.
+  SpecTranslate () era a =>
   a ->
-  SpecRep a
-toSpecRep_ x = case runSpecTransM () $ toSpecRep x of
+  SpecRep era a
+toSpecRep_ x = case runSpecTransM () $ toSpecRep @() @era x of
   Right res -> res
   Left v -> error $ "Failed to translate:\n" <> T.unpack v
