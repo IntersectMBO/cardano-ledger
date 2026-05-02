@@ -6,6 +6,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryConstitutionHashExamples,
   queryCurrentEpochNoExamples,
   queryDRepDelegateesExamples,
+  queryDRepDelegationsExamples,
   queryDRepStakeDistrExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
@@ -20,6 +21,8 @@ import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Test.Cardano.Ledger.Conway.Examples (exampleAnchor)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Shelley.Examples (mkKeyHash, mkScriptHash)
@@ -77,6 +80,20 @@ queryDRepDelegateesExamples =
       , (ScriptHashObj (mkScriptHash 2), DRepScriptHash (mkScriptHash 20))
       , (KeyHashObj (mkKeyHash 3), DRepAlwaysAbstain)
       , (KeyHashObj (mkKeyHash 4), DRepAlwaysNoConfidence)
+      ]
+  ]
+
+queryDRepDelegationsExamples :: [Map DRep (Set (Credential Staking))]
+queryDRepDelegationsExamples =
+  [ Map.empty
+  , Map.fromList
+      [
+        ( DRepKeyHash (mkKeyHash 1)
+        , Set.fromList [KeyHashObj (mkKeyHash 10), ScriptHashObj (mkScriptHash 11)]
+        )
+      , (DRepScriptHash (mkScriptHash 2), Set.singleton (KeyHashObj (mkKeyHash 20)))
+      , (DRepAlwaysAbstain, Set.singleton (KeyHashObj (mkKeyHash 30)))
+      , (DRepAlwaysNoConfidence, Set.empty)
       ]
   ]
 
