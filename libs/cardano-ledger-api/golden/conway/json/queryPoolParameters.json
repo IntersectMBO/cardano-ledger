@@ -1,0 +1,78 @@
+[
+    {},
+    {
+        "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06": {
+            "accountAddress": {
+                "credential": {
+                    "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                },
+                "network": "Testnet"
+            },
+            "cost": 5,
+            "margin": 0.1,
+            "metadata": {
+                "hash": "7b7d",
+                "url": "consensus.pool"
+            },
+            "owners": [
+                "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+            ],
+            "pledge": 1,
+            "poolId": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06",
+            "relays": [],
+            "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+        },
+        "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00": {
+            "accountAddress": {
+                "credential": {
+                    "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                },
+                "network": "Testnet"
+            },
+            "cost": 340000000,
+            "margin": 0.1,
+            "metadata": {
+                "hash": "7b7d",
+                "url": "consensus.pool"
+            },
+            "owners": [
+                "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+            ],
+            "pledge": 100000000,
+            "poolId": "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00",
+            "relays": [
+                {
+                    "single host address": {
+                        "IPv4": "10.0.0.1",
+                        "IPv6": null,
+                        "port": 3001
+                    }
+                },
+                {
+                    "multi host name": {
+                        "dnsName": "_relay._tcp.pool-99.example"
+                    }
+                }
+            ],
+            "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+        },
+        "c7b31a062855f437a05caf5060582ea40e840ebe4b431ffdf84780db": {
+            "accountAddress": {
+                "credential": {
+                    "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                },
+                "network": "Testnet"
+            },
+            "cost": 170000000,
+            "margin": 0.1,
+            "metadata": null,
+            "owners": [
+                "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+            ],
+            "pledge": 0,
+            "poolId": "c7b31a062855f437a05caf5060582ea40e840ebe4b431ffdf84780db",
+            "relays": [],
+            "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+        }
+    }
+]
