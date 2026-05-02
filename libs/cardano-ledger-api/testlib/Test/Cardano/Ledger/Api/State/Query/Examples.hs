@@ -5,6 +5,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryConstitutionExamples,
   queryConstitutionHashExamples,
   queryCurrentEpochNoExamples,
+  queryDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
 ) where
 
@@ -12,6 +13,7 @@ import Cardano.Ledger.Api.Governance (Constitution (..))
 import Cardano.Ledger.BaseTypes (AnchorData, EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Data.Map.Strict (Map)
@@ -62,5 +64,16 @@ querySPOStakeDistrExamples =
       [ (mkKeyHash 1, Coin 1_000_000_000)
       , (mkKeyHash 2, Coin 0)
       , (mkKeyHash 3, Coin 50)
+      ]
+  ]
+
+queryDRepStakeDistrExamples :: [Map DRep Coin]
+queryDRepStakeDistrExamples =
+  [ Map.empty
+  , Map.fromList
+      [ (DRepKeyHash (mkKeyHash 1), Coin 1_000_000_000)
+      , (DRepScriptHash (mkScriptHash 2), Coin 0)
+      , (DRepAlwaysAbstain, Coin 50)
+      , (DRepAlwaysNoConfidence, Coin 100)
       ]
   ]
