@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepDelegationsExamples,
   queryDRepStakeDistrExamples,
   queryDRepStateExamples,
+  queryPoolParametersExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
   queryStakePoolDelegsAndRewardsExamples,
@@ -24,7 +25,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.State (StakePoolRelay (..))
+import Cardano.Ledger.State (StakePoolParams (..), StakePoolRelay (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -35,7 +36,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Conway.Examples (exampleAnchor)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
-import Test.Cardano.Ledger.Shelley.Examples (mkKeyHash, mkScriptHash)
+import Test.Cardano.Ledger.Shelley.Examples (exampleStakePoolParams, mkKeyHash, mkScriptHash)
 
 queryConstitutionExamples :: [Constitution era]
 queryConstitutionExamples =
@@ -197,5 +198,35 @@ queryRegisteredDRepStakeDistrExamples =
   , Map.fromList
       [ (KeyHashObj (mkKeyHash 1), Coin 1_000_000_000)
       , (ScriptHashObj (mkScriptHash 2), Coin 0)
+      ]
+  ]
+
+queryPoolParametersExamples :: [Map (KeyHash StakePool) StakePoolParams]
+queryPoolParametersExamples =
+  [ Map.empty
+  , Map.fromList
+      [ (sppId exampleStakePoolParams, exampleStakePoolParams)
+      ,
+        ( mkKeyHash 99
+        , exampleStakePoolParams
+            { sppId = mkKeyHash 99
+            , sppPledge = Coin 100_000_000
+            , sppCost = Coin 340_000_000
+            , sppRelays =
+                StrictSeq.fromList
+                  [ SingleHostAddr (SJust (Port 3001)) (SJust (toIPv4 [10, 0, 0, 1])) SNothing
+                  , MultiHostName (fromJust (textToDns 64 "_relay._tcp.pool-99.example"))
+                  ]
+            }
+        )
+      ,
+        ( mkKeyHash 100
+        , exampleStakePoolParams
+            { sppId = mkKeyHash 100
+            , sppPledge = Coin 0
+            , sppCost = Coin 170_000_000
+            , sppMetadata = SNothing
+            }
+        )
       ]
   ]
