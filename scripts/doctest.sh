@@ -48,6 +48,18 @@ then
   exit 1
 fi
 
+# Find packages potentially containing doctests
+if [[ ${#PACKAGES[@]} -eq 0 ]]
+then
+  for CABAL_FILE in $(git ls-files '*.cabal')
+  do
+    if git grep -qIEe '(>>>|prop>)' "${CABAL_FILE%/*}/*.hs"
+    then
+      PACKAGES+=("$(basename "$CABAL_FILE" .cabal)")
+    fi
+  done
+fi
+
 # Specify additional arguments needed for specific modules
 EXTRA_ARGS=$(mktemp)
 trap 'rm -f "$EXTRA_ARGS"' EXIT
