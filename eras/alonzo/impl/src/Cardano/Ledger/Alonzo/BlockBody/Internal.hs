@@ -34,6 +34,7 @@ module Cardano.Ledger.Alonzo.BlockBody.Internal (
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
@@ -43,6 +44,7 @@ import Cardano.Ledger.Binary (
   encodeFoldableMapEncoder,
   encodePreEncoded,
   serialize,
+  serialize',
   withSlice,
  )
 import Cardano.Ledger.Core
@@ -50,6 +52,7 @@ import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
@@ -97,6 +100,7 @@ instance EraBlockBody AlonzoEra where
   txSeqBlockBodyL = txSeqBlockBodyAlonzoL
   hashBlockBody = abbHash
   numSegComponents = 4
+  blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 mkBasicBlockBodyAlonzo ::
   ( SafeToHash (TxWits era)

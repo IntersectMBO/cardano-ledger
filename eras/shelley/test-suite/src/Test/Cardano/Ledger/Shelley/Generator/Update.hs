@@ -146,9 +146,9 @@ genPParams c@Constants {maxTxFeePerByte, maxTxFeeFixed} = do
   where
     szGen :: Gen (Word32, Word32, Word16)
     szGen = do
-      blockBodySize <- choose (low, hi)
-      (blockBodySize,,)
-        <$> choose (blockBodySize, blockBodySize `div` 2)
+      bbSize <- choose (low, hi)
+      (bbSize,,)
+        <$> choose (bbSize, bbSize `div` 2)
         <*> choose (25000, maxBound :: Word16) -- Must stay in the range of Word16, but can't be too small
 
 -- Note: we keep the lower bound high enough so that we can more likely

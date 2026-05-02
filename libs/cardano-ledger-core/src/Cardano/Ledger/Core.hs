@@ -63,7 +63,6 @@ module Cardano.Ledger.Core (
   module Cardano.Ledger.Core.Era,
   -- $erablockbody
   EraBlockBody (..),
-  bBodySize,
 
   -- * Re-exports
   Addr (..),
@@ -95,14 +94,11 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (Share),
   DecoderError,
   EncCBOR (..),
-  EncCBORGroup,
   Interns,
   Sized (sizedValue),
   ToCBOR,
-  encCBORGroup,
   mkSized,
   serialize,
-  serialize',
   translateViaCBORAnnotator,
  )
 import Cardano.Ledger.Coin (Coin)
@@ -626,7 +622,6 @@ class
   , Eq (BlockBody era)
   , Show (BlockBody era)
   , Typeable (BlockBody era)
-  , EncCBORGroup (BlockBody era)
   , DecCBOR (Annotator (BlockBody era))
   ) =>
   EraBlockBody era
@@ -645,8 +640,9 @@ class
   -- | The number of segregated components
   numSegComponents :: Word64
 
-bBodySize :: forall era. EraBlockBody era => ProtVer -> BlockBody era -> Int
-bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
+  blockBodySize :: ProtVer -> BlockBody era -> Int
+  default blockBodySize :: SafeToHash (BlockBody era) => ProtVer -> BlockBody era -> Int
+  blockBodySize _ = originalBytesSize
 
 txIdTx :: EraTx era => Tx l era -> TxId
 txIdTx tx = txIdTxBody (tx ^. bodyTxL)

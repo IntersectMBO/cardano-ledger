@@ -1,18 +1,6 @@
 ; This file was auto-generated using generate-cddl. Please do not modify it directly!
 
-; Valid blocks must also satisfy the following two constraints:
-;   1) the length of transaction_bodies and transaction_witness_sets must be
-;      the same
-;   2) every transaction_index must be strictly smaller than the length of
-;      transaction_bodies
-block = 
-  [ header                 
-  , transaction_bodies       : [* transaction_body]                   
-  , transaction_witness_sets : [* transaction_witness_set]            
-  , auxiliary_data_set       : {* transaction_index => auxiliary_data}
-  , invalid_transactions     : [* transaction_index]                  
-  ]
-
+block = [header, block_body]
 
 transaction = 
   [  transaction_body, transaction_witness_set, true, auxiliary_data/ nil
@@ -98,6 +86,20 @@ signature = bytes .size 64
 protocol_version = [major_protocol_version, uint .size 4]
 
 major_protocol_version = 0 .. 13
+
+; Note that every transaction_index must be strictly smaller than the length of transaction_bodies
+block_body = 
+  [ invalid_transactions : invalid_transactions/ nil
+  , transactions      : [* transaction]
+  , peras_certificate : peras_certificate  
+  ]
+
+
+invalid_transactions = nonempty_set<transaction_index>
+
+nonempty_set<a0> = #6.258([+ a0])/ [+ a0]
+
+transaction_index = uint .size 2
 
 transaction_body = 
   {   0  : set<transaction_input>         
@@ -504,8 +506,6 @@ positive_int64 = 1 .. max_int64
 ; representation for empty redeemers.
 script_data_hash = hash32
 
-nonempty_set<a0> = #6.258([+ a0])/ [+ a0]
-
 guards = nonempty_set<addr_keyhash>/ nonempty_oset<credential>
 
 network_id = 0/ 1
@@ -783,5 +783,5 @@ auxiliary_data_map =
   )
 
 
-transaction_index = uint .size 2
+peras_certificate = bytes/ nil
 

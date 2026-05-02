@@ -76,6 +76,7 @@ import Control.State.Transition (
  )
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
@@ -258,8 +259,8 @@ validateBlockBodySize block protVer =
               }
         )
   where
-    actualSize = bBodySize protVer $ blockBody block
-    sizeInBlockHeader = fromIntegral $ block ^. blockBodySizeBlockHeaderL
+    actualSize = blockBodySize protVer $ blockBody block
+    sizeInBlockHeader = fromIntegral @Word32 @Int $ block ^. blockBodySizeBlockHeaderL
 
 -- | Validate that actual block body hash matches claimed hash in block header.
 validateBlockBodyHash ::

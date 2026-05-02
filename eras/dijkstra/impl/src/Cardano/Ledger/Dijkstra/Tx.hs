@@ -23,6 +23,7 @@ module Cardano.Ledger.Dijkstra.Tx (
   Tx (..),
   DijkstraStAnnTx (..),
   validateDijkstraNativeScript,
+  decDijkstraTopTxCBORAnn,
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
@@ -35,6 +36,7 @@ import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
+  Decoder,
   EncCBOR (..),
   Encoding,
   ToCBOR (..),
@@ -124,37 +126,40 @@ instance (EraTx era, Typeable l) => ToCBOR (DijkstraTx l era) where
 instance EraTx era => EncCBOR (DijkstraTx l era) where
   encCBOR = toCBORForMempoolSubmission
 
+decDijkstraTopTxCBORAnn :: EraTx era => Bool -> Decoder s (Annotator (DijkstraTx TopTx era))
+decDijkstraTopTxCBORAnn allowIsValid = do
+  decodeListLen >>= \case
+    4 | allowIsValid -> do
+      bodyAnn <- decCBOR
+      witsAnn <- decCBOR
+      isValid <-
+        decCBOR
+          >>= \case
+            True -> pure (IsValid True)
+            False -> fail "value `false` not allowed for `isValid`"
+      auxAnn <- decodeNullStrictMaybe decCBOR
+      pure $
+        DijkstraTx
+          <$> bodyAnn
+          <*> witsAnn
+          <*> pure isValid
+          <*> sequence auxAnn
+    3 -> do
+      bodyAnn <- decCBOR
+      witsAnn <- decCBOR
+      auxAnn <- decodeNullStrictMaybe decCBOR
+      pure $
+        DijkstraTx
+          <$> bodyAnn
+          <*> witsAnn
+          <*> pure (IsValid True)
+          <*> sequence auxAnn
+    n ->
+      fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
+
 instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where
   decCBOR = withSTxBothLevels @l $ \case
-    STopTx -> do
-      decodeListLen >>= \case
-        4 -> do
-          bodyAnn <- decCBOR
-          witsAnn <- decCBOR
-          isValid <-
-            decCBOR
-              >>= \case
-                True -> pure (IsValid True)
-                False -> fail "value `false` not allowed for `isValid`"
-          auxAnn <- decodeNullStrictMaybe decCBOR
-          pure $
-            DijkstraTx
-              <$> bodyAnn
-              <*> witsAnn
-              <*> pure isValid
-              <*> sequence auxAnn
-        3 -> do
-          bodyAnn <- decCBOR
-          witsAnn <- decCBOR
-          auxAnn <- decodeNullStrictMaybe decCBOR
-          pure $
-            DijkstraTx
-              <$> bodyAnn
-              <*> witsAnn
-              <*> pure (IsValid True)
-              <*> sequence auxAnn
-        n ->
-          fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
+    STopTx -> decDijkstraTopTxCBORAnn True
     SSubTx ->
       decode $
         Ann (RecD DijkstraSubTx)

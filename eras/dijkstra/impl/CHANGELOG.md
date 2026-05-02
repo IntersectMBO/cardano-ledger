@@ -15,6 +15,9 @@
 * Add `getDijkstraScriptsProvided`
 * Add `MissingRequiredGuards` constructor to `DijkstraUtxowPredFailure`
 * Add `DijkstraUtxoEnv` and use it as `Environemnt` in `STS` instance of `UTXOW`
+* Refactor `DijkstraBlockBody` to use `MemoBytes` for memoized serialization
+* Add `blockBodySize` implementation for `DijkstraEra`
+* Add `DijkstraBlockBodyRaw`, `MkDijkstraBlockBody`
 * Add `ApplyTick` instance for `DijkstraEra`
 * Add `WrongNetworkInDirectDeposit` constructor to `DijkstraUtxoPredFailure`
 * Add `SubWrongNetworkInDirectDeposit` constructor to `DijkstraSubUtxoPredFailure`
@@ -51,8 +54,14 @@
 * Remove `NoThunks` instance for `DijkstraContextError`
 * Make `DijkstraContextError` constructors lazy
 
+### cddl
+
+* Add `peras_certificate`, `block_body`
+
 ### testlib
 
+* Add `ToExpr` instance for `DijkstraBlockBody`
+* Add `DecCBOR` instance for `DijkstraBlockBodyRaw`
 * Add `genNonEmptyAccountBalanceIntervals`
 * In `Test.Cardano.Ledger.Dijkstra.Examples`:
   - Remove `mkDijkstraBasedExampleTx`, `mkDijkstraBasedExampleTxBody`

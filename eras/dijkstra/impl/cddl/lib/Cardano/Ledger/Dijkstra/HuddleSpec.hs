@@ -34,9 +34,19 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
 
 import Cardano.Ledger.Conway.HuddleSpec hiding ()
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Huddle.Gen (genArrayTerm)
+import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
+import Codec.CBOR.Cuddle.CDDL.CBORGenerator (CBORGen, WrappedTerm (..), liftAntiGen, withAntiGen)
+import Codec.CBOR.Term (Term (..))
+import Control.Monad (zipWithM)
 import Data.Proxy (Proxy (..))
 import Data.Text ()
-import Data.Word (Word64)
+import Data.Text qualified as T
+import Data.Word (Word16, Word64)
+import Test.AntiGen (withAnnotation, (|!))
+import Test.QuickCheck (choose, shuffle)
+import Test.QuickCheck qualified as QC
+import Test.QuickCheck.GenT (liftGen)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -854,26 +864,61 @@ instance HuddleRule "header" DijkstraEra where
 
 instance HuddleRule "block" DijkstraEra where
   huddleRuleNamed pname p =
+    pname
+      =.= arr
+        [ a $ huddleRule @"header" p
+        , a $ huddleRule @"block_body" p
+        ]
+
+instance HuddleRule "peras_certificate" DijkstraEra where
+  huddleRuleNamed pname _era = pname =.= VBytes / VNil
+
+instance HuddleRule "invalid_transactions" DijkstraEra where
+  huddleRuleNamed pname era = pname =.= huddleRule1 @"nonempty_set" era (huddleRule @"transaction_index" era)
+
+instance HuddleRule "block_body" DijkstraEra where
+  huddleRuleNamed pname era =
     comment
-      [str|Valid blocks must also satisfy the following two constraints:
-          |  1) the length of transaction_bodies and transaction_witness_sets must be
-          |     the same
-          |  2) every transaction_index must be strictly smaller than the length of
-          |     transaction_bodies
+      [str|Note that every transaction_index must be strictly smaller than the length of transaction_bodies
           |]
+      $ withCBORGen blockBodyGen
       $ pname
         =.= arr
-          [ a $ huddleRule @"header" p
-          , "transaction_bodies" ==> arr [0 <+ a (huddleRule @"transaction_body" p)]
-          , "transaction_witness_sets" ==> arr [0 <+ a (huddleRule @"transaction_witness_set" p)]
-          , "auxiliary_data_set"
-              ==> mp
-                [ 0
-                    <+ asKey (huddleRule @"transaction_index" p)
-                    ==> huddleRule @"auxiliary_data" p
-                ]
-          , "invalid_transactions" ==> arr [0 <+ a (huddleRule @"transaction_index" p)]
+          [ "invalid_transactions" ==> huddleRule @"invalid_transactions" era / VNil
+          , "transactions" ==> arr [0 <+ a (huddleRule @"transaction" era)]
+          , "peras_certificate" ==> huddleRule @"peras_certificate" era
           ]
+
+blockBodyGen :: CBORGen WrappedTerm
+blockBodyGen = do
+  numTxs <- liftGen . QC.sized $ \s -> choose (0 :: Int, s)
+  txs <-
+    mapM
+      (\i -> withAntiGen (withAnnotation (T.pack $ show i)) $ generateFromName "transaction")
+      [0 .. numTxs - 1]
+  invalidIxIxs <-
+    if numTxs == 0
+      then pure []
+      else do
+        n <-
+          liftAntiGen $
+            choose (0, numTxs) |! choose (numTxs + 1, 2 * numTxs)
+        txIndices <- liftGen $ shuffle [0 .. toInteger numTxs - 1]
+        -- We need this so that a zapped `n` still produces indices
+        txIndicesOverflow <- liftGen $ shuffle txIndices
+        let
+          txIndicesWithOverflow = take n $ txIndices <> txIndicesOverflow
+          faultyIndex pos i =
+            withAnnotation (T.pack $ show pos) $
+              pure i
+                |! choose (toInteger numTxs + 1, toInteger $ maxBound @Word16)
+        liftAntiGen $
+          withAnnotation "invalid_transactions" $
+            zipWithM faultyIndex [0 :: Int ..] txIndicesWithOverflow
+  invalidTxIxsTerm <- genArrayTerm $ TInteger . toInteger <$> invalidIxIxs
+  txsTerm <- withAntiGen (withAnnotation "transactions") $ genArrayTerm txs
+  perasCertTerm <- generateFromName "peras_certificate"
+  S <$> liftGen (genArrayTerm [invalidTxIxsTerm, txsTerm, perasCertTerm])
 
 instance HuddleRule "auxiliary_scripts" DijkstraEra where
   huddleRuleNamed = auxiliaryScriptsRule

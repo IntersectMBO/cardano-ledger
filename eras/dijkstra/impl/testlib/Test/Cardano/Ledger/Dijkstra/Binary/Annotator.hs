@@ -22,16 +22,29 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (decodePositiveCoin)
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.BlockBody.Internal (
+  DijkstraBlockBody (..),
+  DijkstraBlockBodyRaw (..),
+  alignedValidFlags,
+ )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Cardano.Ledger.Val (Val (..))
+import Control.Monad (forM_, unless)
+import Data.Coerce (coerce)
+import Data.Foldable (Foldable (..))
+import Data.IntSet (IntSet)
+import qualified Data.IntSet as IntSet
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
+import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
+import Data.Word (Word16)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 
@@ -173,25 +186,7 @@ instance Era era => DecCBOR (DijkstraNativeScript era) where
 instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   decCBOR =
     withSTxBothLevels @l $ \case
-      STopTx ->
-        decodeListLen >>= \case
-          4 -> do
-            body <- decCBOR
-            wits <- decCBOR
-            isValid <-
-              decCBOR
-                >>= \case
-                  True -> pure (IsValid True)
-                  False -> fail "value `false` not allowed for `isValid`"
-            aux <- decodeNullStrictMaybe decCBOR
-            pure $ DijkstraTx body wits isValid aux
-          3 -> do
-            DijkstraTx
-              <$> decCBOR
-              <*> decCBOR
-              <*> pure (IsValid True)
-              <*> decodeNullStrictMaybe decCBOR
-          n -> fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
+      STopTx -> decDijkstraTopTxCBOR True
       SSubTx ->
         decode $
           RecD DijkstraSubTx
@@ -201,3 +196,54 @@ instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   {-# INLINE decCBOR #-}
 
 deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)
+
+decDijkstraTopTxCBOR ::
+  ( DecCBOR (TxBody TopTx era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  Bool -> Decoder s (DijkstraTx TopTx era)
+decDijkstraTopTxCBOR allowIsValid =
+  decodeListLen >>= \case
+    4 | allowIsValid -> do
+      body <- decCBOR
+      wits <- decCBOR
+      isValid <-
+        decCBOR
+          >>= \case
+            True -> pure (IsValid True)
+            False -> fail "value `false` not allowed for `isValid`"
+      aux <- decodeNullStrictMaybe decCBOR
+      pure $ DijkstraTx body wits isValid aux
+    3 -> do
+      DijkstraTx
+        <$> decCBOR
+        <*> decCBOR
+        <*> pure (IsValid True)
+        <*> decodeNullStrictMaybe decCBOR
+    n -> fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
+
+instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
+  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
+    let
+      decodeInvalidTxs =
+        decodeNonEmptySetLikeEnforceNoDuplicates
+          (IntSet.insert . fromIntegral @Word16 @Int)
+          (\x -> (IntSet.size x, x))
+          (decCBOR @Word16)
+    invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
+    txs <- decodeSeq (decDijkstraTopTxCBOR @DijkstraEra False)
+    perasCert <- decodeNullStrictMaybe decCBOR
+
+    let txsLength = Seq.length txs
+        inRange x = 0 <= x && x <= txsLength - 1
+    forM_ (IntSet.toList invalidTxs) $ \i ->
+      unless (inRange i) . fail $
+        "index is out of range: " <> show i
+    let
+      validityFlags = alignedValidFlags txsLength invalidTxs
+      txsWithIsValid = Seq.zipWith (set isValidTxL) validityFlags (coerce <$> txs)
+    pure $ DijkstraBlockBodyRaw (StrictSeq.forceToStrict txsWithIsValid) perasCert
+
+instance DecCBOR (DijkstraBlockBody DijkstraEra) where
+  decCBOR = MkDijkstraBlockBody <$> decodeMemoized decCBOR
