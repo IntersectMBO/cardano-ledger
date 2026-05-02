@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Change signature of `validateTreasuryValue` to add a function constructing a predicate failure
 * Change `conwayRegisterInitialFundsThenStaking` to require `MonadIO`, `MonadThrow`, and accept a `HasFS m h` parameter
 * Remove `ToCBOR` and `FromCBOR` instances for `PulsingSnapshot`, `EnactState`, `ConwayGovPredFailure`
 * Add `validateRefScriptSize`, `updateDormantDRepExpiries`, `updateVotingDRepExpiries`

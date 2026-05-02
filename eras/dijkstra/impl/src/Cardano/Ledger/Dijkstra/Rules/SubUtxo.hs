@@ -54,6 +54,7 @@ import Cardano.Ledger.Conway.Rules (
   allegraToConwayUtxoPredFailure,
   alonzoToConwayUtxoPredFailure,
   babbageToConwayUtxoPredFailure,
+  validateTreasuryValue,
  )
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -94,6 +95,7 @@ data SubUtxoEnv era = SubUtxoEnv
   , sueScriptsProvided :: ScriptsProvided era
   , sueOriginalUtxo :: UTxO era
   , sueTopTxIsValid :: IsValid
+  , sueTreasury :: Coin
   }
 
 data DijkstraSubUtxoPredFailure era
@@ -134,6 +136,8 @@ data DijkstraSubUtxoPredFailure era
       Network
       -- | the set of account addresses with incorrect network IDs
       (NonEmptySet AccountAddress)
+  | -- | The treasury value declared in the subtransaction body does not match the actual treasury value
+    SubTreasuryValueMismatch (Mismatch RelEQ Coin)
   deriving (Generic)
 
 deriving stock instance
@@ -227,6 +231,7 @@ instance
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraSubUtxoPredFailure era
   ) =>
   STS (DijkstraSUBUTXO era)
   where
@@ -253,15 +258,19 @@ dijkstraSubUtxoTransition ::
   , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraSubUtxoPredFailure era
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (SubUtxoEnv slot pp certState _ originalUtxo (IsValid isValid), utxoState, tx) <-
+  TRC (SubUtxoEnv slot pp certState _ originalUtxo (IsValid isValid) treasury, utxoState, tx) <-
     judgmentContext
 
   let txBody = tx ^. bodyTxL
 
   runTest $ Allegra.validateOutsideValidityIntervalUTxO slot txBody
+
+  {- CurrentTreasuryOf txSub ~ just (TreasuryOf Γ) -}
+  runTest $ validateTreasuryValue SubTreasuryValueMismatch txBody treasury
 
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
@@ -323,6 +332,7 @@ instance
       SubOutsideForecast a -> Sum SubOutsideForecast 9 !> To a
       SubBabbageOutputTooSmallUTxO x -> Sum SubBabbageOutputTooSmallUTxO 10 !> To x
       SubWrongNetworkInDirectDeposit right wrongs -> Sum (SubWrongNetworkInDirectDeposit @era) 11 !> To right !> To wrongs
+      SubTreasuryValueMismatch mm -> Sum SubTreasuryValueMismatch 12 !> To mm
 
 instance
   ( Era era
@@ -345,6 +355,7 @@ instance
     9 -> SumD SubOutsideForecast <! From
     10 -> SumD SubBabbageOutputTooSmallUTxO <! From
     11 -> SumD SubWrongNetworkInDirectDeposit <! From <! From
+    12 -> SumD SubTreasuryValueMismatch <! From
     n -> Invalid n
 
 dijkstraUtxoToDijkstraSubUtxoPredFailure ::
@@ -375,3 +386,5 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
   WrongNetworkInDirectDeposit x y -> SubWrongNetworkInDirectDeposit x y
   WithdrawalsExceedAccountBalance _ -> error "Impossible: `WithdrawalsExceedAccountBalance` for SUBUTXO"
+  TxRefScriptsSizeTooBig _ -> error "Impossible: `TxRefScriptsSizeTooBig` for SUBUTXO"
+  TreasuryValueMismatch _ -> error "Impossible: `TreasuryValueMismatch` for SUBUTXO"

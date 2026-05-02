@@ -381,7 +381,8 @@ conwayLedgerTransitionTRC
       if tx ^. isValidTxL == IsValid True
         then do
           let txBody = tx ^. bodyTxL
-          runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+          runTest $
+            validateTreasuryValue ConwayTreasuryValueMismatch txBody (chainAccountState ^. casTreasuryL)
           runTest $ validateRefScriptSize pp (utxoState ^. utxoL) tx
 
           let govState = utxoState ^. utxosGovStateL
@@ -460,18 +461,21 @@ conwayLedgerTransitionTRC
     pure $ LedgerState utxoState'' certStateAfterCERTS
 
 validateTreasuryValue ::
-  ConwayEraTxBody era => TxBody l era -> Coin -> Test (ConwayLedgerPredFailure era)
-validateTreasuryValue txBody actualTreasuryValue =
+  ConwayEraTxBody era =>
+  (Mismatch RelEQ Coin -> e) ->
+  TxBody l era ->
+  Coin ->
+  Test e
+validateTreasuryValue mkFailure txBody actualTreasuryValue =
   case txBody ^. currentTreasuryValueTxBodyL of
     SNothing -> pure ()
     SJust submittedTreasuryValue ->
       failureUnless (submittedTreasuryValue == actualTreasuryValue) $
-        ConwayTreasuryValueMismatch
-          ( Mismatch
-              { mismatchSupplied = submittedTreasuryValue
-              , mismatchExpected = actualTreasuryValue
-              }
-          )
+        mkFailure
+          Mismatch
+            { mismatchSupplied = submittedTreasuryValue
+            , mismatchExpected = actualTreasuryValue
+            }
 
 validateRefScriptSize ::
   ( EraTx era
@@ -483,12 +487,11 @@ validateRefScriptSize pp utxo tx =
   let totalRefScriptSize = txNonDistinctRefScriptsSize utxo tx
       maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
    in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
-        ( ConwayTxRefScriptsSizeTooBig
-            Mismatch
-              { mismatchSupplied = totalRefScriptSize
-              , mismatchExpected = maxRefScriptSizePerTx
-              }
-        )
+        ConwayTxRefScriptsSizeTooBig
+          Mismatch
+            { mismatchSupplied = totalRefScriptSize
+            , mismatchExpected = maxRefScriptSizePerTx
+            }
 
 validateWithdrawalsDelegated ::
   ( EraTx era

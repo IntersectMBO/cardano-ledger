@@ -29,7 +29,6 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
@@ -42,7 +41,6 @@ import Cardano.Ledger.Conway.Rules (
   gsCertificates,
   gsProposalProcedures,
   gsVotingProcedures,
-  validateTreasuryValue,
   validateWithdrawalsDelegated,
  )
 import Cardano.Ledger.Conway.State
@@ -120,7 +118,6 @@ data DijkstraSubLedgerPredFailure era
   | SubCertsFailure (PredicateFailure (EraRule "SUBCERTS" era))
   | SubGovFailure (PredicateFailure (EraRule "SUBGOV" era))
   | SubWdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
-  | SubTreasuryValueMismatch (Mismatch RelEQ Coin)
   deriving (Generic)
 
 deriving stock instance
@@ -267,8 +264,6 @@ dijkstraSubLedgersTransition = do
   let proposals = govState ^. proposalsGovStateL
       accounts = certState ^. certDStateL . accountsL
 
-  runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
-
   runTest $ validateWithdrawalsDelegated accounts tx
 
   certStateAfterSubCerts <-
@@ -303,7 +298,14 @@ dijkstraSubLedgersTransition = do
   utxoStateAfterSubUtxow <-
     trans @(EraRule "SUBUTXOW" era) $
       TRC
-        ( SubUtxoEnv slot pp certState scriptsProvided originalUtxo topIsValid
+        ( SubUtxoEnv
+            slot
+            pp
+            certState
+            scriptsProvided
+            originalUtxo
+            topIsValid
+            (chainAccountState ^. casTreasuryL)
         , utxoState
         , tx
         )
@@ -357,7 +359,6 @@ instance
       SubCertsFailure x -> Sum (SubCertsFailure @era) 2 !> To x
       SubGovFailure x -> Sum (SubGovFailure @era) 3 !> To x
       SubWdrlNotDelegatedToDRep x -> Sum (SubWdrlNotDelegatedToDRep @era) 4 !> To x
-      SubTreasuryValueMismatch mm -> Sum (SubTreasuryValueMismatch @era) 5 !> To mm
 
 instance
   ( Era era
@@ -372,7 +373,6 @@ instance
     2 -> SumD SubCertsFailure <! From
     3 -> SumD SubGovFailure <! From
     4 -> SumD SubWdrlNotDelegatedToDRep <! From
-    5 -> SumD SubTreasuryValueMismatch <! From
     n -> Invalid n
 
 conwayToDijkstraSubLedgerPredFailure ::
@@ -391,7 +391,7 @@ conwayToDijkstraSubLedgerPredFailure = \case
   ConwayCertsFailure f -> SubCertsFailure (injectFailure @"SUBCERTS" f)
   ConwayGovFailure f -> SubGovFailure (injectFailure @"SUBGOV" f)
   ConwayWdrlNotDelegatedToDRep x -> SubWdrlNotDelegatedToDRep x
-  ConwayTreasuryValueMismatch x -> SubTreasuryValueMismatch x
+  ConwayTreasuryValueMismatch _ -> error "Impossible: `ConwayTreasuryValueMismatch` has been moved to SUBUTXO rule in Dijkstra"
   ConwayTxRefScriptsSizeTooBig _ -> error "Impossible: `ConwayTxRefScriptsSizeTooBig` for SUBLEDGER"
   ConwayMempoolFailure _ -> error "Impossible: `ConwayMempoolFailure` for SUBLEDGER"
   ConwayWithdrawalsMissingAccounts _ -> error "Impossible: `ConwayWithdrawalsMissingAccounts` for SUBLEDGER"
