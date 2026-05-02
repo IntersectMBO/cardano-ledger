@@ -5,6 +5,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryConstitutionExamples,
   queryConstitutionHashExamples,
   queryCurrentEpochNoExamples,
+  queryDRepDelegateesExamples,
   queryDRepStakeDistrExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
@@ -65,6 +66,17 @@ querySPOStakeDistrExamples =
       [ (mkKeyHash 1, Coin 1_000_000_000)
       , (mkKeyHash 2, Coin 0)
       , (mkKeyHash 3, Coin 50)
+      ]
+  ]
+
+queryDRepDelegateesExamples :: [Map (Credential Staking) DRep]
+queryDRepDelegateesExamples =
+  [ Map.empty
+  , Map.fromList
+      [ (KeyHashObj (mkKeyHash 1), DRepKeyHash (mkKeyHash 10))
+      , (ScriptHashObj (mkScriptHash 2), DRepScriptHash (mkScriptHash 20))
+      , (KeyHashObj (mkKeyHash 3), DRepAlwaysAbstain)
+      , (KeyHashObj (mkKeyHash 4), DRepAlwaysNoConfidence)
       ]
   ]
 
