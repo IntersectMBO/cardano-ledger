@@ -19,14 +19,32 @@ getExecutablePath()
   "$1" -package-env - -e 'import System.Environment' -e 'putStrLn =<< getExecutablePath'
 }
 
+lookupVar()
+{
+  ghc -e 'interact $ maybe "" id . lookup "'"$1"'" . read'
+}
+
+getPackageDb()
+{
+  readlink -f "$("$1" --info | lookupVar 'Global Package DB')"
+}
+
 default_ghc=$(type -p ghc)
-doctest_ghc=$(doctest --info | ghc -e 'interact $ maybe "" id . lookup "ghc" . read')
+doctest_ghc=$(doctest --info | lookupVar 'ghc')
 
 if [[ "$(getExecutablePath "$default_ghc")" != "$(getExecutablePath "$doctest_ghc")" ]]
 then
   echo "Incompatible GHC's:" >&2
   echo "  Default ghc: $(getExecutablePath "$default_ghc")" >&2
   echo "  Doctest ghc: $(getExecutablePath "$doctest_ghc")" >&2
+  exit 1
+fi
+
+if [[ "$(getPackageDb ghc)" != "$(getPackageDb doctest)" ]]
+then
+  echo "Incompatible package DBs:" >&2
+  echo "  Default DB: $(getPackageDb ghc)" >&2
+  echo "  Doctest DB: $(getPackageDb doctest)" >&2
   exit 1
 fi
 
