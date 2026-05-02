@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepStakeDistrExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
+  queryStakePoolDelegsAndRewardsExamples,
 ) where
 
 import Cardano.Ledger.Api.Governance (Constitution (..))
@@ -70,6 +71,22 @@ querySPOStakeDistrExamples =
       , (mkKeyHash 2, Coin 0)
       , (mkKeyHash 3, Coin 50)
       ]
+  ]
+
+queryStakePoolDelegsAndRewardsExamples ::
+  [(Map (Credential Staking) (KeyHash StakePool), Map (Credential Staking) Coin)]
+queryStakePoolDelegsAndRewardsExamples =
+  [ (Map.empty, Map.empty)
+  ,
+    ( Map.fromList
+        [ (KeyHashObj (mkKeyHash 1), mkKeyHash 10)
+        , (ScriptHashObj (mkScriptHash 2), mkKeyHash 20)
+        ]
+    , Map.fromList
+        [ (KeyHashObj (mkKeyHash 1), Coin 1_000_000)
+        , (ScriptHashObj (mkScriptHash 2), Coin 0)
+        ]
+    )
   ]
 
 queryDRepDelegateesExamples :: [Map (Credential Staking) DRep]

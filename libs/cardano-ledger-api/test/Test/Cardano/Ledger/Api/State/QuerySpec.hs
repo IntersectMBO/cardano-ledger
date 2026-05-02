@@ -55,6 +55,7 @@ import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepStakeDistrExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
+  queryStakePoolDelegsAndRewardsExamples,
  )
 import Test.Cardano.Ledger.Binary.Golden (cborGoldenSpec)
 import Test.Cardano.Ledger.Binary.Random
@@ -106,6 +107,9 @@ latestErasSpec =
         "queryRegisteredDRepStakeDistr"
         queryRegisteredDRepStakeDistrExamples
       eraLedgerStateQueryGoldenSpec @era "querySPOStakeDistr" querySPOStakeDistrExamples
+      eraLedgerStateQueryGoldenSpec @era
+        "queryStakePoolDelegsAndRewards"
+        queryStakePoolDelegsAndRewardsExamples
     describe "Roundtrip" $ do
       prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
       prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
