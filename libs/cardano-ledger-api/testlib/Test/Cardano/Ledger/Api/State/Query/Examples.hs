@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepDelegateesExamples,
   queryDRepDelegationsExamples,
   queryDRepStakeDistrExamples,
+  queryDRepStateExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
   queryStakePoolDelegsAndRewardsExamples,
@@ -15,9 +16,9 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
 
 import Cardano.Ledger.Api.Governance (Constitution (..))
 import Cardano.Ledger.BaseTypes (AnchorData, EpochNo (..), StrictMaybe (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep (DRep (..))
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Data.Map.Strict (Map)
@@ -122,6 +123,31 @@ queryDRepStakeDistrExamples =
       , (DRepScriptHash (mkScriptHash 2), Coin 0)
       , (DRepAlwaysAbstain, Coin 50)
       , (DRepAlwaysNoConfidence, Coin 100)
+      ]
+  ]
+
+queryDRepStateExamples :: [Map (Credential DRepRole) DRepState]
+queryDRepStateExamples =
+  [ Map.empty
+  , Map.fromList
+      [
+        ( KeyHashObj (mkKeyHash 1)
+        , DRepState
+            { drepExpiry = EpochNo 100
+            , drepAnchor = SJust exampleAnchor
+            , drepDeposit = CompactCoin 500_000_000
+            , drepDelegs = mempty
+            }
+        )
+      ,
+        ( ScriptHashObj (mkScriptHash 2)
+        , DRepState
+            { drepExpiry = EpochNo 0
+            , drepAnchor = SNothing
+            , drepDeposit = CompactCoin 0
+            , drepDelegs = mempty
+            }
+        )
       ]
   ]
 
