@@ -48,6 +48,7 @@ import System.FilePath ((<.>), (</>))
 import Test.Cardano.Ledger.Api.Arbitrary ()
 import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryAccountsDepositsExamples,
+  queryChainAccountStateExamples,
   queryConstitutionExamples,
   queryConstitutionHashExamples,
   queryCurrentEpochNoExamples,
@@ -132,6 +133,9 @@ latestErasSpec =
   describe (eraName @era) $ do
     describe "Golden" $ do
       eraLedgerStateQueryGoldenSpec @era "queryAccountsDeposits" queryAccountsDepositsExamples
+      eraLedgerStateQueryNoFromJSONGoldenSpec @era
+        "queryChainAccountState"
+        queryChainAccountStateExamples
       eraLedgerStateQueryGoldenSpec @era "queryConstitution" (queryConstitutionExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryConstitutionHash" queryConstitutionHashExamples
       eraLedgerStateQueryGoldenSpec @era "queryCurrentEpochNo" queryCurrentEpochNoExamples

@@ -3,6 +3,7 @@
 
 module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryAccountsDepositsExamples,
+  queryChainAccountStateExamples,
   queryConstitutionExamples,
   queryConstitutionHashExamples,
   queryCurrentEpochNoExamples,
@@ -25,7 +26,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.State (StakePoolParams (..), StakePoolRelay (..))
+import Cardano.Ledger.State (ChainAccountState (..), StakePoolParams (..), StakePoolRelay (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -71,6 +72,12 @@ queryAccountsDepositsExamples =
       [ (KeyHashObj (mkKeyHash 1), Coin 2_000_000)
       , (ScriptHashObj (mkScriptHash 2), Coin 0)
       ]
+  ]
+
+queryChainAccountStateExamples :: [ChainAccountState]
+queryChainAccountStateExamples =
+  [ ChainAccountState (Coin 0) (Coin 0)
+  , ChainAccountState (Coin 1_500_000_000_000_000) (Coin 8_000_000_000_000_000)
   ]
 
 querySPOStakeDistrExamples :: [Map (KeyHash StakePool) Coin]
