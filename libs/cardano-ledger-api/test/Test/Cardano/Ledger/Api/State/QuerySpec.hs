@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Api.State.QuerySpec (spec) where
+module Test.Cardano.Ledger.Api.State.QuerySpec (spec, eraLedgerStateQueryNoFromJSONGoldenSpec) where
 
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.State.Query
@@ -40,6 +40,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import qualified Data.VMap as VMap
 import Lens.Micro ((&), (.~), (^.))
 import Paths_cardano_ledger_api (getDataFileName)
@@ -76,17 +77,48 @@ spec = do
     latestErasSpec @(PreviousEra LatestKnownEra)
     latestErasSpec @LatestKnownEra
 
+goldenFilePath :: forall era. Era era => String -> String -> String
+goldenFilePath ext fname = "golden" </> (toLower <$> eraName @era) </> ext </> fname <.> ext
+
+eraLedgerStateQueryCBORGoldenSpec ::
+  forall era q.
+  (Era era, Eq q, Show q, EncCBOR q, DecCBOR q) =>
+  String -> [q] -> Spec
+eraLedgerStateQueryCBORGoldenSpec qname xs =
+  describe "CBOR" $
+    cborGoldenSpec getDataFileName (goldenFilePath @era "cbor" qname) (eraProtVerHigh @era) xs
+
+eraLedgerStateQueryJSONGoldenSpec ::
+  forall era q.
+  (Era era, Eq q, ToExpr q, NFData q, ToJSON q, FromJSON q, Typeable q) =>
+  String -> [q] -> Spec
+eraLedgerStateQueryJSONGoldenSpec qname xs =
+  describe "JSON" $
+    aesonGoldenSpec getDataFileName (goldenFilePath @era "json" qname) xs
+
+eraLedgerStateQueryJSONSnapshotGoldenSpec ::
+  forall era q.
+  (ToJSON q, Typeable q, Era era) =>
+  String -> [q] -> Spec
+eraLedgerStateQueryJSONSnapshotGoldenSpec qname xs =
+  describe "JSON Snapshot" $
+    itGoldenToJSON getDataFileName (goldenFilePath @era "json" qname) xs
+
 eraLedgerStateQueryGoldenSpec ::
   forall era q.
-  (Era era, Eq q, ToExpr q, NFData q, ToJSON q, Show q, FromJSON q, EncCBOR q, DecCBOR q) =>
+  (Era era, Eq q, ToExpr q, NFData q, Show q, ToJSON q, FromJSON q, EncCBOR q, DecCBOR q) =>
   String -> [q] -> Spec
-eraLedgerStateQueryGoldenSpec queryName queryResultExamples = do
-  let mkFilePath t = "golden" </> (toLower <$> eraName @era) </> t </> queryName <.> t
-  describe queryName $ do
-    describe "JSON" $
-      aesonGoldenSpec getDataFileName (mkFilePath "json") queryResultExamples
-    describe "CBOR" $
-      cborGoldenSpec getDataFileName (mkFilePath "cbor") (eraProtVerHigh @era) queryResultExamples
+eraLedgerStateQueryGoldenSpec qname xs = describe qname $ do
+  eraLedgerStateQueryCBORGoldenSpec @era qname xs
+  eraLedgerStateQueryJSONGoldenSpec @era qname xs
+
+eraLedgerStateQueryNoFromJSONGoldenSpec ::
+  forall era q.
+  (Era era, Eq q, Show q, ToJSON q, EncCBOR q, DecCBOR q) =>
+  String -> [q] -> Spec
+eraLedgerStateQueryNoFromJSONGoldenSpec qname xs = describe qname $ do
+  eraLedgerStateQueryCBORGoldenSpec @era qname xs
+  eraLedgerStateQueryJSONSnapshotGoldenSpec @era qname xs
 
 latestErasSpec ::
   forall era.
