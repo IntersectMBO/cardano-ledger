@@ -8,6 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -23,7 +24,7 @@ module Cardano.Ledger.Dijkstra.Tx (
   Tx (..),
   DijkstraStAnnTx (..),
   validateDijkstraNativeScript,
-  decDijkstraTopTxCBORAnn,
+  decodeDijkstraTopTx,
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
@@ -40,10 +41,12 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   Encoding,
   ToCBOR (..),
-  decodeListLen,
+  TokenType (..),
   decodeNullStrictMaybe,
+  decodeRecordNamed,
   encodeListLen,
   encodeNullStrictMaybe,
+  peekTokenType,
   serialize,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<*!))
@@ -126,40 +129,35 @@ instance (EraTx era, Typeable l) => ToCBOR (DijkstraTx l era) where
 instance EraTx era => EncCBOR (DijkstraTx l era) where
   encCBOR = toCBORForMempoolSubmission
 
-decDijkstraTopTxCBORAnn :: EraTx era => Bool -> Decoder s (Annotator (DijkstraTx TopTx era))
-decDijkstraTopTxCBORAnn allowIsValid = do
-  decodeListLen >>= \case
-    4 | allowIsValid -> do
+decodeDijkstraTopTx :: EraTx era => Bool -> Decoder s (Annotator (DijkstraTx TopTx era))
+decodeDijkstraTopTx allowIsValid =
+  fst <$> do
+    let isValidBackwardsCompatibleLength isValidFlagSupplied =
+          if allowIsValid && isValidFlagSupplied then 4 else 3
+    decodeRecordNamed "DijkstraTx" (isValidBackwardsCompatibleLength . snd) $ do
       bodyAnn <- decCBOR
       witsAnn <- decCBOR
-      isValid <-
-        decCBOR
-          >>= \case
-            True -> pure (IsValid True)
-            False -> fail "value `false` not allowed for `isValid`"
+      isValidFlagSupplied <-
+        if allowIsValid
+          then
+            peekTokenType >>= \case
+              TypeBool ->
+                decCBOR >>= \case
+                  True -> pure True
+                  False -> fail "Value `false` not allowed for `isValid`"
+              _ -> pure False
+          else pure False
       auxAnn <- decodeNullStrictMaybe decCBOR
-      pure $
-        DijkstraTx
-          <$> bodyAnn
-          <*> witsAnn
-          <*> pure isValid
-          <*> sequence auxAnn
-    3 -> do
-      bodyAnn <- decCBOR
-      witsAnn <- decCBOR
-      auxAnn <- decodeNullStrictMaybe decCBOR
-      pure $
-        DijkstraTx
-          <$> bodyAnn
-          <*> witsAnn
-          <*> pure (IsValid True)
-          <*> sequence auxAnn
-    n ->
-      fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
+      let
+        -- `isValid == False` can no longer be supplied in an encoded transaction.
+        isValid = IsValid True
+        dijkstraTopTx =
+          DijkstraTx <$> bodyAnn <*> witsAnn <*> pure isValid <*> sequence auxAnn
+      pure (dijkstraTopTx, isValidFlagSupplied)
 
 instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where
   decCBOR = withSTxBothLevels @l $ \case
-    STopTx -> decDijkstraTopTxCBORAnn True
+    STopTx -> decodeDijkstraTopTx True
     SSubTx ->
       decode $
         Ann (RecD DijkstraSubTx)
