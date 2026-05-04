@@ -49,6 +49,7 @@ import Test.Cardano.Ledger.Api.Arbitrary ()
 import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryAccountsDepositsExamples,
   queryChainAccountStateExamples,
+  queryCommitteeMembersStateExamples,
   queryConstitutionExamples,
   queryConstitutionHashExamples,
   queryCurrentEpochNoExamples,
@@ -140,6 +141,9 @@ latestErasSpec =
       eraLedgerStateQueryNoFromJSONGoldenSpec @era
         "queryChainAccountState"
         queryChainAccountStateExamples
+      eraLedgerStateQueryNoFromJSONGoldenSpec @era
+        "queryCommitteeMembersState"
+        queryCommitteeMembersStateExamples
       eraLedgerStateQueryGoldenSpec @era "queryConstitution" (queryConstitutionExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryConstitutionHash" queryConstitutionHashExamples
       eraLedgerStateQueryGoldenSpec @era "queryCurrentEpochNo" queryCurrentEpochNoExamples
