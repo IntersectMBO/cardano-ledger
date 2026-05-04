@@ -21,11 +21,17 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryStakePoolDefaultVoteExamples,
   queryStakePoolDelegsAndRewardsExamples,
   queryStakePoolRelaysExamples,
+  queryStakeSnapshotsExamples,
 ) where
 
 import Cardano.Base.IP (toIPv4, toIPv6)
 import Cardano.Ledger.Api.Governance (Constitution (..))
-import Cardano.Ledger.Api.State.Query (DefaultVote (..), QueryPoolStateResult (..))
+import Cardano.Ledger.Api.State.Query (
+  DefaultVote (..),
+  QueryPoolStateResult (..),
+  StakeSnapshot (..),
+  StakeSnapshots (..),
+ )
 import Cardano.Ledger.BaseTypes (AnchorData, EpochNo (..), Port (..), StrictMaybe (..), textToDns)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
 import Cardano.Ledger.Credential (Credential (..))
@@ -302,5 +308,38 @@ queryPoolStateExamples =
             [ (mkKeyHash 1, Coin 500_000_000)
             , (mkKeyHash 99, Coin 500_000_000)
             ]
+      }
+  ]
+
+queryStakeSnapshotsExamples :: [StakeSnapshots]
+queryStakeSnapshotsExamples =
+  [ StakeSnapshots
+      Map.empty
+      (knownNonZeroCoin @1)
+      (knownNonZeroCoin @1)
+      (knownNonZeroCoin @1)
+  , StakeSnapshots
+      { ssStakeSnapshots =
+          Map.fromList
+            [
+              ( mkKeyHash 1
+              , StakeSnapshot
+                  { ssMarkPool = Coin 1_000_000_000
+                  , ssSetPool = Coin 900_000_000
+                  , ssGoPool = Coin 800_000_000
+                  }
+              )
+            ,
+              ( mkKeyHash 2
+              , StakeSnapshot
+                  { ssMarkPool = Coin 0
+                  , ssSetPool = Coin 500_000_000
+                  , ssGoPool = Coin 250_000_000
+                  }
+              )
+            ]
+      , ssMarkTotal = knownNonZeroCoin @5_000_000_000
+      , ssSetTotal = knownNonZeroCoin @4_500_000_000
+      , ssGoTotal = knownNonZeroCoin @4_000_000_000
       }
   ]
