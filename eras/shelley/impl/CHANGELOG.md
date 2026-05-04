@@ -49,13 +49,11 @@
   - `ChainPredicateFailure`
 * Add protocol version validation to `createInitialState`:
   - Validate that current protocol version is within the era's bounds
-
-### `cddl`
-
 * Remove `withAntiGen` re-export, since it's deprecated
 
 ### `testlib`
 
+* Export `exampleVrfVerKeyHash` from `Test.Cardano.Ledger.Shelley.Examples`
 * Add `HuddleRule "int32" ShelleyEra` instance
 * Add `withIssuerAndTxsInBlock_` and `withIssuerAndTxsInBlock`
 * Add a `Maybe (KeyHash BlockIssuer)` parameter to `withTxsInBlockEither`

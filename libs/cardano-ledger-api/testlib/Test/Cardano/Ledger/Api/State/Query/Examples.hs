@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryAccountsDepositsExamples,
@@ -14,6 +16,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryPoolParametersExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
+  querySetSnapshotStakePoolDistrExamples,
   queryStakePoolDefaultVoteExamples,
   queryStakePoolDelegsAndRewardsExamples,
   queryStakePoolRelaysExamples,
@@ -23,12 +26,19 @@ import Cardano.Base.IP (toIPv4, toIPv6)
 import Cardano.Ledger.Api.Governance (Constitution (..))
 import Cardano.Ledger.Api.State.Query (DefaultVote (..))
 import Cardano.Ledger.BaseTypes (AnchorData, EpochNo (..), Port (..), StrictMaybe (..), textToDns)
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.State (ChainAccountState (..), StakePoolParams (..), StakePoolRelay (..))
+import Cardano.Ledger.State (
+  ChainAccountState (..),
+  IndividualPoolStake (..),
+  PoolDistr (..),
+  StakePoolParams (..),
+  StakePoolRelay (..),
+ )
+import Data.Default (def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -39,7 +49,13 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Conway.Examples (exampleAnchor)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
-import Test.Cardano.Ledger.Shelley.Examples (exampleStakePoolParams, mkKeyHash, mkScriptHash)
+import Test.Cardano.Ledger.Shelley.Examples (
+  examplePoolDistr,
+  exampleStakePoolParams,
+  exampleVrfVerKeyHash,
+  mkKeyHash,
+  mkScriptHash,
+ )
 
 queryConstitutionExamples :: [Constitution era]
 queryConstitutionExamples =
@@ -90,6 +106,25 @@ querySPOStakeDistrExamples =
       , (mkKeyHash 2, Coin 0)
       , (mkKeyHash 3, Coin 50)
       ]
+  ]
+
+querySetSnapshotStakePoolDistrExamples :: [PoolDistr]
+querySetSnapshotStakePoolDistrExamples =
+  [ def
+  , examplePoolDistr
+  , PoolDistr
+      ( Map.fromList
+          [
+            ( mkKeyHash 1
+            , IndividualPoolStake (1 % 4) (CompactCoin 1_000_000_000) exampleVrfVerKeyHash
+            )
+          ,
+            ( mkKeyHash 2
+            , IndividualPoolStake (3 % 8) (CompactCoin 5_000_000_000) exampleVrfVerKeyHash
+            )
+          ]
+      )
+      (knownNonZeroCoin @6_000_000_000)
   ]
 
 queryStakePoolDefaultVoteExamples :: [DefaultVote]
