@@ -55,7 +55,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
-import Cardano.Ledger.Dijkstra.Tx (DijkstraTx, Tx (..), decDijkstraTopTxCBORAnn)
+import Cardano.Ledger.Dijkstra.Tx (DijkstraTx, Tx (..), decodeDijkstraTopTx)
 import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
@@ -198,7 +198,7 @@ instance
           (\x -> (IntSet.size x, x))
           (decCBOR @Word16)
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
-    txs <- decodeSeq (decDijkstraTopTxCBORAnn @era False)
+    txs <- decodeSeq (decodeDijkstraTopTx @era False)
     perasCert <- decodeNullStrictMaybe decCBOR
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x < txsLength
