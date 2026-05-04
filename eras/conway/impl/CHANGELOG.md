@@ -2,6 +2,9 @@
 
 ## 1.23.0.0
 
+* Add `injectStakeCredentials`, `injectDRepsThenDelegs` to `Cardano.Ledger.Conway.Transition`
+* Add `ConwayExtraConfig` type and `cgExtraConfig` field to `ConwayGenesis`
+* Deprecate `conwayRegisterInitialAccounts`, `registerDRepsThenDelegs`
 * Change `conwayRegisterInitialFundsThenStaking` to require `MonadIO`, `MonadThrow`, and accept a `HasFS m h` parameter
 * Remove `ToCBOR` and `FromCBOR` instances for `PulsingSnapshot`, `EnactState`, `ConwayGovPredFailure`
 * Add `validateRefScriptSize`, `updateDormantDRepExpiries`, `updateVotingDRepExpiries`

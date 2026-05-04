@@ -60,8 +60,7 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNregisteredPools,
  )
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
-import Test.QuickCheck (arbitrary)
-import Test.QuickCheck.Gen as QC
+import Test.QuickCheck (Gen, arbitrary)
 
 -- Generator for coin. This is required, but its ouput is completely discarded.
 -- What is going on here?
@@ -391,12 +390,12 @@ main = do
         ]
     , bgroup "rewards" $
         [ env
-            (generate $ genChainInEpoch 5)
+            (genChainInEpoch 5)
             ( \cs ->
                 bench "createRUpd" $ whnf (createRUpd testGlobals) cs
             )
         , env
-            (generate $ genChainInEpoch 5)
+            (genChainInEpoch 5)
             ( \cs ->
                 bench "createRUpdWithProvenance" $ whnf (createRUpdWithProv testGlobals) cs
             )

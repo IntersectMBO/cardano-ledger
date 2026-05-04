@@ -40,10 +40,15 @@ module Cardano.Ledger.Shelley.Transition (
   mkShelleyTransitionConfig,
   createInitialState,
   shelleyRegisterInitialFundsThenStaking,
+  injectInitialFundsAndStaking,
   shelleyRegisterInitialAccounts,
+  injectStakePools,
+  injectStakeCredentials,
   registerInitialStakePools,
   registerInitialFunds,
+  resolveInjectionSource,
   resetStakeDistribution,
+  tcNetworkIDG,
   protectMainnet,
   protectMainnetLens,
 ) where
@@ -226,20 +231,87 @@ instance EraTransition era => FromJSON (TransitionConfig era) where
 tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
+-- | Register initial funds, stake pools, and stake credentials from the Shelley
+-- genesis configuration. Credentials injection is a parameter because Shelley
+-- and Conway have incompatible account representations ('ShelleyEraAccounts'
+-- vs 'ConwayEraAccounts').
+injectInitialFundsAndStaking ::
+  (EraTransition era, HasCallStack, MonadST m, MonadThrow m) =>
+  HasFS m h ->
+  ( Network ->
+    HasFS m h ->
+    InjectionData (KeyHash Staking) (KeyHash StakePool) ->
+    NewEpochState era ->
+    m (NewEpochState era)
+  ) ->
+  TransitionConfig era ->
+  NewEpochState era ->
+  m (NewEpochState era)
+injectInitialFundsAndStaking hasFS injectCreds cfg nes = do
+  let network = cfg ^. tcNetworkIDG
+  when (network == Mainnet) $ throwIO InjectionNotAllowedOnMainnet
+
+  let sg = cfg ^. tcShelleyGenesisL
+      staking = sg ^. sgStakingL
+
+  poolsSource <-
+    resolveInjectionSource "stakePools" (sgExtraConfig sg) secStakePools (sgsPools staking)
+  credsSource <-
+    resolveInjectionSource "stakeCredentials" (sgExtraConfig sg) secStakeCredentials (sgsStake staking)
+
+  -- We must first register the initial funds, because the stake
+  -- information depends on it.
+  registerInitialFunds hasFS cfg nes
+    >>= injectStakePools network hasFS poolsSource
+    >>= injectCreds network hasFS credsSource
+
+-- | Folds over an 'InjectionData' source of stake credentials and registers them
+injectStakeCredentials ::
+  (ShelleyEraAccounts era, EraCertState era, EraGov era, MonadST m, MonadThrow m) =>
+  Network ->
+  HasFS m h ->
+  InjectionData (KeyHash Staking) (KeyHash StakePool) ->
+  NewEpochState era ->
+  m (NewEpochState era)
+injectStakeCredentials network fs source nes = do
+  when (network == Mainnet) $ throwIO InjectionNotAllowedOnMainnet
+  let stakePools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+      initialAccounts = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+      deposit = compactCoinOrError $ nes ^. nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      certIxRange = fromIntegral (unCertIx maxBound) + 1 :: Int
+      indexToPtr i =
+        Ptr
+          minBound
+          (TxIx (fromIntegral (i `div` certIxRange)))
+          (CertIx (fromIntegral (i `mod` certIxRange)))
+      registerAndDelegate (!accounts, !stakePoolMap, !ptrIdx) (stakeKeyHash, stakePool)
+        | stakePool `Map.member` stakePools =
+            ( registerShelleyAccount
+                (KeyHashObj stakeKeyHash)
+                (indexToPtr ptrIdx)
+                deposit
+                (Just stakePool)
+                accounts
+            , Map.adjust (spsDelegatorsL %~ Set.insert (KeyHashObj stakeKeyHash)) stakePool stakePoolMap
+            , ptrIdx + 1
+            )
+        | otherwise = error $ delegationInvariantMsg stakeKeyHash stakePool
+  (!updatedAccounts, !updatedPools, _) <-
+    foldInjectionData fs source registerAndDelegate (initialAccounts, stakePools, 0 :: Int)
+  pure $
+    nes
+      & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL .~ updatedAccounts
+      & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL .~ updatedPools
+
 shelleyRegisterInitialFundsThenStaking ::
   (EraTransition era, ShelleyEraAccounts era, HasCallStack, MonadST m, MonadThrow m) =>
   HasFS m h ->
   TransitionConfig era ->
   NewEpochState era ->
   m (NewEpochState era)
-shelleyRegisterInitialFundsThenStaking hasFS cfg newEpochState = do
-  -- We must first register the initial funds, because the stake
-  -- information depends on it.
-  newEpochState' <- registerInitialFunds hasFS cfg newEpochState
-  pure $
-    resetStakeDistribution $
-      shelleyRegisterInitialAccounts (cfg ^. tcInitialStakingL) $
-        registerInitialStakePools (cfg ^. tcInitialStakingL) newEpochState'
+shelleyRegisterInitialFundsThenStaking hasFS cfg newEpochState =
+  resetStakeDistribution
+    <$> injectInitialFundsAndStaking hasFS injectStakeCredentials cfg newEpochState
 
 instance EraTransition ShelleyEra where
   newtype TransitionConfig ShelleyEra = ShelleyTransitionConfig
@@ -418,7 +490,59 @@ validateProtVerBounds nes = do
         <> "]"
   pure nes
 
--- | Register initial stake pools from the `ShelleyGenesisStaking`
+-- TODO: remove this once we move over to the extraConfig fields exclusively
+
+-- | Resolve an injection data source from extraConfig vs legacy field, with conflict detection.
+resolveInjectionSource ::
+  MonadThrow m =>
+  String ->
+  StrictMaybe extraConfig ->
+  (extraConfig -> InjectionData k v) ->
+  ListMap.ListMap k v ->
+  m (InjectionData k v)
+resolveInjectionSource name mExtraConfig getExtra legacy =
+  case mExtraConfig of
+    SJust extraConfig
+      | NoInjection <- getExtra extraConfig ->
+          pure $ EmbeddedInjection legacy
+      | null legacy -> pure $ getExtra extraConfig
+      | otherwise ->
+          throwIO $
+            InjectionConflictingSources $
+              "Both legacy and 'extraConfig."
+                <> name
+                <> "' are specified. "
+                <> "Please use only one source."
+    SNothing -> pure $ EmbeddedInjection legacy
+
+delegationInvariantMsg :: (Show a, Show b) => a -> b -> String
+delegationInvariantMsg stakeKeyHash stakePool =
+  "Delegation of "
+    ++ show stakeKeyHash
+    ++ " to an unregistered stake pool "
+    ++ show stakePool
+
+-- | Folds over an 'InjectionData' source of stake pools and registers them.
+injectStakePools ::
+  (EraCertState era, EraGov era, MonadST m, MonadThrow m) =>
+  Network ->
+  HasFS m h ->
+  InjectionData (KeyHash StakePool) StakePoolParams ->
+  NewEpochState era ->
+  m (NewEpochState era)
+injectStakePools network fs source nes = do
+  when (network == Mainnet) $ throwIO InjectionNotAllowedOnMainnet
+  let deposit = nes ^. nesEsL . curPParamsEpochStateL . ppPoolDepositCompactL
+  poolsMap <-
+    foldInjectionData
+      fs
+      source
+      (\(!acc) (poolId, poolParams) -> Map.insert poolId (mkStakePoolState deposit mempty poolParams) acc)
+      -- Note: we start from empty map so this drops any pre-existing pools in the state
+      Map.empty
+  pure $ nes & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL .~ poolsMap
+
+-- | Register initial stake pools from a 'ShelleyGenesisStaking'.
 registerInitialStakePools ::
   forall era.
   (EraCertState era, EraGov era) =>
@@ -431,6 +555,7 @@ registerInitialStakePools ShelleyGenesisStaking {sgsPools} nes =
       .~ ListMap.toMap (mkStakePoolState deposit mempty <$> sgsPools)
   where
     deposit = nes ^. nesEsL . curPParamsEpochStateL . ppPoolDepositCompactL
+{-# DEPRECATED registerInitialStakePools "Use `injectStakePools` instead" #-}
 
 -- | Register all staking credentials and apply delegations. Make sure StakePools that are being
 -- delegated to are already registered, which can be done with `registerInitialStakePools`.
@@ -456,16 +581,11 @@ shelleyRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
           ( registerShelleyAccount (KeyHashObj stakeKeyHash) ptr deposit (Just stakePool) accounts
           , Map.adjust (spsDelegatorsL %~ Set.insert (KeyHashObj stakeKeyHash)) stakePool stakePoolMap
           )
-      | otherwise =
-          error $
-            "Invariant of a delegation of "
-              ++ show stakeKeyHash
-              ++ " to an unregistered stake pool "
-              ++ show stakePool
-              ++ " is being violated."
+      | otherwise = error $ delegationInvariantMsg stakeKeyHash stakePool
     ptrs =
       [ Ptr minBound txIx certIx | txIx <- [minBound .. maxBound], certIx <- [minBound .. maxBound]
       ]
+{-# DEPRECATED shelleyRegisterInitialAccounts "Use `injectStakeCredentials` instead" #-}
 
 -- NOTE: it seems like this is only used for testing, so hardcoding `Testnet` as a Network for now
 
@@ -526,34 +646,17 @@ registerInitialFunds hasFS tc newEpochState = do
   -- Guard against mainnet injection before processing
   when (tc ^. tcNetworkIDG == Mainnet) $
     throwIO InjectionNotAllowedOnMainnet
-
-  -- we currently have two possible injection points: extraConfig takes priority
-  -- over (legacy) sgInitialFunds, but having both is an error.
   let sg = tc ^. tcShelleyGenesisL
-  source <- case sgExtraConfig sg of
-    SJust extraConfig
-      | NoInjection <- secInitialFunds extraConfig ->
-          -- extraConfig present but no initialFunds override: fall back to legacy
-          pure $ EmbeddedInjection (sgInitialFunds sg)
-      | null (sgInitialFunds sg) -> pure $ secInitialFunds extraConfig
-      | otherwise ->
-          throwIO $
-            InjectionConflictingSources
-              "Both legacy 'initialFunds' and 'extraConfig.initialFunds' are specified. \
-              \Please use only one source for initial funds."
-    SNothing -> pure $ EmbeddedInjection (sgInitialFunds sg)
+      addInitialFund (!acc, !coins) (addr, amount) =
+        let txIn = initialFundsPseudoTxIn addr
+            txOut = mkBasicTxOut addr (inject amount)
+         in (Map.insert txIn txOut acc, coins <> amount)
+  source <-
+    resolveInjectionSource "initialFunds" (sgExtraConfig sg) secInitialFunds (sgInitialFunds sg)
 
   -- fold over the stream of initial funds, accumulating state changes
   (newUtxoEntries, totalCoins) <-
-    foldInjectionData
-      hasFS
-      source
-      ( \(!acc, !coins) (addr, amount) ->
-          let txIn = initialFundsPseudoTxIn addr
-              txOut = mkBasicTxOut addr (inject amount)
-           in (Map.insert txIn txOut acc, coins <> amount)
-      )
-      (Map.empty, mempty)
+    foldInjectionData hasFS source addInitialFund (Map.empty, mempty)
 
   pure $ applyFunds newUtxoEntries totalCoins
   where

@@ -23,9 +23,9 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Transition (
-  registerInitialStakePools,
+  injectStakeCredentials,
+  injectStakePools,
   resetStakeDistribution,
-  shelleyRegisterInitialAccounts,
  )
 import Cardano.Ledger.Slot (
   BlockNo (..),
@@ -43,6 +43,8 @@ import Cardano.Protocol.TPraos.Rules.Tickn (
   TicknState,
  )
 import Cardano.Slotting.Slot (WithOrigin (..))
+import Control.Monad.Class.MonadST (MonadST)
+import Control.Monad.Class.MonadThrow (MonadThrow)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
 import Data.Functor.Identity (runIdentity)
@@ -51,6 +53,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Void (Void)
 import Numeric.Natural (Natural)
+import System.FS.API (HasFS)
 import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
@@ -185,14 +188,13 @@ mkOCertIssueNos (GenDelegs delegs0) =
 --
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
-  (EraGov era, EraStake era, EraCertState era, ShelleyEraAccounts era) =>
+  (EraGov era, EraStake era, EraCertState era, ShelleyEraAccounts era, MonadST m, MonadThrow m) =>
+  HasFS m h ->
   ShelleyGenesisStaking ->
   ChainState era ->
-  ChainState era
-registerGenesisStaking sgs cs@STS.ChainState {chainNes = oldChainNes} =
-  cs
-    { chainNes =
-        resetStakeDistribution $
-          shelleyRegisterInitialAccounts sgs $
-            registerInitialStakePools sgs oldChainNes
-    }
+  m (ChainState era)
+registerGenesisStaking hasFS sgs cs@STS.ChainState {chainNes = oldChainNes} = do
+  updatedNes <-
+    injectStakePools Testnet hasFS (EmbeddedInjection (sgsPools sgs)) oldChainNes
+      >>= injectStakeCredentials Testnet hasFS (EmbeddedInjection (sgsStake sgs))
+  pure $ cs {chainNes = resetStakeDistribution updatedNes}
