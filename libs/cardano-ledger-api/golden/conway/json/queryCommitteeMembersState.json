@@ -1,0 +1,78 @@
+[
+    {
+        "committee": {},
+        "epoch": 0,
+        "threshold": null
+    },
+    {
+        "committee": {
+            "keyHash-58e1b65718531b42494610c506cef10ff031fa817a8ff75c0ab180e7": {
+                "expiration": 250,
+                "hotCredsAuthStatus": {
+                    "contents": {
+                        "scriptHash": "4bb4efce5b9566c44aafce0437573d28d6b226cbb15cf8ff3601293c"
+                    },
+                    "tag": "MemberAuthorized"
+                },
+                "nextEpochChange": {
+                    "tag": "ToBeExpired"
+                },
+                "status": "Active"
+            },
+            "keyHash-65fc709a5e019b8aba76f6977c1c8770e4b36fa76f434efc588747b7": {
+                "expiration": 300,
+                "hotCredsAuthStatus": {
+                    "contents": null,
+                    "tag": "MemberResigned"
+                },
+                "nextEpochChange": {
+                    "contents": 350,
+                    "tag": "TermAdjusted"
+                },
+                "status": "Active"
+            },
+            "keyHash-a646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a": {
+                "expiration": 100,
+                "hotCredsAuthStatus": {
+                    "tag": "MemberNotAuthorized"
+                },
+                "nextEpochChange": {
+                    "tag": "ToBeRemoved"
+                },
+                "status": "Expired"
+            },
+            "keyHash-e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541": {
+                "expiration": 200,
+                "hotCredsAuthStatus": {
+                    "contents": {
+                        "keyHash": "92bf8969a49623af689a49861adf7639b25fd663c95733f147f44e71"
+                    },
+                    "tag": "MemberAuthorized"
+                },
+                "nextEpochChange": {
+                    "tag": "NoChangeExpected"
+                },
+                "status": "Active"
+            },
+            "scriptHash-b16b56f5ec064be6ac3cab6035efae86b366cc3dc4a0d571603d70e5": {
+                "expiration": null,
+                "hotCredsAuthStatus": {
+                    "contents": {
+                        "dataHash": "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314",
+                        "url": "https://example.com"
+                    },
+                    "tag": "MemberResigned"
+                },
+                "nextEpochChange": {
+                    "tag": "ToBeEnacted"
+                },
+                "status": "Unrecognized"
+            }
+        },
+        "epoch": 150,
+        "threshold": {
+            "denominator": 3,
+            "numerator": 2
+        }
+    }
+]

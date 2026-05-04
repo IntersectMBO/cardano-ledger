@@ -6,6 +6,7 @@
 module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryAccountsDepositsExamples,
   queryChainAccountStateExamples,
+  queryCommitteeMembersStateExamples,
   queryConstitutionExamples,
   queryConstitutionHashExamples,
   queryCurrentEpochNoExamples,
@@ -27,12 +28,24 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
 import Cardano.Base.IP (toIPv4, toIPv6)
 import Cardano.Ledger.Api.Governance (Constitution (..))
 import Cardano.Ledger.Api.State.Query (
+  CommitteeMemberState (..),
+  CommitteeMembersState (..),
   DefaultVote (..),
+  HotCredAuthStatus (..),
+  MemberStatus (..),
+  NextEpochChange (..),
   QueryPoolStateResult (..),
   StakeSnapshot (..),
   StakeSnapshots (..),
  )
-import Cardano.Ledger.BaseTypes (AnchorData, EpochNo (..), Port (..), StrictMaybe (..), textToDns)
+import Cardano.Ledger.BaseTypes (
+  AnchorData,
+  EpochNo (..),
+  Port (..),
+  StrictMaybe (..),
+  UnitInterval,
+  textToDns,
+ )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -55,6 +68,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Conway.Examples (exampleAnchor)
+import Test.Cardano.Ledger.Core.Rational (unsafeBoundRational)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Shelley.Examples (
   examplePoolDistr,
@@ -103,6 +117,63 @@ queryChainAccountStateExamples :: [ChainAccountState]
 queryChainAccountStateExamples =
   [ ChainAccountState (Coin 0) (Coin 0)
   , ChainAccountState (Coin 1_500_000_000_000_000) (Coin 8_000_000_000_000_000)
+  ]
+
+queryCommitteeMembersStateExamples :: [CommitteeMembersState]
+queryCommitteeMembersStateExamples =
+  [ CommitteeMembersState Map.empty Nothing (EpochNo 0)
+  , CommitteeMembersState
+      { csCommittee =
+          Map.fromList
+            [
+              ( KeyHashObj (mkKeyHash 1)
+              , CommitteeMemberState
+                  { cmsHotCredAuthStatus = MemberAuthorized (KeyHashObj (mkKeyHash 11))
+                  , cmsStatus = Active
+                  , cmsExpiration = Just (EpochNo 200)
+                  , cmsNextEpochChange = NoChangeExpected
+                  }
+              )
+            ,
+              ( KeyHashObj (mkKeyHash 2)
+              , CommitteeMemberState
+                  { cmsHotCredAuthStatus = MemberNotAuthorized
+                  , cmsStatus = Expired
+                  , cmsExpiration = Just (EpochNo 100)
+                  , cmsNextEpochChange = ToBeRemoved
+                  }
+              )
+            ,
+              ( ScriptHashObj (mkScriptHash 3)
+              , CommitteeMemberState
+                  { cmsHotCredAuthStatus = MemberResigned (Just exampleAnchor)
+                  , cmsStatus = Unrecognized
+                  , cmsExpiration = Nothing
+                  , cmsNextEpochChange = ToBeEnacted
+                  }
+              )
+            ,
+              ( KeyHashObj (mkKeyHash 4)
+              , CommitteeMemberState
+                  { cmsHotCredAuthStatus = MemberResigned Nothing
+                  , cmsStatus = Active
+                  , cmsExpiration = Just (EpochNo 300)
+                  , cmsNextEpochChange = TermAdjusted (EpochNo 350)
+                  }
+              )
+            ,
+              ( KeyHashObj (mkKeyHash 5)
+              , CommitteeMemberState
+                  { cmsHotCredAuthStatus = MemberAuthorized (ScriptHashObj (mkScriptHash 50))
+                  , cmsStatus = Active
+                  , cmsExpiration = Just (EpochNo 250)
+                  , cmsNextEpochChange = ToBeExpired
+                  }
+              )
+            ]
+      , csThreshold = Just (unsafeBoundRational (2 % 3) :: UnitInterval)
+      , csEpochNo = EpochNo 150
+      }
   ]
 
 querySPOStakeDistrExamples :: [Map (KeyHash StakePool) Coin]
