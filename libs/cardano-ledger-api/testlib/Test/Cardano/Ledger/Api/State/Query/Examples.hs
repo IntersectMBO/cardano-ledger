@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepStakeDistrExamples,
   queryDRepStateExamples,
   queryPoolParametersExamples,
+  queryPoolStateExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
   querySetSnapshotStakePoolDistrExamples,
@@ -24,7 +25,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
 
 import Cardano.Base.IP (toIPv4, toIPv6)
 import Cardano.Ledger.Api.Governance (Constitution (..))
-import Cardano.Ledger.Api.State.Query (DefaultVote (..))
+import Cardano.Ledger.Api.State.Query (DefaultVote (..), QueryPoolStateResult (..))
 import Cardano.Ledger.BaseTypes (AnchorData, EpochNo (..), Port (..), StrictMaybe (..), textToDns)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
 import Cardano.Ledger.Credential (Credential (..))
@@ -280,4 +281,26 @@ queryPoolParametersExamples =
             }
         )
       ]
+  ]
+
+queryPoolStateExamples :: [QueryPoolStateResult]
+queryPoolStateExamples =
+  [ QueryPoolStateResult Map.empty Map.empty Map.empty Map.empty
+  , QueryPoolStateResult
+      { qpsrStakePoolParams =
+          Map.fromList
+            [ (sppId exampleStakePoolParams, exampleStakePoolParams)
+            , (mkKeyHash 99, exampleStakePoolParams {sppId = mkKeyHash 99})
+            ]
+      , qpsrFutureStakePoolParams =
+          Map.singleton
+            (mkKeyHash 100)
+            (exampleStakePoolParams {sppId = mkKeyHash 100})
+      , qpsrRetiring = Map.singleton (mkKeyHash 99) (EpochNo 250)
+      , qpsrDeposits =
+          Map.fromList
+            [ (mkKeyHash 1, Coin 500_000_000)
+            , (mkKeyHash 99, Coin 500_000_000)
+            ]
+      }
   ]
