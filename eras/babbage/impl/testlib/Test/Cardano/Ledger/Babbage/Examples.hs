@@ -10,6 +10,7 @@
 module Test.Cardano.Ledger.Babbage.Examples (
   ledgerExamples,
   exampleBabbageNewEpochState,
+  exampleBabbageTx,
   exampleBabbageBasedTx,
   exampleBabbageBasedTopTx,
 ) where
@@ -26,8 +27,14 @@ import Cardano.Ledger.Plutus.Data (
   dataToBinaryData,
  )
 import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
-import Cardano.Ledger.Shelley.LedgerState (NewEpochState (..))
+import Cardano.Ledger.Shelley.LedgerState (
+  EraCertState (..),
+  NewEpochState (..),
+  StashedAVVMAddresses,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.State (EraStake)
+import Data.Default (Default)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map
@@ -42,7 +49,6 @@ import Test.Cardano.Ledger.Alonzo.Examples (
   exampleDatum,
   mkAlonzoBasedLedgerExamples,
  )
-import Test.Cardano.Ledger.Babbage.Era
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
 import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus)
@@ -73,19 +79,24 @@ ledgerExamples =
     exampleBabbageNewEpochState
     exampleBabbageTx
     NoGenesis
-  where
-    exampleBabbageTx :: Tx TopTx BabbageEra
-    exampleBabbageTx =
-      exampleBabbageBasedTopTx
-        & addShelleyBasedTopTxExampleFee
-        & addShelleyToBabbageExampleProposedPUpdates
-        & addShelleyToBabbageTxCerts
-        & addShelleyToConwayTxCerts
-        & addAlonzoToConwayExampleReqSigners
+
+exampleBabbageTx :: Tx TopTx BabbageEra
+exampleBabbageTx =
+  exampleBabbageBasedTopTx
+    & addShelleyBasedTopTxExampleFee
+    & addShelleyToBabbageExampleProposedPUpdates
+    & addShelleyToBabbageTxCerts
+    & addShelleyToConwayTxCerts
+    & addAlonzoToConwayExampleReqSigners
 
 exampleBabbageNewEpochState ::
-  ( BabbageEraTest era
+  ( BabbageEraPParams era
   , Value era ~ MaryValue
+  , EraTxOut era
+  , EraGov era
+  , EraStake era
+  , EraCertState era
+  , Default (StashedAVVMAddresses era)
   ) =>
   NewEpochState era
 exampleBabbageNewEpochState =

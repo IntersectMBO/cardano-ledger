@@ -18,4 +18,5 @@ spec =
       goldenJsonPParamsSpec @ConwayEra
     beforeAll (getDataFileName "golden/pparams-update.json") $
       goldenJsonPParamsUpdateSpec @ConwayEra
-    describe "Conway era golden tests" $ Golden.spec @ConwayEra
+    describe "Conway era golden tests" $ do
+      Golden.spec @ConwayEra

@@ -14,7 +14,7 @@
 * Make `Test.Cardano.Ledger.Mary.Imp.spec` accept `Proxy era`
 * In `Test.Cardano.Ledger.Mary.Examples`:
   - Remove `exampleMaryBasedShelleyTxBody`, `exampleMaryBasedTxBody`
-  - Add `exampleMaryBasedTx`
+  - Add `exampleMaryBasedTx`, `exampleMaryTx`
 
 ## 1.10.0.0
 

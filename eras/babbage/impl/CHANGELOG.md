@@ -34,7 +34,7 @@
 * Add `Test.Cardano.Ledger.Babbage.Imp.PoolSpec` module with `babbageEraSpecificSpec`
 * In `Test.Cardano.Ledger.Babbage.Examples`:
   - Remove `mkBabbageBasedExampleTx`, `exampleBabbageBasedTxBody`
-  - Add `exampleBabbageBasedTx`, `exampleBabbageBasedTopTx`
+  - Add `exampleBabbageBasedTx`, `exampleBabbageBasedTopTx`, `exampleBabbageTx`
 
 ## 1.13.0.0
 

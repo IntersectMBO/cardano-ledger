@@ -11,7 +11,10 @@ description:
 
 category: Network
 build-type: Simple
-data-files: cddl/data/allegra.cddl
+data-files:
+  cddl/data/allegra.cddl
+  golden/*.cbor
+
 extra-source-files: CHANGELOG.md
 
 source-repository head

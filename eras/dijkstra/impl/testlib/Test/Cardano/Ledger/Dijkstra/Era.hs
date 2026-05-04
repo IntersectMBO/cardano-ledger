@@ -18,10 +18,12 @@ import Cardano.Ledger.Plutus (Language (..))
 import Data.Coerce
 import Data.Maybe (fromJust)
 import Lens.Micro (lens)
+import Paths_cardano_ledger_dijkstra (getDataFileName)
 import Test.Cardano.Ledger.BlockHeader (TestBlockHeader (..))
 import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
+import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraTx)
 import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
@@ -31,6 +33,10 @@ instance EraTest DijkstraEra where
   mkTestAccountState _ptr = mkConwayTestAccountState
 
   accountsFromAccountsMap = coerce
+
+  mkEraFullPath = getDataFileName
+
+  exampleTx = exampleDijkstraTx
 
 class
   ( ConwayEraTest era

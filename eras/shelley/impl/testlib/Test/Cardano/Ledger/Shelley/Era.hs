@@ -30,10 +30,12 @@ import Data.Default
 import qualified Data.Map.Strict as Map
 import Data.Typeable
 import Lens.Micro
+import Paths_cardano_ledger_shelley (getDataFileName)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
+import Test.Cardano.Ledger.Shelley.Examples (exampleShelleyTx)
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 
 class
@@ -63,6 +65,10 @@ instance EraTest ShelleyEra where
   mkTestAccountState = mkShelleyTestAccountState
 
   accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  mkEraFullPath = getDataFileName
+
+  exampleTx = exampleShelleyTx
 
 instance ShelleyEraTest ShelleyEra
 

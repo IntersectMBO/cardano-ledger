@@ -9,9 +9,11 @@ module Test.Cardano.Ledger.Mary.Era (
 import Cardano.Ledger.Mary
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Plutus (emptyCostModels)
+import Paths_cardano_ledger_mary (getDataFileName)
 import Test.Cardano.Ledger.Allegra.Era
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Mary.Binary.Annotator ()
+import Test.Cardano.Ledger.Mary.Examples (exampleMaryTx)
 import Test.Cardano.Ledger.Mary.TreeDiff ()
 
 class
@@ -26,6 +28,10 @@ instance EraTest MaryEra where
   mkTestAccountState = mkShelleyTestAccountState
 
   accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  mkEraFullPath = getDataFileName
+
+  exampleTx = exampleMaryTx
 
 instance ShelleyEraTest MaryEra
 

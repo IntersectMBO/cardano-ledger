@@ -20,9 +20,11 @@ import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Plutus (Language (..))
 import Data.Coerce
 import Lens.Micro
+import Paths_cardano_ledger_conway (getDataFileName)
 import Test.Cardano.Ledger.Babbage.Era
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
+import Test.Cardano.Ledger.Conway.Examples (exampleConwayTx)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
@@ -43,6 +45,10 @@ instance EraTest ConwayEra where
   mkTestAccountState _mPtr = mkConwayTestAccountState
 
   accountsFromAccountsMap = coerce
+
+  mkEraFullPath = getDataFileName
+
+  exampleTx = exampleConwayTx
 
 instance ShelleyEraTest ConwayEra
 

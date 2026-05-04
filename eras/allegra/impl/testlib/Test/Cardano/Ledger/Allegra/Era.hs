@@ -12,8 +12,10 @@ import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.MemoBytes (EqRaw)
 import Cardano.Ledger.Plutus (emptyCostModels)
+import Paths_cardano_ledger_allegra (getDataFileName)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
+import Test.Cardano.Ledger.Allegra.Examples (exampleAllegraTx)
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Era
@@ -36,6 +38,10 @@ instance EraTest AllegraEra where
   mkTestAccountState = mkShelleyTestAccountState
 
   accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  mkEraFullPath = getDataFileName
+
+  exampleTx = exampleAllegraTx
 
 instance ShelleyEraTest AllegraEra
 
