@@ -29,6 +29,8 @@ module Test.Cardano.Ledger.Shelley.Examples (
   examplePoolDistr,
   exampleStakePoolParams,
   exampleTxIns,
+  exampleVrfVerKeyHash,
+  exampleProposedPPUpdates,
   exampleByronAddress,
   exampleShelleyScript,
   testShelleyGenesis,
