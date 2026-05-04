@@ -210,16 +210,15 @@ library cddl
     -Wunused-packages
 
   build-depends:
-    QuickCheck,
     antigen,
     base,
+    cardano-ledger-core:cddl,
     cardano-ledger-conway:cddl,
     cardano-ledger-core:cddl,
     cardano-ledger-dijkstra,
     cborg,
     cuddle,
     heredoc,
-    quickcheck-transformer,
     text,
 
 executable generate-cddl
@@ -265,6 +264,7 @@ test-suite tests
 
   build-depends:
     base,
+    cardano-data,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-babbage:testlib,
     cardano-ledger-binary:testlib,

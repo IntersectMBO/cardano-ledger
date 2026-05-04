@@ -25,7 +25,7 @@ module Cardano.Ledger.Huddle (
 import Cardano.Ledger.Core (Era)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.Comments ((//-))
-import Codec.CBOR.Cuddle.Huddle hiding (withAntiGen)
+import Codec.CBOR.Cuddle.Huddle
 import qualified Codec.CBOR.Cuddle.Huddle as Huddle hiding ((=:=), (=:~))
 import Data.Proxy (Proxy (..))
 import qualified Data.Text as T

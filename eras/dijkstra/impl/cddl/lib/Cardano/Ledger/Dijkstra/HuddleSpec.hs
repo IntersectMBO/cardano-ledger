@@ -34,9 +34,17 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
 
 import Cardano.Ledger.Conway.HuddleSpec hiding ()
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Huddle.Gen (genArrayTerm)
-import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
-import Codec.CBOR.Cuddle.CDDL.CBORGenerator (CBORGen, WrappedTerm (..), liftAntiGen, withAntiGen)
+import Cardano.Ledger.Huddle.Gen (
+  MonadGen (choose, liftGen),
+  WrappedTerm (..),
+  genArrayTerm,
+  genRule,
+  generateFromName,
+  scale,
+  shuffle,
+ )
+import Cardano.Ledger.Huddle.Gen qualified as Gen
+import Codec.CBOR.Cuddle.CDDL.CBORGenerator (CBORGen, liftAntiGen, withAntiGen)
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (zipWithM)
 import Data.Proxy (Proxy (..))
@@ -44,9 +52,6 @@ import Data.Text ()
 import Data.Text qualified as T
 import Data.Word (Word16, Word64)
 import Test.AntiGen (withAnnotation, (|!))
-import Test.QuickCheck (choose, shuffle)
-import Test.QuickCheck qualified as QC
-import Test.QuickCheck.GenT (liftGen)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -93,7 +98,13 @@ subTransactionsRule ::
   Proxy era ->
   Rule
 subTransactionsRule pname p =
-  pname =.= huddleRule1 @"nonempty_oset" p (huddleRule @"sub_transaction" p)
+  withCBORGen generate $
+    pname =.= huddleRule1 @"nonempty_oset" p (huddleRule @"sub_transaction" p)
+  where
+    generate = do
+      -- Limit the number of subtransactions generated to max 3, since they are quite large
+      nElems <- Gen.sized $ \sz -> choose (0, min sz 3)
+      S <$> generateMaybeTaggedSet nElems (scale (`div` 2) $ genRule @"sub_transaction" @era)
 
 subTransactionRule ::
   forall era.
@@ -891,7 +902,7 @@ instance HuddleRule "block_body" DijkstraEra where
 
 blockBodyGen :: CBORGen WrappedTerm
 blockBodyGen = do
-  numTxs <- liftGen . QC.sized $ \s -> choose (0 :: Int, s)
+  numTxs <- liftGen . Gen.sized $ \s -> choose (0 :: Int, s)
   txs <-
     mapM
       (\i -> withAntiGen (withAnnotation (T.pack $ show i)) $ generateFromName "transaction")
