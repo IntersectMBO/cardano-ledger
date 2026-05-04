@@ -84,6 +84,10 @@ jobs:
       with:
         use-sodium-vrf: false # default is true
 
+    - name: Install cleret
+      # Tag should match the one that's used in flake.nix
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
+
     - name: Install Haskell
       id: install-haskell
       uses: input-output-hk/actions/haskell@latest
@@ -145,10 +149,6 @@ jobs:
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-
 
-    - name: Install cleret
-      # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
-
     - name: Check workflow test matrix
       run: cabal build all --dry-run -v0 && cleret workflow check-test-matrix
 
@@ -172,13 +172,20 @@ jobs:
     - name: Build
       run: cabal build all
 
-    # Pass working directory to test jobs
-    - name: Archive working directory
+    - name: Make file paths relative
+      run: |
+        jq -c --arg root "$PWD/" '(.. | strings) |= ltrimstr($root)' \
+          dist-newstyle/cache/plan.json >plan.json
+        mv plan.json dist-newstyle/cache/plan.json
+
+    # Archive plan.json and local binaries
+    - name: Create state archive
       if: matrix.ghc == '9.6.7'
-      # pax format is needed to avoid unnecessary rebuilding, because the
-      # default format uses a one-second resolution for timestamps
-      run: tar --use-compress-program zstdmt --format posix --exclude-vcs -cf /var/tmp/state.tzst . && mv /var/tmp/state.tzst .
-    - name: Upload working directory archive
+      run: |
+        cleret cabal list-bins -i test -i exe |
+          xargs tar -caf state.tzst dist-newstyle/cache/plan.json
+
+    - name: Upload state archive
       if: matrix.ghc == '9.6.7'
       uses: actions/upload-artifact@v7
       with:
@@ -227,12 +234,8 @@ jobs:
     name: ${{ matrix.package }}-${{ matrix.ghc }}-${{ matrix.os }}
 
     env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-09-23"
-
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
-
       SECP_CACHE_VERSION: "2022-12-30"
 
     defaults:
@@ -240,35 +243,16 @@ jobs:
         shell: bash
 
     steps:
-    - name: Free up disk space
-      run: |
-        # Remove software and language runtimes we're not using
-        sudo rm -rf \
-          /opt/google/chrome \
-          /opt/microsoft/msedge \
-          /opt/microsoft/powershell \
-          /opt/pipx \
-          /usr/lib/mono \
-          /usr/local/julia* \
-          /usr/local/lib/android \
-          /usr/local/lib/node_modules \
-          /usr/local/share/chromium \
-          /usr/local/share/powershell \
-          /usr/share/dotnet \
-          /usr/share/swift
-        df -h /
+    - uses: actions/checkout@v6
 
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: false # default is true
 
-    - name: Install Haskell
-      id: install-haskell
-      uses: input-output-hk/actions/haskell@latest
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.16
+    - name: Install cleret
+      # Tag should match the one that's used in flake.nix
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
 
     - name: Download Mainnet Mirror
       if: matrix.package == 'cardano-ledger-byron'
@@ -286,58 +270,25 @@ jobs:
           mv epochs ..
           cd ..
         }
+        echo CARDANO_MAINNET_MIRROR=$PWD/epochs >> $GITHUB_ENV
 
     - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
       if: "${{ github.event_name == 'schedule'
             || contains(github.event.pull_request.title, 'nightly')
-            || github.event_name == 'workflow_dispatch' && github.event.inputs.nightly }}"
+            || github.event_name == 'workflow_dispatch' && inputs.nightly }}"
       run: |
         echo "NIGHTLY=true" >> $GITHUB_ENV
 
-    # Retrieve working directory from build jobs
-    - name: Download working directory archive
+    - name: Download state archive
       uses: actions/download-artifact@v8
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
 
-    - name: Unarchive working directory
-      run: tar -xf state.tzst --use-compress-program unzstd && rm state.tzst
-
-    - name: Cabal update
-      run: cabal update
-
-    # A dependencies.txt file should have been created by the build job, so we
-    # check if it exists and is not empty.
-    - name: Check dependencies to be used as cache keys
-      id: check-deps
-      run: |
-        ./scripts/file-not-null.sh dependencies.txt
-
-    - name: Restore cache
-      uses: actions/cache/restore@v5
-      id: restore-cabal-cache
-      env:
-        cache-name: cache-cabal-build
-      with:
-        path: |
-          ${{ steps.install-haskell.outputs.cabal-store }}
-        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
-        fail-on-cache-miss: true
+    - name: Unarchive state
+      run: tar -xf state.tzst && rm state.tzst
 
     - name: Run tests
-      run: |
-        export CARDANO_MAINNET_MIRROR="$(pwd)/epochs"
-        if [ -z "$NIGHTLY" ]; then
-          cabal test "${{ matrix.package }}"
-        else
-          TRIES=3
-          scripts/cabal-test-with-retries.sh "${{ matrix.package }}" "$TRIES"
-        fi
-
-    - name: Install cleret
-      if: always()
-      # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
+      run: cleret cabal test '${{ matrix.package }}'
 
     - name: Record test failures
       if: failure()
@@ -350,16 +301,6 @@ jobs:
         name: failures-${{ matrix.package }}-${{ matrix.ghc }}-${{ matrix.os }}
         path: failures.json
 
-    - name: Install doctest
-      run: |
-        BINDIR=$(cabal path --installdir)
-        cabal install doctest --flag cabal-doctest --ignore-project --overwrite-policy=always
-        echo "$BINDIR" >> ${GITHUB_PATH}
-
-    - name: Run doctests
-      if: matrix.ghc != '9.14.1'
-      run: scripts/doctest.sh "${{ matrix.package }}"
-
   test-summary:
     name: Summarize test failures
     runs-on: ubuntu-latest
@@ -368,6 +309,7 @@ jobs:
 
     steps:
     - name: Install cleret
+      # Tag should match the one that's used in flake.nix
       uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
 
     - name: Download test failures artifacts
@@ -397,6 +339,52 @@ jobs:
             echo 'Tests were ${{ needs.test.result }}'
             false;;
         esac
+
+  codegen:
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    env:
+      # current ref from: 27.02.2022
+      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+      SECP_CACHE_VERSION: "2022-12-30"
+      ghc-version: "9.6.7"
+      os: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install system dependencies
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: false # default is true
+
+    - name: Install cleret
+      # Tag should match the one that's used in flake.nix
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.4.0.1
+
+    - name: Download state archive
+      uses: actions/download-artifact@v8
+      with:
+        name: state-${{ env.ghc-version }}-${{ env.os }}
+
+    - name: Unarchive state
+      run: tar -xf state.tzst && rm state.tzst
+
+    - name: Generate CDDL files
+      run: |
+        cleret cabal run generate-cddl
+        git diff
+
+    - name: Generate Plutus examples
+      run: |
+        cleret cabal run plutus-preprocessor
+        git diff
 
   fourmolu:
     runs-on: ubuntu-latest
@@ -453,95 +441,6 @@ jobs:
 
     - name: Run nix formatter
       run: scripts/nix-format.sh
-
-  codegen:
-    needs: build
-
-    runs-on: ubuntu-latest
-
-    env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-09-23"
-
-      # current ref from: 27.02.2022
-      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
-
-      SECP_CACHE_VERSION: "2022-12-30"
-      ghc-version: "9.6.7"
-      os: ubuntu-latest
-
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Free up disk space
-      run: |
-        # Remove software and language runtimes we're not using
-        sudo rm -rf \
-          /opt/google/chrome \
-          /opt/microsoft/msedge \
-          /opt/microsoft/powershell \
-          /opt/pipx \
-          /usr/lib/mono \
-          /usr/local/julia* \
-          /usr/local/lib/android \
-          /usr/local/lib/node_modules \
-          /usr/local/share/chromium \
-          /usr/local/share/powershell \
-          /usr/share/dotnet \
-          /usr/share/swift
-        df -h /
-
-    - name: Install system dependencies
-      uses: input-output-hk/actions/base@latest
-      with:
-        use-sodium-vrf: false # default is true
-
-    - name: Install Haskell
-      id: install-haskell
-      uses: input-output-hk/actions/haskell@latest
-      with:
-        ghc-version: ${{ env.ghc-version }}
-        cabal-version: 3.16
-
-    # Retrieve working directory from build jobs
-    - name: Download working directory archive
-      uses: actions/download-artifact@v8
-      with:
-        name: state-${{ env.ghc-version }}-${{ env.os }}
-
-    - name: Unarchive working directory
-      run: tar -xf state.tzst --use-compress-program unzstd && rm state.tzst
-
-    - name: Cabal update
-      run: cabal update
-
-    # A dependencies.txt file should have been created by the build job, so we
-    # check if it exists and is not empty.
-    - name: Check dependencies to be used as cache keys
-      id: check-deps
-      run: |
-        ./scripts/file-not-null.sh dependencies.txt
-
-    - name: Restore cache
-      uses: actions/cache/restore@v5
-      id: restore-cabal-cache
-      env:
-        cache-name: cache-cabal-build
-      with:
-        path: |
-          ${{ steps.install-haskell.outputs.cabal-store }}
-        key: ${{ env.cache-name }}-${{ runner.os }}-${{ env.ghc-version }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
-        fail-on-cache-miss: true
-
-    - name: Run gen-cddl
-      run: ./scripts/gen-cddl.sh
-
-    - name: Run gen-plutus
-      run: ./scripts/gen-plutus.sh
 
   cabal-format:
     runs-on: ubuntu-latest
