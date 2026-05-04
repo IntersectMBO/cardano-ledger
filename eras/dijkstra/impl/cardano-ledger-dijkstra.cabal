@@ -13,6 +13,7 @@ category: Network
 build-type: Simple
 data-files:
   cddl/data/dijkstra.cddl
+  golden/*.cbor
   golden/*.json
 
 extra-source-files: CHANGELOG.md

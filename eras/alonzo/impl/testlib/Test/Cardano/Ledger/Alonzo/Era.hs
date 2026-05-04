@@ -16,8 +16,10 @@ import Cardano.Ledger.Alonzo.Plutus.Context
 import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.Plutus (Language (..))
 import Data.TreeDiff
+import Paths_cardano_ledger_alonzo (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
+import Test.Cardano.Ledger.Alonzo.Examples (exampleAlonzoTx)
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Common (Arbitrary)
 import Test.Cardano.Ledger.Mary.Era
@@ -44,6 +46,10 @@ instance EraTest AlonzoEra where
   mkTestAccountState = mkShelleyTestAccountState
 
   accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  mkEraFullPath = getDataFileName
+
+  exampleTx = exampleAlonzoTx
 
 instance ShelleyEraTest AlonzoEra
 

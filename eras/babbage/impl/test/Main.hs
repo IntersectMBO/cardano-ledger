@@ -9,7 +9,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Alonzo
 import qualified Test.Cardano.Ledger.Babbage.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Babbage.BinarySpec as BinarySpec
-import qualified Test.Cardano.Ledger.Babbage.GoldenSpec as Golden
+import qualified Test.Cardano.Ledger.Babbage.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Babbage.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Babbage.Imp as Imp
 import Test.Cardano.Ledger.Babbage.ImpTest ()
@@ -32,7 +32,7 @@ main =
   ledgerEraTestMain @BabbageEra $ do
     TxInfo.spec @BabbageEra
     GoldenTranslation.spec
-    Golden.spec
+    GoldenSpec.spec
     BinarySpec.spec
     CddlSpec.spec
     roundTripJsonEraSpec @BabbageEra

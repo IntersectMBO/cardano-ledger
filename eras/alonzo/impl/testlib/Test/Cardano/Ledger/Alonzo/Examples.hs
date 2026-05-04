@@ -11,6 +11,7 @@
 module Test.Cardano.Ledger.Alonzo.Examples (
   ledgerExamples,
   mkAlonzoBasedLedgerExamples,
+  exampleAlonzoTx,
   exampleAlonzoBasedTx,
   exampleAlonzoBasedTopTx,
   addAlonzoToConwayExampleReqSigners,
@@ -91,15 +92,6 @@ ledgerExamples =
     exampleAlonzoTx
     exampleAlonzoGenesis
   where
-    exampleAlonzoTx :: Tx TopTx AlonzoEra
-    exampleAlonzoTx =
-      exampleAlonzoBasedTopTx
-        & addShelleyBasedTopTxExampleFee
-        & addShelleyToBabbageExampleProposedPUpdates
-        & addShelleyToBabbageTxCerts
-        & addShelleyToConwayTxCerts
-        & addAlonzoToConwayExampleReqSigners
-
     exampleAlonzoGenesis =
       AlonzoGenesis
         { agCoinsPerUTxOWord = CoinPerWord $ Coin 1
@@ -112,6 +104,15 @@ ledgerExamples =
         , agMaxCollateralInputs = 30
         , agExtraConfig = Nothing
         }
+
+exampleAlonzoTx :: Tx TopTx AlonzoEra
+exampleAlonzoTx =
+  exampleAlonzoBasedTopTx
+    & addShelleyBasedTopTxExampleFee
+    & addShelleyToBabbageExampleProposedPUpdates
+    & addShelleyToBabbageTxCerts
+    & addShelleyToConwayTxCerts
+    & addAlonzoToConwayExampleReqSigners
 
 mkAlonzoBasedLedgerExamples ::
   forall era.

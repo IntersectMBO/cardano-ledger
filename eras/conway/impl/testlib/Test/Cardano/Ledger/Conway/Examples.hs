@@ -11,6 +11,7 @@
 -- don't care, we are only interested in serialisation, not validation.
 module Test.Cardano.Ledger.Conway.Examples (
   ledgerExamples,
+  exampleConwayTx,
   exampleConwayBasedTx,
   exampleConwayBasedTopTx,
   exampleAnchor,
@@ -76,7 +77,6 @@ import Test.Cardano.Ledger.Babbage.Examples (
   exampleBabbageBasedTx,
   exampleBabbageNewEpochState,
  )
-import Test.Cardano.Ledger.Conway.Era ()
 import Test.Cardano.Ledger.Conway.Genesis (expectedConwayGenesis)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
@@ -105,13 +105,13 @@ ledgerExamples =
     exampleBabbageNewEpochState
     exampleConwayTx
     expectedConwayGenesis
-  where
-    exampleConwayTx :: Tx TopTx ConwayEra
-    exampleConwayTx =
-      exampleConwayBasedTopTx
-        & addShelleyBasedTopTxExampleFee
-        & addShelleyToConwayTxCerts
-        & addAlonzoToConwayExampleReqSigners
+
+exampleConwayTx :: Tx TopTx ConwayEra
+exampleConwayTx =
+  exampleConwayBasedTopTx
+    & addShelleyBasedTopTxExampleFee
+    & addShelleyToConwayTxCerts
+    & addAlonzoToConwayExampleReqSigners
 
 exampleConwayBasedTopTx ::
   forall era.

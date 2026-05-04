@@ -12,9 +12,11 @@ import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Plutus (Language (..))
+import Paths_cardano_ledger_babbage (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
+import Test.Cardano.Ledger.Babbage.Examples (exampleBabbageTx)
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
@@ -28,9 +30,14 @@ class
 
 instance EraTest BabbageEra where
   zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV2]
+
   mkTestAccountState = mkShelleyTestAccountState
 
   accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  mkEraFullPath = getDataFileName
+
+  exampleTx = exampleBabbageTx
 
 instance ShelleyEraTest BabbageEra
 

@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Dijkstra.ImpTest (
   module Test.Cardano.Ledger.Conway.ImpTest,
-  exampleDijkstraGenesis,
   DijkstraEraImp,
   impDijkstraSatisfyNativeScript,
 ) where
@@ -35,8 +34,6 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Dijkstra (ApplyTxError, DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
-import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
 import Cardano.Ledger.Dijkstra.Rules (
   DijkstraLedgerPredFailure (..),
   DijkstraMempoolPredFailure,
@@ -60,11 +57,11 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.State
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
+import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
 
 instance ShelleyEraImp DijkstraEra where
@@ -129,18 +126,6 @@ instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure DijkstraEra where
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = StakeKeyNotRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = StakeKeyHasNonZeroAccountBalanceDELEG c
   injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into DijkstraEra"
-
-exampleDijkstraGenesis :: DijkstraGenesis
-exampleDijkstraGenesis =
-  DijkstraGenesis
-    { dgUpgradePParams =
-        UpgradeDijkstraPParams
-          { udppMaxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
-          , udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
-          , udppRefScriptCostStride = knownNonZeroBounded @25_600 -- 25 KiB
-          , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
-          }
-    }
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era

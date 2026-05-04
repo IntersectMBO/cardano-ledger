@@ -10,6 +10,7 @@
 -- don't care, we are only interested in serialisation, not validation.
 module Test.Cardano.Ledger.Mary.Examples (
   ledgerExamples,
+  exampleMaryTx,
   exampleMaryBasedTx,
   exampleMultiAsset,
   exampleMultiAssetValue,
@@ -57,14 +58,14 @@ ledgerExamples =
     (exampleMultiAssetValue 1)
     exampleMaryTx
     NoGenesis
-  where
-    exampleMaryTx :: Tx TopTx MaryEra
-    exampleMaryTx =
-      exampleMaryBasedTx
-        & addShelleyBasedTopTxExampleFee
-        & addShelleyToBabbageExampleProposedPUpdates
-        & addShelleyToBabbageTxCerts
-        & addShelleyToConwayTxCerts
+
+exampleMaryTx :: Tx TopTx MaryEra
+exampleMaryTx =
+  exampleMaryBasedTx
+    & addShelleyBasedTopTxExampleFee
+    & addShelleyToBabbageExampleProposedPUpdates
+    & addShelleyToBabbageTxCerts
+    & addShelleyToConwayTxCerts
 
 -- Complete transaction which is compatible with any era starting with Mary.
 -- This transaction forms the basis on which future era transactions will be

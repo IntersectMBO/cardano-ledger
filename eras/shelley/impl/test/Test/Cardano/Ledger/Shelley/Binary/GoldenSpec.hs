@@ -12,7 +12,6 @@ import Test.Cardano.Ledger.Shelley.Binary.Golden (
   goldenNewEpochStateExpectation,
   shelleyDecodeDuplicateDelegCertSucceeds,
  )
-import Test.Cardano.Ledger.Shelley.Era ()
 
 spec :: Spec
 spec =

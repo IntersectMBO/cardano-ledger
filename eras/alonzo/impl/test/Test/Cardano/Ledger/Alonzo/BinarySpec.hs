@@ -10,7 +10,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (zipMemoRawType)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data (..))
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import qualified Test.Cardano.Ledger.Alonzo.Binary.Golden as Golden
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
 import Test.Cardano.Ledger.Alonzo.Binary.Twiddle ()
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
@@ -43,4 +42,3 @@ spec = do
     decoderEquivalenceEraSpec @AlonzoEra @(TxDats AlonzoEra)
     decoderEquivalenceEraSpec @AlonzoEra @(Redeemers AlonzoEra)
   Binary.txSizeSpec @AlonzoEra
-  Golden.spec @AlonzoEra
