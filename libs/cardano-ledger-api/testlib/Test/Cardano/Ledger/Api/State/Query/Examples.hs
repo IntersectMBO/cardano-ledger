@@ -14,12 +14,14 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryPoolParametersExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
+  queryStakePoolDefaultVoteExamples,
   queryStakePoolDelegsAndRewardsExamples,
   queryStakePoolRelaysExamples,
 ) where
 
 import Cardano.Base.IP (toIPv4, toIPv6)
 import Cardano.Ledger.Api.Governance (Constitution (..))
+import Cardano.Ledger.Api.State.Query (DefaultVote (..))
 import Cardano.Ledger.BaseTypes (AnchorData, EpochNo (..), Port (..), StrictMaybe (..), textToDns)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -88,6 +90,13 @@ querySPOStakeDistrExamples =
       , (mkKeyHash 2, Coin 0)
       , (mkKeyHash 3, Coin 50)
       ]
+  ]
+
+queryStakePoolDefaultVoteExamples :: [DefaultVote]
+queryStakePoolDefaultVoteExamples =
+  [ DefaultNo
+  , DefaultAbstain
+  , DefaultNoConfidence
   ]
 
 queryStakePoolDelegsAndRewardsExamples ::
