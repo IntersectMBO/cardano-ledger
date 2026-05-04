@@ -173,6 +173,7 @@ jobs:
     # change when `scripts/doctest.sh` runs it
     - name: Install doctest
       id: install-doctest
+      if: matrix.ghc == '9.6.7'
       run: |
         if [[ -z "$(type -t doctest)" ]]
         then
@@ -199,6 +200,10 @@ jobs:
         path: state.tzst
         overwrite: true
         retention-days: 1
+
+    - name: Run doctests
+      if: ${{ steps.install-doctest.outcome == 'success' }}
+      run: scripts/doctest.sh
 
   test:
     needs: build
