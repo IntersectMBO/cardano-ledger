@@ -186,7 +186,7 @@ instance Era era => DecCBOR (DijkstraNativeScript era) where
 instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   decCBOR =
     withSTxBothLevels @l $ \case
-      STopTx -> decDijkstraTopTxCBOR True
+      STopTx -> decodeDijkstraTopTx True
       SSubTx ->
         decode $
           RecD DijkstraSubTx
@@ -197,31 +197,29 @@ instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
 
 deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)
 
-decDijkstraTopTxCBOR ::
+decodeDijkstraTopTx ::
   ( DecCBOR (TxBody TopTx era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxAuxData era)
   ) =>
   Bool -> Decoder s (DijkstraTx TopTx era)
-decDijkstraTopTxCBOR allowIsValid =
-  decodeListLen >>= \case
-    4 | allowIsValid -> do
+decodeDijkstraTopTx allowIsValid =
+  fst <$> do
+    let isValidBackwardsCompatibleLength isValidFlagSupplied =
+          if allowIsValid && isValidFlagSupplied then 4 else 3
+    decodeRecordNamed "DijkstraTx" (isValidBackwardsCompatibleLength . snd) $ do
       body <- decCBOR
       wits <- decCBOR
-      isValid <-
-        decCBOR
-          >>= \case
-            True -> pure (IsValid True)
-            False -> fail "value `false` not allowed for `isValid`"
+      tokenType <- peekTokenType
+      isValidFlagSupplied <-
+        if allowIsValid && tokenType == TypeBool
+          then
+            decCBOR >>= \case
+              True -> pure True
+              False -> fail "Value `false` not allowed for `isValid`"
+          else pure False
       aux <- decodeNullStrictMaybe decCBOR
-      pure $ DijkstraTx body wits isValid aux
-    3 -> do
-      DijkstraTx
-        <$> decCBOR
-        <*> decCBOR
-        <*> pure (IsValid True)
-        <*> decodeNullStrictMaybe decCBOR
-    n -> fail $ "Unexpected list length: " <> show n <> ". Expected: 4 or 3."
+      pure (DijkstraTx body wits (IsValid True) aux, isValidFlagSupplied)
 
 instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
   decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
@@ -232,7 +230,7 @@ instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
           (\x -> (IntSet.size x, x))
           (decCBOR @Word16)
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
-    txs <- decodeSeq (decDijkstraTopTxCBOR @DijkstraEra False)
+    txs <- decodeSeq (decodeDijkstraTopTx @DijkstraEra False)
     perasCert <- decodeNullStrictMaybe decCBOR
 
     let txsLength = Seq.length txs
