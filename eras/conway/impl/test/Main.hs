@@ -8,6 +8,8 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Tx (tierRefScriptFee)
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Alonzo
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Conway.Imp as Imp
+import Test.Cardano.Ledger.Era
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
 import qualified Test.Cardano.Ledger.Conway.GoldenSpec as GoldenSpec
