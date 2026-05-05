@@ -1,0 +1,29 @@
+[
+    {
+        "pools": {},
+        "total": {
+            "stakeGo": 1,
+            "stakeMark": 1,
+            "stakeSet": 1
+        }
+    },
+    {
+        "pools": {
+            "a646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a": {
+                "stakeGo": 250000000,
+                "stakeMark": 0,
+                "stakeSet": 500000000
+            },
+            "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541": {
+                "stakeGo": 800000000,
+                "stakeMark": 1000000000,
+                "stakeSet": 900000000
+            }
+        },
+        "total": {
+            "stakeGo": 4000000000,
+            "stakeMark": 5000000000,
+            "stakeSet": 4500000000
+        }
+    }
+]

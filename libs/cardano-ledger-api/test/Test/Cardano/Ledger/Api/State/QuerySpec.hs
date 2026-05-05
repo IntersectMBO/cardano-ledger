@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Api.State.QuerySpec (spec, eraLedgerStateQueryNoFromJSONGoldenSpec) where
+module Test.Cardano.Ledger.Api.State.QuerySpec (spec) where
 
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.State.Query
@@ -32,7 +32,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (ToJSON)
 import Data.Char (toLower)
 import Data.Default (Default (..))
 import Data.Foldable (foldMap')
@@ -40,7 +40,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import qualified Data.VMap as VMap
 import Lens.Micro ((&), (.~), (^.))
 import Paths_cardano_ledger_api (getDataFileName)
@@ -87,45 +86,13 @@ spec = do
 goldenFilePath :: forall era. Era era => String -> String -> String
 goldenFilePath ext fname = "golden" </> (toLower <$> eraName @era) </> ext </> fname <.> ext
 
-eraLedgerStateQueryCBORGoldenSpec ::
-  forall era q.
-  (Era era, Eq q, Show q, EncCBOR q, DecCBOR q) =>
-  String -> [q] -> Spec
-eraLedgerStateQueryCBORGoldenSpec qname xs =
-  describe "CBOR" $
-    cborGoldenSpec getDataFileName (goldenFilePath @era "cbor" qname) (eraProtVerHigh @era) xs
-
-eraLedgerStateQueryJSONGoldenSpec ::
-  forall era q.
-  (Era era, Eq q, ToExpr q, NFData q, ToJSON q, FromJSON q, Typeable q) =>
-  String -> [q] -> Spec
-eraLedgerStateQueryJSONGoldenSpec qname xs =
-  describe "JSON" $
-    aesonGoldenSpec getDataFileName (goldenFilePath @era "json" qname) xs
-
-eraLedgerStateQueryJSONSnapshotGoldenSpec ::
-  forall era q.
-  (ToJSON q, Typeable q, Era era) =>
-  String -> [q] -> Spec
-eraLedgerStateQueryJSONSnapshotGoldenSpec qname xs =
-  describe "JSON Snapshot" $
-    itGoldenToJSON getDataFileName (goldenFilePath @era "json" qname) xs
-
 eraLedgerStateQueryGoldenSpec ::
-  forall era q.
-  (Era era, Eq q, ToExpr q, NFData q, Show q, ToJSON q, FromJSON q, EncCBOR q, DecCBOR q) =>
-  String -> [q] -> Spec
-eraLedgerStateQueryGoldenSpec qname xs = describe qname $ do
-  eraLedgerStateQueryCBORGoldenSpec @era qname xs
-  eraLedgerStateQueryJSONGoldenSpec @era qname xs
-
-eraLedgerStateQueryNoFromJSONGoldenSpec ::
   forall era q.
   (Era era, Eq q, Show q, ToJSON q, EncCBOR q, DecCBOR q) =>
   String -> [q] -> Spec
-eraLedgerStateQueryNoFromJSONGoldenSpec qname xs = describe qname $ do
-  eraLedgerStateQueryCBORGoldenSpec @era qname xs
-  eraLedgerStateQueryJSONSnapshotGoldenSpec @era qname xs
+eraLedgerStateQueryGoldenSpec qname xs = describe qname $ do
+  cborGoldenSpec getDataFileName (goldenFilePath @era "cbor" qname) (eraProtVerHigh @era) xs
+  itGoldenToJSON getDataFileName (goldenFilePath @era "json" qname) xs
 
 latestErasSpec ::
   forall era.
@@ -139,10 +106,10 @@ latestErasSpec =
   describe (eraName @era) $ do
     describe "Golden" $ do
       eraLedgerStateQueryGoldenSpec @era "queryAccountsDeposits" queryAccountsDepositsExamples
-      eraLedgerStateQueryNoFromJSONGoldenSpec @era
+      eraLedgerStateQueryGoldenSpec @era
         "queryChainAccountState"
         queryChainAccountStateExamples
-      eraLedgerStateQueryNoFromJSONGoldenSpec @era
+      eraLedgerStateQueryGoldenSpec @era
         "queryCommitteeMembersState"
         queryCommitteeMembersStateExamples
       eraLedgerStateQueryGoldenSpec @era "queryConstitution" (queryConstitutionExamples @era)
@@ -153,23 +120,23 @@ latestErasSpec =
       eraLedgerStateQueryGoldenSpec @era "queryDRepStakeDistr" queryDRepStakeDistrExamples
       eraLedgerStateQueryGoldenSpec @era "queryDRepState" queryDRepStateExamples
       eraLedgerStateQueryGoldenSpec @era "queryPoolParameters" queryPoolParametersExamples
-      eraLedgerStateQueryCBORGoldenSpec @era "queryPoolState" queryPoolStateExamples
-      eraLedgerStateQueryNoFromJSONGoldenSpec @era "queryProposals" (queryProposalsExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryPoolState" queryPoolStateExamples
+      eraLedgerStateQueryGoldenSpec @era "queryProposals" (queryProposalsExamples @era)
       eraLedgerStateQueryGoldenSpec @era
         "queryRegisteredDRepStakeDistr"
         queryRegisteredDRepStakeDistrExamples
       eraLedgerStateQueryGoldenSpec @era "querySPOStakeDistr" querySPOStakeDistrExamples
-      eraLedgerStateQueryNoFromJSONGoldenSpec @era
+      eraLedgerStateQueryGoldenSpec @era
         "querySetSnapshotStakePoolDistr"
         querySetSnapshotStakePoolDistrExamples
-      eraLedgerStateQueryCBORGoldenSpec @era
+      eraLedgerStateQueryGoldenSpec @era
         "queryStakePoolDefaultVote"
         queryStakePoolDefaultVoteExamples
       eraLedgerStateQueryGoldenSpec @era
         "queryStakePoolDelegsAndRewards"
         queryStakePoolDelegsAndRewardsExamples
       eraLedgerStateQueryGoldenSpec @era "queryStakePoolRelays" queryStakePoolRelaysExamples
-      eraLedgerStateQueryCBORGoldenSpec @era "queryStakeSnapshots" queryStakeSnapshotsExamples
+      eraLedgerStateQueryGoldenSpec @era "queryStakeSnapshots" queryStakeSnapshotsExamples
     describe "Roundtrip" $ do
       prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
       prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots

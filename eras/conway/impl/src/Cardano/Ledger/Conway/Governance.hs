@@ -228,7 +228,7 @@ import Control.DeepSeq (NFData (..))
 import Control.Monad (guard)
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader (ReaderT, ask)
-import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson (ToJSON (..), Value (..), (.=))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
@@ -550,6 +550,13 @@ instance DecCBOR DefaultVote where
       2 -> pure DefaultNoConfidence
       _ -> fail $ "Invalid DefaultVote tag " ++ show tag
   {-# INLINE decCBOR #-}
+
+instance ToJSON DefaultVote where
+  toJSON defaultVote =
+    case defaultVote of
+      DefaultNo -> String "DefaultNo"
+      DefaultAbstain -> String "DefaultAbstain"
+      DefaultNoConfidence -> String "DefaultNoConfidence"
 
 defaultStakePoolVote ::
   ConwayEraAccounts era =>

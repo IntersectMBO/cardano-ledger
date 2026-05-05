@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -91,7 +92,15 @@ module Cardano.Ledger.Api.State.Query (
 
 import Cardano.Ledger.Api.State.Query.Account as Account
 import Cardano.Ledger.Api.State.Query.Governance as Governance
-import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, ProtVer (..), strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (
+  EpochNo,
+  KeyValuePairs (..),
+  Network,
+  NonZero,
+  ProtVer (..),
+  ToKeyValuePairs (..),
+  strictMaybeToMaybe,
+ )
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
@@ -124,6 +133,8 @@ import Cardano.Ledger.DRep (credToDRep, dRepToCred)
 import Cardano.Ledger.Shelley.LedgerState
 import Control.DeepSeq
 import Control.Monad (guard)
+import Data.Aeson (ToJSON (..), object, pairs, (.=))
+import qualified Data.Aeson as Aeson
 import Data.Foldable (fold, foldMap')
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -446,7 +457,8 @@ data QueryPoolStateResult = QueryPoolStateResult
   , qpsrRetiring :: !(Map (KeyHash StakePool) EpochNo)
   , qpsrDeposits :: !(Map (KeyHash StakePool) Coin)
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs QueryPoolStateResult
 
 instance EncCBOR QueryPoolStateResult where
   encCBOR (QueryPoolStateResult a b c d) =
@@ -460,6 +472,15 @@ instance DecCBOR QueryPoolStateResult where
     qpsrDeposits <- decCBOR
     pure
       QueryPoolStateResult {qpsrStakePoolParams, qpsrFutureStakePoolParams, qpsrRetiring, qpsrDeposits}
+
+instance ToKeyValuePairs QueryPoolStateResult where
+  toKeyValuePairs qpsr@(QueryPoolStateResult _ _ _ _) =
+    let QueryPoolStateResult {..} = qpsr
+     in [ "stakePoolParams" .= qpsrStakePoolParams
+        , "futureStakePoolParams" .= qpsrFutureStakePoolParams
+        , "retiring" .= qpsrRetiring
+        , "deposits" .= qpsrDeposits
+        ]
 
 mkQueryPoolStateResult ::
   (forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x) ->
@@ -537,6 +558,22 @@ instance DecCBOR StakeSnapshot where
       <*> decCBOR
       <*> decCBOR
 
+instance ToJSON StakeSnapshot where
+  toJSON = object . stakeSnapshotToPair
+  toEncoding = pairs . mconcat . stakeSnapshotToPair
+
+stakeSnapshotToPair :: Aeson.KeyValue e a => StakeSnapshot -> [a]
+stakeSnapshotToPair
+  StakeSnapshot
+    { ssMarkPool
+    , ssSetPool
+    , ssGoPool
+    } =
+    [ "stakeMark" .= ssMarkPool
+    , "stakeSet" .= ssSetPool
+    , "stakeGo" .= ssGoPool
+    ]
+
 data StakeSnapshots = StakeSnapshots
   { ssStakeSnapshots :: !(Map (KeyHash StakePool) StakeSnapshot)
   , ssMarkTotal :: !(NonZero Coin)
@@ -569,6 +606,28 @@ instance DecCBOR StakeSnapshots where
       <*> decCBOR
       <*> decCBOR
       <*> decCBOR
+
+instance ToJSON StakeSnapshots where
+  toJSON = object . stakeSnapshotsToPair
+  toEncoding = pairs . mconcat . stakeSnapshotsToPair
+
+stakeSnapshotsToPair ::
+  Aeson.KeyValue e a => StakeSnapshots -> [a]
+stakeSnapshotsToPair
+  StakeSnapshots
+    { ssStakeSnapshots
+    , ssMarkTotal
+    , ssSetTotal
+    , ssGoTotal
+    } =
+    [ "pools" .= ssStakeSnapshots
+    , "total"
+        .= object
+          [ "stakeMark" .= ssMarkTotal
+          , "stakeSet" .= ssSetTotal
+          , "stakeGo" .= ssGoTotal
+          ]
+    ]
 
 -- | Report stake per pool per snapshot as well as total active stake per snapshot.
 --
