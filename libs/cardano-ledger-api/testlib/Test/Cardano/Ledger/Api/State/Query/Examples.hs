@@ -10,10 +10,12 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryConstitutionExamples,
   queryConstitutionHashExamples,
   queryCurrentEpochNoExamples,
+  queryCurrentPParamsExamples,
   queryDRepDelegateesExamples,
   queryDRepDelegationsExamples,
   queryDRepStakeDistrExamples,
   queryDRepStateExamples,
+  queryFuturePParamsExamples,
   queryGovStateExamples,
   queryPoolParametersExamples,
   queryPoolStateExamples,
@@ -41,6 +43,17 @@ import Cardano.Ledger.Api.Governance (
   RatifyState (..),
   Vote (..),
  )
+import Cardano.Ledger.Api.PParams (
+  PParams,
+  ppEMaxL,
+  ppKeyDepositL,
+  ppMaxBBSizeL,
+  ppMaxBHSizeL,
+  ppMaxTxSizeL,
+  ppMinPoolCostL,
+  ppNOptL,
+  ppPoolDepositL,
+ )
 import Cardano.Ledger.Api.State.Query (
   CommitteeMemberState (..),
   CommitteeMembersState (..),
@@ -54,6 +67,7 @@ import Cardano.Ledger.Api.State.Query (
  )
 import Cardano.Ledger.BaseTypes (
   AnchorData,
+  EpochInterval (..),
   EpochNo (..),
   Port (..),
   StrictMaybe (..),
@@ -86,6 +100,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Examples (
   exampleAnchor,
   exampleProposalProcedure,
@@ -124,6 +139,21 @@ queryCurrentEpochNoExamples =
   , EpochNo 500
   , EpochNo maxBound
   ]
+
+populatedPParams :: EraPParams era => PParams era
+populatedPParams =
+  def
+    & ppMaxBBSizeL .~ 90112
+    & ppMaxTxSizeL .~ 16384
+    & ppMaxBHSizeL .~ 1100
+    & ppKeyDepositL .~ Coin 2_000_000
+    & ppPoolDepositL .~ Coin 500_000_000
+    & ppMinPoolCostL .~ Coin 340_000_000
+    & ppEMaxL .~ EpochInterval 18
+    & ppNOptL .~ 500
+
+queryCurrentPParamsExamples :: EraPParams era => [PParams era]
+queryCurrentPParamsExamples = [def, populatedPParams]
 
 queryConstitutionHashExamples :: [SafeHash AnchorData]
 queryConstitutionHashExamples =
@@ -457,6 +487,9 @@ queryPoolStateExamples =
             ]
       }
   ]
+
+queryFuturePParamsExamples :: EraPParams era => [Maybe (PParams era)]
+queryFuturePParamsExamples = [Nothing, Just def, Just populatedPParams]
 
 queryGovStateExamples ::
   EraPParams era =>

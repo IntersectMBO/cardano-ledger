@@ -52,10 +52,12 @@ import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryConstitutionExamples,
   queryConstitutionHashExamples,
   queryCurrentEpochNoExamples,
+  queryCurrentPParamsExamples,
   queryDRepDelegateesExamples,
   queryDRepDelegationsExamples,
   queryDRepStakeDistrExamples,
   queryDRepStateExamples,
+  queryFuturePParamsExamples,
   queryGovStateExamples,
   queryPoolParametersExamples,
   queryPoolStateExamples,
@@ -117,10 +119,12 @@ latestErasSpec =
       eraLedgerStateQueryGoldenSpec @era "queryConstitution" (queryConstitutionExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryConstitutionHash" queryConstitutionHashExamples
       eraLedgerStateQueryGoldenSpec @era "queryCurrentEpochNo" queryCurrentEpochNoExamples
+      eraLedgerStateQueryGoldenSpec @era "queryCurrentPParams" (queryCurrentPParamsExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryDRepDelegatees" queryDRepDelegateesExamples
       eraLedgerStateQueryGoldenSpec @era "queryDRepDelegations" queryDRepDelegationsExamples
       eraLedgerStateQueryGoldenSpec @era "queryDRepStakeDistr" queryDRepStakeDistrExamples
       eraLedgerStateQueryGoldenSpec @era "queryDRepState" queryDRepStateExamples
+      eraLedgerStateQueryGoldenSpec @era "queryFuturePParams" (queryFuturePParamsExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryGovState" (queryGovStateExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryPoolParameters" queryPoolParametersExamples
       eraLedgerStateQueryGoldenSpec @era "queryPoolState" queryPoolStateExamples

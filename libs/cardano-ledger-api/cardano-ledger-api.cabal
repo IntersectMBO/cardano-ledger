@@ -120,6 +120,7 @@ library testlib
     containers,
     data-default,
     generic-random,
+    microlens,
     prettyprinter,
 
 test-suite cardano-ledger-api-test
