@@ -212,6 +212,7 @@ instance
   , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
   , InjectRuleFailure "SUBLEDGER" Conway.ConwayLedgerPredFailure era
   , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBDELEG" Shelley.AccountAlreadyRegistered era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   STS (SUBLEDGER era)
@@ -228,8 +229,8 @@ instance
 dijkstraSubLedgersTransition ::
   forall era.
   ( EraTx era
-  , ConwayEraTxBody era
   , ConwayEraGov era
+  , ConwayEraTxBody era
   , EraRule "SUBLEDGER" era ~ SUBLEDGER era
   , EraRule "SUBGOV" era ~ SUBGOV era
   , EraRule "SUBUTXOW" era ~ SUBUTXOW era

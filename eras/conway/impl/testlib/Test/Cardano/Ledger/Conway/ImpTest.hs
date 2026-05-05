@@ -1914,7 +1914,7 @@ instance InjectRuleFailure "CERT" Shelley.ShelleyDelegPredFailure ConwayEra wher
   injectFailure = DelegFailure . injectFailure
 
 instance InjectRuleFailure "DELEG" Shelley.ShelleyDelegPredFailure ConwayEra where
-  injectFailure (Shelley.StakeKeyAlreadyRegisteredDELEG c) = StakeKeyRegisteredDELEG c
+  injectFailure (Shelley.DelegAccountAlreadyRegistered c) = DelegAccountAlreadyRegistered c
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = StakeKeyNotRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = StakeKeyHasNonZeroAccountBalanceDELEG c
   injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into ConwayEra"

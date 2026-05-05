@@ -12,3 +12,6 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 type instance EraRuleFailure "DELEG" BabbageEra = Shelley.ShelleyDelegPredFailure BabbageEra
 
 instance InjectRuleFailure "DELEG" Shelley.ShelleyDelegPredFailure BabbageEra
+
+instance InjectRuleFailure "DELEG" Shelley.AccountAlreadyRegistered BabbageEra where
+  injectFailure = Shelley.DelegAccountAlreadyRegistered

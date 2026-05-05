@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain (
   ledgerTraceFromBlockWithRestrictedUTxO,
   chainSstWithTick,
   poolTraceFromBlock,
-  TestingLedger,
   splitTrace,
   forEachEpochTrace,
   traceLen,
@@ -42,16 +41,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertStateL,
   lsUTxOStateL,
  )
-import Cardano.Ledger.Shelley.Rules (
-  DELEG,
-  DelegEnv (..),
-  LedgerEnv (..),
-  POOL,
-  PoolEnv (..),
-  PoolEvent,
-  ShelleyPoolPredFailure,
-  ledgerPpL,
- )
+import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.BlockHeader (
   BHeader (..),
@@ -113,15 +104,6 @@ traceLen = 100
 
 longTraceLen :: Word64
 longTraceLen = 150
-
-type TestingLedger era ledger =
-  ( BaseM ledger ~ ReaderT Globals Identity
-  , Environment ledger ~ LedgerEnv era
-  , State ledger ~ LedgerState era
-  , Embed (EraRule "DELEGS" era) ledger
-  , Embed (EraRule "UTXOW" era) ledger
-  , STS ledger
-  )
 
 -- ===================================================
 
@@ -247,6 +229,9 @@ delegTraceFromBlock ::
   ( ChainProperty era
   , ShelleyEraTxBody era
   , ShelleyEraAccounts era
+  , EraRule "DELEG" era ~ Shelley.DELEG era
+  , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
+  , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->

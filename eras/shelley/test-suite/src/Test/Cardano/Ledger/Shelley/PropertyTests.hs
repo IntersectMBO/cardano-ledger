@@ -13,21 +13,13 @@ module Test.Cardano.Ledger.Shelley.PropertyTests (
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, SlotNo)
-import Cardano.Ledger.Block (BbodySignal)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
-import Cardano.Ledger.Shelley.Rules (
-  BbodyEnv,
-  LedgerEnv,
-  POOL,
-  PoolEvent,
-  ShelleyBbodyState,
-  ShelleyLedgersEnv,
-  ShelleyPoolPredFailure,
- )
+import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknEnv, TicknState)
 import Control.State.Transition
@@ -99,6 +91,9 @@ commonTests ::
   , EraRule "POOL" era ~ POOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era
+  , EraRule "DELEG" era ~ Shelley.DELEG era
+  , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
+  , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>
   [TestTree]
 commonTests =
