@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Change `Signal` to `StAnnTx TopTx era` for: `ConwayLEDGER`, `ConwayMEMPOOL`, `ConwayUTXOW`, `ConwayUTXO`, `ConwayUTXOS`
 * Change `conwayRegisterInitialFundsThenStaking` to require `MonadIO`, `MonadThrow`, and accept a `HasFS m h` parameter
 * Remove `ToCBOR` and `FromCBOR` instances for `PulsingSnapshot`, `EnactState`, `ConwayGovPredFailure`
 * Add `validateRefScriptSize`, `updateDormantDRepExpiries`, `updateVotingDRepExpiries`

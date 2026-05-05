@@ -210,7 +210,7 @@ instance
   STS (DijkstraSUBUTXOW era)
   where
   type State (DijkstraSUBUTXOW era) = UTxOState era
-  type Signal (DijkstraSUBUTXOW era) = Tx SubTx era
+  type Signal (DijkstraSUBUTXOW era) = StAnnTx SubTx era
   type Environment (DijkstraSUBUTXOW era) = SubUtxoEnv era
   type BaseM (DijkstraSUBUTXOW era) = ShelleyBase
   type PredicateFailure (DijkstraSUBUTXOW era) = DijkstraSubUtxowPredFailure era
@@ -269,9 +269,10 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env@(SubUtxoEnv _ pp certState scriptsProvided originalUtxo _), utxoState, tx) <-
+  TRC (env@(SubUtxoEnv _ pp certState scriptsProvided originalUtxo _), utxoState, stAnnTx) <-
     judgmentContext
-  let txBody = tx ^. bodyTxL
+  let tx = stAnnTx ^. txStAnnTxG
+      txBody = tx ^. bodyTxL
       witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
 
   {- ∀[ (vk , σ) ∈ vKeySigs ] isSigned vk (txidBytes txId) σ -}
@@ -305,7 +306,7 @@ dijkstraSubUtxowTransition = do
 
   runTest $ validateGuardDatums scriptsProvided txBody
 
-  trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, tx)
+  trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, stAnnTx)
 
 instance
   ( STS (DijkstraSUBUTXO era)

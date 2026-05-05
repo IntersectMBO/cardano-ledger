@@ -216,7 +216,7 @@ instance
   STS (DijkstraSUBLEDGER era)
   where
   type State (DijkstraSUBLEDGER era) = LedgerState era
-  type Signal (DijkstraSUBLEDGER era) = Tx SubTx era
+  type Signal (DijkstraSUBLEDGER era) = StAnnTx SubTx era
   type Environment (DijkstraSUBLEDGER era) = SubLedgerEnv era
   type BaseM (DijkstraSUBLEDGER era) = ShelleyBase
   type PredicateFailure (DijkstraSUBLEDGER era) = DijkstraSubLedgerPredFailure era
@@ -256,10 +256,11 @@ dijkstraSubLedgersTransition = do
   TRC
     ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState scriptsProvided originalUtxo topIsValid
       , ledgerState@(LedgerState utxoState certState)
-      , tx
+      , stAnnTx
       ) <-
     judgmentContext
 
+  let tx = stAnnTx ^. txStAnnTxG
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
   let txBody = tx ^. bodyTxL
   let govState = utxoState ^. utxosGovStateL
@@ -305,7 +306,7 @@ dijkstraSubLedgersTransition = do
       TRC
         ( SubUtxoEnv slot pp certState scriptsProvided originalUtxo topIsValid
         , utxoState
-        , tx
+        , stAnnTx
         )
   pure $
     ledgerState

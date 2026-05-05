@@ -246,11 +246,12 @@ dijkstraUtxowTransition ::
     Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
   , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 dijkstraUtxowTransition = do
-  TRC (DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided, u, tx) <- judgmentContext
+  TRC (DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided, u, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
 
   let txBody = tx ^. bodyTxL
       subTxs = OMap.elems $ txBody ^. subTransactionsTxBodyL
@@ -331,7 +332,7 @@ dijkstraUtxowTransition = do
 
   -- Pass through to UTXO sub-rule, carrying the original UTxO and scriptsProvided
   trans @(EraRule "UTXO" era) $
-    TRC (DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided, u, tx)
+    TRC (DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided, u, stAnnTx)
 
 instance
   forall era.
@@ -349,14 +350,14 @@ instance
     Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
   , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   STS (DijkstraUTXOW era)
   where
   type State (DijkstraUTXOW era) = UTxOState era
-  type Signal (DijkstraUTXOW era) = Tx TopTx era
+  type Signal (DijkstraUTXOW era) = StAnnTx TopTx era
   type Environment (DijkstraUTXOW era) = DijkstraUtxoEnv era
   type BaseM (DijkstraUTXOW era) = ShelleyBase
   type PredicateFailure (DijkstraUTXOW era) = DijkstraUtxowPredFailure era

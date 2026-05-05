@@ -356,19 +356,21 @@ dijkstraUtxoTransition ::
   , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
   , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
   , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
   , -- In this function we call the UTXOS rule, so we need some assumptions
     Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
   , State (EraRule "UTXOS" era) ~ ()
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (DijkstraUtxoEnv slot pp certState originalUtxo _scriptsProvided, utxos, tx) <- judgmentContext
+  TRC (DijkstraUtxoEnv slot pp certState originalUtxo _scriptsProvided, utxos, stAnnTx) <-
+    judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
   -- this is the original Accounts, before any transactions were applied
   let accounts = certState ^. certDStateL . accountsL
 
@@ -442,7 +444,7 @@ dijkstraUtxoTransition = do
   {- ‖collateral tx‖ ≤ maxCollInputs pp -}
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
 
-  () <- trans @(EraRule "UTXOS" era) $ TRC (ConwayUtxosEnv pp originalUtxo, (), tx)
+  () <- trans @(EraRule "UTXOS" era) $ TRC (ConwayUtxosEnv pp originalUtxo, (), stAnnTx)
   updateUTxOStateByTxValidity
     pp
     certState
@@ -470,14 +472,14 @@ instance
   , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
   , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
   , -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (DijkstraUTXO era)
   , Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
   , State (EraRule "UTXOS" era) ~ ()
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , EraCertState era
   , EraRule "UTXO" era ~ DijkstraUTXO era
   , SafeToHash (TxWits era)
@@ -485,7 +487,7 @@ instance
   STS (DijkstraUTXO era)
   where
   type State (DijkstraUTXO era) = UTxOState era
-  type Signal (DijkstraUTXO era) = Tx TopTx era
+  type Signal (DijkstraUTXO era) = StAnnTx TopTx era
   type Environment (DijkstraUTXO era) = DijkstraUtxoEnv era
   type BaseM (DijkstraUTXO era) = ShelleyBase
   type PredicateFailure (DijkstraUTXO era) = DijkstraUtxoPredFailure era

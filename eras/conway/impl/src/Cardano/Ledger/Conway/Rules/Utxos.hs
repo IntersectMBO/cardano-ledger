@@ -194,7 +194,7 @@ instance
   , EraPlutusContext era
   , GovState era ~ ConwayGovState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (ConwayUTXOS era) ~ Tx TopTx era
+  , Signal (ConwayUTXOS era) ~ StAnnTx TopTx era
   , EraRule "UTXOS" era ~ ConwayUTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
@@ -205,7 +205,7 @@ instance
   type BaseM (ConwayUTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
   type Environment (ConwayUTXOS era) = ConwayUtxosEnv era
   type State (ConwayUTXOS era) = ()
-  type Signal (ConwayUTXOS era) = Tx TopTx era
+  type Signal (ConwayUTXOS era) = StAnnTx TopTx era
   type PredicateFailure (ConwayUTXOS era) = ConwayUtxosPredFailure era
   type Event (ConwayUTXOS era) = ConwayUtxosEvent era
 
@@ -223,7 +223,7 @@ instance
   , GovState era ~ ConwayGovState era
   , PredicateFailure (EraRule "UTXOS" era) ~ ConwayUtxosPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (ConwayUTXOS era) ~ Tx TopTx era
+  , Signal (ConwayUTXOS era) ~ StAnnTx TopTx era
   , EraRule "UTXOS" era ~ ConwayUTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
@@ -240,7 +240,7 @@ utxosTransition ::
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , STS (EraRule "UTXOS" era)
   , Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
   , State (EraRule "UTXOS" era) ~ ()
@@ -250,7 +250,8 @@ utxosTransition ::
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
-  judgmentContext >>= \(TRC (ConwayUtxosEnv pp utxo, (), tx)) -> do
+  judgmentContext >>= \(TRC (ConwayUtxosEnv pp utxo, (), stAnnTx)) -> do
+    let tx = stAnnTx ^. txStAnnTxG
     case tx ^. isValidTxL of
       IsValid True -> conwayEvalScriptsTxValid
       IsValid False -> do
@@ -262,7 +263,7 @@ conwayEvalScriptsTxValid ::
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , STS (EraRule "UTXOS" era)
   , State (EraRule "UTXOS" era) ~ ()
   , Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
@@ -272,7 +273,8 @@ conwayEvalScriptsTxValid ::
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do
-  TRC (ConwayUtxosEnv pp utxo, (), tx) <- judgmentContext
+  TRC (ConwayUtxosEnv pp utxo, (), stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
 
   () <- pure $! Debug.traceEvent validBegin ()
   expectScriptsToPass pp tx utxo

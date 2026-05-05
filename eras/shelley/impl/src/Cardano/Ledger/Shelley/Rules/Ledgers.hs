@@ -22,12 +22,14 @@ module Cardano.Ledger.Shelley.Rules.Ledgers (
   PredicateFailure,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase)
+import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, epochInfo, systemStart)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
+import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGERS)
-import Cardano.Ledger.Shelley.LedgerState (ChainAccountState, LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (ChainAccountState, LedgerState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
@@ -42,14 +44,17 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.State (CertState, EraStake)
 import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
   STS (..),
   TRC (..),
   TransitionRule,
   judgmentContext,
+  liftSTS,
   trans,
  )
 import Data.Default (Default)
@@ -157,11 +162,14 @@ instance
   decCBOR = LedgerFailure <$> decCBOR
 
 instance
-  ( Era era
+  ( ApplyTx era
+  , EraGov era
+  , EraStake era
+  , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Default (LedgerState era)
   ) =>
   STS (ShelleyLEDGERS era)
@@ -177,22 +185,31 @@ instance
 
 ledgersTransition ::
   forall era.
-  ( Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
+  ( ApplyTx era
+  , EraGov era
+  , EraStake era
+  , Default (CertState era)
+  , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (ShelleyLEDGERS era)
 ledgersTransition = do
-  TRC (LedgersEnv slot epochNo pp account, ls, txwits) <- judgmentContext
+  TRC (LedgersEnv slot epochNo pp account, ls, txs) <- judgmentContext
+  ei <- liftSTS $ asks epochInfo
+  sysStart <- liftSTS $ asks systemStart
   foldM
     ( \ !ls' (ix, tx) ->
-        trans @(EraRule "LEDGER" era) $
-          TRC (LedgerEnv slot (Just epochNo) ix pp account, ls', tx)
+        -- build the annotations against the same utxo snapshot that the rule will validate against
+        let utxo = utxosUtxo (lsUTxOState ls')
+            stAnnTx = mkStAnnTx ei sysStart pp utxo tx
+         in trans @(EraRule "LEDGER" era) $
+              TRC (LedgerEnv slot (Just epochNo) ix pp account, ls', stAnnTx)
     )
     ls
     $ zip [minBound ..]
-    $ toList txwits
+    $ toList txs
 
 instance
   ( Era era

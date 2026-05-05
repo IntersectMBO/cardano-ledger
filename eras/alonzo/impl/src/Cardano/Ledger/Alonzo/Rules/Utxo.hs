@@ -502,7 +502,7 @@ utxoTransition ::
   , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
   , State (EraRule "UTXOS" era) ~ ShelleyGovState era
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , EraCertState era
   , EraStake era
   , SafeToHash (TxWits era)
@@ -510,8 +510,9 @@ utxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
-  TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
-  let utxo = utxosUtxo utxos
+  TRC (UtxoEnv slot pp certState, utxos, stAnnTx) <- judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
+      utxo = utxosUtxo utxos
 
   {-   txb := txbody tx   -}
   let txBody = tx ^. bodyTxL
@@ -577,7 +578,7 @@ utxoTransition = do
 
   updatedGovState <-
     trans @(EraRule "UTXOS" era) $
-      TRC (UtxosEnv slot pp certState utxo, utxosGovState utxos, tx)
+      TRC (UtxosEnv slot pp certState utxo, utxosGovState utxos, stAnnTx)
 
   case tx ^. isValidTxL of
     IsValid True ->
@@ -611,7 +612,7 @@ instance
   , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
   , State (EraRule "UTXOS" era) ~ ShelleyGovState era
-  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , EraRule "UTXO" era ~ AlonzoUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
@@ -625,7 +626,7 @@ instance
   STS (AlonzoUTXO era)
   where
   type State (AlonzoUTXO era) = UTxOState era
-  type Signal (AlonzoUTXO era) = Tx TopTx era
+  type Signal (AlonzoUTXO era) = StAnnTx TopTx era
   type Environment (AlonzoUTXO era) = UtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase
   type PredicateFailure (AlonzoUTXO era) = AlonzoUtxoPredFailure era

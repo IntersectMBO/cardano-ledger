@@ -31,6 +31,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
 import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided)
 import qualified Data.TreeDiff.OMap as OMap
 import PlutusLedgerApi.Common (EvaluationError (..), ExBudget, ExCPU, ExMemory, SatInt)
 import Test.Cardano.Ledger.Mary.TreeDiff
@@ -140,6 +141,28 @@ instance
         , ("atIsValid", toExpr atIsValid)
         , ("atAuxData", toExpr atAuxData)
         ]
+
+instance
+  ( ToExpr (Tx TopTx era)
+  , ToExpr (ScriptsNeeded era)
+  , ToExpr (ScriptsProvided era)
+  , ToExpr (ContextError era)
+  , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (TxCert era)
+  ) =>
+  ToExpr (AlonzoStAnnTx TopTx era)
+  where
+  toExpr stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _) =
+    let AlonzoStAnnTx {..} = stAnnTx
+     in Rec "AlonzoStAnnTx" $
+          OMap.fromList
+            [ ("asatTx", toExpr asatTx)
+            , ("asatProtocolVersion", toExpr asatProtocolVersion)
+            , ("asatScriptsNeeded", toExpr asatScriptsNeeded)
+            , ("asatScriptsProvided", toExpr asatScriptsProvided)
+            , ("asatPlutusLanguagesUsed", toExpr asatPlutusLanguagesUsed)
+            , ("asatPlutusScriptsWithContext", toExpr asatPlutusScriptsWithContext)
+            ]
 
 -- Plutus/TxInfo
 instance ToExpr (AlonzoContextError era)

@@ -75,12 +75,12 @@ instance
   , Show (PredicateFailure (EraRule "GOV" era))
   , Show (PredicateFailure (EraRule "UTXOW" era))
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   STS (ConwayMEMPOOL era)
   where
   type State (ConwayMEMPOOL era) = LedgerState era
-  type Signal (ConwayMEMPOOL era) = Tx TopTx era
+  type Signal (ConwayMEMPOOL era) = StAnnTx TopTx era
   type Environment (ConwayMEMPOOL era) = LedgerEnv era
   type BaseM (ConwayMEMPOOL era) = ShelleyBase
   type PredicateFailure (ConwayMEMPOOL era) = ConwayLedgerPredFailure era
@@ -97,12 +97,13 @@ mempoolTransition ::
   , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (ConwayMEMPOOL era)
 mempoolTransition = do
-  TRC trc@(ledgerEnv, ledgerState, tx) <-
+  TRC trc@(ledgerEnv, ledgerState, stAnnTx) <-
     judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
 
   -- This rule only gets invoked on transactions within the mempool.
   -- Add checks here that sanitize undesired transactions.
@@ -157,8 +158,8 @@ instance
   , GovState era ~ ConwayGovState era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
-  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
-  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ ConwayLEDGER era
   , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
