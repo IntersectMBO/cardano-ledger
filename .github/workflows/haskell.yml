@@ -356,8 +356,9 @@ jobs:
         cabal install doctest --flag cabal-doctest --ignore-project --overwrite-policy=always
         echo "$BINDIR" >> ${GITHUB_PATH}
 
+    # FIXME: Disabled. See: https://github.com/IntersectMBO/cardano-ledger/issues/5795
     - name: Run doctests
-      if: matrix.ghc != '9.14.1'
+      if: false && matrix.ghc != '9.14.1'
       run: scripts/doctest.sh "${{ matrix.package }}"
 
   test-summary:
