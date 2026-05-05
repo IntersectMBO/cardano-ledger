@@ -2,6 +2,15 @@
 
 ## 1.22.0.0
 
+* Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
+  - `?!.` -> `?!`
+  - `?!#.` -> `?!#`
+  - `checkFailOnLeftStatic` -> `?!#:`
+  - `checkFailOnJustStatic` -> `failOnJustStatic`
+  - `checkFailOnJust` -> `failOnJust`
+  - `checkFailOnNonEmpty` -> `failOnNonEmpty`
+  - `checkFailOnNonEmptySet` -> `failOnNonEmptySet`
+  - `checkFailOnNonEmptyMap` -> `failOnNonEmptyMap`
 * Remove `numSegComponents` from `EraBlockBody`
 * Remove generic `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in favor of per-era instances
 * Add `ToPlutusData` instance for `StrictMaybe`
