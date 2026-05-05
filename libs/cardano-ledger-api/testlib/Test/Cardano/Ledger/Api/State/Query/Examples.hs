@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepStateExamples,
   queryPoolParametersExamples,
   queryPoolStateExamples,
+  queryProposalsExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
   querySetSnapshotStakePoolDistrExamples,
@@ -26,7 +27,13 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
 ) where
 
 import Cardano.Base.IP (toIPv4, toIPv6)
-import Cardano.Ledger.Api.Governance (Constitution (..))
+import Cardano.Ledger.Api.Governance (
+  Constitution (..),
+  GovActionId (..),
+  GovActionIx (..),
+  GovActionState (..),
+  Vote (..),
+ )
 import Cardano.Ledger.Api.State.Query (
   CommitteeMemberState (..),
   CommitteeMembersState (..),
@@ -47,6 +54,7 @@ import Cardano.Ledger.BaseTypes (
   textToDns,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
+import Cardano.Ledger.Core (EraPParams)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
@@ -58,16 +66,28 @@ import Cardano.Ledger.State (
   StakePoolParams (..),
   StakePoolRelay (..),
  )
+import Cardano.Ledger.TxIn (TxId (..))
 import Data.Default (def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Ratio ((%))
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Conway.Examples (exampleAnchor)
+import Test.Cardano.Ledger.Conway.Examples (
+  exampleAnchor,
+  exampleProposalProcedure,
+  exampleProposalProcedureHardForkInitiation,
+  exampleProposalProcedureNewConstitution,
+  exampleProposalProcedureNoConfidence,
+  exampleProposalProcedureParameterChange,
+  exampleProposalProcedureTreasuryWithdrawals,
+  exampleProposalProcedureUpdateCommittee,
+ )
 import Test.Cardano.Ledger.Core.Rational (unsafeBoundRational)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Shelley.Examples (
@@ -381,6 +401,75 @@ queryPoolStateExamples =
             ]
       }
   ]
+
+queryProposalsExamples :: EraPParams era => [Seq (GovActionState era)]
+queryProposalsExamples =
+  [ Seq.empty
+  , Seq.fromList
+      [ GovActionState
+          (mkGid 1)
+          Map.empty
+          Map.empty
+          Map.empty
+          exampleProposalProcedure
+          (EpochNo 100)
+          (EpochNo 130)
+      , GovActionState
+          (mkGid 2)
+          (Map.singleton (KeyHashObj (mkKeyHash 1)) VoteYes)
+          (Map.singleton (KeyHashObj (mkKeyHash 2)) VoteNo)
+          (Map.singleton (mkKeyHash 3) Abstain)
+          exampleProposalProcedureHardForkInitiation
+          (EpochNo 50)
+          (EpochNo 80)
+      , GovActionState
+          (mkGid 3)
+          Map.empty
+          Map.empty
+          Map.empty
+          exampleProposalProcedureTreasuryWithdrawals
+          (EpochNo 60)
+          (EpochNo 90)
+      , GovActionState
+          (mkGid 4)
+          Map.empty
+          ( Map.fromList
+              [ (KeyHashObj (mkKeyHash 4), Abstain)
+              , (ScriptHashObj (mkScriptHash 5), VoteYes)
+              ]
+          )
+          Map.empty
+          exampleProposalProcedureNoConfidence
+          (EpochNo 70)
+          (EpochNo 100)
+      , GovActionState
+          (mkGid 5)
+          Map.empty
+          Map.empty
+          Map.empty
+          exampleProposalProcedureUpdateCommittee
+          (EpochNo 80)
+          (EpochNo 110)
+      , GovActionState
+          (mkGid 6)
+          Map.empty
+          Map.empty
+          Map.empty
+          exampleProposalProcedureNewConstitution
+          (EpochNo 90)
+          (EpochNo 120)
+      , GovActionState
+          (mkGid 7)
+          (Map.singleton (KeyHashObj (mkKeyHash 11)) VoteYes)
+          (Map.singleton (KeyHashObj (mkKeyHash 22)) VoteYes)
+          (Map.singleton (mkKeyHash 33) VoteYes)
+          exampleProposalProcedureParameterChange
+          (EpochNo 100)
+          (EpochNo 130)
+      ]
+  ]
+  where
+    mkGid n = GovActionId (TxId (mkDummySafeHash n)) (GovActionIx 0)
 
 queryStakeSnapshotsExamples :: [StakeSnapshots]
 queryStakeSnapshotsExamples =
