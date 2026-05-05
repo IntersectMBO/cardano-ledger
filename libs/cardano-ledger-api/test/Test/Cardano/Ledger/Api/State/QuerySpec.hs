@@ -56,6 +56,7 @@ import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepDelegationsExamples,
   queryDRepStakeDistrExamples,
   queryDRepStateExamples,
+  queryGovStateExamples,
   queryPoolParametersExamples,
   queryPoolStateExamples,
   queryProposalsExamples,
@@ -119,6 +120,7 @@ latestErasSpec =
       eraLedgerStateQueryGoldenSpec @era "queryDRepDelegations" queryDRepDelegationsExamples
       eraLedgerStateQueryGoldenSpec @era "queryDRepStakeDistr" queryDRepStakeDistrExamples
       eraLedgerStateQueryGoldenSpec @era "queryDRepState" queryDRepStateExamples
+      eraLedgerStateQueryGoldenSpec @era "queryGovState" (queryGovStateExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryPoolParameters" queryPoolParametersExamples
       eraLedgerStateQueryGoldenSpec @era "queryPoolState" queryPoolStateExamples
       eraLedgerStateQueryGoldenSpec @era "queryProposals" (queryProposalsExamples @era)

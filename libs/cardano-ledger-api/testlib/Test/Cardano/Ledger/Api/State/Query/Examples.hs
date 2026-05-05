@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepDelegationsExamples,
   queryDRepStakeDistrExamples,
   queryDRepStateExamples,
+  queryGovStateExamples,
   queryPoolParametersExamples,
   queryPoolStateExamples,
   queryProposalsExamples,
@@ -28,7 +29,10 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
 
 import Cardano.Base.IP (toIPv4, toIPv6)
 import Cardano.Ledger.Api.Governance (
+  Committee (..),
   Constitution (..),
+  ConwayGovState (..),
+  DRepPulsingState (..),
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
@@ -61,6 +65,7 @@ import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.State (
   ChainAccountState (..),
+  FuturePParams (..),
   IndividualPoolStake (..),
   PoolDistr (..),
   StakePoolParams (..),
@@ -399,6 +404,36 @@ queryPoolStateExamples =
             [ (mkKeyHash 1, Coin 500_000_000)
             , (mkKeyHash 99, Coin 500_000_000)
             ]
+      }
+  ]
+
+queryGovStateExamples ::
+  EraPParams era =>
+  [ConwayGovState era]
+queryGovStateExamples =
+  [ def
+  , ConwayGovState
+      { cgsProposals = def
+      , cgsCommittee =
+          SJust $
+            Committee
+              { committeeMembers =
+                  Map.fromList
+                    [ (KeyHashObj (mkKeyHash 1), EpochNo 200)
+                    , (KeyHashObj (mkKeyHash 2), EpochNo 300)
+                    , (ScriptHashObj (mkScriptHash 3), EpochNo 250)
+                    ]
+              , committeeThreshold = unsafeBoundRational (2 % 3) :: UnitInterval
+              }
+      , cgsConstitution =
+          Constitution
+            { constitutionAnchor = exampleAnchor
+            , constitutionGuardrailsScriptHash = SJust (mkScriptHash 1)
+            }
+      , cgsCurPParams = def
+      , cgsPrevPParams = def
+      , cgsFuturePParams = DefinitePParamsUpdate def
+      , cgsDRepPulsingState = DRComplete def def
       }
   ]
 
