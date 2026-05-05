@@ -29,7 +29,7 @@ import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 
-instance SpecTranslate ctx ConwayGovCert where
+instance SpecTranslate ConwayGovCert where
   type SpecRep ConwayGovCert = Agda.DCert
 
   toSpecRep (ConwayRegDRep c d a) =
@@ -56,18 +56,17 @@ instance SpecTranslate ctx ConwayGovCert where
       <*> toSpecRep (SNothing @(Credential _))
 
 instance
-  ( SpecTranslate ctx (PParamsHKD Identity era)
+  ( SpecTranslate (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map AccountAddress Coin)
+  , SpecContext (PParamsHKD Identity era) ~ ()
   ) =>
-  SpecTranslate ctx (ConwayGovCertEnv era)
+  SpecTranslate (ConwayGovCertEnv era)
   where
   type SpecRep (ConwayGovCertEnv era) = Agda.CertEnv
+  type SpecContext (ConwayGovCertEnv era) = (VotingProcedures era, Map AccountAddress Coin)
 
   toSpecRep ConwayGovCertEnv {..} = do
-    votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map AccountAddress Coin)
+    (votes, withdrawals) <- askSpecTransM
     let propGetCCMembers (UpdateCommittee _ _ x _) = Just $ keysSet x
         propGetCCMembers _ = Nothing
         potentialCCMembers =
@@ -77,21 +76,22 @@ instance
         ccColdCreds =
           foldMap (keysSet . committeeMembers) cgceCurrentCommittee
             <> potentialCCMembers cgceCommitteeProposals
-    Agda.MkCertEnv
-      <$> toSpecRep cgceCurrentEpoch
-      <*> toSpecRep cgcePParams
-      <*> toSpecRep votes
-      <*> toSpecRep withdrawals
-      <*> toSpecRep ccColdCreds
+    withSpecTransM (const ()) $
+      Agda.MkCertEnv
+        <$> toSpecRep cgceCurrentEpoch
+        <*> toSpecRep cgcePParams
+        <*> toSpecRep votes
+        <*> withSpecTransM (const ((), ())) (toSpecRep withdrawals)
+        <*> toSpecRep ccColdCreds
 
-instance SpecTranslate ctx (VState era) where
+instance SpecTranslate (VState era) where
   type SpecRep (VState era) = Agda.GState
 
   toSpecRep VState {..} = do
     Agda.MkGState
-      <$> toSpecRep (updateExpiry . drepExpiry <$> vsDReps)
-      <*> toSpecRep
-        (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
+      <$> withSpecTransM dup (toSpecRep (updateExpiry . drepExpiry <$> vsDReps))
+      <*> withSpecTransM dup (toSpecRep
+        (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState))
       <*> deposits
     where
       transEntry (cred, val) =

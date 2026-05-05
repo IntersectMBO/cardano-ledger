@@ -12,8 +12,17 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo () where
 
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Shelley.Rules (utxoEnvCertStateL)
+import Control.State.Transition.Extended (TRC (..))
+import Lens.Micro ((^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), runFromAgdaFunction)
+import Test.Cardano.Ledger.Conformance (
+  ExecSpecRule (..),
+  SpecTRC (..),
+  SpecTranslate (..),
+  runFromAgdaFunction,
+  runSpecTransM,
+ )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo ()
@@ -22,5 +31,14 @@ import Test.Cardano.Ledger.Generic.Instances ()
 
 instance ExecSpecRule "UTXO" ConwayEra where
   type ExecContext "UTXO" ConwayEra = UtxoExecContext ConwayEra
+
+  translateInputs ctx (TRC (env, st, sig)) = do
+    agdaEnv <- runSpecTransM () $ toSpecRep env
+    agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep st
+    agdaSig <- runSpecTransM () $ toSpecRep sig
+    pure $ SpecTRC agdaEnv agdaSt agdaSig
+
+  translateOutput ctx _ st =
+    runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep st
 
   runAgdaRule = runFromAgdaFunction (Agda.utxoStep externalFunctions)

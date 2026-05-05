@@ -61,7 +61,6 @@ import Control.Monad.Except (MonadError (..))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.List (sortOn)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.OMap.Strict (OMap)
 import qualified Data.Set as Set
@@ -72,30 +71,26 @@ import Lens.Micro
 import Lens.Micro.Extras (view)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.Orphans ()
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
-  SpecTransM,
-  SpecTranslate (..),
-  askCtx,
- )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (committeeCredentialToStrictMaybe)
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
-instance SpecTranslate ctx TxId where
+instance SpecTranslate TxId where
   type SpecRep TxId = Agda.TxId
 
-  toSpecRep (TxId x) = toSpecRep @ctx x
+  toSpecRep (TxId x) = toSpecRep x
 
-instance SpecTranslate ctx TxIn where
+instance SpecTranslate TxIn where
   type SpecRep TxIn = Agda.TxIn
 
-  toSpecRep (TxIn txId txIx) = toSpecRep @ctx (txId, txIx)
+  toSpecRep (TxIn txId txIx) = withSpecTransM dup $ toSpecRep (txId, txIx)
 
-instance SpecTranslate ctx (SafeHash a) where
+instance SpecTranslate (SafeHash a) where
   type SpecRep (SafeHash a) = Agda.DataHash
 
-  toSpecRep = toSpecRep @ctx . extractHash
+  toSpecRep = toSpecRep . extractHash
 
-instance SpecTranslate ctx Language where
+instance SpecTranslate Language where
   type SpecRep Language = Agda.HSLanguage
 
   toSpecRep l = case l of
@@ -104,15 +99,15 @@ instance SpecTranslate ctx Language where
     PlutusV3 -> return Agda.PV3
     PlutusV4 -> error "PlutusV4 not supported"
 
-instance SpecTranslate ctx CostModels where
+instance SpecTranslate CostModels where
   type SpecRep CostModels = Agda.LanguageCostModels
 
   toSpecRep cm =
     -- filter out PlutusV4 language
     let validCostModels = filter ((/= PlutusV4) . fst) $ Map.toList (costModelsValid cm)
-     in Agda.MkLanguageCostModels <$> mapM (\(l, _) -> (,()) <$> toSpecRep @ctx l) validCostModels
+     in Agda.MkLanguageCostModels <$> mapM (\(l, _) -> (,()) <$> toSpecRep l) validCostModels
 
-instance SpecTranslate ctx ExUnits where
+instance SpecTranslate ExUnits where
   type SpecRep ExUnits = Agda.ExUnits
 
   toSpecRep (ExUnits a b) = pure (toInteger a, toInteger b)
@@ -121,35 +116,35 @@ instance
   ( SpecRep DataHash ~ Agda.DataHash
   , Era era
   ) =>
-  SpecTranslate ctx (BinaryData era)
+  SpecTranslate (BinaryData era)
   where
   type SpecRep (BinaryData era) = Agda.DataHash
 
-  toSpecRep = toSpecRep @ctx . hashBinaryData
+  toSpecRep = toSpecRep . hashBinaryData
 
-instance Era era => SpecTranslate ctx (Datum era) where
+instance Era era => SpecTranslate (Datum era) where
   type SpecRep (Datum era) = Maybe (Either Agda.Datum Agda.DataHash)
 
   toSpecRep NoDatum = pure Nothing
   toSpecRep (Datum d) = Just . Left <$> toSpecRep d
-  toSpecRep (DatumHash h) = Just . Right <$> toSpecRep @ctx h
+  toSpecRep (DatumHash h) = Just . Right <$> toSpecRep h
 
-instance Era era => SpecTranslate ctx (Data era) where
+instance Era era => SpecTranslate (Data era) where
   type SpecRep (Data era) = Agda.DataHash
 
-  toSpecRep = toSpecRep @ctx . hashAnnotated
+  toSpecRep = toSpecRep . hashAnnotated
 
-instance SpecTranslate ctx TxAuxDataHash where
+instance SpecTranslate TxAuxDataHash where
   type SpecRep TxAuxDataHash = Agda.DataHash
 
-  toSpecRep (TxAuxDataHash x) = toSpecRep @ctx x
+  toSpecRep (TxAuxDataHash x) = toSpecRep x
 
 instance
   ( AlonzoEraScript era
   , NativeScript era ~ Timelock era
   , Script era ~ AlonzoScript era
   ) =>
-  SpecTranslate ctx (Timelock era)
+  SpecTranslate (Timelock era)
   where
   type SpecRep (Timelock era) = Agda.HSTimelock
 
@@ -180,7 +175,7 @@ instance
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
   ) =>
-  SpecTranslate ctx (PlutusScript era)
+  SpecTranslate (PlutusScript era)
   where
   type SpecRep (PlutusScript era) = Agda.HSPlutusScript
 
@@ -195,7 +190,7 @@ instance
   , Script era ~ AlonzoScript era
   , NativeScript era ~ Timelock era
   ) =>
-  SpecTranslate ctx (AlonzoScript era)
+  SpecTranslate (AlonzoScript era)
   where
   type SpecRep (AlonzoScript era) = Agda.Script
 
@@ -205,11 +200,12 @@ instance
 instance
   ( EraTxOut era
   , SpecRep (Value era) ~ Agda.Coin
+  , SpecContext (Value era) ~ ()
   , Script era ~ AlonzoScript era
-  , SpecTranslate ctx (Value era)
-  , SpecTranslate ctx (Script era)
+  , SpecTranslate (Value era)
+  , SpecTranslate (Script era)
   ) =>
-  SpecTranslate ctx (BabbageTxOut era)
+  SpecTranslate (BabbageTxOut era)
   where
   type SpecRep (BabbageTxOut era) = Agda.TxOut
 
@@ -221,28 +217,30 @@ instance
     pure (addr', (val', (datum', script')))
 
 instance
-  ( SpecTranslate ctx (TxOut era)
+  ( SpecTranslate (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecContext (TxOut era) ~ ()
   ) =>
-  SpecTranslate ctx (UTxO era)
+  SpecTranslate (UTxO era)
   where
-  type SpecRep (UTxO era) = SpecRep (Map TxIn (TxOut era))
+  type SpecRep (UTxO era) = Agda.HSMap (SpecRep TxIn) (SpecRep (TxOut era))
 
-  toSpecRep (UTxO m) = toSpecRep m
+  toSpecRep (UTxO m) = withSpecTransM dup $ toSpecRep m
 
-deriving instance SpecTranslate ctx OrdExUnits
+deriving instance SpecTranslate OrdExUnits
 
-deriving instance SpecTranslate ctx CoinPerByte
+deriving instance SpecTranslate CoinPerByte
 
 instance
-  SpecTranslate ctx (HKD f a) =>
-  SpecTranslate ctx (THKD r f a)
+  SpecTranslate (HKD f a) =>
+  SpecTranslate (THKD r f a)
   where
   type SpecRep (THKD r f a) = SpecRep (HKD f a)
+  type SpecContext (THKD r f a) = SpecContext (HKD f a)
 
   toSpecRep = toSpecRep . unTHKD
 
-instance SpecTranslate ctx DRepVotingThresholds where
+instance SpecTranslate DRepVotingThresholds where
   type SpecRep DRepVotingThresholds = Agda.DrepThresholds
 
   toSpecRep DRepVotingThresholds {..} =
@@ -258,7 +256,7 @@ instance SpecTranslate ctx DRepVotingThresholds where
       <*> toSpecRep dvtPPGovGroup
       <*> toSpecRep dvtTreasuryWithdrawal
 
-instance SpecTranslate ctx PoolVotingThresholds where
+instance SpecTranslate PoolVotingThresholds where
   type SpecRep PoolVotingThresholds = Agda.PoolThresholds
 
   toSpecRep PoolVotingThresholds {..} =
@@ -273,7 +271,7 @@ instance
   ( ConwayEraPParams era
   , PParamsHKD Identity era ~ ConwayPParams Identity era
   ) =>
-  SpecTranslate ctx (ConwayPParams Identity era)
+  SpecTranslate (ConwayPParams Identity era)
   where
   type SpecRep (ConwayPParams Identity era) = Agda.PParams
 
@@ -325,17 +323,17 @@ instance
 
     pure Agda.MkPParams {..}
 
-instance SpecTranslate ctx ValidityInterval where
+instance SpecTranslate ValidityInterval where
   type SpecRep ValidityInterval = (Maybe Integer, Maybe Integer)
 
-  toSpecRep (ValidityInterval lo hi) = toSpecRep (lo, hi)
+  toSpecRep (ValidityInterval lo hi) = withSpecTransM dup $ toSpecRep (lo, hi)
 
-instance Era era => SpecTranslate ctx (TxDats era) where
+instance Era era => SpecTranslate (TxDats era) where
   type SpecRep (TxDats era) = Agda.HSSet Agda.Datum
 
   toSpecRep = fmap Agda.MkHSSet . traverse (toSpecRep . snd) . Map.toList . unTxDats
 
-instance SpecTranslate ctx (AlonzoPlutusPurpose AsIx era) where
+instance SpecTranslate (AlonzoPlutusPurpose AsIx era) where
   type SpecRep (AlonzoPlutusPurpose AsIx era) = Agda.RdmrPtr
 
   toSpecRep = \case
@@ -344,7 +342,7 @@ instance SpecTranslate ctx (AlonzoPlutusPurpose AsIx era) where
     AlonzoCertifying (AsIx i) -> pure (Agda.Cert, toInteger i)
     AlonzoRewarding (AsIx i) -> pure (Agda.Rewrd, toInteger i)
 
-instance SpecTranslate ctx (ConwayPlutusPurpose AsIx era) where
+instance SpecTranslate (ConwayPlutusPurpose AsIx era) where
   type SpecRep (ConwayPlutusPurpose AsIx era) = Agda.RdmrPtr
 
   toSpecRep = \case
@@ -357,24 +355,28 @@ instance SpecTranslate ctx (ConwayPlutusPurpose AsIx era) where
 
 instance
   ( AlonzoEraScript era
-  , SpecTranslate ctx (PlutusPurpose AsIx era)
+  , SpecTranslate (PlutusPurpose AsIx era)
+  , SpecContext (PlutusPurpose AsIx era) ~ ()
+  , SpecRep (Data era, ExUnits) ~ (Agda.Redeemer, Agda.ExUnits)
   ) =>
-  SpecTranslate ctx (Redeemers era)
+  SpecTranslate (Redeemers era)
   where
   type
     SpecRep (Redeemers era) =
       Agda.HSMap (SpecRep (PlutusPurpose AsIx era)) (Agda.Redeemer, Agda.ExUnits)
 
-  toSpecRep (Redeemers x) = toSpecRep x
+  toSpecRep (Redeemers x) = withSpecTransM (const ((), ((), ()))) $ toSpecRep x
 
 instance
   ( AlonzoEraScript era
-  , SpecTranslate ctx (PlutusPurpose AsIx era)
+  , SpecTranslate (PlutusPurpose AsIx era)
   , SpecRep (PlutusPurpose AsIx era) ~ Agda.RdmrPtr
+  , SpecContext (PlutusPurpose AsIx era) ~ ()
+  , SpecRep (Data era, ExUnits) ~ (Agda.Redeemer, Agda.ExUnits)
   , Script era ~ AlonzoScript era
   , NativeScript era ~ Timelock era
   ) =>
-  SpecTranslate ctx (AlonzoTxWits era)
+  SpecTranslate (AlonzoTxWits era)
   where
   type SpecRep (AlonzoTxWits era) = Agda.TxWitnesses
 
@@ -387,12 +389,12 @@ instance
     where
       txWitsMap = toList (txwitsVKey x)
 
-instance Era era => SpecTranslate ctx (AlonzoTxAuxData era) where
+instance Era era => SpecTranslate (AlonzoTxAuxData era) where
   type SpecRep (AlonzoTxAuxData era) = Agda.AuxiliaryData
 
   toSpecRep = toSpecRep . hashAnnotated
 
-instance SpecTranslate ctx StakePoolParams where
+instance SpecTranslate StakePoolParams where
   type SpecRep StakePoolParams = Agda.StakePoolParams
 
   toSpecRep StakePoolParams {..} =
@@ -403,52 +405,53 @@ instance SpecTranslate ctx StakePoolParams where
       <*> toSpecRep sppPledge
       <*> toSpecRep (sppAccountAddress ^. accountAddressCredentialL)
 
-instance SpecTranslate ctx DRep where
+instance SpecTranslate DRep where
   type SpecRep DRep = Agda.VDeleg
 
   toSpecRep (DRepCredential c) = Agda.VDelegCredential <$> toSpecRep c
   toSpecRep DRepAlwaysAbstain = pure Agda.VDelegAbstain
   toSpecRep DRepAlwaysNoConfidence = pure Agda.VDelegNoConfidence
 
-instance SpecTranslate ctx Url where
+instance SpecTranslate Url where
   type SpecRep Url = T.Text
   toSpecRep = pure . urlToText
 
-instance SpecTranslate ctx Anchor where
+instance SpecTranslate Anchor where
   type SpecRep Anchor = Agda.Anchor
   toSpecRep (Anchor url h) = Agda.Anchor <$> toSpecRep url <*> toSpecRep h
 
-instance SpecTranslate ctx Withdrawals where
+instance SpecTranslate Withdrawals where
   type SpecRep Withdrawals = Agda.Withdrawals
 
-  toSpecRep (Withdrawals w) = toSpecRep w
+  toSpecRep (Withdrawals w) = withSpecTransM dup $ toSpecRep w
 
-instance SpecTranslate ctx IsValid where
+instance SpecTranslate IsValid where
   type SpecRep IsValid = Bool
 
   toSpecRep (IsValid b) = pure b
 
-instance SpecTranslate ctx (GovPurposeId r) where
+instance SpecTranslate (GovPurposeId r) where
   type SpecRep (GovPurposeId r) = (Agda.TxId, Integer)
 
   toSpecRep (GovPurposeId gaId) = toSpecRep gaId
 
-instance SpecTranslate ctx (Committee era) where
+instance SpecTranslate (Committee era) where
   type SpecRep (Committee era) = (Agda.HSMap Agda.Credential Agda.Epoch, Agda.Rational)
 
-  toSpecRep (Committee members threshold) = toSpecRep (members, threshold)
+  toSpecRep (Committee members threshold) = (,) <$> withSpecTransM dup (toSpecRep members) <*> toSpecRep threshold
 
-instance SpecTranslate ctx (Constitution era) where
+instance SpecTranslate (Constitution era) where
   type SpecRep (Constitution era) = (Agda.DataHash, Maybe Agda.ScriptHash)
 
-  toSpecRep (Constitution (Anchor _ h) policy) = toSpecRep (h, policy)
+  toSpecRep (Constitution (Anchor _ h) policy) = withSpecTransM dup $ toSpecRep (h, policy)
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecTranslate (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecContext (PParamsHKD Identity era) ~ ()
   ) =>
-  SpecTranslate ctx (EnactState era)
+  SpecTranslate (EnactState era)
   where
   type SpecRep (EnactState era) = Agda.EnactState
 
@@ -473,21 +476,21 @@ instance
           SNothing -> pure (0, 0)
         pure (committee, agdaLastId)
 
-instance SpecTranslate ctx Voter where
+instance SpecTranslate Voter where
   type SpecRep Voter = Agda.GovVoter
 
   toSpecRep (CommitteeVoter c) = (Agda.CC,) <$> toSpecRep c
   toSpecRep (DRepVoter c) = (Agda.DRep,) <$> toSpecRep c
   toSpecRep (StakePoolVoter kh) = (Agda.SPO,) <$> toSpecRep (KeyHashObj kh)
 
-instance SpecTranslate ctx Vote where
+instance SpecTranslate Vote where
   type SpecRep Vote = Agda.Vote
 
   toSpecRep VoteYes = pure Agda.Yes
   toSpecRep VoteNo = pure Agda.No
   toSpecRep Abstain = pure Agda.Abstain
 
-instance SpecTranslate ctx (VotingProcedures era) where
+instance SpecTranslate (VotingProcedures era) where
   type SpecRep (VotingProcedures era) = [Agda.GovVote]
 
   toSpecRep = foldrVotingProcedures go (pure [])
@@ -496,19 +499,19 @@ instance SpecTranslate ctx (VotingProcedures era) where
         Voter ->
         GovActionId ->
         VotingProcedure era ->
-        SpecTransM ctx [Agda.GovVote] ->
-        SpecTransM ctx [Agda.GovVote]
+        SpecTransM () [Agda.GovVote] ->
+        SpecTransM () [Agda.GovVote]
       go voter gaId votingProcedure m =
         (:)
           <$> ( Agda.MkGovVote
-                  <$> toSpecRep gaId
+                  <$> withSpecTransM (const ()) (toSpecRep gaId)
                   <*> toSpecRep voter
                   <*> toSpecRep (vProcVote votingProcedure)
                   <*> toSpecRep (vProcAnchor votingProcedure)
               )
           <*> m
 
-instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
+instance SpecTranslate (ConwayPParams StrictMaybe era) where
   type SpecRep (ConwayPParams StrictMaybe era) = Agda.PParamsUpdate
 
   toSpecRep (ConwayPParams {..}) = do
@@ -558,10 +561,11 @@ instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecTranslate (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   ) =>
-  SpecTranslate ctx (GovAction era)
+  SpecTranslate (GovAction era)
   where
   type SpecRep (GovAction era) = Agda.GovAction
 
@@ -569,11 +573,11 @@ instance
   toSpecRep (HardForkInitiation _ pv) = Agda.TriggerHardFork <$> toSpecRep pv
   toSpecRep (TreasuryWithdrawals withdrawals _) =
     Agda.TreasuryWithdrawal
-      <$> toSpecRep withdrawals
+      <$> withSpecTransM dup (toSpecRep withdrawals)
   toSpecRep (NoConfidence _) = pure Agda.NoConfidence
   toSpecRep (UpdateCommittee _ remove add threshold) =
     Agda.UpdateCommittee
-      <$> toSpecRep add
+      <$> withSpecTransM dup (toSpecRep add)
       <*> toSpecRep remove
       <*> toSpecRep threshold
   toSpecRep (NewConstitution _ (Constitution (Anchor _ h) policy)) =
@@ -584,10 +588,11 @@ instance
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecTranslate (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   ) =>
-  SpecTranslate ctx (ProposalProcedure era)
+  SpecTranslate (ProposalProcedure era)
   where
   type SpecRep (ProposalProcedure era) = Agda.GovProposal
 
@@ -629,19 +634,20 @@ nullifyIfNotNeeded (SJust gaId) = \case
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecTranslate (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   ) =>
-  SpecTranslate ctx (GovActionState era)
+  SpecTranslate (GovActionState era)
   where
   type SpecRep (GovActionState era) = Agda.GovActionState
 
   toSpecRep gas@GovActionState {..} = do
     Agda.MkGovActionState
       <$> ( Agda.GovVotes
-              <$> toSpecRep gasCommitteeVotes
-              <*> toSpecRep gasDRepVotes
-              <*> toSpecRep gasStakePoolVotes
+              <$> withSpecTransM dup (toSpecRep gasCommitteeVotes)
+              <*> withSpecTransM dup (toSpecRep gasDRepVotes)
+              <*> withSpecTransM dup (toSpecRep gasStakePoolVotes)
           )
       <*> toSpecRep (gasReturnAddr gas)
       <*> toSpecRep gasExpiresAfter
@@ -650,79 +656,88 @@ instance
     where
       action = gasAction gas
 
-instance SpecTranslate ctx GovActionIx where
+instance SpecTranslate GovActionIx where
   type SpecRep GovActionIx = Integer
 
   toSpecRep = pure . fromIntegral . unGovActionIx
 
-instance SpecTranslate ctx GovActionId where
+instance SpecTranslate GovActionId where
   type SpecRep GovActionId = Agda.GovActionID
 
-  toSpecRep (GovActionId txId gaIx) = toSpecRep (txId, gaIx)
+  toSpecRep (GovActionId txId gaIx) = withSpecTransM dup $ toSpecRep (txId, gaIx)
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecTranslate (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   ) =>
-  SpecTranslate ctx (Proposals era)
+  SpecTranslate (Proposals era)
   where
   type SpecRep (Proposals era) = Agda.GovState
 
   -- TODO get rid of `prioritySort` once we've changed the implementation so
   -- that the proposals are always sorted
-  toSpecRep = toSpecRep . prioritySort . view pPropsL
+  toSpecRep = withSpecTransM dup . toSpecRep . prioritySort . view pPropsL
     where
       prioritySort ::
         OMap GovActionId (GovActionState era) ->
         OMap GovActionId (GovActionState era)
       prioritySort = Exts.fromList . sortOn (actionPriority . gasAction) . Exts.toList
 
-instance SpecTranslate ctx MaryValue where
+instance SpecTranslate MaryValue where
   type SpecRep MaryValue = Agda.Coin
 
   toSpecRep = toSpecRep . coin
 
 instance
-  (Inject ctx Coin, ConwayEraAccounts era) =>
-  SpecTranslate ctx (RatifyEnv era)
+  ConwayEraAccounts era =>
+  SpecTranslate (RatifyEnv era)
   where
   type SpecRep (RatifyEnv era) = Agda.RatifyEnv
+  type SpecContext (RatifyEnv era) = Coin
 
   toSpecRep RatifyEnv {..} = do
     let
       stakeDistrs =
         Agda.StakeDistrs
-          <$> toSpecRep reDRepDistr
+          <$> withSpecTransM dup (toSpecRep reDRepDistr)
           <*> toSpecRep reStakePoolDistr
-      dreps = toSpecRep $ Map.map drepExpiry reDRepState
-    treasury <- askCtx @Coin
-    Agda.MkRatifyEnv
-      <$> stakeDistrs
-      <*> toSpecRep reCurrentEpoch
-      <*> dreps
-      <*> toSpecRep reCommitteeState
-      <*> toSpecRep treasury
-      <*> toSpecRep (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) reStakePools)
-      <*> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
+      dreps = withSpecTransM dup . toSpecRep $ Map.map drepExpiry reDRepState
+    treasury <- askSpecTransM
+    withSpecTransM (const ()) $ do
+      Agda.MkRatifyEnv
+        <$> stakeDistrs
+        <*> toSpecRep reCurrentEpoch
+        <*> dreps
+        <*> toSpecRep reCommitteeState
+        <*> toSpecRep treasury
+        <*> withSpecTransM
+          dup
+          (toSpecRep (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) reStakePools))
+        <*> withSpecTransM
+          dup
+          (toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL)))
 
 instance
   ( EraPParams era
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD Identity era)
-  , Inject ctx [GovActionState era]
+  , SpecContext (PParamsHKD Identity era) ~ ()
+  , SpecTranslate (PParamsHKD Identity era)
   , ToExpr (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
+  , SpecTranslate (PParamsHKD StrictMaybe era)
   ) =>
-  SpecTranslate ctx (RatifyState era)
+  SpecTranslate (RatifyState era)
   where
   type SpecRep (RatifyState era) = Agda.RatifyState
+  type SpecContext (RatifyState era) = [GovActionState era]
 
   toSpecRep RatifyState {..} = do
     govActionMap <-
       foldl' (\acc gas -> Map.insert (gasId gas) gas acc) mempty
-        <$> askCtx @[GovActionState era]
+        <$> askSpecTransM
     let
       lookupGAS gaId m = do
         case Map.lookup gaId govActionMap of
@@ -740,31 +755,32 @@ instance
         (pure Set.empty)
         (rsExpired `Set.union` Set.fromList (gasId <$> toList rsEnacted))
     Agda.MkRatifyState
-      <$> toSpecRep rsEnactState
-      <*> toSpecRep removed
-      <*> toSpecRep rsDelayed
+      <$> withSpecTransM (const ()) (toSpecRep rsEnactState)
+      <*> (Agda.MkHSSet <$> traverse (withSpecTransM (const ((), ())) . toSpecRep) (toList removed))
+      <*> withSpecTransM (const ()) (toSpecRep rsDelayed)
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecTranslate (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   ) =>
-  SpecTranslate ctx (RatifySignal era)
+  SpecTranslate (RatifySignal era)
   where
   type
     SpecRep (RatifySignal era) =
-      SpecRep [(GovActionId, GovActionState era)]
+      [(SpecRep GovActionId, SpecRep (GovActionState era))]
 
   toSpecRep (RatifySignal x) =
-    toSpecRep $
-      (\gas@GovActionState {gasId} -> (gasId, gas)) <$> x
+    traverse (\gas@GovActionState {gasId} -> withSpecTransM dup $ toSpecRep (gasId, gas)) (toList x)
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecTranslate (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   ) =>
-  SpecTranslate ctx (EnactSignal era)
+  SpecTranslate (EnactSignal era)
   where
   type SpecRep (EnactSignal era) = SpecRep (GovAction era)
 

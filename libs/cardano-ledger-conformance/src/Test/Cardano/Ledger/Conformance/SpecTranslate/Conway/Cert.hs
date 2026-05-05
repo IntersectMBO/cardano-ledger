@@ -41,26 +41,26 @@ import Test.Cardano.Ledger.Conway.TreeDiff
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 
 instance
-  ( SpecTranslate ctx (PParamsHKD Identity era)
+  ( SpecTranslate (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map AccountAddress Coin)
+  , SpecContext (PParamsHKD Identity era) ~ ()
   ) =>
-  SpecTranslate ctx (CertEnv era)
+  SpecTranslate (CertEnv era)
   where
   type SpecRep (CertEnv era) = Agda.CertEnv
+  type SpecContext (CertEnv era) = (VotingProcedures era, Map AccountAddress Coin)
   toSpecRep CertEnv {..} = do
-    votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map AccountAddress Coin)
+    (votes, withdrawals) <- askSpecTransM
     let ccColdCreds = foldMap (keysSet . committeeMembers) ceCurrentCommittee
-    Agda.MkCertEnv
-      <$> toSpecRep ceCurrentEpoch
-      <*> toSpecRep cePParams
-      <*> toSpecRep votes
-      <*> toSpecRep withdrawals
-      <*> toSpecRep ccColdCreds
+    withSpecTransM (const ()) $
+      Agda.MkCertEnv
+        <$> toSpecRep ceCurrentEpoch
+        <*> toSpecRep cePParams
+        <*> toSpecRep votes
+        <*> withSpecTransM (const ((), ())) (toSpecRep withdrawals)
+        <*> toSpecRep ccColdCreds
 
-instance ConwayEraAccounts era => SpecTranslate ctx (ConwayCertState era) where
+instance ConwayEraAccounts era => SpecTranslate (ConwayCertState era) where
   type SpecRep (ConwayCertState era) = Agda.CertState
   toSpecRep ConwayCertState {..} =
     Agda.MkCertState
@@ -68,7 +68,7 @@ instance ConwayEraAccounts era => SpecTranslate ctx (ConwayCertState era) where
       <*> toSpecRep conwayCertPState
       <*> toSpecRep conwayCertVState
 
-instance Era era => SpecTranslate ctx (ConwayTxCert era) where
+instance Era era => SpecTranslate (ConwayTxCert era) where
   type SpecRep (ConwayTxCert era) = Agda.DCert
 
   toSpecRep (ConwayTxCertPool p) = toSpecRep p
@@ -79,7 +79,7 @@ depositsMap ::
   ConwayEraCertState era =>
   CertState era ->
   Proposals era ->
-  SpecTransM ctx (Agda.HSMap Agda.DepositPurpose Integer)
+  SpecTransM () (Agda.HSMap Agda.DepositPurpose Integer)
 depositsMap certState props =
   unionsHSMap
     <$> sequence
@@ -102,70 +102,75 @@ depositsMap certState props =
       ]
 
 instance
-  ( SpecTranslate ctx (TxOut era)
+  ( SpecTranslate (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecContext (TxOut era) ~ ()
   , GovState era ~ ConwayGovState era
-  , Inject ctx (CertState era)
   , ConwayEraCertState era
   ) =>
-  SpecTranslate ctx (UTxOState era)
+  SpecTranslate (UTxOState era)
   where
   type SpecRep (UTxOState era) = Agda.UTxOState
+  type SpecContext (UTxOState era) = CertState era
 
   toSpecRep UTxOState {..} = do
-    certState <- askCtx @(CertState era)
+    certState <- askSpecTransM
     let
       props = utxosGovState ^. cgsProposalsL
       deposits = depositsMap certState props
-    Agda.MkUTxOState
-      <$> toSpecRep utxosUtxo
-      <*> toSpecRep utxosFees
-      <*> deposits
-      <*> toSpecRep utxosDonation
+    withSpecTransM (const ()) $
+      Agda.MkUTxOState
+        <$> toSpecRep utxosUtxo
+        <*> toSpecRep utxosFees
+        <*> deposits
+        <*> toSpecRep utxosDonation
 
 instance
   ( ConwayEraGov era
+  , EraPParams era
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecTranslate (PParamsHKD StrictMaybe era)
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecTranslate (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecContext (TxOut era) ~ ()
   , GovState era ~ ConwayGovState era
-  , SpecTranslate (CertState era) (TxOut era)
   , SpecRep (CertState era) ~ Agda.CertState
   , ConwayEraCertState era
   , CertState era ~ ConwayCertState era
   ) =>
-  SpecTranslate ctx (LedgerState era)
+  SpecTranslate (LedgerState era)
   where
   type SpecRep (LedgerState era) = Agda.LState
 
-  toSpecRep (LedgerState {..}) = do
-    let
-      props = utxosGovState lsUTxOState ^. proposalsGovStateL
-      deposits = depositsMap lsCertState props
+  toSpecRep (LedgerState {..}) =
     Agda.MkLState
       <$> withCtx lsCertState (toSpecRep lsUTxOState)
       <*> toSpecRep props
-      <*> withCtx deposits (toSpecRep lsCertState)
+      <*> toSpecRep lsCertState
+    where
+      props = utxosGovState lsUTxOState ^. proposalsGovStateL
 
 instance
   ( EraPParams era
   , ConwayEraGov era
-  , SpecTranslate [GovActionState era] (PParamsHKD Identity era)
+  , SpecTranslate (PParamsHKD Identity era)
+  , SpecContext (PParamsHKD Identity era) ~ ()
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate [GovActionState era] (PParamsHKD StrictMaybe era)
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecTranslate (PParamsHKD StrictMaybe era)
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   , ToExpr (PParamsHKD StrictMaybe era)
+  , SpecTranslate (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecContext (TxOut era) ~ ()
   , GovState era ~ ConwayGovState era
-  , SpecTranslate (CertState era) (TxOut era)
   , SpecRep (CertState era) ~ Agda.CertState
   , ConwayEraCertState era
   , CertState era ~ ConwayCertState era
   ) =>
-  SpecTranslate ctx (EpochState era)
+  SpecTranslate (EpochState era)
   where
   type SpecRep (EpochState era) = Agda.EpochState
 
@@ -181,7 +186,7 @@ instance
       ratifyState = getRatifyState $ utxosGovState lsUTxOState
       govActions = toList $ lsUTxOState ^. utxosGovStateL . proposalsGovStateL . pPropsL
 
-instance SpecTranslate ctx SnapShots where
+instance SpecTranslate SnapShots where
   type SpecRep SnapShots = Agda.Snapshots
 
   toSpecRep (SnapShots {..}) =
@@ -191,18 +196,18 @@ instance SpecTranslate ctx SnapShots where
       <*> toSpecRep ssStakeGo
       <*> toSpecRep ssFee
 
-instance SpecTranslate ctx SnapShot where
+instance SpecTranslate SnapShot where
   type SpecRep SnapShot = Agda.Snapshot
 
   toSpecRep (SnapShot {..}) =
     Agda.MkSnapshot
       <$> toSpecRep (Stake $ VMap.fromMap $ Map.map (unNonZero . swdStake) activeStakeMap)
-      <*> toSpecRep (Map.map swdDelegation activeStakeMap)
-      <*> toSpecRep (VMap.toMap ssStakePoolsSnapShot)
+      <*> withSpecTransM dup (toSpecRep (Map.map swdDelegation activeStakeMap))
+      <*> withSpecTransM dup (toSpecRep (VMap.toMap ssStakePoolsSnapShot))
     where
       activeStakeMap = VMap.toMap $ unActiveStake ssActiveStake
 
-instance SpecTranslate ctx StakePoolSnapShot where
+instance SpecTranslate StakePoolSnapShot where
   type SpecRep StakePoolSnapShot = Agda.StakePoolParams
 
   toSpecRep StakePoolSnapShot {..} =
@@ -213,12 +218,12 @@ instance SpecTranslate ctx StakePoolSnapShot where
       <*> toSpecRep spssPledge
       <*> toSpecRep (unAccountId spssAccountId)
 
-instance SpecTranslate ctx Stake where
+instance SpecTranslate Stake where
   type SpecRep Stake = Agda.HSMap Agda.Credential Agda.Coin
 
-  toSpecRep (Stake stake) = toSpecRep $ VMap.toMap stake
+  toSpecRep (Stake stake) = withSpecTransM dup $ toSpecRep $ VMap.toMap stake
 
-instance SpecTranslate ctx ChainAccountState where
+instance SpecTranslate ChainAccountState where
   type SpecRep ChainAccountState = Agda.Acnt
 
   toSpecRep (ChainAccountState {..}) =
@@ -226,12 +231,12 @@ instance SpecTranslate ctx ChainAccountState where
       <$> toSpecRep casTreasury
       <*> toSpecRep casReserves
 
-instance SpecTranslate ctx DeltaCoin where
+instance SpecTranslate DeltaCoin where
   type SpecRep DeltaCoin = Integer
 
   toSpecRep (DeltaCoin x) = pure x
 
-instance SpecTranslate ctx PulsingRewUpdate where
+instance SpecTranslate PulsingRewUpdate where
   type SpecRep PulsingRewUpdate = Agda.HsRewardUpdate
 
   toSpecRep x =
@@ -239,7 +244,7 @@ instance SpecTranslate ctx PulsingRewUpdate where
       <$> toSpecRep deltaT
       <*> toSpecRep deltaR
       <*> toSpecRep deltaF
-      <*> toSpecRep rwds
+      <*> withSpecTransM dup (toSpecRep rwds)
     where
       (RewardUpdate {..}, _) = runShelleyBase $ completeRupd x
       rwds = Set.foldMap rewardAmount <$> rs
@@ -247,21 +252,22 @@ instance SpecTranslate ctx PulsingRewUpdate where
 instance
   ( EraPParams era
   , ConwayEraGov era
-  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecTranslate (PParamsHKD Identity era)
+  , SpecContext (PParamsHKD Identity era) ~ ()
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  , SpecTranslate [GovActionState era] (PParamsHKD Identity era)
-  , SpecTranslate [GovActionState era] (PParamsHKD StrictMaybe era)
+  , SpecTranslate (PParamsHKD StrictMaybe era)
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   , ToExpr (PParamsHKD StrictMaybe era)
+  , SpecTranslate (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecContext (TxOut era) ~ ()
   , GovState era ~ ConwayGovState era
-  , SpecTranslate (CertState era) (TxOut era)
   , SpecRep (CertState era) ~ Agda.CertState
   , ConwayEraCertState era
   , CertState era ~ ConwayCertState era
   ) =>
-  SpecTranslate ctx (NewEpochState era)
+  SpecTranslate (NewEpochState era)
   where
   type SpecRep (NewEpochState era) = Agda.NewEpochState
 

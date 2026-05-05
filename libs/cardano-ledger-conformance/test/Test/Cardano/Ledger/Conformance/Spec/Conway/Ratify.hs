@@ -54,7 +54,7 @@ conformsToImplAccepted impl agda = property $ do
   let specEnv = fromSpecTransM $ runSpecTransM @Coin 0 $ toSpecRep ratifyEnv
       specSt =
         fromSpecTransM $
-          runSpecTransM govActions $
+          runSpecTransM () $
             toSpecRep (ratifySt ^. rsEnactStateL)
       specGovActions = fromSpecTransM $ runSpecTransM () $ toSpecRep govActions
   return $

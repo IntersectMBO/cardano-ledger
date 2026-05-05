@@ -28,13 +28,14 @@ instance ExecSpecRule "GOV" ConwayEra where
   runAgdaRule (SpecTRC env st sig) = unComputationResult $ Agda.govStep env st sig
 
   translateInputs enactState (TRC (env@GovEnv {gePParams}, st, sig)) = do
-    runSpecTransM ctx $
-      SpecTRC
-        <$> toSpecRep env
-        <*> toSpecRep st
-        <*> toSpecRep sig
+    agdaEnv <- runSpecTransM ctx $ toSpecRep env
+    agdaSt <- runSpecTransM () $ toSpecRep st
+    agdaSig <- runSpecTransM () $ toSpecRep sig
+    pure $ SpecTRC agdaEnv agdaSt agdaSig
     where
       ctx =
         enactState
           & ensPrevGovActionIdsL .~ toPrevGovActionIds (st ^. pRootsL)
           & ensProtVerL .~ (gePParams ^. ppProtocolVersionL)
+
+  translateOutput _ _ st = runSpecTransM () $ toSpecRep st

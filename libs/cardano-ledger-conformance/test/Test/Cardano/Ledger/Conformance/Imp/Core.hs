@@ -17,7 +17,6 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ledgerSlotNoL)
-import Cardano.Ledger.TxIn (TxId)
 import Control.State.Transition
 import Data.Bifunctor (Bifunctor (..))
 import Data.Data (Proxy (..))
@@ -98,12 +97,12 @@ submitTxConformanceHook ::
   ( ConwayEraImp era
   , ExecSpecRule "LEDGER" era
   , ExecContext "LEDGER" era ~ ConwayLedgerExecContext era
-  , SpecTranslate (ExecContext "LEDGER" era) (TxWits era)
+  , SpecTranslate (TxWits era)
   , HasCallStack
   , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecRep (TxBody TopTx era) ~ Agda.TxBody
-  , SpecTranslate TxId (TxBody TopTx era)
-  , SpecTranslate (ConwayLedgerExecContext era) (Tx TopTx era)
+  , SpecTranslate (TxBody TopTx era)
+  , SpecTranslate (Tx TopTx era)
   , ToExpr (SpecRep (Tx TopTx era))
   , SpecNormalize (SpecState "LEDGER" era)
   , Eq (SpecState "LEDGER" era)

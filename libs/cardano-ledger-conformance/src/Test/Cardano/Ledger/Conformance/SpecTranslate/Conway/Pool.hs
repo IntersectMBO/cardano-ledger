@@ -20,24 +20,25 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecTranslate (PParamsHKD Identity era)
+  , SpecContext (PParamsHKD Identity era) ~ ()
   ) =>
-  SpecTranslate ctx (PoolEnv era)
+  SpecTranslate (PoolEnv era)
   where
   type SpecRep (PoolEnv era) = Agda.PParams
 
   toSpecRep (PoolEnv _ pp) = toSpecRep pp
 
-instance SpecTranslate ctx (PState era) where
+instance SpecTranslate (PState era) where
   type SpecRep (PState era) = Agda.PState
 
   toSpecRep PState {..} =
     Agda.MkPState
-      <$> toSpecRep (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools)
-      <*> toSpecRep psFutureStakePoolParams
-      <*> toSpecRep psRetiring
+      <$> withSpecTransM (const ((), ())) (toSpecRep (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools))
+      <*> withSpecTransM (const ((), ())) (toSpecRep psFutureStakePoolParams)
+      <*> withSpecTransM (const ((), ())) (toSpecRep psRetiring)
 
-instance SpecTranslate ctx PoolCert where
+instance SpecTranslate PoolCert where
   type SpecRep PoolCert = Agda.DCert
 
   toSpecRep (RegPool p@StakePoolParams {sppId = KeyHash ppHash}) =

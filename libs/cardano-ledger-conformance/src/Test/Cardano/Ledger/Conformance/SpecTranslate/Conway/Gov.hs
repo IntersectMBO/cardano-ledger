@@ -26,36 +26,40 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
 instance
-  ( SpecTranslate ctx (PParamsHKD Identity era)
-  , Inject ctx (EnactState era)
+  ( SpecTranslate (PParamsHKD Identity era)
+  , SpecContext (PParamsHKD Identity era) ~ ()
   , EraPParams era
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate ctx (CertState era)
+  , SpecTranslate (CertState era)
+  , SpecContext (CertState era) ~ ()
   , SpecRep (CertState era) ~ Agda.CertState
   , EraCertState era
   ) =>
-  SpecTranslate ctx (GovEnv era)
+  SpecTranslate (GovEnv era)
   where
   type SpecRep (GovEnv era) = Agda.GovEnv
+  type SpecContext (GovEnv era) = EnactState era
 
   toSpecRep GovEnv {..} = do
-    enactState <- askCtx @(EnactState era)
+    enactState <- askSpecTransM
     let rewardAccounts = Map.keysSet $ geCertState ^. certDStateL . accountsL . accountsMapL
-    Agda.MkGovEnv
-      <$> toSpecRep geTxId
-      <*> toSpecRep geEpoch
-      <*> toSpecRep gePParams
-      <*> toSpecRep geGuardrailsScriptHash
-      <*> toSpecRep enactState
-      <*> toSpecRep geCertState
-      <*> toSpecRep rewardAccounts
+    withSpecTransM (const ()) $
+      Agda.MkGovEnv
+        <$> toSpecRep geTxId
+        <*> toSpecRep geEpoch
+        <*> toSpecRep gePParams
+        <*> toSpecRep geGuardrailsScriptHash
+        <*> toSpecRep enactState
+        <*> toSpecRep geCertState
+        <*> toSpecRep rewardAccounts
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecTranslate (PParamsHKD StrictMaybe era)
+  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   ) =>
-  SpecTranslate ctx (GovSignal era)
+  SpecTranslate (GovSignal era)
   where
   type SpecRep (GovSignal era) = [Either Agda.GovVote Agda.GovProposal]
 

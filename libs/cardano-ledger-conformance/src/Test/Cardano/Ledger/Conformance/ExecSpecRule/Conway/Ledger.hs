@@ -47,6 +47,10 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   SpecTRC (..),
   runFromAgdaFunction,
  )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (..),
+  runSpecTransM,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -105,6 +109,14 @@ instance
 
 instance ExecSpecRule "LEDGER" ConwayEra where
   type ExecContext "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
+
+  translateInputs ConwayLedgerExecContext {..} (TRC (env, st, sig)) = do
+    agdaEnv <- runSpecTransM (clecGuardrailsScriptHash, clecEnactState) $ toSpecRep env
+    agdaSt <- runSpecTransM () $ toSpecRep st
+    agdaSig <- runSpecTransM () $ toSpecRep sig
+    pure $ SpecTRC agdaEnv agdaSt agdaSig
+
+  translateOutput _ _ st = runSpecTransM () $ toSpecRep st
 
   runAgdaRule trc =
     let externalFunctions' = externalFunctions {Agda.extValidPlutusScript = Agda.isValid (strcSignal trc)}

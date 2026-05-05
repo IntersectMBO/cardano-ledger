@@ -14,7 +14,6 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledger () where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx)
-import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   AllegraEraTxBody (..),
@@ -38,7 +37,7 @@ import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
 import Lens.Micro ((^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (askCtx, withCtx)
+import Test.Cardano.Ledger.Conformance (askSpecTransM, withCtx, withSpecTransM)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   SpecTranslate (..),
  )
@@ -46,61 +45,60 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 
 instance
   ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecTranslate (PParamsHKD Identity era)
+  , SpecContext (PParamsHKD Identity era) ~ ()
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , Inject ctx (StrictMaybe ScriptHash)
-  , Inject ctx (EnactState era)
   ) =>
-  SpecTranslate ctx (LedgerEnv era)
+  SpecTranslate (LedgerEnv era)
   where
   type SpecRep (LedgerEnv era) = Agda.LEnv
+  type SpecContext (LedgerEnv era) = (StrictMaybe ScriptHash, EnactState era)
 
   toSpecRep LedgerEnv {..} = do
-    policyHash <- askCtx @(StrictMaybe ScriptHash)
-    enactState <- askCtx @(EnactState era)
-    Agda.MkLEnv
-      <$> toSpecRep ledgerSlotNo
-      <*> toSpecRep policyHash
-      <*> toSpecRep ledgerPp
-      <*> toSpecRep enactState
-      <*> toSpecRep (casTreasury ledgerAccount)
+    (policyHash, enactState) <- askSpecTransM
+    withSpecTransM (const ()) $
+      Agda.MkLEnv
+        <$> toSpecRep ledgerSlotNo
+        <*> toSpecRep policyHash
+        <*> toSpecRep ledgerPp
+        <*> toSpecRep enactState
+        <*> toSpecRep (casTreasury ledgerAccount)
 
-instance
-  Inject ctx TxId =>
-  SpecTranslate ctx (TxBody TopTx ConwayEra)
-  where
+instance SpecTranslate (TxBody TopTx ConwayEra) where
   type SpecRep (TxBody TopTx ConwayEra) = Agda.TxBody
+  type SpecContext (TxBody TopTx ConwayEra) = TxId
 
   toSpecRep txb = do
-    txId <- askCtx @TxId
-    Agda.MkTxBody
-      <$> toSpecRep (txb ^. inputsTxBodyL)
-      <*> toSpecRep (txb ^. referenceInputsTxBodyL)
-      <*> toSpecRep (txb ^. collateralInputsTxBodyL)
-      <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (txb ^. outputsTxBodyL))
-      <*> toSpecRep txId
-      <*> toSpecRep (txb ^. certsTxBodyL)
-      <*> toSpecRep (txb ^. feeTxBodyL)
-      <*> toSpecRep (txb ^. withdrawalsTxBodyL)
-      <*> toSpecRep (txb ^. vldtTxBodyL)
-      <*> toSpecRep (txb ^. auxDataHashTxBodyL)
-      <*> toSpecRep (txb ^. treasuryDonationTxBodyL)
-      <*> toSpecRep (txb ^. votingProceduresTxBodyL)
-      <*> toSpecRep (txb ^. proposalProceduresTxBodyL)
-      <*> toSpecRep (txb ^. networkIdTxBodyL)
-      <*> toSpecRep (txb ^. currentTreasuryValueTxBodyL)
-      <*> pure 0
-      <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
-      -- The script integrity hash is computed using @const 0@ on the Agda
-      -- side (@Hashable-ScriptIntegrity = record { hash = λ x → 0 }@).
-      -- Until a proper hash function is used in Agda, we emulate the same
-      -- behavior here.
-      --
-      -- The following PR documents the discrepancy on the Agda side:
-      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1086
-      <*> fmap (fmap (const 0)) (toSpecRep (txb ^. scriptIntegrityHashTxBodyL))
+    txId <- askSpecTransM
+    withSpecTransM (const ()) $
+      Agda.MkTxBody
+        <$> toSpecRep (txb ^. inputsTxBodyL)
+        <*> toSpecRep (txb ^. referenceInputsTxBodyL)
+        <*> toSpecRep (txb ^. collateralInputsTxBodyL)
+        <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (txb ^. outputsTxBodyL))
+        <*> toSpecRep txId
+        <*> toSpecRep (txb ^. certsTxBodyL)
+        <*> toSpecRep (txb ^. feeTxBodyL)
+        <*> toSpecRep (txb ^. withdrawalsTxBodyL)
+        <*> toSpecRep (txb ^. vldtTxBodyL)
+        <*> toSpecRep (txb ^. auxDataHashTxBodyL)
+        <*> toSpecRep (txb ^. treasuryDonationTxBodyL)
+        <*> toSpecRep (txb ^. votingProceduresTxBodyL)
+        <*> toSpecRep (txb ^. proposalProceduresTxBodyL)
+        <*> toSpecRep (txb ^. networkIdTxBodyL)
+        <*> toSpecRep (txb ^. currentTreasuryValueTxBodyL)
+        <*> pure 0
+        <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
+        -- The script integrity hash is computed using @const 0@ on the Agda
+        -- side (@Hashable-ScriptIntegrity = record { hash = λ x → 0 }@).
+        -- Until a proper hash function is used in Agda, we emulate the same
+        -- behavior here.
+        --
+        -- The following PR documents the discrepancy on the Agda side:
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1086
+        <*> fmap (fmap (const 0)) (toSpecRep (txb ^. scriptIntegrityHashTxBodyL))
 
-instance SpecTranslate ctx (Tx TopTx ConwayEra) where
+instance SpecTranslate (Tx TopTx ConwayEra) where
   type SpecRep (Tx TopTx ConwayEra) = Agda.Tx
 
   toSpecRep tx =
@@ -111,7 +109,7 @@ instance SpecTranslate ctx (Tx TopTx ConwayEra) where
       <*> toSpecRep (tx ^. isValidTxL)
       <*> toSpecRep (tx ^. auxDataTxL)
 
-instance SpecTranslate ctx (AlonzoStAnnTx TopTx ConwayEra) where
+instance SpecTranslate (AlonzoStAnnTx TopTx ConwayEra) where
   type SpecRep (AlonzoStAnnTx TopTx ConwayEra) = Agda.Tx
 
   toSpecRep stAnnTx = toSpecRep (stAnnTx ^. txStAnnTxG)

@@ -38,24 +38,26 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD Identity era)
-  , Inject ctx (Set (Credential DRepRole))
+  , SpecTranslate (PParamsHKD Identity era)
+  , SpecContext (PParamsHKD Identity era) ~ ()
   ) =>
-  SpecTranslate ctx (ConwayDelegEnv era)
+  SpecTranslate (ConwayDelegEnv era)
   where
   type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
+  type SpecContext (ConwayDelegEnv era) = Set (Credential DRepRole)
 
   toSpecRep ConwayDelegEnv {..} = do
-    delegatees <- askCtx @(Set (Credential DRepRole))
-    Agda.MkDelegEnv
-      <$> toSpecRep cdePParams
-      <*> toSpecRep
-        ( Map.mapKeys (hashToInteger . unKeyHash) $
-            Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) cdePools
-        )
-      <*> toSpecRep delegatees
+    delegatees <- askSpecTransM
+    withSpecTransM (const ()) $
+      Agda.MkDelegEnv
+        <$> toSpecRep cdePParams
+        <*> withSpecTransM (const ((), ())) (toSpecRep
+          ( Map.mapKeys (hashToInteger . unKeyHash) $
+              Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) cdePools
+          ))
+        <*> toSpecRep delegatees
 
-instance SpecTranslate ctx ConwayDelegCert where
+instance SpecTranslate ConwayDelegCert where
   type SpecRep ConwayDelegCert = Agda.DCert
 
   toSpecRep (ConwayRegCert c d) =
@@ -79,14 +81,14 @@ instance SpecTranslate ctx ConwayDelegCert where
       <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> toSpecRep c
 
-instance ConwayEraAccounts era => SpecTranslate ctx (DState era) where
+instance ConwayEraAccounts era => SpecTranslate (DState era) where
   type SpecRep (DState era) = Agda.DState
 
   toSpecRep dState =
     Agda.MkDState
-      <$> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) accountsMap)
-      <*> toSpecRep (Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap)
-      <*> toSpecRep (Map.map (fromCompact . (^. balanceAccountStateL)) accountsMap)
+      <$> withSpecTransM dup (toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) accountsMap))
+      <*> withSpecTransM dup (toSpecRep (Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap))
+      <*> withSpecTransM dup (toSpecRep (Map.map (fromCompact . (^. balanceAccountStateL)) accountsMap))
       <*> deposits
     where
       accountsMap = dState ^. accountsL . accountsMapL

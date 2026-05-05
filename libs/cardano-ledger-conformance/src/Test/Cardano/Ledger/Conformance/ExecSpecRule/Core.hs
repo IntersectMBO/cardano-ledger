@@ -148,9 +148,12 @@ class
     TRC (EraRule rule era) ->
     Either Text (SpecTRC rule era)
   default translateInputs ::
-    ( SpecTranslate (ExecContext rule era) (Environment (EraRule rule era))
-    , SpecTranslate (ExecContext rule era) (State (EraRule rule era))
-    , SpecTranslate (ExecContext rule era) (Signal (EraRule rule era))
+    ( SpecTranslate (Environment (EraRule rule era))
+    , SpecTranslate (State (EraRule rule era))
+    , SpecTranslate (Signal (EraRule rule era))
+    , SpecContext (Environment (EraRule rule era)) ~ ExecContext rule era
+    , SpecContext (State (EraRule rule era)) ~ ExecContext rule era
+    , SpecContext (Signal (EraRule rule era)) ~ ExecContext rule era
     , SpecRep (Environment (EraRule rule era)) ~ SpecEnvironment rule era
     , SpecRep (State (EraRule rule era)) ~ SpecState rule era
     , SpecRep (Signal (EraRule rule era)) ~ SpecSignal rule era
@@ -168,7 +171,8 @@ class
     State (EraRule rule era) ->
     Either Text (SpecState rule era)
   default translateOutput ::
-    ( SpecTranslate (ExecContext rule era) (State (EraRule rule era))
+    ( SpecTranslate (State (EraRule rule era))
+    , SpecContext (State (EraRule rule era)) ~ ExecContext rule era
     , SpecRep (State (EraRule rule era)) ~ SpecState rule era
     ) =>
     ExecContext rule era ->
@@ -378,7 +382,7 @@ generatesWithin gen timeout =
 
 -- | Translate a Haskell type 'a' whose translation context is 'ctx' into its Agda type, in the ImpTest monad.
 translateWithContext ::
-  SpecTranslate ctx a => ctx -> a -> ImpTestM era (Either Text (SpecRep a))
+  SpecTranslate a => SpecContext a -> a -> ImpTestM era (Either Text (SpecRep a))
 translateWithContext ctx x = pure . runSpecTransM ctx $ toSpecRep x
 
 runFromAgdaFunction ::

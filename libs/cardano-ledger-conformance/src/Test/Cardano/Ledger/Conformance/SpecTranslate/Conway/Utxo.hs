@@ -20,9 +20,10 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 
 instance
   ( SpecRep (PParams era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecTranslate (PParamsHKD Identity era)
+  , SpecContext (PParamsHKD Identity era) ~ ()
   ) =>
-  SpecTranslate ctx (UtxoEnv era)
+  SpecTranslate (UtxoEnv era)
   where
   type SpecRep (UtxoEnv era) = Agda.UTxOEnv
 
