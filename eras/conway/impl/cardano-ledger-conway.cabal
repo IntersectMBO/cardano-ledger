@@ -258,6 +258,7 @@ library testlib
     containers,
     data-default,
     deepseq,
+    fs-sim,
     generic-random,
     microlens,
     microlens-mtl,

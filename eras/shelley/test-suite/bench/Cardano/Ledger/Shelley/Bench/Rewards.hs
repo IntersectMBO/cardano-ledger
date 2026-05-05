@@ -40,6 +40,8 @@ import qualified Data.Maybe as Maybe
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import System.FS.API.Types (MountPoint (..))
+import System.FS.IO (ioHasFS)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (
   defaultConstants,
@@ -64,16 +66,17 @@ import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (
  )
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, chainNes, totalAda)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
-import Test.QuickCheck (Gen)
+import Test.QuickCheck.Gen (generate)
 
 -- | Generate a chain state at a given epoch. Since we are only concerned about
 -- rewards, this will populate the chain with empty blocks (only issued by the
 -- original genesis delegates).
-genChainInEpoch :: EpochNo -> Gen (ChainState ShelleyEra)
+genChainInEpoch :: EpochNo -> IO (ChainState ShelleyEra)
 genChainInEpoch epoch = do
   genesisChainState <-
     fromRight (error "genChainState failed")
-      <$> mkGenesisChainState @ShelleyEra (GenEnv ks (ScriptSpace [] [] Map.empty Map.empty) cs) (IRC ())
+      <$> generate
+        (mkGenesisChainState @ShelleyEra (GenEnv ks (ScriptSpace [] [] Map.empty Map.empty) cs) (IRC ()))
   -- Our genesis chain state contains no registered staking. Since we want to
   -- calculate a reward update, we will set some up.
   -- What do we want to do here?
@@ -97,19 +100,21 @@ genChainInEpoch epoch = do
         zip stakePools $
           chunk (length initUtxoAddrs `div` length stakePools) initUtxoAddrs
 
-  let chainState =
-        registerGenesisStaking
-          (mkGenesisStaking stakeMap)
-          genesisChainState
+  chainState <-
+    registerGenesisStaking
+      (ioHasFS (MountPoint "."))
+      (mkGenesisStaking stakeMap)
+      genesisChainState
   -- Now run the empty block generator over the chain state until we hit the
   -- desired epoch.
-  applyUntil
-    chainState
-    ( \x ->
-        if (LS.nesEL $ chainNes x) >= epoch
-          then Nothing
-          else Just $ applyBlk x <$> genEmptyBlock x
-    )
+  generate $
+    applyUntil
+      chainState
+      ( \x ->
+          if (LS.nesEL $ chainNes x) >= epoch
+            then Nothing
+            else Just $ applyBlk x <$> genEmptyBlock x
+      )
   where
     applyUntil :: Monad m => a -> (a -> Maybe (m a)) -> m a
     applyUntil x f = case f x of

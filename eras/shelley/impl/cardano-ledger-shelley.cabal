@@ -253,6 +253,7 @@ library testlib
     cardano-strict-containers,
     containers,
     data-default,
+    fs-sim,
     generic-random,
     hedgehog-quickcheck,
     mempack,

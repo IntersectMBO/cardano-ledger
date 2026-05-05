@@ -306,6 +306,7 @@ instance ShelleyEraImp ConwayEra where
         , cgCommittee = committee
         , cgDelegs = mempty
         , cgInitialDReps = mempty
+        , cgExtraConfig = SNothing
         }
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript

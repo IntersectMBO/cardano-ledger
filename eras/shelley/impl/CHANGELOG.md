@@ -2,6 +2,9 @@
 
 ## 1.19.0.0
 
+* Add `injectStakeCredentials`, `injectStakePools`, `resolveInjectionSource`, `injectInitialFundsAndStaking` to `Cardano.Ledger.Shelley.Transition`
+  - `injectStakeCredentials` and `injectStakePools` take a leading `Network` argument and throw `InjectionNotAllowedOnMainnet` when called with `Mainnet`
+* Deprecate `registerInitialStakePools`, `shelleyRegisterInitialAccounts`
 * Change `applyTxValidation` and `ruleApplyTxValidation` to take `StAnnTx TopTx era` instead of `Tx TopTx era`
 * Change `Signal` to `StAnnTx TopTx era` for: `ShelleyLEDGER`, `ShelleyUTXOW`, `ShelleyUTXO`
 * Add `mkStAnnTx` to `ApplyTx`

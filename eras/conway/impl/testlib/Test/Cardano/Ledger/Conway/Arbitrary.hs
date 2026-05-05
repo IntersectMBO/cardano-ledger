@@ -126,6 +126,7 @@ instance Arbitrary ConwayGenesis where
     -- pretty much guarantees uniqueness
     let cgDelegs = ListMap.fromList delegs
         cgInitialDReps = ListMap.fromList $ initialDRepsNoDelegs ++ initialDRepsWithDelegs
+        cgExtraConfig = SNothing
     pure ConwayGenesis {..}
 
 instance Arbitrary (UpgradeConwayPParams Identity) where
