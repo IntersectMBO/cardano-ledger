@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -121,18 +122,26 @@ requiredSignersRule ::
   Proxy "required_signers" -> Proxy era -> Rule
 requiredSignersRule pname p = pname =.= huddleRule1 @"set" p (huddleRule @"addr_keyhash" p)
 
+-- | See module @PlutusCore.Data@ on the tags that are allowed for the `Constr` index.
+--
+-- Also see CBOR standard that specifies the CBOR tags and their semantics:
+-- https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml
 constr :: IsType0 a => Proxy "constr" -> a -> GRuleCall
 constr pname =
   binding $ \x ->
     pname
-      =.= tag 121 (arr [0 <+ a x])
-      / tag 122 (arr [0 <+ a x])
-      / tag 123 (arr [0 <+ a x])
-      / tag 124 (arr [0 <+ a x])
-      / tag 125 (arr [0 <+ a x])
-      / tag 126 (arr [0 <+ a x])
-      / tag 127 (arr [0 <+ a x])
-      / tag 102 (arr [a VUInt, a $ arr [0 <+ a x]])
+      =.=
+      -- We use 'unType0 . toType0' to convert each 'Tagged ArrayChoice' to 'Choice Type2',
+      -- making the list homogeneous so that 'foldl1 (/)' can be used.
+      -- Ideally, we should have used `toChoice`, but it's not exported by `cuddle`.
+      foldl1
+        (/)
+        ( fmap
+            (unType0 . toType0)
+            ( tag 102 (arr [a VUInt, a $ arr [0 <+ a x]])
+                : [tag t (arr [0 <+ a x]) | t <- [121 .. 127] ++ [1280 .. 1400]]
+            )
+        )
 
 instance HuddleGroup "operational_cert" AlonzoEra where
   huddleGroupNamed = shelleyOperationalCertGroup
