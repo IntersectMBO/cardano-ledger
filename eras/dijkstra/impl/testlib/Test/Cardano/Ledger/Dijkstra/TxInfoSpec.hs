@@ -23,7 +23,7 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..))
 import Cardano.Ledger.Dijkstra.State (UTxO (..))
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
-import Cardano.Ledger.Plutus (Language (..), SLanguage (..))
+import Cardano.Ledger.Plutus (Language (..), SLanguage (..), plutusLanguage)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
@@ -85,7 +85,7 @@ spec = describe "TxInfo" $ do
           , SupportedLanguage SPlutusV3
           ]
     forM_ plutusV1toV3 $ \(SupportedLanguage slang) -> do
-      it "SubTxIsNotSupported" $ do
+      it "UnsupportedScriptInSubTx" $ do
         let
           tx = mkBasicTx @era @SubTx mkBasicTxBody
           ledgerTxInfo =
@@ -100,7 +100,8 @@ spec = describe "TxInfo" $ do
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
-        txInfoResult `shouldBeLeft` inject (SubTxIsNotSupported @era (txIdTx tx))
+        txInfoResult
+          `shouldBeLeft` inject (UnsupportedScriptInSubTx @era (plutusLanguage slang) (txIdTx tx))
       prop "DirectDepositsNotSupported" $ do
         accountAddr <- arbitrary
         coin <- arbitrary
@@ -143,7 +144,7 @@ spec = describe "TxInfo" $ do
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (AccountBalanceIntervalsNotSupported @era abi)
-      it "TopTx with non-empty subTransactionsTxBodyL" $ do
+      it "SubTxsAreNotSupported" $ do
         let
           subTx = mkBasicTx @era @SubTx mkBasicTxBody
           tx =
@@ -162,4 +163,5 @@ spec = describe "TxInfo" $ do
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
-        txInfoResult `shouldBeLeft` inject (SubTxIsNotSupported @era (txIdTx tx))
+        txInfoResult
+          `shouldBeLeft` inject (SubTxsAreNotSupported @era (pure (txIdTx subTx)))
