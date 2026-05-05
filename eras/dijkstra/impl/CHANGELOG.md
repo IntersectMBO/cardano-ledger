@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `SubTxsAreNotSupported` constructor to `DijkstraContextError`
 * Add `decodeDijkstraTopTx`
 * Change `Signal` to `StAnnTx TopTx era` for: `DijkstraLEDGER`, `DijkstraMEMPOOL`, `DijkstraUTXOW`, `DijkstraUTXO`
 * Change `Signal` to `StAnnTx SubTx era` for: `DijkstraSUBLEDGER`, `DijkstraSUBUTXOW`, `DijkstraSUBUTXO`
@@ -27,7 +28,7 @@
 * Add `SubWrongNetworkInDirectDeposit` constructor to `DijkstraSubUtxoPredFailure`
 * Add `validateWrongNetworkInDirectDeposit`
 * Add `checkPointerPresentInOutput`
-* Add `SubTxIsNotSupported` and `transFailSubTxIsNotSupported`
+* Add `UnsupportedScriptInSubTx` and `transFailUnsupportedScriptInSubTx`
 * Remove `transPlutusPurposeV3` and `transPlutusPurposeV1V2`.
 * `DijkstraTxInfoResult` changed its content type to `PlutusTxInfoResult`
 * Add `EraForecast` instance for `DijkstraEra`.
