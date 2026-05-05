@@ -1537,3 +1537,4 @@ peekTokenType = fromPlainDecoder C.peekTokenType
 
 liftST :: ST s a -> Decoder s a
 liftST st = Decoder $ \_ _ -> C.liftST st
+{-# INLINE liftST #-}

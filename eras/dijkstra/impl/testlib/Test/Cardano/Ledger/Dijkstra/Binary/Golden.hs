@@ -307,7 +307,7 @@ goldenIsValidFlag = do
       txWithFlagFalseEnc
       ( DecoderErrorDeserialiseFailure
           "Annotator (Tx TopTx DijkstraEra)"
-          (DeserialiseFailure 13 "value `false` not allowed for `isValid`")
+          (DeserialiseFailure 13 "Value `false` not allowed for `isValid`")
       )
   where
     version = eraProtVerLow @era

@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `decodeDijkstraTopTx`
 * Change `Signal` to `StAnnTx TopTx era` for: `DijkstraLEDGER`, `DijkstraMEMPOOL`, `DijkstraUTXOW`, `DijkstraUTXO`
 * Change `Signal` to `StAnnTx SubTx era` for: `DijkstraSUBLEDGER`, `DijkstraSUBUTXOW`, `DijkstraSUBUTXO`
 * Change `DijkstraSUBLEDGERS` `Signal` to `[StAnnTx SubTx era]`
