@@ -2,6 +2,15 @@
 
 ## 1.21.0.0
 
+* Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
+  - `?!.` -> `?!`
+  - `?!#.` -> `?!#`
+  - `checkFailOnLeftStatic` -> `?!#:`
+  - `checkFailOnJustStatic` -> `failOnJustStatic`
+  - `checkFailOnJust` -> `failOnJust`
+  - `checkFailOnNonEmpty` -> `failOnNonEmpty`
+  - `checkFailOnNonEmptySet` -> `failOnNonEmptySet`
+  - `checkFailOnNonEmptyMap` -> `failOnNonEmptyMap`
 * Change `ChainCode` type to use `ByteArray` instead of `ByteString`
 * Change `bwAttributes` field to use `ByteArray` instead of `ByteString`
 * Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class
