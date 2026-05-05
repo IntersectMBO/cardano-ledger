@@ -196,6 +196,8 @@ instance ToExpr (ShelleyPoolPredFailure era)
 -- Rules/Deleg
 instance ToExpr (ShelleyDelegPredFailure era)
 
+instance ToExpr (AccountAlreadyRegistered era)
+
 -- Rules/Utxow
 instance
   ( Era era

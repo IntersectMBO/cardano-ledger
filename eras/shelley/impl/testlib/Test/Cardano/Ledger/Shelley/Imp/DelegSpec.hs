@@ -47,7 +47,7 @@ shelleyEraSpecificSpec = do
             & bodyTxL . certsTxBodyL
               .~ [regTxCert, regTxCert]
         )
-        [injectFailure $ StakeKeyAlreadyRegisteredDELEG (KeyHashObj kh)]
+        [injectFailure $ AccountAlreadyRegistered (KeyHashObj kh)]
       expectStakeCredNotRegistered (KeyHashObj kh)
 
   it "Delegate to unregistered pool" $ do
@@ -157,7 +157,7 @@ spec = do
       submitTx_ tx
       submitFailingTx
         tx
-        [ injectFailure $ StakeKeyAlreadyRegisteredDELEG cred
+        [ injectFailure $ AccountAlreadyRegistered cred
         ]
       expectStakeCredRegistered cred
 

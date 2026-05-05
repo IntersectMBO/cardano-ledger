@@ -30,7 +30,7 @@ import Cardano.Ledger.Block (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
-import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG, ShelleyEraForecast)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -41,15 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   lsCertStateL,
  )
-import Cardano.Ledger.Shelley.Rules (
-  DelegEnv (..),
-  LedgerEnv (..),
-  PoolEnv (..),
-  PoolEvent,
-  ShelleyPOOL,
-  ShelleyPoolPredFailure,
-  ledgerPpL,
- )
+import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.BHeader (
   BHeader (..),
@@ -59,7 +51,6 @@ import Cardano.Protocol.TPraos.BHeader (
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.State.Transition
 import Data.Foldable (toList)
-import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Proxy
@@ -234,6 +225,9 @@ delegTraceFromBlock ::
   ( ChainProperty era
   , ShelleyEraTxBody era
   , ShelleyEraAccounts era
+  , EraRule "DELEG" era ~ ShelleyDELEG era
+  , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
+  , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->

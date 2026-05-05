@@ -52,6 +52,7 @@ import Cardano.Ledger.Shelley.Rewards (
   StakeShare (..),
  )
 import Cardano.Ledger.Shelley.Rules (
+  AccountAlreadyRegistered (..),
   PredicateFailure,
   ShelleyDelegPredFailure,
   ShelleyDelegsPredFailure,
@@ -667,6 +668,8 @@ instance
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
+
+deriving instance Arbitrary (AccountAlreadyRegistered era)
 
 instance
   ( Era era

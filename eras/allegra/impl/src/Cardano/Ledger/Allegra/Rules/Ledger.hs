@@ -10,9 +10,10 @@ import Cardano.Ledger.Allegra.Rules.Delegs ()
 import Cardano.Ledger.Allegra.Rules.Utxow ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (
+  AccountAlreadyRegistered,
   ShelleyDelegPredFailure,
-  ShelleyDelegsPredFailure,
-  ShelleyDelplPredFailure,
+  ShelleyDelegsPredFailure (..),
+  ShelleyDelplPredFailure (..),
   ShelleyLedgerEvent,
   ShelleyLedgerPredFailure (..),
   ShelleyPoolPredFailure,
@@ -22,6 +23,9 @@ import Cardano.Ledger.Shelley.Rules (
  )
 
 type instance EraRuleFailure "LEDGER" AllegraEra = ShelleyLedgerPredFailure AllegraEra
+
+instance InjectRuleFailure "LEDGER" AccountAlreadyRegistered AllegraEra where
+  injectFailure = DelegsFailure . DelplFailure . DelegFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure AllegraEra
 

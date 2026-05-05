@@ -56,6 +56,7 @@ import Cardano.Ledger.Conway.TxCert (
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_, guard, unless)
 import Control.State.Transition (
@@ -104,7 +105,7 @@ deriving instance Show (PParams era) => Show (ConwayDelegEnv era)
 
 data ConwayDelegPredFailure era
   = IncorrectDepositDELEG Coin
-  | StakeKeyRegisteredDELEG (Credential Staking)
+  | DelegAccountAlreadyRegistered (Shelley.AccountAlreadyRegistered era)
   | StakeKeyNotRegisteredDELEG (Credential Staking)
   | StakeKeyHasNonZeroAccountBalanceDELEG Coin
   | DelegateeDRepNotRegisteredDELEG (Credential DRepRole)
@@ -117,6 +118,9 @@ type instance EraRuleFailure "DELEG" ConwayEra = ConwayDelegPredFailure ConwayEr
 
 type instance EraRuleEvent "DELEG" ConwayEra = VoidEraRule "DELEG" ConwayEra
 
+instance InjectRuleFailure "DELEG" Shelley.AccountAlreadyRegistered ConwayEra where
+  injectFailure = DelegAccountAlreadyRegistered
+
 instance InjectRuleFailure "DELEG" ConwayDelegPredFailure ConwayEra
 
 instance NFData (ConwayDelegPredFailure era)
@@ -126,8 +130,8 @@ instance Era era => EncCBOR (ConwayDelegPredFailure era) where
     encode . \case
       IncorrectDepositDELEG mCoin ->
         Sum (IncorrectDepositDELEG @era) 1 !> To mCoin
-      StakeKeyRegisteredDELEG stakeCred ->
-        Sum (StakeKeyRegisteredDELEG @era) 2 !> To stakeCred
+      DelegAccountAlreadyRegistered stakeCred ->
+        Sum (DelegAccountAlreadyRegistered @era) 2 !> To stakeCred
       StakeKeyNotRegisteredDELEG stakeCred ->
         Sum (StakeKeyNotRegisteredDELEG @era) 3 !> To stakeCred
       StakeKeyHasNonZeroAccountBalanceDELEG mCoin ->
@@ -144,7 +148,7 @@ instance Era era => EncCBOR (ConwayDelegPredFailure era) where
 instance Era era => DecCBOR (ConwayDelegPredFailure era) where
   decCBOR = decode $ Summands "ConwayDelegPredFailure" $ \case
     1 -> SumD IncorrectDepositDELEG <! From
-    2 -> SumD StakeKeyRegisteredDELEG <! From
+    2 -> SumD DelegAccountAlreadyRegistered <! From
     3 -> SumD StakeKeyNotRegisteredDELEG <! From
     4 -> SumD StakeKeyHasNonZeroAccountBalanceDELEG <! From
     5 -> SumD DelegateeDRepNotRegisteredDELEG <! From
@@ -162,6 +166,7 @@ instance
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , EraRule "DELEG" era ~ ConwayDELEG era
   , InjectRuleFailure "DELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "DELEG" Shelley.AccountAlreadyRegistered era
   ) =>
   STS (ConwayDELEG era)
   where
@@ -182,6 +187,7 @@ conwayDelegTransition ::
   , Environment (EraRule rule era) ~ ConwayDelegEnv era
   , State (EraRule rule era) ~ CertState era
   , InjectRuleFailure rule ConwayDelegPredFailure era
+  , InjectRuleFailure rule Shelley.AccountAlreadyRegistered era
   ) =>
   TransitionRule (EraRule rule era)
 conwayDelegTransition = do
@@ -209,9 +215,6 @@ conwayDelegTransition = do
                       }
                 )
             else injectFailure $ IncorrectDepositDELEG deposit
-    checkStakeKeyNotRegistered stakeCred =
-      not (isAccountRegistered stakeCred accounts)
-        ?! injectFailure (StakeKeyRegisteredDELEG stakeCred)
     checkStakeDelegateeRegistered =
       let checkPoolRegistered targetPool =
             targetPool
@@ -232,7 +235,7 @@ conwayDelegTransition = do
   case cert of
     ConwayRegCert stakeCred sMayDeposit -> do
       forM_ sMayDeposit checkDepositAgainstPParams
-      checkStakeKeyNotRegistered stakeCred
+      Shelley.checkAccountAlreadyRegistered @rule accounts stakeCred
       pure $
         certState
           & certDStateL . accountsL
@@ -292,7 +295,7 @@ conwayDelegTransition = do
               certState
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       checkDepositAgainstPParams deposit
-      checkStakeKeyNotRegistered stakeCred
+      Shelley.checkAccountAlreadyRegistered accounts stakeCred
       checkStakeDelegateeRegistered delegatee
       pure $
         processDelegationInternal (pvMajor pv < natVersion @10) stakeCred Nothing delegatee $
