@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryPoolParametersExamples,
   queryPoolStateExamples,
   queryProposalsExamples,
+  queryRatifyStateExamples,
   queryRegisteredDRepStakeDistrExamples,
   querySPOStakeDistrExamples,
   querySetSnapshotStakePoolDistrExamples,
@@ -33,9 +34,11 @@ import Cardano.Ledger.Api.Governance (
   Constitution (..),
   ConwayGovState (..),
   DRepPulsingState (..),
+  EnactState (..),
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
+  RatifyState (..),
   Vote (..),
  )
 import Cardano.Ledger.Api.State.Query (
@@ -345,6 +348,54 @@ queryDRepStateExamples =
         )
       ]
   ]
+
+queryRatifyStateExamples ::
+  EraPParams era =>
+  [RatifyState era]
+queryRatifyStateExamples =
+  [ def
+  , RatifyState
+      { rsEnactState =
+          EnactState
+            { ensCommittee =
+                SJust $
+                  Committee
+                    { committeeMembers =
+                        Map.singleton (KeyHashObj (mkKeyHash 1)) (EpochNo 200)
+                    , committeeThreshold = unsafeBoundRational (1 % 2) :: UnitInterval
+                    }
+            , ensConstitution =
+                Constitution
+                  { constitutionAnchor = exampleAnchor
+                  , constitutionGuardrailsScriptHash = SJust (mkScriptHash 1)
+                  }
+            , ensCurPParams = def
+            , ensPrevPParams = def
+            , ensTreasury = Coin 1_000_000_000
+            , ensWithdrawals =
+                Map.fromList
+                  [ (KeyHashObj (mkKeyHash 1), Coin 500_000_000)
+                  , (ScriptHashObj (mkScriptHash 2), Coin 250_000_000)
+                  ]
+            , ensPrevGovActionIds = def
+            }
+      , rsEnacted =
+          Seq.fromList
+            [ GovActionState
+                (mkGid 1)
+                Map.empty
+                Map.empty
+                Map.empty
+                exampleProposalProcedure
+                (EpochNo 100)
+                (EpochNo 130)
+            ]
+      , rsExpired = Set.fromList [mkGid 99]
+      , rsDelayed = True
+      }
+  ]
+  where
+    mkGid n = GovActionId (TxId (mkDummySafeHash n)) (GovActionIx 0)
 
 queryRegisteredDRepStakeDistrExamples :: [Map (Credential DRepRole) Coin]
 queryRegisteredDRepStakeDistrExamples =
