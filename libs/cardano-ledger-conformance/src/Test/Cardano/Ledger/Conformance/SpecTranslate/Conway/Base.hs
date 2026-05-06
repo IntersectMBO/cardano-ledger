@@ -83,7 +83,7 @@ instance SpecTranslate TxId where
 instance SpecTranslate TxIn where
   type SpecRep TxIn = Agda.TxIn
 
-  toSpecRep (TxIn txId txIx) = withSpecTransM dup $ toSpecRep (txId, txIx)
+  toSpecRep (TxIn txId txIx) = toSpecRepTuple (txId, txIx)
 
 instance SpecTranslate (SafeHash a) where
   type SpecRep (SafeHash a) = Agda.DataHash
@@ -225,7 +225,7 @@ instance
   where
   type SpecRep (UTxO era) = Agda.HSMap (SpecRep TxIn) (SpecRep (TxOut era))
 
-  toSpecRep (UTxO m) = withSpecTransM dup $ toSpecRep m
+  toSpecRep (UTxO m) = toSpecRepMap m
 
 deriving instance SpecTranslate OrdExUnits
 
@@ -326,7 +326,7 @@ instance
 instance SpecTranslate ValidityInterval where
   type SpecRep ValidityInterval = (Maybe Integer, Maybe Integer)
 
-  toSpecRep (ValidityInterval lo hi) = withSpecTransM dup $ toSpecRep (lo, hi)
+  toSpecRep (ValidityInterval lo hi) = toSpecRepTuple (lo, hi)
 
 instance Era era => SpecTranslate (TxDats era) where
   type SpecRep (TxDats era) = Agda.HSSet Agda.Datum
@@ -357,7 +357,7 @@ instance
   ( AlonzoEraScript era
   , SpecTranslate (PlutusPurpose AsIx era)
   , SpecContext (PlutusPurpose AsIx era) ~ ()
-  , SpecRep (Data era, ExUnits) ~ (Agda.Redeemer, Agda.ExUnits)
+  , SpecRep (Data era) ~ Agda.Redeemer
   ) =>
   SpecTranslate (Redeemers era)
   where
@@ -365,14 +365,18 @@ instance
     SpecRep (Redeemers era) =
       Agda.HSMap (SpecRep (PlutusPurpose AsIx era)) (Agda.Redeemer, Agda.ExUnits)
 
-  toSpecRep (Redeemers x) = withSpecTransM (const ((), ((), ()))) $ toSpecRep x
+  toSpecRep (Redeemers x) =
+    fmap Agda.MkHSMap
+      . traverse (toSpecRepTupleGen toSpecRep toSpecRepTuple)
+      . Map.toList
+      $ x
 
 instance
   ( AlonzoEraScript era
   , SpecTranslate (PlutusPurpose AsIx era)
   , SpecRep (PlutusPurpose AsIx era) ~ Agda.RdmrPtr
   , SpecContext (PlutusPurpose AsIx era) ~ ()
-  , SpecRep (Data era, ExUnits) ~ (Agda.Redeemer, Agda.ExUnits)
+  , SpecRep (Data era) ~ Agda.Redeemer
   , Script era ~ AlonzoScript era
   , NativeScript era ~ Timelock era
   ) =>
@@ -423,7 +427,7 @@ instance SpecTranslate Anchor where
 instance SpecTranslate Withdrawals where
   type SpecRep Withdrawals = Agda.Withdrawals
 
-  toSpecRep (Withdrawals w) = withSpecTransM dup $ toSpecRep w
+  toSpecRep (Withdrawals w) = toSpecRepMap w
 
 instance SpecTranslate IsValid where
   type SpecRep IsValid = Bool
@@ -438,12 +442,12 @@ instance SpecTranslate (GovPurposeId r) where
 instance SpecTranslate (Committee era) where
   type SpecRep (Committee era) = (Agda.HSMap Agda.Credential Agda.Epoch, Agda.Rational)
 
-  toSpecRep (Committee members threshold) = (,) <$> withSpecTransM dup (toSpecRep members) <*> toSpecRep threshold
+  toSpecRep (Committee members threshold) = (,) <$> toSpecRepMap members <*> toSpecRep threshold
 
 instance SpecTranslate (Constitution era) where
   type SpecRep (Constitution era) = (Agda.DataHash, Maybe Agda.ScriptHash)
 
-  toSpecRep (Constitution (Anchor _ h) policy) = withSpecTransM dup $ toSpecRep (h, policy)
+  toSpecRep (Constitution (Anchor _ h) policy) = toSpecRepTuple (h, policy)
 
 instance
   ( EraPParams era
@@ -504,7 +508,7 @@ instance SpecTranslate (VotingProcedures era) where
       go voter gaId votingProcedure m =
         (:)
           <$> ( Agda.MkGovVote
-                  <$> withSpecTransM (const ()) (toSpecRep gaId)
+                  <$> toSpecRep gaId
                   <*> toSpecRep voter
                   <*> toSpecRep (vProcVote votingProcedure)
                   <*> toSpecRep (vProcAnchor votingProcedure)
@@ -573,11 +577,11 @@ instance
   toSpecRep (HardForkInitiation _ pv) = Agda.TriggerHardFork <$> toSpecRep pv
   toSpecRep (TreasuryWithdrawals withdrawals _) =
     Agda.TreasuryWithdrawal
-      <$> withSpecTransM dup (toSpecRep withdrawals)
+      <$> toSpecRepMap withdrawals
   toSpecRep (NoConfidence _) = pure Agda.NoConfidence
   toSpecRep (UpdateCommittee _ remove add threshold) =
     Agda.UpdateCommittee
-      <$> withSpecTransM dup (toSpecRep add)
+      <$> toSpecRepMap add
       <*> toSpecRep remove
       <*> toSpecRep threshold
   toSpecRep (NewConstitution _ (Constitution (Anchor _ h) policy)) =
@@ -645,9 +649,9 @@ instance
   toSpecRep gas@GovActionState {..} = do
     Agda.MkGovActionState
       <$> ( Agda.GovVotes
-              <$> withSpecTransM dup (toSpecRep gasCommitteeVotes)
-              <*> withSpecTransM dup (toSpecRep gasDRepVotes)
-              <*> withSpecTransM dup (toSpecRep gasStakePoolVotes)
+              <$> toSpecRepMap gasCommitteeVotes
+              <*> toSpecRepMap gasDRepVotes
+              <*> toSpecRepMap gasStakePoolVotes
           )
       <*> toSpecRep (gasReturnAddr gas)
       <*> toSpecRep gasExpiresAfter
@@ -664,7 +668,7 @@ instance SpecTranslate GovActionIx where
 instance SpecTranslate GovActionId where
   type SpecRep GovActionId = Agda.GovActionID
 
-  toSpecRep (GovActionId txId gaIx) = withSpecTransM dup $ toSpecRep (txId, gaIx)
+  toSpecRep (GovActionId txId gaIx) = toSpecRepTuple (txId, gaIx)
 
 instance
   ( EraPParams era
@@ -678,7 +682,7 @@ instance
 
   -- TODO get rid of `prioritySort` once we've changed the implementation so
   -- that the proposals are always sorted
-  toSpecRep = withSpecTransM dup . toSpecRep . prioritySort . view pPropsL
+  toSpecRep = toSpecRepOMap . prioritySort . view pPropsL
     where
       prioritySort ::
         OMap GovActionId (GovActionState era) ->
@@ -701,9 +705,9 @@ instance
     let
       stakeDistrs =
         Agda.StakeDistrs
-          <$> withSpecTransM dup (toSpecRep reDRepDistr)
+          <$> toSpecRepMap reDRepDistr
           <*> toSpecRep reStakePoolDistr
-      dreps = withSpecTransM dup . toSpecRep $ Map.map drepExpiry reDRepState
+      dreps = toSpecRepMap $ Map.map drepExpiry reDRepState
     treasury <- askSpecTransM
     withSpecTransM (const ()) $ do
       Agda.MkRatifyEnv
@@ -712,12 +716,8 @@ instance
         <*> dreps
         <*> toSpecRep reCommitteeState
         <*> toSpecRep treasury
-        <*> withSpecTransM
-          dup
-          (toSpecRep (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) reStakePools))
-        <*> withSpecTransM
-          dup
-          (toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL)))
+        <*> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) reStakePools)
+        <*> toSpecRepMap (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
 
 instance
   ( EraPParams era
@@ -754,10 +754,11 @@ instance
         lookupGAS
         (pure Set.empty)
         (rsExpired `Set.union` Set.fromList (gasId <$> toList rsEnacted))
-    Agda.MkRatifyState
-      <$> withSpecTransM (const ()) (toSpecRep rsEnactState)
-      <*> (Agda.MkHSSet <$> traverse (withSpecTransM (const ((), ())) . toSpecRep) (toList removed))
-      <*> withSpecTransM (const ()) (toSpecRep rsDelayed)
+    withSpecTransM (const ()) $ do
+      Agda.MkRatifyState
+        <$> toSpecRep rsEnactState
+        <*> (Agda.MkHSSet <$> traverse toSpecRepTuple (toList removed))
+        <*> toSpecRep rsDelayed
 
 instance
   ( EraPParams era
@@ -772,7 +773,7 @@ instance
       [(SpecRep GovActionId, SpecRep (GovActionState era))]
 
   toSpecRep (RatifySignal x) =
-    traverse (\gas@GovActionState {gasId} -> withSpecTransM dup $ toSpecRep (gasId, gas)) (toList x)
+    traverse (\gas@GovActionState {gasId} -> toSpecRepTuple (gasId, gas)) (toList x)
 
 instance
   ( EraPParams era

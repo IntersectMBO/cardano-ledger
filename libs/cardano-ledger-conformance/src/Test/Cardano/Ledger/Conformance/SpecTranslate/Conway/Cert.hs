@@ -57,7 +57,7 @@ instance
         <$> toSpecRep ceCurrentEpoch
         <*> toSpecRep cePParams
         <*> toSpecRep votes
-        <*> withSpecTransM (const ((), ())) (toSpecRep withdrawals)
+        <*> toSpecRepMap withdrawals
         <*> toSpecRep ccColdCreds
 
 instance ConwayEraAccounts era => SpecTranslate (ConwayCertState era) where
@@ -202,8 +202,8 @@ instance SpecTranslate SnapShot where
   toSpecRep (SnapShot {..}) =
     Agda.MkSnapshot
       <$> toSpecRep (Stake $ VMap.fromMap $ Map.map (unNonZero . swdStake) activeStakeMap)
-      <*> withSpecTransM dup (toSpecRep (Map.map swdDelegation activeStakeMap))
-      <*> withSpecTransM dup (toSpecRep (VMap.toMap ssStakePoolsSnapShot))
+      <*> toSpecRepMap (Map.map swdDelegation activeStakeMap)
+      <*> toSpecRepMap (VMap.toMap ssStakePoolsSnapShot)
     where
       activeStakeMap = VMap.toMap $ unActiveStake ssActiveStake
 
@@ -221,7 +221,7 @@ instance SpecTranslate StakePoolSnapShot where
 instance SpecTranslate Stake where
   type SpecRep Stake = Agda.HSMap Agda.Credential Agda.Coin
 
-  toSpecRep (Stake stake) = withSpecTransM dup $ toSpecRep $ VMap.toMap stake
+  toSpecRep (Stake stake) = toSpecRepMap $ VMap.toMap stake
 
 instance SpecTranslate ChainAccountState where
   type SpecRep ChainAccountState = Agda.Acnt
@@ -244,7 +244,7 @@ instance SpecTranslate PulsingRewUpdate where
       <$> toSpecRep deltaT
       <*> toSpecRep deltaR
       <*> toSpecRep deltaF
-      <*> withSpecTransM dup (toSpecRep rwds)
+      <*> toSpecRepMap rwds
     where
       (RewardUpdate {..}, _) = runShelleyBase $ completeRupd x
       rwds = Set.foldMap rewardAmount <$> rs

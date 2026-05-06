@@ -26,7 +26,10 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   withCtx,
   unComputationResult,
   unComputationResult_,
-  dup,
+  toSpecRepTuple,
+  toSpecRepTupleGen,
+  toSpecRepOMap,
+  toSpecRepMap,
 ) where
 
 import Cardano.Ledger.BaseTypes (NonNegativeInterval, UnitInterval, unboundRational)
@@ -55,9 +58,6 @@ import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), V1, (:*:) (..), (:+:) (..))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.TreeDiff (Expr (..), ToExpr (..))
-
-dup :: a -> (a, a)
-dup a = (a, a)
 
 newtype SpecTransM ctx a
   = SpecTransM (ExceptT Text (Reader ctx) a)
@@ -115,11 +115,17 @@ instance SpecTranslate Word64 where
 
   toSpecRep = pure . toInteger
 
-instance (SpecTranslate a, SpecTranslate b) => SpecTranslate (a, b) where
-  type SpecRep (a, b) = (SpecRep a, SpecRep b)
-  type SpecContext (a, b) = (SpecContext a, SpecContext b)
+toSpecRepTupleGen ::
+  (a -> SpecTransM ctx c) ->
+  (b -> SpecTransM ctx d) ->
+  (a, b) ->
+  SpecTransM ctx (c, d)
+toSpecRepTupleGen f g (a, b) = (,) <$> f a <*> g b
 
-  toSpecRep (a, b) = (,) <$> withSpecTransM fst (toSpecRep a) <*> withSpecTransM snd (toSpecRep b)
+toSpecRepTuple ::
+  (SpecTranslate a, SpecTranslate b, SpecContext a ~ ctx, SpecContext b ~ ctx) =>
+  (a, b) -> SpecTransM ctx (SpecRep a, SpecRep b)
+toSpecRepTuple = toSpecRepTupleGen toSpecRep toSpecRep
 
 instance SpecTranslate a => SpecTranslate [a] where
   type SpecRep [a] = [SpecRep a]
@@ -156,15 +162,10 @@ instance SpecTranslate a => SpecTranslate (OSet a) where
   type SpecContext (OSet a) = SpecContext a
   toSpecRep = traverse toSpecRep . toList
 
-instance (Ord k, SpecTranslate k, SpecTranslate v) => SpecTranslate (OMap k v) where
-  type SpecRep (OMap k v) = [(SpecRep k, SpecRep v)]
-  type SpecContext (OMap k v) = (SpecContext k, SpecContext v)
-
-  toSpecRep ::
-    OMap k v ->
-    SpecTransM (SpecContext (OMap k v)) (SpecRep (OMap k v))
-  toSpecRep =
-    traverse (bimapM (withSpecTransM fst . toSpecRep) (withSpecTransM snd . toSpecRep)) . OMap.assocList
+toSpecRepOMap ::
+  (Ord k, SpecTranslate k, SpecTranslate v, SpecContext k ~ ctx, SpecContext v ~ ctx) =>
+  OMap k v -> SpecTransM ctx [(SpecRep k, SpecRep v)]
+toSpecRepOMap = traverse (bimapM toSpecRep toSpecRep) . OMap.assocList
 
 instance (SpecTranslate a, Compactible a) => SpecTranslate (CompactForm a) where
   type SpecRep (CompactForm a) = SpecRep a
@@ -194,14 +195,13 @@ instance SpecTranslate NonNegativeInterval where
 
   toSpecRep = pure . unboundRational
 
-instance (SpecTranslate k, SpecTranslate v) => SpecTranslate (Map k v) where
-  type SpecRep (Map k v) = Agda.HSMap (SpecRep k) (SpecRep v)
-  type SpecContext (Map k v) = (SpecContext k, SpecContext v)
-
-  toSpecRep =
-    fmap Agda.MkHSMap
-      . traverse (bimapM (withSpecTransM fst . toSpecRep) (withSpecTransM snd . toSpecRep))
-      . Map.toList
+toSpecRepMap ::
+  (SpecTranslate k, SpecTranslate v, SpecContext k ~ ctx, SpecContext v ~ ctx) =>
+  Map k v -> SpecTransM ctx (Agda.HSMap (SpecRep k) (SpecRep v))
+toSpecRepMap =
+  fmap Agda.MkHSMap
+    . traverse (bimapM toSpecRep toSpecRep)
+    . Map.toList
 
 class GSpecNormalize f where
   genericSpecNormalize :: f a -> f a

@@ -41,5 +41,5 @@ instance
         <$> toSpecRep certsCurrentEpoch
         <*> toSpecRep certsPParams
         <*> toSpecRep votes
-        <*> withSpecTransM (const ((), ())) (toSpecRep withdrawals)
+        <*> toSpecRepMap withdrawals
         <*> toSpecRep ccColdCreds

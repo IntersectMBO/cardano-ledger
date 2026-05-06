@@ -183,9 +183,9 @@ instance DSIGNAlgorithm v => SpecTranslate (SignedDSIGN v a) where
   toSpecRep (SignedDSIGN x) = pure $ signatureToInteger x
 
 instance SpecTranslate (WitVKey k) where
-  type SpecRep (WitVKey k) = SpecRep (VKey k, Integer)
+  type SpecRep (WitVKey k) = (SpecRep (VKey k), Integer)
 
-  toSpecRep (WitVKey vk sk) = withSpecTransM (const ((), ())) $ toSpecRep (vk, sk)
+  toSpecRep (WitVKey vk sk) = toSpecRepTuple (vk, sk)
 
 instance SpecTranslate CommitteeAuthorization where
   type
@@ -202,7 +202,7 @@ instance SpecTranslate (CommitteeState era) where
     SpecRep (CommitteeState era) =
       Agda.HSMap (SpecRep (Credential ColdCommitteeRole)) (SpecRep CommitteeAuthorization)
 
-  toSpecRep = withSpecTransM (const ((), ())) . toSpecRep . csCommitteeCreds
+  toSpecRep = toSpecRepMap . csCommitteeCreds
 
 committeeCredentialToStrictMaybe ::
   CommitteeAuthorization ->
@@ -218,7 +218,7 @@ instance SpecTranslate IndividualPoolStake where
 instance SpecTranslate PoolDistr where
   type SpecRep PoolDistr = Agda.HSMap (SpecRep (KeyHash StakePool)) Agda.Coin
 
-  toSpecRep (PoolDistr ps _) = withSpecTransM (const ((), ())) $ toSpecRep ps
+  toSpecRep (PoolDistr ps _) = toSpecRepMap ps
 
 instance SpecTranslate BlocksMade where
   type SpecRep BlocksMade = Agda.HSMap Integer Integer

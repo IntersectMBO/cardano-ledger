@@ -51,13 +51,11 @@ instance
     withSpecTransM (const ()) $
       Agda.MkDelegEnv
         <$> toSpecRep cdePParams
-        <*> withSpecTransM
-          (const ((), ()))
-          ( toSpecRep
-              ( Map.mapKeys (hashToInteger . unKeyHash) $
-                  Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) cdePools
-              )
-          )
+        <*> ( toSpecRepMap
+                ( Map.mapKeys (hashToInteger . unKeyHash) $
+                    Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) cdePools
+                )
+            )
         <*> toSpecRep delegatees
 
 instance SpecTranslate ConwayDelegCert where
@@ -89,9 +87,9 @@ instance ConwayEraAccounts era => SpecTranslate (DState era) where
 
   toSpecRep dState =
     Agda.MkDState
-      <$> withSpecTransM dup (toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) accountsMap))
-      <*> withSpecTransM dup (toSpecRep (Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap))
-      <*> withSpecTransM dup (toSpecRep (Map.map (fromCompact . (^. balanceAccountStateL)) accountsMap))
+      <$> toSpecRepMap (Map.mapMaybe (^. dRepDelegationAccountStateL) accountsMap)
+      <*> toSpecRepMap (Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap)
+      <*> toSpecRepMap (Map.map (fromCompact . (^. balanceAccountStateL)) accountsMap)
       <*> deposits
     where
       accountsMap = dState ^. accountsL . accountsMapL

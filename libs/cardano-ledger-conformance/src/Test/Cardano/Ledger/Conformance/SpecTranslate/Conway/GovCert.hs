@@ -81,7 +81,7 @@ instance
         <$> toSpecRep cgceCurrentEpoch
         <*> toSpecRep cgcePParams
         <*> toSpecRep votes
-        <*> withSpecTransM (const ((), ())) (toSpecRep withdrawals)
+        <*> toSpecRepMap withdrawals
         <*> toSpecRep ccColdCreds
 
 instance SpecTranslate (VState era) where
@@ -89,12 +89,10 @@ instance SpecTranslate (VState era) where
 
   toSpecRep VState {..} = do
     Agda.MkGState
-      <$> withSpecTransM dup (toSpecRep (updateExpiry . drepExpiry <$> vsDReps))
-      <*> withSpecTransM
-        dup
-        ( toSpecRep
-            (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
-        )
+      <$> (toSpecRepMap (updateExpiry . drepExpiry <$> vsDReps))
+      <*> ( toSpecRepMap
+              (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
+          )
       <*> deposits
     where
       transEntry (cred, val) =
