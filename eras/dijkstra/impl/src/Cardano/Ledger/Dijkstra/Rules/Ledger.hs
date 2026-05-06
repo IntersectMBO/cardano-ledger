@@ -25,7 +25,7 @@ module Cardano.Ledger.Dijkstra.Rules.Ledger (
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo (AlonzoScript)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded, scriptsProvidedStAnnTx)
 import Cardano.Ledger.Babbage (BabbageTxOut)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -369,8 +369,7 @@ dijkstraLedgerTransition = do
   -- and SUBLEDGERS, and used for all witness/validation lookups.
   let originalUtxo = utxosUtxo (ledgerState ^. lsUTxOStateL)
       subStAnnTxs = subTransactionsStAnnTx stAnnTx
-      -- getScriptsProvided is recursive for Dijkstra
-      scriptsProvided = getScriptsProvided originalUtxo tx
+      scriptsProvided = scriptsProvidedStAnnTx stAnnTx
 
   -- Process all subtransactions first
   LedgerState utxoStateAfterSubLedgers certStateAfterSubLedgers <-

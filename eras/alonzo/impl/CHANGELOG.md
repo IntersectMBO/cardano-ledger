@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `ScriptsProvided` argument to `missingRequiredDatums`
 * Add `scriptsNeededStAnnTx` to `AlonzoEraUTxO` and a helper to implement it `scriptsNeededAlonzoStAnnTx`
 * Add `AlonzoEraTxAuxData` as a superclass to `AlonzoEraTx`
 * Add `NFData` instance for `AlonzoScriptsNeeded`

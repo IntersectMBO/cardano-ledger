@@ -53,6 +53,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO, DijkstraUTXOW)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode (runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
@@ -200,7 +201,7 @@ instance
 dijkstraUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
-  , AlonzoEraUTxO era
+  , DijkstraEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , DijkstraEraTxBody era
   , EraRule "UTXOW" era ~ DijkstraUTXOW era
@@ -227,17 +228,15 @@ dijkstraUtxowTransition = do
   -- A subtx may consume a txout that the top-level tx references, so the UTXO threaded in the state may not contain it.
 
   -- scriptsNeeded for the top-level tx
-  let topScriptsNeeded = getScriptsNeeded originalUtxo txBody
+  let topScriptsNeeded = scriptsNeededStAnnTx stAnnTx
       topScriptHashesNeeded = getScriptsHashesNeeded topScriptsNeeded
+      subStAnnTxs = subTransactionsStAnnTx stAnnTx
 
   -- scriptsNeeded aggregated across all levels
   let allScriptHashesNeeded =
         Set.unions $
           topScriptHashesNeeded
-            : [ getScriptsHashesNeeded
-                  (getScriptsNeeded originalUtxo (subTx ^. bodyTxL))
-              | subTx <- subTxs
-              ]
+            : (getScriptsHashesNeeded . scriptsNeededStAnnTx <$> subStAnnTxs)
 
   {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
   -- Per-level: phase-1 script validation is per-tx (script execution)
@@ -262,7 +261,7 @@ dijkstraUtxowTransition = do
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
   -- Per-level: datum check for top-level tx's own spend inputs
-  runTest $ Alonzo.missingRequiredDatums originalUtxo tx
+  runTest $ Alonzo.missingRequiredDatums scriptsProvided originalUtxo tx
 
   {- dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                           h ↦ s ∈ txscripts txw, s ∈ Scriptph2} -}
@@ -303,7 +302,7 @@ dijkstraUtxowTransition = do
 instance
   forall era.
   ( AlonzoEraTx era
-  , AlonzoEraUTxO era
+  , DijkstraEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , DijkstraEraTxBody era
   , EraRule "UTXOW" era ~ DijkstraUTXOW era
