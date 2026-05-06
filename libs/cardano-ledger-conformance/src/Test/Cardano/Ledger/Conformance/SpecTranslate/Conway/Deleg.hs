@@ -51,10 +51,13 @@ instance
     withSpecTransM (const ()) $
       Agda.MkDelegEnv
         <$> toSpecRep cdePParams
-        <*> withSpecTransM (const ((), ())) (toSpecRep
-          ( Map.mapKeys (hashToInteger . unKeyHash) $
-              Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) cdePools
-          ))
+        <*> withSpecTransM
+          (const ((), ()))
+          ( toSpecRep
+              ( Map.mapKeys (hashToInteger . unKeyHash) $
+                  Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) cdePools
+              )
+          )
         <*> toSpecRep delegatees
 
 instance SpecTranslate ConwayDelegCert where

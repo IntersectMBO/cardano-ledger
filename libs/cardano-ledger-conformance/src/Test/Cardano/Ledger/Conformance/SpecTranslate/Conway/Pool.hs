@@ -34,7 +34,9 @@ instance SpecTranslate (PState era) where
 
   toSpecRep PState {..} =
     Agda.MkPState
-      <$> withSpecTransM (const ((), ())) (toSpecRep (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools))
+      <$> withSpecTransM
+        (const ((), ()))
+        (toSpecRep (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools))
       <*> withSpecTransM (const ((), ())) (toSpecRep psFutureStakePoolParams)
       <*> withSpecTransM (const ((), ())) (toSpecRep psRetiring)
 

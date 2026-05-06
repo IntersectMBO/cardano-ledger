@@ -90,8 +90,11 @@ instance SpecTranslate (VState era) where
   toSpecRep VState {..} = do
     Agda.MkGState
       <$> withSpecTransM dup (toSpecRep (updateExpiry . drepExpiry <$> vsDReps))
-      <*> withSpecTransM dup (toSpecRep
-        (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState))
+      <*> withSpecTransM
+        dup
+        ( toSpecRep
+            (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
+        )
       <*> deposits
     where
       transEntry (cred, val) =
