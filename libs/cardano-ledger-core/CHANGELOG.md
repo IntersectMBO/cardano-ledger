@@ -2,6 +2,13 @@
 
 ## 1.21.0.0
 
+* Add `ToJSON`/`FromJSON` instances for:
+  - `TxIn`, `TxId` in `Cardano.Ledger.TxIn` (using `"hash#index"` text key format)
+  - `Metadatum` in `Cardano.Ledger.Metadata` (matching cardano-api detailed schema: `{"int":n}`, `{"string":t}`, `{"bytes":"<hex>"}`, `{"list":[...]}`, `{"map":[{"k":...,"v":...}]}`)
+  - `WitVKey` in `Cardano.Ledger.Keys.WitVKey`
+  - `BootstrapWitness` in `Cardano.Ledger.Keys.Bootstrap`
+  - `Addr`, `RewardAccount` in `Cardano.Ledger.Address`
+  - `ScriptHash` `ToJSONKey`/`FromJSONKey` in `Cardano.Ledger.Hashes`
 * Change `ChainCode` type to use `ByteArray` instead of `ByteString`
 * Change `bwAttributes` field to use `ByteArray` instead of `ByteString`
 * Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class

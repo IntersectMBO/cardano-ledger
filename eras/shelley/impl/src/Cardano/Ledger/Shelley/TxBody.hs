@@ -43,7 +43,7 @@ module Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Address (
   pattern RewardAccount,
  )
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -84,6 +84,9 @@ import Cardano.Ledger.Shelley.TxOut ()
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), deepseq)
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Foldable as Foldable
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -330,6 +333,42 @@ pattern ShelleyTxBody
             }
 
 {-# COMPLETE ShelleyTxBody #-}
+
+instance ToKeyValuePairs (TxBody TopTx ShelleyEra) where
+  toKeyValuePairs ShelleyTxBody
+                    { stbInputs
+                    , stbOutputs
+                    , stbCerts
+                    , stbWithdrawals
+                    , stbTxFee
+                    , stbTTL
+                    , stbUpdate
+                    , stbMDHash
+                    } =
+    [ "inputs" .= Set.toList stbInputs
+    , "outputs" .= Foldable.toList stbOutputs
+    , "certs" .= Foldable.toList stbCerts
+    , "withdrawals" .= stbWithdrawals
+    , "fee" .= stbTxFee
+    , "ttl" .= stbTTL
+    , "update" .= stbUpdate
+    , "auxDataHash" .= stbMDHash
+    ]
+
+instance ToJSON (TxBody TopTx ShelleyEra) where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance FromJSON (TxBody TopTx ShelleyEra) where
+  parseJSON = Aeson.withObject "ShelleyTxBody" $ \o ->
+    ShelleyTxBody
+      <$> (Set.fromList <$> o .: "inputs")
+      <*> (StrictSeq.fromList <$> o .: "outputs")
+      <*> (StrictSeq.fromList <$> o .: "certs")
+      <*> o .: "withdrawals"
+      <*> o .: "fee"
+      <*> o .: "ttl"
+      <*> o .: "update"
+      <*> o .: "auxDataHash"
 
 -- =========================================
 

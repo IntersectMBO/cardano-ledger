@@ -52,6 +52,14 @@
   - `ChainPredicateFailure`
 * Add protocol version validation to `createInitialState`:
   - Validate that current protocol version is within the era's bounds
+* Add `ToJSON`/`FromJSON` instances for:
+  - `ShelleyTx`, `Tx` in `Cardano.Ledger.Shelley.Tx`
+  - `ShelleyTxBody`, `TxBody` in `Cardano.Ledger.Shelley.TxBody`
+  - `ShelleyTxWits` in `Cardano.Ledger.Shelley.TxWits`
+  - `ShelleyTxAuxData` in `Cardano.Ledger.Shelley.TxAuxData`
+  - `ShelleyTxOut`, `TxOut` in `Cardano.Ledger.Shelley.TxOut`
+  - `MultiSig` in `Cardano.Ledger.Shelley.Scripts` (using `kindObject` convention: `"sig"`, `"all"`, `"any"`, `"atLeast"`)
+  - `Update`, `ProposedPPUpdates` in `Cardano.Ledger.Shelley.PParams`
 
 ### `cddl`
 

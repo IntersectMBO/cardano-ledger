@@ -981,6 +981,12 @@ newtype Withdrawals = Withdrawals {unWithdrawals :: Map AccountAddress Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
 
+instance ToJSON Withdrawals where
+  toJSON (Withdrawals m) = toJSON $ Map.toList m
+
+instance FromJSON Withdrawals where
+  parseJSON v = Withdrawals . Map.fromList <$> parseJSON v
+
 instance Semigroup Withdrawals where
   Withdrawals w1 <> Withdrawals w2 = Withdrawals $ Map.unionWith (<>) w1 w2
 

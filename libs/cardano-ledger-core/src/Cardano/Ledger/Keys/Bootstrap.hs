@@ -50,16 +50,22 @@ import Cardano.Ledger.Keys.Internal (
  )
 import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (unless)
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
+import qualified Data.ByteString.Base16 as Base16
 import Data.Coerce (coerce)
 import Data.Maybe (fromMaybe)
 import Data.MemPack.Buffer (byteArrayToShortByteString)
 import Data.Ord (comparing)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
+import Data.Text (Text)
+import qualified Data.Text.Encoding as Text
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -107,6 +113,48 @@ instance DecCBOR BootstrapWitness where
 
 instance Ord BootstrapWitness where
   compare = comparing bootstrapWitKeyHash
+
+instance ToJSON BootstrapWitness where
+  toJSON (BootstrapWitness (VKey vk) (SignedDSIGN sig) (ChainCode cc) attrs) =
+    let
+      encodeHex :: ByteString -> Text
+      encodeHex = Text.decodeUtf8 . Base16.encode
+     in
+      Aeson.object
+        [ "key" .= encodeHex (DSIGN.rawSerialiseVerKeyDSIGN vk)
+        , "signature" .= encodeHex (DSIGN.rawSerialiseSigDSIGN sig)
+        , "chainCode" .= encodeHex cc
+        , "attributes" .= encodeHex attrs
+        ]
+
+instance FromJSON BootstrapWitness where
+  parseJSON =
+    let
+      decodeHex :: Text -> Parser ByteString
+      decodeHex t = either fail pure $ Base16.decode (Text.encodeUtf8 t)
+     in
+      Aeson.withObject "BootstrapWitness" $ \o -> do
+        keyHex <- o .: "key"
+        sigHex <- o .: "signature"
+        ccHex <- o .: "chainCode"
+        attrsHex <- o .: "attributes"
+        keyBytes <- decodeHex keyHex
+        sigBytes <- decodeHex sigHex
+        ccBytes <- decodeHex ccHex
+        attrsBytes <- decodeHex attrsHex
+        vk <-
+          maybe (fail "BootstrapWitness: invalid key bytes") pure (DSIGN.rawDeserialiseVerKeyDSIGN keyBytes)
+        sig <-
+          maybe
+            (fail "BootstrapWitness: invalid signature bytes")
+            pure
+            (DSIGN.rawDeserialiseSigDSIGN sigBytes)
+        pure $
+          BootstrapWitness
+            (VKey vk)
+            (SignedDSIGN sig)
+            (ChainCode ccBytes)
+            attrsBytes
 
 -- | Rebuild the addrRoot of the corresponding address.
 bootstrapWitKeyHash ::
