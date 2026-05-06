@@ -35,7 +35,10 @@ import Test.Cardano.Ledger.Core.Binary (
   fullCddlSpec,
   fullGenCddlSpec,
  )
-import Test.Cardano.Ledger.Dijkstra.Arbitrary (genNonEmptyAccountBalanceIntervals)
+import Test.Cardano.Ledger.Dijkstra.Arbitrary (
+  genNonEmptyAccountBalanceIntervals,
+  genSmallDijkstraBlockBody,
+ )
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 
 spec :: Spec
@@ -43,10 +46,7 @@ spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @DijkstraEra
     describe "Huddle" $ specWithHuddle dijkstraCDDL . noTwiddle $ do
-      -- BlockBody
-      xdescribe "fix transaction" $
-        fullAnnCddlSpec @(BlockBody DijkstraEra) v "block_body"
-      -- AccountBalanceInterval
+      fullAnnGenCddlSpec @(BlockBody DijkstraEra) genSmallDijkstraBlockBody v "block_body"
       fullCddlSpec @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
       fullGenCddlSpec @(AccountBalanceIntervals DijkstraEra)
         genNonEmptyAccountBalanceIntervals

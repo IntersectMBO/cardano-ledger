@@ -72,6 +72,7 @@
 
 ### testlib
 
+* Add `genSmallDijkstraBlockBody`
 * Add to `Test.Cardano.Ledger.Dijkstra.Examples`:
   - `exampleDijkstraOnwardsEraPParams`
   - `exampleDijkstraOnwardsEraPParamsUpdate`

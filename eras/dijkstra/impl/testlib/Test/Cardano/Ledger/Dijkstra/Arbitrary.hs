@@ -14,7 +14,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Dijkstra.Arbitrary (genNonEmptyAccountBalanceIntervals) where
+module Test.Cardano.Ledger.Dijkstra.Arbitrary (genNonEmptyAccountBalanceIntervals, genSmallDijkstraBlockBody) where
 
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
@@ -40,6 +40,7 @@ import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
+import qualified Data.Sequence.Strict as SSeq
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
@@ -302,6 +303,21 @@ instance
   Arbitrary (DijkstraBlockBody era)
   where
   arbitrary = DijkstraBlockBody <$> arbitrary <*> arbitrary
+
+genSmallDijkstraBlockBody ::
+  ( AlonzoEraTx era
+  , Arbitrary (Tx TopTx era)
+  ) =>
+  Gen (DijkstraBlockBody era)
+genSmallDijkstraBlockBody = DijkstraBlockBody <$> genFewTxs <*> arbitrary
+  where
+    genFewTxs = sized $ \sz -> do
+      numTxs <-
+        frequency
+          [ (99, choose (1, max 1 $ sz `div` 20))
+          , (1, pure 0)
+          ]
+      SSeq.fromList <$> vectorOf numTxs (scale (`div` numTxs) arbitrary)
 
 deriving newtype instance Arbitrary (ApplyTxError DijkstraEra)
 

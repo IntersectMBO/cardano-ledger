@@ -976,10 +976,13 @@ instance HuddleRule "block_body" DijkstraEra where
 
 blockBodyGen :: CBORGen RuleTerm
 blockBodyGen = do
-  numTxs <- liftGen . Gen.sized $ \s -> choose (0 :: Int, s)
+  numTxs <- liftGen . Gen.sized $ \s -> choose (0 :: Int, s `div` 15)
   txs <-
     mapM
-      (\i -> withAntiGen (withAnnotation (T.pack $ show i)) $ generateFromName "transaction")
+      ( \i ->
+          withAntiGen (withAnnotation (T.pack $ show i)) . scale (`div` max 1 numTxs) $
+            generateFromName "transaction"
+      )
       [0 .. numTxs - 1]
   invalidIxIxs <-
     if numTxs == 0
