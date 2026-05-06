@@ -108,12 +108,15 @@ import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.State (StakePoolParams (..))
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), rwhnf)
-import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import Data.Foldable as F (Foldable (..), foldMap', foldl')
 import Data.Map.Strict (Map)
 import Data.Maybe (isJust)
 import Data.Monoid (Sum (..))
 import qualified Data.Set as Set
+import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -300,11 +303,20 @@ instance NFData GenesisDelegCert where
 
 instance ToJSON GenesisDelegCert where
   toJSON (GenesisDelegCert genKeyHash genDelegKeyHash hashVrf) =
-    kindObject "GenesisDelegCert" $
+    kindObject
+      "GenesisDelegCert"
       [ "genKeyHash" .= toJSON genKeyHash
       , "genDelegKeyHash" .= toJSON genDelegKeyHash
       , "hashVrf" .= toJSON hashVrf
       ]
+
+instance FromJSON GenesisDelegCert where
+  parseJSON =
+    Aeson.withObject "GenesisDelegCert" $ \o ->
+      GenesisDelegCert
+        <$> o .: "genKeyHash"
+        <*> o .: "genDelegKeyHash"
+        <*> o .: "hashVrf"
 
 genesisKeyHashWitness :: GenesisDelegCert -> KeyHash Witness
 genesisKeyHashWitness (GenesisDelegCert gk _ _) = asWitness gk
@@ -330,8 +342,14 @@ instance DecCBOR MIRPot where
 
 instance ToJSON MIRPot where
   toJSON = \case
-    ReservesMIR -> "reserves"
-    TreasuryMIR -> "treasury"
+    ReservesMIR -> "ReservesMIR"
+    TreasuryMIR -> "TreasuryMIR"
+
+instance FromJSON MIRPot where
+  parseJSON = Aeson.withText "MIRPot" $ \case
+    "ReservesMIR" -> pure ReservesMIR
+    "TreasuryMIR" -> pure TreasuryMIR
+    other -> fail $ "Unknown MIRPot: " <> show other
 
 -- | MIRTarget specifies if funds from either the reserves
 -- or the treasury are to be handed out to a collection of
@@ -363,6 +381,15 @@ instance ToJSON MIRTarget where
     SendToOppositePotMIR c ->
       kindObject "SendToOppositePotMIR" ["coin" .= toJSON c]
 
+instance FromJSON MIRTarget where
+  parseJSON =
+    Aeson.withObject "MIRTarget" $ \o -> do
+      kind <- o .: "kind" :: Parser Text
+      case kind of
+        "StakeAddressesMIR" -> StakeAddressesMIR <$> o .: "addresses"
+        "SendToOppositePotMIR" -> SendToOppositePotMIR <$> o .: "coin"
+        _ -> fail $ "Unknown MIRTarget kind: " <> show kind
+
 -- | Move instantaneous rewards certificate
 data MIRCert = MIRCert
   { mirPot :: !MIRPot
@@ -382,10 +409,18 @@ instance EncCBOR MIRCert where
 
 instance ToJSON MIRCert where
   toJSON MIRCert {mirPot, mirRewards} =
-    kindObject "MIRCert" $
+    kindObject
+      "MIRCert"
       [ "pot" .= toJSON mirPot
       , "rewards" .= toJSON mirRewards
       ]
+
+instance FromJSON MIRCert where
+  parseJSON =
+    Aeson.withObject "MIRCert" $ \o ->
+      MIRCert
+        <$> o .: "pot"
+        <*> o .: "rewards"
 
 -- | A heavyweight certificate.
 data ShelleyTxCert era
@@ -403,6 +438,30 @@ instance Era era => ToJSON (ShelleyTxCert era) where
     ShelleyTxCertPool poolCert -> toJSON poolCert
     ShelleyTxCertGenesisDeleg genDelegCert -> toJSON genDelegCert
     ShelleyTxCertMir mirCert -> toJSON mirCert
+
+instance Era era => FromJSON (ShelleyTxCert era) where
+  parseJSON =
+    Aeson.withObject "ShelleyTxCert" $ \o -> do
+      kind <- o .: "kind" :: Parser Text
+      case kind of
+        "RegCert" -> ShelleyTxCertDelegCert <$> parseJSON (Aeson.Object o)
+        "UnRegCert" -> ShelleyTxCertDelegCert <$> parseJSON (Aeson.Object o)
+        "DelegCert" -> ShelleyTxCertDelegCert <$> parseJSON (Aeson.Object o)
+        "RegPool" -> ShelleyTxCertPool <$> parseJSON (Aeson.Object o)
+        "RetirePool" -> ShelleyTxCertPool <$> parseJSON (Aeson.Object o)
+        "GenesisDelegCert" -> ShelleyTxCertGenesisDeleg <$> parseJSON (Aeson.Object o)
+        "MIRCert" -> ShelleyTxCertMir <$> parseJSON (Aeson.Object o)
+        _ -> fail $ "Unknown ShelleyTxCert kind: " <> show kind
+
+instance FromJSON ShelleyDelegCert where
+  parseJSON =
+    Aeson.withObject "ShelleyDelegCert" $ \o -> do
+      kind <- o .: "kind" :: Parser Text
+      case kind of
+        "RegCert" -> ShelleyRegCert <$> o .: "credential"
+        "UnRegCert" -> ShelleyUnRegCert <$> o .: "credential"
+        "DelegCert" -> ShelleyDelegCert <$> o .: "credential" <*> o .: "poolId"
+        _ -> fail $ "Unknown ShelleyDelegCert kind: " <> show kind
 
 upgradeShelleyTxCert ::
   ShelleyTxCert era1 ->
@@ -528,7 +587,8 @@ instance ToJSON ShelleyDelegCert where
     ShelleyRegCert cred -> kindObject "RegCert" ["credential" .= toJSON cred]
     ShelleyUnRegCert cred -> kindObject "UnRegCert" ["credential" .= toJSON cred]
     ShelleyDelegCert cred poolId ->
-      kindObject "DelegCert" $
+      kindObject
+        "DelegCert"
         [ "credential" .= toJSON cred
         , "poolId" .= toJSON poolId
         ]

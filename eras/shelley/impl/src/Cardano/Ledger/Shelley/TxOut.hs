@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -45,7 +46,8 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Val (Val)
 import Control.DeepSeq (NFData (rnf))
-import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
 import Data.Maybe (fromMaybe)
 import Data.MemPack
 import GHC.Generics (Generic)
@@ -147,6 +149,19 @@ viewCompactTxOut :: Val (Value era) => ShelleyTxOut era -> (Addr, Value era)
 viewCompactTxOut TxOutCompact {txOutCompactAddr, txOutCompactValue} =
   (decompactAddr txOutCompactAddr, fromCompact txOutCompactValue)
 
+instance
+  ( Era era
+  , Val (Value era)
+  , FromJSON (Value era)
+  ) =>
+  FromJSON (ShelleyTxOut era)
+  where
+  parseJSON =
+    Aeson.withObject "ShelleyTxOut" $ \o ->
+      ShelleyTxOut
+        <$> o .: "address"
+        <*> o .: "value"
+
 instance (Era era, EncCBOR (CompactForm (Value era))) => EncCBOR (ShelleyTxOut era) where
   encCBOR (TxOutCompact addr coin) =
     encodeListLen 2
@@ -179,7 +194,7 @@ deriving via
     (Era era, Val (Value era)) => ToJSON (ShelleyTxOut era)
 
 instance (Era era, Val (Value era)) => ToKeyValuePairs (ShelleyTxOut era) where
-  toKeyValuePairs (ShelleyTxOut !addr !amount) =
+  toKeyValuePairs (ShelleyTxOut !addr !value) =
     [ "address" .= addr
-    , "amount" .= amount
+    , "value" .= value
     ]

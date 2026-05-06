@@ -252,7 +252,7 @@ fromVRFVerKeyHash = Hash.castHash . unVRFVerKeyHash
 newtype TxAuxDataHash = TxAuxDataHash
   { unTxAuxDataHash :: SafeHash EraIndependentTxAuxData
   }
-  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, EncCBOR, DecCBOR, ToJSON)
+  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, EncCBOR, DecCBOR, ToJSON, FromJSON)
 
 --------------------------------------------------------------------------------
 -- Genesis Keys Hashes

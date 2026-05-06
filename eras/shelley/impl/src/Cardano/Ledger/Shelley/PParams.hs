@@ -4,14 +4,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -57,10 +54,12 @@ module Cardano.Ledger.Shelley.PParams (
 
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
+  KeyValuePairs (..),
   NonNegativeInterval,
   Nonce (NeutralNonce),
   ProtVer (..),
   StrictMaybe (..),
+  ToKeyValuePairs (toKeyValuePairs),
   UnitInterval,
   decodeProtVer,
   succVersion,
@@ -81,8 +80,12 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (
+  FromJSON (..),
   ToJSON (..),
+  (.:),
+  (.=),
  )
+import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -247,6 +250,7 @@ emptyShelleyPParamsUpdate =
 data Update era
   = Update !(ProposedPPUpdates era) !EpochNo
   deriving (Generic)
+  deriving (ToJSON) via KeyValuePairs (Update era)
 
 deriving instance Eq (PParamsUpdate era) => Eq (Update era)
 
@@ -257,8 +261,26 @@ deriving instance Show (PParamsUpdate era) => Show (Update era)
 instance NoThunks (PParamsUpdate era) => NoThunks (Update era)
 
 instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (Update era) where
-  encCBOR (Update ppUpdate e) =
-    encodeListLen 2 <> encCBOR ppUpdate <> encCBOR e
+  encCBOR (Update proposedPPUpdates epochNo) =
+    encodeListLen 2 <> encCBOR proposedPPUpdates <> encCBOR epochNo
+
+instance EraPParams era => ToKeyValuePairs (Update era) where
+  toKeyValuePairs (Update ppUpdates epochNo) =
+    [ "proposedPPUpdates" .= ppUpdates
+    , "epoch" .= epochNo
+    ]
+
+instance
+  ( EraPParams era
+  , FromJSON (PParamsUpdate era)
+  ) =>
+  FromJSON (Update era)
+  where
+  parseJSON =
+    Aeson.withObject "Update" $ \o ->
+      Update
+        <$> o .: "proposedPPUpdates"
+        <*> o .: "epoch"
 
 instance
   (Era era, DecCBOR (PParamsUpdate era)) =>
@@ -287,9 +309,19 @@ deriving instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (ProposedPPU
 
 deriving instance (Era era, DecCBOR (PParamsUpdate era)) => DecCBOR (ProposedPPUpdates era)
 
+-- TODO Should this instead use `ToKeyValuePairs`? Check where this is used.
 instance EraPParams era => ToJSON (ProposedPPUpdates era) where
   toJSON (ProposedPPUpdates ppUpdates) = toJSON $ Map.toList ppUpdates
   toEncoding (ProposedPPUpdates ppUpdates) = toEncoding $ Map.toList ppUpdates
+
+instance
+  ( EraPParams era
+  , FromJSON (PParamsUpdate era)
+  ) =>
+  FromJSON (ProposedPPUpdates era)
+  where
+  parseJSON v =
+    ProposedPPUpdates . Map.fromList <$> parseJSON v
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty

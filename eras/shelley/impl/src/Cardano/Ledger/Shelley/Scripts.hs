@@ -33,6 +33,7 @@ module Cardano.Ledger.Shelley.Scripts (
   MultiSigRaw (..),
 ) where
 
+import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -58,10 +59,15 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.MemoBytes.Internal (memoBytesEra)
 import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import qualified Data.ByteString as BS
+import qualified Data.Foldable as Foldable
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -162,6 +168,32 @@ instance ShelleyEraScript ShelleyEra where
   getRequireMOf _ = Nothing
 
 deriving newtype instance NFData (MultiSig era)
+
+-- FIXME The "kind" value that is used comes from cardano-api. Should we instead
+-- use the full name of the constructor (sig -> MultiSigSignature)?
+instance Era era => ToJSON (MultiSig era) where
+  toJSON ms = case getMemoRawType ms of
+    MultiSigSignature kh -> kindObject "sig" ["keyHash" .= kh]
+    MultiSigAllOf ss -> kindObject "all" ["scripts" .= Foldable.toList ss]
+    MultiSigAnyOf ss -> kindObject "any" ["scripts" .= Foldable.toList ss]
+    MultiSigMOf n ss -> kindObject "atLeast" ["required" .= n, "scripts" .= Foldable.toList ss]
+
+instance
+  (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
+  FromJSON (MultiSig era)
+  where
+  parseJSON =
+    Aeson.withObject "MultiSig" $ \o -> do
+      t <- o .: "kind" :: Parser Text
+      case t of
+        "sig" -> mkRequireSignature @era <$> o .: "keyHash"
+        "all" -> mkRequireAllOf @era . StrictSeq.fromList <$> o .: "scripts"
+        "any" -> mkRequireAnyOf @era . StrictSeq.fromList <$> o .: "scripts"
+        "atLeast" ->
+          mkRequireMOf @era
+            <$> o .: "required"
+            <*> (StrictSeq.fromList <$> o .: "scripts")
+        _ -> fail $ "Unknown MultiSig kind: " <> show t
 
 instance EqRaw (MultiSig era) where
   eqRaw = eqMultiSigRaw
