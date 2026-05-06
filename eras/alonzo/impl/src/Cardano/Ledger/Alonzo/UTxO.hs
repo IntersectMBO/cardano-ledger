@@ -26,6 +26,7 @@ module Cardano.Ledger.Alonzo.UTxO (
   getRewardingScriptsNeeded,
   getMintingScriptsNeeded,
   getAlonzoScriptsHashesNeeded,
+  scriptsNeededAlonzoStAnnTx,
   zipAsIxItem,
 
   -- * Scripts provided
@@ -134,12 +135,16 @@ class EraUTxO era => AlonzoEraUTxO era where
 
   scriptsProvidedStAnnTx :: StAnnTx l era -> ScriptsProvided era
 
+  scriptsNeededStAnnTx :: StAnnTx l era -> ScriptsNeeded era
+
 instance AlonzoEraUTxO AlonzoEra where
   getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
 
   getSpendingDatum = getAlonzoSpendingDatum
 
   scriptsProvidedStAnnTx = scriptsProvidedAlonzoStAnnTx
+
+  scriptsNeededStAnnTx = scriptsNeededAlonzoStAnnTx
 
 scriptsProvidedAlonzoStAnnTx ::
   ( EraTxLevel era
@@ -149,6 +154,15 @@ scriptsProvidedAlonzoStAnnTx ::
   AlonzoStAnnTx l era -> ScriptsProvided era
 scriptsProvidedAlonzoStAnnTx stAnnTx =
   withTopTxLevelOnly stAnnTx $ \AlonzoStAnnTx {asatScriptsProvided} -> asatScriptsProvided
+
+scriptsNeededAlonzoStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxTopLevel l era
+  , STxLevel TopTx era ~ STxTopLevel TopTx era
+  ) =>
+  AlonzoStAnnTx l era -> ScriptsNeeded era
+scriptsNeededAlonzoStAnnTx stAnnTx =
+  withTopTxLevelOnly stAnnTx $ \AlonzoStAnnTx {asatScriptsNeeded} -> asatScriptsNeeded
 
 getAlonzoSupplementalDataHashes ::
   (EraTxBody era, AlonzoEraTxOut era) =>

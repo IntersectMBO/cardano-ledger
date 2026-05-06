@@ -177,6 +177,8 @@ instance AlonzoEraUTxO DijkstraEra where
 
   scriptsProvidedStAnnTx = scriptsProvidedDijkstraStAnnTx
 
+  scriptsNeededStAnnTx = scriptsNeededDijkstraStAnnTx
+
 scriptsProvidedDijkstraStAnnTx ::
   ( EraTxLevel era
   , STxLevel l era ~ STxBothLevels l era
@@ -189,6 +191,19 @@ scriptsProvidedDijkstraStAnnTx stAnnTx =
     stAnnTx
     (\DijkstraStAnnTopTx {dsattScriptsProvided} -> dsattScriptsProvided)
     (\DijkstraStAnnSubTx {dsastScriptsProvided} -> dsastScriptsProvided)
+
+scriptsNeededDijkstraStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxBothLevels l era
+  , STxLevel SubTx era ~ STxBothLevels SubTx era
+  , STxLevel TopTx era ~ STxBothLevels TopTx era
+  ) =>
+  DijkstraStAnnTx l era -> ScriptsNeeded era
+scriptsNeededDijkstraStAnnTx stAnnTx =
+  withBothTxLevels
+    stAnnTx
+    (\DijkstraStAnnTopTx {dsattScriptsNeeded} -> dsattScriptsNeeded)
+    (\DijkstraStAnnSubTx {dsastScriptsNeeded} -> dsastScriptsNeeded)
 
 instance DijkstraEraUTxO DijkstraEra where
   subTransactionsStAnnTx = subTransactionsDijkstraStAnnTx
