@@ -50,6 +50,9 @@
   - `ChainPredicateFailure`
 * Add protocol version validation to `createInitialState`:
   - Validate that current protocol version is within the era's bounds
+
+### `cddl`
+
 * Remove `withAntiGen` re-export, since it's deprecated
 * Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
 

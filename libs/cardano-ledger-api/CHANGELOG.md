@@ -2,6 +2,8 @@
 
 ## 1.13.1.0
 
+* Add `ToJSON` instances for `StakeSnapshot` and `StakeSnapshots`.
+* Add `ToJSON` instance for `QueryPoolStateResult`.
 * Add `querySetSnapshotStakePoolDistr` (`GetPoolDistr2`).
 * Add `queryDRepDelegatees` (`GetFilteredVoteDelegatees`).
 * Add `queryStakePoolRelays` (`GetLedgerPeerSnapshot`).

@@ -552,11 +552,10 @@ instance DecCBOR DefaultVote where
   {-# INLINE decCBOR #-}
 
 instance ToJSON DefaultVote where
-  toJSON defaultVote =
-    case defaultVote of
-      DefaultNo -> String "DefaultNo"
-      DefaultAbstain -> String "DefaultAbstain"
-      DefaultNoConfidence -> String "DefaultNoConfidence"
+  toJSON = \case
+    DefaultNo -> String "DefaultNo"
+    DefaultAbstain -> String "DefaultAbstain"
+    DefaultNoConfidence -> String "DefaultNoConfidence"
 
 defaultStakePoolVote ::
   ConwayEraAccounts era =>

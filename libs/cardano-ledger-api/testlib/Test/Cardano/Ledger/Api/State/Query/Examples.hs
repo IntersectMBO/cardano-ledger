@@ -173,13 +173,23 @@ queryAccountsDepositsExamples =
 
 queryChainAccountStateExamples :: [ChainAccountState]
 queryChainAccountStateExamples =
-  [ ChainAccountState (Coin 0) (Coin 0)
-  , ChainAccountState (Coin 1_500_000_000_000_000) (Coin 8_000_000_000_000_000)
+  [ ChainAccountState
+      { casTreasury = Coin 0
+      , casReserves = Coin 0
+      }
+  , ChainAccountState
+      { casTreasury = Coin 1_500_000_000_000_000
+      , casReserves = Coin 8_000_000_000_000_000
+      }
   ]
 
 queryCommitteeMembersStateExamples :: [CommitteeMembersState]
 queryCommitteeMembersStateExamples =
-  [ CommitteeMembersState Map.empty Nothing (EpochNo 0)
+  [ CommitteeMembersState
+      { csCommittee = Map.empty
+      , csThreshold = Nothing
+      , csEpochNo = EpochNo 0
+      }
   , CommitteeMembersState
       { csCommittee =
           Map.fromList
@@ -249,18 +259,27 @@ querySetSnapshotStakePoolDistrExamples =
   [ def
   , examplePoolDistr
   , PoolDistr
-      ( Map.fromList
-          [
-            ( mkKeyHash 1
-            , IndividualPoolStake (1 % 4) (CompactCoin 1_000_000_000) exampleVrfVerKeyHash
-            )
-          ,
-            ( mkKeyHash 2
-            , IndividualPoolStake (3 % 8) (CompactCoin 5_000_000_000) exampleVrfVerKeyHash
-            )
-          ]
-      )
-      (knownNonZeroCoin @6_000_000_000)
+      { unPoolDistr =
+          Map.fromList
+            [
+              ( mkKeyHash 1
+              , IndividualPoolStake
+                  { individualPoolStake = 1 % 4
+                  , individualTotalPoolStake = CompactCoin 1_000_000_000
+                  , individualPoolStakeVrf = exampleVrfVerKeyHash
+                  }
+              )
+            ,
+              ( mkKeyHash 2
+              , IndividualPoolStake
+                  { individualPoolStake = 3 % 8
+                  , individualTotalPoolStake = CompactCoin 5_000_000_000
+                  , individualPoolStakeVrf = exampleVrfVerKeyHash
+                  }
+              )
+            ]
+      , pdTotalActiveStake = knownNonZeroCoin @6_000_000_000
+      }
   ]
 
 queryStakePoolDefaultVoteExamples :: [DefaultVote]
@@ -412,20 +431,25 @@ queryRatifyStateExamples =
       , rsEnacted =
           Seq.fromList
             [ GovActionState
-                (mkGid 1)
-                Map.empty
-                Map.empty
-                Map.empty
-                exampleProposalProcedure
-                (EpochNo 100)
-                (EpochNo 130)
+                { gasId = mkGid 1
+                , gasCommitteeVotes = Map.empty
+                , gasDRepVotes = Map.empty
+                , gasStakePoolVotes = Map.empty
+                , gasProposalProcedure = exampleProposalProcedure
+                , gasProposedIn = EpochNo 100
+                , gasExpiresAfter = EpochNo 130
+                }
             ]
       , rsExpired = Set.fromList [mkGid 99]
       , rsDelayed = True
       }
   ]
   where
-    mkGid n = GovActionId (TxId (mkDummySafeHash n)) (GovActionIx 0)
+    mkGid n =
+      GovActionId
+        { gaidTxId = TxId (mkDummySafeHash n)
+        , gaidGovActionIx = GovActionIx 0
+        }
 
 queryRegisteredDRepStakeDistrExamples :: [Map (Credential DRepRole) Coin]
 queryRegisteredDRepStakeDistrExamples =
@@ -468,7 +492,12 @@ queryPoolParametersExamples =
 
 queryPoolStateExamples :: [QueryPoolStateResult]
 queryPoolStateExamples =
-  [ QueryPoolStateResult Map.empty Map.empty Map.empty Map.empty
+  [ QueryPoolStateResult
+      { qpsrStakePoolParams = Map.empty
+      , qpsrFutureStakePoolParams = Map.empty
+      , qpsrRetiring = Map.empty
+      , qpsrDeposits = Map.empty
+      }
   , QueryPoolStateResult
       { qpsrStakePoolParams =
           Map.fromList
@@ -526,77 +555,89 @@ queryProposalsExamples =
   [ Seq.empty
   , Seq.fromList
       [ GovActionState
-          (mkGid 1)
-          Map.empty
-          Map.empty
-          Map.empty
-          exampleProposalProcedure
-          (EpochNo 100)
-          (EpochNo 130)
+          { gasId = mkGid 1
+          , gasCommitteeVotes = Map.empty
+          , gasDRepVotes = Map.empty
+          , gasStakePoolVotes = Map.empty
+          , gasProposalProcedure = exampleProposalProcedure
+          , gasProposedIn = EpochNo 100
+          , gasExpiresAfter = EpochNo 130
+          }
       , GovActionState
-          (mkGid 2)
-          (Map.singleton (KeyHashObj (mkKeyHash 1)) VoteYes)
-          (Map.singleton (KeyHashObj (mkKeyHash 2)) VoteNo)
-          (Map.singleton (mkKeyHash 3) Abstain)
-          exampleProposalProcedureHardForkInitiation
-          (EpochNo 50)
-          (EpochNo 80)
+          { gasId = mkGid 2
+          , gasCommitteeVotes = Map.singleton (KeyHashObj (mkKeyHash 1)) VoteYes
+          , gasDRepVotes = Map.singleton (KeyHashObj (mkKeyHash 2)) VoteNo
+          , gasStakePoolVotes = Map.singleton (mkKeyHash 3) Abstain
+          , gasProposalProcedure = exampleProposalProcedureHardForkInitiation
+          , gasProposedIn = EpochNo 50
+          , gasExpiresAfter = EpochNo 80
+          }
       , GovActionState
-          (mkGid 3)
-          Map.empty
-          Map.empty
-          Map.empty
-          exampleProposalProcedureTreasuryWithdrawals
-          (EpochNo 60)
-          (EpochNo 90)
+          { gasId = mkGid 3
+          , gasCommitteeVotes = Map.empty
+          , gasDRepVotes = Map.empty
+          , gasStakePoolVotes = Map.empty
+          , gasProposalProcedure = exampleProposalProcedureTreasuryWithdrawals
+          , gasProposedIn = EpochNo 60
+          , gasExpiresAfter = EpochNo 90
+          }
       , GovActionState
-          (mkGid 4)
-          Map.empty
-          ( Map.fromList
-              [ (KeyHashObj (mkKeyHash 4), Abstain)
-              , (ScriptHashObj (mkScriptHash 5), VoteYes)
-              ]
-          )
-          Map.empty
-          exampleProposalProcedureNoConfidence
-          (EpochNo 70)
-          (EpochNo 100)
+          { gasId = mkGid 4
+          , gasCommitteeVotes = Map.empty
+          , gasDRepVotes =
+              Map.fromList
+                [ (KeyHashObj (mkKeyHash 4), Abstain)
+                , (ScriptHashObj (mkScriptHash 5), VoteYes)
+                ]
+          , gasStakePoolVotes = Map.empty
+          , gasProposalProcedure = exampleProposalProcedureNoConfidence
+          , gasProposedIn = EpochNo 70
+          , gasExpiresAfter = EpochNo 100
+          }
       , GovActionState
-          (mkGid 5)
-          Map.empty
-          Map.empty
-          Map.empty
-          exampleProposalProcedureUpdateCommittee
-          (EpochNo 80)
-          (EpochNo 110)
+          { gasId = mkGid 5
+          , gasCommitteeVotes = Map.empty
+          , gasDRepVotes = Map.empty
+          , gasStakePoolVotes = Map.empty
+          , gasProposalProcedure = exampleProposalProcedureUpdateCommittee
+          , gasProposedIn = EpochNo 80
+          , gasExpiresAfter = EpochNo 110
+          }
       , GovActionState
-          (mkGid 6)
-          Map.empty
-          Map.empty
-          Map.empty
-          exampleProposalProcedureNewConstitution
-          (EpochNo 90)
-          (EpochNo 120)
+          { gasId = mkGid 6
+          , gasCommitteeVotes = Map.empty
+          , gasDRepVotes = Map.empty
+          , gasStakePoolVotes = Map.empty
+          , gasProposalProcedure = exampleProposalProcedureNewConstitution
+          , gasProposedIn = EpochNo 90
+          , gasExpiresAfter = EpochNo 120
+          }
       , GovActionState
-          (mkGid 7)
-          (Map.singleton (KeyHashObj (mkKeyHash 11)) VoteYes)
-          (Map.singleton (KeyHashObj (mkKeyHash 22)) VoteYes)
-          (Map.singleton (mkKeyHash 33) VoteYes)
-          exampleProposalProcedureParameterChange
-          (EpochNo 100)
-          (EpochNo 130)
+          { gasId = mkGid 7
+          , gasCommitteeVotes = Map.singleton (KeyHashObj (mkKeyHash 11)) VoteYes
+          , gasDRepVotes = Map.singleton (KeyHashObj (mkKeyHash 22)) VoteYes
+          , gasStakePoolVotes = Map.singleton (mkKeyHash 33) VoteYes
+          , gasProposalProcedure = exampleProposalProcedureParameterChange
+          , gasProposedIn = EpochNo 100
+          , gasExpiresAfter = EpochNo 130
+          }
       ]
   ]
   where
-    mkGid n = GovActionId (TxId (mkDummySafeHash n)) (GovActionIx 0)
+    mkGid n =
+      GovActionId
+        { gaidTxId = TxId (mkDummySafeHash n)
+        , gaidGovActionIx = GovActionIx 0
+        }
 
 queryStakeSnapshotsExamples :: [StakeSnapshots]
 queryStakeSnapshotsExamples =
   [ StakeSnapshots
-      Map.empty
-      (knownNonZeroCoin @1)
-      (knownNonZeroCoin @1)
-      (knownNonZeroCoin @1)
+      { ssStakeSnapshots = Map.empty
+      , ssMarkTotal = knownNonZeroCoin @1
+      , ssSetTotal = knownNonZeroCoin @1
+      , ssGoTotal = knownNonZeroCoin @1
+      }
   , StakeSnapshots
       { ssStakeSnapshots =
           Map.fromList

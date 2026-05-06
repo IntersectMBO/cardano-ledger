@@ -14,6 +14,13 @@ module Test.Cardano.Ledger.Conway.Examples (
   exampleConwayBasedTx,
   exampleConwayBasedTopTx,
   exampleAnchor,
+  exampleProposalProcedure,
+  exampleProposalProcedureHardForkInitiation,
+  exampleProposalProcedureNewConstitution,
+  exampleProposalProcedureNoConfidence,
+  exampleProposalProcedureParameterChange,
+  exampleProposalProcedureTreasuryWithdrawals,
+  exampleProposalProcedureUpdateCommittee,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
