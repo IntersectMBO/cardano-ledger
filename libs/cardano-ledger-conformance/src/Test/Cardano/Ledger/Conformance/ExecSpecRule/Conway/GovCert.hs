@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -27,9 +28,9 @@ instance ExecSpecRule "GOVCERT" ConwayEra where
   type ExecContext "GOVCERT" ConwayEra = ConwayCertExecContext ConwayEra
 
   translateInputs ConwayCertExecContext {..} (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep env
-    agdaSt <- runSpecTransM () $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+    agdaEnv <- runSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep @ConwayEra env
+    agdaSt <- runSpecTransM () $ toSpecRep @ConwayEra st
+    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule (SpecTRC env (Agda.MkCertState dState pState vState) sig) =

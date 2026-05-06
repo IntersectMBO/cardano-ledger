@@ -105,9 +105,9 @@ instance ExecSpecRule "LEDGER" ConwayEra where
   type ExecContext "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
 
   translateInputs ConwayLedgerExecContext {..} (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM (clecGuardrailsScriptHash, clecEnactState) $ toSpecRep env
-    agdaSt <- runSpecTransM () $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+    agdaEnv <- runSpecTransM (clecGuardrailsScriptHash, clecEnactState) $ toSpecRep @ConwayEra env
+    agdaSt <- runSpecTransM () $ toSpecRep @ConwayEra st
+    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule trc =

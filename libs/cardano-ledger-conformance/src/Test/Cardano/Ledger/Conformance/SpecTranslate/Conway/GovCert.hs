@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert () where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -21,7 +22,6 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Data.Default (Default (..))
-import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map, keysSet)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -29,8 +29,8 @@ import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 
-instance SpecTranslate ConwayGovCert where
-  type SpecRep ConwayGovCert = Agda.DCert
+instance SpecTranslate ConwayEra ConwayGovCert where
+  type SpecRep ConwayEra ConwayGovCert = Agda.DCert
 
   toSpecRep (ConwayRegDRep c d a) =
     Agda.Regdrep
@@ -55,15 +55,11 @@ instance SpecTranslate ConwayGovCert where
       <$> toSpecRep c
       <*> toSpecRep (SNothing @(Credential _))
 
-instance
-  ( SpecTranslate (PParamsHKD Identity era)
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecContext (PParamsHKD Identity era) ~ ()
-  ) =>
-  SpecTranslate (Conway.ConwayGovCertEnv era)
-  where
-  type SpecRep (Conway.ConwayGovCertEnv era) = Agda.CertEnv
-  type SpecContext (Conway.ConwayGovCertEnv era) = (VotingProcedures era, Map AccountAddress Coin)
+instance SpecTranslate ConwayEra (Conway.ConwayGovCertEnv ConwayEra) where
+  type SpecRep ConwayEra (Conway.ConwayGovCertEnv ConwayEra) = Agda.CertEnv
+  type
+    SpecContext ConwayEra (Conway.ConwayGovCertEnv ConwayEra) =
+      (VotingProcedures ConwayEra, Map AccountAddress Coin)
 
   toSpecRep Conway.ConwayGovCertEnv {..} = do
     (votes, withdrawals) <- askSpecTransM
@@ -84,8 +80,8 @@ instance
         <*> toSpecRepMap withdrawals
         <*> toSpecRep ccColdCreds
 
-instance SpecTranslate (VState era) where
-  type SpecRep (VState era) = Agda.GState
+instance SpecTranslate ConwayEra (VState ConwayEra) where
+  type SpecRep ConwayEra (VState ConwayEra) = Agda.GState
 
   toSpecRep VState {..} = do
     Agda.MkGState

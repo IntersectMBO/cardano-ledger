@@ -33,12 +33,12 @@ instance ExecSpecRule "UTXO" ConwayEra where
   type ExecContext "UTXO" ConwayEra = UtxoExecContext ConwayEra
 
   translateInputs ctx (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM () $ toSpecRep env
-    agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+    agdaEnv <- runSpecTransM () $ toSpecRep @ConwayEra env
+    agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep @ConwayEra st
+    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   translateOutput ctx _ st =
-    runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep st
+    runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep @ConwayEra st
 
   runAgdaRule = runFromAgdaFunction (Agda.utxoStep externalFunctions)

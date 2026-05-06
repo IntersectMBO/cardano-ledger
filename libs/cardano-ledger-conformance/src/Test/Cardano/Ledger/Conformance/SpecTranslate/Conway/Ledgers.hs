@@ -12,7 +12,7 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledgers () where
 
-import Cardano.Ledger.Conway.Core (EraPParams (..))
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Constitution (..), EnactState (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State (ChainAccountState (..))
@@ -24,16 +24,9 @@ import Test.Cardano.Ledger.Conformance (
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
-instance
-  ( EraPParams era
-  , SpecTranslate (PParamsHKD Shelley.Identity era)
-  , SpecContext (PParamsHKD Shelley.Identity era) ~ ()
-  , SpecRep (PParamsHKD Shelley.Identity era) ~ Agda.PParams
-  ) =>
-  SpecTranslate (Shelley.ShelleyLedgersEnv era)
-  where
-  type SpecRep (Shelley.ShelleyLedgersEnv era) = Agda.LEnv
-  type SpecContext (Shelley.ShelleyLedgersEnv era) = EnactState era
+instance SpecTranslate ConwayEra (Shelley.ShelleyLedgersEnv ConwayEra) where
+  type SpecRep ConwayEra (Shelley.ShelleyLedgersEnv ConwayEra) = Agda.LEnv
+  type SpecContext ConwayEra (Shelley.ShelleyLedgersEnv ConwayEra) = EnactState ConwayEra
 
   toSpecRep Shelley.LedgersEnv {..} = do
     enactState <- askSpecTransM

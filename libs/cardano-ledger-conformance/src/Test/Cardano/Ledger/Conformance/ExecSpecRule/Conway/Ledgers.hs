@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -31,9 +32,9 @@ instance ExecSpecRule "LEDGERS" ConwayEra where
   type ExecContext "LEDGERS" ConwayEra = EnactState ConwayEra
 
   translateInputs enactState (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM enactState $ toSpecRep env
-    agdaSt <- runSpecTransM () $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+    agdaEnv <- runSpecTransM enactState $ toSpecRep @ConwayEra env
+    agdaSt <- runSpecTransM () $ toSpecRep @ConwayEra st
+    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule = runFromAgdaFunction (Agda.ledgersStep externalFunctions)

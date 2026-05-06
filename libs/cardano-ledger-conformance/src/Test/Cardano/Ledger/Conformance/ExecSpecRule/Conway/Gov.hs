@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -28,9 +29,9 @@ instance ExecSpecRule "GOV" ConwayEra where
   runAgdaRule (SpecTRC env st sig) = unComputationResult $ Agda.govStep env st sig
 
   translateInputs enactState (TRC (env@Conway.GovEnv {Conway.gePParams}, st, sig)) = do
-    agdaEnv <- runSpecTransM ctx $ toSpecRep env
-    agdaSt <- runSpecTransM () $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+    agdaEnv <- runSpecTransM ctx $ toSpecRep @ConwayEra env
+    agdaSt <- runSpecTransM () $ toSpecRep @ConwayEra st
+    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
     where
       ctx =

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -23,6 +24,6 @@ instance ExecSpecRule "EPOCH" ConwayEra where
   type ExecContext "EPOCH" ConwayEra = [GovActionState ConwayEra]
 
   translateInputs _ (TRC (env, st, sig)) =
-    runSpecTransM () $ SpecTRC <$> toSpecRep env <*> toSpecRep st <*> toSpecRep sig
+    runSpecTransM () $ SpecTRC <$> toSpecRep env <*> toSpecRep @ConwayEra st <*> toSpecRep sig
 
   runAgdaRuleWithDebug (SpecTRC env st sig) = unComputationResult_ $ Agda.epochStep env st sig

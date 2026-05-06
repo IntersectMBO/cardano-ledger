@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -27,9 +28,9 @@ instance ExecSpecRule "DELEG" ConwayEra where
   type ExecContext "DELEG" ConwayEra = Set (Credential DRepRole)
 
   translateInputs delegatees (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM delegatees $ toSpecRep env
-    agdaSt <- runSpecTransM () $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+    agdaEnv <- runSpecTransM delegatees $ toSpecRep @ConwayEra env
+    agdaSt <- runSpecTransM () $ toSpecRep @ConwayEra st
+    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule (SpecTRC env (Agda.MkCertState dState pState vState) sig) =

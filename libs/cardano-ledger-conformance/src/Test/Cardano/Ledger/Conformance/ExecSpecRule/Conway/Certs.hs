@@ -33,14 +33,14 @@ instance ExecSpecRule "CERTS" ConwayEra where
   type ExecContext "CERTS" ConwayEra = ConwayCertExecContext ConwayEra
 
   translateInputs ConwayCertExecContext {..} (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep env
-    agdaSt <- runSpecTransM () $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+    agdaEnv <- runSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep @ConwayEra env
+    agdaSt <- runSpecTransM () $ toSpecRep @ConwayEra st
+    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule = runFromAgdaFunction Agda.certsStep
 
-  translateOutput ConwayCertExecContext {..} _ = runSpecTransM () . toSpecRep . fixRewards
+  translateOutput ConwayCertExecContext {..} _ = runSpecTransM () . toSpecRep @ConwayEra . fixRewards
     where
       -- This is necessary because the implementation zeroes out the rewards
       -- in the CERTS rule, but the spec does it in a different rule

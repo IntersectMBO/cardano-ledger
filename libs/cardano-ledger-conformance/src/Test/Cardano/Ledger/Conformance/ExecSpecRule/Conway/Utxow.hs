@@ -43,22 +43,22 @@ instance ExecSpecRule "UTXOW" ConwayEra where
   type ExecContext "UTXOW" ConwayEra = UtxoExecContext ConwayEra
 
   translateInputs ctx (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM () $ toSpecRep env
-    agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+    agdaEnv <- runSpecTransM () $ toSpecRep @ConwayEra env
+    agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep @ConwayEra st
+    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   translateOutput ctx _ st =
-    runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep st
+    runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep @ConwayEra st
 
   runAgdaRule = runFromAgdaFunction (Agda.utxowStep externalFunctions)
 
   extraInfo globals ctx trc@(TRC (env, st, sig)) _ =
     let
       result = either show T.unpack $ do
-        agdaEnv <- runSpecTransM () $ toSpecRep env
-        agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep st
-        agdaSig <- runSpecTransM () $ toSpecRep sig
+        agdaEnv <- runSpecTransM () $ toSpecRep @ConwayEra env
+        agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep @ConwayEra st
+        agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
         pure $ Agda.utxowDebug externalFunctions agdaEnv agdaSt agdaSig
       stFinal = first (T.pack . show) $ runSTS @"UTXO" @ConwayEra globals env st sig
       utxoInfo = extraInfo @"UTXO" @ConwayEra globals ctx (coerce trc) stFinal

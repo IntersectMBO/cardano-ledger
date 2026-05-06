@@ -21,7 +21,6 @@ import Cardano.Ledger.Conway.Core (
   AlonzoEraTxBody (..),
   BabbageEraTxBody (..),
   ConwayEraTxBody (..),
-  EraPParams (..),
   EraTx (..),
   EraTxBody (..),
   ScriptHash,
@@ -33,7 +32,6 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State (ChainAccountState (..))
 import Cardano.Ledger.TxIn (TxId)
-import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
 import Lens.Micro ((^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
@@ -43,16 +41,11 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 
-instance
-  ( EraPParams era
-  , SpecTranslate (PParamsHKD Identity era)
-  , SpecContext (PParamsHKD Identity era) ~ ()
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  ) =>
-  SpecTranslate (Shelley.LedgerEnv era)
-  where
-  type SpecRep (Shelley.LedgerEnv era) = Agda.LEnv
-  type SpecContext (Shelley.LedgerEnv era) = (StrictMaybe ScriptHash, Conway.EnactState era)
+instance SpecTranslate ConwayEra (Shelley.LedgerEnv ConwayEra) where
+  type SpecRep ConwayEra (Shelley.LedgerEnv ConwayEra) = Agda.LEnv
+  type
+    SpecContext ConwayEra (Shelley.LedgerEnv ConwayEra) =
+      (StrictMaybe ScriptHash, Conway.EnactState ConwayEra)
 
   toSpecRep Shelley.LedgerEnv {..} = do
     (policyHash, enactState) <- askSpecTransM
@@ -64,9 +57,9 @@ instance
         <*> toSpecRep enactState
         <*> toSpecRep (casTreasury ledgerAccount)
 
-instance SpecTranslate (TxBody TopTx ConwayEra) where
-  type SpecRep (TxBody TopTx ConwayEra) = Agda.TxBody
-  type SpecContext (TxBody TopTx ConwayEra) = TxId
+instance SpecTranslate ConwayEra (TxBody TopTx ConwayEra) where
+  type SpecRep ConwayEra (TxBody TopTx ConwayEra) = Agda.TxBody
+  type SpecContext ConwayEra (TxBody TopTx ConwayEra) = TxId
 
   toSpecRep txb = do
     txId <- askSpecTransM
@@ -98,8 +91,8 @@ instance SpecTranslate (TxBody TopTx ConwayEra) where
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1086
         <*> fmap (fmap (const 0)) (toSpecRep (txb ^. scriptIntegrityHashTxBodyL))
 
-instance SpecTranslate (Tx TopTx ConwayEra) where
-  type SpecRep (Tx TopTx ConwayEra) = Agda.Tx
+instance SpecTranslate ConwayEra (Tx TopTx ConwayEra) where
+  type SpecRep ConwayEra (Tx TopTx ConwayEra) = Agda.Tx
 
   toSpecRep tx =
     Agda.MkTx
@@ -109,7 +102,7 @@ instance SpecTranslate (Tx TopTx ConwayEra) where
       <*> toSpecRep (tx ^. isValidTxL)
       <*> toSpecRep (tx ^. auxDataTxL)
 
-instance SpecTranslate (AlonzoStAnnTx TopTx ConwayEra) where
-  type SpecRep (AlonzoStAnnTx TopTx ConwayEra) = Agda.Tx
+instance SpecTranslate ConwayEra (AlonzoStAnnTx TopTx ConwayEra) where
+  type SpecRep ConwayEra (AlonzoStAnnTx TopTx ConwayEra) = Agda.Tx
 
   toSpecRep stAnnTx = toSpecRep (stAnnTx ^. txStAnnTxG)
