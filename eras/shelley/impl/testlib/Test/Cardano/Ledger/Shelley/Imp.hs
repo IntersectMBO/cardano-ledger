@@ -1,4 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -24,22 +23,23 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 import qualified Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest as Instant
 
 spec ::
-  forall era.
+  forall proxy era.
   ( ShelleyEraImp era
   , EraSpecificSpec era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
+  proxy era ->
   Spec
-spec = do
-  describe "Era specific tests" . withEachEraVersion @era $ eraSpecificSpec
-  describe "ShelleyImpSpec" $ withEachEraVersion @era $ do
-    describe "DELEG" Deleg.spec
+spec era = do
+  describe "Era specific tests" $ withImpInitEachEraVersion era eraSpecificSpec
+  describe "ShelleyEraImpSpec" $ withImpInitEachEraVersion era $ do
+    Deleg.spec
     Epoch.spec
     Ledger.spec
     Pool.spec
     Utxow.spec
     Utxo.spec
-  describe "ShelleyPureTests" $ do
+  describe "ShelleyEraPureTests" $ do
     Instant.spec @era
 
 shelleyEraSpecificSpec ::
@@ -49,9 +49,8 @@ shelleyEraSpecificSpec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 shelleyEraSpecificSpec = do
-  describe "Shelley era specific Imp spec" $
-    describe "DELEG" $
-      Deleg.shelleyEraSpecificSpec
+  describe "From ShelleyEra" $
+    Deleg.shelleyEraSpecificSpec
 
 instance EraSpecificSpec ShelleyEra where
   eraSpecificSpec = shelleyEraSpecificSpec

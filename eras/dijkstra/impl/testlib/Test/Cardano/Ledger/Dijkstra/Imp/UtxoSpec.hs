@@ -33,7 +33,7 @@ spec ::
   forall era.
   DijkstraEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec =
+spec = describe "UTXO" $ do
   describe "Collaterals" $ do
     it "Fails to submit a transaction containing a Ptr in collateral return" $ do
       cred <- KeyHashObj <$> freshKeyHash

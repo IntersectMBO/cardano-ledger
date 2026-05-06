@@ -24,7 +24,7 @@ spec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "HARDFORK" $ do
   it "VRF Keyhashes get populated at v11 HardFork" $ do
     -- Since we're testing the HardFork to 11, the test only makes sense for protocol version 10
     whenMajorVersion @10 $ do

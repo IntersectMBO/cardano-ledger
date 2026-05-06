@@ -2,10 +2,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.Era (
   EraTest (..),
+  EraSpec (..),
+  ledgerEraTestMain,
   registerTestAccount,
 ) where
 
@@ -103,6 +107,24 @@ class
     AccountState era
 
   accountsFromAccountsMap :: Map.Map (Credential Staking) (AccountState era) -> Accounts era
+
+class EraTest era => EraSpec era where
+  -- | All of Imp spec that is applicable to this era
+  eraImpSpec :: Proxy era -> Spec
+
+-- | This is the main entry point for every era's test suite. It contains all tests that must be
+-- supplied by each era through `EraSpec` type class and then some through the extra argument
+ledgerEraTestMain ::
+  forall era.
+  EraSpec era =>
+  -- | Tests that are specific to this era, if any.
+  Spec ->
+  IO ()
+ledgerEraTestMain extraEraSpec =
+  ledgerTestMain $
+    describe (eraName @era) $ do
+      describe "Imp" $ eraImpSpec (Proxy @era)
+      extraEraSpec
 
 -- | This is a helper function that uses `mkTestAccountState` to register an account.
 registerTestAccount ::

@@ -38,7 +38,7 @@ shelleyEraSpecificSpec ::
   , ShelleyEraAccounts era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
-shelleyEraSpecificSpec = do
+shelleyEraSpecificSpec = describe "DELEG" $ do
   it "Twice the same certificate in the same transaction" $ do
     freshKeyHash >>= \kh -> do
       regTxCert <- genRegTxCert (KeyHashObj kh)
@@ -136,7 +136,7 @@ shelleyEraSpecificSpec = do
 spec ::
   ShelleyEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "DELEG" $ do
   describe "Register stake credential" $ do
     it "With correct deposit or without any deposit" $ do
       cred <- KeyHashObj <$> freshKeyHash

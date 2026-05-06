@@ -1,7 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -22,7 +19,6 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 
 spec ::
-  forall era.
   ( DijkstraEraImp era
   , EraSpecificSpec era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
@@ -30,21 +26,15 @@ spec ::
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
+  proxy era ->
   Spec
-spec = do
-  ConwayImp.spec @era
-  withEachEraVersion @era $ dijkstraEraGenericSpec @era
-
-dijkstraEraGenericSpec ::
-  forall era.
-  DijkstraEraImp era =>
-  SpecWith (ImpInit (LedgerSpec era))
-dijkstraEraGenericSpec = do
-  describe "LEDGER" Ledger.spec
-  describe "CERTS" $ do
+spec era = do
+  ConwayImp.spec era
+  withImpInitEachEraVersion era $ do
+    Ledger.spec
     Cert.spec
     Certs.spec
-  describe "UTXOW" Utxow.spec
-  describe "UTXO" Utxo.spec
+    Utxow.spec
+    Utxo.spec
 
 instance EraSpecificSpec DijkstraEra

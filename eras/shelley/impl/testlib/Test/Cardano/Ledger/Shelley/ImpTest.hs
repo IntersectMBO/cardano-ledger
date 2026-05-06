@@ -140,6 +140,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   whenMajorVersionAtMost,
   unlessMajorVersion,
   getsPParams,
+  withImpInitEachEraVersion,
   withEachEraVersion,
   impSatisfyMNativeScripts,
   impSatisfySignature,
@@ -697,10 +698,19 @@ withEachEraVersion ::
   ShelleyEraImp era =>
   SpecWith (ImpInit (LedgerSpec era)) ->
   Spec
-withEachEraVersion specWith =
+withEachEraVersion = withImpInitEachEraVersion (Proxy @era)
+{-# DEPRECATED withEachEraVersion "In favor of `withImpInitEachEraVersion`" #-}
+
+withImpInitEachEraVersion ::
+  forall proxy era.
+  ShelleyEraImp era =>
+  proxy era ->
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  Spec
+withImpInitEachEraVersion _proxy specWith =
   withImpInit @(LedgerSpec era) $ do
     forM_ (eraProtVersions @era) $ \protVer ->
-      describe ("Protocol " <> show protVer) $
+      describe ("Version " <> show protVer) $
         modifyImpInitProtVer protVer specWith
 
 shelleyModifyImpInitProtVer ::

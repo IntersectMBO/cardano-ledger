@@ -1,8 +1,5 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -19,16 +16,16 @@ import Test.Cardano.Ledger.Mary.ImpTest
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
 spec ::
-  forall era.
   ( MaryEraImp era
   , EraSpecificSpec era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
+  proxy era ->
   Spec
-spec = do
-  AllegraImp.spec @era
+spec era = do
+  AllegraImp.spec era
   describe "MaryImpSpec" $
-    withEachEraVersion @era $
+    withImpInitEachEraVersion era $ do
       Utxo.spec
 
 instance EraSpecificSpec MaryEra where

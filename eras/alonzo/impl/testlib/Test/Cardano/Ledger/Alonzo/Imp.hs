@@ -1,9 +1,5 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -23,28 +19,26 @@ import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
 spec ::
-  forall era.
   ( AlonzoEraImp era
   , EraSpecificSpec era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
+  proxy era ->
   Spec
-spec = do
-  MaryImp.spec @era
-  describe "AlonzoImpSpec" . withEachEraVersion @era $ do
+spec era = do
+  MaryImp.spec era
+  describe "AlonzoImpSpec" . withImpInitEachEraVersion era $ do
     Bbody.spec
     Utxo.spec
     Utxos.spec
     Utxow.spec
 
 alonzoEraSpecificSpec ::
-  forall era.
   (AlonzoEraImp era, ShelleyEraTxCert era) =>
   SpecWith (ImpInit (LedgerSpec era))
 alonzoEraSpecificSpec = do
-  describe "Alonzo era specific Imp spec" $
-    describe "Certificates without deposits" $ do
-      Utxow.alonzoEraSpecificSpec
+  describe "From AlonzoEra" $ do
+    Utxow.alonzoEraSpecificSpec
 
 instance EraSpecificSpec AlonzoEra where
   eraSpecificSpec =

@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Main where
 
@@ -17,22 +18,23 @@ import qualified Test.Cardano.Ledger.Dijkstra.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Dijkstra.Imp as Imp
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
 import qualified Test.Cardano.Ledger.Dijkstra.TxInfoSpec as DijkstraTxInfoSpec
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
+
+instance EraSpec DijkstraEra where
+  eraImpSpec = Imp.spec
 
 main :: IO ()
 main =
-  ledgerTestMain $
-    describe "Dijkstra" $ do
-      describe "RoundTrip" $ do
-        roundTripConwayCommonSpec @DijkstraEra
-      Cddl.spec
-      GoldenSpec.spec
-      roundTripJsonShelleyEraSpec @DijkstraEra
-      describe "Imp" $ do
-        Imp.spec @DijkstraEra
-      describe "TxInfo" $ do
-        BabbageTxInfo.spec @DijkstraEra
-        txInfoSpec @DijkstraEra SPlutusV3
-        txInfoSpec @DijkstraEra SPlutusV4
-        DijkstraTxInfoSpec.spec @DijkstraEra
-      Golden.spec @DijkstraEra
+  ledgerEraTestMain @DijkstraEra $ do
+    describe "RoundTrip" $ do
+      roundTripConwayCommonSpec @DijkstraEra
+    Cddl.spec
+    GoldenSpec.spec
+    roundTripJsonShelleyEraSpec @DijkstraEra
+    describe "TxInfo" $ do
+      BabbageTxInfo.spec @DijkstraEra
+      txInfoSpec @DijkstraEra SPlutusV3
+      txInfoSpec @DijkstraEra SPlutusV4
+      DijkstraTxInfoSpec.spec @DijkstraEra
+    Golden.spec @DijkstraEra

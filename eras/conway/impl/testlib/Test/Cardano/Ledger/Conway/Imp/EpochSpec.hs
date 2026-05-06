@@ -46,7 +46,7 @@ spec ::
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "EPOCH" $ do
   dRepVotingSpec
   treasurySpec
   proposalsSpec

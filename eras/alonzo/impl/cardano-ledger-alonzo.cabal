@@ -98,7 +98,7 @@ library
     cardano-ledger-allegra ^>=1.10,
     cardano-ledger-binary ^>=1.9,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.21,
-    cardano-ledger-mary ^>=1.10.1,
+    cardano-ledger-mary ^>=1.11,
     cardano-ledger-shelley ^>=1.19,
     cardano-slotting,
     cardano-strict-containers,

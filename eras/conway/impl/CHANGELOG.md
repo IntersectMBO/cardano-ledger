@@ -46,6 +46,7 @@
 
 ### `testlib`
 
+* Make `Test.Cardano.Ledger.Conway.Imp.spec` accept `Proxy era`
 * In `Test.Cardano.Ledger.Conway.Examples`:
   - Remove `mkConwayBasedExampleTx`, `exampleConwayBasedTxBody`
   - Add `exampleConwayBasedTx`, `exampleConwayBasedTopTx`

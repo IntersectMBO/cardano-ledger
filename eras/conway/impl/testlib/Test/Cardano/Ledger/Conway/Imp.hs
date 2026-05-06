@@ -37,7 +37,6 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
-  forall era.
   ( ConwayEraImp era
   , EraSpecificSpec era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
@@ -45,38 +44,29 @@ spec ::
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
+  proxy era ->
   Spec
-spec = do
-  BabbageImp.spec @era
-  withEachEraVersion @era $ conwayEraGenericSpec @era
-
-conwayEraGenericSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
-conwayEraGenericSpec = do
-  describe "BBODY" Bbody.spec
-  describe "DELEG" Deleg.spec
-  describe "ENACT" Enact.spec
-  describe "EPOCH" Epoch.spec
-  describe "GOV" Gov.spec
-  describe "GOVCERT" GovCert.spec
-  describe "LEDGER" Ledger.spec
-  describe "HARDFORK" HardFork.spec
-  describe "RATIFY" Ratify.spec
-  describe "UTXO" Utxo.spec
-  describe "UTXOS" Utxos.spec
-  describe "UTXOW" Utxow.spec
+spec era = do
+  BabbageImp.spec era
+  withImpInitEachEraVersion era $ do
+    Bbody.spec
+    Deleg.spec
+    Enact.spec
+    Epoch.spec
+    Gov.spec
+    GovCert.spec
+    Ledger.spec
+    HardFork.spec
+    Ratify.spec
+    Utxo.spec
+    Utxos.spec
+    Utxow.spec
 
 conwayEraSpecificSpec :: SpecWith (ImpInit (LedgerSpec ConwayEra))
 conwayEraSpecificSpec = do
   describe "Conway era specific Imp spec" $ do
-    describe "CERTS" Certs.spec
-    describe "UTXO" Utxo.conwayEraSpecificSpec
+    Certs.spec
+    Utxo.conwayEraSpecificSpec
 
 instance EraSpecificSpec ConwayEra where
   eraSpecificSpec =

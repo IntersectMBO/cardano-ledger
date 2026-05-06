@@ -44,6 +44,7 @@
 
 ### `testlib`
 
+* Make `Test.Cardano.Ledger.Alonzo.Imp.spec` accept `Proxy era`
 * Add `genDatumPresent`
 * Added `Proxy era` argument to `exUnitsRule`
 * `TranslationInstance` has a new field `tiPlutusPurpose`

@@ -25,7 +25,7 @@ spec ::
   forall era.
   DijkstraEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec =
+spec = describe "UTXOW" $ do
   describe "RequireGuard native scripts" $ do
     it "Spending inputs locked by script requiring a keyhash guard" $ do
       guardKeyHash <- KeyHashObj <$> freshKeyHash

@@ -77,7 +77,7 @@ library
     cardano-ledger-conway >=1.22,
     cardano-ledger-core:{cardano-ledger-core, internal} >=1.20,
     cardano-ledger-dijkstra >=0.3,
-    cardano-ledger-mary ^>=1.10.1,
+    cardano-ledger-mary >=1.10.1 && <1.12,
     cardano-ledger-shelley ^>=1.19,
     cardano-strict-containers,
     containers,

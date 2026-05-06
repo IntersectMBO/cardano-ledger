@@ -39,7 +39,7 @@ spec ::
   forall era.
   (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "RATIFY" $ do
   votingSpec
   delayingActionsSpec
   committeeMinSizeAffectsInFlightProposalsSpec

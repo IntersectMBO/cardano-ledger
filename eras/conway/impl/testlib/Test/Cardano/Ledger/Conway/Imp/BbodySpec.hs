@@ -39,7 +39,7 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsNoDatum, purposeIsWellfor
 spec ::
   forall era.
   ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "BBODY" $ do
   it "BodyRefScriptsSizeTooBig" $ do
     plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
     let scriptSize = originalBytesSize plutusScript

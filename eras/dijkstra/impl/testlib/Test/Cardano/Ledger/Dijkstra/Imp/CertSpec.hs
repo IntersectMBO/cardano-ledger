@@ -18,7 +18,7 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "CERT" $ do
   xit "Subtransaction consumes correct refund after keyDeposit is changed" $ do
     stakingCred <- KeyHashObj <$> freshKeyHash
     _ <- registerStakeCredential stakingCred

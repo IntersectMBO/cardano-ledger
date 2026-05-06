@@ -60,6 +60,8 @@
 
 ### `testlib`
 
+* Make `Test.Cardano.Ledger.Shelley.Imp.spec` accept `Proxy era`
+* Add `withImpInitEachEraVersion` and deprecate `withEachEraVersion` in its favor
 * Export `exampleVrfVerKeyHash` from `Test.Cardano.Ledger.Shelley.Examples`
 * Add `HuddleRule "int32" ShelleyEra` instance
 * Add `withIssuerAndTxsInBlock_` and `withIssuerAndTxsInBlock`
