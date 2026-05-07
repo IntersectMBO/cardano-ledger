@@ -58,6 +58,7 @@
 
 ### `testlib`
 
+* Export `exampleVrfVerKeyHash` from `Test.Cardano.Ledger.Shelley.Examples`
 * Add `HuddleRule "int32" ShelleyEra` instance
 * Add `withIssuerAndTxsInBlock_` and `withIssuerAndTxsInBlock`
 * Add a `Maybe (KeyHash BlockIssuer)` parameter to `withTxsInBlockEither`

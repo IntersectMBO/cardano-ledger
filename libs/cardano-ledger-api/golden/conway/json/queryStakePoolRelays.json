@@ -1,0 +1,46 @@
+[
+    {},
+    {
+        "a646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a": [
+            {
+                "denominator": 8,
+                "numerator": 3
+            },
+            [
+                {
+                    "single host address": {
+                        "IPv4": "10.0.0.5",
+                        "IPv6": null,
+                        "port": null
+                    }
+                },
+                {
+                    "multi host name": {
+                        "dnsName": "_relay._tcp.pool-2.example"
+                    }
+                }
+            ]
+        ],
+        "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541": [
+            {
+                "denominator": 4,
+                "numerator": 1
+            },
+            [
+                {
+                    "single host address": {
+                        "IPv4": "192.168.1.1",
+                        "IPv6": "2001:db8::1",
+                        "port": 3001
+                    }
+                },
+                {
+                    "single host name": {
+                        "dnsName": "pool-1.relay.example",
+                        "port": 3001
+                    }
+                }
+            ]
+        ]
+    }
+]

@@ -1,0 +1,126 @@
+[
+    {
+        "collateralPercentage": 150,
+        "committeeMaxTermLength": 0,
+        "committeeMinSize": 0,
+        "costModels": {},
+        "dRepActivity": 0,
+        "dRepDeposit": 0,
+        "dRepVotingThresholds": {
+            "committeeNoConfidence": 0,
+            "committeeNormal": 0,
+            "hardForkInitiation": 0,
+            "motionNoConfidence": 0,
+            "ppEconomicGroup": 0,
+            "ppGovGroup": 0,
+            "ppNetworkGroup": 0,
+            "ppTechnicalGroup": 0,
+            "treasuryWithdrawal": 0,
+            "updateToConstitution": 0
+        },
+        "executionUnitPrices": {
+            "priceMemory": 0,
+            "priceSteps": 0
+        },
+        "govActionDeposit": 0,
+        "govActionLifetime": 0,
+        "maxBlockBodySize": 0,
+        "maxBlockExecutionUnits": {
+            "memory": 0,
+            "steps": 0
+        },
+        "maxBlockHeaderSize": 0,
+        "maxCollateralInputs": 5,
+        "maxTxExecutionUnits": {
+            "memory": 0,
+            "steps": 0
+        },
+        "maxTxSize": 2048,
+        "maxValueSize": 0,
+        "minFeeRefScriptCostPerByte": 0,
+        "minPoolCost": 0,
+        "monetaryExpansion": 0,
+        "poolPledgeInfluence": 0,
+        "poolRetireMaxEpoch": 0,
+        "poolVotingThresholds": {
+            "committeeNoConfidence": 0,
+            "committeeNormal": 0,
+            "hardForkInitiation": 0,
+            "motionNoConfidence": 0,
+            "ppSecurityGroup": 0
+        },
+        "protocolVersion": {
+            "major": 9,
+            "minor": 0
+        },
+        "stakeAddressDeposit": 0,
+        "stakePoolDeposit": 0,
+        "stakePoolTargetNum": 100,
+        "treasuryCut": 0,
+        "txFeeFixed": 0,
+        "txFeePerByte": 0,
+        "utxoCostPerByte": 0
+    },
+    {
+        "collateralPercentage": 150,
+        "committeeMaxTermLength": 0,
+        "committeeMinSize": 0,
+        "costModels": {},
+        "dRepActivity": 0,
+        "dRepDeposit": 0,
+        "dRepVotingThresholds": {
+            "committeeNoConfidence": 0,
+            "committeeNormal": 0,
+            "hardForkInitiation": 0,
+            "motionNoConfidence": 0,
+            "ppEconomicGroup": 0,
+            "ppGovGroup": 0,
+            "ppNetworkGroup": 0,
+            "ppTechnicalGroup": 0,
+            "treasuryWithdrawal": 0,
+            "updateToConstitution": 0
+        },
+        "executionUnitPrices": {
+            "priceMemory": 0,
+            "priceSteps": 0
+        },
+        "govActionDeposit": 0,
+        "govActionLifetime": 0,
+        "maxBlockBodySize": 90112,
+        "maxBlockExecutionUnits": {
+            "memory": 0,
+            "steps": 0
+        },
+        "maxBlockHeaderSize": 1100,
+        "maxCollateralInputs": 5,
+        "maxTxExecutionUnits": {
+            "memory": 0,
+            "steps": 0
+        },
+        "maxTxSize": 16384,
+        "maxValueSize": 0,
+        "minFeeRefScriptCostPerByte": 0,
+        "minPoolCost": 340000000,
+        "monetaryExpansion": 0,
+        "poolPledgeInfluence": 0,
+        "poolRetireMaxEpoch": 18,
+        "poolVotingThresholds": {
+            "committeeNoConfidence": 0,
+            "committeeNormal": 0,
+            "hardForkInitiation": 0,
+            "motionNoConfidence": 0,
+            "ppSecurityGroup": 0
+        },
+        "protocolVersion": {
+            "major": 9,
+            "minor": 0
+        },
+        "stakeAddressDeposit": 2000000,
+        "stakePoolDeposit": 500000000,
+        "stakePoolTargetNum": 500,
+        "treasuryCut": 0,
+        "txFeeFixed": 0,
+        "txFeePerByte": 0,
+        "utxoCostPerByte": 0
+    }
+]

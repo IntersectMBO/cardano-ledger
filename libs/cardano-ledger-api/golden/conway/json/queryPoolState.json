@@ -1,0 +1,141 @@
+[
+    {
+        "deposits": {},
+        "futureStakePoolParams": {},
+        "retiring": {},
+        "stakePoolParams": {}
+    },
+    {
+        "deposits": {
+            "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00": 500000000,
+            "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541": 500000000
+        },
+        "futureStakePoolParams": {
+            "c7b31a062855f437a05caf5060582ea40e840ebe4b431ffdf84780db": {
+                "accountAddress": {
+                    "credential": {
+                        "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                    },
+                    "network": "Testnet"
+                },
+                "cost": 5,
+                "margin": 0.1,
+                "metadata": {
+                    "hash": "7b7d",
+                    "url": "consensus.pool"
+                },
+                "owners": [
+                    "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                ],
+                "pledge": 1,
+                "poolId": "c7b31a062855f437a05caf5060582ea40e840ebe4b431ffdf84780db",
+                "relays": [
+                    {
+                        "single host address": {
+                            "IPv4": "127.0.0.1",
+                            "IPv6": "2001:db8::1",
+                            "port": 3000
+                        }
+                    },
+                    {
+                        "single host name": {
+                            "dnsName": "relay.example.com",
+                            "port": 3001
+                        }
+                    },
+                    {
+                        "multi host name": {
+                            "dnsName": "relay.example.com"
+                        }
+                    }
+                ],
+                "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+            }
+        },
+        "retiring": {
+            "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00": 250
+        },
+        "stakePoolParams": {
+            "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06": {
+                "accountAddress": {
+                    "credential": {
+                        "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                    },
+                    "network": "Testnet"
+                },
+                "cost": 5,
+                "margin": 0.1,
+                "metadata": {
+                    "hash": "7b7d",
+                    "url": "consensus.pool"
+                },
+                "owners": [
+                    "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                ],
+                "pledge": 1,
+                "poolId": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06",
+                "relays": [
+                    {
+                        "single host address": {
+                            "IPv4": "127.0.0.1",
+                            "IPv6": "2001:db8::1",
+                            "port": 3000
+                        }
+                    },
+                    {
+                        "single host name": {
+                            "dnsName": "relay.example.com",
+                            "port": 3001
+                        }
+                    },
+                    {
+                        "multi host name": {
+                            "dnsName": "relay.example.com"
+                        }
+                    }
+                ],
+                "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+            },
+            "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00": {
+                "accountAddress": {
+                    "credential": {
+                        "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                    },
+                    "network": "Testnet"
+                },
+                "cost": 5,
+                "margin": 0.1,
+                "metadata": {
+                    "hash": "7b7d",
+                    "url": "consensus.pool"
+                },
+                "owners": [
+                    "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                ],
+                "pledge": 1,
+                "poolId": "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00",
+                "relays": [
+                    {
+                        "single host address": {
+                            "IPv4": "127.0.0.1",
+                            "IPv6": "2001:db8::1",
+                            "port": 3000
+                        }
+                    },
+                    {
+                        "single host name": {
+                            "dnsName": "relay.example.com",
+                            "port": 3001
+                        }
+                    },
+                    {
+                        "multi host name": {
+                            "dnsName": "relay.example.com"
+                        }
+                    }
+                ],
+                "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+            }
+        }
+    }
+]

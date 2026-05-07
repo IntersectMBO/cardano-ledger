@@ -1,0 +1,16 @@
+[
+    [
+        {},
+        {}
+    ],
+    [
+        {
+            "keyHash-e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541": "6d8143487c22dc58eceb5b53f9876e008f052212542d25a0ae8b859b",
+            "scriptHash-a646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a": "4cfcdd3101c6b15a71cf3de4bae8c61b5c16fff90099f01e79492338"
+        },
+        {
+            "keyHash-e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541": 1000000,
+            "scriptHash-a646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a": 0
+        }
+    ]
+]

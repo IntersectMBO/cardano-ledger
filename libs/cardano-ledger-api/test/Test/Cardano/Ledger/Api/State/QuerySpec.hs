@@ -32,7 +32,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (ToJSON)
 import Data.Char (toLower)
 import Data.Default (Default (..))
 import Data.Foldable (foldMap')
@@ -45,7 +45,32 @@ import Lens.Micro ((&), (.~), (^.))
 import Paths_cardano_ledger_api (getDataFileName)
 import System.FilePath ((<.>), (</>))
 import Test.Cardano.Ledger.Api.Arbitrary ()
-import Test.Cardano.Ledger.Api.State.Query.Examples (queryConstitutionExamples)
+import Test.Cardano.Ledger.Api.State.Query.Examples (
+  queryAccountsDepositsExamples,
+  queryChainAccountStateExamples,
+  queryCommitteeMembersStateExamples,
+  queryConstitutionExamples,
+  queryConstitutionHashExamples,
+  queryCurrentEpochNoExamples,
+  queryCurrentPParamsExamples,
+  queryDRepDelegateesExamples,
+  queryDRepDelegationsExamples,
+  queryDRepStakeDistrExamples,
+  queryDRepStateExamples,
+  queryFuturePParamsExamples,
+  queryGovStateExamples,
+  queryPoolParametersExamples,
+  queryPoolStateExamples,
+  queryProposalsExamples,
+  queryRatifyStateExamples,
+  queryRegisteredDRepStakeDistrExamples,
+  querySPOStakeDistrExamples,
+  querySetSnapshotStakePoolDistrExamples,
+  queryStakePoolDefaultVoteExamples,
+  queryStakePoolDelegsAndRewardsExamples,
+  queryStakePoolRelaysExamples,
+  queryStakeSnapshotsExamples,
+ )
 import Test.Cardano.Ledger.Binary.Golden (cborGoldenSpec)
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.Common
@@ -62,17 +87,16 @@ spec = do
     latestErasSpec @(PreviousEra LatestKnownEra)
     latestErasSpec @LatestKnownEra
 
+goldenFilePath :: forall era. Era era => String -> String -> String
+goldenFilePath ext fname = "golden" </> (toLower <$> eraName @era) </> ext </> fname <.> ext
+
 eraLedgerStateQueryGoldenSpec ::
   forall era q.
-  (Era era, Eq q, ToExpr q, NFData q, ToJSON q, Show q, FromJSON q, EncCBOR q, DecCBOR q) =>
+  (Era era, Eq q, Show q, ToJSON q, EncCBOR q, DecCBOR q) =>
   String -> [q] -> Spec
-eraLedgerStateQueryGoldenSpec queryName queryResultExamples = do
-  let mkFilePath t = "golden" </> (toLower <$> eraName @era) </> t </> queryName <.> t
-  describe queryName $ do
-    describe "JSON" $
-      aesonGoldenSpec getDataFileName (mkFilePath "json") queryResultExamples
-    describe "CBOR" $
-      cborGoldenSpec getDataFileName (mkFilePath "cbor") (eraProtVerHigh @era) queryResultExamples
+eraLedgerStateQueryGoldenSpec qname xs = describe qname $ do
+  cborGoldenSpec getDataFileName (goldenFilePath @era "cbor" qname) (eraProtVerHigh @era) xs
+  itGoldenToJSON getDataFileName (goldenFilePath @era "json" qname) xs
 
 latestErasSpec ::
   forall era.
@@ -85,7 +109,42 @@ latestErasSpec ::
 latestErasSpec =
   describe (eraName @era) $ do
     describe "Golden" $ do
+      eraLedgerStateQueryGoldenSpec @era "queryAccountsDeposits" queryAccountsDepositsExamples
+      eraLedgerStateQueryGoldenSpec @era
+        "queryChainAccountState"
+        queryChainAccountStateExamples
+      eraLedgerStateQueryGoldenSpec @era
+        "queryCommitteeMembersState"
+        queryCommitteeMembersStateExamples
       eraLedgerStateQueryGoldenSpec @era "queryConstitution" (queryConstitutionExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryConstitutionHash" queryConstitutionHashExamples
+      eraLedgerStateQueryGoldenSpec @era "queryCurrentEpochNo" queryCurrentEpochNoExamples
+      eraLedgerStateQueryGoldenSpec @era "queryCurrentPParams" (queryCurrentPParamsExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryDRepDelegatees" queryDRepDelegateesExamples
+      eraLedgerStateQueryGoldenSpec @era "queryDRepDelegations" queryDRepDelegationsExamples
+      eraLedgerStateQueryGoldenSpec @era "queryDRepStakeDistr" queryDRepStakeDistrExamples
+      eraLedgerStateQueryGoldenSpec @era "queryDRepState" queryDRepStateExamples
+      eraLedgerStateQueryGoldenSpec @era "queryFuturePParams" (queryFuturePParamsExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryGovState" (queryGovStateExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryPoolParameters" queryPoolParametersExamples
+      eraLedgerStateQueryGoldenSpec @era "queryPoolState" queryPoolStateExamples
+      eraLedgerStateQueryGoldenSpec @era "queryProposals" (queryProposalsExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryRatifyState" (queryRatifyStateExamples @era)
+      eraLedgerStateQueryGoldenSpec @era
+        "queryRegisteredDRepStakeDistr"
+        queryRegisteredDRepStakeDistrExamples
+      eraLedgerStateQueryGoldenSpec @era "querySPOStakeDistr" querySPOStakeDistrExamples
+      eraLedgerStateQueryGoldenSpec @era
+        "querySetSnapshotStakePoolDistr"
+        querySetSnapshotStakePoolDistrExamples
+      eraLedgerStateQueryGoldenSpec @era
+        "queryStakePoolDefaultVote"
+        queryStakePoolDefaultVoteExamples
+      eraLedgerStateQueryGoldenSpec @era
+        "queryStakePoolDelegsAndRewards"
+        queryStakePoolDelegsAndRewardsExamples
+      eraLedgerStateQueryGoldenSpec @era "queryStakePoolRelays" queryStakePoolRelaysExamples
+      eraLedgerStateQueryGoldenSpec @era "queryStakeSnapshots" queryStakeSnapshotsExamples
     describe "Roundtrip" $ do
       prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
       prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots

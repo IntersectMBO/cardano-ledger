@@ -1,0 +1,700 @@
+[
+    {
+        "committee": null,
+        "constitution": {
+            "anchor": {
+                "dataHash": "0000000000000000000000000000000000000000000000000000000000000000",
+                "url": ""
+            }
+        },
+        "currentPParams": {
+            "collateralPercentage": 150,
+            "committeeMaxTermLength": 0,
+            "committeeMinSize": 0,
+            "costModels": {},
+            "dRepActivity": 0,
+            "dRepDeposit": 0,
+            "dRepVotingThresholds": {
+                "committeeNoConfidence": 0,
+                "committeeNormal": 0,
+                "hardForkInitiation": 0,
+                "motionNoConfidence": 0,
+                "ppEconomicGroup": 0,
+                "ppGovGroup": 0,
+                "ppNetworkGroup": 0,
+                "ppTechnicalGroup": 0,
+                "treasuryWithdrawal": 0,
+                "updateToConstitution": 0
+            },
+            "executionUnitPrices": {
+                "priceMemory": 0,
+                "priceSteps": 0
+            },
+            "govActionDeposit": 0,
+            "govActionLifetime": 0,
+            "maxBlockBodySize": 0,
+            "maxBlockExecutionUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxBlockHeaderSize": 0,
+            "maxCollateralInputs": 5,
+            "maxRefScriptSizePerBlock": 0,
+            "maxRefScriptSizePerTx": 0,
+            "maxTxExecutionUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxTxSize": 2048,
+            "maxValueSize": 0,
+            "minFeeRefScriptCostPerByte": 0,
+            "minPoolCost": 0,
+            "monetaryExpansion": 0,
+            "poolPledgeInfluence": 0,
+            "poolRetireMaxEpoch": 0,
+            "poolVotingThresholds": {
+                "committeeNoConfidence": 0,
+                "committeeNormal": 0,
+                "hardForkInitiation": 0,
+                "motionNoConfidence": 0,
+                "ppSecurityGroup": 0
+            },
+            "protocolVersion": {
+                "major": 12,
+                "minor": 0
+            },
+            "refScriptCostMultiplier": {
+                "denominator": 10000000000000000000,
+                "numerator": 1
+            },
+            "refScriptCostStride": 1,
+            "stakeAddressDeposit": 0,
+            "stakePoolDeposit": 0,
+            "stakePoolTargetNum": 100,
+            "treasuryCut": 0,
+            "txFeeFixed": 0,
+            "txFeePerByte": 0,
+            "utxoCostPerByte": 0
+        },
+        "futurePParams": {
+            "tag": "NoPParamsUpdate"
+        },
+        "nextRatifyState": {
+            "enactedGovActions": [],
+            "expiredGovActions": [],
+            "nextEnactState": {
+                "committee": null,
+                "constitution": {
+                    "anchor": {
+                        "dataHash": "0000000000000000000000000000000000000000000000000000000000000000",
+                        "url": ""
+                    }
+                },
+                "curPParams": {
+                    "collateralPercentage": 150,
+                    "committeeMaxTermLength": 0,
+                    "committeeMinSize": 0,
+                    "costModels": {},
+                    "dRepActivity": 0,
+                    "dRepDeposit": 0,
+                    "dRepVotingThresholds": {
+                        "committeeNoConfidence": 0,
+                        "committeeNormal": 0,
+                        "hardForkInitiation": 0,
+                        "motionNoConfidence": 0,
+                        "ppEconomicGroup": 0,
+                        "ppGovGroup": 0,
+                        "ppNetworkGroup": 0,
+                        "ppTechnicalGroup": 0,
+                        "treasuryWithdrawal": 0,
+                        "updateToConstitution": 0
+                    },
+                    "executionUnitPrices": {
+                        "priceMemory": 0,
+                        "priceSteps": 0
+                    },
+                    "govActionDeposit": 0,
+                    "govActionLifetime": 0,
+                    "maxBlockBodySize": 0,
+                    "maxBlockExecutionUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxBlockHeaderSize": 0,
+                    "maxCollateralInputs": 5,
+                    "maxRefScriptSizePerBlock": 0,
+                    "maxRefScriptSizePerTx": 0,
+                    "maxTxExecutionUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxTxSize": 2048,
+                    "maxValueSize": 0,
+                    "minFeeRefScriptCostPerByte": 0,
+                    "minPoolCost": 0,
+                    "monetaryExpansion": 0,
+                    "poolPledgeInfluence": 0,
+                    "poolRetireMaxEpoch": 0,
+                    "poolVotingThresholds": {
+                        "committeeNoConfidence": 0,
+                        "committeeNormal": 0,
+                        "hardForkInitiation": 0,
+                        "motionNoConfidence": 0,
+                        "ppSecurityGroup": 0
+                    },
+                    "protocolVersion": {
+                        "major": 12,
+                        "minor": 0
+                    },
+                    "refScriptCostMultiplier": {
+                        "denominator": 10000000000000000000,
+                        "numerator": 1
+                    },
+                    "refScriptCostStride": 1,
+                    "stakeAddressDeposit": 0,
+                    "stakePoolDeposit": 0,
+                    "stakePoolTargetNum": 100,
+                    "treasuryCut": 0,
+                    "txFeeFixed": 0,
+                    "txFeePerByte": 0,
+                    "utxoCostPerByte": 0
+                },
+                "prevGovActionIds": {
+                    "Committee": null,
+                    "Constitution": null,
+                    "HardFork": null,
+                    "PParamUpdate": null
+                },
+                "prevPParams": {
+                    "collateralPercentage": 150,
+                    "committeeMaxTermLength": 0,
+                    "committeeMinSize": 0,
+                    "costModels": {},
+                    "dRepActivity": 0,
+                    "dRepDeposit": 0,
+                    "dRepVotingThresholds": {
+                        "committeeNoConfidence": 0,
+                        "committeeNormal": 0,
+                        "hardForkInitiation": 0,
+                        "motionNoConfidence": 0,
+                        "ppEconomicGroup": 0,
+                        "ppGovGroup": 0,
+                        "ppNetworkGroup": 0,
+                        "ppTechnicalGroup": 0,
+                        "treasuryWithdrawal": 0,
+                        "updateToConstitution": 0
+                    },
+                    "executionUnitPrices": {
+                        "priceMemory": 0,
+                        "priceSteps": 0
+                    },
+                    "govActionDeposit": 0,
+                    "govActionLifetime": 0,
+                    "maxBlockBodySize": 0,
+                    "maxBlockExecutionUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxBlockHeaderSize": 0,
+                    "maxCollateralInputs": 5,
+                    "maxRefScriptSizePerBlock": 0,
+                    "maxRefScriptSizePerTx": 0,
+                    "maxTxExecutionUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxTxSize": 2048,
+                    "maxValueSize": 0,
+                    "minFeeRefScriptCostPerByte": 0,
+                    "minPoolCost": 0,
+                    "monetaryExpansion": 0,
+                    "poolPledgeInfluence": 0,
+                    "poolRetireMaxEpoch": 0,
+                    "poolVotingThresholds": {
+                        "committeeNoConfidence": 0,
+                        "committeeNormal": 0,
+                        "hardForkInitiation": 0,
+                        "motionNoConfidence": 0,
+                        "ppSecurityGroup": 0
+                    },
+                    "protocolVersion": {
+                        "major": 12,
+                        "minor": 0
+                    },
+                    "refScriptCostMultiplier": {
+                        "denominator": 10000000000000000000,
+                        "numerator": 1
+                    },
+                    "refScriptCostStride": 1,
+                    "stakeAddressDeposit": 0,
+                    "stakePoolDeposit": 0,
+                    "stakePoolTargetNum": 100,
+                    "treasuryCut": 0,
+                    "txFeeFixed": 0,
+                    "txFeePerByte": 0,
+                    "utxoCostPerByte": 0
+                }
+            },
+            "ratificationDelayed": false
+        },
+        "previousPParams": {
+            "collateralPercentage": 150,
+            "committeeMaxTermLength": 0,
+            "committeeMinSize": 0,
+            "costModels": {},
+            "dRepActivity": 0,
+            "dRepDeposit": 0,
+            "dRepVotingThresholds": {
+                "committeeNoConfidence": 0,
+                "committeeNormal": 0,
+                "hardForkInitiation": 0,
+                "motionNoConfidence": 0,
+                "ppEconomicGroup": 0,
+                "ppGovGroup": 0,
+                "ppNetworkGroup": 0,
+                "ppTechnicalGroup": 0,
+                "treasuryWithdrawal": 0,
+                "updateToConstitution": 0
+            },
+            "executionUnitPrices": {
+                "priceMemory": 0,
+                "priceSteps": 0
+            },
+            "govActionDeposit": 0,
+            "govActionLifetime": 0,
+            "maxBlockBodySize": 0,
+            "maxBlockExecutionUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxBlockHeaderSize": 0,
+            "maxCollateralInputs": 5,
+            "maxRefScriptSizePerBlock": 0,
+            "maxRefScriptSizePerTx": 0,
+            "maxTxExecutionUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxTxSize": 2048,
+            "maxValueSize": 0,
+            "minFeeRefScriptCostPerByte": 0,
+            "minPoolCost": 0,
+            "monetaryExpansion": 0,
+            "poolPledgeInfluence": 0,
+            "poolRetireMaxEpoch": 0,
+            "poolVotingThresholds": {
+                "committeeNoConfidence": 0,
+                "committeeNormal": 0,
+                "hardForkInitiation": 0,
+                "motionNoConfidence": 0,
+                "ppSecurityGroup": 0
+            },
+            "protocolVersion": {
+                "major": 12,
+                "minor": 0
+            },
+            "refScriptCostMultiplier": {
+                "denominator": 10000000000000000000,
+                "numerator": 1
+            },
+            "refScriptCostStride": 1,
+            "stakeAddressDeposit": 0,
+            "stakePoolDeposit": 0,
+            "stakePoolTargetNum": 100,
+            "treasuryCut": 0,
+            "txFeeFixed": 0,
+            "txFeePerByte": 0,
+            "utxoCostPerByte": 0
+        },
+        "proposals": []
+    },
+    {
+        "committee": {
+            "members": {
+                "keyHash-a646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a": 300,
+                "keyHash-e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541": 200,
+                "scriptHash-b16b56f5ec064be6ac3cab6035efae86b366cc3dc4a0d571603d70e5": 250
+            },
+            "threshold": {
+                "denominator": 3,
+                "numerator": 2
+            }
+        },
+        "constitution": {
+            "anchor": {
+                "dataHash": "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314",
+                "url": "https://example.com"
+            },
+            "script": "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541"
+        },
+        "currentPParams": {
+            "collateralPercentage": 150,
+            "committeeMaxTermLength": 0,
+            "committeeMinSize": 0,
+            "costModels": {},
+            "dRepActivity": 0,
+            "dRepDeposit": 0,
+            "dRepVotingThresholds": {
+                "committeeNoConfidence": 0,
+                "committeeNormal": 0,
+                "hardForkInitiation": 0,
+                "motionNoConfidence": 0,
+                "ppEconomicGroup": 0,
+                "ppGovGroup": 0,
+                "ppNetworkGroup": 0,
+                "ppTechnicalGroup": 0,
+                "treasuryWithdrawal": 0,
+                "updateToConstitution": 0
+            },
+            "executionUnitPrices": {
+                "priceMemory": 0,
+                "priceSteps": 0
+            },
+            "govActionDeposit": 0,
+            "govActionLifetime": 0,
+            "maxBlockBodySize": 0,
+            "maxBlockExecutionUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxBlockHeaderSize": 0,
+            "maxCollateralInputs": 5,
+            "maxRefScriptSizePerBlock": 0,
+            "maxRefScriptSizePerTx": 0,
+            "maxTxExecutionUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxTxSize": 2048,
+            "maxValueSize": 0,
+            "minFeeRefScriptCostPerByte": 0,
+            "minPoolCost": 0,
+            "monetaryExpansion": 0,
+            "poolPledgeInfluence": 0,
+            "poolRetireMaxEpoch": 0,
+            "poolVotingThresholds": {
+                "committeeNoConfidence": 0,
+                "committeeNormal": 0,
+                "hardForkInitiation": 0,
+                "motionNoConfidence": 0,
+                "ppSecurityGroup": 0
+            },
+            "protocolVersion": {
+                "major": 12,
+                "minor": 0
+            },
+            "refScriptCostMultiplier": {
+                "denominator": 10000000000000000000,
+                "numerator": 1
+            },
+            "refScriptCostStride": 1,
+            "stakeAddressDeposit": 0,
+            "stakePoolDeposit": 0,
+            "stakePoolTargetNum": 100,
+            "treasuryCut": 0,
+            "txFeeFixed": 0,
+            "txFeePerByte": 0,
+            "utxoCostPerByte": 0
+        },
+        "futurePParams": {
+            "contents": {
+                "collateralPercentage": 150,
+                "committeeMaxTermLength": 0,
+                "committeeMinSize": 0,
+                "costModels": {},
+                "dRepActivity": 0,
+                "dRepDeposit": 0,
+                "dRepVotingThresholds": {
+                    "committeeNoConfidence": 0,
+                    "committeeNormal": 0,
+                    "hardForkInitiation": 0,
+                    "motionNoConfidence": 0,
+                    "ppEconomicGroup": 0,
+                    "ppGovGroup": 0,
+                    "ppNetworkGroup": 0,
+                    "ppTechnicalGroup": 0,
+                    "treasuryWithdrawal": 0,
+                    "updateToConstitution": 0
+                },
+                "executionUnitPrices": {
+                    "priceMemory": 0,
+                    "priceSteps": 0
+                },
+                "govActionDeposit": 0,
+                "govActionLifetime": 0,
+                "maxBlockBodySize": 0,
+                "maxBlockExecutionUnits": {
+                    "memory": 0,
+                    "steps": 0
+                },
+                "maxBlockHeaderSize": 0,
+                "maxCollateralInputs": 5,
+                "maxRefScriptSizePerBlock": 0,
+                "maxRefScriptSizePerTx": 0,
+                "maxTxExecutionUnits": {
+                    "memory": 0,
+                    "steps": 0
+                },
+                "maxTxSize": 2048,
+                "maxValueSize": 0,
+                "minFeeRefScriptCostPerByte": 0,
+                "minPoolCost": 0,
+                "monetaryExpansion": 0,
+                "poolPledgeInfluence": 0,
+                "poolRetireMaxEpoch": 0,
+                "poolVotingThresholds": {
+                    "committeeNoConfidence": 0,
+                    "committeeNormal": 0,
+                    "hardForkInitiation": 0,
+                    "motionNoConfidence": 0,
+                    "ppSecurityGroup": 0
+                },
+                "protocolVersion": {
+                    "major": 12,
+                    "minor": 0
+                },
+                "refScriptCostMultiplier": {
+                    "denominator": 10000000000000000000,
+                    "numerator": 1
+                },
+                "refScriptCostStride": 1,
+                "stakeAddressDeposit": 0,
+                "stakePoolDeposit": 0,
+                "stakePoolTargetNum": 100,
+                "treasuryCut": 0,
+                "txFeeFixed": 0,
+                "txFeePerByte": 0,
+                "utxoCostPerByte": 0
+            },
+            "tag": "DefinitePParamsUpdate"
+        },
+        "nextRatifyState": {
+            "enactedGovActions": [],
+            "expiredGovActions": [],
+            "nextEnactState": {
+                "committee": null,
+                "constitution": {
+                    "anchor": {
+                        "dataHash": "0000000000000000000000000000000000000000000000000000000000000000",
+                        "url": ""
+                    }
+                },
+                "curPParams": {
+                    "collateralPercentage": 150,
+                    "committeeMaxTermLength": 0,
+                    "committeeMinSize": 0,
+                    "costModels": {},
+                    "dRepActivity": 0,
+                    "dRepDeposit": 0,
+                    "dRepVotingThresholds": {
+                        "committeeNoConfidence": 0,
+                        "committeeNormal": 0,
+                        "hardForkInitiation": 0,
+                        "motionNoConfidence": 0,
+                        "ppEconomicGroup": 0,
+                        "ppGovGroup": 0,
+                        "ppNetworkGroup": 0,
+                        "ppTechnicalGroup": 0,
+                        "treasuryWithdrawal": 0,
+                        "updateToConstitution": 0
+                    },
+                    "executionUnitPrices": {
+                        "priceMemory": 0,
+                        "priceSteps": 0
+                    },
+                    "govActionDeposit": 0,
+                    "govActionLifetime": 0,
+                    "maxBlockBodySize": 0,
+                    "maxBlockExecutionUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxBlockHeaderSize": 0,
+                    "maxCollateralInputs": 5,
+                    "maxRefScriptSizePerBlock": 0,
+                    "maxRefScriptSizePerTx": 0,
+                    "maxTxExecutionUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxTxSize": 2048,
+                    "maxValueSize": 0,
+                    "minFeeRefScriptCostPerByte": 0,
+                    "minPoolCost": 0,
+                    "monetaryExpansion": 0,
+                    "poolPledgeInfluence": 0,
+                    "poolRetireMaxEpoch": 0,
+                    "poolVotingThresholds": {
+                        "committeeNoConfidence": 0,
+                        "committeeNormal": 0,
+                        "hardForkInitiation": 0,
+                        "motionNoConfidence": 0,
+                        "ppSecurityGroup": 0
+                    },
+                    "protocolVersion": {
+                        "major": 12,
+                        "minor": 0
+                    },
+                    "refScriptCostMultiplier": {
+                        "denominator": 10000000000000000000,
+                        "numerator": 1
+                    },
+                    "refScriptCostStride": 1,
+                    "stakeAddressDeposit": 0,
+                    "stakePoolDeposit": 0,
+                    "stakePoolTargetNum": 100,
+                    "treasuryCut": 0,
+                    "txFeeFixed": 0,
+                    "txFeePerByte": 0,
+                    "utxoCostPerByte": 0
+                },
+                "prevGovActionIds": {
+                    "Committee": null,
+                    "Constitution": null,
+                    "HardFork": null,
+                    "PParamUpdate": null
+                },
+                "prevPParams": {
+                    "collateralPercentage": 150,
+                    "committeeMaxTermLength": 0,
+                    "committeeMinSize": 0,
+                    "costModels": {},
+                    "dRepActivity": 0,
+                    "dRepDeposit": 0,
+                    "dRepVotingThresholds": {
+                        "committeeNoConfidence": 0,
+                        "committeeNormal": 0,
+                        "hardForkInitiation": 0,
+                        "motionNoConfidence": 0,
+                        "ppEconomicGroup": 0,
+                        "ppGovGroup": 0,
+                        "ppNetworkGroup": 0,
+                        "ppTechnicalGroup": 0,
+                        "treasuryWithdrawal": 0,
+                        "updateToConstitution": 0
+                    },
+                    "executionUnitPrices": {
+                        "priceMemory": 0,
+                        "priceSteps": 0
+                    },
+                    "govActionDeposit": 0,
+                    "govActionLifetime": 0,
+                    "maxBlockBodySize": 0,
+                    "maxBlockExecutionUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxBlockHeaderSize": 0,
+                    "maxCollateralInputs": 5,
+                    "maxRefScriptSizePerBlock": 0,
+                    "maxRefScriptSizePerTx": 0,
+                    "maxTxExecutionUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxTxSize": 2048,
+                    "maxValueSize": 0,
+                    "minFeeRefScriptCostPerByte": 0,
+                    "minPoolCost": 0,
+                    "monetaryExpansion": 0,
+                    "poolPledgeInfluence": 0,
+                    "poolRetireMaxEpoch": 0,
+                    "poolVotingThresholds": {
+                        "committeeNoConfidence": 0,
+                        "committeeNormal": 0,
+                        "hardForkInitiation": 0,
+                        "motionNoConfidence": 0,
+                        "ppSecurityGroup": 0
+                    },
+                    "protocolVersion": {
+                        "major": 12,
+                        "minor": 0
+                    },
+                    "refScriptCostMultiplier": {
+                        "denominator": 10000000000000000000,
+                        "numerator": 1
+                    },
+                    "refScriptCostStride": 1,
+                    "stakeAddressDeposit": 0,
+                    "stakePoolDeposit": 0,
+                    "stakePoolTargetNum": 100,
+                    "treasuryCut": 0,
+                    "txFeeFixed": 0,
+                    "txFeePerByte": 0,
+                    "utxoCostPerByte": 0
+                }
+            },
+            "ratificationDelayed": false
+        },
+        "previousPParams": {
+            "collateralPercentage": 150,
+            "committeeMaxTermLength": 0,
+            "committeeMinSize": 0,
+            "costModels": {},
+            "dRepActivity": 0,
+            "dRepDeposit": 0,
+            "dRepVotingThresholds": {
+                "committeeNoConfidence": 0,
+                "committeeNormal": 0,
+                "hardForkInitiation": 0,
+                "motionNoConfidence": 0,
+                "ppEconomicGroup": 0,
+                "ppGovGroup": 0,
+                "ppNetworkGroup": 0,
+                "ppTechnicalGroup": 0,
+                "treasuryWithdrawal": 0,
+                "updateToConstitution": 0
+            },
+            "executionUnitPrices": {
+                "priceMemory": 0,
+                "priceSteps": 0
+            },
+            "govActionDeposit": 0,
+            "govActionLifetime": 0,
+            "maxBlockBodySize": 0,
+            "maxBlockExecutionUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxBlockHeaderSize": 0,
+            "maxCollateralInputs": 5,
+            "maxRefScriptSizePerBlock": 0,
+            "maxRefScriptSizePerTx": 0,
+            "maxTxExecutionUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxTxSize": 2048,
+            "maxValueSize": 0,
+            "minFeeRefScriptCostPerByte": 0,
+            "minPoolCost": 0,
+            "monetaryExpansion": 0,
+            "poolPledgeInfluence": 0,
+            "poolRetireMaxEpoch": 0,
+            "poolVotingThresholds": {
+                "committeeNoConfidence": 0,
+                "committeeNormal": 0,
+                "hardForkInitiation": 0,
+                "motionNoConfidence": 0,
+                "ppSecurityGroup": 0
+            },
+            "protocolVersion": {
+                "major": 12,
+                "minor": 0
+            },
+            "refScriptCostMultiplier": {
+                "denominator": 10000000000000000000,
+                "numerator": 1
+            },
+            "refScriptCostStride": 1,
+            "stakeAddressDeposit": 0,
+            "stakePoolDeposit": 0,
+            "stakePoolTargetNum": 100,
+            "treasuryCut": 0,
+            "txFeeFixed": 0,
+            "txFeePerByte": 0,
+            "utxoCostPerByte": 0
+        },
+        "proposals": []
+    }
+]
