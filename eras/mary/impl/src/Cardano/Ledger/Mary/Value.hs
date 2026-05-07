@@ -67,9 +67,9 @@ import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Exception (assert)
 import Control.Monad (forM_, guard, unless, when)
 import Control.Monad.ST (runST)
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import Data.Aeson.Types (FromJSONKeyFunction (..), ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
 import Data.ByteString.Short (ShortByteString)
@@ -97,7 +97,7 @@ import qualified Data.Semigroup as Semigroup (Sum (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
-import Data.Text.Encoding (decodeLatin1)
+import Data.Text.Encoding (decodeLatin1, encodeUtf8)
 import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
@@ -386,6 +386,25 @@ instance ToJSON AssetName where
 
 instance ToJSONKey AssetName where
   toJSONKey = toJSONKeyText assetNameToTextAsHex
+
+instance FromJSON AssetName where
+  parseJSON = Aeson.withText "AssetName" $ \t ->
+    case BS16.decode (encodeUtf8 t) of
+      Left e -> fail $ "AssetName: invalid hex: " <> e
+      Right bs -> pure $ AssetName (SBS.toShort bs)
+
+instance FromJSONKey AssetName where
+  fromJSONKey = FromJSONKeyTextParser $ \t ->
+    case BS16.decode (encodeUtf8 t) of
+      Left e -> fail $ "AssetName: invalid hex: " <> e
+      Right bs -> pure $ AssetName (SBS.toShort bs)
+
+instance FromJSON MultiAsset where
+  parseJSON v = MultiAsset <$> parseJSON v
+
+instance FromJSON MaryValue where
+  parseJSON = Aeson.withObject "MaryValue" $ \o ->
+    MaryValue <$> o .: "lovelace" <*> o .: "policies"
 
 -- ========================================================================
 -- Compactible
