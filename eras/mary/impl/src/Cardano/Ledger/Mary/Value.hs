@@ -69,7 +69,7 @@ import Control.Monad (forM_, guard, unless, when)
 import Control.Monad.ST (runST)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Types (FromJSONKeyFunction (..), ToJSONKey (..), toJSONKeyText)
+import Data.Aeson.Types (FromJSONKeyFunction (..), Parser, ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
 import Data.ByteString.Short (ShortByteString)
@@ -116,12 +116,6 @@ newtype AssetName = AssetName {assetNameBytes :: SBS.ShortByteString}
 instance Show AssetName where
   show = show . assetNameToBytesAsHex
 
-assetNameToBytesAsHex :: AssetName -> BS.ByteString
-assetNameToBytesAsHex = BS16.encode . SBS.fromShort . assetNameBytes
-
-assetNameToTextAsHex :: AssetName -> Text
-assetNameToTextAsHex = decodeLatin1 . assetNameToBytesAsHex
-
 instance DecCBOR AssetName where
   decCBOR = do
     an <- decCBOR
@@ -132,6 +126,30 @@ instance DecCBOR AssetName where
             assetNameToTextAsHex $
               AssetName an
       else pure $ AssetName an
+
+instance ToJSON AssetName where
+  toJSON = Aeson.String . assetNameToTextAsHex
+
+instance ToJSONKey AssetName where
+  toJSONKey = toJSONKeyText assetNameToTextAsHex
+
+instance FromJSON AssetName where
+  parseJSON = Aeson.withText "AssetName" assetNameFromHexParser
+
+instance FromJSONKey AssetName where
+  fromJSONKey = FromJSONKeyTextParser assetNameFromHexParser
+
+assetNameFromHexParser :: Text -> Parser AssetName
+assetNameFromHexParser t =
+  case BS16.decode (encodeUtf8 t) of
+    Left e -> fail $ "AssetName: invalid hex: " <> e
+    Right bs -> pure $ AssetName (SBS.toShort bs)
+
+assetNameToBytesAsHex :: AssetName -> BS.ByteString
+assetNameToBytesAsHex = BS16.encode . SBS.fromShort . assetNameBytes
+
+assetNameToTextAsHex :: AssetName -> Text
+assetNameToTextAsHex = decodeLatin1 . assetNameToBytesAsHex
 
 -- | Policy ID
 newtype PolicyID = PolicyID {policyID :: ScriptHash}
@@ -152,7 +170,7 @@ newtype PolicyID = PolicyID {policyID :: ScriptHash}
 
 -- | The MultiAssets map
 newtype MultiAsset = MultiAsset (Map PolicyID (Map AssetName Integer))
-  deriving (Show, Generic, ToJSON, EncCBOR)
+  deriving (Show, Generic, FromJSON, ToJSON, EncCBOR)
 
 instance Eq MultiAsset where
   MultiAsset x == MultiAsset y = pointWise (pointWise (==)) x y
@@ -381,30 +399,11 @@ instance ToKeyValuePairs MaryValue where
     , "policies" .= ps
     ]
 
-instance ToJSON AssetName where
-  toJSON = Aeson.String . assetNameToTextAsHex
-
-instance ToJSONKey AssetName where
-  toJSONKey = toJSONKeyText assetNameToTextAsHex
-
-instance FromJSON AssetName where
-  parseJSON = Aeson.withText "AssetName" $ \t ->
-    case BS16.decode (encodeUtf8 t) of
-      Left e -> fail $ "AssetName: invalid hex: " <> e
-      Right bs -> pure $ AssetName (SBS.toShort bs)
-
-instance FromJSONKey AssetName where
-  fromJSONKey = FromJSONKeyTextParser $ \t ->
-    case BS16.decode (encodeUtf8 t) of
-      Left e -> fail $ "AssetName: invalid hex: " <> e
-      Right bs -> pure $ AssetName (SBS.toShort bs)
-
-instance FromJSON MultiAsset where
-  parseJSON v = MultiAsset <$> parseJSON v
-
 instance FromJSON MaryValue where
   parseJSON = Aeson.withObject "MaryValue" $ \o ->
-    MaryValue <$> o .: "lovelace" <*> o .: "policies"
+    MaryValue
+      <$> o .: "lovelace"
+      <*> o .: "policies"
 
 -- ========================================================================
 -- Compactible
