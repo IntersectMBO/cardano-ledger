@@ -79,10 +79,10 @@ import Cardano.Ledger.Babbage.HuddleSpec hiding (
  )
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Huddle.Gen (
-  CBORGen (..),
+  CBORGen,
   MonadGen (choose, resize),
+  RuleTerm (..),
   Term (..),
-  WrappedTerm (..),
   genArrayTerm,
   genMapTerm,
   genRule,
@@ -1053,7 +1053,7 @@ instance HuddleRule "language" ConwayEra where
 instance HuddleRule "potential_languages" ConwayEra where
   huddleRuleNamed pname _ = potentialLanguagesRule pname
 
-conwayCostModelsGenerator :: forall era. Era era => CBORGen WrappedTerm
+conwayCostModelsGenerator :: forall era. Era era => CBORGen RuleTerm
 conwayCostModelsGenerator = Gen.sized $ \size -> do
   nKeys <- choose (0, size)
   initialKeys <- take nKeys <$> shuffle [0 :: Int .. 255]
@@ -1072,7 +1072,7 @@ conwayCostModelsGenerator = Gen.sized $ \size -> do
     v <- withAntiGen (replicateMNorm nVals) $ genRule @"int64" @era
     vs <- genArrayTerm v
     pure (TInt k, vs)
-  S <$> genMapTerm kvs
+  SingleTerm <$> genMapTerm kvs
 
 instance HuddleRule "cost_models" ConwayEra where
   huddleRuleNamed pname p =

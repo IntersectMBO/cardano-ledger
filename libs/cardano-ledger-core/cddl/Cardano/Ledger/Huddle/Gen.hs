@@ -8,17 +8,20 @@ module Cardano.Ledger.Huddle.Gen (
   -- * MonadGen
   module GenT,
 
-  -- * CBORGen
-  module CBORGen,
+  -- * Custom core
+  module CustomCore,
 
   -- * Term generators
+  module CustomGen,
   Term (..),
-  WrappedTerm (..),
   genRule,
   genArrayTerm,
   genBytesTerm,
   genStringTerm,
   genMapTerm,
+
+  -- * Term validators
+  module CustomValidator,
 
   -- * Lifted generators
   arbitrary,
@@ -33,7 +36,9 @@ import Cardano.Ledger.Binary (Term (..))
 import Cardano.Ledger.Huddle (HuddleRule ())
 import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
-import Codec.CBOR.Cuddle.CDDL.CBORGenerator as CBORGen
+import Codec.CBOR.Cuddle.CDDL.Custom.Core as CustomCore
+import Codec.CBOR.Cuddle.CDDL.Custom.Generator as CustomGen
+import Codec.CBOR.Cuddle.CDDL.Custom.Validator as CustomValidator
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Proxy (Proxy (..))

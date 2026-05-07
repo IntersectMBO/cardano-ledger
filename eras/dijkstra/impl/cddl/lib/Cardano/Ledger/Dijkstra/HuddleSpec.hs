@@ -34,9 +34,8 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
 
 import Cardano.Ledger.Conway.HuddleSpec hiding ()
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Huddle.Gen (genArrayTerm)
+import Cardano.Ledger.Huddle.Gen (CBORGen, RuleTerm (..), genArrayTerm, liftAntiGen, withAntiGen)
 import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
-import Codec.CBOR.Cuddle.CDDL.CBORGenerator (CBORGen, WrappedTerm (..), liftAntiGen, withAntiGen)
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (zipWithM)
 import Data.Proxy (Proxy (..))
@@ -889,7 +888,7 @@ instance HuddleRule "block_body" DijkstraEra where
           , "peras_certificate" ==> huddleRule @"peras_certificate" era
           ]
 
-blockBodyGen :: CBORGen WrappedTerm
+blockBodyGen :: CBORGen RuleTerm
 blockBodyGen = do
   numTxs <- liftGen . QC.sized $ \s -> choose (0 :: Int, s)
   txs <-
@@ -918,7 +917,7 @@ blockBodyGen = do
   invalidTxIxsTerm <- genArrayTerm $ TInteger . toInteger <$> invalidIxIxs
   txsTerm <- withAntiGen (withAnnotation "transactions") $ genArrayTerm txs
   perasCertTerm <- generateFromName "peras_certificate"
-  S <$> liftGen (genArrayTerm [invalidTxIxsTerm, txsTerm, perasCertTerm])
+  SingleTerm <$> liftGen (genArrayTerm [invalidTxIxsTerm, txsTerm, perasCertTerm])
 
 instance HuddleRule "auxiliary_scripts" DijkstraEra where
   huddleRuleNamed = auxiliaryScriptsRule

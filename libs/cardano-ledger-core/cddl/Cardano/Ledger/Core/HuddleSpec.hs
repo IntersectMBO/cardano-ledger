@@ -25,7 +25,7 @@ import Cardano.Ledger.Huddle.Gen (
   CBORGen,
   CustomValidatorResult (..),
   MonadGen (..),
-  WrappedTerm (..),
+  RuleTerm (..),
   arbitrary,
   genArrayTerm,
   liftAntiGen,
@@ -53,8 +53,8 @@ genByteString n = BS.pack <$> vectorOf n arbitrary
 
 -- | Generator for plutus scripts that produces random bytestrings.
 -- This avoids collisions when scripts appear in sets (tag 258).
-plutusScriptGen :: MonadGen m => m WrappedTerm
-plutusScriptGen = S . TBytes <$> (genByteString =<< choose (8, 1024))
+plutusScriptGen :: MonadGen m => m RuleTerm
+plutusScriptGen = SingleTerm . TBytes <$> (genByteString =<< choose (8, 1024))
 
 instance Era era => HuddleRule "hash28" era where
   huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (28 :: Word64)
@@ -101,7 +101,7 @@ instance Era era => HuddleRule "unit_interval" era where
             , genUnitInterval64 0 1000
             , genUnitInterval64 (max64 - 1000) max64
             ]
-        S . TTagged 30
+        SingleTerm . TTagged 30
           <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d]
 
 instance Era era => HuddleRule "nonnegative_interval" era where
@@ -251,7 +251,7 @@ instance Era era => HuddleRule "address" era where
         paymentCred <- genHash28
         -- TODO use genBytesTerm once indefinite bytestring decoding has been fixed
         let bytesTerm = TBytes . BS.cons header $ paymentCred <> stakeCred
-        pure $ S bytesTerm
+        pure $ SingleTerm bytesTerm
 
 instance Era era => HuddleRule "reward_account" era where
   huddleRuleNamed pname _ = withCBORGen generator $ pname =.= VBytes
@@ -265,7 +265,7 @@ instance Era era => HuddleRule "reward_account" era where
           header = 0b11100000 .|. mainnetMask .|. scriptMask
         payload <- genHash28
         let term = TBytes $ BS.cons header payload
-        pure $ S term
+        pure $ SingleTerm term
 
 instance Era era => HuddleRule "transaction_index" era where
   huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (2 :: Word64)
@@ -313,12 +313,12 @@ instance Era era => HuddleRule "stake_credential" era where
 instance Era era => HuddleRule "port" era where
   huddleRuleNamed pname _ = pname =.= VUInt `le` 65535
 
-ipGen :: Int -> CBORGen WrappedTerm
+ipGen :: Int -> CBORGen RuleTerm
 ipGen n = do
   l <- liftAntiGen $ choose (n, 1024) |! choose (0, pred n)
   bs <- genByteString l
   -- TODO Also generate with TBytesI
-  pure . S $ TBytes bs
+  pure . SingleTerm $ TBytes bs
 
 ipValidator :: Int -> Term -> CustomValidatorResult
 ipValidator n = \case
