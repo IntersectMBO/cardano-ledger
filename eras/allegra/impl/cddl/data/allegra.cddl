@@ -56,7 +56,7 @@ major_protocol_version = 0 .. 4
 
 kes_signature = bytes .size 448
 
-;Allegra transaction body adds the validity interval start at index 8
+; Allegra transaction body adds the validity interval start at index 8
 transaction_body = 
   {   0 : set<transaction_input>  
   ,   1 : [* transaction_output]
@@ -77,36 +77,36 @@ transaction_id = hash32
 
 transaction_output = [address, amount : coin]
 
-;address format:
-;  [ 8 bit header | payload ];
+; address format:
+;   [ 8 bit header | payload ];
 ;
-;shelley payment addresses:
-;     bit 7: 0
-;     bit 6: base/other
-;     bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
-;     bit 4: payment cred is keyhash/scripthash
-;  bits 3-0: network id
+; shelley payment addresses:
+;      bit 7: 0
+;      bit 6: base/other
+;      bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
+;      bit 4: payment cred is keyhash/scripthash
+;   bits 3-0: network id
 ;
-;reward addresses:
-;  bits 7-5: 111
-;     bit 4: credential is keyhash/scripthash
-;  bits 3-0: network id
+; reward addresses:
+;   bits 7-5: 111
+;      bit 4: credential is keyhash/scripthash
+;   bits 3-0: network id
 ;
-;byron addresses:
-;  bits 7-4: 1000
+; byron addresses:
+;   bits 7-4: 1000
 ;
-;     0000: base address: keyhash28,keyhash28
-;     0001: base address: scripthash28,keyhash28
-;     0010: base address: keyhash28,scripthash28
-;     0011: base address: scripthash28,scripthash28
-;     0100: pointer address: keyhash28, 3 variable length uint
-;     0101: pointer address: scripthash28, 3 variable length uint
-;     0110: enterprise address: keyhash28
-;     0111: enterprise address: scripthash28
-;     1000: byron address
-;     1110: account address: keyhash28
-;     1111: account address: scripthash28
-;1001-1101: future formats
+;      0000: base address: keyhash28,keyhash28
+;      0001: base address: scripthash28,keyhash28
+;      0010: base address: keyhash28,scripthash28
+;      0011: base address: scripthash28,scripthash28
+;      0100: pointer address: keyhash28, 3 variable length uint
+;      0101: pointer address: scripthash28, 3 variable length uint
+;      0110: enterprise address: keyhash28
+;      0111: enterprise address: scripthash28
+;      1000: byron address
+;      1110: account address: keyhash28
+;      1111: account address: scripthash28
+; 1001-1101: future formats
 address = bytes
 
 coin = uint
@@ -132,15 +132,15 @@ addr_keyhash = hash28
 
 hash28 = bytes .size 28
 
-;To compute a script hash, note that you must prepend
-;a tag to the bytes of the script before hashing.
-;The tag is determined by the language.
-;The tags are:
-;  "\x00" for multisig/native scripts
-;  "\x01" for Plutus V1 scripts
-;  "\x02" for Plutus V2 scripts
-;  "\x03" for Plutus V3 scripts
-;  "\x04" for Plutus V4 scripts
+; To compute a script hash, note that you must prepend
+; a tag to the bytes of the script before hashing.
+; The tag is determined by the language.
+; The tags are:
+;   "\x00" for multisig/native scripts
+;   "\x01" for Plutus V1 scripts
+;   "\x02" for Plutus V2 scripts
+;   "\x03" for Plutus V3 scripts
+;   "\x04" for Plutus V4 scripts
 script_hash = hash28
 
 ;This certificate will be deprecated in a future era
@@ -167,14 +167,14 @@ pool_params =
 
 vrf_keyhash = hash32
 
-;A unit interval is a number in the range between 0 and 1, which
-;means there are two extra constraints:
-;  1. numerator <= denominator
-;  2. denominator > 0
+; A unit interval is a number in the range between 0 and 1, which
+; means there are two extra constraints:
+;   1. numerator <= denominator
+;   2. denominator > 0
 ;
-;The relation between numerator and denominator can be
-;expressed in CDDL, but we have a limitation currently
-;(see: https://github.com/input-output-hk/cuddle/issues/30).
+; The relation between numerator and denominator can be
+; expressed in CDDL, but we have a limitation currently
+; (see: https://github.com/input-output-hk/cuddle/issues/30).
 unit_interval = #6.30([uint, uint])
 
 reward_account = bytes
@@ -213,13 +213,13 @@ genesis_delegate_hash = hash28
 
 move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
 
-;The first field determines where the funds are drawn from.
-;  0 denotes the reserves,
-;  1 denotes the treasury.
-;If the second field is a map, funds are moved to stake credentials.
-;Otherwise, the funds are given to the other accounting pot.
-;NOTE:
-;  This has been safely backported to Shelley from Alonzo.
+; The first field determines where the funds are drawn from.
+;   0 denotes the reserves,
+;   1 denotes the treasury.
+; If the second field is a map, funds are moved to stake credentials.
+; Otherwise, the funds are given to the other accounting pot.
+; NOTE:
+;   This has been safely backported to Shelley from Alonzo.
 move_instantaneous_reward = [0/ 1, {* stake_credential => delta_coin}/ coin]
 
 ;This too has been introduced in Shelley as a backport from Alonzo.
@@ -268,13 +268,13 @@ transaction_witness_set =
 
 vkeywitness = [vkey, signature]
 
-;Allegra introduces timelock support for native scripts.
+; Allegra introduces timelock support for native scripts.
 ;
-;Timelock validity intervals are half-open intervals [a, b).
-;  script_invalid_before: specifies the left (included) endpoint a.
-;  script_invalid_hereafter: specifies the right (excluded) endpoint b.
+; Timelock validity intervals are half-open intervals [a, b).
+;   script_invalid_before: specifies the left (included) endpoint a.
+;   script_invalid_hereafter: specifies the right (excluded) endpoint b.
 ;
-;Note: Allegra switched to int64 for script_n_of_k thresholds.
+; Note: Allegra switched to int64 for script_n_of_k thresholds.
 native_script = 
   [  script_pubkey
   // script_all
@@ -298,12 +298,12 @@ min_int64 = -9223372036854775808
 
 max_int64 = 9223372036854775807
 
-;Timelock validity intervals are half-open intervals [a, b).
-;This field specifies the left (included) endpoint a.
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the left (included) endpoint a.
 script_invalid_before = (4, slot)
 
-;Timelock validity intervals are half-open intervals [a, b).
-;This field specifies the right (excluded) endpoint b.
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the right (excluded) endpoint b.
 script_invalid_hereafter = (5, slot)
 
 bootstrap_witness = 

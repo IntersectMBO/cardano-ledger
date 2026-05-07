@@ -1,10 +1,10 @@
 ; This file was auto-generated using generate-cddl. Please do not modify it directly!
 
-;Valid blocks must also satisfy the following two constraints:
-;  1) the length of transaction_bodies and transaction_witness_sets must be
-;     the same
-;  2) every transaction_index must be strictly smaller than the length of
-;     transaction_bodies
+; Valid blocks must also satisfy the following two constraints:
+;   1) the length of transaction_bodies and transaction_witness_sets must be
+;      the same
+;   2) every transaction_index must be strictly smaller than the length of
+;      transaction_bodies
 block = 
   [ header                  
   , transaction_bodies       : [* transaction_body]                   
@@ -88,42 +88,42 @@ transaction_input = [id : transaction_id, index : uint .size 2]
 
 transaction_id = hash32
 
-;Both of the Alonzo and Babbage style TxOut formats are equally valid
-;and can be used interchangeably.
+; Both of the Alonzo and Babbage style TxOut formats are equally valid
+; and can be used interchangeably.
 transaction_output = alonzo_transaction_output/ babbage_transaction_output
 
 alonzo_transaction_output = [address, amount : value, ? datum_hash : hash32]
 
-;address format:
-;  [ 8 bit header | payload ];
+; address format:
+;   [ 8 bit header | payload ];
 ;
-;shelley payment addresses:
-;     bit 7: 0
-;     bit 6: base/other
-;     bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
-;     bit 4: payment cred is keyhash/scripthash
-;  bits 3-0: network id
+; shelley payment addresses:
+;      bit 7: 0
+;      bit 6: base/other
+;      bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
+;      bit 4: payment cred is keyhash/scripthash
+;   bits 3-0: network id
 ;
-;reward addresses:
-;  bits 7-5: 111
-;     bit 4: credential is keyhash/scripthash
-;  bits 3-0: network id
+; reward addresses:
+;   bits 7-5: 111
+;      bit 4: credential is keyhash/scripthash
+;   bits 3-0: network id
 ;
-;byron addresses:
-;  bits 7-4: 1000
+; byron addresses:
+;   bits 7-4: 1000
 ;
-;     0000: base address: keyhash28,keyhash28
-;     0001: base address: scripthash28,keyhash28
-;     0010: base address: keyhash28,scripthash28
-;     0011: base address: scripthash28,scripthash28
-;     0100: pointer address: keyhash28, 3 variable length uint
-;     0101: pointer address: scripthash28, 3 variable length uint
-;     0110: enterprise address: keyhash28
-;     0111: enterprise address: scripthash28
-;     1000: byron address
-;     1110: account address: keyhash28
-;     1111: account address: scripthash28
-;1001-1101: future formats
+;      0000: base address: keyhash28,keyhash28
+;      0001: base address: scripthash28,keyhash28
+;      0010: base address: keyhash28,scripthash28
+;      0011: base address: scripthash28,scripthash28
+;      0100: pointer address: keyhash28, 3 variable length uint
+;      0101: pointer address: scripthash28, 3 variable length uint
+;      0110: enterprise address: keyhash28
+;      0111: enterprise address: scripthash28
+;      1000: byron address
+;      1110: account address: keyhash28
+;      1111: account address: scripthash28
+; 1001-1101: future formats
 address = bytes
 
 value = coin/ [coin, multiasset<uint>]
@@ -134,15 +134,15 @@ multiasset<a0> = {* policy_id => {+ asset_name => a0}}
 
 policy_id = script_hash
 
-;To compute a script hash, note that you must prepend
-;a tag to the bytes of the script before hashing.
-;The tag is determined by the language.
-;The tags are:
-;  "\x00" for multisig/native scripts
-;  "\x01" for Plutus V1 scripts
-;  "\x02" for Plutus V2 scripts
-;  "\x03" for Plutus V3 scripts
-;  "\x04" for Plutus V4 scripts
+; To compute a script hash, note that you must prepend
+; a tag to the bytes of the script before hashing.
+; The tag is determined by the language.
+; The tags are:
+;   "\x00" for multisig/native scripts
+;   "\x01" for Plutus V1 scripts
+;   "\x02" for Plutus V2 scripts
+;   "\x03" for Plutus V3 scripts
+;   "\x04" for Plutus V4 scripts
 script_hash = hash28
 
 hash28 = bytes .size 28
@@ -181,35 +181,35 @@ big_int = int/ big_uint/ big_nint
 
 big_uint = #6.2(bounded_bytes)
 
-;The real bounded_bytes does not have this limit. it instead has
-;a different limit which cannot be expressed in CDDL.
+; The real bounded_bytes does not have this limit. it instead has
+; a different limit which cannot be expressed in CDDL.
 ;
-;The limit is as follows:
-; - bytes with a definite-length encoding are limited to size 0..64
-; - for bytes with an indefinite-length CBOR encoding, each chunk is
-;   limited to size 0..64
-; ( reminder: in CBOR, the indefinite-length encoding of
-; bytestrings consists of a token #2.31 followed by a sequence
-; of definite-length encoded bytestrings and a stop code )
+; The limit is as follows:
+;  - bytes with a definite-length encoding are limited to size 0..64
+;  - for bytes with an indefinite-length CBOR encoding, each chunk is
+;    limited to size 0..64
+;  ( reminder: in CBOR, the indefinite-length encoding of
+;  bytestrings consists of a token #2.31 followed by a sequence
+;  of definite-length encoded bytestrings and a stop code )
 bounded_bytes = bytes .size (0 .. 64)
 
 big_nint = #6.3(bounded_bytes)
 
 script_ref = #6.24(bytes .cbor script)
 
-;Babbage supports three script types:
-;  0: Native scripts (timelock)
-;  1: Plutus V1 scripts
-;  2: Plutus V2 scripts
+; Babbage supports three script types:
+;   0: Native scripts (timelock)
+;   1: Plutus V1 scripts
+;   2: Plutus V2 scripts
 script = [0, native_script// 1, plutus_v1_script// 2, plutus_v2_script]
 
-;Allegra introduces timelock support for native scripts.
+; Allegra introduces timelock support for native scripts.
 ;
-;Timelock validity intervals are half-open intervals [a, b).
-;  script_invalid_before: specifies the left (included) endpoint a.
-;  script_invalid_hereafter: specifies the right (excluded) endpoint b.
+; Timelock validity intervals are half-open intervals [a, b).
+;   script_invalid_before: specifies the left (included) endpoint a.
+;   script_invalid_hereafter: specifies the right (excluded) endpoint b.
 ;
-;Note: Allegra switched to int64 for script_n_of_k thresholds.
+; Note: Allegra switched to int64 for script_n_of_k thresholds.
 native_script = 
   [  script_pubkey
   // script_all
@@ -235,20 +235,20 @@ min_int64 = -9223372036854775808
 
 max_int64 = 9223372036854775807
 
-;Timelock validity intervals are half-open intervals [a, b).
-;This field specifies the left (included) endpoint a.
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the left (included) endpoint a.
 script_invalid_before = (4, slot)
 
-;Timelock validity intervals are half-open intervals [a, b).
-;This field specifies the right (excluded) endpoint b.
+; Timelock validity intervals are half-open intervals [a, b).
+; This field specifies the right (excluded) endpoint b.
 script_invalid_hereafter = (5, slot)
 
-;Alonzo introduces Plutus smart contracts.
-;Plutus V1 scripts are opaque bytestrings.
+; Alonzo introduces Plutus smart contracts.
+; Plutus V1 scripts are opaque bytestrings.
 plutus_v1_script = bytes
 
-;Babbage introduces Plutus V2 with improved cost model
-;and additional builtins.
+; Babbage introduces Plutus V2 with improved cost model
+; and additional builtins.
 plutus_v2_script = bytes
 
 certificate = 
@@ -292,14 +292,14 @@ pool_params =
 
 vrf_keyhash = hash32
 
-;A unit interval is a number in the range between 0 and 1, which
-;means there are two extra constraints:
-;  1. numerator <= denominator
-;  2. denominator > 0
+; A unit interval is a number in the range between 0 and 1, which
+; means there are two extra constraints:
+;   1. numerator <= denominator
+;   2. denominator > 0
 ;
-;The relation between numerator and denominator can be
-;expressed in CDDL, but we have a limitation currently
-;(see: https://github.com/input-output-hk/cuddle/issues/30).
+; The relation between numerator and denominator can be
+; expressed in CDDL, but we have a limitation currently
+; (see: https://github.com/input-output-hk/cuddle/issues/30).
 unit_interval = #6.30([uint, uint])
 
 reward_account = bytes
@@ -338,13 +338,13 @@ genesis_delegate_hash = hash28
 
 move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
 
-;The first field determines where the funds are drawn from.
-;  0 denotes the reserves,
-;  1 denotes the treasury.
-;If the second field is a map, funds are moved to stake credentials.
-;Otherwise, the funds are given to the other accounting pot.
-;NOTE:
-;  This has been safely backported to Shelley from Alonzo.
+; The first field determines where the funds are drawn from.
+;   0 denotes the reserves,
+;   1 denotes the treasury.
+; If the second field is a map, funds are moved to stake credentials.
+; Otherwise, the funds are given to the other accounting pot.
+; NOTE:
+;   This has been safely backported to Shelley from Alonzo.
 move_instantaneous_reward = [0/ 1, {* stake_credential => delta_coin}/ coin]
 
 ;This too has been introduced in Shelley as a backport from Alonzo.
@@ -400,67 +400,67 @@ auxiliary_data_hash = hash32
 
 mint = multiasset<int64>
 
-;This is a hash of data which may affect evaluation of a script.
-;This data consists of:
-;  - The redeemers from the transaction_witness_set (the value of field 5).
-;  - The datums from the transaction_witness_set (the value of field 4).
-;  - The value in the costmdls map corresponding to the script's language
-;    (in field 18 of protocol_param_update.)
-;(In the future it may contain additional protocol parameters.)
+; This is a hash of data which may affect evaluation of a script.
+; This data consists of:
+;   - The redeemers from the transaction_witness_set (the value of field 5).
+;   - The datums from the transaction_witness_set (the value of field 4).
+;   - The value in the costmdls map corresponding to the script's language
+;     (in field 18 of protocol_param_update.)
+; (In the future it may contain additional protocol parameters.)
 ;
-;Since this data does not exist in contiguous form inside a transaction, it needs
-;to be independently constructed by each recipient.
+; Since this data does not exist in contiguous form inside a transaction, it needs
+; to be independently constructed by each recipient.
 ;
-;The bytestring which is hashed is the concatenation of three things:
-;  redeemers || datums || language views
-;The redeemers are exactly the data present in the transaction witness set.
-;Similarly for the datums, if present. If no datums are provided, the middle
-;field is omitted (i.e. it is the empty/null bytestring).
+; The bytestring which is hashed is the concatenation of three things:
+;   redeemers || datums || language views
+; The redeemers are exactly the data present in the transaction witness set.
+; Similarly for the datums, if present. If no datums are provided, the middle
+; field is omitted (i.e. it is the empty/null bytestring).
 ;
-;language views CDDL:
-;{ * language => script_integrity_data }
+; language views CDDL:
+; { * language => script_integrity_data }
 ;
-;This must be encoded canonically, using the same scheme as in
-;RFC7049 section 3.9:
-; - Maps, strings, and bytestrings must use a definite-length encoding
-; - Integers must be as small as possible.
-; - The expressions for map length, string length, and bytestring length
-;   must be as short as possible.
-; - The keys in the map must be sorted as follows:
-;    -  If two keys have different lengths, the shorter one sorts earlier.
-;    -  If two keys have the same length, the one with the lower value
-;       in (byte-wise) lexical order sorts earlier.
+; This must be encoded canonically, using the same scheme as in
+; RFC7049 section 3.9:
+;  - Maps, strings, and bytestrings must use a definite-length encoding
+;  - Integers must be as small as possible.
+;  - The expressions for map length, string length, and bytestring length
+;    must be as short as possible.
+;  - The keys in the map must be sorted as follows:
+;     -  If two keys have different lengths, the shorter one sorts earlier.
+;     -  If two keys have the same length, the one with the lower value
+;        in (byte-wise) lexical order sorts earlier.
 ;
-;For PlutusV1 (language id 0), the language view is the following:
-;  - the value of costmdls map at key 0 (in other words, the script_integrity_data)
-;    is encoded as an indefinite length list and the result is encoded as a bytestring.
-;    (our apologies)
-;    For example, the script_integrity_data corresponding to the all zero costmodel for V1
-;    would be encoded as (in hex):
-;    58a89f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff
-;  - the language ID tag is also encoded twice. first as a uint then as
-;    a bytestring. (our apologies)
-;    Concretely, this means that the language version for V1 is encoded as
-;    4100 in hex.
-;For PlutusV2 (language id 1), the language view is the following:
-;  - the value of costmdls map at key 1 is encoded as an definite length list.
-;    For example, the script_integrity_data corresponding to the all zero costmodel for V2
-;    would be encoded as (in hex):
-;    98af0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-;  - the language ID tag is encoded as expected.
-;    Concretely, this means that the language version for V2 is encoded as
-;    01 in hex.
+; For PlutusV1 (language id 0), the language view is the following:
+;   - the value of costmdls map at key 0 (in other words, the script_integrity_data)
+;     is encoded as an indefinite length list and the result is encoded as a bytestring.
+;     (our apologies)
+;     For example, the script_integrity_data corresponding to the all zero costmodel for V1
+;     would be encoded as (in hex):
+;     58a89f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff
+;   - the language ID tag is also encoded twice. first as a uint then as
+;     a bytestring. (our apologies)
+;     Concretely, this means that the language version for V1 is encoded as
+;     4100 in hex.
+; For PlutusV2 (language id 1), the language view is the following:
+;   - the value of costmdls map at key 1 is encoded as an definite length list.
+;     For example, the script_integrity_data corresponding to the all zero costmodel for V2
+;     would be encoded as (in hex):
+;     98af0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+;   - the language ID tag is encoded as expected.
+;     Concretely, this means that the language version for V2 is encoded as
+;     01 in hex.
 ;
-;Note that each Plutus language represented inside a transaction must have
-;a cost model in the costmdls protocol parameter in order to execute,
-;regardless of what the script integrity data is.
+; Note that each Plutus language represented inside a transaction must have
+; a cost model in the costmdls protocol parameter in order to execute,
+; regardless of what the script integrity data is.
 ;
-;Finally, note that in the case that a transaction includes datums but does not
-;include the redeemers field, the script data format becomes (in hex):
-;[ 80 | datums | A0 ]
-;corresponding to a CBOR empty list and an empty map.
-;Note that a transaction might include the redeemers field and set it to the
-;empty map, in which case the user supplied encoding of the empty map is used.
+; Finally, note that in the case that a transaction includes datums but does not
+; include the redeemers field, the script data format becomes (in hex):
+; [ 80 | datums | A0 ]
+; corresponding to a CBOR empty list and an empty map.
+; Note that a transaction might include the redeemers field and set it to the
+; empty map, in which case the user supplied encoding of the empty map is used.
 script_data_hash = hash32
 
 required_signers = set<addr_keyhash>
@@ -488,7 +488,7 @@ bootstrap_witness =
 
 redeemers = [* redeemer]
 
-;NEW
+; NEW
 redeemer = 
   [ tag      : redeemer_tag
   , index    : uint .size 4
@@ -496,19 +496,19 @@ redeemer =
   , ex_units : ex_units    
   ]
 
-;0: spend
-;1: mint
-;2: cert
-;3: reward
+; 0: spend
+; 1: mint
+; 2: cert
+; 3: reward
 redeemer_tag = 0 .. 3
 
 transaction_index = uint .size 2
 
-;auxiliary_data supports three serialization formats:
-;  1. metadata (raw) - Supported since Shelley
-;  2. auxiliary_data_array - Array format, introduced in Allegra
-;  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
-;     Babbage adds plutus_v2_script support at index 3
+; auxiliary_data supports three serialization formats:
+;   1. metadata (raw) - Supported since Shelley
+;   2. auxiliary_data_array - Array format, introduced in Allegra
+;   3. auxiliary_data_map - Tagged map format, introduced in Alonzo
+;      Babbage adds plutus_v2_script support at index 3
 auxiliary_data = metadata/ auxiliary_data_array/ auxiliary_data_map
 
 metadata = {* metadatum_label => metadatum}
@@ -539,8 +539,8 @@ auxiliary_data_map =
 transaction = 
   [transaction_body, transaction_witness_set, bool, auxiliary_data/ nil]
 
-;0: Plutus v1
-;1: Plutus v2
+; 0: Plutus v1
+; 1: Plutus v2
 language = 0 .. 1
 
 signkey_kes = bytes .size 64

@@ -361,13 +361,13 @@ moveInstantaneousRewardRule ::
   forall era. HuddleRule "delta_coin" era => Proxy "move_instantaneous_reward" -> Proxy era -> Rule
 moveInstantaneousRewardRule pname p =
   comment
-    [str|The first field determines where the funds are drawn from.
-        |  0 denotes the reserves,
-        |  1 denotes the treasury.
-        |If the second field is a map, funds are moved to stake credentials.
-        |Otherwise, the funds are given to the other accounting pot.
-        |NOTE:
-        |  This has been safely backported to Shelley from Alonzo.
+    [str| The first field determines where the funds are drawn from.
+        |   0 denotes the reserves,
+        |   1 denotes the treasury.
+        | If the second field is a map, funds are moved to stake credentials.
+        | Otherwise, the funds are given to the other accounting pot.
+        | NOTE:
+        |   This has been safely backported to Shelley from Alonzo.
         |]
     $ pname
       =.= arr
@@ -558,13 +558,13 @@ instance HuddleGroup "script_n_of_k" ShelleyEra where
 instance HuddleRule "native_script" ShelleyEra where
   huddleRuleNamed pname p =
     comment
-      [str|Native scripts support 4 operations:
-          |  - Signature verification (script_pubkey)
-          |  - Conjunctions (script_all)
-          |  - Disjunctions (script_any)
-          |  - M-of-N thresholds (script_n_of_k)
+      [str| Native scripts support 4 operations:
+          |   - Signature verification (script_pubkey)
+          |   - Conjunctions (script_all)
+          |   - Disjunctions (script_any)
+          |   - M-of-N thresholds (script_n_of_k)
           |
-          |Note: Shelley uses VInt for the threshold in script_n_of_k.
+          | Note: Shelley uses VInt for the threshold in script_n_of_k.
           |]
       $ pname
         =.= arr [a $ huddleGroup @"script_pubkey" p]

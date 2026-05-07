@@ -77,14 +77,14 @@ instance Era era => HuddleRule "positive_word32" era where
 instance Era era => HuddleRule "unit_interval" era where
   huddleRuleNamed pname _ =
     comment
-      [str|A unit interval is a number in the range between 0 and 1, which
-          |means there are two extra constraints:
-          |  1. numerator <= denominator
-          |  2. denominator > 0
+      [str| A unit interval is a number in the range between 0 and 1, which
+          | means there are two extra constraints:
+          |   1. numerator <= denominator
+          |   2. denominator > 0
           |
-          |The relation between numerator and denominator can be
-          |expressed in CDDL, but we have a limitation currently
-          |(see: https://github.com/input-output-hk/cuddle/issues/30).
+          | The relation between numerator and denominator can be
+          | expressed in CDDL, but we have a limitation currently
+          | (see: https://github.com/input-output-hk/cuddle/issues/30).
           |]
       . withCBORGen generator
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
@@ -112,8 +112,8 @@ distinct :: IsSizeable s => Value s -> HuddleItem
 distinct x =
   HIRule
     $ comment
-      [str|A type for distinct values.
-          |The type parameter must support .size, for example: bytes or uint
+      [str| A type for distinct values.
+          | The type parameter must support .size, for example: bytes or uint
           |]
     $ "distinct_"
       <> Name (show' x)
@@ -193,36 +193,36 @@ genHash28 = genByteString 28
 instance Era era => HuddleRule "address" era where
   huddleRuleNamed pname _ =
     comment
-      [str|address format:
-          |  [ 8 bit header | payload ];
+      [str| address format:
+          |   [ 8 bit header | payload ];
           |
-          |shelley payment addresses:
-          |     bit 7: 0
-          |     bit 6: base/other
-          |     bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
-          |     bit 4: payment cred is keyhash/scripthash
-          |  bits 3-0: network id
+          | shelley payment addresses:
+          |      bit 7: 0
+          |      bit 6: base/other
+          |      bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
+          |      bit 4: payment cred is keyhash/scripthash
+          |   bits 3-0: network id
           |
-          |reward addresses:
-          |  bits 7-5: 111
-          |     bit 4: credential is keyhash/scripthash
-          |  bits 3-0: network id
+          | reward addresses:
+          |   bits 7-5: 111
+          |      bit 4: credential is keyhash/scripthash
+          |   bits 3-0: network id
           |
-          |byron addresses:
-          |  bits 7-4: 1000
+          | byron addresses:
+          |   bits 7-4: 1000
           |
-          |     0000: base address: keyhash28,keyhash28
-          |     0001: base address: scripthash28,keyhash28
-          |     0010: base address: keyhash28,scripthash28
-          |     0011: base address: scripthash28,scripthash28
-          |     0100: pointer address: keyhash28, 3 variable length uint
-          |     0101: pointer address: scripthash28, 3 variable length uint
-          |     0110: enterprise address: keyhash28
-          |     0111: enterprise address: scripthash28
-          |     1000: byron address
-          |     1110: account address: keyhash28
-          |     1111: account address: scripthash28
-          |1001-1101: future formats
+          |      0000: base address: keyhash28,keyhash28
+          |      0001: base address: scripthash28,keyhash28
+          |      0010: base address: keyhash28,scripthash28
+          |      0011: base address: scripthash28,scripthash28
+          |      0100: pointer address: keyhash28, 3 variable length uint
+          |      0101: pointer address: scripthash28, 3 variable length uint
+          |      0110: enterprise address: keyhash28
+          |      0111: enterprise address: scripthash28
+          |      1000: byron address
+          |      1110: account address: keyhash28
+          |      1111: account address: scripthash28
+          | 1001-1101: future formats
           |]
       . withCBORGen generator
       $ pname =.= VBytes
@@ -288,15 +288,15 @@ instance Era era => HuddleRule "auxiliary_data_hash" era where
 instance Era era => HuddleRule "script_hash" era where
   huddleRuleNamed pname p =
     comment
-      [str|To compute a script hash, note that you must prepend
-          |a tag to the bytes of the script before hashing.
-          |The tag is determined by the language.
-          |The tags are:
-          |  "\x00" for multisig/native scripts
-          |  "\x01" for Plutus V1 scripts
-          |  "\x02" for Plutus V2 scripts
-          |  "\x03" for Plutus V3 scripts
-          |  "\x04" for Plutus V4 scripts
+      [str| To compute a script hash, note that you must prepend
+          | a tag to the bytes of the script before hashing.
+          | The tag is determined by the language.
+          | The tags are:
+          |   "\x00" for multisig/native scripts
+          |   "\x01" for Plutus V1 scripts
+          |   "\x02" for Plutus V2 scripts
+          |   "\x03" for Plutus V3 scripts
+          |   "\x04" for Plutus V4 scripts
           |]
       $ pname
         =.= huddleRule @"hash28" p
