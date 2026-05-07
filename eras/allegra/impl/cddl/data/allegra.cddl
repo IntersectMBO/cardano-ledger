@@ -1,24 +1,24 @@
 ; This file was auto-generated using generate-cddl. Please do not modify it directly!
 
-block = 
-  [ header                  
-  , transaction_bodies       : [* transaction_body]                   
-  , transaction_witness_sets : [* transaction_witness_set]            
+block =
+  [ header
+  , transaction_bodies       : [* transaction_body]
+  , transaction_witness_sets : [* transaction_witness_set]
   , auxiliary_data_set       : {* transaction_index => auxiliary_data}
   ]
 
 header = [header_body, body_signature : kes_signature]
 
-header_body = 
+header_body =
   [ block_number     : block_number
-  , slot             : slot        
+  , slot             : slot
   , prev_hash        : hash32/ nil
-  , issuer_vkey      : vkey        
-  , vrf_vkey         : vrf_vkey    
-  , nonce_vrf        : vrf_cert    
-  , leader_vrf       : vrf_cert    
+  , issuer_vkey      : vkey
+  , vrf_vkey         : vrf_vkey
+  , nonce_vrf        : vrf_cert
+  , leader_vrf       : vrf_cert
   , block_body_size  : uint .size 4
-  , block_body_hash  : hash32      
+  , block_body_hash  : hash32
   , operational_cert
   , protocol_version
   ]
@@ -35,11 +35,11 @@ vrf_vkey = bytes .size 32
 
 vrf_cert = [bytes, bytes .size 80]
 
-operational_cert = 
-  ( hot_vkey        : kes_vkey       
+operational_cert =
+  ( hot_vkey        : kes_vkey
   , sequence_number : sequence_number
-  , kes_period      : kes_period     
-  , sigma           : signature      
+  , kes_period      : kes_period
+  , sigma           : signature
   )
 
 kes_vkey = bytes .size 32
@@ -57,16 +57,16 @@ major_protocol_version = 0 .. 4
 kes_signature = bytes .size 448
 
 ; Allegra transaction body adds the validity interval start at index 8
-transaction_body = 
-  {   0 : set<transaction_input>  
+transaction_body =
+  {   0 : set<transaction_input>
   ,   1 : [* transaction_output]
-  ,   2 : coin                    
-  , ? 3 : slot                    
-  , ? 4 : [* certificate]       
-  , ? 5 : withdrawals             
-  , ? 6 : update                  
-  , ? 7 : auxiliary_data_hash     
-  , ? 8 : slot                    
+  ,   2 : coin
+  , ? 3 : slot
+  , ? 4 : [* certificate]
+  , ? 5 : withdrawals
+  , ? 6 : update
+  , ? 7 : auxiliary_data_hash
+  , ? 8 : slot
   }
 
 set<a0> = [* a0]
@@ -111,7 +111,7 @@ address = bytes
 
 coin = uint
 
-certificate = 
+certificate =
   [  account_registration_cert
   // account_unregistration_cert
   // delegation_to_stake_pool_cert
@@ -153,15 +153,15 @@ pool_keyhash = hash28
 pool_registration_cert = (3, pool_params)
 
 ;Pool parameters for stake pool registration
-pool_params = 
-  ( operator       : pool_keyhash       
-  , vrf_keyhash    : vrf_keyhash        
-  , pledge         : coin               
-  , cost           : coin               
-  , margin         : unit_interval      
-  , reward_account : reward_account     
-  , pool_owners    : set<addr_keyhash>  
-  , relays         : [* relay]        
+pool_params =
+  ( operator       : pool_keyhash
+  , vrf_keyhash    : vrf_keyhash
+  , pledge         : coin
+  , cost           : coin
+  , margin         : unit_interval
+  , reward_account : reward_account
+  , pool_owners    : set<addr_keyhash>
+  , relays         : [* relay]
   , pool_metadata  : pool_metadata/ nil
   )
 
@@ -231,7 +231,7 @@ update = [proposed_protocol_parameter_updates, epoch]
 
 proposed_protocol_parameter_updates = {* genesis_hash => protocol_param_update}
 
-protocol_param_update = 
+protocol_param_update =
   { ? 0  : uint                 ; minfee A
   , ? 1  : uint                 ; minfee B
   , ? 2  : uint .size 4         ; max block body size
@@ -263,7 +263,7 @@ nonce = [0// 1, hash32]
 
 auxiliary_data_hash = hash32
 
-transaction_witness_set = 
+transaction_witness_set =
   {? 0 : [* vkeywitness], ? 1 : [* native_script], ? 2 : [* bootstrap_witness]}
 
 vkeywitness = [vkey, signature]
@@ -275,7 +275,7 @@ vkeywitness = [vkey, signature]
 ;   script_invalid_hereafter: specifies the right (excluded) endpoint b.
 ;
 ; Note: Allegra switched to int64 for script_n_of_k thresholds.
-native_script = 
+native_script =
   [  script_pubkey
   // script_all
   // script_any
@@ -306,11 +306,11 @@ script_invalid_before = (4, slot)
 ; This field specifies the right (excluded) endpoint b.
 script_invalid_hereafter = (5, slot)
 
-bootstrap_witness = 
-  [ public_key : vkey     
+bootstrap_witness =
+  [ public_key : vkey
   , signature  : signature
-  , chain_code : bytes    
-  , attributes : bytes    
+  , chain_code : bytes
+  , attributes : bytes
   ]
 
 transaction_index = uint .size 2
@@ -321,14 +321,14 @@ metadata = {* metadatum_label => metadatum}
 
 metadatum_label = uint .size 8
 
-metadatum = 
+metadatum =
   {* metadatum => metadatum}
-  / [* metadatum]        
-  / int                    
+  / [* metadatum]
+  / int
   / bytes .size (0 .. 64)
-  / text .size (0 .. 64) 
+  / text .size (0 .. 64)
 
-auxiliary_data_array = 
+auxiliary_data_array =
   [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
 
 auxiliary_scripts = [* native_script]

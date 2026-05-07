@@ -53,7 +53,7 @@ import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
 import Codec.CBOR.Cuddle.IndexMappable
-import Codec.CBOR.Cuddle.Pretty (PrettyStage)
+import Codec.CBOR.Cuddle.Pretty (PrettyStage, renderCDDL)
 import qualified Codec.CBOR.Encoding as CBOR
 import Codec.CBOR.Pretty (prettyHexEnc)
 import qualified Codec.CBOR.Pretty as CBOR
@@ -64,10 +64,10 @@ import Control.Monad (unless)
 import Data.Data (Proxy (..))
 import Data.Either (isLeft)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import GHC.Stack (HasCallStack)
-import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)
+import Prettyprinter (defaultLayoutOptions, layoutPretty)
 import qualified Prettyprinter.Render.Terminal as Ansi
-import Prettyprinter.Render.Text (hPutDoc)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
 import System.IO (IOMode (..), hPutStrLn, withFile)
@@ -331,8 +331,6 @@ writeSpec hddl path = do
     hPutStrLn
       h
       "; This file was auto-generated using generate-cddl. Please do not modify it directly!\n"
-    hPutDoc h (pretty (mapIndex @_ @_ @PrettyStage cddl))
-    -- Write an empty line at the end of the file
-    hPutStrLn h ""
+    T.hPutStrLn h . renderCDDL defaultLayoutOptions $ mapIndex @_ @_ @PrettyStage cddl
   -- Write log to stdout
   putStrLn $ "Generated CDDL file at: " <> path
