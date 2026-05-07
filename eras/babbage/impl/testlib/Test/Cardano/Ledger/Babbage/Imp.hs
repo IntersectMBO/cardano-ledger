@@ -15,10 +15,10 @@ import Cardano.Ledger.Babbage.State
 import Cardano.Ledger.Shelley.Rules
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Alonzo
 import Test.Cardano.Ledger.Alonzo.ImpTest
-import qualified Test.Cardano.Ledger.Babbage.Imp.PoolSpec as Pool
-import qualified Test.Cardano.Ledger.Babbage.Imp.UtxoSpec as Utxo
-import qualified Test.Cardano.Ledger.Babbage.Imp.UtxosSpec as Utxos
-import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as Utxow
+import qualified Test.Cardano.Ledger.Babbage.Imp.PoolSpec as POOL
+import qualified Test.Cardano.Ledger.Babbage.Imp.UtxoSpec as UTXO
+import qualified Test.Cardano.Ledger.Babbage.Imp.UtxosSpec as UTXOS
+import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
 import Test.Cardano.Ledger.Imp.Common
 
@@ -31,9 +31,9 @@ spec ::
 spec era = do
   Alonzo.spec era
   describe "BabbageEra Onwards" $ withImpInitEachEraVersion era $ do
-    Utxo.spec
-    Utxow.spec
-    Utxos.spec
+    UTXO.spec
+    UTXOW.spec
+    UTXOS.spec
 
 babbageEraSpecificSpec ::
   ( BabbageEraImp era
@@ -44,4 +44,4 @@ babbageEraSpecificSpec ::
   Spec
 babbageEraSpecificSpec era = do
   describe "BabbageEra Specific" $ withImpInitEachEraVersion era $ do
-    Pool.babbageEraSpecificSpec
+    POOL.babbageEraSpecificSpec

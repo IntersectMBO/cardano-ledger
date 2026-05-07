@@ -10,11 +10,11 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Shelley.Rules
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
-import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as Cert
-import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertsSpec as Certs
-import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as Ledger
-import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec as Utxo
-import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec as Utxow
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertsSpec as CERTS
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec as UTXO
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 
 spec ::
@@ -29,8 +29,8 @@ spec ::
 spec era = do
   ConwayImp.spec era
   describe "DijkstraEra Onwards" $ withImpInitEachEraVersion era $ do
-    Ledger.spec
-    Cert.spec
-    Certs.spec
-    Utxow.spec
-    Utxo.spec
+    LEDGER.spec
+    CERT.spec
+    CERTS.spec
+    UTXOW.spec
+    UTXO.spec

@@ -8,10 +8,10 @@ module Test.Cardano.Ledger.Alonzo.Imp where
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxCert)
 import Cardano.Ledger.Shelley.Rules
-import qualified Test.Cardano.Ledger.Alonzo.Imp.BbodySpec as Bbody
-import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec as Utxo
-import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as Utxos
-import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
+import qualified Test.Cardano.Ledger.Alonzo.Imp.BbodySpec as BBODY
+import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec as UTXO
+import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as UTXOS
+import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp as Mary
@@ -25,10 +25,10 @@ spec ::
 spec era = do
   Mary.spec era
   describe "AlonzoEra Onwards" $ withImpInitEachEraVersion era $ do
-    Bbody.spec
-    Utxo.spec
-    Utxos.spec
-    Utxow.spec
+    BBODY.spec
+    UTXO.spec
+    UTXOS.spec
+    UTXOW.spec
 
 alonzoEraSpecificSpec ::
   (AlonzoEraImp era, ShelleyEraTxCert era) =>
@@ -36,4 +36,4 @@ alonzoEraSpecificSpec ::
   Spec
 alonzoEraSpecificSpec era = withImpInitEachEraVersion era $ do
   describe "AlonzoEra Specific" $ do
-    Utxow.alonzoEraSpecificSpec
+    UTXOW.alonzoEraSpecificSpec

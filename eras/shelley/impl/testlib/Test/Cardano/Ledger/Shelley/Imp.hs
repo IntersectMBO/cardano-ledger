@@ -12,12 +12,12 @@ import Cardano.Ledger.Shelley.Rules (RupdEvent)
 import Cardano.Ledger.Shelley.State (ShelleyEraAccounts)
 import Control.State.Transition (Event)
 import Test.Cardano.Ledger.Imp.Common
-import qualified Test.Cardano.Ledger.Shelley.Imp.DelegSpec as Deleg
-import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
-import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
-import qualified Test.Cardano.Ledger.Shelley.Imp.PoolSpec as Pool
-import qualified Test.Cardano.Ledger.Shelley.Imp.UtxoSpec as Utxo
-import qualified Test.Cardano.Ledger.Shelley.Imp.UtxowSpec as Utxow
+import qualified Test.Cardano.Ledger.Shelley.Imp.DelegSpec as DELEG
+import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as EPOCH
+import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as LEDGER
+import qualified Test.Cardano.Ledger.Shelley.Imp.PoolSpec as POOL
+import qualified Test.Cardano.Ledger.Shelley.Imp.UtxoSpec as UTXO
+import qualified Test.Cardano.Ledger.Shelley.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Shelley.ImpTest
 import qualified Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest as Instant
 
@@ -30,12 +30,12 @@ spec ::
   Spec
 spec era = do
   describe "ShelleyEra Onwards" $ withImpInitEachEraVersion era $ do
-    Deleg.spec
-    Epoch.spec
-    Ledger.spec
-    Pool.spec
-    Utxow.spec
-    Utxo.spec
+    DELEG.spec
+    EPOCH.spec
+    LEDGER.spec
+    POOL.spec
+    UTXOW.spec
+    UTXO.spec
   describe "ShelleyEraPureTests" $ do
     Instant.spec @era
 
@@ -47,4 +47,4 @@ shelleyEraSpecificSpec ::
   Spec
 shelleyEraSpecificSpec era = withImpInitEachEraVersion era $ do
   describe "ShelleyEra Specific" $
-    Deleg.shelleyEraSpecificSpec
+    DELEG.shelleyEraSpecificSpec

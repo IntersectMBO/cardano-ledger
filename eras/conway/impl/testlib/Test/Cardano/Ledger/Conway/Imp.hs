@@ -20,19 +20,19 @@ import Cardano.Ledger.Shelley.Rules (RupdEvent)
 import Control.State.Transition.Extended
 import Data.Proxy
 import qualified Test.Cardano.Ledger.Babbage.Imp as Babbage
-import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as Bbody
-import qualified Test.Cardano.Ledger.Conway.Imp.CertsSpec as Certs
-import qualified Test.Cardano.Ledger.Conway.Imp.DelegSpec as Deleg
-import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
-import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
-import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GovCert
-import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
-import qualified Test.Cardano.Ledger.Conway.Imp.HardForkSpec as HardFork
-import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as Ledger
-import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
-import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
-import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
-import qualified Test.Cardano.Ledger.Conway.Imp.UtxowSpec as Utxow
+import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as BBODY
+import qualified Test.Cardano.Ledger.Conway.Imp.CertsSpec as CERTS
+import qualified Test.Cardano.Ledger.Conway.Imp.DelegSpec as DELEG
+import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as ENACT
+import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as EPOCH
+import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GOVCERT
+import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as GOV
+import qualified Test.Cardano.Ledger.Conway.Imp.HardForkSpec as HARDFORK
+import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as LEDGER
+import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as RATIFY
+import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as UTXO
+import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as UTXOS
+import qualified Test.Cardano.Ledger.Conway.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
@@ -48,21 +48,22 @@ spec ::
 spec era = do
   Babbage.spec era
   describe "ConwayEra Onwards" $ withImpInitEachEraVersion era $ do
-    Bbody.spec
-    Deleg.spec
-    Enact.spec
-    Epoch.spec
-    Gov.spec
-    GovCert.spec
-    Ledger.spec
-    HardFork.spec
-    Ratify.spec
-    Utxo.spec
-    Utxos.spec
-    Utxow.spec
+    BBODY.spec
+    DELEG.spec
+    ENACT.spec
+    EPOCH.spec
+    GOV.spec
+    GOVCERT.spec
+    LEDGER.spec
+    HARDFORK.spec
+    RATIFY.spec
+    UTXO.spec
+    UTXOS.spec
+    UTXOW.spec
 
 conwayEraSpecificSpec :: Spec
 conwayEraSpecificSpec = do
   describe "ConwayEra Specific" $ withImpInitEachEraVersion (Proxy @ConwayEra) $ do
-    Certs.spec
-    Utxo.conwayEraSpecificSpec
+    -- TODO: move to `spec` when ready: https://github.com/IntersectMBO/cardano-ledger/issues/5805
+    CERTS.spec
+    UTXO.conwayEraSpecificSpec

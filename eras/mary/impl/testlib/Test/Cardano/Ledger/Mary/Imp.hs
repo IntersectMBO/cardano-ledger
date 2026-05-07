@@ -10,7 +10,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules
 import qualified Test.Cardano.Ledger.Allegra.Imp as Allegra
 import Test.Cardano.Ledger.Imp.Common
-import qualified Test.Cardano.Ledger.Mary.Imp.UtxoSpec as Utxo
+import qualified Test.Cardano.Ledger.Mary.Imp.UtxoSpec as UTXO
 import Test.Cardano.Ledger.Mary.ImpTest
 
 spec ::
@@ -23,4 +23,4 @@ spec era = do
   Allegra.spec era
   describe "MaryEra Onwards" $
     withImpInitEachEraVersion era $ do
-      Utxo.spec
+      UTXO.spec
