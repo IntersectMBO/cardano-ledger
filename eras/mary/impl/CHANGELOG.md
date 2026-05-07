@@ -2,6 +2,12 @@
 
 ## 1.11.0.0
 
+* Add `ToJSON`/`FromJSON` instances for:
+  - `AssetName`, `MultiAsset`, `MaryValue` in `Cardano.Ledger.Mary.Value`
+    (`AssetName` serialised as hex text; `MaryValue` as `{"lovelace": N, "policies": {...}}`)
+  - `TxBody TopTx MaryEra` in `Cardano.Ledger.Mary.TxBody`
+  - `Tx TopTx MaryEra` in `Cardano.Ledger.Mary.Tx`
+* Add `FromJSONKey AssetName` instance in `Cardano.Ledger.Mary.Value`
 * Add `ApplyTick` instance for `MaryEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `MaryEra`.
 
