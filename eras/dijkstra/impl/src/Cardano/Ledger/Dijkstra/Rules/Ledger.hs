@@ -25,7 +25,7 @@ module Cardano.Ledger.Dijkstra.Rules.Ledger (
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo (AlonzoScript)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded, scriptsProvidedStAnnTx)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage (BabbageTxOut)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -369,7 +369,6 @@ dijkstraLedgerTransition = do
   -- and SUBLEDGERS, and used for all witness/validation lookups.
   let originalUtxo = utxosUtxo (ledgerState ^. lsUTxOStateL)
       subStAnnTxs = subTransactionsStAnnTx stAnnTx
-      scriptsProvided = scriptsProvidedStAnnTx stAnnTx
 
   -- Process all subtransactions first
   LedgerState utxoStateAfterSubLedgers certStateAfterSubLedgers <-
@@ -381,7 +380,6 @@ dijkstraLedgerTransition = do
             txIx
             pp
             chainAccountState
-            scriptsProvided
             originalUtxo
             (tx ^. isValidTxL)
         , ledgerState
@@ -446,11 +444,11 @@ dijkstraLedgerTransition = do
           )
       else pure (utxoStateAfterSubLedgers, certStateAfterSubLedgers)
 
-  -- Call UTXOW with DijkstraUtxoEnv, passing the original UTxO and aggregated scriptsProvided
+  -- Call UTXOW with DijkstraUtxoEnv, passing the original UTxO
   utxoStateFinal <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided
+        ( DijkstraUtxoEnv slot pp certState originalUtxo
         , utxoStateBeforeUtxow
         , stAnnTx
         )

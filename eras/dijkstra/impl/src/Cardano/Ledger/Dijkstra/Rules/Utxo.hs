@@ -96,8 +96,6 @@ data DijkstraUtxoEnv era = DijkstraUtxoEnv
   , duePParams :: PParams era
   , dueCertState :: CertState era
   , dueOriginalUtxo :: UTxO era
-  , dueScriptsProvided :: ScriptsProvided era
-  -- ^ aggregated scripts provided across all transaction levels
   }
 
 -- | Predicate failure for the Dijkstra Era
@@ -343,7 +341,7 @@ dijkstraUtxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (DijkstraUtxoEnv slot pp certState originalUtxo _scriptsProvided, utxos, stAnnTx) <-
+  TRC (DijkstraUtxoEnv slot pp certState originalUtxo, utxos, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
   -- this is the original Accounts, before any transactions were applied

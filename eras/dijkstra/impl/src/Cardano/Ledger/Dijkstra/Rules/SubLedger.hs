@@ -94,7 +94,6 @@ data SubLedgerEnv era = SubLedgerEnv
   , sleTxIx :: TxIx
   , slePParams :: PParams era
   , sleAccount :: ChainAccountState
-  , sleScriptsProvided :: ScriptsProvided era
   , sleOriginalUtxo :: UTxO era
   , sleTopTxIsValid :: IsValid
   }
@@ -238,7 +237,7 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState scriptsProvided originalUtxo topIsValid
+    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState originalUtxo topIsValid
       , ledgerState@(LedgerState utxoState certState)
       , stAnnTx
       ) <-
@@ -288,7 +287,7 @@ dijkstraSubLedgersTransition = do
   utxoStateAfterSubUtxow <-
     trans @(EraRule "SUBUTXOW" era) $
       TRC
-        ( SubUtxoEnv slot pp certState scriptsProvided originalUtxo topIsValid
+        ( SubUtxoEnv slot pp certState originalUtxo topIsValid
         , utxoState
         , stAnnTx
         )

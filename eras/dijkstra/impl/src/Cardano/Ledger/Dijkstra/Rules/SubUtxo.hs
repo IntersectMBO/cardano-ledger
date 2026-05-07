@@ -65,7 +65,6 @@ data SubUtxoEnv era = SubUtxoEnv
   { sueSlot :: SlotNo
   , suePParams :: PParams era
   , sueCertState :: CertState era
-  , sueScriptsProvided :: ScriptsProvided era
   , sueOriginalUtxo :: UTxO era
   , sueTopTxIsValid :: IsValid
   }
@@ -230,7 +229,7 @@ dijkstraSubUtxoTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (SubUtxoEnv slot pp certState _ originalUtxo (IsValid isValid), utxoState, stAnnTx) <-
+  TRC (SubUtxoEnv slot pp certState originalUtxo (IsValid isValid), utxoState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
