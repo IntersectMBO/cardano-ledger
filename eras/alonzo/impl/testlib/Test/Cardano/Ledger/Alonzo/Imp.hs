@@ -5,7 +5,6 @@
 
 module Test.Cardano.Ledger.Alonzo.Imp where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxCert)
 import Cardano.Ledger.Shelley.Rules
@@ -15,19 +14,17 @@ import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
-import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
+import qualified Test.Cardano.Ledger.Mary.Imp as Mary
 
 spec ::
   ( AlonzoEraImp era
-  , EraSpecificSpec era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
   proxy era ->
   Spec
 spec era = do
-  MaryImp.spec era
-  describe "AlonzoImpSpec" . withImpInitEachEraVersion era $ do
+  Mary.spec era
+  describe "AlonzoEra Onwards" $ withImpInitEachEraVersion era $ do
     Bbody.spec
     Utxo.spec
     Utxos.spec
@@ -35,11 +32,8 @@ spec era = do
 
 alonzoEraSpecificSpec ::
   (AlonzoEraImp era, ShelleyEraTxCert era) =>
-  SpecWith (ImpInit (LedgerSpec era))
-alonzoEraSpecificSpec = do
-  describe "From AlonzoEra" $ do
+  proxy era ->
+  Spec
+alonzoEraSpecificSpec era = withImpInitEachEraVersion era $ do
+  describe "AlonzoEra Specific" $ do
     Utxow.alonzoEraSpecificSpec
-
-instance EraSpecificSpec AlonzoEra where
-  eraSpecificSpec =
-    ShelleyImp.shelleyEraSpecificSpec >> alonzoEraSpecificSpec

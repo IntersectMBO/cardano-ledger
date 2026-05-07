@@ -25,7 +25,6 @@
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
   LedgerSpec,
-  EraSpecificSpec (..),
   SomeSTSEvent (..),
   ImpTestState,
   ImpTestEnv (..),
@@ -343,10 +342,6 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
   -- `futurePParams` are applied and the epoch number is updated to the first epoch
   -- number of the current era
   impPrepAction = passTick
-
-class EraTest era => EraSpecificSpec era where
-  eraSpecificSpec :: SpecWith (ImpInit (LedgerSpec era))
-  eraSpecificSpec = pure ()
 
 data SomeSTSEvent era
   = forall (rule :: Symbol).

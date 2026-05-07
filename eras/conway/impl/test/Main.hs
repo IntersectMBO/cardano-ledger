@@ -6,6 +6,7 @@ module Main where
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Tx (tierRefScriptFee)
+import qualified Test.Cardano.Ledger.Alonzo.Imp as Alonzo
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
@@ -20,7 +21,10 @@ import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 instance EraSpec ConwayEra where
-  eraImpSpec = Imp.spec
+  eraImpSpec era = do
+    Alonzo.alonzoEraSpecificSpec era
+    Imp.conwayEraSpecificSpec
+    Imp.spec era
 
 main :: IO ()
 main = ledgerEraTestMain @ConwayEra $ do

@@ -12,7 +12,9 @@ import qualified Test.Cardano.Ledger.Shelley.Imp as Imp
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 instance EraSpec ShelleyEra where
-  eraImpSpec = Imp.spec
+  eraImpSpec era = do
+    Imp.shelleyEraSpecificSpec era
+    Imp.spec era
 
 main :: IO ()
 main =

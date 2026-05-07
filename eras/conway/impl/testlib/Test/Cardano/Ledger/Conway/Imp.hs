@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conway.Imp (spec) where
+module Test.Cardano.Ledger.Conway.Imp (spec, conwayEraSpecificSpec) where
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -18,8 +18,8 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Shelley.Rules (RupdEvent)
 import Control.State.Transition.Extended
-import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
-import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
+import Data.Proxy
+import qualified Test.Cardano.Ledger.Babbage.Imp as Babbage
 import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as Bbody
 import qualified Test.Cardano.Ledger.Conway.Imp.CertsSpec as Certs
 import qualified Test.Cardano.Ledger.Conway.Imp.DelegSpec as Deleg
@@ -38,7 +38,6 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   ( ConwayEraImp era
-  , EraSpecificSpec era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
@@ -47,8 +46,8 @@ spec ::
   proxy era ->
   Spec
 spec era = do
-  BabbageImp.spec era
-  withImpInitEachEraVersion era $ do
+  Babbage.spec era
+  describe "ConwayEra Onwards" $ withImpInitEachEraVersion era $ do
     Bbody.spec
     Deleg.spec
     Enact.spec
@@ -62,13 +61,8 @@ spec era = do
     Utxos.spec
     Utxow.spec
 
-conwayEraSpecificSpec :: SpecWith (ImpInit (LedgerSpec ConwayEra))
+conwayEraSpecificSpec :: Spec
 conwayEraSpecificSpec = do
-  describe "Conway era specific Imp spec" $ do
+  describe "ConwayEra Specific" $ withImpInitEachEraVersion (Proxy @ConwayEra) $ do
     Certs.spec
     Utxo.conwayEraSpecificSpec
-
-instance EraSpecificSpec ConwayEra where
-  eraSpecificSpec =
-    AlonzoImp.alonzoEraSpecificSpec
-      >> conwayEraSpecificSpec

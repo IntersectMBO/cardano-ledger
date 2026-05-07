@@ -8,7 +8,6 @@
 module Test.Cardano.Ledger.Shelley.Imp (spec, shelleyEraSpecificSpec) where
 
 import Cardano.Ledger.Core (EraRule)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Rules (RupdEvent)
 import Cardano.Ledger.Shelley.State (ShelleyEraAccounts)
 import Control.State.Transition (Event)
@@ -25,14 +24,12 @@ import qualified Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest as Insta
 spec ::
   forall proxy era.
   ( ShelleyEraImp era
-  , EraSpecificSpec era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
   proxy era ->
   Spec
 spec era = do
-  describe "Era specific tests" $ withImpInitEachEraVersion era eraSpecificSpec
-  describe "ShelleyEraImpSpec" $ withImpInitEachEraVersion era $ do
+  describe "ShelleyEra Onwards" $ withImpInitEachEraVersion era $ do
     Deleg.spec
     Epoch.spec
     Ledger.spec
@@ -43,14 +40,11 @@ spec era = do
     Instant.spec @era
 
 shelleyEraSpecificSpec ::
-  forall era.
   ( ShelleyEraImp era
   , ShelleyEraAccounts era
   ) =>
-  SpecWith (ImpInit (LedgerSpec era))
-shelleyEraSpecificSpec = do
-  describe "From ShelleyEra" $
+  proxy era ->
+  Spec
+shelleyEraSpecificSpec era = withImpInitEachEraVersion era $ do
+  describe "ShelleyEra Specific" $
     Deleg.shelleyEraSpecificSpec
-
-instance EraSpecificSpec ShelleyEra where
-  eraSpecificSpec = shelleyEraSpecificSpec

@@ -18,7 +18,7 @@ import qualified Test.Cardano.Ledger.Conway.Binary.Regression as Regression
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
 import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
 import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
-import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, EraSpecificSpec)
+import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import qualified Test.Cardano.Ledger.Conway.SPORatifySpec as SPORatifySpec
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra)
@@ -28,7 +28,6 @@ spec ::
   forall era.
   ( RuleListEra era
   , ConwayEraImp era
-  , EraSpecificSpec era
   ) =>
   Spec
 spec =

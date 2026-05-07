@@ -12,10 +12,13 @@ import qualified Test.Cardano.Ledger.Mary.BinarySpec as BinarySpec
 import qualified Test.Cardano.Ledger.Mary.Imp as Imp
 import Test.Cardano.Ledger.Mary.ImpTest ()
 import qualified Test.Cardano.Ledger.Mary.ValueSpec as ValueSpec
+import qualified Test.Cardano.Ledger.Shelley.Imp as Imp (shelleyEraSpecificSpec)
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 instance EraSpec MaryEra where
-  eraImpSpec = Imp.spec
+  eraImpSpec era = do
+    Imp.shelleyEraSpecificSpec era
+    Imp.spec era
 
 main :: IO ()
 main =

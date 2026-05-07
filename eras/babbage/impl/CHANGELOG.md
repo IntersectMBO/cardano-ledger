@@ -29,6 +29,7 @@
 
 ### `testlib`
 
+* Add `proxy era` argument to `babbageEraSpecificSpec`
 * Make `Test.Cardano.Ledger.Babbage.Imp.spec` accept `Proxy era`
 * Add `Test.Cardano.Ledger.Babbage.Imp.PoolSpec` module with `babbageEraSpecificSpec`
 * In `Test.Cardano.Ledger.Babbage.Examples`:

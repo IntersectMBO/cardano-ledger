@@ -6,7 +6,6 @@
 module Test.Cardano.Ledger.Dijkstra.Imp where
 
 import Cardano.Ledger.Conway.Rules
-import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Shelley.Rules
 import Test.Cardano.Ledger.Common
@@ -20,7 +19,6 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest
 
 spec ::
   ( DijkstraEraImp era
-  , EraSpecificSpec era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
@@ -30,11 +28,9 @@ spec ::
   Spec
 spec era = do
   ConwayImp.spec era
-  withImpInitEachEraVersion era $ do
+  describe "DijkstraEra Onwards" $ withImpInitEachEraVersion era $ do
     Ledger.spec
     Cert.spec
     Certs.spec
     Utxow.spec
     Utxo.spec
-
-instance EraSpecificSpec DijkstraEra
