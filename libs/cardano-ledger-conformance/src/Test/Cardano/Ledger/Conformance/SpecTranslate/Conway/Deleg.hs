@@ -48,7 +48,7 @@ instance
 
   toSpecRep ConwayDelegEnv {..} = do
     delegatees <- askSpecTransM
-    withSpecTransM (const ()) $
+    withCtxSpecTransM () $
       Agda.MkDelegEnv
         <$> toSpecRep cdePParams
         <*> ( toSpecRepMap

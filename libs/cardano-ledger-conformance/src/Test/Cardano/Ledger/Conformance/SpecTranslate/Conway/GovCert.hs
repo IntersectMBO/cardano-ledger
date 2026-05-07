@@ -76,7 +76,7 @@ instance
         ccColdCreds =
           foldMap (keysSet . committeeMembers) cgceCurrentCommittee
             <> potentialCCMembers cgceCommitteeProposals
-    withSpecTransM (const ()) $
+    withCtxSpecTransM () $
       Agda.MkCertEnv
         <$> toSpecRep cgceCurrentEpoch
         <*> toSpecRep cgcePParams

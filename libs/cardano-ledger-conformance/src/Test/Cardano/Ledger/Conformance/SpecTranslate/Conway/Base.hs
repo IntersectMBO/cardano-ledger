@@ -709,7 +709,7 @@ instance
           <*> toSpecRep reStakePoolDistr
       dreps = toSpecRepMap $ Map.map drepExpiry reDRepState
     treasury <- askSpecTransM
-    withSpecTransM (const ()) $ do
+    withCtxSpecTransM () $ do
       Agda.MkRatifyEnv
         <$> stakeDistrs
         <*> toSpecRep reCurrentEpoch
@@ -754,7 +754,7 @@ instance
         lookupGAS
         (pure Set.empty)
         (rsExpired `Set.union` Set.fromList (gasId <$> toList rsEnacted))
-    withSpecTransM (const ()) $ do
+    withCtxSpecTransM () $ do
       Agda.MkRatifyState
         <$> toSpecRep rsEnactState
         <*> (Agda.MkHSSet <$> traverse toSpecRepTuple (toList removed))

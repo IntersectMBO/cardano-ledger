@@ -36,7 +36,7 @@ instance
   toSpecRep CertsEnv {..} = do
     (votes, withdrawals) <- askSpecTransM
     let ccColdCreds = foldMap (keysSet . committeeMembers) certsCurrentCommittee
-    withSpecTransM (const ()) $
+    withCtxSpecTransM () $
       Agda.MkCertEnv
         <$> toSpecRep certsCurrentEpoch
         <*> toSpecRep certsPParams

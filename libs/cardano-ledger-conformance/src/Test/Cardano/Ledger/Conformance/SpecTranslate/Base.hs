@@ -22,8 +22,8 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTransM,
   runSpecTransM,
   withSpecTransM,
+  withCtxSpecTransM,
   askSpecTransM,
-  withCtx,
   unComputationResult,
   unComputationResult_,
   toSpecRepTuple,
@@ -68,6 +68,9 @@ runSpecTransM ctx (SpecTransM m) = runReader (runExceptT m) ctx
 
 withSpecTransM :: (ctx -> ctx') -> SpecTransM ctx' a -> SpecTransM ctx a
 withSpecTransM f (SpecTransM m) = SpecTransM (mapExceptT (withReaderT f) m)
+
+withCtxSpecTransM :: ctx -> SpecTransM ctx a -> SpecTransM ctx' a
+withCtxSpecTransM ctx = withSpecTransM (const ctx)
 
 askSpecTransM :: SpecTransM ctx ctx
 askSpecTransM = ask
@@ -229,12 +232,6 @@ class SpecNormalize a where
   specNormalize :: a -> a
   default specNormalize :: (Generic a, GSpecNormalize (Rep a)) => a -> a
   specNormalize = to . genericSpecNormalize . from
-
-withCtx :: ctx -> SpecTransM ctx a -> SpecTransM ctx' a
-withCtx ctx m = do
-  case runSpecTransM ctx m of
-    Right x -> pure x
-    Left e -> throwError e
 
 -- | OpaqueErrorString behaves like unit in comparisons, but contains an
 -- error string that can be displayed.

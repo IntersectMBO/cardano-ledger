@@ -52,7 +52,7 @@ instance
   toSpecRep CertEnv {..} = do
     (votes, withdrawals) <- askSpecTransM
     let ccColdCreds = foldMap (keysSet . committeeMembers) ceCurrentCommittee
-    withSpecTransM (const ()) $
+    withCtxSpecTransM () $
       Agda.MkCertEnv
         <$> toSpecRep ceCurrentEpoch
         <*> toSpecRep cePParams
@@ -118,7 +118,7 @@ instance
     let
       props = utxosGovState ^. cgsProposalsL
       deposits = depositsMap certState props
-    withSpecTransM (const ()) $
+    withCtxSpecTransM () $
       Agda.MkUTxOState
         <$> toSpecRep utxosUtxo
         <*> toSpecRep utxosFees
@@ -146,7 +146,7 @@ instance
 
   toSpecRep (LedgerState {..}) =
     Agda.MkLState
-      <$> withCtx lsCertState (toSpecRep lsUTxOState)
+      <$> withCtxSpecTransM lsCertState (toSpecRep lsUTxOState)
       <*> toSpecRep props
       <*> toSpecRep lsCertState
     where
@@ -180,7 +180,7 @@ instance
       <*> toSpecRep esSnapshots
       <*> toSpecRep esLState
       <*> toSpecRep enactState
-      <*> withCtx govActions (toSpecRep ratifyState)
+      <*> withCtxSpecTransM govActions (toSpecRep ratifyState)
     where
       enactState = mkEnactState $ utxosGovState lsUTxOState
       ratifyState = getRatifyState $ utxosGovState lsUTxOState

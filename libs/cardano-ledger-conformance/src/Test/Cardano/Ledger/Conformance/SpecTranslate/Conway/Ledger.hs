@@ -37,7 +37,7 @@ import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
 import Lens.Micro ((^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (askSpecTransM, withCtx, withSpecTransM)
+import Test.Cardano.Ledger.Conformance (askSpecTransM, withCtxSpecTransM)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   SpecTranslate (..),
  )
@@ -56,7 +56,7 @@ instance
 
   toSpecRep LedgerEnv {..} = do
     (policyHash, enactState) <- askSpecTransM
-    withSpecTransM (const ()) $
+    withCtxSpecTransM () $
       Agda.MkLEnv
         <$> toSpecRep ledgerSlotNo
         <*> toSpecRep policyHash
@@ -70,7 +70,7 @@ instance SpecTranslate (TxBody TopTx ConwayEra) where
 
   toSpecRep txb = do
     txId <- askSpecTransM
-    withSpecTransM (const ()) $
+    withCtxSpecTransM () $
       Agda.MkTxBody
         <$> toSpecRep (txb ^. inputsTxBodyL)
         <*> toSpecRep (txb ^. referenceInputsTxBodyL)
@@ -103,7 +103,7 @@ instance SpecTranslate (Tx TopTx ConwayEra) where
 
   toSpecRep tx =
     Agda.MkTx
-      <$> withCtx (txIdTx tx) (toSpecRep (tx ^. bodyTxL))
+      <$> withCtxSpecTransM (txIdTx tx) (toSpecRep (tx ^. bodyTxL))
       <*> toSpecRep (tx ^. witsTxL)
       <*> toSpecRep (tx ^. sizeTxF)
       <*> toSpecRep (tx ^. isValidTxL)

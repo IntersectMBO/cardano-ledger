@@ -20,7 +20,7 @@ import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
   askSpecTransM,
-  withSpecTransM,
+  withCtxSpecTransM,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
@@ -39,7 +39,7 @@ instance
     enactState <- askSpecTransM
     let
       guardrailsScriptHash = constitutionGuardrailsScriptHash $ ensConstitution enactState
-    withSpecTransM (const ()) $
+    withCtxSpecTransM () $
       Agda.MkLEnv
         <$> toSpecRep ledgersSlotNo
         <*> toSpecRep guardrailsScriptHash

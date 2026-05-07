@@ -43,7 +43,7 @@ instance
   toSpecRep GovEnv {..} = do
     enactState <- askSpecTransM
     let rewardAccounts = Map.keysSet $ geCertState ^. certDStateL . accountsL . accountsMapL
-    withSpecTransM (const ()) $
+    withCtxSpecTransM () $
       Agda.MkGovEnv
         <$> toSpecRep geTxId
         <*> toSpecRep geEpoch
