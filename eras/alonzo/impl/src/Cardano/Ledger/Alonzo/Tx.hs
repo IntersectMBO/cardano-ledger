@@ -10,6 +10,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -98,7 +99,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemersL,
   unTxDatsL,
  )
-import Cardano.Ledger.BaseTypes (ProtVer, integralToBounded)
+import Cardano.Ledger.BaseTypes (ProtVer, ToKeyValuePairs (..), integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -124,7 +125,8 @@ import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
@@ -533,3 +535,44 @@ instance
 
 instance EncCBOR (Tx l era) => EncCBOR (AlonzoStAnnTx l era) where
   encCBOR AlonzoStAnnTx {asatTx} = encCBOR asatTx
+
+instance
+  ( ToJSON (TxBody TopTx era)
+  , ToJSON (TxWits era)
+  , ToJSON (TxAuxData era)
+  ) =>
+  ToKeyValuePairs (AlonzoTx TopTx era)
+  where
+  toKeyValuePairs AlonzoTx {atBody, atWits, atIsValid, atAuxData} =
+    [ "body" .= atBody
+    , "wits" .= atWits
+    , "isValid" .= atIsValid
+    , "auxiliaryData" .= atAuxData
+    ]
+
+instance
+  ( ToJSON (TxBody TopTx era)
+  , ToJSON (TxWits era)
+  , ToJSON (TxAuxData era)
+  ) =>
+  ToJSON (AlonzoTx TopTx era)
+  where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance
+  ( FromJSON (TxBody TopTx era)
+  , FromJSON (TxWits era)
+  , FromJSON (TxAuxData era)
+  ) =>
+  FromJSON (AlonzoTx TopTx era)
+  where
+  parseJSON = withObject "AlonzoTx" $ \o ->
+    AlonzoTx
+      <$> o .: "body"
+      <*> o .: "wits"
+      <*> o .: "isValid"
+      <*> o .: "auxiliaryData"
+
+deriving newtype instance ToJSON (Tx TopTx AlonzoEra)
+
+deriving newtype instance FromJSON (Tx TopTx AlonzoEra)

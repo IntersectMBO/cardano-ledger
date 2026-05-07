@@ -83,6 +83,7 @@ import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
+  ToKeyValuePairs (..),
  )
 import Cardano.Ledger.Binary (
   Annotator,
@@ -109,6 +110,9 @@ import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..), deepseq)
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Foldable as Foldable
 import qualified Data.Map.Strict as Map
 import Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet
@@ -579,3 +583,55 @@ instance Ord k => Indexable k (Map.Map k v) where
 instance Ord k => Indexable k (OSet k) where
   indexOf asItem = indexOf asItem . OSet.toStrictSeq
   fromIndex asIndex = fromIndex asIndex . OSet.toStrictSeq
+
+instance ToKeyValuePairs (TxBody TopTx AlonzoEra) where
+  toKeyValuePairs
+    AlonzoTxBody
+      { atbInputs
+      , atbCollateral
+      , atbOutputs
+      , atbCerts
+      , atbWithdrawals
+      , atbTxFee
+      , atbValidityInterval
+      , atbUpdate
+      , atbReqSignerHashes
+      , atbMint
+      , atbScriptIntegrityHash
+      , atbAuxDataHash
+      , atbTxNetworkId
+      } =
+      [ "inputs" .= Set.toList atbInputs
+      , "collateral" .= Set.toList atbCollateral
+      , "outputs" .= Foldable.toList atbOutputs
+      , "certs" .= Foldable.toList atbCerts
+      , "withdrawals" .= atbWithdrawals
+      , "fee" .= atbTxFee
+      , "validityInterval" .= atbValidityInterval
+      , "update" .= atbUpdate
+      , "reqSignerHashes" .= Set.toList atbReqSignerHashes
+      , "mint" .= atbMint
+      , "scriptIntegrityHash" .= atbScriptIntegrityHash
+      , "auxDataHash" .= atbAuxDataHash
+      , "networkId" .= atbTxNetworkId
+      ]
+
+instance ToJSON (TxBody TopTx AlonzoEra) where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance FromJSON (TxBody TopTx AlonzoEra) where
+  parseJSON = withObject "TxBody AlonzoEra" $ \o ->
+    AlonzoTxBody
+      <$> (Set.fromList <$> o .: "inputs")
+      <*> (Set.fromList <$> o .: "collateral")
+      <*> (StrictSeq.fromList <$> o .: "outputs")
+      <*> (StrictSeq.fromList <$> o .: "certs")
+      <*> o .: "withdrawals"
+      <*> o .: "fee"
+      <*> o .: "validityInterval"
+      <*> o .: "update"
+      <*> (Set.fromList <$> o .: "reqSignerHashes")
+      <*> o .: "mint"
+      <*> o .: "scriptIntegrityHash"
+      <*> o .: "auxDataHash"
+      <*> o .: "networkId"

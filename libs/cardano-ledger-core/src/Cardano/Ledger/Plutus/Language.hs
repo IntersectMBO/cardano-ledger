@@ -86,14 +86,16 @@ import Data.Aeson (
  )
 import Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Base64 as B64 (encode)
-import Data.ByteString.Short (ShortByteString, fromShort)
+import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Either (isRight)
 import Data.Ix (Ix)
 import Data.Kind (Type)
 import Data.MemPack
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
+import qualified Data.Text.Encoding as Text
 import Data.Typeable (Typeable, gcast)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -211,6 +213,16 @@ instance Show PlutusBinary where
 
 instance SafeToHash PlutusBinary where
   originalBytes (PlutusBinary binaryBlutus) = fromShort binaryBlutus
+
+instance ToJSON PlutusBinary where
+  toJSON (PlutusBinary sbs) =
+    String . Text.decodeUtf8 . BS16.encode . fromShort $ sbs
+
+instance FromJSON PlutusBinary where
+  parseJSON = withText "PlutusBinary" $ \t ->
+    case BS16.decode (Text.encodeUtf8 t) of
+      Left e -> fail $ "PlutusBinary: invalid hex: " <> e
+      Right bs -> pure . PlutusBinary . toShort $ bs
 
 -- | Non-Native Plutus Script language. This is expected to be an open type. We will add
 -- new Constuctors to this type as additional Plutus language versions as are added.  We
