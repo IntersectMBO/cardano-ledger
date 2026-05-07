@@ -142,7 +142,7 @@ certificate =
   // move_instantaneous_rewards_cert
   ]
 
-;This certificate will be deprecated in a future era
+; This certificate will be deprecated in a future era
 account_registration_cert = (0, stake_credential)
 
 stake_credential = credential
@@ -151,7 +151,7 @@ credential = [0, addr_keyhash// 1, script_hash]
 
 addr_keyhash = hash28
 
-;This certificate will be deprecated in a future era
+; This certificate will be deprecated in a future era
 account_unregistration_cert = (1, stake_credential)
 
 delegation_to_stake_pool_cert = (2, stake_credential, pool_keyhash)
@@ -160,7 +160,7 @@ pool_keyhash = hash28
 
 pool_registration_cert = (3, pool_params)
 
-;Pool parameters for stake pool registration
+; Pool parameters for stake pool registration
 pool_params =
   ( operator       : pool_keyhash
   , vrf_keyhash    : vrf_keyhash
@@ -197,12 +197,12 @@ ipv4 = bytes .size 4
 
 ipv6 = bytes .size 16
 
-;dns_name: An A or AAAA DNS record
+; dns_name: An A or AAAA DNS record
 single_host_name = (1, port/ nil, dns_name)
 
 dns_name = text .size (0 .. 64)
 
-;dns_name: An SRV DNS record
+; dns_name: An SRV DNS record
 multi_host_name = (2, dns_name)
 
 pool_metadata = [url, bytes]
@@ -230,7 +230,7 @@ move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
 ;   This has been safely backported to Shelley from Alonzo.
 move_instantaneous_reward = [0/ 1, {* stake_credential => delta_coin}/ coin]
 
-;This too has been introduced in Shelley as a backport from Alonzo.
+; This too has been introduced in Shelley as a backport from Alonzo.
 delta_coin = int
 
 withdrawals = {* reward_account => coin}

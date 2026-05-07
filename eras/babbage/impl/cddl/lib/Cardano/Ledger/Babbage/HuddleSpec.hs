@@ -360,7 +360,7 @@ instance HuddleRule "header" BabbageEra where
 -- See 'babbageProtocolVersionRule' and 'operational_cert' instance for details.
 -- References: PR #3762, Issue #3559
 instance HuddleRule "header_body" BabbageEra where
-  huddleRuleNamed pname p = comment "nonce_vrf and leader_vrf are replaced by vrf_result" $ babbageHeaderBodyRule pname p
+  huddleRuleNamed pname p = babbageHeaderBodyRule pname p //- "nonce_vrf and leader_vrf are replaced by vrf_result"
 
 instance HuddleRule "transaction" BabbageEra where
   huddleRuleNamed pname p =
