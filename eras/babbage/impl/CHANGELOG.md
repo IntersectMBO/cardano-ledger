@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Add `ToJSON`/`FromJSON` instances for `BabbageTx`, `BabbageTxBody`, `BabbageTxOut`
+* Add `FromJSON (Datum era)` and update `ToJSON (Datum era)` with full discriminated schema in `cardano-ledger-core`
 * Change `Signal` to `StAnnTx TopTx era` for: `BabbageLEDGER`, `BabbageUTXOW`, `BabbageUTXO`, `BabbageUTXOS`
 * Remove `ToCBOR` and `FromCBOR` instances for `BabbageTxOut`
 * Add `ApplyTick` instance for `BabbageEra`
