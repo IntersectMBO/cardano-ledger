@@ -9,6 +9,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -61,7 +62,7 @@ import Cardano.Ledger.Babbage.TxBody (
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
-import Cardano.Ledger.BaseTypes (Network, fromSMaybe)
+import Cardano.Ledger.BaseTypes (Network, ToKeyValuePairs (..), fromSMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -107,10 +108,15 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq)
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Foldable as Foldable (toList)
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', to, (^.))
@@ -677,3 +683,76 @@ conwayRedeemerPointerInverse txBody = \case
     ConwayVoting <$> fromIndex idx (txBody ^. votingProceduresTxBodyL)
   ConwayProposing idx ->
     ConwayProposing <$> fromIndex idx (txBody ^. proposalProceduresTxBodyL)
+
+instance
+  ToJSON (TxOut ConwayEra) =>
+  ToKeyValuePairs (TxBody TopTx ConwayEra)
+  where
+  toKeyValuePairs
+    ConwayTxBody
+      { ctbSpendInputs
+      , ctbCollateralInputs
+      , ctbReferenceInputs
+      , ctbOutputs
+      , ctbCollateralReturn
+      , ctbTotalCollateral
+      , ctbCerts
+      , ctbWithdrawals
+      , ctbTxfee
+      , ctbVldt
+      , ctbReqSignerHashes
+      , ctbMint
+      , ctbScriptIntegrityHash
+      , ctbAdHash
+      , ctbTxNetworkId
+      , ctbVotingProcedures
+      , ctbProposalProcedures
+      , ctbCurrentTreasuryValue
+      , ctbTreasuryDonation
+      } =
+      [ "inputs" .= Set.toList ctbSpendInputs
+      , "collateral" .= Set.toList ctbCollateralInputs
+      , "referenceInputs" .= Set.toList ctbReferenceInputs
+      , "outputs" .= fmap sizedValue (Foldable.toList ctbOutputs)
+      , "collateralReturn" .= fmap sizedValue ctbCollateralReturn
+      , "totalCollateral" .= ctbTotalCollateral
+      , "certs" .= Foldable.toList ctbCerts
+      , "withdrawals" .= ctbWithdrawals
+      , "fee" .= ctbTxfee
+      , "validityInterval" .= ctbVldt
+      , "reqSignerHashes" .= Set.toList ctbReqSignerHashes
+      , "mint" .= ctbMint
+      , "scriptIntegrityHash" .= ctbScriptIntegrityHash
+      , "auxDataHash" .= ctbAdHash
+      , "networkId" .= ctbTxNetworkId
+      , "votingProcedures" .= ctbVotingProcedures
+      , "proposalProcedures" .= Foldable.toList ctbProposalProcedures
+      , "currentTreasuryValue" .= ctbCurrentTreasuryValue
+      , "treasuryDonation" .= ctbTreasuryDonation
+      ]
+
+instance ToJSON (TxOut ConwayEra) => ToJSON (TxBody TopTx ConwayEra) where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance FromJSON (TxOut ConwayEra) => FromJSON (TxBody TopTx ConwayEra) where
+  parseJSON = withObject "TxBody ConwayEra" $ \o ->
+    ConwayTxBody
+      <$> (Set.fromList <$> o .: "inputs")
+      <*> (Set.fromList <$> o .: "collateral")
+      <*> (Set.fromList <$> o .: "referenceInputs")
+      <*> (fmap (mkSized (eraProtVerLow @ConwayEra)) . StrictSeq.fromList <$> o .: "outputs")
+      <*> (fmap (mkSized (eraProtVerLow @ConwayEra)) <$> o .: "collateralReturn")
+      <*> o .: "totalCollateral"
+      <*> (OSet.fromStrictSeq . StrictSeq.fromList <$> o .: "certs")
+      <*> o .: "withdrawals"
+      <*> o .: "fee"
+      <*> o .: "validityInterval"
+      <*> (Set.fromList <$> o .: "reqSignerHashes")
+      <*> o .: "mint"
+      <*> o .: "scriptIntegrityHash"
+      <*> o .: "auxDataHash"
+      <*> o .: "networkId"
+      <*> o .: "votingProcedures"
+      <*> (OSet.fromStrictSeq . StrictSeq.fromList <$> o .: "proposalProcedures")
+      <*> o .: "currentTreasuryValue"
+      <*> o .: "treasuryDonation"
