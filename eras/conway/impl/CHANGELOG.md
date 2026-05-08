@@ -3,6 +3,8 @@
 ## 1.23.0.0
 
 * Add `ToJSON` instance for `DefaultVote`.
+* Add `ToJSON`/`FromJSON` instances for `ConwayTx`, `TxBody ConwayEra`
+* Add `FromJSON` instances for `GovActionId`, `GovActionIx`, `GovPurposeId`, `Voter`, `Vote`, `VotingProcedure`, `VotingProcedures`, `ProposalProcedure`, `GovAction`, `ConwayPlutusPurpose`, `ConwayDelegCert`, `ConwayGovCert`, `ConwayTxCert`
 * Add `injectStakeCredentials`, `injectDRepsThenDelegs` to `Cardano.Ledger.Conway.Transition`
 * Add `ConwayExtraConfig` type and `cgExtraConfig` field to `ConwayGenesis`
 * Deprecate `conwayRegisterInitialAccounts`, `registerDRepsThenDelegs`

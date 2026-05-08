@@ -602,41 +602,42 @@ instance
   ToJSON (TxOut BabbageEra) =>
   ToKeyValuePairs (TxBody TopTx BabbageEra)
   where
-  toKeyValuePairs BabbageTxBody
-                    { btbInputs
-                    , btbCollateral
-                    , btbReferenceInputs
-                    , btbOutputs
-                    , btbCollateralReturn
-                    , btbTotalCollateral
-                    , btbCerts
-                    , btbWithdrawals
-                    , btbTxFee
-                    , btbValidityInterval
-                    , btbUpdate
-                    , btbReqSignerHashes
-                    , btbMint
-                    , btbScriptIntegrityHash
-                    , btbAuxDataHash
-                    , btbTxNetworkId
-                    } =
-    [ "inputs" .= Set.toList btbInputs
-    , "collateral" .= Set.toList btbCollateral
-    , "referenceInputs" .= Set.toList btbReferenceInputs
-    , "outputs" .= fmap sizedValue (Foldable.toList btbOutputs)
-    , "collateralReturn" .= fmap sizedValue btbCollateralReturn
-    , "totalCollateral" .= btbTotalCollateral
-    , "certs" .= Foldable.toList btbCerts
-    , "withdrawals" .= btbWithdrawals
-    , "fee" .= btbTxFee
-    , "validityInterval" .= btbValidityInterval
-    , "update" .= btbUpdate
-    , "reqSignerHashes" .= Set.toList btbReqSignerHashes
-    , "mint" .= btbMint
-    , "scriptIntegrityHash" .= btbScriptIntegrityHash
-    , "auxDataHash" .= btbAuxDataHash
-    , "networkId" .= btbTxNetworkId
-    ]
+  toKeyValuePairs
+    BabbageTxBody
+      { btbInputs
+      , btbCollateral
+      , btbReferenceInputs
+      , btbOutputs
+      , btbCollateralReturn
+      , btbTotalCollateral
+      , btbCerts
+      , btbWithdrawals
+      , btbTxFee
+      , btbValidityInterval
+      , btbUpdate
+      , btbReqSignerHashes
+      , btbMint
+      , btbScriptIntegrityHash
+      , btbAuxDataHash
+      , btbTxNetworkId
+      } =
+      [ "inputs" .= Set.toList btbInputs
+      , "collateral" .= Set.toList btbCollateral
+      , "referenceInputs" .= Set.toList btbReferenceInputs
+      , "outputs" .= fmap sizedValue (Foldable.toList btbOutputs)
+      , "collateralReturn" .= fmap sizedValue btbCollateralReturn
+      , "totalCollateral" .= btbTotalCollateral
+      , "certs" .= Foldable.toList btbCerts
+      , "withdrawals" .= btbWithdrawals
+      , "fee" .= btbTxFee
+      , "validityInterval" .= btbValidityInterval
+      , "update" .= btbUpdate
+      , "reqSignerHashes" .= Set.toList btbReqSignerHashes
+      , "mint" .= btbMint
+      , "scriptIntegrityHash" .= btbScriptIntegrityHash
+      , "auxDataHash" .= btbAuxDataHash
+      , "networkId" .= btbTxNetworkId
+      ]
 
 instance ToJSON (TxOut BabbageEra) => ToJSON (TxBody TopTx BabbageEra) where
   toJSON = Aeson.object . toKeyValuePairs
