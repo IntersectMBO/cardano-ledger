@@ -56,7 +56,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeListLen,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   fromByronCBOR,
   matchSize,
@@ -103,7 +103,7 @@ instance EncCBOR UTxOError where
 instance DecCBOR UTxOError where
   decCBOR = do
     len <- decodeListLen
-    tag <- decodeWord8
+    tag <- decodeWord
     case tag of
       0 -> matchSize "UTxOError" 2 len >> UTxOMissingInput <$> decCBOR
       1 -> matchSize "UTxOError" 1 len $> UTxOOverlappingUnion

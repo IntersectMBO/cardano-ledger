@@ -1,12 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.Arbitrary (
@@ -18,13 +15,7 @@ module Test.Cardano.Ledger.Binary.Arbitrary (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class hiding (Signable)
-import Cardano.Crypto.Util
-import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Binary.Version
-import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
-import Cardano.Slotting.Time (SystemStart (..))
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
 import Codec.CBOR.Term
@@ -40,7 +31,6 @@ import qualified Data.Foldable as F
 import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Data.Maybe.Strict
 import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
-import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -51,8 +41,8 @@ import System.Random.Stateful hiding (genByteString, genShortByteString)
 import Test.Cardano.Ledger.Binary.Random (QC (QC))
 import Test.Cardano.Slotting.Arbitrary ()
 import Test.Crypto.Hash ()
+import Test.Crypto.Instances ()
 import Test.Crypto.KES ()
-import Test.Crypto.VRF ()
 import Test.QuickCheck
 import Test.QuickCheck.Instances ()
 
@@ -162,48 +152,6 @@ instance
   where
   arbitrary = VMap.fromMap <$> arbitrary
   shrink = fmap VMap.fromList . shrink . VMap.toList
-
-instance DSIGNAlgorithm v => Arbitrary (VerKeyDSIGN v) where
-  arbitrary = deriveVerKeyDSIGN <$> arbitrary
-
-errorInvalidSize :: HasCallStack => Int -> Maybe a -> Gen a
-errorInvalidSize n = maybe (error $ "Impossible: Invalid size " ++ show n) pure
-
-instance DSIGNAlgorithm v => Arbitrary (SignKeyDSIGN v) where
-  arbitrary = do
-    let n = fromIntegral (sizeSignKeyDSIGN (Proxy @v))
-    bs <- genByteString n
-    errorInvalidSize n $ rawDeserialiseSignKeyDSIGN bs
-
-instance DSIGNAlgorithm v => Arbitrary (SigDSIGN v) where
-  arbitrary = do
-    let n = fromIntegral (sizeSigDSIGN (Proxy @v))
-    bs <- genByteString n
-    errorInvalidSize n $ rawDeserialiseSigDSIGN bs
-
-instance DSIGNAlgorithm v => Arbitrary (SignedDSIGN v a) where
-  arbitrary = SignedDSIGN <$> arbitrary
-
-instance
-  (ContextVRF v ~ (), Signable v ~ SignableRepresentation, VRFAlgorithm v) =>
-  Arbitrary (CertifiedVRF v a)
-  where
-  arbitrary = CertifiedVRF <$> arbitrary <*> genCertVRF
-    where
-      genCertVRF :: Gen (CertVRF v)
-      genCertVRF = arbitrary
-
-instance Arbitrary t => Arbitrary (WithOrigin t) where
-  arbitrary = frequency [(20, pure Origin), (80, At <$> arbitrary)]
-  shrink = \case
-    Origin -> []
-    At x -> Origin : map At (shrink x)
-
-deriving instance Arbitrary EpochSize
-
-deriving instance Arbitrary SystemStart
-
-deriving instance Arbitrary BlockNo
 
 instance Arbitrary Version where
   arbitrary = genVersion minBound maxBound

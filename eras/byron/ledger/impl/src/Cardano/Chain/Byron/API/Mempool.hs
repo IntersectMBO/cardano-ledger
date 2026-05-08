@@ -66,7 +66,7 @@ instance EncCBOR ApplyMempoolPayloadErr where
 instance DecCBOR ApplyMempoolPayloadErr where
   decCBOR = do
     enforceSize "ApplyMempoolPayloadErr" 2
-    decodeWord8 >>= \case
+    decodeWord >>= \case
       0 -> MempoolTxErr <$> decCBOR
       1 -> MempoolDlgErr <$> decCBOR
       2 -> MempoolUpdateProposalErr <$> decCBOR

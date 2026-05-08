@@ -23,7 +23,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeListLen,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   fromByronCBOR,
   matchSize,
@@ -91,7 +91,7 @@ instance DecCBOR ApplicationNameError where
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "ApplicationNameError" size len
-    tag <- decodeWord8
+    tag <- decodeWord
     case tag of
       0 -> checkSize 2 >> ApplicationNameTooLong <$> decCBOR
       1 -> checkSize 2 >> ApplicationNameNotAscii <$> decCBOR

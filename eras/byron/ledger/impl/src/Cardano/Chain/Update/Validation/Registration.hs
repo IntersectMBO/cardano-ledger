@@ -75,7 +75,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeListLen,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   enforceSize,
   fromByronCBOR,
@@ -275,7 +275,7 @@ instance DecCBOR Error where
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "Registration.Error" size len
-    tag <- decodeWord8
+    tag <- decodeWord
     case tag of
       0 -> checkSize 2 >> DuplicateProtocolVersion <$> decCBOR
       1 -> checkSize 2 >> DuplicateSoftwareVersion <$> decCBOR

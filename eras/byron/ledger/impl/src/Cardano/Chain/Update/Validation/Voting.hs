@@ -42,7 +42,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeListLen,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   fromByronCBOR,
   matchSize,
@@ -114,7 +114,7 @@ instance DecCBOR Error where
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "Voting.Error" size len
-    tag <- decodeWord8
+    tag <- decodeWord
     case tag of
       0 -> checkSize 1 >> pure VotingInvalidSignature
       1 -> checkSize 2 >> VotingProposalNotRegistered <$> decCBOR

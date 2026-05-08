@@ -21,7 +21,7 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   cborError,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   encodePreEncoded,
   enforceSize,
@@ -86,7 +86,7 @@ instance DecCBOR MempoolPayload where
 instance DecCBOR (AMempoolPayload ByteSpan) where
   decCBOR = do
     enforceSize "MempoolPayload" 2
-    decodeWord8 >>= \case
+    decodeWord >>= \case
       0 -> MempoolTx <$> decCBOR
       1 -> MempoolDlg <$> decCBOR
       2 -> MempoolUpdateProposal <$> decCBOR

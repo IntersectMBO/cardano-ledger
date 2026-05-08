@@ -7,7 +7,6 @@
 {-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Chain.Common.TxFeePolicy (
@@ -33,6 +32,7 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   cborError,
+  decodeWord,
   encodeListLen,
   enforceSize,
   fromByronCBOR,
@@ -94,7 +94,7 @@ instance EncCBOR TxFeePolicy where
 instance DecCBOR TxFeePolicy where
   decCBOR = do
     enforceSize "TxFeePolicy" 2
-    tag <- decCBOR @Word8
+    tag <- decodeWord
     case tag of
       0 -> TxFeePolicyTxSizeLinear <$> decodeKnownCborDataItem
       _ -> cborError $ DecoderErrorUnknownTag "TxFeePolicy" tag

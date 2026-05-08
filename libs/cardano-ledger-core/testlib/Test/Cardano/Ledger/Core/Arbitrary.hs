@@ -53,7 +53,6 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   CertIx (..),
   DnsName,
-  EpochInterval (..),
   HasZero,
   Mismatch (..),
   Network (..),
@@ -293,9 +292,6 @@ instance Arbitrary Nonce where
       [ return NeutralNonce
       , mkNonceFromNumber <$> arbitrary
       ]
-
-instance Arbitrary EpochInterval where
-  arbitrary = EpochInterval <$> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.TxIn -------------------------------------------------------------------

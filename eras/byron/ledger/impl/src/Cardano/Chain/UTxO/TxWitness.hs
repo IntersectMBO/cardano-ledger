@@ -42,6 +42,7 @@ import Cardano.Ledger.Binary (
   byronProtVer,
   cborError,
   decodeListLen,
+  decodeWord,
   encodeListLen,
   fromByronCBOR,
   matchSize,
@@ -120,7 +121,7 @@ instance EncCBOR TxInWitness where
 instance DecCBOR TxInWitness where
   decCBOR = do
     len <- decodeListLen
-    decCBOR @Word8 >>= \case
+    decodeWord >>= \case
       0 -> do
         matchSize "TxInWitness.VKWitness" len 2
         uncurry VKWitness <$> decodeKnownCborDataItem

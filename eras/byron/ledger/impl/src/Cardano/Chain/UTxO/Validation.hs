@@ -76,7 +76,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeListLen,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   enforceSize,
   fromByronCBOR,
@@ -159,7 +159,7 @@ instance DecCBOR TxValidationError where
     len <- decodeListLen
     let checkSize :: forall s. Int -> Decoder s ()
         checkSize size = matchSize "TxValidationError" size len
-    tag <- decodeWord8
+    tag <- decodeWord
     case tag of
       0 -> checkSize 3 >> TxValidationLovelaceError <$> decCBOR <*> decCBOR
       1 -> checkSize 4 >> TxValidationFeeTooSmall <$> decCBOR <*> decCBOR <*> decCBOR
@@ -351,7 +351,7 @@ instance EncCBOR UTxOValidationError where
 instance DecCBOR UTxOValidationError where
   decCBOR = do
     enforceSize "UTxOValidationError" 2
-    decodeWord8 >>= \case
+    decodeWord >>= \case
       0 -> UTxOValidationTxValidationError <$> decCBOR
       1 -> UTxOValidationUTxOError <$> decCBOR
       tag -> cborError $ DecoderErrorUnknownTag "UTxOValidationError" tag

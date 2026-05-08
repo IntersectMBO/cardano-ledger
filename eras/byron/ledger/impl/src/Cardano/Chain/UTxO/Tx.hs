@@ -35,6 +35,7 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   cborError,
+  decodeWord,
   encodeListLen,
   enforceSize,
   fromByronCBOR,
@@ -174,7 +175,7 @@ instance EncCBOR TxIn where
 instance DecCBOR TxIn where
   decCBOR = do
     enforceSize "TxIn" 2
-    tag <- decCBOR @Word8
+    tag <- decodeWord
     case tag of
       0 -> uncurry TxInUtxo <$> decodeKnownCborDataItem
       _ -> cborError $ DecoderErrorUnknownTag "TxIn" tag

@@ -23,7 +23,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeListLenCanonical,
-  decodeWord8Canonical,
+  decodeWordCanonical,
   encodeListLen,
   fromByronCBOR,
   matchSize,
@@ -76,7 +76,7 @@ instance DecCBOR AddrSpendingData where
   decCBOR = do
     len <- decodeListLenCanonical
     matchSize "AddrSpendingData" 2 len
-    decodeWord8Canonical >>= \case
+    decodeWordCanonical >>= \case
       0 -> VerKeyASD <$> decCBOR
       2 -> RedeemASD <$> decCBOR
       tag -> cborError $ DecoderErrorUnknownTag "AddrSpendingData" tag
@@ -110,7 +110,7 @@ instance EncCBOR AddrType where
 
 instance DecCBOR AddrType where
   decCBOR =
-    decodeWord8Canonical >>= \case
+    decodeWordCanonical >>= \case
       0 -> pure ATVerKey
       2 -> pure ATRedeem
       tag -> cborError $ DecoderErrorUnknownTag "AddrType" tag

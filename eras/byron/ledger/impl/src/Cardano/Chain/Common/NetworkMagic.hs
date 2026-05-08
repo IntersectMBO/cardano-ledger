@@ -24,7 +24,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeListLen,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   fromByronCBOR,
   matchSize,
@@ -72,7 +72,7 @@ instance EncCBOR NetworkMagic where
 instance DecCBOR NetworkMagic where
   decCBOR = do
     len <- decodeListLen
-    tag <- decodeWord8
+    tag <- decodeWord
     case tag of
       0 -> matchSize "NetworkMagic" 1 len $> NetworkMainOrStage
       1 -> matchSize "NetworkMagic" 2 len >> NetworkTestnet <$> decCBOR

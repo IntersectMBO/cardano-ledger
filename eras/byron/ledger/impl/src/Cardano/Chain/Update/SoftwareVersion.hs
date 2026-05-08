@@ -22,7 +22,7 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   cborError,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   enforceSize,
   fromByronCBOR,
@@ -95,7 +95,7 @@ instance EncCBOR SoftwareVersionError where
 instance DecCBOR SoftwareVersionError where
   decCBOR = do
     enforceSize "SoftwareVersionError" 2
-    tag <- decodeWord8
+    tag <- decodeWord
     case tag of
       0 -> SoftwareVersionApplicationNameError <$> decCBOR
       _ -> cborError $ DecoderErrorUnknownTag "SoftwareVersionError" tag

@@ -34,7 +34,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeListLen,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   enforceSize,
   fromByronCBOR,
@@ -162,7 +162,7 @@ instance DecCBOR Error where
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "Scheduling.Error" size len
-    tag <- decodeWord8
+    tag <- decodeWord
     case tag of
       0 -> checkSize 1 >> pure InvalidCertificate
       1 -> checkSize 3 >> MultipleDelegationsForEpoch <$> decCBOR <*> decCBOR

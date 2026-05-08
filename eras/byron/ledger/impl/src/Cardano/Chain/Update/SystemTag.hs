@@ -26,7 +26,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeListLen,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   fromByronCBOR,
   matchSize,
@@ -98,7 +98,7 @@ instance DecCBOR SystemTagError where
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "SystemTagError" size len
-    tag <- decodeWord8
+    tag <- decodeWord
     case tag of
       0 -> checkSize 2 >> SystemTagNotAscii <$> decCBOR
       1 -> checkSize 2 >> SystemTagTooLong <$> decCBOR

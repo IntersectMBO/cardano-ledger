@@ -30,7 +30,7 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   cborError,
-  decodeWord8,
+  decodeWord,
   encodeListLen,
   enforceSize,
   fromByronCBOR,
@@ -138,7 +138,7 @@ instance EncCBOR Error where
 instance DecCBOR Error where
   decCBOR = do
     enforceSize "Endorsement.Error" 2
-    tag <- decodeWord8
+    tag <- decodeWord
     case tag of
       0 -> MultipleProposalsForProtocolVersion <$> decCBOR
       _ -> cborError $ DecoderErrorUnknownTag "Endorsement.Error" tag

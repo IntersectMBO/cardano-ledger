@@ -21,8 +21,8 @@ source-repository-package
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
-  , hackage.haskell.org 2025-01-14T00:25:08Z
-  , cardano-haskell-packages 2025-01-08T16:35:32Z
+  , hackage.haskell.org 2025-05-15T07:59:00Z
+  , cardano-haskell-packages 2026-04-11T06:29:42Z
 
 packages:
   -- == Byron era ==
@@ -91,3 +91,8 @@ tests: true
 benchmarks: true
 -- The only sensible test display option
 test-show-details: streaming
+
+-- NOTE: leios-prototype requires newer cardano-crypto-class, but some
+-- dependencies (plutus) are not patched for leios
+allow-newer:
+  , cardano-crypto-class
