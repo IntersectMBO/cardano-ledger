@@ -2,6 +2,8 @@
 
 ## 0.3.0.0
 
+* Add `TranslateEra` instance for `DijkstraEra VState`
+* Fix `TranslateEra` instance for `DijkstraEra CertState`
 * Add `GuardScriptHashesNotSupported` constructor to `DijkstraContextError`
 * Add `SubTxsAreNotSupported` constructor to `DijkstraContextError`
 * Add `decodeDijkstraTopTx`

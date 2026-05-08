@@ -123,6 +123,9 @@ instance TranslateEra DijkstraEra DState where
 instance TranslateEra DijkstraEra PState where
   translateEra _ PState {..} = pure PState {..}
 
+instance TranslateEra DijkstraEra VState where
+  translateEra _ vState = pure $ coerce vState
+
 instance TranslateEra DijkstraEra LedgerState where
   translateEra ctx ls =
     pure
@@ -135,10 +138,12 @@ translateCertState ::
   TranslationContext DijkstraEra ->
   CertState ConwayEra ->
   CertState DijkstraEra
-translateCertState ctx scert =
-  def
-    & certDStateL .~ translateEra' ctx (scert ^. certDStateL)
-    & certPStateL .~ translateEra' ctx (scert ^. certPStateL)
+translateCertState ctx ConwayCertState {..} =
+  ConwayCertState
+    { conwayCertVState = translateEra' ctx conwayCertVState
+    , conwayCertPState = translateEra' ctx conwayCertPState
+    , conwayCertDState = translateEra' ctx conwayCertDState
+    }
 
 instance TranslateEra DijkstraEra GovAction where
   translateEra _ = pure . upgradeGovAction
