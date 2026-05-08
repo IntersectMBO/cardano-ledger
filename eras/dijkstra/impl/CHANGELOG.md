@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `GuardScriptHashesNotSupported` constructor to `DijkstraContextError`
 * Add `SubTxsAreNotSupported` constructor to `DijkstraContextError`
 * Add `decodeDijkstraTopTx`
 * Change `Signal` to `StAnnTx TopTx era` for: `DijkstraLEDGER`, `DijkstraMEMPOOL`, `DijkstraUTXOW`, `DijkstraUTXO`
