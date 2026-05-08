@@ -7,6 +7,10 @@
 * Add `ApplyTick` instance for `AllegraEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `AllegraEra`.
 * Remove `NoThunks` instance for `AllegraUtxoPredFailure`
+* Add `ToJSON`/`FromJSON` instances for:
+  - `Tx`, `TxBody` in `Cardano.Ledger.Allegra.Tx` / `Cardano.Ledger.Allegra.TxBody`
+  - `AllegraTxAuxData` in `Cardano.Ledger.Allegra.TxAuxData`
+  - `Timelock` in `Cardano.Ledger.Allegra.Scripts`
 
 ### `cddl`
 
