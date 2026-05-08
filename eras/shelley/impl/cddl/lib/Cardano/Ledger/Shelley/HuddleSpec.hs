@@ -261,23 +261,21 @@ singleHostNameGroup ::
   forall era.
   HuddleRule "dns_name" era => Proxy "single_host_name" -> Proxy era -> GroupDef
 singleHostNameGroup pname p =
-  comment
-    "dns_name: An A or AAAA DNS record"
-    $ pname
+  ( pname
       =.~ grp
         [ 1
         , a $ huddleRule @"port" p / VNil
         , a $ huddleRule @"dns_name" p
         ]
+  )
+    //- "dns_name: An A or AAAA DNS record"
 
 multiHostNameGroup ::
   forall era.
   HuddleRule "dns_name" era => Proxy "multi_host_name" -> Proxy era -> GroupDef
 multiHostNameGroup pname p =
-  comment
-    "dns_name: An SRV DNS record"
-    $ pname
-      =.~ grp [2, a $ huddleRule @"dns_name" p]
+  (pname =.~ grp [2, a $ huddleRule @"dns_name" p])
+    //- "dns_name: An SRV DNS record"
 
 relayRule ::
   forall era.
@@ -304,9 +302,7 @@ poolParamsGroup ::
   Proxy era ->
   GroupDef
 poolParamsGroup pname p =
-  comment
-    "Pool parameters for stake pool registration"
-    $ pname
+  ( pname
       =.~ grp
         [ "operator" ==> huddleRule @"pool_keyhash" p
         , "vrf_keyhash" ==> huddleRule @"vrf_keyhash" p
@@ -318,6 +314,8 @@ poolParamsGroup pname p =
         , "relays" ==> arr [0 <+ a (huddleRule @"relay" p)]
         , "pool_metadata" ==> huddleRule @"pool_metadata" p / VNil
         ]
+  )
+    //- "Pool parameters for stake pool registration"
 
 poolRegistrationCertGroup ::
   forall era.
@@ -353,21 +351,19 @@ genesisDelegationCertGroup pname p =
 
 deltaCoinRule :: Proxy "delta_coin" -> Rule
 deltaCoinRule pname =
-  comment
-    "This too has been introduced in Shelley as a backport from Alonzo."
-    $ pname =.= VInt
+  (pname =.= VInt) //- "This too has been introduced in Shelley as a backport from Alonzo."
 
 moveInstantaneousRewardRule ::
   forall era. HuddleRule "delta_coin" era => Proxy "move_instantaneous_reward" -> Proxy era -> Rule
 moveInstantaneousRewardRule pname p =
   comment
-    [str|The first field determines where the funds are drawn from.
-        |  0 denotes the reserves,
-        |  1 denotes the treasury.
-        |If the second field is a map, funds are moved to stake credentials.
-        |Otherwise, the funds are given to the other accounting pot.
-        |NOTE:
-        |  This has been safely backported to Shelley from Alonzo.
+    [str| The first field determines where the funds are drawn from.
+        |   0 denotes the reserves,
+        |   1 denotes the treasury.
+        | If the second field is a map, funds are moved to stake credentials.
+        | Otherwise, the funds are given to the other accounting pot.
+        | NOTE:
+        |   This has been safely backported to Shelley from Alonzo.
         |]
     $ pname
       =.= arr
@@ -392,18 +388,14 @@ moveInstantaneousRewardsCertGroup pname p =
 accountRegistrationCertGroup ::
   forall era. Era era => Proxy "account_registration_cert" -> Proxy era -> GroupDef
 accountRegistrationCertGroup pname p =
-  comment
-    "This certificate will be deprecated in a future era"
-    $ pname
-      =.~ grp [0, a $ huddleRule @"stake_credential" p]
+  (pname =.~ grp [0, a $ huddleRule @"stake_credential" p])
+    //- "This certificate will be deprecated in a future era"
 
 accountUnregistrationCertGroup ::
   forall era. Era era => Proxy "account_unregistration_cert" -> Proxy era -> GroupDef
 accountUnregistrationCertGroup pname p =
-  comment
-    "This certificate will be deprecated in a future era"
-    $ pname
-      =.~ grp [1, a $ huddleRule @"stake_credential" p]
+  (pname =.~ grp [1, a $ huddleRule @"stake_credential" p])
+    //- "This certificate will be deprecated in a future era"
 
 delegationToStakePoolCertGroup ::
   forall era. Era era => Proxy "delegation_to_stake_pool_cert" -> Proxy era -> GroupDef
@@ -558,13 +550,13 @@ instance HuddleGroup "script_n_of_k" ShelleyEra where
 instance HuddleRule "native_script" ShelleyEra where
   huddleRuleNamed pname p =
     comment
-      [str|Native scripts support 4 operations:
-          |  - Signature verification (script_pubkey)
-          |  - Conjunctions (script_all)
-          |  - Disjunctions (script_any)
-          |  - M-of-N thresholds (script_n_of_k)
+      [str| Native scripts support 4 operations:
+          |   - Signature verification (script_pubkey)
+          |   - Conjunctions (script_all)
+          |   - Disjunctions (script_any)
+          |   - M-of-N thresholds (script_n_of_k)
           |
-          |Note: Shelley uses VInt for the threshold in script_n_of_k.
+          | Note: Shelley uses VInt for the threshold in script_n_of_k.
           |]
       $ pname
         =.= arr [a $ huddleGroup @"script_pubkey" p]

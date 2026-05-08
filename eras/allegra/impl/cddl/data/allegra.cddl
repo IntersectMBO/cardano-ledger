@@ -1,29 +1,27 @@
 ; This file was auto-generated using generate-cddl. Please do not modify it directly!
 
-block = 
-  [ header                 
-  , transaction_bodies       : [* transaction_body]                   
-  , transaction_witness_sets : [* transaction_witness_set]            
+block =
+  [ header
+  , transaction_bodies       : [* transaction_body]
+  , transaction_witness_sets : [* transaction_witness_set]
   , auxiliary_data_set       : {* transaction_index => auxiliary_data}
   ]
 
-
 header = [header_body, body_signature : kes_signature]
 
-header_body = 
-  [ block_number      : block_number
-  , slot              : slot        
-  , prev_hash         : hash32/ nil 
-  , issuer_vkey       : vkey        
-  , vrf_vkey          : vrf_vkey    
-  , nonce_vrf         : vrf_cert    
-  , leader_vrf        : vrf_cert    
-  , block_body_size   : uint .size 4
-  , block_body_hash   : hash32      
+header_body =
+  [ block_number     : block_number
+  , slot             : slot
+  , prev_hash        : hash32/ nil
+  , issuer_vkey      : vkey
+  , vrf_vkey         : vrf_vkey
+  , nonce_vrf        : vrf_cert
+  , leader_vrf       : vrf_cert
+  , block_body_size  : uint .size 4
+  , block_body_hash  : hash32
   , operational_cert
   , protocol_version
   ]
-
 
 block_number = uint .size 8
 
@@ -37,11 +35,11 @@ vrf_vkey = bytes .size 32
 
 vrf_cert = [bytes, bytes .size 80]
 
-operational_cert = 
-  ( hot_vkey        : kes_vkey       
+operational_cert =
+  ( hot_vkey        : kes_vkey
   , sequence_number : sequence_number
-  , kes_period      : kes_period     
-  , sigma           : signature      
+  , kes_period      : kes_period
+  , sigma           : signature
   )
 
 kes_vkey = bytes .size 32
@@ -59,18 +57,17 @@ major_protocol_version = 0 .. 4
 kes_signature = bytes .size 448
 
 ; Allegra transaction body adds the validity interval start at index 8
-transaction_body = 
-  {   0 : set<transaction_input>   
+transaction_body =
+  {   0 : set<transaction_input>
   ,   1 : [* transaction_output]
-  ,   2 : coin                      
-  , ? 3 : slot                      
-  , ? 4 : [* certificate]       
-  , ? 5 : withdrawals               
-  , ? 6 : update                    
-  , ? 7 : auxiliary_data_hash       
-  , ? 8 : slot                      
+  ,   2 : coin
+  , ? 3 : slot
+  , ? 4 : [* certificate]
+  , ? 5 : withdrawals
+  , ? 6 : update
+  , ? 7 : auxiliary_data_hash
+  , ? 8 : slot
   }
-
 
 set<a0> = [* a0]
 
@@ -82,22 +79,22 @@ transaction_output = [address, amount : coin]
 
 ; address format:
 ;   [ 8 bit header | payload ];
-; 
+;
 ; shelley payment addresses:
 ;      bit 7: 0
 ;      bit 6: base/other
 ;      bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
 ;      bit 4: payment cred is keyhash/scripthash
 ;   bits 3-0: network id
-; 
+;
 ; reward addresses:
 ;   bits 7-5: 111
 ;      bit 4: credential is keyhash/scripthash
 ;   bits 3-0: network id
-; 
+;
 ; byron addresses:
 ;   bits 7-4: 1000
-; 
+;
 ;      0000: base address: keyhash28,keyhash28
 ;      0001: base address: scripthash28,keyhash28
 ;      0010: base address: keyhash28,scripthash28
@@ -114,7 +111,7 @@ address = bytes
 
 coin = uint
 
-certificate = 
+certificate =
   [  account_registration_cert
   // account_unregistration_cert
   // delegation_to_stake_pool_cert
@@ -123,7 +120,6 @@ certificate =
   // genesis_delegation_cert
   // move_instantaneous_rewards_cert
   ]
-
 
 ; This certificate will be deprecated in a future era
 account_registration_cert = (0, stake_credential)
@@ -157,15 +153,15 @@ pool_keyhash = hash28
 pool_registration_cert = (3, pool_params)
 
 ; Pool parameters for stake pool registration
-pool_params = 
-  ( operator       : pool_keyhash      
-  , vrf_keyhash    : vrf_keyhash       
-  , pledge         : coin              
-  , cost           : coin              
-  , margin         : unit_interval     
-  , reward_account : reward_account    
+pool_params =
+  ( operator       : pool_keyhash
+  , vrf_keyhash    : vrf_keyhash
+  , pledge         : coin
+  , cost           : coin
+  , margin         : unit_interval
+  , reward_account : reward_account
   , pool_owners    : set<addr_keyhash>
-  , relays         : [* relay]     
+  , relays         : [* relay]
   , pool_metadata  : pool_metadata/ nil
   )
 
@@ -175,7 +171,7 @@ vrf_keyhash = hash32
 ; means there are two extra constraints:
 ;   1. numerator <= denominator
 ;   2. denominator > 0
-; 
+;
 ; The relation between numerator and denominator can be
 ; expressed in CDDL, but we have a limitation currently
 ; (see: https://github.com/input-output-hk/cuddle/issues/30).
@@ -235,26 +231,25 @@ update = [proposed_protocol_parameter_updates, epoch]
 
 proposed_protocol_parameter_updates = {* genesis_hash => protocol_param_update}
 
-protocol_param_update = 
-  { ? 0  : uint                   ; minfee A
-  , ? 1  : uint                   ; minfee B
-  , ? 2  : uint .size 4           ; max block body size
-  , ? 3  : uint .size 4           ; max transaction size
-  , ? 4  : uint .size 2           ; max block header size
-  , ? 5  : coin                   ; key deposit
-  , ? 6  : coin                   ; pool deposit
-  , ? 7  : epoch_interval         ; maximum epoch
-  , ? 8  : uint .size 2           ; n_opt: desired number of stake pools
-  , ? 9  : nonnegative_interval   ; pool pledge influence
-  , ? 10 : unit_interval          ; expansion rate
-  , ? 11 : unit_interval          ; treasury growth rate
-  , ? 12 : unit_interval          ; decentralization constant
-  , ? 13 : nonce                  ; extra entropy
+protocol_param_update =
+  { ? 0  : uint                 ; minfee A
+  , ? 1  : uint                 ; minfee B
+  , ? 2  : uint .size 4         ; max block body size
+  , ? 3  : uint .size 4         ; max transaction size
+  , ? 4  : uint .size 2         ; max block header size
+  , ? 5  : coin                 ; key deposit
+  , ? 6  : coin                 ; pool deposit
+  , ? 7  : epoch_interval       ; maximum epoch
+  , ? 8  : uint .size 2         ; n_opt: desired number of stake pools
+  , ? 9  : nonnegative_interval ; pool pledge influence
+  , ? 10 : unit_interval        ; expansion rate
+  , ? 11 : unit_interval        ; treasury growth rate
+  , ? 12 : unit_interval        ; decentralization constant
+  , ? 13 : nonce                ; extra entropy
   , ? 14 : [protocol_version] ; protocol version
-  , ? 15 : coin                   ; min utxo value
-  , ? 16 : coin                   ; min pool cost
+  , ? 15 : coin                 ; min utxo value
+  , ? 16 : coin                 ; min pool cost
   }
-
 
 epoch_interval = uint .size 4
 
@@ -268,19 +263,19 @@ nonce = [0// 1, hash32]
 
 auxiliary_data_hash = hash32
 
-transaction_witness_set = 
+transaction_witness_set =
   {? 0 : [* vkeywitness], ? 1 : [* native_script], ? 2 : [* bootstrap_witness]}
 
 vkeywitness = [vkey, signature]
 
 ; Allegra introduces timelock support for native scripts.
-; 
+;
 ; Timelock validity intervals are half-open intervals [a, b).
 ;   script_invalid_before: specifies the left (included) endpoint a.
 ;   script_invalid_hereafter: specifies the right (excluded) endpoint b.
-; 
+;
 ; Note: Allegra switched to int64 for script_n_of_k thresholds.
-native_script = 
+native_script =
   [  script_pubkey
   // script_all
   // script_any
@@ -288,7 +283,6 @@ native_script =
   // script_invalid_before
   // script_invalid_hereafter
   ]
-
 
 script_pubkey = (0, addr_keyhash)
 
@@ -312,13 +306,12 @@ script_invalid_before = (4, slot)
 ; This field specifies the right (excluded) endpoint b.
 script_invalid_hereafter = (5, slot)
 
-bootstrap_witness = 
-  [ public_key : vkey     
+bootstrap_witness =
+  [ public_key : vkey
   , signature  : signature
-  , chain_code : bytes    
-  , attributes : bytes    
+  , chain_code : bytes
+  , attributes : bytes
   ]
-
 
 transaction_index = uint .size 2
 
@@ -328,14 +321,14 @@ metadata = {* metadatum_label => metadatum}
 
 metadatum_label = uint .size 8
 
-metadatum = 
+metadatum =
   {* metadatum => metadatum}
-  / [* metadatum]       
-  / int                     
+  / [* metadatum]
+  / int
   / bytes .size (0 .. 64)
-  / text .size (0 .. 64) 
+  / text .size (0 .. 64)
 
-auxiliary_data_array = 
+auxiliary_data_array =
   [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]
 
 auxiliary_scripts = [* native_script]

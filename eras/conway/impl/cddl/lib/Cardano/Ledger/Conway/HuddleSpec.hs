@@ -79,10 +79,10 @@ import Cardano.Ledger.Babbage.HuddleSpec hiding (
  )
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Huddle.Gen (
-  CBORGen (..),
+  CBORGen,
   MonadGen (choose, resize),
+  RuleTerm (..),
   Term (..),
-  WrappedTerm (..),
   genArrayTerm,
   genMapTerm,
   genRule,
@@ -677,12 +677,12 @@ conwayWithdrawalsRule pname p =
 conwayRedeemerTag :: Proxy "redeemer_tag" -> Rule
 conwayRedeemerTag pname =
   comment
-    [str|0: spend
-        |1: mint
-        |2: cert
-        |3: reward
-        |4: voting
-        |5: proposing
+    [str| 0: spend
+        | 1: mint
+        | 2: cert
+        | 3: reward
+        | 4: voting
+        | 5: proposing
         |]
     $ pname
       =.= (0 :: Integer)
@@ -805,7 +805,7 @@ instance HuddleRule "protocol_version" ConwayEra where
 instance Era era => HuddleRule "plutus_v3_script" era where
   huddleRuleNamed pname _ =
     comment
-      [str|Conway introduces Plutus V3 with support for new governance features.
+      [str| Conway introduces Plutus V3 with support for new governance features.
           |]
       . withCBORGen plutusScriptGen
       $ pname =.= VBytes
@@ -1019,8 +1019,8 @@ instance HuddleRule "babbage_transaction_output" ConwayEra where
 instance HuddleRule "transaction_output" ConwayEra where
   huddleRuleNamed pname p =
     comment
-      [str|Both of the Alonzo and Babbage style TxOut formats are equally valid
-          |and can be used interchangeably
+      [str| Both of the Alonzo and Babbage style TxOut formats are equally valid
+          | and can be used interchangeably
           |]
       $ pname
         =.= huddleRule @"alonzo_transaction_output" p
@@ -1029,11 +1029,11 @@ instance HuddleRule "transaction_output" ConwayEra where
 instance HuddleRule "script" ConwayEra where
   huddleRuleNamed pname p =
     comment
-      [str|Conway supports four script types:
-          |  0: Native scripts (timelock) - unchanged from Allegra
-          |  1: Plutus V1 scripts
-          |  2: Plutus V2 scripts
-          |  3: Plutus V3 scripts
+      [str| Conway supports four script types:
+          |   0: Native scripts (timelock) - unchanged from Allegra
+          |   1: Plutus V1 scripts
+          |   2: Plutus V2 scripts
+          |   3: Plutus V3 scripts
           |]
       $ pname
         =.= arr [0, a (huddleRule @"native_script" p)]
@@ -1044,16 +1044,16 @@ instance HuddleRule "script" ConwayEra where
 instance HuddleRule "language" ConwayEra where
   huddleRuleNamed pname _ =
     comment
-      [str|0: Plutus v1
-          |1: Plutus v2
-          |2: Plutus v3
+      [str| 0: Plutus v1
+          | 1: Plutus v2
+          | 2: Plutus v3
           |]
       $ pname =.= (0 :: Integer) ... (2 :: Integer)
 
 instance HuddleRule "potential_languages" ConwayEra where
   huddleRuleNamed pname _ = potentialLanguagesRule pname
 
-conwayCostModelsGenerator :: forall era. Era era => CBORGen WrappedTerm
+conwayCostModelsGenerator :: forall era. Era era => CBORGen RuleTerm
 conwayCostModelsGenerator = Gen.sized $ \size -> do
   nKeys <- choose (0, size)
   initialKeys <- take nKeys <$> shuffle [0 :: Int .. 255]
@@ -1072,19 +1072,19 @@ conwayCostModelsGenerator = Gen.sized $ \size -> do
     v <- withAntiGen (replicateMNorm nVals) $ genRule @"int64" @era
     vs <- genArrayTerm v
     pure (TInt k, vs)
-  S <$> genMapTerm kvs
+  SingleTerm <$> genMapTerm kvs
 
 instance HuddleRule "cost_models" ConwayEra where
   huddleRuleNamed pname p =
     comment
-      [str|The format for cost_models is flexible enough to allow adding
-          |Plutus built-ins and language versions in the future.
+      [str| The format for cost_models is flexible enough to allow adding
+          | Plutus built-ins and language versions in the future.
           |
-          |Plutus v1: only 166 integers are used, but more are accepted (and ignored)
-          |Plutus v2: only 175 integers are used, but more are accepted (and ignored)
-          |Plutus v3: only 223 integers are used, but more are accepted (and ignored)
+          | Plutus v1: only 166 integers are used, but more are accepted (and ignored)
+          | Plutus v2: only 175 integers are used, but more are accepted (and ignored)
+          | Plutus v3: only 223 integers are used, but more are accepted (and ignored)
           |
-          |Any 8-bit unsigned number can be used as a key.
+          | Any 8-bit unsigned number can be used as a key.
           |]
       $ pname
         =.= mp
@@ -1103,9 +1103,9 @@ instance HuddleRule "redeemer" ConwayEra where
 instance HuddleRule "redeemers" ConwayEra where
   huddleRuleNamed pname p =
     comment
-      [str|Flat Array support is included for backwards compatibility and
-          |will be removed in the next era. It is recommended for tools to
-          |adopt using a Map instead of Array going forward.
+      [str| Flat Array support is included for backwards compatibility and
+          | will be removed in the next era. It is recommended for tools to
+          | adopt using a Map instead of Array going forward.
           |]
       $ pname
         =.= sarr [1 <+ a (huddleRule @"redeemer" p)]
@@ -1126,72 +1126,72 @@ instance HuddleRule "redeemers" ConwayEra where
 instance HuddleRule "script_data_hash" ConwayEra where
   huddleRuleNamed pname p =
     comment
-      [str|This is a hash of data which may affect evaluation of a script.
-          |This data consists of:
-          |  - The redeemers from the transaction_witness_set (the value of field 5).
-          |  - The datums from the transaction_witness_set (the value of field 4).
-          |  - The value in the cost_models map corresponding to the script's language
-          |    (in field 18 of protocol_param_update.)
-          |(In the future it may contain additional protocol parameters.)
+      [str| This is a hash of data which may affect evaluation of a script.
+          | This data consists of:
+          |   - The redeemers from the transaction_witness_set (the value of field 5).
+          |   - The datums from the transaction_witness_set (the value of field 4).
+          |   - The value in the cost_models map corresponding to the script's language
+          |     (in field 18 of protocol_param_update.)
+          | (In the future it may contain additional protocol parameters.)
           |
-          |Since this data does not exist in contiguous form inside a transaction, it needs
-          |to be independently constructed by each recipient.
+          | Since this data does not exist in contiguous form inside a transaction, it needs
+          | to be independently constructed by each recipient.
           |
-          |The bytestring which is hashed is the concatenation of three things:
-          |  redeemers || datums || language views
-          |The redeemers are exactly the data present in the transaction witness set.
-          |Similarly for the datums, if present. If no datums are provided, the middle
-          |field is omitted (i.e. it is the empty/null bytestring).
+          | The bytestring which is hashed is the concatenation of three things:
+          |   redeemers || datums || language views
+          | The redeemers are exactly the data present in the transaction witness set.
+          | Similarly for the datums, if present. If no datums are provided, the middle
+          | field is omitted (i.e. it is the empty/null bytestring).
           |
-          |language views CDDL:
-          |{ * language => script_integrity_data }
+          | language views CDDL:
+          | { * language => script_integrity_data }
           |
-          |This must be encoded canonically, using the same scheme as in
-          |RFC7049 section 3.9:
-          | - Maps, strings, and bytestrings must use a definite-length encoding
-          | - Integers must be as small as possible.
-          | - The expressions for map length, string length, and bytestring length
-          |   must be as short as possible.
-          | - The keys in the map must be sorted as follows:
-          |    -  If two keys have different lengths, the shorter one sorts earlier.
-          |    -  If two keys have the same length, the one with the lower value
-          |       in (byte-wise) lexical order sorts earlier.
+          | This must be encoded canonically, using the same scheme as in
+          | RFC7049 section 3.9:
+          |  - Maps, strings, and bytestrings must use a definite-length encoding
+          |  - Integers must be as small as possible.
+          |  - The expressions for map length, string length, and bytestring length
+          |    must be as short as possible.
+          |  - The keys in the map must be sorted as follows:
+          |     -  If two keys have different lengths, the shorter one sorts earlier.
+          |     -  If two keys have the same length, the one with the lower value
+          |        in (byte-wise) lexical order sorts earlier.
           |
-          |For PlutusV1 (language id 0), the language view is the following:
-          |  - the value of cost_models map at key 0 (in other words, the script_integrity_data)
-          |    is encoded as an indefinite length list and the result is encoded as a bytestring.
-          |    (our apologies)
-          |    For example, the script_integrity_data corresponding to the all zero costmodel for V1
-          |    would be encoded as (in hex):
-          |    58a89f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff
-          |  - the language ID tag is also encoded twice. first as a uint then as
-          |    a bytestring. (our apologies)
-          |    Concretely, this means that the language version for V1 is encoded as
-          |    4100 in hex.
-          |For PlutusV2 (language id 1), the language view is the following:
-          |  - the value of cost_models map at key 1 is encoded as an definite length list.
-          |    For example, the script_integrity_data corresponding to the all zero costmodel for V2
-          |    would be encoded as (in hex):
-          |    98af0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-          |  - the language ID tag is encoded as expected.
-          |    Concretely, this means that the language version for V2 is encoded as
-          |    01 in hex.
-          |For PlutusV3 (language id 2), the language view is the following:
-          |  - the value of cost_models map at key 2 is encoded as a definite length list.
+          | For PlutusV1 (language id 0), the language view is the following:
+          |   - the value of cost_models map at key 0 (in other words, the script_integrity_data)
+          |     is encoded as an indefinite length list and the result is encoded as a bytestring.
+          |     (our apologies)
+          |     For example, the script_integrity_data corresponding to the all zero costmodel for V1
+          |     would be encoded as (in hex):
+          |     58a89f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff
+          |   - the language ID tag is also encoded twice. first as a uint then as
+          |     a bytestring. (our apologies)
+          |     Concretely, this means that the language version for V1 is encoded as
+          |     4100 in hex.
+          | For PlutusV2 (language id 1), the language view is the following:
+          |   - the value of cost_models map at key 1 is encoded as an definite length list.
+          |     For example, the script_integrity_data corresponding to the all zero costmodel for V2
+          |     would be encoded as (in hex):
+          |     98af0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+          |   - the language ID tag is encoded as expected.
+          |     Concretely, this means that the language version for V2 is encoded as
+          |     01 in hex.
+          | For PlutusV3 (language id 2), the language view is the following:
+          |   - the value of cost_models map at key 2 is encoded as a definite length list.
           |
-          |Note that each Plutus language represented inside a transaction must have
-          |a cost model in the cost_models protocol parameter in order to execute,
-          |regardless of what the script integrity data is.
+          | Note that each Plutus language represented inside a transaction must have
+          | a cost model in the cost_models protocol parameter in order to execute,
+          | regardless of what the script integrity data is.
           |
-          |Finally, note that in the case that a transaction includes datums but does not
-          |include the redeemers field, the script data format becomes (in hex):
-          |[ A0 | datums | A0 ]
-          |corresponding to a CBOR empty map and an empty map for language view.
-          |This empty redeeemer case has changed from the previous eras, since default
-          |representation for redeemers has been changed to a map. Also whenever redeemers are
-          |supplied either as a map or as an array they must contain at least one element,
-          |therefore there is no way to override this behavior by providing a custom
-          |representation for empty redeemers.
+          | Finally, note that in the case that a transaction includes datums but does not
+          | include the redeemers field, the script data format becomes (in hex):
+          | [ A0 | datums | A0 ]
+          | corresponding to a CBOR empty map and an empty map for language view.
+          | This empty redeeemer case has changed from the previous eras, since default
+          | representation for redeemers has been changed to a map. Also whenever redeemers are
+          | supplied either as a map or as an array they must contain at least one element,
+          | therefore there is no way to override this behavior by providing a custom
+          | representation for empty redeemers.
           |]
       $ scriptDataHashRule pname p
 
@@ -1311,11 +1311,11 @@ instance HuddleRule "header" ConwayEra where
 instance HuddleRule "block" ConwayEra where
   huddleRuleNamed pname p =
     comment
-      [str|Valid blocks must also satisfy the following two constraints:
-          |  1) the length of transaction_bodies and transaction_witness_sets must be
-          |     the same
-          |  2) every transaction_index must be strictly smaller than the length of
-          |     transaction_bodies
+      [str| Valid blocks must also satisfy the following two constraints:
+          |   1) the length of transaction_bodies and transaction_witness_sets must be
+          |      the same
+          |   2) every transaction_index must be strictly smaller than the length of
+          |      transaction_bodies
           |]
       $ pname
         =.= arr
@@ -1354,11 +1354,11 @@ instance HuddleRule "auxiliary_data_array" ConwayEra where
 instance HuddleRule "auxiliary_data" ConwayEra where
   huddleRuleNamed pname p =
     comment
-      [str|auxiliary_data supports three serialization formats:
-          |  1. metadata (raw) - Supported since Shelley
-          |  2. auxiliary_data_array - Array format, introduced in Allegra
-          |  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
-          |     Conway adds plutus_v3_script support at index 4
+      [str| auxiliary_data supports three serialization formats:
+          |   1. metadata (raw) - Supported since Shelley
+          |   2. auxiliary_data_array - Array format, introduced in Allegra
+          |   3. auxiliary_data_map - Tagged map format, introduced in Alonzo
+          |      Conway adds plutus_v3_script support at index 4
           |]
       $ pname
         =.= huddleRule @"metadata" p

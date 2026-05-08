@@ -124,13 +124,13 @@ nativeScriptRule ::
   Rule
 nativeScriptRule pname p =
   comment
-    [str|Allegra introduces timelock support for native scripts.
+    [str| Allegra introduces timelock support for native scripts.
         |
-        |Timelock validity intervals are half-open intervals [a, b).
-        |  script_invalid_before: specifies the left (included) endpoint a.
-        |  script_invalid_hereafter: specifies the right (excluded) endpoint b.
+        | Timelock validity intervals are half-open intervals [a, b).
+        |   script_invalid_before: specifies the left (included) endpoint a.
+        |   script_invalid_hereafter: specifies the right (excluded) endpoint b.
         |
-        |Note: Allegra switched to int64 for script_n_of_k thresholds.
+        | Note: Allegra switched to int64 for script_n_of_k thresholds.
         |]
     $ pname
       =.= arr [a $ huddleGroup @"script_pubkey" p]
@@ -158,8 +158,8 @@ scriptInvalidBeforeGroup ::
   forall era. Era era => Proxy "script_invalid_before" -> Proxy era -> GroupDef
 scriptInvalidBeforeGroup pname p =
   comment
-    [str|Timelock validity intervals are half-open intervals [a, b).
-        |This field specifies the left (included) endpoint a.
+    [str| Timelock validity intervals are half-open intervals [a, b).
+        | This field specifies the left (included) endpoint a.
         |]
     $ pname
       =.~ grp [4, a (huddleRule @"slot" p)]
@@ -168,8 +168,8 @@ scriptInvalidHereafterGroup ::
   forall era. Era era => Proxy "script_invalid_hereafter" -> Proxy era -> GroupDef
 scriptInvalidHereafterGroup pname p =
   comment
-    [str|Timelock validity intervals are half-open intervals [a, b).
-        |This field specifies the right (excluded) endpoint b.
+    [str| Timelock validity intervals are half-open intervals [a, b).
+        | This field specifies the right (excluded) endpoint b.
         |]
     $ pname
       =.~ grp [5, a (huddleRule @"slot" p)]
@@ -321,7 +321,7 @@ instance HuddleRule "auxiliary_data" AllegraEra where
 instance HuddleRule "transaction_body" AllegraEra where
   huddleRuleNamed pname p =
     comment
-      [str|Allegra transaction body adds the validity interval start at index 8
+      [str| Allegra transaction body adds the validity interval start at index 8
           |]
       $ pname
         =.= mp

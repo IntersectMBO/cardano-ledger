@@ -138,10 +138,10 @@ babbageScript ::
   Rule
 babbageScript pname p =
   comment
-    [str|Babbage supports three script types:
-        |  0: Native scripts (timelock)
-        |  1: Plutus V1 scripts
-        |  2: Plutus V2 scripts
+    [str| Babbage supports three script types:
+        |   0: Native scripts (timelock)
+        |   1: Plutus V1 scripts
+        |   2: Plutus V2 scripts
         |]
     $ pname
       =.= arr [0, a (huddleRule @"native_script" p)]
@@ -288,7 +288,7 @@ instance HuddleRule "redeemers" BabbageEra where
 instance HuddleRule "redeemer" BabbageEra where
   huddleRuleNamed pname p =
     comment
-      [str|NEW
+      [str| NEW
           |]
       $ alonzoRedeemer pname p
 
@@ -316,11 +316,11 @@ instance HuddleRule "major_protocol_version" BabbageEra where
 instance HuddleRule "block" BabbageEra where
   huddleRuleNamed pname p =
     comment
-      [str|Valid blocks must also satisfy the following two constraints:
-          |  1) the length of transaction_bodies and transaction_witness_sets must be
-          |     the same
-          |  2) every transaction_index must be strictly smaller than the length of
-          |     transaction_bodies
+      [str| Valid blocks must also satisfy the following two constraints:
+          |   1) the length of transaction_bodies and transaction_witness_sets must be
+          |      the same
+          |   2) every transaction_index must be strictly smaller than the length of
+          |      transaction_bodies
           |]
       $ pname
         =.= arr
@@ -360,7 +360,7 @@ instance HuddleRule "header" BabbageEra where
 -- See 'babbageProtocolVersionRule' and 'operational_cert' instance for details.
 -- References: PR #3762, Issue #3559
 instance HuddleRule "header_body" BabbageEra where
-  huddleRuleNamed pname p = comment "nonce_vrf and leader_vrf are replaced by vrf_result" $ babbageHeaderBodyRule pname p
+  huddleRuleNamed pname p = babbageHeaderBodyRule pname p //- "nonce_vrf and leader_vrf are replaced by vrf_result"
 
 instance HuddleRule "transaction" BabbageEra where
   huddleRuleNamed pname p =
@@ -398,75 +398,75 @@ instance HuddleRule "transaction_body" BabbageEra where
 instance HuddleRule "script_data_hash" BabbageEra where
   huddleRuleNamed pname p =
     comment
-      [str|This is a hash of data which may affect evaluation of a script.
-          |This data consists of:
-          |  - The redeemers from the transaction_witness_set (the value of field 5).
-          |  - The datums from the transaction_witness_set (the value of field 4).
-          |  - The value in the costmdls map corresponding to the script's language
-          |    (in field 18 of protocol_param_update.)
-          |(In the future it may contain additional protocol parameters.)
+      [str| This is a hash of data which may affect evaluation of a script.
+          | This data consists of:
+          |   - The redeemers from the transaction_witness_set (the value of field 5).
+          |   - The datums from the transaction_witness_set (the value of field 4).
+          |   - The value in the costmdls map corresponding to the script's language
+          |     (in field 18 of protocol_param_update.)
+          | (In the future it may contain additional protocol parameters.)
           |
-          |Since this data does not exist in contiguous form inside a transaction, it needs
-          |to be independently constructed by each recipient.
+          | Since this data does not exist in contiguous form inside a transaction, it needs
+          | to be independently constructed by each recipient.
           |
-          |The bytestring which is hashed is the concatenation of three things:
-          |  redeemers || datums || language views
-          |The redeemers are exactly the data present in the transaction witness set.
-          |Similarly for the datums, if present. If no datums are provided, the middle
-          |field is omitted (i.e. it is the empty/null bytestring).
+          | The bytestring which is hashed is the concatenation of three things:
+          |   redeemers || datums || language views
+          | The redeemers are exactly the data present in the transaction witness set.
+          | Similarly for the datums, if present. If no datums are provided, the middle
+          | field is omitted (i.e. it is the empty/null bytestring).
           |
-          |language views CDDL:
-          |{ * language => script_integrity_data }
+          | language views CDDL:
+          | { * language => script_integrity_data }
           |
-          |This must be encoded canonically, using the same scheme as in
-          |RFC7049 section 3.9:
-          | - Maps, strings, and bytestrings must use a definite-length encoding
-          | - Integers must be as small as possible.
-          | - The expressions for map length, string length, and bytestring length
-          |   must be as short as possible.
-          | - The keys in the map must be sorted as follows:
-          |    -  If two keys have different lengths, the shorter one sorts earlier.
-          |    -  If two keys have the same length, the one with the lower value
-          |       in (byte-wise) lexical order sorts earlier.
+          | This must be encoded canonically, using the same scheme as in
+          | RFC7049 section 3.9:
+          |  - Maps, strings, and bytestrings must use a definite-length encoding
+          |  - Integers must be as small as possible.
+          |  - The expressions for map length, string length, and bytestring length
+          |    must be as short as possible.
+          |  - The keys in the map must be sorted as follows:
+          |     -  If two keys have different lengths, the shorter one sorts earlier.
+          |     -  If two keys have the same length, the one with the lower value
+          |        in (byte-wise) lexical order sorts earlier.
           |
-          |For PlutusV1 (language id 0), the language view is the following:
-          |  - the value of costmdls map at key 0 (in other words, the script_integrity_data)
-          |    is encoded as an indefinite length list and the result is encoded as a bytestring.
-          |    (our apologies)
-          |    For example, the script_integrity_data corresponding to the all zero costmodel for V1
-          |    would be encoded as (in hex):
-          |    58a89f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff
-          |  - the language ID tag is also encoded twice. first as a uint then as
-          |    a bytestring. (our apologies)
-          |    Concretely, this means that the language version for V1 is encoded as
-          |    4100 in hex.
-          |For PlutusV2 (language id 1), the language view is the following:
-          |  - the value of costmdls map at key 1 is encoded as an definite length list.
-          |    For example, the script_integrity_data corresponding to the all zero costmodel for V2
-          |    would be encoded as (in hex):
-          |    98af0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-          |  - the language ID tag is encoded as expected.
-          |    Concretely, this means that the language version for V2 is encoded as
-          |    01 in hex.
+          | For PlutusV1 (language id 0), the language view is the following:
+          |   - the value of costmdls map at key 0 (in other words, the script_integrity_data)
+          |     is encoded as an indefinite length list and the result is encoded as a bytestring.
+          |     (our apologies)
+          |     For example, the script_integrity_data corresponding to the all zero costmodel for V1
+          |     would be encoded as (in hex):
+          |     58a89f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff
+          |   - the language ID tag is also encoded twice. first as a uint then as
+          |     a bytestring. (our apologies)
+          |     Concretely, this means that the language version for V1 is encoded as
+          |     4100 in hex.
+          | For PlutusV2 (language id 1), the language view is the following:
+          |   - the value of costmdls map at key 1 is encoded as an definite length list.
+          |     For example, the script_integrity_data corresponding to the all zero costmodel for V2
+          |     would be encoded as (in hex):
+          |     98af0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+          |   - the language ID tag is encoded as expected.
+          |     Concretely, this means that the language version for V2 is encoded as
+          |     01 in hex.
           |
-          |Note that each Plutus language represented inside a transaction must have
-          |a cost model in the costmdls protocol parameter in order to execute,
-          |regardless of what the script integrity data is.
+          | Note that each Plutus language represented inside a transaction must have
+          | a cost model in the costmdls protocol parameter in order to execute,
+          | regardless of what the script integrity data is.
           |
-          |Finally, note that in the case that a transaction includes datums but does not
-          |include the redeemers field, the script data format becomes (in hex):
-          |[ 80 | datums | A0 ]
-          |corresponding to a CBOR empty list and an empty map.
-          |Note that a transaction might include the redeemers field and set it to the
-          |empty map, in which case the user supplied encoding of the empty map is used.
+          | Finally, note that in the case that a transaction includes datums but does not
+          | include the redeemers field, the script data format becomes (in hex):
+          | [ 80 | datums | A0 ]
+          | corresponding to a CBOR empty list and an empty map.
+          | Note that a transaction might include the redeemers field and set it to the
+          | empty map, in which case the user supplied encoding of the empty map is used.
           |]
       $ scriptDataHashRule pname p
 
 instance HuddleRule "transaction_output" BabbageEra where
   huddleRuleNamed pname p =
     comment
-      [str|Both of the Alonzo and Babbage style TxOut formats are equally valid
-          |and can be used interchangeably.
+      [str| Both of the Alonzo and Babbage style TxOut formats are equally valid
+          | and can be used interchangeably.
           |]
       $ pname
         =.= huddleRule @"alonzo_transaction_output" p
@@ -524,8 +524,8 @@ instance HuddleGroup "script_invalid_hereafter" BabbageEra where
 instance Era era => HuddleRule "plutus_v2_script" era where
   huddleRuleNamed pname _ =
     comment
-      [str|Babbage introduces Plutus V2 with improved cost model
-          |and additional builtins.
+      [str| Babbage introduces Plutus V2 with improved cost model
+          | and additional builtins.
           |]
       . withCBORGen plutusScriptGen
       $ pname =.= VBytes
@@ -536,8 +536,8 @@ instance HuddleRule "script" BabbageEra where
 instance HuddleRule "language" BabbageEra where
   huddleRuleNamed pname _ =
     comment
-      [str|0: Plutus v1
-          |1: Plutus v2
+      [str| 0: Plutus v1
+          | 1: Plutus v2
           |]
       $ pname =.= (0 :: Integer) ... (1 :: Integer)
 
@@ -580,11 +580,11 @@ instance HuddleRule "protocol_param_update" BabbageEra where
 instance HuddleRule "auxiliary_data" BabbageEra where
   huddleRuleNamed pname p =
     comment
-      [str|auxiliary_data supports three serialization formats:
-          |  1. metadata (raw) - Supported since Shelley
-          |  2. auxiliary_data_array - Array format, introduced in Allegra
-          |  3. auxiliary_data_map - Tagged map format, introduced in Alonzo
-          |     Babbage adds plutus_v2_script support at index 3
+      [str| auxiliary_data supports three serialization formats:
+          |   1. metadata (raw) - Supported since Shelley
+          |   2. auxiliary_data_array - Array format, introduced in Allegra
+          |   3. auxiliary_data_map - Tagged map format, introduced in Alonzo
+          |      Babbage adds plutus_v2_script support at index 3
           |]
       $ pname
         =.= huddleRule @"metadata" p

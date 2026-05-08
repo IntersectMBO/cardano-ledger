@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
   noTwiddle,
   HuddleEnv (..),
-  toGenEnv,
+  toGenConfig,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -47,13 +47,13 @@ import Codec.CBOR.Cuddle.CBOR.Validator.Trace (
   prettyValidationTrace,
  )
 import Codec.CBOR.Cuddle.CDDL (Name (..))
-import Codec.CBOR.Cuddle.CDDL.CBORGenerator (GenEnv (..), runCBORGen)
 import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
+import Codec.CBOR.Cuddle.CDDL.Custom.Generator (GenConfig (..), runCBORGen)
 import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
 import Codec.CBOR.Cuddle.IndexMappable
-import Codec.CBOR.Cuddle.Pretty (PrettyStage)
+import Codec.CBOR.Cuddle.Pretty (PrettyStage, renderCDDL)
 import qualified Codec.CBOR.Encoding as CBOR
 import Codec.CBOR.Pretty (prettyHexEnc)
 import qualified Codec.CBOR.Pretty as CBOR
@@ -64,10 +64,10 @@ import Control.Monad (unless)
 import Data.Data (Proxy (..))
 import Data.Either (isLeft)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import GHC.Stack (HasCallStack)
-import Prettyprinter (Pretty (pretty), defaultLayoutOptions, layoutPretty)
+import Prettyprinter (defaultLayoutOptions, layoutPretty)
 import qualified Prettyprinter.Render.Terminal as Ansi
-import Prettyprinter.Render.Text (hPutDoc)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
 import System.IO (IOMode (..), hPutStrLn, withFile)
@@ -112,7 +112,7 @@ huddleDecoderEquivalenceSpec ::
 huddleDecoderEquivalenceSpec version ruleName =
   let lbl = label $ Proxy @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \env -> property $ do
-        term <- runAntiGen . runCBORGen (toGenEnv env) . generateFromName $ Name ruleName
+        term <- runAntiGen . runCBORGen (toGenConfig env) . generateFromName $ Name ruleName
         let encoding = CBOR.encodeTerm term
             initCborBytes = CBOR.toLazyByteString encoding
         pure $ decoderEquivalenceExpectation @a version initCborBytes
@@ -130,7 +130,7 @@ huddleRoundTripCborSpec version ruleName =
       trip = cborTrip @a
    in describe "Generate bytestring from CDDL and decode -> encode" $
         it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \env -> property $ do
-          term <- runAntiGen . runCBORGen (toGenEnv env) . generateFromName $ Name ruleName
+          term <- runAntiGen . runCBORGen (toGenConfig env) . generateFromName $ Name ruleName
           pure $ roundTripExample lbl version version trip term
 
 huddleRoundTripAnnCborSpec ::
@@ -145,7 +145,7 @@ huddleRoundTripAnnCborSpec version ruleName =
   let lbl = label $ Proxy @(Annotator a)
       trip = cborTrip @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $ \env -> property $ do
-        term <- runAntiGen . runCBORGen (toGenEnv env) . generateFromName $ Name ruleName
+        term <- runAntiGen . runCBORGen (toGenConfig env) . generateFromName $ Name ruleName
         pure $ roundTripAnnExample lbl version version trip term
 
 data HuddleEnv = HuddleEnv
@@ -153,11 +153,11 @@ data HuddleEnv = HuddleEnv
   , heRoot :: CTreeRoot MonoReferenced
   }
 
-toGenEnv :: HuddleEnv -> GenEnv
-toGenEnv HuddleEnv {..} =
-  GenEnv
-    { geTwiddle = heTwiddle
-    , geRoot = mapIndex heRoot
+toGenConfig :: HuddleEnv -> GenConfig
+toGenConfig HuddleEnv {..} =
+  GenConfig
+    { gcTwiddle = heTwiddle
+    , gcRoot = mapIndex heRoot
     }
 
 huddleAntiCborSpec ::
@@ -171,7 +171,7 @@ huddleAntiCborSpec version ruleName =
    in describe "Decoding fails when term is zapped"
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
         $ \env@HuddleEnv {heRoot} -> property @(Gen Property) $ do
-          mTerm <- zapAntiGenResult 1 . runCBORGen (toGenEnv env) . generateFromName $ Name ruleName
+          mTerm <- zapAntiGenResult 1 . runCBORGen (toGenConfig env) . generateFromName $ Name ruleName
           case mTerm of
             zr@ZapResult {..}
               | zrZapped > 0 -> do
@@ -331,8 +331,6 @@ writeSpec hddl path = do
     hPutStrLn
       h
       "; This file was auto-generated using generate-cddl. Please do not modify it directly!\n"
-    hPutDoc h (pretty (mapIndex @_ @_ @PrettyStage cddl))
-    -- Write an empty line at the end of the file
-    hPutStrLn h ""
+    T.hPutStrLn h . renderCDDL defaultLayoutOptions $ mapIndex @_ @_ @PrettyStage cddl
   -- Write log to stdout
   putStrLn $ "Generated CDDL file at: " <> path

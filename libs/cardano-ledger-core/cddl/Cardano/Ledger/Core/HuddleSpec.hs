@@ -25,7 +25,7 @@ import Cardano.Ledger.Huddle.Gen (
   CBORGen,
   CustomValidatorResult (..),
   MonadGen (..),
-  WrappedTerm (..),
+  RuleTerm (..),
   arbitrary,
   genArrayTerm,
   liftAntiGen,
@@ -53,8 +53,8 @@ genByteString n = BS.pack <$> vectorOf n arbitrary
 
 -- | Generator for plutus scripts that produces random bytestrings.
 -- This avoids collisions when scripts appear in sets (tag 258).
-plutusScriptGen :: MonadGen m => m WrappedTerm
-plutusScriptGen = S . TBytes <$> (genByteString =<< choose (8, 1024))
+plutusScriptGen :: MonadGen m => m RuleTerm
+plutusScriptGen = SingleTerm . TBytes <$> (genByteString =<< choose (8, 1024))
 
 instance Era era => HuddleRule "hash28" era where
   huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (28 :: Word64)
@@ -77,14 +77,14 @@ instance Era era => HuddleRule "positive_word32" era where
 instance Era era => HuddleRule "unit_interval" era where
   huddleRuleNamed pname _ =
     comment
-      [str|A unit interval is a number in the range between 0 and 1, which
-          |means there are two extra constraints:
-          |  1. numerator <= denominator
-          |  2. denominator > 0
+      [str| A unit interval is a number in the range between 0 and 1, which
+          | means there are two extra constraints:
+          |   1. numerator <= denominator
+          |   2. denominator > 0
           |
-          |The relation between numerator and denominator can be
-          |expressed in CDDL, but we have a limitation currently
-          |(see: https://github.com/input-output-hk/cuddle/issues/30).
+          | The relation between numerator and denominator can be
+          | expressed in CDDL, but we have a limitation currently
+          | (see: https://github.com/input-output-hk/cuddle/issues/30).
           |]
       . withCBORGen generator
       $ pname =.= tag 30 (arr [a VUInt, a VUInt])
@@ -101,7 +101,7 @@ instance Era era => HuddleRule "unit_interval" era where
             , genUnitInterval64 0 1000
             , genUnitInterval64 (max64 - 1000) max64
             ]
-        S . TTagged 30
+        SingleTerm . TTagged 30
           <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d]
 
 instance Era era => HuddleRule "nonnegative_interval" era where
@@ -112,8 +112,8 @@ distinct :: IsSizeable s => Value s -> HuddleItem
 distinct x =
   HIRule
     $ comment
-      [str|A type for distinct values.
-          |The type parameter must support .size, for example: bytes or uint
+      [str| A type for distinct values.
+          | The type parameter must support .size, for example: bytes or uint
           |]
     $ "distinct_"
       <> Name (show' x)
@@ -193,36 +193,36 @@ genHash28 = genByteString 28
 instance Era era => HuddleRule "address" era where
   huddleRuleNamed pname _ =
     comment
-      [str|address format:
-          |  [ 8 bit header | payload ];
+      [str| address format:
+          |   [ 8 bit header | payload ];
           |
-          |shelley payment addresses:
-          |     bit 7: 0
-          |     bit 6: base/other
-          |     bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
-          |     bit 4: payment cred is keyhash/scripthash
-          |  bits 3-0: network id
+          | shelley payment addresses:
+          |      bit 7: 0
+          |      bit 6: base/other
+          |      bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
+          |      bit 4: payment cred is keyhash/scripthash
+          |   bits 3-0: network id
           |
-          |reward addresses:
-          |  bits 7-5: 111
-          |     bit 4: credential is keyhash/scripthash
-          |  bits 3-0: network id
+          | reward addresses:
+          |   bits 7-5: 111
+          |      bit 4: credential is keyhash/scripthash
+          |   bits 3-0: network id
           |
-          |byron addresses:
-          |  bits 7-4: 1000
+          | byron addresses:
+          |   bits 7-4: 1000
           |
-          |     0000: base address: keyhash28,keyhash28
-          |     0001: base address: scripthash28,keyhash28
-          |     0010: base address: keyhash28,scripthash28
-          |     0011: base address: scripthash28,scripthash28
-          |     0100: pointer address: keyhash28, 3 variable length uint
-          |     0101: pointer address: scripthash28, 3 variable length uint
-          |     0110: enterprise address: keyhash28
-          |     0111: enterprise address: scripthash28
-          |     1000: byron address
-          |     1110: account address: keyhash28
-          |     1111: account address: scripthash28
-          |1001-1101: future formats
+          |      0000: base address: keyhash28,keyhash28
+          |      0001: base address: scripthash28,keyhash28
+          |      0010: base address: keyhash28,scripthash28
+          |      0011: base address: scripthash28,scripthash28
+          |      0100: pointer address: keyhash28, 3 variable length uint
+          |      0101: pointer address: scripthash28, 3 variable length uint
+          |      0110: enterprise address: keyhash28
+          |      0111: enterprise address: scripthash28
+          |      1000: byron address
+          |      1110: account address: keyhash28
+          |      1111: account address: scripthash28
+          | 1001-1101: future formats
           |]
       . withCBORGen generator
       $ pname =.= VBytes
@@ -251,7 +251,7 @@ instance Era era => HuddleRule "address" era where
         paymentCred <- genHash28
         -- TODO use genBytesTerm once indefinite bytestring decoding has been fixed
         let bytesTerm = TBytes . BS.cons header $ paymentCred <> stakeCred
-        pure $ S bytesTerm
+        pure $ SingleTerm bytesTerm
 
 instance Era era => HuddleRule "reward_account" era where
   huddleRuleNamed pname _ = withCBORGen generator $ pname =.= VBytes
@@ -265,7 +265,7 @@ instance Era era => HuddleRule "reward_account" era where
           header = 0b11100000 .|. mainnetMask .|. scriptMask
         payload <- genHash28
         let term = TBytes $ BS.cons header payload
-        pure $ S term
+        pure $ SingleTerm term
 
 instance Era era => HuddleRule "transaction_index" era where
   huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (2 :: Word64)
@@ -288,15 +288,15 @@ instance Era era => HuddleRule "auxiliary_data_hash" era where
 instance Era era => HuddleRule "script_hash" era where
   huddleRuleNamed pname p =
     comment
-      [str|To compute a script hash, note that you must prepend
-          |a tag to the bytes of the script before hashing.
-          |The tag is determined by the language.
-          |The tags are:
-          |  "\x00" for multisig/native scripts
-          |  "\x01" for Plutus V1 scripts
-          |  "\x02" for Plutus V2 scripts
-          |  "\x03" for Plutus V3 scripts
-          |  "\x04" for Plutus V4 scripts
+      [str| To compute a script hash, note that you must prepend
+          | a tag to the bytes of the script before hashing.
+          | The tag is determined by the language.
+          | The tags are:
+          |   "\x00" for multisig/native scripts
+          |   "\x01" for Plutus V1 scripts
+          |   "\x02" for Plutus V2 scripts
+          |   "\x03" for Plutus V3 scripts
+          |   "\x04" for Plutus V4 scripts
           |]
       $ pname
         =.= huddleRule @"hash28" p
@@ -313,12 +313,12 @@ instance Era era => HuddleRule "stake_credential" era where
 instance Era era => HuddleRule "port" era where
   huddleRuleNamed pname _ = pname =.= VUInt `le` 65535
 
-ipGen :: Int -> CBORGen WrappedTerm
+ipGen :: Int -> CBORGen RuleTerm
 ipGen n = do
   l <- liftAntiGen $ choose (n, 1024) |! choose (0, pred n)
   bs <- genByteString l
   -- TODO Also generate with TBytesI
-  pure . S $ TBytes bs
+  pure . SingleTerm $ TBytes bs
 
 ipValidator :: Int -> Term -> CustomValidatorResult
 ipValidator n = \case
