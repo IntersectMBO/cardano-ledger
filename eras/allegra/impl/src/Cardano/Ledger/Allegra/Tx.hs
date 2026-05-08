@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -29,6 +30,7 @@ import Cardano.Ledger.Core (
   HasEraTxLevel (..),
   NativeScript,
   STxTopLevel (..),
+  TopTx,
  )
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
@@ -44,6 +46,7 @@ import Cardano.Ledger.Shelley.Tx (
   witsShelleyTxL,
  )
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Set as Set (map)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -91,6 +94,10 @@ instance Typeable t => DecCBOR (Annotator (Tx t AllegraEra)) where
 
 allegraTxL :: Lens' (Tx t AllegraEra) (ShelleyTx t AllegraEra)
 allegraTxL = lens unAllegraTx (\x y -> x {unAllegraTx = y})
+
+deriving newtype instance ToJSON (Tx TopTx AllegraEra)
+
+deriving newtype instance FromJSON (Tx TopTx AllegraEra)
 
 -- =======================================================
 -- Validating timelock scripts
