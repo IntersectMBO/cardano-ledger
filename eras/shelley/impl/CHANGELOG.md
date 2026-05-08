@@ -3,7 +3,7 @@
 ## 1.19.0.0
 
 * Change `NoThunks` instance for `BlockTransitionError` to not check for thunks in its contents
-* Add `NFData` constriant to `BlockTransitionError` constructor.
+* Add `NFData` constraint to `BlockTransitionError` constructor.
 * Add `injectStakeCredentials`, `injectStakePools`, `resolveInjectionSource`, `injectInitialFundsAndStaking` to `Cardano.Ledger.Shelley.Transition`
   - `injectStakeCredentials` and `injectStakePools` take a leading `Network` argument and throw `InjectionNotAllowedOnMainnet` when called with `Mainnet`
 * Deprecate `registerInitialStakePools`, `shelleyRegisterInitialAccounts`
