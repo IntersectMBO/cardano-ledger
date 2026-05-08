@@ -1105,28 +1105,31 @@ withdrawalsSpec =
               }
 
     it "Fails for empty withdrawals" $ do
-      mkTreasuryWithdrawalsGovAction [] >>= expectZeroTreasuryFailurePostBootstrap
+      mkTreasuryWithdrawalsGovAction [] >>= expectZeroTreasuryFailure
 
       accountAddress1 <- registerAccountAddress
-      mkTreasuryWithdrawalsGovAction [(accountAddress1, zero)] >>= expectZeroTreasuryFailurePostBootstrap
+      mkTreasuryWithdrawalsGovAction [(accountAddress1, zero)] >>= expectZeroTreasuryFailure
 
       accountAddress2 <- registerAccountAddress
       let withdrawals = [(accountAddress1, zero), (accountAddress2, zero)]
 
-      mkTreasuryWithdrawalsGovAction withdrawals >>= expectZeroTreasuryFailurePostBootstrap
+      mkTreasuryWithdrawalsGovAction withdrawals >>= expectZeroTreasuryFailure
 
       wdrls <- mkTreasuryWithdrawalsGovAction $ withdrawals ++ [(accountAddress2, Coin 100_000)]
       proposal <- mkProposal wdrls
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrap [disallowedProposalFailure proposal]
   where
-    expectZeroTreasuryFailurePostBootstrap wdrls = do
+    expectZeroTreasuryFailure wdrls = do
       proposal <- mkProposal wdrls
       void $
         submitBootstrapAwareFailingProposal proposal $
           FailBootstrapAndPostBootstrap $
             FailBoth
-              { bootstrapFailures = [disallowedProposalFailure proposal]
+              { bootstrapFailures =
+                  [ disallowedProposalFailure proposal
+                  , injectFailure $ ZeroTreasuryWithdrawals wdrls
+                  ]
               , postBootstrapFailures = [injectFailure $ ZeroTreasuryWithdrawals wdrls]
               }
 
