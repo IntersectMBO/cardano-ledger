@@ -4,10 +4,12 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,7 +27,7 @@ module Cardano.Ledger.Shelley.API.Validation (
   applyBlockEitherNoEvents,
   applyBlockNoValidaton,
   applyTickNoEvents,
-  BlockTransitionError (..),
+  BlockTransitionError (BlockTransitionError),
   chainChecks,
 ) where
 
@@ -42,13 +44,14 @@ import Cardano.Ledger.Shelley.Rules (BbodySignal (..))
 import qualified Cardano.Ledger.Shelley.Rules as STS
 import Cardano.Ledger.Shelley.State ()
 import Cardano.Ledger.Slot (SlotNo)
+import Control.DeepSeq (NFData, deepseq)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty (..))
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (AllowThunk (..), NoThunks (..))
 
 class EraGov era => ApplyTick era where
   -- | Run the `TICK` rule with `globalAssertionPolicy` and without any
@@ -83,7 +86,14 @@ class EraGov era => ApplyTick era where
         flip runReader globals . applySTSOptsResult @(EraRule "TICK" era) opts $
           TRC ((), newEpochState, slotNo)
 
-class (ApplyTick era, EraBlockBody era, EraBlockHeader h era) => ApplyBlock h era where
+class
+  ( ApplyTick era
+  , EraBlockBody era
+  , EraBlockHeader h era
+  , NFData (PredicateFailure (EraRule "BBODY" era))
+  ) =>
+  ApplyBlock h era
+  where
   wrapBlockSignal :: Block h era -> Signal (EraRule "BBODY" era)
   default wrapBlockSignal ::
     Signal (EraRule "BBODY" era) ~ BbodySignal era =>
@@ -222,8 +232,19 @@ updateNewEpochState ss (STS.BbodyState ls bcur) =
   LedgerState.updateNES ss bcur ls
 
 newtype BlockTransitionError era
-  = BlockTransitionError (NonEmpty (STS.PredicateFailure (EraRule "BBODY" era)))
+  = BlockTransitionErrorInternal (NonEmpty (STS.PredicateFailure (EraRule "BBODY" era)))
   deriving (Generic)
+
+pattern BlockTransitionError ::
+  NFData (PredicateFailure (EraRule "BBODY" era)) =>
+  NonEmpty (PredicateFailure (EraRule "BBODY" era)) ->
+  BlockTransitionError era
+pattern BlockTransitionError failures <-
+  BlockTransitionErrorInternal failures
+  where
+    BlockTransitionError failures = failures `deepseq` BlockTransitionErrorInternal failures
+
+{-# COMPLETE BlockTransitionError #-}
 
 deriving stock instance
   Eq (STS.PredicateFailure (EraRule "BBODY" era)) =>
@@ -233,6 +254,6 @@ deriving stock instance
   Show (STS.PredicateFailure (EraRule "BBODY" era)) =>
   Show (BlockTransitionError era)
 
-instance
-  NoThunks (STS.PredicateFailure (EraRule "BBODY" era)) =>
-  NoThunks (BlockTransitionError era)
+-- | We do not check for thunks in this instance, because `BlockTransitionError` uses `NFData` to
+-- force its contents to Normal Form upon construction.
+deriving via AllowThunk (BlockTransitionError era) instance NoThunks (BlockTransitionError era)
