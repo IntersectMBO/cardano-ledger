@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add `ToJSON`/`FromJSON` instances for `BabbageTx`, `BabbageTxBody`, `BabbageTxOut`
 * Change `Signal` to `StAnnTx TopTx era` for: `BabbageLEDGER`, `BabbageUTXOW`, `BabbageUTXO`, `BabbageUTXOS`
 * Remove `ToCBOR` and `FromCBOR` instances for `BabbageTxOut`
 * Add `ApplyTick` instance for `BabbageEra`

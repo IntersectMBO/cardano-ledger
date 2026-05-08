@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -26,6 +27,7 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to)
@@ -74,3 +76,7 @@ instance Typeable l => DecCBOR (Annotator (Tx l BabbageEra)) where
 
 babbageTxL :: Lens' (Tx l BabbageEra) (AlonzoTx l BabbageEra)
 babbageTxL = lens unBabbageTx (\x y -> x {unBabbageTx = y})
+
+deriving newtype instance ToJSON (Tx TopTx BabbageEra)
+
+deriving newtype instance FromJSON (Tx TopTx BabbageEra)
