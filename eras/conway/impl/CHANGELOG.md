@@ -40,6 +40,10 @@
 * Make `ConwayContextError` constructors lazy
 * Make `ZeroTreasuryWithdrawals` a permanent check for all eras (not just post-Babbage).
 
+### cddl
+
+* Extend `constr` CDDL rule to include tags 1280–1400 for Plutus `Data` constructor indexes
+
 ### `testlib`
 
 * In `Test.Cardano.Ledger.Conway.Examples`:
