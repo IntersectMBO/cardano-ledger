@@ -22,10 +22,10 @@ import Cardano.Ledger.Babbage.Rules.Ppup ()
 import Cardano.Ledger.Babbage.Rules.Utxo
 import Cardano.Ledger.Babbage.Rules.Utxos
 import Cardano.Ledger.Babbage.Rules.Utxow
-import Cardano.Ledger.Shelley.Rules (PpupEvent, ShelleyLedgerEvent, ShelleyTickEvent)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleEvent "TICK" BabbageEra = ShelleyTickEvent BabbageEra
+type instance EraRuleEvent "TICK" BabbageEra = Shelley.ShelleyTickEvent BabbageEra
 
-type instance EraRuleEvent "LEDGER" BabbageEra = ShelleyLedgerEvent BabbageEra
+type instance EraRuleEvent "LEDGER" BabbageEra = Shelley.ShelleyLedgerEvent BabbageEra
 
-type instance EraRuleEvent "PPUP" BabbageEra = PpupEvent BabbageEra
+type instance EraRuleEvent "PPUP" BabbageEra = Shelley.PpupEvent BabbageEra

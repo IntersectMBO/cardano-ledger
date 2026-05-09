@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Babbage.TreeDiff (
 ) where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo.Rules
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
@@ -23,7 +23,7 @@ import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Alonzo.TreeDiff
 
@@ -36,7 +36,7 @@ instance ToExpr (PlutusPurpose AsIx era) => ToExpr (BabbageContextError era)
 -- PParams
 instance ToExpr (BabbagePParams StrictMaybe era)
 
-instance ToExpr (BabbagePParams Identity era)
+instance ToExpr (BabbagePParams Shelley.Identity era)
 
 -- TxOut
 instance
@@ -73,7 +73,7 @@ instance ToExpr (TxBody TopTx BabbageEra)
 
 -- Rules/Utxo
 instance
-  ( ToExpr (AlonzoUtxoPredFailure era)
+  ( ToExpr (Alonzo.AlonzoUtxoPredFailure era)
   , ToExpr (TxOut era)
   ) =>
   ToExpr (BabbageUtxoPredFailure era)
@@ -81,7 +81,7 @@ instance
 -- Rules/Utxow
 instance
   ( Era era
-  , ToExpr (PredicateFailure (EraRule "UTXO" era))
+  , ToExpr (Shelley.PredicateFailure (EraRule "UTXO" era))
   , ToExpr (PlutusPurpose AsIx era)
   , ToExpr (PlutusPurpose AsItem era)
   , ToExpr (TxCert era)

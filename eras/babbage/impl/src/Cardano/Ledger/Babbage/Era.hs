@@ -14,22 +14,13 @@ module Cardano.Ledger.Babbage.Era (
   BabbageLEDGER,
 ) where
 
-import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Internal.Era (BabbageEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyEPOCH,
-  ShelleyMIR,
-  ShelleyNEWPP,
-  ShelleyRUPD,
-  ShelleySNAP,
-  ShelleyTICK,
-  ShelleyTICKF,
-  ShelleyUPEC,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
 -- =====================================================
 
@@ -64,7 +55,7 @@ type instance EraRule "LEDGER" BabbageEra = BabbageLEDGER BabbageEra
 
 -- Rules inherited from Alonzo
 
-type instance EraRule "BBODY" BabbageEra = AlonzoBBODY BabbageEra
+type instance EraRule "BBODY" BabbageEra = Alonzo.AlonzoBBODY BabbageEra
 
 -- Rules inherited from Shelley
 
@@ -74,15 +65,15 @@ type instance EraRule "DELEGS" BabbageEra = API.ShelleyDELEGS BabbageEra
 
 type instance EraRule "DELPL" BabbageEra = API.ShelleyDELPL BabbageEra
 
-type instance EraRule "EPOCH" BabbageEra = ShelleyEPOCH BabbageEra
+type instance EraRule "EPOCH" BabbageEra = Shelley.ShelleyEPOCH BabbageEra
 
 type instance EraRule "LEDGERS" BabbageEra = API.ShelleyLEDGERS BabbageEra
 
-type instance EraRule "MIR" BabbageEra = ShelleyMIR BabbageEra
+type instance EraRule "MIR" BabbageEra = Shelley.ShelleyMIR BabbageEra
 
 type instance EraRule "NEWEPOCH" BabbageEra = API.ShelleyNEWEPOCH BabbageEra
 
-type instance EraRule "NEWPP" BabbageEra = ShelleyNEWPP BabbageEra
+type instance EraRule "NEWPP" BabbageEra = Shelley.ShelleyNEWPP BabbageEra
 
 type instance EraRule "POOL" BabbageEra = API.ShelleyPOOL BabbageEra
 
@@ -90,14 +81,14 @@ type instance EraRule "POOLREAP" BabbageEra = API.ShelleyPOOLREAP BabbageEra
 
 type instance EraRule "PPUP" BabbageEra = API.ShelleyPPUP BabbageEra
 
-type instance EraRule "RUPD" BabbageEra = ShelleyRUPD BabbageEra
+type instance EraRule "RUPD" BabbageEra = Shelley.ShelleyRUPD BabbageEra
 
-type instance EraRule "SNAP" BabbageEra = ShelleySNAP BabbageEra
+type instance EraRule "SNAP" BabbageEra = Shelley.ShelleySNAP BabbageEra
 
-type instance EraRule "TICK" BabbageEra = ShelleyTICK BabbageEra
+type instance EraRule "TICK" BabbageEra = Shelley.ShelleyTICK BabbageEra
 
-type instance EraRule "TICKF" BabbageEra = ShelleyTICKF BabbageEra
+type instance EraRule "TICKF" BabbageEra = Shelley.ShelleyTICKF BabbageEra
 
-type instance EraRule "UPEC" BabbageEra = ShelleyUPEC BabbageEra
+type instance EraRule "UPEC" BabbageEra = Shelley.ShelleyUPEC BabbageEra
 
 -- =================================================

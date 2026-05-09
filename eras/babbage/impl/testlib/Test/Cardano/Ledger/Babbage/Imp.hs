@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Babbage.Imp (spec, babbageEraSpecificSpec) where
 
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.State
-import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Alonzo
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import qualified Test.Cardano.Ledger.Babbage.Imp.PoolSpec as POOL
@@ -24,7 +24,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   ( BabbageEraImp era
-  , Event (EraRule "RUPD" era) ~ RupdEvent
+  , Shelley.Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   ) =>
   proxy era ->
   Spec
@@ -38,7 +38,7 @@ spec era = do
 babbageEraSpecificSpec ::
   ( BabbageEraImp era
   , ShelleyEraAccounts era
-  , Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
+  , Shelley.Event (EraRule "NEWEPOCH" era) ~ Shelley.ShelleyNewEpochEvent era
   ) =>
   proxy era ->
   Spec
