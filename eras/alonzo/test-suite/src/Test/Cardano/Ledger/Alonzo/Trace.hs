@@ -19,14 +19,7 @@ import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
 import Cardano.Ledger.BaseTypes (Globals, epochInfo, systemStart)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, lsUTxOState, utxosUtxo)
-import Cardano.Ledger.Shelley.Rules (
-  DelegsEnv,
-  DelplEnv,
-  LedgerEnv (..),
-  ShelleyDelplPredFailure,
-  ShelleyLedgerPredFailure,
-  UtxoEnv,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.Crypto (Crypto)
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -55,32 +48,32 @@ instance
   , ShelleyEraAccounts era
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
-  , Environment (EraRule "DELPL" era) ~ DelplEnv era
+  , Environment (EraRule "DELPL" era) ~ Shelley.DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
-  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
+  , PredicateFailure (EraRule "DELPL" era) ~ Shelley.ShelleyDelplPredFailure era
   , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
-  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
-  , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
+  , Environment (EraRule "DELEGS" era) ~ Shelley.DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , AtMostEra "Babbage" era
   , EraCertState era
   , Crypto c
-  , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
+  , EraRuleFailure "LEDGER" era ~ Shelley.ShelleyLedgerPredFailure era
   , EraRule "LEDGER" era ~ AlonzoLEDGER era
   ) =>
   TQC.HasTrace (AlonzoLEDGER era) (GenEnv c era)
   where
   envGen GenEnv {geConstants} =
-    LedgerEnv (SlotNo 0) Nothing minBound
+    Shelley.LedgerEnv (SlotNo 0) Nothing minBound
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
-  sigGen ge ledgerEnv@(LedgerEnv _ _ _ pParams _) ls = do
+  sigGen ge ledgerEnv@(Shelley.LedgerEnv _ _ _ pParams _) ls = do
     tx <- genTx ge ledgerEnv ls
     pure $
       mkStAnnTx

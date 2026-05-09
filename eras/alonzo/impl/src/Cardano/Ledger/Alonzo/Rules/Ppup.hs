@@ -7,10 +7,10 @@ module Cardano.Ledger.Alonzo.Rules.Ppup () where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (PpupEvent, ShelleyPpupPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleFailure "PPUP" AlonzoEra = ShelleyPpupPredFailure AlonzoEra
+type instance EraRuleFailure "PPUP" AlonzoEra = Shelley.ShelleyPpupPredFailure AlonzoEra
 
-type instance EraRuleEvent "PPUP" AlonzoEra = PpupEvent AlonzoEra
+type instance EraRuleEvent "PPUP" AlonzoEra = Shelley.PpupEvent AlonzoEra
 
-instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure AlonzoEra
+instance InjectRuleFailure "PPUP" Shelley.ShelleyPpupPredFailure AlonzoEra
