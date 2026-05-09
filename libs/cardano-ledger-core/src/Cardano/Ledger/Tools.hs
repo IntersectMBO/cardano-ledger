@@ -24,6 +24,7 @@ module Cardano.Ledger.Tools (
   byteStringToNum,
 ) where
 
+import Cardano.Base.Bytes (byteStringToByteArray)
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN.Class (sigSizeDSIGN, verKeySizeDSIGN)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
@@ -44,9 +45,11 @@ import Cardano.Ledger.State.UTxO (EraUTxO (..), UTxO (..))
 import Data.Bits (Bits (..), shiftR)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Short as SBS
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Proxy
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
@@ -268,14 +271,14 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
       Set.fromList [WitVKey key dummySig | key <- take numKeyWits dummyKeys]
 
     -- ChainCode is always 32 bytes long.
-    chainCode = ChainCode $ BS.replicate 32 0
+    chainCode = ChainCode $ byteArrayFromShortByteString $ SBS.replicate 32 0
 
     mkDummyByronKeyWit ::
       VKey Witness ->
       Byron.Attributes Byron.AddrAttributes ->
       BootstrapWitness
     mkDummyByronKeyWit key =
-      BootstrapWitness key dummySig chainCode . serialize' byronProtVer
+      BootstrapWitness key dummySig chainCode . byteStringToByteArray . serialize' byronProtVer
     dummyByronKeyWits =
       Set.fromList $ zipWith mkDummyByronKeyWit dummyKeys byronAttrs
 

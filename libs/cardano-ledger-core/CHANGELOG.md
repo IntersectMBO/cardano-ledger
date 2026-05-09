@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Change `ChainCode` type to use `ByteArray` instead of `ByteString`
+* Change `bwAttributes` field to use `ByteArray` instead of `ByteString`
 * Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class
 * Add `decodeProtVer` to `Cardano.Ledger.BaseTypes`
 * Add `EraDecoder` type and `ppEraDecoder` field to `PParam`

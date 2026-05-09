@@ -21,6 +21,7 @@ module Cardano.Ledger.Keys.Bootstrap (
   verifyBootstrapWit,
 ) where
 
+import Cardano.Base.Bytes (byteStringToByteArray)
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN (SignedDSIGN (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
@@ -32,6 +33,8 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   encodeListLen,
+  natVersion,
+  whenDecoderVersionAtLeast,
  )
 import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
 import Cardano.Ledger.Binary.Decoding (decodeRecordNamed)
@@ -46,25 +49,39 @@ import Cardano.Ledger.Keys.Internal (
   verifySignedDSIGN,
  )
 import Control.DeepSeq (NFData (..), rwhnf)
+import Control.Monad (unless)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Builder as B
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Short as SBS
 import Data.Coerce (coerce)
 import Data.Maybe (fromMaybe)
+import Data.MemPack.Buffer (byteArrayToShortByteString)
 import Data.Ord (comparing)
+import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
 
-newtype ChainCode = ChainCode {unChainCode :: ByteString}
+newtype ChainCode = ChainCode {unChainCode :: BA.ByteArray}
   deriving (Eq, Generic)
   deriving (Show) via Quiet ChainCode
-  deriving newtype (NoThunks, EncCBOR, DecCBOR, NFData)
+  deriving newtype (NoThunks, EncCBOR, NFData)
+
+instance DecCBOR ChainCode where
+  decCBOR = do
+    chainCode <- decCBOR
+    whenDecoderVersionAtLeast (natVersion @12) $ do
+      unless (BA.sizeofByteArray chainCode == 32) $
+        fail "ChainCode is expected to be 32 bytes in size"
+    pure $ ChainCode chainCode
 
 data BootstrapWitness = BootstrapWitness
   { bwKey :: !(VKey Witness)
   , bwSignature :: !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
   , bwChainCode :: !ChainCode
-  , bwAttributes :: !ByteString
+  , bwAttributes :: !BA.ByteArray
   }
   deriving (Generic, Show, Eq)
 
@@ -109,14 +126,20 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
     -- 3e: chain code bytes (32)
     -- 4: the addrAttributes
     -- the prefix is constant, and hard coded here:
-    prefix :: ByteString
+    prefix :: SBS.ShortByteString
     prefix = "\131\00\130\00\88\64"
     -- Here we are reserializing a key which we have previously deserialized.
     -- This is normally naughty. However, this is a blob of bytes -- serializing
     -- it amounts to wrapping the underlying byte array in a ByteString
     -- constructor.
     keyBytes = DSIGN.rawSerialiseVerKeyDSIGN key
-    bytes = prefix <> keyBytes <> cc <> attributes
+    bytes =
+      BSL.toStrict $
+        B.toLazyByteString $
+          B.shortByteString prefix
+            <> B.byteString keyBytes
+            <> B.shortByteString (byteArrayToShortByteString cc)
+            <> B.shortByteString (byteArrayToShortByteString attributes)
     hash_SHA3_256 :: ByteString -> ByteString
     hash_SHA3_256 = Hash.digest (Proxy :: Proxy Hash.SHA3_256)
     hash_crypto :: ByteString -> Hash.Hash ADDRHASH a
@@ -133,7 +156,7 @@ unpackByronVKey
     -- is the correct one. (32 bytes). If the XPub was constructed correctly,
     -- we already know that it has this length.
     Nothing -> error "unpackByronVKey: impossible!"
-    Just vk -> (VKey vk, ChainCode chainCodeBytes)
+    Just vk -> (VKey vk, ChainCode $ byteStringToByteArray chainCodeBytes)
 
 verifyBootstrapWit ::
   Hash HASH EraIndependentTxBody ->
@@ -156,7 +179,7 @@ makeBootstrapWitness ::
   Byron.Attributes Byron.AddrAttributes ->
   BootstrapWitness
 makeBootstrapWitness txBodyHash byronSigningKey addrAttributes =
-  BootstrapWitness vk signature cc (serialize' addrAttributes)
+  BootstrapWitness vk signature cc $ byteStringToByteArray (serialize' addrAttributes)
   where
     (vk, cc) = unpackByronVKey $ Byron.toVerification byronSigningKey
     signature =

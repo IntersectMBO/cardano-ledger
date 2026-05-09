@@ -328,7 +328,7 @@ test-suite tests
     base16-bytestring,
     binary,
     bytestring,
-    cardano-base:testlib >=0.1.3,
+    cardano-base:{cardano-base, testlib} >=0.1.3,
     cardano-crypto-class,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron,

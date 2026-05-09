@@ -10,6 +10,7 @@
 
 module Test.Cardano.Ledger.AddressSpec (spec) where
 
+import Cardano.Base.Bytes (byteStringToByteArray)
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
@@ -66,7 +67,8 @@ spec =
               { bwKey = shelleyVKey
               , bwChainCode = chainCode
               , bwSignature = sig
-              , bwAttributes = serialize' byronProtVer $ Byron.addrAttributes byronAddr
+              , bwAttributes =
+                  byteStringToByteArray $ serialize' byronProtVer $ Byron.addrAttributes byronAddr
               }
       pure $
         coerceKeyRole (bootstrapKeyHash addr)
