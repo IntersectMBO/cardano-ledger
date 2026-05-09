@@ -18,7 +18,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Rewards (rewardAmount)
@@ -45,11 +45,11 @@ instance
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecContext (PParamsHKD Identity era) ~ ()
   ) =>
-  SpecTranslate (CertEnv era)
+  SpecTranslate (Conway.CertEnv era)
   where
-  type SpecRep (CertEnv era) = Agda.CertEnv
-  type SpecContext (CertEnv era) = (VotingProcedures era, Map AccountAddress Coin)
-  toSpecRep CertEnv {..} = do
+  type SpecRep (Conway.CertEnv era) = Agda.CertEnv
+  type SpecContext (Conway.CertEnv era) = (VotingProcedures era, Map AccountAddress Coin)
+  toSpecRep Conway.CertEnv {..} = do
     (votes, withdrawals) <- askSpecTransM
     let ccColdCreds = foldMap (keysSet . committeeMembers) ceCurrentCommittee
     withCtxSpecTransM () $

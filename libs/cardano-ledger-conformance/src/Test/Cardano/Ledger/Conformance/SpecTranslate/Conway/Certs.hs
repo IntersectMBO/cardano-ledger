@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Certs () where
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Data.Functor.Identity (Identity)
 import Data.Map (keysSet)
 import Data.Map.Strict (Map)
@@ -29,11 +29,11 @@ instance
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecContext (PParamsHKD Identity era) ~ ()
   ) =>
-  SpecTranslate (CertsEnv era)
+  SpecTranslate (Conway.CertsEnv era)
   where
-  type SpecRep (CertsEnv era) = Agda.CertEnv
-  type SpecContext (CertsEnv era) = (VotingProcedures era, Map AccountAddress Coin)
-  toSpecRep CertsEnv {..} = do
+  type SpecRep (Conway.CertsEnv era) = Agda.CertEnv
+  type SpecContext (Conway.CertsEnv era) = (VotingProcedures era, Map AccountAddress Coin)
+  toSpecRep Conway.CertsEnv {..} = do
     (votes, withdrawals) <- askSpecTransM
     let ccColdCreds = foldMap (keysSet . committeeMembers) certsCurrentCommittee
     withCtxSpecTransM () $

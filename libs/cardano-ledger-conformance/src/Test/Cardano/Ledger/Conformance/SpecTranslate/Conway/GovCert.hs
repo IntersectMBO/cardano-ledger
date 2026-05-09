@@ -16,7 +16,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (ConwayGovCertEnv (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -60,12 +60,12 @@ instance
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecContext (PParamsHKD Identity era) ~ ()
   ) =>
-  SpecTranslate (ConwayGovCertEnv era)
+  SpecTranslate (Conway.ConwayGovCertEnv era)
   where
-  type SpecRep (ConwayGovCertEnv era) = Agda.CertEnv
-  type SpecContext (ConwayGovCertEnv era) = (VotingProcedures era, Map AccountAddress Coin)
+  type SpecRep (Conway.ConwayGovCertEnv era) = Agda.CertEnv
+  type SpecContext (Conway.ConwayGovCertEnv era) = (VotingProcedures era, Map AccountAddress Coin)
 
-  toSpecRep ConwayGovCertEnv {..} = do
+  toSpecRep Conway.ConwayGovCertEnv {..} = do
     (votes, withdrawals) <- askSpecTransM
     let propGetCCMembers (UpdateCommittee _ _ x _) = Just $ keysSet x
         propGetCCMembers _ = Nothing

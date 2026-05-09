@@ -39,7 +39,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ConwayPParams (..), THKD (..))
-import Cardano.Ledger.Conway.Rules (EnactSignal (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.Scripts (AlonzoScript (..), ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
@@ -48,7 +48,7 @@ import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.Rules (Identity)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireAnyOf,
@@ -269,11 +269,11 @@ instance SpecTranslate PoolVotingThresholds where
 
 instance
   ( ConwayEraPParams era
-  , PParamsHKD Identity era ~ ConwayPParams Identity era
+  , PParamsHKD Shelley.Identity era ~ ConwayPParams Shelley.Identity era
   ) =>
-  SpecTranslate (ConwayPParams Identity era)
+  SpecTranslate (ConwayPParams Shelley.Identity era)
   where
-  type SpecRep (ConwayPParams Identity era) = Agda.PParams
+  type SpecRep (ConwayPParams Shelley.Identity era) = Agda.PParams
 
   toSpecRep cpp@ConwayPParams {..} = do
     ppA <- toSpecRep cppTxFeePerByte
@@ -451,9 +451,9 @@ instance SpecTranslate (Constitution era) where
 
 instance
   ( EraPParams era
-  , SpecTranslate (PParamsHKD Identity era)
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecContext (PParamsHKD Identity era) ~ ()
+  , SpecTranslate (PParamsHKD Shelley.Identity era)
+  , SpecRep (PParamsHKD Shelley.Identity era) ~ Agda.PParams
+  , SpecContext (PParamsHKD Shelley.Identity era) ~ ()
   ) =>
   SpecTranslate (EnactState era)
   where
@@ -721,9 +721,9 @@ instance
 
 instance
   ( EraPParams era
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecContext (PParamsHKD Identity era) ~ ()
-  , SpecTranslate (PParamsHKD Identity era)
+  , SpecRep (PParamsHKD Shelley.Identity era) ~ Agda.PParams
+  , SpecContext (PParamsHKD Shelley.Identity era) ~ ()
+  , SpecTranslate (PParamsHKD Shelley.Identity era)
   , ToExpr (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   , SpecContext (PParamsHKD StrictMaybe era) ~ ()
@@ -781,8 +781,8 @@ instance
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   ) =>
-  SpecTranslate (EnactSignal era)
+  SpecTranslate (Conway.EnactSignal era)
   where
-  type SpecRep (EnactSignal era) = SpecRep (GovAction era)
+  type SpecRep (Conway.EnactSignal era) = SpecRep (GovAction era)
 
-  toSpecRep (EnactSignal _ ga) = toSpecRep ga
+  toSpecRep (Conway.EnactSignal _ ga) = toSpecRep ga

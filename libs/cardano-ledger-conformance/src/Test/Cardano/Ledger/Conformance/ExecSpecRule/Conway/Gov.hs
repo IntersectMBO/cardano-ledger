@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Gov () where
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (EraPParams (..))
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Control.State.Transition.Extended (TRC (..))
 import Lens.Micro ((&), (.~), (^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
@@ -27,7 +27,7 @@ instance ExecSpecRule "GOV" ConwayEra where
 
   runAgdaRule (SpecTRC env st sig) = unComputationResult $ Agda.govStep env st sig
 
-  translateInputs enactState (TRC (env@GovEnv {gePParams}, st, sig)) = do
+  translateInputs enactState (TRC (env@Conway.GovEnv {Conway.gePParams}, st, sig)) = do
     agdaEnv <- runSpecTransM ctx $ toSpecRep env
     agdaSt <- runSpecTransM () $ toSpecRep st
     agdaSig <- runSpecTransM () $ toSpecRep sig

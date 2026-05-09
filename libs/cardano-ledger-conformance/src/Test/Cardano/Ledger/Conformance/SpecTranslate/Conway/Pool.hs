@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool where
 
 import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import qualified Data.Map.Strict as Map
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
@@ -19,15 +19,15 @@ import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
 instance
-  ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate (PParamsHKD Identity era)
-  , SpecContext (PParamsHKD Identity era) ~ ()
+  ( SpecRep (PParamsHKD Shelley.Identity era) ~ Agda.PParams
+  , SpecTranslate (PParamsHKD Shelley.Identity era)
+  , SpecContext (PParamsHKD Shelley.Identity era) ~ ()
   ) =>
-  SpecTranslate (PoolEnv era)
+  SpecTranslate (Shelley.PoolEnv era)
   where
-  type SpecRep (PoolEnv era) = Agda.PParams
+  type SpecRep (Shelley.PoolEnv era) = Agda.PParams
 
-  toSpecRep (PoolEnv _ pp) = toSpecRep pp
+  toSpecRep (Shelley.PoolEnv _ pp) = toSpecRep pp
 
 instance SpecTranslate (PState era) where
   type SpecRep (PState era) = Agda.PState

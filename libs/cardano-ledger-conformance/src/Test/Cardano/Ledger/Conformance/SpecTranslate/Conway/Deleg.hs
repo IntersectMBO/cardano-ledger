@@ -14,9 +14,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg () where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Conway.Rules (
-  ConwayDelegEnv (..),
- )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
@@ -25,7 +23,7 @@ import Cardano.Ledger.Conway.TxCert (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Lens.Micro
@@ -37,16 +35,16 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
 instance
-  ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate (PParamsHKD Identity era)
-  , SpecContext (PParamsHKD Identity era) ~ ()
+  ( SpecRep (PParamsHKD Shelley.Identity era) ~ Agda.PParams
+  , SpecTranslate (PParamsHKD Shelley.Identity era)
+  , SpecContext (PParamsHKD Shelley.Identity era) ~ ()
   ) =>
-  SpecTranslate (ConwayDelegEnv era)
+  SpecTranslate (Conway.ConwayDelegEnv era)
   where
-  type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
-  type SpecContext (ConwayDelegEnv era) = Set (Credential DRepRole)
+  type SpecRep (Conway.ConwayDelegEnv era) = Agda.DelegEnv
+  type SpecContext (Conway.ConwayDelegEnv era) = Set (Credential DRepRole)
 
-  toSpecRep ConwayDelegEnv {..} = do
+  toSpecRep Conway.ConwayDelegEnv {..} = do
     delegatees <- askSpecTransM
     withCtxSpecTransM () $
       Agda.MkDelegEnv
