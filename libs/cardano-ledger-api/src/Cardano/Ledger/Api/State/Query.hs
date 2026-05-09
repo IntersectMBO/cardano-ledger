@@ -125,7 +125,7 @@ import Cardano.Ledger.Conway.Governance (
   psProposalsL,
   rsEnactStateL,
  )
-import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
@@ -191,7 +191,7 @@ queryDRepState nes creds
   where
     vStateFiltered = vState & vsDRepsL %~ (`Map.restrictKeys` creds)
     vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
-    updateDormantDRepExpiry' = updateDormantDRepExpiry (nes ^. nesELL)
+    updateDormantDRepExpiry' = Conway.updateDormantDRepExpiry (nes ^. nesELL)
 
 -- | Query the delegators delegated to each DRep, including
 -- @AlwaysAbstain@ and @NoConfidence@.
