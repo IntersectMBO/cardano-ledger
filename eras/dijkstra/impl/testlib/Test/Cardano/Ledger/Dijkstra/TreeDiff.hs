@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
-import Cardano.Ledger.Conway.Rules (ConwayGovEvent)
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
 import Cardano.Ledger.Dijkstra.BlockBody.Internal (DijkstraBlockBodyRaw)
@@ -267,7 +267,7 @@ instance
   ToExpr (DijkstraGovPredFailure era) =>
   ToExpr (DijkstraSubGovPredFailure era)
 
-instance ToExpr (ConwayGovEvent era) => ToExpr (DijkstraSubGovEvent era)
+instance ToExpr (Conway.ConwayGovEvent era) => ToExpr (DijkstraSubGovEvent era)
 
 instance ToExpr (DijkstraSubGovCertPredFailure era)
 

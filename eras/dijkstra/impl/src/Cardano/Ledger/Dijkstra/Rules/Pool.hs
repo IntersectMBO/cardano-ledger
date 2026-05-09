@@ -7,12 +7,12 @@ module Cardano.Ledger.Dijkstra.Rules.Pool () where
 
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPoolPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleFailure "POOL" DijkstraEra = ShelleyPoolPredFailure DijkstraEra
+type instance EraRuleFailure "POOL" DijkstraEra = Shelley.ShelleyPoolPredFailure DijkstraEra
 
-type instance EraRuleEvent "POOL" DijkstraEra = PoolEvent DijkstraEra
+type instance EraRuleEvent "POOL" DijkstraEra = Shelley.PoolEvent DijkstraEra
 
-instance InjectRuleFailure "POOL" ShelleyPoolPredFailure DijkstraEra
+instance InjectRuleFailure "POOL" Shelley.ShelleyPoolPredFailure DijkstraEra
 
-instance InjectRuleEvent "POOL" PoolEvent DijkstraEra
+instance InjectRuleEvent "POOL" Shelley.PoolEvent DijkstraEra

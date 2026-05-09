@@ -23,21 +23,14 @@ module Cardano.Ledger.Dijkstra.Rules.Bbody (
   conwayToDijkstraBbodyPredFailure,
 ) where
 
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoBbodyEvent (ShelleyInAlonzoEvent),
-  AlonzoBbodyPredFailure,
-  AlonzoUtxoPredFailure,
-  AlonzoUtxosPredFailure,
-  AlonzoUtxowPredFailure,
-  validateExUnits,
- )
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Nonce,
@@ -49,16 +42,6 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
-import Cardano.Ledger.Conway.Rules (
-  ConwayBbodyPredFailure,
-  ConwayCertPredFailure,
-  ConwayCertsPredFailure,
-  ConwayDelegPredFailure,
-  ConwayGovPredFailure,
-  ConwayUtxosPredFailure,
-  alonzoToConwayBbodyPredFailure,
-  shelleyToConwayBbodyPredFailure,
- )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.BlockBody (
@@ -81,16 +64,6 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Shelley.API (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), utxoL)
-import Cardano.Ledger.Shelley.Rules (
-  BbodyEnv (..),
-  ShelleyBbodyPredFailure,
-  ShelleyBbodyState (..),
-  ShelleyLedgersEnv (..),
-  ShelleyLedgersPredFailure,
-  ShelleyPoolPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowPredFailure,
- )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (slotToEpochBoundary)
 import Control.DeepSeq (NFData)
@@ -153,167 +126,168 @@ instance
 
 type instance EraRuleFailure "BBODY" DijkstraEra = DijkstraBbodyPredFailure DijkstraEra
 
-type instance EraRuleEvent "BBODY" DijkstraEra = AlonzoBbodyEvent DijkstraEra
+type instance EraRuleEvent "BBODY" DijkstraEra = Alonzo.AlonzoBbodyEvent DijkstraEra
 
 instance InjectRuleFailure "BBODY" DijkstraBbodyPredFailure DijkstraEra
 
-instance InjectRuleFailure "BBODY" ConwayBbodyPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Conway.ConwayBbodyPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure DijkstraEra where
-  injectFailure = conwayToDijkstraBbodyPredFailure . alonzoToConwayBbodyPredFailure
+instance InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure DijkstraEra where
+  injectFailure = conwayToDijkstraBbodyPredFailure . Conway.alonzoToConwayBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure DijkstraEra where
-  injectFailure = conwayToDijkstraBbodyPredFailure . shelleyToConwayBbodyPredFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure DijkstraEra where
+  injectFailure = conwayToDijkstraBbodyPredFailure . Conway.shelleyToConwayBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure DijkstraEra where
-  injectFailure = conwayToDijkstraBbodyPredFailure . shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyLedgersPredFailure DijkstraEra where
+  injectFailure =
+    conwayToDijkstraBbodyPredFailure . Conway.shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure
 
 instance InjectRuleFailure "BBODY" DijkstraLedgerPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
 instance InjectRuleFailure "BBODY" DijkstraUtxowPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" BabbageUtxowPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Babbage.BabbageUtxowPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxowPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Alonzo.AlonzoUtxowPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Shelley.ShelleyUtxowPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
 instance InjectRuleFailure "BBODY" DijkstraUtxoPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" BabbageUtxoPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Babbage.BabbageUtxoPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxoPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Alonzo.AlonzoUtxoPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxosPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Alonzo.AlonzoUtxosPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayUtxosPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Conway.ConwayUtxosPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Shelley.ShelleyUtxoPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" AllegraUtxoPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Allegra.AllegraUtxoPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayCertsPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Conway.ConwayCertsPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayCertPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Conway.ConwayCertPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayDelegPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Conway.ConwayDelegPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Shelley.ShelleyPoolPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
 instance InjectRuleFailure "BBODY" DijkstraGovCertPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayGovPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Conway.ConwayGovPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
 instance InjectRuleFailure "BBODY" DijkstraGovPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure
-      . shelleyToConwayBbodyPredFailure
+      . Conway.shelleyToConwayBbodyPredFailure
       . Shelley.LedgersFailure
       . injectFailure
 
 instance
   ( Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
-  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
   , EraBlockBody era
   , AlonzoEraPParams era
-  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
-  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
+  , InjectRuleFailure "BBODY" Conway.ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
-  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
+  , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , EraRule "BBODY" era ~ DijkstraBBODY era
   , AlonzoEraTx era
   , BabbageEraTxBody era
@@ -322,17 +296,17 @@ instance
   ) =>
   STS (DijkstraBBODY era)
   where
-  type State (DijkstraBBODY era) = ShelleyBbodyState era
+  type State (DijkstraBBODY era) = Shelley.ShelleyBbodyState era
 
   type Signal (DijkstraBBODY era) = DijkstraBbodySignal era
 
-  type Environment (DijkstraBBODY era) = BbodyEnv era
+  type Environment (DijkstraBBODY era) = Shelley.BbodyEnv era
 
   type BaseM (DijkstraBBODY era) = ShelleyBase
 
   type PredicateFailure (DijkstraBBODY era) = DijkstraBbodyPredFailure era
 
-  type Event (DijkstraBBODY era) = AlonzoBbodyEvent era
+  type Event (DijkstraBBODY era) = Alonzo.AlonzoBbodyEvent era
 
   initialRules = []
   transitionRules = [dijkstraBbodyTransition @era]
@@ -340,26 +314,30 @@ instance
 dijkstraBbodyTransition ::
   forall era.
   ( Signal (EraRule "BBODY" era) ~ DijkstraBbodySignal era
-  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
+  , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
+  , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , DijkstraEraBlockBody era
   , BabbageEraTxBody era
-  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
+  , InjectRuleFailure "BBODY" Conway.ConwayBbodyPredFailure era
+  , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , STS (EraRule "BBODY" era)
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , AlonzoEraTx era
-  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
+  , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , ConwayEraPParams era
   ) =>
   TransitionRule (EraRule "BBODY" era)
 dijkstraBbodyTransition = do
-  TRC (BbodyEnv pp account, BbodyState ls blocksMade, DijkstraBbodySignal block@Block {blockBody}) <-
+  TRC
+    ( Shelley.BbodyEnv pp account
+      , Shelley.BbodyState ls blocksMade
+      , DijkstraBbodySignal block@Block {blockBody}
+      ) <-
     judgmentContext
 
   Shelley.validateBlockBodySize block (pp ^. ppProtocolVersionL)
@@ -375,12 +353,12 @@ dijkstraBbodyTransition = do
   ls' <-
     trans @(EraRule "LEDGERS" era) $
       TRC
-        ( LedgersEnv bhSlot curEpoch pp account
+        ( Shelley.LedgersEnv bhSlot curEpoch pp account
         , ls
         , fromStrict txs
         )
 
-  validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
+  Alonzo.validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
 
   Conway.validateBodyRefScriptsSizeTooBig @era pp blockBody (ls ^. utxoL)
 
@@ -390,11 +368,11 @@ dijkstraBbodyTransition = do
       let nonce = block ^. prevNonceBlockHeaderL
        in validatePerasCert nonce PerasKey cert ?! injectFailure (PerasCertValidationFailed cert nonce)
 
-  pure $ BbodyState ls' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
+  pure $ Shelley.BbodyState ls' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
 
 -- | Validate that Peras certificate is in the block body.
 conwayToDijkstraBbodyPredFailure ::
-  forall era. ConwayBbodyPredFailure era -> DijkstraBbodyPredFailure era
+  forall era. Conway.ConwayBbodyPredFailure era -> DijkstraBbodyPredFailure era
 conwayToDijkstraBbodyPredFailure = \case
   Conway.WrongBlockBodySizeBBODY mm -> WrongBlockBodySizeBBODY mm
   Conway.InvalidBodyHashBBODY mm -> InvalidBodyHashBBODY mm
@@ -411,4 +389,4 @@ instance
   Embed ledgers (DijkstraBBODY era)
   where
   wrapFailed = LedgersFailure
-  wrapEvent = ShelleyInAlonzoEvent . Shelley.LedgersEvent
+  wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent

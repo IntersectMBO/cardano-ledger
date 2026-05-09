@@ -22,23 +22,9 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxo (
   SubUtxoEnv (..),
 ) where
 
-import Cardano.Ledger.Allegra.Rules (
-  AllegraUtxoPredFailure,
-  shelleyToAllegraUtxoPredFailure,
- )
-import qualified Cardano.Ledger.Allegra.Rules as Allegra (
-  validateOutsideValidityIntervalUTxO,
- )
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure)
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
-  validateOutputTooBigUTxO,
-  validateOutsideForecast,
-  validateWrongNetworkInTxBody,
- )
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
-import qualified Cardano.Ledger.Babbage.Rules as Babbage (
-  validateOutputTooSmallUTxO,
- )
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -49,12 +35,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (
-  ConwayUtxoPredFailure,
-  allegraToConwayUtxoPredFailure,
-  alonzoToConwayUtxoPredFailure,
-  babbageToConwayUtxoPredFailure,
- )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraSUBUTXO,
@@ -67,14 +48,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosGovState, utxosUtxo)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, updateUTxOStateNoFees)
-import qualified Cardano.Ledger.Shelley.Rules as Shelley (
-  validateBadInputsUTxO,
-  validateInputSetEmptyUTxO,
-  validateOutputBootAddrAttrsTooBig,
-  validateWrongNetwork,
-  validateWrongNetworkWithdrawal,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
@@ -170,33 +144,33 @@ instance InjectRuleFailure "SUBUTXO" DijkstraSubUtxoPredFailure DijkstraEra
 instance InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure DijkstraEra where
   injectFailure = dijkstraUtxoToDijkstraSubUtxoPredFailure
 
-instance InjectRuleFailure "SUBUTXO" ConwayUtxoPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBUTXO" Conway.ConwayUtxoPredFailure DijkstraEra where
   injectFailure = dijkstraUtxoToDijkstraSubUtxoPredFailure . conwayToDijkstraUtxoPredFailure
 
-instance InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure DijkstraEra where
   injectFailure =
     dijkstraUtxoToDijkstraSubUtxoPredFailure
       . conwayToDijkstraUtxoPredFailure
-      . alonzoToConwayUtxoPredFailure
+      . Conway.alonzoToConwayUtxoPredFailure
 
-instance InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure DijkstraEra where
   injectFailure =
     dijkstraUtxoToDijkstraSubUtxoPredFailure
       . conwayToDijkstraUtxoPredFailure
-      . babbageToConwayUtxoPredFailure
+      . Conway.babbageToConwayUtxoPredFailure
 
-instance InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure DijkstraEra where
   injectFailure =
     dijkstraUtxoToDijkstraSubUtxoPredFailure
       . conwayToDijkstraUtxoPredFailure
-      . allegraToConwayUtxoPredFailure
+      . Conway.allegraToConwayUtxoPredFailure
 
-instance InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBUTXO" Shelley.ShelleyUtxoPredFailure DijkstraEra where
   injectFailure =
     dijkstraUtxoToDijkstraSubUtxoPredFailure
       . conwayToDijkstraUtxoPredFailure
-      . allegraToConwayUtxoPredFailure
-      . shelleyToAllegraUtxoPredFailure
+      . Conway.allegraToConwayUtxoPredFailure
+      . Allegra.shelleyToAllegraUtxoPredFailure
 
 instance InjectRuleEvent "SUBUTXO" DijkstraSubUtxoEvent DijkstraEra
 
@@ -222,10 +196,10 @@ instance
   , AlonzoEraTxWits era
   , ConwayEraGov era
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
-  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" Shelley.ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   ) =>
   STS (DijkstraSUBUTXO era)
@@ -248,10 +222,10 @@ dijkstraSubUtxoTransition ::
   , AlonzoEraTxWits era
   , STS (EraRule "SUBUTXO" era)
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
-  , InjectRuleFailure "SUBUTXO" ShelleyUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" AllegraUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" AlonzoUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" Shelley.ShelleyUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
@@ -292,7 +266,7 @@ dijkstraSubUtxoTransition = do
   if isValid
     then do
       newState <-
-        updateUTxOStateNoFees
+        Shelley.updateUTxOStateNoFees
           pp
           utxoState
           txBody

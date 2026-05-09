@@ -32,11 +32,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (
-  CertEnv (..),
-  ConwayCertPredFailure,
-  ConwayCertsPredFailure (..),
- )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -85,7 +81,7 @@ instance InjectRuleFailure "SUBCERTS" DijkstraSubCertsPredFailure DijkstraEra
 instance InjectRuleFailure "SUBCERTS" DijkstraSubCertPredFailure DijkstraEra where
   injectFailure = SubCertFailure
 
-instance InjectRuleFailure "SUBCERTS" ConwayCertsPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBCERTS" Conway.ConwayCertsPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraSubCertsPredFailure @DijkstraEra
 
 instance InjectRuleEvent "SUBCERTS" DijkstraSubCertsEvent DijkstraEra
@@ -137,7 +133,7 @@ dijkstraSubCertsTransition = do
       certStateRest <-
         trans @(DijkstraSUBCERTS era) $ TRC (env, certState, gamma)
       trans @(EraRule "SUBCERT" era) $
-        TRC (CertEnv pp currentEpoch committee committeeProposals, certStateRest, txCert)
+        TRC (Conway.CertEnv pp currentEpoch committee committeeProposals, certStateRest, txCert)
 
 instance
   ( STS (DijkstraSUBCERT era)
@@ -179,10 +175,10 @@ instance (EraPParams era, NFData (Tx SubTx era)) => NFData (SubCertsEnv era)
 
 conwayToDijkstraSubCertsPredFailure ::
   forall era.
-  ( InjectRuleFailure "SUBCERT" ConwayCertPredFailure era
-  , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
+  ( InjectRuleFailure "SUBCERT" Conway.ConwayCertPredFailure era
+  , PredicateFailure (EraRule "CERT" era) ~ Conway.ConwayCertPredFailure era
   ) =>
-  ConwayCertsPredFailure era -> DijkstraSubCertsPredFailure era
+  Conway.ConwayCertsPredFailure era -> DijkstraSubCertsPredFailure era
 conwayToDijkstraSubCertsPredFailure = \case
-  WithdrawalsNotInRewardsCERTS _ -> error "Impossible: `WithdrawalsNotInRewardsCERTS` for SUBCERTS"
-  CertFailure f -> SubCertFailure (injectFailure @"SUBCERT" f)
+  Conway.WithdrawalsNotInRewardsCERTS _ -> error "Impossible: `WithdrawalsNotInRewardsCERTS` for SUBCERTS"
+  Conway.CertFailure f -> SubCertFailure (injectFailure @"SUBCERT" f)

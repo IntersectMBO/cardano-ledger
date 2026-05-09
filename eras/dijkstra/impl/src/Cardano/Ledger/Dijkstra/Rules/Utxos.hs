@@ -5,13 +5,8 @@
 
 module Cardano.Ledger.Dijkstra.Rules.Utxos () where
 
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosEvent, AlonzoUtxosPredFailure)
-import Cardano.Ledger.Conway.Rules (
-  ConwayUtxosEvent,
-  ConwayUtxosPredFailure,
-  alonzoToConwayUtxosEvent,
-  alonzoToConwayUtxosPredFailure,
- )
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Core (
   EraRuleEvent,
   EraRuleFailure,
@@ -20,16 +15,16 @@ import Cardano.Ledger.Dijkstra.Core (
  )
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 
-type instance EraRuleFailure "UTXOS" DijkstraEra = ConwayUtxosPredFailure DijkstraEra
+type instance EraRuleFailure "UTXOS" DijkstraEra = Conway.ConwayUtxosPredFailure DijkstraEra
 
-type instance EraRuleEvent "UTXOS" DijkstraEra = ConwayUtxosEvent DijkstraEra
+type instance EraRuleEvent "UTXOS" DijkstraEra = Conway.ConwayUtxosEvent DijkstraEra
 
-instance InjectRuleFailure "UTXOS" ConwayUtxosPredFailure DijkstraEra
+instance InjectRuleFailure "UTXOS" Conway.ConwayUtxosPredFailure DijkstraEra
 
-instance InjectRuleEvent "UTXOS" ConwayUtxosEvent DijkstraEra
+instance InjectRuleEvent "UTXOS" Conway.ConwayUtxosEvent DijkstraEra
 
-instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure DijkstraEra where
-  injectFailure = alonzoToConwayUtxosPredFailure
+instance InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure DijkstraEra where
+  injectFailure = Conway.alonzoToConwayUtxosPredFailure
 
-instance InjectRuleEvent "UTXOS" AlonzoUtxosEvent DijkstraEra where
-  injectEvent = alonzoToConwayUtxosEvent
+instance InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent DijkstraEra where
+  injectEvent = Conway.alonzoToConwayUtxosEvent

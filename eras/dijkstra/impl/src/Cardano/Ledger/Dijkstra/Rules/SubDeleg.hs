@@ -25,11 +25,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (
-  ConwayDelegEnv,
-  ConwayDelegPredFailure,
-  conwayDelegTransition,
- )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -50,7 +46,7 @@ import Control.State.Transition.Extended (
 import Data.Void (Void)
 import GHC.Generics (Generic)
 
-newtype DijkstraSubDelegPredFailure era = DijkstraSubDelegPredFailure (ConwayDelegPredFailure era)
+newtype DijkstraSubDelegPredFailure era = DijkstraSubDelegPredFailure (Conway.ConwayDelegPredFailure era)
   deriving (Generic, Eq, Show, NFData, EncCBOR, DecCBOR)
 
 type instance EraRuleFailure "SUBDELEG" DijkstraEra = DijkstraSubDelegPredFailure DijkstraEra
@@ -59,22 +55,22 @@ type instance EraRuleEvent "SUBDELEG" DijkstraEra = VoidEraRule "SUBDELEG" Dijks
 
 instance InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure DijkstraEra
 
-instance InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBDELEG" Conway.ConwayDelegPredFailure DijkstraEra where
   injectFailure = DijkstraSubDelegPredFailure
 
 instance
   ( EraGov era
   , ConwayEraCertState era
   , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
-  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" Conway.ConwayDelegPredFailure era
   ) =>
   STS (DijkstraSUBDELEG era)
   where
   type State (DijkstraSUBDELEG era) = CertState era
   type Signal (DijkstraSUBDELEG era) = ConwayDelegCert
-  type Environment (DijkstraSUBDELEG era) = ConwayDelegEnv era
+  type Environment (DijkstraSUBDELEG era) = Conway.ConwayDelegEnv era
   type BaseM (DijkstraSUBDELEG era) = ShelleyBase
   type PredicateFailure (DijkstraSUBDELEG era) = DijkstraSubDelegPredFailure era
   type Event (DijkstraSUBDELEG era) = Void
 
-  transitionRules = [conwayDelegTransition]
+  transitionRules = [Conway.conwayDelegTransition]

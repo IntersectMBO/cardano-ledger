@@ -22,7 +22,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubLedger (
   SubLedgerEnv (..),
 ) where
 
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -32,19 +32,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (
-  ConwayCertsPredFailure,
-  ConwayDelegPredFailure,
-  ConwayGovCertPredFailure,
-  ConwayLedgerPredFailure (..),
-  GovEnv (..),
-  GovSignal (..),
-  gsCertificates,
-  gsProposalProcedures,
-  gsVotingProcedures,
-  validateTreasuryValue,
-  validateWithdrawalsDelegated,
- )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -77,11 +65,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (
-  PoolEvent,
-  ShelleyPoolPredFailure,
-  epochFromSlot,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -159,7 +143,7 @@ instance InjectRuleFailure "SUBLEDGER" DijkstraSubUtxowPredFailure DijkstraEra w
 instance InjectRuleFailure "SUBLEDGER" DijkstraSubCertsPredFailure DijkstraEra where
   injectFailure = SubCertsFailure
 
-instance InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBLEDGER" Conway.ConwayLedgerPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraSubLedgerPredFailure
 
 data DijkstraSubLedgerEvent era
@@ -201,16 +185,16 @@ instance
   , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
   , Embed (EraRule "SUBUTXOW" era) (DijkstraSUBLEDGER era)
   , Embed (EraRule "SUBCERTS" era) (DijkstraSUBCERTS era)
-  , InjectRuleEvent "SUBPOOL" PoolEvent era
+  , InjectRuleEvent "SUBPOOL" Shelley.PoolEvent era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
-  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
-  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
-  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" Conway.ConwayGovCertPredFailure era
+  , InjectRuleFailure "SUBDELEG" Conway.ConwayDelegPredFailure era
   , InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure era
-  , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
-  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBLEDGER" Conway.ConwayLedgerPredFailure era
+  , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   STS (DijkstraSUBLEDGER era)
@@ -240,14 +224,14 @@ dijkstraSubLedgersTransition ::
   , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
   , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
   , Embed (EraRule "SUBUTXOW" era) (DijkstraSUBLEDGER era)
-  , InjectRuleFailure "SUBLEDGER" ConwayLedgerPredFailure era
-  , InjectRuleEvent "SUBPOOL" PoolEvent era
+  , InjectRuleFailure "SUBLEDGER" Conway.ConwayLedgerPredFailure era
+  , InjectRuleEvent "SUBPOOL" Shelley.PoolEvent era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
-  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
-  , InjectRuleFailure "SUBGOVCERT" ConwayGovCertPredFailure era
-  , InjectRuleFailure "SUBDELEG" ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBGOVCERT" Conway.ConwayGovCertPredFailure era
+  , InjectRuleFailure "SUBDELEG" Conway.ConwayDelegPredFailure era
   , STS (EraRule "SUBLEDGER" era)
   , TxCert era ~ DijkstraTxCert era
   ) =>
@@ -261,16 +245,16 @@ dijkstraSubLedgersTransition = do
     judgmentContext
 
   let tx = stAnnTx ^. txStAnnTxG
-  curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
+  curEpochNo <- maybe (liftSTS $ Shelley.epochFromSlot slot) pure mbCurEpochNo
   let txBody = tx ^. bodyTxL
   let govState = utxoState ^. utxosGovStateL
   let committee = govState ^. committeeGovStateL
   let proposals = govState ^. proposalsGovStateL
       accounts = certState ^. certDStateL . accountsL
 
-  runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+  runTest $ Conway.validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
 
-  runTest $ validateWithdrawalsDelegated accounts tx
+  runTest $ Conway.validateWithdrawalsDelegated accounts tx
 
   certStateAfterSubCerts <-
     trans @(EraRule "SUBCERTS" era) $
@@ -280,7 +264,7 @@ dijkstraSubLedgersTransition = do
         , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
         )
   let govEnv =
-        GovEnv
+        Conway.GovEnv
           (txIdTxBody txBody)
           curEpochNo
           pp
@@ -288,10 +272,10 @@ dijkstraSubLedgersTransition = do
           certStateAfterSubCerts
           committee
   let govSignal =
-        GovSignal
-          { gsVotingProcedures = txBody ^. votingProceduresTxBodyL
-          , gsProposalProcedures = txBody ^. proposalProceduresTxBodyL
-          , gsCertificates = txBody ^. certsTxBodyL
+        Conway.GovSignal
+          { Conway.gsVotingProcedures = txBody ^. votingProceduresTxBodyL
+          , Conway.gsProposalProcedures = txBody ^. proposalProceduresTxBodyL
+          , Conway.gsCertificates = txBody ^. certsTxBodyL
           }
   proposalsState <-
     trans @(EraRule "SUBGOV" era) $
@@ -380,20 +364,20 @@ conwayToDijkstraSubLedgerPredFailure ::
   forall era.
   ( InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure era
   , PredicateFailure (EraRule "UTXOW" era) ~ DijkstraUtxowPredFailure era
-  , InjectRuleFailure "SUBCERTS" ConwayCertsPredFailure era
-  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
+  , InjectRuleFailure "SUBCERTS" Conway.ConwayCertsPredFailure era
+  , PredicateFailure (EraRule "CERTS" era) ~ Conway.ConwayCertsPredFailure era
   , InjectRuleFailure "SUBGOV" DijkstraGovPredFailure era
   , PredicateFailure (EraRule "GOV" era) ~ DijkstraGovPredFailure era
   ) =>
-  ConwayLedgerPredFailure era ->
+  Conway.ConwayLedgerPredFailure era ->
   DijkstraSubLedgerPredFailure era
 conwayToDijkstraSubLedgerPredFailure = \case
-  ConwayUtxowFailure f -> SubUtxowFailure (injectFailure @"SUBUTXOW" f)
-  ConwayCertsFailure f -> SubCertsFailure (injectFailure @"SUBCERTS" f)
-  ConwayGovFailure f -> SubGovFailure (injectFailure @"SUBGOV" f)
-  ConwayWdrlNotDelegatedToDRep x -> SubWdrlNotDelegatedToDRep x
-  ConwayTreasuryValueMismatch x -> SubTreasuryValueMismatch x
-  ConwayTxRefScriptsSizeTooBig _ -> error "Impossible: `ConwayTxRefScriptsSizeTooBig` for SUBLEDGER"
-  ConwayMempoolFailure _ -> error "Impossible: `ConwayMempoolFailure` for SUBLEDGER"
-  ConwayWithdrawalsMissingAccounts _ -> error "Impossible: `ConwayWithdrawalsMissingAccounts` for SUBLEDGER"
-  ConwayIncompleteWithdrawals _ -> error "Impossible: `ConwayIncompleteWithdrawals` for SUBLEDGER"
+  Conway.ConwayUtxowFailure f -> SubUtxowFailure (injectFailure @"SUBUTXOW" f)
+  Conway.ConwayCertsFailure f -> SubCertsFailure (injectFailure @"SUBCERTS" f)
+  Conway.ConwayGovFailure f -> SubGovFailure (injectFailure @"SUBGOV" f)
+  Conway.ConwayWdrlNotDelegatedToDRep x -> SubWdrlNotDelegatedToDRep x
+  Conway.ConwayTreasuryValueMismatch x -> SubTreasuryValueMismatch x
+  Conway.ConwayTxRefScriptsSizeTooBig _ -> error "Impossible: `ConwayTxRefScriptsSizeTooBig` for SUBLEDGER"
+  Conway.ConwayMempoolFailure _ -> error "Impossible: `ConwayMempoolFailure` for SUBLEDGER"
+  Conway.ConwayWithdrawalsMissingAccounts _ -> error "Impossible: `ConwayWithdrawalsMissingAccounts` for SUBLEDGER"
+  Conway.ConwayIncompleteWithdrawals _ -> error "Impossible: `ConwayIncompleteWithdrawals` for SUBLEDGER"

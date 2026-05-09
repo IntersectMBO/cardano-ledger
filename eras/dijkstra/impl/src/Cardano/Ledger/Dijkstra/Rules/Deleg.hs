@@ -5,12 +5,12 @@
 
 module Cardano.Ledger.Dijkstra.Rules.Deleg () where
 
-import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure)
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 
-type instance EraRuleFailure "DELEG" DijkstraEra = ConwayDelegPredFailure DijkstraEra
+type instance EraRuleFailure "DELEG" DijkstraEra = Conway.ConwayDelegPredFailure DijkstraEra
 
 type instance EraRuleEvent "DELEG" DijkstraEra = VoidEraRule "DELEG" DijkstraEra
 
-instance InjectRuleFailure "DELEG" ConwayDelegPredFailure DijkstraEra
+instance InjectRuleFailure "DELEG" Conway.ConwayDelegPredFailure DijkstraEra
