@@ -117,7 +117,6 @@ exampleConwayBasedTopTx ::
   forall era.
   ( AlonzoEraTx era
   , ConwayEraTxBody era
-  , AlonzoEraTxAuxData era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   , EraPlutusTxInfo 'PlutusV3 era
@@ -132,7 +131,6 @@ exampleConwayBasedTx ::
   forall era l.
   ( AlonzoEraTx era
   , ConwayEraTxBody era
-  , AlonzoEraTxAuxData era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   , EraPlutusTxInfo 'PlutusV3 era

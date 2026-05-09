@@ -103,7 +103,6 @@ exampleBabbageBasedTopTx ::
   forall era.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
-  , AlonzoEraTxAuxData era
   , Value era ~ MaryValue
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
@@ -118,7 +117,6 @@ exampleBabbageBasedTx ::
   forall era l.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
-  , AlonzoEraTxAuxData era
   , Value era ~ MaryValue
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
@@ -146,7 +144,6 @@ addBabbageBasedTxFeatures ::
   forall era l.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
-  , AlonzoEraTxAuxData era
   , Value era ~ MaryValue
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era

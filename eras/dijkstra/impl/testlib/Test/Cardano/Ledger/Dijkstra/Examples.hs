@@ -109,7 +109,6 @@ exampleDijkstraBasedTopTx ::
   , EraPlutusTxInfo PlutusV2 era
   , EraPlutusTxInfo PlutusV3 era
   , EraPlutusTxInfo PlutusV4 era
-  , AlonzoEraTxAuxData era
   ) =>
   Tx TopTx era
 exampleDijkstraBasedTopTx =
@@ -127,7 +126,6 @@ exampleDijkstraBasedSubTx ::
   , EraPlutusTxInfo PlutusV2 era
   , EraPlutusTxInfo PlutusV3 era
   , EraPlutusTxInfo PlutusV4 era
-  , AlonzoEraTxAuxData era
   ) =>
   Tx SubTx era
 exampleDijkstraBasedSubTx =
@@ -139,7 +137,6 @@ addDijkstraBasedTopTxFeatures ::
   forall era.
   ( AlonzoEraTx era
   , DijkstraEraTxBody era
-  , AlonzoEraTxAuxData era
   , DijkstraEraScript era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
@@ -172,7 +169,6 @@ addDijkstraBasedTxFeatures ::
   forall era l.
   ( AlonzoEraTx era
   , DijkstraEraTxBody era
-  , AlonzoEraTxAuxData era
   , DijkstraEraScript era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV4 era

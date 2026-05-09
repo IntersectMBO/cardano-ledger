@@ -39,9 +39,9 @@ import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody (upgradeGovAction, upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxWits ()
-import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
+  LedgerState (..),
   NewEpochState (..),
   UTxOState (..),
   epochStateGovStateL,
@@ -123,22 +123,27 @@ instance TranslateEra DijkstraEra DState where
 instance TranslateEra DijkstraEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra DijkstraEra API.LedgerState where
+instance TranslateEra DijkstraEra VState where
+  translateEra _ vState = pure $ coerce vState
+
+instance TranslateEra DijkstraEra LedgerState where
   translateEra ctx ls =
     pure
-      API.LedgerState
-        { API.lsUTxOState = translateEra' ctx $ ls ^. lsUTxOStateL
-        , API.lsCertState = translateCertState ctx $ ls ^. lsCertStateL
+      LedgerState
+        { lsUTxOState = translateEra' ctx $ ls ^. lsUTxOStateL
+        , lsCertState = translateCertState ctx $ ls ^. lsCertStateL
         }
 
 translateCertState ::
   TranslationContext DijkstraEra ->
-  API.CertState ConwayEra ->
-  API.CertState DijkstraEra
-translateCertState ctx scert =
-  def
-    & certDStateL .~ translateEra' ctx (scert ^. certDStateL)
-    & certPStateL .~ translateEra' ctx (scert ^. certPStateL)
+  CertState ConwayEra ->
+  CertState DijkstraEra
+translateCertState ctx ConwayCertState {..} =
+  ConwayCertState
+    { conwayCertVState = translateEra' ctx conwayCertVState
+    , conwayCertPState = translateEra' ctx conwayCertPState
+    , conwayCertDState = translateEra' ctx conwayCertDState
+    }
 
 instance TranslateEra DijkstraEra GovAction where
   translateEra _ = pure . upgradeGovAction
@@ -217,14 +222,14 @@ instance TranslateEra DijkstraEra UTxOState where
   translateEra ctxt us =
     pure
       UTxOState
-        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
-        , API.utxosDeposited = API.utxosDeposited us
-        , API.utxosFees = API.utxosFees us
-        , API.utxosGovState = translateEra' ctxt $ API.utxosGovState us
-        , API.utxosInstantStake = coerce $ API.utxosInstantStake us
-        , API.utxosDonation = API.utxosDonation us
+        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        , utxosDeposited = utxosDeposited us
+        , utxosFees = utxosFees us
+        , utxosGovState = translateEra' ctxt $ utxosGovState us
+        , utxosInstantStake = coerce $ utxosInstantStake us
+        , utxosDonation = utxosDonation us
         }
 
-instance TranslateEra DijkstraEra API.UTxO where
+instance TranslateEra DijkstraEra UTxO where
   translateEra _ctxt utxo =
-    pure $ API.UTxO $ upgradeTxOut `Map.map` API.unUTxO utxo
+    pure $ UTxO $ upgradeTxOut `Map.map` unUTxO utxo

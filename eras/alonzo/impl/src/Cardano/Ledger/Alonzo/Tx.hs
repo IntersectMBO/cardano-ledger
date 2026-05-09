@@ -83,6 +83,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   plutusScriptLanguage,
   txscriptfee,
  )
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoEraTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   ScriptIntegrityHash,
@@ -205,7 +206,12 @@ alonzoTxL :: Lens' (Tx l AlonzoEra) (AlonzoTx l AlonzoEra)
 alonzoTxL = lens unAlonzoTx $ const MkAlonzoTx
 
 class
-  (EraTx era, AlonzoEraTxBody era, AlonzoEraTxWits era, AlonzoEraScript era) =>
+  ( EraTx era
+  , AlonzoEraTxBody era
+  , AlonzoEraTxWits era
+  , AlonzoEraScript era
+  , AlonzoEraTxAuxData era
+  ) =>
   AlonzoEraTx era
   where
   isValidTxL :: Lens' (Tx TopTx era) IsValid
