@@ -107,7 +107,7 @@ fromListN n xs = VG.create $ do
   removeDuplicates keepSecondDuplicate mv
 {-# INLINE fromListN #-}
 
--- | Convert a sorted assoc list with distionct keys into a KVVector
+-- | Convert a sorted assoc list with distinct keys into a KVVector
 fromDistinctAscList ::
   (VG.Vector kv k, VG.Vector vv v) =>
   [(k, v)] ->
