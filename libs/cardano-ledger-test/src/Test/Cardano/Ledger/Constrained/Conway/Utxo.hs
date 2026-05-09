@@ -36,7 +36,7 @@ import Cardano.Ledger.Conway.Core (
 import Cardano.Ledger.Conway.Governance (GovActionId)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Constrained.API
 import Control.DeepSeq (NFData)
 import Control.Monad.Reader (runReader)
@@ -149,7 +149,7 @@ utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, uePParams, ueCertState}
                     (lit ueCertState)
           ]
   where
-    curEpoch = runReader (epochFromSlot ueSlot) testGlobals
+    curEpoch = runReader (Shelley.epochFromSlot ueSlot) testGlobals
 
 data UtxoExecContext era = UtxoExecContext
   { uecTx :: !(Tx TopTx era)
@@ -172,7 +172,7 @@ instance
   , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
-  , ToExpr (PParamsHKD Identity era)
+  , ToExpr (PParamsHKD Shelley.Identity era)
   , EraCertState era
   , ToExpr (CertState era)
   , ToExpr (Tx TopTx era)
@@ -196,7 +196,7 @@ instance
             !> To uecUtxoEnv
 
 instance CertState era ~ ConwayCertState era => Inject (UtxoExecContext era) (ConwayCertState era) where
-  inject ctx = (uecUtxoEnv ctx) ^. utxoEnvCertStateL
+  inject ctx = (uecUtxoEnv ctx) ^. Shelley.utxoEnvCertStateL
 
 utxoTxSpec ::
   HasSpec (Tx TopTx era) =>

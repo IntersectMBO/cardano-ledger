@@ -5,13 +5,13 @@
 module Bench.Constrained.STS where
 
 import Cardano.Ledger.Conway
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Constrained.API
 import Control.DeepSeq
 import Criterion
 import Test.Cardano.Ledger.Constrained.Conway
 
-govEnv :: GovEnv ConwayEra
+govEnv :: Conway.GovEnv ConwayEra
 govEnv = genFromSpecWithSeed 10 30 govEnvSpec
 
 singleProposalTreeSpec :: Specification (ProposalTree ConwayEra)

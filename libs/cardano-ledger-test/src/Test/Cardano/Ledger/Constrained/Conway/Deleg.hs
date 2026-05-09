@@ -20,7 +20,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
@@ -154,10 +154,10 @@ dStateSpec _univ _wdrls = constrained $ \ [var| dstate |] ->
 conwayDelegCertSpec ::
   forall era.
   (EraPParams era, ConwayEraCertState era) =>
-  ConwayDelegEnv era ->
+  Conway.ConwayDelegEnv era ->
   CertState era ->
   Specification ConwayDelegCert
-conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
+conwayDelegCertSpec (Conway.ConwayDelegEnv pp pools) certState =
   let ds = certState ^. certDStateL
       vs = certState ^. certVStateL
       accountsMap = ds ^. accountsL . accountsMapL
@@ -209,7 +209,7 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
 
 delegEnvSpec ::
   EraSpecPParams era =>
-  Specification (ConwayDelegEnv era)
+  Specification (Conway.ConwayDelegEnv era)
 delegEnvSpec = constrained $ \env ->
   match env $ \pp _ ->
     pp `satisfies` pparamsSpec
@@ -221,10 +221,10 @@ shelleyDelegCertSpec ::
   forall era.
   (EraPParams era, EraAccounts era) =>
   WitUniv era ->
-  ConwayDelegEnv era ->
+  Conway.ConwayDelegEnv era ->
   DState era ->
   Specification ShelleyDelegCert
-shelleyDelegCertSpec univ (ConwayDelegEnv _pp pools) ds =
+shelleyDelegCertSpec univ (Conway.ConwayDelegEnv _pp pools) ds =
   let accountsMap = ds ^. accountsL . accountsMapL
    in constrained $ \dc ->
         (caseOn dc)

@@ -36,12 +36,8 @@ package plutus-core
 module Main where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoUTXOW)
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyLEDGER,
-  ShelleyLedgerEvent (UtxowEvent),
-  ShelleyLedgerPredFailure (UtxowFailure),
- )
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended (Embed (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
@@ -55,13 +51,13 @@ import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (relevantCasesAreCovered
 
 -- ===============================================================
 
-instance Embed (AlonzoBBODY AlonzoEra) (CHAIN AlonzoEra) where
+instance Embed (Alonzo.AlonzoBBODY AlonzoEra) (CHAIN AlonzoEra) where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
-instance Embed (AlonzoUTXOW AlonzoEra) (ShelleyLEDGER AlonzoEra) where
-  wrapFailed = UtxowFailure
-  wrapEvent = UtxowEvent
+instance Embed (Alonzo.AlonzoUTXOW AlonzoEra) (Shelley.ShelleyLEDGER AlonzoEra) where
+  wrapFailed = Shelley.UtxowFailure
+  wrapEvent = Shelley.UtxowEvent
 
 profileCover :: IO ()
 profileCover =

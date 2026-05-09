@@ -16,11 +16,11 @@ import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayUtxosEnv (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (utxosUtxo)
-import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Constrained.API hiding (forAll)
 import Control.Monad.Reader
 import Control.State.Transition.Extended
@@ -69,7 +69,7 @@ stsPropertyV2 ::
   , Signal (EraRule r era) ~ sig
   , PredicateFailure (EraRule r era) ~ fail
   , STS (EraRule r era)
-  , BaseM (EraRule r era) ~ ReaderT Globals Identity
+  , BaseM (EraRule r era) ~ ReaderT Globals Shelley.Identity
   , Testable p
   , HasSpec env
   , HasSpec st
@@ -94,7 +94,7 @@ stsPropertyV2' ::
   , Signal (EraRule r ConwayEra) ~ sig
   , PredicateFailure (EraRule r ConwayEra) ~ fail
   , STS (EraRule r ConwayEra)
-  , BaseM (EraRule r ConwayEra) ~ ReaderT Globals Identity
+  , BaseM (EraRule r ConwayEra) ~ ReaderT Globals Shelley.Identity
   , Testable p
   , HasSpec env
   , HasSpec st
@@ -150,7 +150,7 @@ stsPropertyV2Gen ::
   , Signal (EraRule r era) ~ sig
   , PredicateFailure (EraRule r era) ~ fail
   , STS (EraRule r era)
-  , BaseM (EraRule r era) ~ ReaderT Globals Identity
+  , BaseM (EraRule r era) ~ ReaderT Globals Shelley.Identity
   , Testable p
   , HasSpec env
   , HasSpec st
@@ -228,8 +228,8 @@ prop_UTXOS =
           mkStAnnTx
             (epochInfo testGlobals)
             (systemStart testGlobals)
-            (cuePParams env)
-            (cueUTxO env)
+            (Conway.cuePParams env)
+            (Conway.cueUTxO env)
             tx
     )
     $ \_env _st _sig _st' -> True
@@ -330,7 +330,7 @@ prop_UTXOW =
           mkStAnnTx
             (epochInfo testGlobals)
             (systemStart testGlobals)
-            (uePParams env)
+            (Shelley.uePParams env)
             (utxosUtxo st)
             tx
     )

@@ -22,7 +22,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
@@ -47,7 +47,7 @@ import Test.QuickCheck hiding (forAll, witness)
 certEnvSpec ::
   forall era.
   EraSpecPParams era =>
-  WitUniv era -> Specification (CertEnv era)
+  WitUniv era -> Specification (Conway.CertEnv era)
 certEnvSpec _univ =
   constrained $ \ce ->
     match ce $ \pp _currEpoch _currCommittee _proposals ->
@@ -97,10 +97,10 @@ conwayTxCertSpec ::
   forall era.
   era ~ ConwayEra =>
   WitUniv era ->
-  CertEnv era ->
+  Conway.CertEnv era ->
   CertState era ->
   Specification (ConwayTxCert era)
-conwayTxCertSpec univ (CertEnv pp ce cc cp) certState =
+conwayTxCertSpec univ (Conway.CertEnv pp ce cc cp) certState =
   constrained $ \txCert ->
     caseOn
       txCert
@@ -111,9 +111,9 @@ conwayTxCertSpec univ (CertEnv pp ce cc cp) certState =
       (branchW 2 $ \govCert -> satisfies govCert $ govCertSpec univ govCertEnv certState)
   where
     certPState = certState ^. certPStateL
-    delegEnv = ConwayDelegEnv pp (psStakePools certPState)
+    delegEnv = Conway.ConwayDelegEnv pp (psStakePools certPState)
     poolEnv = PoolEnv ce pp
-    govCertEnv = ConwayGovCertEnv pp ce cc cp
+    govCertEnv = Conway.ConwayGovCertEnv pp ce cc cp
 
 -- ==============================================================
 -- Shelley Certs
@@ -161,10 +161,10 @@ shelleyTxCertSpec ::
   forall era.
   (AtMostEra "Babbage" era, EraSpecPParams era, EraAccounts era) =>
   WitUniv era ->
-  CertEnv era ->
+  Conway.CertEnv era ->
   ShelleyCertState era ->
   Specification (ShelleyTxCert era)
-shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (ShelleyCertState pstate dstate) =
+shelleyTxCertSpec univ (Conway.CertEnv pp currEpoch _ _) (ShelleyCertState pstate dstate) =
   constrained $ \ [var|shelleyTxCert|] ->
     -- These weights try to make it equally likely that each of the many certs
     -- across the 3 categories are chosen at similar frequencies.
@@ -174,7 +174,7 @@ shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (ShelleyCertState pstate dstat
             deleg
             ( shelleyDelegCertSpec @era
                 univ
-                (ConwayDelegEnv pp (psStakePools pstate))
+                (Conway.ConwayDelegEnv pp (psStakePools pstate))
                 dstate
             )
       )
@@ -192,7 +192,7 @@ class
   ) =>
   EraSpecCert era
   where
-  txCertSpec :: WitUniv era -> CertEnv era -> CertState era -> Specification (TxCert era)
+  txCertSpec :: WitUniv era -> Conway.CertEnv era -> CertState era -> Specification (TxCert era)
   txCertKey :: TxCert era -> CertKey
   certStateSpec ::
     WitUniv era ->
@@ -292,7 +292,7 @@ testShelleyCert = do
   univ <- genWitUniv @era 200
   wdrls <- genFromSpec (constrained $ \x -> witness univ x)
   delegatees <- genFromSpec (delegateeSpec univ)
-  env <- genFromSpec @(CertEnv era) (certEnvSpec @era univ)
+  env <- genFromSpec @(Conway.CertEnv era) (certEnvSpec @era univ)
   dstate <-
     genFromSpec @(ShelleyCertState era)
       (shelleyCertStateSpec @era univ delegatees wdrls)
@@ -313,7 +313,7 @@ testShelleyCert = do
 testConwayCert :: Gen Property
 testConwayCert = do
   univ <- genWitUniv @ConwayEra 200
-  env <- genFromSpec @(CertEnv ConwayEra) (certEnvSpec @ConwayEra univ)
+  env <- genFromSpec @(Conway.CertEnv ConwayEra) (certEnvSpec @ConwayEra univ)
   wdrls <- genFromSpec (constrained $ \x -> witness univ x)
   delegatees <- genFromSpec (delegateeSpec univ)
   dstate <-

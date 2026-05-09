@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.Conway.Rules (GovEnv (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -109,12 +109,12 @@ utxostateX pp = do
   certstate <- csX @era
   genFromSpec @(UTxOState era) (utxoStateSpec pp univ (lit certstate))
 
-govenvX :: PParams ConwayEra -> Gen (GovEnv ConwayEra)
-govenvX pp = genFromSpec @(GovEnv ConwayEra) (govEnvSpec pp)
+govenvX :: PParams ConwayEra -> Gen (Conway.GovEnv ConwayEra)
+govenvX pp = genFromSpec @(Conway.GovEnv ConwayEra) (govEnvSpec pp)
 
 conwaygovX :: PParams ConwayEra -> Gen (ConwayGovState ConwayEra)
 conwaygovX pp = do
-  env <- genFromSpec @(GovEnv ConwayEra) (govEnvSpec pp)
+  env <- genFromSpec @(Conway.GovEnv ConwayEra) (govEnvSpec pp)
   genFromSpec @(ConwayGovState ConwayEra) (conwayGovStateSpec pp env)
 
 lsX ::

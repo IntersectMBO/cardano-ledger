@@ -17,7 +17,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.Rules qualified as Conway
 import Cardano.Ledger.Conway.State
 import Constrained.API
 import Data.Coerce
@@ -35,7 +35,7 @@ succVersionOrCurrent :: ProtVer -> Version
 succVersionOrCurrent pv = fromMaybe (pvMajor pv) (succVersion (pvMajor pv))
 
 govEnvSpec ::
-  Specification (GovEnv ConwayEra)
+  Specification (Conway.GovEnv ConwayEra)
 govEnvSpec = constrained $ \ge ->
   match ge $ \_ _ pp _ _ _ ->
     satisfies pp pparamsSpec
@@ -44,9 +44,9 @@ govEnvSpec = constrained $ \ge ->
 -- is never going to be generated, and the real representation of `Proposals` doesn't
 -- allow the id to appear twice.
 govProposalsSpec ::
-  GovEnv ConwayEra ->
+  Conway.GovEnv ConwayEra ->
   Specification (Proposals ConwayEra)
-govProposalsSpec GovEnv {geEpoch, gePParams, geGuardrailsScriptHash, geCertState} =
+govProposalsSpec Conway.GovEnv {geEpoch, gePParams, geGuardrailsScriptHash, geCertState} =
   proposalsSpec
     (lit geEpoch)
     (lit (succVersionOrCurrent (gePParams ^. ppProtocolVersionL)))
@@ -301,10 +301,10 @@ onHardFork ::
 onHardFork gas k = onCon @"HardForkInitiation" (pProcGovAction_ . gasProposalProcedure_ $ gas) k
 
 govProceduresSpec ::
-  GovEnv ConwayEra ->
+  Conway.GovEnv ConwayEra ->
   Proposals ConwayEra ->
-  Specification (GovSignal ConwayEra)
-govProceduresSpec ge@GovEnv {..} ps =
+  Specification (Conway.GovSignal ConwayEra)
+govProceduresSpec ge@Conway.GovEnv {..} ps =
   let actions f =
         [ gid
         | (gid, act) <- Map.toList $ proposalsActionsMap ps
@@ -359,11 +359,11 @@ govProceduresSpec ge@GovEnv {..} ps =
           ]
 
 wfGovAction ::
-  GovEnv ConwayEra ->
+  Conway.GovEnv ConwayEra ->
   Proposals ConwayEra ->
   Term (GovAction ConwayEra) ->
   Pred
-wfGovAction GovEnv {geGuardrailsScriptHash, geEpoch, gePParams, geCertState} ps govAction =
+wfGovAction Conway.GovEnv {geGuardrailsScriptHash, geEpoch, gePParams, geCertState} ps govAction =
   caseOn
     govAction
     -- ParameterChange

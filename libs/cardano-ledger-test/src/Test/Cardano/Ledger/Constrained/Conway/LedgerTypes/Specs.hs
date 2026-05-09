@@ -34,7 +34,7 @@ import Cardano.Ledger.Coin (
   knownNonZeroCoin,
  )
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -152,13 +152,13 @@ genCertContext univ = do
 -- This is a very large Specification (500 lines), so we don't want to redo it.
 -- The only important part of the GovEnv is that the embedded PParams matches
 -- the PParams passed to conwayGovStateSpec.
-testGovEnv :: PParams ConwayEra -> GovEnv ConwayEra
+testGovEnv :: PParams ConwayEra -> Conway.GovEnv ConwayEra
 testGovEnv pp = unsafePerformIO $ generate $ do
-  genFromSpec @(GovEnv ConwayEra) (govEnvSpec pp)
+  genFromSpec @(Conway.GovEnv ConwayEra) (govEnvSpec pp)
 
 govEnvSpec ::
   PParams ConwayEra ->
-  Specification (GovEnv ConwayEra)
+  Specification (Conway.GovEnv ConwayEra)
 govEnvSpec pp = constrained $ \ [var|govEnv|] ->
   match govEnv $ \_ _ [var|cppx|] _ _ _ -> [assert $ lit pp ==. cppx]
 
@@ -470,7 +470,7 @@ getDelegs cs =
 
 conwayGovStateSpec ::
   PParams ConwayEra ->
-  GovEnv ConwayEra ->
+  Conway.GovEnv ConwayEra ->
   Specification (ConwayGovState ConwayEra)
 conwayGovStateSpec pp govenv =
   constrained $ \ [var|conwaygovstate|] ->

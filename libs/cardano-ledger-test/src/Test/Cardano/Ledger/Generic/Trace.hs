@@ -17,8 +17,8 @@ module Test.Cardano.Ledger.Generic.Trace where
 
 -- =========================================================================
 
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import Cardano.Ledger.Coin (knownNonZeroCoin)
 import Cardano.Ledger.Shelley.Core
@@ -33,11 +33,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertStateL,
   prevPParamsEpochStateL,
  )
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyLedgerPredFailure (..),
-  ShelleyLedgersPredFailure (..),
-  ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)
@@ -225,11 +221,11 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
     getw
       Babbage
       ( MockChainFromLedgersFailure
-          ( LedgerFailure
-              ( UtxowFailure
-                  ( AlonzoInBabbageUtxowPredFailure
-                      ( ShelleyInAlonzoUtxowPredFailure
-                          (ScriptWitnessNotValidatingUTXOW set)
+          ( Shelley.LedgerFailure
+              ( Shelley.UtxowFailure
+                  ( Babbage.AlonzoInBabbageUtxowPredFailure
+                      ( Alonzo.ShelleyInAlonzoUtxowPredFailure
+                          (Shelley.ScriptWitnessNotValidatingUTXOW set)
                         )
                     )
                 )
@@ -238,10 +234,10 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
     getw
       Alonzo
       ( MockChainFromLedgersFailure
-          ( LedgerFailure
-              ( UtxowFailure
-                  ( ShelleyInAlonzoUtxowPredFailure
-                      (ScriptWitnessNotValidatingUTXOW set)
+          ( Shelley.LedgerFailure
+              ( Shelley.UtxowFailure
+                  ( Alonzo.ShelleyInAlonzoUtxowPredFailure
+                      (Shelley.ScriptWitnessNotValidatingUTXOW set)
                     )
                 )
             )
@@ -249,18 +245,18 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
     getw
       Mary
       ( MockChainFromLedgersFailure
-          ( LedgerFailure
-              ( UtxowFailure
-                  (ScriptWitnessNotValidatingUTXOW set)
+          ( Shelley.LedgerFailure
+              ( Shelley.UtxowFailure
+                  (Shelley.ScriptWitnessNotValidatingUTXOW set)
                 )
             )
         ) = NES.toSet set
     getw
       Allegra
       ( MockChainFromLedgersFailure
-          ( LedgerFailure
-              ( UtxowFailure
-                  (ScriptWitnessNotValidatingUTXOW set)
+          ( Shelley.LedgerFailure
+              ( Shelley.UtxowFailure
+                  (Shelley.ScriptWitnessNotValidatingUTXOW set)
                 )
             )
         ) = NES.toSet set

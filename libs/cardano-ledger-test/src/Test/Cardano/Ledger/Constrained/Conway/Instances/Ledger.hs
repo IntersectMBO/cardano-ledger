@@ -84,7 +84,7 @@ import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
-import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.Rules qualified as Conway
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxBody
@@ -102,7 +102,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardPulser (RSLP))
 import Cardano.Ledger.Shelley.Rewards (LeaderOnlyReward, PoolRewardInfo, StakeShare)
-import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Shelley.Rules qualified as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxCert (
@@ -233,9 +233,9 @@ instance Foldy DeltaCoin
 
 deriving via Integer instance Num DeltaCoin
 
-instance (Typeable (TxCert era), Typeable era) => HasSimpleRep (GovSignal era)
+instance (Typeable (TxCert era), Typeable era) => HasSimpleRep (Conway.GovSignal era)
 
-instance HasSpec (GovSignal ConwayEra)
+instance HasSpec (Conway.GovSignal ConwayEra)
 
 instance HasSimpleRep SlotNo
 
@@ -950,9 +950,9 @@ instance HasSimpleRep (ConwayPParams StrictMaybe c)
 
 instance Typeable c => HasSpec (ConwayPParams StrictMaybe c)
 
-instance HasSimpleRep (ConwayPParams Identity era)
+instance HasSimpleRep (ConwayPParams Shelley.Identity era)
 
-instance Era era => HasSpec (ConwayPParams Identity era)
+instance Era era => HasSpec (ConwayPParams Shelley.Identity era)
 
 instance HasSpec Char where
   type TypeSpec Char = ()
@@ -991,8 +991,8 @@ instance Typeable a => HasSimpleRep (THKD tag StrictMaybe a) where
 
 instance (IsNormalType a, Typeable tag, HasSpec a) => HasSpec (THKD tag StrictMaybe a)
 
-instance Typeable a => HasSimpleRep (THKD tag Identity a) where
-  type SimpleRep (THKD tag Identity a) = a
+instance Typeable a => HasSimpleRep (THKD tag Shelley.Identity a) where
+  type SimpleRep (THKD tag Shelley.Identity a) = a
   fromSimpleRep = THKD
   toSimpleRep (THKD a) = a
 
@@ -1000,9 +1000,9 @@ instance
   ( IsNormalType a
   , Typeable tag
   , HasSpec a
-  , GenericallyInstantiated (THKD tag Identity a)
+  , GenericallyInstantiated (THKD tag Shelley.Identity a)
   ) =>
-  HasSpec (THKD tag Identity a)
+  HasSpec (THKD tag Shelley.Identity a)
 
 instance HasSimpleRep GovActionPurpose
 
@@ -1128,11 +1128,11 @@ instance HasSimpleRep (GovRelation StrictMaybe)
 
 instance HasSpec (GovRelation StrictMaybe)
 
-instance (Typeable (CertState era), Era era) => HasSimpleRep (GovEnv era)
+instance (Typeable (CertState era), Era era) => HasSimpleRep (Conway.GovEnv era)
 
 instance
   (EraSpecPParams era, EraTxOut era, EraCertState era, EraGov era, HasSpec (CertState era)) =>
-  HasSpec (GovEnv era)
+  HasSpec (Conway.GovEnv era)
 
 instance Typeable era => HasSimpleRep (GovActionState era)
 
@@ -1354,9 +1354,9 @@ instance
         , forAll (snd_ forest) $ genHint (Just 2, limit)
         ]
 
-instance HasSimpleRep (EnactSignal ConwayEra)
+instance HasSimpleRep (Conway.EnactSignal ConwayEra)
 
-instance HasSpec (EnactSignal ConwayEra)
+instance HasSpec (Conway.EnactSignal ConwayEra)
 
 instance Typeable era => HasSimpleRep (EnactState era)
 
@@ -1396,17 +1396,17 @@ instance HasSimpleRep IndividualPoolStake
 
 instance HasSpec IndividualPoolStake
 
-instance HasSimpleRep (ConwayGovCertEnv ConwayEra)
+instance HasSimpleRep (Conway.ConwayGovCertEnv ConwayEra)
 
-instance HasSpec (ConwayGovCertEnv ConwayEra)
+instance HasSpec (Conway.ConwayGovCertEnv ConwayEra)
 
-instance Typeable era => HasSimpleRep (PoolEnv era)
+instance Typeable era => HasSimpleRep (Shelley.PoolEnv era)
 
-instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (PoolEnv era)
+instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (Shelley.PoolEnv era)
 
-instance Era era => HasSimpleRep (CertEnv era)
+instance Era era => HasSimpleRep (Conway.CertEnv era)
 
-instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (CertEnv era)
+instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (Conway.CertEnv era)
 
 instance HasSimpleRep NonMyopic
 
@@ -1538,10 +1538,10 @@ type DRepPulserTypes =
 
 instance
   HasSimpleRep
-    (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
+    (DRepPulser ConwayEra Shelley.Identity (RatifyState ConwayEra))
   where
   type
-    TheSop (DRepPulser ConwayEra Identity (RatifyState ConwayEra)) =
+    TheSop (DRepPulser ConwayEra Shelley.Identity (RatifyState ConwayEra)) =
       '["DRepPulser" ::: DRepPulserTypes]
   toSimpleRep DRepPulser {..} =
     inject @"DRepPulser" @'["DRepPulser" ::: DRepPulserTypes]
@@ -1564,19 +1564,19 @@ instance
       $ \ps accs b sd spd dd ds ce cs es p pds poolps ->
         DRepPulser ps accs b sd spd dd ds ce cs es p pds testGlobals poolps
 
-instance HasSpec (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
+instance HasSpec (DRepPulser ConwayEra Shelley.Identity (RatifyState ConwayEra))
 
-instance (Typeable (CertState era), Era era) => HasSimpleRep (UtxoEnv era)
+instance (Typeable (CertState era), Era era) => HasSimpleRep (Shelley.UtxoEnv era)
 
 instance
   (EraGov era, EraTxOut era, EraSpecPParams era, EraCertState era, HasSpec (CertState era)) =>
-  HasSpec (UtxoEnv era)
+  HasSpec (Shelley.UtxoEnv era)
 
-instance Era era => HasSimpleRep (ConwayUtxosEnv era)
+instance Era era => HasSimpleRep (Conway.ConwayUtxosEnv era)
 
 instance
   (Era era, EraSpecPParams era, HasSpec (TxOut era), IsNormalType (TxOut era)) =>
-  HasSpec (ConwayUtxosEnv era)
+  HasSpec (Conway.ConwayUtxosEnv era)
 
 -- ================================================================
 -- All the Tx instances
@@ -1813,9 +1813,9 @@ instance HasSpec BootstrapWitness where
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
-instance Era era => HasSimpleRep (LedgerEnv era)
+instance Era era => HasSimpleRep (Shelley.LedgerEnv era)
 
-instance (HasSpec (PParams era), Era era) => HasSpec (LedgerEnv era)
+instance (HasSpec (PParams era), Era era) => HasSpec (Shelley.LedgerEnv era)
 
 onJust' ::
   ( HasSpec a
@@ -1834,9 +1834,9 @@ onSized ::
   Pred
 onSized sz p = match sz $ \a _ -> p a
 
-instance Typeable era => HasSimpleRep (ConwayDelegEnv era)
+instance Typeable era => HasSimpleRep (Conway.ConwayDelegEnv era)
 
-instance (HasSpec (PParams era), Era era) => HasSpec (ConwayDelegEnv era)
+instance (HasSpec (PParams era), Era era) => HasSpec (Conway.ConwayDelegEnv era)
 
 instance Era era => HasSimpleRep (EpochState era)
 
@@ -1939,9 +1939,9 @@ instance HasSimpleRep Pulser where
 
 instance HasSpec Pulser
 
-instance (Typeable (Tx TopTx era), Typeable era) => HasSimpleRep (CertsEnv era)
+instance (Typeable (Tx TopTx era), Typeable era) => HasSimpleRep (Conway.CertsEnv era)
 
-instance (EraGov era, EraTx era, EraSpecPParams era, HasSpec (Tx TopTx era)) => HasSpec (CertsEnv era)
+instance (EraGov era, EraTx era, EraSpecPParams era, HasSpec (Tx TopTx era)) => HasSpec (Conway.CertsEnv era)
 
 -- CompactForm
 

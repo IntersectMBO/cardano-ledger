@@ -41,14 +41,9 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript, pattern RequireTimeStart)
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxoPredFailure (..),
-  AlonzoUtxosPredFailure (..),
-  AlonzoUtxowPredFailure (..),
- )
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), AsIx, ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), mkTxIxPartial)
 import Cardano.Ledger.Block (BbodySignal, EraBlockHeader)
@@ -61,7 +56,6 @@ import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Shelley.API (Block, LedgerEnv (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, UTxOState, smartUTxOState)
-import Cardano.Ledger.Shelley.Rules (BbodyEnv (..), ShelleyBbodyState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
@@ -258,19 +252,19 @@ testBBODY ::
   , ToExpr (PredicateFailure (EraRule "BBODY" era))
   , ToExpr (State (EraRule "LEDGERS" era))
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
-  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
+  , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ BbodySignal era
   , STS (EraRule "BBODY" era)
   , EraBlockHeader h era
   ) =>
-  ShelleyBbodyState era ->
+  Shelley.ShelleyBbodyState era ->
   Block h era ->
-  Either (NonEmpty (PredicateFailure (EraRule "BBODY" era))) (ShelleyBbodyState era) ->
+  Either (NonEmpty (PredicateFailure (EraRule "BBODY" era))) (Shelley.ShelleyBbodyState era) ->
   PParams era ->
   Expectation
 testBBODY initialSt block expected pparams =
-  let env = BbodyEnv pparams def
+  let env = Shelley.BbodyEnv pparams def
    in runSTS @"BBODY" @era (TRC (env, initialSt, Shelley.BbodySignal block)) (genericCont "" expected)
 
 -- | Use an equality test on the expected and computed [PredicateFailure]
@@ -460,8 +454,16 @@ findMismatch ::
   Proof era ->
   PredicateFailure (EraRule "UTXOW" era) ->
   Maybe (PredicateFailure (EraRule "UTXOS" era))
-findMismatch Alonzo (ShelleyInAlonzoUtxowPredFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just $ injectFailure x
-findMismatch Babbage (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just $ injectFailure x
+findMismatch
+  Alonzo
+  ( Alonzo.ShelleyInAlonzoUtxowPredFailure
+      (Shelley.UtxoFailure (Alonzo.UtxosFailure x@(Alonzo.ValidationTagMismatch _ _)))
+    ) = Just $ injectFailure x
+findMismatch
+  Babbage
+  ( Babbage.UtxoFailure
+      (Babbage.AlonzoInBabbageUtxoPredFailure (Alonzo.UtxosFailure x@(Alonzo.ValidationTagMismatch _ _)))
+    ) = Just $ injectFailure x
 findMismatch
   Conway
   ( Conway.UtxoFailure

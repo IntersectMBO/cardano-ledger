@@ -10,7 +10,7 @@
 -- for the CERTS rule
 module Test.Cardano.Ledger.Constrained.Conway.Certs where
 
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.State
 import Constrained.API
@@ -33,7 +33,7 @@ txZero = mkBasicTx mkBasicTxBody
 
 certsEnvSpec ::
   (EraSpecPParams era, HasSpec (Tx TopTx era)) =>
-  Specification (CertsEnv era)
+  Specification (Conway.CertsEnv era)
 certsEnvSpec = constrained $ \ce ->
   match ce $ \tx pp _currepoch _currcommittee commproposals ->
     [ satisfies pp pparamsSpec
@@ -42,20 +42,20 @@ certsEnvSpec = constrained $ \ce ->
     ]
 
 -- | Project a CertEnv out of a CertsEnv (i.e drop the Tx)
-projectEnv :: CertsEnv era -> CertEnv era
+projectEnv :: Conway.CertsEnv era -> Conway.CertEnv era
 projectEnv x =
-  CertEnv
-    { cePParams = certsPParams x
-    , ceCurrentEpoch = certsCurrentEpoch x
-    , ceCurrentCommittee = certsCurrentCommittee x
-    , ceCommitteeProposals = certsCommitteeProposals x
+  Conway.CertEnv
+    { Conway.cePParams = Conway.certsPParams x
+    , Conway.ceCurrentEpoch = Conway.certsCurrentEpoch x
+    , Conway.ceCurrentCommittee = Conway.certsCurrentCommittee x
+    , Conway.ceCommitteeProposals = Conway.certsCommitteeProposals x
     }
 
 txCertsSpec ::
   forall era.
   EraSpecCert era =>
   WitUniv era ->
-  CertsEnv era ->
+  Conway.CertsEnv era ->
   CertState era ->
   Specification (Seq (TxCert era))
 txCertsSpec univ env state =
@@ -74,7 +74,7 @@ listSeqCertPairSpec ::
   forall era.
   EraSpecCert era =>
   WitUniv era ->
-  CertEnv era ->
+  Conway.CertEnv era ->
   CertState era ->
   Specification ([TxCert era], Seq (TxCert era))
 listSeqCertPairSpec univ env state =

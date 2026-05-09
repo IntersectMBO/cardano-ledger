@@ -38,15 +38,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
  )
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, sumRewards)
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyEPOCH,
-  ShelleyMIR,
-  ShelleyNEWEPOCH,
-  ShelleyTICKF,
-  adoptGenesisDelegs,
-  updateRewards,
-  validatingTickTransitionFORECAST,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo, SlotNo (..))
 import Cardano.Ledger.State
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
@@ -156,7 +148,7 @@ updateRewardsX globals newepochstate =
       context = (TRC ((), newepochstate, epochNo))
       rule = case nesRu newepochstate of
         SNothing -> pure epochstate
-        SJust p -> updateRewards epochstate epochNo $ getComplete p
+        SJust p -> Shelley.updateRewards epochstate epochNo $ getComplete p
    in liftRule globals context rule
 
 adoptGenesisDelegsR ::
@@ -164,23 +156,27 @@ adoptGenesisDelegsR ::
   SlotNo ->
   NewEpochState era ->
   EpochState era
-adoptGenesisDelegsR slot nes = adoptGenesisDelegs (nesEs nes) slot
+adoptGenesisDelegsR slot nes = Shelley.adoptGenesisDelegs (nesEs nes) slot
 
 tickfR2 ::
   Globals ->
   SlotNo ->
   NewEpochState CurrentEra ->
   NewEpochState CurrentEra
-tickfR2 globals slot nes = liftRule globals (TRC ((), nes, slot)) (validatingTickTransitionFORECAST @ShelleyTICKF nes slot)
+tickfR2 globals slot nes =
+  liftRule
+    globals
+    (TRC ((), nes, slot))
+    (Shelley.validatingTickTransitionFORECAST @Shelley.ShelleyTICKF nes slot)
 
 mirR :: Globals -> EpochState CurrentEra -> EpochState CurrentEra
-mirR globals es' = liftApplySTS globals (applySTS @(ShelleyMIR CurrentEra) (TRC ((), es', ())))
+mirR globals es' = liftApplySTS globals (applySTS @(Shelley.ShelleyMIR CurrentEra) (TRC ((), es', ())))
 
 newEpochR :: Globals -> EpochNo -> NewEpochState CurrentEra -> NewEpochState CurrentEra
-newEpochR globals epochNo nes = liftApplySTS globals (applySTS @(ShelleyNEWEPOCH CurrentEra) (TRC ((), nes, epochNo)))
+newEpochR globals epochNo nes = liftApplySTS globals (applySTS @(Shelley.ShelleyNEWEPOCH CurrentEra) (TRC ((), nes, epochNo)))
 
 epochR :: Globals -> EpochNo -> EpochState CurrentEra -> EpochState CurrentEra
-epochR globals epochNo es'' = liftApplySTS globals (applySTS @(ShelleyEPOCH CurrentEra) (TRC ((), es'', epochNo)))
+epochR globals epochNo es'' = liftApplySTS globals (applySTS @(Shelley.ShelleyEPOCH CurrentEra) (TRC ((), es'', epochNo)))
 
 -- ============================================================
 
