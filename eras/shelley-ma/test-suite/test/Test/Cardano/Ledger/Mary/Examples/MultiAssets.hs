@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Mary.Examples.MultiAssets (
   multiAssetsExample,
 ) where
 
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure (..))
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Allegra.Scripts (
   Timelock (..),
   pattern RequireTimeExpire,
@@ -31,7 +31,7 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
  )
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
-import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure (..), ShelleyUtxowPredFailure (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireSignature,
@@ -115,12 +115,13 @@ makeMaryTxBody ins outs interval minted =
 policyFailure ::
   PolicyID -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra)
 policyFailure p =
-  Left . pure . UtxowFailure . ScriptWitnessNotValidatingUTXOW $ NES.singleton (policyID p)
+  Left . pure . Shelley.UtxowFailure . Shelley.ScriptWitnessNotValidatingUTXOW $
+    NES.singleton (policyID p)
 
 outTooBigFailure ::
   TxOut MaryEra -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra)
 outTooBigFailure out =
-  Left . pure . UtxowFailure . UtxoFailure $ OutputTooBigUTxO $ pure out
+  Left . pure . Shelley.UtxowFailure . Shelley.UtxoFailure $ Allegra.OutputTooBigUTxO $ pure out
 
 ----------------------------------------------------
 -- Introduce a new Token Bundle, Purple Tokens
