@@ -169,6 +169,17 @@ jobs:
         path: ${{ steps.install-haskell.outputs.cabal-store }}
         key:  ${{ steps.restore-cabal-cache.outputs.cache-primary-key }}
 
+    # `doctest` needs to be present before building, to avoid `cabal repl` seeing a configuration
+    # change when `scripts/doctest.sh` runs it
+    - name: Install doctest
+      id: install-doctest
+      run: |
+        if [[ -z "$(type -t doctest)" ]]
+        then
+          cabal install doctest --ignore-project --overwrite-policy=always
+          cabal path --installdir >> $GITHUB_PATH
+        fi
+
     - name: Build
       run: cabal build all
 
