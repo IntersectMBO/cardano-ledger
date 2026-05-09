@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -43,6 +44,7 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
   EncCBOR,
+  EncCBORGroup (..),
   decodeNonEmptySetLikeEnforceNoDuplicates,
   decodeNullMaybe,
   decodeNullStrictMaybe,
@@ -224,6 +226,11 @@ deriving via
     , DecCBOR (Annotator (TxWits era))
     ) =>
     DecCBOR (Annotator (DijkstraBlockBody era))
+
+instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBlockBody era) where
+  encCBORGroup (DijkstraBlockBody txs perasCert) = do
+    encodeListLen 2 <> encCBOR txs <> encCBOR perasCert
+  listLen _ = 1
 
 --------------------------------------------------------------------------------
 -- Internal utility functions
