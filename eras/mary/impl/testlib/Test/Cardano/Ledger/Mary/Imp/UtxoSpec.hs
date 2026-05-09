@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Mary.Imp.UtxoSpec (spec) where
 import Cardano.Ledger.BaseTypes (Mismatch (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
@@ -66,7 +66,7 @@ spec = describe "UTXO" $ do
       submitFailingTx
         (mkBasicTx txBody)
         [ injectFailure $
-            ValueNotConservedUTxO $
+            Shelley.ValueNotConservedUTxO $
               Mismatch
                 (rootTxOutValue <> MaryValue c (MultiAsset mintedMultiAsset))
                 (rootTxOutValue <> MaryValue c burnTooMuchProducedMultiAsset)

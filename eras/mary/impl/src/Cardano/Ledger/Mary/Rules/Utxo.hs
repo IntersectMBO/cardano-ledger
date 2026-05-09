@@ -5,21 +5,18 @@
 
 module Cardano.Ledger.Mary.Rules.Utxo () where
 
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure (..), shelleyToAllegraUtxoPredFailure)
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Rules.Ppup ()
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyPpupPredFailure,
-  ShelleyUtxoPredFailure,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleFailure "UTXO" MaryEra = AllegraUtxoPredFailure MaryEra
+type instance EraRuleFailure "UTXO" MaryEra = Allegra.AllegraUtxoPredFailure MaryEra
 
-instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure MaryEra
+instance InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure MaryEra
 
-instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure MaryEra where
-  injectFailure = shelleyToAllegraUtxoPredFailure
+instance InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure MaryEra where
+  injectFailure = Allegra.shelleyToAllegraUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure MaryEra where
-  injectFailure = UpdateFailure
+instance InjectRuleFailure "UTXO" Shelley.ShelleyPpupPredFailure MaryEra where
+  injectFailure = Allegra.UpdateFailure

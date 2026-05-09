@@ -9,41 +9,31 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Rules.Delegs ()
 import Cardano.Ledger.Mary.Rules.Utxow ()
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
-  ShelleyDelegsPredFailure,
-  ShelleyDelplPredFailure,
-  ShelleyLedgerEvent,
-  ShelleyLedgerPredFailure (..),
-  ShelleyPoolPredFailure,
-  ShelleyPpupPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowPredFailure,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleFailure "LEDGER" MaryEra = ShelleyLedgerPredFailure MaryEra
+type instance EraRuleFailure "LEDGER" MaryEra = Shelley.ShelleyLedgerPredFailure MaryEra
 
-instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure MaryEra
+instance InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure MaryEra
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure MaryEra where
-  injectFailure = UtxowFailure
+instance InjectRuleFailure "LEDGER" Shelley.ShelleyUtxowPredFailure MaryEra where
+  injectFailure = Shelley.UtxowFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure MaryEra where
-  injectFailure = UtxowFailure . injectFailure
+instance InjectRuleFailure "LEDGER" Shelley.ShelleyUtxoPredFailure MaryEra where
+  injectFailure = Shelley.UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure MaryEra where
-  injectFailure = UtxowFailure . injectFailure
+instance InjectRuleFailure "LEDGER" Shelley.ShelleyPpupPredFailure MaryEra where
+  injectFailure = Shelley.UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure MaryEra where
-  injectFailure = DelegsFailure
+instance InjectRuleFailure "LEDGER" Shelley.ShelleyDelegsPredFailure MaryEra where
+  injectFailure = Shelley.DelegsFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure MaryEra where
-  injectFailure = DelegsFailure . injectFailure
+instance InjectRuleFailure "LEDGER" Shelley.ShelleyDelplPredFailure MaryEra where
+  injectFailure = Shelley.DelegsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure MaryEra where
-  injectFailure = DelegsFailure . injectFailure
+instance InjectRuleFailure "LEDGER" Shelley.ShelleyPoolPredFailure MaryEra where
+  injectFailure = Shelley.DelegsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure MaryEra where
-  injectFailure = DelegsFailure . injectFailure
+instance InjectRuleFailure "LEDGER" Shelley.ShelleyDelegPredFailure MaryEra where
+  injectFailure = Shelley.DelegsFailure . injectFailure
 
-type instance EraRuleEvent "LEDGER" MaryEra = ShelleyLedgerEvent MaryEra
+type instance EraRuleEvent "LEDGER" MaryEra = Shelley.ShelleyLedgerEvent MaryEra
