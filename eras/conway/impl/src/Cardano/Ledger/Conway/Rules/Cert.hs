@@ -55,7 +55,7 @@ import Cardano.Ledger.Shelley.API (
   PState (..),
   PoolEnv (PoolEnv),
  )
-import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPOOL, ShelleyPoolPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraCertState (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
@@ -114,7 +114,7 @@ instance InjectRuleFailure "CERT" ConwayCertPredFailure ConwayEra
 instance InjectRuleFailure "CERT" ConwayDelegPredFailure ConwayEra where
   injectFailure = DelegFailure
 
-instance InjectRuleFailure "CERT" ShelleyPoolPredFailure ConwayEra where
+instance InjectRuleFailure "CERT" Shelley.ShelleyPoolPredFailure ConwayEra where
   injectFailure = PoolFailure
 
 instance InjectRuleFailure "CERT" ConwayGovCertPredFailure ConwayEra where
@@ -235,13 +235,13 @@ instance
 
 instance
   ( Era era
-  , STS (ShelleyPOOL era)
-  , Event (EraRule "POOL" era) ~ PoolEvent era
-  , PredicateFailure (EraRule "POOL" era) ~ ShelleyPoolPredFailure era
-  , PredicateFailure (ShelleyPOOL era) ~ ShelleyPoolPredFailure era
-  , BaseM (ShelleyPOOL era) ~ ShelleyBase
+  , STS (Shelley.ShelleyPOOL era)
+  , Event (EraRule "POOL" era) ~ Shelley.PoolEvent era
+  , PredicateFailure (EraRule "POOL" era) ~ Shelley.ShelleyPoolPredFailure era
+  , PredicateFailure (Shelley.ShelleyPOOL era) ~ Shelley.ShelleyPoolPredFailure era
+  , BaseM (Shelley.ShelleyPOOL era) ~ ShelleyBase
   ) =>
-  Embed (ShelleyPOOL era) (ConwayCERT era)
+  Embed (Shelley.ShelleyPOOL era) (ConwayCERT era)
   where
   wrapFailed = PoolFailure
   wrapEvent = PoolEvent

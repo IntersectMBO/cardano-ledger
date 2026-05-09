@@ -204,9 +204,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   produced,
   utxosGovStateL,
  )
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
- )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.Val (Val (..), (<->))
@@ -1910,16 +1907,16 @@ delegateSPORewardAddressToDRep_ kh stake drep = do
       drep
 
 -- Partial implementation used for checking predicate failures
-instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure ConwayEra where
+instance InjectRuleFailure "LEDGER" Shelley.ShelleyDelegPredFailure ConwayEra where
   injectFailure = ConwayCertsFailure . injectFailure
 
-instance InjectRuleFailure "CERTS" ShelleyDelegPredFailure ConwayEra where
+instance InjectRuleFailure "CERTS" Shelley.ShelleyDelegPredFailure ConwayEra where
   injectFailure = CertFailure . injectFailure
 
-instance InjectRuleFailure "CERT" ShelleyDelegPredFailure ConwayEra where
+instance InjectRuleFailure "CERT" Shelley.ShelleyDelegPredFailure ConwayEra where
   injectFailure = DelegFailure . injectFailure
 
-instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure ConwayEra where
+instance InjectRuleFailure "DELEG" Shelley.ShelleyDelegPredFailure ConwayEra where
   injectFailure (Shelley.StakeKeyAlreadyRegisteredDELEG c) = StakeKeyRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = StakeKeyNotRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = StakeKeyHasNonZeroAccountBalanceDELEG c

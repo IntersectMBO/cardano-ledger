@@ -13,7 +13,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -75,7 +75,7 @@ spec = describe "HARDFORK" $ do
       registerStakePoolTx kh4 vrf >>= \tx ->
         submitFailingTx
           tx
-          [injectFailure $ VRFKeyHashAlreadyRegistered kh4 vrf]
+          [injectFailure $ Shelley.VRFKeyHashAlreadyRegistered kh4 vrf]
 
       retireStakePool kh3 (EpochInterval 1)
       passEpoch

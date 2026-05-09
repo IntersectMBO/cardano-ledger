@@ -7,12 +7,12 @@ module Cardano.Ledger.Conway.Rules.Pool () where
 
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPoolPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleFailure "POOL" ConwayEra = ShelleyPoolPredFailure ConwayEra
+type instance EraRuleFailure "POOL" ConwayEra = Shelley.ShelleyPoolPredFailure ConwayEra
 
-type instance EraRuleEvent "POOL" ConwayEra = PoolEvent ConwayEra
+type instance EraRuleEvent "POOL" ConwayEra = Shelley.PoolEvent ConwayEra
 
-instance InjectRuleFailure "POOL" ShelleyPoolPredFailure ConwayEra
+instance InjectRuleFailure "POOL" Shelley.ShelleyPoolPredFailure ConwayEra
 
-instance InjectRuleEvent "POOL" PoolEvent ConwayEra
+instance InjectRuleEvent "POOL" Shelley.PoolEvent ConwayEra

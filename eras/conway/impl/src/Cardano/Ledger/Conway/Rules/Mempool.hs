@@ -34,7 +34,7 @@ import Cardano.Ledger.Conway.Rules.Gov (GovEnv, GovSignal, unelectedCommitteeVot
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerEvent, ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLedgerPredFailure, UtxoEnv, ledgerPpL)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.Monad (unless)
 import Control.State.Transition (
   BaseM,
@@ -74,14 +74,14 @@ instance
   , Show (PredicateFailure (EraRule "CERTS" era))
   , Show (PredicateFailure (EraRule "GOV" era))
   , Show (PredicateFailure (EraRule "UTXOW" era))
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   STS (ConwayMEMPOOL era)
   where
   type State (ConwayMEMPOOL era) = LedgerState era
   type Signal (ConwayMEMPOOL era) = StAnnTx TopTx era
-  type Environment (ConwayMEMPOOL era) = LedgerEnv era
+  type Environment (ConwayMEMPOOL era) = Shelley.LedgerEnv era
   type BaseM (ConwayMEMPOOL era) = ShelleyBase
   type PredicateFailure (ConwayMEMPOOL era) = ConwayLedgerPredFailure era
   type Event (ConwayMEMPOOL era) = ConwayLedgerEvent era
@@ -96,7 +96,7 @@ mempoolTransition ::
   , ConwayEraCertState era
   , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (ConwayMEMPOOL era)
@@ -119,7 +119,7 @@ mempoolTransition = do
 
   -- Skip all other checks if the transaction is probably a duplicate
   whenFailureFreeDefault ledgerState $ do
-    let protVer = ledgerEnv ^. ledgerPpL . ppProtocolVersionL
+    let protVer = ledgerEnv ^. Shelley.ledgerPpL . ppProtocolVersionL
     unless (hardforkConwayDisallowUnelectedCommitteeFromVoting protVer) $
       -- This check can completely be removed once mainnet switches to protocol
       -- version 11, since the same check has been implemented in the GOV rule.
@@ -149,8 +149,8 @@ instance
   , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
-  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
   , State (EraRule "UTXOW" era) ~ UTxOState era
@@ -163,7 +163,7 @@ instance
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ ConwayLEDGER era
   , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   ) =>
   Embed (ConwayLEDGER era) (ConwayMEMPOOL era)

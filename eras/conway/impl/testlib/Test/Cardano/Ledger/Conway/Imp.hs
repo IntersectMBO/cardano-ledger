@@ -16,7 +16,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayHardForkEvent,
   ConwayNewEpochEvent,
  )
-import Cardano.Ledger.Shelley.Rules (RupdEvent)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended
 import Data.Proxy
 import qualified Test.Cardano.Ledger.Babbage.Imp as Babbage
@@ -41,7 +41,7 @@ spec ::
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "RUPD" era) ~ RupdEvent
+  , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   ) =>
   proxy era ->
   Spec

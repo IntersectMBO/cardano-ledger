@@ -24,7 +24,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Val
 import Data.Default (Default (..))
 import qualified Data.List.NonEmpty as NE
@@ -42,8 +42,8 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ( ConwayEraImp era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Shelley.Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Shelley.Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "EPOCH" $ do
@@ -488,8 +488,8 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
 eventsSpec ::
   forall era.
   ( ConwayEraImp era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Shelley.Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Shelley.Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 eventsSpec = describe "Events" $ do
@@ -525,7 +525,9 @@ eventsSpec = describe "Events" $ do
           >>= submitProposal
       let
         isGovInfoEvent (SomeSTSEvent ev)
-          | Just (TickNewEpochEvent (EpochEvent (GovInfoEvent {})) :: ShelleyTickEvent era) <- cast ev = True
+          | Just (Shelley.TickNewEpochEvent (EpochEvent (GovInfoEvent {})) :: Shelley.ShelleyTickEvent era) <-
+              cast ev =
+              True
         isGovInfoEvent _ = False
         passEpochWithNoDroppedActions = do
           evs <- impEventsFrom passEpoch

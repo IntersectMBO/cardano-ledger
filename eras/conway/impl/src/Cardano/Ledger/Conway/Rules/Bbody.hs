@@ -27,23 +27,15 @@ module Cardano.Ledger.Conway.Rules.Bbody (
   validateBodyRefScriptsSizeTooBig,
 ) where
 
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoBbodyEvent (..),
-  AlonzoBbodyPredFailure (ShelleyInAlonzoBbodyPredFailure),
-  AlonzoUtxoPredFailure,
-  AlonzoUtxosPredFailure,
-  AlonzoUtxowPredFailure,
-  alonzoBbodyTransition,
- )
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoBbodyPredFailure (..))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, IsValid (..), isValidTxL)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network (..),
@@ -74,19 +66,7 @@ import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), utxoL)
-import Cardano.Ledger.Shelley.Rules (
-  BbodyEnv (..),
-  BbodySignal (..),
-  ShelleyBbodyEvent (..),
-  ShelleyBbodyPredFailure,
-  ShelleyBbodyState (..),
-  ShelleyLedgersEnv (..),
-  ShelleyLedgersPredFailure,
-  ShelleyPoolPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowPredFailure,
- )
-import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyBbodyPredFailure (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), txouts, unUTxO)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard, when)
@@ -168,17 +148,17 @@ instance
 
 type instance EraRuleFailure "BBODY" ConwayEra = ConwayBbodyPredFailure ConwayEra
 
-type instance EraRuleEvent "BBODY" ConwayEra = AlonzoBbodyEvent ConwayEra
+type instance EraRuleEvent "BBODY" ConwayEra = Alonzo.AlonzoBbodyEvent ConwayEra
 
 instance InjectRuleFailure "BBODY" ConwayBbodyPredFailure ConwayEra
 
-instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure ConwayEra where
   injectFailure = alonzoToConwayBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Shelley.ShelleyLedgersPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure
 
 instance InjectRuleFailure "BBODY" ConwayLedgerPredFailure ConwayEra where
@@ -187,34 +167,34 @@ instance InjectRuleFailure "BBODY" ConwayLedgerPredFailure ConwayEra where
 instance InjectRuleFailure "BBODY" ConwayUtxowPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" BabbageUtxowPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Babbage.BabbageUtxowPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxowPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Alonzo.AlonzoUtxowPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Shelley.ShelleyUtxowPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
 instance InjectRuleFailure "BBODY" ConwayUtxoPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" BabbageUtxoPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Babbage.BabbageUtxoPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxoPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Alonzo.AlonzoUtxoPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxosPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Alonzo.AlonzoUtxosPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
 instance InjectRuleFailure "BBODY" ConwayUtxosPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Shelley.ShelleyUtxoPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AllegraUtxoPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Allegra.AllegraUtxoPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
 instance InjectRuleFailure "BBODY" ConwayCertsPredFailure ConwayEra where
@@ -226,7 +206,7 @@ instance InjectRuleFailure "BBODY" ConwayCertPredFailure ConwayEra where
 instance InjectRuleFailure "BBODY" ConwayDelegPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure ConwayEra where
+instance InjectRuleFailure "BBODY" Shelley.ShelleyPoolPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
 instance InjectRuleFailure "BBODY" ConwayGovCertPredFailure ConwayEra where
@@ -237,7 +217,7 @@ instance InjectRuleFailure "BBODY" ConwayGovPredFailure ConwayEra where
 
 shelleyToConwayBbodyPredFailure ::
   forall era.
-  ShelleyBbodyPredFailure era ->
+  Shelley.ShelleyBbodyPredFailure era ->
   ConwayBbodyPredFailure era
 shelleyToConwayBbodyPredFailure
   (Shelley.WrongBlockBodySizeBBODY m) =
@@ -249,22 +229,22 @@ shelleyToConwayBbodyPredFailure (Shelley.LedgersFailure x) = LedgersFailure x
 
 alonzoToConwayBbodyPredFailure ::
   forall era.
-  AlonzoBbodyPredFailure era ->
+  Alonzo.AlonzoBbodyPredFailure era ->
   ConwayBbodyPredFailure era
-alonzoToConwayBbodyPredFailure (ShelleyInAlonzoBbodyPredFailure x) = shelleyToConwayBbodyPredFailure x
+alonzoToConwayBbodyPredFailure (Alonzo.ShelleyInAlonzoBbodyPredFailure x) = shelleyToConwayBbodyPredFailure x
 alonzoToConwayBbodyPredFailure (Alonzo.TooManyExUnits m) = TooManyExUnits m
 
 instance
   ( Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
-  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
   , EraBlockBody era
   , AlonzoEraPParams era
-  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
+  , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
+  , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , EraRule "BBODY" era ~ ConwayBBODY era
   , AlonzoEraTx era
   , BabbageEraTxBody era
@@ -272,26 +252,26 @@ instance
   ) =>
   STS (ConwayBBODY era)
   where
-  type State (ConwayBBODY era) = ShelleyBbodyState era
+  type State (ConwayBBODY era) = Shelley.ShelleyBbodyState era
 
-  type Signal (ConwayBBODY era) = BbodySignal era
+  type Signal (ConwayBBODY era) = Shelley.BbodySignal era
 
-  type Environment (ConwayBBODY era) = BbodyEnv era
+  type Environment (ConwayBBODY era) = Shelley.BbodyEnv era
 
   type BaseM (ConwayBBODY era) = ShelleyBase
 
   type PredicateFailure (ConwayBBODY era) = ConwayBbodyPredFailure era
 
-  type Event (ConwayBBODY era) = AlonzoBbodyEvent era
+  type Event (ConwayBBODY era) = Alonzo.AlonzoBbodyEvent era
 
   initialRules = []
-  transitionRules = [conwayBbodyTransition @era >> alonzoBbodyTransition @era]
+  transitionRules = [conwayBbodyTransition @era >> Alonzo.alonzoBbodyTransition @era]
 
 conwayBbodyTransition ::
   forall era.
-  ( Signal (EraRule "BBODY" era) ~ BbodySignal era
-  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
-  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
+  ( Signal (EraRule "BBODY" era) ~ Shelley.BbodySignal era
+  , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
+  , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
@@ -303,7 +283,12 @@ conwayBbodyTransition ::
   ) =>
   TransitionRule (EraRule "BBODY" era)
 conwayBbodyTransition = do
-  TRC (BbodyEnv pp _, state@(BbodyState ls _), BbodySignal block@Block {blockBody}) <- judgmentContext
+  TRC
+    ( Shelley.BbodyEnv pp _
+      , state@(Shelley.BbodyState ls _)
+      , Shelley.BbodySignal block@Block {blockBody}
+      ) <-
+    judgmentContext
 
   let curProtVerMajor = pvMajor $ pp ^. ppProtocolVersionL
       checkHeaderProtVerTooHigh = do
@@ -339,7 +324,7 @@ instance
   Embed ledgers (ConwayBBODY era)
   where
   wrapFailed = LedgersFailure
-  wrapEvent = ShelleyInAlonzoEvent . LedgersEvent
+  wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent
 
 -- | Validate that total reference script size does not exceed block limit.
 validateBodyRefScriptsSizeTooBig ::

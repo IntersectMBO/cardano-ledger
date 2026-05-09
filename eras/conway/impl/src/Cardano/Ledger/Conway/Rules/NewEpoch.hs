@@ -45,11 +45,7 @@ import Cardano.Ledger.Rewards (Reward)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
-import Cardano.Ledger.Shelley.Rules (
-  RupdEvent (..),
-  ShelleyTICK,
-  ShelleyTickEvent (..),
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.State
 import qualified Cardano.Ledger.Val as Val
@@ -96,7 +92,7 @@ instance
   , EraStake era
   , EraCertState era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
-  , Event (EraRule "RUPD" era) ~ RupdEvent
+  , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
@@ -144,7 +140,7 @@ newEpochTransition ::
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
   , Default (StashedAVVMAddresses era)
-  , Event (EraRule "RUPD" era) ~ RupdEvent
+  , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
@@ -173,7 +169,7 @@ newEpochTransition = do
         SNothing -> pure es0
         SJust p@(Pulsing _ _) -> do
           (ans, event) <- liftSTS (completeRupd p)
-          tellReward (DeltaRewardEvent (RupdEvent eNo event))
+          tellReward (DeltaRewardEvent (Shelley.RupdEvent eNo event))
           updateRewards es0 eNo ans
         SJust (Complete ru') -> updateRewards es0 eNo ru'
       es2 <- trans @(EraRule "EPOCH" era) $ TRC ((), es1, eNo)
@@ -193,10 +189,10 @@ newEpochTransition = do
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
 tellReward ::
-  Event (EraRule "RUPD" era) ~ RupdEvent =>
+  Event (EraRule "RUPD" era) ~ Shelley.RupdEvent =>
   ConwayNewEpochEvent era ->
   Rule (ConwayNEWEPOCH era) rtype ()
-tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
+tellReward (DeltaRewardEvent (Shelley.RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
 updateRewards ::
@@ -220,10 +216,10 @@ instance
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , PredicateFailure (EraRule "NEWEPOCH" era) ~ PredicateFailure (ConwayNEWEPOCH era)
   ) =>
-  Embed (ConwayNEWEPOCH era) (ShelleyTICK era)
+  Embed (ConwayNEWEPOCH era) (Shelley.ShelleyTICK era)
   where
   wrapFailed = \case {}
-  wrapEvent = TickNewEpochEvent
+  wrapEvent = Shelley.TickNewEpochEvent
 
 instance
   ( STS (ConwayEPOCH era)

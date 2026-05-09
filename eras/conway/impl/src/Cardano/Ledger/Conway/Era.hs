@@ -37,12 +37,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Internal.Era (ConwayEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyPOOL,
-  ShelleyRUPD,
-  ShelleySNAP,
-  ShelleyTICK,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
 -- =====================================================
 
@@ -163,13 +158,13 @@ type instance EraRule "LEDGERS" ConwayEra = API.ShelleyLEDGERS ConwayEra
 
 type instance EraRule "POOLREAP" ConwayEra = API.ShelleyPOOLREAP ConwayEra
 
-type instance EraRule "RUPD" ConwayEra = ShelleyRUPD ConwayEra
+type instance EraRule "RUPD" ConwayEra = Shelley.ShelleyRUPD ConwayEra
 
-type instance EraRule "SNAP" ConwayEra = ShelleySNAP ConwayEra
+type instance EraRule "SNAP" ConwayEra = Shelley.ShelleySNAP ConwayEra
 
-type instance EraRule "TICK" ConwayEra = ShelleyTICK ConwayEra
+type instance EraRule "TICK" ConwayEra = Shelley.ShelleyTICK ConwayEra
 
-type instance EraRule "POOL" ConwayEra = ShelleyPOOL ConwayEra
+type instance EraRule "POOL" ConwayEra = Shelley.ShelleyPOOL ConwayEra
 
 -- | Bootstrap phase
 hardforkConwayBootstrapPhase :: ProtVer -> Bool

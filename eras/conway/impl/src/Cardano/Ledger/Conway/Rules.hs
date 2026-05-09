@@ -44,12 +44,12 @@ import Cardano.Ledger.Conway.Rules.Tickf
 import Cardano.Ledger.Conway.Rules.Utxo
 import Cardano.Ledger.Conway.Rules.Utxos
 import Cardano.Ledger.Conway.Rules.Utxow
-import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleEvent "TICK" ConwayEra = ShelleyTickEvent ConwayEra
+type instance EraRuleEvent "TICK" ConwayEra = Shelley.ShelleyTickEvent ConwayEra
 
 instance InjectRuleEvent "TICK" ConwayEpochEvent ConwayEra where
-  injectEvent = TickNewEpochEvent . injectEvent
+  injectEvent = Shelley.TickNewEpochEvent . injectEvent
 
 instance InjectRuleEvent "TICK" ConwayHardForkEvent ConwayEra where
-  injectEvent = TickNewEpochEvent . injectEvent
+  injectEvent = Shelley.TickNewEpochEvent . injectEvent

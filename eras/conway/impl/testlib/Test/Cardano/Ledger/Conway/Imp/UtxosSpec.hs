@@ -15,10 +15,10 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
@@ -30,7 +30,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
 import Data.Default (def)
 import Data.Foldable (for_)
@@ -74,7 +74,7 @@ spec = describe "UTXOS" $ do
           else
             submitFailingTx
               tx
-              [ injectFailure $ UnspendableUTxONoDatumHash $ NES.singleton txIn
+              [ injectFailure $ Alonzo.UnspendableUTxONoDatumHash $ NES.singleton txIn
               ]
 
 datumAndReferenceInputsSpec ::
@@ -120,13 +120,13 @@ datumAndReferenceInputsSpec = do
           whenMajorVersionAtMost @10 $
             submitFailingTx
               consumingTx
-              (pure . injectFailure $ BabbageNonDisjointRefInputs badTxIns)
+              (pure . injectFailure $ Babbage.BabbageNonDisjointRefInputs badTxIns)
           whenMajorVersionAtLeast @11 $
             when (lang > eraMaxLanguage @BabbageEra) $
               submitFailingTx @era
                 consumingTx
                 [ injectFailure $
-                    CollectErrors [BadTranslation . inject $ ReferenceInputsNotDisjointFromInputs @era badTxIns]
+                    Alonzo.CollectErrors [BadTranslation . inject $ ReferenceInputsNotDisjointFromInputs @era badTxIns]
                 ]
         it "using inline datums" $ do
           let shSpending = hashPlutusScript $ redeemerSameAsDatum slang
@@ -150,7 +150,7 @@ datumAndReferenceInputsSpec = do
               submitFailingTx
                 consumingTx
                 ( pure . injectFailure $
-                    CollectErrors
+                    Alonzo.CollectErrors
                       [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
                 )
             else
@@ -305,7 +305,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
                       .~ SSeq.singleton badCert
                 )
                 ( pure . injectFailure $
-                    CollectErrors
+                    Alonzo.CollectErrors
                       [ BadTranslation $
                           inject $
                             CertificateNotSupported badCert
@@ -422,7 +422,9 @@ govPolicySpec = do
               mkBasicTx mkBasicTxBody
                 & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
                 & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing SNothing
-        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
+        submitFailingTx
+          tx
+          [injectFailure $ Shelley.ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
       impAnn "TreasuryWithdrawals" $ do
         accountAddress <- registerAccountAddress
@@ -433,7 +435,9 @@ govPolicySpec = do
               mkBasicTx mkBasicTxBody
                 & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
                 & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing SNothing
-        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
+        submitFailingTx
+          tx
+          [injectFailure $ Shelley.ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
     it "alwaysSucceeds Plutus govPolicy validates" $ whenPostBootstrap $ do
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV3)
@@ -535,7 +539,7 @@ costModelsSpec =
         let pparamsUpdate = def & ppuCostModelsL .~ SJust (testingCostModels [PlutusV3])
         let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
 
-        submitFailingGovAction govAction [injectFailure $ CollectErrors [NoCostModel PlutusV3]]
+        submitFailingGovAction govAction [injectFailure $ Alonzo.CollectErrors [NoCostModel PlutusV3]]
 
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1104
     -- TODO: Re-enable after issue is resolved, by removing this override
@@ -551,7 +555,7 @@ costModelsSpec =
       mintingTokenTx <- mkTokenMintingTx $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
 
       impAnn "Minting token fails" $ do
-        submitFailingTx mintingTokenTx [injectFailure $ CollectErrors [NoCostModel PlutusV3]]
+        submitFailingTx mintingTokenTx [injectFailure $ Alonzo.CollectErrors [NoCostModel PlutusV3]]
 
       govIdPPUpdate1 <-
         enactCostModels
@@ -641,7 +645,7 @@ testPlutusV1V2Failure sh badField lenz errorField = do
         & bodyTxL . lenz .~ badField
     )
     ( pure . injectFailure $
-        CollectErrors [BadTranslation errorField]
+        Alonzo.CollectErrors [BadTranslation errorField]
     )
 
 enactCostModels ::

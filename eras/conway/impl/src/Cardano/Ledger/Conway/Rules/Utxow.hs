@@ -24,22 +24,10 @@ module Cardano.Ledger.Conway.Rules.Utxow (
 ) where
 
 import Cardano.Crypto.Hash (ByteString)
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxoEvent,
-  AlonzoUtxoPredFailure,
-  AlonzoUtxosPredFailure,
-  AlonzoUtxowEvent (WrappedShelleyEraEvent),
-  AlonzoUtxowPredFailure,
- )
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxowPredFailure (..))
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage.Rules (
-  BabbageUtxoPredFailure,
-  BabbageUtxowPredFailure,
-  babbageUtxowTransition,
- )
-import qualified Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -49,15 +37,7 @@ import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Keys (VKey)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowEvent (UtxoEvent),
-  ShelleyUtxowPredFailure,
- )
-import qualified Cardano.Ledger.Shelley.Rules as Shelley (
-  ShelleyUtxowPredFailure (..),
-  UtxoEnv,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
@@ -131,35 +111,35 @@ data ConwayUtxowPredFailure era
 
 type instance EraRuleFailure "UTXOW" ConwayEra = ConwayUtxowPredFailure ConwayEra
 
-type instance EraRuleEvent "UTXOW" ConwayEra = AlonzoUtxowEvent ConwayEra
+type instance EraRuleEvent "UTXOW" ConwayEra = Alonzo.AlonzoUtxowEvent ConwayEra
 
 instance InjectRuleFailure "UTXOW" ConwayUtxowPredFailure ConwayEra
 
-instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure ConwayEra where
+instance InjectRuleFailure "UTXOW" Babbage.BabbageUtxowPredFailure ConwayEra where
   injectFailure = babbageToConwayUtxowPredFailure
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure ConwayEra where
+instance InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxowPredFailure ConwayEra where
   injectFailure = alonzoToConwayUtxowPredFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure ConwayEra where
+instance InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure ConwayEra where
   injectFailure = shelleyToConwayUtxowPredFailure
 
 instance InjectRuleFailure "UTXOW" ConwayUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" BabbageUtxoPredFailure ConwayEra where
+instance InjectRuleFailure "UTXOW" Babbage.BabbageUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure ConwayEra where
+instance InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure ConwayEra where
+instance InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxosPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure ConwayEra where
+instance InjectRuleFailure "UTXOW" Shelley.ShelleyUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure ConwayEra where
+instance InjectRuleFailure "UTXOW" Allegra.AllegraUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
 deriving instance
@@ -192,9 +172,9 @@ instance
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ConwayEraTxBody era
   , EraRule "UTXOW" era ~ ConwayUTXOW era
-  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" Babbage.BabbageUtxowPredFailure era
   , InjectRuleFailure "UTXOW" ConwayUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ConwayUTXOW era)
@@ -211,23 +191,23 @@ instance
   type Environment (ConwayUTXOW era) = Shelley.UtxoEnv era
   type BaseM (ConwayUTXOW era) = ShelleyBase
   type PredicateFailure (ConwayUTXOW era) = ConwayUtxowPredFailure era
-  type Event (ConwayUTXOW era) = AlonzoUtxowEvent era
-  transitionRules = [babbageUtxowTransition @era]
+  type Event (ConwayUTXOW era) = Alonzo.AlonzoUtxowEvent era
+  transitionRules = [Babbage.babbageUtxowTransition @era]
   initialRules = []
 
 instance
   ( Era era
   , STS (ConwayUTXO era)
   , PredicateFailure (EraRule "UTXO" era) ~ ConwayUtxoPredFailure era
-  , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
+  , Event (EraRule "UTXO" era) ~ Alonzo.AlonzoUtxoEvent era
   , BaseM (ConwayUTXOW era) ~ ShelleyBase
   , PredicateFailure (ConwayUTXOW era) ~ ConwayUtxowPredFailure era
-  , Event (ConwayUTXOW era) ~ AlonzoUtxowEvent era
+  , Event (ConwayUTXOW era) ~ Alonzo.AlonzoUtxowEvent era
   ) =>
   Embed (ConwayUTXO era) (ConwayUTXOW era)
   where
   wrapFailed = UtxoFailure
-  wrapEvent = WrappedShelleyEraEvent . UtxoEvent
+  wrapEvent = Alonzo.WrappedShelleyEraEvent . Shelley.UtxoEvent
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -294,7 +274,7 @@ instance
 
 babbageToConwayUtxowPredFailure ::
   forall era.
-  BabbageUtxowPredFailure era ->
+  Babbage.BabbageUtxowPredFailure era ->
   ConwayUtxowPredFailure era
 babbageToConwayUtxowPredFailure = \case
   Babbage.AlonzoInBabbageUtxowPredFailure x -> alonzoToConwayUtxowPredFailure x
@@ -305,7 +285,7 @@ babbageToConwayUtxowPredFailure = \case
 
 alonzoToConwayUtxowPredFailure ::
   forall era.
-  AlonzoUtxowPredFailure era ->
+  Alonzo.AlonzoUtxowPredFailure era ->
   ConwayUtxowPredFailure era
 alonzoToConwayUtxowPredFailure = \case
   Alonzo.ShelleyInAlonzoUtxowPredFailure f -> shelleyToConwayUtxowPredFailure f
@@ -317,7 +297,7 @@ alonzoToConwayUtxowPredFailure = \case
   Alonzo.ExtraRedeemers xs -> ExtraRedeemers xs
   Alonzo.ScriptIntegrityHashMismatch x y -> ScriptIntegrityHashMismatch x y
 
-shelleyToConwayUtxowPredFailure :: ShelleyUtxowPredFailure era -> ConwayUtxowPredFailure era
+shelleyToConwayUtxowPredFailure :: Shelley.ShelleyUtxowPredFailure era -> ConwayUtxowPredFailure era
 shelleyToConwayUtxowPredFailure = \case
   Shelley.InvalidWitnessesUTXOW xs -> InvalidWitnessesUTXOW xs
   Shelley.MissingVKeyWitnessesUTXOW xs -> MissingVKeyWitnessesUTXOW xs
