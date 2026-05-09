@@ -20,7 +20,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Internal.Era (AllegraEra)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
 instance EraGenesis AllegraEra
 
@@ -38,41 +38,41 @@ type instance Value AllegraEra = Coin
 
 -- These rules are all inherited from Shelley
 
-type instance EraRule "BBODY" AllegraEra = ShelleyBBODY AllegraEra
+type instance EraRule "BBODY" AllegraEra = Shelley.ShelleyBBODY AllegraEra
 
-type instance EraRule "DELEG" AllegraEra = ShelleyDELEG AllegraEra
+type instance EraRule "DELEG" AllegraEra = Shelley.ShelleyDELEG AllegraEra
 
-type instance EraRule "DELEGS" AllegraEra = ShelleyDELEGS AllegraEra
+type instance EraRule "DELEGS" AllegraEra = Shelley.ShelleyDELEGS AllegraEra
 
-type instance EraRule "DELPL" AllegraEra = ShelleyDELPL AllegraEra
+type instance EraRule "DELPL" AllegraEra = Shelley.ShelleyDELPL AllegraEra
 
-type instance EraRule "EPOCH" AllegraEra = ShelleyEPOCH AllegraEra
+type instance EraRule "EPOCH" AllegraEra = Shelley.ShelleyEPOCH AllegraEra
 
-type instance EraRule "LEDGER" AllegraEra = ShelleyLEDGER AllegraEra
+type instance EraRule "LEDGER" AllegraEra = Shelley.ShelleyLEDGER AllegraEra
 
-type instance EraRule "LEDGERS" AllegraEra = ShelleyLEDGERS AllegraEra
+type instance EraRule "LEDGERS" AllegraEra = Shelley.ShelleyLEDGERS AllegraEra
 
-type instance EraRule "MIR" AllegraEra = ShelleyMIR AllegraEra
+type instance EraRule "MIR" AllegraEra = Shelley.ShelleyMIR AllegraEra
 
-type instance EraRule "NEWEPOCH" AllegraEra = ShelleyNEWEPOCH AllegraEra
+type instance EraRule "NEWEPOCH" AllegraEra = Shelley.ShelleyNEWEPOCH AllegraEra
 
-type instance EraRule "NEWPP" AllegraEra = ShelleyNEWPP AllegraEra
+type instance EraRule "NEWPP" AllegraEra = Shelley.ShelleyNEWPP AllegraEra
 
-type instance EraRule "POOL" AllegraEra = ShelleyPOOL AllegraEra
+type instance EraRule "POOL" AllegraEra = Shelley.ShelleyPOOL AllegraEra
 
-type instance EraRule "POOLREAP" AllegraEra = ShelleyPOOLREAP AllegraEra
+type instance EraRule "POOLREAP" AllegraEra = Shelley.ShelleyPOOLREAP AllegraEra
 
-type instance EraRule "PPUP" AllegraEra = ShelleyPPUP AllegraEra
+type instance EraRule "PPUP" AllegraEra = Shelley.ShelleyPPUP AllegraEra
 
-type instance EraRule "RUPD" AllegraEra = ShelleyRUPD AllegraEra
+type instance EraRule "RUPD" AllegraEra = Shelley.ShelleyRUPD AllegraEra
 
-type instance EraRule "SNAP" AllegraEra = ShelleySNAP AllegraEra
+type instance EraRule "SNAP" AllegraEra = Shelley.ShelleySNAP AllegraEra
 
-type instance EraRule "TICK" AllegraEra = ShelleyTICK AllegraEra
+type instance EraRule "TICK" AllegraEra = Shelley.ShelleyTICK AllegraEra
 
-type instance EraRule "TICKF" AllegraEra = ShelleyTICKF AllegraEra
+type instance EraRule "TICKF" AllegraEra = Shelley.ShelleyTICKF AllegraEra
 
-type instance EraRule "UPEC" AllegraEra = ShelleyUPEC AllegraEra
+type instance EraRule "UPEC" AllegraEra = Shelley.ShelleyUPEC AllegraEra
 
 -- These rules are defined anew in the Allegra era
 

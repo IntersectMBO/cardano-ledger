@@ -19,6 +19,6 @@ import Cardano.Ledger.Allegra.Rules.Pool ()
 import Cardano.Ledger.Allegra.Rules.Ppup ()
 import Cardano.Ledger.Allegra.Rules.Utxo
 import Cardano.Ledger.Allegra.Rules.Utxow
-import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleEvent "TICK" AllegraEra = ShelleyTickEvent AllegraEra
+type instance EraRuleEvent "TICK" AllegraEra = Shelley.ShelleyTickEvent AllegraEra

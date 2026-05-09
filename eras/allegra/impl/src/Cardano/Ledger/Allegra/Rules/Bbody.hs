@@ -8,46 +8,35 @@ module Cardano.Ledger.Allegra.Rules.Bbody () where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Rules.Ledgers ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyBbodyPredFailure (..),
-  ShelleyDelegPredFailure,
-  ShelleyDelegsPredFailure,
-  ShelleyDelplPredFailure,
-  ShelleyLedgerPredFailure,
-  ShelleyLedgersPredFailure,
-  ShelleyPoolPredFailure,
-  ShelleyPpupPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowPredFailure,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleFailure "BBODY" AllegraEra = ShelleyBbodyPredFailure AllegraEra
+type instance EraRuleFailure "BBODY" AllegraEra = Shelley.ShelleyBbodyPredFailure AllegraEra
 
-instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure AllegraEra
+instance InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure AllegraEra
 
-instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure AllegraEra where
-  injectFailure = LedgersFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyLedgersPredFailure AllegraEra where
+  injectFailure = Shelley.LedgersFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure AllegraEra where
-  injectFailure = LedgersFailure . injectFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyLedgerPredFailure AllegraEra where
+  injectFailure = Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure AllegraEra where
-  injectFailure = LedgersFailure . injectFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyUtxowPredFailure AllegraEra where
+  injectFailure = Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure AllegraEra where
-  injectFailure = LedgersFailure . injectFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyUtxoPredFailure AllegraEra where
+  injectFailure = Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure AllegraEra where
-  injectFailure = LedgersFailure . injectFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyPpupPredFailure AllegraEra where
+  injectFailure = Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure AllegraEra where
-  injectFailure = LedgersFailure . injectFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyDelegsPredFailure AllegraEra where
+  injectFailure = Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure AllegraEra where
-  injectFailure = LedgersFailure . injectFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyDelplPredFailure AllegraEra where
+  injectFailure = Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure AllegraEra where
-  injectFailure = LedgersFailure . injectFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyPoolPredFailure AllegraEra where
+  injectFailure = Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure AllegraEra where
-  injectFailure = LedgersFailure . injectFailure
+instance InjectRuleFailure "BBODY" Shelley.ShelleyDelegPredFailure AllegraEra where
+  injectFailure = Shelley.LedgersFailure . injectFailure

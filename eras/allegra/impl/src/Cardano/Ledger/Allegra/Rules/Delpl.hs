@@ -9,18 +9,14 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Rules.Deleg ()
 import Cardano.Ledger.Allegra.Rules.Pool ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
-  ShelleyDelplPredFailure (..),
-  ShelleyPoolPredFailure,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleFailure "DELPL" AllegraEra = ShelleyDelplPredFailure AllegraEra
+type instance EraRuleFailure "DELPL" AllegraEra = Shelley.ShelleyDelplPredFailure AllegraEra
 
-instance InjectRuleFailure "DELPL" ShelleyDelplPredFailure AllegraEra
+instance InjectRuleFailure "DELPL" Shelley.ShelleyDelplPredFailure AllegraEra
 
-instance InjectRuleFailure "DELPL" ShelleyPoolPredFailure AllegraEra where
-  injectFailure = PoolFailure
+instance InjectRuleFailure "DELPL" Shelley.ShelleyPoolPredFailure AllegraEra where
+  injectFailure = Shelley.PoolFailure
 
-instance InjectRuleFailure "DELPL" ShelleyDelegPredFailure AllegraEra where
-  injectFailure = DelegFailure
+instance InjectRuleFailure "DELPL" Shelley.ShelleyDelegPredFailure AllegraEra where
+  injectFailure = Shelley.DelegFailure
