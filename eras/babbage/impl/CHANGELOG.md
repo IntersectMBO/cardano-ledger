@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Replace arguments of `babbageEvalScriptsTxInvalid` with `StAnnTx`
+* Replace arguments of `expectScriptsToPass` with `StAnnTx`
 * Change `Signal` to `StAnnTx TopTx era` for: `BabbageLEDGER`, `BabbageUTXOW`, `BabbageUTXO`, `BabbageUTXOS`
 * Remove `ToCBOR` and `FromCBOR` instances for `BabbageTxOut`
 * Add `ApplyTick` instance for `BabbageEra`

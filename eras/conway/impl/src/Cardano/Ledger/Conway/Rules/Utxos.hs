@@ -238,44 +238,33 @@ utxosTransition ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , EraPlutusContext era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
-  , STS (EraRule "UTXOS" era)
-  , Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
   , State (EraRule "UTXOS" era) ~ ()
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
-  , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
-  judgmentContext >>= \(TRC (ConwayUtxosEnv pp utxo, (), stAnnTx)) -> do
+  judgmentContext >>= \(TRC (_, (), stAnnTx)) -> do
     let tx = stAnnTx ^. txStAnnTxG
     case tx ^. isValidTxL of
       IsValid True -> conwayEvalScriptsTxValid
       IsValid False -> do
-        babbageEvalScriptsTxInvalid @era pp tx utxo
+        babbageEvalScriptsTxInvalid @era stAnnTx
 
 conwayEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , EraPlutusContext era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
-  , STS (EraRule "UTXOS" era)
   , State (EraRule "UTXOS" era) ~ ()
-  , Environment (EraRule "UTXOS" era) ~ ConwayUtxosEnv era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
-  , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do
-  TRC (ConwayUtxosEnv pp utxo, (), stAnnTx) <- judgmentContext
-  let tx = stAnnTx ^. txStAnnTxG
+  TRC (_, (), stAnnTx) <- judgmentContext
 
   () <- pure $! Debug.traceEvent validBegin ()
-  expectScriptsToPass pp tx utxo
+  expectScriptsToPass stAnnTx
   pure $! Debug.traceEvent validEnd ()
