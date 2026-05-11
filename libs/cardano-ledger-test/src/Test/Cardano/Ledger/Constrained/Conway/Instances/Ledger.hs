@@ -1572,12 +1572,6 @@ instance
   (EraGov era, EraTxOut era, EraSpecPParams era, EraCertState era, HasSpec (CertState era)) =>
   HasSpec (Shelley.UtxoEnv era)
 
-instance Era era => HasSimpleRep (Conway.ConwayUtxosEnv era)
-
-instance
-  (Era era, EraSpecPParams era, HasSpec (TxOut era), IsNormalType (TxOut era)) =>
-  HasSpec (Conway.ConwayUtxosEnv era)
-
 -- ================================================================
 -- All the Tx instances
 

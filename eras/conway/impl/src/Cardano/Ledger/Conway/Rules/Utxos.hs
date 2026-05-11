@@ -17,7 +17,6 @@
 
 module Cardano.Ledger.Conway.Rules.Utxos (
   ConwayUTXOS,
-  ConwayUtxosEnv (..),
   ConwayUtxosPredFailure (..),
   ConwayUtxosEvent (..),
   alonzoToConwayUtxosPredFailure,
@@ -67,18 +66,6 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Debug.Trace as Debug
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
-
-data ConwayUtxosEnv era = ConwayUtxosEnv
-  { cuePParams :: !(PParams era)
-  , cueUTxO :: !(UTxO era)
-  }
-  deriving (Generic)
-
-deriving instance (Show (PParams era), Show (UTxO era)) => Show (ConwayUtxosEnv era)
-
-deriving instance (Eq (PParams era), Eq (UTxO era)) => Eq (ConwayUtxosEnv era)
-
-instance (Era era, NFData (PParams era), NFData (UTxO era)) => NFData (ConwayUtxosEnv era)
 
 data ConwayUtxosPredFailure era
   = -- | The 'isValid' tag on the transaction is incorrect. The tag given
@@ -203,7 +190,7 @@ instance
   STS (ConwayUTXOS era)
   where
   type BaseM (ConwayUTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
-  type Environment (ConwayUTXOS era) = ConwayUtxosEnv era
+  type Environment (ConwayUTXOS era) = ()
   type State (ConwayUTXOS era) = ()
   type Signal (ConwayUTXOS era) = StAnnTx TopTx era
   type PredicateFailure (ConwayUTXOS era) = ConwayUtxosPredFailure era
@@ -239,13 +226,14 @@ utxosTransition ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
+  , Environment (EraRule "UTXOS" era) ~ ()
   , State (EraRule "UTXOS" era) ~ ()
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
-  judgmentContext >>= \(TRC (_, (), stAnnTx)) -> do
+  judgmentContext >>= \(TRC ((), (), stAnnTx)) -> do
     let tx = stAnnTx ^. txStAnnTxG
     case tx ^. isValidTxL of
       IsValid True -> conwayEvalScriptsTxValid
@@ -257,13 +245,14 @@ conwayEvalScriptsTxValid ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
+  , Environment (EraRule "UTXOS" era) ~ ()
   , State (EraRule "UTXOS" era) ~ ()
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do
-  TRC (_, (), stAnnTx) <- judgmentContext
+  TRC ((), (), stAnnTx) <- judgmentContext
 
   () <- pure $! Debug.traceEvent validBegin ()
   expectScriptsToPass stAnnTx

@@ -12,7 +12,7 @@
 * Add `validateRefScriptSize`, `updateDormantDRepExpiries`, `updateVotingDRepExpiries`
 * Add `ApplyTick` instance for `ConwayEra`
 * Add `ConwayUtxosEnv`
-* Change `STS` instance of `ConwayUTXOS`: use `ConwayUtxosEnv` as `Environment` and `()` as `State`
+* Change `STS` instance of `ConwayUTXOS`: use `()` as `Environment` and `State`
 * Add `updateTreasuryDonation`
 * Add `checkReferenceInputsNotDisjointFromInputs`
 * Add `ConwayEraScript` superclass to `ConwayEraPlutusTxInfo`
