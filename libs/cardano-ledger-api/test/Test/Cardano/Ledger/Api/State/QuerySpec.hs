@@ -24,6 +24,7 @@ import Cardano.Ledger.Conway.Governance (
   newEpochStateDRepPulsingStateL,
   rsEnactStateL,
  )
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.State (
   ConwayEraCertState (..),
   vsCommitteeStateL,
@@ -78,6 +79,7 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
+import Test.Cardano.Ledger.Dijkstra.Era (EraTest)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Slotting.Numeric ()
 
@@ -104,6 +106,8 @@ latestErasSpec ::
   , Default (StashedAVVMAddresses era)
   , GovState era ~ ConwayGovState era
   , ConwayEraCertState era
+  , ConwayEraPParams era
+  , EraTest era
   ) =>
   Spec
 latestErasSpec =

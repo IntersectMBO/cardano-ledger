@@ -112,7 +112,7 @@ library testlib
     cardano-base,
     cardano-ledger-api,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
-    cardano-ledger-conway:testlib,
+    cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:testlib,
     cardano-ledger-shelley:testlib,
@@ -120,7 +120,6 @@ library testlib
     containers,
     data-default,
     generic-random,
-    microlens,
     prettyprinter,
 
 test-suite cardano-ledger-api-test
