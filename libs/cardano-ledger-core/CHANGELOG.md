@@ -7,9 +7,10 @@
   - `Metadatum` in `Cardano.Ledger.Metadata` (matching cardano-api detailed schema: `{"int":n}`, `{"string":t}`, `{"bytes":"<hex>"}`, `{"list":[...]}`, `{"map":[{"k":...,"v":...}]}`)
   - `WitVKey` in `Cardano.Ledger.Keys.WitVKey`
   - `BootstrapWitness` in `Cardano.Ledger.Keys.Bootstrap`
-  - `Addr`, `RewardAccount` in `Cardano.Ledger.Address`
+  - `Addr`, `RewardAccount`, `AccountId` and `DirectDeposits` in `Cardano.Ledger.Address`
   - `ScriptHash` `ToJSONKey`/`FromJSONKey` in `Cardano.Ledger.Hashes`
   - `Datum era` in `Cardano.Ledger.Plutus.Data`
+  - `Inclusive` and `Exclusive` in `Cardano.Ledger.BaseTypes`
 * Change `ChainCode` type to use `ByteArray` instead of `ByteString`
 * Change `bwAttributes` field to use `ByteArray` instead of `ByteString`
 * Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class
@@ -45,6 +46,7 @@
   - `ScriptHash` `ToJSONKey`/`FromJSONKey` in `Cardano.Ledger.Hashes`
   - `Data` in `Cardano.Ledger.Plutus.Data`
   - `PlutusBinary` in `Cardano.Ledger.Plutus.Language`
+  - `Datum` in `Cardano.Ledger.Plutus.Data` (discriminated schema: `null`/`{"datumhash":...}`/inline data)
 
 ### `cddl`
 

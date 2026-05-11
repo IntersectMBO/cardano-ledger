@@ -6,6 +6,9 @@
 * Fix `TranslateEra` instance for `DijkstraEra CertState`
 * Add `GuardScriptHashesNotSupported` constructor to `DijkstraContextError`
 * Add `SubTxsAreNotSupported` constructor to `DijkstraContextError`
+* Add `ToJSON`/`FromJSON` instances for `Tx TopTx DijkstraEra`, `Tx SubTx DijkstraEra`, `TxBody TopTx DijkstraEra`, `TxBody SubTx DijkstraEra`, `DijkstraTxCert`, `DijkstraDelegCert`, `DijkstraPlutusPurpose`, `DijkstraNativeScript`, `AccountBalanceInterval`, `AccountBalanceIntervals`
+* Add `ToJSON`/`FromJSON` instances for `Inclusive`, `Exclusive` in `cardano-ledger-core`
+* Add `ToJSONKey`/`FromJSONKey` instances for `AccountId` and `ToJSON`/`FromJSON` for `DirectDeposits`
 * Add `decodeDijkstraTopTx`
 * Change `Signal` to `StAnnTx TopTx era` for: `DijkstraLEDGER`, `DijkstraMEMPOOL`, `DijkstraUTXOW`, `DijkstraUTXO`
 * Change `Signal` to `StAnnTx SubTx era` for: `DijkstraSUBLEDGER`, `DijkstraSUBUTXOW`, `DijkstraSUBUTXO`
