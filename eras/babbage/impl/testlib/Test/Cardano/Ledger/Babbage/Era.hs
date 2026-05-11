@@ -16,7 +16,11 @@ import Paths_cardano_ledger_babbage (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
-import Test.Cardano.Ledger.Babbage.Examples (exampleBabbageTx)
+import Test.Cardano.Ledger.Babbage.Examples (
+  exampleBabbageOnwardsEraPParams,
+  exampleBabbagePParamsUpdate,
+  exampleBabbageTx,
+ )
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
@@ -38,6 +42,10 @@ instance EraTest BabbageEra where
   mkEraFullPath = getDataFileName
 
   exampleTx = exampleBabbageTx
+
+  examplePParams = exampleBabbageOnwardsEraPParams
+
+  examplePParamsUpdate = exampleBabbagePParamsUpdate
 
 instance ShelleyEraTest BabbageEra
 
