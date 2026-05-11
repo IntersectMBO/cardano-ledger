@@ -295,14 +295,15 @@ instance Era era => DecCBOR (Datum era) where
       decodeDatum k = Invalid k
 
 instance Era era => ToJSON (Datum era) where
-  toJSON d =
-    case datumDataHash d of
-      SNothing -> Null
-      SJust dh -> toJSON dh
-  toEncoding d =
-    case datumDataHash d of
-      SNothing -> toEncoding Null
-      SJust dh -> toEncoding dh
+  toJSON NoDatum = Null
+  toJSON (DatumHash dh) = object ["datumhash" .= dh]
+  toJSON (Datum bd) = toJSON (binaryDataToData @era bd)
+
+instance Era era => FromJSON (Datum era) where
+  parseJSON Null = pure NoDatum
+  parseJSON v =
+    (withObject "DatumHash" (\o -> DatumHash <$> o .: "datumhash") v)
+      <|> (Datum . dataToBinaryData <$> parseJSON v)
 
 mkInlineDatum :: forall era. Era era => PV1.Data -> Datum era
 mkInlineDatum = Datum . dataToBinaryData . Data @era

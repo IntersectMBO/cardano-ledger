@@ -68,6 +68,8 @@ import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
@@ -422,3 +424,61 @@ instance
   where
   toSTxLevel DijkstraStAnnTopTx {} = STopTx @era
   toSTxLevel DijkstraStAnnSubTx {} = SSubTx @era
+
+instance
+  ( ToJSON (TxBody TopTx DijkstraEra)
+  , ToJSON (TxWits DijkstraEra)
+  , ToJSON (TxAuxData DijkstraEra)
+  ) =>
+  ToJSON (Tx TopTx DijkstraEra)
+  where
+  toJSON (MkDijkstraTx (DijkstraTx {dtBody, dtWits, dtIsValid, dtAuxData})) =
+    Aeson.object
+      [ "body" .= dtBody
+      , "wits" .= dtWits
+      , "isValid" .= dtIsValid
+      , "auxiliaryData" .= dtAuxData
+      ]
+
+instance
+  ( ToJSON (TxBody SubTx DijkstraEra)
+  , ToJSON (TxWits DijkstraEra)
+  , ToJSON (TxAuxData DijkstraEra)
+  ) =>
+  ToJSON (Tx SubTx DijkstraEra)
+  where
+  toJSON (MkDijkstraTx (DijkstraSubTx {dstBody, dstWits, dstAuxData})) =
+    Aeson.object
+      [ "body" .= dstBody
+      , "wits" .= dstWits
+      , "auxiliaryData" .= dstAuxData
+      ]
+
+instance
+  ( FromJSON (TxBody TopTx DijkstraEra)
+  , FromJSON (TxWits DijkstraEra)
+  , FromJSON (TxAuxData DijkstraEra)
+  ) =>
+  FromJSON (Tx TopTx DijkstraEra)
+  where
+  parseJSON = withObject "Tx TopTx DijkstraEra" $ \o ->
+    fmap MkDijkstraTx $
+      DijkstraTx
+        <$> o .: "body"
+        <*> o .: "wits"
+        <*> o .: "isValid"
+        <*> o .: "auxiliaryData"
+
+instance
+  ( FromJSON (TxBody SubTx DijkstraEra)
+  , FromJSON (TxWits DijkstraEra)
+  , FromJSON (TxAuxData DijkstraEra)
+  ) =>
+  FromJSON (Tx SubTx DijkstraEra)
+  where
+  parseJSON = withObject "Tx SubTx DijkstraEra" $ \o ->
+    fmap MkDijkstraTx $
+      DijkstraSubTx
+        <$> o .: "body"
+        <*> o .: "wits"
+        <*> o .: "auxiliaryData"
