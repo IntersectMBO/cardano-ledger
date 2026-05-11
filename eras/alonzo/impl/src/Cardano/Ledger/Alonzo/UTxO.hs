@@ -33,6 +33,9 @@ module Cardano.Ledger.Alonzo.UTxO (
   scriptsProvidedAlonzoStAnnTx,
   resolveNeededPlutusScriptsWithPurpose,
 
+  -- * Plutus scripts with context
+  plutusScriptsWithContextAlonzoStAnnTx,
+
   -- * Datums needed
   getInputDataHashesTxBody,
 
@@ -43,6 +46,7 @@ module Cardano.Ledger.Alonzo.UTxO (
 import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.State ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx (..))
@@ -52,7 +56,7 @@ import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
-import Cardano.Ledger.Plutus (Language (..))
+import Cardano.Ledger.Plutus (Language (..), PlutusWithContext)
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
 import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
@@ -69,6 +73,7 @@ import Cardano.Ledger.State (
 import Cardano.Ledger.TxIn
 import Control.DeepSeq (NFData)
 import Data.Foldable as F (foldl', toList)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import qualified Data.Set as Set
@@ -137,6 +142,10 @@ class EraUTxO era => AlonzoEraUTxO era where
 
   scriptsNeededStAnnTx :: StAnnTx l era -> ScriptsNeeded era
 
+  plutusScriptsWithContextStAnnTx ::
+    StAnnTx l era ->
+    Either (NonEmpty (CollectError era)) [PlutusWithContext]
+
 instance AlonzoEraUTxO AlonzoEra where
   getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
 
@@ -145,6 +154,8 @@ instance AlonzoEraUTxO AlonzoEra where
   scriptsProvidedStAnnTx = scriptsProvidedAlonzoStAnnTx
 
   scriptsNeededStAnnTx = scriptsNeededAlonzoStAnnTx
+
+  plutusScriptsWithContextStAnnTx = plutusScriptsWithContextAlonzoStAnnTx
 
 scriptsProvidedAlonzoStAnnTx ::
   ( EraTxLevel era
@@ -163,6 +174,17 @@ scriptsNeededAlonzoStAnnTx ::
   AlonzoStAnnTx l era -> ScriptsNeeded era
 scriptsNeededAlonzoStAnnTx stAnnTx =
   withTopTxLevelOnly stAnnTx $ \AlonzoStAnnTx {asatScriptsNeeded} -> asatScriptsNeeded
+
+plutusScriptsWithContextAlonzoStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxTopLevel l era
+  , STxLevel TopTx era ~ STxTopLevel TopTx era
+  ) =>
+  AlonzoStAnnTx l era ->
+  Either (NonEmpty (CollectError era)) [PlutusWithContext]
+plutusScriptsWithContextAlonzoStAnnTx stAnnTx =
+  withTopTxLevelOnly stAnnTx $
+    \AlonzoStAnnTx {asatPlutusScriptsWithContext} -> asatPlutusScriptsWithContext
 
 getAlonzoSupplementalDataHashes ::
   (EraTxBody era, AlonzoEraTxOut era) =>

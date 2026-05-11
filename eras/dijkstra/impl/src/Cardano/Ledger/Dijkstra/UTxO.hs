@@ -17,6 +17,7 @@ module Cardano.Ledger.Dijkstra.UTxO (
   batchNonDistinctRefScriptsSize,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded (..),
@@ -46,7 +47,9 @@ import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Plutus (PlutusWithContext)
 import Data.Foldable (Foldable (..))
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Monoid (Sum (..))
@@ -179,6 +182,8 @@ instance AlonzoEraUTxO DijkstraEra where
 
   scriptsNeededStAnnTx = scriptsNeededDijkstraStAnnTx
 
+  plutusScriptsWithContextStAnnTx = plutusScriptsWithContextDijkstraStAnnTx
+
 scriptsProvidedDijkstraStAnnTx ::
   ( EraTxLevel era
   , STxLevel l era ~ STxBothLevels l era
@@ -204,6 +209,20 @@ scriptsNeededDijkstraStAnnTx stAnnTx =
     stAnnTx
     (\DijkstraStAnnTopTx {dsattScriptsNeeded} -> dsattScriptsNeeded)
     (\DijkstraStAnnSubTx {dsastScriptsNeeded} -> dsastScriptsNeeded)
+
+plutusScriptsWithContextDijkstraStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxBothLevels l era
+  , STxLevel SubTx era ~ STxBothLevels SubTx era
+  , STxLevel TopTx era ~ STxBothLevels TopTx era
+  ) =>
+  DijkstraStAnnTx l era ->
+  Either (NonEmpty (CollectError era)) [PlutusWithContext]
+plutusScriptsWithContextDijkstraStAnnTx stAnnTx =
+  withBothTxLevels
+    stAnnTx
+    (\DijkstraStAnnTopTx {dsattPlutusScriptsWithContext} -> dsattPlutusScriptsWithContext)
+    (\DijkstraStAnnSubTx {dsastPlutusScriptsWithContext} -> dsastPlutusScriptsWithContext)
 
 instance DijkstraEraUTxO DijkstraEra where
   subTransactionsStAnnTx = subTransactionsDijkstraStAnnTx
