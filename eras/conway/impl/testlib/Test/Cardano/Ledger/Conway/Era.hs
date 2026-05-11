@@ -1,5 +1,7 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -24,7 +26,11 @@ import Paths_cardano_ledger_conway (getDataFileName)
 import Test.Cardano.Ledger.Babbage.Era
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
-import Test.Cardano.Ledger.Conway.Examples (exampleConwayTx)
+import Test.Cardano.Ledger.Conway.Examples (
+  exampleConwayOnwardsEraPParams,
+  exampleConwayOnwardsEraPParamsUpdate,
+  exampleConwayTx,
+ )
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
@@ -49,6 +55,10 @@ instance EraTest ConwayEra where
   mkEraFullPath = getDataFileName
 
   exampleTx = exampleConwayTx
+
+  examplePParams = exampleConwayOnwardsEraPParams
+
+  examplePParamsUpdate = exampleConwayOnwardsEraPParamsUpdate
 
 instance ShelleyEraTest ConwayEra
 
