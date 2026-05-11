@@ -112,6 +112,10 @@ vMapTests =
         let f' k v = applyFun2 f k v :: String
          in prop_AsMapTo (VMap.foldMapWithKey f') (Map.foldMapWithKey f')
       prop "lookup" $ \k -> prop_AsMapTo (VMap.lookup k) (Map.lookup k)
+      prop "elemAt/lookupIndex" $ \k m ->
+        case VMap.lookupIndex k m of
+          Nothing -> label "Nothing" $ Map.lookupIndex k (VMap.toMap m) === Nothing
+          Just ix -> label "Just" $ prop_AsMapTo (VMap.elemAt ix) (Map.elemAt ix) m
       prop "lookup (existing)" $ \k v xs ->
         let xs' = xs <> [(k, v)]
          in (VMap.lookup k (VMap.fromList xs' :: VMapT) === Just v)

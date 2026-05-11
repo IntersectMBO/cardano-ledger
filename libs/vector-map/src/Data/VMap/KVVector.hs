@@ -31,6 +31,7 @@ module Data.VMap.KVVector (
   memberKVVector,
   lookupKVVector,
   lookupDefaultKVVector,
+  lookupIndexKVVector,
   elemAtKVVector,
   sortAscKVMVector,
   internKVVectorMaybe,
@@ -216,6 +217,11 @@ lookupKVVector ::
 lookupKVVector key (KVVector keys values) =
   VG.unsafeIndex values <$> lookupIxSortedVector key keys
 {-# INLINE lookupKVVector #-}
+
+lookupIndexKVVector ::
+  (Ord k, VG.Vector kv k) => k -> KVVector kv vv (k, v) -> Maybe Int
+lookupIndexKVVector key (KVVector keys _values) = lookupIxSortedVector key keys
+{-# INLINE lookupIndexKVVector #-}
 
 -- | Look up a value by the key in a __sorted__ key/value vector. Ensure it is
 -- sorted otherwise terrible things happen.
