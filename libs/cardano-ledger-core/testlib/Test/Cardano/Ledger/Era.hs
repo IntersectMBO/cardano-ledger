@@ -118,6 +118,12 @@ class
   -- to be valid, but all possible fields must be set to some example value.
   exampleTx :: Tx TopTx era
 
+  -- | Example PParams used for testing. All possible fields must be set.
+  examplePParams :: PParams era
+
+  -- | Example PParamsUpdate used for testing. All possible fields must be set.
+  examplePParamsUpdate :: PParamsUpdate era
+
 class EraTest era => EraSpec era where
   -- | All of Imp spec that is applicable to this era
   eraImpSpec :: Proxy era -> Spec

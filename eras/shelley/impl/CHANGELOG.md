@@ -59,6 +59,11 @@
 
 ### `testlib`
 
+* Add to `Test.Cardano.Ledger.Shelley.Examples`:
+  - `exampleShelleyPParams`
+  - `exampleShelleyPParamsUpdate`
+  - `exampleShelleyOnwardsEraPParams`
+  - `exampleShelleyOnwardsEraPParamsUpdate`
 * Add `proxy era` argument to `shelleyEraSpecificSpec`
 * Remove `EraSpecificSpec`
 * Make `Test.Cardano.Ledger.Shelley.Imp.spec` accept `Proxy era`

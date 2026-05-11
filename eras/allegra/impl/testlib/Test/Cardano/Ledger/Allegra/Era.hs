@@ -19,6 +19,10 @@ import Test.Cardano.Ledger.Allegra.Examples (exampleAllegraTx)
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Era
+import Test.Cardano.Ledger.Shelley.Examples (
+  exampleShelleyPParams,
+  exampleShelleyPParamsUpdate,
+ )
 
 class
   ( ShelleyEraTest era
@@ -42,6 +46,10 @@ instance EraTest AllegraEra where
   mkEraFullPath = getDataFileName
 
   exampleTx = exampleAllegraTx
+
+  examplePParams = exampleShelleyPParams
+
+  examplePParamsUpdate = exampleShelleyPParamsUpdate
 
 instance ShelleyEraTest AllegraEra
 

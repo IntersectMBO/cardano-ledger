@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -34,6 +35,10 @@ module Test.Cardano.Ledger.Shelley.Examples (
   exampleProposedPPUpdates,
   exampleByronAddress,
   exampleShelleyScript,
+  exampleShelleyOnwardsEraPParams,
+  exampleShelleyOnwardsEraPParamsUpdate,
+  exampleShelleyPParams,
+  exampleShelleyPParamsUpdate,
   testShelleyGenesis,
   -- utility functions
   mkDSIGNKeyPair,
@@ -89,6 +94,7 @@ import Data.Word (Word64, Word8)
 import Lens.Micro ((&), (.~), (<>~))
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey)
+import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, unsafeBoundRational)
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 
@@ -577,3 +583,63 @@ seedFromWords ws =
 
 keyToCredential :: KeyPair r -> Credential r
 keyToCredential = KeyHashObj . hashKey . vKey
+
+exampleShelleyOnwardsEraPParams :: forall era. EraPParams era => PParams era
+exampleShelleyOnwardsEraPParams =
+  def
+    & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 44)
+    & ppTxFeeFixedL .~ Coin 155_381
+    & ppMaxBBSizeL .~ 90_112
+    & ppMaxTxSizeL .~ 16_384
+    & ppMaxBHSizeL .~ 1_100
+    & ppKeyDepositL .~ Coin 2_000_000
+    & ppPoolDepositL .~ Coin 500_000_000
+    & ppEMaxL .~ EpochInterval 18
+    & ppNOptL .~ 500
+    & ppA0L .~ 3 %! 10
+    & ppRhoL .~ 3 %! 1_000
+    & ppTauL .~ 2 %! 10
+    & ppProtocolVersionL .~ ProtVer (eraProtVerHigh @era) 0
+    & ppMinPoolCostL .~ Coin 340_000_000
+
+exampleShelleyOnwardsEraPParamsUpdate :: EraPParams era => PParamsUpdate era
+exampleShelleyOnwardsEraPParamsUpdate =
+  emptyPParamsUpdate
+    & ppuTxFeePerByteL .~ SJust (CoinPerByte (CompactCoin 44))
+    & ppuTxFeeFixedL .~ SJust (Coin 155_381)
+    & ppuMaxBBSizeL .~ SJust 90_112
+    & ppuMaxTxSizeL .~ SJust 16_384
+    & ppuMaxBHSizeL .~ SJust 1_100
+    & ppuKeyDepositL .~ SJust (Coin 2_000_000)
+    & ppuPoolDepositL .~ SJust (Coin 500_000_000)
+    & ppuEMaxL .~ SJust (EpochInterval 18)
+    & ppuNOptL .~ SJust 500
+    & ppuA0L .~ SJust (3 %! 10)
+    & ppuRhoL .~ SJust (3 %! 1_000)
+    & ppuTauL .~ SJust (2 %! 10)
+    & ppuMinPoolCostL .~ SJust (Coin 340_000_000)
+
+exampleShelleyPParams ::
+  forall era.
+  (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) =>
+  PParams era
+exampleShelleyPParams =
+  exampleShelleyOnwardsEraPParams
+    & ppMinUTxOValueL .~ Coin 1_000_000
+    & ppDL .~ 1 %! 2
+    & ppExtraEntropyL .~ NeutralNonce
+
+exampleShelleyPParamsUpdate ::
+  forall era.
+  ( EraPParams era
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
+  , AtMostEra "Babbage" era
+  ) =>
+  PParamsUpdate era
+exampleShelleyPParamsUpdate =
+  exampleShelleyOnwardsEraPParamsUpdate
+    & ppuMinUTxOValueL .~ SJust (Coin 1_000_000)
+    & ppuDL .~ SJust (1 %! 2)
+    & ppuExtraEntropyL .~ SJust NeutralNonce
+    & ppuProtocolVersionL .~ SJust (ProtVer (eraProtVerHigh @era) 0)
