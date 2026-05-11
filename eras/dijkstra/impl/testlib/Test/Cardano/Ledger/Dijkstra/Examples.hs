@@ -16,6 +16,8 @@ module Test.Cardano.Ledger.Dijkstra.Examples (
   exampleDijkstraTx,
   exampleDijkstraBasedTopTx,
   exampleDijkstraBasedSubTx,
+  exampleDijkstraOnwardsEraPParams,
+  exampleDijkstraOnwardsEraPParamsUpdate,
   exampleDijkstraGenesis,
 ) where
 
@@ -37,7 +39,18 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
-import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
+import Cardano.Ledger.Dijkstra.PParams (
+  DijkstraEraPParams,
+  UpgradeDijkstraPParams (..),
+  ppMaxRefScriptSizePerBlockL,
+  ppMaxRefScriptSizePerTxL,
+  ppRefScriptCostMultiplierL,
+  ppRefScriptCostStrideL,
+  ppuMaxRefScriptSizePerBlockL,
+  ppuMaxRefScriptSizePerTxL,
+  ppuRefScriptCostMultiplierL,
+  ppuRefScriptCostStrideL,
+ )
 import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceInterval (..),
@@ -74,8 +87,14 @@ import Test.Cardano.Ledger.Alonzo.Examples (
   mkAlonzoBasedLedgerExamples,
  )
 import Test.Cardano.Ledger.Babbage.Examples (exampleBabbageNewEpochState)
-import Test.Cardano.Ledger.Conway.Examples (exampleConwayBasedTopTx, exampleConwayBasedTx)
+import Test.Cardano.Ledger.Conway.Examples (
+  exampleConwayBasedTopTx,
+  exampleConwayBasedTx,
+  exampleConwayOnwardsEraPParams,
+  exampleConwayOnwardsEraPParamsUpdate,
+ )
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
+import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
 import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus)
 import Test.Cardano.Ledger.Shelley.Examples (
@@ -241,16 +260,33 @@ exampleDirectDeposits =
   DirectDeposits $
     Map.singleton
       (AccountAddress Mainnet (AccountId $ KeyHashObj $ mkKeyHash 300))
-      (Coin 1000000)
+      (Coin 1_000_000)
 
 exampleAccountBalanceIntervals :: AccountBalanceIntervals era
 exampleAccountBalanceIntervals =
   AccountBalanceIntervals $
     Map.fromList
       [ (AccountId $ KeyHashObj $ mkKeyHash 400, AccountBalanceLowerBound (Inclusive $ Coin 500))
-      , (AccountId $ KeyHashObj $ mkKeyHash 401, AccountBalanceUpperBound (Exclusive $ Coin 10000))
+      , (AccountId $ KeyHashObj $ mkKeyHash 401, AccountBalanceUpperBound (Exclusive $ Coin 10_000))
       ,
         ( AccountId $ ScriptHashObj $ mkScriptHash 402
         , AccountBalanceBothBounds (Inclusive $ Coin 100) (Exclusive $ Coin 5000)
         )
       ]
+
+exampleDijkstraOnwardsEraPParams :: (DijkstraEraPParams era, ConwayEraPParams era) => PParams era
+exampleDijkstraOnwardsEraPParams =
+  exampleConwayOnwardsEraPParams
+    & ppMaxRefScriptSizePerBlockL .~ 1024 * 1024
+    & ppMaxRefScriptSizePerTxL .~ 200 * 1024
+    & ppRefScriptCostStrideL .~ knownNonZeroBounded @25_600
+    & ppRefScriptCostMultiplierL .~ 12 %! 10
+
+exampleDijkstraOnwardsEraPParamsUpdate ::
+  (DijkstraEraPParams era, ConwayEraPParams era) => PParamsUpdate era
+exampleDijkstraOnwardsEraPParamsUpdate =
+  exampleConwayOnwardsEraPParamsUpdate
+    & ppuMaxRefScriptSizePerBlockL .~ SJust (1024 * 1024)
+    & ppuMaxRefScriptSizePerTxL .~ SJust (200 * 1024)
+    & ppuRefScriptCostStrideL .~ SJust (knownNonZeroBounded @25_600)
+    & ppuRefScriptCostMultiplierL .~ SJust (12 %! 10)
