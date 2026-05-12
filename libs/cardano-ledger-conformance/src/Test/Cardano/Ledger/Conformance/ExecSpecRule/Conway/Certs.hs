@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs () where
 import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.State (CanSetAccounts (..), EraAccounts (..), EraCertState (..))
+import Control.State.Transition.Extended (TRC (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -21,6 +22,7 @@ import Lens.Micro ((%~), (.~), (^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
+  SpecTRC (..),
   SpecTranslate (..),
   runFromAgdaFunction,
   runSpecTransM,
@@ -30,9 +32,15 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (ConwayCertExecC
 instance ExecSpecRule "CERTS" ConwayEra where
   type ExecContext "CERTS" ConwayEra = ConwayCertExecContext ConwayEra
 
+  translateInputs ConwayCertExecContext {..} (TRC (env, st, sig)) = do
+    agdaEnv <- runSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep env
+    agdaSt <- runSpecTransM () $ toSpecRep st
+    agdaSig <- runSpecTransM () $ toSpecRep sig
+    pure $ SpecTRC agdaEnv agdaSt agdaSig
+
   runAgdaRule = runFromAgdaFunction Agda.certsStep
 
-  translateOutput ctx@ConwayCertExecContext {..} _ = runSpecTransM ctx . toSpecRep . fixRewards
+  translateOutput ConwayCertExecContext {..} _ = runSpecTransM () . toSpecRep . fixRewards
     where
       -- This is necessary because the implementation zeroes out the rewards
       -- in the CERTS rule, but the spec does it in a different rule

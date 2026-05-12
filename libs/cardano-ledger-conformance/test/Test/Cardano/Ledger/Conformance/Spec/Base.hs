@@ -4,6 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conformance.Spec.Base (spec) where
 
@@ -27,7 +28,8 @@ hashDisplayProp ::
   forall a.
   ( Typeable a
   , Arbitrary a
-  , SpecTranslate () a
+  , SpecTranslate a
+  , SpecContext a ~ ()
   , SpecNormalize (SpecRep a)
   , ToExpr (SpecRep a)
   , ToExpr a

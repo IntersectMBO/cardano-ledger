@@ -14,7 +14,6 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (
 ) where
 
 import Cardano.Ledger.Address (AccountAddress)
-import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
@@ -22,11 +21,18 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (Era)
 import Cardano.Ledger.Conway.Governance (VotingProcedures)
 import Control.DeepSeq (NFData)
+import Control.State.Transition.Extended (TRC (..))
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (Arbitrary (..), ToExpr)
-import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), runFromAgdaFunction)
+import Test.Cardano.Ledger.Conformance (
+  ExecSpecRule (..),
+  SpecTRC (..),
+  SpecTranslate (..),
+  runFromAgdaFunction,
+  runSpecTransM,
+ )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
 
 data ConwayCertExecContext era
@@ -37,12 +43,6 @@ data ConwayCertExecContext era
   deriving (Generic, Eq, Show)
 
 instance Era era => NFData (ConwayCertExecContext era)
-
-instance Inject (ConwayCertExecContext era) (Map AccountAddress Coin) where
-  inject = ccecWithdrawals
-
-instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
-  inject = ccecVotes
 
 instance Era era => Arbitrary (ConwayCertExecContext era) where
   arbitrary =
@@ -69,5 +69,13 @@ instance Era era => ToExpr (ConwayCertExecContext era)
 
 instance ExecSpecRule "CERT" ConwayEra where
   type ExecContext "CERT" ConwayEra = ConwayCertExecContext ConwayEra
+
+  translateInputs ConwayCertExecContext {..} (TRC (env, st, sig)) = do
+    agdaEnv <- runSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep env
+    agdaSt <- runSpecTransM () $ toSpecRep st
+    agdaSig <- runSpecTransM () $ toSpecRep sig
+    pure $ SpecTRC agdaEnv agdaSt agdaSig
+
+  translateOutput _ _ st = runSpecTransM () $ toSpecRep st
 
   runAgdaRule = runFromAgdaFunction Agda.certStep

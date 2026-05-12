@@ -13,7 +13,7 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledger (ConwayLedgerExecContext (..)) where
 
-import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Conway (ConwayEra)
@@ -47,6 +47,10 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   SpecTRC (..),
   runFromAgdaFunction,
  )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (..),
+  runSpecTransM,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -59,12 +63,6 @@ data ConwayLedgerExecContext era
   , clecUtxoExecContext :: UtxoExecContext era
   }
   deriving (Generic)
-
-instance Inject (ConwayLedgerExecContext era) (StrictMaybe ScriptHash) where
-  inject = clecGuardrailsScriptHash
-
-instance Inject (ConwayLedgerExecContext ConwayEra) (EnactState ConwayEra) where
-  inject = clecEnactState
 
 instance
   ( EraPParams era
@@ -105,6 +103,12 @@ instance
 
 instance ExecSpecRule "LEDGER" ConwayEra where
   type ExecContext "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
+
+  translateInputs ConwayLedgerExecContext {..} (TRC (env, st, sig)) = do
+    agdaEnv <- runSpecTransM (clecGuardrailsScriptHash, clecEnactState) $ toSpecRep env
+    agdaSt <- runSpecTransM () $ toSpecRep st
+    agdaSig <- runSpecTransM () $ toSpecRep sig
+    pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule trc =
     let externalFunctions' = externalFunctions {Agda.extValidPlutusScript = Agda.isValid (strcSignal trc)}

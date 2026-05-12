@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -10,13 +11,26 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert () where
 
 import Cardano.Ledger.Conway (ConwayEra)
+import Control.State.Transition.Extended (TRC (..))
 import Data.Bifunctor (Bifunctor (..))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), SpecTRC (..), unComputationResult)
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (ConwayCertExecContext)
+import Test.Cardano.Ledger.Conformance (
+  ExecSpecRule (..),
+  SpecTRC (..),
+  SpecTranslate (..),
+  runSpecTransM,
+  unComputationResult,
+ )
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (ConwayCertExecContext (..))
 
 instance ExecSpecRule "GOVCERT" ConwayEra where
   type ExecContext "GOVCERT" ConwayEra = ConwayCertExecContext ConwayEra
+
+  translateInputs ConwayCertExecContext {..} (TRC (env, st, sig)) = do
+    agdaEnv <- runSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep env
+    agdaSt <- runSpecTransM () $ toSpecRep st
+    agdaSig <- runSpecTransM () $ toSpecRep sig
+    pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule (SpecTRC env (Agda.MkCertState dState pState vState) sig) =
     second (Agda.MkCertState dState pState) . unComputationResult $

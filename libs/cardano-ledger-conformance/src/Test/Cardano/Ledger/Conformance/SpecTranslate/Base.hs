@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -20,19 +21,23 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   OpaqueErrorString (..),
   SpecTransM,
   runSpecTransM,
-  askCtx,
-  withCtx,
+  withSpecTransM,
+  withCtxSpecTransM,
+  askSpecTransM,
   unComputationResult,
   unComputationResult_,
-  toSpecRep_,
+  toSpecRepTuple,
+  toSpecRepTupleGen,
+  toSpecRepOMap,
+  toSpecRepMap,
 ) where
 
-import Cardano.Ledger.BaseTypes (Inject (..), NonNegativeInterval, UnitInterval, unboundRational)
+import Cardano.Ledger.BaseTypes (NonNegativeInterval, UnitInterval, unboundRational)
 import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.Compactible (Compactible (..), fromCompact)
 import Control.DeepSeq (NFData)
-import Control.Monad.Except (ExceptT, MonadError (..), runExceptT)
-import Control.Monad.Reader (MonadReader (..), Reader, asks, runReader)
+import Control.Monad.Except (ExceptT, MonadError (..), mapExceptT, runExceptT)
+import Control.Monad.Reader (MonadReader (..), Reader, ask, runReader, withReaderT)
 import Data.Bitraversable (bimapM)
 import Data.Foldable (Foldable (..))
 import Data.Kind (Type)
@@ -48,7 +53,6 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
-import qualified Data.Text as T
 import Data.Void (Void, absurd)
 import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), V1, (:*:) (..), (:+:) (..))
@@ -62,131 +66,145 @@ newtype SpecTransM ctx a
 runSpecTransM :: ctx -> SpecTransM ctx a -> Either Text a
 runSpecTransM ctx (SpecTransM m) = runReader (runExceptT m) ctx
 
-class SpecTranslate ctx a where
+withSpecTransM :: (ctx -> ctx') -> SpecTransM ctx' a -> SpecTransM ctx a
+withSpecTransM f (SpecTransM m) = SpecTransM (mapExceptT (withReaderT f) m)
+
+withCtxSpecTransM :: ctx -> SpecTransM ctx a -> SpecTransM ctx' a
+withCtxSpecTransM ctx = withSpecTransM (const ctx)
+
+askSpecTransM :: SpecTransM ctx ctx
+askSpecTransM = ask
+
+class SpecTranslate a where
   type SpecRep a :: Type
 
-  toSpecRep :: a -> SpecTransM ctx (SpecRep a)
+  type SpecContext a :: Type
+  type SpecContext a = ()
 
-instance SpecTranslate ctx () where
+  toSpecRep :: a -> SpecTransM (SpecContext a) (SpecRep a)
+
+instance SpecTranslate () where
   type SpecRep () = ()
 
   toSpecRep = pure
 
-instance SpecTranslate ctx Bool where
+instance SpecTranslate Bool where
   type SpecRep Bool = Bool
 
   toSpecRep = pure
 
-instance SpecTranslate ctx Integer where
+instance SpecTranslate Integer where
   type SpecRep Integer = Integer
 
   toSpecRep = pure
 
-instance SpecTranslate ctx Void where
+instance SpecTranslate Void where
   type SpecRep Void = Void
 
   toSpecRep = absurd
 
-instance SpecTranslate ctx Word16 where
+instance SpecTranslate Word16 where
   type SpecRep Word16 = Integer
 
   toSpecRep = pure . toInteger
 
-instance SpecTranslate ctx Word32 where
+instance SpecTranslate Word32 where
   type SpecRep Word32 = Integer
 
   toSpecRep = pure . toInteger
 
-instance SpecTranslate ctx Word64 where
+instance SpecTranslate Word64 where
   type SpecRep Word64 = Integer
 
   toSpecRep = pure . toInteger
 
-instance
-  ( SpecTranslate ctx a
-  , SpecTranslate ctx b
-  ) =>
-  SpecTranslate ctx (a, b)
-  where
-  type SpecRep (a, b) = (SpecRep a, SpecRep b)
+toSpecRepTupleGen ::
+  (a -> SpecTransM ctx c) ->
+  (b -> SpecTransM ctx d) ->
+  (a, b) ->
+  SpecTransM ctx (c, d)
+toSpecRepTupleGen f g (a, b) = (,) <$> f a <*> g b
 
-  toSpecRep (x, y) = (,) <$> toSpecRep x <*> toSpecRep y
+toSpecRepTuple ::
+  (SpecTranslate a, SpecTranslate b, SpecContext a ~ ctx, SpecContext b ~ ctx) =>
+  (a, b) -> SpecTransM ctx (SpecRep a, SpecRep b)
+toSpecRepTuple = toSpecRepTupleGen toSpecRep toSpecRep
 
-instance SpecTranslate ctx a => SpecTranslate ctx [a] where
+instance SpecTranslate a => SpecTranslate [a] where
   type SpecRep [a] = [SpecRep a]
+  type SpecContext [a] = SpecContext a
 
   toSpecRep = traverse toSpecRep
 
-instance SpecTranslate ctx a => SpecTranslate ctx (StrictMaybe a) where
+instance SpecTranslate a => SpecTranslate (StrictMaybe a) where
   type SpecRep (StrictMaybe a) = Maybe (SpecRep a)
+  type SpecContext (StrictMaybe a) = SpecContext a
 
   toSpecRep = toSpecRep . strictMaybeToMaybe
 
-instance SpecTranslate ctx a => SpecTranslate ctx (Maybe a) where
+instance SpecTranslate a => SpecTranslate (Maybe a) where
   type SpecRep (Maybe a) = Maybe (SpecRep a)
+  type SpecContext (Maybe a) = SpecContext a
 
   toSpecRep = traverse toSpecRep
 
-instance SpecTranslate ctx a => SpecTranslate ctx (StrictSeq a) where
+instance SpecTranslate a => SpecTranslate (StrictSeq a) where
   type SpecRep (StrictSeq a) = [SpecRep a]
+  type SpecContext (StrictSeq a) = SpecContext a
 
   toSpecRep = traverse toSpecRep . toList
 
-instance SpecTranslate ctx a => SpecTranslate ctx (Seq a) where
+instance SpecTranslate a => SpecTranslate (Seq a) where
   type SpecRep (Seq a) = [SpecRep a]
+  type SpecContext (Seq a) = SpecContext a
 
   toSpecRep = traverse toSpecRep . toList
 
-instance SpecTranslate ctx a => SpecTranslate ctx (OSet a) where
+instance SpecTranslate a => SpecTranslate (OSet a) where
   type SpecRep (OSet a) = [SpecRep a]
-
+  type SpecContext (OSet a) = SpecContext a
   toSpecRep = traverse toSpecRep . toList
 
-instance
-  ( SpecTranslate ctx k
-  , SpecTranslate ctx v
-  , Ord k
-  ) =>
-  SpecTranslate ctx (OMap k v)
-  where
-  type SpecRep (OMap k v) = [(SpecRep k, SpecRep v)]
+toSpecRepOMap ::
+  (Ord k, SpecTranslate k, SpecTranslate v, SpecContext k ~ ctx, SpecContext v ~ ctx) =>
+  OMap k v -> SpecTransM ctx [(SpecRep k, SpecRep v)]
+toSpecRepOMap = traverse (bimapM toSpecRep toSpecRep) . OMap.assocList
 
-  toSpecRep = traverse (bimapM toSpecRep toSpecRep) . OMap.assocList
-
-instance (SpecTranslate ctx a, Compactible a) => SpecTranslate ctx (CompactForm a) where
+instance (SpecTranslate a, Compactible a) => SpecTranslate (CompactForm a) where
   type SpecRep (CompactForm a) = SpecRep a
+  type SpecContext (CompactForm a) = SpecContext a
 
   toSpecRep = toSpecRep . fromCompact
 
-instance SpecTranslate ctx a => SpecTranslate ctx (Sized a) where
+instance SpecTranslate a => SpecTranslate (Sized a) where
   type SpecRep (Sized a) = SpecRep a
+  type SpecContext (Sized a) = SpecContext a
 
   toSpecRep (Sized x _) = toSpecRep x
 
-instance SpecTranslate ctx a => SpecTranslate ctx (Set a) where
+instance SpecTranslate a => SpecTranslate (Set a) where
   type SpecRep (Set a) = Agda.HSSet (SpecRep a)
+  type SpecContext (Set a) = SpecContext a
 
   toSpecRep = fmap Agda.MkHSSet . traverse toSpecRep . Set.toList
 
-instance SpecTranslate ctx UnitInterval where
+instance SpecTranslate UnitInterval where
   type SpecRep UnitInterval = Agda.Rational
 
   toSpecRep = pure . unboundRational
 
-instance SpecTranslate ctx NonNegativeInterval where
+instance SpecTranslate NonNegativeInterval where
   type SpecRep NonNegativeInterval = Agda.Rational
 
   toSpecRep = pure . unboundRational
 
-instance
-  ( SpecTranslate ctx k
-  , SpecTranslate ctx v
-  ) =>
-  SpecTranslate ctx (Map k v)
-  where
-  type SpecRep (Map k v) = Agda.HSMap (SpecRep k) (SpecRep v)
-
-  toSpecRep = fmap Agda.MkHSMap . traverse (bimapM toSpecRep toSpecRep) . Map.toList
+toSpecRepMap ::
+  (SpecTranslate k, SpecTranslate v, SpecContext k ~ ctx, SpecContext v ~ ctx) =>
+  Map k v -> SpecTransM ctx (Agda.HSMap (SpecRep k) (SpecRep v))
+toSpecRepMap =
+  fmap Agda.MkHSMap
+    . traverse (bimapM toSpecRep toSpecRep)
+    . Map.toList
 
 class GSpecNormalize f where
   genericSpecNormalize :: f a -> f a
@@ -215,15 +233,6 @@ class SpecNormalize a where
   default specNormalize :: (Generic a, GSpecNormalize (Rep a)) => a -> a
   specNormalize = to . genericSpecNormalize . from
 
-askCtx :: forall b ctx. Inject ctx b => SpecTransM ctx b
-askCtx = asks inject
-
-withCtx :: ctx -> SpecTransM ctx a -> SpecTransM ctx' a
-withCtx ctx m = do
-  case runSpecTransM ctx m of
-    Right x -> pure x
-    Left e -> throwError e
-
 -- | OpaqueErrorString behaves like unit in comparisons, but contains an
 -- error string that can be displayed.
 newtype OpaqueErrorString = OpaqueErrorString (NonEmpty Text)
@@ -246,11 +255,3 @@ unComputationResult (Agda.Failure e) = Left e
 unComputationResult_ :: Agda.ComputationResult Void a -> Either e a
 unComputationResult_ (Agda.Success x) = Right x
 unComputationResult_ (Agda.Failure x) = case x of {}
-
-toSpecRep_ ::
-  SpecTranslate () a =>
-  a ->
-  SpecRep a
-toSpecRep_ x = case runSpecTransM () $ toSpecRep x of
-  Right res -> res
-  Left v -> error $ "Failed to translate:\n" <> T.unpack v
