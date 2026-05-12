@@ -499,6 +499,8 @@ deriving instance Crypto c => Eq (ChainTransitionError c)
 
 deriving instance Crypto c => Show (ChainTransitionError c)
 
+instance Crypto c => NoThunks (ChainTransitionError c)
+
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::
   Globals ->

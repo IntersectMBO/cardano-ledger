@@ -49,7 +49,6 @@
   - `ShelleyLedgersPredFailure`
   - `ShelleyPoolPredFailure`
   - `ShelleyPpupPredFailure`
-  - `ChainPredicateFailure`
 * Add protocol version validation to `createInitialState`:
   - Validate that current protocol version is within the era's bounds
 
