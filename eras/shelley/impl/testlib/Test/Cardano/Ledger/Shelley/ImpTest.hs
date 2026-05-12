@@ -25,7 +25,6 @@
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
   LedgerSpec,
-  EraSpecificSpec (..),
   SomeSTSEvent (..),
   ImpTestState,
   ImpTestEnv (..),
@@ -140,6 +139,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   whenMajorVersionAtMost,
   unlessMajorVersion,
   getsPParams,
+  withImpInitEachEraVersion,
   withEachEraVersion,
   impSatisfyMNativeScripts,
   impSatisfySignature,
@@ -342,10 +342,6 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
   -- `futurePParams` are applied and the epoch number is updated to the first epoch
   -- number of the current era
   impPrepAction = passTick
-
-class EraTest era => EraSpecificSpec era where
-  eraSpecificSpec :: SpecWith (ImpInit (LedgerSpec era))
-  eraSpecificSpec = pure ()
 
 data SomeSTSEvent era
   = forall (rule :: Symbol).
@@ -697,10 +693,19 @@ withEachEraVersion ::
   ShelleyEraImp era =>
   SpecWith (ImpInit (LedgerSpec era)) ->
   Spec
-withEachEraVersion specWith =
+withEachEraVersion = withImpInitEachEraVersion (Proxy @era)
+{-# DEPRECATED withEachEraVersion "In favor of `withImpInitEachEraVersion`" #-}
+
+withImpInitEachEraVersion ::
+  forall proxy era.
+  ShelleyEraImp era =>
+  proxy era ->
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  Spec
+withImpInitEachEraVersion _proxy specWith =
   withImpInit @(LedgerSpec era) $ do
     forM_ (eraProtVersions @era) $ \protVer ->
-      describe ("Protocol " <> show protVer) $
+      describe ("Version " <> show protVer) $
         modifyImpInitProtVer protVer specWith
 
 shelleyModifyImpInitProtVer ::

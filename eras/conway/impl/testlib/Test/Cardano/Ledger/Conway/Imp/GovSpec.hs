@@ -47,7 +47,7 @@ spec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "GOV" $ do
   constitutionSpec
   proposalsSpec
   votingSpec

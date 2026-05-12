@@ -48,7 +48,7 @@ spec ::
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "ENACT" $ do
   committeeSpec
   treasuryWithdrawalsSpec
   noConfidenceSpec

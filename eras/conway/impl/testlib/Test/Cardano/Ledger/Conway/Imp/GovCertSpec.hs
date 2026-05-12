@@ -27,7 +27,7 @@ spec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "GOVCERT" $ do
   it "Resigning proposed CC key" $ do
     ccColdCred <- KeyHashObj <$> freshKeyHash
     proposal <- mkUpdateCommitteeProposal Nothing mempty [(ccColdCred, EpochInterval 1234)] (1 %! 2)

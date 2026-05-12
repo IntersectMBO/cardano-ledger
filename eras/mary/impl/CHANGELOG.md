@@ -1,6 +1,6 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.10.1.0
+## 1.11.0.0
 
 * Add `ApplyTick` instance for `MaryEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `MaryEra`.
@@ -11,6 +11,7 @@
 
 ### `testlib`
 
+* Make `Test.Cardano.Ledger.Mary.Imp.spec` accept `Proxy era`
 * In `Test.Cardano.Ledger.Mary.Examples`:
   - Remove `exampleMaryBasedShelleyTxBody`, `exampleMaryBasedTxBody`
   - Add `exampleMaryBasedTx`

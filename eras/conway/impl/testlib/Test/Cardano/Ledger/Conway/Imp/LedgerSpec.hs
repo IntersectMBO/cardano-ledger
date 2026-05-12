@@ -52,7 +52,7 @@ spec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "LEDGER" $ do
   it "TxRefScriptsSizeTooBig" $ do
     -- we use here the largest script we currently have as many times as necessary to
     -- trigger the predicate failure

@@ -56,7 +56,7 @@ spec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "UTXOS" $ do
   govPolicySpec
   costModelsSpec
   datumAndReferenceInputsSpec

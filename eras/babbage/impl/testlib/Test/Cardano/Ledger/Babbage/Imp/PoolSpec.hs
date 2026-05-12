@@ -33,7 +33,7 @@ babbageEraSpecificSpec ::
   , Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
-babbageEraSpecificSpec = do
+babbageEraSpecificSpec = describe "POOL" $ do
   it "Pool to pool member rewards" $ do
     -- This test attempts to reproduce the issue that appeared with the release of
     -- `cardano-db-sync-10.6.1` (using `cardano-ledger-shelley-1.17.0.0`),

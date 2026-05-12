@@ -21,7 +21,7 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "CERTS" $ do
   describe "Withdrawals" $ do
     it "Withdrawing from an unregistered staking address" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2

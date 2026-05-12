@@ -55,7 +55,7 @@ spec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = do
+spec = describe "DELEG" $ do
   describe "Register stake credential" $ do
     it "With correct deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL

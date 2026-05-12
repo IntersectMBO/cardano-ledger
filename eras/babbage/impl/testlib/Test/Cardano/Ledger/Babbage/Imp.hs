@@ -8,50 +8,40 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Babbage.Imp (spec) where
+module Test.Cardano.Ledger.Babbage.Imp (spec, babbageEraSpecificSpec) where
 
-import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.State
 import Cardano.Ledger.Shelley.Rules
-import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
+import qualified Test.Cardano.Ledger.Alonzo.Imp as Alonzo
 import Test.Cardano.Ledger.Alonzo.ImpTest
-import qualified Test.Cardano.Ledger.Babbage.Imp.PoolSpec as Pool
-import qualified Test.Cardano.Ledger.Babbage.Imp.UtxoSpec as Utxo
-import qualified Test.Cardano.Ledger.Babbage.Imp.UtxosSpec as Utxos
-import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as Utxow
+import qualified Test.Cardano.Ledger.Babbage.Imp.PoolSpec as POOL
+import qualified Test.Cardano.Ledger.Babbage.Imp.UtxoSpec as UTXO
+import qualified Test.Cardano.Ledger.Babbage.Imp.UtxosSpec as UTXOS
+import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
 import Test.Cardano.Ledger.Imp.Common
-import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
 spec ::
-  forall era.
   ( BabbageEraImp era
-  , EraSpecificSpec era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
+  proxy era ->
   Spec
-spec = do
-  AlonzoImp.spec @era
-  withEachEraVersion @era $
-    describe "BabbageImpSpec - era generic tests" $ do
-      Utxo.spec
-      Utxow.spec
-      Utxos.spec @era
+spec era = do
+  Alonzo.spec era
+  describe "BabbageEra Onwards" $ withImpInitEachEraVersion era $ do
+    UTXO.spec
+    UTXOW.spec
+    UTXOS.spec
 
 babbageEraSpecificSpec ::
-  forall era.
   ( BabbageEraImp era
   , ShelleyEraAccounts era
   , Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
   ) =>
-  SpecWith (ImpInit (LedgerSpec era))
-babbageEraSpecificSpec = do
-  describe "Babbage era specific Imp spec" $
-    describe "POOL" Pool.babbageEraSpecificSpec
-
-instance EraSpecificSpec BabbageEra where
-  eraSpecificSpec =
-    ShelleyImp.shelleyEraSpecificSpec
-      >> AlonzoImp.alonzoEraSpecificSpec
-      >> babbageEraSpecificSpec
+  proxy era ->
+  Spec
+babbageEraSpecificSpec era = do
+  describe "BabbageEra Specific" $ withImpInitEachEraVersion era $ do
+    POOL.babbageEraSpecificSpec

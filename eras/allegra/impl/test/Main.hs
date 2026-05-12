@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Main where
 
@@ -8,18 +9,21 @@ import qualified Test.Cardano.Ledger.Allegra.Binary.Golden as Golden
 import qualified Test.Cardano.Ledger.Allegra.BinarySpec as BinarySpec
 import qualified Test.Cardano.Ledger.Allegra.Imp as Imp
 import Test.Cardano.Ledger.Allegra.ImpTest ()
-import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
+import Test.Cardano.Ledger.Era
+import qualified Test.Cardano.Ledger.Shelley.Imp as Imp (shelleyEraSpecificSpec)
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
+
+instance EraSpec AllegraEra where
+  eraImpSpec era = do
+    Imp.shelleyEraSpecificSpec era
+    Imp.spec era
 
 main :: IO ()
 main =
-  ledgerTestMain $
-    describe "Allegra" $ do
-      BinarySpec.spec
-      CddlSpec.spec
-      describe "Imp" $ do
-        Imp.spec @AllegraEra
-      roundTripJsonEraSpec @AllegraEra
-      roundTripJsonShelleyEraSpec @AllegraEra
-      Golden.spec @AllegraEra
+  ledgerEraTestMain @AllegraEra $ do
+    BinarySpec.spec
+    CddlSpec.spec
+    roundTripJsonEraSpec @AllegraEra
+    roundTripJsonShelleyEraSpec @AllegraEra
+    Golden.spec @AllegraEra

@@ -33,6 +33,7 @@ import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import qualified Data.Set as Set
 import Lens.Micro
 import Lens.Micro.Mtl
@@ -44,7 +45,7 @@ spec ::
   forall era.
   ConwayEraImp era =>
   Spec
-spec = withEachEraVersion @era $ do
+spec = withImpInitEachEraVersion (Proxy @era) $ do
   describe "DRep" $ do
     describe "Expiries are reported correctly" $ do
       let drepStateFromQuery ::

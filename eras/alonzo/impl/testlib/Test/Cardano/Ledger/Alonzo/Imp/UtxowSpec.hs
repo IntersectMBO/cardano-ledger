@@ -23,5 +23,6 @@ alonzoEraSpecificSpec ::
   forall era. (AlonzoEraImp era, ShelleyEraTxCert era) => SpecWith (ImpInit (LedgerSpec era))
 alonzoEraSpecificSpec = do
   describe "UTXOW" $ do
-    Valid.alonzoEraSpecificSpec
-    Invalid.alonzoEraSpecificSpec
+    describe "Certificates without deposits" $ do
+      Valid.alonzoEraSpecificSpec
+      Invalid.alonzoEraSpecificSpec

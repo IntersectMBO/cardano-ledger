@@ -37,6 +37,7 @@
 
 ### `testlib`
 
+* Add `EraSpec` and `ledgerEraTestMain`
 * Add `toPackageGolden` and `itGolden`
 * Add `goldenForToJSON`, `itGoldenToJSON`, `aesonGoldenSpec` and `roundTripAesonProperty`
 * Add `fullAnnCddlSpec`, `fullAnnGenCddlSpec`, `fullCddlSpec` and `fullGenCddlSpec`

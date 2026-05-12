@@ -69,6 +69,7 @@
 
 ### testlib
 
+* Make `Test.Cardano.Ledger.Dijkstra.Imp.spec` accept `Proxy era`
 * Add `ToExpr` instance for `DijkstraBlockBody`
 * Add `DecCBOR` instance for `DijkstraBlockBodyRaw`
 * Add `genNonEmptyAccountBalanceIntervals`
