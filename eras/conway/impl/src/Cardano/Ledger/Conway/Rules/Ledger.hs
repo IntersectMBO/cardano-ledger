@@ -118,6 +118,7 @@ import Cardano.Ledger.Shelley.Rules (
   shelleyLedgerAssertions,
   testIncompleteAndMissingWithdrawals,
  )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -150,6 +151,9 @@ data ConwayLedgerPredFailure era
 type instance EraRuleFailure "LEDGER" ConwayEra = ConwayLedgerPredFailure ConwayEra
 
 type instance EraRuleEvent "LEDGER" ConwayEra = ConwayLedgerEvent ConwayEra
+
+instance InjectRuleFailure "LEDGER" Shelley.AccountAlreadyRegistered ConwayEra where
+  injectFailure = ConwayCertsFailure . CertFailure . DelegFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure ConwayEra
 

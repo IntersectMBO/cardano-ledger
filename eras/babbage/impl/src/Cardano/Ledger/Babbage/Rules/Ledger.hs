@@ -32,13 +32,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (
+  AccountAlreadyRegistered,
   DelegsEnv (..),
   LedgerEnv (..),
   ShelleyDELEGS,
   ShelleyDelegPredFailure,
   ShelleyDelegsEvent,
-  ShelleyDelegsPredFailure,
-  ShelleyDelplPredFailure,
+  ShelleyDelegsPredFailure (..),
+  ShelleyDelplPredFailure (..),
   ShelleyLEDGERS,
   ShelleyLedgerEvent (..),
   ShelleyLedgerPredFailure (..),
@@ -64,6 +65,9 @@ import Data.Sequence (Seq)
 -- ==================================================
 
 type instance EraRuleFailure "LEDGER" BabbageEra = ShelleyLedgerPredFailure BabbageEra
+
+instance InjectRuleFailure "LEDGER" AccountAlreadyRegistered BabbageEra where
+  injectFailure = DelegsFailure . DelplFailure . DelegFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure BabbageEra
 
