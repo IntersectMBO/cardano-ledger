@@ -13,6 +13,7 @@ import qualified Test.Cardano.Ledger.Alonzo.GoldenTranslation as GoldenTranslati
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Imp
 import qualified Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec as TxInfoImp
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
+import qualified Test.Cardano.Ledger.Alonzo.TxInfoSpec as TxInfoSpec
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
@@ -35,3 +36,4 @@ main =
       describe "TxWits" $ do
         TxWitsSpec.spec @AlonzoEra
       TxInfoImp.spec
+      TxInfoSpec.spec @AlonzoEra

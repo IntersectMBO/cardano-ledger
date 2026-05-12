@@ -6,7 +6,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
+-- Orphan instance for 'EraTranslateValidityInterval ConwayEra' that uses
+-- Conway's open-upper-bound validity interval semantics.
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conway.TxInfoSpec (spec) where
 
@@ -21,7 +23,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (transValidityInterval)
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Slot
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
@@ -30,12 +32,19 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import Test.Cardano.Ledger.Alonzo.TxInfoSpec (EraTranslateValidityInterval (..), txInfoSignersSpec)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Genesis ()
+
+-- | Conway uses open upper bounds for validity intervals (since protocol version 9).
+instance EraTranslateValidityInterval ConwayEra where
+  translateVI =
+    transValidityInterval (Proxy @ConwayEra)
 
 spec :: Spec
 spec = do
   describe "TxInfo" $ do
+    txInfoSignersSpec @ConwayEra SPlutusV1
     let trans pv cert = either (error . show) id (toPlutusTxCert @'PlutusV3 @ConwayEra Proxy pv cert)
         transV9 = trans (ProtVer (natVersion @9) 0)
         transV10 = trans (ProtVer (natVersion @10) 0)
@@ -58,7 +67,8 @@ spec = do
       expectDeposit coin $ transV10 $ UnRegDepositTxCert cred coin
       expectNoDeposit $ transV10 $ ConwayTxCertDeleg $ ConwayUnRegCert cred SNothing
 
-    it "validity interval's upper bound is open when protocol >= 9" $
+    it
+      "validity interval's upper bound is open when protocol >= 9"
       transVITimeUpperBoundIsOpen
   where
     expectDeposit :: Coin -> PV3.TxCert -> IO ()

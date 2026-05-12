@@ -179,6 +179,7 @@ library testlib
     Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen
     Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
     Test.Cardano.Ledger.Alonzo.TreeDiff
+    Test.Cardano.Ledger.Alonzo.TxInfoSpec
 
   visibility: public
   hs-source-dirs: testlib
@@ -223,6 +224,7 @@ library testlib
     microlens-mtl,
     mtl,
     plutus-ledger-api,
+    plutus-tx,
     serialise,
     text,
     time,

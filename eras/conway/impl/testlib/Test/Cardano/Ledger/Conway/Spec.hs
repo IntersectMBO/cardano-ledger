@@ -8,6 +8,9 @@
 
 module Test.Cardano.Ledger.Conway.Spec (spec) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError)
+import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
   ConwayEpochEvent,
@@ -19,7 +22,10 @@ import Cardano.Ledger.Shelley.Rules (RupdEvent)
 import Control.State.Transition (STS (..))
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
+import qualified Test.Cardano.Ledger.Alonzo.TxInfoSpec as AlonzoTxInfo
+import Test.Cardano.Ledger.Alonzo.TxInfoSpec (EraTranslateValidityInterval)
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
+import Test.Cardano.Ledger.Conway.TxInfoSpec () -- EraTranslateValidityInterval ConwayEra orphan
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.Golden as Golden
 import qualified Test.Cardano.Ledger.Conway.Binary.Regression as Regression
@@ -42,6 +48,9 @@ spec ::
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "RUPD" era) ~ RupdEvent
+  , Inject (AlonzoContextError era) (ContextError era)
+  , AtMostEra "Conway" era
+  , EraTranslateValidityInterval era
   ) =>
   Spec
 spec =
@@ -62,6 +71,17 @@ spec =
       TxWitsSpec.spec @era
     Regression.spec @era
     describe "TxInfo" $ do
-      BabbageTxInfo.spec @era
-      describe "PlutusV3" $
+      describe "PlutusV1" $ do
+        BabbageTxInfo.txInfoV1Spec @era
+        AlonzoTxInfo.txInfoSpec @era SPlutusV1
+        AlonzoTxInfo.txInfoSignersSpec @era SPlutusV1
+      describe "PlutusV2" $ do
+        AlonzoTxInfo.txInfoSpec @era SPlutusV2
+        AlonzoTxInfo.txInfoSignersSpec @era SPlutusV2
+        BabbageTxInfo.txInfoSpec @era SPlutusV2
+      describe "PlutusV3" $ do
+        AlonzoTxInfo.txInfoSpec @era SPlutusV3
+        AlonzoTxInfo.txInfoSignersSpec @era SPlutusV3
+        AlonzoTxInfo.txInfoSignersSpec @era SPlutusV3
+        AlonzoTxInfo.txInfoCertsSpec @era SPlutusV3
         BabbageTxInfo.txInfoSpec @era SPlutusV3
