@@ -36,6 +36,4 @@ instance ExecSpecRule "LEDGERS" ConwayEra where
     agdaSig <- runSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
-  translateOutput _ _ st = runSpecTransM () $ toSpecRep st
-
   runAgdaRule = runFromAgdaFunction (Agda.ledgersStep externalFunctions)

@@ -172,14 +172,14 @@ class
     Either Text (SpecState rule era)
   default translateOutput ::
     ( SpecTranslate (State (EraRule rule era))
-    , SpecContext (State (EraRule rule era)) ~ ExecContext rule era
+    , SpecContext (State (EraRule rule era)) ~ ()
     , SpecRep (State (EraRule rule era)) ~ SpecState rule era
     ) =>
     ExecContext rule era ->
     TRC (EraRule rule era) ->
     State (EraRule rule era) ->
     Either Text (SpecState rule era)
-  translateOutput ctx _ st = runSpecTransM ctx $ toSpecRep st
+  translateOutput _ _ st = runSpecTransM () $ toSpecRep st
 
   extraInfo ::
     HasCallStack =>

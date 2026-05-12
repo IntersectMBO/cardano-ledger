@@ -32,8 +32,6 @@ instance ExecSpecRule "GOVCERT" ConwayEra where
     agdaSig <- runSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
-  translateOutput _ _ st = runSpecTransM () $ toSpecRep st
-
   runAgdaRule (SpecTRC env (Agda.MkCertState dState pState vState) sig) =
     second (Agda.MkCertState dState pState) . unComputationResult $
       Agda.govCertStep env vState sig

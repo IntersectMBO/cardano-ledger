@@ -25,6 +25,4 @@ instance ExecSpecRule "EPOCH" ConwayEra where
   translateInputs _ (TRC (env, st, sig)) =
     runSpecTransM () $ SpecTRC <$> toSpecRep env <*> toSpecRep st <*> toSpecRep sig
 
-  translateOutput _ _ st = runSpecTransM () $ toSpecRep st
-
   runAgdaRuleWithDebug (SpecTRC env st sig) = unComputationResult_ $ Agda.epochStep env st sig

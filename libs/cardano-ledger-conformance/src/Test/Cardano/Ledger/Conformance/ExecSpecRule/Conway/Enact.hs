@@ -39,6 +39,4 @@ instance ExecSpecRule "ENACT" ConwayEra where
           agdaSt
           agdaSig
 
-  translateOutput _ _ st = runSpecTransM () $ toSpecRep st
-
   runAgdaRule (SpecTRC env st sig) = unComputationResult $ Agda.enactStep env st sig

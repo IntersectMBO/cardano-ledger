@@ -37,5 +37,3 @@ instance ExecSpecRule "GOV" ConwayEra where
         enactState
           & ensPrevGovActionIdsL .~ toPrevGovActionIds (st ^. pRootsL)
           & ensProtVerL .~ (gePParams ^. ppProtocolVersionL)
-
-  translateOutput _ _ st = runSpecTransM () $ toSpecRep st

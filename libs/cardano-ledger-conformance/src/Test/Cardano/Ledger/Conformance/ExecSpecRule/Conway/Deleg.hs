@@ -32,8 +32,6 @@ instance ExecSpecRule "DELEG" ConwayEra where
     agdaSig <- runSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
-  translateOutput _ _ st = runSpecTransM () $ toSpecRep st
-
   runAgdaRule (SpecTRC env (Agda.MkCertState dState pState vState) sig) =
     second
       (\dState' -> Agda.MkCertState dState' pState vState)

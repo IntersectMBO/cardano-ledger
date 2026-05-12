@@ -116,8 +116,6 @@ instance ExecSpecRule "LEDGER" ConwayEra where
     agdaSig <- runSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
-  translateOutput _ _ st = runSpecTransM () $ toSpecRep st
-
   runAgdaRule trc =
     let externalFunctions' = externalFunctions {Agda.extValidPlutusScript = Agda.isValid (strcSignal trc)}
      in runFromAgdaFunction (Agda.ledgerStep externalFunctions') trc
