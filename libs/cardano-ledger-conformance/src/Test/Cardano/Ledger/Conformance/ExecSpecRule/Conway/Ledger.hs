@@ -13,7 +13,7 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledger (ConwayLedgerExecContext (..)) where
 
-import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Conway (ConwayEra)
@@ -63,12 +63,6 @@ data ConwayLedgerExecContext era
   , clecUtxoExecContext :: UtxoExecContext era
   }
   deriving (Generic)
-
-instance Inject (ConwayLedgerExecContext era) (StrictMaybe ScriptHash) where
-  inject = clecGuardrailsScriptHash
-
-instance Inject (ConwayLedgerExecContext ConwayEra) (EnactState ConwayEra) where
-  inject = clecEnactState
 
 instance
   ( EraPParams era

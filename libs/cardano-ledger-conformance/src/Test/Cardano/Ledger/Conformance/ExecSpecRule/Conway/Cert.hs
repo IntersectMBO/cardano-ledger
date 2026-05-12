@@ -14,7 +14,6 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (
 ) where
 
 import Cardano.Ledger.Address (AccountAddress)
-import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
@@ -44,12 +43,6 @@ data ConwayCertExecContext era
   deriving (Generic, Eq, Show)
 
 instance Era era => NFData (ConwayCertExecContext era)
-
-instance Inject (ConwayCertExecContext era) (Map AccountAddress Coin) where
-  inject = ccecWithdrawals
-
-instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
-  inject = ccecVotes
 
 instance Era era => Arbitrary (ConwayCertExecContext era) where
   arbitrary =
