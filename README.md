@@ -1,15 +1,9 @@
 <h1 align="center">Cardano Ledger</h1>
 
 <p align="center">
-  <a href="https://input-output-hk.github.io/cardano-engineering-handbook">
-    <img alt="CEH" src="https://img.shields.io/badge/policy-Cardano%20Engineering%20Handbook-informational?style=for-the-badge" />
-  </a>
-  <a href="https://github.com/intersectmbo/cardano-ledger/actions/workflows/haskell.yml">
-    <img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-ledger/haskell.yml?branch=master&style=for-the-badge" />
-  </a>
-  <a href="https://cardano-ledger.cardano.intersectmbo.org/">
-    <img alt="Haddock (master)" src="https://img.shields.io/badge/documentation-Haddock-yellow?style=for-the-badge" />
-  </a>
+  <a href="https://input-output-hk.github.io/cardano-engineering-handbook"><img alt="CEH" src="https://img.shields.io/badge/policy-Cardano%20Engineering%20Handbook-informational?style=for-the-badge"/></a>
+  <a href="https://github.com/intersectmbo/cardano-ledger/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-ledger/haskell.yml?branch=master&style=for-the-badge"/></a>
+  <a href="https://cardano-ledger.cardano.intersectmbo.org/"><img alt="Haddock (master)" src="https://img.shields.io/badge/documentation-Haddock-yellow?style=for-the-badge"/></a>
 </p>
 
 This repository contains the formal specifications, executable models,
