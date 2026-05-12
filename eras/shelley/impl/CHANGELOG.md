@@ -67,6 +67,7 @@
 
 ### `testlib`
 
+* Add golden JSON file for `Tx TopTx ShelleyEra` at `golden/tx.json`
 * Add `proxy era` argument to `shelleyEraSpecificSpec`
 * Remove `EraSpecificSpec`
 * Make `Test.Cardano.Ledger.Shelley.Imp.spec` accept `Proxy era`

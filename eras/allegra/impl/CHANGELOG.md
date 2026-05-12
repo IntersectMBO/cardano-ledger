@@ -18,6 +18,7 @@
 
 ### `testlib`
 
+* Add golden JSON file for `Tx TopTx AllegraEra` at `golden/tx.json`
 * Make `Test.Cardano.Ledger.Allegra.Imp.spec` accept `Proxy era`
 * In `Test.Cardano.Ledger.Allegra.Examples`:
   - Remove `mkAllegraBasedExampleTx`, `exampleAllegraBasedTxBody`, `exampleAllegraBasedShelleyTxBody`

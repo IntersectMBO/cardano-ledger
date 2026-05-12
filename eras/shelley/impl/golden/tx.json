@@ -1,0 +1,244 @@
+{
+    "stAuxData": {
+        "1": {
+            "string": "string"
+        },
+        "2": {
+            "bytes": "6279746573"
+        },
+        "3": {
+            "int": 1
+        },
+        "4": {
+            "list": [
+                {
+                    "int": 1
+                },
+                {
+                    "int": 2
+                }
+            ]
+        },
+        "5": {
+            "map": [
+                {
+                    "k": {
+                        "int": 3
+                    },
+                    "v": {
+                        "bytes": "62"
+                    }
+                }
+            ]
+        }
+    },
+    "stBody": {
+        "auxDataHash": "32e93baec5fceec344438f8a01e295503a3e0669cefe44ed9af8d8f3e5de1347",
+        "certs": [
+            {
+                "kind": "RegPool",
+                "poolParams": {
+                    "accountAddress": {
+                        "credential": {
+                            "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                        },
+                        "network": "Testnet"
+                    },
+                    "cost": 5,
+                    "margin": 0.1,
+                    "metadata": {
+                        "hash": "7b7d",
+                        "url": "consensus.pool"
+                    },
+                    "owners": [
+                        "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                    ],
+                    "pledge": 1,
+                    "poolId": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06",
+                    "relays": [
+                        {
+                            "single host address": {
+                                "IPv4": "127.0.0.1",
+                                "IPv6": "2001:db8::1",
+                                "port": 3000
+                            }
+                        },
+                        {
+                            "single host name": {
+                                "dnsName": "relay.example.com",
+                                "port": 3001
+                            }
+                        },
+                        {
+                            "multi host name": {
+                                "dnsName": "relay.example.com"
+                            }
+                        }
+                    ],
+                    "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+                }
+            },
+            {
+                "epochNo": 2,
+                "kind": "RetirePool",
+                "poolId": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+            },
+            {
+                "genDelegKeyHash": "65fc709a5e019b8aba76f6977c1c8770e4b36fa76f434efc588747b7",
+                "genKeyHash": "b16b56f5ec064be6ac3cab6035efae86b366cc3dc4a0d571603d70e5",
+                "hashVrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c",
+                "kind": "GenesisDelegCert"
+            },
+            {
+                "kind": "MIRCert",
+                "pot": "ReservesMIR",
+                "rewards": {
+                    "addresses": {
+                        "keyHash-008b47844d92812fc30d1f0ac9b6fbf38778ccba9db8312ad9079079": 1
+                    },
+                    "kind": "StakeAddressesMIR"
+                }
+            },
+            {
+                "kind": "MIRCert",
+                "pot": "TreasuryMIR",
+                "rewards": {
+                    "addresses": {
+                        "keyHash-8a95c8ed588306ea88860b54eb0c65e77dfab999789cc5e6ca008799": 1
+                    },
+                    "kind": "StakeAddressesMIR"
+                }
+            },
+            {
+                "kind": "MIRCert",
+                "pot": "ReservesMIR",
+                "rewards": {
+                    "coin": 1,
+                    "kind": "SendToOppositePotMIR"
+                }
+            },
+            {
+                "credential": {
+                    "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                },
+                "kind": "RegCert"
+            },
+            {
+                "credential": {
+                    "scriptHash": "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541"
+                },
+                "kind": "UnRegCert"
+            },
+            {
+                "credential": {
+                    "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                },
+                "kind": "DelegCert",
+                "poolId": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+            }
+        ],
+        "fee": 3,
+        "inputs": [
+            "ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e25#0"
+        ],
+        "outputs": [
+            {
+                "address": "00cb9358529df4729c3246a2a033cb9821abbfd16de4888005904abc410d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06",
+                "value": 100000
+            },
+            {
+                "address": "40cb9358529df4729c3246a2a033cb9821abbfd16de4888005904abc410a0000",
+                "value": 100000
+            },
+            {
+                "address": "60cb9358529df4729c3246a2a033cb9821abbfd16de4888005904abc41",
+                "value": 100000
+            },
+            {
+                "address": "82d818583d83581c239e480f0260bfe927d69166886a0315eee294eec1098977656f8e10a20157566120636f6d70726573736564206c656e6e612e706e67024100001a359e595f",
+                "value": 100000
+            }
+        ],
+        "ttl": 10,
+        "update": {
+            "epoch": 10,
+            "proposedPPUpdates": [
+                [
+                    "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541",
+                    {
+                        "maxBlockHeaderSize": 4000
+                    }
+                ]
+            ]
+        },
+        "withdrawals": [
+            [
+                {
+                    "credential": {
+                        "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                    },
+                    "network": "Testnet"
+                },
+                100
+            ]
+        ]
+    },
+    "stWits": {
+        "addrWits": [
+            {
+                "key": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+                "signature": "cc54e9dda58bcccd63b65194fcbd34f9363fba4be91320dad814cd37e3d2a5a6ebb33e41857657e974034e8f69736330a1f70f780b33c0f32fe5cb6844ffaa02"
+            },
+            {
+                "key": "3b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da29",
+                "signature": "0f6ddab976bf90575cdf7bfc356c0b81120195b70a260f68ce18a309e3df4440ec5d03de336a8435f4a29ce802f2a3f6f1d69282526cc009193c3e02865de804"
+            }
+        ],
+        "bootWits": [
+            {
+                "attributes": "a20157566120636f6d70726573736564206c656e6e612e706e67024100",
+                "chainCode": "a388079e79ea1a8a2d38cd90da27cd506c2f1f964d43afe7b7079318924cac4d",
+                "key": "4f483e905800b6b5fb9bea5b9ae5576d6cbd5afe4a1ae7850d1477914ea36822",
+                "signature": "371b083e53df4370bb874b394943390f01fe3913f4649af33726096a01c94de815836c91dcf5847a62e8808a71547fd07330226e4d33799a696c04c85f86dc00"
+            }
+        ],
+        "scriptWits": {
+            "83b9c461b3d246728731b55485e7af99be9a2de2b7904ca07ac89f25": {
+                "kind": "atLeast",
+                "required": 2,
+                "scripts": [
+                    {
+                        "keyHash": "0d94e174732ef9aae73f395ab44507bfa983d65023c11a951f0c32e4",
+                        "kind": "sig"
+                    },
+                    {
+                        "kind": "all",
+                        "scripts": [
+                            {
+                                "keyHash": "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541",
+                                "kind": "sig"
+                            },
+                            {
+                                "keyHash": "a646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a",
+                                "kind": "sig"
+                            }
+                        ]
+                    },
+                    {
+                        "kind": "any",
+                        "scripts": [
+                            {
+                                "keyHash": "b16b56f5ec064be6ac3cab6035efae86b366cc3dc4a0d571603d70e5",
+                                "kind": "sig"
+                            },
+                            {
+                                "keyHash": "65fc709a5e019b8aba76f6977c1c8770e4b36fa76f434efc588747b7",
+                                "kind": "sig"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

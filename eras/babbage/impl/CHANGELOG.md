@@ -30,6 +30,7 @@
 
 ### `testlib`
 
+* Add golden JSON file for `Tx TopTx BabbageEra` at `golden/tx.json`
 * Add `proxy era` argument to `babbageEraSpecificSpec`
 * Make `Test.Cardano.Ledger.Babbage.Imp.spec` accept `Proxy era`
 * Add `Test.Cardano.Ledger.Babbage.Imp.PoolSpec` module with `babbageEraSpecificSpec`

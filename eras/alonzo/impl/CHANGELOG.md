@@ -45,6 +45,7 @@
 
 ### `testlib`
 
+* Add golden JSON file for `Tx TopTx AlonzoEra` at `golden/tx.json`
 * Add `proxy era` argument to `alonzoEraSpecificSpec`
 * Make `Test.Cardano.Ledger.Alonzo.Imp.spec` accept `Proxy era`
 * Add `genDatumPresent`

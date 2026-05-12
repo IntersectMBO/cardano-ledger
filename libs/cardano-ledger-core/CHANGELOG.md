@@ -56,6 +56,7 @@
 
 ### `testlib`
 
+* Add golden JSON test in `ledgerEraTestMain` via `aesonGoldenSpec "golden/tx.json"`
 * Add `EraSpec` and `ledgerEraTestMain`
 * Add `toPackageGolden` and `itGolden`
 * Add `goldenForToJSON`, `itGoldenToJSON`, `aesonGoldenSpec` and `roundTripAesonProperty`
