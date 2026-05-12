@@ -35,6 +35,9 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   EncCBOR (encCBOR),
   cborError,
+  decodeRecordNamed,
+  ifDecoderVersionAtLeast,
+  natVersion,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (D, From, RecD),
@@ -190,8 +193,14 @@ instance EncCBOR ExUnits where
   encCBOR (ExUnits m s) = encode $ Rec ExUnits !> To m !> To s
 
 instance DecCBOR ExUnits where
-  decCBOR = decode $ RecD ExUnits <! D decNat <! D decNat
+  decCBOR =
+    ifDecoderVersionAtLeast (natVersion @12) decodeExUnits $
+      decode $
+        RecD ExUnits <! D decNat <! D decNat
     where
+      decodeExUnits =
+        decodeRecordNamed "ExUnits" (const 2) $
+          ExUnits <$> decNat <*> decNat
       decNat :: Decoder s Natural
       decNat = do
         x <- decCBOR
@@ -211,5 +220,12 @@ instance EncCBOR Prices where
   encCBOR (Prices m s) = encode $ Rec Prices !> To m !> To s
 
 instance DecCBOR Prices where
-  decCBOR = decode $ RecD Prices <! From <! From
+  decCBOR =
+    ifDecoderVersionAtLeast (natVersion @12) decodePrices $
+      decode $
+        RecD Prices <! From <! From
+    where
+      decodePrices =
+        decodeRecordNamed "Prices" (const 2) $
+          Prices <$> decCBOR <*> decCBOR
   {-# INLINE decCBOR #-}

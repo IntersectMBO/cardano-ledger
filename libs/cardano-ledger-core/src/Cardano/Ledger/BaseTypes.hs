@@ -114,6 +114,7 @@ import Cardano.Ledger.Binary (
   ToCBOR,
   cborError,
   decodeIntegralRational,
+  decodeRecordNamed,
   encodeListLen,
   fromPlainDecoder,
   ifDecoderVersionAtLeast,
@@ -987,10 +988,13 @@ instance NFData Anchor where
 
 instance DecCBOR Anchor where
   decCBOR =
-    decode $
-      RecD Anchor
-        <! From
-        <! From
+    ifDecoderVersionAtLeast (natVersion @12) decodeAnchor $
+      decode $
+        RecD Anchor <! From <! From
+    where
+      decodeAnchor =
+        decodeRecordNamed "Anchor" (const 2) $
+          Anchor <$> decCBOR <*> decCBOR
 
 instance EncCBOR Anchor where
   encCBOR Anchor {..} =

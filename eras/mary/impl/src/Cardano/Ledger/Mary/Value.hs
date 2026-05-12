@@ -46,6 +46,7 @@ import Cardano.Ledger.Binary (
   cborError,
   decodeInteger,
   decodeMap,
+  decodeRecordNamed,
   decodeWord64,
   ifDecoderVersionAtLeast,
   peekTokenType,
@@ -296,10 +297,17 @@ decodeMaryValue = do
 
 decodeValuePair :: (forall t. Decoder t Integer) -> Decoder s MaryValue
 decodeValuePair decodeMultiAssetAmount =
-  decode $
-    RecD MaryValue
-      <! D (Coin . toInteger <$> decodeWord64)
-      <! D (decodeMultiAsset decodeMultiAssetAmount)
+  ifDecoderVersionAtLeast (natVersion @12) decodeMaryValue' $
+    decode $
+      RecD MaryValue
+        <! From
+        <! D (decodeMultiAsset decodeMultiAssetAmount)
+  where
+    decodeMaryValue' =
+      decodeRecordNamed "MaryValue" (const 2) $
+        MaryValue
+          <$> decCBOR
+          <*> decodeMultiAsset decodeMultiAssetAmount
 
 -- | `MultiAsset` can be used in two different circumstances:
 --

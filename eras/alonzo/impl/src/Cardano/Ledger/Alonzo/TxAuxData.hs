@@ -68,6 +68,8 @@ import Cardano.Ledger.Binary (
   ToCBOR,
   TokenType (..),
   decodeStrictSeq,
+  ifDecoderVersionAtLeast,
+  natVersion,
   peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders
@@ -199,7 +201,7 @@ instance
   decCBOR =
     decodeTxAuxDataByTokenType @(Annotator (AlonzoTxAuxDataRaw era))
       decodeShelley
-      decodeAllegra
+      (ifDecoderVersionAtLeast (natVersion @12) decodeDijkstra decodeAllegra)
       decodeAlonzo
     where
       decodeShelley =
@@ -217,6 +219,11 @@ instance
                 (sequence <$> decodeStrictSeq decCBOR)
               <*! Ann (Emit Map.empty)
           )
+      decodeDijkstra =
+        decodeRecordNamed "AlonzoTxAuxDataRaw" (const 2) $ do
+          metadata <- decCBOR
+          annScripts <- sequence <$> decodeStrictSeq decCBOR
+          pure $ AlonzoTxAuxDataRaw <$> pure metadata <*> annScripts <*> pure Map.empty
       decodeAlonzo =
         decode $
           TagD 259 $

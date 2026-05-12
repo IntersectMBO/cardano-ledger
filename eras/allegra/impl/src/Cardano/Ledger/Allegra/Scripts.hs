@@ -67,6 +67,9 @@ import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   EncCBOR (encCBOR),
   ToCBOR (..),
+  decodeRecordNamed,
+  ifDecoderVersionAtLeast,
+  natVersion,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -139,7 +142,12 @@ decodeVI :: Decode (Closed Dense) ValidityInterval
 decodeVI = RecD ValidityInterval <! From <! From
 
 instance DecCBOR ValidityInterval where
-  decCBOR = decode decodeVI
+  decCBOR =
+    ifDecoderVersionAtLeast (natVersion @12) decodeValidityInterval (decode decodeVI)
+    where
+      decodeValidityInterval =
+        decodeRecordNamed "ValidityInterval" (const 2) $
+          ValidityInterval <$> decCBOR <*> decCBOR
 
 instance ToJSON ValidityInterval where
   toJSON vi =

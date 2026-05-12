@@ -49,7 +49,7 @@ import Cardano.Ledger.Binary (
   peekTokenType,
   serialize,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<*!))
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), Tx (..), getConwayMinFeeTx)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
@@ -158,11 +158,11 @@ instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where
   decCBOR = withSTxBothLevels @l $ \case
     STopTx -> decodeDijkstraTopTx True
     SSubTx ->
-      decode $
-        Ann (RecD DijkstraSubTx)
-          <*! From
-          <*! From
-          <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
+      decodeRecordNamed "DijkstraSubTx" (const 3) $ do
+        body <- decCBOR
+        wits <- decCBOR
+        aux <- sequence <$> decodeNullStrictMaybe decCBOR
+        pure $ DijkstraSubTx <$> body <*> wits <*> aux
 
 instance HasEraTxLevel DijkstraTx DijkstraEra where
   toSTxLevel DijkstraTx {} = STopTx
