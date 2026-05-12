@@ -117,6 +117,8 @@ deriving instance
   VRF.VRFAlgorithm (VRF c) =>
   Eq (PrtclPredicateFailure c)
 
+instance Crypto c => NoThunks (PrtclPredicateFailure c)
+
 instance
   ( Crypto c
   , KES.Signable (KES c) (BHBody c)

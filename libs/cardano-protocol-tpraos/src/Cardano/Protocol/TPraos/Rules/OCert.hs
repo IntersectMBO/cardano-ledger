@@ -24,6 +24,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 
 data OCERT c
 
@@ -49,6 +50,8 @@ data OcertPredicateFailure
   | NoCounterForKeyHashOCERT
       (KeyHash BlockIssuer) -- stake pool key hash
   deriving (Show, Eq, Generic)
+
+instance NoThunks OcertPredicateFailure
 
 instance
   ( Crypto c
