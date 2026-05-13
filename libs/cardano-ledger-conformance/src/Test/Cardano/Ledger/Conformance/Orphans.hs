@@ -8,17 +8,10 @@
 module Test.Cardano.Ledger.Conformance.Orphans where
 
 import Cardano.Ledger.Hashes (standardAddrHashSize)
-import Data.Bifunctor (Bifunctor (..))
 import Data.Default (Default)
-import Data.List (nub, sortOn)
-import Data.List.NonEmpty (NonEmpty)
-import qualified Data.Set as Set
-import Data.Text (Text)
-import Data.Void (Void)
 import GHC.Generics (Generic)
 import MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (OpaqueErrorString, SpecNormalize (..))
 import Test.Cardano.Ledger.Conformance.Utils
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr (..))
 
@@ -283,135 +276,6 @@ instance ToExpr NewEpochState
 instance ToExpr LEnv
 
 instance Default (HSMap k v)
-
-instance SpecNormalize Void
-
-instance SpecNormalize a => SpecNormalize (NonEmpty a)
-
-instance SpecNormalize Text where
-  specNormalize = id
-
-instance SpecNormalize OpaqueErrorString
-
-instance SpecNormalize a => SpecNormalize [a]
-
-instance SpecNormalize Char where
-  specNormalize = id
-
-instance
-  ( Eq v
-  , Ord k
-  , SpecNormalize k
-  , SpecNormalize v
-  ) =>
-  SpecNormalize (HSMap k v)
-  where
-  specNormalize (MkHSMap l) = MkHSMap . sortOn fst $ bimap specNormalize specNormalize <$> nub l
-
-instance (Ord a, SpecNormalize a) => SpecNormalize (HSSet a) where
-  specNormalize (MkHSSet l) = MkHSSet . Set.toList . Set.fromList $ specNormalize <$> l
-
-instance (SpecNormalize a, SpecNormalize b) => SpecNormalize (a, b)
-
-instance SpecNormalize a => SpecNormalize (Maybe a)
-
-instance (SpecNormalize a, SpecNormalize b) => SpecNormalize (Either a b)
-
-instance SpecNormalize Bool
-
-instance SpecNormalize TxId where
-  specNormalize = id
-
-instance SpecNormalize ()
-
-instance SpecNormalize BaseAddr
-
-instance SpecNormalize BootstrapAddr
-
-instance SpecNormalize Timelock
-
-instance SpecNormalize HSTimelock
-
-instance SpecNormalize Agda.LanguageCostModels where
-  specNormalize = MkLanguageCostModels . sortOn fst . lcmLanguageCostModels
-
-instance SpecNormalize HSLanguage
-
-instance SpecNormalize HSPlutusScript
-
-instance SpecNormalize UTxOState
-
-instance SpecNormalize Credential
-
-instance SpecNormalize GovRole
-
-instance SpecNormalize GovVotes
-
-instance SpecNormalize VDeleg
-
-instance SpecNormalize DepositPurpose
-
-instance SpecNormalize DState
-
-instance SpecNormalize StakePoolParams
-
-instance SpecNormalize PState
-
-instance SpecNormalize GState
-
-instance SpecNormalize CertState
-
-instance SpecNormalize Vote
-
-instance SpecNormalize Agda.Rational where
-  specNormalize = id
-
-instance SpecNormalize PParamsUpdate
-
-instance SpecNormalize RewardAddress
-
-instance SpecNormalize GovAction
-
-instance SpecNormalize GovActionState
-
-instance SpecNormalize StakeDistrs
-
-instance SpecNormalize PoolThresholds
-
-instance SpecNormalize DrepThresholds
-
-instance SpecNormalize PParams
-
-instance SpecNormalize EnactState
-
-instance SpecNormalize RatifyEnv
-
-instance SpecNormalize RatifyState
-
-instance SpecNormalize EpochState
-
-instance SpecNormalize Snapshots
-
-instance SpecNormalize Snapshot where
-  specNormalize (MkSnapshot s d p) =
-    MkSnapshot (specNormalize s') (specNormalize d') p
-    where
-      s' = removeZero s
-      -- Only keep delegations for credentials that have non-zero stake,
-      -- since ActiveStake drops zero-stake credentials
-      d' = keepOnlyStaked s' (removeZero d)
-      removeZero (MkHSMap l) = MkHSMap $ filter ((/= 0) . snd) l
-      keepOnlyStaked (MkHSMap sl) (MkHSMap dl) =
-        let stakeKeys = Set.fromList (map fst sl)
-         in MkHSMap $ filter ((`Set.member` stakeKeys) . fst) dl
-
-instance SpecNormalize Acnt
-
-instance SpecNormalize LState
-
-instance SpecNormalize HsRewardUpdate
-
-instance SpecNormalize NewEpochState
 
 deriving instance Semigroup (HSMap k v)
 

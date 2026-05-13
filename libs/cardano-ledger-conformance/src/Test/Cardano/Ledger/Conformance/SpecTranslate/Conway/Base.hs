@@ -675,3 +675,86 @@ instance SpecTranslate ConwayEra (Conway.EnactSignal ConwayEra) where
   type SpecRep ConwayEra (Conway.EnactSignal ConwayEra) = SpecRep ConwayEra (GovAction ConwayEra)
 
   toSpecRep (Conway.EnactSignal _ ga) = toSpecRep ga
+
+instance SpecNormalize TxId where
+  specNormalize = id
+
+instance SpecNormalize Agda.Timelock
+
+instance SpecNormalize Agda.HSTimelock
+
+instance SpecNormalize Agda.LanguageCostModels where
+  specNormalize = Agda.MkLanguageCostModels . sortOn fst . Agda.lcmLanguageCostModels
+
+instance SpecNormalize Agda.HSLanguage
+
+instance SpecNormalize Agda.HSPlutusScript
+
+instance SpecNormalize Agda.UTxOState
+
+instance SpecNormalize Agda.GovRole
+
+instance SpecNormalize Agda.GovVotes
+
+instance SpecNormalize Agda.VDeleg
+
+instance SpecNormalize Agda.DepositPurpose
+
+instance SpecNormalize Agda.DState
+
+instance SpecNormalize Agda.StakePoolParams
+
+instance SpecNormalize Agda.PState
+
+instance SpecNormalize Agda.GState
+
+instance SpecNormalize Agda.CertState
+
+instance SpecNormalize Agda.Vote
+
+instance SpecNormalize Agda.PParamsUpdate
+
+instance SpecNormalize Agda.RewardAddress
+
+instance SpecNormalize Agda.GovAction
+
+instance SpecNormalize Agda.GovActionState
+
+instance SpecNormalize Agda.StakeDistrs
+
+instance SpecNormalize Agda.PoolThresholds
+
+instance SpecNormalize Agda.DrepThresholds
+
+instance SpecNormalize Agda.PParams
+
+instance SpecNormalize Agda.EnactState
+
+instance SpecNormalize Agda.RatifyEnv
+
+instance SpecNormalize Agda.RatifyState
+
+instance SpecNormalize Agda.EpochState
+
+instance SpecNormalize Agda.Snapshots
+
+instance SpecNormalize Agda.Snapshot where
+  specNormalize (Agda.MkSnapshot s d p) =
+    Agda.MkSnapshot (specNormalize s') (specNormalize d') p
+    where
+      s' = removeZero s
+      -- Only keep delegations for credentials that have non-zero stake,
+      -- since ActiveStake drops zero-stake credentials
+      d' = keepOnlyStaked s' (removeZero d)
+      removeZero (Agda.MkHSMap l) = Agda.MkHSMap $ filter ((/= 0) . snd) l
+      keepOnlyStaked (Agda.MkHSMap sl) (Agda.MkHSMap dl) =
+        let stakeKeys = Set.fromList (map fst sl)
+         in Agda.MkHSMap $ filter ((`Set.member` stakeKeys) . fst) dl
+
+instance SpecNormalize Agda.Acnt
+
+instance SpecNormalize Agda.LState
+
+instance SpecNormalize Agda.HsRewardUpdate
+
+instance SpecNormalize Agda.NewEpochState

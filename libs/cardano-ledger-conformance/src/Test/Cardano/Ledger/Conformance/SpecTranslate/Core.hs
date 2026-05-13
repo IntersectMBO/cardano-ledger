@@ -7,10 +7,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -229,3 +227,9 @@ instance SpecTranslate era BlocksMade where
       k' <- toSpecRep k
       pure (k', naturalToInteger v)
     pure $ Agda.MkHSMap xs
+
+instance SpecNormalize Agda.BaseAddr
+
+instance SpecNormalize Agda.BootstrapAddr
+
+instance SpecNormalize Agda.Credential

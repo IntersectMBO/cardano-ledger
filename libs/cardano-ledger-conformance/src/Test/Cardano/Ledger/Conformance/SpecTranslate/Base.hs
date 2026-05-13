@@ -6,12 +6,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -39,9 +37,11 @@ import Cardano.Ledger.Compactible (Compactible (..), fromCompact)
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (ExceptT, MonadError (..), mapExceptT, runExceptT)
 import Control.Monad.Reader (MonadReader (..), Reader, ask, runReader, withReaderT)
+import Data.Bifunctor (bimap)
 import Data.Bitraversable (bimapM)
 import Data.Foldable (Foldable (..))
 import Data.Kind (Type)
+import Data.List (nub, sortOn)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -238,6 +238,49 @@ class SpecNormalize a where
   specNormalize :: a -> a
   default specNormalize :: (Generic a, GSpecNormalize (Rep a)) => a -> a
   specNormalize = to . genericSpecNormalize . from
+
+instance SpecNormalize Void
+
+instance SpecNormalize Text where
+  specNormalize = id
+
+instance SpecNormalize OpaqueErrorString
+
+instance SpecNormalize Char where
+  specNormalize = id
+
+instance SpecNormalize Integer where
+  specNormalize = id
+
+instance SpecNormalize Bool
+
+instance SpecNormalize ()
+
+instance SpecNormalize a => SpecNormalize [a]
+
+instance SpecNormalize a => SpecNormalize (NonEmpty a)
+
+instance
+  ( Eq v
+  , Ord k
+  , SpecNormalize k
+  , SpecNormalize v
+  ) =>
+  SpecNormalize (Agda.HSMap k v)
+  where
+  specNormalize (Agda.MkHSMap l) = Agda.MkHSMap . sortOn fst $ bimap specNormalize specNormalize <$> nub l
+
+instance (Ord a, SpecNormalize a) => SpecNormalize (Agda.HSSet a) where
+  specNormalize (Agda.MkHSSet l) = Agda.MkHSSet . Set.toList . Set.fromList $ specNormalize <$> l
+
+instance (SpecNormalize a, SpecNormalize b) => SpecNormalize (a, b)
+
+instance SpecNormalize a => SpecNormalize (Maybe a)
+
+instance (SpecNormalize a, SpecNormalize b) => SpecNormalize (Either a b)
+
+instance SpecNormalize Agda.Rational where
+  specNormalize = id
 
 -- | OpaqueErrorString behaves like unit in comparisons, but contains an
 -- error string that can be displayed.
