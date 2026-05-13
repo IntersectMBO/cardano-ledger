@@ -48,6 +48,7 @@
 
 ### `testlib`
 
+* Add golden JSON file for `Tx TopTx ConwayEra` at `golden/tx.json`
 * Export `conwayEraSpecificSpec`
 * Make `Test.Cardano.Ledger.Conway.Imp.spec` accept `Proxy era`
 * In `Test.Cardano.Ledger.Conway.Examples`:

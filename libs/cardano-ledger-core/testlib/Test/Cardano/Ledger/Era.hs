@@ -126,7 +126,10 @@ class EraTest era => EraSpec era where
 -- supplied by each era through `EraSpec` type class and then some through the extra argument
 ledgerEraTestMain ::
   forall era.
-  EraSpec era =>
+  ( EraSpec era
+  , ToJSON (Tx TopTx era)
+  , FromJSON (Tx TopTx era)
+  ) =>
   -- | Tests that are specific to this era, if any.
   Spec ->
   IO ()
@@ -134,12 +137,18 @@ ledgerEraTestMain extraEraSpec =
   ledgerTestMain $
     describe (eraName @era) $ do
       describe "Imp" $ eraImpSpec (Proxy @era)
-      describe "Golden" $
-        cborAnnGoldenSpec
-          (mkEraFullPath @era)
-          "golden/tx.cbor"
-          (eraProtVerLow @era)
-          (exampleTx @era)
+      describe "Golden" $ do
+        describe "CBOR" $
+          cborAnnGoldenSpec
+            (mkEraFullPath @era)
+            "golden/tx.cbor"
+            (eraProtVerLow @era)
+            (exampleTx @era)
+        describe "JSON" $
+          aesonGoldenSpec
+            (mkEraFullPath @era)
+            "golden/tx.json"
+            (exampleTx @era)
       describe "Era-specific spec" extraEraSpec
 
 -- | This is a helper function that uses `mkTestAccountState` to register an account.

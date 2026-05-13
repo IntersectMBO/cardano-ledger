@@ -17,6 +17,7 @@
 
 ### `testlib`
 
+* Add golden JSON file for `Tx TopTx MaryEra` at `golden/tx.json`
 * Make `Test.Cardano.Ledger.Mary.Imp.spec` accept `Proxy era`
 * In `Test.Cardano.Ledger.Mary.Examples`:
   - Remove `exampleMaryBasedShelleyTxBody`, `exampleMaryBasedTxBody`

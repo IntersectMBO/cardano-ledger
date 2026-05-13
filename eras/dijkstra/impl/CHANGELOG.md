@@ -72,6 +72,7 @@
 
 ### testlib
 
+* Add golden JSON file for `Tx TopTx DijkstraEra` at `golden/tx.json`
 * Make `Test.Cardano.Ledger.Dijkstra.Imp.spec` accept `Proxy era`
 * Add `ToExpr` instance for `DijkstraBlockBody`
 * Add `DecCBOR` instance for `DijkstraBlockBodyRaw`
