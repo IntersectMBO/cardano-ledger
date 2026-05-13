@@ -92,7 +92,7 @@ library
     cardano-data >=1.2,
     cardano-ledger-allegra ^>=1.10,
     cardano-ledger-alonzo ^>=1.16,
-    cardano-ledger-binary >=1.6,
+    cardano-ledger-binary >=1.9,
     cardano-ledger-core:{cardano-ledger-core, internal} >=1.20,
     cardano-ledger-mary ^>=1.11,
     cardano-ledger-shelley ^>=1.19,
@@ -146,7 +146,7 @@ executable generate-cddl
 
   build-depends:
     base,
-    cardano-ledger-binary:testlib >=1.5,
+    cardano-ledger-binary:testlib >=1.9,
     cddl,
 
 executable generate-cbor
