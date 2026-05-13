@@ -35,6 +35,10 @@ concurrency:
       github.event_name == 'schedule' && '-scheduled' || '')}}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     strategy:
@@ -53,10 +57,6 @@ jobs:
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
 
       SECP_CACHE_VERSION: "2022-12-30"
-
-    defaults:
-      run:
-        shell: bash
 
     steps:
     - uses: actions/checkout@v6
@@ -233,10 +233,6 @@ jobs:
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
       SECP_CACHE_VERSION: "2022-12-30"
 
-    defaults:
-      run:
-        shell: bash
-
     steps:
     - uses: actions/checkout@v6
 
@@ -347,10 +343,6 @@ jobs:
       ghc-version: "9.6.7"
       os: ubuntu-latest
 
-    defaults:
-      run:
-        shell: bash
-
     steps:
     - uses: actions/checkout@v6
 
@@ -385,10 +377,6 @@ jobs:
 
   fourmolu:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        shell: bash
 
     strategy:
       fail-fast: false
@@ -441,10 +429,6 @@ jobs:
 
   cabal-format:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        shell: bash
 
     strategy:
       fail-fast: false
@@ -540,10 +524,6 @@ jobs:
   SRP-validity:
     name: Check if formal-ledger-specifications SRP is valid
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        shell: bash
 
     steps:
     - uses: actions/checkout@v6
