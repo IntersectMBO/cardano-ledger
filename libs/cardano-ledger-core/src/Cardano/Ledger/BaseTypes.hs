@@ -66,7 +66,6 @@ module Cardano.Ledger.BaseTypes (
   activeSlotLog,
   module Data.Maybe.Strict,
   BlocksMade (..),
-  kindObject,
 
   -- * Indices
   TxIx (..),
@@ -96,6 +95,8 @@ module Cardano.Ledger.BaseTypes (
   -- * Aeson helpers
   KeyValuePairs (..),
   ToKeyValuePairs (..),
+  kindObjectValue,
+  kindObject,
 ) where
 
 import Cardano.Crypto.Hash
@@ -157,6 +158,7 @@ import Control.Monad.Trans.Reader (ReaderT)
 import Data.Aeson (
   FromJSON (..),
   KeyValue,
+  Object,
   ToJSON (..),
   Value (..),
   object,
@@ -165,6 +167,7 @@ import Data.Aeson (
   (.:),
   (.=),
  )
+import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Aeson.Types (Pair)
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString.Lazy as BSL
@@ -1028,10 +1031,6 @@ class Inject t s where
 instance Inject a a where
   inject = id
 
--- | Helper function for a common pattern of creating objects
-kindObject :: Text -> [Pair] -> Value
-kindObject name obj = object $ ("kind" .= name) : obj
-
 positiveUnitIntervalNonZeroRational :: PositiveUnitInterval -> NonZero Rational
 positiveUnitIntervalNonZeroRational = unsafeNonZero . unboundRational
 
@@ -1043,3 +1042,10 @@ newtype KeyValuePairs a = KeyValuePairs {unKeyValuePairs :: a}
 instance ToKeyValuePairs a => ToJSON (KeyValuePairs a) where
   toJSON = object . toKeyValuePairs . unKeyValuePairs
   toEncoding = pairs . mconcat . toKeyValuePairs . unKeyValuePairs
+
+-- | Helper function for a common pattern of creating objects
+kindObjectValue :: Text -> [Pair] -> Value
+kindObjectValue name obj = Object $ kindObject name obj
+
+kindObject :: Text -> [Pair] -> Object
+kindObject name obj = KeyMap.fromList $ "kind" .= name : obj

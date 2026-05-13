@@ -19,7 +19,7 @@ module Cardano.Ledger.Dijkstra.TxCert (
   dijkstraToConwayDelegCert,
 ) where
 
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), kindObject)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), kindObjectValue)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -143,25 +143,25 @@ instance NoThunks DijkstraDelegCert
 instance ToJSON DijkstraDelegCert where
   toJSON = \case
     DijkstraRegCert cred deposit ->
-      kindObject
+      kindObjectValue
         "RegCert"
         [ "credential" .= toJSON cred
         , "deposit" .= toJSON deposit
         ]
     DijkstraUnRegCert cred refund ->
-      kindObject
+      kindObjectValue
         "UnRegCert"
         [ "credential" .= toJSON cred
         , "refund" .= toJSON refund
         ]
     DijkstraDelegCert cred delegatee ->
-      kindObject
+      kindObjectValue
         "DelegCert"
         [ "credential" .= toJSON cred
         , "delegatee" .= toJSON delegatee
         ]
     DijkstraRegDelegCert cred delegatee deposit ->
-      kindObject
+      kindObjectValue
         "RegDelegCert"
         [ "credential" .= toJSON cred
         , "delegatee" .= toJSON delegatee

@@ -48,6 +48,7 @@ module Cardano.Ledger.Plutus.Language (
   withSLanguage,
   asSLanguage,
   withSamePlutusLanguage,
+  plutusTagLanguageMap,
 
   -- * Plutus Script Context
   LegacyPlutusArgs (..),
@@ -91,6 +92,8 @@ import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Either (isRight)
 import Data.Ix (Ix)
 import Data.Kind (Type)
+import Data.Map.Strict (Map)
+import Data.MapExtras (boundedEnumMap)
 import Data.MemPack
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
@@ -161,6 +164,11 @@ hashPlutusScript plutusScript =
   ScriptHash $
     Hash.castHash $
       Hash.hashWith id (BS.singleton (plutusLanguageTag plutusScript) <> originalBytes plutusScript)
+
+-- | A map from single-byte Plutus language tag to 'Language'.
+-- Useful for decoding the script type from a tag byte.
+plutusTagLanguageMap :: Map Word8 Language
+plutusTagLanguageMap = boundedEnumMap (`withSLanguage` plutusLanguageTag)
 
 decodePlutus :: Decoder s (Language, PlutusBinary)
 decodePlutus = decodeRecordNamed "Plutus" (const 2) $ (,) <$> decCBOR <*> decCBOR
@@ -417,7 +425,7 @@ class
   isLanguage :: SLanguage l
 
   -- | Tag that will be used as a prefix to compute the `ScriptHash`
-  plutusLanguageTag :: Plutus l -> Word8
+  plutusLanguageTag :: proxy l -> Word8
 
   decodePlutusRunnable ::
     -- | Which major protocol version to use for deserialization and further execution

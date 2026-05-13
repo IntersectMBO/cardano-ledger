@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -58,10 +57,14 @@ module Cardano.Ledger.Allegra.Scripts (
   ltePosInfty,
   invalidBeforeL,
   invalidHereAfterL,
+
+  -- ** JSON utilities
+  allegraBasedEraNativeScriptToJSON,
+  allegraBasedEraNativeScriptJSONParser,
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), kindObject, maybeToStrictMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -98,20 +101,26 @@ import Cardano.Ledger.MemoBytes.Internal (mkMemoBytesShort)
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
   nativeMultiSigTag,
+  shelleyBasedEraNativeScriptJSONParser,
+  shelleyBasedEraNativeScriptToJSON,
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
   pattern RequireSignature,
  )
 import Cardano.Slotting.Slot (SlotNo (..))
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData (..))
-import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:?), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import Data.Foldable as F (foldl')
-import Data.MemPack
+import Data.MemPack (MemPack (packM, packedByteCount, unpackM))
+import Data.Proxy (Proxy (Proxy))
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set (Set, member)
+import Data.Typeable (typeRep)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
@@ -264,6 +273,48 @@ deriving instance Show (Timelock era)
 
 instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
+
+instance (AllegraEraScript era, NativeScript era ~ Timelock era) => ToJSON (Timelock era) where
+  toJSON =
+    let go = allegraBasedEraNativeScriptToJSON go
+     in Aeson.Object . go
+
+allegraBasedEraNativeScriptToJSON ::
+  AllegraEraScript era =>
+  (NativeScript era -> Aeson.Object) ->
+  NativeScript era ->
+  Aeson.Object
+allegraBasedEraNativeScriptToJSON childNativeScriptToObject script =
+  shelleyBasedEraNativeScriptToJSON childNativeScriptToObject script
+    <> case script of
+      RequireTimeStart s ->
+        kindObject "TimeStart" ["slot" .= s]
+      RequireTimeExpire s ->
+        kindObject "TimeExpire" ["slot" .= s]
+      _ -> mempty
+
+instance (AllegraEraScript era, NativeScript era ~ Timelock era) => FromJSON (Timelock era) where
+  parseJSON = allegraBasedEraNativeScriptJSONParser
+
+allegraBasedEraNativeScriptJSONParser ::
+  forall era.
+  AllegraEraScript era =>
+  Aeson.Value ->
+  Parser (NativeScript era)
+allegraBasedEraNativeScriptJSONParser value =
+  shelleyBasedEraNativeScriptJSONParser value
+    <|> Aeson.withObject
+      typeName
+      ( \o -> do
+          t <- o .: "kind" :: Parser String
+          case t of
+            "TimeStart" -> RequireTimeStart @era <$> o .: "slot"
+            "TimeExpire" -> RequireTimeExpire @era <$> o .: "slot"
+            _ -> fail $ "Unknown " <> typeName <> " kind: " <> t
+      )
+      value
+  where
+    typeName = show $ typeRep (Proxy @(NativeScript era))
 
 upgradeMultiSig :: NativeScript ShelleyEra -> NativeScript AllegraEra
 upgradeMultiSig = \case

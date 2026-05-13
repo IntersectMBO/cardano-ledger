@@ -90,6 +90,7 @@ library
     FailT,
     aeson >=2.2,
     base >=4.18 && <5,
+    base16-bytestring,
     base64-bytestring,
     bytestring,
     cardano-base >=0.1.1.0,

@@ -49,7 +49,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe,
   epochInfo,
-  kindObject,
+  kindObjectValue,
   systemStart,
  )
 import Cardano.Ledger.Binary (
@@ -314,7 +314,7 @@ instance DecCBOR FailureDescription where
 
 instance ToJSON FailureDescription where
   toJSON (PlutusFailure t _bs) =
-    kindObject
+    kindObjectValue
       "FailureDescription"
       [ "error" .= Aeson.String "PlutusFailure"
       , "description" .= t
@@ -347,11 +347,11 @@ instance DecCBOR TagMismatchDescription where
 instance ToJSON TagMismatchDescription where
   toJSON = \case
     PassedUnexpectedly ->
-      kindObject
+      kindObjectValue
         "TagMismatchDescription"
         ["error" .= Aeson.String "PassedUnexpectedly"]
     FailedUnexpectedly forReasons ->
-      kindObject
+      kindObjectValue
         "TagMismatchDescription"
         [ "error" .= Aeson.String "FailedUnexpectedly"
         , "reconstruction" .= forReasons

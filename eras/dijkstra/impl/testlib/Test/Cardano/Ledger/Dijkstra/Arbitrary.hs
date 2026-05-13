@@ -127,7 +127,7 @@ sizedDijkstraNativeScript ::
 sizedDijkstraNativeScript 0 = RequireSignature <$> arbitrary
 sizedDijkstraNativeScript n =
   oneof $
-    sizedNativeScriptGens n
+    sizedNativeScriptGens n sizedDijkstraNativeScript
       <> [ RequireTimeStart <$> arbitrary
          , RequireTimeExpire <$> arbitrary
          , RequireGuard <$> arbitrary

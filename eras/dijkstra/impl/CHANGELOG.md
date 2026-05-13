@@ -62,6 +62,8 @@
   - `DijkstraUtxowPredFailure`
 * Remove `NoThunks` instance for `DijkstraContextError`
 * Make `DijkstraContextError` constructors lazy
+* Add `ToJSON` and `FromJSON` instances for `DijkstraNativeScript era`
+* Export `dijkstraBasedEraNativeScriptToJSON` and `dijkstraBasedEraNativeScriptJSONParser` from `Cardano.Ledger.Dijkstra.Scripts`
 
 ### cddl
 

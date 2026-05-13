@@ -50,6 +50,7 @@ class
   , Arbitrary (TxWits era)
   , Arbitrary (TxOut era)
   , Arbitrary (TxAuxData era)
+  , Arbitrary (NativeScript era)
   , Arbitrary (Script era)
   , Arbitrary (PParamsHKD Identity era)
   , Arbitrary (PParamsHKD StrictMaybe era)
@@ -68,6 +69,7 @@ class
   , ToExpr (TxWits era)
   , ToExpr (TxOut era)
   , ToExpr (TxAuxData era)
+  , ToExpr (NativeScript era)
   , ToExpr (Script era)
   , ToExpr (PParamsHKD Identity era)
   , ToExpr (PParamsHKD StrictMaybe era)
@@ -165,6 +167,11 @@ ledgerEraTestMain extraEraSpec =
             "golden/tx.cbor"
             (eraProtVerLow @era)
             (exampleTx @era)
+      describe "JSON" $ do
+        prop (show $ typeRep $ Proxy @(NativeScript era)) $
+          roundTripAesonProperty @(NativeScript era)
+        prop (show $ typeRep $ Proxy @(Script era)) $
+          roundTripAesonProperty @(Script era)
       describe "Era-specific spec" extraEraSpec
 
 -- | This is a helper function that uses `mkTestAccountState` to register an account.

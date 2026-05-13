@@ -580,15 +580,21 @@ maxMultiSigListLens = 4
 
 sizedMultiSig :: ShelleyEraScript era => Int -> Gen (NativeScript era)
 sizedMultiSig 0 = RequireSignature <$> arbitrary
-sizedMultiSig n = oneof $ sizedNativeScriptGens n
+sizedMultiSig n =
+  oneof $
+    sizedNativeScriptGens n sizedMultiSig
 
-sizedNativeScriptGens :: ShelleyEraScript era => Int -> [Gen (NativeScript era)]
-sizedNativeScriptGens n =
+sizedNativeScriptGens ::
+  ShelleyEraScript era =>
+  Int ->
+  (Int -> Gen (NativeScript era)) ->
+  [Gen (NativeScript era)]
+sizedNativeScriptGens n childNativeScriptGen =
   [ RequireSignature <$> arbitrary
-  , RequireAllOf <$> (fromList <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1))))
-  , RequireAnyOf <$> (fromList <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1))))
+  , RequireAllOf . fromList <$> resize maxMultiSigListLens (listOf (childNativeScriptGen (n - 1)))
+  , RequireAnyOf . fromList <$> resize maxMultiSigListLens (listOf (childNativeScriptGen (n - 1)))
   , do
-      subs <- resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
+      subs <- resize maxMultiSigListLens (listOf (childNativeScriptGen (n - 1)))
       let i = length subs
       RequireMOf <$> choose (0, i) <*> pure (fromList subs)
   ]

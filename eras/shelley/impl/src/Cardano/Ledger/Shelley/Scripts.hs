@@ -31,8 +31,13 @@ module Cardano.Ledger.Shelley.Scripts (
   nativeMultiSigTag,
   eqMultiSigRaw,
   MultiSigRaw (..),
+
+  -- ** JSON utilities
+  shelleyBasedEraNativeScriptToJSON,
+  shelleyBasedEraNativeScriptJSONParser,
 ) where
 
+import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -58,10 +63,16 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.MemoBytes.Internal (memoBytesEra)
 import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), (.:))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import qualified Data.ByteString as BS
+import Data.Foldable (toList)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Text (Text)
+import Data.Typeable (Proxy (..), typeRep)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -165,6 +176,58 @@ deriving newtype instance NFData (MultiSig era)
 
 instance EqRaw (MultiSig era) where
   eqRaw = eqMultiSigRaw
+
+instance (ShelleyEraScript era, NativeScript era ~ MultiSig era) => ToJSON (MultiSig era) where
+  toJSON =
+    let go = shelleyBasedEraNativeScriptToJSON go
+     in Aeson.Object . go
+
+shelleyBasedEraNativeScriptToJSON ::
+  ShelleyEraScript era =>
+  (NativeScript era -> Aeson.Object) ->
+  NativeScript era ->
+  Aeson.Object
+shelleyBasedEraNativeScriptToJSON childNativeScriptToObject script =
+  case script of
+    RequireSignature kh ->
+      kindObject "Signature" ["keyHash" .= kh]
+    RequireAllOf scripts ->
+      kindObject "AllOf" ["scripts" .= fmap childNativeScriptToObject (toList scripts)]
+    RequireAnyOf scripts ->
+      kindObject "AnyOf" ["scripts" .= fmap childNativeScriptToObject (toList scripts)]
+    RequireMOf n scripts ->
+      kindObject
+        "MOf"
+        [ "required" .= n
+        , "scripts" .= fmap childNativeScriptToObject (toList scripts)
+        ]
+    _ -> mempty
+
+instance
+  (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
+  FromJSON (MultiSig era)
+  where
+  parseJSON = shelleyBasedEraNativeScriptJSONParser
+
+shelleyBasedEraNativeScriptJSONParser ::
+  forall era.
+  ShelleyEraScript era =>
+  Aeson.Value ->
+  Parser (NativeScript era)
+shelleyBasedEraNativeScriptJSONParser =
+  Aeson.withObject typeName $ \o -> do
+    t <- o .: "kind" :: Parser Text
+    case t of
+      "Signature" -> mkRequireSignature @era <$> o .: "keyHash"
+      "AllOf" -> mkRequireAllOf @era . StrictSeq.fromList <$> o .: "scripts"
+      "AnyOf" -> mkRequireAnyOf @era . StrictSeq.fromList <$> o .: "scripts"
+      "MOf" ->
+        mkRequireMOf @era
+          <$> o .: "required"
+          <*> (StrictSeq.fromList <$> o .: "scripts")
+      _ -> fail $ "Unknown " <> typeName <> " kind: " <> show t
+  where
+    typeName = show $ typeRep (Proxy @(NativeScript era))
 
 pattern RequireSignature :: ShelleyEraScript era => KeyHash Witness -> NativeScript era
 pattern RequireSignature akh <- (getRequireSignature -> Just akh)

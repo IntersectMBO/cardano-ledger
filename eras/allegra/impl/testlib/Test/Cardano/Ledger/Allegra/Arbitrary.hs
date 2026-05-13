@@ -59,7 +59,7 @@ sizedTimelock ::
 sizedTimelock 0 = RequireSignature <$> arbitrary
 sizedTimelock n =
   oneof $
-    sizedNativeScriptGens n
+    sizedNativeScriptGens n sizedTimelock
       <> [ RequireTimeStart <$> arbitrary
          , RequireTimeExpire <$> arbitrary
          ]

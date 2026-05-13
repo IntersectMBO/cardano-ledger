@@ -21,7 +21,7 @@ module Cardano.Ledger.Core.TxCert (
   isUnRegStakeTxCert,
 ) where
 
-import Cardano.Ledger.BaseTypes (kindObject)
+import Cardano.Ledger.BaseTypes (kindObjectValue)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
@@ -149,9 +149,9 @@ instance NFData PoolCert where
 instance ToJSON PoolCert where
   toJSON = \case
     RegPool poolParams ->
-      kindObject "RegPool" ["poolParams" .= toJSON poolParams]
+      kindObjectValue "RegPool" ["poolParams" .= toJSON poolParams]
     RetirePool poolId epochNo ->
-      kindObject
+      kindObjectValue
         "RetirePool"
         [ "poolId" .= toJSON poolId
         , "epochNo" .= toJSON epochNo

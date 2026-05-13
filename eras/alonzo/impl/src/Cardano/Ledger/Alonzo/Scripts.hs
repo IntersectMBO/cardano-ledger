@@ -62,10 +62,11 @@ module Cardano.Ledger.Alonzo.Scripts (
   module Cardano.Ledger.Plutus.ExUnits,
 ) where
 
+import Cardano.Crypto.Hash.Class (hashToTextAsHex)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxCert ()
-import Cardano.Ledger.BaseTypes (ProtVer (..), kindObject)
+import Cardano.Ledger.BaseTypes (ProtVer (..), kindObjectValue)
 import Cardano.Ledger.Binary (
   Annotator,
   CBORGroup (..),
@@ -76,6 +77,7 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   ToCBOR (toCBOR),
   Version,
+  decodeFullAnnotator,
   decodeWord8,
   encodeWord8,
  )
@@ -88,7 +90,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<*!),
  )
-import Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
@@ -102,20 +103,40 @@ import Cardano.Ledger.Plutus.Language (
   SLanguage (..),
   asSLanguage,
   isValidPlutus,
+  languageFromText,
   plutusLanguage,
   plutusSLanguage,
+  plutusTagLanguageMap,
   withSLanguage,
  )
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..), nativeMultiSigTag)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
-import Control.Monad (guard, (>=>))
-import Data.Aeson (ToJSON (..), Value (String), object, (.=))
+import Control.Monad (forM_, guard, unless, when, (>=>))
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, withObject, (.:), (.:?), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as BS16
+import qualified Data.ByteString.Base64 as BS64
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Short as SBS
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (lookupMapFail)
 import Data.Maybe (fromJust, isJust)
-import Data.MemPack
+import Data.MemPack (
+  MemPack,
+  packM,
+  packTagM,
+  packedByteCount,
+  packedTagByteCount,
+  unknownTagM,
+  unpackM,
+  unpackTagM,
+ )
+import Data.Text (Text)
+import Data.Text.Encoding (decodeLatin1, encodeUtf8)
 import Data.Typeable
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -296,6 +317,11 @@ instance (ToJSON ix, ToJSON it) => ToJSON (AsIxItem ix it) where
       , "item" .= toJSON it
       ]
 
+instance FromJSON ix => FromJSON (AsIx ix it) where
+  parseJSON =
+    withObject "AsIx" $ \o ->
+      AsIx <$> o .: "index"
+
 toAsPurpose :: f ix it -> AsPurpose ix it
 toAsPurpose = const AsPurpose
 
@@ -406,7 +432,25 @@ instance
     AlonzoCertifying n -> kindObjectWithValue "AlonzoCertifying" n
     AlonzoRewarding n -> kindObjectWithValue "AlonzoRewarding" n
     where
-      kindObjectWithValue name n = kindObject name ["value" .= n]
+      kindObjectWithValue name n = kindObjectValue name ["value" .= n]
+
+instance
+  ( FromJSON (AsIx Word32 TxIn)
+  , FromJSON (AsIx Word32 PolicyID)
+  , FromJSON (AsIx Word32 (TxCert era))
+  , FromJSON (AsIx Word32 AccountAddress)
+  ) =>
+  FromJSON (AlonzoPlutusPurpose AsIx era)
+  where
+  parseJSON =
+    withObject "AlonzoPlutusPurpose" $ \o -> do
+      kind <- o .: "kind" :: Parser Text
+      case kind of
+        "AlonzoSpending" -> AlonzoSpending <$> o .: "value"
+        "AlonzoMinting" -> AlonzoMinting <$> o .: "value"
+        "AlonzoCertifying" -> AlonzoCertifying <$> o .: "value"
+        "AlonzoRewarding" -> AlonzoRewarding <$> o .: "value"
+        _ -> fail $ "Unknown AlonzoPlutusPurpose kind: " <> show kind
 
 pattern SpendingPurpose ::
   AlonzoEraScript era => f Word32 TxIn -> PlutusPurpose f era
@@ -579,8 +623,120 @@ instance
   where
   eqRaw = eqAlonzoScriptRaw
 
-instance AlonzoEraScript era => ToJSON (AlonzoScript era) where
-  toJSON = String . serializeAsHexText
+instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => ToJSON (AlonzoScript era) where
+  toJSON script =
+    object $
+      [ "scriptHash" .= hashScript script
+      , "scriptBase16Tag" .= toBase16Text (scriptPrefixTag script)
+      , "scriptBase64Bytes" .= toBase64Text (originalBytes script)
+      , "scriptType"
+          .= case script of
+            NativeScript _ -> Aeson.String "NativeScript"
+            PlutusScript plutusScript -> toJSON (withPlutusScript plutusScript plutusLanguage)
+      ]
+        ++ case script of
+          NativeScript nativeScript -> ["nativeScriptContents" .= toJSON nativeScript]
+          PlutusScript _ -> []
+    where
+      toBase64Text = decodeLatin1 . BS64.encode
+      toBase16Text = ("0x" <>) . decodeLatin1 . BS16.encode
+
+instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => FromJSON (AlonzoScript era) where
+  parseJSON = withObject typeName $ \o -> do
+    mScriptType <- o .:? "scriptType" :: Parser (Maybe Text)
+    -- Determine whether this is a native or plutus script and which language.
+    -- If "scriptType" is absent, fall back to "scriptBase16Tag" as source of truth.
+    script <- case mScriptType of
+      Nothing -> do
+        -- Infer the script type from the "scriptBase16Tag" field
+        tagHex <- o .: "scriptBase16Tag" :: Parser Text
+        let hexBytes = BS.drop 2 (encodeUtf8 tagHex) -- strip "0x" prefix
+        case BS16.decode hexBytes of
+          Left err -> fail $ typeName <> ": invalid scriptBase16Tag: " <> err
+          Right bs
+            | [tag] <- BS.unpack bs -> do
+                -- Decode script based on scriptTag
+                script <-
+                  if tag == BS.head nativeMultiSigTag
+                    then buildNativeScript o
+                    else do
+                      plutusLang <- lookupMapFail "Language Tag" plutusTagLanguageMap tag
+                      buildPlutusScript plutusLang o
+                -- Check that the "scriptBase16Tag" in the JSON matches the
+                -- scriptTag extracted from the script itself.
+                checkScriptBase16Tag tagHex script
+                pure script
+            | otherwise -> fail $ typeName <> ": scriptBase16Tag must encode a single byte"
+      Just scriptType -> do
+        -- If the "scriptType" field in present in the JSON, we can decode the
+        -- script directly.
+        script <- case scriptType of
+          "NativeScript" -> buildNativeScript o
+          plutusLanguageText -> do
+            -- Decode the Plutus language version encoded in the "scriptType"
+            -- JSON field.
+            plutusLang <- languageFromText plutusLanguageText
+            buildPlutusScript plutusLang o
+
+        -- If the "scriptBase16Tag" JSON field is present, we make sure it
+        -- matches the scriptTag of the decoded script.
+        mTagHex <- o .:? "scriptBase16Tag" :: Parser (Maybe Text)
+        forM_ mTagHex $ \tagHex -> checkScriptBase16Tag tagHex script
+
+        pure script
+
+    -- If the "scriptHash" JSON field is present, we make sure it matches the
+    -- actual script hash of the decoded script.
+    mScriptHash <- o .:? "scriptHash"
+    forM_ mScriptHash $ \scriptHash ->
+      let actualScriptHash@(ScriptHash hash) = hashScript script
+       in when (scriptHash /= actualScriptHash) $
+            fail $
+              typeName
+                <> ": scriptHash does not match constructed script: "
+                <> show (hashToTextAsHex hash)
+
+    pure script
+    where
+      typeName = show $ typeRep (Proxy @(AlonzoScript era))
+      buildNativeScript o = do
+        mBytes <- decodeOptionalScriptBytes o
+        mContents <- o .:? "nativeScriptContents"
+        case (mBytes, mContents) of
+          (Nothing, Nothing) ->
+            fail $ typeName <> ": neither scriptBase64Bytes nor nativeScriptContents provided for NativeScript"
+          (Just bytes, Nothing) ->
+            NativeScript <$> decodeNativeScriptBytes bytes
+          (Nothing, Just contents) ->
+            pure (NativeScript contents)
+          (Just bytes, Just contents) -> do
+            nativeScript <- decodeNativeScriptBytes bytes
+            unless (NativeScript contents `eqRaw` NativeScript nativeScript) $
+              fail $
+                typeName <> ": nativeScriptContents does not match scriptBase64Bytes"
+            pure $ NativeScript nativeScript
+      buildPlutusScript plutusLang o = do
+        bytes <- decodeScriptBytes o
+        PlutusScript <$> mkBinaryPlutusScript plutusLang (PlutusBinary (SBS.toShort bytes))
+      decodeNativeScriptBytes bytes =
+        case decodeFullAnnotator (eraProtVerHigh @era) "NativeScript" decCBOR (BSL.fromStrict bytes) of
+          Left err -> fail $ typeName <> ": " <> show err
+          Right s -> pure s
+      decodeScriptBytes o = do
+        b64 <- o .: "scriptBase64Bytes" :: Parser Text
+        decodeBase64Bytes b64
+      decodeOptionalScriptBytes o = do
+        mb64 <- o .:? "scriptBase64Bytes" :: Parser (Maybe Text)
+        mapM decodeBase64Bytes mb64
+      decodeBase64Bytes b64 =
+        case BS64.decode (encodeUtf8 b64) of
+          Left err -> fail $ typeName <> ": invalid base64: " <> err
+          Right bytes -> pure bytes
+      checkScriptBase16Tag tagHex script = do
+        let expectedTagHex = "0x" <> decodeLatin1 (BS16.encode (scriptPrefixTag script))
+        when (tagHex /= expectedTagHex) $
+          fail $
+            typeName <> ": scriptBase16Tag does not match constructed script"
 
 -- | It might seem that this instance unnecessarily utilizes a zero Tag, but it is needed for
 -- forward compatibility with plutus scripts from future eras.
@@ -620,12 +776,13 @@ instance AlonzoEraScript era => ToCBOR (AlonzoScript era) where
 encodeScript :: AlonzoEraScript era => AlonzoScript era -> Encode Open (AlonzoScript era)
 encodeScript = \case
   NativeScript i -> Sum NativeScript 0 !> To i
-  PlutusScript plutusScript -> withPlutusScript plutusScript $ \plutus@(Plutus pb) ->
-    case plutusSLanguage plutus of
-      SPlutusV1 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV1) 1 !> To pb
-      SPlutusV2 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV2) 2 !> To pb
-      SPlutusV3 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV3) 3 !> To pb
-      SPlutusV4 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV4) 4 !> To pb
+  PlutusScript plutusScript ->
+    withPlutusScript plutusScript $ \plutus@(Plutus pb) ->
+      case plutusSLanguage plutus of
+        SPlutusV1 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV1) 1 !> To pb
+        SPlutusV2 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV2) 2 !> To pb
+        SPlutusV3 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV3) 3 !> To pb
+        SPlutusV4 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV4) 4 !> To pb
 
 instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
   decCBOR = decode (Summands "AlonzoScript" decodeScript)

@@ -51,6 +51,9 @@
   - `ShelleyPpupPredFailure`
 * Add protocol version validation to `createInitialState`:
   - Validate that current protocol version is within the era's bounds
+* Add `ToJSON` and `FromJSON` instances for `MultiSig era`
+* Export `shelleyBasedEraNativeScriptToJSON` and `shelleyBasedEraNativeScriptJSONParser` from `Cardano.Ledger.Shelley.Scripts`
+* Change `shelleyBasedEraNativeScriptToJSON` to accept a `(NativeScript era -> Aeson.Object)` continuation as its first argument for recursive child serialisation
 
 ### `cddl`
 
@@ -71,6 +74,7 @@
 * Add `withImpInitEachEraVersion` and deprecate `withEachEraVersion` in its favor
 * Export `exampleVrfVerKeyHash` from `Test.Cardano.Ledger.Shelley.Examples`
 * Add `HuddleRule "int32" ShelleyEra` instance
+* Change `sizedNativeScriptGens` to accept a `(Int -> Gen (NativeScript era))` child generator as its second argument, replacing the hardwired recursive call to `sizedMultiSig`
 * Add `withIssuerAndTxsInBlock_` and `withIssuerAndTxsInBlock`
 * Add a `Maybe (KeyHash BlockIssuer)` parameter to `withTxsInBlockEither`
 * Export `exampleShelleyScript` and `exampleBootstrapWitness` from `Test.Cardano.Ledger.Shelley.Examples`
