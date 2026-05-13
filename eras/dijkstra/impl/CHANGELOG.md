@@ -75,7 +75,8 @@
 * Add `genNonEmptyAccountBalanceIntervals`
 * In `Test.Cardano.Ledger.Dijkstra.Examples`:
   - Remove `mkDijkstraBasedExampleTx`, `mkDijkstraBasedExampleTxBody`
-  - Add `exampleDijkstraBasedTopTx`, `exampleDijkstraBasedSubTx`
+  - Add `exampleDijkstraBasedTopTx`, `exampleDijkstraBasedSubTx`, `exampleDijkstraTx`, `exampleDijkstraGenesis`
+* Move `exampleDijkstraGenesis` from `Test.Cardano.Ledger.Dijkstra.ImpTest` to `Test.Cardano.Ledger.Dijkstra.Examples`
 
 ## 0.2.0.0
 

@@ -61,7 +61,6 @@ import Test.Cardano.Ledger.Mary.Golden (
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
 import Test.Cardano.Protocol.TPraos.Examples (
-  LedgerExamples (..),
   ProtocolLedgerExamples (..),
   ledgerExamplesAlonzo,
  )
@@ -187,11 +186,6 @@ goldenCborSerialization =
       "golden/block.cbor"
       (eraProtVerLow @AlonzoEra)
       (pleBlock ledgerExamplesAlonzo)
-    cborAnnGoldenSpec
-      getDataFileName
-      "golden/tx.cbor"
-      (eraProtVerLow @AlonzoEra)
-      (leTx $ pleLedgerExamples ledgerExamplesAlonzo)
 
 goldenJsonSerialization :: Spec
 goldenJsonSerialization =

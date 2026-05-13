@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Shelley.Examples (
   ledgerExamples,
   -- functions used in building examples for other eras
   mkShelleyBasedLedgerExamples,
+  exampleShelleyTx,
   exampleShelleyBasedTx,
   addShelleyBasedTopTxExampleFee,
   addShelleyToBabbageExampleProposedPUpdates,
@@ -134,15 +135,15 @@ ledgerExamples =
     exampleCoin
     exampleShelleyTx
     emptyFromByronTranslationContext
-  where
-    exampleShelleyTx :: Tx TopTx ShelleyEra
-    exampleShelleyTx =
-      exampleShelleyBasedTx
-        & bodyTxL . ttlTxBodyL .~ SlotNo 10
-        & addShelleyBasedTopTxExampleFee
-        & addShelleyToBabbageExampleProposedPUpdates
-        & addShelleyToBabbageTxCerts
-        & addShelleyToConwayTxCerts
+
+exampleShelleyTx :: Tx TopTx ShelleyEra
+exampleShelleyTx =
+  exampleShelleyBasedTx
+    & bodyTxL . ttlTxBodyL .~ SlotNo 10
+    & addShelleyBasedTopTxExampleFee
+    & addShelleyToBabbageExampleProposedPUpdates
+    & addShelleyToBabbageTxCerts
+    & addShelleyToConwayTxCerts
 
 mkShelleyBasedLedgerExamples ::
   forall era.

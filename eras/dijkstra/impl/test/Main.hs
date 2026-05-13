@@ -12,7 +12,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec as Cddl
-import qualified Test.Cardano.Ledger.Dijkstra.Binary.Golden as Golden
+import qualified Test.Cardano.Ledger.Dijkstra.Binary.Golden as GoldenBinary
 import Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip ()
 import qualified Test.Cardano.Ledger.Dijkstra.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Dijkstra.Imp as Imp
@@ -37,4 +37,4 @@ main =
       txInfoSpec @DijkstraEra SPlutusV3
       txInfoSpec @DijkstraEra SPlutusV4
       DijkstraTxInfoSpec.spec @DijkstraEra
-    Golden.spec @DijkstraEra
+    GoldenBinary.spec @DijkstraEra

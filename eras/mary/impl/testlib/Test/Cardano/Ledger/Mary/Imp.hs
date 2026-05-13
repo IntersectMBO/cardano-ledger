@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Mary.Imp (spec) where
 

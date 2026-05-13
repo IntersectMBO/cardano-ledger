@@ -8,6 +8,7 @@
 -- don't care, we are only interested in serialisation, not validation.
 module Test.Cardano.Ledger.Allegra.Examples (
   ledgerExamples,
+  exampleAllegraTx,
   exampleAllegraBasedTx,
 ) where
 
@@ -44,14 +45,14 @@ ledgerExamples =
     exampleCoin
     exampleAllegraTx
     NoGenesis
-  where
-    exampleAllegraTx :: Tx TopTx AllegraEra
-    exampleAllegraTx =
-      exampleAllegraBasedTx
-        & addShelleyBasedTopTxExampleFee
-        & addShelleyToBabbageExampleProposedPUpdates
-        & addShelleyToBabbageTxCerts
-        & addShelleyToConwayTxCerts
+
+exampleAllegraTx :: Tx TopTx AllegraEra
+exampleAllegraTx =
+  exampleAllegraBasedTx
+    & addShelleyBasedTopTxExampleFee
+    & addShelleyToBabbageExampleProposedPUpdates
+    & addShelleyToBabbageTxCerts
+    & addShelleyToConwayTxCerts
 
 -- Complete transaction which is compatible with any era starting with Allegra.
 -- This transaction forms the basis on which future era transactions will be

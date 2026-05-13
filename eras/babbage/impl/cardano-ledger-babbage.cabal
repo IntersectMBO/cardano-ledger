@@ -154,6 +154,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.Arbitrary
     Test.Cardano.Ledger.Babbage.Binary.Annotator
     Test.Cardano.Ledger.Babbage.Binary.Cddl
+    Test.Cardano.Ledger.Babbage.Binary.Golden
     Test.Cardano.Ledger.Babbage.Binary.Twiddle
     Test.Cardano.Ledger.Babbage.Era
     Test.Cardano.Ledger.Babbage.Examples
@@ -205,6 +206,7 @@ library testlib
     cardano-slotting,
     cardano-strict-containers,
     containers,
+    data-default,
     generic-random,
     microlens,
     microlens-ghc,

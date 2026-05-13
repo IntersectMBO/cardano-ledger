@@ -8,6 +8,7 @@ synopsis: Shelley Ledger Executable Model
 build-type: Simple
 data-files:
   cddl/data/shelley.cddl
+  golden/*.cbor
   golden/*.json
 
 extra-source-files: CHANGELOG.md

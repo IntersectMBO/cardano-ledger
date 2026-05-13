@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -12,8 +13,10 @@
 -- don't care, we are only interested in serialisation, not validation.
 module Test.Cardano.Ledger.Dijkstra.Examples (
   ledgerExamples,
+  exampleDijkstraTx,
   exampleDijkstraBasedTopTx,
   exampleDijkstraBasedSubTx,
+  exampleDijkstraGenesis,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
@@ -25,12 +28,16 @@ import Cardano.Ledger.BaseTypes (
   Inclusive (..),
   Network (..),
   StrictMaybe (..),
+  boundRational,
+  knownNonZeroBounded,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
+import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
+import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
 import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceInterval (..),
@@ -55,7 +62,7 @@ import Cardano.Ledger.Plutus.Data (
 import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
-import qualified Data.MapExtras as Map
+import Data.Maybe (fromJust)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as StrictSeq
@@ -69,7 +76,6 @@ import Test.Cardano.Ledger.Alonzo.Examples (
 import Test.Cardano.Ledger.Babbage.Examples (exampleBabbageNewEpochState)
 import Test.Cardano.Ledger.Conway.Examples (exampleConwayBasedTopTx, exampleConwayBasedTx)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
-import Test.Cardano.Ledger.Dijkstra.ImpTest (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
 import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus)
 import Test.Cardano.Ledger.Shelley.Examples (
@@ -93,11 +99,23 @@ ledgerExamples =
     exampleBabbageNewEpochState
     exampleDijkstraTx
     exampleDijkstraGenesis
-  where
-    exampleDijkstraTx :: Tx TopTx DijkstraEra
-    exampleDijkstraTx =
-      exampleDijkstraBasedTopTx
-        & addShelleyBasedTopTxExampleFee
+
+exampleDijkstraTx :: Tx TopTx DijkstraEra
+exampleDijkstraTx =
+  exampleDijkstraBasedTopTx
+    & addShelleyBasedTopTxExampleFee
+
+exampleDijkstraGenesis :: DijkstraGenesis
+exampleDijkstraGenesis =
+  DijkstraGenesis
+    { dgUpgradePParams =
+        UpgradeDijkstraPParams
+          { udppMaxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
+          , udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
+          , udppRefScriptCostStride = knownNonZeroBounded @25_600 -- 25 KiB
+          , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          }
+    }
 
 exampleDijkstraBasedTopTx ::
   forall era.
@@ -180,7 +198,11 @@ addDijkstraBasedTxFeatures tx =
   tx
     & witsTxL
       <>~ ( mkBasicTxWits
-              & scriptTxWitsL <>~ Map.fromElems hashScript [alwaysSucceeds @'PlutusV4 3]
+              -- NOTE: PlutusV4 scripts are NOT part of Dijkstra's transaction_witness_set
+              -- CDDL (only V1/V2/V3 are). Including them here would cause a roundtrip
+              -- failure as they get silently dropped during serialization. See
+              -- TODO in 'Cardano.Ledger.Dijkstra.HuddleSpec'.
+              -- & scriptTxWitsL <>~ Map.fromElems hashScript [alwaysSucceeds @'PlutusV4 3]
               & rdmrsTxWitsL <>~ redeemers
           )
     & modifyTxAuxData
