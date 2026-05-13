@@ -25,7 +25,7 @@ import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (TRC (..))
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (Arbitrary (..), ToExpr)
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),

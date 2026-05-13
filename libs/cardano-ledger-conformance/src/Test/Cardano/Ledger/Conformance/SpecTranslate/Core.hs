@@ -62,7 +62,7 @@ import Data.Functor.Identity (Identity (..))
 import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import GHC.Natural (naturalToInteger)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Core.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.Utils
 

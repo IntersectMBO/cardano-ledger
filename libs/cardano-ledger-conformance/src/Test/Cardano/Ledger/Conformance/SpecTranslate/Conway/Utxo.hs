@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo () where
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (SpecTranslate (..))
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 

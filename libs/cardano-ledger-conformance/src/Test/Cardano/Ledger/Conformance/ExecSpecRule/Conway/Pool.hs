@@ -10,7 +10,7 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool where
 
 import Cardano.Ledger.Conway
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()

@@ -15,7 +15,7 @@ import Cardano.Ledger.Credential (Credential)
 import Control.State.Transition.Extended (TRC (..))
 import Data.Bifunctor (second)
 import Data.Set (Set)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core ()

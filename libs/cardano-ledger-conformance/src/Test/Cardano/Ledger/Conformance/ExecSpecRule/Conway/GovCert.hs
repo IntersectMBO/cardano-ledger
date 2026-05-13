@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert () where
 import Cardano.Ledger.Conway (ConwayEra)
 import Control.State.Transition.Extended (TRC (..))
 import Data.Bifunctor (Bifunctor (..))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   SpecTRC (..),

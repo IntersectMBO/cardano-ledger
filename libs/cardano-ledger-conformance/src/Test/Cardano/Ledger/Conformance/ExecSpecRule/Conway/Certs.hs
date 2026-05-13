@@ -19,7 +19,7 @@ import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (.~), (^.))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   SpecTRC (..),

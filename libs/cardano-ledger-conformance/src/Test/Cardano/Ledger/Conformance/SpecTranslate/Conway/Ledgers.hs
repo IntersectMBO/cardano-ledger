@@ -16,7 +16,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Constitution (..), EnactState (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State (ChainAccountState (..))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
   askSpecTransM,

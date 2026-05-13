@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledgers () where
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (EnactState)
 import Control.State.Transition.Extended (TRC (..))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   SpecTRC (..),
   SpecTranslate (..),

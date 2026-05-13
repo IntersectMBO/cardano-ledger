@@ -19,7 +19,7 @@ import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Data.Map (keysSet)
 import Data.Map.Strict (Map)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()

@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.State (ChainAccountState (..))
 import Cardano.Ledger.TxIn (TxId)
 import Data.Maybe.Strict (StrictMaybe)
 import Lens.Micro ((^.))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (askSpecTransM, withCtxSpecTransM)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   SpecTranslate (..),

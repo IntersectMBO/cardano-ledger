@@ -15,7 +15,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Shelley.Rules (utxoEnvCertStateL)
 import Control.State.Transition.Extended (TRC (..))
 import Lens.Micro ((^.))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   SpecTRC (..),

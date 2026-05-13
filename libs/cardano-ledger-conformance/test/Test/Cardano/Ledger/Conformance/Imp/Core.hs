@@ -24,7 +24,6 @@ import Data.List.NonEmpty
 import Data.Text qualified as T
 import GHC.TypeLits (symbolVal)
 import Lens.Micro
-import MAlonzo.Code.Ledger.Foreign.API qualified as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayLedgerExecContext (..))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
@@ -99,8 +98,6 @@ submitTxConformanceHook ::
   , ExecContext "LEDGER" era ~ ConwayLedgerExecContext era
   , SpecTranslate era (TxWits era)
   , HasCallStack
-  , SpecRep era (TxWits era) ~ Agda.TxWitnesses
-  , SpecRep era (TxBody TopTx era) ~ Agda.TxBody
   , SpecTranslate era (TxBody TopTx era)
   , SpecTranslate era (Tx TopTx era)
   , ToExpr (SpecRep era (Tx TopTx era))

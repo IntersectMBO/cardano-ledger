@@ -25,7 +25,7 @@ import Data.Default (Default (..))
 import Data.Map.Strict (Map, keysSet)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 

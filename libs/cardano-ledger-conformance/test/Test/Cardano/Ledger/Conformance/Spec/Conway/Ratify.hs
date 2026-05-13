@@ -24,7 +24,7 @@ import Cardano.Ledger.Conway.Rules qualified as Conway
 import Constrained.Generation
 import Data.Either (fromRight)
 import Lens.Micro
-import MAlonzo.Code.Ledger.Foreign.API qualified as Agda
+import MAlonzo.Code.Ledger.Conway.Foreign.API qualified as Agda
 import Prettyprinter as Pretty
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
 import Test.Cardano.Ledger.Conformance.Spec.Core

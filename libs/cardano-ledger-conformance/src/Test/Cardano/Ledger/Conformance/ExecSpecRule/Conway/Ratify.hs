@@ -24,7 +24,7 @@ import Control.State.Transition.Extended (TRC (..))
 import Data.Foldable (Foldable (..))
 import Data.Ratio (denominator, numerator)
 import Lens.Micro ((^.))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),

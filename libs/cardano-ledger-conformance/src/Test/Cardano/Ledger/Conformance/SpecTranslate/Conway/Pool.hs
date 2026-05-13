@@ -17,7 +17,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import qualified Data.Map.Strict as Map
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 

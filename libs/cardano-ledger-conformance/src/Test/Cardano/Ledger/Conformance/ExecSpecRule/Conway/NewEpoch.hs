@@ -6,7 +6,7 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.NewEpoch () where
 
 import Cardano.Ledger.Conway (ConwayEra)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), SpecTRC (..), unComputationResult_)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Conway.ImpTest ()

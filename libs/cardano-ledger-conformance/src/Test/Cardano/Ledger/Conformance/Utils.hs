@@ -13,7 +13,7 @@ import Data.Containers.ListUtils (nubOrdOn)
 import Data.Data (Proxy (..))
 import Data.Foldable (Foldable (..))
 import Data.List (sortOn)
-import MAlonzo.Code.Ledger.Foreign.API as Agda
+import MAlonzo.Code.Ledger.Core.Foreign.API as Agda
 import Test.Cardano.Ledger.TreeDiff (Expr, ToExpr (..))
 
 agdaHashToBytes :: Int -> Integer -> ByteString

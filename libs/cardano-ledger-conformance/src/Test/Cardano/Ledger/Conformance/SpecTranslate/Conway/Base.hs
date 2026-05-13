@@ -71,7 +71,7 @@ import Data.Traversable (forM)
 import qualified GHC.Exts as Exts
 import Lens.Micro
 import Lens.Micro.Extras (view)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.Orphans ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (committeeCredentialToStrictMaybe)

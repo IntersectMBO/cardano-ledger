@@ -47,7 +47,7 @@ import GHC.Base (Constraint, Symbol, Type)
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol)
 import Lens.Micro.Mtl (use)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Core.Foreign.API as Agda
 import Prettyprinter
 import Prettyprinter.Render.Terminal
 import System.FilePath ((<.>))

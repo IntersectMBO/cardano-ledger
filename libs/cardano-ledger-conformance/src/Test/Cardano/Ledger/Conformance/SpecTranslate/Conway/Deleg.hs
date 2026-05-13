@@ -27,7 +27,7 @@ import Cardano.Ledger.Credential (Credential)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Lens.Micro
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   hashToInteger,
  )

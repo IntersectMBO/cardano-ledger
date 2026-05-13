@@ -36,7 +36,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   externalFunctions,

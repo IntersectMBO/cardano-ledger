@@ -32,7 +32,7 @@ import qualified Data.OMap.Strict as OMap
 import qualified Data.VMap as VMap
 import Lens.Micro
 import Lens.Micro.Extras (view)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()

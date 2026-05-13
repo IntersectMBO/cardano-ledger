@@ -22,7 +22,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Coerce (coerce)
 import qualified Data.Text as T
 import Lens.Micro ((^.))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),

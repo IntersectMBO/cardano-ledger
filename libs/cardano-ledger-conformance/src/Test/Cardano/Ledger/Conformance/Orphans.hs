@@ -16,7 +16,7 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import MAlonzo.Code.Ledger.Foreign.API as Agda
+import MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (OpaqueErrorString, SpecNormalize (..))
 import Test.Cardano.Ledger.Conformance.Utils

@@ -57,7 +57,7 @@ import Data.Text (Text)
 import Data.Void (Void, absurd)
 import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), V1, (:*:) (..), (:+:) (..))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Core.Foreign.API as Agda
 import Test.Cardano.Ledger.TreeDiff (Expr (..), ToExpr (..))
 
 newtype SpecTransM era ctx a

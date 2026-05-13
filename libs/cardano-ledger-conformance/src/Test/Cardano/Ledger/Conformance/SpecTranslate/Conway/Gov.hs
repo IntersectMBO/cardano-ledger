@@ -16,7 +16,7 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.State
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
