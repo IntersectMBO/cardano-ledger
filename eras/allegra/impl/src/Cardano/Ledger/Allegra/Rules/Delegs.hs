@@ -8,22 +8,17 @@ module Cardano.Ledger.Allegra.Rules.Delegs () where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Rules.Delpl ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
-  ShelleyDelegsPredFailure (..),
-  ShelleyDelplPredFailure,
-  ShelleyPoolPredFailure,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleFailure "DELEGS" AllegraEra = ShelleyDelegsPredFailure AllegraEra
+type instance EraRuleFailure "DELEGS" AllegraEra = Shelley.ShelleyDelegsPredFailure AllegraEra
 
-instance InjectRuleFailure "DELEGS" ShelleyDelegsPredFailure AllegraEra
+instance InjectRuleFailure "DELEGS" Shelley.ShelleyDelegsPredFailure AllegraEra
 
-instance InjectRuleFailure "DELEGS" ShelleyDelplPredFailure AllegraEra where
-  injectFailure = DelplFailure
+instance InjectRuleFailure "DELEGS" Shelley.ShelleyDelplPredFailure AllegraEra where
+  injectFailure = Shelley.DelplFailure
 
-instance InjectRuleFailure "DELEGS" ShelleyPoolPredFailure AllegraEra where
-  injectFailure = DelplFailure . injectFailure
+instance InjectRuleFailure "DELEGS" Shelley.ShelleyPoolPredFailure AllegraEra where
+  injectFailure = Shelley.DelplFailure . injectFailure
 
-instance InjectRuleFailure "DELEGS" ShelleyDelegPredFailure AllegraEra where
-  injectFailure = DelplFailure . injectFailure
+instance InjectRuleFailure "DELEGS" Shelley.ShelleyDelegPredFailure AllegraEra where
+  injectFailure = Shelley.DelplFailure . injectFailure

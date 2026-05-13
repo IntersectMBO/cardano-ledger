@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Gov () where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.State
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
@@ -35,12 +35,12 @@ instance
   , SpecRep (CertState era) ~ Agda.CertState
   , EraCertState era
   ) =>
-  SpecTranslate (GovEnv era)
+  SpecTranslate (Conway.GovEnv era)
   where
-  type SpecRep (GovEnv era) = Agda.GovEnv
-  type SpecContext (GovEnv era) = EnactState era
+  type SpecRep (Conway.GovEnv era) = Agda.GovEnv
+  type SpecContext (Conway.GovEnv era) = EnactState era
 
-  toSpecRep GovEnv {..} = do
+  toSpecRep Conway.GovEnv {..} = do
     enactState <- askSpecTransM
     let rewardAccounts = Map.keysSet $ geCertState ^. certDStateL . accountsL . accountsMapL
     withCtxSpecTransM () $
@@ -59,11 +59,11 @@ instance
   , SpecContext (PParamsHKD StrictMaybe era) ~ ()
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   ) =>
-  SpecTranslate (GovSignal era)
+  SpecTranslate (Conway.GovSignal era)
   where
-  type SpecRep (GovSignal era) = [Either Agda.GovVote Agda.GovProposal]
+  type SpecRep (Conway.GovSignal era) = [Either Agda.GovVote Agda.GovProposal]
 
-  toSpecRep GovSignal {gsVotingProcedures, gsProposalProcedures} = do
+  toSpecRep Conway.GovSignal {gsVotingProcedures, gsProposalProcedures} = do
     votingProcedures <- toSpecRep gsVotingProcedures
     proposalProcedures <- toSpecRep gsProposalProcedures
     pure $

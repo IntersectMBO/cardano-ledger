@@ -20,11 +20,7 @@ import Cardano.Ledger.Conway.Governance (
   RatifyState (..),
   rsEnactStateL,
  )
-import Cardano.Ledger.Conway.Rules (
-  committeeAccepted,
-  dRepAccepted,
-  spoAccepted,
- )
+import Cardano.Ledger.Conway.Rules qualified as Conway
 import Constrained.Generation
 import Data.Either (fromRight)
 import Lens.Micro
@@ -83,9 +79,9 @@ spec = describe "RATIFY" $ do
   prop "STS" $ conformsToImplConstrained_ constrainedRatify
   describe "Accepted" $ do
     forM_
-      [ ("DRep", (dRepAccepted, Agda.acceptedByDRep))
-      , ("SPO", (spoAccepted, Agda.acceptedBySPO))
-      , ("CC", (committeeAccepted, Agda.acceptedByCC))
+      [ ("DRep", (Conway.dRepAccepted, Agda.acceptedByDRep))
+      , ("SPO", (Conway.spoAccepted, Agda.acceptedBySPO))
+      , ("CC", (Conway.committeeAccepted, Agda.acceptedByCC))
       ]
       $ \(l, (impl, agda)) ->
         prop l $ conformsToImplAccepted impl agda

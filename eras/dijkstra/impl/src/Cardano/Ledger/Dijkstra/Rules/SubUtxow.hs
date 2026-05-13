@@ -23,18 +23,9 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
 
 import Cardano.Crypto.Hash (ByteString)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure)
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
-  checkScriptIntegrityHash,
-  hasExactSetOfRedeemers,
-  missingRequiredDatums,
- )
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
-import qualified Cardano.Ledger.Babbage.Rules as Babbage (
-  validateFailedBabbageScripts,
-  validateScriptsWellFormedTxOuts,
- )
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
@@ -44,12 +35,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (
-  ConwayUtxowPredFailure,
-  alonzoToConwayUtxowPredFailure,
-  babbageToConwayUtxowPredFailure,
-  shelleyToConwayUtxowPredFailure,
- )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -65,12 +51,7 @@ import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
-import qualified Cardano.Ledger.Shelley.Rules as Shelley (
-  validateMetadata,
-  validateNeededWitnesses,
-  validateVerifiedWits,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
@@ -160,26 +141,26 @@ instance InjectRuleFailure "SUBUTXOW" DijkstraSubUtxoPredFailure DijkstraEra whe
 instance InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure DijkstraEra where
   injectFailure = dijkstraUtxowToDijkstraSubUtxowPredFailure
 
-instance InjectRuleFailure "SUBUTXOW" ConwayUtxowPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBUTXOW" Conway.ConwayUtxowPredFailure DijkstraEra where
   injectFailure = dijkstraUtxowToDijkstraSubUtxowPredFailure . conwayToDijkstraUtxowPredFailure
 
-instance InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBUTXOW" Babbage.BabbageUtxowPredFailure DijkstraEra where
   injectFailure =
     dijkstraUtxowToDijkstraSubUtxowPredFailure
       . conwayToDijkstraUtxowPredFailure
-      . babbageToConwayUtxowPredFailure
+      . Conway.babbageToConwayUtxowPredFailure
 
-instance InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure DijkstraEra where
   injectFailure =
     dijkstraUtxowToDijkstraSubUtxowPredFailure
       . conwayToDijkstraUtxowPredFailure
-      . alonzoToConwayUtxowPredFailure
+      . Conway.alonzoToConwayUtxowPredFailure
 
-instance InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBUTXOW" Shelley.ShelleyUtxowPredFailure DijkstraEra where
   injectFailure =
     dijkstraUtxowToDijkstraSubUtxowPredFailure
       . conwayToDijkstraUtxowPredFailure
-      . shelleyToConwayUtxowPredFailure
+      . Conway.shelleyToConwayUtxowPredFailure
 
 instance InjectRuleEvent "SUBUTXOW" DijkstraSubUtxowEvent DijkstraEra
 
@@ -201,9 +182,9 @@ instance
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
-  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" Shelley.ShelleyUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" Babbage.BabbageUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
@@ -261,9 +242,9 @@ dijkstraSubUtxowTransition ::
   , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
   , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
-  , InjectRuleFailure "SUBUTXOW" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" Shelley.ShelleyUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" Babbage.BabbageUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>

@@ -21,12 +21,7 @@ import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary (ApplyTxError (MaryApplyTxError), MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure (DelegateeNotRegisteredDELEG),
-  ShelleyDelegsPredFailure (DelplFailure),
-  ShelleyDelplPredFailure (DelegFailure),
-  ShelleyLedgerPredFailure (DelegsFailure),
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import qualified Data.Map.Strict as Map (singleton)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
@@ -51,8 +46,8 @@ import Test.Cardano.Ledger.Shelley.Examples (
 ledgerExamples :: LedgerExamples MaryEra
 ledgerExamples =
   mkShelleyBasedLedgerExamples
-    ( MaryApplyTxError . pure . DelegsFailure . DelplFailure . DelegFailure $
-        DelegateeNotRegisteredDELEG @MaryEra (mkKeyHash 1)
+    ( MaryApplyTxError . pure . Shelley.DelegsFailure . Shelley.DelplFailure . Shelley.DelegFailure $
+        Shelley.DelegateeNotRegisteredDELEG @MaryEra (mkKeyHash 1)
     )
     (exampleMultiAssetValue 1)
     exampleMaryTx

@@ -16,7 +16,7 @@ import Cardano.Ledger.Babbage.State
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Rewards
-import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.Monad (zipWithM_)
 import Data.Coerce
 import Data.Map ((!))
@@ -30,7 +30,7 @@ babbageEraSpecificSpec ::
   forall era.
   ( BabbageEraImp era
   , ShelleyEraAccounts era
-  , Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
+  , Shelley.Event (EraRule "NEWEPOCH" era) ~ Shelley.ShelleyNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 babbageEraSpecificSpec = describe "POOL" $ do
@@ -86,7 +86,8 @@ babbageEraSpecificSpec = describe "POOL" $ do
     -- member rewards (because they delegated to `p3`, which is producing blocks).
     let
       isMemberRewardEvent (SomeSTSEvent ev)
-        | Just (TickNewEpochEvent (TotalRewardEvent _ m) :: ShelleyTickEvent era) <- cast ev =
+        | Just (Shelley.TickNewEpochEvent (Shelley.TotalRewardEvent _ m) :: Shelley.ShelleyTickEvent era) <-
+            cast ev =
             Set.size (Set.filter ((== MemberReward) . rewardType) (m ! s7)) > 0
       isMemberRewardEvent _ = False
 

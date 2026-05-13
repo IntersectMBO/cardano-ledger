@@ -13,10 +13,10 @@ module Test.Cardano.Ledger.Conformance.Imp.Core where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (ledgerSlotNoL)
+import Cardano.Ledger.Shelley.Rules qualified as Shelley
 import Control.State.Transition
 import Data.Bifunctor (Bifunctor (..))
 import Data.Data (Proxy (..))
@@ -126,10 +126,10 @@ submitTxConformanceHook globals trc@(TRC (env, state, signal)) =
               { uecTx = signal ^. txStAnnTxG
               , uecUTxO = state ^. utxoL
               , uecUtxoEnv =
-                  UtxoEnv
-                    { ueSlot = env ^. ledgerSlotNoL
-                    , uePParams = state ^. lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
-                    , ueCertState = state ^. lsCertStateL
+                  Shelley.UtxoEnv
+                    { Shelley.ueSlot = env ^. Shelley.ledgerSlotNoL
+                    , Shelley.uePParams = state ^. lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
+                    , Shelley.ueCertState = state ^. lsCertStateL
                     }
               }
         }

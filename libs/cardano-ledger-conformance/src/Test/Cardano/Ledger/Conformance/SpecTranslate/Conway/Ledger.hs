@@ -29,8 +29,8 @@ import Cardano.Ledger.Conway.Core (
   txIdTx,
   txStAnnTxG,
  )
-import Cardano.Ledger.Conway.Rules (EnactState)
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State (ChainAccountState (..))
 import Cardano.Ledger.TxIn (TxId)
 import Data.Functor.Identity (Identity)
@@ -49,12 +49,12 @@ instance
   , SpecContext (PParamsHKD Identity era) ~ ()
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   ) =>
-  SpecTranslate (LedgerEnv era)
+  SpecTranslate (Shelley.LedgerEnv era)
   where
-  type SpecRep (LedgerEnv era) = Agda.LEnv
-  type SpecContext (LedgerEnv era) = (StrictMaybe ScriptHash, EnactState era)
+  type SpecRep (Shelley.LedgerEnv era) = Agda.LEnv
+  type SpecContext (Shelley.LedgerEnv era) = (StrictMaybe ScriptHash, Conway.EnactState era)
 
-  toSpecRep LedgerEnv {..} = do
+  toSpecRep Shelley.LedgerEnv {..} = do
     (policyHash, enactState) <- askSpecTransM
     withCtxSpecTransM () $
       Agda.MkLEnv

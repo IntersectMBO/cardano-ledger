@@ -54,7 +54,7 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures,
  )
 import Cardano.Ledger.Conway.PParams (ppCommitteeMaxTermLengthL)
-import Cardano.Ledger.Conway.Rules (CertsEnv (..), EnactSignal)
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayGovCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -380,7 +380,7 @@ ratifySignalSpec govActions =
 enactSignalSpec ::
   EpochNo ->
   EnactState ConwayEra ->
-  Specification (EnactSignal ConwayEra)
+  Specification (Conway.EnactSignal ConwayEra)
 enactSignalSpec epoch EnactState {..} =
   constrained' $ \_gid action ->
     [ -- TODO get rid of this by modifying the spec so that ENACT can't fail.
@@ -543,7 +543,7 @@ constrainedCerts =
   ConstrainedGeneratorBundle
     genDelegCtx
     (const certsEnvSpec)
-    ( \(u, ConwayCertGenContext {..}) CertsEnv {certsCurrentEpoch} ->
+    ( \(u, ConwayCertGenContext {..}) Conway.CertsEnv {certsCurrentEpoch} ->
         conwayCertStateSpec u (ccccDelegatees, ccccWithdrawals) (lit certsCurrentEpoch)
     )
     (\(u, _) env st -> genFromSpec (txCertsSpec u env st))

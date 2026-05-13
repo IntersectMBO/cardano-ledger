@@ -36,11 +36,11 @@ module Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block, EraBlockHeader)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Internal.Era (DijkstraEra)
 import Cardano.Ledger.Mary (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Lens.Micro
 
 instance EraTxLevel DijkstraEra where
@@ -136,29 +136,29 @@ data DijkstraGOV era
 
 type instance EraRule "GOV" DijkstraEra = DijkstraGOV DijkstraEra
 
-type instance EraRule "NEWEPOCH" DijkstraEra = ConwayNEWEPOCH DijkstraEra
+type instance EraRule "NEWEPOCH" DijkstraEra = Conway.ConwayNEWEPOCH DijkstraEra
 
-type instance EraRule "EPOCH" DijkstraEra = ConwayEPOCH DijkstraEra
+type instance EraRule "EPOCH" DijkstraEra = Conway.ConwayEPOCH DijkstraEra
 
-type instance EraRule "ENACT" DijkstraEra = ConwayENACT DijkstraEra
+type instance EraRule "ENACT" DijkstraEra = Conway.ConwayENACT DijkstraEra
 
-type instance EraRule "UTXOS" DijkstraEra = ConwayUTXOS DijkstraEra
+type instance EraRule "UTXOS" DijkstraEra = Conway.ConwayUTXOS DijkstraEra
 
 data DijkstraLEDGER era
 
 type instance EraRule "LEDGER" DijkstraEra = DijkstraLEDGER DijkstraEra
 
-type instance EraRule "TICKF" DijkstraEra = ConwayTICKF DijkstraEra
+type instance EraRule "TICKF" DijkstraEra = Conway.ConwayTICKF DijkstraEra
 
-type instance EraRule "RATIFY" DijkstraEra = ConwayRATIFY DijkstraEra
+type instance EraRule "RATIFY" DijkstraEra = Conway.ConwayRATIFY DijkstraEra
 
-type instance EraRule "CERTS" DijkstraEra = ConwayCERTS DijkstraEra
+type instance EraRule "CERTS" DijkstraEra = Conway.ConwayCERTS DijkstraEra
 
 data DijkstraCERT era
 
 type instance EraRule "CERT" DijkstraEra = DijkstraCERT DijkstraEra
 
-type instance EraRule "DELEG" DijkstraEra = ConwayDELEG DijkstraEra
+type instance EraRule "DELEG" DijkstraEra = Conway.ConwayDELEG DijkstraEra
 
 data DijkstraGOVCERT era
 
@@ -180,7 +180,7 @@ data DijkstraMEMPOOL era
 
 type instance EraRule "MEMPOOL" DijkstraEra = DijkstraMEMPOOL DijkstraEra
 
-type instance EraRule "HARDFORK" DijkstraEra = ConwayHARDFORK DijkstraEra
+type instance EraRule "HARDFORK" DijkstraEra = Conway.ConwayHARDFORK DijkstraEra
 
 -- Rules inherited from Shelley
 
@@ -188,10 +188,10 @@ type instance EraRule "LEDGERS" DijkstraEra = API.ShelleyLEDGERS DijkstraEra
 
 type instance EraRule "POOLREAP" DijkstraEra = API.ShelleyPOOLREAP DijkstraEra
 
-type instance EraRule "RUPD" DijkstraEra = ShelleyRUPD DijkstraEra
+type instance EraRule "RUPD" DijkstraEra = Shelley.ShelleyRUPD DijkstraEra
 
-type instance EraRule "SNAP" DijkstraEra = ShelleySNAP DijkstraEra
+type instance EraRule "SNAP" DijkstraEra = Shelley.ShelleySNAP DijkstraEra
 
-type instance EraRule "TICK" DijkstraEra = ShelleyTICK DijkstraEra
+type instance EraRule "TICK" DijkstraEra = Shelley.ShelleyTICK DijkstraEra
 
-type instance EraRule "POOL" DijkstraEra = ShelleyPOOL DijkstraEra
+type instance EraRule "POOL" DijkstraEra = Shelley.ShelleyPOOL DijkstraEra

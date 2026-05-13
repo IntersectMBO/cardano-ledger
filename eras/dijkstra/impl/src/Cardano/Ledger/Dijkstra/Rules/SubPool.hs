@@ -33,12 +33,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBPOOL,
  )
 import Cardano.Ledger.Dijkstra.State
-import Cardano.Ledger.Shelley.Rules (
-  PoolEnv,
-  PoolEvent (..),
-  ShelleyPoolPredFailure,
-  poolTransition,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -52,7 +47,7 @@ import Control.State.Transition.Extended (
  )
 import GHC.Generics (Generic)
 
-newtype DijkstraSubPoolPredFailure era = DijkstraSubPoolPredFailure (ShelleyPoolPredFailure era)
+newtype DijkstraSubPoolPredFailure era = DijkstraSubPoolPredFailure (Shelley.ShelleyPoolPredFailure era)
   deriving (Eq, Show, Generic, DecCBOR, EncCBOR, NFData)
 
 type instance EraRuleFailure "SUBPOOL" DijkstraEra = DijkstraSubPoolPredFailure DijkstraEra
@@ -61,32 +56,32 @@ type instance EraRuleEvent "SUBPOOL" DijkstraEra = DijkstraSubPoolEvent Dijkstra
 
 instance InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure DijkstraEra
 
-instance InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure DijkstraEra where
+instance InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure DijkstraEra where
   injectFailure = DijkstraSubPoolPredFailure
 
 instance InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent DijkstraEra
 
-instance InjectRuleEvent "SUBPOOL" PoolEvent DijkstraEra where
+instance InjectRuleEvent "SUBPOOL" Shelley.PoolEvent DijkstraEra where
   injectEvent = DijkstraSubPoolEvent
 
-newtype DijkstraSubPoolEvent era = DijkstraSubPoolEvent (PoolEvent era)
+newtype DijkstraSubPoolEvent era = DijkstraSubPoolEvent (Shelley.PoolEvent era)
   deriving (Generic, Eq, NFData)
 
 instance
   ( EraGov era
   , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
-  , InjectRuleEvent "SUBPOOL" PoolEvent era
+  , InjectRuleEvent "SUBPOOL" Shelley.PoolEvent era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
-  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure era
   ) =>
   STS (DijkstraSUBPOOL era)
   where
   type State (DijkstraSUBPOOL era) = PState era
   type Signal (DijkstraSUBPOOL era) = PoolCert
-  type Environment (DijkstraSUBPOOL era) = PoolEnv era
+  type Environment (DijkstraSUBPOOL era) = Shelley.PoolEnv era
   type BaseM (DijkstraSUBPOOL era) = ShelleyBase
   type PredicateFailure (DijkstraSUBPOOL era) = DijkstraSubPoolPredFailure era
   type Event (DijkstraSUBPOOL era) = DijkstraSubPoolEvent era
 
-  transitionRules = [poolTransition]
+  transitionRules = [Shelley.poolTransition]

@@ -7,8 +7,8 @@ module Cardano.Ledger.Allegra.Rules.Ppup () where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleFailure "PPUP" AllegraEra = ShelleyPpupPredFailure AllegraEra
+type instance EraRuleFailure "PPUP" AllegraEra = Shelley.ShelleyPpupPredFailure AllegraEra
 
-instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure AllegraEra
+instance InjectRuleFailure "PPUP" Shelley.ShelleyPpupPredFailure AllegraEra

@@ -17,7 +17,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (Era (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential)
@@ -54,10 +54,10 @@ vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
 govCertSpec ::
   EraCertState era =>
   WitUniv era ->
-  ConwayGovCertEnv ConwayEra ->
+  Conway.ConwayGovCertEnv ConwayEra ->
   CertState ConwayEra ->
   Specification ConwayGovCert
-govCertSpec univ ConwayGovCertEnv {..} certState =
+govCertSpec univ Conway.ConwayGovCertEnv {..} certState =
   let vs = certState ^. certVStateL
       reps = lit $ Map.keysSet $ vsDReps vs
       deposits = Map.map drepDeposit (vsDReps vs)
@@ -133,7 +133,7 @@ notYetResigned committeeStatus coldcred =
 
 govCertEnvSpec ::
   WitUniv ConwayEra ->
-  Specification (ConwayGovCertEnv ConwayEra)
+  Specification (Conway.ConwayGovCertEnv ConwayEra)
 govCertEnvSpec univ =
   constrained $ \ [var|gce|] ->
     match gce $ \ [var|pp|] _ [var|committee|] [var|proposalmap|] ->

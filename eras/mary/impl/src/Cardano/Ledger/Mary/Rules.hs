@@ -16,6 +16,6 @@ import Cardano.Ledger.Mary.Rules.Pool ()
 import Cardano.Ledger.Mary.Rules.Ppup ()
 import Cardano.Ledger.Mary.Rules.Utxo ()
 import Cardano.Ledger.Mary.Rules.Utxow ()
-import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleEvent "TICK" MaryEra = ShelleyTickEvent MaryEra
+type instance EraRuleEvent "TICK" MaryEra = Shelley.ShelleyTickEvent MaryEra

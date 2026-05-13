@@ -19,7 +19,7 @@ module Cardano.Ledger.Alonzo.Era (
 import Cardano.Ledger.Internal.Era (AlonzoEra)
 import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
 -- =====================================================
 
@@ -56,34 +56,34 @@ type instance EraRule "BBODY" AlonzoEra = AlonzoBBODY AlonzoEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "DELEG" AlonzoEra = ShelleyDELEG AlonzoEra
+type instance EraRule "DELEG" AlonzoEra = Shelley.ShelleyDELEG AlonzoEra
 
-type instance EraRule "DELEGS" AlonzoEra = ShelleyDELEGS AlonzoEra
+type instance EraRule "DELEGS" AlonzoEra = Shelley.ShelleyDELEGS AlonzoEra
 
-type instance EraRule "DELPL" AlonzoEra = ShelleyDELPL AlonzoEra
+type instance EraRule "DELPL" AlonzoEra = Shelley.ShelleyDELPL AlonzoEra
 
-type instance EraRule "EPOCH" AlonzoEra = ShelleyEPOCH AlonzoEra
+type instance EraRule "EPOCH" AlonzoEra = Shelley.ShelleyEPOCH AlonzoEra
 
-type instance EraRule "LEDGERS" AlonzoEra = ShelleyLEDGERS AlonzoEra
+type instance EraRule "LEDGERS" AlonzoEra = Shelley.ShelleyLEDGERS AlonzoEra
 
-type instance EraRule "MIR" AlonzoEra = ShelleyMIR AlonzoEra
+type instance EraRule "MIR" AlonzoEra = Shelley.ShelleyMIR AlonzoEra
 
-type instance EraRule "NEWEPOCH" AlonzoEra = ShelleyNEWEPOCH AlonzoEra
+type instance EraRule "NEWEPOCH" AlonzoEra = Shelley.ShelleyNEWEPOCH AlonzoEra
 
-type instance EraRule "NEWPP" AlonzoEra = ShelleyNEWPP AlonzoEra
+type instance EraRule "NEWPP" AlonzoEra = Shelley.ShelleyNEWPP AlonzoEra
 
-type instance EraRule "POOL" AlonzoEra = ShelleyPOOL AlonzoEra
+type instance EraRule "POOL" AlonzoEra = Shelley.ShelleyPOOL AlonzoEra
 
-type instance EraRule "POOLREAP" AlonzoEra = ShelleyPOOLREAP AlonzoEra
+type instance EraRule "POOLREAP" AlonzoEra = Shelley.ShelleyPOOLREAP AlonzoEra
 
-type instance EraRule "PPUP" AlonzoEra = ShelleyPPUP AlonzoEra
+type instance EraRule "PPUP" AlonzoEra = Shelley.ShelleyPPUP AlonzoEra
 
-type instance EraRule "RUPD" AlonzoEra = ShelleyRUPD AlonzoEra
+type instance EraRule "RUPD" AlonzoEra = Shelley.ShelleyRUPD AlonzoEra
 
-type instance EraRule "SNAP" AlonzoEra = ShelleySNAP AlonzoEra
+type instance EraRule "SNAP" AlonzoEra = Shelley.ShelleySNAP AlonzoEra
 
-type instance EraRule "TICK" AlonzoEra = ShelleyTICK AlonzoEra
+type instance EraRule "TICK" AlonzoEra = Shelley.ShelleyTICK AlonzoEra
 
-type instance EraRule "TICKF" AlonzoEra = ShelleyTICKF AlonzoEra
+type instance EraRule "TICKF" AlonzoEra = Shelley.ShelleyTICKF AlonzoEra
 
-type instance EraRule "UPEC" AlonzoEra = ShelleyUPEC AlonzoEra
+type instance EraRule "UPEC" AlonzoEra = Shelley.ShelleyUPEC AlonzoEra

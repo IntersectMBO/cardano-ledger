@@ -80,13 +80,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.Rewards ()
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyPOOLREAP,
-  ShelleyPoolreapEvent,
-  ShelleyPoolreapState (..),
-  ShelleySNAP,
-  SnapEnv (..),
- )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.Val (zero, (<->))
@@ -154,12 +147,12 @@ instance
   , EraStake era
   , EraCertState era
   , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
-  , Environment (EraRule "SNAP" era) ~ SnapEnv era
+  , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
-  , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
+  , State (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
@@ -253,13 +246,13 @@ epochTransition ::
   ( RunConwayRatify era
   , ConwayEraCertState era
   , EraTxOut era
-  , Environment (EraRule "SNAP" era) ~ SnapEnv era
+  , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
   , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
-  , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
+  , State (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
@@ -290,11 +283,11 @@ epochTransition = do
       certState0 = ledgerState0 ^. lsCertStateL
       vState = certState0 ^. certVStateL
   snapshots1 <-
-    trans @(EraRule "SNAP" era) $ TRC (SnapEnv ledgerState0 curPParams, snapshots0, ())
+    trans @(EraRule "SNAP" era) $ TRC (Shelley.SnapEnv ledgerState0 curPParams, snapshots0, ())
 
-  PoolreapState utxoState1 chainAccountState1 certState1 <-
+  Shelley.PoolreapState utxoState1 chainAccountState1 certState1 <-
     trans @(EraRule "POOLREAP" era) $
-      TRC ((), PoolreapState utxoState0 chainAccountState0 certState0, eNo)
+      TRC ((), Shelley.PoolreapState utxoState0 chainAccountState0 certState0, eNo)
 
   let
     stakePoolDistr = ssStakeMarkPoolDistr snapshots1
@@ -380,10 +373,10 @@ epochTransition = do
 
 instance
   ( Era era
-  , STS (ShelleyPOOLREAP era)
-  , Event (EraRule "POOLREAP" era) ~ ShelleyPoolreapEvent era
+  , STS (Shelley.ShelleyPOOLREAP era)
+  , Event (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapEvent era
   ) =>
-  Embed (ShelleyPOOLREAP era) (ConwayEPOCH era)
+  Embed (Shelley.ShelleyPOOLREAP era) (ConwayEPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = PoolReapEvent
@@ -394,7 +387,7 @@ instance
   , EraCertState era
   , Event (EraRule "SNAP" era) ~ Shelley.SnapEvent era
   ) =>
-  Embed (ShelleySNAP era) (ConwayEPOCH era)
+  Embed (Shelley.ShelleySNAP era) (ConwayEPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = SnapEvent

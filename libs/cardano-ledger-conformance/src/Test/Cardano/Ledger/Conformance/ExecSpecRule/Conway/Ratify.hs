@@ -19,14 +19,7 @@ import Cardano.Ledger.Conway.Governance (
   gasAction,
   rsEnactStateL,
  )
-import Cardano.Ledger.Conway.Rules (
-  committeeAccepted,
-  committeeAcceptedRatio,
-  dRepAccepted,
-  dRepAcceptedRatio,
-  spoAccepted,
-  spoAcceptedRatio,
- )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Control.State.Transition.Extended (TRC (..))
 import Data.Foldable (Foldable (..))
 import Data.Ratio (denominator, numerator)
@@ -81,17 +74,17 @@ instance ExecSpecRule "RATIFY" ConwayEra where
             )
           ,
             ( "SPO:"
-            , showAccepted (spoAccepted env st gas)
-                PP.<+> showRatio (spoAcceptedRatio env gas pv)
+            , showAccepted (Conway.spoAccepted env st gas)
+                PP.<+> showRatio (Conway.spoAcceptedRatio env gas pv)
             )
           ,
             ( "DRep:"
-            , showAccepted (dRepAccepted env st gas)
-                PP.<+> showRatio (dRepAcceptedRatio env gasDRepVotes (gasAction gas))
+            , showAccepted (Conway.dRepAccepted env st gas)
+                PP.<+> showRatio (Conway.dRepAcceptedRatio env gasDRepVotes (gasAction gas))
             )
           ,
             ( "CC:"
-            , showAccepted (committeeAccepted env st gas)
-                PP.<+> showRatio (committeeAcceptedRatio members gasCommitteeVotes reCommitteeState reCurrentEpoch)
+            , showAccepted (Conway.committeeAccepted env st gas)
+                PP.<+> showRatio (Conway.committeeAcceptedRatio members gasCommitteeVotes reCommitteeState reCurrentEpoch)
             )
           ]

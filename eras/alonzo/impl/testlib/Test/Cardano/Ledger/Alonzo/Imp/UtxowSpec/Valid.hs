@@ -27,7 +27,7 @@ import Cardano.Ledger.Plutus (
   hashPlutusScript,
   withSLanguage,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireSignature,
@@ -202,7 +202,7 @@ alonzoEraSpecificSpec = do
               -- This passes UTXOW rules but not DELEG rules; however, we care about only UTXOW rules here
               submitFailingTx
                 tx
-                [injectFailure $ StakeKeyNotRegisteredDELEG (ScriptHashObj scriptHash)]
+                [injectFailure $ Shelley.StakeKeyNotRegisteredDELEG (ScriptHashObj scriptHash)]
             else
               -- Conway fixed the bug that was causing DELEG to fail
               submitTx_ tx

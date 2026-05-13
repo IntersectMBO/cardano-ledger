@@ -7,81 +7,71 @@
 
 module Cardano.Ledger.Dijkstra.Rules.Certs () where
 
-import Cardano.Ledger.Conway.Rules (
-  ConwayCERTS,
-  ConwayCertEvent (..),
-  ConwayCertPredFailure (..),
-  ConwayCertsEvent (..),
-  ConwayCertsPredFailure (..),
-  ConwayDELEG,
-  ConwayDelegPredFailure,
-  ConwayGOVCERT,
-  ConwayGovCertPredFailure,
- )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Rules.Cert ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
-import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPOOL, ShelleyPoolPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended
 import GHC.Base (absurd)
 
-type instance EraRuleFailure "CERTS" DijkstraEra = ConwayCertsPredFailure DijkstraEra
+type instance EraRuleFailure "CERTS" DijkstraEra = Conway.ConwayCertsPredFailure DijkstraEra
 
-type instance EraRuleEvent "CERTS" DijkstraEra = ConwayCertsEvent DijkstraEra
+type instance EraRuleEvent "CERTS" DijkstraEra = Conway.ConwayCertsEvent DijkstraEra
 
-instance InjectRuleFailure "CERTS" ConwayCertsPredFailure DijkstraEra
+instance InjectRuleFailure "CERTS" Conway.ConwayCertsPredFailure DijkstraEra
 
-instance InjectRuleFailure "CERTS" ConwayCertPredFailure DijkstraEra where
-  injectFailure = CertFailure
+instance InjectRuleFailure "CERTS" Conway.ConwayCertPredFailure DijkstraEra where
+  injectFailure = Conway.CertFailure
 
-instance InjectRuleFailure "CERTS" ConwayDelegPredFailure DijkstraEra where
-  injectFailure = CertFailure . injectFailure
+instance InjectRuleFailure "CERTS" Conway.ConwayDelegPredFailure DijkstraEra where
+  injectFailure = Conway.CertFailure . injectFailure
 
-instance InjectRuleFailure "CERTS" ShelleyPoolPredFailure DijkstraEra where
-  injectFailure = CertFailure . injectFailure
+instance InjectRuleFailure "CERTS" Shelley.ShelleyPoolPredFailure DijkstraEra where
+  injectFailure = Conway.CertFailure . injectFailure
 
 instance InjectRuleFailure "CERTS" DijkstraGovCertPredFailure DijkstraEra where
-  injectFailure = CertFailure . injectFailure
+  injectFailure = Conway.CertFailure . injectFailure
 
-instance InjectRuleFailure "CERTS" ConwayGovCertPredFailure DijkstraEra where
-  injectFailure = CertFailure . injectFailure
+instance InjectRuleFailure "CERTS" Conway.ConwayGovCertPredFailure DijkstraEra where
+  injectFailure = Conway.CertFailure . injectFailure
 
 instance
   ( Era era
   , STS (DijkstraCERT era)
-  , Event (EraRule "CERT" era) ~ ConwayCertEvent era
-  , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
+  , Event (EraRule "CERT" era) ~ Conway.ConwayCertEvent era
+  , PredicateFailure (EraRule "CERT" era) ~ Conway.ConwayCertPredFailure era
   ) =>
-  Embed (DijkstraCERT era) (ConwayCERTS era)
+  Embed (DijkstraCERT era) (Conway.ConwayCERTS era)
   where
-  wrapFailed = CertFailure
-  wrapEvent = CertEvent
+  wrapFailed = Conway.CertFailure
+  wrapEvent = Conway.CertEvent
 
 instance
-  ( STS (ConwayDELEG era)
-  , PredicateFailure (EraRule "DELEG" era) ~ ConwayDelegPredFailure era
+  ( STS (Conway.ConwayDELEG era)
+  , PredicateFailure (EraRule "DELEG" era) ~ Conway.ConwayDelegPredFailure era
   ) =>
-  Embed (ConwayDELEG era) (DijkstraCERT era)
+  Embed (Conway.ConwayDELEG era) (DijkstraCERT era)
   where
-  wrapFailed = DelegFailure
+  wrapFailed = Conway.DelegFailure
   wrapEvent = absurd
 
 instance
-  ( STS (ShelleyPOOL era)
-  , PredicateFailure (EraRule "POOL" era) ~ ShelleyPoolPredFailure era
-  , Event (EraRule "POOL" era) ~ PoolEvent era
+  ( STS (Shelley.ShelleyPOOL era)
+  , PredicateFailure (EraRule "POOL" era) ~ Shelley.ShelleyPoolPredFailure era
+  , Event (EraRule "POOL" era) ~ Shelley.PoolEvent era
   ) =>
-  Embed (ShelleyPOOL era) (DijkstraCERT era)
+  Embed (Shelley.ShelleyPOOL era) (DijkstraCERT era)
   where
-  wrapFailed = PoolFailure
-  wrapEvent = PoolEvent
+  wrapFailed = Conway.PoolFailure
+  wrapEvent = Conway.PoolEvent
 
 instance
-  ( STS (ConwayGOVCERT era)
-  , PredicateFailure (EraRule "GOVCERT" era) ~ ConwayGovCertPredFailure era
+  ( STS (Conway.ConwayGOVCERT era)
+  , PredicateFailure (EraRule "GOVCERT" era) ~ Conway.ConwayGovCertPredFailure era
   ) =>
-  Embed (ConwayGOVCERT era) (DijkstraCERT era)
+  Embed (Conway.ConwayGOVCERT era) (DijkstraCERT era)
   where
-  wrapFailed = GovCertFailure
+  wrapFailed = Conway.GovCertFailure
   wrapEvent = absurd

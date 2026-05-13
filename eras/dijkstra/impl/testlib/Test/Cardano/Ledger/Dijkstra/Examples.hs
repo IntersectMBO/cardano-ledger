@@ -28,7 +28,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
 import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
@@ -88,7 +88,7 @@ ledgerExamples =
         pure $
           Dijkstra.LedgerFailure $
             injectFailure $
-              DelegateeStakePoolNotRegisteredDELEG (mkKeyHash 1)
+              Conway.DelegateeStakePoolNotRegisteredDELEG (mkKeyHash 1)
     )
     exampleBabbageNewEpochState
     exampleDijkstraTx

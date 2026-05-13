@@ -12,10 +12,7 @@ import Cardano.Ledger.Api.Era
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Conway
-import Cardano.Ledger.Conway.Rules (
-  ConwayLedgerPredFailure (ConwayUtxowFailure),
-  ConwayUtxowPredFailure (InvalidWitnessesUTXOW),
- )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
@@ -80,7 +77,7 @@ main = do
       !globals = mkGlobals genesis
       !slotNo = SlotNo 55733343
       restrictError = \case
-        ConwayApplyTxError (ConwayUtxowFailure (InvalidWitnessesUTXOW _) :| []) -> ()
+        ConwayApplyTxError (Conway.ConwayUtxowFailure (Conway.InvalidWitnessesUTXOW _) :| []) -> ()
         otherErr -> error . show $ otherErr
       applyTx' mempoolEnv mempoolState =
         -- TODO: revert this to `either (error . show) seqTuple` after tx's are fixed

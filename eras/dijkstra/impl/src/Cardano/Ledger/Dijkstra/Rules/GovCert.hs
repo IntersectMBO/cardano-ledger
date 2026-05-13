@@ -30,7 +30,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayGovCertEnv, ConwayGovCertPredFailure (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
@@ -69,7 +68,7 @@ type instance EraRuleEvent "GOVCERT" DijkstraEra = VoidEraRule "GOVCERT" Dijkstr
 
 instance InjectRuleFailure "GOVCERT" DijkstraGovCertPredFailure DijkstraEra
 
-instance InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure DijkstraEra where
+instance InjectRuleFailure "GOVCERT" Conway.ConwayGovCertPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraGovCertPredFailure
 
 instance NFData (DijkstraGovCertPredFailure era)
@@ -99,8 +98,8 @@ instance
   , ConwayEraCertState era
   , State (EraRule "GOVCERT" era) ~ CertState era
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
-  , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
-  , InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure era
+  , Environment (EraRule "GOVCERT" era) ~ Conway.ConwayGovCertEnv era
+  , InjectRuleFailure "GOVCERT" Conway.ConwayGovCertPredFailure era
   , EraRule "GOVCERT" era ~ DijkstraGOVCERT era
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
@@ -109,7 +108,7 @@ instance
   where
   type State (DijkstraGOVCERT era) = CertState era
   type Signal (DijkstraGOVCERT era) = ConwayGovCert
-  type Environment (DijkstraGOVCERT era) = ConwayGovCertEnv era
+  type Environment (DijkstraGOVCERT era) = Conway.ConwayGovCertEnv era
   type BaseM (DijkstraGOVCERT era) = ShelleyBase
   type PredicateFailure (DijkstraGOVCERT era) = DijkstraGovCertPredFailure era
   type Event (DijkstraGOVCERT era) = Void
@@ -117,11 +116,11 @@ instance
   transitionRules = [Conway.conwayGovCertTransition]
 
 conwayToDijkstraGovCertPredFailure ::
-  forall era. ConwayGovCertPredFailure era -> DijkstraGovCertPredFailure era
+  forall era. Conway.ConwayGovCertPredFailure era -> DijkstraGovCertPredFailure era
 conwayToDijkstraGovCertPredFailure = \case
-  ConwayDRepAlreadyRegistered c -> DijkstraDRepAlreadyRegistered c
-  ConwayDRepNotRegistered c -> DijkstraDRepNotRegistered c
-  ConwayDRepIncorrectDeposit mm -> DijkstraDRepIncorrectDeposit mm
-  ConwayCommitteeHasPreviouslyResigned c -> DijkstraCommitteeHasPreviouslyResigned c
-  ConwayDRepIncorrectRefund mm -> DijkstraDRepIncorrectRefund mm
-  ConwayCommitteeIsUnknown c -> DijkstraCommitteeIsUnknown c
+  Conway.ConwayDRepAlreadyRegistered c -> DijkstraDRepAlreadyRegistered c
+  Conway.ConwayDRepNotRegistered c -> DijkstraDRepNotRegistered c
+  Conway.ConwayDRepIncorrectDeposit mm -> DijkstraDRepIncorrectDeposit mm
+  Conway.ConwayCommitteeHasPreviouslyResigned c -> DijkstraCommitteeHasPreviouslyResigned c
+  Conway.ConwayDRepIncorrectRefund mm -> DijkstraDRepIncorrectRefund mm
+  Conway.ConwayCommitteeIsUnknown c -> DijkstraCommitteeIsUnknown c

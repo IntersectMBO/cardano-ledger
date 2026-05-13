@@ -23,18 +23,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxosEvent (..),
-  AlonzoUtxosPredFailure (..),
-  TagMismatchDescription (..),
-  UtxosEnv (..),
-  invalidBegin,
-  invalidEnd,
-  scriptFailureToFailureDescription,
-  validBegin,
-  validEnd,
-  when2Phase,
- )
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded,
@@ -55,12 +44,7 @@ import Cardano.Ledger.Plutus.Evaluate (
   ScriptResult (..),
  )
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules (
-  PpupEnv (..),
-  PpupEvent,
-  ShelleyPPUP,
-  ShelleyPpupPredFailure,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.Monad (forM_)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
@@ -68,16 +52,16 @@ import Data.List.NonEmpty (nonEmpty)
 import qualified Debug.Trace as Debug
 import Lens.Micro
 
-type instance EraRuleFailure "UTXOS" BabbageEra = AlonzoUtxosPredFailure BabbageEra
+type instance EraRuleFailure "UTXOS" BabbageEra = Alonzo.AlonzoUtxosPredFailure BabbageEra
 
-type instance EraRuleEvent "UTXOS" BabbageEra = AlonzoUtxosEvent BabbageEra
+type instance EraRuleEvent "UTXOS" BabbageEra = Alonzo.AlonzoUtxosEvent BabbageEra
 
-instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure BabbageEra
+instance InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure BabbageEra
 
-instance InjectRuleEvent "UTXOS" AlonzoUtxosEvent BabbageEra
+instance InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent BabbageEra
 
-instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure BabbageEra where
-  injectFailure = UpdateFailure
+instance InjectRuleFailure "UTXOS" Shelley.ShelleyPpupPredFailure BabbageEra where
+  injectFailure = Alonzo.UpdateFailure
 
 -- =====================================================
 
@@ -94,37 +78,37 @@ instance
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
-  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (BabbageUTXOS era) ~ StAnnTx TopTx era
   , EncCBOR (EraRuleFailure "PPUP" era)
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
-  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
-  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent era
   , EraRule "UTXOS" era ~ BabbageUTXOS era
   ) =>
   STS (BabbageUTXOS era)
   where
   type BaseM (BabbageUTXOS era) = ShelleyBase
-  type Environment (BabbageUTXOS era) = UtxosEnv era
+  type Environment (BabbageUTXOS era) = Alonzo.UtxosEnv era
   type State (BabbageUTXOS era) = ShelleyGovState era
   type Signal (BabbageUTXOS era) = StAnnTx TopTx era
-  type PredicateFailure (BabbageUTXOS era) = AlonzoUtxosPredFailure era
-  type Event (BabbageUTXOS era) = AlonzoUtxosEvent era
+  type PredicateFailure (BabbageUTXOS era) = Alonzo.AlonzoUtxosPredFailure era
+  type Event (BabbageUTXOS era) = Alonzo.AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
 
 instance
   ( Era era
-  , STS (ShelleyPPUP era)
-  , EraRuleFailure "PPUP" era ~ ShelleyPpupPredFailure era
-  , EraRuleEvent "PPUP" era ~ PpupEvent era
+  , STS (Shelley.ShelleyPPUP era)
+  , EraRuleFailure "PPUP" era ~ Shelley.ShelleyPpupPredFailure era
+  , EraRuleEvent "PPUP" era ~ Shelley.PpupEvent era
   ) =>
-  Embed (ShelleyPPUP era) (BabbageUTXOS era)
+  Embed (Shelley.ShelleyPPUP era) (BabbageUTXOS era)
   where
-  wrapFailed = UpdateFailure
-  wrapEvent = AlonzoPpupToUtxosEvent
+  wrapFailed = Alonzo.UpdateFailure
+  wrapEvent = Alonzo.AlonzoPpupToUtxosEvent
 
 utxosTransition ::
   forall era.
@@ -137,7 +121,7 @@ utxosTransition ::
   , EraStake era
   , EraGov era
   , GovState era ~ ShelleyGovState era
-  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
@@ -146,12 +130,12 @@ utxosTransition ::
   , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
   , EraRule "UTXOS" era ~ BabbageUTXOS era
-  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
-  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent era
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
-  judgmentContext >>= \(TRC (UtxosEnv _ pp _ utxo, pup, stAnnTx)) -> do
+  judgmentContext >>= \(TRC (Alonzo.UtxosEnv _ pp _ utxo, pup, stAnnTx)) -> do
     let tx = stAnnTx ^. txStAnnTxG
     case tx ^. isValidTxL of
       IsValid True -> babbageEvalScriptsTxValid
@@ -168,9 +152,9 @@ expectScriptsToPass ::
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (EraRule "UTXOS" era)
-  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
-  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent era
   ) =>
   PParams era ->
   Tx TopTx era ->
@@ -183,19 +167,19 @@ expectScriptsToPass pp tx utxo = do
   let
     scriptsWithContextEither =
       collectPlutusScriptsWithContext ei sysSt pp tx utxo
-  (() <$ scriptsWithContextEither) ?!: (injectFailure . CollectErrors)
+  (() <$ scriptsWithContextEither) ?!: (injectFailure . Alonzo.CollectErrors)
   {- isValid tx = evalScripts tx sLst = True -}
-  when2Phase $
+  Alonzo.when2Phase $
     whenFailureFree $
       forM_ scriptsWithContextEither $ \scriptsWithContext ->
         case evalPlutusScripts scriptsWithContext of
           Fails _ fs ->
             failBecause $
               injectFailure $
-                ValidationTagMismatch
+                Alonzo.ValidationTagMismatch
                   (tx ^. isValidTxL)
-                  (FailedUnexpectedly (scriptFailureToFailureDescription <$> fs))
-          Passes ps -> mapM_ (tellEvent . injectEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
+                  (Alonzo.FailedUnexpectedly (Alonzo.scriptFailureToFailureDescription <$> fs))
+          Passes ps -> mapM_ (tellEvent . injectEvent . Alonzo.SuccessfulPlutusScriptsEvent) (nonEmpty ps)
 
 babbageEvalScriptsTxValid ::
   forall era.
@@ -205,18 +189,18 @@ babbageEvalScriptsTxValid ::
   , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (BabbageUTXOS era)
-  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext era
-  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure era
   , EraRule "UTXOS" era ~ BabbageUTXOS era
-  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent era
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
-  TRC (UtxosEnv slot pp certState utxo, pup, stAnnTx) <-
+  TRC (Alonzo.UtxosEnv slot pp certState utxo, pup, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       txBody = tx ^. bodyTxL
@@ -227,11 +211,11 @@ babbageEvalScriptsTxValid = do
   -- transaction will fail due to `PPUP`
   updatedGovState <-
     trans @(EraRule "PPUP" era) $
-      TRC (PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
+      TRC (Shelley.PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
 
-  () <- pure $! Debug.traceEvent validBegin ()
+  () <- pure $! Debug.traceEvent Alonzo.validBegin ()
   expectScriptsToPass pp tx utxo
-  () <- pure $! Debug.traceEvent validEnd ()
+  () <- pure $! Debug.traceEvent Alonzo.validEnd ()
 
   pure updatedGovState
 
@@ -241,8 +225,8 @@ babbageEvalScriptsTxInvalid ::
   , EraPlutusContext era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
-  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , STS (EraRule "UTXOS" era)
   ) =>
@@ -253,25 +237,25 @@ babbageEvalScriptsTxInvalid ::
 babbageEvalScriptsTxInvalid pp tx utxo = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
-  () <- pure $! Debug.traceEvent invalidBegin ()
+  () <- pure $! Debug.traceEvent Alonzo.invalidBegin ()
   {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
   let
     scriptsWithContextEither =
       collectPlutusScriptsWithContext ei sysSt pp tx utxo
-  (() <$ scriptsWithContextEither) ?!: (injectFailure . CollectErrors)
+  (() <$ scriptsWithContextEither) ?!: (injectFailure . Alonzo.CollectErrors)
   {- isValid tx = evalScripts tx sLst = False -}
-  when2Phase $
+  Alonzo.when2Phase $
     whenFailureFree $
       forM_ scriptsWithContextEither $ \scriptsWithContext ->
         case evalPlutusScripts scriptsWithContext of
           Passes _ ->
             failBecause $
               injectFailure $
-                ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
+                Alonzo.ValidationTagMismatch (tx ^. isValidTxL) Alonzo.PassedUnexpectedly
           Fails ps fs -> do
             mapM_
-              (tellEvent . injectEvent . SuccessfulPlutusScriptsEvent @era)
+              (tellEvent . injectEvent . Alonzo.SuccessfulPlutusScriptsEvent @era)
               (nonEmpty ps)
             tellEvent . injectEvent $
-              FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs)
-  pure $! Debug.traceEvent invalidEnd ()
+              Alonzo.FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs)
+  pure $! Debug.traceEvent Alonzo.invalidEnd ()

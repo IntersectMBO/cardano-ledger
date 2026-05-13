@@ -5,9 +5,9 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp where
 
-import Cardano.Ledger.Conway.Rules
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
@@ -19,10 +19,10 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest
 
 spec ::
   ( DijkstraEraImp era
-  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Event (EraRule "RUPD" era) ~ RupdEvent
+  , Shelley.Event (EraRule "EPOCH" era) ~ Conway.ConwayEpochEvent era
+  , Shelley.Event (EraRule "NEWEPOCH" era) ~ Conway.ConwayNewEpochEvent era
+  , Shelley.Event (EraRule "HARDFORK" era) ~ Conway.ConwayHardForkEvent era
+  , Shelley.Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   ) =>
   proxy era ->
   Spec

@@ -66,12 +66,7 @@ import Cardano.Ledger.Plutus.Evaluate (
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules (
-  PpupEnv (..),
-  PpupEvent,
-  ShelleyPPUP,
-  ShelleyPpupPredFailure,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)
@@ -108,7 +103,7 @@ instance
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
-  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure,
   , Eq (EraRuleFailure "PPUP" era)
@@ -147,12 +142,12 @@ instance NFData (EraRuleEvent "PPUP" era) => NFData (AlonzoUtxosEvent era)
 
 instance
   ( Era era
-  , STS (ShelleyPPUP era)
-  , EraRuleFailure "PPUP" era ~ ShelleyPpupPredFailure era
-  , Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
-  , EraRuleEvent "PPUP" era ~ PpupEvent era
+  , STS (Shelley.ShelleyPPUP era)
+  , EraRuleFailure "PPUP" era ~ Shelley.ShelleyPpupPredFailure era
+  , Event (EraRule "PPUP" era) ~ Event (Shelley.ShelleyPPUP era)
+  , EraRuleEvent "PPUP" era ~ Shelley.PpupEvent era
   ) =>
-  Embed (ShelleyPPUP era) (AlonzoUTXOS era)
+  Embed (Shelley.ShelleyPPUP era) (AlonzoUTXOS era)
   where
   wrapFailed = UpdateFailure
   wrapEvent = AlonzoPpupToUtxosEvent
@@ -167,7 +162,7 @@ utxosTransition ::
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
@@ -229,7 +224,7 @@ alonzoEvalScriptsTxValid ::
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
-  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
@@ -257,7 +252,7 @@ alonzoEvalScriptsTxValid = do
   () <- pure $! Debug.traceEvent validEnd ()
 
   trans @(EraRule "PPUP" era) $
-    TRC (PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
+    TRC (Shelley.PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
 
 alonzoEvalScriptsTxInvalid ::
   forall era.
@@ -381,7 +376,7 @@ type instance EraRuleFailure "UTXOS" AlonzoEra = AlonzoUtxosPredFailure AlonzoEr
 
 instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure AlonzoEra
 
-instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure AlonzoEra where
+instance InjectRuleFailure "UTXOS" Shelley.ShelleyPpupPredFailure AlonzoEra where
   injectFailure = UpdateFailure
 
 instance

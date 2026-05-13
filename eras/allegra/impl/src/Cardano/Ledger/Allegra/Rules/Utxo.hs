@@ -41,11 +41,6 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules (
-  PpupEnv (..),
-  ShelleyPPUP,
-  ShelleyPpupPredFailure,
- )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
@@ -95,7 +90,7 @@ type instance EraRuleFailure "UTXO" AllegraEra = AllegraUtxoPredFailure AllegraE
 
 instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure AllegraEra
 
-instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure AllegraEra where
+instance InjectRuleFailure "UTXO" Shelley.ShelleyPpupPredFailure AllegraEra where
   injectFailure = UpdateFailure
 
 instance InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure AllegraEra where
@@ -159,7 +154,7 @@ utxoTransition ::
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , Embed (EraRule "PPUP" era) (EraRule "UTXO" era)
-  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , GovState era ~ ShelleyGovState era
@@ -201,7 +196,7 @@ utxoTransition = do
 
   -- process Protocol Parameter Update Proposals
   ppup' <-
-    trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txBody ^. updateTxBodyL)
+    trans @(EraRule "PPUP" era) $ TRC (Shelley.PPUPEnv slot pp genDelegs, ppup, txBody ^. updateTxBodyL)
 
   {- adaPolicy ∉ supp mint tx
      above check not needed because mint field of type MultiAsset cannot contain ada -}
@@ -292,7 +287,7 @@ instance
   , ShelleyEraTxBody era
   , AllegraEraTxBody era
   , Embed (EraRule "PPUP" era) (AllegraUTXO era)
-  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , AtMostEra "Babbage" era
@@ -319,11 +314,11 @@ instance
 
 instance
   ( Era era
-  , STS (ShelleyPPUP era)
-  , EraRuleFailure "PPUP" era ~ ShelleyPpupPredFailure era
-  , Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
+  , STS (Shelley.ShelleyPPUP era)
+  , EraRuleFailure "PPUP" era ~ Shelley.ShelleyPpupPredFailure era
+  , Event (EraRule "PPUP" era) ~ Event (Shelley.ShelleyPPUP era)
   ) =>
-  Embed (ShelleyPPUP era) (AllegraUTXO era)
+  Embed (Shelley.ShelleyPPUP era) (AllegraUTXO era)
   where
   wrapFailed = UpdateFailure
   wrapEvent = UpdateEvent

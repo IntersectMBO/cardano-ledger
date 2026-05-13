@@ -12,12 +12,12 @@
 
 module Cardano.Ledger.Mary.Era (MaryEra) where
 
-import Cardano.Ledger.Allegra.Rules (AllegraUTXO, AllegraUTXOW)
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Internal.Era (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Rules
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
 instance EraGenesis MaryEra
 
@@ -32,42 +32,42 @@ type instance Value MaryEra = MaryValue
 
 -- These rules are all inherited from Shelley
 
-type instance EraRule "BBODY" MaryEra = ShelleyBBODY MaryEra
+type instance EraRule "BBODY" MaryEra = Shelley.ShelleyBBODY MaryEra
 
-type instance EraRule "DELEG" MaryEra = ShelleyDELEG MaryEra
+type instance EraRule "DELEG" MaryEra = Shelley.ShelleyDELEG MaryEra
 
-type instance EraRule "DELEGS" MaryEra = ShelleyDELEGS MaryEra
+type instance EraRule "DELEGS" MaryEra = Shelley.ShelleyDELEGS MaryEra
 
-type instance EraRule "DELPL" MaryEra = ShelleyDELPL MaryEra
+type instance EraRule "DELPL" MaryEra = Shelley.ShelleyDELPL MaryEra
 
-type instance EraRule "EPOCH" MaryEra = ShelleyEPOCH MaryEra
+type instance EraRule "EPOCH" MaryEra = Shelley.ShelleyEPOCH MaryEra
 
-type instance EraRule "LEDGER" MaryEra = ShelleyLEDGER MaryEra
+type instance EraRule "LEDGER" MaryEra = Shelley.ShelleyLEDGER MaryEra
 
-type instance EraRule "LEDGERS" MaryEra = ShelleyLEDGERS MaryEra
+type instance EraRule "LEDGERS" MaryEra = Shelley.ShelleyLEDGERS MaryEra
 
-type instance EraRule "MIR" MaryEra = ShelleyMIR MaryEra
+type instance EraRule "MIR" MaryEra = Shelley.ShelleyMIR MaryEra
 
-type instance EraRule "NEWEPOCH" MaryEra = ShelleyNEWEPOCH MaryEra
+type instance EraRule "NEWEPOCH" MaryEra = Shelley.ShelleyNEWEPOCH MaryEra
 
-type instance EraRule "NEWPP" MaryEra = ShelleyNEWPP MaryEra
+type instance EraRule "NEWPP" MaryEra = Shelley.ShelleyNEWPP MaryEra
 
-type instance EraRule "POOL" MaryEra = ShelleyPOOL MaryEra
+type instance EraRule "POOL" MaryEra = Shelley.ShelleyPOOL MaryEra
 
-type instance EraRule "POOLREAP" MaryEra = ShelleyPOOLREAP MaryEra
+type instance EraRule "POOLREAP" MaryEra = Shelley.ShelleyPOOLREAP MaryEra
 
-type instance EraRule "PPUP" MaryEra = ShelleyPPUP MaryEra
+type instance EraRule "PPUP" MaryEra = Shelley.ShelleyPPUP MaryEra
 
-type instance EraRule "RUPD" MaryEra = ShelleyRUPD MaryEra
+type instance EraRule "RUPD" MaryEra = Shelley.ShelleyRUPD MaryEra
 
-type instance EraRule "SNAP" MaryEra = ShelleySNAP MaryEra
+type instance EraRule "SNAP" MaryEra = Shelley.ShelleySNAP MaryEra
 
-type instance EraRule "TICK" MaryEra = ShelleyTICK MaryEra
+type instance EraRule "TICK" MaryEra = Shelley.ShelleyTICK MaryEra
 
-type instance EraRule "TICKF" MaryEra = ShelleyTICKF MaryEra
+type instance EraRule "TICKF" MaryEra = Shelley.ShelleyTICKF MaryEra
 
-type instance EraRule "UPEC" MaryEra = ShelleyUPEC MaryEra
+type instance EraRule "UPEC" MaryEra = Shelley.ShelleyUPEC MaryEra
 
-type instance EraRule "UTXO" MaryEra = AllegraUTXO MaryEra
+type instance EraRule "UTXO" MaryEra = Allegra.AllegraUTXO MaryEra
 
-type instance EraRule "UTXOW" MaryEra = AllegraUTXOW MaryEra
+type instance EraRule "UTXOW" MaryEra = Allegra.AllegraUTXOW MaryEra

@@ -12,7 +12,7 @@ import Cardano.Ledger.BaseTypes (unNonZero)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
-import Cardano.Ledger.Shelley.Rules (calculatePoolDistr)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (
   IndividualPoolStake (..),
   PoolDistr (..),
@@ -37,7 +37,7 @@ calcPoolDistOldEqualsNew =
     prop "old==new" $
       withMaxSuccess 500 $ \snap ->
         counterexample "BAD" $
-          oldCalculatePoolDistr (const True) snap === calculatePoolDistr snap
+          oldCalculatePoolDistr (const True) snap === Shelley.calculatePoolDistr snap
 
 -- | The original version of calculatePoolDistr
 oldCalculatePoolDistr :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr

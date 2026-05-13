@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo () where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (EraPParams (..), PParams)
-import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Data.Functor.Identity (Identity)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (SpecTranslate (..))
@@ -23,12 +23,12 @@ instance
   , SpecTranslate (PParamsHKD Identity era)
   , SpecContext (PParamsHKD Identity era) ~ ()
   ) =>
-  SpecTranslate (UtxoEnv era)
+  SpecTranslate (Shelley.UtxoEnv era)
   where
-  type SpecRep (UtxoEnv era) = Agda.UTxOEnv
+  type SpecRep (Shelley.UtxoEnv era) = Agda.UTxOEnv
 
   toSpecRep x =
     Agda.MkUTxOEnv
-      <$> toSpecRep (ueSlot x)
-      <*> toSpecRep (uePParams x)
+      <$> toSpecRep (Shelley.ueSlot x)
+      <*> toSpecRep (Shelley.uePParams x)
       <*> toSpecRep (Coin 10_000_000) -- TODO: Fix generating types

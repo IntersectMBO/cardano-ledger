@@ -32,7 +32,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Conway.Governance (ConwayEraGov)
-import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -48,7 +48,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedgers (DijkstraSubLedgersPredFailure (
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
   BaseM,
@@ -83,10 +83,10 @@ type instance EraRuleEvent "MEMPOOL" DijkstraEra = DijkstraMempoolEvent Dijkstra
 
 instance InjectRuleFailure "MEMPOOL" DijkstraMempoolPredFailure DijkstraEra
 
-instance InjectRuleFailure "MEMPOOL" ConwayLedgerPredFailure DijkstraEra where
+instance InjectRuleFailure "MEMPOOL" Conway.ConwayLedgerPredFailure DijkstraEra where
   injectFailure = \case
-    ConwayMempoolFailure "All inputs are spent. Transaction has probably already been included" -> AllInputsAreSpent
-    ConwayMempoolFailure predFailureMessage -> MempoolFailure predFailureMessage
+    Conway.ConwayMempoolFailure "All inputs are spent. Transaction has probably already been included" -> AllInputsAreSpent
+    Conway.ConwayMempoolFailure predFailureMessage -> MempoolFailure predFailureMessage
     otherLedgerFailure -> LedgerFailure $ conwayToDijkstraLedgerPredFailure otherLedgerFailure
 
 instance InjectRuleFailure "MEMPOOL" DijkstraUtxoPredFailure DijkstraEra where
@@ -153,7 +153,7 @@ instance
   , Show (PredicateFailure (EraRule "GOV" era))
   , Show (PredicateFailure (EraRule "UTXOW" era))
   , Show (PredicateFailure (EraRule "SUBLEDGERS" era))
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , EraRuleFailure "SUBLEDGERS" era ~ DijkstraSubLedgersPredFailure era
   ) =>
@@ -161,7 +161,7 @@ instance
   where
   type State (DijkstraMEMPOOL era) = LedgerState era
   type Signal (DijkstraMEMPOOL era) = StAnnTx TopTx era
-  type Environment (DijkstraMEMPOOL era) = LedgerEnv era
+  type Environment (DijkstraMEMPOOL era) = Shelley.LedgerEnv era
   type BaseM (DijkstraMEMPOOL era) = ShelleyBase
   type PredicateFailure (DijkstraMEMPOOL era) = DijkstraMempoolPredFailure era
   type Event (DijkstraMEMPOOL era) = DijkstraMempoolEvent era
@@ -173,7 +173,7 @@ mempoolTransition ::
   ( EraTx era
   , Embed (EraRule "LEDGER" era) (DijkstraMEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (DijkstraMEMPOOL era)

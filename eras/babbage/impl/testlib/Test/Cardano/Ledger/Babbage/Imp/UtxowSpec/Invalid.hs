@@ -10,7 +10,7 @@
 module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec.Invalid (spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..), hashDataTxWitsL, unRedeemersL)
 import Cardano.Ledger.Babbage.Core
@@ -30,7 +30,7 @@ import Cardano.Ledger.Plutus (
   mkInlineDatum,
   withSLanguage,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (ExtraneousScriptWitnessesUTXOW))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import qualified Data.Map.Strict as Map
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
@@ -53,7 +53,7 @@ spec = describe "Invalid" $ do
     submitFailingTx
       (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn])
       [ injectFailure $
-          CollectErrors
+          Alonzo.CollectErrors
             [ BadTranslation . inject $
                 InlineDatumsNotSupported @era (TxOutFromInput txIn)
             ]
@@ -102,9 +102,9 @@ spec = describe "Invalid" $ do
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert prp (dt, ExUnits 0 0)
           submitFailingTx
             tx
-            [ injectFailure $ ExtraRedeemers [prp]
+            [ injectFailure $ Alonzo.ExtraRedeemers [prp]
             , injectFailure $
-                CollectErrors [BadTranslation (inject $ RedeemerPointerPointsToNothing prp)]
+                Alonzo.CollectErrors [BadTranslation (inject $ RedeemerPointerPointsToNothing prp)]
             ]
 
         it "Inline datum with a failing script" $ do
@@ -165,7 +165,7 @@ spec = describe "Invalid" $ do
                 & witsTxL . hashScriptTxWitsL .~ [script]
             )
             [ injectFailure $
-                ExtraneousScriptWitnessesUTXOW $
+                Shelley.ExtraneousScriptWitnessesUTXOW $
                   NES.singleton scriptHash
             ]
 
@@ -183,7 +183,7 @@ spec = describe "Invalid" $ do
                 & witsTxL . hashDataTxWitsL .~ [redundantDatum]
             )
             [ injectFailure $
-                NotAllowedSupplementalDatums (NES.singleton $ hashData redundantDatum) mempty
+                Alonzo.NotAllowedSupplementalDatums (NES.singleton $ hashData redundantDatum) mempty
             ]
 
         -- There is no such thing as a "reference datum". In other words, you cannot
@@ -217,5 +217,5 @@ spec = describe "Invalid" $ do
                 & bodyTxL . inputsTxBodyL .~ [txInHash]
             )
             [ injectFailure $
-                MissingRequiredDatums (NES.singleton datumHash) mempty
+                Alonzo.MissingRequiredDatums (NES.singleton datumHash) mempty
             ]

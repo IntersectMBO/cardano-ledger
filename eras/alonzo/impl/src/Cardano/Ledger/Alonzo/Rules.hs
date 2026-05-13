@@ -23,8 +23,8 @@ import Cardano.Ledger.Alonzo.Rules.Ppup ()
 import Cardano.Ledger.Alonzo.Rules.Utxo
 import Cardano.Ledger.Alonzo.Rules.Utxos
 import Cardano.Ledger.Alonzo.Rules.Utxow
-import Cardano.Ledger.Shelley.Rules (ShelleyLedgerEvent, ShelleyTickEvent)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleEvent "LEDGER" AlonzoEra = ShelleyLedgerEvent AlonzoEra
+type instance EraRuleEvent "LEDGER" AlonzoEra = Shelley.ShelleyLedgerEvent AlonzoEra
 
-type instance EraRuleEvent "TICK" AlonzoEra = ShelleyTickEvent AlonzoEra
+type instance EraRuleEvent "TICK" AlonzoEra = Shelley.ShelleyTickEvent AlonzoEra

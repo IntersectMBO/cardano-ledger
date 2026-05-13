@@ -56,13 +56,6 @@ import Cardano.Ledger.Conway.Governance (
   Proposals,
   Voter (..),
  )
-import Cardano.Ledger.Conway.Rules (
-  ConwayGovEvent,
-  ConwayGovPredFailure,
-  GovEnv,
-  GovSignal,
-  conwayGovTransition,
- )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
@@ -127,14 +120,14 @@ pattern InvalidPolicyHash got expected = InvalidGuardrailsScriptHash got expecte
 
 type instance EraRuleFailure "GOV" DijkstraEra = DijkstraGovPredFailure DijkstraEra
 
-type instance EraRuleEvent "GOV" DijkstraEra = ConwayGovEvent DijkstraEra
+type instance EraRuleEvent "GOV" DijkstraEra = Conway.ConwayGovEvent DijkstraEra
 
 instance InjectRuleFailure "GOV" DijkstraGovPredFailure DijkstraEra
 
-instance InjectRuleFailure "GOV" ConwayGovPredFailure DijkstraEra where
+instance InjectRuleFailure "GOV" Conway.ConwayGovPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraGovPredFailure
 
-instance InjectRuleEvent "GOV" ConwayGovEvent DijkstraEra
+instance InjectRuleEvent "GOV" Conway.ConwayGovEvent DijkstraEra
 
 instance EraPParams era => NFData (DijkstraGovPredFailure era)
 
@@ -208,25 +201,26 @@ instance
   , ConwayEraPParams era
   , ConwayEraGov era
   , EraRule "GOV" era ~ DijkstraGOV era
-  , InjectRuleFailure "GOV" ConwayGovPredFailure era
-  , InjectRuleEvent "GOV" ConwayGovEvent era
+  , InjectRuleFailure "GOV" Conway.ConwayGovPredFailure era
+  , InjectRuleEvent "GOV" Conway.ConwayGovEvent era
   , EraCertState era
   , ConwayEraCertState era
   ) =>
   STS (DijkstraGOV era)
   where
   type State (DijkstraGOV era) = Proposals era
-  type Signal (DijkstraGOV era) = GovSignal era
-  type Environment (DijkstraGOV era) = GovEnv era
+  type Signal (DijkstraGOV era) = Conway.GovSignal era
+  type Environment (DijkstraGOV era) = Conway.GovEnv era
   type BaseM (DijkstraGOV era) = ShelleyBase
   type PredicateFailure (DijkstraGOV era) = DijkstraGovPredFailure era
-  type Event (DijkstraGOV era) = ConwayGovEvent era
+  type Event (DijkstraGOV era) = Conway.ConwayGovEvent era
 
   initialRules = []
 
-  transitionRules = [conwayGovTransition]
+  transitionRules = [Conway.conwayGovTransition]
 
-conwayToDijkstraGovPredFailure :: forall era. ConwayGovPredFailure era -> DijkstraGovPredFailure era
+conwayToDijkstraGovPredFailure ::
+  forall era. Conway.ConwayGovPredFailure era -> DijkstraGovPredFailure era
 conwayToDijkstraGovPredFailure = \case
   Conway.GovActionsDoNotExist gaId -> GovActionsDoNotExist gaId
   Conway.MalformedProposal ga -> MalformedProposal ga

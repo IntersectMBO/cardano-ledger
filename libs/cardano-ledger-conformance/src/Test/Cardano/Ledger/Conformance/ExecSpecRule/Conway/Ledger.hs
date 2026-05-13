@@ -27,9 +27,9 @@ import Cardano.Ledger.Conway.Core (
   ScriptHash,
   TxLevel (..),
  )
-import Cardano.Ledger.Conway.Rules (EnactState)
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraCertState (..))
 import Control.State.Transition.Extended (TRC (..))
 import Data.Bifunctor (Bifunctor (..))
@@ -59,7 +59,7 @@ import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 data ConwayLedgerExecContext era
   = ConwayLedgerExecContext
   { clecGuardrailsScriptHash :: StrictMaybe ScriptHash
-  , clecEnactState :: EnactState era
+  , clecEnactState :: Conway.EnactState era
   , clecUtxoExecContext :: UtxoExecContext era
   }
   deriving (Generic)
@@ -114,14 +114,14 @@ instance ExecSpecRule "LEDGER" ConwayEra where
     let externalFunctions' = externalFunctions {Agda.extValidPlutusScript = Agda.isValid (strcSignal trc)}
      in runFromAgdaFunction (Agda.ledgerStep externalFunctions') trc
 
-  extraInfo globals ConwayLedgerExecContext {..} (TRC (LedgerEnv {..}, LedgerState {..}, sig)) _ =
+  extraInfo globals ConwayLedgerExecContext {..} (TRC (Shelley.LedgerEnv {..}, LedgerState {..}, sig)) _ =
     extraInfo @"UTXOW" @ConwayEra
       globals
       clecUtxoExecContext
       (TRC (utxoEnv, lsUTxOState, sig))
       stFinal
     where
-      utxoEnv = UtxoEnv ledgerSlotNo ledgerPp lsCertState
+      utxoEnv = Shelley.UtxoEnv ledgerSlotNo ledgerPp lsCertState
       stFinal =
         first (T.pack . show) $
           runSTS @"UTXOW" @ConwayEra globals utxoEnv lsUTxOState sig

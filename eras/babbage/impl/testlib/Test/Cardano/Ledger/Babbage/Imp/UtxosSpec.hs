@@ -13,7 +13,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   TxOutSource (..),
  )
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (CollectErrors))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core (
@@ -89,7 +89,7 @@ spec = describe "UTXOS" $ do
       submitBabbageFailingTx
         tx
         [ injectFailure $
-            CollectErrors
+            Alonzo.CollectErrors
               [ BadTranslation . inject $
                   ReferenceScriptsNotSupported @era (TxOutFromOutput (TxIx 0))
               ]
@@ -108,7 +108,7 @@ spec = describe "UTXOS" $ do
       submitBabbageFailingTx
         tx
         [ injectFailure $
-            CollectErrors
+            Alonzo.CollectErrors
               [ BadTranslation . inject $
                   ReferenceInputsNotSupported @era [refIn]
               ]
@@ -122,7 +122,7 @@ spec = describe "UTXOS" $ do
           submitFailingTx
             tx
             [ injectFailure $
-                CollectErrors
+                Alonzo.CollectErrors
                   [ BadTranslation . inject $
                       ByronTxOutInContext @era (TxOutFromOutput (TxIx 0))
                   ]

@@ -65,7 +65,7 @@ import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure, computeDRepExpiry)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.DRep (drepExpiryL)
-import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
@@ -130,7 +130,7 @@ instance InjectRuleFailure "CERTS" ConwayCertPredFailure ConwayEra where
 instance InjectRuleFailure "CERTS" ConwayDelegPredFailure ConwayEra where
   injectFailure = CertFailure . injectFailure
 
-instance InjectRuleFailure "CERTS" ShelleyPoolPredFailure ConwayEra where
+instance InjectRuleFailure "CERTS" Shelley.ShelleyPoolPredFailure ConwayEra where
   injectFailure = CertFailure . injectFailure
 
 instance InjectRuleFailure "CERTS" ConwayGovCertPredFailure ConwayEra where

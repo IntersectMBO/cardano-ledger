@@ -25,7 +25,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxow (
   checkScriptIntegrityHash,
 ) where
 
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
@@ -57,14 +57,6 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), natVersion)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyPpupPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowEvent (UtxoEvent),
-  ShelleyUtxowPredFailure (..),
-  UtxoEnv (..),
-  validateNeededWitnesses,
- )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.State (
@@ -95,7 +87,7 @@ import Validation
 -- | The Predicate failure type in the Alonzo Era. It embeds the Predicate
 --   failure type of the Shelley Era, as they share some failure modes.
 data AlonzoUtxowPredFailure era
-  = ShelleyInAlonzoUtxowPredFailure (ShelleyUtxowPredFailure era)
+  = ShelleyInAlonzoUtxowPredFailure (Shelley.ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
       (NonEmpty (PlutusPurpose AsItem era, ScriptHash))
@@ -127,23 +119,23 @@ type instance EraRuleFailure "UTXOW" AlonzoEra = AlonzoUtxowPredFailure AlonzoEr
 
 instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure AlonzoEra
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure AlonzoEra where
+instance InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoUtxowPredFailure
 
 instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure AlonzoEra where
-  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure
 
 instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure AlonzoEra where
-  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure AlonzoEra where
-  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
+instance InjectRuleFailure "UTXOW" Shelley.ShelleyPpupPredFailure AlonzoEra where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure AlonzoEra where
-  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
+instance InjectRuleFailure "UTXOW" Shelley.ShelleyUtxoPredFailure AlonzoEra where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure AlonzoEra where
-  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
+instance InjectRuleFailure "UTXOW" Allegra.AllegraUtxoPredFailure AlonzoEra where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure . injectFailure
 
 deriving instance
   ( AlonzoEraScript era
@@ -184,7 +176,7 @@ instance
       ScriptIntegrityHashMismatch x y -> Sum ScriptIntegrityHashMismatch 8 !> To x !> To y
 
 newtype AlonzoUtxowEvent era
-  = WrappedShelleyEraEvent (ShelleyUtxowEvent era)
+  = WrappedShelleyEraEvent (Shelley.ShelleyUtxowEvent era)
   deriving (Generic)
 
 deriving instance Eq (Event (EraRule "UTXO" era)) => Eq (AlonzoUtxowEvent era)
@@ -306,18 +298,18 @@ alonzoStyleWitness ::
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , EraRule "UTXOW" era ~ AlonzoUTXOW era
-  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
-  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 alonzoStyleWitness = do
-  TRC (utxoEnv@(UtxoEnv _ pp certState), u, stAnnTx) <- judgmentContext
+  TRC (utxoEnv@(Shelley.UtxoEnv _ pp certState), u, stAnnTx) <- judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
@@ -356,7 +348,7 @@ alonzoStyleWitness = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
+  runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState utxo txBody
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
@@ -401,11 +393,11 @@ instance
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , EraRule "UTXOW" era ~ AlonzoUTXOW era
-  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
-  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , EraCertState era
@@ -414,7 +406,7 @@ instance
   where
   type State (AlonzoUTXOW era) = UTxOState era
   type Signal (AlonzoUTXOW era) = StAnnTx TopTx era
-  type Environment (AlonzoUTXOW era) = UtxoEnv era
+  type Environment (AlonzoUTXOW era) = Shelley.UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type PredicateFailure (AlonzoUTXOW era) = AlonzoUtxowPredFailure era
   type Event (AlonzoUTXOW era) = AlonzoUtxowEvent era
@@ -432,5 +424,5 @@ instance
   ) =>
   Embed (AlonzoUTXO era) (AlonzoUTXOW era)
   where
-  wrapFailed = ShelleyInAlonzoUtxowPredFailure . UtxoFailure
-  wrapEvent = WrappedShelleyEraEvent . UtxoEvent
+  wrapFailed = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure
+  wrapEvent = WrappedShelleyEraEvent . Shelley.UtxoEvent

@@ -42,10 +42,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedger (
  )
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure (..))
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (
-  PoolEvent,
-  ShelleyPoolPredFailure,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.State.Transition.Extended
@@ -105,9 +102,9 @@ instance
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
   , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
   , Embed (EraRule "SUBLEDGER" era) (DijkstraSUBLEDGERS era)
-  , InjectRuleEvent "SUBPOOL" PoolEvent era
+  , InjectRuleEvent "SUBPOOL" Shelley.PoolEvent era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
-  , InjectRuleFailure "SUBPOOL" ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   ) =>
   STS (DijkstraSUBLEDGERS era)

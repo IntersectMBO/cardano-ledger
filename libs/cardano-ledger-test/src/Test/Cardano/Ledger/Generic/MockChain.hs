@@ -27,16 +27,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
  )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate)
-import Cardano.Ledger.Shelley.Rules (
-  LedgerEnv,
-  RupdEnv,
-  ShelleyLEDGERS,
-  ShelleyLedgersEnv (..),
-  ShelleyLedgersEvent,
-  ShelleyLedgersPredFailure,
-  ShelleyTICK,
-  ShelleyTickEvent,
- )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Slotting.Slot (EpochNo, SlotNo)
 import Control.State.Transition (
@@ -67,7 +58,7 @@ data MOCKCHAIN era -- This is a Testing only STS instance
 type instance EraRule "MOCKCHAIN" era = MOCKCHAIN era
 
 data MockChainFailure era
-  = MockChainFromLedgersFailure !(ShelleyLedgersPredFailure era)
+  = MockChainFromLedgersFailure !(Shelley.ShelleyLedgersPredFailure era)
   | BlocksOutOfOrder
       !SlotNo -- The last applied block SlotNo
       !SlotNo -- The candidate block SlotNo
@@ -78,8 +69,8 @@ instance
   ToExpr (MockChainFailure era)
 
 data MockChainEvent era
-  = MockChainFromTickEvent !(ShelleyTickEvent era)
-  | MockChainFromLedgersEvent !(ShelleyLedgersEvent era)
+  = MockChainFromTickEvent !(Shelley.ShelleyTickEvent era)
+  | MockChainFromLedgersEvent !(Shelley.ShelleyLedgersEvent era)
 
 data MockBlock era = MockBlock
   { mbIssuer :: !(KeyHash StakePool)
@@ -122,17 +113,17 @@ instance (Era era, NoThunks (NewEpochState era)) => NoThunks (MockChainState era
 
 instance
   ( EraGov era
-  , STS (ShelleyTICK era)
+  , STS (Shelley.ShelleyTICK era)
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Environment (EraRule "TICK" era) ~ ()
   , Embed (EraRule "TICK" era) (MOCKCHAIN era)
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
-  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
@@ -162,7 +153,7 @@ instance
 
         newledgerState <-
           trans @(EraRule "LEDGERS" era) $
-            TRC (LedgersEnv slot (epochFromSlotNo slot) pparams account, ledgerState, fromStrict txs)
+            TRC (Shelley.LedgersEnv slot (epochFromSlotNo slot) pparams account, ledgerState, fromStrict txs)
 
         let newEpochstate = epochState {esLState = newledgerState}
             newNewEpochState = nes' {nesEs = newEpochstate, nesBcur = newblocksmade}
@@ -173,27 +164,27 @@ instance
 -- Embed instances
 
 instance
-  ( STS (ShelleyTICK era)
+  ( STS (Shelley.ShelleyTICK era)
   , Signal (EraRule "RUPD" era) ~ SlotNo
   , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
-  , Environment (EraRule "RUPD" era) ~ RupdEnv era
+  , Environment (EraRule "RUPD" era) ~ Shelley.RupdEnv era
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   ) =>
-  Embed (ShelleyTICK era) (MOCKCHAIN era)
+  Embed (Shelley.ShelleyTICK era) (MOCKCHAIN era)
   where
   wrapFailed = \case {}
   wrapEvent = MockChainFromTickEvent
 
 instance
-  ( STS (ShelleyLEDGERS era)
+  ( STS (Shelley.ShelleyLEDGERS era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
-  Embed (ShelleyLEDGERS era) (MOCKCHAIN era)
+  Embed (Shelley.ShelleyLEDGERS era) (MOCKCHAIN era)
   where
   wrapFailed = MockChainFromLedgersFailure
   wrapEvent = MockChainFromLedgersEvent
@@ -201,14 +192,15 @@ instance
 -- ================================================================
 
 deriving instance
-  (Show (ShelleyTickEvent era), Show (ShelleyLedgersEvent era)) => Show (MockChainEvent era)
+  (Show (Shelley.ShelleyTickEvent era), Show (Shelley.ShelleyLedgersEvent era)) =>
+  Show (MockChainEvent era)
 
 deriving instance
-  (Eq (ShelleyTickEvent era), Eq (ShelleyLedgersEvent era)) => Eq (MockChainEvent era)
+  (Eq (Shelley.ShelleyTickEvent era), Eq (Shelley.ShelleyLedgersEvent era)) => Eq (MockChainEvent era)
 
-deriving instance Show (ShelleyLedgersPredFailure era) => Show (MockChainFailure era)
+deriving instance Show (Shelley.ShelleyLedgersPredFailure era) => Show (MockChainFailure era)
 
-deriving instance Eq (ShelleyLedgersPredFailure era) => Eq (MockChainFailure era)
+deriving instance Eq (Shelley.ShelleyLedgersPredFailure era) => Eq (MockChainFailure era)
 
 ppMockChainState ::
   (Reflect era, ShelleyEraTest era) =>
