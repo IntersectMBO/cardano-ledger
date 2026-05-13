@@ -1,8 +1,10 @@
 # Version history for `small-steps`
 
-## 1.1.3.1
+## 1.1.4.0
 
-*
+### `testlib`
+
+* Add `closureWith`
 
 ## 1.1.3.0
 

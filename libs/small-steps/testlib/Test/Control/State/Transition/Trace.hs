@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -45,6 +46,7 @@ module Test.Control.State.Transition.Trace (
   lastSignal,
   firstAndLastState,
   closure,
+  closureWith,
 
   -- * Miscellaneous utilities
   extractValues,
@@ -54,7 +56,7 @@ module Test.Control.State.Transition.Trace (
 ) where
 
 import Control.DeepSeq (NFData)
-import Control.Monad (void)
+import Control.Monad (foldM, void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Control.State.Transition.Extended hiding (Assertion, trans)
@@ -382,13 +384,28 @@ closure ::
   -- | List of signals to apply, where the newest signal comes first.
   [Signal s] ->
   m (Trace s)
-closure env st0 sigs = mkTrace env st0 <$> loop st0 (reverse sigs) []
+closure env st0 = closureWith env st0 (const id)
+
+-- | Like `closure`, but the signal for each step is built from the running
+-- state (the post-state of the previous successful step, or the initial
+-- state for the first step) via the supplied builder.
+closureWith ::
+  forall s m a.
+  (STS s, m ~ BaseM s) =>
+  Environment s ->
+  State s ->
+  -- | Build a 'Signal' from the running 'State'
+  (State s -> a -> Signal s) ->
+  [a] ->
+  m (Trace s)
+closureWith env st0 mkSig xs =
+  mkTrace env st0 . snd <$> foldM accum (st0, []) (reverse xs)
   where
-    loop _ [] acc = pure acc
-    loop sti (sig : sigs') acc =
-      applySTSTest @s (TRC (env, sti, sig)) >>= \case
-        Left _ -> loop sti sigs' acc
-        Right sti' -> loop sti' sigs' ((sti', sig) : acc)
+    accum (!accState, !accTrace) x =
+      let sig = mkSig accState x
+       in applySTSTest @s (TRC (env, accState, sig)) >>= \case
+            Left _ -> pure (accState, accTrace)
+            Right newState -> pure (newState, (newState, sig) : accTrace)
 
 --------------------------------------------------------------------------------
 -- Minimal DSL to specify expectations on traces

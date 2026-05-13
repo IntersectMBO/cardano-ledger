@@ -40,6 +40,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   curPParamsEpochStateL,
   lsCertStateL,
+  lsUTxOStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegEnv (..),
@@ -157,16 +158,21 @@ ledgerTraceFromBlock ::
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt
   , runShelleyBase $
-      Trace.closure @(EraRule "LEDGER" era) ledgerEnv ledgerSt0 stAnnTxs
+      Trace.closureWith @(EraRule "LEDGER" era)
+        ledgerEnv
+        ledgerSt0
+        ( \ls tx ->
+            mkStAnnTx
+              (epochInfo testGlobals)
+              (systemStart testGlobals)
+              (ledgerEnv ^. ledgerPpL)
+              (ls ^. lsUTxOStateL . utxoG)
+              tx
+        )
+        txs
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
-    pp_ = ledgerEnv ^. ledgerPpL
-    utxo = utxosUtxo (lsUTxOState ledgerSt0)
-    stAnnTxs =
-      map
-        (mkStAnnTx (epochInfo testGlobals) (systemStart testGlobals) pp_ utxo)
-        txs
 
 -- | This function is nearly the same as ledgerTraceFromBlock, but
 -- it restricts the UTxO state to only those needed by the block.
@@ -187,7 +193,18 @@ ledgerTraceFromBlockWithRestrictedUTxO ::
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO
   , runShelleyBase $
-      Trace.closure @(EraRule "LEDGER" era) ledgerEnv ledgerSt0' stAnnTxs
+      Trace.closureWith @(EraRule "LEDGER" era)
+        ledgerEnv
+        restrictedSt0
+        ( \ls tx ->
+            mkStAnnTx
+              (epochInfo testGlobals)
+              (systemStart testGlobals)
+              (ledgerEnv ^. ledgerPpL)
+              (ls ^. lsUTxOStateL . utxoG)
+              tx
+        )
+        txs
   )
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -195,12 +212,7 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
     LedgerState utxoSt delegationSt = ledgerSt0
     utxo = unUTxO . utxosUtxo $ utxoSt
     (relevantUTxO, irrelevantUTxO) = Map.partitionWithKey (const . (`Set.member` txIns)) utxo
-    ledgerSt0' = LedgerState (utxoSt {utxosUtxo = UTxO relevantUTxO}) delegationSt
-    pp_ = ledgerEnv ^. ledgerPpL
-    stAnnTxs =
-      map
-        (mkStAnnTx (epochInfo testGlobals) (systemStart testGlobals) pp_ (UTxO relevantUTxO))
-        txs
+    restrictedSt0 = LedgerState (utxoSt {utxosUtxo = UTxO relevantUTxO}) delegationSt
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
 poolTraceFromBlock ::
