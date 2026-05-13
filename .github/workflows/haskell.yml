@@ -39,6 +39,15 @@ defaults:
   run:
     shell: bash
 
+env:
+  # Modify this value to "invalidate" the cabal cache.
+  CABAL_CACHE_VERSION: "2024-09-23"
+
+  # current ref from: 27.02.2022
+  SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+
+  SECP_CACHE_VERSION: "2022-12-30"
+
 jobs:
   build:
     strategy:
@@ -48,15 +57,6 @@ jobs:
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
-
-    env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-09-23"
-
-      # current ref from: 27.02.2022
-      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
-
-      SECP_CACHE_VERSION: "2022-12-30"
 
     steps:
     - uses: actions/checkout@v6
@@ -228,11 +228,6 @@ jobs:
 
     name: ${{ matrix.package }}-${{ matrix.ghc }}-${{ matrix.os }}
 
-    env:
-      # current ref from: 27.02.2022
-      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
-      SECP_CACHE_VERSION: "2022-12-30"
-
     steps:
     - uses: actions/checkout@v6
 
@@ -337,9 +332,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # current ref from: 27.02.2022
-      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
-      SECP_CACHE_VERSION: "2022-12-30"
       ghc-version: "9.6.7"
       os: ubuntu-latest
 
