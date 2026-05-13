@@ -75,7 +75,7 @@ module Cardano.Ledger.Shelley.TxCert (
 ) where
 
 import Cardano.Base.Proxy (asProxy)
-import Cardano.Ledger.BaseTypes (invalidKey, kindObject)
+import Cardano.Ledger.BaseTypes (invalidKey, kindObjectValue)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   DecCBORGroup (..),
@@ -300,7 +300,8 @@ instance NFData GenesisDelegCert where
 
 instance ToJSON GenesisDelegCert where
   toJSON (GenesisDelegCert genKeyHash genDelegKeyHash hashVrf) =
-    kindObject "GenesisDelegCert" $
+    kindObjectValue
+      "GenesisDelegCert"
       [ "genKeyHash" .= toJSON genKeyHash
       , "genDelegKeyHash" .= toJSON genDelegKeyHash
       , "hashVrf" .= toJSON hashVrf
@@ -359,9 +360,9 @@ instance EncCBOR MIRTarget where
 instance ToJSON MIRTarget where
   toJSON = \case
     StakeAddressesMIR mirAddresses ->
-      kindObject "StakeAddressesMIR" ["addresses" .= toJSON mirAddresses]
+      kindObjectValue "StakeAddressesMIR" ["addresses" .= toJSON mirAddresses]
     SendToOppositePotMIR c ->
-      kindObject "SendToOppositePotMIR" ["coin" .= toJSON c]
+      kindObjectValue "SendToOppositePotMIR" ["coin" .= toJSON c]
 
 -- | Move instantaneous rewards certificate
 data MIRCert = MIRCert
@@ -382,7 +383,8 @@ instance EncCBOR MIRCert where
 
 instance ToJSON MIRCert where
   toJSON MIRCert {mirPot, mirRewards} =
-    kindObject "MIRCert" $
+    kindObjectValue
+      "MIRCert"
       [ "pot" .= toJSON mirPot
       , "rewards" .= toJSON mirRewards
       ]
@@ -525,10 +527,11 @@ data ShelleyDelegCert
 
 instance ToJSON ShelleyDelegCert where
   toJSON = \case
-    ShelleyRegCert cred -> kindObject "RegCert" ["credential" .= toJSON cred]
-    ShelleyUnRegCert cred -> kindObject "UnRegCert" ["credential" .= toJSON cred]
+    ShelleyRegCert cred -> kindObjectValue "RegCert" ["credential" .= toJSON cred]
+    ShelleyUnRegCert cred -> kindObjectValue "UnRegCert" ["credential" .= toJSON cred]
     ShelleyDelegCert cred poolId ->
-      kindObject "DelegCert" $
+      kindObjectValue
+        "DelegCert"
         [ "credential" .= toJSON cred
         , "poolId" .= toJSON poolId
         ]

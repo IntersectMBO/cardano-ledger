@@ -53,7 +53,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer,
   StrictMaybe (..),
   isSJust,
-  kindObject,
+  kindObjectValue,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -301,7 +301,7 @@ instance ToJSON (PlutusPurpose AsIx era) => ToJSON (BabbageContextError era) whe
     ByronTxOutInContext txOutSource ->
       String $ "Byron UTxO being created or spent: " <> txOutSourceToText txOutSource
     RedeemerPointerPointsToNothing ptr ->
-      kindObject "RedeemerPointerPointsToNothing" ["ptr" .= toJSON ptr]
+      kindObjectValue "RedeemerPointerPointsToNothing" ["ptr" .= toJSON ptr]
     InlineDatumsNotSupported txOutSource ->
       String $ "Inline datums not supported, output source: " <> txOutSourceToText txOutSource
     ReferenceScriptsNotSupported txOutSource ->

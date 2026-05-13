@@ -52,6 +52,8 @@
 * Remove `NoThunks (ContextError era)` constraint from `EraPlutusContext` class
 * Remove `NoThunks` deriving instance for `CollectError`
 * Make `AlonzoContextError` constructors lazy
+* Add `FromJSON (AlonzoScript era)` instance
+* Add `EncCBOR` and `ToCBOR` instances for `PlutusScript era`
 
 ### `cddl`
 

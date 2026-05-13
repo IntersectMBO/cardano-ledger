@@ -33,6 +33,10 @@ module Cardano.Ledger.Dijkstra.Scripts (
   upgradeTimelock,
   AccountBalanceInterval (..),
   AccountBalanceIntervals (..),
+
+  -- ** JSON utilities
+  dijkstraBasedEraNativeScriptToJSON,
+  dijkstraBasedEraNativeScriptJSONParser,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts
@@ -85,17 +89,30 @@ import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus (Language (..), Plutus, SLanguage (..), plutusSLanguage)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (TxIn)
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData (..), rwhnf)
-import Data.Aeson (KeyValue (..), ToJSON (..))
+import Data.Aeson (FromJSON (parseJSON), KeyValue (..), ToJSON (toJSON), (.:))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import qualified Data.Map.Strict as Map
-import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
+import Data.MemPack (
+  MemPack,
+  packM,
+  packTagM,
+  packedByteCount,
+  packedTagByteCount,
+  unknownTagM,
+  unpackM,
+  unpackTagM,
+ )
 import Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet
+import Data.Proxy (Proxy (Proxy))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
 import qualified Data.Sequence.Strict as SSeq
 import Data.Set as Set (Set, member)
-import Data.Typeable (Typeable)
+import Data.Typeable (Typeable, typeRep)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -195,7 +212,7 @@ instance
     DijkstraProposing n -> kindObjectWithValue "DijkstraProposing" n
     DijkstraGuarding n -> kindObjectWithValue "DijkstraGuarding" n
     where
-      kindObjectWithValue name n = kindObject name ["value" .= n]
+      kindObjectWithValue name n = kindObjectValue name ["value" .= n]
 
 deriving instance (EraTxCert era, EraPParams era) => Eq (DijkstraPlutusPurpose AsItem era)
 
@@ -301,6 +318,55 @@ instance Era era => MemPack (DijkstraNativeScript era) where
   packedByteCount (MkDijkstraNativeScript mb) = byteCountMemoBytes mb
   packM (MkDijkstraNativeScript mb) = packMemoBytesM mb
   unpackM = MkDijkstraNativeScript <$> unpackMemoBytesM (eraProtVerLow @era)
+
+instance
+  ( DijkstraEraScript era
+  , NativeScript era ~ DijkstraNativeScript era
+  ) =>
+  ToJSON (DijkstraNativeScript era)
+  where
+  toJSON =
+    let go = dijkstraBasedEraNativeScriptToJSON go
+     in Aeson.Object . go
+
+dijkstraBasedEraNativeScriptToJSON ::
+  DijkstraEraScript era =>
+  (NativeScript era -> Aeson.Object) ->
+  NativeScript era ->
+  Aeson.Object
+dijkstraBasedEraNativeScriptToJSON childNativeScriptToObject script =
+  allegraBasedEraNativeScriptToJSON childNativeScriptToObject script
+    <> case script of
+      RequireGuard cred ->
+        kindObject "Guard" ["credential" .= cred]
+      _ -> mempty
+
+instance
+  ( DijkstraEraScript era
+  , NativeScript era ~ DijkstraNativeScript era
+  ) =>
+  FromJSON (DijkstraNativeScript era)
+  where
+  parseJSON = dijkstraBasedEraNativeScriptJSONParser
+
+dijkstraBasedEraNativeScriptJSONParser ::
+  forall era.
+  DijkstraEraScript era =>
+  Aeson.Value ->
+  Parser (NativeScript era)
+dijkstraBasedEraNativeScriptJSONParser value =
+  allegraBasedEraNativeScriptJSONParser value
+    <|> Aeson.withObject
+      typeName
+      ( \o -> do
+          kind <- o .: "kind" :: Parser String
+          case (kind :: String) of
+            "Guard" -> mkRequireGuard @era <$> o .: "credential"
+            _ -> fail $ "Unknown " <> typeName <> " kind: " <> kind
+      )
+      value
+  where
+    typeName = show $ typeRep (Proxy @(NativeScript era))
 
 instance EraScript DijkstraEra where
   type Script DijkstraEra = AlonzoScript DijkstraEra
