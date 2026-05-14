@@ -64,7 +64,9 @@ gTwiddleTList v a = TList <$> twiddleL v (from @a @p a)
 --
 --   For any value `x :: a`, where `a` derives `Twiddle`, and for any version
 --   of the decoder, the following property must hold:
---   >>> fmap ((== x) . encodingToTerm version . encCBOR) (twiddle x)
+--   prop> \x version -> fmap (== encodingToTerm version (encCBOR x)) (twiddle version (x :: Double))
+--
+--   Note: this property doesn't hold for some types, hence the type restriction
 class Twiddle a where
   -- | Given a value of type `a`, generates a CBOR `Term` that can contain
   -- slight variations without changing the semantics. After encoding and

@@ -146,7 +146,7 @@
 
             # and from nixpkgs or other inputs
             nativeBuildInputs = with nixpkgs;
-              [
+              with (import nix/doctest.nix { inherit config nixpkgs; }); [
                 (python3.withPackages (ps:
                   with ps; [
                     sphinx
@@ -158,18 +158,9 @@
                 haskellPackages.implicit-hie
                 shellcheck
                 act
+                doctest
                 inputs.cardano-ledger-release-tool.packages.${system}.default
-              ] ++ (let
-                doctest = haskell-nix.hackage-package {
-                  name = "doctest";
-                  version = "0.24.3";
-                  configureArgs = "-f cabal-doctest";
-                  inherit (config) compiler-nix-name;
-                };
-              in [
-                (doctest.getComponent "exe:cabal-doctest")
-                (doctest.getComponent "exe:doctest")
-              ]);
+              ];
             # disable Hoogle until someone request it
             withHoogle = false;
             # Skip cross compilers for the shell

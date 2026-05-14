@@ -67,6 +67,7 @@ class
   --
   -- Designed to be used with @TypeApplications@:
   --
+  -- >>> :set -XTypeApplications
   -- >>> eraName @ByronEra
   -- "Byron"
   eraName :: String
