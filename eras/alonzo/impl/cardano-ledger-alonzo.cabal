@@ -225,6 +225,7 @@ library testlib
     mtl,
     plutus-ledger-api,
     serialise,
+    small-steps,
     text,
     time,
     tree-diff,

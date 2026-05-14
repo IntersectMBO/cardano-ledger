@@ -32,7 +32,8 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided)
-import Control.State.Transition (PredicateFailure)
+import Control.State.Transition (Event, PredicateFailure)
+import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import PlutusLedgerApi.Common (EvaluationError (..), ExBudget, ExCPU, ExMemory, SatInt)
 import Test.Cardano.Ledger.Mary.TreeDiff
@@ -206,9 +207,9 @@ instance
   ) =>
   ToExpr (AlonzoUtxowPredFailure era)
 
-instance ToExpr (Shelley.Event (EraRule "UTXO" era)) => ToExpr (AlonzoUtxowEvent era)
+instance ToExpr (Event (EraRule "UTXO" era)) => ToExpr (AlonzoUtxowEvent era)
 
-instance (ToExpr (TxOut era), ToExpr (Shelley.Event (EraRule "UTXOS" era))) => ToExpr (AlonzoUtxoEvent era)
+instance (ToExpr (TxOut era), ToExpr (Event (EraRule "UTXOS" era))) => ToExpr (AlonzoUtxoEvent era)
 
 instance
   ( ToExpr (EraRuleEvent "PPUP" era)
@@ -234,7 +235,7 @@ instance
   ToExpr (AlonzoBbodyPredFailure era)
 
 instance
-  ToExpr (Shelley.Event (EraRule "LEDGERS" era)) =>
+  ToExpr (Event (EraRule "LEDGERS" era)) =>
   ToExpr (AlonzoBbodyEvent era)
 
 instance ToExpr EvaluationError where

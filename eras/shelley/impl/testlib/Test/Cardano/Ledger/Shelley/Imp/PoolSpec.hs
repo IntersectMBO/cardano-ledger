@@ -17,6 +17,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.State
+import Control.State.Transition (Event)
 import Data.Coerce
 import qualified Data.Map.Strict as Map
 import Data.Proxy

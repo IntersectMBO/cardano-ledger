@@ -23,6 +23,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Val (zero, (<->))
 import Control.Monad (forM)
+import Control.State.Transition (Event)
 import Data.Default (def)
 import Data.Foldable as F (foldl', traverse_)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -43,9 +44,9 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ( ConwayEraImp era
-  , Shelley.Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Shelley.Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , Shelley.Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "ENACT" $ do
@@ -189,9 +190,9 @@ treasuryWithdrawalsSpec =
 hardForkInitiationSpec ::
   forall era.
   ( ConwayEraImp era
-  , Shelley.Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Shelley.Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , Shelley.Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 hardForkInitiationSpec =
@@ -235,9 +236,9 @@ hardForkInitiationSpec =
 hardForkInitiationNoDRepsSpec ::
   forall era.
   ( ConwayEraImp era
-  , Shelley.Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Shelley.Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , Shelley.Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 hardForkInitiationNoDRepsSpec =
@@ -511,9 +512,9 @@ actionPrioritySpec =
 expectHardForkEvents ::
   forall era.
   ( ConwayEraImp era
-  , Shelley.Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Shelley.Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , Shelley.Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   ) =>
   [SomeSTSEvent era] -> [SomeSTSEvent era] -> ImpTestM era ()
 expectHardForkEvents actual expected =

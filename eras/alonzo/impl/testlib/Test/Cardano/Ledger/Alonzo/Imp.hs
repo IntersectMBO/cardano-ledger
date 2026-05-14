@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Alonzo.Imp (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxCert)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Control.State.Transition (Event)
 import qualified Test.Cardano.Ledger.Alonzo.Imp.BbodySpec as BBODY
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec as UTXO
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as UTXOS
@@ -23,7 +24,7 @@ import qualified Test.Cardano.Ledger.Shelley.Imp as Shelley
 
 spec ::
   ( AlonzoEraImp era
-  , Shelley.Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
+  , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   ) =>
   proxy era ->
   Spec

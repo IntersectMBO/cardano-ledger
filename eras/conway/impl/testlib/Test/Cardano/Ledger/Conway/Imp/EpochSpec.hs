@@ -26,6 +26,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Val
+import Control.State.Transition (Event)
 import Data.Default (Default (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -42,8 +43,8 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ( ConwayEraImp era
-  , Shelley.Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Shelley.Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "EPOCH" $ do
@@ -488,8 +489,8 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
 eventsSpec ::
   forall era.
   ( ConwayEraImp era
-  , Shelley.Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Shelley.Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 eventsSpec = describe "Events" $ do

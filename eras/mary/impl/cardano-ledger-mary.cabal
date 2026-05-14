@@ -186,6 +186,7 @@ library testlib
     cardano-strict-containers,
     containers,
     microlens,
+    small-steps,
 
 test-suite tests
   type: exitcode-stdio-1.0
