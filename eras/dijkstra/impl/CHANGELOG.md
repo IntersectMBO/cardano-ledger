@@ -69,6 +69,10 @@
 
 ### testlib
 
+* Add to `Test.Cardano.Ledger.Dijkstra.Examples`:
+  - `exampleDijkstraOnwardsEraPParams`
+  - `exampleDijkstraOnwardsEraPParamsUpdate`
+* Move `exampleDijkstraGenesis` from `Test.Cardano.Ledger.Dijkstra.ImpTest` to `Test.Cardano.Ledger.Dijkstra.Examples` (still re-exported from `ImpTest`).
 * Make `Test.Cardano.Ledger.Dijkstra.Imp.spec` accept `Proxy era`
 * Add `ToExpr` instance for `DijkstraBlockBody`
 * Add `DecCBOR` instance for `DijkstraBlockBodyRaw`

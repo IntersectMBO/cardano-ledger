@@ -23,7 +23,11 @@ import Test.Cardano.Ledger.BlockHeader (TestBlockHeader (..))
 import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
-import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraTx)
+import Test.Cardano.Ledger.Dijkstra.Examples (
+  exampleDijkstraOnwardsEraPParams,
+  exampleDijkstraOnwardsEraPParamsUpdate,
+  exampleDijkstraTx,
+ )
 import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
@@ -37,6 +41,10 @@ instance EraTest DijkstraEra where
   mkEraFullPath = getDataFileName
 
   exampleTx = exampleDijkstraTx
+
+  examplePParams = exampleDijkstraOnwardsEraPParams
+
+  examplePParamsUpdate = exampleDijkstraOnwardsEraPParamsUpdate
 
 class
   ( ConwayEraTest era

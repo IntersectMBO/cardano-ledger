@@ -15,6 +15,10 @@ import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 import Test.Cardano.Ledger.Mary.Examples (exampleMaryTx)
 import Test.Cardano.Ledger.Mary.TreeDiff ()
+import Test.Cardano.Ledger.Shelley.Examples (
+  exampleShelleyPParams,
+  exampleShelleyPParamsUpdate,
+ )
 
 class
   ( AllegraEraTest era
@@ -32,6 +36,10 @@ instance EraTest MaryEra where
   mkEraFullPath = getDataFileName
 
   exampleTx = exampleMaryTx
+
+  examplePParams = exampleShelleyPParams
+
+  examplePParamsUpdate = exampleShelleyPParamsUpdate
 
 instance ShelleyEraTest MaryEra
 

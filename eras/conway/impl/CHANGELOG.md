@@ -46,6 +46,10 @@
 
 ### `testlib`
 
+* Add to `Test.Cardano.Ledger.Conway.Examples`:
+  - `exampleConwayOnwardsEraPParams`
+  - `exampleConwayOnwardsEraPParamsUpdate`
+* Change `exampleProposalProcedureParameterChange` to use `exampleConwayOnwardsEraPParamsUpdate`.
 * Export `conwayEraSpecificSpec`
 * Make `Test.Cardano.Ledger.Conway.Imp.spec` accept `Proxy era`
 * In `Test.Cardano.Ledger.Conway.Examples`:

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,12 +14,15 @@ module Test.Cardano.Ledger.Babbage.Examples (
   exampleBabbageTx,
   exampleBabbageBasedTx,
   exampleBabbageBasedTopTx,
+  exampleBabbageOnwardsEraPParams,
+  exampleBabbageOnwardsEraPParamsUpdate,
+  exampleBabbagePParamsUpdate,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Babbage (ApplyTxError (BabbageApplyTxError), BabbageEra)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..))
@@ -33,7 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraStake)
+import Cardano.Ledger.State (EraStake, EraUTxO)
 import Data.Default (Default)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -46,12 +50,14 @@ import Test.Cardano.Ledger.Alonzo.Examples (
   addAlonzoToConwayExampleReqSigners,
   exampleAlonzoBasedTopTx,
   exampleAlonzoBasedTx,
+  exampleAlonzoOnwardsEraPParams,
+  exampleAlonzoOnwardsEraPParamsUpdate,
   exampleDatum,
   mkAlonzoBasedLedgerExamples,
  )
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
-import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus)
+import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus, testingCostModels)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   addShelleyBasedTopTxExampleFee,
@@ -91,11 +97,11 @@ exampleBabbageTx =
 
 exampleBabbageNewEpochState ::
   ( BabbageEraPParams era
-  , Value era ~ MaryValue
-  , EraTxOut era
   , EraGov era
   , EraStake era
   , EraCertState era
+  , EraUTxO era
+  , Value era ~ MaryValue
   , Default (StashedAVVMAddresses era)
   ) =>
   NewEpochState era
@@ -197,3 +203,23 @@ exampleCollateralOutput =
   mkBasicTxOut
     (mkAddr examplePayKey exampleStakeKey)
     (MaryValue (Coin 8675309) mempty)
+
+exampleBabbageOnwardsEraPParams :: BabbageEraPParams era => PParams era
+exampleBabbageOnwardsEraPParams =
+  exampleAlonzoOnwardsEraPParams
+    & ppCostModelsL .~ testingCostModels [PlutusV1, PlutusV2]
+    & ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 4_310)
+
+exampleBabbageOnwardsEraPParamsUpdate :: BabbageEraPParams era => PParamsUpdate era
+exampleBabbageOnwardsEraPParamsUpdate =
+  exampleAlonzoOnwardsEraPParamsUpdate
+    & ppuCostModelsL .~ SJust (testingCostModels [PlutusV1, PlutusV2])
+    & ppuCoinsPerUTxOByteL .~ SJust (CoinPerByte (CompactCoin 4_310))
+
+exampleBabbagePParamsUpdate ::
+  forall era.
+  (BabbageEraPParams era, AtMostEra "Babbage" era) =>
+  PParamsUpdate era
+exampleBabbagePParamsUpdate =
+  exampleBabbageOnwardsEraPParamsUpdate
+    & ppuProtocolVersionL .~ SJust (ProtVer (eraProtVerHigh @era) 0)

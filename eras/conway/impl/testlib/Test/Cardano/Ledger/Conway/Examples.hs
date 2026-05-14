@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -15,6 +16,8 @@ module Test.Cardano.Ledger.Conway.Examples (
   exampleConwayBasedTx,
   exampleConwayBasedTopTx,
   exampleAnchor,
+  exampleConwayOnwardsEraPParams,
+  exampleConwayOnwardsEraPParamsUpdate,
   exampleProposalProcedure,
   exampleProposalProcedureHardForkInitiation,
   exampleProposalProcedureNewConstitution,
@@ -43,11 +46,13 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedure (..),
   VotingProcedures (..),
  )
+import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL, ppuMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Plutus.CostModels (mkCostModels)
 import Cardano.Ledger.Plutus.Data (
   Data (..),
   Datum (..),
@@ -76,13 +81,15 @@ import Test.Cardano.Ledger.Babbage.Examples (
   exampleBabbageBasedTopTx,
   exampleBabbageBasedTx,
   exampleBabbageNewEpochState,
+  exampleBabbageOnwardsEraPParams,
+  exampleBabbageOnwardsEraPParamsUpdate,
  )
 import Test.Cardano.Ledger.Conway.Genesis (expectedConwayGenesis)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
-import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus)
+import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus, testingCostModels, zeroTestingCostModelV3)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   addShelleyBasedTopTxExampleFee,
@@ -263,7 +270,7 @@ exampleProposalProcedure =
     , pProcAnchor = exampleAnchor
     }
 
-exampleProposalProcedureParameterChange :: EraPParams era => ProposalProcedure era
+exampleProposalProcedureParameterChange :: ConwayEraPParams era => ProposalProcedure era
 exampleProposalProcedureParameterChange =
   ProposalProcedure
     { pProcDeposit = Coin 1000000000
@@ -271,7 +278,7 @@ exampleProposalProcedureParameterChange =
     , pProcGovAction =
         ParameterChange
           (SJust (GovPurposeId exampleGovActionId))
-          (emptyPParamsUpdate & ppuMaxBBSizeL .~ SJust 65536)
+          (exampleConwayOnwardsEraPParamsUpdate & ppuMaxBBSizeL .~ SJust 65536)
           (SJust (mkScriptHash 1))
     , pProcAnchor = exampleAnchor
     }
@@ -337,3 +344,80 @@ exampleProposalProcedureNewConstitution =
             }
     , pProcAnchor = exampleAnchor
     }
+
+exampleConwayOnwardsEraPParams :: forall era. ConwayEraPParams era => PParams era
+exampleConwayOnwardsEraPParams =
+  exampleBabbageOnwardsEraPParams
+    & ppCostModelsL
+      .~ ( testingCostModels [PlutusV1, PlutusV2]
+             <> mkCostModels (Map.singleton PlutusV3 zeroTestingCostModelV3)
+         )
+    -- conway
+    & ppPoolVotingThresholdsL
+      .~ PoolVotingThresholds
+        { pvtMotionNoConfidence = 51 %! 100
+        , pvtCommitteeNormal = 51 %! 100
+        , pvtCommitteeNoConfidence = 51 %! 100
+        , pvtHardForkInitiation = 51 %! 100
+        , pvtPPSecurityGroup = 51 %! 100
+        }
+    & ppDRepVotingThresholdsL
+      .~ DRepVotingThresholds
+        { dvtMotionNoConfidence = 67 %! 100
+        , dvtCommitteeNormal = 67 %! 100
+        , dvtCommitteeNoConfidence = 60 %! 100
+        , dvtUpdateToConstitution = 75 %! 100
+        , dvtHardForkInitiation = 60 %! 100
+        , dvtPPNetworkGroup = 67 %! 100
+        , dvtPPEconomicGroup = 67 %! 100
+        , dvtPPTechnicalGroup = 67 %! 100
+        , dvtPPGovGroup = 75 %! 100
+        , dvtTreasuryWithdrawal = 67 %! 100
+        }
+    & ppCommitteeMinSizeL .~ 7
+    & ppCommitteeMaxTermLengthL .~ EpochInterval 73
+    & ppGovActionLifetimeL .~ EpochInterval 6
+    & ppGovActionDepositL .~ Coin 100_000_000_000
+    & ppDRepDepositL .~ Coin 500_000_000
+    & ppDRepActivityL .~ EpochInterval 20
+    & ppMinFeeRefScriptCostPerByteL .~ 15 %! 1
+
+exampleConwayOnwardsEraPParamsUpdate :: forall era. ConwayEraPParams era => PParamsUpdate era
+exampleConwayOnwardsEraPParamsUpdate =
+  exampleBabbageOnwardsEraPParamsUpdate
+    & ppuCostModelsL
+      .~ SJust
+        ( testingCostModels [PlutusV1, PlutusV2]
+            <> mkCostModels (Map.singleton PlutusV3 zeroTestingCostModelV3)
+        )
+    -- conway
+    & ppuPoolVotingThresholdsL
+      .~ SJust
+        PoolVotingThresholds
+          { pvtMotionNoConfidence = 51 %! 100
+          , pvtCommitteeNormal = 51 %! 100
+          , pvtCommitteeNoConfidence = 51 %! 100
+          , pvtHardForkInitiation = 51 %! 100
+          , pvtPPSecurityGroup = 51 %! 100
+          }
+    & ppuDRepVotingThresholdsL
+      .~ SJust
+        DRepVotingThresholds
+          { dvtMotionNoConfidence = 67 %! 100
+          , dvtCommitteeNormal = 67 %! 100
+          , dvtCommitteeNoConfidence = 60 %! 100
+          , dvtUpdateToConstitution = 75 %! 100
+          , dvtHardForkInitiation = 60 %! 100
+          , dvtPPNetworkGroup = 67 %! 100
+          , dvtPPEconomicGroup = 67 %! 100
+          , dvtPPTechnicalGroup = 67 %! 100
+          , dvtPPGovGroup = 75 %! 100
+          , dvtTreasuryWithdrawal = 67 %! 100
+          }
+    & ppuCommitteeMinSizeL .~ SJust 7
+    & ppuCommitteeMaxTermLengthL .~ SJust (EpochInterval 73)
+    & ppuGovActionLifetimeL .~ SJust (EpochInterval 6)
+    & ppuGovActionDepositL .~ SJust (Coin 100_000_000_000)
+    & ppuDRepDepositL .~ SJust (Coin 500_000_000)
+    & ppuDRepActivityL .~ SJust (EpochInterval 20)
+    & ppuMinFeeRefScriptCostPerByteL .~ SJust (15 %! 1)

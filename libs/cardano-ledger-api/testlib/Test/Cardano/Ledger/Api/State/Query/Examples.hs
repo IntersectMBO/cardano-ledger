@@ -43,17 +43,7 @@ import Cardano.Ledger.Api.Governance (
   RatifyState (..),
   Vote (..),
  )
-import Cardano.Ledger.Api.PParams (
-  PParams,
-  ppEMaxL,
-  ppKeyDepositL,
-  ppMaxBBSizeL,
-  ppMaxBHSizeL,
-  ppMaxTxSizeL,
-  ppMinPoolCostL,
-  ppNOptL,
-  ppPoolDepositL,
- )
+import Cardano.Ledger.Api.PParams (PParams)
 import Cardano.Ledger.Api.State.Query (
   CommitteeMemberState (..),
   CommitteeMembersState (..),
@@ -67,7 +57,6 @@ import Cardano.Ledger.Api.State.Query (
  )
 import Cardano.Ledger.BaseTypes (
   AnchorData,
-  EpochInterval (..),
   EpochNo (..),
   Port (..),
   StrictMaybe (..),
@@ -75,7 +64,7 @@ import Cardano.Ledger.BaseTypes (
   textToDns,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
-import Cardano.Ledger.Core (EraPParams)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
@@ -100,7 +89,6 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Examples (
   exampleAnchor,
   exampleProposalProcedure,
@@ -113,6 +101,7 @@ import Test.Cardano.Ledger.Conway.Examples (
  )
 import Test.Cardano.Ledger.Core.Rational (unsafeBoundRational)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
+import Test.Cardano.Ledger.Era (EraTest (..))
 import Test.Cardano.Ledger.Shelley.Examples (
   examplePoolDistr,
   exampleStakePoolParams,
@@ -140,20 +129,8 @@ queryCurrentEpochNoExamples =
   , EpochNo maxBound
   ]
 
-populatedPParams :: EraPParams era => PParams era
-populatedPParams =
-  def
-    & ppMaxBBSizeL .~ 90112
-    & ppMaxTxSizeL .~ 16384
-    & ppMaxBHSizeL .~ 1100
-    & ppKeyDepositL .~ Coin 2_000_000
-    & ppPoolDepositL .~ Coin 500_000_000
-    & ppMinPoolCostL .~ Coin 340_000_000
-    & ppEMaxL .~ EpochInterval 18
-    & ppNOptL .~ 500
-
-queryCurrentPParamsExamples :: EraPParams era => [PParams era]
-queryCurrentPParamsExamples = [def, populatedPParams]
+queryCurrentPParamsExamples :: EraTest era => [PParams era]
+queryCurrentPParamsExamples = [def, examplePParams]
 
 queryConstitutionHashExamples :: [SafeHash AnchorData]
 queryConstitutionHashExamples =
@@ -399,7 +376,7 @@ queryDRepStateExamples =
   ]
 
 queryRatifyStateExamples ::
-  EraPParams era =>
+  EraTest era =>
   [RatifyState era]
 queryRatifyStateExamples =
   [ def
@@ -418,7 +395,7 @@ queryRatifyStateExamples =
                   { constitutionAnchor = exampleAnchor
                   , constitutionGuardrailsScriptHash = SJust (mkScriptHash 1)
                   }
-            , ensCurPParams = def
+            , ensCurPParams = examplePParams
             , ensPrevPParams = def
             , ensTreasury = Coin 1_000_000_000
             , ensWithdrawals =
@@ -517,11 +494,11 @@ queryPoolStateExamples =
       }
   ]
 
-queryFuturePParamsExamples :: EraPParams era => [Maybe (PParams era)]
-queryFuturePParamsExamples = [Nothing, Just def, Just populatedPParams]
+queryFuturePParamsExamples :: EraTest era => [Maybe (PParams era)]
+queryFuturePParamsExamples = [Nothing, Just def, Just examplePParams]
 
 queryGovStateExamples ::
-  EraPParams era =>
+  EraTest era =>
   [ConwayGovState era]
 queryGovStateExamples =
   [ def
@@ -543,14 +520,14 @@ queryGovStateExamples =
             { constitutionAnchor = exampleAnchor
             , constitutionGuardrailsScriptHash = SJust (mkScriptHash 1)
             }
-      , cgsCurPParams = def
+      , cgsCurPParams = examplePParams
       , cgsPrevPParams = def
-      , cgsFuturePParams = DefinitePParamsUpdate def
+      , cgsFuturePParams = DefinitePParamsUpdate examplePParams
       , cgsDRepPulsingState = DRComplete def def
       }
   ]
 
-queryProposalsExamples :: EraPParams era => [Seq (GovActionState era)]
+queryProposalsExamples :: ConwayEraPParams era => [Seq (GovActionState era)]
 queryProposalsExamples =
   [ Seq.empty
   , Seq.fromList

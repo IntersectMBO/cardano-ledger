@@ -44,6 +44,11 @@
 
 ### `testlib`
 
+* Add to `Test.Cardano.Ledger.Alonzo.Examples`:
+  - `exampleAlonzoPParams`
+  - `exampleAlonzoPParamsUpdate`
+  - `exampleAlonzoOnwardsEraPParams`
+  - `exampleAlonzoOnwardsEraPParamsUpdate`
 * Add `proxy era` argument to `alonzoEraSpecificSpec`
 * Make `Test.Cardano.Ledger.Alonzo.Imp.spec` accept `Proxy era`
 * Add `genDatumPresent`

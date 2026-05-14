@@ -35,7 +35,11 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
-import Test.Cardano.Ledger.Shelley.Examples (exampleShelleyTx)
+import Test.Cardano.Ledger.Shelley.Examples (
+  exampleShelleyPParams,
+  exampleShelleyPParamsUpdate,
+  exampleShelleyTx,
+ )
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 
 class
@@ -69,6 +73,10 @@ instance EraTest ShelleyEra where
   mkEraFullPath = getDataFileName
 
   exampleTx = exampleShelleyTx
+
+  examplePParams = exampleShelleyPParams
+
+  examplePParamsUpdate = exampleShelleyPParamsUpdate
 
 instance ShelleyEraTest ShelleyEra
 

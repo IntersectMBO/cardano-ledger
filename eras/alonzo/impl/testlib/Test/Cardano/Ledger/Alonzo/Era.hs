@@ -19,7 +19,11 @@ import Data.TreeDiff
 import Paths_cardano_ledger_alonzo (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
-import Test.Cardano.Ledger.Alonzo.Examples (exampleAlonzoTx)
+import Test.Cardano.Ledger.Alonzo.Examples (
+  exampleAlonzoPParams,
+  exampleAlonzoPParamsUpdate,
+  exampleAlonzoTx,
+ )
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Common (Arbitrary)
 import Test.Cardano.Ledger.Mary.Era
@@ -50,6 +54,10 @@ instance EraTest AlonzoEra where
   mkEraFullPath = getDataFileName
 
   exampleTx = exampleAlonzoTx
+
+  examplePParams = exampleAlonzoPParams
+
+  examplePParamsUpdate = exampleAlonzoPParamsUpdate
 
 instance ShelleyEraTest AlonzoEra
 

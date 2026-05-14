@@ -10,6 +10,12 @@
 * Add `queryAccountsDeposits` (`GetStakeDelegDeposits`).
 * Add `queryCurrentEpochNo` (`GetEpochNo`).
 
+### `testlib`
+
+* Change constraints on `queryCurrentPParamsExamples`, `queryFuturePParamsExamples`, `queryRatifyStateExamples`, `queryGovStateExamples` to `EraTest era`.
+* Tighten `queryProposalsExamples` constraint to `ConwayEraPParams era` (via `exampleProposalProcedureParameterChange`).
+* Populate `ensCurPParams`, `cgsCurPParams`, `cgsFuturePParams` with `examplePParams`.
+
 ## 1.13.0.0
 
 * Add `queryStakeSnapshots` and the types produced by it:

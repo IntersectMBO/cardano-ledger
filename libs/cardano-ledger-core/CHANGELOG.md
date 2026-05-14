@@ -37,6 +37,7 @@
 
 ### `testlib`
 
+* Add `examplePParams` and `examplePParamsUpdate` to `EraTest`.
 * Add `EraSpec` and `ledgerEraTestMain`
 * Add `toPackageGolden` and `itGolden`
 * Add `goldenForToJSON`, `itGoldenToJSON`, `aesonGoldenSpec` and `roundTripAesonProperty`
