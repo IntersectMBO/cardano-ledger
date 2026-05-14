@@ -1,0 +1,60 @@
+name: PR Comment
+description: Create or update a PR comment identified by a hidden marker
+
+inputs:
+  marker:
+    description: Hidden marker text for identifying the comment
+    required: true
+  body:
+    description: Markdown body of the comment
+    required: false
+    default: ''
+  body-path:
+    description: Path to a file containing the comment body
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/github-script@v7
+      env:
+        COMMENT_MARKER: ${{ inputs.marker }}
+        COMMENT_BODY: ${{ inputs.body }}
+        COMMENT_BODY_PATH: ${{ inputs.body-path }}
+      with:
+        script: |
+          const fs = require('fs');
+          const bodyPath = process.env.COMMENT_BODY_PATH;
+          const rawBody = bodyPath
+            ? fs.readFileSync(bodyPath, 'utf8')
+            : process.env.COMMENT_BODY;
+
+          if (!rawBody) return;
+
+          const marker = '<-- ${process.env.COMMENT_MARKER} -->';
+          const body = marker + '\n\n' + process.env.COMMENT_BODY;
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existing = comments.find(c => c.body.includes(marker));
+
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }
