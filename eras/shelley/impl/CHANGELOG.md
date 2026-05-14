@@ -2,6 +2,19 @@
 
 ## 1.19.0.0
 
+* Remove re-exports from `Rules.*` modules:
+  - `PredicateFailure`
+  - `Event`
+  - `Identity`
+  - `lift`
+  - `epochInfoRange`
+  - `PulsingRewUpdate`
+  - `startStep`
+  - `pulseStep`
+  - `completeStep`
+  - `calculatePoolDistr`
+  - `calculatePoolDistr'`
+  - `epochFromSlot`
 * Change `NoThunks` instance for `BlockTransitionError` to not check for thunks in its contents
 * Add `NFData` constraint to `BlockTransitionError` constructor.
 * Add `injectStakeCredentials`, `injectStakePools`, `resolveInjectionSource`, `injectInitialFundsAndStaking` to `Cardano.Ledger.Shelley.Transition`
