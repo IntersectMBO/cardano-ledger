@@ -27,7 +27,6 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   ShelleyLedgerPredFailure (..),
   ShelleyLedgerEvent (..),
   Event,
-  PredicateFailure,
   epochFromSlot,
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,

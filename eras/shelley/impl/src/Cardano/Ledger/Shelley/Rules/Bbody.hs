@@ -24,7 +24,6 @@ module Cardano.Ledger.Shelley.Rules.Bbody (
   BbodySignal (..),
   ShelleyBbodyPredFailure (..),
   ShelleyBbodyEvent (..),
-  PredicateFailure,
   State,
   validateBlockBodySize,
   validateBlockBodyHash,

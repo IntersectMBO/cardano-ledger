@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.Rules.Pool (
   ShelleyPOOL,
   PoolEvent (..),
   PoolEnv (..),
-  PredicateFailure,
   ShelleyPoolPredFailure (..),
   poolTransition,
 ) where

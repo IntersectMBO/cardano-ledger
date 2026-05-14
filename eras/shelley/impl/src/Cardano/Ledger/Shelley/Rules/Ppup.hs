@@ -18,7 +18,6 @@ module Cardano.Ledger.Shelley.Rules.Ppup (
   ShelleyPpupPredFailure (..),
   ShelleyGovState (..),
   PpupEvent (..),
-  PredicateFailure,
   VotingPeriod (..),
   votedFuturePParams,
 ) where

@@ -32,6 +32,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided)
+import Control.State.Transition (PredicateFailure)
 import qualified Data.TreeDiff.OMap as OMap
 import PlutusLedgerApi.Common (EvaluationError (..), ExBudget, ExCPU, ExMemory, SatInt)
 import Test.Cardano.Ledger.Mary.TreeDiff
@@ -178,7 +179,7 @@ instance
 instance
   ( ToExpr (Value era)
   , ToExpr (TxOut era)
-  , ToExpr (Shelley.PredicateFailure (EraRule "UTXOS" era))
+  , ToExpr (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   ToExpr (AlonzoUtxoPredFailure era)
 
@@ -200,7 +201,7 @@ instance
   ( Era era
   , ToExpr (PlutusPurpose AsIx era)
   , ToExpr (PlutusPurpose AsItem era)
-  , ToExpr (Shelley.PredicateFailure (EraRule "UTXO" era))
+  , ToExpr (PredicateFailure (EraRule "UTXO" era))
   , ToExpr (TxCert era)
   ) =>
   ToExpr (AlonzoUtxowPredFailure era)
@@ -229,7 +230,7 @@ instance
         ]
 
 instance
-  ToExpr (Shelley.PredicateFailure (EraRule "LEDGERS" era)) =>
+  ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
   ToExpr (AlonzoBbodyPredFailure era)
 
 instance

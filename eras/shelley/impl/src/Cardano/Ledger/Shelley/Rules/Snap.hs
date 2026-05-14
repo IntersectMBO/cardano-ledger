@@ -11,7 +11,6 @@
 
 module Cardano.Ledger.Shelley.Rules.Snap (
   ShelleySNAP,
-  PredicateFailure,
   SnapEvent (..),
   SnapEnv (..),
 ) where

@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.Rules.Ledgers (
   ShelleyLedgersEnv (..),
   ShelleyLedgersPredFailure (..),
   ShelleyLedgersEvent (..),
-  PredicateFailure,
 ) where
 
 import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, epochInfo, systemStart)

@@ -23,7 +23,7 @@ import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Control.State.Transition (PredicateFailure)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Alonzo.TreeDiff
 
@@ -81,7 +81,7 @@ instance
 -- Rules/Utxow
 instance
   ( Era era
-  , ToExpr (Shelley.PredicateFailure (EraRule "UTXO" era))
+  , ToExpr (PredicateFailure (EraRule "UTXO" era))
   , ToExpr (PlutusPurpose AsIx era)
   , ToExpr (PlutusPurpose AsItem era)
   , ToExpr (TxCert era)

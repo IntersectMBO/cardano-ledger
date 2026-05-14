@@ -20,7 +20,6 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
   ShelleyUTXOW,
   ShelleyUtxowPredFailure (..),
   ShelleyUtxowEvent (..),
-  PredicateFailure,
   transitionRulesUTXOW,
 
   -- * Individual validation steps

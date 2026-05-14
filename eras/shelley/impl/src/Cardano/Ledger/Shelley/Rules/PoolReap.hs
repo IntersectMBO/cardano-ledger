@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   prCertStateL,
   prChainAccountStateL,
   prUTxOStateL,
-  PredicateFailure,
 ) where
 
 import Cardano.Ledger.BaseTypes
