@@ -6,7 +6,12 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Babbage.Imp (spec, babbageEraSpecificSpec) where
+module Test.Cardano.Ledger.Babbage.Imp (
+  spec,
+  Alonzo.shelleyToBabbageSpec,
+  Alonzo.alonzoToConwaySpec,
+  babbageOnlySpec,
+) where
 
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.State
@@ -33,13 +38,13 @@ spec era = do
     UTXOW.spec
     UTXOS.spec
 
-babbageEraSpecificSpec ::
+babbageOnlySpec ::
   ( BabbageEraImp era
   , ShelleyEraAccounts era
   , Shelley.Event (EraRule "NEWEPOCH" era) ~ Shelley.ShelleyNewEpochEvent era
   ) =>
   proxy era ->
   Spec
-babbageEraSpecificSpec era = do
+babbageOnlySpec era = do
   describe "BabbageEra Specific" $ withImpInitEachEraVersion era $ do
     POOL.babbageEraSpecificSpec

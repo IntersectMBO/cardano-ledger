@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Allegra.Imp (spec) where
+module Test.Cardano.Ledger.Allegra.Imp (spec, Shelley.shelleyToBabbageSpec) where
 
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Shelley.Rules as Shelley

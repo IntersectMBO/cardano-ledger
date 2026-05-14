@@ -7,7 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec, alonzoEraSpecificSpec) where
+module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec, alonzoToConwaySpec) where
 
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -229,11 +229,11 @@ spec = describe "Invalid transactions" $ do
             it "Spending" $
               testPurpose (mkSpendingPurpose $ AsIx 99)
 
-alonzoEraSpecificSpec ::
+alonzoToConwaySpec ::
   forall era.
   (AlonzoEraImp era, ShelleyEraTxCert era) =>
   SpecWith (ImpInit (LedgerSpec era))
-alonzoEraSpecificSpec = describe "Invalid transactions" $ do
+alonzoToConwaySpec = describe "Invalid transactions" $ do
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
