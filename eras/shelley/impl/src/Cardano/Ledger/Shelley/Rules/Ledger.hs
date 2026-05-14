@@ -26,7 +26,6 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   ledgerAccountL,
   ShelleyLedgerPredFailure (..),
   ShelleyLedgerEvent (..),
-  epochFromSlot,
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
   testIncompleteAndMissingWithdrawals,

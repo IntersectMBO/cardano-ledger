@@ -37,6 +37,7 @@ import Cardano.Ledger.Conway.Governance (GovActionId)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.API.Types
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Slot (epochFromSlot)
 import Constrained.API
 import Control.DeepSeq (NFData)
 import Control.Monad.Reader (runReader)
@@ -150,7 +151,7 @@ utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, uePParams, ueCertState}
                     (lit ueCertState)
           ]
   where
-    curEpoch = runReader (Shelley.epochFromSlot ueSlot) testGlobals
+    curEpoch = runReader (epochFromSlot ueSlot) testGlobals
 
 data UtxoExecContext era = UtxoExecContext
   { uecTx :: !(Tx TopTx era)
