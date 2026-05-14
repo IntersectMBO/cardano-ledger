@@ -17,13 +17,12 @@ import Test.Cardano.Ledger.Alonzo.ImpTest ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import Test.Cardano.Ledger.Era
-import qualified Test.Cardano.Ledger.Shelley.Imp as Shelley
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 instance EraSpec AlonzoEra where
   eraImpSpec era = do
-    Shelley.shelleyEraSpecificSpec era
-    Imp.alonzoEraSpecificSpec era
+    Imp.shelleyToBabbageSpec era
+    Imp.alonzoToConwaySpec era
     Imp.spec era
 
 main :: IO ()

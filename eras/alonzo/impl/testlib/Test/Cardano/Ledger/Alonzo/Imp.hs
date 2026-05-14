@@ -3,7 +3,11 @@
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Alonzo.Imp where
+module Test.Cardano.Ledger.Alonzo.Imp (
+  spec,
+  Shelley.shelleyToBabbageSpec,
+  alonzoToConwaySpec,
+) where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxCert)
@@ -15,6 +19,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp as Mary
+import qualified Test.Cardano.Ledger.Shelley.Imp as Shelley
 
 spec ::
   ( AlonzoEraImp era
@@ -30,10 +35,10 @@ spec era = do
     UTXOS.spec
     UTXOW.spec
 
-alonzoEraSpecificSpec ::
+alonzoToConwaySpec ::
   (AlonzoEraImp era, ShelleyEraTxCert era) =>
   proxy era ->
   Spec
-alonzoEraSpecificSpec era = withImpInitEachEraVersion era $ do
+alonzoToConwaySpec era = withImpInitEachEraVersion era $ do
   describe "AlonzoEra Specific" $ do
-    UTXOW.alonzoEraSpecificSpec
+    UTXOW.alonzoToConwaySpec

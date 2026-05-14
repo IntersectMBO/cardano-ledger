@@ -13,7 +13,7 @@ import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 instance EraSpec ShelleyEra where
   eraImpSpec era = do
-    Imp.shelleyEraSpecificSpec era
+    Imp.shelleyToBabbageSpec era
     Imp.spec era
 
 main :: IO ()

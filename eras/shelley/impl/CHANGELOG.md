@@ -64,7 +64,7 @@
   - `exampleShelleyPParamsUpdate`
   - `exampleShelleyOnwardsEraPParams`
   - `exampleShelleyOnwardsEraPParamsUpdate`
-* Add `proxy era` argument to `shelleyEraSpecificSpec`
+* Add `proxy era` argument to `shelleyEraSpecificSpec` and rename it to `shelleyToBabbageSpec`
 * Remove `EraSpecificSpec`
 * Make `Test.Cardano.Ledger.Shelley.Imp.spec` accept `Proxy era`
 * Add `withImpInitEachEraVersion` and deprecate `withEachEraVersion` in its favor

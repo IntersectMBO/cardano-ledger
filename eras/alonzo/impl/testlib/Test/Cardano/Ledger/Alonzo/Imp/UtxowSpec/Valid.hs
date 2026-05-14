@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid (spec, alonzoEraSpecificSpec) where
+module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid (spec, alonzoToConwaySpec) where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Allegra.Scripts (
@@ -124,11 +124,11 @@ spec = describe "Valid transactions" $ do
                 & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
           submitTx_ tx
 
-alonzoEraSpecificSpec ::
+alonzoToConwaySpec ::
   forall era.
   (AlonzoEraImp era, ShelleyEraTxCert era) =>
   SpecWith (ImpInit (LedgerSpec era))
-alonzoEraSpecificSpec = do
+alonzoToConwaySpec = do
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
