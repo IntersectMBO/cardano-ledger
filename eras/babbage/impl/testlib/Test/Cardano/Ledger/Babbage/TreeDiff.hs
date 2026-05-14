@@ -24,6 +24,7 @@ import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
 import Control.State.Transition (PredicateFailure)
+import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Alonzo.TreeDiff
 
@@ -36,7 +37,7 @@ instance ToExpr (PlutusPurpose AsIx era) => ToExpr (BabbageContextError era)
 -- PParams
 instance ToExpr (BabbagePParams StrictMaybe era)
 
-instance ToExpr (BabbagePParams Shelley.Identity era)
+instance ToExpr (BabbagePParams Identity era)
 
 -- TxOut
 instance

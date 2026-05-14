@@ -40,6 +40,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Constrained.API
 import Control.DeepSeq (NFData)
 import Control.Monad.Reader (runReader)
+import Data.Functor.Identity (Identity)
 import Data.Word
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
@@ -172,7 +173,7 @@ instance
   , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
-  , ToExpr (PParamsHKD Shelley.Identity era)
+  , ToExpr (PParamsHKD Identity era)
   , EraCertState era
   , ToExpr (CertState era)
   , ToExpr (Tx TopTx era)

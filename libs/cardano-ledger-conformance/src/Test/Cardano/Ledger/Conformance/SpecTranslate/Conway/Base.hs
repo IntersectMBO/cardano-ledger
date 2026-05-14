@@ -49,7 +49,6 @@ import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireAnyOf,
@@ -235,7 +234,7 @@ instance SpecTranslate ConwayEra PoolVotingThresholds where
       <*> toSpecRep pvtPPSecurityGroup
 
 instance SpecTranslate ConwayEra (ConwayPParams Identity ConwayEra) where
-  type SpecRep ConwayEra (ConwayPParams Shelley.Identity ConwayEra) = Agda.PParams
+  type SpecRep ConwayEra (ConwayPParams Identity ConwayEra) = Agda.PParams
 
   toSpecRep cpp@ConwayPParams {..} = do
     ppA <- toSpecRep cppTxFeePerByte

@@ -30,7 +30,6 @@ import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided)
 import Control.State.Transition (Event, PredicateFailure)
 import Data.Functor.Identity (Identity)
@@ -70,7 +69,7 @@ deriving newtype instance ToExpr OrdExUnits
 
 instance ToExpr (AlonzoPParams StrictMaybe era)
 
-instance ToExpr (AlonzoPParams Shelley.Identity era)
+instance ToExpr (AlonzoPParams Identity era)
 
 -- TxWits
 instance ToExpr (PlutusPurpose AsIx era) => ToExpr (RedeemersRaw era)
