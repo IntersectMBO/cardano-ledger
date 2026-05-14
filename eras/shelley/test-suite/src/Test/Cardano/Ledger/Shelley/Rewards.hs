@@ -80,6 +80,7 @@ import Cardano.Ledger.Shelley.PoolRank (Likelihood, leaderProbability, likelihoo
 import Cardano.Ledger.Shelley.RewardUpdate (
   FreeVars (..),
   Pulser,
+  PulsingRewUpdate (..),
   RewardAns (..),
   RewardEvent,
   RewardPulser (RSLP),
@@ -93,7 +94,6 @@ import Cardano.Ledger.Shelley.Rewards (
   mkPoolRewardInfo,
  )
 import Cardano.Ledger.Shelley.Rules (
-  PulsingRewUpdate (..),
   RupdEvent (RupdEvent),
   ShelleyNewEpochEvent (DeltaRewardEvent, TotalRewardEvent),
   ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent),

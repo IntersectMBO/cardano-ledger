@@ -11,7 +11,6 @@ module Cardano.Ledger.Shelley.Rules.Rupd (
   ShelleyRUPD,
   RupdEnv (..),
   epochInfoRange,
-  PulsingRewUpdate (..),
   startStep,
   pulseStep,
   completeStep,
