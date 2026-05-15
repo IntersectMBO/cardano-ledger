@@ -26,6 +26,7 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain (
 import Cardano.Ledger.BaseTypes (Globals, SlotNo (..))
 import Cardano.Ledger.Block (
   Block (..),
+  bodyTxs,
   neededTxInsForBlock,
  )
 import Cardano.Ledger.Core
@@ -256,7 +257,7 @@ ledgerTraceBase ::
   ChainState era ->
   Block (BHeader MockCrypto) era ->
   (ChainState era, LedgerEnv era, LedgerState era, [Tx TopTx era])
-ledgerTraceBase chainSt Block {blockHeader = BHeader bhb _, blockBody} =
+ledgerTraceBase chainSt (UnserialisedBlock (BHeader bhb _) body) =
   ( tickedChainSt
   , LedgerEnv slot Nothing minBound pp_ (esChainAccountState nes)
   , esLState nes
@@ -268,7 +269,7 @@ ledgerTraceBase chainSt Block {blockHeader = BHeader bhb _, blockBody} =
     nes = (nesEs . chainNes) tickedChainSt
     pp_ = nes ^. curPParamsEpochStateL
     -- Oldest to Newest first
-    txs = reverse $ toList $ blockBody ^. txSeqBlockBodyL -- HERE WE USE SOME SegWit function
+    txs = reverse $ toList $ bodyTxs body ^. txSeqBlockBodyL
 
 -- | Transform the [(source, signal, target)] of a CHAIN Trace
 -- by manually applying the Chain TICK Rule to each source and producing

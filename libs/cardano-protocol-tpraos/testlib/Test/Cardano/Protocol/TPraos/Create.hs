@@ -2,8 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -44,6 +42,7 @@ import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),
+  HashHeader,
   PrevHash (BlockHash),
   mkSeed,
   seedEta,
@@ -60,14 +59,12 @@ import Data.List.NonEmpty as NE
 import Data.Ratio (denominator, numerator, (%))
 import Data.Sequence.Strict as StrictSeq
 import Data.Word
-import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Protocol.Crypto.KES (KESKeyPair (..))
 import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Cardano.Protocol.Crypto.VRF.Fake (NatNonce (..), WithResult (..))
-import Test.Crypto.Instances ()
 
 data AllIssuerKeys c (r :: KeyRole) = AllIssuerKeys
   { aikCold :: KeyPair r
@@ -276,12 +273,12 @@ mkBlock ::
   Block (BHeader c) era
 mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
-      blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList txns
-      bodySize = fromIntegral $ bBodySize protVer blockBody
-      bodyHash = hashBlockBody @era blockBody
+      txseq = toTxSeq @era (StrictSeq.fromList txns)
+      bodySize = fromIntegral $ bBodySize protVer txseq
+      bodyHash = hashBlockBody @era txseq
       bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
-      blockHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
-   in Block {blockHeader, blockBody}
+      bHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
+   in Block bHeader (BodyInline txseq)
 
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
@@ -316,10 +313,10 @@ mkBlockFakeVRF ::
   Block (BHeader c) era
 mkBlockFakeVRF prev pKeys txns slotNo blockNo enonce bnonce l kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
-      blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList txns
-      bodySize = fromIntegral $ bBodySize protVer blockBody
-      bodyHash = hashBlockBody blockBody
+      txSeq = toTxSeq @era (StrictSeq.fromList txns)
+      bodySize = fromIntegral $ bBodySize protVer txSeq
+      bodyHash = hashBlockBody txSeq
       bhBody =
         mkBHBodyFakeVRF bnonce l protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
       bHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
-   in Block bHeader blockBody
+   in Block bHeader (BodyInline txSeq)

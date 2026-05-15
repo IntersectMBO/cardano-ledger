@@ -2,17 +2,7 @@
   description = "cardano-ledger";
 
   inputs = {
-
-    hackageNix = {
-      url = "github:input-output-hk/hackage.nix";
-      flake = false;
-    };
-
-    haskellNix = {
-      url = "github:input-output-hk/haskell.nix";
-      inputs.hackage.follows = "hackageNix";
-    };
-
+    haskellNix.url = "github:input-output-hk/haskell.nix";
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
@@ -69,8 +59,8 @@
         inherit (nixpkgs) lib;
 
         # see flake `variants` below for alternative compilers
-        defaultCompiler = "ghc967";
-        fourmoluVersion = "0.17.0.0";
+        defaultCompiler = "ghc966";
+        fourmoluVersion = "0.16.2.0";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -101,6 +91,7 @@
             # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
             shellHook = ''
               export LANG=en_US.UTF-8
+              export LC_ALL=en_US.UTF-8
               export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
             '' + lib.optionalString (nixpkgs.glibcLocales != null && nixpkgs.stdenv.hostPlatform.libc == "glibc") ''
               export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"
@@ -119,37 +110,23 @@
             # tools we want in our shell, from hackage
             tools =
               {
-                cabal = "3.14.2.0";
-                cuddle = "latest";
+                cabal = "3.14.1.0";
+                ghcid = "0.8.9";
               }
               // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
                 fourmolu = fourmoluVersion;
                 hlint = "3.8";
-                haskell-language-server = "2.12.0.0";
+                haskell-language-server = "2.9.0.0";
                 cabal-gild = "1.5.0.1";
               };
 
             # and from nixpkgs or other inputs
             nativeBuildInputs = with nixpkgs;
               [
-                (python3.withPackages (ps: with ps; [sphinx sphinx-rtd-theme recommonmark sphinx-markdown-tables sphinxemoji]))
+                (python3.withPackages (ps: with ps; [sphinx sphinx_rtd_theme recommonmark sphinx-markdown-tables sphinxemoji]))
                 haskellPackages.implicit-hie
-                shellcheck
-                cardano-ledger-release-tool
-              ] ++
-              (let
-                doctest = haskell-nix.hackage-package {
-                  name = "doctest";
-                  version = "0.24.0";
-                  configureArgs = "-f cabal-doctest";
-                  inherit (config) compiler-nix-name;
-                };
-              in
-                [
-                  (doctest.getComponent "exe:cabal-doctest")
-                  (doctest.getComponent "exe:doctest")
-                ]);
+              ];
             # disable Hoogle until someone request it
             withHoogle = true;
             # Skip cross compilers for the shell
@@ -171,7 +148,7 @@
               packages.cardano-ledger-byron = {
                 configureFlags = ["--ghc-option=-Werror"];
                 components = {
-                  tests.tests = {
+                  tests.cardano-ledger-byron-test = {
                     preCheck = ''
                       export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
                     '';
@@ -181,7 +158,18 @@
               };
             })
             ({pkgs, ...}:
+              lib.mkIf pkgs.stdenv.hostPlatform.isUnix {
+                packages.cardano-ledger-shelley.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-allegra.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-mary.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-alonzo.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-babbage.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-conway.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-protocol-tpraos.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+              })
+            ({pkgs, ...}:
               lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
+                packages.set-algebra.components.tests.tests.buildable = lib.mkForce false;
                 packages.plutus-preprocessor.buildable = lib.mkForce false;
                 packages.cardano-ledger-test.buildable = lib.mkForce false;
                 packages.cardano-ledger-shelley.buildable = lib.mkForce false;
@@ -190,7 +178,6 @@
                 packages.cardano-ledger-alonzo.buildable = lib.mkForce false;
                 packages.cardano-ledger-babbage.buildable = lib.mkForce false;
                 packages.cardano-ledger-conway.buildable = lib.mkForce false;
-                packages.cardano-ledger-dijkstra.buildable = lib.mkForce false;
                 packages.cardano-protocol-tpraos.buildable = lib.mkForce false;
               })
           ];
@@ -200,7 +187,7 @@
           cabalProject.flake (
             lib.optionalAttrs (system == "x86_64-linux") {
               # on linux, build/test other supported compilers
-              variants = lib.genAttrs ["ghc967" "ghc9122"] (compiler-nix-name: {
+              variants = lib.genAttrs ["ghc984"] (compiler-nix-name: {
                 inherit compiler-nix-name;
               });
             }
@@ -254,16 +241,16 @@
                 "docs/small-step-semantics"
                 "docs/pool-ranking"
                 "docs/non-integer-calculations"
-                "eras/byron/ledger/impl/cddl-spec"
+                "eras/byron/cddl-spec"
               ];
             };
           };
 
           devShells = let
             mkDevShells = p: {
-              # `nix develop .#profiling` (or `.#ghc967.profiling): a shell with profiling enabled
+              # `nix develop .#profiling` (or `.#ghc966.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
-              # `nix develop .#pre-commit` (or `.#ghc967.pre-commit): a shell with pre-commit enabled
+              # `nix develop .#pre-commit` (or `.#ghc966.pre-commit): a shell with pre-commit enabled
               pre-commit = let
                 pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
                   src = ./.;
@@ -281,7 +268,7 @@
             };
           in
             mkDevShells cabalProject
-            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc9122`
+            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc8107`
             // lib.mapAttrs (compiler-nix-name: _: let
               p = cabalProject.appendModule {inherit compiler-nix-name;};
             in

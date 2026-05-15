@@ -144,7 +144,7 @@ instance Crypto c => NFData (BHeader c) where
   rnf (BHeader _ _) = ()
 
 instance NFData ChainDepState where
-  rnf (ChainDepState _ _ _) = ()
+  rnf (ChainDepState {}) = ()
 
 instance NFData (ChainTransitionError c) where
   rnf _ = ()

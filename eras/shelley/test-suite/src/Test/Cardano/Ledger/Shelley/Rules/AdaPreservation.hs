@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Shelley.Rules.AdaPreservation (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), bodyTxs)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.API (LedgerState)
@@ -275,7 +275,7 @@ checkPreservation SourceSignalTarget {source, target, signal = block} count =
                   <> toDeltaCoin (sumRewards prevPP (rs ru))
             ]
 
-    txs' = toList $ blockBody block ^. txSeqBlockBodyL
+    txs' = toList $ bodyTxs (blockBody block) ^. txSeqBlockBodyL
     txs = zipWith dispTx txs' [0 :: Int ..]
 
     dispTx tx ix =
@@ -600,14 +600,14 @@ withdrawals ::
   EraGen era =>
   Block (BHeader MockCrypto) era ->
   Coin
-withdrawals (Block _ blockBody) =
+withdrawals (UnserialisedBlock _ body) =
   F.foldl'
     ( \c tx ->
         let wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
          in if hasFailedScripts tx then c else c <> fold wdrls
     )
     (Coin 0)
-    $ blockBody ^. txSeqBlockBodyL
+    $ bodyTxs body ^. txSeqBlockBodyL
 
 txFees ::
   forall era.

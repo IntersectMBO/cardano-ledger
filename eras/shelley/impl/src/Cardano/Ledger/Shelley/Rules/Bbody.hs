@@ -42,7 +42,12 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (
+  Block (..),
+  bodyBytesSize,
+  bodyTxs,
+  hashBody,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
@@ -219,12 +224,12 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account
                , BbodyState ls b
-               , Block {blockHeader = blockHeaderView, blockBody}
+               , UnserialisedBlock blockHeaderView body
                )
            ) -> do
-        let txs = blockBody ^. txSeqBlockBodyL
-            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) blockBody
-            actualBodyHash = hashBlockBody blockBody
+        let txs = bodyTxs body ^. txSeqBlockBodyL
+            actualBodySize = bodyBytesSize (pp ^. ppProtocolVersionL) body
+            actualBodyHash = hashBody body
 
         actualBodySize
           == fromIntegral (bhviewBSize blockHeaderView)

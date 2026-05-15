@@ -56,7 +56,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), bodyTxs)
 import Cardano.Ledger.Conway.Era (ConwayBBODY, ConwayEra)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
@@ -308,11 +308,11 @@ conwayBbodyTransition = do
     >>= \( TRC
              ( BbodyEnv pp _
                , state@(BbodyState ls _)
-               , Block bhView txsSeq
+               , UnserialisedBlock bhView body
                )
            ) -> do
         let utxo = utxosUtxo (lsUTxOState ls)
-            txs = txsSeq ^. txSeqBlockBodyL
+            txs = bodyTxs body ^. txSeqBlockBodyL
             totalRefScriptSize = totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs utxo
             maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
             curVerMajor = pvMajor $ pp ^. ppProtocolVersionL

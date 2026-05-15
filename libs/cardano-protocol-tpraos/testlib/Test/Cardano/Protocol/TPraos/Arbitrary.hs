@@ -22,13 +22,14 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (BlockNo (..), Nonce, Seed, SlotNo (..))
-import Cardano.Ledger.Block (Block (Block))
+import Cardano.Ledger.Block (Block (Block), Body (..))
 import Cardano.Ledger.Core
 import Cardano.Protocol.Crypto (Crypto (KES, VRF), StandardCrypto)
-import Cardano.Protocol.TPraos.API (ChainDepState, PraosCrypto)
+import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (BHBody),
   BHeader (BHeader),
+  HashHeader (HashHeader),
   PrevHash (BlockHash, GenesisHash),
  )
 import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..))
@@ -43,10 +44,6 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Protocol.TPraos.Create (AllIssuerKeys, mkBHBody, mkBHeader, mkBlock, mkOCert)
-
-instance Arbitrary ChainDepState where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
 
 newtype VRFNatVal = VRFNatVal Natural
   deriving (Show)
@@ -156,28 +153,23 @@ instance
   , KES.Signable (KES c) ~ SignableRepresentation
   , VRF.Signable (VRF c) ~ SignableRepresentation
   , Arbitrary (Tx TopTx era)
-  , Arbitrary (BlockBody era)
   ) =>
   Arbitrary (Block (BHeader c) era)
   where
-  arbitrary =
-    Block
-      <$> arbitrary
-      <*> arbitrary
+  arbitrary = Block <$> arbitrary <*> (BodyInline . toTxSeq <$> arbitrary)
 
 -- | Use supplied keys to generate a Block.
 genBlock ::
   ( Crypto c
   , VRF.Signable (VRF c) Seed
   , KES.Signable (KES c) (BHBody c)
-  , Arbitrary (BlockBody era)
+  , EraBlockBody era
+  , Arbitrary (Tx TopTx era)
   ) =>
   [AllIssuerKeys c r] ->
   Gen (Block (BHeader c) era)
 genBlock aiks =
-  Block
-    <$> genBHeader aiks
-    <*> arbitrary
+  Block <$> genBHeader aiks <*> (BodyInline . toTxSeq <$> arbitrary)
 
 -- | For some purposes, a totally random block generator may not be suitable.
 -- There are tests in the ouroboros-network repository, for instance, that

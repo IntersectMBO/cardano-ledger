@@ -34,7 +34,12 @@ import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (
+  Block (..),
+  bodyBytesSize,
+  bodyTxs,
+  hashBody,
+ )
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
@@ -191,12 +196,12 @@ alonzoBbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account
                , BbodyState ls b
-               , Block bh txsSeq
+               , UnserialisedBlock bh body
                )
            ) -> do
-        let txs = txsSeq ^. txSeqBlockBodyL
-            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashBlockBody @era txsSeq
+        let txs = bodyTxs body ^. txSeqBlockBodyL
+            actualBodySize = bodyBytesSize (pp ^. ppProtocolVersionL) body
+            actualBodyHash = hashBody body
 
         actualBodySize
           == fromIntegral (bhviewBSize bh)

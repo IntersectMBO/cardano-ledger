@@ -273,4 +273,8 @@ instance ToExpr PositiveInterval where
 
 instance ToExpr BHeaderView
 
-instance (ToExpr h, ToExpr (BlockBody era)) => ToExpr (Block h era)
+instance ToExpr Certificate
+
+instance ToExpr (BlockBody era) => ToExpr (Body era)
+
+instance (ToExpr h, ToExpr (Body era)) => ToExpr (Block h era)

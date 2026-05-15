@@ -51,7 +51,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), bodyTxs)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure,
@@ -358,10 +358,10 @@ dijkstraBbodyTransition = do
     >>= \( TRC
              ( _
                , state
-               , Block bh bbody
+               , UnserialisedBlock bh body
                )
            ) -> do
-        case bbody ^. perasCertBlockBodyL of
+        case bodyTxs body ^. perasCertBlockBodyL of
           SNothing ->
             -- No certificate is present, so no validation is needed.
             --

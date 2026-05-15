@@ -5,8 +5,9 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -15,37 +16,117 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Block (
-  Block (..),
+  Block (Block, Block', UnserialisedBlock, UnsafeUnserialisedBlock),
+  blockHeader,
+  blockBody,
+  Body (..),
+  Certificate (..),
   bheader,
   bbody,
   neededTxInsForBlock,
-) where
+  certByteSize,
+  hashCert,
+  hashBody,
+  bodyBytesSize,
+  bodyTxs,
+  -- leios shims for the upstream EraSegWits -> EraBlockBody refactor
+  fromTxSeq,
+  toTxSeq,
+)
+where
 
-import Cardano.Base.Proxy (asProxy)
+import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.BaseTypes (ProtVer (ProtVer))
 import Cardano.Ledger.Binary (
-  Annotator,
+  Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (..),
-  EncCBORGroup (..),
-  decodeRecordNamed,
+  EncCBORGroup (encCBORGroup, listLen),
+  annotatorSlice,
+  decodeListLen,
+  decodeWord8,
   encodeListLen,
-  toPlainEncoding,
+  encodeWord8,
+  serialize,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
+import Cardano.Ledger.MemoBytes (MemoBytes (Memo), decodeMemoized)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Control.DeepSeq (NFData)
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Short as SBS
+import Data.Coerce (coerce)
 import Data.Foldable (toList)
+import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import GHC.Stack (HasCallStack, callStack)
+import Data.Function ((&))
+import Data.Sequence.Strict (StrictSeq)
+import Lens.Micro ((.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
-data Block h era = Block
+-- | Shim for the upstream 'EraSegWits' -> 'EraBlockBody' refactor: the leios
+-- code was written against 'fromTxSeq' / 'toTxSeq' (class methods of the old
+-- 'EraSegWits'), which were replaced by the 'txSeqBlockBodyL' lens. These
+-- shims let the existing leios callsites keep working.
+fromTxSeq :: EraBlockBody era => BlockBody era -> StrictSeq (Tx TopTx era)
+fromTxSeq = (^. txSeqBlockBodyL)
+
+toTxSeq :: EraBlockBody era => StrictSeq (Tx TopTx era) -> BlockBody era
+toTxSeq sseq = mkBasicBlockBody & txSeqBlockBodyL .~ sseq
+
+newtype Certificate = Certificate {unCertificate :: BSL.ByteString}
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NoThunks)
+  deriving newtype (DecCBOR, EncCBOR)
+
+certByteSize :: ProtVer -> Certificate -> Int
+certByteSize (ProtVer v _) = fromIntegral . BSL.length . serialize v . encCBOR
+
+hashCert :: Certificate -> Hash.Hash HASH EraIndependentBlockBody
+hashCert = coerce $ Hash.hashWith BSL.toStrict . unCertificate
+
+data Body era = BodyInline !(BlockBody era) | BodyCertificate Certificate (Maybe (BlockBody era))
+  deriving stock (Generic)
+
+deriving stock instance
+  (Era era, Show (BlockBody era)) =>
+  Show (Body era)
+
+deriving stock instance
+  (Era era, Eq (BlockBody era)) =>
+  Eq (Body era)
+
+deriving anyclass instance
+  (Era era, NoThunks (BlockBody era)) =>
+  NoThunks (Body era)
+
+hashBody :: EraBlockBody era => Body era -> Hash HASH EraIndependentBlockBody
+hashBody (BodyInline txs) = hashBlockBody txs
+hashBody (BodyCertificate cert _) = hashCert cert
+
+bodyBytesSize :: EraBlockBody era => ProtVer -> Body era -> Int
+bodyBytesSize pv (BodyInline txs) = bBodySize pv txs
+bodyBytesSize pv (BodyCertificate cert _) = certByteSize pv cert
+
+-- TODO(bladyjoker): Why didn't you name this bodyTxsUnsafe?
+bodyTxs :: HasCallStack => Body era -> BlockBody era
+bodyTxs (BodyInline txs) = txs
+bodyTxs (BodyCertificate cert mayCertifiedEbTxClosure) = case mayCertifiedEbTxClosure of
+  Nothing ->
+    error $
+      "Certificate body must include EB transaction closure (I was expecting this to be resolved) "
+        <> show (cert, callStack)
+  Just txs -> txs
+
+data Block h era
+  = Block'
   { blockHeader :: !h
-  , blockBody :: !(BlockBody era)
+  , blockBody :: !(Body era) -- FIXME(bladyjoker): This doesn't belong here, this should remain a "ledger block of transactions"
+  , blockBytes :: BSL.ByteString
   }
   deriving (Generic)
 
@@ -64,53 +145,214 @@ deriving anyclass instance
   ) =>
   NoThunks (Block h era)
 
-instance (NFData h, NFData (BlockBody era)) => NFData (Block h era)
-
-instance
+pattern Block ::
   forall era h.
   ( Era era
+  , EncCBOR (Body era)
   , EncCBORGroup (BlockBody era)
   , EncCBOR h
   ) =>
-  EncCBOR (Block h era)
+  h ->
+  Body era ->
+  Block h era
+pattern Block h body <-
+  Block' h body _
   where
-  encCBOR (Block h txns) =
-    encodeListLen (1 + listLen (asProxy txns)) <> encCBOR h <> encCBORGroup txns
+    Block h body =
+      let bytes =
+            let (len, encBody) = case body of
+                  BodyCertificate cert _ -> (2, encCBOR cert)
+                  BodyInline txs -> (1 + listLen (Proxy @(BlockBody era)), encCBORGroup txs) -- NOTE(bladyjoker): Old format
+             in serialize (eraProtVerLow @era) $
+                  mconcat
+                    [ encodeListLen len
+                    , encCBOR h
+                    , encBody
+                    ]
+       in Block' h body bytes
 
-instance
-  forall era h.
-  ( Era era
-  , EncCBORGroup (BlockBody era)
-  , EncCBOR h
-  , Typeable h
-  ) =>
-  Plain.ToCBOR (Block h era)
+{-# COMPLETE Block #-}
+
+-- | Access a block without its serialised bytes. This is often useful when
+-- we're using a 'BHeaderView' in place of the concrete header.
+pattern UnserialisedBlock ::
+  h ->
+  Body era ->
+  Block h era
+pattern UnserialisedBlock h body <- Block' h body _
+
+{-# COMPLETE UnserialisedBlock #-}
+
+-- | Unsafely construct a block without the ability to serialise its bytes.
+--
+--   Anyone calling this pattern must ensure that the resulting block is never
+--   serialised. Any uses of this pattern outside of testing code should be
+--   regarded with suspicion.
+pattern UnsafeUnserialisedBlock ::
+  h ->
+  Body era ->
+  Block h era
+pattern UnsafeUnserialisedBlock h body <-
+  Block' h body _
   where
-  toCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
+    UnsafeUnserialisedBlock h body =
+      let bytes = error "`UnsafeUnserialisedBlock` used to construct a block which was later serialised."
+       in Block' h body bytes
+
+{-# COMPLETE UnsafeUnserialisedBlock #-}
+
+instance (EraTx era, Typeable h) => EncCBOR (Block h era)
+
+instance (EraTx era, Typeable h) => Plain.ToCBOR (Block h era) where
+  toCBOR = Plain.encodePreEncoded . BSL.toStrict . blockBytes
 
 instance
   ( EraBlockBody era
   , DecCBOR (Annotator h)
+  , DecCBOR (Annotator (Body era))
+  , DecCBOR (Annotator (BlockBody era))
   , Typeable h
   ) =>
   DecCBOR (Annotator (Block h era))
   where
-  decCBOR = decodeRecordNamed "Block" (const blockSize) $ do
-    header <- decCBOR
-    txns <- decCBOR
-    pure $ Block <$> header <*> txns
-    where
-      blockSize = 1 + fromIntegral (numSegComponents @era)
+  decCBOR = annotatorSlice $ do
+    braw <- decCBOR @(Annotator (BlockRaw h era))
+    pure $ (\(BlockRaw h body) -> Block' h body) <$> braw
 
-bheader ::
-  Block h era ->
-  h
-bheader (Block bh _) = bh
-{-# DEPRECATED bheader "In favor of `blockHeader`" #-}
+data BlockRaw h era = BlockRaw
+  { _blockRawHeader :: !h
+  , _blockRawBody :: !(Body era)
+  }
 
-bbody :: Block h era -> BlockBody era
-bbody (Block _ txs) = txs
-{-# DEPRECATED bbody "In favor of `blockBody`" #-}
+instance
+  ( EraBlockBody era
+  , DecCBOR h
+  , DecCBOR (Body era)
+  , DecCBOR (BlockBody era)
+  ) =>
+  DecCBOR (BlockRaw h era)
+  where
+  decCBOR = do
+    len <- decodeListLen
+    let oldLen = 1 + fromIntegral (numSegComponents @era)
+    if len == 2
+      then do
+        -- NOTE(bladyjoker): New leios format: [header, cert]
+        header <- decCBOR @h
+        cert <- decCBOR @Certificate
+        pure $ BlockRaw header (BodyCertificate cert Nothing)
+      else
+        if len == oldLen
+          then do
+            -- NOTE(bladyjoker): Old pre-leios format: [header, txseq_components...]
+            header <- decCBOR @h
+            txSeq <- decCBOR @(BlockBody era)
+            pure $ BlockRaw header (BodyInline txSeq)
+          else
+            fail $
+              "Block: unexpected list length "
+                ++ show len
+                ++ ". Expected 2 (leios) or "
+                ++ show oldLen
+                ++ " (pre-leios)"
+
+instance
+  ( EraBlockBody era
+  , DecCBOR (Annotator h)
+  , DecCBOR (Annotator (Body era))
+  , DecCBOR (Annotator (BlockBody era))
+  , Typeable h
+  ) =>
+  DecCBOR (Annotator (BlockRaw h era))
+  where
+  decCBOR = do
+    len <- decodeListLen
+    let oldLen = 1 + fromIntegral (numSegComponents @era)
+    if len == 2
+      then do
+        -- NOTE(bladyjoker): New leios format: [header, cert]
+        header <- decCBOR @(Annotator h)
+        cert <- decCBOR @Certificate
+        pure $ BlockRaw <$> header <*> pure (BodyCertificate cert Nothing)
+      else
+        if len == oldLen
+          then do
+            -- NOTE(bladyjoker): Old pre-leios format: [header, txseq_components...]
+            header <- decCBOR @(Annotator h)
+            txSeq <- decCBOR @(Annotator (BlockBody era))
+            pure $ BlockRaw <$> header <*> fmap BodyInline txSeq
+          else
+            fail $
+              "Block: unexpected list length "
+                ++ show len
+                ++ ". Expected 2 (leios) or "
+                ++ show oldLen
+                ++ " (pre-leios)"
+
+instance
+  (DecCBOR (BlockBody era), EraBlockBody era) =>
+  DecCBOR (Body era)
+  where
+  decCBOR = do
+    len <- decodeListLen
+    tag <- decodeWord8
+    case tag of
+      0 ->
+        if len == (1 + fromIntegral (numSegComponents @era))
+          then BodyInline <$> decCBOR @(BlockBody era)
+          else fail "Body: Got tag for BodyInline but the list length didn't match"
+      1 ->
+        if len == (1 + 1)
+          then (`BodyCertificate` Nothing) <$> decCBOR
+          else fail "Body: Got tag for BodyCertificate but the list length didn't match"
+      _ -> fail $ "Body: unknown tag " ++ show tag
+
+instance
+  EraBlockBody era =>
+  DecCBOR (Annotator (Body era))
+  where
+  decCBOR = annotatorSlice $ do
+    len <- decodeListLen
+    tag <- decodeWord8
+    case tag of
+      0 ->
+        if len == (1 + fromIntegral (numSegComponents @era))
+          then do
+            txSeq <- decCBOR @(Annotator (BlockBody era))
+            pure (const . BodyInline <$> txSeq)
+          else fail "Body: Got tag for BodyInline but the list length didn't match"
+      1 ->
+        if len == (1 + 1)
+          then do
+            cert <- decCBOR @Certificate
+            pure $ pure ((const . BodyCertificate cert) Nothing)
+          else fail "Body: Got tag for BodyCertificate but the list length didn't match"
+      _ -> fail $ "Body: unknown tag " ++ show tag
+
+instance EncCBORGroup (BlockBody era) => EncCBOR (Body era) where
+  encCBOR body =
+    case body of
+      BodyInline txs -> encodeListLen (1 + listLen (Proxy @(BlockBody era))) <> encodeWord8 0 <> encCBORGroup txs
+      BodyCertificate cert _ -> encodeListLen (1 + 1) <> encodeWord8 1 <> encCBOR cert
+
+instance
+  ( EraBlockBody era
+  , DecCBOR h
+  , DecCBOR (Body era)
+  , DecCBOR (BlockBody era)
+  ) =>
+  DecCBOR (Block h era)
+  where
+  decCBOR = do
+    Memo (BlockRaw h body) bs <-
+      decodeMemoized (decCBOR @(BlockRaw h era))
+    pure $ Block' h body (BSL.fromStrict (SBS.fromShort bs))
+
+bheader :: Block h era -> h
+bheader = blockHeader
+
+bbody :: Block h era -> Body era
+bbody = blockBody
 
 -- | The validity of any individual block depends only on a subset
 -- of the UTxO stored in the ledger state. This function returns
@@ -126,9 +368,19 @@ neededTxInsForBlock ::
   EraBlockBody era =>
   Block h era ->
   Set TxIn
-neededTxInsForBlock Block {blockBody} = Set.filter isNotNewInput allTxIns
+neededTxInsForBlock (Block' _ (BodyInline txsSeq) _) = neededTxInsForTxs txsSeq
+neededTxInsForBlock (Block' _ (BodyCertificate cert mayTxsSeq) _) = case mayTxsSeq of
+  Nothing -> error $ "Must have EB transaction closure associated with a Certificate " <> show cert
+  Just txsSeq -> neededTxInsForTxs txsSeq
+
+neededTxInsForTxs ::
+  forall era.
+  EraBlockBody era =>
+  BlockBody era ->
+  Set TxIn
+neededTxInsForTxs txsSeq = Set.filter isNotNewInput allTxIns
   where
-    txBodies = map (^. bodyTxL) $ toList $ blockBody ^. txSeqBlockBodyL
+    txBodies = map (^. bodyTxL) $ toList (txsSeq ^. txSeqBlockBodyL)
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txIdTxBody txBodies
-    isNotNewInput (TxIn txId _) = txId `Set.notMember` newTxIds
+    isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds

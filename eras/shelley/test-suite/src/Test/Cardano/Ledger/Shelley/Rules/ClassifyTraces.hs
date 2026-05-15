@@ -21,7 +21,7 @@ module Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
 
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary.Plain as Plain (serialize')
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), bodyTxs)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
@@ -134,7 +134,7 @@ relevantCasesAreCoveredForTrace ::
   Property
 relevantCasesAreCoveredForTrace tr = do
   let blockTxs :: Block (BHeader MockCrypto) era -> [Tx TopTx era]
-      blockTxs Block {blockBody} = toList $ blockBody ^. txSeqBlockBodyL
+      blockTxs (UnserialisedBlock _ body) = toList $ bodyTxs body ^. txSeqBlockBodyL
       bs = traceSignals OldestFirst tr
       txs = concatMap blockTxs bs
       certsByTx_ = certsByTx @era txs
