@@ -5,7 +5,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -36,7 +35,6 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
   askSpecTransM,
-  runSpecTransM,
   withCtxSpecTransM,
  )
 
@@ -81,7 +79,5 @@ instance ExecSpecRule "CERT" ConwayEra where
     agdaSt <- withCtxSpecTransM () $ toSpecRep st
     agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
-
-  translateOutput _ _ st = runSpecTransM () $ toSpecRep @ConwayEra st
 
   runAgdaRule = runFromAgdaFunction Agda.certStep

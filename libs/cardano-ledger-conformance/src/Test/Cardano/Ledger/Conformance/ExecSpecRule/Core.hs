@@ -59,6 +59,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
   runSpecTransM,
   unComputationResult,
+  withCtxSpecTransM,
  )
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest (
@@ -164,20 +165,18 @@ class
     SpecTRC <$> toSpecRep env <*> toSpecRep st <*> toSpecRep sig
 
   translateOutput ::
-    ExecContext rule era ->
     TRC (EraRule rule era) ->
     State (EraRule rule era) ->
-    Either Text (SpecState rule era)
+    SpecTransM era (ExecContext rule era) (SpecState rule era)
   default translateOutput ::
     ( SpecTranslate era (State (EraRule rule era))
     , SpecContext era (State (EraRule rule era)) ~ ()
     , SpecRep era (State (EraRule rule era)) ~ SpecState rule era
     ) =>
-    ExecContext rule era ->
     TRC (EraRule rule era) ->
     State (EraRule rule era) ->
-    Either Text (SpecState rule era)
-  translateOutput _ _ st = runSpecTransM () $ toSpecRep @era st
+    SpecTransM era (ExecContext rule era) (SpecState rule era)
+  translateOutput _ = withCtxSpecTransM () . toSpecRep
 
   extraInfo ::
     HasCallStack =>
@@ -358,7 +357,8 @@ runConformance execContext trc@(TRC (env, st, sig)) = do
       case implRes of
         Right (st', _) ->
           fmap (Right . specNormalize) . expectRightExpr $
-            translateOutput @rule @era execContext trc st'
+            runSpecTransM @era execContext $
+              translateOutput trc st'
         Left err -> pure $ Left err
   pure $ ConformanceResult implResTest agdaResTest implRes
 

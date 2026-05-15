@@ -52,8 +52,8 @@ instance ExecSpecRule "UTXOW" ConwayEra where
     agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
-  translateOutput ctx _ st =
-    runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep @ConwayEra st
+  translateOutput _ =
+    withSpecTransM ((^. utxoEnvCertStateL) . uecUtxoEnv) . toSpecRep
 
   runAgdaRule = runFromAgdaFunction (Agda.utxowStep externalFunctions)
 

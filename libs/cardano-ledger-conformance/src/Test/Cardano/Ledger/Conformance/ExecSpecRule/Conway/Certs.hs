@@ -29,7 +29,6 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
   askSpecTransM,
-  runSpecTransM,
   withCtxSpecTransM,
  )
 
@@ -45,13 +44,15 @@ instance ExecSpecRule "CERTS" ConwayEra where
 
   runAgdaRule = runFromAgdaFunction Agda.certsStep
 
-  translateOutput ConwayCertExecContext {..} _ = runSpecTransM () . toSpecRep @ConwayEra . fixRewards
-    where
+  translateOutput _ st = do
+    ConwayCertExecContext {..} <- askSpecTransM
+    let
       -- This is necessary because the implementation zeroes out the rewards
       -- in the CERTS rule, but the spec does it in a different rule
+      zeroRewards = Map.adjust (balanceAccountStateL .~ mempty)
       fixRewards =
         certDStateL . accountsL . accountsMapL
           %~ \m ->
             foldr' zeroRewards m . Set.map (^. accountAddressCredentialL) $
               Map.keysSet ccecWithdrawals
-      zeroRewards = Map.adjust (balanceAccountStateL .~ mempty)
+    withCtxSpecTransM () $ toSpecRep $ fixRewards st

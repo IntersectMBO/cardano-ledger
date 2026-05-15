@@ -50,8 +50,8 @@ instance ExecSpecRule "RATIFY" ConwayEra where
       specSig <- withCtxSpecTransM () (toSpecRep sig)
       pure $ SpecTRC specEnv specSt specSig
 
-  translateOutput _ (TRC (_, _, RatifySignal actions)) out =
-    runSpecTransM () . withCtxSpecTransM (toList actions) $ toSpecRep @ConwayEra out
+  translateOutput (TRC (_, _, RatifySignal actions)) =
+    withCtxSpecTransM (toList actions) . toSpecRep
 
   extraInfo _ _ trc@(TRC (env@RatifyEnv {..}, st@RatifyState {..}, RatifySignal actions)) _ =
     PP.vsep $ specExtraInfo : (actionAcceptedRatio <$> toList actions)

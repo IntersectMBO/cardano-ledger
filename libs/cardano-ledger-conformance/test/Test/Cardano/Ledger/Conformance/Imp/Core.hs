@@ -58,7 +58,7 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
       agdaResponse = fmap fst agdaResponse'
       agdaDebug = either (const "") snd agdaResponse'
       impRuleResult' = bimap (T.pack . show) fst impRuleResult
-      impResponse = first (T.pack . show) . translateOutput @rule @era ctx trc =<< impRuleResult'
+      impResponse = first (T.pack . show) . runSpecTransM @era ctx . translateOutput trc =<< impRuleResult'
 
     logString "implEnv"
     logToExpr env
