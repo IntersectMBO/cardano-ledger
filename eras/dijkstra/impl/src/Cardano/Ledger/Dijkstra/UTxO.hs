@@ -47,13 +47,14 @@ import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
-import Cardano.Ledger.Plutus (PlutusWithContext)
+import Cardano.Ledger.Plutus (Language, PlutusWithContext)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Monoid (Sum (..))
 import qualified Data.OMap.Strict as OMap
+import Data.Set (Set)
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 
@@ -184,6 +185,8 @@ instance AlonzoEraUTxO DijkstraEra where
 
   plutusScriptsWithContextStAnnTx = plutusScriptsWithContextDijkstraStAnnTx
 
+  plutusLanguagesUsedStAnnTx = plutusLanguagesUsedDijkstraStAnnTx
+
 scriptsProvidedDijkstraStAnnTx ::
   ( EraTxLevel era
   , STxLevel l era ~ STxBothLevels l era
@@ -223,6 +226,19 @@ plutusScriptsWithContextDijkstraStAnnTx stAnnTx =
     stAnnTx
     (\DijkstraStAnnTopTx {dsattPlutusScriptsWithContext} -> dsattPlutusScriptsWithContext)
     (\DijkstraStAnnSubTx {dsastPlutusScriptsWithContext} -> dsastPlutusScriptsWithContext)
+
+plutusLanguagesUsedDijkstraStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxBothLevels l era
+  , STxLevel SubTx era ~ STxBothLevels SubTx era
+  , STxLevel TopTx era ~ STxBothLevels TopTx era
+  ) =>
+  DijkstraStAnnTx l era -> Set Language
+plutusLanguagesUsedDijkstraStAnnTx stAnnTx =
+  withBothTxLevels
+    stAnnTx
+    (\DijkstraStAnnTopTx {dsattPlutusLanguagesUsed} -> dsattPlutusLanguagesUsed)
+    (\DijkstraStAnnSubTx {dsastPlutusLanguagesUsed} -> dsastPlutusLanguagesUsed)
 
 instance DijkstraEraUTxO DijkstraEra where
   subTransactionsStAnnTx = subTransactionsDijkstraStAnnTx

@@ -36,6 +36,9 @@ module Cardano.Ledger.Alonzo.UTxO (
   -- * Plutus scripts with context
   plutusScriptsWithContextAlonzoStAnnTx,
 
+  -- * Plutus languages used
+  plutusLanguagesUsedAlonzoStAnnTx,
+
   -- * Datums needed
   getInputDataHashesTxBody,
 
@@ -146,6 +149,8 @@ class EraUTxO era => AlonzoEraUTxO era where
     StAnnTx l era ->
     Either (NonEmpty (CollectError era)) [PlutusWithContext]
 
+  plutusLanguagesUsedStAnnTx :: StAnnTx l era -> Set.Set Language
+
 instance AlonzoEraUTxO AlonzoEra where
   getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
 
@@ -156,6 +161,8 @@ instance AlonzoEraUTxO AlonzoEra where
   scriptsNeededStAnnTx = scriptsNeededAlonzoStAnnTx
 
   plutusScriptsWithContextStAnnTx = plutusScriptsWithContextAlonzoStAnnTx
+
+  plutusLanguagesUsedStAnnTx = plutusLanguagesUsedAlonzoStAnnTx
 
 scriptsProvidedAlonzoStAnnTx ::
   ( EraTxLevel era
@@ -185,6 +192,16 @@ plutusScriptsWithContextAlonzoStAnnTx ::
 plutusScriptsWithContextAlonzoStAnnTx stAnnTx =
   withTopTxLevelOnly stAnnTx $
     \AlonzoStAnnTx {asatPlutusScriptsWithContext} -> asatPlutusScriptsWithContext
+
+plutusLanguagesUsedAlonzoStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxTopLevel l era
+  , STxLevel TopTx era ~ STxTopLevel TopTx era
+  ) =>
+  AlonzoStAnnTx l era -> Set.Set Language
+plutusLanguagesUsedAlonzoStAnnTx stAnnTx =
+  withTopTxLevelOnly stAnnTx $
+    \AlonzoStAnnTx {asatPlutusLanguagesUsed} -> asatPlutusLanguagesUsed
 
 getAlonzoSupplementalDataHashes ::
   (EraTxBody era, AlonzoEraTxOut era) =>
