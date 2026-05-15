@@ -88,6 +88,8 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.Plutus.Language (Language (..), PlutusBinary (..), guardPlutus)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
 import Control.DeepSeq (NFData, deepseq)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import Data.Foldable (toList)
 import Data.List (intercalate)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
@@ -388,3 +390,35 @@ atadPlutus (MkAlonzoTxAuxData (Memo raw _)) = atadrPlutusScripts raw
 atadPlutus' :: AlonzoTxAuxData era -> Map Language (NE.NonEmpty PlutusBinary)
 atadPlutus' (MkAlonzoTxAuxData (Memo raw _)) = atadrPlutusScripts raw
 {-# DEPRECATED atadPlutus' "In favor of `atadPlutusScripts'`" #-}
+
+instance
+  ( AlonzoEraScript era
+  , ToJSON (NativeScript era)
+  ) =>
+  ToJSON (AlonzoTxAuxData era)
+  where
+  toJSON AlonzoTxAuxData {atadMetadata, atadNativeScripts, atadPlutusScripts} =
+    object
+      [ "metadata" .= atadMetadata
+      , "nativeScripts" .= toList atadNativeScripts
+      , "plutusScripts" .= fmap NE.toList atadPlutusScripts
+      ]
+
+instance
+  ( AlonzoEraScript era
+  , FromJSON (NativeScript era)
+  ) =>
+  FromJSON (AlonzoTxAuxData era)
+  where
+  parseJSON = withObject "AlonzoTxAuxData" $ \o -> do
+    metadata <- o .: "metadata"
+    nativeScripts <- StrictSeq.fromList <$> o .: "nativeScripts"
+    plutusScriptsRaw <- o .: "plutusScripts"
+    let plutusScripts = Map.mapMaybe NE.nonEmpty plutusScriptsRaw
+    pure $
+      mkMemoizedEra @era $
+        AlonzoTxAuxDataRaw
+          { atadrMetadata = metadata
+          , atadrNativeScripts = nativeScripts
+          , atadrPlutusScripts = plutusScripts
+          }

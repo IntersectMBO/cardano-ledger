@@ -64,11 +64,18 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.MemoBytes.Internal (mkMemoBytesShort)
 import qualified Codec.Serialise as Cborg (Serialise (..))
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
-import Data.Aeson (ToJSON (..), Value (Null))
+import Control.Monad (forM)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (Null), object, withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
+import qualified Data.ByteString.Base16 as BS16
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coerce (coerce)
 import Data.MemPack
+import Data.Text.Encoding (encodeUtf8)
+import qualified Data.Text.Encoding as Text (decodeUtf8)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -128,6 +135,52 @@ unData :: Data era -> PV1.Data
 unData eraData =
   case getMemoRawType eraData of
     PlutusData plutusData -> plutusData
+
+-- | JSON serialization of 'Data' uses the same detailed schema as cardano-api.
+instance ToJSON (Data era) where
+  toJSON = plutusDataToJson . unData
+
+-- | JSON deserialization of 'Data' uses the same detailed schema as cardano-api.
+instance Era era => FromJSON (Data era) where
+  parseJSON v = Data <$> plutusDataFromJson v
+
+plutusDataToJson :: PV1.Data -> Aeson.Value
+plutusDataToJson = \case
+  PV1.Constr n fields ->
+    object ["constructor" .= n, "fields" .= map plutusDataToJson fields]
+  PV1.Map kvs ->
+    object
+      [ "map"
+          .= [ object ["k" .= plutusDataToJson k, "v" .= plutusDataToJson v]
+             | (k, v) <- kvs
+             ]
+      ]
+  PV1.List elems ->
+    object ["list" .= map plutusDataToJson elems]
+  PV1.I n ->
+    object ["int" .= n]
+  PV1.B bs ->
+    object ["bytes" .= Text.decodeUtf8 (BS16.encode bs)]
+
+plutusDataFromJson :: Aeson.Value -> Parser PV1.Data
+plutusDataFromJson = withObject "Data" $ \o ->
+  (PV1.Constr <$> o .: "constructor" <*> (traverse plutusDataFromJson =<< o .: "fields"))
+    <|> ( do
+            kvs <- o .: "map"
+            PV1.Map
+              <$> forM
+                kvs
+                ( withObject "MapEntry" $ \kv ->
+                    (,) <$> (plutusDataFromJson =<< kv .: "k") <*> (plutusDataFromJson =<< kv .: "v")
+                )
+        )
+    <|> (PV1.List <$> (traverse plutusDataFromJson =<< o .: "list"))
+    <|> (PV1.I <$> o .: "int")
+    <|> (PV1.B <$> (parsePlutusByteString =<< o .: "bytes"))
+  where
+    parsePlutusByteString t = case BS16.decode (encodeUtf8 t) of
+      Left e -> fail $ "bytes: invalid hex: " <> e
+      Right bs -> pure bs
 
 -- | Upgrade 'Data' from one era to another. While the underlying data will
 -- remain the same, the memoised serialisation may change to reflect the
@@ -242,14 +295,15 @@ instance Era era => DecCBOR (Datum era) where
       decodeDatum k = Invalid k
 
 instance Era era => ToJSON (Datum era) where
-  toJSON d =
-    case datumDataHash d of
-      SNothing -> Null
-      SJust dh -> toJSON dh
-  toEncoding d =
-    case datumDataHash d of
-      SNothing -> toEncoding Null
-      SJust dh -> toEncoding dh
+  toJSON NoDatum = Null
+  toJSON (DatumHash dh) = object ["datumhash" .= dh]
+  toJSON (Datum bd) = toJSON (binaryDataToData @era bd)
+
+instance Era era => FromJSON (Datum era) where
+  parseJSON Null = pure NoDatum
+  parseJSON v =
+    withObject "DatumHash" (\o -> DatumHash <$> o .: "datumhash") v
+      <|> (Datum . dataToBinaryData <$> parseJSON v)
 
 mkInlineDatum :: forall era. Era era => PV1.Data -> Datum era
 mkInlineDatum = Datum . dataToBinaryData . Data @era

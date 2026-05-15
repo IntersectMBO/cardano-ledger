@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -15,7 +16,7 @@ module Cardano.Ledger.Mary.Tx (
 
 import Cardano.Ledger.Allegra.Tx (Tx (..), validateTimelock)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
-import Cardano.Ledger.Core (EraTx (..), HasEraTxLevel (..), STxTopLevel (..))
+import Cardano.Ledger.Core (EraTx (..), HasEraTxLevel (..), STxTopLevel (..), TopTx)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.TxAuxData ()
@@ -33,6 +34,7 @@ import Cardano.Ledger.Shelley.Tx (
   witsShelleyTxL,
  )
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
@@ -76,6 +78,10 @@ instance EqRaw (Tx t MaryEra) where
 
 maryTxL :: Lens' (Tx t MaryEra) (ShelleyTx t MaryEra)
 maryTxL = lens unMaryTx (\x y -> x {unMaryTx = y})
+
+deriving newtype instance ToJSON (Tx TopTx MaryEra)
+
+deriving newtype instance FromJSON (Tx TopTx MaryEra)
 
 instance Typeable t => DecCBOR (Annotator (Tx t MaryEra)) where
   decCBOR = fmap MkMaryTx <$> decCBOR

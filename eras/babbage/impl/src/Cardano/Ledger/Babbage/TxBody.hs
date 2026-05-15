@@ -68,6 +68,7 @@ import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
+  ToKeyValuePairs (..),
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -97,7 +98,10 @@ import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..), deepseq)
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
 import Data.Foldable as F (foldl')
+import Data.Foldable as Foldable (toList)
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -593,3 +597,67 @@ basicBabbageTxBodyRaw =
     SNothing
     SNothing
     SNothing
+
+instance
+  ToJSON (TxOut BabbageEra) =>
+  ToKeyValuePairs (TxBody TopTx BabbageEra)
+  where
+  toKeyValuePairs
+    BabbageTxBody
+      { btbInputs
+      , btbCollateral
+      , btbReferenceInputs
+      , btbOutputs
+      , btbCollateralReturn
+      , btbTotalCollateral
+      , btbCerts
+      , btbWithdrawals
+      , btbTxFee
+      , btbValidityInterval
+      , btbUpdate
+      , btbReqSignerHashes
+      , btbMint
+      , btbScriptIntegrityHash
+      , btbAuxDataHash
+      , btbTxNetworkId
+      } =
+      [ "inputs" .= Set.toList btbInputs
+      , "collateral" .= Set.toList btbCollateral
+      , "referenceInputs" .= Set.toList btbReferenceInputs
+      , "outputs" .= fmap sizedValue (Foldable.toList btbOutputs)
+      , "collateralReturn" .= fmap sizedValue btbCollateralReturn
+      , "totalCollateral" .= btbTotalCollateral
+      , "certs" .= Foldable.toList btbCerts
+      , "withdrawals" .= btbWithdrawals
+      , "fee" .= btbTxFee
+      , "validityInterval" .= btbValidityInterval
+      , "update" .= btbUpdate
+      , "reqSignerHashes" .= Set.toList btbReqSignerHashes
+      , "mint" .= btbMint
+      , "scriptIntegrityHash" .= btbScriptIntegrityHash
+      , "auxDataHash" .= btbAuxDataHash
+      , "networkId" .= btbTxNetworkId
+      ]
+
+instance ToJSON (TxOut BabbageEra) => ToJSON (TxBody TopTx BabbageEra) where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance FromJSON (TxOut BabbageEra) => FromJSON (TxBody TopTx BabbageEra) where
+  parseJSON = withObject "TxBody BabbageEra" $ \o ->
+    BabbageTxBody
+      <$> (Set.fromList <$> o .: "inputs")
+      <*> (Set.fromList <$> o .: "collateral")
+      <*> (Set.fromList <$> o .: "referenceInputs")
+      <*> (fmap (mkSized (eraProtVerLow @BabbageEra)) . StrictSeq.fromList <$> o .: "outputs")
+      <*> (fmap (mkSized (eraProtVerLow @BabbageEra)) <$> o .: "collateralReturn")
+      <*> o .: "totalCollateral"
+      <*> (StrictSeq.fromList <$> o .: "certs")
+      <*> o .: "withdrawals"
+      <*> o .: "fee"
+      <*> o .: "validityInterval"
+      <*> o .: "update"
+      <*> (Set.fromList <$> o .: "reqSignerHashes")
+      <*> o .: "mint"
+      <*> o .: "scriptIntegrityHash"
+      <*> o .: "auxDataHash"
+      <*> o .: "networkId"

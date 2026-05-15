@@ -188,7 +188,7 @@ data AccountAddress = AccountAddress
 
 newtype AccountId = AccountId {unAccountId :: Credential Staking}
   deriving (Show, Eq, Generic, Ord)
-  deriving newtype (NFData, NoThunks, ToJSON, FromJSON, EncCBOR, DecCBOR)
+  deriving newtype (NFData, NoThunks, ToJSON, FromJSON, ToJSONKey, FromJSONKey, EncCBOR, DecCBOR)
 
 -- | Deprecated pattern synonym for backward compatibility
 pattern RewardAccount :: Network -> Credential Staking -> AccountAddress
@@ -981,6 +981,12 @@ newtype Withdrawals = Withdrawals {unWithdrawals :: Map AccountAddress Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
 
+instance ToJSON Withdrawals where
+  toJSON (Withdrawals m) = toJSON $ Map.toList m
+
+instance FromJSON Withdrawals where
+  parseJSON v = Withdrawals . Map.fromList <$> parseJSON v
+
 instance Semigroup Withdrawals where
   Withdrawals w1 <> Withdrawals w2 = Withdrawals $ Map.unionWith (<>) w1 w2
 
@@ -990,7 +996,7 @@ instance Monoid Withdrawals where
 -- | Direct deposits to account addresses.
 newtype DirectDeposits = DirectDeposits {unDirectDeposits :: Map AccountAddress Coin}
   deriving (Show, Eq, Generic)
-  deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
+  deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR, ToJSON, FromJSON)
 
 instance Semigroup DirectDeposits where
   DirectDeposits d1 <> DirectDeposits d2 = DirectDeposits $ Map.unionWith (<>) d1 d2

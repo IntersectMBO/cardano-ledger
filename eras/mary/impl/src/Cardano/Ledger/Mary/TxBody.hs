@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -39,6 +40,7 @@ module Cardano.Ledger.Mary.TxBody (
 
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.TxBody
+import Cardano.Ledger.BaseTypes (ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
@@ -60,8 +62,13 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Foldable as Foldable
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -238,3 +245,43 @@ instance MaryEraTxBody MaryEra where
       (\AllegraTxBodyRaw {atbrMint} -> atbrMint)
       (\txBodyRaw mint -> txBodyRaw {atbrMint = mint})
   {-# INLINEABLE mintTxBodyL #-}
+
+instance ToKeyValuePairs (TxBody TopTx MaryEra) where
+  toKeyValuePairs
+    MaryTxBody
+      { mtbInputs
+      , mtbOutputs
+      , mtbCerts
+      , mtbWithdrawals
+      , mtbTxFee
+      , mtbValidityInterval
+      , mtbUpdate
+      , mtbAuxDataHash
+      , mtbMint
+      } =
+      [ "inputs" .= Set.toList mtbInputs
+      , "outputs" .= Foldable.toList mtbOutputs
+      , "certs" .= Foldable.toList mtbCerts
+      , "withdrawals" .= mtbWithdrawals
+      , "fee" .= mtbTxFee
+      , "validityInterval" .= mtbValidityInterval
+      , "update" .= mtbUpdate
+      , "auxDataHash" .= mtbAuxDataHash
+      , "mint" .= mtbMint
+      ]
+
+instance ToJSON (TxBody TopTx MaryEra) where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance FromJSON (TxBody TopTx MaryEra) where
+  parseJSON = Aeson.withObject "TxBody MaryEra" $ \o ->
+    MaryTxBody
+      <$> (Set.fromList <$> o .: "inputs")
+      <*> (StrictSeq.fromList <$> o .: "outputs")
+      <*> (StrictSeq.fromList <$> o .: "certs")
+      <*> o .: "withdrawals"
+      <*> o .: "fee"
+      <*> o .: "validityInterval"
+      <*> o .: "update"
+      <*> o .: "auxDataHash"
+      <*> o .: "mint"

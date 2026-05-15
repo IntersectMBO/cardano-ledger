@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -9,7 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -17,7 +16,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -34,7 +32,7 @@ module Cardano.Ledger.Shelley.Tx (
   shelleyTxEqRaw,
 ) where
 
-import Cardano.Ledger.BaseTypes (integralToBounded)
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..), integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
@@ -60,6 +58,8 @@ import Cardano.Ledger.Shelley.TxWits ()
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor.Classes (Eq1 (..))
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -110,6 +110,39 @@ deriving via
   InspectHeap (ShelleyTx l era)
   instance
     (Typeable era, Typeable l) => NoThunks (ShelleyTx l era)
+
+instance
+  (ToJSON (TxBody TopTx era), ToJSON (TxWits era), ToJSON (TxAuxData era)) =>
+  ToKeyValuePairs (ShelleyTx TopTx era)
+  where
+  toKeyValuePairs ShelleyTx {stBody, stWits, stAuxData} =
+    [ "stBody" .= stBody
+    , "stWits" .= stWits
+    , "stAuxData" .= stAuxData
+    ]
+
+deriving via
+  KeyValuePairs (ShelleyTx TopTx era)
+  instance
+    ( ToJSON (TxBody TopTx era)
+    , ToJSON (TxWits era)
+    , ToJSON (TxAuxData era)
+    ) =>
+    ToJSON (ShelleyTx TopTx era)
+
+instance
+  ( FromJSON (TxBody TopTx era)
+  , FromJSON (TxWits era)
+  , FromJSON (TxAuxData era)
+  ) =>
+  FromJSON (ShelleyTx TopTx era)
+  where
+  parseJSON =
+    Aeson.withObject "ShelleyTx" $ \o ->
+      ShelleyTx
+        <$> o .: "stBody"
+        <*> o .: "stWits"
+        <*> o .: "stAuxData"
 
 -- | `TxBody` setter and getter for `ShelleyTx`.
 bodyShelleyTxL :: Lens' (ShelleyTx l era) (TxBody l era)
@@ -232,6 +265,10 @@ shelleyTxEqRaw tx1 tx2 =
 
 instance EqRaw (Tx l ShelleyEra) where
   eqRaw = shelleyTxEqRaw
+
+deriving newtype instance ToJSON (Tx TopTx ShelleyEra)
+
+deriving newtype instance FromJSON (Tx TopTx ShelleyEra)
 
 shelleyTxL :: Lens' (Tx l ShelleyEra) (ShelleyTx l ShelleyEra)
 shelleyTxL = lens unShelleyTx (\x y -> x {unShelleyTx = y})

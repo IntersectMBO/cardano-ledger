@@ -2,6 +2,15 @@
 
 ## 1.21.0.0
 
+* Add `ToJSON`/`FromJSON` instances for:
+  - `TxIn`, `TxId` in `Cardano.Ledger.TxIn` (using `"hash#index"` text key format)
+  - `Metadatum` in `Cardano.Ledger.Metadata` (matching cardano-api detailed schema: `{"int":n}`, `{"string":t}`, `{"bytes":"<hex>"}`, `{"list":[...]}`, `{"map":[{"k":...,"v":...}]}`)
+  - `WitVKey` in `Cardano.Ledger.Keys.WitVKey`
+  - `BootstrapWitness` in `Cardano.Ledger.Keys.Bootstrap`
+  - `Addr`, `RewardAccount`, `AccountId` and `DirectDeposits` in `Cardano.Ledger.Address`
+  - `ScriptHash` `ToJSONKey`/`FromJSONKey` in `Cardano.Ledger.Hashes`
+  - `Datum era` in `Cardano.Ledger.Plutus.Data`
+  - `Inclusive` and `Exclusive` in `Cardano.Ledger.BaseTypes`
 * Change `ChainCode` type to use `ByteArray` instead of `ByteString`
 * Change `bwAttributes` field to use `ByteArray` instead of `ByteString`
 * Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class
@@ -26,8 +35,18 @@
 * Remove orphan `NoThunks`, `NFData`, `FromJSON`, `ToJSON` instances for `IPv4` and `IPv6`
   - Moved to `cardano-base:Cardano.Base.IP`
 * Remove `ToCBOR` and `FromCBOR` instances for `Nonce`
-* Remove default implementation of `fromPlutusData` in `ToPlutusData` typeclass.
-* Add `modifyTxAuxData` in `Cardano.Ledger.Core`.
+* Remove default implementation of `fromPlutusData` in `ToPlutusData` typeclass
+* Add `modifyTxAuxData` in `Cardano.Ledger.Core`
+* Add `ToJSON`/`FromJSON` instances for:
+  - `TxIn`, `TxId` in `Cardano.Ledger.TxIn`
+  - `Metadatum` in `Cardano.Ledger.Metadata`
+  - `WitVKey` in `Cardano.Ledger.Keys.WitVKey`
+  - `BootstrapWitness` in `Cardano.Ledger.Keys.Bootstrap`
+  - `Addr`, `RewardAccount` in `Cardano.Ledger.Address`
+  - `ScriptHash` `ToJSONKey`/`FromJSONKey` in `Cardano.Ledger.Hashes`
+  - `Data` in `Cardano.Ledger.Plutus.Data`
+  - `PlutusBinary` in `Cardano.Ledger.Plutus.Language`
+  - `Datum` in `Cardano.Ledger.Plutus.Data` (discriminated schema: `null`/`{"datumhash":...}`/inline data)
 
 ### `cddl`
 

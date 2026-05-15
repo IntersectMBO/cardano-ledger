@@ -39,12 +39,19 @@ import Cardano.Ledger.Binary (
   peekTokenType,
  )
 import Cardano.Ledger.Orphans ()
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData (rnf))
 import Control.Monad (when)
+import Data.Aeson (FromJSON (..), ToJSON (..), (.=))
+import qualified Data.Aeson as Aeson
 import Data.Array.Byte (ByteArray (..))
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.Primitive.ByteArray as Prim
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Foreign as TF
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -72,6 +79,48 @@ instance EncCBOR Metadatum where
 
 instance DecCBOR Metadatum where
   decCBOR = decodeMetadatum
+
+instance ToJSON Metadatum where
+  toJSON = \case
+    Map kvs ->
+      Aeson.object
+        [ "map"
+            .= [ Aeson.object
+                   [ "k" .= toJSON k
+                   , "v" .= toJSON v
+                   ]
+               | (k, v) <- kvs
+               ]
+        ]
+    List xs -> Aeson.object ["list" .= xs]
+    I n -> Aeson.object ["int" .= n]
+    B ba ->
+      -- FIXME Check again this implementation. Can we simplify?
+      Aeson.object
+        [ "bytes"
+            .= TE.decodeLatin1
+              (B16.encode (BS.pack [Prim.indexByteArray ba i :: Word8 | i <- [0 .. Prim.sizeofByteArray ba - 1]]))
+        ]
+    S t -> Aeson.object ["string" .= t]
+
+instance FromJSON Metadatum where
+  parseJSON =
+    Aeson.withObject "Metadatum" $ \o ->
+      (Map <$> (o Aeson..: "map" >>= traverse parseMetadatumKeyValue))
+        <|> (List <$> o Aeson..: "list")
+        <|> (I <$> o Aeson..: "int")
+        <|> ( o Aeson..: "bytes" >>= \s ->
+                case B16.decode (TE.encodeUtf8 s) of
+                  Left e -> fail $ "Metadatum bytes: invalid hex: " <> e
+                  Right bs -> pure $ B (Prim.byteArrayFromList (BS.unpack bs))
+            )
+        <|> (S <$> o Aeson..: "string")
+    where
+      parseMetadatumKeyValue =
+        Aeson.withObject "Metadatum Inner Map" $ \kvo ->
+          (,)
+            <$> (kvo Aeson..: "k" >>= parseJSON)
+            <*> (kvo Aeson..: "v" >>= parseJSON)
 
 -------------------------------------------------------------------------------
 -- CBOR encoding and decoding

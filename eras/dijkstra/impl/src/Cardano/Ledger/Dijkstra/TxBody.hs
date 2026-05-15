@@ -9,6 +9,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -106,7 +107,7 @@ import Cardano.Ledger.Babbage.TxBody (
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
-import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), fromSMaybe)
+import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), ToKeyValuePairs (..), fromSMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin, decodePositiveCoin)
@@ -143,7 +144,11 @@ import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq)
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import Data.Coerce (coerce)
+import qualified Data.Foldable as Foldable
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.OMap.Strict (OMap)
@@ -152,6 +157,7 @@ import Data.OSet.Strict (OSet, decodeOSet)
 import qualified Data.OSet.Strict as OSet
 import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set, foldr')
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -1344,6 +1350,191 @@ instance
 
   accountBalanceIntervalsTxBodyL = memoRawTypeL @DijkstraEra . accountBalanceIntervalsDijkstraTxBodyRawL
   {-# INLINE accountBalanceIntervalsTxBodyL #-}
+
+instance
+  ( ToJSON (TxOut DijkstraEra)
+  , ToJSON (Tx SubTx DijkstraEra)
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
+  ) =>
+  ToKeyValuePairs (TxBody TopTx DijkstraEra)
+  where
+  toKeyValuePairs txb =
+    let DijkstraTxBodyRaw
+          { dtbrSpendInputs
+          , dtbrCollateralInputs
+          , dtbrReferenceInputs
+          , dtbrOutputs
+          , dtbrCollateralReturn
+          , dtbrTotalCollateral
+          , dtbrCerts
+          , dtbrWithdrawals
+          , dtbrFee
+          , dtbrVldt
+          , dtbrGuards
+          , dtbrMint
+          , dtbrScriptIntegrityHash
+          , dtbrAuxDataHash
+          , dtbrNetworkId
+          , dtbrVotingProcedures
+          , dtbrProposalProcedures
+          , dtbrCurrentTreasuryValue
+          , dtbrTreasuryDonation
+          , dtbrSubTransactions
+          , dtbrDirectDeposits
+          , dtbrAccountBalanceIntervals
+          } = getMemoRawType txb
+     in [ "inputs" .= Set.toList dtbrSpendInputs
+        , "collateral" .= Set.toList dtbrCollateralInputs
+        , "referenceInputs" .= Set.toList dtbrReferenceInputs
+        , "outputs" .= fmap sizedValue (Foldable.toList dtbrOutputs)
+        , "collateralReturn" .= fmap sizedValue dtbrCollateralReturn
+        , "totalCollateral" .= dtbrTotalCollateral
+        , "certs" .= Foldable.toList dtbrCerts
+        , "withdrawals" .= dtbrWithdrawals
+        , "fee" .= dtbrFee
+        , "validityInterval" .= dtbrVldt
+        , "guards" .= Foldable.toList dtbrGuards
+        , "mint" .= dtbrMint
+        , "scriptIntegrityHash" .= dtbrScriptIntegrityHash
+        , "auxDataHash" .= dtbrAuxDataHash
+        , "networkId" .= dtbrNetworkId
+        , "votingProcedures" .= dtbrVotingProcedures
+        , "proposalProcedures" .= Foldable.toList dtbrProposalProcedures
+        , "currentTreasuryValue" .= dtbrCurrentTreasuryValue
+        , "treasuryDonation" .= dtbrTreasuryDonation
+        , "subTransactions" .= dtbrSubTransactions
+        , "directDeposits" .= dtbrDirectDeposits
+        , "accountBalanceIntervals" .= dtbrAccountBalanceIntervals
+        ]
+
+instance
+  ( ToJSON (TxOut DijkstraEra)
+  , ToJSON (Tx SubTx DijkstraEra)
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
+  ) =>
+  ToJSON (TxBody TopTx DijkstraEra)
+  where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance
+  ToJSON (TxOut DijkstraEra) =>
+  ToKeyValuePairs (TxBody SubTx DijkstraEra)
+  where
+  toKeyValuePairs txb =
+    let DijkstraSubTxBodyRaw
+          { dstbrSpendInputs
+          , dstbrReferenceInputs
+          , dstbrOutputs
+          , dstbrCerts
+          , dstbrWithdrawals
+          , dstbrVldt
+          , dstbrGuards
+          , dstbrMint
+          , dstbrScriptIntegrityHash
+          , dstbrAuxDataHash
+          , dstbrNetworkId
+          , dstbrVotingProcedures
+          , dstbrProposalProcedures
+          , dstbrCurrentTreasuryValue
+          , dstbrTreasuryDonation
+          , dstbrRequiredTopLevelGuards
+          , dstbrDirectDeposits
+          , dstbrAccountBalanceIntervals
+          } = getMemoRawType txb
+     in [ "inputs" .= Set.toList dstbrSpendInputs
+        , "referenceInputs" .= Set.toList dstbrReferenceInputs
+        , "outputs" .= fmap sizedValue (Foldable.toList dstbrOutputs)
+        , "certs" .= Foldable.toList dstbrCerts
+        , "withdrawals" .= dstbrWithdrawals
+        , "validityInterval" .= dstbrVldt
+        , "guards" .= Foldable.toList dstbrGuards
+        , "mint" .= dstbrMint
+        , "scriptIntegrityHash" .= dstbrScriptIntegrityHash
+        , "auxDataHash" .= dstbrAuxDataHash
+        , "networkId" .= dstbrNetworkId
+        , "votingProcedures" .= dstbrVotingProcedures
+        , "proposalProcedures" .= Foldable.toList dstbrProposalProcedures
+        , "currentTreasuryValue" .= dstbrCurrentTreasuryValue
+        , "treasuryDonation" .= dstbrTreasuryDonation
+        , "requiredTopLevelGuards" .= dstbrRequiredTopLevelGuards
+        , "directDeposits" .= dstbrDirectDeposits
+        , "accountBalanceIntervals" .= dstbrAccountBalanceIntervals
+        ]
+
+instance
+  ToJSON (TxOut DijkstraEra) =>
+  ToJSON (TxBody SubTx DijkstraEra)
+  where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance
+  ( FromJSON (TxOut DijkstraEra)
+  , FromJSON (Tx SubTx DijkstraEra)
+  , Eq (Tx SubTx DijkstraEra)
+  , NFData (Tx SubTx DijkstraEra)
+  , Show (Tx SubTx DijkstraEra)
+  , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
+  ) =>
+  FromJSON (TxBody TopTx DijkstraEra)
+  where
+  parseJSON = withObject "TxBody TopTx DijkstraEra" $ \o ->
+    DijkstraTxBody
+      <$> (Set.fromList <$> o .: "inputs")
+      <*> (Set.fromList <$> o .: "collateral")
+      <*> (Set.fromList <$> o .: "referenceInputs")
+      <*> (fmap (mkSized (eraProtVerLow @DijkstraEra)) . StrictSeq.fromList <$> o .: "outputs")
+      <*> (fmap (mkSized (eraProtVerLow @DijkstraEra)) <$> o .: "collateralReturn")
+      <*> o .: "totalCollateral"
+      <*> (OSet.fromStrictSeq . StrictSeq.fromList <$> o .: "certs")
+      <*> o .: "withdrawals"
+      <*> o .: "fee"
+      <*> o .: "validityInterval"
+      <*> (OSet.fromStrictSeq . StrictSeq.fromList <$> o .: "guards")
+      <*> o .: "mint"
+      <*> o .: "scriptIntegrityHash"
+      <*> o .: "auxDataHash"
+      <*> o .: "networkId"
+      <*> o .: "votingProcedures"
+      <*> (OSet.fromStrictSeq . StrictSeq.fromList <$> o .: "proposalProcedures")
+      <*> o .: "currentTreasuryValue"
+      <*> o .: "treasuryDonation"
+      <*> (OMap.fromFoldable <$> (o .: "subTransactions" :: Parser [Tx SubTx DijkstraEra]))
+      <*> o .: "directDeposits"
+      <*> o .: "accountBalanceIntervals"
+
+instance
+  ( FromJSON (TxOut DijkstraEra)
+  , Eq (Tx SubTx DijkstraEra)
+  , NFData (Tx SubTx DijkstraEra)
+  , Show (Tx SubTx DijkstraEra)
+  , EncCBOR (Tx SubTx DijkstraEra)
+  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
+  ) =>
+  FromJSON (TxBody SubTx DijkstraEra)
+  where
+  parseJSON = withObject "TxBody SubTx DijkstraEra" $ \o ->
+    DijkstraSubTxBody
+      <$> (Set.fromList <$> o .: "inputs")
+      <*> (Set.fromList <$> o .: "referenceInputs")
+      <*> (fmap (mkSized (eraProtVerLow @DijkstraEra)) . StrictSeq.fromList <$> o .: "outputs")
+      <*> (OSet.fromStrictSeq . StrictSeq.fromList <$> o .: "certs")
+      <*> o .: "withdrawals"
+      <*> o .: "validityInterval"
+      <*> (OSet.fromStrictSeq . StrictSeq.fromList <$> o .: "guards")
+      <*> o .: "mint"
+      <*> o .: "scriptIntegrityHash"
+      <*> o .: "auxDataHash"
+      <*> o .: "networkId"
+      <*> o .: "votingProcedures"
+      <*> (OSet.fromStrictSeq . StrictSeq.fromList <$> o .: "proposalProcedures")
+      <*> o .: "currentTreasuryValue"
+      <*> o .: "treasuryDonation"
+      <*> o .: "requiredTopLevelGuards"
+      <*> o .: "directDeposits"
+      <*> o .: "accountBalanceIntervals"
 
 -- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
 -- the first element and if it's a credential, it decodes the rest of the

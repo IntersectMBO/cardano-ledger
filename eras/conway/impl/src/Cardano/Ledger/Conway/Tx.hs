@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -47,6 +48,7 @@ import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -141,3 +143,7 @@ instance AlonzoEraTx ConwayEra where
 
 instance Typeable l => DecCBOR (Annotator (Tx l ConwayEra)) where
   decCBOR = fmap MkConwayTx <$> decCBOR
+
+deriving newtype instance ToJSON (Tx TopTx ConwayEra)
+
+deriving newtype instance FromJSON (Tx TopTx ConwayEra)

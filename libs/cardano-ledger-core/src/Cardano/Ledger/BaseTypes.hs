@@ -801,10 +801,10 @@ deriving instance Show EpochErr
 instance Exception EpochErr
 
 newtype Inclusive a = Inclusive {unInclusive :: a}
-  deriving newtype (Generic, Show, Eq, Ord, NoThunks, NFData, EncCBOR, DecCBOR)
+  deriving newtype (Generic, Show, Eq, Ord, NoThunks, NFData, EncCBOR, DecCBOR, ToJSON, FromJSON)
 
 newtype Exclusive a = Exclusive {unExclusive :: a}
-  deriving newtype (Generic, Show, Eq, Ord, NoThunks, NFData, EncCBOR, DecCBOR)
+  deriving newtype (Generic, Show, Eq, Ord, NoThunks, NFData, EncCBOR, DecCBOR, ToJSON, FromJSON)
 
 -- | Relationship descriptor for the expectation in the 'Mismatch' type.
 type data Relation

@@ -76,6 +76,7 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   ToCBOR (toCBOR),
   Version,
+  decodeFullAnnotatorFromHexText,
   decodeWord8,
   encodeWord8,
  )
@@ -110,12 +111,15 @@ import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..), nativeMultiSigTag)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (guard, (>=>))
-import Data.Aeson (ToJSON (..), Value (String), object, (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (String), object, withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import qualified Data.ByteString as BS
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
 import Data.MemPack
+import Data.Text (Text)
 import Data.Typeable
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -286,8 +290,14 @@ instance (NFData ix, NFData it) => NFData (AsIxItem ix it) where
 instance ToJSON ix => ToJSON (AsIx ix it) where
   toJSON (AsIx i) = object ["index" .= toJSON i]
 
+instance FromJSON ix => FromJSON (AsIx ix it) where
+  parseJSON =
+    withObject "AsIx" $ \o ->
+      AsIx <$> o .: "index"
+
 instance ToJSON it => ToJSON (AsItem ix it) where
-  toJSON (AsItem i) = object ["item" .= toJSON i]
+  toJSON (AsItem i) =
+    object ["item" .= toJSON i]
 
 instance (ToJSON ix, ToJSON it) => ToJSON (AsIxItem ix it) where
   toJSON (AsIxItem ix it) =
@@ -407,6 +417,24 @@ instance
     AlonzoRewarding n -> kindObjectWithValue "AlonzoRewarding" n
     where
       kindObjectWithValue name n = kindObject name ["value" .= n]
+
+instance
+  ( FromJSON (AsIx Word32 TxIn)
+  , FromJSON (AsIx Word32 PolicyID)
+  , FromJSON (AsIx Word32 (TxCert era))
+  , FromJSON (AsIx Word32 AccountAddress)
+  ) =>
+  FromJSON (AlonzoPlutusPurpose AsIx era)
+  where
+  parseJSON =
+    withObject "AlonzoPlutusPurpose" $ \o -> do
+      kind <- o .: "kind" :: Parser Text
+      case kind of
+        "AlonzoSpending" -> AlonzoSpending <$> o .: "value"
+        "AlonzoMinting" -> AlonzoMinting <$> o .: "value"
+        "AlonzoCertifying" -> AlonzoCertifying <$> o .: "value"
+        "AlonzoRewarding" -> AlonzoRewarding <$> o .: "value"
+        _ -> fail $ "Unknown AlonzoPlutusPurpose kind: " <> show kind
 
 pattern SpendingPurpose ::
   AlonzoEraScript era => f Word32 TxIn -> PlutusPurpose f era
@@ -581,6 +609,18 @@ instance
 
 instance AlonzoEraScript era => ToJSON (AlonzoScript era) where
   toJSON = String . serializeAsHexText
+
+instance
+  ( AlonzoEraScript era
+  , DecCBOR (Annotator (AlonzoScript era))
+  ) =>
+  FromJSON (AlonzoScript era)
+  where
+  parseJSON =
+    Aeson.withText "AlonzoScript" $ \t ->
+      case decodeFullAnnotatorFromHexText (eraProtVerLow @era) "AlonzoScript" decCBOR t of
+        Left e -> fail $ show e
+        Right script -> pure script
 
 -- | It might seem that this instance unnecessarily utilizes a zero Tag, but it is needed for
 -- forward compatibility with plutus scripts from future eras.

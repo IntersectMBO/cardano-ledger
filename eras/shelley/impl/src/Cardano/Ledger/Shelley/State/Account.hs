@@ -79,14 +79,13 @@ instance Typeable era => DecShareCBOR (ShelleyAccountState era) where
         <*> decodeNullStrictMaybe (interns ks <$> decCBOR)
 
 instance ToKeyValuePairs (ShelleyAccountState era) where
-  toKeyValuePairs sas@(ShelleyAccountState _ _ _ _) =
-    let ShelleyAccountState {..} = sas
-     in [ "reward" .= sasBalance -- deprecated
-        , "balance" .= sasBalance
-        , "deposit" .= sasDeposit
-        , "ptr" .= sasPtr
-        , "spool" .= sasStakePoolDelegation
-        ]
+  toKeyValuePairs ShelleyAccountState {sasBalance, sasDeposit, sasPtr, sasStakePoolDelegation} =
+    [ "reward" .= sasBalance -- deprecated
+    , "balance" .= sasBalance
+    , "deposit" .= sasDeposit
+    , "ptr" .= sasPtr
+    , "spool" .= sasStakePoolDelegation
+    ]
 
 deriving via KeyValuePairs (ShelleyAccountState era) instance ToJSON (ShelleyAccountState era)
 

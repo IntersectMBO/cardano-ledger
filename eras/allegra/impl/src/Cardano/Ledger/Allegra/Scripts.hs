@@ -61,7 +61,7 @@ module Cardano.Ledger.Allegra.Scripts (
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), kindObject, maybeToStrictMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -105,9 +105,10 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
-import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:?), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Foldable as F (foldl')
+import Data.Aeson.Types (Parser)
+import Data.Foldable as F (foldl', toList)
 import Data.MemPack
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
 import qualified Data.Sequence.Strict as SSeq
@@ -487,3 +488,24 @@ eqTimelockRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
     go (TimelockTimeStart sn1) (TimelockTimeStart sn2) = sn1 == sn2
     go (TimelockTimeExpire sn1) (TimelockTimeExpire sn2) = sn1 == sn2
     go _ _ = False
+
+instance Era era => ToJSON (Timelock era) where
+  toJSON tl = case getMemoRawType tl of
+    TimelockSignature kh -> kindObject "sig" ["keyHash" .= kh]
+    TimelockAllOf ss -> kindObject "all" ["scripts" .= F.toList ss]
+    TimelockAnyOf ss -> kindObject "any" ["scripts" .= F.toList ss]
+    TimelockMOf n ss -> kindObject "atLeast" ["required" .= n, "scripts" .= F.toList ss]
+    TimelockTimeStart s -> kindObject "timeStart" ["slot" .= s]
+    TimelockTimeExpire s -> kindObject "timeExpire" ["slot" .= s]
+
+instance (AllegraEraScript era, NativeScript era ~ Timelock era) => FromJSON (Timelock era) where
+  parseJSON = Aeson.withObject "Timelock" $ \o -> do
+    t <- o .: "kind" :: Parser String
+    case t of
+      "sig" -> mkRequireSignature @era <$> o .: "keyHash"
+      "all" -> mkRequireAllOf @era . SSeq.fromList <$> o .: "scripts"
+      "any" -> mkRequireAnyOf @era . SSeq.fromList <$> o .: "scripts"
+      "atLeast" -> mkRequireMOf @era <$> o .: "required" <*> (SSeq.fromList <$> o .: "scripts")
+      "timeStart" -> mkTimeStart @era <$> o .: "slot"
+      "timeExpire" -> mkTimeExpire @era <$> o .: "slot"
+      _ -> fail $ "Unknown Timelock kind: " <> t

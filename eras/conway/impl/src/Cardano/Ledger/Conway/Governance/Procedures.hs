@@ -125,7 +125,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Credential (Credential (..), credToText)
+import Cardano.Ledger.Credential (Credential (..), credToText, parseCredential)
 import Cardano.Ledger.Shelley.RewardProvenance ()
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)
@@ -135,6 +135,7 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State.Strict (get, put)
 import Data.Aeson (
   FromJSON (..),
+  FromJSONKey (..),
   KeyValue (..),
   ToJSON (..),
   ToJSONKey (..),
@@ -142,7 +143,8 @@ import Data.Aeson (
   (.:),
   (.:?),
  )
-import Data.Aeson.Types (toJSONKeyText)
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (FromJSONKeyFunction (..), toJSONKeyText)
 import Data.Data (Typeable)
 import Data.Default
 import Data.Kind
@@ -158,6 +160,7 @@ import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
+import Text.Read (readMaybe)
 
 newtype GovActionIx = GovActionIx {unGovActionIx :: Word16}
   deriving
@@ -170,6 +173,7 @@ newtype GovActionIx = GovActionIx {unGovActionIx :: Word16}
     , EncCBOR
     , DecCBOR
     , ToJSON
+    , FromJSON
     )
 
 data GovActionId = GovActionId
@@ -209,6 +213,26 @@ instance ToKeyValuePairs GovActionId where
 
 instance ToJSONKey GovActionId where
   toJSONKey = toJSONKeyText govActionIdToText
+
+instance FromJSON GovActionId where
+  parseJSON = withObject "GovActionId" $ \o ->
+    GovActionId
+      <$> o .: "txId"
+      <*> o .: "govActionIx"
+
+instance FromJSONKey GovActionId where
+  fromJSONKey = FromJSONKeyTextParser parseGovActionId
+
+parseGovActionId :: MonadFail m => Text.Text -> m GovActionId
+parseGovActionId t = case Text.splitOn "#" t of
+  [txIdText, ixText] -> do
+    txId <- case Aeson.fromJSON (Aeson.String txIdText) of
+      Aeson.Success v -> pure v
+      Aeson.Error e -> fail $ "GovActionId: invalid txId: " <> e
+    ix <-
+      maybe (fail "GovActionId: invalid index") (pure . GovActionIx) (readMaybe $ Text.unpack ixText)
+    pure $ GovActionId txId ix
+  _ -> fail "GovActionId: expected 'txhash#ix'"
 
 govActionIdToText :: GovActionId -> Text.Text
 govActionIdToText (GovActionId (TxId txidHash) (GovActionIx ix)) =
@@ -343,6 +367,8 @@ data Voter
 
 instance ToJSON Voter
 
+instance FromJSON Voter
+
 instance ToJSONKey Voter where
   toJSONKey = toJSONKeyText $ \case
     CommitteeVoter cred ->
@@ -351,6 +377,20 @@ instance ToJSONKey Voter where
       "drep-" <> credToText cred
     StakePoolVoter kh ->
       "stakepool-" <> credToText (KeyHashObj kh)
+
+instance FromJSONKey Voter where
+  fromJSONKey = FromJSONKeyTextParser parseVoter
+
+parseVoter :: MonadFail m => Text.Text -> m Voter
+parseVoter t = case Text.splitOn "-" t of
+  ("committee" : rest) -> CommitteeVoter <$> parseCredential (Text.intercalate "-" rest)
+  ("drep" : rest) -> DRepVoter <$> parseCredential (Text.intercalate "-" rest)
+  ("stakepool" : rest) -> do
+    cred <- parseCredential (Text.intercalate "-" rest)
+    case cred of
+      KeyHashObj kh -> pure $ StakePoolVoter kh
+      ScriptHashObj _ -> fail "StakePool voter cannot be a script hash"
+  _ -> fail $ "Invalid Voter: " <> show t
 
 instance DecCBOR Voter where
   decCBOR = decodeRecordSum "Voter" $ \case
@@ -387,6 +427,8 @@ data Vote
 
 instance ToJSON Vote
 
+instance FromJSON Vote
+
 instance NoThunks Vote
 
 instance NFData Vote
@@ -401,7 +443,7 @@ newtype VotingProcedures era = VotingProcedures
   { unVotingProcedures :: Map Voter (Map GovActionId (VotingProcedure era))
   }
   deriving stock (Generic, Eq, Show)
-  deriving newtype (NoThunks, EncCBOR, ToJSON)
+  deriving newtype (NoThunks, EncCBOR, ToJSON, FromJSON)
 
 deriving newtype instance Era era => NFData (VotingProcedures era)
 
@@ -478,6 +520,12 @@ deriving via
   instance
     EraPParams era => ToJSON (VotingProcedure era)
 
+instance EraPParams era => FromJSON (VotingProcedure era) where
+  parseJSON = withObject "VotingProcedure" $ \o ->
+    VotingProcedure
+      <$> o .: "decision"
+      <*> o .: "anchor"
+
 instance EraPParams era => ToKeyValuePairs (VotingProcedure era) where
   toKeyValuePairs vProc@(VotingProcedure _ _) =
     let VotingProcedure {..} = vProc
@@ -547,6 +595,14 @@ deriving via
   KeyValuePairs (ProposalProcedure era)
   instance
     EraPParams era => ToJSON (ProposalProcedure era)
+
+instance EraPParams era => FromJSON (ProposalProcedure era) where
+  parseJSON = withObject "ProposalProcedure" $ \o ->
+    ProposalProcedure
+      <$> o .: "deposit"
+      <*> o .: "returnAddr"
+      <*> o .: "govAction"
+      <*> o .: "anchor"
 
 instance EraPParams era => ToKeyValuePairs (ProposalProcedure era) where
   toKeyValuePairs proposalProcedure@(ProposalProcedure _ _ _ _) =
@@ -662,6 +718,10 @@ deriving newtype instance NFData (GovPurposeId (p :: GovActionPurpose))
 deriving newtype instance ToJSONKey (GovPurposeId (p :: GovActionPurpose))
 
 deriving newtype instance ToJSON (GovPurposeId (p :: GovActionPurpose))
+
+deriving newtype instance FromJSON (GovPurposeId (p :: GovActionPurpose))
+
+deriving newtype instance FromJSONKey (GovPurposeId (p :: GovActionPurpose))
 
 deriving newtype instance Show (GovPurposeId (p :: GovActionPurpose))
 
@@ -867,6 +927,8 @@ instance EraPParams era => NoThunks (GovAction era)
 instance EraPParams era => NFData (GovAction era)
 
 instance EraPParams era => ToJSON (GovAction era)
+
+instance EraPParams era => FromJSON (GovAction era)
 
 instance EraPParams era => DecCBOR (GovAction era) where
   decCBOR =

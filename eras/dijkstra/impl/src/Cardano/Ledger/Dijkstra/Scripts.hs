@@ -86,7 +86,8 @@ import Cardano.Ledger.Plutus (Language (..), Plutus, SLanguage (..), plutusSLang
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
-import Data.Aeson (KeyValue (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), withObject, (.:))
+import qualified Data.Foldable as Foldable
 import qualified Data.Map.Strict as Map
 import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
 import Data.OSet.Strict (OSet)
@@ -576,4 +577,62 @@ newtype AccountBalanceIntervals era
   = AccountBalanceIntervals
   {unAccountBalanceIntervals :: Map.Map AccountId (AccountBalanceInterval era)}
   deriving (Generic)
-  deriving newtype (Show, Ord, Eq, NoThunks, NFData, EncCBOR, DecCBOR)
+  deriving newtype (Show, Ord, Eq, NoThunks, NFData, EncCBOR, DecCBOR, ToJSON, FromJSON)
+
+instance
+  ( forall a b. (FromJSON a, FromJSON b) => FromJSON (f a b)
+  , FromJSON (TxCert era)
+  , EraPParams era
+  ) =>
+  FromJSON (DijkstraPlutusPurpose f era)
+  where
+  parseJSON = withObject "DijkstraPlutusPurpose" $ \o -> do
+    kind <- o .: "kind"
+    value <- o .: "value"
+    case (kind :: String) of
+      "DijkstraSpending" -> DijkstraSpending <$> parseJSON value
+      "DijkstraMinting" -> DijkstraMinting <$> parseJSON value
+      "DijkstraCertifying" -> DijkstraCertifying <$> parseJSON value
+      "DijkstraRewarding" -> DijkstraRewarding <$> parseJSON value
+      "DijkstraVoting" -> DijkstraVoting <$> parseJSON value
+      "DijkstraProposing" -> DijkstraProposing <$> parseJSON value
+      "DijkstraGuarding" -> DijkstraGuarding <$> parseJSON value
+      _ -> fail $ "Unknown DijkstraPlutusPurpose kind: " <> kind
+
+instance Era era => ToJSON (DijkstraNativeScript era) where
+  toJSON dns = case getMemoRawType dns of
+    DijkstraRequireSignature kh -> kindObject "sig" ["keyHash" .= kh]
+    DijkstraRequireAllOf ss -> kindObject "all" ["scripts" .= Foldable.toList ss]
+    DijkstraRequireAnyOf ss -> kindObject "any" ["scripts" .= Foldable.toList ss]
+    DijkstraRequireMOf n ss -> kindObject "atLeast" ["required" .= n, "scripts" .= Foldable.toList ss]
+    DijkstraTimeStart s -> kindObject "timeStart" ["slot" .= s]
+    DijkstraTimeExpire s -> kindObject "timeExpire" ["slot" .= s]
+    DijkstraRequireGuard cred -> kindObject "guard" ["credential" .= cred]
+
+instance Era era => FromJSON (DijkstraNativeScript era) where
+  parseJSON = withObject "DijkstraNativeScript" $ \o -> do
+    kind <- o .: "kind"
+    case (kind :: String) of
+      "sig" -> mkDijkstraRequireSignature @era <$> o .: "keyHash"
+      "all" -> mkDijkstraRequireAllOf @era . SSeq.fromList <$> o .: "scripts"
+      "any" -> mkDijkstraRequireAnyOf @era . SSeq.fromList <$> o .: "scripts"
+      "atLeast" -> mkDijkstraRequireMOf @era <$> o .: "required" <*> (SSeq.fromList <$> o .: "scripts")
+      "timeStart" -> mkDijkstraTimeStart @era <$> o .: "slot"
+      "timeExpire" -> mkDijkstraTimeExpire @era <$> o .: "slot"
+      "guard" -> mkDijkstraRequireGuard @era <$> o .: "credential"
+      _ -> fail $ "Unknown DijkstraNativeScript kind: " <> kind
+
+instance ToJSON (AccountBalanceInterval era) where
+  toJSON = \case
+    AccountBalanceLowerBound l -> kindObject "lowerBound" ["lower" .= l]
+    AccountBalanceUpperBound u -> kindObject "upperBound" ["upper" .= u]
+    AccountBalanceBothBounds l u -> kindObject "bothBounds" ["lower" .= l, "upper" .= u]
+
+instance FromJSON (AccountBalanceInterval era) where
+  parseJSON = withObject "AccountBalanceInterval" $ \o -> do
+    kind <- o .: "kind"
+    case (kind :: String) of
+      "lowerBound" -> AccountBalanceLowerBound <$> o .: "lower"
+      "upperBound" -> AccountBalanceUpperBound <$> o .: "upper"
+      "bothBounds" -> AccountBalanceBothBounds <$> o .: "lower" <*> o .: "upper"
+      _ -> fail $ "Unknown AccountBalanceInterval kind: " <> kind
