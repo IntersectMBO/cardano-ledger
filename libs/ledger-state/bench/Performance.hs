@@ -125,58 +125,63 @@ main = do
           , env (pure $ tickToEpochEnd newEpochStateStart) $
               bench "tickOverTheEpochBoundary" . nf tickOverTheEpochBoundary
           ]
-    , env (pure (mkMempoolEnv newEpochState slotNo, toMempoolState newEpochState)) $
-        \ ~(mempoolEnv, mempoolState) ->
-          bgroup
-            "reapplyTx"
-            [ env (pure validatedTx1) $
-                bench "Tx1" . whnf (reapplyTx' mempoolEnv mempoolState)
-            , env (pure validatedTx2) $
-                bench "Tx2" . whnf (reapplyTx' mempoolEnv mempoolState)
-            , env (pure validatedTx3) $
-                bench "Tx3" . whnf (reapplyTx' mempoolEnv mempoolState)
-            , env
-                (pure [validatedTx1, validatedTx2, validatedTx3])
-                $ bench "Tx1+Tx2+Tx3" . whnf (F.foldl' (reapplyTx' mempoolEnv) mempoolState)
-            ]
-    , env (pure (mkMempoolEnv newEpochState slotNo, toMempoolState newEpochState)) $
-        \ ~(mempoolEnv, mempoolState) ->
-          bgroup
-            "applyTx"
-            [ env (pure (extractTx validatedTx1)) $
-                bench "Tx1" . whnf (applyTx' mempoolEnv mempoolState)
-            , env (pure (extractTx validatedTx2)) $
-                bench "Tx2" . whnf (applyTx' mempoolEnv mempoolState)
-            , env (pure (extractTx validatedTx3)) $
-                bench "Tx3" . whnf (applyTx' mempoolEnv mempoolState)
-            , env
-                (pure [validatedTx1, validatedTx2, validatedTx3])
-                $ bench "Tx1+Tx2+Tx3"
-                  -- TODO: revert this to `foldl'` without `fmap` after tx's are fixed
-                  . whnf (F.foldlM (\ms -> fmap fst . applyTx' mempoolEnv ms . extractTx) mempoolState)
-            ]
-    , env (pure utxo) $ \utxo' ->
-        bgroup
-          "UTxO"
-          [ bench "sumUTxO" $ nf sumUTxO utxo'
-          , bench "sumCoinUTxO" $ nf sumCoinUTxO utxo'
-          , -- We need to filter out all multi-assets to prevent `areAllAdaOnly`
-            -- from short circuiting and producing results that are way better
-            -- than the worst case
-            env (pure $ Map.filter (\txOut -> isAdaOnly (txOut ^. valueTxOutL)) $ unUTxO utxo') $
-              bench "areAllAdaOnly" . nf areAllAdaOnly
-          ]
-    , env (pure newEpochState) $ \nes ->
-        let (_, minTxOut) = Map.findMin utxoMap
-            (_, maxTxOut) = Map.findMax utxoMap
-            setAddr =
-              Set.fromList [minTxOut ^. addrTxOutL, maxTxOut ^. addrTxOutL]
-         in bgroup
-              "MinMaxTxId"
-              [ env (pure setAddr) $ bench "getFilteredNewUTxO" . nf (getFilteredUTxO nes)
-              , env (pure setAddr) $ bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO nes)
-              ]
     ]
+      ++ [ utxoBenchmark
+         | utxoBenchmark <-
+             [ env (pure (mkMempoolEnv newEpochState slotNo, toMempoolState newEpochState)) $
+                 \ ~(mempoolEnv, mempoolState) ->
+                   bgroup
+                     "reapplyTx"
+                     [ env (pure validatedTx1) $
+                         bench "Tx1" . whnf (reapplyTx' mempoolEnv mempoolState)
+                     , env (pure validatedTx2) $
+                         bench "Tx2" . whnf (reapplyTx' mempoolEnv mempoolState)
+                     , env (pure validatedTx3) $
+                         bench "Tx3" . whnf (reapplyTx' mempoolEnv mempoolState)
+                     , env
+                         (pure [validatedTx1, validatedTx2, validatedTx3])
+                         $ bench "Tx1+Tx2+Tx3" . whnf (F.foldl' (reapplyTx' mempoolEnv) mempoolState)
+                     ]
+             , env (pure (mkMempoolEnv newEpochState slotNo, toMempoolState newEpochState)) $
+                 \ ~(mempoolEnv, mempoolState) ->
+                   bgroup
+                     "applyTx"
+                     [ env (pure (extractTx validatedTx1)) $
+                         bench "Tx1" . whnf (applyTx' mempoolEnv mempoolState)
+                     , env (pure (extractTx validatedTx2)) $
+                         bench "Tx2" . whnf (applyTx' mempoolEnv mempoolState)
+                     , env (pure (extractTx validatedTx3)) $
+                         bench "Tx3" . whnf (applyTx' mempoolEnv mempoolState)
+                     , env
+                         (pure [validatedTx1, validatedTx2, validatedTx3])
+                         $ bench "Tx1+Tx2+Tx3"
+                           -- TODO: revert this to `foldl'` without `fmap` after tx's are fixed
+                           . whnf (F.foldlM (\ms -> fmap fst . applyTx' mempoolEnv ms . extractTx) mempoolState)
+                     ]
+             , env (pure utxo) $ \utxo' ->
+                 bgroup
+                   "UTxO"
+                   [ bench "sumUTxO" $ nf sumUTxO utxo'
+                   , bench "sumCoinUTxO" $ nf sumCoinUTxO utxo'
+                   , -- We need to filter out all multi-assets to prevent `areAllAdaOnly`
+                     -- from short circuiting and producing results that are way better
+                     -- than the worst case
+                     env (pure $ Map.filter (\txOut -> isAdaOnly (txOut ^. valueTxOutL)) $ unUTxO utxo') $
+                       bench "areAllAdaOnly" . nf areAllAdaOnly
+                   ]
+             , env (pure newEpochState) $ \nes ->
+                 let (_, minTxOut) = Map.findMin utxoMap
+                     (_, maxTxOut) = Map.findMax utxoMap
+                     setAddr =
+                       Set.fromList [minTxOut ^. addrTxOutL, maxTxOut ^. addrTxOutL]
+                  in bgroup
+                       "MinMaxTxId"
+                       [ env (pure setAddr) $ bench "getFilteredNewUTxO" . nf (getFilteredUTxO nes)
+                       , env (pure setAddr) $ bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO nes)
+                       ]
+             ]
+         , utxoSize > 0
+         ]
       ++ [ env (selectRandomMapKeys largeKeysNum stdGen utxoMap) $ \largeKeys ->
              bgroup
                "DeleteTxOuts"
