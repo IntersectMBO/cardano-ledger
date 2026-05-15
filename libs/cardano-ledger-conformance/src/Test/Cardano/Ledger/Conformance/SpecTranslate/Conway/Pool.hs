@@ -3,9 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -18,7 +16,10 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import qualified Data.Map.Strict as Map
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (SpecRep, toSpecRep),
+  toSpecRepMap,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
 instance SpecTranslate ConwayEra (Shelley.PoolEnv ConwayEra) where

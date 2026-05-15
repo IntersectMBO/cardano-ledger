@@ -4,9 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -20,7 +18,12 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Data.Map (keysSet)
 import Data.Map.Strict (Map)
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (..),
+  askSpecTransM,
+  toSpecRepMap,
+  withCtxSpecTransM,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
 

@@ -5,9 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -33,10 +31,20 @@ import qualified Data.VMap as VMap
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTransM,
+  SpecTranslate (..),
+  askSpecTransM,
+  toSpecRepMap,
+  withCtxSpecTransM,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
+import Test.Cardano.Ledger.Conformance.Utils (
+  bimapMHSMap,
+  unionsHSMap,
+ )
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 
 instance SpecTranslate ConwayEra (Conway.CertEnv ConwayEra) where
@@ -83,7 +91,7 @@ depositsMap certState props =
           (Agda.MkHSMap . Map.toList $ certState ^. certDStateL . accountsL . accountsMapL)
       , bimapMHSMap
           (fmap Agda.PoolDeposit . toSpecRep)
-          (toSpecRep)
+          toSpecRep
           (Agda.MkHSMap . Map.toList $ fromCompact . spsDeposit <$> certState ^. certPStateL . psStakePoolsL)
       , bimapMHSMap
           (fmap Agda.DRepDeposit . toSpecRep)

@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -16,9 +15,16 @@ import Control.State.Transition.Extended (TRC (..))
 import Data.Bifunctor (second)
 import Data.Set (Set)
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
+  ExecSpecRule (ExecContext, runAgdaRule, translateInputs),
+  SpecTRC (SpecTRC),
+ )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (toSpecRep),
+  unComputationResult,
+  withCtxSpecTransM,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()

@@ -5,7 +5,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -19,8 +18,17 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Control.State.Transition.Extended (TRC (..))
 import Lens.Micro ((&), (.~), (^.))
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
+  ExecSpecRule (ExecContext, runAgdaRule, translateInputs),
+  SpecTRC (SpecTRC),
+ )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (toSpecRep),
+  askSpecTransM,
+  unComputationResult,
+  withCtxSpecTransM,
+ )
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 
 instance ExecSpecRule "GOV" ConwayEra where
