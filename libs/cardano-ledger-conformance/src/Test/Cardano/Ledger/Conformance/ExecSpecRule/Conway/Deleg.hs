@@ -27,10 +27,10 @@ instance ExecSpecRule "DELEG" ConwayEra where
   -- The context is the set of all DRep delegatees in the transaction
   type ExecContext "DELEG" ConwayEra = Set (Credential DRepRole)
 
-  translateInputs delegatees (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM delegatees $ toSpecRep @ConwayEra env
-    agdaSt <- runSpecTransM () $ toSpecRep @ConwayEra st
-    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
+  translateInputs (TRC (env, st, sig)) = do
+    agdaEnv <- toSpecRep env
+    agdaSt <- withCtxSpecTransM () $ toSpecRep st
+    agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule (SpecTRC env (Agda.MkCertState dState pState vState) sig) =

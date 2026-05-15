@@ -49,7 +49,8 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
-  runSpecTransM,
+  askSpecTransM,
+  withCtxSpecTransM,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..))
@@ -104,10 +105,11 @@ instance
 instance ExecSpecRule "LEDGER" ConwayEra where
   type ExecContext "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
 
-  translateInputs ConwayLedgerExecContext {..} (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM (clecGuardrailsScriptHash, clecEnactState) $ toSpecRep @ConwayEra env
-    agdaSt <- runSpecTransM () $ toSpecRep @ConwayEra st
-    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
+  translateInputs (TRC (env, st, sig)) = do
+    ConwayLedgerExecContext {..} <- askSpecTransM
+    agdaEnv <- withCtxSpecTransM (clecGuardrailsScriptHash, clecEnactState) $ toSpecRep env
+    agdaSt <- withCtxSpecTransM () $ toSpecRep st
+    agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule trc =

@@ -11,7 +11,6 @@
 
 module Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify (spec) where
 
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   EnactState,
@@ -51,7 +50,7 @@ conformsToImplAccepted impl agda = property $ do
   govActions <- cgbContextGen
   ratifyEnv <- genFromSpec $ cgbEnvironmentSpec govActions
   ratifySt <- genFromSpec $ cgbStateSpec govActions ratifyEnv
-  let specEnv = fromSpecTransM $ runSpecTransM @Coin 0 $ toSpecRep @ConwayEra ratifyEnv
+  let specEnv = fromSpecTransM $ runSpecTransM 0 $ toSpecRep @ConwayEra ratifyEnv
       specSt =
         fromSpecTransM $
           runSpecTransM () $

@@ -24,15 +24,19 @@ import qualified Data.Text as T
 import Lens.Micro ((^.))
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import qualified Prettyprinter as PP
-import Test.Cardano.Ledger.Conformance (
-  ExecSpecRule (..),
-  SpecTRC (..),
-  SpecTranslate (..),
-  runFromAgdaFunction,
-  runSpecTransM,
- )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
+  ExecSpecRule (..),
+  SpecTRC (..),
+  runFromAgdaFunction,
+ )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (..),
+  runSpecTransM,
+  withCtxSpecTransM,
+  withSpecTransM,
+ )
 import Test.Cardano.Ledger.Constrained.Conway (
   UtxoExecContext (..),
  )
@@ -42,10 +46,10 @@ import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 instance ExecSpecRule "UTXOW" ConwayEra where
   type ExecContext "UTXOW" ConwayEra = UtxoExecContext ConwayEra
 
-  translateInputs ctx (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM () $ toSpecRep @ConwayEra env
-    agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep @ConwayEra st
-    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
+  translateInputs (TRC (env, st, sig)) = do
+    agdaEnv <- withCtxSpecTransM () $ toSpecRep env
+    agdaSt <- withSpecTransM ((^. utxoEnvCertStateL) . uecUtxoEnv) $ toSpecRep st
+    agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   translateOutput ctx _ st =

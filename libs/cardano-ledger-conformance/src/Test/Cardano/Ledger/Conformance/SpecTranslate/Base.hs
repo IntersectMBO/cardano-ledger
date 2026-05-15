@@ -64,7 +64,7 @@ newtype SpecTransM era ctx a
   = SpecTransM (ExceptT Text (Reader ctx) a)
   deriving (Functor, Applicative, Monad, MonadError Text, MonadReader ctx)
 
-runSpecTransM :: ctx -> SpecTransM era ctx a -> Either Text a
+runSpecTransM :: forall era ctx a. ctx -> SpecTransM era ctx a -> Either Text a
 runSpecTransM ctx (SpecTransM m) = runReader (runExceptT m) ctx
 
 withSpecTransM :: (ctx -> ctx') -> SpecTransM era ctx' a -> SpecTransM era ctx a

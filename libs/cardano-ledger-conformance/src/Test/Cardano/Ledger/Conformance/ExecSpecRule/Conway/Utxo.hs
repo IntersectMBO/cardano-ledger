@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -22,6 +21,8 @@ import Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
   runFromAgdaFunction,
   runSpecTransM,
+  withCtxSpecTransM,
+  withSpecTransM,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
@@ -32,10 +33,10 @@ import Test.Cardano.Ledger.Generic.Instances ()
 instance ExecSpecRule "UTXO" ConwayEra where
   type ExecContext "UTXO" ConwayEra = UtxoExecContext ConwayEra
 
-  translateInputs ctx (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM () $ toSpecRep @ConwayEra env
-    agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep @ConwayEra st
-    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
+  translateInputs (TRC (env, st, sig)) = do
+    agdaEnv <- withCtxSpecTransM () $ toSpecRep env
+    agdaSt <- withSpecTransM ((^. utxoEnvCertStateL) . uecUtxoEnv) $ toSpecRep st
+    agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   translateOutput ctx _ st =

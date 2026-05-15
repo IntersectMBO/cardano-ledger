@@ -55,6 +55,7 @@ import Test.Cardano.Ledger.Api.DebugTools (writeCBOR)
 import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecNormalize (..),
+  SpecTransM,
   SpecTranslate (..),
   runSpecTransM,
   unComputationResult,
@@ -144,9 +145,8 @@ class
 
   translateInputs ::
     HasCallStack =>
-    ExecContext rule era ->
     TRC (EraRule rule era) ->
-    Either Text (SpecTRC rule era)
+    SpecTransM era (ExecContext rule era) (SpecTRC rule era)
   default translateInputs ::
     ( SpecTranslate era (Environment (EraRule rule era))
     , SpecTranslate era (State (EraRule rule era))
@@ -158,12 +158,10 @@ class
     , SpecRep era (State (EraRule rule era)) ~ SpecState rule era
     , SpecRep era (Signal (EraRule rule era)) ~ SpecSignal rule era
     ) =>
-    ExecContext rule era ->
     TRC (EraRule rule era) ->
-    Either Text (SpecTRC rule era)
-  translateInputs ctx (TRC (env, st, sig)) = do
-    runSpecTransM ctx $
-      SpecTRC <$> toSpecRep @era env <*> toSpecRep @era st <*> toSpecRep @era sig
+    SpecTransM era (ExecContext rule era) (SpecTRC rule era)
+  translateInputs (TRC (env, st, sig)) = do
+    SpecTRC <$> toSpecRep env <*> toSpecRep st <*> toSpecRep sig
 
   translateOutput ::
     ExecContext rule era ->
@@ -340,7 +338,8 @@ runConformance execContext trc@(TRC (env, st, sig)) = do
   SpecTRC specEnv specSt specSig <-
     impAnn "Translating the inputs" $
       expectRightDeepExpr $
-        translateInputs @rule @era execContext trc
+        runSpecTransM @era execContext $
+          translateInputs trc
   logDoc $ "ctx:\n" <> ansiExpr execContext
   logDoc $ "implEnv:\n" <> ansiExpr env
   logDoc $ "implSt:\n" <> ansiExpr st

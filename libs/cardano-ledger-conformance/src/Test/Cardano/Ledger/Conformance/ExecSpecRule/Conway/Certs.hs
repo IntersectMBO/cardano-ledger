@@ -20,22 +20,27 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (.~), (^.))
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (ConwayCertExecContext (..))
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   SpecTRC (..),
-  SpecTranslate (..),
   runFromAgdaFunction,
-  runSpecTransM,
  )
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (ConwayCertExecContext (..))
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (..),
+  askSpecTransM,
+  runSpecTransM,
+  withCtxSpecTransM,
+ )
 
 instance ExecSpecRule "CERTS" ConwayEra where
   type ExecContext "CERTS" ConwayEra = ConwayCertExecContext ConwayEra
 
-  translateInputs ConwayCertExecContext {..} (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep @ConwayEra env
-    agdaSt <- runSpecTransM () $ toSpecRep @ConwayEra st
-    agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
+  translateInputs (TRC (env, st, sig)) = do
+    ConwayCertExecContext {..} <- askSpecTransM
+    agdaEnv <- withCtxSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep env
+    agdaSt <- withCtxSpecTransM () $ toSpecRep st
+    agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule = runFromAgdaFunction Agda.certsStep

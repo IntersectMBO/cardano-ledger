@@ -49,7 +49,7 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
   impAnn ("Conformance hook (" <> symbolVal (Proxy @rule) <> ")") $ do
     -- translate inputs
     specTRC@(SpecTRC specEnv specState specSignal) <-
-      impAnn "Translating inputs" . expectRightDeepExpr $ translateInputs ctx trc
+      impAnn "Translating inputs" . expectRightDeepExpr $ runSpecTransM ctx $ translateInputs trc
     -- get agda response
     agdaResponse' <-
       fmap (second $ first specNormalize) . evaluateDeep $ runAgdaRuleWithDebug @rule @era specTRC

@@ -26,9 +26,11 @@ import Data.Ratio (denominator, numerator)
 import Lens.Micro ((^.))
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import qualified Prettyprinter as PP
-import Test.Cardano.Ledger.Conformance (
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   SpecTRC (..),
+ )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
   runSpecTransM,
   unComputationResult_,
@@ -41,18 +43,17 @@ import Test.Cardano.Ledger.Conway.TreeDiff (ansiExpr, tableDoc)
 instance ExecSpecRule "RATIFY" ConwayEra where
   runAgdaRule (SpecTRC env st sig) = unComputationResult_ $ Agda.ratifyStep env st sig
 
-  translateInputs _ (TRC (env, st@RatifyState {..}, sig@(RatifySignal actions))) =
-    runSpecTransM () $ do
-      let treasury = ensTreasury rsEnactState
-      specEnv <- withCtxSpecTransM treasury (toSpecRep @ConwayEra env)
-      specSt <- withCtxSpecTransM (toList actions) (toSpecRep @ConwayEra st)
-      specSig <- withCtxSpecTransM () (toSpecRep @ConwayEra sig)
+  translateInputs (TRC (env, st@RatifyState {..}, sig@(RatifySignal actions))) =
+    do
+      specEnv <- withCtxSpecTransM (ensTreasury rsEnactState) (toSpecRep env)
+      specSt <- withCtxSpecTransM (toList actions) (toSpecRep st)
+      specSig <- withCtxSpecTransM () (toSpecRep sig)
       pure $ SpecTRC specEnv specSt specSig
 
   translateOutput _ (TRC (_, _, RatifySignal actions)) out =
     runSpecTransM () . withCtxSpecTransM (toList actions) $ toSpecRep @ConwayEra out
 
-  extraInfo _ ctx trc@(TRC (env@RatifyEnv {..}, st@RatifyState {..}, RatifySignal actions)) _ =
+  extraInfo _ _ trc@(TRC (env@RatifyEnv {..}, st@RatifyState {..}, RatifySignal actions)) _ =
     PP.vsep $ specExtraInfo : (actionAcceptedRatio <$> toList actions)
     where
       members = foldMap' (committeeMembers @ConwayEra) $ ensCommittee rsEnactState
@@ -62,7 +63,7 @@ instance ExecSpecRule "RATIFY" ConwayEra where
       specExtraInfo =
         PP.vsep
           [ "Spec extra info:"
-          , either PP.viaShow ansiExpr $ translateInputs @_ @ConwayEra ctx trc
+          , either PP.viaShow ansiExpr $ runSpecTransM () $ translateInputs @_ @ConwayEra trc
           ]
       pv = st ^. rsEnactStateL . ensProtVerL
       actionAcceptedRatio gas@GovActionState {..} =
