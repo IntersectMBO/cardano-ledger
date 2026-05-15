@@ -5,6 +5,7 @@ module Main where
 import Control.Monad
 import Criterion.Main
 import Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import Data.VMap as VMap
 import System.Random.Stateful as Random
 
@@ -16,13 +17,9 @@ main = do
       n = 200000
       randList :: StdGen -> [(Key, Int)]
       randList gen = runStateGen_ gen (uniformListM n)
-      prefixList :: StdGen -> [(Key, Int)]
-      prefixList gen =
-        runStateGen_ gen $ \g ->
-          replicateM n $ do
-            key <- uniformM g
-            val <- uniformM g
-            pure (key, val)
+      duplicatedList :: StdGen -> [(Key, Int)]
+      duplicatedList gen =
+        replicate n $ runStateGen_ gen uniformM
       sequentialList :: StdGen -> [(Key, Int)]
       sequentialList gen =
         runStateGen_ gen $ \g -> do
@@ -33,56 +30,30 @@ main = do
     [ bgroup
         "fromList"
         [ fromListBench "uniform" (randList std1)
-        , fromListBench "prefixed" (prefixList std1)
         , fromListBench "sequential" (sequentialList std1)
+        , fromListBench "duplicated" (duplicatedList std1)
         ]
-    , bgroup
-        "toList"
-        [ toListBench "uniform" (randList std1)
-        , toListBench "prefixed" (prefixList std1)
-        , toListBench "sequential" (sequentialList std1)
-        ]
-    , bgroup
-        "toMapThroughList"
-        [ toMapThroughListBench "uniform" (randList std1)
-        , toMapThroughListBench "prefixed" (prefixList std1)
-        , toMapThroughListBench "sequential" (sequentialList std1)
-        ]
-    , bgroup
-        "fromMap"
-        [ fromMapBench "uniform" (randList std1)
-        , fromMapBench "prefixed" (prefixList std1)
-        , fromMapBench "sequential" (sequentialList std1)
-        ]
-    , bgroup
-        "foldlWithKey"
-        [ foldlWithKeyBench "uniform" (randList std1)
-        , foldlWithKeyBench "prefixed" (prefixList std1)
-        , foldlWithKeyBench "sequential" (sequentialList std1)
-        ]
-    , bgroup
-        "mapMaybeWithKey"
-        [ mapMaybeWithKeyBench "uniform" (randList std1)
-        , mapMaybeWithKeyBench "prefixed" (prefixList std1)
-        , mapMaybeWithKeyBench "sequential" (sequentialList std1)
-        ]
+    , lookupBench (randList std1)
+    , toListBench (randList std1)
+    , toMapThroughListBench (randList std1)
+    , fromMapBench (randList std1)
+    , foldlWithKeyBench (randList std1)
+    , mapMaybeWithKeyBench (randList std1)
     ]
 
-fromMapBench :: String -> [(Key, Int)] -> Benchmark
-fromMapBench name xs =
+fromMapBench :: [(Key, Int)] -> Benchmark
+fromMapBench xs =
   env (pure $ Map.fromList xs) $ \xsMap ->
     bgroup
-      name
-      [ bgroup
-          "fromMap"
-          [ bench "VMap" $ nf (VMap.fromMap :: Map Key Int -> VMap VB VP Key Int) xsMap
-          ]
+      "fromMap"
+      [ bench "VMap" $ nf (VMap.fromMap :: Map Key Int -> VMap VB VP Key Int) xsMap
       ]
 
-toMapThroughListBench :: String -> [(Key, Int)] -> Benchmark
-toMapThroughListBench name xs =
+-- This benchmark compares `toMap` implementation to a similar one if it was written for `Map`
+toMapThroughListBench :: [(Key, Int)] -> Benchmark
+toMapThroughListBench xs =
   bgroup
-    name
+    "toMapThroughList"
     [ bgroup
         "toMap"
         [ env (pure (Map.fromList xs)) $
@@ -92,10 +63,10 @@ toMapThroughListBench name xs =
         ]
     ]
 
-toListBench :: String -> [(Key, Int)] -> Benchmark
-toListBench name xs =
+toListBench :: [(Key, Int)] -> Benchmark
+toListBench xs =
   bgroup
-    name
+    "toList"
     [ bgroup
         "toList"
         [ env (pure (Map.fromList xs)) $ bench "Map" . nf Map.toList
@@ -118,28 +89,31 @@ toListBench name xs =
 
 fromListBench :: String -> [(Key, Int)] -> Benchmark
 fromListBench name xs =
-  env (pure xs) $ \xsnf ->
-    bgroup
-      name
-      [ bench "Map" $ nf Map.fromList xsnf
-      , bench "VMap" $
-          nf (VMap.fromList :: [(Key, Int)] -> VMap VB VP Key Int) xsnf
-      ]
-
-foldlWithKeyBench :: String -> [(Key, Int)] -> Benchmark
-foldlWithKeyBench name xs =
   bgroup
     name
+    [ env (pure xs) $ bench "Map.fromList" . nf Map.fromList
+    , env (pure xs) $
+        bench "VMap.fromList"
+          . nf (VMap.fromList :: [(Key, Int)] -> VMap VB VP Key Int)
+    , env (pure (length xs, xs)) $ \ ~(n, xsnf) ->
+        bench "VMap.fromListN" $
+          nf (VMap.fromListN n :: [(Key, Int)] -> VMap VB VP Key Int) xsnf
+    ]
+
+foldlWithKeyBench :: [(Key, Int)] -> Benchmark
+foldlWithKeyBench xs =
+  bgroup
+    "foldlWithKey"
     [ env (pure (Map.fromList xs)) $
-        bench "Map" . nf (Map.foldlWithKey (\a !_ -> (a +)) 0)
+        bench "Map" . nf (Map.foldlWithKey' (\a !_ -> (a +)) 0)
     , env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
         bench "VMap" . nf (VMap.foldlWithKey (\a !_ -> (a +)) 0)
     ]
 
-mapMaybeWithKeyBench :: String -> [(Key, Int)] -> Benchmark
-mapMaybeWithKeyBench name xs =
+mapMaybeWithKeyBench :: [(Key, Int)] -> Benchmark
+mapMaybeWithKeyBench xs =
   bgroup
-    name
+    "mapMaybeWithKey"
     [ env (pure (Map.fromList xs)) $
         bench "Map" . nf (Map.mapMaybeWithKey f)
     , env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
@@ -147,3 +121,13 @@ mapMaybeWithKeyBench name xs =
     ]
   where
     f key val = if even key then Just (key + val) else Nothing
+
+lookupBench :: [(Key, Int)] -> Benchmark
+lookupBench xs =
+  bgroup
+    "lookup"
+    [ env (pure (Prelude.map fst xs, Map.fromList xs)) $ \ ~(ks, m) ->
+        bench "Map" $ whnfIO $ mapM_ (\k -> fromJust (Map.lookup k m) `seq` pure ()) ks
+    , env (pure (Prelude.map fst xs, VMap.fromList xs :: VMap VB VP Key Int)) $ \ ~(ks, m) ->
+        bench "VMap" $ whnfIO $ mapM_ (\k -> fromJust (VMap.lookup k m) `seq` pure ()) ks
+    ]

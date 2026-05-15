@@ -13,6 +13,7 @@ module Data.VMap (
   size,
   lookup,
   findWithDefault,
+  lookupIndex,
   elemAt,
   member,
   notMember,
@@ -125,6 +126,11 @@ elemAt ::
   (VG.Vector kv k, VG.Vector vv v) => Int -> VMap kv vv k v -> (k, v)
 elemAt ix = KV.elemAtKVVector ix . unVMap
 {-# INLINE elemAt #-}
+
+lookupIndex ::
+  (Ord k, VG.Vector kv k) => k -> VMap kv vv k v -> Maybe Int
+lookupIndex key = KV.lookupIndexKVVector key . unVMap
+{-# INLINE lookupIndex #-}
 
 member ::
   (Ord k, VG.Vector kv k) => k -> VMap kv vv k v -> Bool

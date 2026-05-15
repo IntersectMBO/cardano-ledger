@@ -1,8 +1,8 @@
 # Version history for `vector-map`
 
-## 1.2.0.1
+## 1.2.1.0
 
-*
+* Add `lookupIndex`
 
 ## 1.2.0.0
 
