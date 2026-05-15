@@ -311,7 +311,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
-      sparse-checkout: .github
+      with:
+        sparse-checkout: |
+          .github
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
@@ -329,7 +331,7 @@ jobs:
         cat failures-summary.md >"$GITHUB_STEP_SUMMARY"
 
     - name: Post PR comment
-      if: github.event.pull_request
+      if: github.event.pull_request && !github.event.pull_request.draft
       uses: ./.github/actions/pr-comment
       with:
         marker: 'failures summary'
