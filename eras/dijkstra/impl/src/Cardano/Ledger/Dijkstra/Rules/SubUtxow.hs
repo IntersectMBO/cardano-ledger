@@ -275,7 +275,7 @@ dijkstraSubUtxowTransition = do
   {- txADhash ≡ map hash txAuxData -}
   runTestOnSignal $ Shelley.validateMetadata pp tx
 
-  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptHashesNeeded
+  let scriptIntegrity = mkScriptIntegrity pp tx (plutusLanguagesUsedStAnnTx stAnnTx)
   runTest $ Alonzo.checkScriptIntegrityHash tx pp scriptIntegrity
 
   runTest $ Alonzo.hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded

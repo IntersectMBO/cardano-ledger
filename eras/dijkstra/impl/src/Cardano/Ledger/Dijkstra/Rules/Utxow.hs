@@ -286,7 +286,7 @@ dijkstraUtxowTransition = do
 
   {- scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw) -}
   -- Per-level: script integrity is per-tx (depends on that tx's redeemers and language views)
-  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided topScriptHashesNeeded
+  let scriptIntegrity = mkScriptIntegrity pp tx (plutusLanguagesUsedStAnnTx stAnnTx)
   runTest $ Alonzo.checkScriptIntegrityHash tx pp scriptIntegrity
 
   {- concatMapˡ (λ txSub → mapˢ proj₁ (TopLevelGuardsOf txSub)) (SubTransactionsOf txTop) ⊆ GuardsOf txTop -}

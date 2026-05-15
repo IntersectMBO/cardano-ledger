@@ -367,7 +367,7 @@ alonzoStyleWitness = do
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
   -- It raises 'NoCostModel' a constructor of the predicate failure 'CollectError'.
 
-  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptsHashesNeeded
+  let scriptIntegrity = mkScriptIntegrity pp tx (plutusLanguagesUsedStAnnTx stAnnTx)
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ checkScriptIntegrityHash tx pp scriptIntegrity
 
