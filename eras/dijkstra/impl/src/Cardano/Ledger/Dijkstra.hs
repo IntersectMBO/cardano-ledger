@@ -145,7 +145,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo tx =
       , dsattPlutusLanguagesUsed = languagesUsed
       , dsattPlutusScriptsWithContext =
           scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) plutusScriptsUsed
-      , dsattStAnnSubTxs = stAnnSubTxs
+      , dsattSubTransactions = stAnnSubTxs
       }
 
 mkDijkstraStAnnSubTx ::

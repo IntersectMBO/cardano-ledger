@@ -1,13 +1,16 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.UTxO (
+  DijkstraEraUTxO (..),
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
   scriptsProvidedDijkstraStAnnTx,
@@ -50,6 +53,9 @@ import Data.Monoid (Sum (..))
 import qualified Data.OMap.Strict as OMap
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
+
+class AlonzoEraUTxO era => DijkstraEraUTxO era where
+  subTransactionsStAnnTx :: StAnnTx TopTx era -> [StAnnTx SubTx era]
 
 getConsumedDijkstraValue ::
   forall era l.
@@ -183,6 +189,13 @@ scriptsProvidedDijkstraStAnnTx stAnnTx =
     stAnnTx
     (\DijkstraStAnnTopTx {dsattScriptsProvided} -> dsattScriptsProvided)
     (\DijkstraStAnnSubTx {dsastScriptsProvided} -> dsastScriptsProvided)
+
+instance DijkstraEraUTxO DijkstraEra where
+  subTransactionsStAnnTx = subTransactionsDijkstraStAnnTx
+
+subTransactionsDijkstraStAnnTx ::
+  DijkstraStAnnTx TopTx era -> [DijkstraStAnnTx SubTx era]
+subTransactionsDijkstraStAnnTx DijkstraStAnnTopTx {dsattSubTransactions} = dsattSubTransactions
 
 dijkstraSubTxProducedValue ::
   (ConwayEraTxBody era, Value era ~ MaryValue) =>
