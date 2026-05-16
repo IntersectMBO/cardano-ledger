@@ -20,7 +20,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.BaseTypes (PerasCert (..), StrictMaybe)
+import Cardano.Ledger.BaseTypes (LeiosCert (..), PerasCert (..), StrictMaybe)
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure)
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
@@ -289,6 +289,9 @@ instance
 instance Arbitrary PerasCert where
   arbitrary = pure PerasCert
 
+instance Arbitrary LeiosCert where
+  arbitrary = pure LeiosCert
+
 instance
   ( EraBlockBody era
   , AlonzoEraTx era
@@ -297,7 +300,7 @@ instance
   ) =>
   Arbitrary (DijkstraBlockBody era)
   where
-  arbitrary = DijkstraBlockBody <$> arbitrary <*> arbitrary
+  arbitrary = DijkstraBlockBody <$> arbitrary <*> arbitrary <*> arbitrary
 
 deriving newtype instance Arbitrary (ApplyTxError DijkstraEra)
 

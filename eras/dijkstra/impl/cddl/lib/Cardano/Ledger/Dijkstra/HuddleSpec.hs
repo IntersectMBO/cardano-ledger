@@ -863,6 +863,11 @@ instance HuddleRule "block" DijkstraEra where
           |     the same
           |  2) every transaction_index must be strictly smaller than the length of
           |     transaction_bodies
+          |
+          |The 'leios_cert' and 'peras_cert' slots are always present on the wire and
+          |encode as CBOR null when absent. Two slots in a row can't be wire-disambiguated
+          |as trailing-optionals (the prototype's [4-or-5-item-body] pattern), so the body
+          |has a fixed item count and the slots themselves are nullable.
           |]
       $ pname
         =.= arr
@@ -876,7 +881,27 @@ instance HuddleRule "block" DijkstraEra where
                     ==> huddleRule @"auxiliary_data" p
                 ]
           , "invalid_transactions" ==> arr [0 <+ a (huddleRule @"transaction_index" p)]
+          , "leios_cert" ==> huddleRule @"leios_cert" p / VNil
+          , "peras_cert" ==> huddleRule @"peras_cert" p / VNil
           ]
+
+instance HuddleRule "leios_cert" DijkstraEra where
+  huddleRuleNamed pname _p =
+    comment
+      [str|Placeholder Leios certificate. The real cert payload will be filled in
+          |once the Leios design lands; for now it serialises as an empty CBOR list
+          |so the on-wire token is unambiguous against the surrounding 'null /
+          |leios_cert' choice.
+          |]
+      $ pname =.= arr []
+
+instance HuddleRule "peras_cert" DijkstraEra where
+  huddleRuleNamed pname _p =
+    comment
+      [str|Placeholder Peras certificate. Same shape as 'leios_cert' (empty CBOR
+          |list) until the Peras design fixes the payload.
+          |]
+      $ pname =.= arr []
 
 instance HuddleRule "auxiliary_scripts" DijkstraEra where
   huddleRuleNamed = auxiliaryScriptsRule

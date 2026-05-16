@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
   module Test.Cardano.Ledger.Conway.TreeDiff,
 ) where
 
-import Cardano.Ledger.BaseTypes (PerasCert, StrictMaybe)
+import Cardano.Ledger.BaseTypes (LeiosCert, PerasCert, StrictMaybe)
 import Cardano.Ledger.Conway.Rules (ConwayGovEvent)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core (
@@ -125,7 +125,11 @@ instance ToExpr (TxBody l DijkstraEra)
 
 instance ToExpr PerasCert
 
-instance (ToExpr (Tx TopTx era), ToExpr PerasCert) => ToExpr (DijkstraBlockBody era)
+instance ToExpr LeiosCert
+
+instance
+  (ToExpr (Tx TopTx era), ToExpr LeiosCert, ToExpr PerasCert) =>
+  ToExpr (DijkstraBlockBody era)
 
 instance ToExpr (DijkstraTx l DijkstraEra) where
   toExpr = \case

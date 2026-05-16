@@ -99,6 +99,9 @@ module Cardano.Ledger.BaseTypes (
   PerasCert (..),
   PerasKey (..),
   validatePerasCert,
+
+  -- * Leios-specific types
+  LeiosCert (..),
 ) where
 
 import Cardano.Crypto.Hash
@@ -116,8 +119,10 @@ import Cardano.Ledger.Binary (
   FromCBOR,
   ToCBOR,
   cborError,
+  enforceSize,
   ifDecoderVersionAtLeast,
  )
+import qualified Cardano.Ledger.Binary as Binary (encodeListLen)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -1016,14 +1021,36 @@ data PerasCert = PerasCert
 
 instance NFData PerasCert
 
+-- | Encode as CBOR empty list (0x80), NOT as @encCBOR ()@. The unit
+-- instance encodes as @encodeNull@ (0xf6), which is also what
+-- 'encodeNullStrictMaybe' emits for 'SNothing' — making 'SJust
+-- PerasCert' indistinguishable from 'SNothing' on the wire when
+-- wrapped in a null-tagged @StrictMaybe@.
 instance EncCBOR PerasCert where
-  encCBOR PerasCert =
-    encCBOR ()
+  encCBOR PerasCert = Binary.encodeListLen 0
 
 instance DecCBOR PerasCert where
   decCBOR = do
-    () <- decCBOR
+    enforceSize "PerasCert" 0
     pure PerasCert
+
+-- | Placeholder for Leios certificates.
+--
+-- NOTE: The real type will be brought from elsewhere once it's ready.
+data LeiosCert = LeiosCert
+  deriving (Eq, Show, Generic, NoThunks)
+
+instance NFData LeiosCert
+
+-- | See note on the 'PerasCert' instance: encode as CBOR empty list
+-- (0x80), NOT as @encCBOR ()@.
+instance EncCBOR LeiosCert where
+  encCBOR LeiosCert = Binary.encodeListLen 0
+
+instance DecCBOR LeiosCert where
+  decCBOR = do
+    enforceSize "LeiosCert" 0
+    pure LeiosCert
 
 -- | Placeholder for Peras public keys
 --

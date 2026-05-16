@@ -13,6 +13,7 @@ import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.Golden as Golden
 import Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip ()
+import qualified Test.Cardano.Ledger.Dijkstra.BlockBodySpec as BlockBodySpec
 import qualified Test.Cardano.Ledger.Dijkstra.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Dijkstra.Imp as Imp
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
@@ -26,6 +27,7 @@ main =
       describe "RoundTrip" $ do
         roundTripConwayCommonSpec @DijkstraEra
       Cddl.spec
+      BlockBodySpec.spec
       GoldenSpec.spec
       roundTripJsonShelleyEraSpec @DijkstraEra
       describe "Imp" $ do

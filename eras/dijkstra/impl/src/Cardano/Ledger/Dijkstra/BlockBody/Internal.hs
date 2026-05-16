@@ -30,19 +30,21 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   alignedValidFlags,
   mkBasicBlockBodyDijkstra,
   DijkstraEraBlockBody (..),
+  LeiosCert,
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (PerasCert)
+import Cardano.Ledger.BaseTypes (LeiosCert, PerasCert)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
   EncCBORGroup (..),
-  decodeListLen,
+  decodeNullStrictMaybe,
   encCBOR,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
+  encodeNullStrictMaybe,
   encodePreEncoded,
   serialize,
   withSlice,
@@ -53,7 +55,6 @@ import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
-import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
@@ -84,6 +85,9 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 
 data DijkstraBlockBody era = DijkstraBlockBodyInternal
   { dbbTxs :: !(StrictSeq (Tx TopTx era))
+  , dbbLeiosCert :: !(StrictMaybe LeiosCert)
+  -- ^ Optional Leios certificate. When 'SJust', the EB closure carrying
+  -- the actual transactions must be looked up via the LeiosDB.
   , dbbPerasCert :: !(StrictMaybe PerasCert)
   -- ^ Optional Peras certificate
   , dbbHash :: Hash.Hash HASH EraIndependentBlockBody
@@ -98,19 +102,28 @@ data DijkstraBlockBody era = DijkstraBlockBodyInternal
   , dbbTxsIsValidBytes :: BSL.ByteString
   -- ^ Bytes representing a set of integers. These are the indices of
   -- transactions with 'isValid' == False.
+  , dbbLeiosCertBytes :: Maybe BSL.ByteString
+  -- ^ Bytes encoding the optional Leios certificate
   , dbbPerasCertBytes :: Maybe BSL.ByteString
   -- ^ Bytes encoding the optional Peras certificate
   }
   deriving (Generic)
 
-instance (NFData (Tx TopTx era), NFData PerasCert) => NFData (DijkstraBlockBody era)
+instance
+  (NFData (Tx TopTx era), NFData LeiosCert, NFData PerasCert) =>
+  NFData (DijkstraBlockBody era)
 
 instance EraBlockBody DijkstraEra where
   type BlockBody DijkstraEra = DijkstraBlockBody DijkstraEra
   mkBasicBlockBody = mkBasicBlockBodyDijkstra
-  txSeqBlockBodyL = lens dbbTxs (\bb p -> bb {dbbTxs = p})
+
+  -- Rebuild via the bidirectional pattern so the cached body/wits/aux/isvalid
+  -- bytes and the body hash are recomputed for the new tx sequence. Mirrors
+  -- the Alonzo idiom 'lens abbTxs (\_ s -> AlonzoBlockBody s)'.
+  txSeqBlockBodyL =
+    lens dbbTxs (\bb txs -> DijkstraBlockBody txs (dbbLeiosCert bb) (dbbPerasCert bb))
   hashBlockBody = dbbHash
-  numSegComponents = 5
+  numSegComponents = 6
 
 mkBasicBlockBodyDijkstra ::
   ( SafeToHash (TxWits era)
@@ -118,16 +131,22 @@ mkBasicBlockBodyDijkstra ::
   , AlonzoEraTx era
   ) =>
   BlockBody era
-mkBasicBlockBodyDijkstra = DijkstraBlockBody mempty SNothing
+mkBasicBlockBodyDijkstra = DijkstraBlockBody mempty SNothing SNothing
 {-# INLINEABLE mkBasicBlockBodyDijkstra #-}
 
 -- | Dijkstra-specific extensions to 'EraBlockBody'
 class EraBlockBody era => DijkstraEraBlockBody era where
+  leiosCertBlockBodyL :: Lens' (BlockBody era) (StrictMaybe LeiosCert)
+  -- ^ Lens to access the optional Leios certificate in the block body
+
   perasCertBlockBodyL :: Lens' (BlockBody era) (StrictMaybe PerasCert)
   -- ^ Lens to access the optional Peras certificate in the block body
 
 instance DijkstraEraBlockBody DijkstraEra where
-  perasCertBlockBodyL = lens dbbPerasCert (\bb c -> bb {dbbPerasCert = c})
+  leiosCertBlockBodyL =
+    lens dbbLeiosCert (\bb c -> DijkstraBlockBody (dbbTxs bb) c (dbbPerasCert bb))
+  perasCertBlockBodyL =
+    lens dbbPerasCert (\bb c -> DijkstraBlockBody (dbbTxs bb) (dbbLeiosCert bb) c)
 
 pattern DijkstraBlockBody ::
   forall era.
@@ -135,12 +154,13 @@ pattern DijkstraBlockBody ::
   , SafeToHash (TxWits era)
   ) =>
   StrictSeq (Tx TopTx era) ->
+  StrictMaybe LeiosCert ->
   StrictMaybe PerasCert ->
   DijkstraBlockBody era
-pattern DijkstraBlockBody xs mbPerasCert <-
-  DijkstraBlockBodyInternal xs mbPerasCert _ _ _ _ _ _
+pattern DijkstraBlockBody xs mbLeiosCert mbPerasCert <-
+  DijkstraBlockBodyInternal xs mbLeiosCert mbPerasCert _ _ _ _ _ _ _
   where
-    DijkstraBlockBody txns mbPerasCert =
+    DijkstraBlockBody txns mbLeiosCert mbPerasCert =
       let version = eraProtVerLow @era
           serializeFoldablePreEncoded x =
             serialize version $
@@ -148,19 +168,32 @@ pattern DijkstraBlockBody xs mbPerasCert <-
           metaChunk index m = encodeIndexed <$> strictMaybeToMaybe m
             where
               encodeIndexed metadata = encCBOR index <> encodePreEncoded metadata
-          txSeqBodies =
-            serializeFoldablePreEncoded $ originalBytes . view bodyTxL <$> txns
-          txSeqWits =
-            serializeFoldablePreEncoded $ originalBytes . view witsTxL <$> txns
-          txSeqAuxDatas =
-            serialize version . encodeFoldableMapEncoder metaChunk $
-              fmap originalBytes . view auxDataTxL <$> txns
-          txSeqIsValids =
-            serialize version $ encCBOR $ nonValidatingIndices txns
+          -- NOTE: When the block contains a LeiosCert, any transactions must
+          -- not be encoded or contribute to the block body hash.
+          (txSeqBodies, txSeqWits, txSeqAuxDatas, txSeqIsValids) =
+            case mbLeiosCert of
+              SJust _ ->
+                ( serializeFoldablePreEncoded (mempty :: StrictSeq ByteString)
+                , serializeFoldablePreEncoded (mempty :: StrictSeq ByteString)
+                , serialize
+                    version
+                    (encodeFoldableMapEncoder metaChunk (mempty :: StrictSeq (StrictMaybe ByteString)))
+                , serialize version (encCBOR ([] :: [Int]))
+                )
+              SNothing ->
+                ( serializeFoldablePreEncoded $ originalBytes . view bodyTxL <$> txns
+                , serializeFoldablePreEncoded $ originalBytes . view witsTxL <$> txns
+                , serialize version . encodeFoldableMapEncoder metaChunk $
+                    fmap originalBytes . view auxDataTxL <$> txns
+                , serialize version $ encCBOR $ nonValidatingIndices txns
+                )
+          mbLeiosCertBytes =
+            Just (serialize version (encodeNullStrictMaybe encCBOR mbLeiosCert))
           mbPerasCertBytes =
-            fmap (serialize version) (strictMaybeToMaybe mbPerasCert)
+            Just (serialize version (encodeNullStrictMaybe encCBOR mbPerasCert))
        in DijkstraBlockBodyInternal
             { dbbTxs = txns
+            , dbbLeiosCert = mbLeiosCert
             , dbbPerasCert = mbPerasCert
             , dbbHash =
                 hashDijkstraSegWits
@@ -168,11 +201,13 @@ pattern DijkstraBlockBody xs mbPerasCert <-
                   txSeqWits
                   txSeqAuxDatas
                   txSeqIsValids
+                  mbLeiosCertBytes
                   mbPerasCertBytes
             , dbbTxsBodyBytes = txSeqBodies
             , dbbTxsWitsBytes = txSeqWits
             , dbbTxsAuxDataBytes = txSeqAuxDatas
             , dbbTxsIsValidBytes = txSeqIsValids
+            , dbbLeiosCertBytes = mbLeiosCertBytes
             , dbbPerasCertBytes = mbPerasCertBytes
             }
 
@@ -185,6 +220,7 @@ deriving via
      , "dbbTxsWitsBytes"
      , "dbbTxsAuxDataBytes"
      , "dbbTxsIsValidBytes"
+     , "dbbLeiosCertBytes"
      , "dbbPerasCertBytes"
      ]
     (DijkstraBlockBody era)
@@ -207,8 +243,13 @@ instance Era era => EncCBORGroup (DijkstraBlockBody era) where
           <> dbbTxsWitsBytes blockBody
           <> dbbTxsAuxDataBytes blockBody
           <> dbbTxsIsValidBytes blockBody
+          <> fromMaybe BSL.empty (dbbLeiosCertBytes blockBody)
           <> fromMaybe BSL.empty (dbbPerasCertBytes blockBody)
-  listLen _ = 5
+
+  -- The cert byte fields always encode something (a CBOR null when
+  -- absent, the cert value when present), so the body always has 6
+  -- elements.
+  listLen _ = 6
 
 hashDijkstraSegWits ::
   BSL.ByteString ->
@@ -220,14 +261,17 @@ hashDijkstraSegWits ::
   BSL.ByteString ->
   -- | Bytes for transaction isValid flags
   Maybe BSL.ByteString ->
+  -- | Bytes for optional Leios certificate
+  Maybe BSL.ByteString ->
   -- | Bytes for optional Peras certificate
   Hash HASH EraIndependentBlockBody
-hashDijkstraSegWits txSeqBodies txSeqWits txAuxData txSeqIsValids mbPerasCert =
+hashDijkstraSegWits txSeqBodies txSeqWits txAuxData txSeqIsValids mbLeiosCert mbPerasCert =
   coerce . hashLazy . toLazyByteString $
     hashPart txSeqBodies
       <> hashPart txSeqWits
       <> hashPart txAuxData
       <> hashPart txSeqIsValids
+      <> maybe mempty hashPart mbLeiosCert
       <> maybe mempty hashPart mbPerasCert
   where
     hashLazy :: BSL.ByteString -> Hash HASH ByteString
@@ -246,9 +290,12 @@ instance
   ) =>
   DecCBOR (Annotator (DijkstraBlockBody era))
   where
+  -- The body is encoded as 6 group elements (via 'encCBORGroup'), so
+  -- the outer 'decodeRecordNamed \"Block\" (const 7)' in
+  -- 'Cardano.Ledger.Block' already consumed the list-length header.
+  -- We just sequence the 6 items here (no inner 'decodeListLen'),
+  -- matching the Alonzo/Conway-style body decoder.
   decCBOR = do
-    len <- decodeListLen
-
     (bodies, bodiesAnn) <- withSlice decCBOR
     (wits, witsAnn) <- withSlice decCBOR
     let bodiesLength = length bodies
@@ -279,27 +326,35 @@ instance
             StrictSeq.forceToStrict $
               Seq.zipWith4 dijkstraSegwitTx bodies wits validFlags auxData
 
-    (mbPerasCert, mbPerasCertAnn) <-
-      case len of
-        4 -> return (pure SNothing, pure Nothing)
-        5 -> bimap (pure . SJust) (fmap Just) <$> withSlice decCBOR
-        _ -> fail $ "unexpected body length: " <> show len
+    -- Each cert slot is always present as 'encodeNullStrictMaybe'
+    -- (CBOR null when absent, value when present).
+    (leios, leiosSliceAnn) <-
+      withSlice (decodeNullStrictMaybe (decCBOR @LeiosCert))
+    (peras, perasSliceAnn) <-
+      withSlice (decodeNullStrictMaybe (decCBOR @PerasCert))
+    let mbLeiosCert = pure leios
+        mbLeiosCertAnn = Just <$> leiosSliceAnn
+        mbPerasCert = pure peras
+        mbPerasCertAnn = Just <$> perasSliceAnn
 
     pure $
       DijkstraBlockBodyInternal
         <$> txns
+        <*> mbLeiosCert
         <*> mbPerasCert
         <*> ( hashDijkstraSegWits
                 <$> bodiesAnn
                 <*> witsAnn
                 <*> auxDataAnn
                 <*> isValAnn
+                <*> mbLeiosCertAnn
                 <*> mbPerasCertAnn
             )
         <*> bodiesAnn
         <*> witsAnn
         <*> auxDataAnn
         <*> isValAnn
+        <*> mbLeiosCertAnn
         <*> mbPerasCertAnn
 
 --------------------------------------------------------------------------------
