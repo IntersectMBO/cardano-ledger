@@ -92,6 +92,7 @@ import Data.Maybe (fromJust)
 import Data.MemPack
 import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
 import qualified Data.Monoid as M (Sum (Sum, getSum))
+import Data.Ord (comparing)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
 import qualified Data.Semigroup as Semigroup (Sum (..))
@@ -184,6 +185,10 @@ data MaryValue = MaryValue !Coin !MultiAsset
 
 instance Eq MaryValue where
   x == y = pointwise (==) x y
+
+instance Ord MaryValue where
+  -- This is slightly inefficient, but pointwise requires (Integer -> Integer -> Bool)
+  x <= y = pointwise (<=) x y
 
 instance NFData MaryValue where
   rnf (MaryValue c m) = c `deepseq` rnf m
@@ -401,7 +406,7 @@ instance ToJSONKey AssetName where
 
 instance Compactible MaryValue where
   newtype CompactForm MaryValue = CompactValue CompactValue
-    deriving (Eq, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
+    deriving (Eq, Ord, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -466,6 +471,9 @@ instance NFData CompactValue where
 
 instance Eq CompactValue where
   a == b = from a == from b
+
+instance Ord CompactValue where
+  compare = comparing from
 
 deriving via
   OnlyCheckWhnfNamed "CompactValue" CompactValue

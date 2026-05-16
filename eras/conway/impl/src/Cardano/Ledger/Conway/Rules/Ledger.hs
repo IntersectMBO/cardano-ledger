@@ -204,6 +204,14 @@ deriving instance
 
 deriving instance
   ( Era era
+  , Ord (PredicateFailure (EraRule "UTXOW" era))
+  , Ord (PredicateFailure (EraRule "CERTS" era))
+  , Ord (PredicateFailure (EraRule "GOV" era))
+  ) =>
+  Ord (ConwayLedgerPredFailure era)
+
+deriving instance
+  ( Era era
   , Show (PredicateFailure (EraRule "UTXOW" era))
   , Show (PredicateFailure (EraRule "CERTS" era))
   , Show (PredicateFailure (EraRule "GOV" era))

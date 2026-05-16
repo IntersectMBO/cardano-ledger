@@ -30,7 +30,7 @@ data UpdnState = UpdnState Nonce Nonce
   deriving (Show, Eq)
 
 data UpdnPredicateFailure c -- No predicate failures
-  deriving (Generic, Show, Eq)
+  deriving (Eq, Ord, Show, Generic)
 
 instance NoThunks (UpdnPredicateFailure c)
 

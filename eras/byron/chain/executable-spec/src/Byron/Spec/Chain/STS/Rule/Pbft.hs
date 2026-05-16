@@ -23,7 +23,7 @@ data PbftPredicateFailure
   | PrevHashNotMatching Hash Hash
   | InvalidHeaderSignature VKey (Sig Hash)
   | SigCountFailure (PredicateFailure SIGCNT)
-  deriving (Eq, Show, Data)
+  deriving (Eq, Ord, Show, Data)
 
 instance STS PBFT where
   type

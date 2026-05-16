@@ -151,6 +151,13 @@ deriving instance
   ) =>
   Eq (AlonzoUtxowPredFailure era)
 
+deriving instance
+  ( AlonzoEraScript era
+  , Ord (TxCert era)
+  , Ord (PredicateFailure (EraRule "UTXO" era))
+  ) =>
+  Ord (AlonzoUtxowPredFailure era)
+
 instance
   ( AlonzoEraScript era
   , NFData (TxCert era)

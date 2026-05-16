@@ -141,6 +141,8 @@ solidifyFuturePParams = \case
 
 deriving stock instance Eq (PParams era) => Eq (FuturePParams era)
 
+deriving stock instance Ord (PParams era) => Ord (FuturePParams era)
+
 deriving stock instance Show (PParams era) => Show (FuturePParams era)
 
 deriving via AllowThunk (FuturePParams era) instance NoThunks (FuturePParams era)

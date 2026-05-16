@@ -60,7 +60,7 @@ data DijkstraGovCertPredFailure era
     -- attempted. Current Constitutional Committee and all available proposals will be
     -- searched before reporting this predicate failure.
     DijkstraCommitteeIsUnknown (Credential ColdCommitteeRole)
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 type instance EraRuleFailure "GOVCERT" DijkstraEra = DijkstraGovCertPredFailure DijkstraEra
 

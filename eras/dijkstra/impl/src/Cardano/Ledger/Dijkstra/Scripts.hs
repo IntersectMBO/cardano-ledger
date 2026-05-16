@@ -231,7 +231,7 @@ data DijkstraNativeScriptRaw era
   | DijkstraTimeStart !SlotNo
   | DijkstraTimeExpire !SlotNo
   | DijkstraRequireGuard (Credential Guard)
-  deriving (Eq, Generic, NFData)
+  deriving (Eq, Ord, Generic, NFData)
 
 deriving instance Show (DijkstraNativeScriptRaw era)
 
@@ -262,7 +262,7 @@ instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
       decRaw n = Invalid n
 
 newtype DijkstraNativeScript era = MkDijkstraNativeScript (MemoBytes (DijkstraNativeScriptRaw era))
-  deriving (Eq, Generic)
+  deriving (Eq, Ord, Generic)
   deriving newtype (ToCBOR, NFData, SafeToHash)
 
 deriving instance Show (DijkstraNativeScript era)

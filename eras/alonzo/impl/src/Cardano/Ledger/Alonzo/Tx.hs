@@ -142,7 +142,7 @@ import NoThunks.Class (InspectHeap (..), NoThunks)
 -- | Tag indicating whether non-native scripts in this transaction are expected
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValid = IsValid Bool
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
   deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToJSON, FromJSON)
 
 data AlonzoTx l era where
@@ -509,7 +509,7 @@ instance
 
 instance
   ( AlonzoEraScript era
-  , NFData (Tx l era)
+  , NFData (Tx TopTx era)
   , NFData (ScriptsNeeded era)
   , NFData (ScriptsProvided era)
   , NFData (ContextError era)
@@ -525,5 +525,5 @@ instance
                 asatPlutusLanguagesUsed `deepseq`
                   rnf asatPlutusScriptsWithContext
 
-instance EncCBOR (Tx l era) => EncCBOR (AlonzoStAnnTx l era) where
+instance EncCBOR (Tx TopTx era) => EncCBOR (AlonzoStAnnTx l era) where
   encCBOR AlonzoStAnnTx {asatTx} = encCBOR asatTx
