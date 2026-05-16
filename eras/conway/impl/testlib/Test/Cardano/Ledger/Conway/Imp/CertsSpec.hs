@@ -51,7 +51,7 @@ spec = describe "CERTS" $ do
        in
         submitBootstrapAware
           (submitTx_ tx)
-          (submitFailingTx tx)
+          (submitFailingTxSubset tx)
           ( FailBootstrapAndPostBootstrap $
               FailBoth
                 { bootstrapFailures = [notInRewardsFailure]
@@ -78,7 +78,7 @@ spec = describe "CERTS" $ do
        in
         submitBootstrapAware
           (submitTx_ tx)
-          (submitFailingTx tx)
+          (submitFailingTxSubset tx)
           ( FailBootstrapAndPostBootstrap $
               FailBoth
                 { bootstrapFailures = [notInRewardsFailure]
@@ -97,7 +97,7 @@ spec = describe "CERTS" $ do
       (accountAddress2, reward2, stakeKey2) <- setupAccountAddress
       void $ delegateToDRep (KeyHashObj stakeKey1) (Coin 1_000_000) DRepAlwaysAbstain
       void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysAbstain
-      submitFailingTx
+      submitFailingTxSubset
         ( mkBasicTx $
             mkBasicTxBody
               & withdrawalsTxBodyL
@@ -117,7 +117,7 @@ spec = describe "CERTS" $ do
                 Withdrawals [(accountAddress1, reward1 <+> Coin 1)]
         ]
 
-      submitFailingTx
+      submitFailingTxSubset
         ( mkBasicTx $
             mkBasicTxBody
               & withdrawalsTxBodyL
