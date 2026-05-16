@@ -112,6 +112,10 @@ deriving stock instance
   Eq (PredicateFailure (EraRule "DELPL" era)) =>
   Eq (ShelleyDelegsPredFailure era)
 
+deriving stock instance
+  Ord (PredicateFailure (EraRule "DELPL" era)) =>
+  Ord (ShelleyDelegsPredFailure era)
+
 instance
   NFData (PredicateFailure (EraRule "DELPL" era)) =>
   NFData (ShelleyDelegsPredFailure era)

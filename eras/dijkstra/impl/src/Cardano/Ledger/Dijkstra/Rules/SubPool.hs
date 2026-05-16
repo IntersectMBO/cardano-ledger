@@ -48,7 +48,7 @@ import Control.State.Transition.Extended (
 import GHC.Generics (Generic)
 
 newtype DijkstraSubPoolPredFailure era = DijkstraSubPoolPredFailure (Shelley.ShelleyPoolPredFailure era)
-  deriving (Eq, Show, Generic, DecCBOR, EncCBOR, NFData)
+  deriving (Eq, Ord, Show, Generic, DecCBOR, EncCBOR, NFData)
 
 type instance EraRuleFailure "SUBPOOL" DijkstraEra = DijkstraSubPoolPredFailure DijkstraEra
 

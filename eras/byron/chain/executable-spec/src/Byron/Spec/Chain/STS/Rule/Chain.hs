@@ -56,7 +56,7 @@ data ChainPredicateFailure
   | MaximumBlockSize Natural Natural
   | LedgerDelegationFailure (PredicateFailure DELEG)
   | LedgerUTxOFailure (PredicateFailure UTXOWS)
-  deriving (Eq, Show, Data)
+  deriving (Eq, Ord, Show, Data)
 
 instance STS CHAIN where
   type

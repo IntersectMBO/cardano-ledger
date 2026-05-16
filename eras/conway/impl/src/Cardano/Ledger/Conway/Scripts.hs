@@ -218,6 +218,8 @@ instance NoThunks (ConwayPlutusPurpose AsIx era)
 
 deriving instance (Eq (TxCert era), EraPParams era) => Eq (ConwayPlutusPurpose AsItem era)
 
+deriving instance (Ord (TxCert era), EraPParams era) => Ord (ConwayPlutusPurpose AsItem era)
+
 deriving instance (Show (TxCert era), EraPParams era) => Show (ConwayPlutusPurpose AsItem era)
 
 instance (NoThunks (TxCert era), EraPParams era) => NoThunks (ConwayPlutusPurpose AsItem era)
@@ -244,6 +246,8 @@ deriving via
     DecCBOR (ConwayPlutusPurpose f era)
 
 deriving instance (Eq (TxCert era), EraPParams era) => Eq (ConwayPlutusPurpose AsIxItem era)
+
+deriving instance (Ord (TxCert era), EraPParams era) => Ord (ConwayPlutusPurpose AsIxItem era)
 
 deriving instance (Show (TxCert era), EraPParams era) => Show (ConwayPlutusPurpose AsIxItem era)
 

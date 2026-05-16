@@ -146,7 +146,7 @@ mkTrace env initState sigs = Trace env initState sigs'
 -- >>> import Control.State.Transition.Extended (STS (..))
 -- >>> :{
 -- data DUMMY
--- data DummyPredicateFailure = CeciNEstPasUnePredicateFailure deriving (Eq, Show)
+-- data DummyPredicateFailure = CeciNEstPasUnePredicateFailure deriving (Eq, Ord, Show)
 -- instance STS DUMMY where
 --   type Environment DUMMY = Bool
 --   type State DUMMY = Int
@@ -357,7 +357,7 @@ preStatesAndSignals NewestFirst tr =
 -- >>> import Data.Functor.Identity
 -- >>> :{
 -- data ADDER
--- data AdderPredicateFailure = NoFailuresPossible deriving (Eq, Show)
+-- data AdderPredicateFailure = NoFailuresPossible deriving (Eq, Ord, Show)
 -- instance STS ADDER where
 --   type Environment ADDER = ()
 --   type State ADDER = Int

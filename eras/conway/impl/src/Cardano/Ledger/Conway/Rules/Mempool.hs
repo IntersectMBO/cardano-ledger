@@ -68,9 +68,9 @@ instance
   , EraCertState era
   , Embed (EraRule "LEDGER" era) (MEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Eq (PredicateFailure (EraRule "CERTS" era))
-  , Eq (PredicateFailure (EraRule "GOV" era))
-  , Eq (PredicateFailure (EraRule "UTXOW" era))
+  , Ord (PredicateFailure (EraRule "CERTS" era))
+  , Ord (PredicateFailure (EraRule "GOV" era))
+  , Ord (PredicateFailure (EraRule "UTXOW" era))
   , Show (PredicateFailure (EraRule "CERTS" era))
   , Show (PredicateFailure (EraRule "GOV" era))
   , Show (PredicateFailure (EraRule "UTXOW" era))

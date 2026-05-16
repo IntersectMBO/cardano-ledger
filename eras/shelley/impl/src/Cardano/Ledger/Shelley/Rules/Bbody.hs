@@ -179,6 +179,12 @@ deriving stock instance
   ) =>
   Eq (ShelleyBbodyPredFailure era)
 
+deriving stock instance
+  ( Era era
+  , Ord (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  Ord (ShelleyBbodyPredFailure era)
+
 instance
   ( EraBlockBody era
   , EraRule "BBODY" era ~ BBODY era

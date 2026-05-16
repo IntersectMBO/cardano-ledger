@@ -127,6 +127,10 @@ deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
   Eq (AlonzoBbodyPredFailure era)
 
+deriving instance
+  (Era era, Ord (PredicateFailure (EraRule "LEDGERS" era))) =>
+  Ord (AlonzoBbodyPredFailure era)
+
 instance
   (Era era, EncCBOR (PredicateFailure (EraRule "LEDGERS" era))) =>
   EncCBOR (AlonzoBbodyPredFailure era)
