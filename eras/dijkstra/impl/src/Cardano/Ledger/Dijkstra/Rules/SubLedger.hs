@@ -114,6 +114,13 @@ deriving stock instance
   Eq (DijkstraSubLedgerPredFailure era)
 
 deriving stock instance
+  ( Ord (PredicateFailure (EraRule "SUBGOV" era))
+  , Ord (PredicateFailure (EraRule "SUBCERTS" era))
+  , Ord (PredicateFailure (EraRule "SUBUTXOW" era))
+  ) =>
+  Ord (DijkstraSubLedgerPredFailure era)
+
+deriving stock instance
   ( Show (PredicateFailure (EraRule "SUBGOV" era))
   , Show (PredicateFailure (EraRule "SUBCERTS" era))
   , Show (PredicateFailure (EraRule "SUBUTXOW" era))

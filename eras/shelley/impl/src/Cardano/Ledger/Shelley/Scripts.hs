@@ -90,7 +90,7 @@ data MultiSigRaw era
     MultiSigAnyOf !(StrictSeq (MultiSig era))
   | -- | Require M of the given sub-terms to be satisfied.
     MultiSigMOf !Int !(StrictSeq (MultiSig era))
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
   deriving anyclass (NoThunks)
 
 class EraScript era => ShelleyEraScript era where
@@ -109,7 +109,7 @@ class EraScript era => ShelleyEraScript era where
 instance NFData (MultiSigRaw era)
 
 newtype MultiSig era = MkMultiSig (MemoBytes (MultiSigRaw era))
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
 
 instance Memoized (MultiSig era) where

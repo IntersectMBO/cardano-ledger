@@ -207,7 +207,7 @@ instance Exception AssertionException
 
 -- | State transition system.
 class
-  ( Eq (PredicateFailure a)
+  ( Ord (PredicateFailure a)
   , Show (PredicateFailure a)
   , Monad (BaseM a)
   , Typeable a
@@ -823,7 +823,7 @@ newtype Threshold a = Threshold a
 data STUB (e :: Type) (st :: Type) (si :: Type) (f :: Type) (m :: Type -> Type)
 
 instance
-  ( Eq f
+  ( Ord f
   , Monad m
   , Show f
   , Typeable e

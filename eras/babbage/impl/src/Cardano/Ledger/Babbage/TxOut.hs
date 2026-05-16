@@ -318,6 +318,10 @@ deriving stock instance
   (Era era, Eq (Script era), Eq (CompactForm (Value era))) =>
   Eq (BabbageTxOut era)
 
+deriving stock instance
+  (Era era, Ord (Script era), Ord (CompactForm (Value era))) =>
+  Ord (BabbageTxOut era)
+
 -- | Already in NF
 instance NFData (BabbageTxOut era) where
   rnf = rwhnf

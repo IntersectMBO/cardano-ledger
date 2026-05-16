@@ -112,6 +112,10 @@ deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
   Eq (ConwayBbodyPredFailure era)
 
+deriving instance
+  (Era era, Ord (PredicateFailure (EraRule "LEDGERS" era))) =>
+  Ord (ConwayBbodyPredFailure era)
+
 deriving anyclass instance
   (Era era, NFData (PredicateFailure (EraRule "LEDGERS" era))) =>
   NFData (ConwayBbodyPredFailure era)

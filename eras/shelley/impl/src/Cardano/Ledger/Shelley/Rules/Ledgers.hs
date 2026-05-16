@@ -145,6 +145,12 @@ deriving stock instance
   ) =>
   Eq (ShelleyLedgersPredFailure era)
 
+deriving stock instance
+  ( Era era
+  , Ord (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  Ord (ShelleyLedgersPredFailure era)
+
 instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "LEDGER" era))

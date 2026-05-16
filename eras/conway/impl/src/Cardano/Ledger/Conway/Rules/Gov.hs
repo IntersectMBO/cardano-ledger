@@ -215,7 +215,7 @@ data ConwayGovPredFailure era
     TreasuryWithdrawalReturnAccountsDoNotExist (NonEmpty AccountAddress)
   | -- | Disallow votes by unelected committee members
     UnelectedCommitteeVoters (NonEmpty (Credential HotCommitteeRole))
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 {-# DEPRECATED InvalidPolicyHash "In favor of `InvalidGuardrailsScriptHash`" #-}
 pattern InvalidPolicyHash ::

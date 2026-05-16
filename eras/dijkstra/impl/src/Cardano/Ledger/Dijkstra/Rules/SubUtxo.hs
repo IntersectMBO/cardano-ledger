@@ -120,6 +120,15 @@ deriving stock instance
 
 deriving stock instance
   ( Era era
+  , Ord (Value era)
+  , Ord (TxOut era)
+  , Ord (Script era)
+  , Ord TxIn
+  ) =>
+  Ord (DijkstraSubUtxoPredFailure era)
+
+deriving stock instance
+  ( Era era
   , Show (Value era)
   , Show (TxOut era)
   , Show (Script era)

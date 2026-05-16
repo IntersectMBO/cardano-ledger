@@ -283,7 +283,7 @@ adaIsPreservedInEachEpoch ::
   , ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))
   , ToExpr (PredicateFailure (EraRule "RUPD" era))
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
-  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Ord (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   GenSize ->

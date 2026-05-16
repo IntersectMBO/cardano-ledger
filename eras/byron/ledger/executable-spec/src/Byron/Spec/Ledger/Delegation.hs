@@ -323,7 +323,7 @@ dIStateDState =
 data SDELEG deriving (Data)
 
 data EpochDiff = EpochDiff {currentEpoch :: Epoch, certEpoch :: Epoch}
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 -- | These `PredicateFailure`s are all "throwable". The disjunction of the
 --   rules' preconditions is not `True` - the `PredicateFailure`s represent
@@ -335,7 +335,7 @@ data SdelegPredicateFailure
   | HasAlreadyDelegated
   | IsAlreadyScheduled
   | DoesNotVerify
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS SDELEG where
   type State SDELEG = DSState
@@ -421,7 +421,7 @@ data AdelegPredicateFailure
   | S_NoLastDelegation
   | S_AfterExistingDelegation
   | S_AlreadyADelegateOf VKey VKeyGenesis
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 -- | Delegation rules
 data ADELEG deriving (Data)
@@ -492,7 +492,7 @@ data SDELEGS deriving (Data)
 
 data SdelegsPredicateFailure
   = SDelegFailure (PredicateFailure SDELEG)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS SDELEGS where
   type State SDELEGS = DSState
@@ -524,7 +524,7 @@ data ADELEGS deriving (Data)
 
 data AdelegsPredicateFailure
   = ADelegFailure (PredicateFailure ADELEG)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS ADELEGS where
   type State ADELEGS = DState
@@ -560,7 +560,7 @@ data DELEG deriving (Data)
 data DelegPredicateFailure
   = SDelegSFailure (PredicateFailure SDELEGS)
   | ADelegSFailure (PredicateFailure ADELEGS)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS DELEG where
   type State DELEG = DIState
@@ -674,7 +674,7 @@ randomDCertGen env = do
 data MSDELEG deriving (Data)
 
 data MsdelegPredicateFailure = SDELEGFailure (PredicateFailure SDELEG)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS MSDELEG where
   type Environment MSDELEG = DSEnv
