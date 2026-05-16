@@ -17,12 +17,14 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
+import Cardano.Ledger.Plutus (SLanguage (SPlutusV3), hashPlutusScript)
 import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.NonEmpty as NEM
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
 
 spec ::
   forall era.
@@ -51,7 +53,7 @@ spec = describe "CERTS" $ do
        in
         submitBootstrapAware
           (submitTx_ tx)
-          (submitFailingTx tx)
+          (submitFailingSubsetTx tx)
           ( FailBootstrapAndPostBootstrap $
               FailBoth
                 { bootstrapFailures = [notInRewardsFailure]
@@ -78,7 +80,7 @@ spec = describe "CERTS" $ do
        in
         submitBootstrapAware
           (submitTx_ tx)
-          (submitFailingTx tx)
+          (submitFailingSubsetTx tx)
           ( FailBootstrapAndPostBootstrap $
               FailBoth
                 { bootstrapFailures = [notInRewardsFailure]
@@ -97,9 +99,15 @@ spec = describe "CERTS" $ do
       (accountAddress2, reward2, stakeKey2) <- setupAccountAddress
       void $ delegateToDRep (KeyHashObj stakeKey1) (Coin 1_000_000) DRepAlwaysAbstain
       void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysAbstain
-      submitFailingTx
+
+      -- Force legacy mode by including a PV3 script in our Tx's
+      txIn <- produceScript . hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
+
+      submitFailingSubsetTx
         ( mkBasicTx $
             mkBasicTxBody
+              & inputsTxBodyL
+                .~ [txIn]
               & withdrawalsTxBodyL
                 .~ Withdrawals
                   [ (accountAddress1, reward1 <+> Coin 1)
@@ -108,18 +116,19 @@ spec = describe "CERTS" $ do
         )
         [ if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
             then
-              injectFailure $
-                ConwayIncompleteWithdrawals @era $
-                  NEM.singleton accountAddress1 $
-                    Mismatch (reward1 <+> Coin 1) reward1
+              injectFailure . ConwayIncompleteWithdrawals @era $
+                NEM.singleton accountAddress1 $
+                  Mismatch (reward1 <+> Coin 1) reward1
             else
               injectFailure . WithdrawalsNotInRewardsCERTS @era $
                 Withdrawals [(accountAddress1, reward1 <+> Coin 1)]
         ]
 
-      submitFailingTx
+      submitFailingSubsetTx
         ( mkBasicTx $
             mkBasicTxBody
+              & inputsTxBodyL
+                .~ [txIn]
               & withdrawalsTxBodyL
                 .~ Withdrawals
                   [(accountAddress1, zero)]
@@ -129,7 +138,9 @@ spec = describe "CERTS" $ do
               injectFailure . ConwayIncompleteWithdrawals @era $
                 NEM.singleton accountAddress1 $
                   Mismatch zero reward1
-            else injectFailure . WithdrawalsNotInRewardsCERTS @era $ Withdrawals [(accountAddress1, zero)]
+            else
+              injectFailure . WithdrawalsNotInRewardsCERTS @era $
+                Withdrawals [(accountAddress1, zero)]
         ]
   where
     setupAccountAddress = do
