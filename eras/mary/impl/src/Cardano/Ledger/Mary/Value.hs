@@ -92,6 +92,7 @@ import Data.Maybe (fromJust)
 import Data.MemPack
 import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
 import Data.Monoid (Sum (..))
+import Data.Ord (comparing)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
@@ -151,8 +152,12 @@ newtype PolicyID = PolicyID {policyID :: ScriptHash}
     )
 
 -- | The MultiAssets map
+--
+-- Note that the `Ord` instance isn't semantically meaningful and is used only
+-- to satisfy constraints on Haskell containers such as `Set` and `Map`.
+-- Do not use it for any purpose that would directly affect chain behavior.
 newtype MultiAsset = MultiAsset (Map PolicyID (Map AssetName Integer))
-  deriving (Show, Generic, ToJSON, EncCBOR)
+  deriving (Show, Ord, Generic, ToJSON, EncCBOR)
 
 instance Eq MultiAsset where
   MultiAsset x == MultiAsset y = CM.pointwise (CM.pointwise (==)) x y
@@ -177,8 +182,12 @@ instance DecCBOR MultiAsset where
   decCBOR = decodeMultiAsset decodeIntegerBounded64
 
 -- | The Value representing MultiAssets
+--
+-- Note that the `Ord` instance isn't semantically meaningful and is used only
+-- to satisfy constraints on Haskell containers such as `Set` and `Map`.
+-- Do not use it for any purpose that would directly affect chain behavior.
 data MaryValue = MaryValue !Coin !MultiAsset
-  deriving (Show, Generic)
+  deriving (Show, Ord, Generic)
   deriving (ToJSON) via KeyValuePairs MaryValue
 
 instance Eq MaryValue where
@@ -400,7 +409,7 @@ instance ToJSONKey AssetName where
 
 instance Compactible MaryValue where
   newtype CompactForm MaryValue = CompactValue CompactValue
-    deriving (Eq, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
+    deriving (Eq, Ord, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -465,6 +474,9 @@ instance NFData CompactValue where
 
 instance Eq CompactValue where
   a == b = from a == from b
+
+instance Ord CompactValue where
+  compare = comparing from
 
 deriving via
   OnlyCheckWhnfNamed "CompactValue" CompactValue

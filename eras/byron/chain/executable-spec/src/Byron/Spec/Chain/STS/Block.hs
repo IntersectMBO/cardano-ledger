@@ -45,7 +45,7 @@ data BlockHeader = BlockHeader
   , _bhUpdHash :: !Hash
   -- ^ Update payload hash
   }
-  deriving (Eq, Generic, Show, Data)
+  deriving (Eq, Ord, Show, Generic, Data)
 
 -- TODO: BlockVersion – the protocol (block) version that created the block
 -- TODO: SoftwareVersion – the software version that created the block

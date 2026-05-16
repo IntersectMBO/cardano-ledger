@@ -34,11 +34,13 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  rawEncodeFixedSized,
  )
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
+import Data.Ord (comparing)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -106,6 +108,10 @@ type DSignable = DSIGN.Signable DSIGN
 --   We wrap the basic `VerKeyDSIGN` in order to add the key role.
 newtype VKey (kd :: KeyRole) = VKey {unVKey :: DSIGN.VerKeyDSIGN DSIGN}
   deriving (Generic, Eq, NFData, NoThunks, DecCBOR, EncCBOR)
+
+instance Ord (VKey kd) where
+  -- VerKeyDSIGN specifically disallows direct Ord
+  compare = comparing (rawEncodeFixedSized . unVKey)
 
 deriving via Quiet (VKey kd) instance Show (VKey kd)
 

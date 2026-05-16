@@ -80,7 +80,7 @@ data ExUnits' a = ExUnits'
   { exUnitsMem' :: !a
   , exUnitsSteps' :: !a
   }
-  deriving (Eq, Generic, Show, Functor)
+  deriving (Eq, Ord, Generic, Show, Functor)
   -- It is deliberate that there is no Ord instance, use `pointWiseExUnits` instead.
   deriving
     (Measure, BoundedMeasure)
@@ -100,7 +100,7 @@ deriving instance FromJSON a => FromJSON (ExUnits' a)
 -- | This newtype wrapper of ExUnits' is used to hide
 --  an implementation detail inside the ExUnits pattern.
 newtype ExUnits = WrapExUnits {unWrapExUnits :: ExUnits' Natural}
-  deriving (Eq, Generic, Show)
+  deriving (Eq, Ord, Generic, Show)
   deriving newtype (Monoid, Semigroup)
 
 instance NoThunks ExUnits

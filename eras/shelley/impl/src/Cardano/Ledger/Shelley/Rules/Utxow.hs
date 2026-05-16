@@ -162,6 +162,12 @@ deriving stock instance
   Eq (ShelleyUtxowPredFailure era)
 
 deriving stock instance
+  ( Ord (PredicateFailure (EraRule "UTXO" era))
+  , Era era
+  ) =>
+  Ord (ShelleyUtxowPredFailure era)
+
+deriving stock instance
   ( Show (PredicateFailure (EraRule "UTXO" era))
   , Era era
   ) =>

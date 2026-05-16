@@ -40,7 +40,7 @@ data UTXOWS deriving (Data)
 
 data UtxowsPredicateFailure
   = UtxowFailure (PredicateFailure UTXOW)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UTXOWS where
   type State UTXOWS = UTxOState

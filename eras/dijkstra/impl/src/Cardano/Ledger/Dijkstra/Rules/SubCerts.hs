@@ -54,6 +54,9 @@ deriving stock instance
   Eq (PredicateFailure (EraRule "SUBCERT" era)) => Eq (DijkstraSubCertsPredFailure era)
 
 deriving stock instance
+  Ord (PredicateFailure (EraRule "SUBCERT" era)) => Ord (DijkstraSubCertsPredFailure era)
+
+deriving stock instance
   Show (PredicateFailure (EraRule "SUBCERT" era)) => Show (DijkstraSubCertsPredFailure era)
 
 instance

@@ -431,7 +431,7 @@ instance EncCBOR Vote where
 newtype VotingProcedures era = VotingProcedures
   { unVotingProcedures :: Map Voter (Map GovActionId (VotingProcedure era))
   }
-  deriving stock (Generic, Eq, Show)
+  deriving stock (Generic, Eq, Ord, Show)
   deriving newtype (NoThunks, EncCBOR, ToJSON, FromJSON)
 
 deriving newtype instance Era era => NFData (VotingProcedures era)
@@ -478,7 +478,7 @@ data VotingProcedure era = VotingProcedure
   { vProcVote :: !Vote
   , vProcAnchor :: !(StrictMaybe Anchor)
   }
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Eq, Ord, Show)
 
 instance NoThunks (VotingProcedure era)
 

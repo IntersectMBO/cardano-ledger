@@ -63,7 +63,7 @@ data UTXOW deriving (Data)
 data UtxowPredicateFailure
   = UtxoFailure (PredicateFailure UTXO)
   | InsufficientWitnesses
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UTXOW where
   type Environment UTXOW = UTxOEnv

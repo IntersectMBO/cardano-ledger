@@ -56,6 +56,9 @@ deriving stock instance
   Eq (PredicateFailure (EraRule "SUBLEDGER" era)) => Eq (DijkstraSubLedgersPredFailure era)
 
 deriving stock instance
+  Ord (PredicateFailure (EraRule "SUBLEDGER" era)) => Ord (DijkstraSubLedgersPredFailure era)
+
+deriving stock instance
   Show (PredicateFailure (EraRule "SUBLEDGER" era)) => Show (DijkstraSubLedgersPredFailure era)
 
 instance NFData (PredicateFailure (EraRule "SUBLEDGER" era)) => NFData (DijkstraSubLedgersPredFailure era)

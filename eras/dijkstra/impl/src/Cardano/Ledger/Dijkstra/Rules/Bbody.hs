@@ -93,6 +93,10 @@ deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
   Eq (DijkstraBbodyPredFailure era)
 
+deriving instance
+  (Era era, Ord (PredicateFailure (EraRule "LEDGERS" era))) =>
+  Ord (DijkstraBbodyPredFailure era)
+
 instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "LEDGERS" era))

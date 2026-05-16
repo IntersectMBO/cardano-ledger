@@ -264,6 +264,10 @@ deriving instance
   Eq (BabbageContextError era)
 
 deriving instance
+  (Ord (AlonzoContextError era), Ord (PlutusPurpose AsIx era)) =>
+  Ord (BabbageContextError era)
+
+deriving instance
   (Show (AlonzoContextError era), Show (PlutusPurpose AsIx era)) =>
   Show (BabbageContextError era)
 

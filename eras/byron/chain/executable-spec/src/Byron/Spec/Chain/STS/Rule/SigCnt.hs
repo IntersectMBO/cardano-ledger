@@ -27,7 +27,7 @@ data SigcntPredicateFailure
     TooManyIssuedBlocks VKeyGenesis
   | -- | The key signing the block is not a delegate of a genesis key.
     NotADelegate
-  deriving (Eq, Show, Data)
+  deriving (Eq, Ord, Show, Data)
 
 instance STS SIGCNT where
   type
