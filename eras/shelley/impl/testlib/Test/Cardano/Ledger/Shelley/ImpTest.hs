@@ -466,7 +466,7 @@ class
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Ord (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
   , NFData (PredicateFailure (EraRule "LEDGER" era))

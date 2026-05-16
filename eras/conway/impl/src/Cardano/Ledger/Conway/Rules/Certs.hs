@@ -141,6 +141,10 @@ deriving stock instance
   Eq (ConwayCertsPredFailure era)
 
 deriving stock instance
+  Ord (PredicateFailure (EraRule "CERT" era)) =>
+  Ord (ConwayCertsPredFailure era)
+
+deriving stock instance
   Show (PredicateFailure (EraRule "CERT" era)) =>
   Show (ConwayCertsPredFailure era)
 

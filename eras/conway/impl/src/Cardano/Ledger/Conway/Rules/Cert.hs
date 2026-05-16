@@ -133,6 +133,13 @@ deriving stock instance
   ) =>
   Eq (ConwayCertPredFailure era)
 
+deriving stock instance
+  ( Ord (PredicateFailure (EraRule "DELEG" era))
+  , Ord (PredicateFailure (EraRule "POOL" era))
+  , Ord (PredicateFailure (EraRule "GOVCERT" era))
+  ) =>
+  Ord (ConwayCertPredFailure era)
+
 instance
   ( NFData (PredicateFailure (EraRule "DELEG" era))
   , NFData (PredicateFailure (EraRule "POOL" era))

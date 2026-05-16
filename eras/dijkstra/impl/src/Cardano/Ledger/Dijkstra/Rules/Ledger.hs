@@ -191,6 +191,15 @@ deriving instance
 
 deriving instance
   ( Era era
+  , Ord (PredicateFailure (EraRule "UTXOW" era))
+  , Ord (PredicateFailure (EraRule "ENTITIES" era))
+  , Ord (PredicateFailure (EraRule "GOV" era))
+  , Ord (PredicateFailure (EraRule "SUBLEDGERS" era))
+  ) =>
+  Ord (DijkstraLedgerPredFailure era)
+
+deriving instance
+  ( Era era
   , Show (PredicateFailure (EraRule "UTXOW" era))
   , Show (PredicateFailure (EraRule "ENTITIES" era))
   , Show (PredicateFailure (EraRule "GOV" era))

@@ -193,6 +193,15 @@ deriving instance
   Eq (ConwayContextError era)
 
 deriving instance
+  ( Ord (BabbageContextError era)
+  , Ord (TxCert era)
+  , Ord (PlutusPurpose AsItem era)
+  , Ord (PlutusPurpose AsIx era)
+  , EraPParams era
+  ) =>
+  Ord (ConwayContextError era)
+
+deriving instance
   ( Show (BabbageContextError era)
   , Show (TxCert era)
   , Show (PlutusPurpose AsItem era)

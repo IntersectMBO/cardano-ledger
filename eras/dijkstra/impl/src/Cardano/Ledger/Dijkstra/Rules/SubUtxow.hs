@@ -117,6 +117,12 @@ deriving stock instance
 
 deriving stock instance
   ( ConwayEraScript era
+  , Ord (PredicateFailure (EraRule "SUBUTXO" era))
+  ) =>
+  Ord (DijkstraSubUtxowPredFailure era)
+
+deriving stock instance
+  ( ConwayEraScript era
   , Show (PredicateFailure (EraRule "SUBUTXO" era))
   ) =>
   Show (DijkstraSubUtxowPredFailure era)

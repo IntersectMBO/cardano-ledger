@@ -49,7 +49,7 @@ data OcertPredicateFailure
       String -- error message given by Consensus Layer
   | NoCounterForKeyHashOCERT
       (KeyHash BlockIssuer) -- stake pool key hash
-  deriving (Show, Eq, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 instance NoThunks OcertPredicateFailure
 

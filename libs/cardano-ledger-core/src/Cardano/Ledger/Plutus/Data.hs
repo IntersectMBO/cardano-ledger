@@ -83,7 +83,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 -- | This is a wrapper with a phantom era for PV1.Data, since we need
 -- something with kind (* -> *) for MemoBytes
 newtype PlutusData era = PlutusData PV1.Data
-  deriving newtype (Eq, Generic, Show, NFData, NoThunks, Cborg.Serialise)
+  deriving newtype (Eq, Ord, Generic, Show, NFData, NoThunks, Cborg.Serialise)
 
 instance EncCBOR (PlutusData era) where
   encCBOR (PlutusData d) = fromPlainEncoding $ Cborg.encode d
@@ -95,7 +95,7 @@ instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
   decCBOR = pure <$> fromPlainDecoder Cborg.decode
 
 newtype Data era = MkData (MemoBytes (PlutusData era))
-  deriving (Eq, Generic)
+  deriving (Eq, Ord, Generic)
   deriving newtype (SafeToHash, ToCBOR, NFData, DecCBOR)
 
 -- | Encodes memoized bytes created upon construction.

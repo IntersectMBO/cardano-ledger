@@ -153,6 +153,10 @@ deriving instance
   VRF.VRFAlgorithm (VRF c) =>
   Eq (OverlayPredicateFailure c)
 
+deriving instance
+  VRF.VRFAlgorithm (VRF c) =>
+  Ord (OverlayPredicateFailure c)
+
 instance
   VRF.VRFAlgorithm (VRF c) =>
   NoThunks (OverlayPredicateFailure c)

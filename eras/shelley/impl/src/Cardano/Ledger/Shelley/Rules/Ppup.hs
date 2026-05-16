@@ -65,7 +65,7 @@ import NoThunks.Class (NoThunks (..))
 data PpupEnv era = PPUPEnv SlotNo (PParams era) GenDelegs
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance NoThunks VotingPeriod
 
@@ -104,7 +104,7 @@ data ShelleyPpupPredFailure era
     --  version by exactly one.
     PVCannotFollowPPUP
       ProtVer
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 type instance EraRuleFailure "PPUP" ShelleyEra = ShelleyPpupPredFailure ShelleyEra
 
