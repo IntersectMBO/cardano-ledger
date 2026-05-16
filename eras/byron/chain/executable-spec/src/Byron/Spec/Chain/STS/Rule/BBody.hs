@@ -54,7 +54,7 @@ data BbodyPredicateFailure
   | BUPIFailure (PredicateFailure BUPI)
   | DelegationFailure (PredicateFailure DELEG)
   | UTXOWSFailure (PredicateFailure UTXOWS)
-  deriving (Eq, Show, Data)
+  deriving (Eq, Ord, Show, Data)
 
 instance STS BBODY where
   type

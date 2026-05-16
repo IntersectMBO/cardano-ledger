@@ -36,7 +36,7 @@ data BupiPredicateFailure
   = UPIREGFailure (PredicateFailure UPIREG)
   | UPIVOTESFailure (PredicateFailure UPIVOTES)
   | UPIENDFailure (PredicateFailure UPIEND)
-  deriving (Eq, Show, Data)
+  deriving (Eq, Ord, Show, Data)
 
 instance STS BUPI where
   type Environment BUPI = UPIEnv

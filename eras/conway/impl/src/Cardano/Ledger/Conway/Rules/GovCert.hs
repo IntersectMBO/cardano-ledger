@@ -115,7 +115,7 @@ data ConwayGovCertPredFailure era
     -- attempted. Current Constitutional Committee and all available proposals will be
     -- searched before reporting this predicate failure.
     ConwayCommitteeIsUnknown (Credential ColdCommitteeRole)
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 type instance EraRuleFailure "GOVCERT" ConwayEra = ConwayGovCertPredFailure ConwayEra
 

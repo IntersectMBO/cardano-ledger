@@ -200,6 +200,13 @@ deriving stock instance
   ) =>
   Eq (ShelleyLedgerPredFailure era)
 
+deriving stock instance
+  ( Ord (PredicateFailure (EraRule "DELEGS" era))
+  , Ord (PredicateFailure (EraRule "UTXOW" era))
+  , Era era
+  ) =>
+  Ord (ShelleyLedgerPredFailure era)
+
 instance
   ( NFData (PredicateFailure (EraRule "DELEGS" era))
   , NFData (PredicateFailure (EraRule "UTXOW" era))

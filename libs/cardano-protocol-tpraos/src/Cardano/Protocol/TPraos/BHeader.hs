@@ -434,7 +434,7 @@ data LastAppliedBlock = LastAppliedBlock
   , labSlotNo :: !SlotNo
   , labHash :: !HashHeader
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance NoThunks LastAppliedBlock
 

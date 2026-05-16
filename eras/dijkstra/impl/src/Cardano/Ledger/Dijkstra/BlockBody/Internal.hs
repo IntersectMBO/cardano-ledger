@@ -277,7 +277,7 @@ alignedValidFlags n invalidSet =
 --
 -- NOTE: The real type will be brought from 'cardano-base' once it's ready.
 newtype PerasCert = PerasCert ByteArray
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
   deriving newtype (EncCBOR, DecCBOR)
 
 instance NoThunks PerasCert

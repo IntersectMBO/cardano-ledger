@@ -21,7 +21,7 @@ import NoThunks.Class (NoThunks)
 import Prelude hiding (map)
 
 newtype NonEmptyMap k v = NonEmptyMap (Map k v)
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Ord)
   deriving newtype (EncCBOR, NoThunks, NFData, ToJSON)
 
 instance (FromJSONKey k, Ord k, FromJSON v) => FromJSON (NonEmptyMap k v) where

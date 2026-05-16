@@ -126,7 +126,7 @@ instance
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Ord (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   STS (MOCKCHAIN era)
@@ -213,6 +213,8 @@ deriving instance
 deriving instance Show (Shelley.ShelleyLedgersPredFailure era) => Show (MockChainFailure era)
 
 deriving instance Eq (Shelley.ShelleyLedgersPredFailure era) => Eq (MockChainFailure era)
+
+deriving instance Ord (Shelley.ShelleyLedgersPredFailure era) => Ord (MockChainFailure era)
 
 ppMockChainState ::
   (Reflect era, ShelleyEraTest era) =>

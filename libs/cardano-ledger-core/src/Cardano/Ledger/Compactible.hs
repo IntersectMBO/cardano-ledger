@@ -27,6 +27,7 @@ import NoThunks.Class (NoThunks)
 class
   ( Show (CompactForm a)
   , Eq (CompactForm a)
+  , Ord (CompactForm a)
   , EncCBOR (CompactForm a)
   , NoThunks (CompactForm a)
   ) =>
