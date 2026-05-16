@@ -66,7 +66,7 @@ data UtxoPredicateFailure
   | IncreasedTotalBalance
   | InputsNotInUTxO
   | NonPositiveOutputs
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UTXO where
   type Environment UTXO = UTxOEnv

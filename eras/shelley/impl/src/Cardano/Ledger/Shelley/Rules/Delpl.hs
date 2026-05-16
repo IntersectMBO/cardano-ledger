@@ -96,6 +96,12 @@ deriving stock instance
   Eq (ShelleyDelplPredFailure era)
 
 deriving stock instance
+  ( Ord (PredicateFailure (EraRule "DELEG" era))
+  , Ord (PredicateFailure (EraRule "POOL" era))
+  ) =>
+  Ord (ShelleyDelplPredFailure era)
+
+deriving stock instance
   ( Show (PredicateFailure (EraRule "DELEG" era))
   , Show (PredicateFailure (EraRule "POOL" era))
   ) =>

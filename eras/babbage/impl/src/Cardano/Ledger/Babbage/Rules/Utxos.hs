@@ -74,7 +74,7 @@ instance
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (UTXOS era) ~ StAnnTx TopTx era
   , EncCBOR (EraRuleFailure "PPUP" era)
-  , Eq (EraRuleFailure "PPUP" era)
+  , Ord (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent era

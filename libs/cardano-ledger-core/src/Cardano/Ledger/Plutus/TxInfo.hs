@@ -90,7 +90,7 @@ import qualified PlutusLedgerApi.V3 as PV3
 data TxOutSource
   = TxOutFromInput !TxIn
   | TxOutFromOutput !TxIx
-  deriving (Eq, Show, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Generic, NoThunks)
 
 instance NFData TxOutSource where
   rnf = rwhnf

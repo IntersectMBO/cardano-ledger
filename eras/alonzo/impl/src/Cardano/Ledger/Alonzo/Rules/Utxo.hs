@@ -206,6 +206,14 @@ deriving stock instance
   ) =>
   Eq (AlonzoUtxoPredFailure era)
 
+deriving stock instance
+  ( Era era
+  , Ord (Value era)
+  , Ord (TxOut era)
+  , Ord (PredicateFailure (EraRule "UTXOS" era))
+  ) =>
+  Ord (AlonzoUtxoPredFailure era)
+
 instance
   ( Era era
   , NFData (Value era)

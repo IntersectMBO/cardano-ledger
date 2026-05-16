@@ -186,7 +186,7 @@ toPlutusTxInfoForPurpose proxy lti sp =
 
 class
   ( AlonzoEraScript era
-  , Eq (ContextError era)
+  , Ord (ContextError era)
   , Show (ContextError era)
   , NFData (ContextError era)
   , EncCBOR (ContextError era)
@@ -364,6 +364,10 @@ data CollectError era
 deriving instance
   (AlonzoEraScript era, Eq (ContextError era)) =>
   Eq (CollectError era)
+
+deriving instance
+  (AlonzoEraScript era, Ord (ContextError era)) =>
+  Ord (CollectError era)
 
 deriving instance
   (AlonzoEraScript era, Show (ContextError era)) =>

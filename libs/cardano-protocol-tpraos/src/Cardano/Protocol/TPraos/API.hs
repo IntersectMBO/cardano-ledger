@@ -387,6 +387,10 @@ deriving stock instance
   Eq (FutureLedgerViewError era)
 
 deriving stock instance
+  Ord (PredicateFailure (EraRule "TICKF" era)) =>
+  Ord (FutureLedgerViewError era)
+
+deriving stock instance
   Show (PredicateFailure (EraRule "TICKF" era)) =>
   Show (FutureLedgerViewError era)
 

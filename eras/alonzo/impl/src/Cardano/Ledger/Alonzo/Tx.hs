@@ -157,7 +157,7 @@ import NoThunks.Class (InspectHeap (..), NoThunks)
 data IsPhase2Valid
   = Phase2Invalid
   | Phase2Valid
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (NoThunks, NFData)
 
 instance Semigroup IsPhase2Valid where

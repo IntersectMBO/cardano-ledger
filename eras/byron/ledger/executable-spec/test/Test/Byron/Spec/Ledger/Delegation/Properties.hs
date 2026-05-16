@@ -146,7 +146,7 @@ makeLenses ''DBlock
 data DBlockPredicateFailure
   = DPF (PredicateFailure DELEG)
   | NotIncreasingBlockSlot
-  deriving (Eq, Show, Data)
+  deriving (Eq, Ord, Show, Data)
 
 -- | This corresponds to a state-transition rule where blocks with increasing
 -- slot-numbers are produced.

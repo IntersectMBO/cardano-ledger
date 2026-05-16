@@ -142,6 +142,16 @@ deriving instance
   ) =>
   Eq (BabbageUtxowPredFailure era)
 
+deriving instance
+  ( AlonzoEraScript era
+  , Ord (Shelley.ShelleyUtxowPredFailure era)
+  , Ord (PredicateFailure (EraRule "UTXO" era))
+  , Ord (PredicateFailure (EraRule "UTXOS" era))
+  , Ord (TxOut era)
+  , Ord (TxCert era)
+  ) =>
+  Ord (BabbageUtxowPredFailure era)
+
 instance
   ( AlonzoEraScript era
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
@@ -409,7 +419,7 @@ instance
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
-  , Eq (PredicateFailure (EraRule "UTXOS" era))
+  , Ord (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   , EraCertState era
   ) =>

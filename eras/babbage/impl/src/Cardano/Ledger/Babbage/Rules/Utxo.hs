@@ -139,6 +139,16 @@ deriving instance
   ) =>
   Eq (BabbageUtxoPredFailure era)
 
+deriving instance
+  ( Era era
+  , Ord (Alonzo.AlonzoUtxoPredFailure era)
+  , Ord (PredicateFailure (EraRule "UTXO" era))
+  , Ord (TxOut era)
+  , Ord (Script era)
+  , Ord TxIn
+  ) =>
+  Ord (BabbageUtxoPredFailure era)
+
 instance
   ( Era era
   , NFData (Value era)
