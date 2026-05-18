@@ -15,6 +15,7 @@ import Cardano.Ledger.Conway
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool
+import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesis (..),
@@ -22,13 +23,14 @@ import Cardano.Ledger.Shelley.Genesis (
   mkShelleyGlobals,
  )
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Slot
 import Cardano.Ledger.State
 import Cardano.Ledger.State.UTxO (CurrentEra, readHexUTxO, readNewEpochState)
 import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.DeepSeq
-import Control.Monad (when)
+import Control.Monad (forM)
 import Criterion.Main
 import Data.Aeson
 import Data.Bifunctor (bimap, first)
@@ -44,8 +46,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
-import System.Environment (getEnv)
-import System.Exit (die)
+import System.Environment (getEnv, lookupEnv)
 import System.Random.Stateful
 
 main :: IO ()
@@ -54,19 +55,24 @@ main = do
       utxoVarName = "BENCH_UTXO_PATH"
       ledgerStateVarName = "BENCH_LEDGER_STATE_PATH"
   genesisFilePath <- getEnv genesisVarName
-  utxoFilePath <- getEnv utxoVarName
+  mUtxoFilePath <- lookupEnv utxoVarName
   ledgerStateFilePath <- getEnv ledgerStateVarName
 
-  genesis <- either error id <$> eitherDecodeFileStrict' genesisFilePath
-  putStrLn $ "Importing UTxO from: " ++ show utxoFilePath
-  utxo <- readHexUTxO utxoFilePath
-  putStrLn "Done importing UTxO"
   putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
-  es' <- readNewEpochState ledgerStateFilePath
+  nesFromFile <- readNewEpochState ledgerStateFilePath
   putStrLn "Done importing NewEpochState"
 
-  let nesUTxOL = nesEsL . esLStateL . lsUTxOStateL . utxoL
-      es = es' & nesUTxOL .~ utxo
+  mUtxo <- forM mUtxoFilePath $ \utxoFilePath -> do
+    putStrLn $ "Importing UTxO from: " ++ show utxoFilePath
+    utxo <- readHexUTxO utxoFilePath
+    utxo <$ putStrLn "Done importing UTxO"
+
+  genesis <- either error id <$> eitherDecodeFileStrict' genesisFilePath
+
+  let newEpochState = case mUtxo of
+        Nothing -> nesFromFile
+        Just utxoFromFile -> nesFromFile & utxoL .~ utxoFromFile
+      utxo = newEpochState ^. utxoL
       utxoMap = unUTxO utxo
       utxoSize = Map.size utxoMap
       largeKeysNum = 100000
@@ -86,72 +92,106 @@ main = do
       reapplyTx' mempoolEnv mempoolState =
         either (error . show) id
           . reapplyTx globals mempoolEnv mempoolState
+      slotsPerTick =
+        let f = positiveUnitIntervalNonZeroRational (activeSlotVal (activeSlotCoeff globals))
+         in round (1 /. f)
 
-  when (utxoSize < largeKeysNum) $
-    die $
-      "UTxO size is too small (" <> show utxoSize <> " < " <> show largeKeysNum <> ")"
-  largeKeys <- selectRandomMapKeys 100000 stdGen utxoMap
+      epochInfo = epochInfoPure globals
+      -- Assume we are at the very first slot number in the epoch and tick all the way to the very
+      -- last slot number. Note, that if the assumption was wrong, the whole reward computation and
+      -- other pulsers might restart, which shouldn't impact the final result at the end of the
+      -- epoch.
+      tickToEpochEnd nes =
+        let !lastSlotNo = epochInfoFirst epochInfo (succ (nesEL nes)) *- Duration slotsPerTick
+            go !curSlotNo !curNes
+              | nextSlotNo < lastSlotNo =
+                  go nextSlotNo (applyTickNoEvents @CurrentEra globals curNes nextSlotNo)
+              | otherwise = curNes
+              where
+                !nextSlotNo = curSlotNo +* Duration slotsPerTick
+         in go (epochInfoFirst epochInfo (nesEL nes)) nes
+      -- Assume we are at most `slotsPerTick` number of slots away from the first slot number of the
+      -- next epoch and perform one TICK over that many slot numbers, which has the net result of
+      -- crossing over the next epoch boundary.
+      tickOverTheEpochBoundary nes =
+        let !firstSlotNoOfTheNextEpoch = epochInfoFirst epochInfo (succ (nesEL nes))
+         in applyTickNoEvents @CurrentEra globals nes firstSlotNoOfTheNextEpoch
 
-  defaultMain
-    [ env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
+  defaultMain $
+    [ env (pure $ tickOverTheEpochBoundary $ tickToEpochEnd newEpochState) $ \newEpochStateStart ->
         bgroup
-          "reapplyTx"
-          [ env (pure validatedTx1) $
-              bench "Tx1" . whnf (reapplyTx' mempoolEnv mempoolState)
-          , env (pure validatedTx2) $
-              bench "Tx2" . whnf (reapplyTx' mempoolEnv mempoolState)
-          , env (pure validatedTx3) $
-              bench "Tx3" . whnf (reapplyTx' mempoolEnv mempoolState)
-          , env
-              (pure [validatedTx1, validatedTx2, validatedTx3])
-              $ bench "Tx1+Tx2+Tx3" . whnf (F.foldl' (reapplyTx' mempoolEnv) mempoolState)
+          "applyTick"
+          [ bench "tickToEpochEnd" $ nf tickToEpochEnd newEpochStateStart
+          , env (pure $ tickToEpochEnd newEpochStateStart) $
+              bench "tickOverTheEpochBoundary" . nf tickOverTheEpochBoundary
           ]
-    , env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
-        bgroup
-          "applyTx"
-          [ env (pure (extractTx validatedTx1)) $
-              bench "Tx1" . whnf (applyTx' mempoolEnv mempoolState)
-          , env (pure (extractTx validatedTx2)) $
-              bench "Tx2" . whnf (applyTx' mempoolEnv mempoolState)
-          , env (pure (extractTx validatedTx3)) $
-              bench "Tx3" . whnf (applyTx' mempoolEnv mempoolState)
-          , env
-              (pure [validatedTx1, validatedTx2, validatedTx3])
-              $ bench "Tx1+Tx2+Tx3"
-                -- TODO: revert this to `foldl'` without `fmap` after tx's are fixed
-                . whnf (F.foldlM (\ms -> fmap fst . applyTx' mempoolEnv ms . extractTx) mempoolState)
-          ]
-    , env (pure utxo) $ \utxo' ->
-        bgroup
-          "UTxO"
-          [ bench "sumUTxO" $ nf sumUTxO utxo'
-          , bench "sumCoinUTxO" $ nf sumCoinUTxO utxo'
-          , -- We need to filter out all multi-assets to prevent `areAllAdaOnly`
-            -- from short circuiting and producing results that are way better
-            -- than the worst case
-            env (pure $ Map.filter (\txOut -> isAdaOnly (txOut ^. valueTxOutL)) $ unUTxO utxo') $
-              bench "areAllAdaOnly" . nf areAllAdaOnly
-          ]
-    , env (pure es) $ \newEpochState ->
-        let (_, minTxOut) = Map.findMin utxoMap
-            (_, maxTxOut) = Map.findMax utxoMap
-            setAddr =
-              Set.fromList [minTxOut ^. addrTxOutL, maxTxOut ^. addrTxOutL]
-         in bgroup
-              "MinMaxTxId"
-              [ env (pure setAddr) $
-                  bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState)
-              , env (pure setAddr) $
-                  bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
-              ]
-    , bgroup
-        "DeleteTxOuts"
-        [ extractKeysBench utxoMap largeKeysNum largeKeys
-        , extractKeysBench utxoMap 9 (Set.take 9 largeKeys)
-        , extractKeysBench utxoMap 5 (Set.take 5 largeKeys)
-        , extractKeysBench utxoMap 2 (Set.take 2 largeKeys)
-        ]
     ]
+      ++ [ utxoBenchmark
+         | utxoBenchmark <-
+             [ env (pure (mkMempoolEnv newEpochState slotNo, toMempoolState newEpochState)) $
+                 \ ~(mempoolEnv, mempoolState) ->
+                   bgroup
+                     "reapplyTx"
+                     [ env (pure validatedTx1) $
+                         bench "Tx1" . whnf (reapplyTx' mempoolEnv mempoolState)
+                     , env (pure validatedTx2) $
+                         bench "Tx2" . whnf (reapplyTx' mempoolEnv mempoolState)
+                     , env (pure validatedTx3) $
+                         bench "Tx3" . whnf (reapplyTx' mempoolEnv mempoolState)
+                     , env
+                         (pure [validatedTx1, validatedTx2, validatedTx3])
+                         $ bench "Tx1+Tx2+Tx3" . whnf (F.foldl' (reapplyTx' mempoolEnv) mempoolState)
+                     ]
+             , env (pure (mkMempoolEnv newEpochState slotNo, toMempoolState newEpochState)) $
+                 \ ~(mempoolEnv, mempoolState) ->
+                   bgroup
+                     "applyTx"
+                     [ env (pure (extractTx validatedTx1)) $
+                         bench "Tx1" . whnf (applyTx' mempoolEnv mempoolState)
+                     , env (pure (extractTx validatedTx2)) $
+                         bench "Tx2" . whnf (applyTx' mempoolEnv mempoolState)
+                     , env (pure (extractTx validatedTx3)) $
+                         bench "Tx3" . whnf (applyTx' mempoolEnv mempoolState)
+                     , env
+                         (pure [validatedTx1, validatedTx2, validatedTx3])
+                         $ bench "Tx1+Tx2+Tx3"
+                           -- TODO: revert this to `foldl'` without `fmap` after tx's are fixed
+                           . whnf (F.foldlM (\ms -> fmap fst . applyTx' mempoolEnv ms . extractTx) mempoolState)
+                     ]
+             , env (pure utxo) $ \utxo' ->
+                 bgroup
+                   "UTxO"
+                   [ bench "sumUTxO" $ nf sumUTxO utxo'
+                   , bench "sumCoinUTxO" $ nf sumCoinUTxO utxo'
+                   , -- We need to filter out all multi-assets to prevent `areAllAdaOnly`
+                     -- from short circuiting and producing results that are way better
+                     -- than the worst case
+                     env (pure $ Map.filter (\txOut -> isAdaOnly (txOut ^. valueTxOutL)) $ unUTxO utxo') $
+                       bench "areAllAdaOnly" . nf areAllAdaOnly
+                   ]
+             , env (pure newEpochState) $ \nes ->
+                 let (_, minTxOut) = Map.findMin utxoMap
+                     (_, maxTxOut) = Map.findMax utxoMap
+                     setAddr =
+                       Set.fromList [minTxOut ^. addrTxOutL, maxTxOut ^. addrTxOutL]
+                  in bgroup
+                       "MinMaxTxId"
+                       [ env (pure setAddr) $ bench "getFilteredNewUTxO" . nf (getFilteredUTxO nes)
+                       , env (pure setAddr) $ bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO nes)
+                       ]
+             ]
+         , utxoSize > 0
+         ]
+      ++ [ env (selectRandomMapKeys largeKeysNum stdGen utxoMap) $ \largeKeys ->
+             bgroup
+               "DeleteTxOuts"
+               [ extractKeysBench utxoMap largeKeysNum largeKeys
+               , extractKeysBench utxoMap 9 (Set.take 9 largeKeys)
+               , extractKeysBench utxoMap 5 (Set.take 5 largeKeys)
+               , extractKeysBench utxoMap 2 (Set.take 2 largeKeys)
+               ]
+         | utxoSize >= largeKeysNum
+         ]
 
 extractKeysBench ::
   (NFData k, NFData a, Ord k) =>
