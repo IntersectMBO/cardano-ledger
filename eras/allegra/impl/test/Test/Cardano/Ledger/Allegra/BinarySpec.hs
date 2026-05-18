@@ -12,7 +12,6 @@ import Test.Cardano.Ledger.Allegra.Era ()
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary as Binary (decoderEquivalenceCoreEraTypesSpec, txSizeSpec)
-import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra (..))
 import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)
 
 spec :: Spec
@@ -22,17 +21,3 @@ spec = do
   describe "DecCBOR instances equivalence" $ do
     Binary.decoderEquivalenceCoreEraTypesSpec @AllegraEra
   Binary.txSizeSpec @AllegraEra
-
-instance RuleListEra AllegraEra where
-  type
-    EraRules AllegraEra =
-      '[ "DELEG"
-       , "DELEGS"
-       , "DELPL"
-       , "LEDGER"
-       , "LEDGERS"
-       , "POOL"
-       , "PPUP"
-       , "UTXO"
-       , "UTXOW"
-       ]

@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (
   roundTripAlonzoEraTypesSpec,
 ) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   AsIx (..),
@@ -26,7 +25,6 @@ import Test.Cardano.Ledger.Alonzo.Era (AlonzoEraTest)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (
-  RuleListEra (..),
   roundTripAnnEraTypeSpec,
   roundTripEraExpectation,
   roundTripEraTypeExpectation,
@@ -34,12 +32,7 @@ import Test.Cardano.Ledger.Core.Binary.RoundTrip (
  )
 import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)
 
-roundTripAlonzoCommonSpec ::
-  forall era.
-  ( AlonzoEraTest era
-  , RuleListEra era
-  ) =>
-  Spec
+roundTripAlonzoCommonSpec :: forall era. AlonzoEraTest era => Spec
 roundTripAlonzoCommonSpec = do
   roundTripAlonzoEraTypesSpec @era
   roundTripShelleyCommonSpec @era
@@ -69,18 +62,3 @@ roundTripAlonzoEraTypesSpec = do
     prop "Redeemers" $
       forAll genNonEmptyRedeemers $
         roundTripEraTypeExpectation @era @Redeemers
-
-instance RuleListEra AlonzoEra where
-  type
-    EraRules AlonzoEra =
-      '[ "DELEG"
-       , "DELEGS"
-       , "DELPL"
-       , "LEDGER"
-       , "LEDGERS"
-       , "POOL"
-       , "PPUP"
-       , "UTXO"
-       , "UTXOW"
-       , "UTXOS"
-       ]

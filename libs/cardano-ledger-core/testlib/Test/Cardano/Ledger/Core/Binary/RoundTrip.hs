@@ -1,21 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Core.Binary.RoundTrip (
-  RuleListEra (..),
-  EraRuleProof (..),
-
   -- * Spec
   roundTripEraSpec,
   roundTripAnnEraSpec,
@@ -32,16 +22,13 @@ module Test.Cardano.Ledger.Core.Binary.RoundTrip (
   roundTripShareEraExpectation,
   roundTripShareEraTypeExpectation,
   roundTripCoreEraTypesSpec,
-  roundTripAllPredicateFailures,
 ) where
 
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.State
-import Control.State.Transition.Extended (STS (..))
 import Data.Typeable
-import GHC.TypeLits (Symbol)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -241,58 +228,3 @@ roundTripCoreEraTypesSpec = do
     roundTripShareEraTypeSpec @era @PState
     roundTripShareEraTypeSpec @era @CommitteeState
     roundTripShareEraTypeSpec @era @UTxO
-
-data EraRuleProof era (rs :: [Symbol]) where
-  EraRuleProofEmpty :: EraRuleProof era '[]
-  EraRuleProofHead ::
-    ( Show (EraRuleFailure r era)
-    , Eq (EraRuleFailure r era)
-    , EncCBOR (EraRuleFailure r era)
-    , DecCBOR (EraRuleFailure r era)
-    , Arbitrary (EraRuleFailure r era)
-    , EraRuleFailure r era ~ PredicateFailure (EraRule r era)
-    ) =>
-    Proxy r ->
-    EraRuleProof era xs ->
-    EraRuleProof era (r ': xs)
-
-class UnliftRules era (rs :: [Symbol]) where
-  unliftEraRuleProofs :: EraRuleProof era rs
-
-instance UnliftRules era '[] where
-  unliftEraRuleProofs = EraRuleProofEmpty
-
-instance
-  ( Show (EraRuleFailure r era)
-  , Eq (EraRuleFailure r era)
-  , EncCBOR (EraRuleFailure r era)
-  , DecCBOR (EraRuleFailure r era)
-  , Arbitrary (EraRuleFailure r era)
-  , EraRuleFailure r era ~ PredicateFailure (EraRule r era)
-  , UnliftRules era rs
-  ) =>
-  UnliftRules era (r ': rs)
-  where
-  unliftEraRuleProofs = EraRuleProofHead Proxy unliftEraRuleProofs
-
-class
-  UnliftRules era (EraRules era) =>
-  RuleListEra era
-  where
-  type EraRules era :: [Symbol]
-
-roundTripAllPredicateFailures ::
-  forall era.
-  ( RuleListEra era
-  , Era era
-  , HasCallStack
-  ) =>
-  Spec
-roundTripAllPredicateFailures =
-  describe "Predicate Failures" . go $ unliftEraRuleProofs @era @(EraRules era)
-  where
-    go :: EraRuleProof era rs' -> Spec
-    go EraRuleProofEmpty = pure ()
-    go (EraRuleProofHead (Proxy :: Proxy r) x) = do
-      roundTripEraSpec @era @(EraRuleFailure r era)
-      go x

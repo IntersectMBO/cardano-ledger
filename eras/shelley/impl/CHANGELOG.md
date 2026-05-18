@@ -59,6 +59,7 @@
 
 ### `testlib`
 
+* Add `Arbitrary` instance for `ShelleyBbodyPredFailure`
 * Add to `Test.Cardano.Ledger.Shelley.Examples`:
   - `exampleShelleyPParams`
   - `exampleShelleyPParamsUpdate`
