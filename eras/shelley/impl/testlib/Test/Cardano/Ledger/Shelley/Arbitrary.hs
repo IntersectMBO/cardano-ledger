@@ -53,6 +53,7 @@ import Cardano.Ledger.Shelley.Rewards (
  )
 import Cardano.Ledger.Shelley.Rules (
   PredicateFailure,
+  ShelleyBbodyPredFailure,
   ShelleyDelegPredFailure,
   ShelleyDelegsPredFailure,
   ShelleyDelplPredFailure,
@@ -688,6 +689,15 @@ instance
 
 instance
   ( Era era
+  , Arbitrary (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  Arbitrary (ShelleyBbodyPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+  shrink _ = []
+
+instance
+  ( Era era
   , Arbitrary (PredicateFailure (EraRule "DELEGS" era))
   , Arbitrary (PredicateFailure (EraRule "UTXOW" era))
   ) =>
@@ -701,6 +711,17 @@ instance
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Arbitrary (ShelleyUtxowPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+  shrink _ = []
+
+instance
+  ( Era era
+  , Arbitrary (Value era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (EraRuleFailure "PPUP" era)
+  ) =>
+  Arbitrary (ShelleyUtxoPredFailure era)
   where
   arbitrary = genericArbitraryU
   shrink _ = []
@@ -720,17 +741,6 @@ instance
 deriving newtype instance Arbitrary (Tx TopTx ShelleyEra)
 
 deriving newtype instance Arbitrary (ApplyTxError ShelleyEra)
-
-instance
-  ( Era era
-  , Arbitrary (Value era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (EraRuleFailure "PPUP" era)
-  ) =>
-  Arbitrary (ShelleyUtxoPredFailure era)
-  where
-  arbitrary = genericArbitraryU
-  shrink _ = []
 
 data RawSeed = RawSeed !Word64 !Word64 !Word64 !Word64 !Word64
   deriving (Eq, Show)

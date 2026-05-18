@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Conway.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe)
-import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
@@ -24,12 +23,7 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
 
-roundTripConwayCommonSpec ::
-  forall era.
-  ( ConwayEraTest era
-  , RuleListEra era
-  ) =>
-  Spec
+roundTripConwayCommonSpec :: forall era. ConwayEraTest era => Spec
 roundTripConwayCommonSpec = do
   roundTripConwayEraTypesSpec @era
   roundTripAlonzoCommonSpec @era
@@ -61,20 +55,3 @@ roundTripConwayEraTypesSpec = do
     roundTripShareEraTypeSpec @era @PulsingSnapshot
     roundTripShareEraTypeSpec @era @RatifyState
     roundTripShareEraTypeSpec @era @VState
-
-instance RuleListEra ConwayEra where
-  type
-    EraRules ConwayEra =
-      '[ "BBODY"
-       , "CERT"
-       , "CERTS"
-       , "DELEG"
-       , "GOVCERT"
-       , "GOV"
-       , "LEDGER"
-       , "LEDGERS"
-       , "POOL"
-       , "UTXO"
-       , "UTXOS"
-       , "UTXOW"
-       ]

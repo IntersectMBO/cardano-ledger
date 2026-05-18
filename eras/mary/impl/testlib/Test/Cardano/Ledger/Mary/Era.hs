@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -27,6 +29,20 @@ class
   MaryEraTest era
 
 instance EraTest MaryEra where
+  type
+    EraRulesWithFailures MaryEra =
+      '[ "BBODY"
+       , "DELEG"
+       , "DELEGS"
+       , "DELPL"
+       , "LEDGER"
+       , "LEDGERS"
+       , "POOL"
+       , "PPUP"
+       , "UTXO"
+       , "UTXOW"
+       ]
+
   zeroCostModels = emptyCostModels
 
   mkTestAccountState = mkShelleyTestAccountState

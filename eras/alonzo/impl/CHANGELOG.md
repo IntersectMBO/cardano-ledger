@@ -49,6 +49,7 @@
 
 ### `testlib`
 
+* Add `Arbitrary` instance for `AlonzoBbodyPredFailure`
 * Add to `Test.Cardano.Ledger.Alonzo.Examples`:
   - `exampleAlonzoPParams`
   - `exampleAlonzoPParamsUpdate`

@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -46,6 +47,23 @@ class
   ConwayEraTest era
 
 instance EraTest ConwayEra where
+  type
+    EraRulesWithFailures ConwayEra =
+      '[ "BBODY"
+       , "CERT"
+       , "CERTS"
+       , "DELEG"
+       , "GOVCERT"
+       , "GOV"
+       , "LEDGER"
+       , "LEDGERS"
+       , -- , "MEMPOOL" -- TODO: Enable, once we are in Dijkstra era.
+         "POOL"
+       , "UTXO"
+       , "UTXOS"
+       , "UTXOW"
+       ]
+
   zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV3]
 
   mkTestAccountState _mPtr = mkConwayTestAccountState

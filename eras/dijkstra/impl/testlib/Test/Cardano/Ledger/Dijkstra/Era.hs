@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -32,6 +34,33 @@ import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
 instance EraTest DijkstraEra where
+  type
+    EraRulesWithFailures DijkstraEra =
+      '[ "BBODY"
+       , "CERT"
+       , "CERTS"
+       , "DELEG"
+       , "GOVCERT"
+       , "GOV"
+       , "LEDGER"
+       , "LEDGERS"
+       , "MEMPOOL"
+       , "POOL"
+       , "UTXO"
+       , "UTXOS"
+       , "UTXOW"
+       , "SUBCERT"
+       , "SUBCERTS"
+       , "SUBDELEG"
+       , "SUBGOVCERT"
+       , "SUBGOV"
+       , "SUBLEDGER"
+       , "SUBLEDGERS"
+       , "SUBPOOL"
+       , "SUBUTXO"
+       , "SUBUTXOW"
+       ]
+
   zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV4]
 
   mkTestAccountState _ptr = mkConwayTestAccountState

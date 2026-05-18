@@ -33,14 +33,9 @@ import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Binary as Binary (decoderEquivalenceCoreEraTypesSpec, txSizeSpec)
-import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra, roundTripEraSpec)
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
 
-spec ::
-  forall era.
-  ( ConwayEraImp era
-  , RuleListEra era
-  ) =>
-  Spec
+spec :: forall era. ConwayEraImp era => Spec
 spec = do
   describe "RoundTrip" $ do
     roundTripCborSpec @GovActionId
