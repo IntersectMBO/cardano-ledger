@@ -233,3 +233,5 @@ instance SpecNormalize Agda.BaseAddr
 instance SpecNormalize Agda.BootstrapAddr
 
 instance SpecNormalize Agda.Credential
+
+instance SpecNormalize Agda.RewardAddress
