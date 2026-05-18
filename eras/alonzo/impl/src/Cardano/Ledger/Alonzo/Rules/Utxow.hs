@@ -212,12 +212,12 @@ missingRequiredDatums ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   ) =>
+  ScriptsProvided era ->
   UTxO era ->
   Tx l era ->
   Test (AlonzoUtxowPredFailure era)
-missingRequiredDatums utxo tx = do
+missingRequiredDatums scriptsProvided utxo tx = do
   let txBody = tx ^. bodyTxL
-      scriptsProvided = getScriptsProvided utxo tx
       (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptsProvided
       txHashes = Map.keysSet (tx ^. witsTxL . datsTxWitsL . unTxDatsL)
       unmatchedDatumHashes = Set.difference inputHashes txHashes
@@ -319,21 +319,21 @@ alonzoStyleWitness = do
   let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
       witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
-      scriptsProvided = getScriptsProvided utxo tx
+      scriptsProvided = scriptsProvidedStAnnTx stAnnTx
 
   -- check scripts
   {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
   runTestOnSignal $ Shelley.validateFailedNativeScripts scriptsProvided tx
 
   {-  { h | (_,h) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  let scriptsNeeded = getScriptsNeeded utxo txBody
+  let scriptsNeeded = scriptsNeededStAnnTx stAnnTx
       scriptsHashesNeeded = getScriptsHashesNeeded scriptsNeeded
       shelleyScriptsNeeded = ShelleyScriptsNeeded scriptsHashesNeeded
   runTest $ Shelley.validateMissingScripts shelleyScriptsNeeded scriptsProvided
 
   {- inputHashes := { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} -}
   {-  inputHashes ⊆ dom(txdats txw)  -}
-  runTest $ missingRequiredDatums utxo tx
+  runTest $ missingRequiredDatums scriptsProvided utxo tx
 
   {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx -}
   -- This is incorporated into missingRequiredDatums, see the
@@ -367,7 +367,7 @@ alonzoStyleWitness = do
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
   -- It raises 'NoCostModel' a constructor of the predicate failure 'CollectError'.
 
-  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptsHashesNeeded
+  let scriptIntegrity = mkScriptIntegrity pp tx (plutusLanguagesUsedStAnnTx stAnnTx)
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ checkScriptIntegrityHash tx pp scriptIntegrity
 

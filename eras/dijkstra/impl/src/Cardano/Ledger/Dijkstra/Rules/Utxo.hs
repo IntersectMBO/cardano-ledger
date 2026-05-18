@@ -96,8 +96,6 @@ data DijkstraUtxoEnv era = DijkstraUtxoEnv
   , duePParams :: PParams era
   , dueCertState :: CertState era
   , dueOriginalUtxo :: UTxO era
-  , dueScriptsProvided :: ScriptsProvided era
-  -- ^ aggregated scripts provided across all transaction levels
   }
 
 -- | Predicate failure for the Dijkstra Era
@@ -336,14 +334,14 @@ dijkstraUtxoTransition ::
   , STS (EraRule "UTXO" era)
   , Event (EraRule "UTXO" era) ~ Alonzo.AlonzoUtxoEvent era
   , -- In this function we call the UTXOS rule, so we need some assumptions
-    Environment (EraRule "UTXOS" era) ~ Conway.ConwayUtxosEnv era
+    Environment (EraRule "UTXOS" era) ~ ()
   , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (DijkstraUtxoEnv slot pp certState originalUtxo _scriptsProvided, utxos, stAnnTx) <-
+  TRC (DijkstraUtxoEnv slot pp certState originalUtxo, utxos, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
   -- this is the original Accounts, before any transactions were applied
@@ -419,7 +417,7 @@ dijkstraUtxoTransition = do
   {- ‖collateral tx‖ ≤ maxCollInputs pp -}
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
 
-  () <- trans @(EraRule "UTXOS" era) $ TRC (Conway.ConwayUtxosEnv pp originalUtxo, (), stAnnTx)
+  () <- trans @(EraRule "UTXOS" era) $ TRC ((), (), stAnnTx)
   Babbage.updateUTxOStateByTxValidity
     pp
     certState
@@ -452,7 +450,7 @@ instance
   , STS (EraRule "UTXO" era)
   , -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (DijkstraUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ Conway.ConwayUtxosEnv era
+  , Environment (EraRule "UTXOS" era) ~ ()
   , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , EraCertState era

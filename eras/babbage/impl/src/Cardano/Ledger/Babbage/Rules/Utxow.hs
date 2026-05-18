@@ -27,7 +27,7 @@ module Cardano.Ledger.Babbage.Rules.Utxow (
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (validScript)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
@@ -331,8 +331,8 @@ babbageUtxowTransition = do
   -- check scripts
   {- neededHashes := {h | ( , h) ∈ scriptsNeeded utxo txb} -}
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
-  let scriptsNeeded = getScriptsNeeded utxo txBody
-      scriptsProvided = getScriptsProvided utxo tx
+  let scriptsNeeded = scriptsNeededStAnnTx stAnnTx
+      scriptsProvided = scriptsProvidedStAnnTx stAnnTx
       scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
   {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
   -- CHANGED In BABBAGE txscripts depends on UTxO
@@ -344,7 +344,7 @@ babbageUtxowTransition = do
   runTest $ babbageMissingScripts pp scriptHashesNeeded sRefs sReceived
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
-  runTest $ Alonzo.missingRequiredDatums utxo tx
+  runTest $ Alonzo.missingRequiredDatums scriptsProvided utxo tx
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
@@ -374,7 +374,7 @@ babbageUtxowTransition = do
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
   -- It raises 'NoCostModel' a constructor of the predicate failure 'CollectError'.
 
-  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptHashesNeeded
+  let scriptIntegrity = mkScriptIntegrity pp tx (plutusLanguagesUsedStAnnTx stAnnTx)
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ Alonzo.checkScriptIntegrityHash tx pp scriptIntegrity
 

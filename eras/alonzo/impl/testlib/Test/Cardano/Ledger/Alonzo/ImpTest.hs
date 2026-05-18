@@ -63,7 +63,11 @@ import Cardano.Ledger.Alonzo.Rules (
   TagMismatchDescription (..),
   scriptFailureToFailureDescription,
  )
-import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
+import Cardano.Ledger.Alonzo.Scripts (
+  plutusScriptLanguage,
+  toAsItem,
+  toAsIx,
+ )
 import Cardano.Ledger.Alonzo.Tx (ScriptIntegrity, hashScriptIntegrity, mkScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
@@ -99,7 +103,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
-import Data.Maybe (catMaybes, isJust, isNothing)
+import Data.Maybe (catMaybes, isJust, isNothing, mapMaybe)
 import Data.Set ((\\))
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -559,10 +563,12 @@ computeScriptIntegrity ::
   UTxO era ->
   Tx l era ->
   StrictMaybe (ScriptIntegrity era)
-computeScriptIntegrity pp utxo tx = mkScriptIntegrity pp tx scriptsProvided scriptsNeeded
+computeScriptIntegrity pp utxo tx = mkScriptIntegrity pp tx langs
   where
-    scriptsProvided = getScriptsProvided utxo tx
+    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
     scriptsNeeded = getScriptsHashesNeeded . getScriptsNeeded utxo $ tx ^. bodyTxL
+    scriptsUsed = Map.elems $ Map.restrictKeys scriptsProvided scriptsNeeded
+    langs = Set.fromList $ plutusScriptLanguage <$> mapMaybe toPlutusScript scriptsUsed
 
 impComputeScriptIntegrity ::
   AlonzoEraImp era =>

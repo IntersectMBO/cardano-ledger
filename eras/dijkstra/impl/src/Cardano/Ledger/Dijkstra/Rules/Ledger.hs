@@ -61,9 +61,8 @@ import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
-import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Dijkstra.TxBody
-import Cardano.Ledger.Dijkstra.UTxO (batchNonDistinctRefScriptsSize)
+import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..), batchNonDistinctRefScriptsSize)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
@@ -274,7 +273,7 @@ instance
   , ConwayEraTxBody era
   , ConwayEraGov era
   , DijkstraEraTxBody era
-  , EraUTxO era
+  , DijkstraEraUTxO era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
   , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
@@ -290,8 +289,6 @@ instance
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ Conway.GovSignal era
   , Signal (EraRule "SUBLEDGERS" era) ~ [StAnnTx SubTx era]
-  , StAnnTx TopTx era ~ DijkstraStAnnTx TopTx era
-  , StAnnTx SubTx era ~ DijkstraStAnnTx SubTx era
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ DijkstraLEDGER era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
@@ -339,7 +336,7 @@ dijkstraLedgerTransition ::
   , ConwayEraCertState era
   , ConwayEraGov era
   , DijkstraEraTxBody era
-  , EraUTxO era
+  , DijkstraEraUTxO era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
   , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
@@ -354,8 +351,6 @@ dijkstraLedgerTransition ::
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ Conway.GovSignal era
-  , StAnnTx TopTx era ~ DijkstraStAnnTx TopTx era
-  , StAnnTx SubTx era ~ DijkstraStAnnTx SubTx era
   , STS (DijkstraLEDGER era)
   , EraRule "LEDGER" era ~ DijkstraLEDGER era
   , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
@@ -373,9 +368,7 @@ dijkstraLedgerTransition = do
   -- This is passed through the environment to UTXOW
   -- and SUBLEDGERS, and used for all witness/validation lookups.
   let originalUtxo = utxosUtxo (ledgerState ^. lsUTxOStateL)
-      subStAnnTxs = dsattStAnnSubTxs stAnnTx
-      -- getScriptsProvided is recursive for Dijkstra
-      scriptsProvided = getScriptsProvided originalUtxo tx
+      subStAnnTxs = subTransactionsStAnnTx stAnnTx
 
   -- Process all subtransactions first
   LedgerState utxoStateAfterSubLedgers certStateAfterSubLedgers <-
@@ -387,7 +380,6 @@ dijkstraLedgerTransition = do
             txIx
             pp
             chainAccountState
-            scriptsProvided
             originalUtxo
             (tx ^. isValidTxL)
         , ledgerState
@@ -452,11 +444,11 @@ dijkstraLedgerTransition = do
           )
       else pure (utxoStateAfterSubLedgers, certStateAfterSubLedgers)
 
-  -- Call UTXOW with DijkstraUtxoEnv, passing the original UTxO and aggregated scriptsProvided
+  -- Call UTXOW with DijkstraUtxoEnv, passing the original UTxO
   utxoStateFinal <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( DijkstraUtxoEnv slot pp certState originalUtxo scriptsProvided
+        ( DijkstraUtxoEnv slot pp certState originalUtxo
         , utxoStateBeforeUtxow
         , stAnnTx
         )

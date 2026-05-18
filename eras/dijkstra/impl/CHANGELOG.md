@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `DijkstraEraUTxO` type class with `subTransactionsStAnnTx` method
 * Add `TranslateEra` instance for `DijkstraEra VState`
 * Fix `TranslateEra` instance for `DijkstraEra CertState`
 * Add `GuardScriptHashesNotSupported` constructor to `DijkstraContextError`

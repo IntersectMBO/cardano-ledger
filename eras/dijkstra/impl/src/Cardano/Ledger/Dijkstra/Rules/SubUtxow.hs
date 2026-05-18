@@ -250,16 +250,17 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env@(SubUtxoEnv _ pp certState scriptsProvided originalUtxo _), utxoState, stAnnTx) <-
+  TRC (env@(SubUtxoEnv _ pp certState originalUtxo _), utxoState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       txBody = tx ^. bodyTxL
       witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
+      scriptsProvided = scriptsProvidedStAnnTx stAnnTx
 
   {- ∀[ (vk , σ) ∈ vKeySigs ] isSigned vk (txidBytes txId) σ -}
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
-  let scriptsNeeded = getScriptsNeeded originalUtxo txBody
+  let scriptsNeeded = scriptsNeededStAnnTx stAnnTx
       scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
 
   {- ∀[ s ∈ p1ScriptsNeeded ] validP1Script vKeyHashesProvided txVldt s -}
@@ -269,12 +270,12 @@ dijkstraSubUtxowTransition = do
   runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState originalUtxo txBody
 
   {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
-  runTest $ Alonzo.missingRequiredDatums originalUtxo tx
+  runTest $ Alonzo.missingRequiredDatums scriptsProvided originalUtxo tx
 
   {- txADhash ≡ map hash txAuxData -}
   runTestOnSignal $ Shelley.validateMetadata pp tx
 
-  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptHashesNeeded
+  let scriptIntegrity = mkScriptIntegrity pp tx (plutusLanguagesUsedStAnnTx stAnnTx)
   runTest $ Alonzo.checkScriptIntegrityHash tx pp scriptIntegrity
 
   runTest $ Alonzo.hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded

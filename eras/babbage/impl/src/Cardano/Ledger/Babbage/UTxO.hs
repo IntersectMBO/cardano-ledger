@@ -18,6 +18,9 @@ import Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsHashesNeeded,
   getAlonzoScriptsNeeded,
   getAlonzoWitsVKeyNeeded,
+  plutusLanguagesUsedAlonzoStAnnTx,
+  plutusScriptsWithContextAlonzoStAnnTx,
+  scriptsNeededAlonzoStAnnTx,
   scriptsProvidedAlonzoStAnnTx,
  )
 import Cardano.Ledger.Babbage.Core
@@ -64,6 +67,12 @@ instance AlonzoEraUTxO BabbageEra where
   getSpendingDatum = getBabbageSpendingDatum
 
   scriptsProvidedStAnnTx = scriptsProvidedAlonzoStAnnTx
+
+  scriptsNeededStAnnTx = scriptsNeededAlonzoStAnnTx
+
+  plutusScriptsWithContextStAnnTx = plutusScriptsWithContextAlonzoStAnnTx
+
+  plutusLanguagesUsedStAnnTx = plutusLanguagesUsedAlonzoStAnnTx
 
 getBabbageSupplementalDataHashes ::
   BabbageEraTxBody era =>

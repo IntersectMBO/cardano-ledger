@@ -16,7 +16,6 @@ import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
-import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (utxosUtxo)
@@ -222,14 +221,16 @@ prop_UTXOS =
   stsPropertyV2Gen @"UTXOS"
     trueSpec
     (\_env -> trueSpec)
-    ( \env _st -> do
+    ( \_env _st -> do
+        pp <- genFromSpec trueSpec
+        utxo <- genFromSpec trueSpec
         tx <- genFromSpec trueSpec
         pure $
           mkStAnnTx
             (epochInfo testGlobals)
             (systemStart testGlobals)
-            (Conway.cuePParams env)
-            (Conway.cueUTxO env)
+            pp
+            utxo
             tx
     )
     $ \_env _st _sig _st' -> True

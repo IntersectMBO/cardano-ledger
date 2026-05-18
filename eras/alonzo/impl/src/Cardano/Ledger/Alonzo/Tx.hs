@@ -80,7 +80,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   CostModel,
   ExUnits (..),
-  plutusScriptLanguage,
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoEraTxAuxData)
@@ -119,7 +118,7 @@ import Cardano.Ledger.Mary (Tx (..))
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus (Data, Language, PlutusWithContext, hashData, nonNativeLanguages)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (ScriptsNeeded, ScriptsProvided (..))
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..), deepseq)
@@ -128,8 +127,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -331,24 +328,21 @@ hashScriptIntegrity :: Era era => ScriptIntegrity era -> ScriptIntegrityHash
 hashScriptIntegrity = hashAnnotated
 
 mkScriptIntegrity ::
-  ( AlonzoEraPParams era
+  ( EraTx era
+  , AlonzoEraPParams era
   , AlonzoEraTxWits era
-  , EraUTxO era
   ) =>
   PParams era ->
   Tx l era ->
-  ScriptsProvided era ->
-  Set ScriptHash ->
+  Set Language ->
   StrictMaybe (ScriptIntegrity era)
-mkScriptIntegrity pp tx (ScriptsProvided scriptsProvided) scriptsNeeded
+mkScriptIntegrity pp tx langs
   | null (txRedeemers ^. unRedeemersL)
   , null langViews
   , null (txDats ^. unTxDatsL) =
       SNothing
   | otherwise = SJust $ ScriptIntegrity txRedeemers txDats langViews
   where
-    scriptsUsed = Map.elems $ Map.restrictKeys scriptsProvided scriptsNeeded
-    langs = Set.fromList $ plutusScriptLanguage <$> mapMaybe toPlutusScript scriptsUsed
     langViews = Set.map (getLanguageView pp) langs
     txWits = tx ^. witsTxL
     txRedeemers = txWits ^. rdmrsTxWitsL

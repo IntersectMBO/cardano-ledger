@@ -195,8 +195,6 @@ instance
   ) =>
   ToExpr (ConwayUtxosPredFailure era)
 
-instance (ToExpr (PParamsHKD Identity era), ToExpr (TxOut era)) => ToExpr (ConwayUtxosEnv era)
-
 -- TxBody
 instance ToExpr (ConwayTxBodyRaw TopTx ConwayEra) where
   toExpr ConwayTxBodyRaw {..} =

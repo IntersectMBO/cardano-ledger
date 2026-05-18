@@ -378,7 +378,7 @@ data DijkstraStAnnTx l era where
     , dsattPlutusLegacyMode :: Bool
     , dsattPlutusLanguagesUsed :: Set Language
     , dsattPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
-    , dsattStAnnSubTxs :: [DijkstraStAnnTx SubTx era]
+    , dsattSubTransactions :: [DijkstraStAnnTx SubTx era]
     } ->
     DijkstraStAnnTx TopTx era
   DijkstraStAnnSubTx ::

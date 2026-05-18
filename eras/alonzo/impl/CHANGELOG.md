@@ -2,6 +2,11 @@
 
 ## 1.16.0.0
 
+* Replace `scriptsProvided` and `scriptsNeeded` in `mkScriptIntegrity` signature with `Set Language`
+* Add `plutusLanguagesUsedStAnnTx` to `AlonzoEraUTxO` and a helper to implement it `plutusLanguagesUsedAlonzoStAnnTx`
+* Add `plutusScriptsWithContextStAnnTx` to `AlonzoEraUTxO` and a helper to implement it `plutusScriptsWithContextAlonzoStAnnTx`
+* Add `ScriptsProvided` argument to `missingRequiredDatums`
+* Add `scriptsNeededStAnnTx` to `AlonzoEraUTxO` and a helper to implement it `scriptsNeededAlonzoStAnnTx`
 * Add `AlonzoEraTxAuxData` as a superclass to `AlonzoEraTx`
 * Add `NFData` instance for `AlonzoScriptsNeeded`
 * Change `Signal` to `StAnnTx TopTx era` for: `AlonzoLEDGER`, `AlonzoUTXOW`, `AlonzoUTXO`, `AlonzoUTXOS`
