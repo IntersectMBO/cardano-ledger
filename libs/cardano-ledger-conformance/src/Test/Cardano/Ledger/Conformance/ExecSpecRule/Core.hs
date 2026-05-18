@@ -18,6 +18,7 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
+  ExecSpecTopLevelRule (..),
   ConformanceResult (..),
   SpecTRC (..),
   generatesWithin,
@@ -186,6 +187,9 @@ class
     Either Text (State (EraRule rule era), [Event (EraRule rule era)]) ->
     Doc AnsiStyle
   extraInfo _ _ _ _ = mempty
+
+class ExecSpecRule rule era => ExecSpecTopLevelRule rule era where
+  mkRuleExecContext :: Globals -> TRC (EraRule rule era) -> ExecContext rule era
 
 dumpCbor ::
   forall era a.

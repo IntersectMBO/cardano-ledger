@@ -47,6 +47,7 @@ import qualified Test.Cardano.Ledger.Binary.TreeDiff as TD
 import Test.Cardano.Ledger.Common (NFData, ToExpr (..))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
+  ExecSpecTopLevelRule (..),
   SpecTRC (..),
   runFromAgdaFunction,
  )
@@ -209,3 +210,22 @@ instance ExecSpecRule "LEDGER" DijkstraEra where
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule = runFromAgdaFunction Agda.ledgerStep
+
+instance ExecSpecTopLevelRule "LEDGER" DijkstraEra where
+  mkRuleExecContext _ (TRC (env, state, signal)) =
+    DijkstraLedgerExecContext
+      { dlecGuardrailsScriptHash =
+          state ^. lsUTxOStateL . utxosGovStateL . constitutionGovStateL . constitutionGuardrailsScriptHashL
+      , dlecEnactState = mkEnactState $ state ^. lsUTxOStateL . utxosGovStateL
+      , dlecUtxoExecContext =
+          UtxoExecContext
+            { uecTx = signal ^. txStAnnTxG
+            , uecUTxO = state ^. utxoL
+            , uecUtxoEnv =
+                Shelley.UtxoEnv
+                  { Shelley.ueSlot = env ^. Shelley.ledgerSlotNoL
+                  , Shelley.uePParams = state ^. lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
+                  , Shelley.ueCertState = state ^. lsCertStateL
+                  }
+            }
+      }
