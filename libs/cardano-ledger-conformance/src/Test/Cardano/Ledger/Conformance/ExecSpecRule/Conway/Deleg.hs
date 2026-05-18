@@ -14,10 +14,17 @@ import Cardano.Ledger.Credential (Credential)
 import Control.State.Transition.Extended (TRC (..))
 import Data.Bifunctor (second)
 import Data.Set (Set)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
+  ExecSpecRule (ExecContext, runAgdaRule, translateInputs),
+  SpecTRC (SpecTRC),
+ )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (toSpecRep),
+  unComputationResult,
+  withCtxSpecTransM,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
@@ -26,10 +33,10 @@ instance ExecSpecRule "DELEG" ConwayEra where
   -- The context is the set of all DRep delegatees in the transaction
   type ExecContext "DELEG" ConwayEra = Set (Credential DRepRole)
 
-  translateInputs delegatees (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM delegatees $ toSpecRep env
-    agdaSt <- runSpecTransM () $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+  translateInputs (TRC (env, st, sig)) = do
+    agdaEnv <- toSpecRep env
+    agdaSt <- withCtxSpecTransM () $ toSpecRep st
+    agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule (SpecTRC env (Agda.MkCertState dState pState vState) sig) =

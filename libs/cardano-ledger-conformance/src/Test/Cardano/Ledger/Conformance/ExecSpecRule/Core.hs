@@ -47,7 +47,7 @@ import GHC.Base (Constraint, Symbol, Type)
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol)
 import Lens.Micro.Mtl (use)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Core.Foreign.API as Agda
 import Prettyprinter
 import Prettyprinter.Render.Terminal
 import System.FilePath ((<.>))
@@ -55,9 +55,11 @@ import Test.Cardano.Ledger.Api.DebugTools (writeCBOR)
 import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecNormalize (..),
+  SpecTransM,
   SpecTranslate (..),
   runSpecTransM,
   unComputationResult,
+  withCtxSpecTransM,
  )
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest (
@@ -122,13 +124,13 @@ class
   type ExecContext rule era = ()
 
   type SpecEnvironment rule era
-  type SpecEnvironment rule era = SpecRep (Environment (EraRule rule era))
+  type SpecEnvironment rule era = SpecRep era (Environment (EraRule rule era))
 
   type SpecState rule era
-  type SpecState rule era = SpecRep (State (EraRule rule era))
+  type SpecState rule era = SpecRep era (State (EraRule rule era))
 
   type SpecSignal rule era
-  type SpecSignal rule era = SpecRep (Signal (EraRule rule era))
+  type SpecSignal rule era = SpecRep era (Signal (EraRule rule era))
 
   runAgdaRule ::
     HasCallStack =>
@@ -144,42 +146,37 @@ class
 
   translateInputs ::
     HasCallStack =>
-    ExecContext rule era ->
     TRC (EraRule rule era) ->
-    Either Text (SpecTRC rule era)
+    SpecTransM era (ExecContext rule era) (SpecTRC rule era)
   default translateInputs ::
-    ( SpecTranslate (Environment (EraRule rule era))
-    , SpecTranslate (State (EraRule rule era))
-    , SpecTranslate (Signal (EraRule rule era))
-    , SpecContext (Environment (EraRule rule era)) ~ ExecContext rule era
-    , SpecContext (State (EraRule rule era)) ~ ExecContext rule era
-    , SpecContext (Signal (EraRule rule era)) ~ ExecContext rule era
-    , SpecRep (Environment (EraRule rule era)) ~ SpecEnvironment rule era
-    , SpecRep (State (EraRule rule era)) ~ SpecState rule era
-    , SpecRep (Signal (EraRule rule era)) ~ SpecSignal rule era
+    ( SpecTranslate era (Environment (EraRule rule era))
+    , SpecTranslate era (State (EraRule rule era))
+    , SpecTranslate era (Signal (EraRule rule era))
+    , SpecContext era (Environment (EraRule rule era)) ~ ExecContext rule era
+    , SpecContext era (State (EraRule rule era)) ~ ExecContext rule era
+    , SpecContext era (Signal (EraRule rule era)) ~ ExecContext rule era
+    , SpecRep era (Environment (EraRule rule era)) ~ SpecEnvironment rule era
+    , SpecRep era (State (EraRule rule era)) ~ SpecState rule era
+    , SpecRep era (Signal (EraRule rule era)) ~ SpecSignal rule era
     ) =>
-    ExecContext rule era ->
     TRC (EraRule rule era) ->
-    Either Text (SpecTRC rule era)
-  translateInputs ctx (TRC (env, st, sig)) = do
-    runSpecTransM ctx $
-      SpecTRC <$> toSpecRep env <*> toSpecRep st <*> toSpecRep sig
+    SpecTransM era (ExecContext rule era) (SpecTRC rule era)
+  translateInputs (TRC (env, st, sig)) = do
+    SpecTRC <$> toSpecRep env <*> toSpecRep st <*> toSpecRep sig
 
   translateOutput ::
-    ExecContext rule era ->
     TRC (EraRule rule era) ->
     State (EraRule rule era) ->
-    Either Text (SpecState rule era)
+    SpecTransM era (ExecContext rule era) (SpecState rule era)
   default translateOutput ::
-    ( SpecTranslate (State (EraRule rule era))
-    , SpecContext (State (EraRule rule era)) ~ ()
-    , SpecRep (State (EraRule rule era)) ~ SpecState rule era
+    ( SpecTranslate era (State (EraRule rule era))
+    , SpecContext era (State (EraRule rule era)) ~ ()
+    , SpecRep era (State (EraRule rule era)) ~ SpecState rule era
     ) =>
-    ExecContext rule era ->
     TRC (EraRule rule era) ->
     State (EraRule rule era) ->
-    Either Text (SpecState rule era)
-  translateOutput _ _ st = runSpecTransM () $ toSpecRep st
+    SpecTransM era (ExecContext rule era) (SpecState rule era)
+  translateOutput _ = withCtxSpecTransM () . toSpecRep
 
   extraInfo ::
     HasCallStack =>
@@ -340,7 +337,8 @@ runConformance execContext trc@(TRC (env, st, sig)) = do
   SpecTRC specEnv specSt specSig <-
     impAnn "Translating the inputs" $
       expectRightDeepExpr $
-        translateInputs @rule @era execContext trc
+        runSpecTransM @era execContext $
+          translateInputs trc
   logDoc $ "ctx:\n" <> ansiExpr execContext
   logDoc $ "implEnv:\n" <> ansiExpr env
   logDoc $ "implSt:\n" <> ansiExpr st
@@ -359,7 +357,8 @@ runConformance execContext trc@(TRC (env, st, sig)) = do
       case implRes of
         Right (st', _) ->
           fmap (Right . specNormalize) . expectRightExpr $
-            translateOutput @rule @era execContext trc st'
+            runSpecTransM @era execContext $
+              translateOutput trc st'
         Left err -> pure $ Left err
   pure $ ConformanceResult implResTest agdaResTest implRes
 
@@ -382,8 +381,9 @@ generatesWithin gen timeout =
 
 -- | Translate a Haskell type 'a' whose translation context is 'ctx' into its Agda type, in the ImpTest monad.
 translateWithContext ::
-  SpecTranslate a => SpecContext a -> a -> ImpTestM era (Either Text (SpecRep a))
-translateWithContext ctx x = pure . runSpecTransM ctx $ toSpecRep x
+  forall era a.
+  SpecTranslate era a => SpecContext era a -> a -> ImpTestM era (Either Text (SpecRep era a))
+translateWithContext ctx x = pure . runSpecTransM ctx $ toSpecRep @era x
 
 runFromAgdaFunction ::
   ( SpecEnvironment rule era ->

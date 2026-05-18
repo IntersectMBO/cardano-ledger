@@ -2,35 +2,33 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool where
 
 import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import qualified Data.Map.Strict as Map
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (SpecRep, toSpecRep),
+  toSpecRepMap,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
-instance
-  ( SpecRep (PParamsHKD Shelley.Identity era) ~ Agda.PParams
-  , SpecTranslate (PParamsHKD Shelley.Identity era)
-  , SpecContext (PParamsHKD Shelley.Identity era) ~ ()
-  ) =>
-  SpecTranslate (Shelley.PoolEnv era)
-  where
-  type SpecRep (Shelley.PoolEnv era) = Agda.PParams
+instance SpecTranslate ConwayEra (Shelley.PoolEnv ConwayEra) where
+  type SpecRep ConwayEra (Shelley.PoolEnv ConwayEra) = Agda.PParams
 
   toSpecRep (Shelley.PoolEnv _ pp) = toSpecRep pp
 
-instance SpecTranslate (PState era) where
-  type SpecRep (PState era) = Agda.PState
+instance SpecTranslate ConwayEra (PState ConwayEra) where
+  type SpecRep ConwayEra (PState ConwayEra) = Agda.PState
 
   toSpecRep PState {..} =
     Agda.MkPState
@@ -38,8 +36,8 @@ instance SpecTranslate (PState era) where
       <*> toSpecRepMap psFutureStakePoolParams
       <*> toSpecRepMap psRetiring
 
-instance SpecTranslate PoolCert where
-  type SpecRep PoolCert = Agda.DCert
+instance SpecTranslate ConwayEra PoolCert where
+  type SpecRep ConwayEra PoolCert = Agda.DCert
 
   toSpecRep (RegPool p@StakePoolParams {sppId = KeyHash ppHash}) =
     Agda.Regpool

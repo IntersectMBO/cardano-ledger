@@ -24,7 +24,6 @@ import Data.List.NonEmpty
 import Data.Text qualified as T
 import GHC.TypeLits (symbolVal)
 import Lens.Micro
-import MAlonzo.Code.Ledger.Foreign.API qualified as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayLedgerExecContext (..))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
@@ -50,7 +49,7 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
   impAnn ("Conformance hook (" <> symbolVal (Proxy @rule) <> ")") $ do
     -- translate inputs
     specTRC@(SpecTRC specEnv specState specSignal) <-
-      impAnn "Translating inputs" . expectRightDeepExpr $ translateInputs ctx trc
+      impAnn "Translating inputs" . expectRightDeepExpr $ runSpecTransM ctx $ translateInputs trc
     -- get agda response
     agdaResponse' <-
       fmap (second $ first specNormalize) . evaluateDeep $ runAgdaRuleWithDebug @rule @era specTRC
@@ -59,7 +58,7 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
       agdaResponse = fmap fst agdaResponse'
       agdaDebug = either (const "") snd agdaResponse'
       impRuleResult' = bimap (T.pack . show) fst impRuleResult
-      impResponse = first (T.pack . show) . translateOutput @rule @era ctx trc =<< impRuleResult'
+      impResponse = first (T.pack . show) . runSpecTransM @era ctx . translateOutput trc =<< impRuleResult'
 
     logString "implEnv"
     logToExpr env
@@ -97,13 +96,11 @@ submitTxConformanceHook ::
   ( ConwayEraImp era
   , ExecSpecRule "LEDGER" era
   , ExecContext "LEDGER" era ~ ConwayLedgerExecContext era
-  , SpecTranslate (TxWits era)
+  , SpecTranslate era (TxWits era)
   , HasCallStack
-  , SpecRep (TxWits era) ~ Agda.TxWitnesses
-  , SpecRep (TxBody TopTx era) ~ Agda.TxBody
-  , SpecTranslate (TxBody TopTx era)
-  , SpecTranslate (Tx TopTx era)
-  , ToExpr (SpecRep (Tx TopTx era))
+  , SpecTranslate era (TxBody TopTx era)
+  , SpecTranslate era (Tx TopTx era)
+  , ToExpr (SpecRep era (Tx TopTx era))
   , SpecNormalize (SpecState "LEDGER" era)
   , Eq (SpecState "LEDGER" era)
   ) =>

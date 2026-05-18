@@ -22,7 +22,7 @@ import Cardano.Ledger.Keys (DSIGN, VKey (..))
 import Data.ByteString (ByteString)
 import Data.Either (isRight)
 import Data.Maybe (fromMaybe)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (integerToHash)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (signatureFromInteger, vkeyFromInteger)

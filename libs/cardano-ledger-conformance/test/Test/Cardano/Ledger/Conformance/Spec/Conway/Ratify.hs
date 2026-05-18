@@ -11,7 +11,6 @@
 
 module Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify (spec) where
 
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   EnactState,
@@ -24,7 +23,7 @@ import Cardano.Ledger.Conway.Rules qualified as Conway
 import Constrained.Generation
 import Data.Either (fromRight)
 import Lens.Micro
-import MAlonzo.Code.Ledger.Foreign.API qualified as Agda
+import MAlonzo.Code.Ledger.Conway.Foreign.API qualified as Agda
 import Prettyprinter as Pretty
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
 import Test.Cardano.Ledger.Conformance.Spec.Core
@@ -37,9 +36,12 @@ import Test.Cardano.Ledger.Conway.TreeDiff (tableDoc)
 import Test.Cardano.Ledger.Imp.Common
 
 conformsToImplAccepted ::
-  era ~ ConwayEra =>
-  (RatifyEnv era -> RatifyState era -> GovActionState era -> Bool) ->
-  (SpecRep (RatifyEnv era) -> SpecRep (EnactState era) -> SpecRep (GovActionState era) -> Bool) ->
+  (RatifyEnv ConwayEra -> RatifyState ConwayEra -> GovActionState ConwayEra -> Bool) ->
+  ( SpecRep ConwayEra (RatifyEnv ConwayEra) ->
+    SpecRep ConwayEra (EnactState ConwayEra) ->
+    SpecRep ConwayEra (GovActionState ConwayEra) ->
+    Bool
+  ) ->
   Property
 conformsToImplAccepted impl agda = property $ do
   let ConstrainedGeneratorBundle {..} = constrainedRatify
@@ -47,12 +49,12 @@ conformsToImplAccepted impl agda = property $ do
   govActions <- cgbContextGen
   ratifyEnv <- genFromSpec $ cgbEnvironmentSpec govActions
   ratifySt <- genFromSpec $ cgbStateSpec govActions ratifyEnv
-  let specEnv = fromSpecTransM $ runSpecTransM @Coin 0 $ toSpecRep ratifyEnv
+  let specEnv = fromSpecTransM $ runSpecTransM 0 $ toSpecRep @ConwayEra ratifyEnv
       specSt =
         fromSpecTransM $
           runSpecTransM () $
-            toSpecRep (ratifySt ^. rsEnactStateL)
-      specGovActions = fromSpecTransM $ runSpecTransM () $ toSpecRep govActions
+            toSpecRep @ConwayEra (ratifySt ^. rsEnactStateL)
+      specGovActions = fromSpecTransM $ runSpecTransM () $ toSpecRep @ConwayEra govActions
   return $
     conjoin $
       zipWith

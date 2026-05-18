@@ -36,7 +36,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   externalFunctions,
@@ -49,7 +49,8 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
-  runSpecTransM,
+  askSpecTransM,
+  withCtxSpecTransM,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..))
@@ -104,10 +105,11 @@ instance
 instance ExecSpecRule "LEDGER" ConwayEra where
   type ExecContext "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
 
-  translateInputs ConwayLedgerExecContext {..} (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM (clecGuardrailsScriptHash, clecEnactState) $ toSpecRep env
-    agdaSt <- runSpecTransM () $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+  translateInputs (TRC (env, st, sig)) = do
+    ConwayLedgerExecContext {..} <- askSpecTransM
+    agdaEnv <- withCtxSpecTransM (clecGuardrailsScriptHash, clecEnactState) $ toSpecRep env
+    agdaSt <- withCtxSpecTransM () $ toSpecRep st
+    agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule trc =

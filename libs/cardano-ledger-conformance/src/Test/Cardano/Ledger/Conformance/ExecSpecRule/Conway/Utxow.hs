@@ -22,17 +22,22 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Coerce (coerce)
 import qualified Data.Text as T
 import Lens.Micro ((^.))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import Lens.Micro.Extras (view)
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import qualified Prettyprinter as PP
-import Test.Cardano.Ledger.Conformance (
-  ExecSpecRule (..),
-  SpecTRC (..),
-  SpecTranslate (..),
-  runFromAgdaFunction,
-  runSpecTransM,
- )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
+  ExecSpecRule (..),
+  SpecTRC (..),
+  runFromAgdaFunction,
+ )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (..),
+  runSpecTransM,
+  withCtxSpecTransM,
+  withSpecTransM,
+ )
 import Test.Cardano.Ledger.Constrained.Conway (
   UtxoExecContext (..),
  )
@@ -42,23 +47,23 @@ import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 instance ExecSpecRule "UTXOW" ConwayEra where
   type ExecContext "UTXOW" ConwayEra = UtxoExecContext ConwayEra
 
-  translateInputs ctx (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM () $ toSpecRep env
-    agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+  translateInputs (TRC (env, st, sig)) = do
+    agdaEnv <- withCtxSpecTransM () $ toSpecRep env
+    agdaSt <- withSpecTransM (view utxoEnvCertStateL . uecUtxoEnv) $ toSpecRep st
+    agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
-  translateOutput ctx _ st =
-    runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep st
+  translateOutput _ =
+    withSpecTransM (view utxoEnvCertStateL . uecUtxoEnv) . toSpecRep
 
   runAgdaRule = runFromAgdaFunction (Agda.utxowStep externalFunctions)
 
   extraInfo globals ctx trc@(TRC (env, st, sig)) _ =
     let
       result = either show T.unpack $ do
-        agdaEnv <- runSpecTransM () $ toSpecRep env
-        agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep st
-        agdaSig <- runSpecTransM () $ toSpecRep sig
+        agdaEnv <- runSpecTransM () $ toSpecRep @ConwayEra env
+        agdaSt <- runSpecTransM (uecUtxoEnv ctx ^. utxoEnvCertStateL) $ toSpecRep @ConwayEra st
+        agdaSig <- runSpecTransM () $ toSpecRep @ConwayEra sig
         pure $ Agda.utxowDebug externalFunctions agdaEnv agdaSt agdaSig
       stFinal = first (T.pack . show) $ runSTS @"UTXO" @ConwayEra globals env st sig
       utxoInfo = extraInfo @"UTXO" @ConwayEra globals ctx (coerce trc) stFinal

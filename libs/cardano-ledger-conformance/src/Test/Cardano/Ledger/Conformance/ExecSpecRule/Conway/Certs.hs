@@ -18,35 +18,42 @@ import Control.State.Transition.Extended (TRC (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Lens.Micro ((%~), (.~), (^.))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (
+import Lens.Micro ((%~), (.~))
+import Lens.Micro.Extras (view)
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (ConwayCertExecContext (..))
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   SpecTRC (..),
-  SpecTranslate (..),
   runFromAgdaFunction,
-  runSpecTransM,
  )
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (ConwayCertExecContext (..))
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTranslate (..),
+  askSpecTransM,
+  withCtxSpecTransM,
+ )
 
 instance ExecSpecRule "CERTS" ConwayEra where
   type ExecContext "CERTS" ConwayEra = ConwayCertExecContext ConwayEra
 
-  translateInputs ConwayCertExecContext {..} (TRC (env, st, sig)) = do
-    agdaEnv <- runSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep env
-    agdaSt <- runSpecTransM () $ toSpecRep st
-    agdaSig <- runSpecTransM () $ toSpecRep sig
+  translateInputs (TRC (env, st, sig)) = do
+    ConwayCertExecContext {..} <- askSpecTransM
+    agdaEnv <- withCtxSpecTransM (ccecVotes, ccecWithdrawals) $ toSpecRep env
+    agdaSt <- withCtxSpecTransM () $ toSpecRep st
+    agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   runAgdaRule = runFromAgdaFunction Agda.certsStep
 
-  translateOutput ConwayCertExecContext {..} _ = runSpecTransM () . toSpecRep . fixRewards
-    where
+  translateOutput _ st = do
+    ConwayCertExecContext {..} <- askSpecTransM
+    let
       -- This is necessary because the implementation zeroes out the rewards
       -- in the CERTS rule, but the spec does it in a different rule
+      zeroRewards = Map.adjust (balanceAccountStateL .~ mempty)
       fixRewards =
         certDStateL . accountsL . accountsMapL
           %~ \m ->
-            foldr' zeroRewards m . Set.map (^. accountAddressCredentialL) $
+            foldr' zeroRewards m . Set.map (view accountAddressCredentialL) $
               Map.keysSet ccecWithdrawals
-      zeroRewards = Map.adjust (balanceAccountStateL .~ mempty)
+    withCtxSpecTransM () $ toSpecRep $ fixRewards st

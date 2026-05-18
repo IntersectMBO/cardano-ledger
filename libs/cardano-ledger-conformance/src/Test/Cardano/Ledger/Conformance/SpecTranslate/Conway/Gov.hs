@@ -5,40 +5,25 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Gov () where
 
-import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway (ConwayEra)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.State
-import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 
-instance
-  ( SpecTranslate (PParamsHKD Identity era)
-  , SpecContext (PParamsHKD Identity era) ~ ()
-  , EraPParams era
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate (CertState era)
-  , SpecContext (CertState era) ~ ()
-  , SpecRep (CertState era) ~ Agda.CertState
-  , EraCertState era
-  ) =>
-  SpecTranslate (Conway.GovEnv era)
-  where
-  type SpecRep (Conway.GovEnv era) = Agda.GovEnv
-  type SpecContext (Conway.GovEnv era) = EnactState era
+instance SpecTranslate ConwayEra (Conway.GovEnv ConwayEra) where
+  type SpecRep ConwayEra (Conway.GovEnv ConwayEra) = Agda.GovEnv
+  type SpecContext ConwayEra (Conway.GovEnv ConwayEra) = Conway.EnactState ConwayEra
 
   toSpecRep Conway.GovEnv {..} = do
     enactState <- askSpecTransM
@@ -53,15 +38,8 @@ instance
         <*> toSpecRep geCertState
         <*> toSpecRep rewardAccounts
 
-instance
-  ( EraPParams era
-  , SpecTranslate (PParamsHKD StrictMaybe era)
-  , SpecContext (PParamsHKD StrictMaybe era) ~ ()
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
-  ) =>
-  SpecTranslate (Conway.GovSignal era)
-  where
-  type SpecRep (Conway.GovSignal era) = [Either Agda.GovVote Agda.GovProposal]
+instance SpecTranslate ConwayEra (Conway.GovSignal ConwayEra) where
+  type SpecRep ConwayEra (Conway.GovSignal ConwayEra) = [Either Agda.GovVote Agda.GovProposal]
 
   toSpecRep Conway.GovSignal {gsVotingProcedures, gsProposalProcedures} = do
     votingProcedures <- toSpecRep gsVotingProcedures
