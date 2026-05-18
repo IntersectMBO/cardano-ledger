@@ -1000,7 +1000,10 @@ blockBodyGen = do
         liftAntiGen $
           withAnnotation "invalid_transactions" $
             zipWithM faultyIndex [0 :: Int ..] txIndicesWithOverflow
-  invalidTxIxsTerm <- genArrayTerm $ TInteger . toInteger <$> invalidIxIxs
+  invalidTxIxsTerm <-
+    if null invalidIxIxs
+      then pure TNull
+      else genArrayTerm $ TInteger . toInteger <$> invalidIxIxs
   txsTerm <- withAntiGen (withAnnotation "transactions") $ genArrayTerm txs
   perasCertTerm <- generateFromName "peras_certificate"
   SingleTerm <$> genArrayTerm [invalidTxIxsTerm, txsTerm, perasCertTerm]
