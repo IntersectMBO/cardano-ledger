@@ -244,7 +244,7 @@ instance HuddleRule "vkeywitness" BabbageEra where
   huddleRuleNamed = vkeywitnessRule
 
 instance HuddleRule "bootstrap_witness" BabbageEra where
-  huddleRuleNamed = bootstrapWitnessRule
+  huddleRuleNamed = shelleyBootstrapWitnessRule
 
 instance HuddleRule "policy_id" BabbageEra where
   huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p

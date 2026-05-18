@@ -104,7 +104,7 @@ instance HuddleRule "vkeywitness" MaryEra where
   huddleRuleNamed = vkeywitnessRule
 
 instance HuddleRule "bootstrap_witness" MaryEra where
-  huddleRuleNamed = bootstrapWitnessRule
+  huddleRuleNamed = shelleyBootstrapWitnessRule
 
 instance HuddleRule "transaction_witness_set" MaryEra where
   huddleRuleNamed = transactionWitnessSetRule

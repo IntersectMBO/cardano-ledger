@@ -756,7 +756,7 @@ instance HuddleRule "vkeywitness" ConwayEra where
   huddleRuleNamed = vkeywitnessRule
 
 instance HuddleRule "bootstrap_witness" ConwayEra where
-  huddleRuleNamed = bootstrapWitnessRule
+  huddleRuleNamed = shelleyBootstrapWitnessRule
 
 instance HuddleRule "ex_units" ConwayEra where
   huddleRuleNamed = exUnitsRule

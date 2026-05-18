@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   shelleyHeaderBodyRule,
   transactionWitnessSetRule,
   vkeywitnessRule,
-  bootstrapWitnessRule,
+  shelleyBootstrapWitnessRule,
   shelleyOperationalCertGroup,
   genesisHashRule,
   scriptPubkeyGroup,
@@ -170,9 +170,9 @@ vkeywitnessRule pname p =
   pname
     =.= arr [a $ huddleRule @"vkey" p, a $ huddleRule @"signature" p]
 
-bootstrapWitnessRule ::
+shelleyBootstrapWitnessRule ::
   forall era. Era era => Proxy "bootstrap_witness" -> Proxy era -> Rule
-bootstrapWitnessRule pname p =
+shelleyBootstrapWitnessRule pname p =
   pname
     =.= arr
       [ "public_key" ==> huddleRule @"vkey" p
@@ -568,7 +568,7 @@ instance HuddleRule "vkeywitness" ShelleyEra where
   huddleRuleNamed = vkeywitnessRule
 
 instance HuddleRule "bootstrap_witness" ShelleyEra where
-  huddleRuleNamed = bootstrapWitnessRule
+  huddleRuleNamed = shelleyBootstrapWitnessRule
 
 instance HuddleRule "transaction_witness_set" ShelleyEra where
   huddleRuleNamed = transactionWitnessSetRule

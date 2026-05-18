@@ -219,7 +219,7 @@ instance HuddleRule "vkeywitness" AlonzoEra where
   huddleRuleNamed = vkeywitnessRule
 
 instance HuddleRule "bootstrap_witness" AlonzoEra where
-  huddleRuleNamed = bootstrapWitnessRule
+  huddleRuleNamed = shelleyBootstrapWitnessRule
 
 instance HuddleRule "auxiliary_scripts" AlonzoEra where
   huddleRuleNamed = auxiliaryScriptsRule

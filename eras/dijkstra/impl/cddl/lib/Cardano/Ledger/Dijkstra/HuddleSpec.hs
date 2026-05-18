@@ -434,8 +434,18 @@ instance HuddleRule "transaction_id" DijkstraEra where
 instance HuddleRule "vkeywitness" DijkstraEra where
   huddleRuleNamed = vkeywitnessRule
 
+dijkstraBootstrapWitnessRule :: Proxy "bootstrap_witness" -> Proxy DijkstraEra -> Rule
+dijkstraBootstrapWitnessRule pname p =
+  pname
+    =.= arr
+      [ "public_key" ==> huddleRule @"vkey" p
+      , "signature" ==> huddleRule @"signature" p
+      , "chain_code" ==> VBytes `sized` (32 :: Word64)
+      , "attributes" ==> VBytes
+      ]
+
 instance HuddleRule "bootstrap_witness" DijkstraEra where
-  huddleRuleNamed = bootstrapWitnessRule
+  huddleRuleNamed = dijkstraBootstrapWitnessRule
 
 instance HuddleRule "ex_units" DijkstraEra where
   huddleRuleNamed = exUnitsRule
