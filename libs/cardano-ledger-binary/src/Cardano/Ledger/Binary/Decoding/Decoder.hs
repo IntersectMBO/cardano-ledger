@@ -79,6 +79,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeNonEmptySetLikeEnforceNoDuplicates,
   decodeListLikeEnforceNoDuplicates,
   decodeMapContents,
+  decodeSparseKeyed,
 
   -- **** Applicaitve
   decodeMapTraverse,
@@ -263,6 +264,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Compose (Compose (..))
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
+import Data.List (intercalate)
 import qualified Data.List.NonEmpty as NE (NonEmpty, nonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe)
@@ -1144,6 +1146,111 @@ decodeMapContentsTraverse decodeKey decodeValue =
     decodeInlinedPair = getCompose $ (,) <$> Compose decodeKey <*> Compose decodeValue
     {-# INLINE decodeInlinedPair #-}
 {-# INLINE decodeMapContentsTraverse #-}
+
+-- | Decode a sparse-keyed CBOR map into an accumulator, dispatching per
+-- key.
+--
+-- A /sparse-keyed map/ is the CBOR shape used throughout Cardano
+-- for records where every field is optional and is identified
+-- by a small non-negative integer key. CDDL examples include
+-- @transaction_witness_set@, @transaction_body@, @auxiliary_data@, and
+-- @protocol_param_update@. The on-the-wire shape is
+--
+-- @
+-- { ? key0 => value0, ? key1 => value1, ... }
+-- @
+--
+-- with no order requirement, no padding for absent fields, and a CBOR
+-- map header that may be either definite-length (major type 5 with a
+-- count) or indefinite-length (@0xBF@ followed by entries terminated
+-- by the break byte @0xFF@). That being said, uniqueness of keys is
+-- enforced upon deserialisation
+--
+-- The handler is invoked /after/ the helper has read the key but
+-- /before/ the value bytes are consumed:
+--
+-- * @'Just' decoder@ supplies the decoder for the value
+--   bytes. It receives the current accumulator and returns
+--   the updated one, supporting both record-update style
+--   (plain accumulators) and applicative threading (e.g.
+--   @'Cardano.Ledger.Binary.Decoding.Annotated.Annotator' t@
+--   accumulators).
+-- * @'Nothing'@ signals an unknown key. The helper reports it uniformly
+--   so callers do not write per-type \"unknown key\" strings.
+--
+-- @
+-- data R = R { rA :: !(Maybe Word64), rB :: !(Maybe Word64) }
+--
+-- decodeR :: Decoder s R
+-- decodeR = decodeSparseKeyed "R" [(0, "a")] (R Nothing Nothing) $ \r -> \case
+--   0 -> Just $ do
+--     !v <- decCBOR
+--     pure $ r { rA = Just v }
+--   1 -> Just $ do
+--     !v <- decCBOR
+--     pure $ r { rB = Just v }
+--   _ -> Nothing
+-- @
+decodeSparseKeyed ::
+  forall a s.
+  -- | Type name used in error messages.
+  Text.Text ->
+  -- | Required keys with friendly names per key. After the map is fully
+  -- consumed, the absence of any key in this list is reported as a
+  -- failure using its name and key.
+  [(Word, String)] ->
+  -- | Initial accumulator value.
+  a ->
+  -- | Per-key handler. @'Just' d@ provides the decoder for the value
+  -- that is already applied to the supplied accumulator; 'Nothing'
+  -- indicates the key as unknown and is reported as decoding failure.
+  (a -> Word -> Maybe (Decoder s a)) ->
+  Decoder s a
+decodeSparseKeyed name requiredFields initial decoderForKey = do
+  (seen, acc) <-
+    decodeMapLenOrIndef >>= \case
+      Just len -> defLoop Set.empty initial len
+      Nothing -> indefLoop Set.empty initial
+  let missing =
+        [ show n <> ":" <> show k
+        | (k, n) <- requiredFields
+        , not $ Set.member k seen
+        ]
+  unless (null missing) $
+    failMsg $
+      "Missing required field(s): " <> intercalate ", " missing
+  pure acc
+  where
+    failMsg :: String -> Decoder s b
+    failMsg msg = fail $ Text.unpack name <> ":" <> msg
+
+    defLoop :: Set.Set Word -> a -> Int -> Decoder s (Set.Set Word, a)
+    defLoop !seen !acc !i
+      | i <= 0 = pure (seen, acc)
+      | otherwise = do
+          (seen', acc') <- step seen acc
+          defLoop seen' acc' (i - 1)
+
+    indefLoop :: Set.Set Word -> a -> Decoder s (Set.Set Word, a)
+    indefLoop !seen !acc =
+      decodeBreakOr >>= \case
+        True -> pure (seen, acc)
+        False -> do
+          (seen', acc') <- step seen acc
+          indefLoop seen' acc'
+
+    step :: Set.Set Word -> a -> Decoder s (Set.Set Word, a)
+    step seen acc = do
+      key <- decodeWord
+      if Set.member key seen
+        then failMsg $ "Duplicate field key " <> show key
+        else case decoderForKey acc key of
+          Nothing -> failMsg $ "Unknown field key " <> show key
+          Just decoder -> do
+            acc' <- decoder
+            pure (Set.insert key seen, acc')
+    {-# INLINE step #-}
+{-# INLINE decodeSparseKeyed #-}
 
 --------------------------------------------------------------------------------
 -- Time
