@@ -42,7 +42,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Decoding (label)
 import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
-import Codec.CBOR.Cuddle.CBOR.Validator (validateCBOR)
+import Codec.CBOR.Cuddle.CBOR.Validator (ValidateCBORError (..), validateCBOR)
 import Codec.CBOR.Cuddle.CBOR.Validator.Trace (
   Evidenced (..),
   SValidity (..),
@@ -213,7 +213,16 @@ huddleAntiCborProp version ruleName env@HuddleEnv {heRoot} = property @(Gen Prop
             encoding = toPlainEncoding version $ encodeTerm zrValue
             bs = CBOR.toStrictByteString encoding
           case validateCBOR bs (Name ruleName) (mapIndex heRoot) of
-            Left _ -> discard
+            -- cborg-level failure (e.g. twiddler turned a tag into a
+            -- bignum tag with a non-bytes body): the decoder will also
+            -- fail, which is exactly what a zap test is meant to detect.
+            --
+            -- It could also be argued that the correct thing to do here would
+            -- be to discard instead, since we're not really testing our decoders
+            -- but `cborg`'s decoders.
+            Left (DecodingFailed _) -> pure $ property ()
+            Left e@LeftoverBytes {} -> pure . property . expectationFailure $ show e
+            Left e@RuleDoesNotExist {} -> pure . property . expectationFailure $ show e
             Right (Evidenced SInvalid trc) -> do
               let
                 errMsg =
