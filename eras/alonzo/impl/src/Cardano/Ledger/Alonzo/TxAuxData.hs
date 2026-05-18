@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -67,6 +68,8 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   ToCBOR,
   TokenType (..),
+  assertTag,
+  decodeSparseKeyed,
   decodeStrictSeq,
   ifDecoderVersionAtLeast,
   natVersion,
@@ -202,7 +205,18 @@ instance
     decodeTxAuxDataByTokenType @(Annotator (AlonzoTxAuxDataRaw era))
       decodeShelley
       (ifDecoderVersionAtLeast (natVersion @12) decodeDijkstra decodeAllegra)
-      decodeAlonzo
+      ( ifDecoderVersionAtLeast
+          (natVersion @12)
+          ( do
+              assertTag 259
+              decodeSparseKeyed
+                "AlonzoTxAuxData"
+                []
+                (pure emptyAlonzoTxAuxDataRaw)
+                decoderForKey
+          )
+          decodeAlonzo
+      )
     where
       decodeShelley =
         decode
@@ -228,6 +242,39 @@ instance
         decode $
           TagD 259 $
             SparseKeyed "AlonzoTxAuxData" (pure emptyAlonzoTxAuxDataRaw) auxDataField []
+
+      decoderForKey ::
+        Annotator (AlonzoTxAuxDataRaw era) ->
+        Word ->
+        Maybe (Decoder s (Annotator (AlonzoTxAuxDataRaw era)))
+      decoderForKey acc = \case
+        0 -> Just $ do
+          !x <- decCBOR
+          pure $ (\ad -> ad {atadrMetadata = x}) <$> acc
+        1 -> Just $ do
+          !x <- sequence <$> decodeStrictSeq decCBOR
+          pure $
+            (\scripts ad -> ad {atadrNativeScripts = atadrNativeScripts ad <> scripts})
+              <$> x
+              <*> acc
+        2 -> Just $ do
+          guardPlutus PlutusV1
+          !x <- decCBOR
+          pure $ addPlutusScripts PlutusV1 x <$> acc
+        3 -> Just $ do
+          guardPlutus PlutusV2
+          !x <- decCBOR
+          pure $ addPlutusScripts PlutusV2 x <$> acc
+        4 -> Just $ do
+          guardPlutus PlutusV3
+          !x <- decCBOR
+          pure $ addPlutusScripts PlutusV3 x <$> acc
+        5 -> Just $ do
+          guardPlutus PlutusV4
+          !x <- decCBOR
+          pure $ addPlutusScripts PlutusV4 x <$> acc
+        _ -> Nothing
+      {-# INLINE decoderForKey #-}
 
       auxDataField :: Word -> Field (Annotator (AlonzoTxAuxDataRaw era))
       auxDataField 0 = fieldA (\x ad -> ad {atadrMetadata = x}) From
