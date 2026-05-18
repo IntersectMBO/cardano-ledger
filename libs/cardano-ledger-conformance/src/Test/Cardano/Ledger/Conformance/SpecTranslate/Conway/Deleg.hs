@@ -27,6 +27,7 @@ import Cardano.Ledger.Credential (Credential)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Lens.Micro
+import Lens.Micro.Extras (view)
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   hashToInteger,
@@ -79,15 +80,15 @@ instance SpecTranslate ConwayEra (DState ConwayEra) where
 
   toSpecRep dState =
     Agda.MkDState
-      <$> toSpecRepMap (Map.mapMaybe (^. dRepDelegationAccountStateL) accountsMap)
-      <*> toSpecRepMap (Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap)
-      <*> toSpecRepMap (Map.map (fromCompact . (^. balanceAccountStateL)) accountsMap)
+      <$> toSpecRepMap (Map.mapMaybe (view dRepDelegationAccountStateL) accountsMap)
+      <*> toSpecRepMap (Map.mapMaybe (view stakePoolDelegationAccountStateL) accountsMap)
+      <*> toSpecRepMap (Map.map (fromCompact . (view balanceAccountStateL)) accountsMap)
       <*> deposits
     where
       accountsMap = dState ^. accountsL . accountsMapL
       deposits = do
         let
-          m = Map.map (fromCompact . (^. depositAccountStateL)) accountsMap
+          m = Map.map (fromCompact . (view depositAccountStateL)) accountsMap
           transEntry (cred, val) =
             (,)
               <$> (Agda.CredentialDeposit <$> toSpecRep cred)

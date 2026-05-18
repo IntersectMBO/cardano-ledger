@@ -22,6 +22,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Coerce (coerce)
 import qualified Data.Text as T
 import Lens.Micro ((^.))
+import Lens.Micro.Extras (view)
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
@@ -48,12 +49,12 @@ instance ExecSpecRule "UTXOW" ConwayEra where
 
   translateInputs (TRC (env, st, sig)) = do
     agdaEnv <- withCtxSpecTransM () $ toSpecRep env
-    agdaSt <- withSpecTransM ((^. utxoEnvCertStateL) . uecUtxoEnv) $ toSpecRep st
+    agdaSt <- withSpecTransM (view utxoEnvCertStateL . uecUtxoEnv) $ toSpecRep st
     agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
   translateOutput _ =
-    withSpecTransM ((^. utxoEnvCertStateL) . uecUtxoEnv) . toSpecRep
+    withSpecTransM (view utxoEnvCertStateL . uecUtxoEnv) . toSpecRep
 
   runAgdaRule = runFromAgdaFunction (Agda.utxowStep externalFunctions)
 

@@ -18,7 +18,8 @@ import Control.State.Transition.Extended (TRC (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Lens.Micro ((%~), (.~), (^.))
+import Lens.Micro ((%~), (.~))
+import Lens.Micro.Extras (view)
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (ConwayCertExecContext (..))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
@@ -53,6 +54,6 @@ instance ExecSpecRule "CERTS" ConwayEra where
       fixRewards =
         certDStateL . accountsL . accountsMapL
           %~ \m ->
-            foldr' zeroRewards m . Set.map (^. accountAddressCredentialL) $
+            foldr' zeroRewards m . Set.map (view accountAddressCredentialL) $
               Map.keysSet ccecWithdrawals
     withCtxSpecTransM () $ toSpecRep $ fixRewards st

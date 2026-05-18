@@ -631,7 +631,7 @@ instance SpecTranslate ConwayEra (RatifyEnv ConwayEra) where
         <*> toSpecRep reCommitteeState
         <*> toSpecRep treasury
         <*> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) reStakePools)
-        <*> toSpecRepMap (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
+        <*> toSpecRepMap (Map.mapMaybe (view dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
 
 instance SpecTranslate ConwayEra (RatifyState ConwayEra) where
   type SpecRep ConwayEra (RatifyState ConwayEra) = Agda.RatifyState

@@ -36,11 +36,10 @@ import Test.Cardano.Ledger.Conway.TreeDiff (tableDoc)
 import Test.Cardano.Ledger.Imp.Common
 
 conformsToImplAccepted ::
-  era ~ ConwayEra =>
-  (RatifyEnv era -> RatifyState era -> GovActionState era -> Bool) ->
-  ( SpecRep era (RatifyEnv era) ->
-    SpecRep era (EnactState era) ->
-    SpecRep era (GovActionState era) ->
+  (RatifyEnv ConwayEra -> RatifyState ConwayEra -> GovActionState ConwayEra -> Bool) ->
+  ( SpecRep ConwayEra (RatifyEnv ConwayEra) ->
+    SpecRep ConwayEra (EnactState ConwayEra) ->
+    SpecRep ConwayEra (GovActionState ConwayEra) ->
     Bool
   ) ->
   Property
