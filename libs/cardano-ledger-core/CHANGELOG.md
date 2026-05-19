@@ -28,6 +28,9 @@
 * Remove `ToCBOR` and `FromCBOR` instances for `Nonce`
 * Remove default implementation of `fromPlutusData` in `ToPlutusData` typeclass.
 * Add `modifyTxAuxData` in `Cardano.Ledger.Core`.
+* Add `ToJSON`, `FromJSON` and `NFData` as `EraTxAuxData` superclass constraints
+* Add `ToJSON` and `FromJSON` instances for `Metadatum`
+* Add `ToJSON` and `FromJSON` instances for `Data era` and `PlutusBinary`
 * Rename `kindObject` (which returned `Value`) to `kindObjectValue`
 * Add `kindObject :: Text -> [Pair] -> Object` returning an `Aeson.Object`
 * Add `NFData (Script era)`, `ToJSON (Script era)`, `FromJSON (Script era)`, `ToJSON (NativeScript era)`, and `FromJSON (NativeScript era)` as superclass constraints to `EraScript`
@@ -68,6 +71,7 @@
 * Modify `ToExpr` instance for `Mismatch` to display type-level `r` parameter using `Typeable`
 * Add `Arbitrary (NativeScript era)` and `ToExpr (NativeScript era)` constraints to `EraConstraints`
 * Add round-trip JSON property test for `NativeScript era` and `Script era` to the shared era spec
+* Add round-trip JSON property test for `TxAuxData era` to the shared era spec
 
 ## 1.20.0.0
 

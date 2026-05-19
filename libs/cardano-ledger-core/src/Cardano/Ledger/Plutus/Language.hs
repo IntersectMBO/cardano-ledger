@@ -87,8 +87,8 @@ import Data.Aeson (
  )
 import Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base64 as B64 (encode)
-import Data.ByteString.Short (ShortByteString, fromShort)
+import qualified Data.ByteString.Base64 as BS64
+import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Either (isRight)
 import Data.Ix (Ix)
 import Data.Kind (Type)
@@ -97,6 +97,7 @@ import Data.MapExtras (boundedEnumMap)
 import Data.MemPack
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
+import qualified Data.Text.Encoding as T
 import Data.Typeable (Typeable, gcast)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -153,6 +154,15 @@ newtype Plutus (l :: Language) = Plutus
   }
   deriving stock (Show, Generic)
   deriving newtype (Eq, Ord, SafeToHash, NoThunks, NFData, MemPack)
+
+instance ToJSON PlutusBinary where
+  toJSON = String . T.decodeLatin1 . BS64.encode . originalBytes
+
+instance FromJSON PlutusBinary where
+  parseJSON = withText "PlutusBinary" $ \t ->
+    case BS64.decode (T.encodeUtf8 t) of
+      Left e -> fail $ "PlutusBinary: invalid hex: " <> e
+      Right bs -> pure . PlutusBinary $ toShort bs
 
 plutusSLanguage :: PlutusLanguage l => proxy l -> SLanguage l
 plutusSLanguage _ = isLanguage
@@ -215,7 +225,7 @@ instance DecCBOR (Annotator PlutusBinary) where
   decCBOR = pure <$> decCBOR
 
 instance Show PlutusBinary where
-  show = show . B64.encode . fromShort . unPlutusBinary
+  show = show . BS64.encode . fromShort . unPlutusBinary
 
 instance SafeToHash PlutusBinary where
   originalBytes (PlutusBinary binaryBlutus) = fromShort binaryBlutus

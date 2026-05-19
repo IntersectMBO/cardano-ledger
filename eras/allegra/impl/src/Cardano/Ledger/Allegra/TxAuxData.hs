@@ -30,6 +30,7 @@ module Cardano.Ledger.Allegra.TxAuxData (
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -62,6 +63,9 @@ import Codec.CBOR.Decoding (
   ),
  )
 import Control.DeepSeq (NFData, deepseq)
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Foldable as F
 import Data.Map.Strict (Map)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -204,3 +208,26 @@ instance
               <*! Ann From
               <*! D (sequence <$> decCBOR)
           )
+
+instance
+  (Era era, EncCBOR (NativeScript era), ToJSON (NativeScript era)) =>
+  ToKeyValuePairs (AllegraTxAuxData era)
+  where
+  toKeyValuePairs (AllegraTxAuxData metadata nativeScripts) =
+    [ "metadata" .= metadata
+    , "nativeScripts" .= F.toList nativeScripts
+    ]
+
+deriving via
+  KeyValuePairs (AllegraTxAuxData era)
+  instance
+    (Era era, EncCBOR (NativeScript era), ToJSON (NativeScript era)) => ToJSON (AllegraTxAuxData era)
+
+instance
+  (Era era, EncCBOR (NativeScript era), FromJSON (NativeScript era)) =>
+  FromJSON (AllegraTxAuxData era)
+  where
+  parseJSON = Aeson.withObject "AllegraTxAuxData" $ \o ->
+    AllegraTxAuxData
+      <$> o .: "metadata"
+      <*> (maybe mempty StrictSeq.fromList <$> o .:? "nativeScripts")
