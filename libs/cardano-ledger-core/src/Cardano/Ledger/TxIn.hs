@@ -11,6 +11,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -23,7 +24,7 @@ module Cardano.Ledger.TxIn (
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToTextAsHex)
-import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial, txIxFromIntegral)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -36,14 +37,17 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Hashes (EraIndependentTxBody, SafeHash, extractHash)
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..))
+import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import Data.MemPack
 import Data.Text (Text)
 import qualified Data.Text as Text
+import Data.Word (Word16)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
+import Text.Read (readMaybe)
 
 -- ===================================================================================
 -- Because we expect other Era's to import and use TxId, TxIn, TxOut, we use the weakest
@@ -59,19 +63,6 @@ import NoThunks.Class (NoThunks (..))
 newtype TxId = TxId {unTxId :: SafeHash EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, ToJSON, FromJSON, EncCBOR, DecCBOR, NFData, MemPack)
-
-instance ToJSON TxIn where
-  toJSON = toJSON . txInToText
-  toEncoding = toEncoding . txInToText
-
-instance ToJSONKey TxIn where
-  toJSONKey = toJSONKeyText txInToText
-
-txInToText :: TxIn -> Text
-txInToText (TxIn (TxId txidHash) ix) =
-  hashToTextAsHex (extractHash txidHash)
-    <> Text.pack "#"
-    <> Text.pack (show ix)
 
 -- | The input of a UTxO.
 data TxIn = TxIn !TxId {-# UNPACK #-} !TxIx
@@ -93,6 +84,34 @@ mkTxInPartial txId = TxIn txId . mkTxIxPartial
 instance NFData TxIn
 
 instance NoThunks TxIn
+
+instance ToJSON TxIn where
+  toJSON = toJSON . txInToText
+  toEncoding = toEncoding . txInToText
+
+instance ToJSONKey TxIn where
+  toJSONKey = toJSONKeyText txInToText
+
+instance FromJSON TxIn where
+  parseJSON v = do
+    t <- parseJSON @Text v
+    case Text.splitOn "#" t of
+      [txIdText, txIxText] -> do
+        txId <- parseJSON (Aeson.String txIdText)
+        txIx <-
+          maybe
+            (fail "TxIn: invalid index")
+            pure
+            (readMaybe $ Text.unpack txIxText)
+        txIx' <- txIxFromIntegral @Word16 txIx
+        pure $ TxIn txId txIx'
+      _ -> fail "TxIn: expected 'TxId#TxIx'"
+
+txInToText :: TxIn -> Text
+txInToText (TxIn (TxId txidHash) ix) =
+  hashToTextAsHex (extractHash txidHash)
+    <> Text.pack "#"
+    <> Text.pack (show (unTxIx ix))
 
 instance EncCBOR TxIn where
   encCBOR (TxIn txId index) =
