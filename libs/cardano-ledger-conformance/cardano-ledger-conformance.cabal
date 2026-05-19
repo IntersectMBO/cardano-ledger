@@ -137,6 +137,7 @@ test-suite tests
     Test.Cardano.Ledger.Conformance.Imp.Conway
     Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify
     Test.Cardano.Ledger.Conformance.Imp.Core
+    Test.Cardano.Ledger.Conformance.Imp.Dijkstra
     Test.Cardano.Ledger.Conformance.Spec.Base
     Test.Cardano.Ledger.Conformance.Spec.Conway
     Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify
@@ -160,6 +161,7 @@ test-suite tests
     cardano-ledger-conformance,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
     cardano-ledger-executable-spec,
     cardano-ledger-shelley,
     cardano-ledger-test,

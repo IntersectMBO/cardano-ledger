@@ -33,15 +33,19 @@ import Cardano.Ledger.Conway.Core (
   TxCert,
   TxLevel (..),
  )
+import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
-import Cardano.Ledger.State (EraCertState (..), ScriptsNeeded, ScriptsProvided)
+import Cardano.Ledger.Shelley.LedgerState
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.State (ScriptsNeeded, ScriptsProvided)
 import Control.DeepSeq (deepseq, rnf)
 import Control.State.Transition.Extended (TRC (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import GHC.Generics (Generic)
+import Lens.Micro
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import qualified Test.Cardano.Ledger.Binary.TreeDiff as TD
 import Test.Cardano.Ledger.Common (NFData, ToExpr (..))
