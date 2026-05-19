@@ -152,10 +152,12 @@ library cddl
     -Wunused-packages
 
   build-depends:
+    QuickCheck,
     base,
     cardano-ledger-babbage:cddl,
     cardano-ledger-conway,
     cardano-ledger-core:cddl,
+    containers,
     heredoc,
 
 executable generate-cddl

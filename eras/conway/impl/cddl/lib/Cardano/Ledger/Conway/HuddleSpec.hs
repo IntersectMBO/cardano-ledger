@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -11,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.HuddleSpec (
@@ -65,6 +67,7 @@ module Cardano.Ledger.Conway.HuddleSpec (
   maybeTaggedNonemptySet,
   maybeTaggedNonemptyOset,
   conwayCostModelsGenerator,
+  generateMaybeTaggedSet,
 ) where
 
 import Cardano.Ledger.Babbage.HuddleSpec hiding (
@@ -83,21 +86,35 @@ import Cardano.Ledger.Huddle.Gen (
   MonadGen (choose, resize),
   RuleTerm (..),
   Term (..),
+  antiChoose,
+  antiVectorOfUnique,
+  arbitrary,
+  faultyNum,
   genArrayTerm,
   genMapTerm,
   genRule,
+  generateFromGRef,
   liftAntiGen,
   oneof,
   replicateMNorm,
   shuffle,
+  unwrapSingle,
+  unwrapSingleOrError,
+  validateArrayTerm,
+  validateFromGRef,
   withAntiGen,
   (|!),
  )
 import Cardano.Ledger.Huddle.Gen qualified as Gen
+import Control.Monad (unless)
+import Data.Containers.ListUtils (nubOrd)
+import Data.Foldable (traverse_)
+import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Traversable (forM)
 import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)
+import Test.QuickCheck qualified as QC
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -706,9 +723,41 @@ conwayRedeemer pname p =
       , "ex_units" ==> huddleRule @"ex_units" p
       ]
 
+generateMaybeTaggedSet :: Int -> CBORGen Term -> CBORGen Term
+generateMaybeTaggedSet nElems gen = do
+  elems <- fromMaybe QC.discard <$> withAntiGen (antiVectorOfUnique nElems) gen
+  elemsArr <- genArrayTerm elems
+  tagged <- arbitrary
+  if tagged
+    then do
+      t <- liftAntiGen $ faultyNum 258
+      pure $ TTagged t elemsArr
+    else pure elemsArr
+
 mkMaybeTaggedSet ::
-  forall name a. (KnownSymbol name, IsType0 a) => Proxy name -> Word64 -> a -> GRuleCall
-mkMaybeTaggedSet pname n = binding $ \x -> pname =.= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
+  forall name a.
+  (KnownSymbol name, IsType0 a) => Proxy name -> Int -> a -> GRuleCall
+mkMaybeTaggedSet pname n = binding $ \x ->
+  withCBORGen (generator x)
+    . withValidator (validator x)
+    $ pname =.= tag 258 (arr [fromIntegral n <+ a x]) / sarr [fromIntegral n <+ a x]
+  where
+    generator :: GRef -> CBORGen RuleTerm
+    generator ref = do
+      nElems <- liftAntiGen . Gen.sized $ \sz ->
+        let sz' = max n sz in antiChoose (n, sz') (0, sz')
+      fmap SingleTerm . generateMaybeTaggedSet nElems $ unwrapSingleOrError <$> generateFromGRef ref
+    validator ref term = do
+      term_ <- unwrapSingle term
+      let
+        validateInner t = do
+          elems <- validateArrayTerm t
+          unless (length elems == length (nubOrd elems)) $
+            fail "not all elements are unique"
+          traverse_ (validateFromGRef ref) elems
+      case term_ of
+        TTagged t x | t == 258 -> validateInner x
+        x -> validateInner x
 
 maybeTaggedSet :: IsType0 a => Proxy "set" -> a -> GRuleCall
 maybeTaggedSet pname = mkMaybeTaggedSet pname 0
