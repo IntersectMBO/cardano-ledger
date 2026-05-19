@@ -92,6 +92,9 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.Plutus.Language (Language (..), PlutusBinary (..), guardPlutus)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
 import Control.DeepSeq (NFData, deepseq)
+import Control.Monad (forM)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?), (.=))
+import Data.Foldable (toList)
 import Data.List (intercalate)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
@@ -190,7 +193,7 @@ getAlonzoTxAuxDataScripts AlonzoTxAuxData {atadNativeScripts = timelocks, atadPl
             -- AlonzoTxAuxData is that it does not contain scripts with languages that are not
             -- supported in this era
             mapMaybe (fmap PlutusScript . mkBinaryPlutusScript lang) $
-              NE.toList plutusScripts
+              toList plutusScripts
         | lang <- [PlutusV1 .. eraMaxLanguage @era]
         , Just plutusScripts <- [Map.lookup lang plutus]
         ]
@@ -385,6 +388,34 @@ deriving via
   InspectHeapNamed "AlonzoTxAuxDataRaw" (AlonzoTxAuxData era)
   instance
     NoThunks (AlonzoTxAuxData era)
+
+instance
+  ( AlonzoEraScript era
+  , ToJSON (NativeScript era)
+  ) =>
+  ToJSON (AlonzoTxAuxData era)
+  where
+  toJSON AlonzoTxAuxData {atadMetadata, atadNativeScripts, atadPlutusScripts} =
+    object
+      [ "metadata" .= atadMetadata
+      , "nativeScripts" .= toList atadNativeScripts
+      , "plutusScripts" .= fmap toList atadPlutusScripts
+      ]
+
+instance
+  ( AlonzoEraScript era
+  , FromJSON (NativeScript era)
+  ) =>
+  FromJSON (AlonzoTxAuxData era)
+  where
+  parseJSON = withObject "AlonzoTxAuxData" $ \o -> do
+    metadata <- o .: "metadata"
+    nativeScripts <- o .:? "nativeScripts" .!= mempty
+    plutusScriptsLangMap <- o .:? "plutusScripts" .!= mempty
+    plutusScripts <-
+      fmap concat $ forM (Map.toList plutusScriptsLangMap) $ \(lang, plutusScripts) ->
+        traverse (fmap PlutusScript . mkBinaryPlutusScript lang) plutusScripts
+    pure $ mkAlonzoTxAuxData metadata $ fmap NativeScript nativeScripts <> plutusScripts
 
 -- | Construct auxiliary data. Make sure not to supply plutus script versions that are not
 -- supported in this era, because it will result in a runtime exception. Use

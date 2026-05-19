@@ -43,6 +43,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.Metadata (Metadatum (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Map.Strict (Map)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -96,6 +97,12 @@ instance EraTxAuxData ShelleyEra where
   validateTxAuxData _ _ = True
 
 instance EqRaw (ShelleyTxAuxData era)
+
+instance Era era => ToJSON (ShelleyTxAuxData era) where
+  toJSON (ShelleyTxAuxData m) = toJSON m
+
+instance Era era => FromJSON (ShelleyTxAuxData era) where
+  parseJSON v = ShelleyTxAuxData <$> parseJSON v
 
 instance HashAnnotated (ShelleyTxAuxData era) EraIndependentTxAuxData where
   hashAnnotated = getMemoSafeHash
