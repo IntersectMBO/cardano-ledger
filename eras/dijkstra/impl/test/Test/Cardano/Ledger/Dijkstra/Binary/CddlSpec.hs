@@ -61,8 +61,7 @@ spec = do
       fullCddlSpec @(TxOut DijkstraEra) v "transaction_output"
       fullAnnCddlSpec @(Script DijkstraEra) v "script"
       fullGenCddlSpec @(Datum DijkstraEra) genDatumPresent v "datum_option"
-      xdescribe "fix plutus_v4_script" $ do
-        fullAnnCddlSpec @(TxWits DijkstraEra) v "transaction_witness_set"
+      fullAnnCddlSpec @(TxWits DijkstraEra) v "transaction_witness_set"
       fullCddlSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       fullCddlSpec @CostModels v "cost_models"
       fullAnnGenCddlSpec @(Redeemers DijkstraEra) genNonEmptyRedeemers v "redeemers"
