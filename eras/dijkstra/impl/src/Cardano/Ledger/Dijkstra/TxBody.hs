@@ -106,7 +106,7 @@ import Cardano.Ledger.Babbage.TxBody (
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
-import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), fromSMaybe)
+import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin, decodePositiveCoin)
@@ -150,11 +150,12 @@ import Data.OMap.Strict (OMap)
 import qualified Data.OMap.Strict as OMap
 import Data.OSet.Strict (OSet, decodeOSet)
 import qualified Data.OSet.Strict as OSet
+import Data.Proxy (Proxy (..))
 import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, foldr')
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
+import Data.Typeable (Typeable, typeRep)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to, (.~), (^.))
 import NoThunks.Class (InspectHeap (..), NoThunks)
@@ -327,104 +328,160 @@ instance
   DecCBOR (Annotator (DijkstraTxBodyRaw l era))
   where
   decCBOR = withSTxBothLevels @l $ \sTxLevel ->
-    decode $
-      SparseKeyed
-        "TxBodyRaw"
-        (pure $ basicDijkstraTxBodyRaw sTxLevel)
-        (bodyFields sTxLevel)
-        (requiredFields sTxLevel)
+    decodeSparseKeyed
+      name
+      (requiredFields sTxLevel)
+      (pure $ basicDijkstraTxBodyRaw sTxLevel)
+      (decoderForKey sTxLevel)
     where
-      bodyFields :: STxBothLevels l era -> Word -> Field (Annotator (DijkstraTxBodyRaw l era))
-      bodyFields sTxLevel = \case
-        0 -> fieldA (inputsDijkstraTxBodyRawL .~) From
-        1 -> fieldA (outputsDijkstraTxBodyRawL .~) From
-        2 | STopTx <- sTxLevel -> fieldA (feeDijkstraTxBodyRawL .~) From
-        3 -> ofieldA (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) From
+      name = show . typeRep $ Proxy @(DijkstraTxBodyRaw l era)
+      decoderForKey ::
+        STxBothLevels l era ->
+        Annotator (DijkstraTxBodyRaw l era) ->
+        Word ->
+        Maybe (Decoder s (Annotator (DijkstraTxBodyRaw l era)))
+      decoderForKey sTxLevel acc = \case
+        0 -> Just $ mapSparseField (inputsDijkstraTxBodyRawL .~) decCBOR acc
+        1 -> Just $ mapSparseField (outputsDijkstraTxBodyRawL .~) decCBOR acc
+        2 | STopTx <- sTxLevel -> Just $ mapSparseField (feeDijkstraTxBodyRawL .~) decCBOR acc
+        3 -> Just $ mapSparseFieldOptional (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) decCBOR acc
         4 ->
-          fieldAGuarded
-            (emptyFailure "Certificates" "non-empty")
-            OSet.null
-            (certsDijkstraTxBodyRawL .~)
-            From
+          Just $
+            mapSparseFieldGuarded
+              name
+              (emptyFailure "Certificates" "non-empty")
+              OSet.null
+              (certsDijkstraTxBodyRawL .~)
+              decCBOR
+              acc
         5 ->
-          fieldAGuarded
-            (emptyFailure "Withdrawals" "non-empty")
-            (null . unWithdrawals)
-            (withdrawalsDijkstraTxBodyRawL .~)
-            From
-        7 -> ofieldA (auxDataHashDijkstraTxBodyRawL .~) From
-        8 -> ofieldA (vldtDijkstraTxBodyRawL . invalidBeforeL .~) From
+          Just $
+            mapSparseFieldGuarded
+              name
+              (emptyFailure "Withdrawals" "non-empty")
+              (null . unWithdrawals)
+              (withdrawalsDijkstraTxBodyRawL .~)
+              decCBOR
+              acc
+        7 -> Just $ mapSparseFieldOptional (auxDataHashDijkstraTxBodyRawL .~) decCBOR acc
+        8 -> Just $ mapSparseFieldOptional (vldtDijkstraTxBodyRawL . invalidBeforeL .~) decCBOR acc
         9 ->
-          fieldAGuarded
-            (emptyFailure "Mint" "non-empty")
-            (== mempty)
-            (mintDijkstraTxBodyRawL .~)
-            From
-        11 -> ofieldA (scriptIntegrityHashDijkstraTxBodyRawL .~) From
+          Just $
+            mapSparseFieldGuarded
+              name
+              (emptyFailure "Mint" "non-empty")
+              (== mempty)
+              (mintDijkstraTxBodyRawL .~)
+              decCBOR
+              acc
+        11 -> Just $ mapSparseFieldOptional (scriptIntegrityHashDijkstraTxBodyRawL .~) decCBOR acc
         13
           | STopTx <- sTxLevel ->
-              fieldAGuarded
-                (emptyFailure "Collateral Inputs" "non-empty")
-                null
-                (collateralInputsDijkstraTxBodyRawL .~)
-                From
+              Just $
+                mapSparseFieldGuarded
+                  name
+                  (emptyFailure "Collateral Inputs" "non-empty")
+                  null
+                  (collateralInputsDijkstraTxBodyRawL .~)
+                  decCBOR
+                  acc
+        -- Keys 14 and 22 are decoded with 'mapSparseField' directly.
+        -- Their lenses target plain values (@'OSet' (Credential Guard)@
+        -- and @'Coin'@), so there's no 'StrictMaybe' to wrap or unwrap.
+        --
+        -- The round-trip stays consistent and symmetric because
+        -- the encoder omits each key when its value equals the
+        -- default, and the decoder's initial accumulator (built by
+        -- 'basicDijkstraTxBodyRaw') starts each field at that same
+        -- default.
+        --
+        -- For example:
+        --   * Key 14 — encoder: @Omit null (Key 14 (To dtbrGuards))@.
+        --   The key is in the serialised bits only when @dtbrGuards@
+        --   is non-empty. The accumulator starts at @mempty@, so a
+        --   missing key keeps the field at @mempty@ — matching what
+        --   the sender skipped.
+        --
+        --   * Key 22 — encoder: @Omit (== mempty) (Key 22 (To
+        --   dtbrTreasuryDonation))@. The key is in the serialised bits
+        --   only when the donation is non-zero. The accumulator starts
+        --   at @mempty@, so a missing key keeps the field at @zero@.
         14 ->
-          ofieldA
-            (\x -> guardsDijkstraTxBodyRawL .~ fromSMaybe mempty x)
-            (D decodeGuards)
-        15 -> ofieldA (networkIdDijkstraTxBodyRawL .~) From
+          Just $ mapSparseField (guardsDijkstraTxBodyRawL .~) decodeGuards acc
+        15 -> Just $ mapSparseFieldOptional (networkIdDijkstraTxBodyRawL .~) decCBOR acc
         16
           | STopTx <- sTxLevel ->
-              ofieldA (collateralReturnDijkstraTxBodyRawL .~) From
+              Just $ mapSparseFieldOptional (collateralReturnDijkstraTxBodyRawL .~) decCBOR acc
         17
           | STopTx <- sTxLevel ->
-              ofieldA (totalCollateralDijkstraTxBodyRawL .~) From
+              Just $ mapSparseFieldOptional (totalCollateralDijkstraTxBodyRawL .~) decCBOR acc
         18 ->
-          fieldAGuarded
-            (emptyFailure "Reference Inputs" "non-empty")
-            null
-            (referenceInputsDijkstraTxBodyRawL .~)
-            From
+          Just $
+            mapSparseFieldGuarded
+              name
+              (emptyFailure "Reference Inputs" "non-empty")
+              null
+              (referenceInputsDijkstraTxBodyRawL .~)
+              decCBOR
+              acc
         19 ->
-          fieldAGuarded
-            (emptyFailure "VotingProcedures" "non-empty")
-            (null . unVotingProcedures)
-            (votingProceduresDijkstraTxBodyRawL .~)
-            From
+          Just $
+            mapSparseFieldGuarded
+              name
+              (emptyFailure "VotingProcedures" "non-empty")
+              (null . unVotingProcedures)
+              (votingProceduresDijkstraTxBodyRawL .~)
+              decCBOR
+              acc
         20 ->
-          fieldAGuarded
-            (emptyFailure "ProposalProcedures" "non-empty")
-            OSet.null
-            (proposalProceduresDijkstraTxBodyRawL .~)
-            From
-        21 -> ofieldA (currentTreasuryValueDijkstraTxBodyRawL .~) From
+          Just $
+            mapSparseFieldGuarded
+              name
+              (emptyFailure "ProposalProcedures" "non-empty")
+              OSet.null
+              (proposalProceduresDijkstraTxBodyRawL .~)
+              decCBOR
+              acc
+        21 -> Just $ mapSparseFieldOptional (currentTreasuryValueDijkstraTxBodyRawL .~) decCBOR acc
         22 ->
-          ofieldA
-            (\x -> treasuryDonationDijkstraTxBodyRawL .~ fromSMaybe zero x)
-            (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
+          -- See comment about field 14.
+          Just $
+            mapSparseField
+              (treasuryDonationDijkstraTxBodyRawL .~)
+              (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero")
+              acc
         23
           | STopTx <- sTxLevel ->
-              fieldAA (subTransactionsDijkstraTxBodyRawL .~) (D decodeSubTransactions)
+              Just $ mapSparseFieldA (subTransactionsDijkstraTxBodyRawL .~) decodeSubTransactions acc
         24
           | SSubTx <- sTxLevel ->
-              fieldAGuarded
-                (emptyFailure "RequiredTopLevelGuards" "non-empty")
-                Map.null
-                (requiredTopLevelGuardsDijkstraTxBodyRawL .~)
-                (D (decodeMap decCBOR (decodeNullStrictMaybe decCBOR)))
+              Just $
+                mapSparseFieldGuarded
+                  name
+                  (emptyFailure "RequiredTopLevelGuards" "non-empty")
+                  Map.null
+                  (requiredTopLevelGuardsDijkstraTxBodyRawL .~)
+                  (decodeMap decCBOR (decodeNullStrictMaybe decCBOR))
+                  acc
         25 ->
-          fieldAGuarded
-            (emptyFailure "DirectDeposits" "non-empty")
-            (null . unDirectDeposits)
-            (directDepositsDijkstraTxBodyRawL .~)
-            From
+          Just $
+            mapSparseFieldGuarded
+              name
+              (emptyFailure "DirectDeposits" "non-empty")
+              (null . unDirectDeposits)
+              (directDepositsDijkstraTxBodyRawL .~)
+              decCBOR
+              acc
         26 ->
-          fieldAGuarded
-            (emptyFailure "AccountBalanceIntervals" "non-empty")
-            (null . unAccountBalanceIntervals)
-            (accountBalanceIntervalsDijkstraTxBodyRawL .~)
-            From
-        n -> invalidField n
+          Just $
+            mapSparseFieldGuarded
+              name
+              (emptyFailure "AccountBalanceIntervals" "non-empty")
+              (null . unAccountBalanceIntervals)
+              (accountBalanceIntervalsDijkstraTxBodyRawL .~)
+              decCBOR
+              acc
+        _ -> Nothing
       decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
       decodeSubTransactions =
         decodeNonEmptySetLikeEnforceNoDuplicatesAnn
