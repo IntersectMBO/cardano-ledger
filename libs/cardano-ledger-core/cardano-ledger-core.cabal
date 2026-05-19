@@ -204,6 +204,7 @@ library cddl
     cuddle >=1.8,
     heredoc,
     mempack,
+    mtl,
     quickcheck-transformer,
     text >=2.0,
 

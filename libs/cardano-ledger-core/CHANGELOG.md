@@ -31,6 +31,22 @@
 
 ### `cddl`
 
+* Added various custom generator and validator helpers:
+  - `validateFromName`
+  - `validateFromGRef`
+  - `validateInt`
+  - `validateUInt`
+  - `validateNInt`
+  - `validateArrayTerm`
+  - `validateBytesTerm`
+  - `validateStringTerm`
+  - `validateMapTerm`
+  - `unwrapSingle`
+  - `unwrapSingleOrError`
+  - `antiVectorOfUnique`
+  - `antiVectorOfUniqueBy`
+  - `antiVectorOfUniqueOn`
+* Changed the type of `gen*` functions to return a `CBORGen` value instead of `m`
 * Remove `pickOne`
 * Add `genMapTerm`
 * Modify `genBytesTerm`, `genArrayTerm` and `genStringTerm` so it works with `MonadGen` instead of `StatefulGen`

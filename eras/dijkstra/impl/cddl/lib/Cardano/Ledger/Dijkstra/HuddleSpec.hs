@@ -944,7 +944,7 @@ blockBodyGen = do
   invalidTxIxsTerm <- genArrayTerm $ TInteger . toInteger <$> invalidIxIxs
   txsTerm <- withAntiGen (withAnnotation "transactions") $ genArrayTerm txs
   perasCertTerm <- generateFromName "peras_certificate"
-  SingleTerm <$> liftGen (genArrayTerm [invalidTxIxsTerm, txsTerm, perasCertTerm])
+  SingleTerm <$> genArrayTerm [invalidTxIxsTerm, txsTerm, perasCertTerm]
 
 instance HuddleRule "auxiliary_scripts" DijkstraEra where
   huddleRuleNamed = auxiliaryScriptsRule
