@@ -32,6 +32,7 @@ import Test.QuickCheck.Random (mkQCGen)
 data GenerateCBOROpts = GenerateCBOROpts
   { gcboRuleNames :: ![T.Text]
   , gcboZap :: !(Maybe Int)
+  , gcboCount :: !Int
   , gcboSeed :: !(Maybe Int)
   }
 
@@ -48,6 +49,15 @@ optsParser =
           Opt.long "zap"
             <> Opt.metavar "N"
             <> Opt.help "Generate corrupted (zapped) CBOR with N mistakes"
+      )
+    <*> Opt.option
+      Opt.auto
+      ( Opt.long "count"
+          <> Opt.short 'n'
+          <> Opt.metavar "N"
+          <> Opt.value 1
+          <> Opt.showDefault
+          <> Opt.help "Number of samples to generate per rule"
       )
     <*> Opt.optional
       ( Opt.option Opt.auto $
@@ -75,19 +85,19 @@ generateCBORMain huddle = do
         when multipleRules $
           hPutStrLn stderr $
             "# " <> T.unpack ruleName
-        emitSample opts env ruleName
+        forM_ [0 .. gcboCount opts - 1] $ emitSample opts env ruleName
 
-emitSample :: GenerateCBOROpts -> HuddleEnv -> T.Text -> IO ()
-emitSample opts env ruleName = do
+emitSample :: GenerateCBOROpts -> HuddleEnv -> T.Text -> Int -> IO ()
+emitSample opts env ruleName sampleIx = do
   let cborGen = runCBORGen (toGenConfig env) (generateFromName (Name ruleName))
       gen = zapAntiGenResult (fromMaybe 0 (gcboZap opts)) cborGen
   result <- case gcboSeed opts of
     Nothing -> generate gen
-    Just seed -> pure $ unGen gen (mkQCGen seed) 30
-  writeSample opts env ruleName result
+    Just seed -> pure $ unGen gen (mkQCGen (seed + sampleIx)) 30
+  writeSample opts env ruleName sampleIx result
 
-writeSample :: GenerateCBOROpts -> HuddleEnv -> T.Text -> ZapResult CBOR.Term -> IO ()
-writeSample opts env ruleName ZapResult {zrValue, zrZapped}
+writeSample :: GenerateCBOROpts -> HuddleEnv -> T.Text -> Int -> ZapResult CBOR.Term -> IO ()
+writeSample opts env ruleName sampleIx ZapResult {zrValue, zrZapped}
   | isJust (gcboZap opts) && zrZapped == 0 = warn "produced no corruptions"
   | isJust (gcboZap opts) && isValid validation =
       warn "produced a value that is still valid"
@@ -97,4 +107,10 @@ writeSample opts env ruleName ZapResult {zrValue, zrZapped}
     validation = validateCBOR bs (Name ruleName) (mapIndex (heRoot env))
     warn reason =
       hPutStrLn stderr $
-        "Warning: zap " <> reason <> " for rule " <> T.unpack ruleName
+        "Warning: zap "
+          <> reason
+          <> " for rule "
+          <> T.unpack ruleName
+          <> " (sample "
+          <> show sampleIx
+          <> ")"
