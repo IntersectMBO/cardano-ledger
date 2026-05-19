@@ -83,12 +83,15 @@ import Cardano.Ledger.Binary (
   decodeNonEmptyList,
   decodeNonEmptySetLikeEnforceNoDuplicates,
   decodeNonEmptySetLikeEnforceNoDuplicatesAnn,
+  decodeSparseKeyed,
   encodeFoldableEncoder,
   encodeListLen,
   encodeTag,
   ifDecoderVersionAtLeast,
   ifEncodingVersionAtLeast,
   listLenInt,
+  mapSparseField,
+  mapSparseFieldA,
   natVersion,
   peekTokenType,
   setTag,
@@ -129,8 +132,10 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
 import qualified Data.MapExtras as Map (fromElems)
 import Data.Maybe (mapMaybe)
+import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (typeRep)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -601,13 +606,12 @@ instance
   DecCBOR (Annotator (AlonzoTxWitsRaw era))
   where
   decCBOR =
-    decode $
-      SparseKeyed
-        "AlonzoTxWits"
-        (pure emptyTxWitsRaw)
-        txWitnessField
-        []
+    ifDecoderVersionAtLeast
+      (natVersion @12)
+      (decodeSparseKeyed name [] (pure emptyTxWitsRaw) decoderForKey)
+      (decode $ SparseKeyed name (pure emptyTxWitsRaw) txWitnessField [])
     where
+      name = show . typeRep $ Proxy @(AlonzoTxWitsRaw era)
       addrWitsSetDecoder :: (Ord a, DecCBOR a) => Decoder s (Set a)
       addrWitsSetDecoder = do
         let
@@ -620,6 +624,30 @@ instance
 
         ifDecoderVersionAtLeast (natVersion @12) nonEmptyNoDuplicatesDecoder nonEmptyDecoder
       {-# INLINE addrWitsSetDecoder #-}
+
+      setOrListDecoder :: (Ord a, DecCBOR a) => Decoder s (Set a)
+      setOrListDecoder =
+        ifDecoderVersionAtLeast
+          (natVersion @9)
+          addrWitsSetDecoder
+          (Set.fromList <$> decodeList decCBOR)
+      {-# INLINE setOrListDecoder #-}
+
+      decoderForKey ::
+        Annotator (AlonzoTxWitsRaw era) ->
+        Word ->
+        Maybe (Decoder s (Annotator (AlonzoTxWitsRaw era)))
+      decoderForKey acc = \case
+        0 -> Just $ mapSparseField (\x w -> w {atwrAddrTxWits = x}) setOrListDecoder acc
+        1 -> Just $ mapSparseFieldA addScriptsTxWitsRaw nativeScriptsDecoder acc
+        2 -> Just $ mapSparseField (\x w -> w {atwrBootAddrTxWits = x}) setOrListDecoder acc
+        3 -> Just $ mapSparseField addScriptsTxWitsRaw (alonzoPlutusScriptDecoder SPlutusV1) acc
+        4 -> Just $ mapSparseFieldA (\x w -> w {atwrDatsTxWits = x}) decCBOR acc
+        5 -> Just $ mapSparseFieldA (\x w -> w {atwrRdmrsTxWits = x}) decCBOR acc
+        6 -> Just $ mapSparseField addScriptsTxWitsRaw (alonzoPlutusScriptDecoder SPlutusV2) acc
+        7 -> Just $ mapSparseField addScriptsTxWitsRaw (alonzoPlutusScriptDecoder SPlutusV3) acc
+        _ -> Nothing
+      {-# INLINE decoderForKey #-}
 
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
       txWitnessField 0 =
@@ -698,13 +726,19 @@ decodeAlonzoPlutusScript ::
   (AlonzoEraScript era, PlutusLanguage l) =>
   SLanguage l ->
   Decode (Closed Dense) (Map ScriptHash (Script era))
-decodeAlonzoPlutusScript slang =
-  D $
-    ifDecoderVersionAtLeast
-      (natVersion @9)
-      (scriptDecoderV9 (fromPlutusScript <$> decodePlutusScript slang))
-      (scriptDecoder (fromPlutusScript <$> decodePlutusScript slang))
+decodeAlonzoPlutusScript slang = D (alonzoPlutusScriptDecoder slang)
 {-# INLINE decodeAlonzoPlutusScript #-}
+
+alonzoPlutusScriptDecoder ::
+  (AlonzoEraScript era, PlutusLanguage l) =>
+  SLanguage l ->
+  Decoder s (Map ScriptHash (Script era))
+alonzoPlutusScriptDecoder slang =
+  ifDecoderVersionAtLeast
+    (natVersion @9)
+    (scriptDecoderV9 (fromPlutusScript <$> decodePlutusScript slang))
+    (scriptDecoder (fromPlutusScript <$> decodePlutusScript slang))
+{-# INLINE alonzoPlutusScriptDecoder #-}
 
 scriptDecoderV9 ::
   EraScript era =>

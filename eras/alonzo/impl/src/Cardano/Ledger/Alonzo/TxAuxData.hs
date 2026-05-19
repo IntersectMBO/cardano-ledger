@@ -96,9 +96,10 @@ import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing, mapMaybe)
+import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Typeable (Typeable)
+import Data.Typeable (Typeable, typeRep)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Stack
@@ -210,7 +211,7 @@ instance
           ( do
               assertTag 259
               decodeSparseKeyed
-                "AlonzoTxAuxData"
+                name
                 []
                 (pure emptyAlonzoTxAuxDataRaw)
                 decoderForKey
@@ -218,6 +219,7 @@ instance
           decodeAlonzo
       )
     where
+      name = show . typeRep $ Proxy @(AlonzoTxAuxDataRaw era)
       decodeShelley =
         decode
           ( Ann (Emit AlonzoTxAuxDataRaw)
@@ -241,7 +243,7 @@ instance
       decodeAlonzo =
         decode $
           TagD 259 $
-            SparseKeyed "AlonzoTxAuxData" (pure emptyAlonzoTxAuxDataRaw) auxDataField []
+            SparseKeyed name (pure emptyAlonzoTxAuxDataRaw) auxDataField []
 
       decoderForKey ::
         Annotator (AlonzoTxAuxDataRaw era) ->
