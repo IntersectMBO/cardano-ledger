@@ -54,6 +54,7 @@ dijkstraCDDL =
   collectFromInit
     [ HIRule $ huddleRule @"block" (Proxy @DijkstraEra)
     , HIRule $ huddleRule @"transaction" (Proxy @DijkstraEra)
+    , HIRule $ huddleRule @"transaction_mempool" (Proxy @DijkstraEra)
     , HIRule $ huddleRule @"kes_signature" (Proxy @DijkstraEra)
     , HIRule $ huddleRule @"language" (Proxy @DijkstraEra)
     , HIRule $ huddleRule @"potential_languages" (Proxy @DijkstraEra)
@@ -780,16 +781,32 @@ instance HuddleRule "script_data_hash" DijkstraEra where
           |]
       $ scriptDataHashRule pname p
 
+instance HuddleRule "transaction_mempool" DijkstraEra where
+  huddleRuleNamed pname p =
+    comment
+      [str| In Dijkstra we're deprecating the `is_valid` flag, but for backwards
+          | compatibility we still allow this flag to be present in incoming 
+          | transactions. Once the transaction is added to a block, the flag will
+          | be stripped, so the `is_valid` flag cannot appear in transactions that
+          | are in a block.
+          |
+          | In the next era `is_valid` flags will not be allowed even in mempool 
+          | transactions, so it's strongly recommended to encode transactions
+          | according to the `transaction` rule.
+          |]
+      $ pname
+        =.= huddleRule @"transaction" p
+        / sarr
+          [ a $ huddleRule @"transaction_body" p
+          , a $ huddleRule @"transaction_witness_set" p
+          , a $ bool True
+          , a (huddleRule @"auxiliary_data" p / VNil)
+          ]
+
 instance HuddleRule "transaction" DijkstraEra where
   huddleRuleNamed pname p =
     pname
       =.= arr
-        [ a $ huddleRule @"transaction_body" p
-        , a $ huddleRule @"transaction_witness_set" p
-        , a $ (bool True)
-        , a (huddleRule @"auxiliary_data" p / VNil)
-        ]
-      / arr
         [ a $ huddleRule @"transaction_body" p
         , a $ huddleRule @"transaction_witness_set" p
         , a (huddleRule @"auxiliary_data" p / VNil)
