@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `mapSparseField`, `mapSparseFieldA`, `mapSparseFieldOptional`, `mapSparseFieldGuarded`
 * Add `decodeSparseKeyed`
 * Add `decodeIntegralRational`
 * Add `decodeNonEmptySetLikeEnforceNoDuplicates`
