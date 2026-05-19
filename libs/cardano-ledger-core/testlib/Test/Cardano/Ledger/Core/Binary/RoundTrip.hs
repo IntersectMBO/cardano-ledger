@@ -217,18 +217,20 @@ roundTripCoreEraTypesSpec = do
     roundTripEraSpec @era @(CompactForm (Value era))
     roundTripEraSpec @era @(TxOut era)
     roundTripEraSpec @era @(TxCert era)
-    roundTripEraSpec @era @(PParams era)
-    roundTripEraSpec @era @(PParamsUpdate era)
+    reducedTestsUnlessNightly $ do
+      roundTripEraSpec @era @(PParams era)
+      roundTripEraSpec @era @(PParamsUpdate era)
     roundTripAnnEraSpec @era @(Script era)
     roundTripEraSpec @era @(Script era)
     roundTripAnnEraSpec @era @(TxAuxData era)
     roundTripEraSpec @era @(TxAuxData era)
     roundTripAnnEraSpec @era @(TxWits era)
     roundTripEraSpec @era @(TxWits era)
-    roundTripAnnEraSpec @era @(TxBody TopTx era)
-    roundTripEraSpec @era @(TxBody TopTx era)
-    roundTripAnnEraSpec @era @(Tx TopTx era)
-    roundTripEraSpec @era @(Tx TopTx era)
+    reducedTestsUnlessNightly $ do
+      roundTripAnnEraSpec @era @(TxBody TopTx era)
+      roundTripEraSpec @era @(TxBody TopTx era)
+      roundTripAnnEraSpec @era @(Tx TopTx era)
+      roundTripEraSpec @era @(Tx TopTx era)
     prop ("MemPack/CBOR Roundtrip " <> show (typeRep $ Proxy @(TxOut era))) $
       roundTripRangeExpectation @(TxOut era)
         (mkTrip encodeMemPack decNoShareCBOR)
@@ -289,7 +291,8 @@ roundTripAllPredicateFailures ::
   ) =>
   Spec
 roundTripAllPredicateFailures =
-  describe "Predicate Failures" . go $ unliftEraRuleProofs @era @(EraRules era)
+  reducedTestsUnlessNightly . describe "Predicate Failures" . go $
+    unliftEraRuleProofs @era @(EraRules era)
   where
     go :: EraRuleProof era rs' -> Spec
     go EraRuleProofEmpty = pure ()

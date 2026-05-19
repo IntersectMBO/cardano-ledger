@@ -64,7 +64,7 @@ roundTripStateEraTypesSpec ::
   , Arbitrary (InstantStake era)
   ) =>
   Spec
-roundTripStateEraTypesSpec = do
+roundTripStateEraTypesSpec = reducedTestsUnlessNightly $ do
   describe "State Types Families" $ do
     roundTripShareEraSpec @era @(GovState era)
   describe "State Types" $ do

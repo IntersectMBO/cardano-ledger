@@ -63,5 +63,6 @@ decoderEquivalenceCoreEraTypesSpec =
     decoderEquivalenceEraSpec @era @(Script era)
     decoderEquivalenceEraSpec @era @(TxAuxData era)
     decoderEquivalenceEraSpec @era @(TxWits era)
-    decoderEquivalenceEraSpec @era @(TxBody TopTx era)
-    decoderEquivalenceEraSpec @era @(Tx TopTx era)
+    reducedTestsUnlessNightly $ do
+      decoderEquivalenceEraSpec @era @(TxBody TopTx era)
+      decoderEquivalenceEraSpec @era @(Tx TopTx era)

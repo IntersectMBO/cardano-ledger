@@ -52,8 +52,10 @@ roundTripConwayEraTypesSpec = do
     roundTripEraTypeSpec @era @VotingProcedures
     roundTripEraTypeSpec @era @ProposalProcedure
     roundTripEraTypeSpec @era @Constitution
-    prop "CostModels" $ roundTripEraExpectation @era @CostModels
-  describe (eraName @era <> " State Types") $ do
+    reducedTestsUnlessNightly $
+      prop "CostModels" $
+        roundTripEraExpectation @era @CostModels
+  reducedTestsUnlessNightly $ describe (eraName @era <> " State Types") $ do
     roundTripShareEraTypeSpec @era @EnactState
     roundTripShareEraTypeSpec @era @GovActionState
     roundTripShareEraTypeSpec @era @Proposals

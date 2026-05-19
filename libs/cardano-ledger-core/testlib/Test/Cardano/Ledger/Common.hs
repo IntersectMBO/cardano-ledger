@@ -65,6 +65,8 @@ module Test.Cardano.Ledger.Common (
   -- * Miscellanous helpers
   tracedDiscard,
   forEachEraVersion,
+  nightlyEnabled,
+  reducedTestsUnlessNightly,
 ) where
 
 import Cardano.Ledger.Binary (Version)
@@ -75,8 +77,11 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Types as Aeson (parseEither)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Maybe (isJust)
 import Data.Typeable
 import qualified Debug.Trace as Debug
+import System.Environment (lookupEnv)
+import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Binary.Golden (toPackageGolden)
 import Test.Cardano.Ledger.Binary.TreeDiff (
   ToExpr (..),
@@ -112,6 +117,19 @@ ledgerTestMainWith = impSpecMainWithConfig
 
 ledgerTestMain :: Spec -> IO ()
 ledgerTestMain = ledgerTestMainWith ledgerHspecConfig
+
+-- | True when the @NIGHTLY@ environment variable is set.
+nightlyEnabled :: Bool
+nightlyEnabled = unsafePerformIO $ isJust <$> lookupEnv "NIGHTLY"
+{-# NOINLINE nightlyEnabled #-}
+
+-- | Cap QuickCheck @maxSuccess@ at 25 unless @NIGHTLY@ is set. Use this to wrap
+-- expensive round-trip property blocks so CI stays fast while nightly runs the
+-- full 100 samples.
+reducedTestsUnlessNightly :: SpecWith a -> SpecWith a
+reducedTestsUnlessNightly
+  | nightlyEnabled = id
+  | otherwise = modifyMaxSuccess (`min` 25)
 
 shouldBeExpr :: (HasCallStack, ToExpr a, Eq a) => a -> a -> IO ()
 shouldBeExpr = expectExprEqualWithMessage ""
