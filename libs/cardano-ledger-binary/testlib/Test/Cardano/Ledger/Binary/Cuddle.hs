@@ -25,6 +25,7 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   noTwiddle,
   HuddleEnv (..),
   toGenConfig,
+  resolveHuddle,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -63,7 +64,6 @@ import qualified Codec.CBOR.Encoding as CBOR
 import Codec.CBOR.Pretty (prettyHexEnc)
 import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
-import qualified Codec.CBOR.Write as C
 import qualified Codec.CBOR.Write as CBOR
 import Control.Monad (unless)
 import Data.Data (Proxy (..))
@@ -213,7 +213,7 @@ huddleAntiCborProp version ruleName env@HuddleEnv {heRoot} = property @(Gen Prop
       | zrZapped > 0 -> do
           let
             encoding = toPlainEncoding version $ encodeTerm zrValue
-            bs = C.toStrictByteString encoding
+            bs = CBOR.toStrictByteString encoding
           case validateCBOR bs (Name ruleName) (mapIndex heRoot) of
             Evidenced SInvalid trc -> do
               let
@@ -249,12 +249,9 @@ huddleAntiCborSpec version ruleName =
 specWithHuddle :: Cuddle.Huddle -> SpecWith HuddleEnv -> Spec
 specWithHuddle h =
   beforeAll $
-    let cddl = Cuddle.toCDDL h
-        rCddl = Cuddle.fullResolveCDDL (mapCDDLDropExt cddl)
-     in case rCddl of
-          Right ct ->
-            pure $ HuddleEnv True ct
-          Left nrf -> error $ show nrf
+    case resolveHuddle h of
+      Right ct -> pure $ HuddleEnv True ct
+      Left err -> error err
 
 noTwiddle :: SpecWith HuddleEnv -> SpecWith HuddleEnv
 noTwiddle = mapSubject $ \env -> env {heTwiddle = False}
@@ -393,3 +390,10 @@ writeSpec hddl path = do
     T.hPutStrLn h . renderCDDL defaultLayoutOptions $ mapIndex @_ @_ @PrettyStage cddl
   -- Write log to stdout
   putStrLn $ "Generated CDDL file at: " <> path
+
+-- | Resolve a Huddle spec into a fully resolved CTree, suitable for CBOR generation.
+resolveHuddle :: Cuddle.Huddle -> Either String (CTreeRoot MonoReferenced)
+resolveHuddle h =
+  case Cuddle.fullResolveCDDL (mapCDDLDropExt (Cuddle.toCDDL h)) of
+    Right ct -> Right ct
+    Left nrf -> Left (show nrf)
