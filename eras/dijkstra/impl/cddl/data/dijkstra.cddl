@@ -2,10 +2,20 @@
 
 block = [header, block_body]
 
-transaction =
-  [  transaction_body, transaction_witness_set, true, auxiliary_data/ nil
-  // transaction_body, transaction_witness_set, auxiliary_data/ nil
-  ]
+transaction = [transaction_body, transaction_witness_set, auxiliary_data/ nil]
+
+; In Dijkstra we're deprecating the `is_valid` flag, but for backwards
+; compatibility we still allow this flag to be present in incoming
+; transactions. Once the transaction is added to a block, the flag will
+; be stripped, so the `is_valid` flag cannot appear in transactions that
+; are in a block.
+;
+; In the next era `is_valid` flags will not be allowed even in mempool
+; transactions, so it's strongly recommended to encode transactions
+; according to the `transaction` rule.
+transaction_mempool =
+  transaction
+  / [transaction_body, transaction_witness_set, true, auxiliary_data/ nil]
 
 kes_signature = bytes .size 448
 
