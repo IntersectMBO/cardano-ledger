@@ -833,7 +833,7 @@ vkeywitness = [vkey, signature]
 bootstrap_witness =
   [ public_key : vkey
   , signature  : signature
-  , chain_code : bytes
+  , chain_code : bytes .size 32
   , attributes : bytes
   ]
 

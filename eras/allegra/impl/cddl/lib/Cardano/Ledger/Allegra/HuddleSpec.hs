@@ -232,7 +232,7 @@ instance HuddleRule "vkeywitness" AllegraEra where
   huddleRuleNamed = vkeywitnessRule
 
 instance HuddleRule "bootstrap_witness" AllegraEra where
-  huddleRuleNamed = bootstrapWitnessRule
+  huddleRuleNamed = shelleyBootstrapWitnessRule
 
 instance HuddleRule "transaction_witness_set" AllegraEra where
   huddleRuleNamed = transactionWitnessSetRule
