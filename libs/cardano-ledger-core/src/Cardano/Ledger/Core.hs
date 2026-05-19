@@ -505,6 +505,9 @@ class
   , ToCBOR (TxWits era)
   , EncCBOR (TxWits era)
   , DecCBOR (Annotator (TxWits era))
+  , NFData (TxWits era)
+  , ToJSON (TxWits era)
+  , FromJSON (TxWits era)
   ) =>
   EraTxWits era
   where

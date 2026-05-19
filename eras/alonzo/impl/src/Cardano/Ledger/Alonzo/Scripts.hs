@@ -115,7 +115,7 @@ import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..), nativeMultiSigTag)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (guard, (>=>))
-import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.=))
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import Data.Kind (Type)
@@ -312,8 +312,14 @@ instance (NFData ix, NFData it) => NFData (AsIxItem ix it) where
 instance ToJSON ix => ToJSON (AsIx ix it) where
   toJSON (AsIx i) = object ["index" .= toJSON i]
 
+instance FromJSON ix => FromJSON (AsIx ix it) where
+  parseJSON = withObject "AsIx" $ \o -> AsIx <$> o .: "index"
+
 instance ToJSON it => ToJSON (AsItem ix it) where
   toJSON (AsItem i) = object ["item" .= toJSON i]
+
+instance FromJSON it => FromJSON (AsItem ix it) where
+  parseJSON = withObject "AsItem" $ \o -> AsItem <$> o .: "item"
 
 instance (ToJSON ix, ToJSON it) => ToJSON (AsIxItem ix it) where
   toJSON (AsIxItem ix it) =
@@ -321,6 +327,10 @@ instance (ToJSON ix, ToJSON it) => ToJSON (AsIxItem ix it) where
       [ "index" .= toJSON ix
       , "item" .= toJSON it
       ]
+
+instance (FromJSON ix, FromJSON it) => FromJSON (AsIxItem ix it) where
+  parseJSON = withObject "AsIxItem" $ \o ->
+    AsIxItem <$> o .: "index" <*> o .: "item"
 
 toAsPurpose :: f ix it -> AsPurpose ix it
 toAsPurpose = const AsPurpose
@@ -433,6 +443,25 @@ instance
     AlonzoWithdrawing n -> kindObjectWithValue "AlonzoWithdrawing" n
     where
       kindObjectWithValue name n = kindObjectValue name ["value" .= n]
+
+instance
+  ( FromJSON (f Word32 TxIn)
+  , FromJSON (f Word32 PolicyID)
+  , FromJSON (f Word32 (TxCert era))
+  , FromJSON (f Word32 AccountAddress)
+  , Era era
+  ) =>
+  FromJSON (AlonzoPlutusPurpose f era)
+  where
+  parseJSON = withObject "AlonzoPlutusPurpose" $ \o -> do
+    kind <- o .: "kind"
+    value <- o .: "value"
+    case (kind :: String) of
+      "AlonzoSpending" -> AlonzoSpending <$> parseJSON value
+      "AlonzoMinting" -> AlonzoMinting <$> parseJSON value
+      "AlonzoCertifying" -> AlonzoCertifying <$> parseJSON value
+      "AlonzoWithdrawing" -> AlonzoWithdrawing <$> parseJSON value
+      _ -> fail $ "Unknown AlonzoPlutusPurpose kind: " <> kind
 
 pattern AlonzoRewarding :: f Word32 AccountAddress -> AlonzoPlutusPurpose f era
 pattern AlonzoRewarding x = AlonzoWithdrawing x

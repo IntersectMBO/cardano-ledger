@@ -87,7 +87,7 @@ import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData (..), rwhnf)
-import Data.Aeson (FromJSON (parseJSON), KeyValue (..), ToJSON (toJSON), (.:))
+import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), withObject, (.:))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser)
 import qualified Data.Map.Strict as Map
@@ -209,6 +209,27 @@ instance
     DijkstraGuarding n -> kindObjectWithValue "DijkstraGuarding" n
     where
       kindObjectWithValue name n = kindObjectValue name ["value" .= n]
+
+instance
+  ( forall a b. (FromJSON a, FromJSON b) => FromJSON (f a b)
+  , FromJSON (TxCert era)
+  , EraPParams era
+  ) =>
+  FromJSON (DijkstraPlutusPurpose f era)
+  where
+  parseJSON = withObject "DijkstraPlutusPurpose" $ \o -> do
+    kind <- o .: "kind"
+    value <- o .: "value"
+    case (kind :: String) of
+      "DijkstraSpending" -> DijkstraSpending <$> parseJSON value
+      "DijkstraMinting" -> DijkstraMinting <$> parseJSON value
+      "DijkstraCertifying" -> DijkstraCertifying <$> parseJSON value
+      "DijkstraWithdrawing" -> DijkstraWithdrawing <$> parseJSON value
+      "DijkstraRewarding" -> DijkstraRewarding <$> parseJSON value
+      "DijkstraVoting" -> DijkstraVoting <$> parseJSON value
+      "DijkstraProposing" -> DijkstraProposing <$> parseJSON value
+      "DijkstraGuarding" -> DijkstraGuarding <$> parseJSON value
+      _ -> fail $ "Unknown DijkstraPlutusPurpose kind: " <> kind
 
 deriving instance (EraTxCert era, EraPParams era) => Eq (DijkstraPlutusPurpose AsItem era)
 
@@ -651,8 +672,23 @@ instance Typeable era => DecCBOR (AccountBalanceInterval era) where
       (Nothing, Just u) -> pure $ AccountBalanceUpperBound u
       _ -> cborError $ DecoderErrorCustom "AccountBalanceInterval" "Both interval bounds cannot be nil."
 
+instance ToJSON (AccountBalanceInterval era) where
+  toJSON = \case
+    AccountBalanceLowerBound l -> kindObjectValue "lowerBound" ["lower" .= l]
+    AccountBalanceUpperBound u -> kindObjectValue "upperBound" ["upper" .= u]
+    AccountBalanceBothBounds l u -> kindObjectValue "bothBounds" ["lower" .= l, "upper" .= u]
+
+instance FromJSON (AccountBalanceInterval era) where
+  parseJSON = withObject "AccountBalanceInterval" $ \o -> do
+    kind <- o .: "kind"
+    case (kind :: String) of
+      "lowerBound" -> AccountBalanceLowerBound <$> o .: "lower"
+      "upperBound" -> AccountBalanceUpperBound <$> o .: "upper"
+      "bothBounds" -> AccountBalanceBothBounds <$> o .: "lower" <*> o .: "upper"
+      _ -> fail $ "Unknown AccountBalanceInterval kind: " <> kind
+
 newtype AccountBalanceIntervals era
   = AccountBalanceIntervals
   {unAccountBalanceIntervals :: Map.Map AccountId (AccountBalanceInterval era)}
   deriving (Generic)
-  deriving newtype (Show, Ord, Eq, NoThunks, NFData, EncCBOR, DecCBOR)
+  deriving newtype (Show, Ord, Eq, NoThunks, NFData, EncCBOR, DecCBOR, ToJSON, FromJSON)

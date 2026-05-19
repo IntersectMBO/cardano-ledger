@@ -10,8 +10,9 @@
 * Add `ApplyTick` instance for `AllegraEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `AllegraEra`.
 * Remove `NoThunks` instance for `AllegraUtxoPredFailure`
-* Add `ToJSON` and `FromJSON` instances for `AllegraTxAuxData era`
-* Add `ToJSON` and `FromJSON` instances for `Timelock era`
+* Add `ToJSON` and `FromJSON` instances for
+  - `AllegraTxAuxData era`
+  - `Timelock era`
 * Export `allegraBasedEraNativeScriptToJSON` and `allegraBasedEraNativeScriptJSONParser` from `Cardano.Ledger.Allegra.Scripts`
 
 ### `cddl`

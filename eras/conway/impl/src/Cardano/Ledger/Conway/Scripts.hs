@@ -53,7 +53,7 @@ import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
-import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
 import Data.MemPack
 import Data.Typeable
 import Data.Word (Word32)
@@ -315,6 +315,26 @@ instance
 pattern ConwayRewarding :: f Word32 AccountAddress -> ConwayPlutusPurpose f era
 pattern ConwayRewarding x = ConwayWithdrawing x
 {-# DEPRECATED ConwayRewarding "In favor of `ConwayWithdrawing`" #-}
+
+instance
+  ( forall a b. (FromJSON a, FromJSON b) => FromJSON (f a b)
+  , FromJSON (TxCert era)
+  , EraPParams era
+  ) =>
+  FromJSON (ConwayPlutusPurpose f era)
+  where
+  parseJSON = withObject "ConwayPlutusPurpose" $ \o -> do
+    kind <- o .: "kind"
+    value <- o .: "value"
+    case (kind :: String) of
+      "ConwaySpending" -> ConwaySpending <$> parseJSON value
+      "ConwayMinting" -> ConwayMinting <$> parseJSON value
+      "ConwayCertifying" -> ConwayCertifying <$> parseJSON value
+      "ConwayWithdrawing" -> ConwayWithdrawing <$> parseJSON value
+      "ConwayRewarding" -> ConwayRewarding <$> parseJSON value
+      "ConwayVoting" -> ConwayVoting <$> parseJSON value
+      "ConwayProposing" -> ConwayProposing <$> parseJSON value
+      _ -> fail $ "Unknown ConwayPlutusPurpose kind: " <> kind
 
 pattern VotingPurpose ::
   ConwayEraScript era => f Word32 Voter -> PlutusPurpose f era

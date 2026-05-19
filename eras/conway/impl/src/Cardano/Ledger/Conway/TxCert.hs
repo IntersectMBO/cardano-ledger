@@ -90,7 +90,9 @@ import Cardano.Ledger.Shelley.TxCert (
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:?), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.:?), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import Data.Foldable as F (foldMap', foldl')
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (getSum))
@@ -566,6 +568,20 @@ instance ToJSON ConwayDelegCert where
         , "deposit" .= toJSON deposit
         ]
 
+instance FromJSON ConwayDelegCert where
+  parseJSON = withObject "ConwayDelegCert" $ \o -> do
+    kind <- o .: "kind" :: Parser Aeson.Value
+    case kind of
+      Aeson.String "RegCert" ->
+        ConwayRegCert <$> o .: "credential" <*> o .: "deposit"
+      Aeson.String "UnRegCert" ->
+        ConwayUnRegCert <$> o .: "credential" <*> o .: "refund"
+      Aeson.String "DelegCert" ->
+        ConwayDelegCert <$> o .: "credential" <*> o .: "delegatee"
+      Aeson.String "RegDelegCert" ->
+        ConwayRegDelegCert <$> o .: "credential" <*> o .: "delegatee" <*> o .: "deposit"
+      _ -> fail $ "Unknown ConwayDelegCert kind: " <> show kind
+
 data ConwayGovCert
   = ConwayRegDRep !(Credential DRepRole) !Coin !(StrictMaybe Anchor)
   | ConwayUnRegDRep !(Credential DRepRole) !Coin
@@ -612,6 +628,22 @@ instance ToJSON ConwayGovCert where
         , "anchor" .= toJSON anchor
         ]
 
+instance FromJSON ConwayGovCert where
+  parseJSON = withObject "ConwayGovCert" $ \o -> do
+    kind <- o .: "kind" :: Parser Aeson.Value
+    case kind of
+      Aeson.String "RegDRep" ->
+        ConwayRegDRep <$> o .: "dRep" <*> o .: "deposit" <*> o .: "anchor"
+      Aeson.String "UnRegDRep" ->
+        ConwayUnRegDRep <$> o .: "dRep" <*> o .: "refund"
+      Aeson.String "UpdateDRep" ->
+        ConwayUpdateDRep <$> o .: "dRep" <*> o .: "anchor"
+      Aeson.String "AuthCommitteeHotKey" ->
+        ConwayAuthCommitteeHotKey <$> o .: "coldCredential" <*> o .: "hotCredential"
+      Aeson.String "ResignCommitteeColdKey" ->
+        ConwayResignCommitteeColdKey <$> o .: "coldCredential" <*> o .: "anchor"
+      _ -> fail $ "Unknown ConwayGovCert kind: " <> show kind
+
 instance EncCBOR ConwayGovCert where
   encCBOR = \case
     ConwayAuthCommitteeHotKey cred key ->
@@ -656,6 +688,19 @@ instance Era era => ToJSON (ConwayTxCert era) where
     ConwayTxCertDeleg delegCert -> toJSON delegCert
     ConwayTxCertPool poolCert -> toJSON poolCert
     ConwayTxCertGov govCert -> toJSON govCert
+
+instance Era era => FromJSON (ConwayTxCert era) where
+  parseJSON = withObject "ConwayTxCert" $ \o -> do
+    kind <- o .: "kind" :: Parser Aeson.Value
+    case kind of
+      Aeson.String k
+        | k `elem` ["RegCert", "UnRegCert", "DelegCert", "RegDelegCert"] ->
+            ConwayTxCertDeleg <$> parseJSON (Aeson.Object o)
+        | k `elem` ["RegPool", "RetirePool"] ->
+            ConwayTxCertPool <$> parseJSON (Aeson.Object o)
+        | k `elem` ["RegDRep", "UnRegDRep", "UpdateDRep", "AuthCommitteeHotKey", "ResignCommitteeColdKey"] ->
+            ConwayTxCertGov <$> parseJSON (Aeson.Object o)
+      _ -> fail $ "Unknown ConwayTxCert kind: " <> show kind
 
 instance
   ( ShelleyEraTxCert era
