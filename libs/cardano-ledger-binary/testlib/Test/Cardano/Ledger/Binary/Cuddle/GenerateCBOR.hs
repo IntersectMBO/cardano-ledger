@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -105,14 +106,18 @@ emitSample opts env ruleName sampleIx = do
 
 writeSample :: GenerateCBOROpts -> HuddleEnv -> T.Text -> Int -> ZapResult CBOR.Term -> IO ()
 writeSample opts env ruleName sampleIx ZapResult {zrValue, zrZapped}
-  | isJust (gcboZap opts) && zrZapped == 0 = warn "produced no corruptions"
-  | isJust (gcboZap opts) && isValid validation =
-      warn "produced a value that is still valid"
-  | otherwise =
-      if gcboBinary opts
-        then BS.hPut stdout bs
-        else BS8.putStrLn (Base16.encode bs)
+  | isJust (gcboZap opts) =
+      if zrZapped == 0
+        then warn "produced no corruptions"
+        else case validation of
+          Left e -> warn $ "could not run validation because of malformed bytes\n" <> show e
+          Right (Evidenced SValid _) -> warn "produced a value that is still valid"
+          Right (Evidenced SInvalid _) -> outputBinary
+  | otherwise = outputBinary
   where
+    outputBinary
+      | gcboBinary opts = BS.hPut stdout bs
+      | otherwise = BS8.putStrLn (Base16.encode bs)
     bs = CBOR.toStrictByteString (CBOR.encodeTerm zrValue)
     validation = validateCBOR bs (Name ruleName) (mapIndex (heRoot env))
     warn reason =

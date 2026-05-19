@@ -127,7 +127,7 @@ library testlib
     cardano-strict-containers,
     cborg,
     containers,
-    cuddle >=1.7,
+    cuddle >=1.8,
     directory,
     filepath,
     formatting,
