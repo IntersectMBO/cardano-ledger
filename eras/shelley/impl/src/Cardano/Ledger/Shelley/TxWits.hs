@@ -7,6 +7,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -34,6 +36,7 @@ module Cardano.Ledger.Shelley.TxWits (
   mapTraverseableDecoderA,
 ) where
 
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
@@ -65,6 +68,8 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Ledger.Shelley.TxAuxData ()
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (parseJSON), KeyValue ((.=)), ToJSON, (.:))
+import qualified Data.Aeson as Aeson
 import Data.Functor.Classes (Eq1 (liftEq))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -193,6 +198,25 @@ instance EraScript era => Semigroup (ShelleyTxWits era) where
 
 instance EraScript era => Monoid (ShelleyTxWits era) where
   mempty = ShelleyTxWits mempty mempty mempty
+
+instance (EraScript era, ToJSON (Script era)) => ToKeyValuePairs (ShelleyTxWits era) where
+  toKeyValuePairs ShelleyTxWits {addrWits, scriptWits, bootWits} =
+    [ "addrWits" .= Set.toList addrWits
+    , "scriptWits" .= scriptWits
+    , "bootWits" .= Set.toList bootWits
+    ]
+
+deriving via
+  KeyValuePairs (ShelleyTxWits era)
+  instance
+    (EraScript era, ToJSON (Script era)) => ToJSON (ShelleyTxWits era)
+
+instance (EraScript era, FromJSON (Script era)) => FromJSON (ShelleyTxWits era) where
+  parseJSON = Aeson.withObject "ShelleyTxWits" $ \o ->
+    ShelleyTxWits
+      <$> (Set.fromList <$> o .: "addrWits")
+      <*> o .: "scriptWits"
+      <*> (Set.fromList <$> o .: "bootWits")
 
 pattern ShelleyTxWits ::
   forall era.

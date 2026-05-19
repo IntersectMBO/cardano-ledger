@@ -11,6 +11,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -19,6 +20,7 @@ module Cardano.Ledger.TxIn (
   TxIn (TxIn),
   mkTxInPartial,
   txInToText,
+  parseTxId,
   TxIx,
 ) where
 
@@ -36,11 +38,14 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Hashes (EraIndependentTxBody, SafeHash, extractHash)
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), eitherDecodeStrict')
+import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import Data.MemPack
 import Data.Text (Text)
 import qualified Data.Text as Text
+import Data.Text.Encoding (encodeUtf8)
+import Data.Word (Word16)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
@@ -59,19 +64,6 @@ import NoThunks.Class (NoThunks (..))
 newtype TxId = TxId {unTxId :: SafeHash EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, ToJSON, FromJSON, EncCBOR, DecCBOR, NFData, MemPack)
-
-instance ToJSON TxIn where
-  toJSON = toJSON . txInToText
-  toEncoding = toEncoding . txInToText
-
-instance ToJSONKey TxIn where
-  toJSONKey = toJSONKeyText txInToText
-
-txInToText :: TxIn -> Text
-txInToText (TxIn (TxId txidHash) ix) =
-  hashToTextAsHex (extractHash txidHash)
-    <> Text.pack "#"
-    <> Text.pack (show ix)
 
 -- | The input of a UTxO.
 data TxIn = TxIn !TxId {-# UNPACK #-} !TxIx
@@ -93,6 +85,37 @@ mkTxInPartial txId = TxIn txId . mkTxIxPartial
 instance NFData TxIn
 
 instance NoThunks TxIn
+
+instance ToJSON TxIn where
+  toJSON = toJSON . txInToText
+  toEncoding = toEncoding . txInToText
+
+instance ToJSONKey TxIn where
+  toJSONKey = toJSONKeyText txInToText
+
+instance FromJSON TxIn where
+  parseJSON v = do
+    t <- parseJSON @Text v
+    (txId, txIx) <- parseTxId t
+    pure $ TxIn txId (TxIx txIx)
+
+parseTxId :: MonadFail m => Text -> m (TxId, Word16)
+parseTxId t = case Text.splitOn "#" t of
+  [txIdText, txIxText] -> do
+    txId <- case Aeson.fromJSON (Aeson.String txIdText) of
+      Aeson.Success v -> pure v
+      Aeson.Error e -> fail $ "invalid txId: " <> e
+    txIx <- case eitherDecodeStrict' (encodeUtf8 txIxText) of
+      Left err -> fail $ "invalid transaction index: " <> err
+      Right ix -> pure ix
+    pure (txId, txIx)
+  _ -> fail "expected 'txhash#ix'"
+
+txInToText :: TxIn -> Text
+txInToText (TxIn (TxId txidHash) ix) =
+  hashToTextAsHex (extractHash txidHash)
+    <> Text.pack "#"
+    <> Text.pack (show (unTxIx ix))
 
 instance EncCBOR TxIn where
   encCBOR (TxIn txId index) =

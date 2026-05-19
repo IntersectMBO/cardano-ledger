@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -14,11 +15,12 @@ module Cardano.Ledger.Keys.WitVKey (
 ) where
 
 import Cardano.Crypto.DSIGN.Class (
-  SignedDSIGN,
+  SignedDSIGN (..),
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FixedSizeCodec (..),
   decodeRecordNamed,
   encodeListLen,
  )
@@ -30,9 +32,20 @@ import Cardano.Ledger.Hashes (
   hashKey,
   hashTxBodySignature,
  )
-import Cardano.Ledger.Keys.Internal (DSIGN, KeyRole (..), VKey, asWitness)
+import Cardano.Ledger.Keys.Internal (
+  DSIGN,
+  KeyRole (..),
+  VKey (..),
+  asWitness,
+ )
 import Control.DeepSeq
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
+import qualified Data.ByteString.Base16 as B16
 import Data.Ord (comparing)
+import Data.Text (Text)
+import qualified Data.Text.Encoding as Text
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
@@ -66,6 +79,23 @@ instance Typeable kr => Ord (WitVKey kr) where
     -- comparison on signatures is unlikely to happen and is only needed for
     -- compliance with Ord laws.
     comparing wvkKeyHash x y <> comparing (hashTxBodySignature . wvkSignature) x y
+
+instance ToJSON (WitVKey kr) where
+  toJSON (WitVKey (VKey vk) (SignedDSIGN sig)) =
+    Aeson.object
+      [ "key" .= Text.decodeUtf8 (B16.encode (rawEncodeFixedSized vk))
+      , "signature" .= Text.decodeUtf8 (B16.encode (rawEncodeFixedSized sig))
+      ]
+
+instance Typeable kr => FromJSON (WitVKey kr) where
+  parseJSON = Aeson.withObject "WitVKey" $ \o -> do
+    !keyHex <- o .: "key" :: Parser Text
+    !sigHex <- o .: "signature" :: Parser Text
+    !keyBytes <- either fail pure $ B16.decode (Text.encodeUtf8 keyHex)
+    !sigBytes <- either fail pure $ B16.decode (Text.encodeUtf8 sigHex)
+    !vk <- rawDecodeFixedSized keyBytes
+    !sig <- rawDecodeFixedSized sigBytes
+    pure $ WitVKey (VKey vk) (SignedDSIGN sig)
 
 instance EncCBOR (WitVKey kr) where
   encCBOR (WitVKey k sig) =

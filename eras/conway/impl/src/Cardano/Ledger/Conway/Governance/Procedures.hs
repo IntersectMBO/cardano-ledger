@@ -2,12 +2,10 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -21,7 +19,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -125,9 +122,9 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Credential (Credential (..), credToText)
+import Cardano.Ledger.Credential (Credential (..), credToText, parseCredential)
 import Cardano.Ledger.Shelley.RewardProvenance ()
-import Cardano.Ledger.TxIn (TxId (..))
+import Cardano.Ledger.TxIn (TxId (..), parseTxId)
 import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (when)
@@ -135,6 +132,7 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State.Strict (get, put)
 import Data.Aeson (
   FromJSON (..),
+  FromJSONKey (..),
   KeyValue (..),
   ToJSON (..),
   ToJSONKey (..),
@@ -142,7 +140,7 @@ import Data.Aeson (
   (.:),
   (.:?),
  )
-import Data.Aeson.Types (toJSONKeyText)
+import Data.Aeson.Types (FromJSONKeyFunction (..), toJSONKeyText)
 import Data.Data (Typeable)
 import Data.Default
 import Data.Kind
@@ -170,6 +168,7 @@ newtype GovActionIx = GovActionIx {unGovActionIx :: Word16}
     , EncCBOR
     , DecCBOR
     , ToJSON
+    , FromJSON
     )
 
 data GovActionId = GovActionId
@@ -215,6 +214,20 @@ govActionIdToText (GovActionId (TxId txidHash) (GovActionIx ix)) =
   hashToTextAsHex (extractHash txidHash)
     <> Text.pack "#"
     <> Text.pack (show ix)
+
+instance FromJSON GovActionId where
+  parseJSON = withObject "GovActionId" $ \o ->
+    GovActionId
+      <$> o .: "txId"
+      <*> o .: "govActionIx"
+
+instance FromJSONKey GovActionId where
+  fromJSONKey = FromJSONKeyTextParser parseGovActionId
+
+parseGovActionId :: MonadFail m => Text.Text -> m GovActionId
+parseGovActionId t = do
+  (txId, ix) <- parseTxId t
+  pure $ GovActionId txId (GovActionIx ix)
 
 data GovActionState era = GovActionState
   { gasId :: !GovActionId
@@ -273,7 +286,7 @@ deriving via
     EraPParams era => ToJSON (GovActionState era)
 
 instance EraPParams era => ToKeyValuePairs (GovActionState era) where
-  toKeyValuePairs gas@(GovActionState _ _ _ _ _ _ _) =
+  toKeyValuePairs gas =
     let GovActionState {..} = gas
      in [ "actionId" .= gasId
         , "committeeVotes" .= gasCommitteeVotes
@@ -352,6 +365,22 @@ instance ToJSONKey Voter where
     StakePoolVoter kh ->
       "stakepool-" <> credToText (KeyHashObj kh)
 
+instance FromJSON Voter
+
+instance FromJSONKey Voter where
+  fromJSONKey = FromJSONKeyTextParser parseVoter
+
+parseVoter :: MonadFail m => Text.Text -> m Voter
+parseVoter t = case Text.splitOn "-" t of
+  ("committee" : rest) -> CommitteeVoter <$> parseCredential (Text.intercalate "-" rest)
+  ("drep" : rest) -> DRepVoter <$> parseCredential (Text.intercalate "-" rest)
+  ("stakepool" : rest) -> do
+    cred <- parseCredential (Text.intercalate "-" rest)
+    case cred of
+      KeyHashObj kh -> pure $ StakePoolVoter kh
+      ScriptHashObj _ -> fail "StakePool voter cannot be a script hash"
+  _ -> fail $ "Invalid Voter: " <> show t
+
 instance DecCBOR Voter where
   decCBOR = decodeRecordSum "Voter" $ \case
     0 -> (2,) . CommitteeVoter . KeyHashObj <$> decCBOR
@@ -387,6 +416,8 @@ data Vote
 
 instance ToJSON Vote
 
+instance FromJSON Vote
+
 instance NoThunks Vote
 
 instance NFData Vote
@@ -401,7 +432,7 @@ newtype VotingProcedures era = VotingProcedures
   { unVotingProcedures :: Map Voter (Map GovActionId (VotingProcedure era))
   }
   deriving stock (Generic, Eq, Show)
-  deriving newtype (NoThunks, EncCBOR, ToJSON)
+  deriving newtype (NoThunks, EncCBOR, ToJSON, FromJSON)
 
 deriving newtype instance Era era => NFData (VotingProcedures era)
 
@@ -485,6 +516,12 @@ instance EraPParams era => ToKeyValuePairs (VotingProcedure era) where
         , "decision" .= vProcVote
         ]
 
+instance EraPParams era => FromJSON (VotingProcedure era) where
+  parseJSON = withObject "VotingProcedure" $ \o ->
+    VotingProcedure
+      <$> o .: "decision"
+      <*> o .: "anchor"
+
 -- | Attaches indices to a sequence of proposal procedures. The indices grow
 -- from left to right.
 indexedGovProps ::
@@ -549,13 +586,21 @@ deriving via
     EraPParams era => ToJSON (ProposalProcedure era)
 
 instance EraPParams era => ToKeyValuePairs (ProposalProcedure era) where
-  toKeyValuePairs proposalProcedure@(ProposalProcedure _ _ _ _) =
+  toKeyValuePairs proposalProcedure =
     let ProposalProcedure {..} = proposalProcedure
      in [ "deposit" .= pProcDeposit
         , "returnAddr" .= pProcReturnAddr
         , "govAction" .= pProcGovAction
         , "anchor" .= pProcAnchor
         ]
+
+instance EraPParams era => FromJSON (ProposalProcedure era) where
+  parseJSON = withObject "ProposalProcedure" $ \o ->
+    ProposalProcedure
+      <$> o .: "deposit"
+      <*> o .: "returnAddr"
+      <*> o .: "govAction"
+      <*> o .: "anchor"
 
 data Committee era = Committee
   { committeeMembers :: !(Map (Credential ColdCommitteeRole) EpochNo)
@@ -668,6 +713,10 @@ deriving newtype instance ToJSONKey (GovPurposeId (p :: GovActionPurpose))
 
 deriving newtype instance ToJSON (GovPurposeId (p :: GovActionPurpose))
 
+deriving newtype instance FromJSON (GovPurposeId (p :: GovActionPurpose))
+
+deriving newtype instance FromJSONKey (GovPurposeId (p :: GovActionPurpose))
+
 deriving newtype instance Show (GovPurposeId (p :: GovActionPurpose))
 
 -- | Abstract data type for representing relationship of governance action with the same purpose
@@ -741,7 +790,7 @@ instance
   (forall p. Typeable p => EncCBOR (f (GovPurposeId (p :: GovActionPurpose)))) =>
   EncCBOR (GovRelation f)
   where
-  encCBOR govPurpose@(GovRelation _ _ _ _) =
+  encCBOR govPurpose =
     let GovRelation {..} = govPurpose
      in encodeListLen 4
           <> encCBOR grPParamUpdate
@@ -753,7 +802,7 @@ instance
   (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose)))) =>
   ToKeyValuePairs (GovRelation f)
   where
-  toKeyValuePairs govPurpose@(GovRelation _ _ _ _) =
+  toKeyValuePairs govPurpose =
     let GovRelation {..} = govPurpose
      in [ "PParamUpdate" .= grPParamUpdate
         , "HardFork" .= grHardFork
@@ -872,6 +921,8 @@ instance EraPParams era => NoThunks (GovAction era)
 instance EraPParams era => NFData (GovAction era)
 
 instance EraPParams era => ToJSON (GovAction era)
+
+instance EraPParams era => FromJSON (GovAction era)
 
 instance EraPParams era => DecCBOR (GovAction era) where
   decCBOR =
