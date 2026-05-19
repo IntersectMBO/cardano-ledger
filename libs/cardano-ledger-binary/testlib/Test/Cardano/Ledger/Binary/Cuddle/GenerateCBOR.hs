@@ -15,6 +15,7 @@ import Codec.CBOR.Cuddle.IndexMappable
 import qualified Codec.CBOR.Term as CBOR
 import qualified Codec.CBOR.Write as CBOR
 import Control.Monad (forM_, when)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS8
 import Data.Maybe (fromMaybe, isJust)
@@ -34,6 +35,7 @@ data GenerateCBOROpts = GenerateCBOROpts
   , gcboZap :: !(Maybe Int)
   , gcboCount :: !Int
   , gcboSeed :: !(Maybe Int)
+  , gcboBinary :: !Bool
   }
 
 optsParser :: Opt.Parser GenerateCBOROpts
@@ -65,6 +67,10 @@ optsParser =
             <> Opt.metavar "SEED"
             <> Opt.help "Fixed random seed for reproducibility"
       )
+    <*> Opt.switch
+      ( Opt.long "binary"
+          <> Opt.help "Output raw CBOR bytes instead of hex encoding"
+      )
 
 generateCBORMain :: Cuddle.Huddle -> IO ()
 generateCBORMain huddle = do
@@ -79,10 +85,11 @@ generateCBORMain huddle = do
   case resolveHuddle huddle of
     Left err -> die $ "Failed to resolve CDDL: " <> err
     Right root -> do
+      when (gcboBinary opts) $ hSetBinaryMode stdout True
       let env = HuddleEnv {heTwiddle = True, heRoot = root}
           multipleRules = length (gcboRuleNames opts) > 1
       forM_ (gcboRuleNames opts) $ \ruleName -> do
-        when multipleRules $
+        when (multipleRules && not (gcboBinary opts)) $
           hPutStrLn stderr $
             "# " <> T.unpack ruleName
         forM_ [0 .. gcboCount opts - 1] $ emitSample opts env ruleName
@@ -101,7 +108,10 @@ writeSample opts env ruleName sampleIx ZapResult {zrValue, zrZapped}
   | isJust (gcboZap opts) && zrZapped == 0 = warn "produced no corruptions"
   | isJust (gcboZap opts) && isValid validation =
       warn "produced a value that is still valid"
-  | otherwise = BS8.putStrLn (Base16.encode bs)
+  | otherwise =
+      if gcboBinary opts
+        then BS.hPut stdout bs
+        else BS8.putStrLn (Base16.encode bs)
   where
     bs = CBOR.toStrictByteString (CBOR.encodeTerm zrValue)
     validation = validateCBOR bs (Name ruleName) (mapIndex (heRoot env))
