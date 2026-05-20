@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.CanonicalState.Spec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval, NonNegativeInterval, NonZero, UnitInterval)
 import Cardano.Ledger.CanonicalState.BasicTypes (CanonicalExUnits (..))
-import Cardano.Ledger.CanonicalState.Conway ()
+import Cardano.Ledger.CanonicalState.Conway (CanonicalGovActionState)
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesCommittee.V0 as Committee.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesDReps.V0 as EntitiesDReps.V0
@@ -142,6 +142,10 @@ spec = do
       validateType @"gov/proposals/roots/v0" @GovProposals.V0.CanonicalGovActionId "gov_action_id"
       isCanonical @"gov/proposals/roots/v0" @GovProposals.Roots.V0.GovProposalsRootsOut
       validateType @"gov/proposals/roots/v0" @GovProposals.Roots.V0.GovProposalsRootsOut "record_entry"
+    describe "gov/proposals/v0" $ do
+      isCanonical @"gov/proposals/v0" @(GovProposals.V0.GovProposalOut CanonicalGovActionState)
+      validateType @"gov/proposals/v0" @(GovProposals.V0.GovProposalOut CanonicalGovActionState)
+        "record_entry"
   describe "namespaces" $ do
     testNS @"blocks/v0"
     testNS @"utxo/v0"
