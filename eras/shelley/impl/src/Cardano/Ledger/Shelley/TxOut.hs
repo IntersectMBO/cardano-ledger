@@ -45,7 +45,8 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Val (Val)
 import Control.DeepSeq (NFData (rnf))
-import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
 import Data.Maybe (fromMaybe)
 import Data.MemPack
 import GHC.Generics (Generic)
@@ -183,3 +184,9 @@ instance (Era era, Val (Value era)) => ToKeyValuePairs (ShelleyTxOut era) where
     [ "address" .= addr
     , "amount" .= amount
     ]
+
+instance (Era era, Val (Value era)) => FromJSON (ShelleyTxOut era) where
+  parseJSON = Aeson.withObject "ShelleyTxOut" $ \o ->
+    ShelleyTxOut
+      <$> o .: "address"
+      <*> o .: "amount"
