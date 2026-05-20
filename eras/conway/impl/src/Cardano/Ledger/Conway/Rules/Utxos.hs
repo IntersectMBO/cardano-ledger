@@ -163,6 +163,13 @@ deriving stock instance
   ) =>
   Eq (ConwayUtxosPredFailure era)
 
+deriving stock instance
+  ( ConwayEraScript era
+  , Ord (TxCert era)
+  , Ord (ContextError era)
+  ) =>
+  Ord (ConwayUtxosPredFailure era)
+
 instance
   ( ConwayEraScript era
   , NFData (TxCert era)

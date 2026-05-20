@@ -47,7 +47,7 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 
 newtype DijkstraSubDelegPredFailure era = DijkstraSubDelegPredFailure (Conway.ConwayDelegPredFailure era)
-  deriving (Generic, Eq, Show, NFData, EncCBOR, DecCBOR)
+  deriving (Generic, Eq, Ord, Show, NFData, EncCBOR, DecCBOR)
 
 type instance EraRuleFailure "SUBDELEG" DijkstraEra = DijkstraSubDelegPredFailure DijkstraEra
 

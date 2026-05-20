@@ -122,6 +122,14 @@ deriving instance
   ( AlonzoEraScript era
   , EraTxCert era
   , EraTxOut era
+  , Ord (ContextError era)
+  ) =>
+  Ord (DijkstraContextError era)
+
+deriving instance
+  ( AlonzoEraScript era
+  , EraTxCert era
+  , EraTxOut era
   , Show (ContextError era)
   ) =>
   Show (DijkstraContextError era)

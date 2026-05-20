@@ -106,7 +106,7 @@ instance
   , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure,
-  , Eq (EraRuleFailure "PPUP" era)
+  , Ord (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
   , EraCertState era
@@ -166,7 +166,7 @@ utxosTransition ::
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
-  , Eq (EraRuleFailure "PPUP" era)
+  , Ord (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
   , EraCertState era
@@ -295,7 +295,7 @@ invalidEnd = intercalate "," ["[LEDGER][SCRIPTS_NOT_VALIDATE_TRANSITION]", "END"
 
 data FailureDescription
   = PlutusFailure Text BS.ByteString
-  deriving (Show, Eq, Generic, NoThunks)
+  deriving (Show, Eq, Ord, Generic, NoThunks)
 
 instance NFData FailureDescription
 
@@ -329,7 +329,7 @@ scriptFailureToFailureDescription (ScriptFailure msg pwc) =
 data TagMismatchDescription
   = PassedUnexpectedly
   | FailedUnexpectedly (NonEmpty FailureDescription)
-  deriving (Show, Eq, Generic, NoThunks)
+  deriving (Show, Eq, Ord, Generic, NoThunks)
 
 instance NFData TagMismatchDescription
 
@@ -411,7 +411,6 @@ deriving stock instance
   ( AlonzoEraScript era
   , Show (TxCert era)
   , Show (ContextError era)
-  , Show (Shelley.UTxOState era)
   , Show (EraRuleFailure "PPUP" era)
   ) =>
   Show (AlonzoUtxosPredFailure era)
@@ -420,16 +419,25 @@ deriving stock instance
   ( AlonzoEraScript era
   , Eq (TxCert era)
   , Eq (ContextError era)
-  , Eq (Shelley.UTxOState era)
   , Eq (EraRuleFailure "PPUP" era)
   ) =>
   Eq (AlonzoUtxosPredFailure era)
+
+deriving stock instance
+  ( AlonzoEraScript era
+  , Ord (TxCert era)
+  , Ord (ContextError era)
+  , Ord (GovState era)
+  , Ord (InstantStake era)
+  , Ord (EraRuleFailure "PPUP" era)
+  , EraTxOut era
+  ) =>
+  Ord (AlonzoUtxosPredFailure era)
 
 instance
   ( AlonzoEraScript era
   , NFData (TxCert era)
   , NFData (ContextError era)
-  , NFData (Shelley.UTxOState era)
   , NFData (EraRuleFailure "PPUP" era)
   ) =>
   NFData (AlonzoUtxosPredFailure era)

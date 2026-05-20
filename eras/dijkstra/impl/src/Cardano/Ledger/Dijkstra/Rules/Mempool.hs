@@ -97,6 +97,10 @@ deriving instance
   Eq (DijkstraMempoolPredFailure era)
 
 deriving instance
+  Ord (PredicateFailure (EraRule "LEDGER" era)) =>
+  Ord (DijkstraMempoolPredFailure era)
+
+deriving instance
   Show (PredicateFailure (EraRule "LEDGER" era)) =>
   Show (DijkstraMempoolPredFailure era)
 

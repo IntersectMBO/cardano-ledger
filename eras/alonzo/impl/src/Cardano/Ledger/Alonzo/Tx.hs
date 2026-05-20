@@ -142,7 +142,7 @@ import NoThunks.Class (InspectHeap (..), NoThunks)
 -- | Tag indicating whether non-native scripts in this transaction are expected
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValid = IsValid Bool
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
   deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToJSON, FromJSON)
 
 data AlonzoTx l era where

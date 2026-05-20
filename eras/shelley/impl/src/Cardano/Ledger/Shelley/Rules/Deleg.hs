@@ -120,7 +120,7 @@ data ShelleyDelegPredFailure era
   | -- | Target pool which is not registered
     DelegateeNotRegisteredDELEG
       (KeyHash StakePool)
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 type instance EraRuleFailure "DELEG" ShelleyEra = ShelleyDelegPredFailure ShelleyEra
 

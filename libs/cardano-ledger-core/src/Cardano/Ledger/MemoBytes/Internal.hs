@@ -93,6 +93,7 @@ import qualified Data.ByteString.Short as SBS (length)
 import Data.Coerce
 import Data.MemPack
 import Data.MemPack.Buffer (Buffer)
+import Data.Ord (comparing)
 import qualified Data.Text as T
 import Data.Typeable
 import GHC.Base (Type)
@@ -181,6 +182,10 @@ instance
 -- | Both binary representation and Haskell types are compared.
 instance Eq t => Eq (MemoBytes t) where
   x == y = mbBytes x == mbBytes y && mbRawType x == mbRawType y
+
+-- | Both binary representation and Haskell types are compared.
+instance Ord t => Ord (MemoBytes t) where
+  compare = comparing mbBytes <> comparing mbRawType
 
 instance Show t => Show (MemoBytes t) where
   show (MemoBytes y _ h) =

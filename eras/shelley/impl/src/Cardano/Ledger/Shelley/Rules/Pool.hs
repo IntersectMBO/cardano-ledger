@@ -112,7 +112,7 @@ data ShelleyPoolPredFailure era
       (KeyHash StakePool)
       -- | VRF key attempted to use, that has already been registered
       (VRFVerKeyHash StakePoolVRF)
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 type instance EraRuleFailure "POOL" ShelleyEra = ShelleyPoolPredFailure ShelleyEra
 

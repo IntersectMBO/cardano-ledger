@@ -209,6 +209,13 @@ deriving stock instance
   ) =>
   Eq (ShelleyUtxoPredFailure era)
 
+deriving stock instance
+  ( Ord (Value era)
+  , Ord (TxOut era)
+  , Ord (EraRuleFailure "PPUP" era)
+  ) =>
+  Ord (ShelleyUtxoPredFailure era)
+
 instance
   ( Era era
   , NFData (Value era)
@@ -271,7 +278,7 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , Eq (EraRuleFailure "PPUP" era)
+  , Ord (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , EraRule "UTXO" era ~ ShelleyUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era

@@ -166,6 +166,14 @@ deriving stock instance
   ) =>
   Eq (TestChainPredicateFailure era)
 
+deriving stock instance
+  ( Era era
+  , Ord (PredicateFailure (EraRule "BBODY" era))
+  , Ord (PredicateFailure (EraRule "TICK" era))
+  , Ord (PredicateFailure (EraRule "TICKN" era))
+  ) =>
+  Ord (TestChainPredicateFailure era)
+
 -- | Creates a valid initial chain state
 initialShelleyState ::
   forall era.

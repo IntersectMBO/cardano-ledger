@@ -16,7 +16,7 @@ import Test.QuickCheck (Property, arbitrary, shrink, withMaxSuccess)
 
 data SUM
 
-data NoFailure = NoFailure deriving (Eq, Show)
+data NoFailure = NoFailure deriving (Eq, Ord, Show)
 
 instance STS SUM where
   type Environment SUM = ()
