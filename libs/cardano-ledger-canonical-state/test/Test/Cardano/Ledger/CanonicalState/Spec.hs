@@ -17,6 +17,7 @@ import Cardano.Ledger.BaseTypes (EpochInterval, NonNegativeInterval, NonZero, Un
 import Cardano.Ledger.CanonicalState.BasicTypes (CanonicalExUnits (..))
 import Cardano.Ledger.CanonicalState.Conway (CanonicalGovActionState)
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
+import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesAccounts.V0 as EntitiesAccounts.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesCommittee.V0 as Committee.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesDReps.V0 as EntitiesDReps.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesStakePools.V0 as EntitiesStakePools.V0
@@ -39,6 +40,7 @@ import Cardano.Ledger.Core (
   VRFVerKeyHash,
  )
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.State (PoolMetadata, StakePoolRelay)
 import Cardano.Ledger.TxIn (TxId)
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
@@ -116,6 +118,15 @@ spec = do
       validateType @"entities/stake_pools/vrf_key_hashes/v0"
         @EntitiesStakePoolsVRFKeyHashes.V0.EntitiesStakePoolsVRFKeyHashesOut
         "record_entry"
+    describe "entities/accounts/v0" $ do
+      isCanonical @"entities/accounts/v0" @DRep
+      validateType @"entities/accounts/v0" @DRep "drep"
+      isCanonical @"entities/accounts/v0" @EntitiesAccounts.V0.CanonicalAccountState
+      validateType @"entities/accounts/v0" @EntitiesAccounts.V0.CanonicalAccountState
+        "account_state"
+      isCanonical @"entities/accounts/v0" @EntitiesAccounts.V0.EntitiesAccountsOut
+      validateType @"entities/accounts/v0" @EntitiesAccounts.V0.EntitiesAccountsOut
+        "record_entry"
     describe "gov/committee/v0" $ do
       isCanonical @"gov/committee/v0" @GovCommittee.V0.CanonicalCommittee
       validateType @"gov/committee/v0" @GovCommittee.V0.CanonicalCommittee "committee"
@@ -153,6 +164,7 @@ spec = do
     testNS @"entities/stake_pools/v0"
     testNS @"entities/dreps/v0"
     testNS @"entities/stake_pools/vrf_key_hashes/v0"
+    testNS @"entities/accounts/v0"
     testNS @"gov/constitution/v0"
     testNS @"gov/committee/v0"
     testNS @"gov/pparams/v0"
