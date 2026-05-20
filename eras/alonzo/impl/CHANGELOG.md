@@ -49,6 +49,10 @@
 * Add `FromJSON` instance for
   - `AsIx ix it`
   - `AlonzoPlutusPurpose AsIx era`
+* Add `FromJSON` instance for
+  - `AlonzoTxOut era`
+  - `AsIx ix it`
+  - `AlonzoPlutusPurpose AsIx era`
 
 ### `cddl`
 

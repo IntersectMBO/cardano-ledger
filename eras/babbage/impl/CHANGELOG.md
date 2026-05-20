@@ -22,6 +22,7 @@
   - `BabbageUtxowPredFailure`
 * Remove `NoThunks` instance for `BabbageContextError`
 * Make `BabbageContextError` constructors lazy
+* Add `FromJSON` instance for `BabbageTxOut era`
 
 ### `cddl`
 

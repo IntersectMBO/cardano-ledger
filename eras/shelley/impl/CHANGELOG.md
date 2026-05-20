@@ -55,6 +55,7 @@
   - `ShelleyTxAuxData era`
   - `ShelleyTxWits era`
   - `MultiSig era`
+* Add `FromJSON` instance for `ShelleyTxOut era`
 * Export `shelleyBasedEraNativeScriptToJSON` and `shelleyBasedEraNativeScriptJSONParser` from `Cardano.Ledger.Shelley.Scripts`
 * Change `shelleyBasedEraNativeScriptToJSON` to accept a `(NativeScript era -> Aeson.Object)` continuation as its first argument for recursive child serialisation
 

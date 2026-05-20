@@ -4,6 +4,8 @@
 
 * Add `ApplyTick` instance for `MaryEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `MaryEra`.
+* Add `FromJSON` instance for `MaryValue`
+* Add `FromJSON` and `FromJSONKey` instances for `AssetName` (hex-decoding from `ToJSON` format)
 
 ### `cddl`
 
