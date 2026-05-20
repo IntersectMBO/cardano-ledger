@@ -182,3 +182,13 @@ if impl(ghc >=9.14)
     , universe-base:base
     , universe-base:containers
     , uuid-types:template-haskell
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  --sha256: sha256-qpShH6TD09thz4Nar6iKsrwWLkzzigVcuOLzxf+ZkDc=
+  tag: 6ed7596ecb5739689fada36a4fed0b06045a7f22
+  subdir:
+    cardano-base
+    cardano-crypto-class
+    cardano-crypto-praos
