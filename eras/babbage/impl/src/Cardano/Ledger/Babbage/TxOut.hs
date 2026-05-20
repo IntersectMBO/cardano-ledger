@@ -610,7 +610,7 @@ decodeTxOut decAddr = do
   dtxo <-
     ifDecoderVersionAtLeast
       (natVersion @12)
-      (decodeSparseKeyed name requiredFields initial decoderForKey)
+      (decodeSparseKeyed name requiredFields initial decoderByKey)
       (decode $ SparseKeyed name initial bodyFields requiredFields)
   case dtxo of
     DecodingTxOut SNothing _ _ _ ->
@@ -621,8 +621,8 @@ decodeTxOut decAddr = do
     name = show . typeRep $ Proxy @(BabbageTxOut era)
     initial :: DecodingTxOut era
     initial = DecodingTxOut SNothing mempty NoDatum SNothing
-    decoderForKey :: DecodingTxOut era -> Word -> Maybe (Decoder s (DecodingTxOut era))
-    decoderForKey txOut = \case
+    decoderByKey :: DecodingTxOut era -> Word -> Maybe (Decoder s (DecodingTxOut era))
+    decoderByKey txOut = \case
       0 -> Just $ do
         !x <- decAddr
         pure txOut {decodingTxOutAddr = SJust x}
@@ -636,7 +636,7 @@ decodeTxOut decAddr = do
         !x <- decodeCIC "Script"
         pure txOut {decodingTxOutScript = SJust x}
       _ -> Nothing
-    {-# INLINE decoderForKey #-}
+    {-# INLINE decoderByKey #-}
     bodyFields :: (Word -> Field (DecodingTxOut era))
     bodyFields 0 =
       field

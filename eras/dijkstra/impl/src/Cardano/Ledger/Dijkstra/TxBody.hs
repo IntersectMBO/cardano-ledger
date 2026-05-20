@@ -332,15 +332,15 @@ instance
       name
       (requiredFields sTxLevel)
       (pure $ basicDijkstraTxBodyRaw sTxLevel)
-      (decoderForKey sTxLevel)
+      (decoderByKey sTxLevel)
     where
       name = show . typeRep $ Proxy @(DijkstraTxBodyRaw l era)
-      decoderForKey ::
+      decoderByKey ::
         STxBothLevels l era ->
         Annotator (DijkstraTxBodyRaw l era) ->
         Word ->
         Maybe (Decoder s (Annotator (DijkstraTxBodyRaw l era)))
-      decoderForKey sTxLevel acc = \case
+      decoderByKey sTxLevel acc = \case
         0 -> Just $ mapSparseField (inputsDijkstraTxBodyRawL .~) decCBOR acc
         1 -> Just $ mapSparseField (outputsDijkstraTxBodyRawL .~) decCBOR acc
         2 | STopTx <- sTxLevel -> Just $ mapSparseField (feeDijkstraTxBodyRawL .~) decCBOR acc

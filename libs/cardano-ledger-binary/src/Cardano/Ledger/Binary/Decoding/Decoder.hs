@@ -1210,7 +1210,7 @@ decodeSparseKeyed ::
   -- indicates the key as unknown and is reported as decoding failure.
   (a -> Word -> Maybe (Decoder s a)) ->
   Decoder s a
-decodeSparseKeyed name requiredFields initial decoderForKey = do
+decodeSparseKeyed name requiredFields initial decoderByKey = do
   (seen, acc) <-
     decodeMapLenOrIndef >>= \case
       Just len -> defLoop Set.empty initial len
@@ -1248,7 +1248,7 @@ decodeSparseKeyed name requiredFields initial decoderForKey = do
       key <- decodeWord
       if Set.member key seen
         then failMsg $ "Duplicate field key " <> show key
-        else case decoderForKey acc key of
+        else case decoderByKey acc key of
           Nothing -> failMsg $ "Unknown field key " <> show key
           Just decoder -> do
             acc' <- decoder

@@ -257,15 +257,15 @@ instance EraPParams era => DecCBOR (PParamsUpdate era) where
   decCBOR =
     ifDecoderVersionAtLeast
       (natVersion @12)
-      (decodeSparseKeyed name [] emptyPParamsUpdate decoderForKey)
+      (decodeSparseKeyed name [] emptyPParamsUpdate decoderByKey)
       (decode $ SparseKeyed name emptyPParamsUpdate updateField [])
     where
       name = show . typeRep $ Proxy @(PParamsUpdate era)
-      decoderForKey ::
+      decoderByKey ::
         PParamsUpdate era ->
         Word ->
         Maybe (Decoder s (PParamsUpdate era))
-      decoderForKey acc k =
+      decoderByKey acc k =
         case IntMap.lookup (fromIntegral k) updateFieldMap of
           Just (Field setter dec) -> Just $ (`setter` acc) <$> dec
           Nothing -> Nothing

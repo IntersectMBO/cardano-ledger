@@ -608,7 +608,7 @@ instance
   decCBOR =
     ifDecoderVersionAtLeast
       (natVersion @12)
-      (decodeSparseKeyed name [] (pure emptyTxWitsRaw) decoderForKey)
+      (decodeSparseKeyed name [] (pure emptyTxWitsRaw) decoderByKey)
       (decode $ SparseKeyed name (pure emptyTxWitsRaw) txWitnessField [])
     where
       name = show . typeRep $ Proxy @(AlonzoTxWitsRaw era)
@@ -633,11 +633,11 @@ instance
           (Set.fromList <$> decodeList decCBOR)
       {-# INLINE setOrListDecoder #-}
 
-      decoderForKey ::
+      decoderByKey ::
         Annotator (AlonzoTxWitsRaw era) ->
         Word ->
         Maybe (Decoder s (Annotator (AlonzoTxWitsRaw era)))
-      decoderForKey acc = \case
+      decoderByKey acc = \case
         0 -> Just $ mapSparseField (\x w -> w {atwrAddrTxWits = x}) setOrListDecoder acc
         1 -> Just $ mapSparseFieldA addScriptsTxWitsRaw nativeScriptsDecoder acc
         2 -> Just $ mapSparseField (\x w -> w {atwrBootAddrTxWits = x}) setOrListDecoder acc
@@ -647,7 +647,7 @@ instance
         6 -> Just $ mapSparseField addScriptsTxWitsRaw (alonzoPlutusScriptDecoder SPlutusV2) acc
         7 -> Just $ mapSparseField addScriptsTxWitsRaw (alonzoPlutusScriptDecoder SPlutusV3) acc
         _ -> Nothing
-      {-# INLINE decoderForKey #-}
+      {-# INLINE decoderByKey #-}
 
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
       txWitnessField 0 =

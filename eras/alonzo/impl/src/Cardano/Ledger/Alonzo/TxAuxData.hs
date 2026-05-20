@@ -214,7 +214,7 @@ instance
                 name
                 []
                 (pure emptyAlonzoTxAuxDataRaw)
-                decoderForKey
+                decoderByKey
           )
           decodeAlonzo
       )
@@ -245,11 +245,11 @@ instance
           TagD 259 $
             SparseKeyed name (pure emptyAlonzoTxAuxDataRaw) auxDataField []
 
-      decoderForKey ::
+      decoderByKey ::
         Annotator (AlonzoTxAuxDataRaw era) ->
         Word ->
         Maybe (Decoder s (Annotator (AlonzoTxAuxDataRaw era)))
-      decoderForKey acc = \case
+      decoderByKey acc = \case
         0 -> Just $ do
           !x <- decCBOR
           pure $ (\ad -> ad {atadrMetadata = x}) <$> acc
@@ -276,7 +276,7 @@ instance
           !x <- decCBOR
           pure $ addPlutusScripts PlutusV4 x <$> acc
         _ -> Nothing
-      {-# INLINE decoderForKey #-}
+      {-# INLINE decoderByKey #-}
 
       auxDataField :: Word -> Field (Annotator (AlonzoTxAuxDataRaw era))
       auxDataField 0 = fieldA (\x ad -> ad {atadrMetadata = x}) From
