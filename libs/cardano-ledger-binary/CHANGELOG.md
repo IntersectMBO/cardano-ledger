@@ -12,6 +12,8 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Binary.Cuddle.GenerateCBOR` with `generateCBORMain`
+* Add `resolveHuddle`
 * Add `goldenForEncCBOR` and `cborGoldenSpec`
 * Add `toPackageGolden`
 * Remove `roundTripFailureExpectation`, `roundTripCborExpectation`, and `cborTrip`
