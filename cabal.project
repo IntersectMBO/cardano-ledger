@@ -182,3 +182,32 @@ if impl(ghc >=9.14)
     , universe-base:base
     , universe-base:containers
     , uuid-types:template-haskell
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  tag: 8c02cb91a2b10c7a4d54d79ea82e694621596448
+  --sha256: sha256-VQ9bEtIDPQFmZ4330vcYDwZbqIUDhex2sRAkeO7zHtc=
+  subdir:
+    base-deriving-via
+    cardano-base
+    cardano-binary
+    cardano-crypto-class
+    cardano-crypto-praos
+    cardano-git-rev
+    cardano-slotting
+    cardano-strict-containers
+    heapwords
+    measures
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/plutus.git
+  tag: 772a9f3f517ab6523645fa1539f94f7e22caa4ca
+  --sha256: sha256-YpQph8E+RAg67J8ogA9KDDNl8VRTq++BCd73hiMGh78=
+  subdir:
+    plutus-core
+    plutus-ledger-api
+    plutus-metatheory
+    plutus-tx
+    plutus-tx-plugin

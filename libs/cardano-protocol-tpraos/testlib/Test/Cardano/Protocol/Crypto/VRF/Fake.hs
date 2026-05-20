@@ -41,6 +41,7 @@ import Cardano.Ledger.Binary.Crypto (
   encodeSignKeyVRF,
   encodeVerKeyVRF,
  )
+import Control.DeepSeq (NFData (..))
 import Data.Bits
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
@@ -101,14 +102,14 @@ instance VRFAlgorithm FakeVRF where
 
   newtype VerKeyVRF FakeVRF = VerKeyFakeVRF Word64
     deriving stock (Show, Generic)
-    deriving newtype (Eq, Ord, NoThunks)
+    deriving newtype (Eq, Ord, NFData, NoThunks)
   newtype SignKeyVRF FakeVRF = SignKeyFakeVRF Word64
     deriving stock (Show, Generic)
-    deriving newtype (Eq, Ord, NoThunks)
+    deriving newtype (Eq, Ord, NFData, NoThunks)
 
   data CertVRF FakeVRF = CertFakeVRF !Word64 !Word16 !(OutputVRF FakeVRF)
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (NoThunks)
+    deriving anyclass (NFData, NoThunks)
 
   genKeyVRF seed = SignKeyFakeVRF $ runMonadRandomWithSeed seed getRandomWord64
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n
