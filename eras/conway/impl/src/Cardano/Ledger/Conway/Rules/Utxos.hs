@@ -23,7 +23,7 @@ module Cardano.Ledger.Conway.Rules.Utxos (
   alonzoToConwayUtxosEvent,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.UTxO (
@@ -110,7 +110,7 @@ alonzoToConwayUtxosEvent = \case
 instance
   ( EraTxCert era
   , ConwayEraScript era
-  , EncCBOR (ContextError era)
+  , EncCBOR (CollectError era)
   ) =>
   EncCBOR (ConwayUtxosPredFailure era)
   where
@@ -122,7 +122,7 @@ instance
 instance
   ( EraTxCert era
   , ConwayEraScript era
-  , DecCBOR (ContextError era)
+  , DecCBOR (CollectError era)
   ) =>
   DecCBOR (ConwayUtxosPredFailure era)
   where
@@ -135,28 +135,28 @@ instance
 deriving stock instance
   ( ConwayEraScript era
   , Show (TxCert era)
-  , Show (ContextError era)
+  , Show (CollectError era)
   ) =>
   Show (ConwayUtxosPredFailure era)
 
 deriving stock instance
   ( ConwayEraScript era
   , Eq (TxCert era)
-  , Eq (ContextError era)
+  , Eq (CollectError era)
   ) =>
   Eq (ConwayUtxosPredFailure era)
 
 deriving stock instance
   ( ConwayEraScript era
   , Ord (TxCert era)
-  , Ord (ContextError era)
+  , Ord (CollectError era)
   ) =>
   Ord (ConwayUtxosPredFailure era)
 
 instance
   ( ConwayEraScript era
   , NFData (TxCert era)
-  , NFData (ContextError era)
+  , NFData (CollectError era)
   ) =>
   NFData (ConwayUtxosPredFailure era)
 
