@@ -50,6 +50,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   atadPlutus',
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts (
@@ -211,7 +212,7 @@ instance
           ( do
               assertTag 259
               decodeSparseKeyed
-                name
+                TypeName
                 []
                 (pure emptyAlonzoTxAuxDataRaw)
                 decoderByKey
@@ -259,23 +260,17 @@ instance
             (\scripts ad -> ad {atadrNativeScripts = atadrNativeScripts ad <> scripts})
               <$> x
               <*> acc
-        2 -> Just $ do
-          guardPlutus PlutusV1
-          !x <- decCBOR
-          pure $ addPlutusScripts PlutusV1 x <$> acc
-        3 -> Just $ do
-          guardPlutus PlutusV2
-          !x <- decCBOR
-          pure $ addPlutusScripts PlutusV2 x <$> acc
-        4 -> Just $ do
-          guardPlutus PlutusV3
-          !x <- decCBOR
-          pure $ addPlutusScripts PlutusV3 x <$> acc
-        5 -> Just $ do
-          guardPlutus PlutusV4
-          !x <- decCBOR
-          pure $ addPlutusScripts PlutusV4 x <$> acc
+        2 -> decodeAddPlutus PlutusV1 acc
+        3 -> decodeAddPlutus PlutusV2 acc
+        4 -> decodeAddPlutus PlutusV3 acc
+        5 -> decodeAddPlutus PlutusV4 acc
         _ -> Nothing
+        where
+          decodeAddPlutus lang accu = Just $ do
+            guardPlutus lang
+            !x <- decCBOR
+            pure $ addPlutusScripts lang x <$> accu
+          {-# INLINE decodeAddPlutus #-}
       {-# INLINE decoderByKey #-}
 
       auxDataField :: Word -> Field (Annotator (AlonzoTxAuxDataRaw era))

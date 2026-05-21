@@ -12,6 +12,13 @@ repository cardano-haskell-packages
 
 source-repository-package
   type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  subdir: cardano-base
+  --sha256: sha256-Gj8BPEew+UYkCWr3D0LgA6dvhYof49V20XRMRMf1FzY=
+  tag: efe33cb3739f5c90b733b730bdeffa11a75f291d
+
+source-repository-package
+  type: git
   location: https://github.com/IntersectMBO/formal-ledger-specifications.git
   subdir: hs
   -- !WARNING!:

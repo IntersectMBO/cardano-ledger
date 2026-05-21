@@ -42,6 +42,7 @@ module Cardano.Ledger.Babbage.TxOut (
   internBabbageTxOut,
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Address (
   CompactAddr,
   compactAddr,
@@ -610,7 +611,7 @@ decodeTxOut decAddr = do
   dtxo <-
     ifDecoderVersionAtLeast
       (natVersion @12)
-      (decodeSparseKeyed name requiredFields initial decoderByKey)
+      (decodeSparseKeyed TypeName requiredFields initial decoderByKey)
       (decode $ SparseKeyed name initial bodyFields requiredFields)
   case dtxo of
     DecodingTxOut SNothing _ _ _ ->

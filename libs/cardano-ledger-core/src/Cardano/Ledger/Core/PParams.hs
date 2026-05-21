@@ -97,6 +97,7 @@ module Cardano.Ledger.Core.PParams (
   ppuMinFeeBL,
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   KeyValuePairs (..),
@@ -257,7 +258,7 @@ instance EraPParams era => DecCBOR (PParamsUpdate era) where
   decCBOR =
     ifDecoderVersionAtLeast
       (natVersion @12)
-      (decodeSparseKeyed name [] emptyPParamsUpdate decoderByKey)
+      (decodeSparseKeyed TypeName [] emptyPParamsUpdate decoderByKey)
       (decode $ SparseKeyed name emptyPParamsUpdate updateField [])
     where
       name = show . typeRep $ Proxy @(PParamsUpdate era)

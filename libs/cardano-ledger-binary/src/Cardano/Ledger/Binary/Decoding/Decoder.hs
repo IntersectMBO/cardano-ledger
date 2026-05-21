@@ -171,6 +171,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 ) where
 
 import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
+import Cardano.Base.Typeable (TypeName)
 import Cardano.Ledger.Binary.Plain (
   DecoderError (..),
   cborError,
@@ -1198,7 +1199,7 @@ decodeMapContentsTraverse decodeKey decodeValue =
 decodeSparseKeyed ::
   forall a s.
   -- | Type name used in error messages.
-  String ->
+  TypeName a ->
   -- | Required keys with friendly names per key. After the map is fully
   -- consumed, the absence of any key in this list is reported as a
   -- failure using its name and key.
@@ -1226,7 +1227,7 @@ decodeSparseKeyed name requiredFields initial decoderByKey = do
   pure acc
   where
     failMsg :: String -> Decoder s b
-    failMsg msg = fail $ name <> ":" <> msg
+    failMsg msg = fail $ show name <> ":" <> msg
 
     defLoop :: Set.Set Word -> a -> Int -> Decoder s (Set.Set Word, a)
     defLoop !seen !acc !i

@@ -98,6 +98,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
   accountBalanceIntervalsDijkstraTxBodyRawL,
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
@@ -329,7 +330,7 @@ instance
   where
   decCBOR = withSTxBothLevels @l $ \sTxLevel ->
     decodeSparseKeyed
-      name
+      TypeName
       (requiredFields sTxLevel)
       (pure $ basicDijkstraTxBodyRaw sTxLevel)
       (decoderByKey sTxLevel)

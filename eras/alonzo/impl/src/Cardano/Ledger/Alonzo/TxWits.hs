@@ -56,6 +56,7 @@ module Cardano.Ledger.Alonzo.TxWits (
 ) where
 
 import Cardano.Base.Proxy (asProxy)
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
@@ -608,7 +609,7 @@ instance
   decCBOR =
     ifDecoderVersionAtLeast
       (natVersion @12)
-      (decodeSparseKeyed name [] (pure emptyTxWitsRaw) decoderByKey)
+      (decodeSparseKeyed TypeName [] (pure emptyTxWitsRaw) decoderByKey)
       (decode $ SparseKeyed name (pure emptyTxWitsRaw) txWitnessField [])
     where
       name = show . typeRep $ Proxy @(AlonzoTxWitsRaw era)
