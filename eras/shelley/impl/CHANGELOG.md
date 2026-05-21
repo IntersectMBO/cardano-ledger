@@ -2,6 +2,15 @@
 
 ## 1.19.0.0
 
+* Deprecate:
+  - `Validated`
+  - `extractTx`
+  - `coerceValidated`
+  - `unsafeMakeValidated`
+  - `translateValidated`
+  - `applyTxValidation`
+  - `applyTx`
+  - `reapplyTx`
 * Add functions to `Mempool` module:
   - `applyTxWithFullValidation`
   - `reapplyValidatedTx`

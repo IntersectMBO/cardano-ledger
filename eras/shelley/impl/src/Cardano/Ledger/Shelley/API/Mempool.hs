@@ -110,17 +110,21 @@ extractValidatedTx validatedTx = getValidatedTxStAnnTx validatedTx ^. txStAnnTxG
 -- some chain state.
 newtype Validated tx = Validated tx
   deriving (Eq, NoThunks, Show, NFData)
+{-# DEPRECATED Validated "Use 'ValidatedTx' instead." #-}
 
 -- | Extract the underlying unvalidated Tx.
 extractTx :: Validated tx -> tx
 extractTx (Validated tx) = tx
+{-# DEPRECATED extractTx "Use 'extractValidatedTx'" #-}
 
 coerceValidated :: Coercible a b => Validated a -> Validated b
 coerceValidated (Validated a) = Validated $ coerce a
+{-# DEPRECATED coerceValidated "'Validated' is deprecated; switch to 'ValidatedTx'." #-}
 
 -- Don't use this except in Testing to make Arbitrary instances, etc.
 unsafeMakeValidated :: tx -> Validated tx
 unsafeMakeValidated = Validated
+{-# DEPRECATED unsafeMakeValidated "Use 'unsafeMakeValidatedTx' instead." #-}
 
 -- | Build a 'ValidatedTx' without running the LEDGER rule - should only be used for testing.
 unsafeMakeValidatedTx ::
@@ -154,6 +158,7 @@ translateValidated ::
   Validated (f (PreviousEra era)) ->
   Except (TranslationError era f) (Validated (f era))
 translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
+{-# DEPRECATED translateValidated "Translation of `Validated` does not make sense. It must be fully re-validated in a new era" #-}
 
 class
   ( EraTx era
@@ -211,6 +216,8 @@ class
   applyTxValidation policy globals env state stAnnTx =
     fmap (\vtx -> Validated (vtStAnnTx vtx ^. txStAnnTxG))
       <$> internalApplyTxWithValidation policy globals env state (stAnnTx ^. txStAnnTxG)
+
+{-# DEPRECATED applyTxValidation "Use 'internalApplyTxWithValidation' instead." #-}
 
 ruleApplyTxValidation ::
   forall rule era.
@@ -387,6 +394,7 @@ applyTx ::
 applyTx globals env state tx = do
   (mempoolState, vtx) <- internalApplyTxWithValidation ValidateAll globals env state tx
   pure (mempoolState, Validated (vtStAnnTx vtx ^. txStAnnTxG))
+{-# DEPRECATED applyTx "Use 'applyTxWithFullValidation' instead." #-}
 
 -- | Reapply a previously validated 'Tx'.
 --
@@ -403,3 +411,4 @@ reapplyTx ::
   Either (ApplyTxError era) (MempoolState era)
 reapplyTx globals env state (Validated tx) =
   fst <$> internalApplyTxWithValidation (ValidateSuchThat (notElem lblStatic)) globals env state tx
+{-# DEPRECATED reapplyTx "Use 'reapplyValidatedTx' instead." #-}
