@@ -98,6 +98,7 @@ library
     microlens,
     nothunks,
     primitive,
+    small-steps,
     text,
 
   if flag(asserts)

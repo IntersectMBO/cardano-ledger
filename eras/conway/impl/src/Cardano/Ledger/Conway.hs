@@ -43,10 +43,15 @@ import Cardano.Ledger.Conway.Tx (Tx (..))
 import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Conway.UTxO ()
+import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.Rules (ledgerPpL)
+import Cardano.Ledger.State (utxoG)
+import Control.State.Transition.Extended (ValidationPolicy (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 
 instance ApplyTx ConwayEra where
   newtype ApplyTxError ConwayEra = ConwayApplyTxError (NonEmpty (ConwayLedgerPredFailure ConwayEra))
@@ -55,9 +60,28 @@ instance ApplyTx ConwayEra where
 
   mkStAnnTx = mkAlonzoStAnnTx
 
-  applyTxValidation validationPolicy globals env state stAnnTx =
-    first ConwayApplyTxError $
-      ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state stAnnTx
+  internalApplyTxWithValidation validationPolicy globals env state tx =
+    let stAnnTx =
+          mkStAnnTx
+            (epochInfo globals)
+            (systemStart globals)
+            (env ^. ledgerPpL)
+            (state ^. utxoG)
+            tx
+     in first ConwayApplyTxError $
+          ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state stAnnTx
+
+  internalReapplyValidatedTx globals env state vtx =
+    fst
+      <$> first
+        ConwayApplyTxError
+        ( ruleApplyTxValidation @"MEMPOOL"
+            (ValidateSuchThat (notElem lblStatic))
+            globals
+            env
+            state
+            (vtStAnnTx vtx)
+        )
 
 instance ApplyTick ConwayEra
 

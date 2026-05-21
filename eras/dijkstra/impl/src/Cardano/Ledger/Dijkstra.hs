@@ -54,15 +54,21 @@ import Cardano.Ledger.Dijkstra.TxInfo ()
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Plutus (Language (..))
+import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.Shelley.API (
   ApplyBlock (..),
   ApplyTick (..),
   ApplyTx (..),
+  ValidatedTx (..),
+  epochInfo,
   ruleApplyTxValidation,
+  systemStart,
  )
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided, UTxO)
+import Cardano.Ledger.Shelley.Rules (ledgerPpL)
+import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided, UTxO, utxoG)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
+import Control.State.Transition.Extended (ValidationPolicy (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty)
@@ -79,9 +85,28 @@ instance ApplyTx DijkstraEra where
 
   mkStAnnTx = mkDijkstraStAnnTopTx
 
-  applyTxValidation validationPolicy globals env state stAnnTx =
-    first DijkstraApplyTxError $
-      ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state stAnnTx
+  internalApplyTxWithValidation validationPolicy globals env state tx =
+    let stAnnTx =
+          mkStAnnTx
+            (epochInfo globals)
+            (systemStart globals)
+            (env ^. ledgerPpL)
+            (state ^. utxoG)
+            tx
+     in first DijkstraApplyTxError $
+          ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state stAnnTx
+
+  internalReapplyValidatedTx globals env state vtx =
+    fst
+      <$> first
+        DijkstraApplyTxError
+        ( ruleApplyTxValidation @"MEMPOOL"
+            (ValidateSuchThat (notElem lblStatic))
+            globals
+            env
+            state
+            (vtStAnnTx vtx)
+        )
 
 instance ApplyTick DijkstraEra
 

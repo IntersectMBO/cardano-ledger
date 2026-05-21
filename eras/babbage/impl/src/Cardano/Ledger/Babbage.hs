@@ -51,11 +51,16 @@ import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
+import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.Rules (ledgerPpL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.State (utxoG)
+import Control.State.Transition.Extended (ValidationPolicy (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 
 instance ApplyTx BabbageEra where
   newtype ApplyTxError BabbageEra
@@ -65,9 +70,28 @@ instance ApplyTx BabbageEra where
 
   mkStAnnTx = mkAlonzoStAnnTx
 
-  applyTxValidation validationPolicy globals env state stAnnTx =
-    first BabbageApplyTxError $
-      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
+  internalApplyTxWithValidation validationPolicy globals env state tx =
+    let stAnnTx =
+          mkStAnnTx
+            (epochInfo globals)
+            (systemStart globals)
+            (env ^. ledgerPpL)
+            (state ^. utxoG)
+            tx
+     in first BabbageApplyTxError $
+          ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
+
+  internalReapplyValidatedTx globals env state vtx =
+    fst
+      <$> first
+        BabbageApplyTxError
+        ( ruleApplyTxValidation @"LEDGER"
+            (ValidateSuchThat (notElem lblStatic))
+            globals
+            env
+            state
+            (vtStAnnTx vtx)
+        )
 
 instance ApplyTick BabbageEra
 
