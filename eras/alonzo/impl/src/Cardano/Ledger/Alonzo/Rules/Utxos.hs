@@ -35,7 +35,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxos (
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, UTXOS)
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (..),
   collectPlutusScriptsWithContext,
@@ -382,7 +382,7 @@ instance InjectRuleFailure "UTXOS" Shelley.ShelleyPpupPredFailure AlonzoEra wher
 instance
   ( EraTxCert era
   , AlonzoEraScript era
-  , EncCBOR (ContextError era)
+  , EncCBOR (CollectError era)
   , EncCBOR (EraRuleFailure "PPUP" era)
   ) =>
   EncCBOR (AlonzoUtxosPredFailure era)
@@ -395,7 +395,7 @@ instance
 instance
   ( EraTxCert era
   , AlonzoEraScript era
-  , DecCBOR (ContextError era)
+  , DecCBOR (CollectError era)
   , DecCBOR (EraRuleFailure "PPUP" era)
   ) =>
   DecCBOR (AlonzoUtxosPredFailure era)
@@ -408,34 +408,25 @@ instance
       dec n = Invalid n
 
 deriving stock instance
-  ( AlonzoEraScript era
-  , Show (TxCert era)
-  , Show (CollectError era)
+  ( Show (CollectError era)
   , Show (EraRuleFailure "PPUP" era)
   ) =>
   Show (AlonzoUtxosPredFailure era)
 
 deriving stock instance
-  ( AlonzoEraScript era
-  , Eq (TxCert era)
-  , Eq (CollectError era)
+  ( Eq (CollectError era)
   , Eq (EraRuleFailure "PPUP" era)
   ) =>
   Eq (AlonzoUtxosPredFailure era)
 
 deriving stock instance
-  ( AlonzoEraScript era
-  , Ord (TxCert era)
-  , Ord (CollectError era)
+  ( Ord (CollectError era)
   , Ord (EraRuleFailure "PPUP" era)
-  , EraTxOut era
   ) =>
   Ord (AlonzoUtxosPredFailure era)
 
 instance
-  ( AlonzoEraScript era
-  , NFData (TxCert era)
-  , NFData (CollectError era)
+  ( NFData (CollectError era)
   , NFData (EraRuleFailure "PPUP" era)
   ) =>
   NFData (AlonzoUtxosPredFailure era)
