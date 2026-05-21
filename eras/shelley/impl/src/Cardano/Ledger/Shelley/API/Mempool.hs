@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -21,7 +22,12 @@ module Cardano.Ledger.Shelley.API.Mempool (
   ApplyTx (..),
   ApplyTxError (..),
   Validated,
+  ValidatedTx,
+  getValidatedTxStAnnTx,
+  getValidatedTxProtocolVersion,
+  getValidatedTxSlotNo,
   extractTx,
+  extractValidatedTx,
   coerceValidated,
   translateValidated,
   ruleApplyTxValidation,
@@ -37,7 +43,7 @@ module Cardano.Ledger.Shelley.API.Mempool (
   overNewEpochState,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, epochInfo, systemStart)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
@@ -47,7 +53,6 @@ import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, ShelleyLedgerPredFailure, ledgerPpL)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
-import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.State (UTxO, utxoG)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -64,6 +69,37 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
+
+-- | A transaction that has been validated against some chain state.
+data ValidatedTx era = ValidatedTx
+  { vtStAnnTx :: !(StAnnTx TopTx era)
+  -- ^ The transaction paired with the state-derived annotation produced during validation
+  , vtProtocolVersion :: !ProtVer
+  -- ^ Protocol version under which the validation took place
+  , vtSlotNo :: !SlotNo
+  -- ^ Slot number under which the validation took place
+  }
+  deriving (Generic)
+
+deriving instance Eq (StAnnTx TopTx era) => Eq (ValidatedTx era)
+
+deriving instance Show (StAnnTx TopTx era) => Show (ValidatedTx era)
+
+instance NFData (StAnnTx TopTx era) => NFData (ValidatedTx era)
+
+instance NoThunks (StAnnTx TopTx era) => NoThunks (ValidatedTx era)
+
+getValidatedTxStAnnTx :: ValidatedTx era -> StAnnTx TopTx era
+getValidatedTxStAnnTx = vtStAnnTx
+
+getValidatedTxProtocolVersion :: ValidatedTx era -> ProtVer
+getValidatedTxProtocolVersion = vtProtocolVersion
+
+getValidatedTxSlotNo :: ValidatedTx era -> SlotNo
+getValidatedTxSlotNo = vtSlotNo
+
+extractValidatedTx :: EraTx era => ValidatedTx era -> Tx TopTx era
+extractValidatedTx validatedTx = getValidatedTxStAnnTx validatedTx ^. txStAnnTxG
 
 -- | A newtype which indicates that a transaction has been validated against
 -- some chain state.

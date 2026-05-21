@@ -2,6 +2,12 @@
 
 ## 1.19.0.0
 
+* Add:
+  - `ValidatedTx`
+  - `getValidatedTxStAnnTx`
+  - `getValidatedTxProtocolVersion`
+  - `getValidatedTxSlotNo`
+  - `extractValidatedTx`
 * Rename rule types and deprecate the old names:
   - `ShelleyBBODY` -> `BBODY`
   - `ShelleyDELEG` -> `DELEG`
