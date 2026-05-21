@@ -236,87 +236,94 @@ instance (Typeable s, DecCBOR a) => DecCBOR (Tagged s a) where
 -- Containers
 --------------------------------------------------------------------------------
 
+-- | Decode a tuple-shaped CBOR list of fixed arity. Starting at protocol
+-- version 12 we additionally accept indefinite-length list encoding.
+decodeTuple :: Int -> Decoder s a -> Decoder s a
+decodeTuple n body =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    (decodeRecordNamed "Tuple" (const n) body)
+    (decodeListLenOf n *> body)
+{-# INLINE decodeTuple #-}
+
 instance (DecCBOR a, DecCBOR b) => DecCBOR (a, b) where
-  decCBOR = do
-    decodeListLenOf 2
+  decCBOR = decodeTuple 2 $ do
     !x <- decCBOR
     !y <- decCBOR
-    return (x, y)
-  dropCBOR _ = decodeListLenOf 2 <* dropCBOR (Proxy @a) <* dropCBOR (Proxy @b)
+    pure (x, y)
+  dropCBOR _ =
+    decodeTuple 2 $
+      dropCBOR (Proxy @a) <* dropCBOR (Proxy @b)
   {-# INLINE decCBOR #-}
 
 instance (DecCBOR a, DecCBOR b, DecCBOR c) => DecCBOR (a, b, c) where
-  decCBOR = do
-    decodeListLenOf 3
+  decCBOR = decodeTuple 3 $ do
     !x <- decCBOR
     !y <- decCBOR
     !z <- decCBOR
-    return (x, y, z)
+    pure (x, y, z)
   dropCBOR _ =
-    decodeListLenOf 3
-      <* dropCBOR (Proxy @a)
-      <* dropCBOR (Proxy @b)
-      <* dropCBOR (Proxy @c)
+    decodeTuple 3 $
+      dropCBOR (Proxy @a)
+        <* dropCBOR (Proxy @b)
+        <* dropCBOR (Proxy @c)
   {-# INLINE decCBOR #-}
 
 instance (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d) => DecCBOR (a, b, c, d) where
-  decCBOR = do
-    decodeListLenOf 4
+  decCBOR = decodeTuple 4 $ do
     !a <- decCBOR
     !b <- decCBOR
     !c <- decCBOR
     !d <- decCBOR
-    return (a, b, c, d)
+    pure (a, b, c, d)
   dropCBOR _ =
-    decodeListLenOf 4
-      <* dropCBOR (Proxy @a)
-      <* dropCBOR (Proxy @b)
-      <* dropCBOR (Proxy @c)
-      <* dropCBOR (Proxy @d)
+    decodeTuple 4 $
+      dropCBOR (Proxy @a)
+        <* dropCBOR (Proxy @b)
+        <* dropCBOR (Proxy @c)
+        <* dropCBOR (Proxy @d)
   {-# INLINE decCBOR #-}
 
 instance
   (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d, DecCBOR e) =>
   DecCBOR (a, b, c, d, e)
   where
-  decCBOR = do
-    decodeListLenOf 5
+  decCBOR = decodeTuple 5 $ do
     !a <- decCBOR
     !b <- decCBOR
     !c <- decCBOR
     !d <- decCBOR
     !e <- decCBOR
-    return (a, b, c, d, e)
+    pure (a, b, c, d, e)
   dropCBOR _ =
-    decodeListLenOf 5
-      <* dropCBOR (Proxy @a)
-      <* dropCBOR (Proxy @b)
-      <* dropCBOR (Proxy @c)
-      <* dropCBOR (Proxy @d)
-      <* dropCBOR (Proxy @e)
+    decodeTuple 5 $
+      dropCBOR (Proxy @a)
+        <* dropCBOR (Proxy @b)
+        <* dropCBOR (Proxy @c)
+        <* dropCBOR (Proxy @d)
+        <* dropCBOR (Proxy @e)
   {-# INLINE decCBOR #-}
 
 instance
   (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d, DecCBOR e, DecCBOR f) =>
   DecCBOR (a, b, c, d, e, f)
   where
-  decCBOR = do
-    decodeListLenOf 6
+  decCBOR = decodeTuple 6 $ do
     !a <- decCBOR
     !b <- decCBOR
     !c <- decCBOR
     !d <- decCBOR
     !e <- decCBOR
     !f <- decCBOR
-    return (a, b, c, d, e, f)
+    pure (a, b, c, d, e, f)
   dropCBOR _ =
-    decodeListLenOf 6
-      <* dropCBOR (Proxy @a)
-      <* dropCBOR (Proxy @b)
-      <* dropCBOR (Proxy @c)
-      <* dropCBOR (Proxy @d)
-      <* dropCBOR (Proxy @e)
-      <* dropCBOR (Proxy @f)
+    decodeTuple 6 $
+      dropCBOR (Proxy @a)
+        <* dropCBOR (Proxy @b)
+        <* dropCBOR (Proxy @c)
+        <* dropCBOR (Proxy @d)
+        <* dropCBOR (Proxy @e)
+        <* dropCBOR (Proxy @f)
   {-# INLINE decCBOR #-}
 
 instance
@@ -330,8 +337,7 @@ instance
   ) =>
   DecCBOR (a, b, c, d, e, f, g)
   where
-  decCBOR = do
-    decodeListLenOf 7
+  decCBOR = decodeTuple 7 $ do
     !a <- decCBOR
     !b <- decCBOR
     !c <- decCBOR
@@ -339,16 +345,16 @@ instance
     !e <- decCBOR
     !f <- decCBOR
     !g <- decCBOR
-    return (a, b, c, d, e, f, g)
+    pure (a, b, c, d, e, f, g)
   dropCBOR _ =
-    decodeListLenOf 7
-      <* dropCBOR (Proxy @a)
-      <* dropCBOR (Proxy @b)
-      <* dropCBOR (Proxy @c)
-      <* dropCBOR (Proxy @d)
-      <* dropCBOR (Proxy @e)
-      <* dropCBOR (Proxy @f)
-      <* dropCBOR (Proxy @g)
+    decodeTuple 7 $
+      dropCBOR (Proxy @a)
+        <* dropCBOR (Proxy @b)
+        <* dropCBOR (Proxy @c)
+        <* dropCBOR (Proxy @d)
+        <* dropCBOR (Proxy @e)
+        <* dropCBOR (Proxy @f)
+        <* dropCBOR (Proxy @g)
   {-# INLINE decCBOR #-}
 
 instance DecCBOR BS.ByteString where
