@@ -143,6 +143,8 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeString,
   decodeStringCanonical,
   decodeStringIndef,
+  decodeStringIndefLen,
+  decodeStringDefOrIndef,
   decodeTag,
   decodeTag64,
   decodeTag64Canonical,
@@ -1575,6 +1577,30 @@ decodeStringCanonical = fromPlainDecoder C.decodeStringCanonical
 decodeStringIndef :: Decoder s ()
 decodeStringIndef = fromPlainDecoder C.decodeStringIndef
 {-# INLINE decodeStringIndef #-}
+
+-- | Loop over chunks of an indefinite-length text string until a break token is
+-- encountered, concatenating the chunks in order. Assumes the leading
+-- indefinite-length marker has already been consumed (e.g. via
+-- 'decodeStringIndef').
+decodeStringIndefLen :: Decoder s Text.Text
+decodeStringIndefLen = decodeStringIndef *> go []
+  where
+    go !acc = do
+      stop <- decodeBreakOr
+      if stop
+        then pure $! Text.concat (reverse acc)
+        else do
+          !chunk <- decodeString
+          go (chunk : acc)
+
+-- | Decode a text string that may be either definite-length or
+-- indefinite-length encoded.
+decodeStringDefOrIndef :: Decoder s Text.Text
+decodeStringDefOrIndef =
+  peekTokenType >>= \case
+    C.TypeString -> decodeString
+    C.TypeStringIndef -> decodeStringIndefLen
+    _ -> cborError $ DecoderErrorCustom "Text" "expected string"
 
 decodeTag :: Decoder s Word
 decodeTag = fromPlainDecoder C.decodeTag

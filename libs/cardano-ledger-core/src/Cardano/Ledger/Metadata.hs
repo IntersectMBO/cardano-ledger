@@ -30,6 +30,7 @@ import Cardano.Ledger.Binary (
   decodeMapLenIndef,
   decodeString,
   decodeStringIndef,
+  decodeStringIndefLen,
   encodeInteger,
   encodeListLen,
   encodeMapLen,
@@ -133,7 +134,7 @@ decodeMetadatum = do
       return (S x)
     TypeStringIndef -> do
       decodeStringIndef
-      !x <- decodeStringIndefLen []
+      !x <- decodeStringIndefLen
       when (checkSizes && TF.lengthWord8 x > 64) $
         decodeError "text .size (0..64): text exceeds 64 bytes"
       return (S x)
@@ -182,15 +183,6 @@ decodeBytesIndefLen acc = do
     else do
       !ba <- decCBOR
       decodeBytesIndefLen (ba : acc)
-
-decodeStringIndefLen :: [T.Text] -> Decoder s T.Text
-decodeStringIndefLen acc = do
-  stop <- decodeBreakOr
-  if stop
-    then return $! T.concat (reverse acc)
-    else do
-      !str <- decodeString
-      decodeStringIndefLen (str : acc)
 
 decodeListN :: Int -> [Metadatum] -> Decoder s [Metadatum]
 decodeListN !n acc =
