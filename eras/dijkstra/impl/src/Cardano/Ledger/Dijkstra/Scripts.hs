@@ -60,11 +60,11 @@ import Cardano.Ledger.Binary (
   cborError,
   decodeNullMaybe,
   decodeRecordSum,
+  decodeRecordNamed,
   decodeWord8,
   encodeListLen,
   encodeNull,
   encodeWord8,
-  enforceSize,
  )
 import Cardano.Ledger.Binary.Coders (
   Encode (..),
@@ -641,8 +641,7 @@ instance EncCBOR (AccountBalanceInterval era) where
     AccountBalanceBothBounds l u -> encodeListLen 2 <> encCBOR l <> encCBOR u
 
 instance Typeable era => DecCBOR (AccountBalanceInterval era) where
-  decCBOR = do
-    enforceSize "AccountBalanceInterval" 2
+  decCBOR = decodeRecordNamed "AccountBalanceInterval" (const 2) $ do
     lower <- decodeNullMaybe decCBOR
     upper <- decodeNullMaybe decCBOR
     case (lower, upper) of
