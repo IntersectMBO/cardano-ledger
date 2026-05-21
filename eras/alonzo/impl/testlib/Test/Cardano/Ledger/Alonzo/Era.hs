@@ -45,6 +45,21 @@ class
   AlonzoEraTest era
 
 instance EraTest AlonzoEra where
+  type
+    EraRulesWithFailures AlonzoEra =
+      '[ "BBODY"
+       , "DELEG"
+       , "DELEGS"
+       , "DELPL"
+       , "LEDGER"
+       , "LEDGERS"
+       , "POOL"
+       , "PPUP"
+       , "UTXO"
+       , "UTXOS"
+       , "UTXOW"
+       ]
+
   zeroCostModels = zeroTestingCostModels [PlutusV1]
 
   mkTestAccountState = mkShelleyTestAccountState

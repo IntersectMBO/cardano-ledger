@@ -51,6 +51,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError)
 import Cardano.Ledger.Alonzo.Rules (
+  AlonzoBbodyPredFailure,
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
   AlonzoUtxowPredFailure (..),
@@ -355,6 +356,14 @@ instance
   , Arbitrary (PlutusPurpose AsIx era)
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  ( Era era
+  , Arbitrary (Shelley.PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  Arbitrary (AlonzoBbodyPredFailure era)
   where
   arbitrary = genericArbitraryU
 

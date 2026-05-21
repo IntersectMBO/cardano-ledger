@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -33,6 +34,20 @@ class
   BabbageEraTest era
 
 instance EraTest BabbageEra where
+  type
+    EraRulesWithFailures BabbageEra =
+      '[ "BBODY"
+       , "DELEG"
+       , "DELEGS"
+       , "DELPL"
+       , "LEDGER"
+       , "LEDGERS"
+       , "POOL"
+       , "PPUP"
+       , "UTXO"
+       , "UTXOS"
+       , "UTXOW"
+       ]
   zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV2]
 
   mkTestAccountState = mkShelleyTestAccountState

@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.DelegSpec (
-  shelleyEraSpecificSpec,
+  shelleyToBabbageSpec,
   spec,
 ) where
 
@@ -33,12 +33,12 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-shelleyEraSpecificSpec ::
+shelleyToBabbageSpec ::
   ( ShelleyEraImp era
   , ShelleyEraAccounts era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
-shelleyEraSpecificSpec = describe "DELEG" $ do
+shelleyToBabbageSpec = describe "DELEG" $ do
   it "Twice the same certificate in the same transaction" $ do
     freshKeyHash >>= \kh -> do
       regTxCert <- genRegTxCert (KeyHashObj kh)

@@ -1,4 +1,6 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -37,6 +39,20 @@ class
   AllegraEraTest era
 
 instance EraTest AllegraEra where
+  type
+    EraRulesWithFailures AllegraEra =
+      '[ "BBODY"
+       , "DELEG"
+       , "DELEGS"
+       , "DELPL"
+       , "LEDGER"
+       , "LEDGERS"
+       , "POOL"
+       , "PPUP"
+       , "UTXO"
+       , "UTXOW"
+       ]
+
   zeroCostModels = emptyCostModels
 
   mkTestAccountState = mkShelleyTestAccountState

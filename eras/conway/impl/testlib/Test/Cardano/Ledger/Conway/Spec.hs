@@ -21,15 +21,9 @@ import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import qualified Test.Cardano.Ledger.Conway.SPORatifySpec as SPORatifySpec
-import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra)
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
-spec ::
-  forall era.
-  ( RuleListEra era
-  , ConwayEraImp era
-  ) =>
-  Spec
+spec :: forall era. ConwayEraImp era => Spec
 spec =
   describe "Conway features" $ do
     Proposals.spec @era

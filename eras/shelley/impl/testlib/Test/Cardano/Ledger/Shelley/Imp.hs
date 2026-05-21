@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Imp (spec, shelleyEraSpecificSpec) where
+module Test.Cardano.Ledger.Shelley.Imp (spec, shelleyToBabbageSpec) where
 
 import Cardano.Ledger.Core (EraRule)
 import Cardano.Ledger.Shelley.Rules (RupdEvent)
@@ -39,12 +39,12 @@ spec era = do
   describe "ShelleyEraPureTests" $ do
     Instant.spec @era
 
-shelleyEraSpecificSpec ::
+shelleyToBabbageSpec ::
   ( ShelleyEraImp era
   , ShelleyEraAccounts era
   ) =>
   proxy era ->
   Spec
-shelleyEraSpecificSpec era = withImpInitEachEraVersion era $ do
+shelleyToBabbageSpec era = withImpInitEachEraVersion era $ do
   describe "ShelleyEra Specific" $
-    DELEG.shelleyEraSpecificSpec
+    DELEG.shelleyToBabbageSpec
