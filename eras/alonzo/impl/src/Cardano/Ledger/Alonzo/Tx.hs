@@ -76,7 +76,7 @@ import Cardano.Ledger.Alonzo.PParams (
   getLanguageView,
   ppPricesL,
  )
-import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, ContextError)
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   CostModel,
@@ -504,19 +504,19 @@ data AlonzoStAnnTx l era where
 
 deriving instance
   ( AlonzoEraScript era
-  , Eq (Tx l era)
+  , Eq (Tx TopTx era)
   , Eq (ScriptsNeeded era)
   , Eq (ScriptsProvided era)
-  , Eq (ContextError era)
+  , Eq (CollectError era)
   ) =>
   Eq (AlonzoStAnnTx l era)
 
 deriving instance
   ( AlonzoEraScript era
-  , Show (Tx l era)
+  , Show (Tx TopTx era)
   , Show (ScriptsNeeded era)
   , Show (ScriptsProvided era)
-  , Show (ContextError era)
+  , Show (CollectError era)
   ) =>
   Show (AlonzoStAnnTx l era)
 
@@ -528,10 +528,10 @@ instance
 
 instance
   ( AlonzoEraScript era
-  , NFData (Tx l era)
+  , NFData (Tx TopTx era)
   , NFData (ScriptsNeeded era)
   , NFData (ScriptsProvided era)
-  , NFData (ContextError era)
+  , NFData (CollectError era)
   ) =>
   NFData (AlonzoStAnnTx l era)
   where

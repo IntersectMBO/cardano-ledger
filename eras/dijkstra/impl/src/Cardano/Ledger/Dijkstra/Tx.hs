@@ -28,7 +28,7 @@ module Cardano.Ledger.Dijkstra.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
-import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, ContextError, TxInfoResult)
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, TxInfoResult)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   IsValid (..),
@@ -392,22 +392,22 @@ data DijkstraStAnnTx l era where
 
 deriving instance
   ( DijkstraEraScript era
-  , Eq (Tx l era)
+  , Eq (Tx TopTx era)
   , Eq (Tx SubTx era)
   , Eq (ScriptsNeeded era)
   , Eq (ScriptsProvided era)
-  , Eq (ContextError era)
+  , Eq (CollectError era)
   , Eq (TxInfoResult era)
   ) =>
   Eq (DijkstraStAnnTx l era)
 
 deriving instance
   ( DijkstraEraScript era
-  , Show (Tx l era)
+  , Show (Tx TopTx era)
   , Show (Tx SubTx era)
   , Show (ScriptsNeeded era)
   , Show (ScriptsProvided era)
-  , Show (ContextError era)
+  , Show (CollectError era)
   , Show (TxInfoResult era)
   ) =>
   Show (DijkstraStAnnTx l era)
