@@ -49,23 +49,15 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
-import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (
-  NewEpochState,
-  curPParamsEpochStateL,
-  lsUTxOStateL,
-  utxosGovStateL,
- )
-import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules.Ledger (
-  LedgerEnv,
+  LedgerEnv (..),
   ShelleyLedgerPredFailure,
   ledgerPpL,
   ledgerSlotNoL,
  )
-import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
-import Cardano.Ledger.State (UTxO, curPParamsGovStateL, utxoG)
+import Cardano.Ledger.State
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
@@ -262,9 +254,9 @@ instance ApplyTx ShelleyEra where
             (vtStAnnTx vtx)
         )
 
-type MempoolEnv era = Ledger.LedgerEnv era
+type MempoolEnv era = LedgerEnv era
 
-type MempoolState era = LedgerState.LedgerState era
+type MempoolState era = LedgerState era
 
 -- | Construct the environment used to validate transactions from the full
 -- ledger state.
@@ -285,16 +277,14 @@ mkMempoolEnv ::
   SlotNo ->
   MempoolEnv era
 mkMempoolEnv
-  LedgerState.NewEpochState
-    { LedgerState.nesEs
-    }
+  NewEpochState {nesEs}
   slot =
-    Ledger.LedgerEnv
-      { Ledger.ledgerSlotNo = slot
-      , Ledger.ledgerEpochNo = Nothing
-      , Ledger.ledgerIx = minBound
-      , Ledger.ledgerPp = nesEs ^. curPParamsEpochStateL
-      , Ledger.ledgerAccount = LedgerState.esChainAccountState nesEs
+    LedgerEnv
+      { ledgerSlotNo = slot
+      , ledgerEpochNo = Nothing
+      , ledgerIx = minBound
+      , ledgerPp = nesEs ^. curPParamsEpochStateL
+      , ledgerAccount = esChainAccountState nesEs
       }
 
 -- | Construct a mempool state from the wider ledger state.
@@ -303,7 +293,7 @@ mkMempoolEnv
 --   regenerated when the ledger state gets updated (e.g. through application of
 --   a new block).
 mkMempoolState :: NewEpochState era -> MempoolState era
-mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} = LedgerState.esLState nesEs
+mkMempoolState NewEpochState {nesEs} = esLState nesEs
 
 -- | Transform a function over mempool states to one over the full
 -- 'NewEpochState'.
@@ -316,9 +306,9 @@ overNewEpochState f st = do
   f (mkMempoolState st)
     <&> \ls ->
       st
-        { LedgerState.nesEs =
-            (LedgerState.nesEs st)
-              { LedgerState.esLState = ls
+        { nesEs =
+            (nesEs st)
+              { esLState = ls
               }
         }
 
