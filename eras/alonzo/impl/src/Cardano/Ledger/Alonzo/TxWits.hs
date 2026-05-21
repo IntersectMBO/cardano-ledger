@@ -76,6 +76,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   TokenType (..),
   allowTag,
+  decodeAccA,
   decodeList,
   decodeListLenOrIndef,
   decodeListLikeWithCount,
@@ -91,8 +92,6 @@ import Cardano.Ledger.Binary (
   ifDecoderVersionAtLeast,
   ifEncodingVersionAtLeast,
   listLenInt,
-  mapSparseField,
-  mapSparseFieldA,
   natVersion,
   peekTokenType,
   setTag,
@@ -626,27 +625,27 @@ instance
         ifDecoderVersionAtLeast (natVersion @12) nonEmptyNoDuplicatesDecoder nonEmptyDecoder
       {-# INLINE addrWitsSetDecoder #-}
 
-      setOrListDecoder :: (Ord a, DecCBOR a) => Decoder s (Set a)
-      setOrListDecoder =
+      setOrListWitsDecoder :: (Ord a, DecCBOR a) => Decoder s (Set a)
+      setOrListWitsDecoder =
         ifDecoderVersionAtLeast
           (natVersion @9)
           addrWitsSetDecoder
           (Set.fromList <$> decodeList decCBOR)
-      {-# INLINE setOrListDecoder #-}
+      {-# INLINE setOrListWitsDecoder #-}
 
       decoderByKey ::
         Annotator (AlonzoTxWitsRaw era) ->
         Word ->
         Maybe (Decoder s (Annotator (AlonzoTxWitsRaw era)))
       decoderByKey acc = \case
-        0 -> Just $ mapSparseField (\x w -> w {atwrAddrTxWits = x}) setOrListDecoder acc
-        1 -> Just $ mapSparseFieldA addScriptsTxWitsRaw nativeScriptsDecoder acc
-        2 -> Just $ mapSparseField (\x w -> w {atwrBootAddrTxWits = x}) setOrListDecoder acc
-        3 -> Just $ mapSparseField addScriptsTxWitsRaw (alonzoPlutusScriptDecoder SPlutusV1) acc
-        4 -> Just $ mapSparseFieldA (\x w -> w {atwrDatsTxWits = x}) decCBOR acc
-        5 -> Just $ mapSparseFieldA (\x w -> w {atwrRdmrsTxWits = x}) decCBOR acc
-        6 -> Just $ mapSparseField addScriptsTxWitsRaw (alonzoPlutusScriptDecoder SPlutusV2) acc
-        7 -> Just $ mapSparseField addScriptsTxWitsRaw (alonzoPlutusScriptDecoder SPlutusV3) acc
+        0 -> Just $ decodeAccA acc (\x w -> w {atwrAddrTxWits = x}) (pure <$> setOrListWitsDecoder)
+        1 -> Just $ decodeAccA acc addScriptsTxWitsRaw nativeScriptsDecoder
+        2 -> Just $ decodeAccA acc (\x w -> w {atwrBootAddrTxWits = x}) (pure <$> setOrListWitsDecoder)
+        3 -> Just $ decodeAccA acc addScriptsTxWitsRaw (pure <$> alonzoPlutusScriptDecoder SPlutusV1)
+        4 -> Just $ decodeAccA acc (\x w -> w {atwrDatsTxWits = x}) decCBOR
+        5 -> Just $ decodeAccA acc (\x w -> w {atwrRdmrsTxWits = x}) decCBOR
+        6 -> Just $ decodeAccA acc addScriptsTxWitsRaw (pure <$> alonzoPlutusScriptDecoder SPlutusV2)
+        7 -> Just $ decodeAccA acc addScriptsTxWitsRaw (pure <$> alonzoPlutusScriptDecoder SPlutusV3)
         _ -> Nothing
       {-# INLINE decoderByKey #-}
 

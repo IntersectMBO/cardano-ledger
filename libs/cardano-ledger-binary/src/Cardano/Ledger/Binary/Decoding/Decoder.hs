@@ -80,10 +80,9 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeListLikeEnforceNoDuplicates,
   decodeMapContents,
   decodeSparseKeyed,
-  mapSparseField,
-  mapSparseFieldA,
-  mapSparseFieldOptional,
-  mapSparseFieldGuarded,
+  decodeAccA,
+  failOnNull,
+  failOnMempty,
 
   -- **** Applicaitve
   decodeMapTraverse,
@@ -1257,71 +1256,27 @@ decodeSparseKeyed name requiredFields initial decoderByKey = do
     {-# INLINE step #-}
 {-# INLINE decodeSparseKeyed #-}
 
--- | Decode a value and apply it to a 'Functor'-wrapped accumulator
--- (typically 'Annotator'). Intended for use inside the per-key handler
--- of 'decodeSparseKeyed'.
-mapSparseField ::
-  Functor ann =>
-  -- | Setter that updates the underlying record with the decoded value.
+-- | Decode a value and add it to the accumulator using the
+-- `Applicative` instance.
+decodeAccA ::
+  Applicative f =>
+  -- | Applicative accumulator
+  f t ->
+  -- | Function to adds the decoded value to the accumulator
   (x -> t -> t) ->
-  -- | Decoder for the field value.
-  Decoder s x ->
-  -- | Current accumulator.
-  ann t ->
-  Decoder s (ann t)
-mapSparseField setter dec acc = do
-  !x <- dec
-  pure $ setter x <$> acc
-{-# INLINE mapSparseField #-}
-
--- | Like 'mapSparseField' but the decoder yields an
--- 'Applicative'-wrapped value (e.g. @'Annotator' x@).
-mapSparseFieldA ::
-  Applicative ann =>
-  (x -> t -> t) ->
-  Decoder s (ann x) ->
-  ann t ->
-  Decoder s (ann t)
-mapSparseFieldA setter dec acc = do
+  -- | Decoder of the Applicative value
+  Decoder s (f x) ->
+  Decoder s (f t)
+decodeAccA acc setter dec = do
   !x <- dec
   pure $ setter <$> x <*> acc
-{-# INLINE mapSparseFieldA #-}
+{-# INLINE decodeAccA #-}
 
--- | Like 'mapSparseField' but the setter expects a 'StrictMaybe' value.
--- Useful when the underlying field is a @'Lens'' t ('StrictMaybe' x)@
--- and the key's absence implies 'SNothing' (already set by the initial
--- accumulator).
-mapSparseFieldOptional ::
-  Functor ann =>
-  (StrictMaybe x -> t -> t) ->
-  Decoder s x ->
-  ann t ->
-  Decoder s (ann t)
-mapSparseFieldOptional setter dec acc = do
-  !x <- dec
-  pure $ setter (SJust x) <$> acc
-{-# INLINE mapSparseFieldOptional #-}
+failOnNull :: (Foldable f, MonadFail m) => f a -> String -> m ()
+failOnNull f msg = when (null f) $ fail msg
 
--- | Like 'mapSparseField' but reject the value when the predicate is
--- satisfied.
-mapSparseFieldGuarded ::
-  Functor ann =>
-  -- | Type name; failure is prefixed with @name:@.
-  String ->
-  -- | Error message used when the predicate rejects the value.
-  String ->
-  -- | Predicate: 'True' means reject.
-  (x -> Bool) ->
-  (x -> t -> t) ->
-  Decoder s x ->
-  ann t ->
-  Decoder s (ann t)
-mapSparseFieldGuarded name msg reject setter dec acc = do
-  !x <- dec
-  if reject x
-    then fail $ name <> ":" <> msg
-    else pure $ setter x <$> acc
-{-# INLINE mapSparseFieldGuarded #-}
+failOnMempty :: (Eq f, Monoid f, MonadFail m) => f -> String -> m ()
+failOnMempty f msg = when (f == mempty) $ fail msg
 
 --------------------------------------------------------------------------------
 -- Time

@@ -146,7 +146,6 @@ import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq)
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.OMap.Strict (OMap)
 import qualified Data.OMap.Strict as OMap
 import Data.OSet.Strict (OSet, decodeOSet)
@@ -336,152 +335,114 @@ instance
       (decoderByKey sTxLevel)
     where
       name = show . typeRep $ Proxy @(DijkstraTxBodyRaw l era)
+      emptyNamedFailure fieldName requirement =
+        name <> ": " <> emptyFailure fieldName requirement
       decoderByKey ::
         STxBothLevels l era ->
         Annotator (DijkstraTxBodyRaw l era) ->
         Word ->
         Maybe (Decoder s (Annotator (DijkstraTxBodyRaw l era)))
       decoderByKey sTxLevel acc = \case
-        0 -> Just $ mapSparseField (inputsDijkstraTxBodyRawL .~) decCBOR acc
-        1 -> Just $ mapSparseField (outputsDijkstraTxBodyRawL .~) decCBOR acc
-        2 | STopTx <- sTxLevel -> Just $ mapSparseField (feeDijkstraTxBodyRawL .~) decCBOR acc
-        3 -> Just $ mapSparseFieldOptional (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) decCBOR acc
+        0 -> Just $ decodeAccA acc (inputsDijkstraTxBodyRawL .~) (pure <$> decCBOR)
+        1 -> Just $ decodeAccA acc (outputsDijkstraTxBodyRawL .~) (pure <$> decCBOR)
+        2 | STopTx <- sTxLevel -> Just $ decodeAccA acc (feeDijkstraTxBodyRawL .~) (pure <$> decCBOR)
+        3 -> Just $ decodeAccA acc (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) (pure . SJust <$> decCBOR)
         4 ->
           Just $
-            mapSparseFieldGuarded
-              name
-              (emptyFailure "Certificates" "non-empty")
-              OSet.null
-              (certsDijkstraTxBodyRawL .~)
-              decCBOR
-              acc
+            decodeAccA acc (certsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull x $ emptyNamedFailure "Certificates" "non-empty"
+                pure x
         5 ->
           Just $
-            mapSparseFieldGuarded
-              name
-              (emptyFailure "Withdrawals" "non-empty")
-              (null . unWithdrawals)
-              (withdrawalsDijkstraTxBodyRawL .~)
-              decCBOR
-              acc
-        7 -> Just $ mapSparseFieldOptional (auxDataHashDijkstraTxBodyRawL .~) decCBOR acc
-        8 -> Just $ mapSparseFieldOptional (vldtDijkstraTxBodyRawL . invalidBeforeL .~) decCBOR acc
+            decodeAccA acc (withdrawalsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull (unWithdrawals x) $ emptyNamedFailure "Withdrawals" "non-empty"
+                pure x
+        7 -> Just $ decodeAccA acc (auxDataHashDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
+        8 -> Just $ decodeAccA acc (vldtDijkstraTxBodyRawL . invalidBeforeL .~) (pure . SJust <$> decCBOR)
         9 ->
           Just $
-            mapSparseFieldGuarded
-              name
-              (emptyFailure "Mint" "non-empty")
-              (== mempty)
-              (mintDijkstraTxBodyRawL .~)
-              decCBOR
-              acc
-        11 -> Just $ mapSparseFieldOptional (scriptIntegrityHashDijkstraTxBodyRawL .~) decCBOR acc
+            decodeAccA acc (mintDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnMempty x $ emptyNamedFailure "Mint" "non-empty"
+                pure x
+        11 -> Just $ decodeAccA acc (scriptIntegrityHashDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         13
           | STopTx <- sTxLevel ->
               Just $
-                mapSparseFieldGuarded
-                  name
-                  (emptyFailure "Collateral Inputs" "non-empty")
-                  null
-                  (collateralInputsDijkstraTxBodyRawL .~)
-                  decCBOR
-                  acc
-        -- Keys 14 and 22 are decoded with 'mapSparseField' directly.
-        -- Their lenses target plain values (@'OSet' (Credential Guard)@
-        -- and @'Coin'@), so there's no 'StrictMaybe' to wrap or unwrap.
-        --
-        -- The round-trip stays consistent and symmetric because
-        -- the encoder omits each key when its value equals the
-        -- default, and the decoder's initial accumulator (built by
-        -- 'basicDijkstraTxBodyRaw') starts each field at that same
-        -- default.
-        --
-        -- For example:
-        --   * Key 14 — encoder: @Omit null (Key 14 (To dtbrGuards))@.
-        --   The key is in the serialised bits only when @dtbrGuards@
-        --   is non-empty. The accumulator starts at @mempty@, so a
-        --   missing key keeps the field at @mempty@ — matching what
-        --   the sender skipped.
-        --
-        --   * Key 22 — encoder: @Omit (== mempty) (Key 22 (To
-        --   dtbrTreasuryDonation))@. The key is in the serialised bits
-        --   only when the donation is non-zero. The accumulator starts
-        --   at @mempty@, so a missing key keeps the field at @zero@.
+                decodeAccA acc (collateralInputsDijkstraTxBodyRawL .~) $
+                  pure <$> do
+                    x <- decCBOR
+                    failOnNull x $ emptyNamedFailure "Collateral Inputs" "non-empty"
+                    pure x
         14 ->
-          Just $ mapSparseField (guardsDijkstraTxBodyRawL .~) decodeGuards acc
-        15 -> Just $ mapSparseFieldOptional (networkIdDijkstraTxBodyRawL .~) decCBOR acc
+          -- plain field - initial accumulator already holds the omit-default
+          Just $ decodeAccA acc (guardsDijkstraTxBodyRawL .~) (pure <$> decodeGuards)
+        15 -> Just $ decodeAccA acc (networkIdDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         16
           | STopTx <- sTxLevel ->
-              Just $ mapSparseFieldOptional (collateralReturnDijkstraTxBodyRawL .~) decCBOR acc
+              Just $ decodeAccA acc (collateralReturnDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         17
           | STopTx <- sTxLevel ->
-              Just $ mapSparseFieldOptional (totalCollateralDijkstraTxBodyRawL .~) decCBOR acc
+              Just $ decodeAccA acc (totalCollateralDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         18 ->
           Just $
-            mapSparseFieldGuarded
-              name
-              (emptyFailure "Reference Inputs" "non-empty")
-              null
-              (referenceInputsDijkstraTxBodyRawL .~)
-              decCBOR
-              acc
+            decodeAccA acc (referenceInputsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull x $ emptyNamedFailure "Reference Inputs" "non-empty"
+                pure x
         19 ->
           Just $
-            mapSparseFieldGuarded
-              name
-              (emptyFailure "VotingProcedures" "non-empty")
-              (null . unVotingProcedures)
-              (votingProceduresDijkstraTxBodyRawL .~)
-              decCBOR
-              acc
+            decodeAccA acc (votingProceduresDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull (unVotingProcedures x) $ emptyNamedFailure "VotingProcedures" "non-empty"
+                pure x
         20 ->
           Just $
-            mapSparseFieldGuarded
-              name
-              (emptyFailure "ProposalProcedures" "non-empty")
-              OSet.null
-              (proposalProceduresDijkstraTxBodyRawL .~)
-              decCBOR
-              acc
-        21 -> Just $ mapSparseFieldOptional (currentTreasuryValueDijkstraTxBodyRawL .~) decCBOR acc
+            decodeAccA acc (proposalProceduresDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull x $ emptyNamedFailure "ProposalProcedures" "non-empty"
+                pure x
+        21 -> Just $ decodeAccA acc (currentTreasuryValueDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         22 ->
-          -- See comment about field 14.
+          -- plain field - initial accumulator already holds the omit-default
           Just $
-            mapSparseField
-              (treasuryDonationDijkstraTxBodyRawL .~)
-              (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero")
+            decodeAccA
               acc
+              (treasuryDonationDijkstraTxBodyRawL .~)
+              (pure <$> decodePositiveCoin (emptyFailure "Treasury Donation" "non-zero"))
         23
           | STopTx <- sTxLevel ->
-              Just $ mapSparseFieldA (subTransactionsDijkstraTxBodyRawL .~) decodeSubTransactions acc
+              Just $ decodeAccA acc (subTransactionsDijkstraTxBodyRawL .~) decodeSubTransactions
         24
           | SSubTx <- sTxLevel ->
               Just $
-                mapSparseFieldGuarded
-                  name
-                  (emptyFailure "RequiredTopLevelGuards" "non-empty")
-                  Map.null
-                  (requiredTopLevelGuardsDijkstraTxBodyRawL .~)
-                  (decodeMap decCBOR (decodeNullStrictMaybe decCBOR))
-                  acc
+                decodeAccA acc (requiredTopLevelGuardsDijkstraTxBodyRawL .~) $
+                  pure <$> do
+                    x <- decodeMap decCBOR (decodeNullStrictMaybe decCBOR)
+                    failOnNull x $ emptyNamedFailure "RequiredTopLevelGuards" "non-empty"
+                    pure x
         25 ->
           Just $
-            mapSparseFieldGuarded
-              name
-              (emptyFailure "DirectDeposits" "non-empty")
-              (null . unDirectDeposits)
-              (directDepositsDijkstraTxBodyRawL .~)
-              decCBOR
-              acc
+            decodeAccA acc (directDepositsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull (unDirectDeposits x) $ emptyNamedFailure "DirectDeposits" "non-empty"
+                pure x
         26 ->
           Just $
-            mapSparseFieldGuarded
-              name
-              (emptyFailure "AccountBalanceIntervals" "non-empty")
-              (null . unAccountBalanceIntervals)
-              (accountBalanceIntervalsDijkstraTxBodyRawL .~)
-              decCBOR
-              acc
+            decodeAccA acc (accountBalanceIntervalsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull (unAccountBalanceIntervals x) $ emptyNamedFailure "AccountBalanceIntervals" "non-empty"
+                pure x
         _ -> Nothing
       decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
       decodeSubTransactions =
