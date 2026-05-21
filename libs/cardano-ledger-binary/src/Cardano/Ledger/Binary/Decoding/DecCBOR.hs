@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -44,7 +45,7 @@ import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Decoding.Decoder
-import Cardano.Ledger.Binary.Version (Version, byronProtVer)
+import Cardano.Ledger.Binary.Version (Version, byronProtVer, natVersion)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (
   EpochInterval (..),
@@ -355,7 +356,11 @@ instance DecCBOR BS.ByteString where
   {-# INLINE decCBOR #-}
 
 instance DecCBOR T.Text where
-  decCBOR = decodeString
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @12)
+      decodeStringDefOrIndef
+      decodeString
   {-# INLINE decCBOR #-}
 
 instance DecCBOR BSL.ByteString where
