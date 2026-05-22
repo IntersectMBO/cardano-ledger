@@ -145,6 +145,8 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeStringIndef,
   decodeStringIndefLen,
   decodeStringDefOrIndef,
+  decodeBytesIndefLen,
+  decodeBytesDefOrIndef,
   decodeTag,
   decodeTag64,
   decodeTag64Canonical,
@@ -1320,7 +1322,11 @@ binaryGetDecoder ::
   Get a ->
   Decoder s a
 binaryGetDecoder name getter = do
-  bs <- decodeBytes
+  bs <-
+    ifDecoderVersionAtLeast
+      (natVersion @12)
+      decodeBytesDefOrIndef
+      decodeBytes
   case runGetOrFail getter (BSL.fromStrict bs) of
     Left (_, _, err) -> cborError $ DecoderErrorCustom name (Text.pack err)
     Right (leftOver, _, ha)
@@ -1601,6 +1607,30 @@ decodeStringDefOrIndef =
     C.TypeString -> decodeString
     C.TypeStringIndef -> decodeStringIndefLen
     _ -> cborError $ DecoderErrorCustom "Text" "expected string"
+
+-- | Loop over chunks of an indefinite-length byte string until a break token
+-- is encountered, concatenating the chunks in order. Assumes the leading
+-- indefinite-length marker has already been consumed (e.g. via
+-- 'decodeBytesIndef').
+decodeBytesIndefLen :: Decoder s BS.ByteString
+decodeBytesIndefLen = go []
+  where
+    go acc = do
+      stop <- decodeBreakOr
+      if stop
+        then pure $! BS.concat (reverse acc)
+        else do
+          !chunk <- decodeBytes
+          go (chunk : acc)
+
+-- | Decode a byte string that may be either definite-length or
+-- indefinite-length encoded.
+decodeBytesDefOrIndef :: Decoder s BS.ByteString
+decodeBytesDefOrIndef =
+  peekTokenType >>= \case
+    C.TypeBytes -> decodeBytes
+    C.TypeBytesIndef -> decodeBytesIndef *> decodeBytesIndefLen
+    _ -> cborError $ DecoderErrorCustom "ByteString" "expected bytes"
 
 decodeTag :: Decoder s Word
 decodeTag = fromPlainDecoder C.decodeTag
