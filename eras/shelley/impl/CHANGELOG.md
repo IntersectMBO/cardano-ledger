@@ -2,6 +2,8 @@
 
 ## 1.19.0.0
 
+* Add `internalApplyTxWithValidation` to `ApplyTx`
+* Change return type of `ruleApplyTxValidation` to `ValidatedTx`
 * Add:
   - `ValidatedTx`
   - `getValidatedTxStAnnTx`
