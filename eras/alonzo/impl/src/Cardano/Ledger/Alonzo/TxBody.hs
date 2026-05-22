@@ -83,6 +83,7 @@ import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
+  ToKeyValuePairs (toKeyValuePairs),
  )
 import Cardano.Ledger.Binary (
   Annotator,
@@ -109,6 +110,9 @@ import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..), deepseq)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), (.:), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map
 import Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet
@@ -491,6 +495,58 @@ instance
 
 instance Typeable l => DecCBOR (Annotator (AlonzoTxBodyRaw l AlonzoEra)) where
   decCBOR = pure <$> decCBOR
+
+instance ToKeyValuePairs (TxBody TopTx AlonzoEra) where
+  toKeyValuePairs
+    AlonzoTxBody
+      { atbInputs
+      , atbCollateral
+      , atbOutputs
+      , atbCerts
+      , atbWithdrawals
+      , atbTxFee
+      , atbValidityInterval
+      , atbUpdate
+      , atbReqSignerHashes
+      , atbMint
+      , atbScriptIntegrityHash
+      , atbAuxDataHash
+      , atbTxNetworkId
+      } =
+      [ "inputs" .= Set.toList atbInputs
+      , "collateral" .= Set.toList atbCollateral
+      , "outputs" .= F.toList atbOutputs
+      , "certs" .= F.toList atbCerts
+      , "withdrawals" .= atbWithdrawals
+      , "fee" .= atbTxFee
+      , "validityInterval" .= atbValidityInterval
+      , "update" .= atbUpdate
+      , "reqSignerHashes" .= Set.toList atbReqSignerHashes
+      , "mint" .= atbMint
+      , "scriptIntegrityHash" .= atbScriptIntegrityHash
+      , "auxDataHash" .= atbAuxDataHash
+      , "networkId" .= atbTxNetworkId
+      ]
+
+instance ToJSON (TxBody TopTx AlonzoEra) where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance FromJSON (TxBody TopTx AlonzoEra) where
+  parseJSON = Aeson.withObject "TxBody AlonzoEra" $ \o ->
+    AlonzoTxBody
+      <$> (Set.fromList <$> o .: "inputs")
+      <*> (Set.fromList <$> o .: "collateral")
+      <*> (StrictSeq.fromList <$> o .: "outputs")
+      <*> (StrictSeq.fromList <$> o .: "certs")
+      <*> o .: "withdrawals"
+      <*> o .: "fee"
+      <*> o .: "validityInterval"
+      <*> o .: "update"
+      <*> (Set.fromList <$> o .: "reqSignerHashes")
+      <*> o .: "mint"
+      <*> o .: "scriptIntegrityHash"
+      <*> o .: "auxDataHash"
+      <*> o .: "networkId"
 
 emptyAlonzoTxBodyRaw :: AlonzoTxBodyRaw TopTx era
 emptyAlonzoTxBodyRaw =

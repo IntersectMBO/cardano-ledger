@@ -234,6 +234,8 @@ class
   , forall l. Show (TxBody l era)
   , forall l. Eq (TxBody l era)
   , forall l. EqRaw (TxBody l era)
+  , ToJSON (TxBody TopTx era)
+  , FromJSON (TxBody TopTx era)
   ) =>
   EraTxBody era
   where

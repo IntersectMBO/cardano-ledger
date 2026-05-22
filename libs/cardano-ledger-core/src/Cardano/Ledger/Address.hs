@@ -987,10 +987,16 @@ instance Semigroup Withdrawals where
 instance Monoid Withdrawals where
   mempty = Withdrawals Map.empty
 
+instance ToJSON Withdrawals where
+  toJSON (Withdrawals m) = toJSON $ Map.toList m
+
+instance FromJSON Withdrawals where
+  parseJSON v = Withdrawals . Map.fromList <$> parseJSON v
+
 -- | Direct deposits to account addresses.
 newtype DirectDeposits = DirectDeposits {unDirectDeposits :: Map AccountAddress Coin}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
+  deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR, ToJSON, FromJSON)
 
 instance Semigroup DirectDeposits where
   DirectDeposits d1 <> DirectDeposits d2 = DirectDeposits $ Map.unionWith (<>) d1 d2

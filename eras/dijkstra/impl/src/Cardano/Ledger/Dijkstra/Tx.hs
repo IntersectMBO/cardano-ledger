@@ -74,6 +74,8 @@ import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
@@ -329,6 +331,34 @@ dijkstraTxEqRaw tx1 tx2 =
 
 instance EqRaw (Tx l DijkstraEra) where
   eqRaw = dijkstraTxEqRaw
+
+instance
+  ( ToJSON (TxBody SubTx DijkstraEra)
+  , ToJSON (TxWits DijkstraEra)
+  , ToJSON (TxAuxData DijkstraEra)
+  ) =>
+  ToJSON (Tx SubTx DijkstraEra)
+  where
+  toJSON (MkDijkstraTx (DijkstraSubTx {dstBody, dstWits, dstAuxData})) =
+    Aeson.object
+      [ "dstBody" .= dstBody
+      , "dstWits" .= dstWits
+      , "dstAuxData" .= dstAuxData
+      ]
+
+instance
+  ( FromJSON (TxBody SubTx DijkstraEra)
+  , FromJSON (TxWits DijkstraEra)
+  , FromJSON (TxAuxData DijkstraEra)
+  ) =>
+  FromJSON (Tx SubTx DijkstraEra)
+  where
+  parseJSON = withObject "Tx SubTx DijkstraEra" $ \o ->
+    fmap MkDijkstraTx $
+      DijkstraSubTx
+        <$> o .: "dstBody"
+        <*> o .: "dstWits"
+        <*> o .: "dstAuxData"
 
 dijkstraTxL :: Lens' (Tx l DijkstraEra) (DijkstraTx l DijkstraEra)
 dijkstraTxL = lens unDijkstraTx (\x y -> x {unDijkstraTx = y})

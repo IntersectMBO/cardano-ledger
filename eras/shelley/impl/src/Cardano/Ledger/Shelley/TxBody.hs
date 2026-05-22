@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -43,7 +42,7 @@ module Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Address (
   pattern RewardAccount,
  )
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), ToKeyValuePairs (toKeyValuePairs))
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -84,6 +83,9 @@ import Cardano.Ledger.Shelley.TxOut ()
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), deepseq)
+import Data.Aeson (FromJSON, ToJSON, (.:), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -143,6 +145,43 @@ instance Typeable l => DecCBOR (ShelleyTxBodyRaw l ShelleyEra) where
 
 instance Typeable l => DecCBOR (Annotator (ShelleyTxBodyRaw l ShelleyEra)) where
   decCBOR = pure <$> decCBOR
+
+instance ToKeyValuePairs (TxBody TopTx ShelleyEra) where
+  toKeyValuePairs
+    ShelleyTxBody
+      { stbInputs
+      , stbOutputs
+      , stbCerts
+      , stbWithdrawals
+      , stbTxFee
+      , stbTTL
+      , stbUpdate
+      , stbMDHash
+      } =
+      [ "inputs" .= Set.toList stbInputs
+      , "outputs" .= F.toList stbOutputs
+      , "certs" .= F.toList stbCerts
+      , "withdrawals" .= stbWithdrawals
+      , "fee" .= stbTxFee
+      , "ttl" .= stbTTL
+      , "update" .= stbUpdate
+      , "auxDataHash" .= stbMDHash
+      ]
+
+instance ToJSON (TxBody TopTx ShelleyEra) where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance FromJSON (TxBody TopTx ShelleyEra) where
+  parseJSON = Aeson.withObject "ShelleyTxBody" $ \o ->
+    ShelleyTxBody
+      <$> (Set.fromList <$> o .: "inputs")
+      <*> (StrictSeq.fromList <$> o .: "outputs")
+      <*> (StrictSeq.fromList <$> o .: "certs")
+      <*> o .: "withdrawals"
+      <*> o .: "fee"
+      <*> o .: "ttl"
+      <*> o .: "update"
+      <*> o .: "auxDataHash"
 
 -- =================================================================
 -- Composable components for building TxBody optional sparse serialisers.

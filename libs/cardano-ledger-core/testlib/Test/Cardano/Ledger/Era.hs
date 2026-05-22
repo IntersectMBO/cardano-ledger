@@ -46,6 +46,7 @@ class
   , EraGenesis era
   , -- Arbitrary Core
     Arbitrary (Tx TopTx era)
+  , Arbitrary (TxBody SubTx era)
   , Arbitrary (TxBody TopTx era)
   , Arbitrary (TxWits era)
   , Arbitrary (TxOut era)
@@ -65,6 +66,7 @@ class
   , Arbitrary (AccountState era)
   , -- ToExpr Core
     ToExpr (Tx TopTx era)
+  , ToExpr (TxBody SubTx era)
   , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   , ToExpr (TxOut era)
@@ -178,6 +180,10 @@ ledgerEraTestMain extraEraSpec =
           roundTripAesonProperty @(TxWits era)
         prop (show $ typeRep $ Proxy @(TxOut era)) $
           roundTripAesonProperty @(TxOut era)
+        prop (show $ typeRep $ Proxy @(TxBody SubTx era)) $
+          roundTripAesonProperty @(TxBody SubTx era)
+        prop (show $ typeRep $ Proxy @(TxBody TopTx era)) $
+          roundTripAesonProperty @(TxBody TopTx era)
       describe "Era-specific spec" extraEraSpec
 
 -- | This is a helper function that uses `mkTestAccountState` to register an account.
