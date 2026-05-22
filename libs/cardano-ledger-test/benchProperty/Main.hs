@@ -41,6 +41,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended (Embed (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
+import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.Common (ledgerTestMain)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
   CHAIN,

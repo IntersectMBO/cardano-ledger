@@ -2,8 +2,8 @@
 
 ## 1.16.0.0
 
+* Introduce `LEDGERS` and `STS` instance and wire it to `EraRule LEDGERS`
 * Export `alonzoPlutusScriptDecoder` from `Cardano.Ledger.Alonzo.TxWits`
-* Add `generate-cbor` executable
 * Rename the `Rewarding` verb to `Withdrawing` and deprecate the old names:
   - `AlonzoRewarding` -> `AlonzoWithdrawing`
   - `RewardingPurpose` -> `WithdrawingPurpose`
