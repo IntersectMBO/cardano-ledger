@@ -6,6 +6,7 @@
 * Add `DecCBOR (TxCert era)` and `DecCBOR (PlutusPurpose AsItem era)` constraints to the `DecCBOR (BabbageContextError era)` instance
 * Add `AlonzoEraTransition` instance for `BabbageEra`
 * Add `FromJSON` instance for `BabbageTxOut era`
+* Add `ToJSON` and `FromJSON` instances for `TxBody TopTx BabbageEra`
 * Change `toPlutusV2Args` to accept `LedgerTxInfo era` argument instead of `ProtVer` and `Maybe (Data era)`
 * Rename `transRedeemerPtr` to `transRedeemerPointerV2V3`
 * Add `EncCBOR`, `ToCBOR` for `Block`

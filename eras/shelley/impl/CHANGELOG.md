@@ -10,7 +10,15 @@
 * Add `DecCBOR` instances for `Annotator Block`
 * Cap the reward pot of an over-leveraged stake pool in `mkPoolRewardInfo`, whenever the
   maximum pledge leverage is set in the protocol parameters
-* Add `FromJSON` instance for `ShelleyTxOut era`
+* Add `FromJSON` instance for
+  - `GenesisDelegCert`
+  - `MIRPot`
+  - `MIRTarget`
+  - `MIRCert`
+  - `ShelleyTxOut era`
+* Add `ToJSON` and `FromJSON` instances for
+  - `TxBody TopTx ShelleyEra`
+  - `Update era`
 
 ### `testlib`
 

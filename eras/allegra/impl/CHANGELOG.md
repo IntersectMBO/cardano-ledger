@@ -28,6 +28,7 @@
 * Add `ToJSON` and `FromJSON` instances for
   - `AllegraTxAuxData era`
   - `Timelock era`
+  - `TxBody TopTx AllegraEra`
 * Export `allegraBasedEraNativeScriptToJSON` and `allegraBasedEraNativeScriptJSONParser` from `Cardano.Ledger.Allegra.Scripts`
 
 ### `cddl`
