@@ -261,6 +261,10 @@
 * Add `ToJSON` and `FromJSON` instances for
   - `DijkstraNativeScript era`
   - `AccountBalanceInterval era`
+  - `TxBody TopTx DijkstraEra`
+  - `TxBody SubTx DijkstraEra`
+  - `Tx TopTx DijkstraEra`
+  - `Tx SubTx DijkstraEra`
 * Add `FromJSON` instance for
   - `DijkstraScript era`
   - `DijkstraDelegCert`

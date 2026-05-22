@@ -50,6 +50,10 @@
 * Add `FromJSON (TxOut era)` as `EraTxOut` superclass constraint
 * Add `FromJSON t` as `Val t` superclass constraint
 * Add `ToJSON` and `FromJSON` instances for `Datum era`
+* Add `ToJSON (TxBody TopTx era)` and `FromJSON (TxBody TopTx era)` as `EraTxBody` superclass constraints
+* Add `ToJSON (Tx TopTx era)` and `FromJSON (Tx TopTx era)` as `EraTx` superclass constraints
+* Add `ToJSON` and `FromJSON` instances for `Withdrawals`
+* Add `FromJSON` instance for `ScriptHash` and `TxAuxDataHash`
 
 ### `testlib`
 
@@ -182,6 +186,7 @@
 * Add round-trip JSON property test for `TxAuxData era` to the shared era spec
 * Add round-trip JSON property test for `TxWits era` to the shared era spec
 * Add round-trip JSON property test for `TxOut era` to the shared era spec
+* Add round-trip JSON property test for `TxBody TopTx era` to the shared era spec
 
 ## 1.20.0.0
 

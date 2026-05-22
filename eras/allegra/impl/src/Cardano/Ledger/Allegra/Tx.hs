@@ -29,6 +29,7 @@ import Cardano.Ledger.Core (
   HasEraTxLevel (..),
   NativeScript,
   STxTopLevel (..),
+  TxLevel (..),
  )
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
@@ -44,6 +45,7 @@ import Cardano.Ledger.Shelley.Tx (
   witsShelleyTxL,
  )
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Set as Set (map)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -89,6 +91,12 @@ instance HasEraTxLevel Tx AllegraEra where
 
 instance EqRaw (Tx t AllegraEra) where
   eqRaw = shelleyTxEqRaw
+
+instance ToJSON (Tx TopTx AllegraEra) where
+  toJSON (MkAllegraTx tx) = toJSON tx
+
+instance FromJSON (Tx TopTx AllegraEra) where
+  parseJSON v = MkAllegraTx <$> parseJSON v
 
 instance Typeable t => DecCBOR (Annotator (Tx t AllegraEra)) where
   decCBOR = fmap MkAllegraTx <$> decCBOR

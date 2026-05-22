@@ -9,6 +9,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -34,7 +35,7 @@ module Cardano.Ledger.Shelley.Tx (
   shelleyTxEqRaw,
 ) where
 
-import Cardano.Ledger.BaseTypes (integralToBounded)
+import Cardano.Ledger.BaseTypes (ToKeyValuePairs (..), integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
@@ -60,6 +61,8 @@ import Cardano.Ledger.Shelley.TxWits ()
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor.Classes (Eq1 (..))
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -236,6 +239,47 @@ shelleyTxEqRaw tx1 tx2 =
 
 instance EqRaw (Tx l ShelleyEra) where
   eqRaw = shelleyTxEqRaw
+
+instance
+  ( ToJSON (TxBody TopTx era)
+  , ToJSON (TxWits era)
+  , ToJSON (TxAuxData era)
+  ) =>
+  ToKeyValuePairs (ShelleyTx TopTx era)
+  where
+  toKeyValuePairs ShelleyTx {stBody, stWits, stAuxData} =
+    [ "body" .= stBody
+    , "wits" .= stWits
+    , "auxData" .= stAuxData
+    ]
+
+instance
+  ( ToJSON (TxBody TopTx era)
+  , ToJSON (TxWits era)
+  , ToJSON (TxAuxData era)
+  ) =>
+  ToJSON (ShelleyTx TopTx era)
+  where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance
+  ( FromJSON (TxBody TopTx era)
+  , FromJSON (TxWits era)
+  , FromJSON (TxAuxData era)
+  ) =>
+  FromJSON (ShelleyTx TopTx era)
+  where
+  parseJSON = withObject "ShelleyTx" $ \o ->
+    ShelleyTx
+      <$> o .: "body"
+      <*> o .: "wits"
+      <*> o .: "auxData"
+
+instance ToJSON (Tx TopTx ShelleyEra) where
+  toJSON (MkShelleyTx tx) = toJSON tx
+
+instance FromJSON (Tx TopTx ShelleyEra) where
+  parseJSON v = MkShelleyTx <$> parseJSON v
 
 shelleyTxL :: Lens' (Tx l ShelleyEra) (ShelleyTx l ShelleyEra)
 shelleyTxL = lens unShelleyTx (\x y -> x {unShelleyTx = y})

@@ -113,6 +113,9 @@
   - `ConwayTxCert era`
   - `ConwayPlutusPurpose f era`
 * Add `ToJSON` instance for `DefaultVote`.
+* Add `ToJSON` and `FromJSON` instances for
+  - `TxBody TopTx ConwayEra`
+  - `Tx TopTx ConwayEra`
 
 ### cddl
 
