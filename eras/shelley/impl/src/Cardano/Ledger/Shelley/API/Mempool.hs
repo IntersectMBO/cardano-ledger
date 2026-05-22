@@ -168,6 +168,16 @@ class
     Tx TopTx era ->
     Either (ApplyTxError era) (MempoolState era, ValidatedTx era)
 
+  -- | Reapply a previously validated transaction.
+  --
+  -- /Warning/ - Should not be used directly. `reapplyValidatedTx` should be used instead.
+  internalReapplyValidatedTx ::
+    Globals ->
+    MempoolEnv era ->
+    MempoolState era ->
+    ValidatedTx era ->
+    Either (ApplyTxError era) (MempoolState era)
+
   -- | Validate a transaction against a mempool state for given STS
   -- options, and return the new mempool state, a "validated" 'TxInBlock
   applyTxValidation ::
@@ -232,6 +242,18 @@ instance ApplyTx ShelleyEra where
             tx
      in first ShelleyApplyTxError $
           ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
+
+  internalReapplyValidatedTx globals env state vtx =
+    fst
+      <$> first
+        ShelleyApplyTxError
+        ( ruleApplyTxValidation @"LEDGER"
+            (ValidateSuchThat (notElem lblStatic))
+            globals
+            env
+            state
+            (vtStAnnTx vtx)
+        )
 
 type MempoolEnv era = Ledger.LedgerEnv era
 
