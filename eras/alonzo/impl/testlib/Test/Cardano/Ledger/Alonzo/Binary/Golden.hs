@@ -88,7 +88,7 @@ txWitsDecodingFailsOnInvalidField version validFields =
           DecoderErrorDeserialiseFailure lbl (DeserialiseFailure 1 "expected word")
   where
     lbl = Binary.label $ Proxy @(Annotator (TxWits era))
-    typeName = show (typeRep (Proxy @(AlonzoTxWitsRaw era)))
+    typeName = show (typeRep (Proxy @(Annotator (AlonzoTxWitsRaw era))))
 
 spec ::
   forall era.
