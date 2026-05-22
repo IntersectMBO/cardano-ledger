@@ -379,21 +379,31 @@ instance DecCBOR BSL.ByteString where
 
 instance DecCBOR ShortByteString where
   decCBOR = do
-    BA (Prim.ByteArray ba) <- decodeByteArray
-    return $ SBS ba
+    BA (Prim.ByteArray ba) <- decodeByteArrayVersioned
+    pure $ SBS ba
   {-# INLINE decCBOR #-}
 
 instance DecCBOR ByteArray where
-  decCBOR = decodeByteArray
+  decCBOR = decodeByteArrayVersioned
   {-# INLINE decCBOR #-}
 
 instance DecCBOR Prim.ByteArray where
-  decCBOR = unBA <$> decodeByteArray
+  decCBOR = unBA <$> decodeByteArrayVersioned
   {-# INLINE decCBOR #-}
 
 instance DecCBOR SlicedByteArray where
-  decCBOR = fromByteArray . unBA <$> decodeByteArray
+  decCBOR = fromByteArray . unBA <$> decodeByteArrayVersioned
   {-# INLINE decCBOR #-}
+
+-- | Like 'decodeByteArray', but accepts indefinite-length byte string
+-- encodings starting at protocol version 12.
+decodeByteArrayVersioned :: Decoder s ByteArray
+decodeByteArrayVersioned =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    decodeByteArrayDefOrIndef
+    decodeByteArray
+{-# INLINE decodeByteArrayVersioned #-}
 
 instance DecCBOR a => DecCBOR [a] where
   decCBOR = decodeList decCBOR

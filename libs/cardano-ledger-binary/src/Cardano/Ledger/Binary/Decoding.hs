@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -236,7 +237,12 @@ decodeNestedCbor = do
 --
 -- then `decodeNestedCborBytes` yields the inner 'DEADBEEF', unchanged.
 decodeNestedCborBytes :: Decoder s BS.ByteString
-decodeNestedCborBytes = decodeNestedCborTag >> decodeBytes
+decodeNestedCborBytes = do
+  decodeNestedCborTag
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    decodeBytesDefOrIndef
+    decodeBytes
 {-# INLINE decodeNestedCborBytes #-}
 
 -- $annotated

@@ -147,6 +147,8 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeStringDefOrIndef,
   decodeBytesIndefLen,
   decodeBytesDefOrIndef,
+  decodeByteArrayIndefLen,
+  decodeByteArrayDefOrIndef,
   decodeTag,
   decodeTag64,
   decodeTag64Canonical,
@@ -186,6 +188,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain (assertTag, decodeTagMaybe
 import Cardano.Ledger.Binary.Version (Version, mkVersion32, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
 import Codec.CBOR.ByteArray (ByteArray (..))
+import qualified Codec.CBOR.ByteArray as CBA
 import qualified Codec.CBOR.Decoding as C (
   ByteOffset,
   DecodeAction (..),
@@ -1631,6 +1634,20 @@ decodeBytesDefOrIndef =
     C.TypeBytes -> decodeBytes
     C.TypeBytesIndef -> decodeBytesIndef *> decodeBytesIndefLen
     _ -> cborError $ DecoderErrorCustom "ByteString" "expected bytes"
+
+-- | 'decodeBytesIndefLen' specialised to the cborg 'ByteArray' type. Assumes
+-- the leading indefinite-length marker has already been consumed (e.g. via
+-- 'decodeBytesIndef').
+decodeByteArrayIndefLen :: Decoder s ByteArray
+decodeByteArrayIndefLen = CBA.fromByteString <$> decodeBytesIndefLen
+
+-- | 'decodeBytesDefOrIndef' specialised to the cborg 'ByteArray' type.
+decodeByteArrayDefOrIndef :: Decoder s ByteArray
+decodeByteArrayDefOrIndef =
+  peekTokenType >>= \case
+    C.TypeBytes -> decodeByteArray
+    C.TypeBytesIndef -> decodeByteArrayIndefLen
+    _ -> cborError $ DecoderErrorCustom "ByteArray" "expected bytes"
 
 decodeTag :: Decoder s Word
 decodeTag = fromPlainDecoder C.decodeTag
