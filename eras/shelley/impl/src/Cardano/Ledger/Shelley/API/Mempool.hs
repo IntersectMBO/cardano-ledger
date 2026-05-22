@@ -38,6 +38,7 @@ module Cardano.Ledger.Shelley.API.Mempool (
   MempoolEnv,
   MempoolState,
   unsafeMakeValidated,
+  unsafeMakeValidatedTx,
 
   -- * Exports for compatibility
   mkMempoolEnv,
@@ -120,6 +121,27 @@ coerceValidated (Validated a) = Validated $ coerce a
 -- Don't use this except in Testing to make Arbitrary instances, etc.
 unsafeMakeValidated :: tx -> Validated tx
 unsafeMakeValidated = Validated
+
+-- | Build a 'ValidatedTx' without running the LEDGER rule - should only be used for testing.
+unsafeMakeValidatedTx ::
+  ApplyTx era =>
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  Tx TopTx era ->
+  ValidatedTx era
+unsafeMakeValidatedTx globals env state tx =
+  ValidatedTx
+    { vtStAnnTx =
+        mkStAnnTx
+          (epochInfo globals)
+          (systemStart globals)
+          (env ^. ledgerPpL)
+          (state ^. utxoG)
+          tx
+    , vtProtocolVersion = env ^. ledgerPpL . ppProtocolVersionL
+    , vtSlotNo = env ^. ledgerSlotNoL
+    }
 
 -- | Translate a validated transaction across eras.
 --

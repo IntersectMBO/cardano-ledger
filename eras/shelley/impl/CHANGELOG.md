@@ -2,6 +2,10 @@
 
 ## 1.19.0.0
 
+* Add functions to `Mempool` module:
+  - `applyTxWithFullValidation`
+  - `reapplyValidatedTx`
+  - `unsafeMakeValidatedTx`
 * Add `applyTxWithFullValidation` and `reapplyValidatedTx` to `Mempool` module
 * Add `internalApplyTxWithValidation` and `internalReapplyValidatedTx` to `ApplyTx`
 * Change return type of `ruleApplyTxValidation` to `ValidatedTx`

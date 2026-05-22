@@ -27,7 +27,7 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.Shelley.API.Mempool (applyTx, mkMempoolEnv)
+import Cardano.Ledger.Shelley.API.Mempool (applyTxWithFullValidation, mkMempoolEnv)
 import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad.Reader (asks)
 import Data.List.NonEmpty (NonEmpty)
@@ -230,7 +230,7 @@ spec = describe "LEDGER" $ do
           ls = nes ^. nesEsL . esLStateL
         txFixed <- (tx &) =<< asks iteFixup
         logToExpr txFixed
-        case applyTx globals mempoolEnv ls txFixed of
+        case applyTxWithFullValidation globals mempoolEnv ls txFixed of
           Left err -> do
             err `shouldBe` inject expectedFailures
           Right _ ->
