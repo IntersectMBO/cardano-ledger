@@ -38,19 +38,15 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra, UTXOS)
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (..),
-  collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
 import Cardano.Ledger.Alonzo.Rules.Ppup ()
 import Cardano.Ledger.Alonzo.State
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (
-  Globals,
   ShelleyBase,
   StrictMaybe,
-  epochInfo,
   kindObjectValue,
-  systemStart,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -68,10 +64,8 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
-import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (ReaderT, asks)
 import Control.State.Transition.Extended
 import Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
@@ -100,7 +94,6 @@ instance
   , AlonzoEraScript era
   , TxCert era ~ ShelleyTxCert era
   , EraGov era
-  , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (UTXOS era)
   , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
@@ -157,20 +150,11 @@ utxosTransition ::
   ( AlonzoEraTx era
   , ShelleyEraTxBody era
   , AlonzoEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , TxCert era ~ ShelleyTxCert era
-  , EraGov era
-  , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (UTXOS era)
-  , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
-  , Eq (EraRuleFailure "PPUP" era)
-  , Show (EraRuleFailure "PPUP" era)
-  , EraPlutusContext era
   , EraCertState era
-  , EraStake era
   ) =>
   TransitionRule (UTXOS era)
 utxosTransition =
@@ -183,28 +167,14 @@ utxosTransition =
 -- ===================================================================
 
 scriptsTransition ::
-  ( STS sts
-  , Monad m
-  , AlonzoEraTxBody era
-  , AlonzoEraTxWits era
-  , AlonzoEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , BaseM sts ~ ReaderT Globals m
+  ( AlonzoEraUTxO era
   , PredicateFailure sts ~ AlonzoUtxosPredFailure era
-  , EraPlutusContext era
   ) =>
-  SlotNo ->
-  PParams era ->
-  Tx TopTx era ->
-  UTxO era ->
+  StAnnTx TopTx era ->
   (ScriptResult -> Rule sts ctx ()) ->
   Rule sts ctx ()
-scriptsTransition slot pp tx utxo action = do
-  sysSt <- liftSTS $ asks systemStart
-  ei <- liftSTS $ asks epochInfo
-  let
-    scriptsWithContext =
-      collectPlutusScriptsWithContext (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo
+scriptsTransition stAnnTx action = do
+  let scriptsWithContext = plutusScriptsWithContextStAnnTx stAnnTx
   failOnNonEmpty
     (either (NonEmpty.filter isNotBadTranslation) (const []) scriptsWithContext)
     CollectErrors
@@ -222,18 +192,15 @@ alonzoEvalScriptsTxValid ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ShelleyEraTxBody era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , STS (UTXOS era)
   , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (UTXOS era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , EraPlutusContext era
   , EraCertState era
   ) =>
   TransitionRule (UTXOS era)
 alonzoEvalScriptsTxValid = do
-  TRC (UtxosEnv slot pp certState utxo, pup, stAnnTx) <-
+  TRC (UtxosEnv slot pp certState _utxo, pup, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       txBody = tx ^. bodyTxL
@@ -241,7 +208,7 @@ alonzoEvalScriptsTxValid = do
 
   () <- pure $! Debug.traceEvent validBegin ()
 
-  scriptsTransition slot pp tx utxo $ \case
+  scriptsTransition stAnnTx $ \case
     Fails _ps fs ->
       failBecause $
         ValidationTagMismatch
@@ -258,18 +225,15 @@ alonzoEvalScriptsTxInvalid ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , STS (UTXOS era)
-  , EraPlutusContext era
   ) =>
   TransitionRule (UTXOS era)
 alonzoEvalScriptsTxInvalid = do
-  TRC (UtxosEnv slot pp _ utxo, pup, stAnnTx) <- judgmentContext
+  TRC (UtxosEnv _slot _pp _ _utxo, pup, stAnnTx) <- judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
   () <- pure $! Debug.traceEvent invalidBegin ()
 
-  scriptsTransition slot pp tx utxo $ \case
+  scriptsTransition stAnnTx $ \case
     Passes _ps ->
       failBecause $
         ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
