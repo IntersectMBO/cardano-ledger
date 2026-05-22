@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `defaultApplyTxWithValidation` and `defaultReapplyValidatedTx` helpers to `Mempool` module
 * Deprecate:
   - `Validated`
   - `extractTx`

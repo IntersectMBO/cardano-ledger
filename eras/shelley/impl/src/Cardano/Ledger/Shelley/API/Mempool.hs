@@ -33,6 +33,8 @@ module Cardano.Ledger.Shelley.API.Mempool (
   coerceValidated,
   translateValidated,
   ruleApplyTxValidation,
+  defaultApplyTxWithValidation,
+  defaultReapplyValidatedTx,
 
   -- * Exports for testing
   MempoolEnv,
@@ -158,7 +160,10 @@ translateValidated ::
   Validated (f (PreviousEra era)) ->
   Except (TranslationError era f) (Validated (f era))
 translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
-{-# DEPRECATED translateValidated "Translation of `Validated` does not make sense. It must be fully re-validated in a new era" #-}
+{-# DEPRECATED
+  translateValidated
+  "Translation of `Validated` does not make sense. It must be fully re-validated in a new era"
+  #-}
 
 class
   ( EraTx era
@@ -253,6 +258,66 @@ ruleApplyTxValidation validationPolicy globals env state stAnnTx =
           }
    in fmap (,validatedTx) result
 
+-- | A default implementation for 'internalApplyTxWithValidation', parameterised by the
+-- STS rule to run and a wrapper that lifts predicate failures into the era's
+-- 'ApplyTxError'.
+defaultApplyTxWithValidation ::
+  forall rule era.
+  ( ApplyTx era
+  , STS (EraRule rule era)
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  , Environment (EraRule rule era) ~ LedgerEnv era
+  , State (EraRule rule era) ~ MempoolState era
+  , Signal (EraRule rule era) ~ StAnnTx TopTx era
+  ) =>
+  (NonEmpty (PredicateFailure (EraRule rule era)) -> ApplyTxError era) ->
+  ValidationPolicy ->
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  Tx TopTx era ->
+  Either (ApplyTxError era) (MempoolState era, ValidatedTx era)
+defaultApplyTxWithValidation wrap validationPolicy globals env state tx =
+  let stAnnTx =
+        mkStAnnTx
+          (epochInfo globals)
+          (systemStart globals)
+          (env ^. ledgerPpL)
+          (state ^. utxoG)
+          tx
+   in first wrap $
+        ruleApplyTxValidation @rule validationPolicy globals env state stAnnTx
+
+-- | A default implementation for 'internalReapplyValidatedTx', parameterised by the
+-- STS rule to run and a wrapper that lifts predicate failures into the era's
+-- 'ApplyTxError'.
+defaultReapplyValidatedTx ::
+  forall rule era.
+  ( ApplyTx era
+  , STS (EraRule rule era)
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  , Environment (EraRule rule era) ~ LedgerEnv era
+  , State (EraRule rule era) ~ MempoolState era
+  , Signal (EraRule rule era) ~ StAnnTx TopTx era
+  ) =>
+  (NonEmpty (PredicateFailure (EraRule rule era)) -> ApplyTxError era) ->
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  ValidatedTx era ->
+  Either (ApplyTxError era) (MempoolState era)
+defaultReapplyValidatedTx wrap globals env state vtx =
+  fst
+    <$> first
+      wrap
+      ( ruleApplyTxValidation @rule
+          (ValidateSuchThat (notElem lblStatic))
+          globals
+          env
+          state
+          (vtStAnnTx vtx)
+      )
+
 instance ApplyTx ShelleyEra where
   newtype ApplyTxError ShelleyEra = ShelleyApplyTxError (NonEmpty (ShelleyLedgerPredFailure ShelleyEra))
     deriving (Eq, Show)
@@ -271,17 +336,7 @@ instance ApplyTx ShelleyEra where
      in first ShelleyApplyTxError $
           ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
 
-  internalReapplyValidatedTx globals env state vtx =
-    fst
-      <$> first
-        ShelleyApplyTxError
-        ( ruleApplyTxValidation @"LEDGER"
-            (ValidateSuchThat (notElem lblStatic))
-            globals
-            env
-            state
-            (vtStAnnTx vtx)
-        )
+  internalReapplyValidatedTx = defaultReapplyValidatedTx @"LEDGER" ShelleyApplyTxError
 
 type MempoolEnv era = LedgerEnv era
 
