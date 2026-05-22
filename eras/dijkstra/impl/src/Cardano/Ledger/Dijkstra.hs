@@ -163,7 +163,6 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo tx =
    in
     DijkstraStAnnTopTx
       { dsattTx = tx
-      , dsattProtocolVersion = pp ^. ppProtocolVersionL
       , dsattScriptsNeeded = scriptsNeeded
       , dsattScriptsProvided = scriptsProvided
       , dsattPlutusLegacyMode = not $ Set.null $ Set.filter (<= PlutusV3) languagesUsed

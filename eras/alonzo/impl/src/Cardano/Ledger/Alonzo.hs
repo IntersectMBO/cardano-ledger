@@ -141,7 +141,6 @@ mkAlonzoStAnnTx ei sysStart pp utxo tx =
    in
     AlonzoStAnnTx
       { asatTx = tx
-      , asatProtocolVersion = pp ^. ppProtocolVersionL
       , asatScriptsNeeded = scriptsNeeded
       , asatScriptsProvided = scriptsProvided
       , asatPlutusLanguagesUsed =

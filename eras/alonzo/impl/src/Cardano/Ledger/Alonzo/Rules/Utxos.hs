@@ -119,7 +119,6 @@ data UtxosEnv era = UtxosEnv
   { ueSlot :: SlotNo
   , uePParams :: PParams era
   , ueCertState :: CertState era
-  , ueUtxo :: UTxO era
   }
   deriving (Generic)
 
@@ -200,7 +199,7 @@ alonzoEvalScriptsTxValid ::
   ) =>
   TransitionRule (UTXOS era)
 alonzoEvalScriptsTxValid = do
-  TRC (UtxosEnv slot pp certState _utxo, pup, stAnnTx) <-
+  TRC (UtxosEnv slot pp certState, pup, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       txBody = tx ^. bodyTxL
@@ -228,7 +227,7 @@ alonzoEvalScriptsTxInvalid ::
   ) =>
   TransitionRule (UTXOS era)
 alonzoEvalScriptsTxInvalid = do
-  TRC (UtxosEnv _slot _pp _ _utxo, pup, stAnnTx) <- judgmentContext
+  TRC (UtxosEnv _slot _pp _, pup, stAnnTx) <- judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
   () <- pure $! Debug.traceEvent invalidBegin ()

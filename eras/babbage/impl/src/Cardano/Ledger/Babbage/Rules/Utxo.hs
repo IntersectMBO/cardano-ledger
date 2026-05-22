@@ -443,7 +443,7 @@ utxoTransition = do
   babbageUtxoValidation
   updatedGovState <-
     trans @(EraRule "UTXOS" era) $
-      TRC (Alonzo.UtxosEnv slot pp certState (utxosUtxo utxos), utxosGovState utxos, stAnnTx)
+      TRC (Alonzo.UtxosEnv slot pp certState, utxosGovState utxos, stAnnTx)
   updateUTxOStateByTxValidity pp certState updatedGovState tx utxos
 
 updateUTxOStateByTxValidity ::

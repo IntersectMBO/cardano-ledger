@@ -170,7 +170,7 @@ babbageEvalScriptsTxValid ::
   ) =>
   TransitionRule (UTXOS era)
 babbageEvalScriptsTxValid = do
-  TRC (Alonzo.UtxosEnv slot pp certState _utxo, pup, stAnnTx) <-
+  TRC (Alonzo.UtxosEnv slot pp certState, pup, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       txBody = tx ^. bodyTxL

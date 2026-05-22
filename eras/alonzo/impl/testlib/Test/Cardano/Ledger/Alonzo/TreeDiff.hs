@@ -153,12 +153,11 @@ instance
   ) =>
   ToExpr (AlonzoStAnnTx TopTx era)
   where
-  toExpr stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _) =
+  toExpr stAnnTx@(AlonzoStAnnTx _ _ _ _ _) =
     let AlonzoStAnnTx {..} = stAnnTx
      in Rec "AlonzoStAnnTx" $
           OMap.fromList
             [ ("asatTx", toExpr asatTx)
-            , ("asatProtocolVersion", toExpr asatProtocolVersion)
             , ("asatScriptsNeeded", toExpr asatScriptsNeeded)
             , ("asatScriptsProvided", toExpr asatScriptsProvided)
             , ("asatPlutusLanguagesUsed", toExpr asatPlutusLanguagesUsed)

@@ -125,16 +125,15 @@ instance
   ) =>
   NFData (DijkstraStAnnTx TopTx era)
   where
-  rnf stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _) =
+  rnf stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _) =
     let DijkstraStAnnTopTx {..} = stAnnTx
      in dsattTx `deepseq`
-          dsattProtocolVersion `deepseq`
-            dsattScriptsNeeded `deepseq`
-              dsattScriptsProvided `deepseq`
-                dsattPlutusLegacyMode `deepseq`
-                  dsattPlutusLanguagesUsed `deepseq`
-                    dsattPlutusScriptsWithContext `deepseq`
-                      rnf dsattSubTransactions
+          dsattScriptsNeeded `deepseq`
+            dsattScriptsProvided `deepseq`
+              dsattPlutusLegacyMode `deepseq`
+                dsattPlutusLanguagesUsed `deepseq`
+                  dsattPlutusScriptsWithContext `deepseq`
+                    rnf dsattSubTransactions
 
 instance
   ( AlonzoEraTx era
@@ -168,12 +167,11 @@ instance
   ) =>
   ToExpr (DijkstraStAnnTx TopTx era)
   where
-  toExpr stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _) =
+  toExpr stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _) =
     let DijkstraStAnnTopTx {..} = stAnnTx
      in TD.Rec "DijkstraStAnnTopTx" $
           OMap.fromList
             [ ("dsattTx", toExpr dsattTx)
-            , ("dsattProtocolVersion", toExpr dsattProtocolVersion)
             , ("dsattScriptsNeeded", toExpr dsattScriptsNeeded)
             , ("dsattScriptsProvided", toExpr dsattScriptsProvided)
             , ("dsattPlutusLegacyMode", toExpr dsattPlutusLegacyMode)
