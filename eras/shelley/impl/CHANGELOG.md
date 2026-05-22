@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `applyTxWithFullValidation` and `reapplyValidatedTx` to `Mempool` module
 * Add `internalApplyTxWithValidation` and `internalReapplyValidatedTx` to `ApplyTx`
 * Change return type of `ruleApplyTxValidation` to `ValidatedTx`
 * Add:

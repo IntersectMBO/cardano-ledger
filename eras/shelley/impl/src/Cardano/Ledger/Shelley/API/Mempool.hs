@@ -18,6 +18,8 @@
 -- mempool.
 module Cardano.Ledger.Shelley.API.Mempool (
   applyTx,
+  applyTxWithFullValidation,
+  reapplyValidatedTx,
   reapplyTx,
   ApplyTx (..),
   ApplyTxError (..),
@@ -49,7 +51,12 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
+import Cardano.Ledger.Shelley.LedgerState (
+  NewEpochState,
+  curPParamsEpochStateL,
+  lsUTxOStateL,
+  utxosGovStateL,
+ )
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.Rules.Ledger (
   LedgerEnv,
@@ -58,7 +65,7 @@ import Cardano.Ledger.Shelley.Rules.Ledger (
   ledgerSlotNoL,
  )
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
-import Cardano.Ledger.State (UTxO, utxoG)
+import Cardano.Ledger.State (UTxO, curPParamsGovStateL, utxoG)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
@@ -314,6 +321,43 @@ overNewEpochState f st = do
               { LedgerState.esLState = ls
               }
         }
+
+-- | Validate a transaction against a mempool state and return the new
+-- mempool state together with a 'ValidatedTx'
+applyTxWithFullValidation ::
+  ApplyTx era =>
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  Tx TopTx era ->
+  Either (ApplyTxError era) (MempoolState era, ValidatedTx era)
+applyTxWithFullValidation = internalApplyTxWithValidation ValidateAll
+
+-- | Reapply a previously validated transaction, skipping static checks.
+-- Use the state-derived annotations in `StAnnTx` if the current protocol version
+-- matches the one in `ValidatedTx`, otherwise reconstruct `StAnnTx.
+-- If major protocol version has changed from when `ValidatedTx`
+-- was constructed, then full validation is triggered again.
+reapplyValidatedTx ::
+  (ApplyTx era, EraGov era) =>
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  ValidatedTx era ->
+  Either (ApplyTxError era) (MempoolState era)
+reapplyValidatedTx globals env ledgerState vtx
+  | pvMajor (vtProtocolVersion vtx) == pvMajor currentPv =
+      internalReapplyValidatedTx globals env ledgerState vtx
+  | otherwise =
+      fst
+        <$> internalApplyTxWithValidation
+          ValidateAll
+          globals
+          env
+          ledgerState
+          (vtStAnnTx vtx ^. txStAnnTxG)
+  where
+    currentPv = ledgerState ^. lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppProtocolVersionL
 
 -- | Validate a transaction against a mempool state using default STS options
 -- and return both the new mempool state and a "validated" 'TxInBlock'.
