@@ -358,7 +358,11 @@ instance
   {-# INLINE decCBOR #-}
 
 instance DecCBOR BS.ByteString where
-  decCBOR = decodeBytes
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @12)
+      decodeBytesDefOrIndef
+      decodeBytes
   {-# INLINE decCBOR #-}
 
 instance DecCBOR T.Text where
@@ -505,7 +509,11 @@ instance KnownNat n => DecCBOR (PackedBytes n) where
   {-# INLINE decCBOR #-}
 
 instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a) where
-  decCBOR = hashFromPackedBytes <$> decCBOR
+  -- Hashes are size-constrained in CDDL and so must use a definite-length
+  -- bytestring encoding. Reading the bytes directly via 'decodeBytes' keeps
+  -- that invariant even when the 'DecCBOR ByteString' instance accepts
+  -- indefinite-length encodings.
+  decCBOR = fmap hashFromPackedBytes . packByteString =<< decodeBytes
   {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
