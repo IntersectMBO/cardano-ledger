@@ -30,6 +30,25 @@ module Cardano.Ledger.Conway.Era (
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
   hardforkConwayDELEGIncorrectDepositsAndRefunds,
   hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
+
+  -- * Deprecated
+  ConwayBBODY,
+  ConwayCERT,
+  ConwayDELEG,
+  ConwayGOVCERT,
+  ConwayCERTS,
+  ConwayGOV,
+  ConwayHARDFORK,
+  ConwayMEMPOOL,
+  ConwayNEWEPOCH,
+  ConwayEPOCH,
+  ConwayENACT,
+  ConwayUTXO,
+  ConwayUTXOS,
+  ConwayUTXOW,
+  ConwayTICKF,
+  ConwayLEDGER,
+  ConwayRATIFY,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
@@ -86,69 +105,137 @@ type instance EraRuleEvent "DELEGS" ConwayEra = VoidEraRule "DELEGS" ConwayEra
 
 data GOV era
 
+type ConwayGOV = GOV
+
+{-# DEPRECATED ConwayGOV "In favor of `GOV`" #-}
+
 type instance EraRule "GOV" ConwayEra = GOV ConwayEra
 
 data NEWEPOCH era
+
+type ConwayNEWEPOCH = NEWEPOCH
+
+{-# DEPRECATED ConwayNEWEPOCH "In favor of `NEWEPOCH`" #-}
 
 type instance EraRule "NEWEPOCH" ConwayEra = NEWEPOCH ConwayEra
 
 data EPOCH era
 
+type ConwayEPOCH = EPOCH
+
+{-# DEPRECATED ConwayEPOCH "In favor of `EPOCH`" #-}
+
 type instance EraRule "EPOCH" ConwayEra = EPOCH ConwayEra
 
 data ENACT era
+
+type ConwayENACT = ENACT
+
+{-# DEPRECATED ConwayENACT "In favor of `ENACT`" #-}
 
 type instance EraRule "ENACT" ConwayEra = ENACT ConwayEra
 
 data UTXOS era
 
+type ConwayUTXOS = UTXOS
+
+{-# DEPRECATED ConwayUTXOS "In favor of `UTXOS`" #-}
+
 type instance EraRule "UTXOS" ConwayEra = UTXOS ConwayEra
 
 data LEDGER era
+
+type ConwayLEDGER = LEDGER
+
+{-# DEPRECATED ConwayLEDGER "In favor of `LEDGER`" #-}
 
 type instance EraRule "LEDGER" ConwayEra = LEDGER ConwayEra
 
 data TICKF era
 
+type ConwayTICKF = TICKF
+
+{-# DEPRECATED ConwayTICKF "In favor of `TICKF`" #-}
+
 type instance EraRule "TICKF" ConwayEra = TICKF ConwayEra
 
 data RATIFY era
+
+type ConwayRATIFY = RATIFY
+
+{-# DEPRECATED ConwayRATIFY "In favor of `RATIFY`" #-}
 
 type instance EraRule "RATIFY" ConwayEra = RATIFY ConwayEra
 
 data CERTS era
 
+type ConwayCERTS = CERTS
+
+{-# DEPRECATED ConwayCERTS "In favor of `CERTS`" #-}
+
 type instance EraRule "CERTS" ConwayEra = CERTS ConwayEra
 
 data CERT era
+
+type ConwayCERT = CERT
+
+{-# DEPRECATED ConwayCERT "In favor of `CERT`" #-}
 
 type instance EraRule "CERT" ConwayEra = CERT ConwayEra
 
 data DELEG era
 
+type ConwayDELEG = DELEG
+
+{-# DEPRECATED ConwayDELEG "In favor of `DELEG`" #-}
+
 type instance EraRule "DELEG" ConwayEra = DELEG ConwayEra
 
 data GOVCERT era
+
+type ConwayGOVCERT = GOVCERT
+
+{-# DEPRECATED ConwayGOVCERT "In favor of `GOVCERT`" #-}
 
 type instance EraRule "GOVCERT" ConwayEra = GOVCERT ConwayEra
 
 data UTXOW era
 
+type ConwayUTXOW = UTXOW
+
+{-# DEPRECATED ConwayUTXOW "In favor of `UTXOW`" #-}
+
 type instance EraRule "UTXOW" ConwayEra = UTXOW ConwayEra
 
 data UTXO era
+
+type ConwayUTXO = UTXO
+
+{-# DEPRECATED ConwayUTXO "In favor of `UTXO`" #-}
 
 type instance EraRule "UTXO" ConwayEra = UTXO ConwayEra
 
 data BBODY era
 
+type ConwayBBODY = BBODY
+
+{-# DEPRECATED ConwayBBODY "In favor of `BBODY`" #-}
+
 type instance EraRule "BBODY" ConwayEra = BBODY ConwayEra
 
 data MEMPOOL era
 
+type ConwayMEMPOOL = MEMPOOL
+
+{-# DEPRECATED ConwayMEMPOOL "In favor of `MEMPOOL`" #-}
+
 type instance EraRule "MEMPOOL" ConwayEra = MEMPOOL ConwayEra
 
 data HARDFORK era
+
+type ConwayHARDFORK = HARDFORK
+
+{-# DEPRECATED ConwayHARDFORK "In favor of `HARDFORK`" #-}
 
 type instance EraRule "HARDFORK" ConwayEra = HARDFORK ConwayEra
 
