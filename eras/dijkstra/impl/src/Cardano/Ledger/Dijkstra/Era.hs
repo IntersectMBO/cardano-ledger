@@ -184,14 +184,14 @@ type instance EraRule "HARDFORK" DijkstraEra = Conway.ConwayHARDFORK DijkstraEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "LEDGERS" DijkstraEra = API.ShelleyLEDGERS DijkstraEra
+type instance EraRule "LEDGERS" DijkstraEra = API.LEDGERS DijkstraEra
 
-type instance EraRule "POOLREAP" DijkstraEra = API.ShelleyPOOLREAP DijkstraEra
+type instance EraRule "POOLREAP" DijkstraEra = API.POOLREAP DijkstraEra
 
-type instance EraRule "RUPD" DijkstraEra = Shelley.ShelleyRUPD DijkstraEra
+type instance EraRule "RUPD" DijkstraEra = Shelley.RUPD DijkstraEra
 
-type instance EraRule "SNAP" DijkstraEra = Shelley.ShelleySNAP DijkstraEra
+type instance EraRule "SNAP" DijkstraEra = Shelley.SNAP DijkstraEra
 
-type instance EraRule "TICK" DijkstraEra = Shelley.ShelleyTICK DijkstraEra
+type instance EraRule "TICK" DijkstraEra = Shelley.TICK DijkstraEra
 
-type instance EraRule "POOL" DijkstraEra = Shelley.ShelleyPOOL DijkstraEra
+type instance EraRule "POOL" DijkstraEra = Shelley.POOL DijkstraEra

@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Delegs (
-  ShelleyDELEGS,
+  DELEGS,
   DelegsEnv (..),
   ShelleyDelegsPredFailure (..),
   ShelleyDelegsEvent (..),
@@ -38,11 +38,11 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyDELEGS, ShelleyEra)
+import Cardano.Ledger.Shelley.Era (DELEGS, ShelleyEra)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (
+  DELPL,
   DelplEnv (..),
-  ShelleyDELPL,
   ShelleyDelplEvent,
   ShelleyDelplPredFailure,
  )
@@ -120,22 +120,22 @@ instance
   ( EraTx era
   , EraCertState era
   , ShelleyEraTxBody era
-  , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
+  , Embed (EraRule "DELPL" era) (DELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
-  , EraRule "DELEGS" era ~ ShelleyDELEGS era
+  , EraRule "DELEGS" era ~ DELEGS era
   ) =>
-  STS (ShelleyDELEGS era)
+  STS (DELEGS era)
   where
-  type State (ShelleyDELEGS era) = CertState era
-  type Signal (ShelleyDELEGS era) = Seq (TxCert era)
-  type Environment (ShelleyDELEGS era) = DelegsEnv era
-  type BaseM (ShelleyDELEGS era) = ShelleyBase
+  type State (DELEGS era) = CertState era
+  type Signal (DELEGS era) = Seq (TxCert era)
+  type Environment (DELEGS era) = DelegsEnv era
+  type BaseM (DELEGS era) = ShelleyBase
   type
-    PredicateFailure (ShelleyDELEGS era) =
+    PredicateFailure (DELEGS era) =
       ShelleyDelegsPredFailure era
-  type Event (ShelleyDELEGS era) = ShelleyDelegsEvent era
+  type Event (DELEGS era) = ShelleyDelegsEvent era
 
   transitionRules = [delegsTransition]
 
@@ -171,13 +171,13 @@ delegsTransition ::
   ( EraTx era
   , EraCertState era
   , ShelleyEraTxBody era
-  , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
+  , Embed (EraRule "DELPL" era) (DELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
-  , EraRule "DELEGS" era ~ ShelleyDELEGS era
+  , EraRule "DELEGS" era ~ DELEGS era
   ) =>
-  TransitionRule (ShelleyDELEGS era)
+  TransitionRule (DELEGS era)
 delegsTransition = do
   TRC
     ( env@(DelegsEnv slot@(SlotNo slot64) epochNo txIx pp _tx chainAccountState)
@@ -189,7 +189,7 @@ delegsTransition = do
     Empty -> pure certState
     gamma :|> txCert -> do
       certState' <-
-        trans @(ShelleyDELEGS era) $ TRC (env, certState, gamma)
+        trans @(DELEGS era) $ TRC (env, certState, gamma)
       -- It is impossible to have 65535 number of certificates in a transaction.
       let certIx = CertIx (fromIntegral @Int @Word16 $ length gamma)
           ptr = Ptr (SlotNo32 (fromIntegral @Word64 @Word32 slot64)) txIx certIx
@@ -198,11 +198,11 @@ delegsTransition = do
 
 instance
   ( Era era
-  , STS (ShelleyDELPL era)
+  , STS (DELPL era)
   , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   , Event (EraRule "DELPL" era) ~ ShelleyDelplEvent era
   ) =>
-  Embed (ShelleyDELPL era) (ShelleyDELEGS era)
+  Embed (DELPL era) (DELEGS era)
   where
   wrapFailed = DelplFailure
   wrapEvent = DelplEvent

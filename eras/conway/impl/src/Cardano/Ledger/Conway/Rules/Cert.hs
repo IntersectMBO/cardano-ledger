@@ -235,13 +235,13 @@ instance
 
 instance
   ( Era era
-  , STS (Shelley.ShelleyPOOL era)
+  , STS (Shelley.POOL era)
   , Event (EraRule "POOL" era) ~ Shelley.PoolEvent era
   , PredicateFailure (EraRule "POOL" era) ~ Shelley.ShelleyPoolPredFailure era
-  , PredicateFailure (Shelley.ShelleyPOOL era) ~ Shelley.ShelleyPoolPredFailure era
-  , BaseM (Shelley.ShelleyPOOL era) ~ ShelleyBase
+  , PredicateFailure (Shelley.POOL era) ~ Shelley.ShelleyPoolPredFailure era
+  , BaseM (Shelley.POOL era) ~ ShelleyBase
   ) =>
-  Embed (Shelley.ShelleyPOOL era) (ConwayCERT era)
+  Embed (Shelley.POOL era) (ConwayCERT era)
   where
   wrapFailed = PoolFailure
   wrapEvent = PoolEvent

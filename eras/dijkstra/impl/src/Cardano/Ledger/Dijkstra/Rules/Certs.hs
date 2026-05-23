@@ -58,11 +58,11 @@ instance
   wrapEvent = absurd
 
 instance
-  ( STS (Shelley.ShelleyPOOL era)
+  ( STS (Shelley.POOL era)
   , PredicateFailure (EraRule "POOL" era) ~ Shelley.ShelleyPoolPredFailure era
   , Event (EraRule "POOL" era) ~ Shelley.PoolEvent era
   ) =>
-  Embed (Shelley.ShelleyPOOL era) (DijkstraCERT era)
+  Embed (Shelley.POOL era) (DijkstraCERT era)
   where
   wrapFailed = Conway.PoolFailure
   wrapEvent = Conway.PoolEvent

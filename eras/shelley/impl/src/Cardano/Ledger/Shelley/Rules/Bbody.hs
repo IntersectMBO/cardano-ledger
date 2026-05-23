@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Bbody (
-  ShelleyBBODY,
+  BBODY,
   ShelleyBbodyState (..),
   BbodyEnv (..),
   BbodySignal (..),
@@ -48,7 +48,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Block (BbodySignal (..), Block (..), EraBlockHeader (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
-import Cardano.Ledger.Shelley.Era (ShelleyBBODY, ShelleyEra)
+import Cardano.Ledger.Shelley.Era (BBODY, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (ChainAccountState)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
@@ -181,40 +181,40 @@ deriving stock instance
 
 instance
   ( EraBlockBody era
-  , EraRule "BBODY" era ~ ShelleyBBODY era
+  , EraRule "BBODY" era ~ BBODY era
   , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
-  , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
+  , Embed (EraRule "LEDGERS" era) (BBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   ) =>
-  STS (ShelleyBBODY era)
+  STS (BBODY era)
   where
-  type State (ShelleyBBODY era) = ShelleyBbodyState era
+  type State (BBODY era) = ShelleyBbodyState era
 
-  type Signal (ShelleyBBODY era) = BbodySignal era
+  type Signal (BBODY era) = BbodySignal era
 
-  type Environment (ShelleyBBODY era) = BbodyEnv era
+  type Environment (BBODY era) = BbodyEnv era
 
-  type BaseM (ShelleyBBODY era) = ShelleyBase
+  type BaseM (BBODY era) = ShelleyBase
 
-  type PredicateFailure (ShelleyBBODY era) = ShelleyBbodyPredFailure era
+  type PredicateFailure (BBODY era) = ShelleyBbodyPredFailure era
 
-  type Event (ShelleyBBODY era) = ShelleyBbodyEvent era
+  type Event (BBODY era) = ShelleyBbodyEvent era
 
   initialRules = []
   transitionRules = [bbodyTransition]
 
 bbodyTransition ::
   forall era.
-  ( STS (ShelleyBBODY era)
-  , EraRule "BBODY" era ~ ShelleyBBODY era
+  ( STS (BBODY era)
+  , EraRule "BBODY" era ~ BBODY era
   , EraBlockBody era
-  , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
+  , Embed (EraRule "LEDGERS" era) (BBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
   ) =>
-  TransitionRule (ShelleyBBODY era)
+  TransitionRule (BBODY era)
 bbodyTransition = do
   TRC (BbodyEnv pp account, BbodyState ls blocksMade, BbodySignal block@Block {blockBody}) <-
     judgmentContext
@@ -292,7 +292,7 @@ instance
   , STS ledgers
   , Era era
   ) =>
-  Embed ledgers (ShelleyBBODY era)
+  Embed ledgers (BBODY era)
   where
   wrapFailed = LedgersFailure
   wrapEvent = LedgersEvent

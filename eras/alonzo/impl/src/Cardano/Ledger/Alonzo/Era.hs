@@ -56,34 +56,34 @@ type instance EraRule "BBODY" AlonzoEra = AlonzoBBODY AlonzoEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "DELEG" AlonzoEra = Shelley.ShelleyDELEG AlonzoEra
+type instance EraRule "DELEG" AlonzoEra = Shelley.DELEG AlonzoEra
 
-type instance EraRule "DELEGS" AlonzoEra = Shelley.ShelleyDELEGS AlonzoEra
+type instance EraRule "DELEGS" AlonzoEra = Shelley.DELEGS AlonzoEra
 
-type instance EraRule "DELPL" AlonzoEra = Shelley.ShelleyDELPL AlonzoEra
+type instance EraRule "DELPL" AlonzoEra = Shelley.DELPL AlonzoEra
 
-type instance EraRule "EPOCH" AlonzoEra = Shelley.ShelleyEPOCH AlonzoEra
+type instance EraRule "EPOCH" AlonzoEra = Shelley.EPOCH AlonzoEra
 
-type instance EraRule "LEDGERS" AlonzoEra = Shelley.ShelleyLEDGERS AlonzoEra
+type instance EraRule "LEDGERS" AlonzoEra = Shelley.LEDGERS AlonzoEra
 
-type instance EraRule "MIR" AlonzoEra = Shelley.ShelleyMIR AlonzoEra
+type instance EraRule "MIR" AlonzoEra = Shelley.MIR AlonzoEra
 
-type instance EraRule "NEWEPOCH" AlonzoEra = Shelley.ShelleyNEWEPOCH AlonzoEra
+type instance EraRule "NEWEPOCH" AlonzoEra = Shelley.NEWEPOCH AlonzoEra
 
-type instance EraRule "NEWPP" AlonzoEra = Shelley.ShelleyNEWPP AlonzoEra
+type instance EraRule "NEWPP" AlonzoEra = Shelley.NEWPP AlonzoEra
 
-type instance EraRule "POOL" AlonzoEra = Shelley.ShelleyPOOL AlonzoEra
+type instance EraRule "POOL" AlonzoEra = Shelley.POOL AlonzoEra
 
-type instance EraRule "POOLREAP" AlonzoEra = Shelley.ShelleyPOOLREAP AlonzoEra
+type instance EraRule "POOLREAP" AlonzoEra = Shelley.POOLREAP AlonzoEra
 
-type instance EraRule "PPUP" AlonzoEra = Shelley.ShelleyPPUP AlonzoEra
+type instance EraRule "PPUP" AlonzoEra = Shelley.PPUP AlonzoEra
 
-type instance EraRule "RUPD" AlonzoEra = Shelley.ShelleyRUPD AlonzoEra
+type instance EraRule "RUPD" AlonzoEra = Shelley.RUPD AlonzoEra
 
-type instance EraRule "SNAP" AlonzoEra = Shelley.ShelleySNAP AlonzoEra
+type instance EraRule "SNAP" AlonzoEra = Shelley.SNAP AlonzoEra
 
-type instance EraRule "TICK" AlonzoEra = Shelley.ShelleyTICK AlonzoEra
+type instance EraRule "TICK" AlonzoEra = Shelley.TICK AlonzoEra
 
-type instance EraRule "TICKF" AlonzoEra = Shelley.ShelleyTICKF AlonzoEra
+type instance EraRule "TICKF" AlonzoEra = Shelley.TICKF AlonzoEra
 
-type instance EraRule "UPEC" AlonzoEra = Shelley.ShelleyUPEC AlonzoEra
+type instance EraRule "UPEC" AlonzoEra = Shelley.UPEC AlonzoEra

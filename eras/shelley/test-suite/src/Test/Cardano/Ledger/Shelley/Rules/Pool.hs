@@ -18,7 +18,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   curPParamsEpochStateL,
  )
-import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPOOL, ShelleyPoolPredFailure)
+import Cardano.Ledger.Shelley.Rules (POOL, PoolEvent, ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.BHeader (bhbody, bheaderSlotNo)
@@ -65,7 +65,7 @@ tests ::
   , EraStake era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
-  , EraRule "POOL" era ~ ShelleyPOOL era
+  , EraRule "POOL" era ~ POOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era
   ) =>
@@ -84,7 +84,7 @@ tests =
 -- retirement.
 poolRetirement ::
   ( ChainProperty era
-  , EraRule "POOL" era ~ ShelleyPOOL era
+  , EraRule "POOL" era ~ POOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era
   ) =>
@@ -103,7 +103,7 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
 -- in the retiring map.
 poolRegistration ::
   ( ChainProperty era
-  , EraRule "POOL" era ~ ShelleyPOOL era
+  , EraRule "POOL" era ~ POOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era
   ) =>
@@ -119,7 +119,7 @@ poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
 -- POOL` transition.
 poolStateIsInternallyConsistent ::
   ( ChainProperty era
-  , EraRule "POOL" era ~ ShelleyPOOL era
+  , EraRule "POOL" era ~ POOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era
   ) =>
@@ -131,7 +131,7 @@ poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = 
   where
     (_, poolTr) = poolTraceFromBlock chainSt block
 
-poolRegistrationProp :: SourceSignalTarget (ShelleyPOOL era) -> Property
+poolRegistrationProp :: SourceSignalTarget (POOL era) -> Property
 poolRegistrationProp
   SourceSignalTarget
     { signal = RegPool stakePoolParams
@@ -174,7 +174,7 @@ poolRegistrationProp _ = property ()
 poolRetirementProp ::
   EpochNo ->
   EpochInterval ->
-  SourceSignalTarget (ShelleyPOOL era) ->
+  SourceSignalTarget (POOL era) ->
   Property
 poolRetirementProp
   currentEpoch@(EpochNo ce)

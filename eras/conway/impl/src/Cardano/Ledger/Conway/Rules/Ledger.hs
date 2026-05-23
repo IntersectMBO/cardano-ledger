@@ -581,7 +581,7 @@ instance
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
   ) =>
-  Embed (ConwayLEDGER era) (Shelley.ShelleyLEDGERS era)
+  Embed (ConwayLEDGER era) (Shelley.LEDGERS era)
   where
   wrapFailed = Shelley.LedgerFailure
   wrapEvent = Shelley.LedgerEvent

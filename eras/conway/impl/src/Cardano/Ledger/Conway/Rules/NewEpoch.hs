@@ -176,7 +176,7 @@ newEpochTransition = do
       let adaPots = totalAdaPotsES es2
       tellEvent $ TotalAdaPotsEvent adaPots
       let pd' = ssStakeMarkPoolDistr (esSnapshots es0)
-      -- See `ShelleyNEWEPOCH` for details on the implementation
+      -- See `Shelley.NEWEPOCH` for details on the implementation
       pure $
         nes
           { nesEL = eNo
@@ -216,7 +216,7 @@ instance
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , PredicateFailure (EraRule "NEWEPOCH" era) ~ PredicateFailure (ConwayNEWEPOCH era)
   ) =>
-  Embed (ConwayNEWEPOCH era) (Shelley.ShelleyTICK era)
+  Embed (ConwayNEWEPOCH era) (Shelley.TICK era)
   where
   wrapFailed = \case {}
   wrapEvent = Shelley.TickNewEpochEvent

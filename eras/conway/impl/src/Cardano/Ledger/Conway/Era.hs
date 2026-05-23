@@ -154,17 +154,17 @@ type instance EraRule "HARDFORK" ConwayEra = ConwayHARDFORK ConwayEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "LEDGERS" ConwayEra = API.ShelleyLEDGERS ConwayEra
+type instance EraRule "LEDGERS" ConwayEra = API.LEDGERS ConwayEra
 
-type instance EraRule "POOLREAP" ConwayEra = API.ShelleyPOOLREAP ConwayEra
+type instance EraRule "POOLREAP" ConwayEra = API.POOLREAP ConwayEra
 
-type instance EraRule "RUPD" ConwayEra = Shelley.ShelleyRUPD ConwayEra
+type instance EraRule "RUPD" ConwayEra = Shelley.RUPD ConwayEra
 
-type instance EraRule "SNAP" ConwayEra = Shelley.ShelleySNAP ConwayEra
+type instance EraRule "SNAP" ConwayEra = Shelley.SNAP ConwayEra
 
-type instance EraRule "TICK" ConwayEra = Shelley.ShelleyTICK ConwayEra
+type instance EraRule "TICK" ConwayEra = Shelley.TICK ConwayEra
 
-type instance EraRule "POOL" ConwayEra = Shelley.ShelleyPOOL ConwayEra
+type instance EraRule "POOL" ConwayEra = Shelley.POOL ConwayEra
 
 -- | Bootstrap phase
 hardforkConwayBootstrapPhase :: ProtVer -> Bool

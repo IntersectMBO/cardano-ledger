@@ -16,13 +16,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Epoch (
-  ShelleyEPOCH,
+  EPOCH,
   ShelleyEpochEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
+import Cardano.Ledger.Shelley.Era (EPOCH)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   LedgerState,
@@ -44,16 +44,16 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.LedgerState.Types (prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules.PoolReap (
-  ShelleyPOOLREAP,
+  POOLREAP,
   ShelleyPoolreapEvent,
   ShelleyPoolreapState (..),
  )
 import Cardano.Ledger.Shelley.Rules.Snap (
-  ShelleySNAP,
+  SNAP,
   SnapEnv (..),
   SnapEvent,
  )
-import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, UpecState (..))
+import Cardano.Ledger.Shelley.Rules.Upec (UPEC, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
@@ -96,41 +96,41 @@ instance
   , EraStake era
   , EraCertState era
   , GovState era ~ ShelleyGovState era
-  , Embed (EraRule "SNAP" era) (ShelleyEPOCH era)
+  , Embed (EraRule "SNAP" era) (EPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
-  , Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era)
+  , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
-  , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
+  , Embed (EraRule "UPEC" era) (EPOCH era)
   , Environment (EraRule "UPEC" era) ~ LedgerState era
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
   , Default (PParams era)
   ) =>
-  STS (ShelleyEPOCH era)
+  STS (EPOCH era)
   where
-  type State (ShelleyEPOCH era) = EpochState era
-  type Signal (ShelleyEPOCH era) = EpochNo
-  type Environment (ShelleyEPOCH era) = ()
-  type BaseM (ShelleyEPOCH era) = ShelleyBase
-  type PredicateFailure (ShelleyEPOCH era) = Void
-  type Event (ShelleyEPOCH era) = ShelleyEpochEvent era
+  type State (EPOCH era) = EpochState era
+  type Signal (EPOCH era) = EpochNo
+  type Environment (EPOCH era) = ()
+  type BaseM (EPOCH era) = ShelleyBase
+  type PredicateFailure (EPOCH era) = Void
+  type Event (EPOCH era) = ShelleyEpochEvent era
   transitionRules = [epochTransition]
 
 epochTransition ::
   forall era.
-  ( Embed (EraRule "SNAP" era) (ShelleyEPOCH era)
+  ( Embed (EraRule "SNAP" era) (EPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
-  , Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era)
+  , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
-  , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
+  , Embed (EraRule "UPEC" era) (EPOCH era)
   , Environment (EraRule "UPEC" era) ~ LedgerState era
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
@@ -138,7 +138,7 @@ epochTransition ::
   , EraGov era
   , EraCertState era
   ) =>
-  TransitionRule (ShelleyEPOCH era)
+  TransitionRule (EPOCH era)
 epochTransition = do
   TRC
     ( _
@@ -188,27 +188,27 @@ instance
   , Event (EraRule "SNAP" era) ~ SnapEvent era
   , EraCertState era
   ) =>
-  Embed (ShelleySNAP era) (ShelleyEPOCH era)
+  Embed (SNAP era) (EPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = SnapEvent
 
 instance
   ( Era era
-  , STS (ShelleyPOOLREAP era)
+  , STS (POOLREAP era)
   , Event (EraRule "POOLREAP" era) ~ ShelleyPoolreapEvent era
   ) =>
-  Embed (ShelleyPOOLREAP era) (ShelleyEPOCH era)
+  Embed (POOLREAP era) (EPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = PoolReapEvent
 
 instance
   ( Era era
-  , STS (ShelleyUPEC era)
+  , STS (UPEC era)
   , Event (EraRule "UPEC" era) ~ Void
   ) =>
-  Embed (ShelleyUPEC era) (ShelleyEPOCH era)
+  Embed (UPEC era) (EPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = UpecEvent

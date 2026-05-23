@@ -9,14 +9,14 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Newpp (
-  ShelleyNEWPP,
+  NEWPP,
   ShelleyNewppState (..),
   NewppEnv (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals (quorum), ShelleyBase)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
+import Cardano.Ledger.Shelley.Era (NEWPP)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
@@ -53,13 +53,13 @@ instance
   , GovState era ~ ShelleyGovState era
   , AtMostEra "Babbage" era
   ) =>
-  STS (ShelleyNEWPP era)
+  STS (NEWPP era)
   where
-  type State (ShelleyNEWPP era) = ShelleyNewppState era
-  type Signal (ShelleyNEWPP era) = PParams era
-  type Environment (ShelleyNEWPP era) = NewppEnv era
-  type BaseM (ShelleyNEWPP era) = ShelleyBase
-  type PredicateFailure (ShelleyNEWPP era) = Void
+  type State (NEWPP era) = ShelleyNewppState era
+  type Signal (NEWPP era) = PParams era
+  type Environment (NEWPP era) = NewppEnv era
+  type BaseM (NEWPP era) = ShelleyBase
+  type PredicateFailure (NEWPP era) = Void
   transitionRules = [newPpTransition]
 
 instance EraPParams era => Default (ShelleyNewppState era) where
@@ -71,7 +71,7 @@ newPpTransition ::
   , EraGov era
   , AtMostEra "Babbage" era
   ) =>
-  TransitionRule (ShelleyNEWPP era)
+  TransitionRule (NEWPP era)
 newPpTransition = do
   TRC
     ( NewppEnv _certState _utxoState

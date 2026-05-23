@@ -373,10 +373,10 @@ epochTransition = do
 
 instance
   ( Era era
-  , STS (Shelley.ShelleyPOOLREAP era)
+  , STS (Shelley.POOLREAP era)
   , Event (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapEvent era
   ) =>
-  Embed (Shelley.ShelleyPOOLREAP era) (ConwayEPOCH era)
+  Embed (Shelley.POOLREAP era) (ConwayEPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = PoolReapEvent
@@ -387,7 +387,7 @@ instance
   , EraCertState era
   , Event (EraRule "SNAP" era) ~ Shelley.SnapEvent era
   ) =>
-  Embed (Shelley.ShelleySNAP era) (ConwayEPOCH era)
+  Embed (Shelley.SNAP era) (ConwayEPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = SnapEvent

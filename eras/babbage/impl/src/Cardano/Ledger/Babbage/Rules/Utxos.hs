@@ -92,11 +92,11 @@ instance
 
 instance
   ( Era era
-  , STS (Shelley.ShelleyPPUP era)
+  , STS (Shelley.PPUP era)
   , EraRuleFailure "PPUP" era ~ Shelley.ShelleyPpupPredFailure era
   , EraRuleEvent "PPUP" era ~ Shelley.PpupEvent era
   ) =>
-  Embed (Shelley.ShelleyPPUP era) (BabbageUTXOS era)
+  Embed (Shelley.PPUP era) (BabbageUTXOS era)
   where
   wrapFailed = Alonzo.UpdateFailure
   wrapEvent = Alonzo.AlonzoPpupToUtxosEvent

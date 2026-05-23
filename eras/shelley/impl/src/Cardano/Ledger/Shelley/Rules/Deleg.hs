@@ -12,7 +12,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Deleg (
-  ShelleyDELEG,
+  DELEG,
   DelegEnv (..),
   ShelleyDelegPredFailure (..),
   ShelleyDelegEvent (..),
@@ -45,7 +45,7 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyDELEG, ShelleyEra, hardforkAlonzoAllowMIRTransfer)
+import Cardano.Ledger.Shelley.Era (DELEG, ShelleyEra, hardforkAlonzoAllowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (
@@ -137,14 +137,14 @@ instance
   , ShelleyEraTxCert era
   , AtMostEra "Babbage" era
   ) =>
-  STS (ShelleyDELEG era)
+  STS (DELEG era)
   where
-  type State (ShelleyDELEG era) = CertState era
-  type Signal (ShelleyDELEG era) = TxCert era
-  type Environment (ShelleyDELEG era) = DelegEnv era
-  type BaseM (ShelleyDELEG era) = ShelleyBase
-  type PredicateFailure (ShelleyDELEG era) = ShelleyDelegPredFailure era
-  type Event (ShelleyDELEG era) = ShelleyDelegEvent era
+  type State (DELEG era) = CertState era
+  type Signal (DELEG era) = TxCert era
+  type Environment (DELEG era) = DelegEnv era
+  type BaseM (DELEG era) = ShelleyBase
+  type PredicateFailure (DELEG era) = ShelleyDelegPredFailure era
+  type Event (DELEG era) = ShelleyDelegEvent era
 
   transitionRules = [delegationTransition]
 
@@ -256,7 +256,7 @@ delegationTransition ::
   , EraPParams era
   , AtMostEra "Babbage" era
   ) =>
-  TransitionRule (ShelleyDELEG era)
+  TransitionRule (DELEG era)
 delegationTransition = do
   TRC (DelegEnv slot epochNo ptr chainAccountState pp, certState, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
@@ -393,7 +393,7 @@ checkSlotNotTooLate ::
   ) =>
   SlotNo ->
   EpochNo ->
-  Rule (ShelleyDELEG era) 'Transition ()
+  Rule (DELEG era) 'Transition ()
 checkSlotNotTooLate slot curEpochNo = do
   sp <- liftSTS $ asks stabilityWindow
   ei <- liftSTS $ asks epochInfoPure
@@ -409,7 +409,7 @@ updateReservesAndTreasury ::
   Map.Map (Credential Staking) Coin ->
   Coin ->
   CertState era ->
-  Rule (ShelleyDELEG era) 'Transition (CertState era)
+  Rule (DELEG era) 'Transition (CertState era)
 updateReservesAndTreasury targetPot combinedMap available certState = do
   let requiredForRewards = fold combinedMap
   requiredForRewards

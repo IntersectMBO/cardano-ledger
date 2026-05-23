@@ -9,26 +9,26 @@
 
 module Cardano.Ledger.Shelley.Era (
   ShelleyEra,
-  ShelleyBBODY,
-  ShelleyDELEG,
-  ShelleyDELEGS,
-  ShelleyDELPL,
-  ShelleyEPOCH,
-  ShelleyLEDGER,
-  ShelleyLEDGERS,
-  ShelleyMIR,
-  ShelleyNEWEPOCH,
-  ShelleyNEWPP,
-  ShelleyPOOL,
-  ShelleyPOOLREAP,
-  ShelleyPPUP,
-  ShelleyRUPD,
-  ShelleySNAP,
-  ShelleyTICK,
-  ShelleyTICKF,
-  ShelleyUPEC,
-  ShelleyUTXO,
-  ShelleyUTXOW,
+  BBODY,
+  DELEG,
+  DELEGS,
+  DELPL,
+  EPOCH,
+  LEDGER,
+  LEDGERS,
+  MIR,
+  NEWEPOCH,
+  NEWPP,
+  POOL,
+  POOLREAP,
+  PPUP,
+  RUPD,
+  SNAP,
+  TICK,
+  TICKF,
+  UPEC,
+  UTXO,
+  UTXOW,
   hardforkAllegraAggregatedRewards,
   hardforkAlonzoAllowMIRTransfer,
   hardforkAlonzoValidatePoolAccountAddressNetID,
@@ -46,85 +46,85 @@ instance EraTxLevel ShelleyEra where
 
 type instance Value ShelleyEra = Coin
 
-data ShelleyBBODY era
+data BBODY era
 
-data ShelleyDELEG era
+data DELEG era
 
-data ShelleyDELEGS era
+data DELEGS era
 
-data ShelleyDELPL era
+data DELPL era
 
-data ShelleyEPOCH era
+data EPOCH era
 
-data ShelleyLEDGER era
+data LEDGER era
 
-data ShelleyLEDGERS era
+data LEDGERS era
 
-data ShelleyMIR era
+data MIR era
 
-data ShelleyNEWEPOCH era
+data NEWEPOCH era
 
-data ShelleyNEWPP era
+data NEWPP era
 
-data ShelleyPOOL era
+data POOL era
 
-data ShelleyPOOLREAP era
+data POOLREAP era
 
-data ShelleyPPUP era
+data PPUP era
 
-data ShelleyRUPD era
+data RUPD era
 
-data ShelleySNAP era
+data SNAP era
 
-data ShelleyTICK era
+data TICK era
 
-data ShelleyTICKF era
+data TICKF era
 
-data ShelleyUPEC era
+data UPEC era
 
-data ShelleyUTXO era
+data UTXO era
 
-data ShelleyUTXOW era
+data UTXOW era
 
-type instance EraRule "BBODY" ShelleyEra = ShelleyBBODY ShelleyEra
+type instance EraRule "BBODY" ShelleyEra = BBODY ShelleyEra
 
-type instance EraRule "DELEG" ShelleyEra = ShelleyDELEG ShelleyEra
+type instance EraRule "DELEG" ShelleyEra = DELEG ShelleyEra
 
-type instance EraRule "DELEGS" ShelleyEra = ShelleyDELEGS ShelleyEra
+type instance EraRule "DELEGS" ShelleyEra = DELEGS ShelleyEra
 
-type instance EraRule "DELPL" ShelleyEra = ShelleyDELPL ShelleyEra
+type instance EraRule "DELPL" ShelleyEra = DELPL ShelleyEra
 
-type instance EraRule "EPOCH" ShelleyEra = ShelleyEPOCH ShelleyEra
+type instance EraRule "EPOCH" ShelleyEra = EPOCH ShelleyEra
 
-type instance EraRule "LEDGER" ShelleyEra = ShelleyLEDGER ShelleyEra
+type instance EraRule "LEDGER" ShelleyEra = LEDGER ShelleyEra
 
-type instance EraRule "LEDGERS" ShelleyEra = ShelleyLEDGERS ShelleyEra
+type instance EraRule "LEDGERS" ShelleyEra = LEDGERS ShelleyEra
 
-type instance EraRule "MIR" ShelleyEra = ShelleyMIR ShelleyEra
+type instance EraRule "MIR" ShelleyEra = MIR ShelleyEra
 
-type instance EraRule "NEWEPOCH" ShelleyEra = ShelleyNEWEPOCH ShelleyEra
+type instance EraRule "NEWEPOCH" ShelleyEra = NEWEPOCH ShelleyEra
 
-type instance EraRule "NEWPP" ShelleyEra = ShelleyNEWPP ShelleyEra
+type instance EraRule "NEWPP" ShelleyEra = NEWPP ShelleyEra
 
-type instance EraRule "POOL" ShelleyEra = ShelleyPOOL ShelleyEra
+type instance EraRule "POOL" ShelleyEra = POOL ShelleyEra
 
-type instance EraRule "POOLREAP" ShelleyEra = ShelleyPOOLREAP ShelleyEra
+type instance EraRule "POOLREAP" ShelleyEra = POOLREAP ShelleyEra
 
-type instance EraRule "PPUP" ShelleyEra = ShelleyPPUP ShelleyEra
+type instance EraRule "PPUP" ShelleyEra = PPUP ShelleyEra
 
-type instance EraRule "RUPD" ShelleyEra = ShelleyRUPD ShelleyEra
+type instance EraRule "RUPD" ShelleyEra = RUPD ShelleyEra
 
-type instance EraRule "SNAP" ShelleyEra = ShelleySNAP ShelleyEra
+type instance EraRule "SNAP" ShelleyEra = SNAP ShelleyEra
 
-type instance EraRule "TICK" ShelleyEra = ShelleyTICK ShelleyEra
+type instance EraRule "TICK" ShelleyEra = TICK ShelleyEra
 
-type instance EraRule "TICKF" ShelleyEra = ShelleyTICKF ShelleyEra
+type instance EraRule "TICKF" ShelleyEra = TICKF ShelleyEra
 
-type instance EraRule "UPEC" ShelleyEra = ShelleyUPEC ShelleyEra
+type instance EraRule "UPEC" ShelleyEra = UPEC ShelleyEra
 
-type instance EraRule "UTXO" ShelleyEra = ShelleyUTXO ShelleyEra
+type instance EraRule "UTXO" ShelleyEra = UTXO ShelleyEra
 
-type instance EraRule "UTXOW" ShelleyEra = ShelleyUTXOW ShelleyEra
+type instance EraRule "UTXOW" ShelleyEra = UTXOW ShelleyEra
 
 hardforkAllegraAggregatedRewards :: ProtVer -> Bool
 hardforkAllegraAggregatedRewards pv = pvMajor pv > natVersion @2

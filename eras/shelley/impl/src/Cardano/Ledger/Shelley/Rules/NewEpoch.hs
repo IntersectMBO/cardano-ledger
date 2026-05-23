@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.NewEpoch (
-  ShelleyNEWEPOCH,
+  NEWEPOCH,
   ShelleyNewEpochEvent (..),
   updateRewards,
 ) where
@@ -31,11 +31,11 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Rewards (Reward)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyNEWEPOCH)
+import Cardano.Ledger.Shelley.Era (NEWEPOCH, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
-import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR, ShelleyMirEvent)
+import Cardano.Ledger.Shelley.Rules.Mir (MIR, ShelleyMirEvent)
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State
@@ -85,8 +85,8 @@ instance
   , EraGov era
   , EraStake era
   , EraCertState era
-  , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
-  , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
+  , Embed (EraRule "MIR" era) (NEWEPOCH era)
+  , Embed (EraRule "EPOCH" era) (NEWEPOCH era)
   , Environment (EraRule "MIR" era) ~ ()
   , State (EraRule "MIR" era) ~ EpochState era
   , Signal (EraRule "MIR" era) ~ ()
@@ -99,17 +99,17 @@ instance
   , Default (PParams era)
   , Default (StashedAVVMAddresses era)
   ) =>
-  STS (ShelleyNEWEPOCH era)
+  STS (NEWEPOCH era)
   where
-  type State (ShelleyNEWEPOCH era) = NewEpochState era
+  type State (NEWEPOCH era) = NewEpochState era
 
-  type Signal (ShelleyNEWEPOCH era) = EpochNo
+  type Signal (NEWEPOCH era) = EpochNo
 
-  type Environment (ShelleyNEWEPOCH era) = ()
+  type Environment (NEWEPOCH era) = ()
 
-  type BaseM (ShelleyNEWEPOCH era) = ShelleyBase
-  type PredicateFailure (ShelleyNEWEPOCH era) = Void
-  type Event (ShelleyNEWEPOCH era) = ShelleyNewEpochEvent era
+  type BaseM (NEWEPOCH era) = ShelleyBase
+  type PredicateFailure (NEWEPOCH era) = Void
+  type Event (NEWEPOCH era) = ShelleyNewEpochEvent era
 
   initialRules =
     [ pure $
@@ -131,8 +131,8 @@ newEpochTransition ::
   , EraGov era
   , EraStake era
   , EraCertState era
-  , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
-  , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
+  , Embed (EraRule "MIR" era) (NEWEPOCH era)
+  , Embed (EraRule "EPOCH" era) (NEWEPOCH era)
   , Environment (EraRule "MIR" era) ~ ()
   , State (EraRule "MIR" era) ~ EpochState era
   , Signal (EraRule "MIR" era) ~ ()
@@ -144,7 +144,7 @@ newEpochTransition ::
   , Event (EraRule "RUPD" era) ~ RupdEvent
   , Default (State (EraRule "PPUP" era))
   ) =>
-  TransitionRule (ShelleyNEWEPOCH era)
+  TransitionRule (NEWEPOCH era)
 newEpochTransition = do
   TRC
     ( _
@@ -198,15 +198,15 @@ newEpochTransition = do
 tellReward ::
   Event (EraRule "RUPD" era) ~ RupdEvent =>
   ShelleyNewEpochEvent era ->
-  Rule (ShelleyNEWEPOCH era) rtype ()
+  Rule (NEWEPOCH era) rtype ()
 tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
 instance
-  ( STS (ShelleyEPOCH era)
+  ( STS (EPOCH era)
   , Event (EraRule "EPOCH" era) ~ ShelleyEpochEvent era
   ) =>
-  Embed (ShelleyEPOCH era) (ShelleyNEWEPOCH era)
+  Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = EpochEvent
@@ -217,7 +217,7 @@ instance
   , Default (EpochState era)
   , Event (EraRule "MIR" era) ~ ShelleyMirEvent era
   ) =>
-  Embed (ShelleyMIR era) (ShelleyNEWEPOCH era)
+  Embed (MIR era) (NEWEPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = MirEvent
@@ -229,7 +229,7 @@ updateRewards ::
   EpochState era ->
   EpochNo ->
   RewardUpdate ->
-  Rule (ShelleyNEWEPOCH era) 'Transition (EpochState era)
+  Rule (NEWEPOCH era) 'Transition (EpochState era)
 updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
   let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_
    in assert (Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df))) (pure ())

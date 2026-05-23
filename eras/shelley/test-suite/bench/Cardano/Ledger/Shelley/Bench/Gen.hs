@@ -16,8 +16,8 @@ import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   Block,
   DelplEnv,
+  LEDGERS,
   ShelleyEraForecast,
-  ShelleyLEDGERS,
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -81,8 +81,8 @@ genBlock ::
   ( EraGen era
   , MinLEDGER_STS era
   , ShelleyEraForecast era
-  , EraRule "LEDGERS" era ~ ShelleyLEDGERS era
-  , QC.HasTrace (ShelleyLEDGERS era) (GenEnv MockCrypto era)
+  , EraRule "LEDGERS" era ~ LEDGERS era
+  , QC.HasTrace (LEDGERS era) (GenEnv MockCrypto era)
   , ApplyBlock TestBlockHeader era
   , EraBlockHeader (BHeader MockCrypto) era
   ) =>

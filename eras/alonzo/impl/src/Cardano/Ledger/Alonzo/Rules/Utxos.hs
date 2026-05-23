@@ -142,12 +142,12 @@ instance NFData (EraRuleEvent "PPUP" era) => NFData (AlonzoUtxosEvent era)
 
 instance
   ( Era era
-  , STS (Shelley.ShelleyPPUP era)
+  , STS (Shelley.PPUP era)
   , EraRuleFailure "PPUP" era ~ Shelley.ShelleyPpupPredFailure era
-  , Event (EraRule "PPUP" era) ~ Event (Shelley.ShelleyPPUP era)
+  , Event (EraRule "PPUP" era) ~ Event (Shelley.PPUP era)
   , EraRuleEvent "PPUP" era ~ Shelley.PpupEvent era
   ) =>
-  Embed (Shelley.ShelleyPPUP era) (AlonzoUTXOS era)
+  Embed (Shelley.PPUP era) (AlonzoUTXOS era)
   where
   wrapFailed = UpdateFailure
   wrapEvent = AlonzoPpupToUtxosEvent

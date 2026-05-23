@@ -13,7 +13,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Ppup (
-  ShelleyPPUP,
+  PPUP,
   PpupEnv (..),
   ShelleyPpupPredFailure (..),
   ShelleyGovState (..),
@@ -38,7 +38,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Hashes (GenDelegs (..))
-import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPPUP)
+import Cardano.Ledger.Shelley.Era (PPUP, ShelleyEra)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (ProposedPPUpdates),
@@ -117,13 +117,13 @@ newtype PpupEvent era = PpupNewEpoch EpochNo
 
 instance NFData (PpupEvent era)
 
-instance (EraPParams era, AtMostEra "Babbage" era) => STS (ShelleyPPUP era) where
-  type State (ShelleyPPUP era) = ShelleyGovState era
-  type Signal (ShelleyPPUP era) = StrictMaybe (Update era)
-  type Environment (ShelleyPPUP era) = PpupEnv era
-  type BaseM (ShelleyPPUP era) = ShelleyBase
-  type PredicateFailure (ShelleyPPUP era) = ShelleyPpupPredFailure era
-  type Event (ShelleyPPUP era) = PpupEvent era
+instance (EraPParams era, AtMostEra "Babbage" era) => STS (PPUP era) where
+  type State (PPUP era) = ShelleyGovState era
+  type Signal (PPUP era) = StrictMaybe (Update era)
+  type Environment (PPUP era) = PpupEnv era
+  type BaseM (PPUP era) = ShelleyBase
+  type PredicateFailure (PPUP era) = ShelleyPpupPredFailure era
+  type Event (PPUP era) = PpupEvent era
 
   initialRules = []
 
@@ -144,7 +144,7 @@ instance Era era => DecCBOR (ShelleyPpupPredFailure era) where
     k -> Invalid k
 
 ppupTransitionNonEmpty ::
-  (EraPParams era, AtMostEra "Babbage" era) => TransitionRule (ShelleyPPUP era)
+  (EraPParams era, AtMostEra "Babbage" era) => TransitionRule (PPUP era)
 ppupTransitionNonEmpty = do
   TRC
     ( PPUPEnv slot pp (GenDelegs genDelegs)

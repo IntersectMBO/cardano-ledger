@@ -18,11 +18,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Tick (
-  ShelleyTICK,
+  TICK,
   State,
   ShelleyTickEvent (..),
   adoptGenesisDelegs,
-  ShelleyTICKF,
+  TICKF,
   validatingTickTransition,
   validatingTickTransitionFORECAST,
   solidifyNextEpochPParams,
@@ -31,7 +31,7 @@ module Cardano.Ledger.Shelley.Rules.Tick (
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (..))
-import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyTICK, ShelleyTICKF)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, TICK, TICKF)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
@@ -45,13 +45,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertStateL,
   newEpochStateGovStateL,
  )
-import Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNEWEPOCH, ShelleyNewEpochEvent)
+import Cardano.Ledger.Shelley.Rules.NewEpoch (NEWEPOCH, ShelleyNewEpochEvent)
 import Cardano.Ledger.Shelley.Rules.Rupd (
+  RUPD,
   RupdEnv (..),
   RupdEvent,
-  ShelleyRUPD,
  )
-import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, UpecState (..))
+import Cardano.Ledger.Shelley.Rules.Upec (UPEC, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo, SlotNo, getTheSlotOfNoReturn)
 import Cardano.Ledger.State (EraCertState (..), SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Control.DeepSeq (NFData)
@@ -85,10 +85,10 @@ instance
 instance
   ( EraGov era
   , EraCertState era
-  , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
-  , Embed (EraRule "RUPD" era) (ShelleyTICK era)
-  , State (ShelleyTICK era) ~ NewEpochState era
-  , BaseM (ShelleyTICK era) ~ ShelleyBase
+  , Embed (EraRule "NEWEPOCH" era) (TICK era)
+  , Embed (EraRule "RUPD" era) (TICK era)
+  , State (TICK era) ~ NewEpochState era
+  , BaseM (TICK era) ~ ShelleyBase
   , Environment (EraRule "RUPD" era) ~ RupdEnv era
   , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
   , Signal (EraRule "RUPD" era) ~ SlotNo
@@ -96,14 +96,14 @@ instance
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   ) =>
-  STS (ShelleyTICK era)
+  STS (TICK era)
   where
-  type State (ShelleyTICK era) = NewEpochState era
-  type Signal (ShelleyTICK era) = SlotNo
-  type Environment (ShelleyTICK era) = ()
-  type BaseM (ShelleyTICK era) = ShelleyBase
-  type PredicateFailure (ShelleyTICK era) = Void
-  type Event (ShelleyTICK era) = ShelleyTickEvent era
+  type State (TICK era) = NewEpochState era
+  type Signal (TICK era) = SlotNo
+  type Environment (TICK era) = ()
+  type BaseM (TICK era) = ShelleyBase
+  type PredicateFailure (TICK era) = Void
+  type Event (TICK era) = ShelleyTickEvent era
 
   initialRules = []
   transitionRules = [bheadTransition]
@@ -245,9 +245,9 @@ bheadTransition ::
   forall era.
   ( EraGov era
   , EraCertState era
-  , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
-  , Embed (EraRule "RUPD" era) (ShelleyTICK era)
-  , STS (ShelleyTICK era)
+  , Embed (EraRule "NEWEPOCH" era) (TICK era)
+  , Embed (EraRule "RUPD" era) (TICK era)
+  , STS (TICK era)
   , Environment (EraRule "RUPD" era) ~ RupdEnv era
   , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
   , Signal (EraRule "RUPD" era) ~ SlotNo
@@ -255,12 +255,12 @@ bheadTransition ::
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   ) =>
-  TransitionRule (ShelleyTICK era)
+  TransitionRule (TICK era)
 bheadTransition = do
   TRC ((), nes0@(NewEpochState _ bprev _ es _ _ _), slot) <-
     judgmentContext
 
-  nes1 <- validatingTickTransition @ShelleyTICK nes0 slot
+  nes1 <- validatingTickTransition @TICK nes0 slot
 
   -- Here we force the evaluation of the mark snapshot
   -- and the per-pool stake distribution.
@@ -278,20 +278,20 @@ bheadTransition = do
   pure nes2
 
 instance
-  ( STS (ShelleyNEWEPOCH era)
+  ( STS (NEWEPOCH era)
   , Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
   ) =>
-  Embed (ShelleyNEWEPOCH era) (ShelleyTICK era)
+  Embed (NEWEPOCH era) (TICK era)
   where
   wrapFailed = \case {}
   wrapEvent = TickNewEpochEvent
 
 instance
   ( Era era
-  , STS (ShelleyRUPD era)
+  , STS (RUPD era)
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
-  Embed (ShelleyRUPD era) (ShelleyTICK era)
+  Embed (RUPD era) (TICK era)
   where
   wrapFailed = \case {}
   wrapEvent = TickRupdEvent
@@ -314,16 +314,16 @@ instance
   , Signal (EraRule "UPEC" era) ~ ()
   , State (EraRule "UPEC" era) ~ UpecState era
   , Environment (EraRule "UPEC" era) ~ LedgerState era
-  , Embed (EraRule "UPEC" era) (ShelleyTICKF era)
+  , Embed (EraRule "UPEC" era) (TICKF era)
   ) =>
-  STS (ShelleyTICKF era)
+  STS (TICKF era)
   where
-  type State (ShelleyTICKF era) = NewEpochState era
-  type Signal (ShelleyTICKF era) = SlotNo
-  type Environment (ShelleyTICKF era) = ()
-  type BaseM (ShelleyTICKF era) = ShelleyBase
-  type PredicateFailure (ShelleyTICKF era) = Void
-  type Event (ShelleyTICKF era) = ShelleyTickfEvent era
+  type State (TICKF era) = NewEpochState era
+  type Signal (TICKF era) = SlotNo
+  type Environment (TICKF era) = ()
+  type BaseM (TICKF era) = ShelleyBase
+  type PredicateFailure (TICKF era) = Void
+  type Event (TICKF era) = ShelleyTickfEvent era
 
   initialRules = []
   transitionRules =
@@ -334,10 +334,10 @@ instance
 
 instance
   ( Era era
-  , STS (ShelleyUPEC era)
+  , STS (UPEC era)
   , Event (EraRule "UPEC" era) ~ Void
   ) =>
-  Embed (ShelleyUPEC era) (ShelleyTICKF era)
+  Embed (UPEC era) (TICKF era)
   where
   wrapFailed = \case {}
   wrapEvent = TickfUpecEvent

@@ -30,7 +30,7 @@ import Cardano.Ledger.Mary.Value (
   MultiAsset (..),
   PolicyID (..),
  )
-import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
+import Cardano.Ledger.Shelley.API (LEDGER, LedgerEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -113,13 +113,13 @@ makeMaryTxBody ins outs interval minted =
     & mintTxBodyL .~ minted
 
 policyFailure ::
-  PolicyID -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra)
+  PolicyID -> Either (NonEmpty (PredicateFailure (LEDGER MaryEra))) (UTxO MaryEra)
 policyFailure p =
   Left . pure . Shelley.UtxowFailure . Shelley.ScriptWitnessNotValidatingUTXOW $
     NES.singleton (policyID p)
 
 outTooBigFailure ::
-  TxOut MaryEra -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra)
+  TxOut MaryEra -> Either (NonEmpty (PredicateFailure (LEDGER MaryEra))) (UTxO MaryEra)
 outTooBigFailure out =
   Left . pure . Shelley.UtxowFailure . Shelley.UtxoFailure $ Allegra.OutputTooBigUTxO $ pure out
 

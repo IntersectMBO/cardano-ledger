@@ -87,7 +87,7 @@ instance
   , PredicateFailure (EraRule "UTXOW" era) ~ Shelley.ShelleyUtxowPredFailure era
   , Event (EraRule "UTXOW" era) ~ Event (AllegraUTXOW era)
   ) =>
-  Embed (AllegraUTXOW era) (Shelley.ShelleyLEDGER era)
+  Embed (AllegraUTXOW era) (Shelley.LEDGER era)
   where
   wrapFailed = Shelley.UtxowFailure
   wrapEvent = Shelley.UtxowEvent

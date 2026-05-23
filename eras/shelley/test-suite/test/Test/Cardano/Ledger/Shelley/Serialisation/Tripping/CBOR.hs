@@ -58,6 +58,6 @@ tests =
           (eraProtVerLow @ShelleyEra)
           (eraProtVerHigh @ShelleyEra)
     , testProperty "LEDGER Predicate Failures" $
-        roundTripExpectation @[PredicateFailure (STS.ShelleyLEDGERS ShelleyEra)] cborTrip
+        roundTripExpectation @[PredicateFailure (STS.LEDGERS ShelleyEra)] cborTrip
     , testCoreTypes
     ]

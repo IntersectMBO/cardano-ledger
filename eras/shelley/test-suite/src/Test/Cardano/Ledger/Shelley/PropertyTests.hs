@@ -16,7 +16,7 @@ import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, SlotNo)
 import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (BbodySignal)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast, ShelleyPOOL)
+import Cardano.Ledger.Shelley.API (ApplyBlock, POOL, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
@@ -96,7 +96,7 @@ commonTests ::
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Signal (EraRule "BBODY" era) ~ BbodySignal era
-  , EraRule "POOL" era ~ ShelleyPOOL era
+  , EraRule "POOL" era ~ POOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era
   , EncCBORGroup (BlockBody era)

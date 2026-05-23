@@ -79,8 +79,8 @@ instance NFData (ValidateInput era) where
 validateInput ::
   ( EraGen era
   , EraStake era
-  , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
-  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
+  , EraRule "LEDGERS" era ~ API.LEDGERS era
+  , QC.HasTrace (API.LEDGERS era) (GenEnv MockCrypto era)
   , API.ApplyBlock TestBlockHeader era
   , API.ShelleyEraForecast era
   , MinLEDGER_STS era
@@ -162,8 +162,8 @@ genUpdateInputs ::
   , EraStake era
   , MinLEDGER_STS era
   , API.ShelleyEraForecast era
-  , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
-  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
+  , EraRule "LEDGERS" era ~ API.LEDGERS era
+  , QC.HasTrace (API.LEDGERS era) (GenEnv MockCrypto era)
   , API.ApplyBlock TestBlockHeader era
   , EraBlockHeader (BHeader MockCrypto) era
   ) =>

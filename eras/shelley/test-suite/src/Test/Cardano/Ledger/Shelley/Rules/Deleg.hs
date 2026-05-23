@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Deleg (
 
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley (hardforkAlonzoAllowMIRTransfer)
-import Cardano.Ledger.Shelley.API (ShelleyDELEG)
+import Cardano.Ledger.Shelley.API (DELEG)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
 import Cardano.Ledger.Shelley.State
@@ -70,7 +70,7 @@ tests =
       conjoin $
         map chainProp (sourceSignalTargets tr)
   where
-    delegProp :: DelegEnv era -> SourceSignalTarget (ShelleyDELEG era) -> Property
+    delegProp :: DelegEnv era -> SourceSignalTarget (DELEG era) -> Property
     delegProp denv delegSst =
       conjoin
         [ keyRegistration delegSst
@@ -90,7 +90,7 @@ tests =
 -- | Check stake key registration
 keyRegistration ::
   (EraCertState era, ShelleyEraTxCert era) =>
-  SourceSignalTarget (ShelleyDELEG era) ->
+  SourceSignalTarget (DELEG era) ->
   Property
 keyRegistration
   SourceSignalTarget
@@ -112,7 +112,7 @@ keyRegistration _ = property ()
 -- | Check stake key de-registration
 keyDeRegistration ::
   (EraCertState era, ShelleyEraTxCert era) =>
-  SourceSignalTarget (ShelleyDELEG era) ->
+  SourceSignalTarget (DELEG era) ->
   Property
 keyDeRegistration
   SourceSignalTarget
@@ -132,7 +132,7 @@ keyDeRegistration _ = property ()
 -- | Check stake key delegation
 keyDelegation ::
   (EraCertState era, ShelleyEraTxCert era) =>
-  SourceSignalTarget (ShelleyDELEG era) ->
+  SourceSignalTarget (DELEG era) ->
   Property
 keyDelegation
   SourceSignalTarget
@@ -151,7 +151,7 @@ keyDelegation _ = property ()
 
 -- | Check that the sum of balances does not change and that each element
 -- that is either removed or added has a zero balance.
-balancesSumInvariant :: EraCertState era => SourceSignalTarget (ShelleyDELEG era) -> Property
+balancesSumInvariant :: EraCertState era => SourceSignalTarget (DELEG era) -> Property
 balancesSumInvariant
   SourceSignalTarget {source, target} =
     let accountsBalances ds = Map.map (^. balanceAccountStateL) (ds ^. accountsL . accountsMapL)
@@ -173,7 +173,7 @@ balancesSumInvariant
 checkInstantaneousRewards ::
   (EraPParams era, EraCertState era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   DelegEnv era ->
-  SourceSignalTarget (ShelleyDELEG era) ->
+  SourceSignalTarget (DELEG era) ->
   Property
 checkInstantaneousRewards
   denv

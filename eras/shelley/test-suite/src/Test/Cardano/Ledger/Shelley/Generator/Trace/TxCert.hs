@@ -24,9 +24,9 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (SlotNo32 (..))
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Cardano.Ledger.Shelley.API (
+  DELPL,
   DelplEnv (..),
   Ptr (..),
-  ShelleyDELPL,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.State
@@ -138,11 +138,11 @@ certsTransition = do
 
 instance
   ( Era era
-  , STS (ShelleyDELPL era)
+  , STS (DELPL era)
   , PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   , Event (Core.EraRule "DELPL" era) ~ ShelleyDelplEvent era
   ) =>
-  Embed (ShelleyDELPL era) (CERTS era)
+  Embed (DELPL era) (CERTS era)
   where
   wrapFailed = CertsFailure
   wrapEvent = CertsEvent

@@ -13,7 +13,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.PoolReap (
-  ShelleyPOOLREAP,
+  POOLREAP,
   ShelleyPoolreapEvent (..),
   ShelleyPoolreapState (..),
   prCertStateL,
@@ -26,7 +26,7 @@ import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOLREAP)
+import Cardano.Ledger.Shelley.Era (POOLREAP, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   allObligations,
@@ -100,14 +100,14 @@ instance
   , EraGov era
   , EraCertState era
   ) =>
-  STS (ShelleyPOOLREAP era)
+  STS (POOLREAP era)
   where
-  type State (ShelleyPOOLREAP era) = ShelleyPoolreapState era
-  type Signal (ShelleyPOOLREAP era) = EpochNo
-  type Environment (ShelleyPOOLREAP era) = ()
-  type BaseM (ShelleyPOOLREAP era) = ShelleyBase
-  type PredicateFailure (ShelleyPOOLREAP era) = Void
-  type Event (ShelleyPOOLREAP era) = ShelleyPoolreapEvent era
+  type State (POOLREAP era) = ShelleyPoolreapState era
+  type Signal (POOLREAP era) = EpochNo
+  type Environment (POOLREAP era) = ()
+  type BaseM (POOLREAP era) = ShelleyBase
+  type PredicateFailure (POOLREAP era) = Void
+  type Event (POOLREAP era) = ShelleyPoolreapEvent era
   transitionRules = [poolReapTransition]
 
   renderAssertionViolation = renderPoolReapViolation
@@ -128,7 +128,7 @@ instance
         )
     ]
 
-poolReapTransition :: forall era. EraCertState era => TransitionRule (ShelleyPOOLREAP era)
+poolReapTransition :: forall era. EraCertState era => TransitionRule (POOLREAP era)
 poolReapTransition = do
   TRC (_, PoolreapState us a cs0, e) <- judgmentContext
   let

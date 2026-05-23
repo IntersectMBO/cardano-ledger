@@ -59,36 +59,36 @@ type instance EraRule "BBODY" BabbageEra = Alonzo.AlonzoBBODY BabbageEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "DELEG" BabbageEra = API.ShelleyDELEG BabbageEra
+type instance EraRule "DELEG" BabbageEra = API.DELEG BabbageEra
 
-type instance EraRule "DELEGS" BabbageEra = API.ShelleyDELEGS BabbageEra
+type instance EraRule "DELEGS" BabbageEra = API.DELEGS BabbageEra
 
-type instance EraRule "DELPL" BabbageEra = API.ShelleyDELPL BabbageEra
+type instance EraRule "DELPL" BabbageEra = API.DELPL BabbageEra
 
-type instance EraRule "EPOCH" BabbageEra = Shelley.ShelleyEPOCH BabbageEra
+type instance EraRule "EPOCH" BabbageEra = Shelley.EPOCH BabbageEra
 
-type instance EraRule "LEDGERS" BabbageEra = API.ShelleyLEDGERS BabbageEra
+type instance EraRule "LEDGERS" BabbageEra = API.LEDGERS BabbageEra
 
-type instance EraRule "MIR" BabbageEra = Shelley.ShelleyMIR BabbageEra
+type instance EraRule "MIR" BabbageEra = Shelley.MIR BabbageEra
 
-type instance EraRule "NEWEPOCH" BabbageEra = API.ShelleyNEWEPOCH BabbageEra
+type instance EraRule "NEWEPOCH" BabbageEra = API.NEWEPOCH BabbageEra
 
-type instance EraRule "NEWPP" BabbageEra = Shelley.ShelleyNEWPP BabbageEra
+type instance EraRule "NEWPP" BabbageEra = Shelley.NEWPP BabbageEra
 
-type instance EraRule "POOL" BabbageEra = API.ShelleyPOOL BabbageEra
+type instance EraRule "POOL" BabbageEra = API.POOL BabbageEra
 
-type instance EraRule "POOLREAP" BabbageEra = API.ShelleyPOOLREAP BabbageEra
+type instance EraRule "POOLREAP" BabbageEra = API.POOLREAP BabbageEra
 
-type instance EraRule "PPUP" BabbageEra = API.ShelleyPPUP BabbageEra
+type instance EraRule "PPUP" BabbageEra = API.PPUP BabbageEra
 
-type instance EraRule "RUPD" BabbageEra = Shelley.ShelleyRUPD BabbageEra
+type instance EraRule "RUPD" BabbageEra = Shelley.RUPD BabbageEra
 
-type instance EraRule "SNAP" BabbageEra = Shelley.ShelleySNAP BabbageEra
+type instance EraRule "SNAP" BabbageEra = Shelley.SNAP BabbageEra
 
-type instance EraRule "TICK" BabbageEra = Shelley.ShelleyTICK BabbageEra
+type instance EraRule "TICK" BabbageEra = Shelley.TICK BabbageEra
 
-type instance EraRule "TICKF" BabbageEra = Shelley.ShelleyTICKF BabbageEra
+type instance EraRule "TICKF" BabbageEra = Shelley.TICKF BabbageEra
 
-type instance EraRule "UPEC" BabbageEra = Shelley.ShelleyUPEC BabbageEra
+type instance EraRule "UPEC" BabbageEra = Shelley.UPEC BabbageEra
 
 -- =================================================

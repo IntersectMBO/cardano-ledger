@@ -27,13 +27,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosUtxo,
  )
 import Cardano.Ledger.Shelley.Rules (
+  DELPL,
   DelegsEnv,
   DelplEnv,
+  LEDGER,
+  LEDGERS,
   LedgerEnv (..),
-  ShelleyDELPL,
   ShelleyDelplPredFailure,
-  ShelleyLEDGER,
-  ShelleyLEDGERS,
   ShelleyLedgersEnv (..),
   UtxoEnv,
  )
@@ -88,8 +88,8 @@ instance
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
   , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
-  , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
-  , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
+  , Embed (EraRule "DELEGS" era) (LEDGER era)
+  , Embed (EraRule "UTXOW" era) (LEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
@@ -97,10 +97,10 @@ instance
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , AtMostEra "Babbage" era
-  , EraRule "LEDGER" era ~ ShelleyLEDGER era
+  , EraRule "LEDGER" era ~ LEDGER era
   , Crypto c
   ) =>
-  TQC.HasTrace (ShelleyLEDGER era) (GenEnv c era)
+  TQC.HasTrace (LEDGER era) (GenEnv c era)
   where
   envGen GenEnv {geConstants} =
     LedgerEnv (SlotNo 0) Nothing minBound
@@ -119,7 +119,7 @@ instance
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 
-  type BaseEnv (ShelleyLEDGER era) = Globals
+  type BaseEnv (LEDGER era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 instance
@@ -137,11 +137,11 @@ instance
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
   , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
-  , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
-  , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
+  , Embed (EraRule "DELEG" era) (DELPL era)
+  , Embed (EraRule "LEDGER" era) (LEDGERS era)
   , AtMostEra "Babbage" era
   ) =>
-  TQC.HasTrace (ShelleyLEDGERS era) (GenEnv c era)
+  TQC.HasTrace (LEDGERS era) (GenEnv c era)
   where
   envGen GenEnv {geConstants} =
     LedgersEnv (SlotNo 0) (EpochNo 0)
@@ -188,7 +188,7 @@ instance
 
   shrinkSignal = const []
 
-  type BaseEnv (ShelleyLEDGERS era) = Globals
+  type BaseEnv (LEDGERS era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | Generate initial state for the LEDGER STS using the STS environment.

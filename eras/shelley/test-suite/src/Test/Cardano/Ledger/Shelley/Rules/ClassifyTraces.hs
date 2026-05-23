@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.PParams (
   pattern ProposedPPUpdates,
   pattern Update,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
+import Cardano.Ledger.Shelley.Rules (LEDGER)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxCert (
   isDelegation,
@@ -333,13 +333,13 @@ propAbstractSizeBoundsBytes ::
   ( EraGen era
   , EraGov era
   , EraStake era
-  , QC.HasTrace (ShelleyLEDGER era) (GenEnv MockCrypto era)
+  , QC.HasTrace (LEDGER era) (GenEnv MockCrypto era)
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
   let tl = 100
       numBytes = toInteger . BS.length . Plain.serialize'
-  forAllTraceFromInitState @(ShelleyLEDGER era)
+  forAllTraceFromInitState @(LEDGER era)
     testGlobals
     tl
     (genEnv @era @MockCrypto p defaultConstants)
@@ -361,7 +361,7 @@ propAbstractSizeNotTooBig ::
   ( EraGen era
   , EraGov era
   , EraStake era
-  , QC.HasTrace (ShelleyLEDGER era) (GenEnv MockCrypto era)
+  , QC.HasTrace (LEDGER era) (GenEnv MockCrypto era)
   ) =>
   Property
 propAbstractSizeNotTooBig = property $ do
@@ -374,7 +374,7 @@ propAbstractSizeNotTooBig = property $ do
       acceptableMagnitude = (3 :: Integer)
       numBytes = toInteger . BS.length . Plain.serialize'
       notTooBig tx = txSizeBound tx <= acceptableMagnitude * numBytes tx
-  forAllTraceFromInitState @(ShelleyLEDGER era)
+  forAllTraceFromInitState @(LEDGER era)
     testGlobals
     tl
     (genEnv @era @MockCrypto p defaultConstants)

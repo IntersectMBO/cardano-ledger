@@ -173,11 +173,11 @@ instance
 
 instance
   ( Era era
-  , STS (Shelley.ShelleyDELEGS era)
+  , STS (Shelley.DELEGS era)
   , PredicateFailure (EraRule "DELEGS" era) ~ Shelley.ShelleyDelegsPredFailure era
   , Event (EraRule "DELEGS" era) ~ Shelley.ShelleyDelegsEvent era
   ) =>
-  Embed (Shelley.ShelleyDELEGS era) (AlonzoLEDGER era)
+  Embed (Shelley.DELEGS era) (AlonzoLEDGER era)
   where
   wrapFailed = Shelley.DelegsFailure
   wrapEvent = Shelley.DelegsEvent
@@ -199,7 +199,7 @@ instance
   , PredicateFailure (EraRule "LEDGER" era) ~ Shelley.ShelleyLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ Shelley.ShelleyLedgerEvent era
   ) =>
-  Embed (AlonzoLEDGER era) (Shelley.ShelleyLEDGERS era)
+  Embed (AlonzoLEDGER era) (Shelley.LEDGERS era)
   where
   wrapFailed = Shelley.LedgerFailure
   wrapEvent = Shelley.LedgerEvent

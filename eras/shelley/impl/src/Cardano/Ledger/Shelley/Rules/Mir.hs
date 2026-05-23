@@ -12,7 +12,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Mir (
-  ShelleyMIR,
+  MIR,
   ShelleyMirEvent (..),
   emptyInstantaneousRewards,
 ) where
@@ -21,7 +21,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin, compactCoinOrError)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.Shelley.Era (ShelleyMIR)
+import Cardano.Ledger.Shelley.Era (MIR)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   curPParamsEpochStateL,
@@ -69,14 +69,14 @@ instance
   , EraGov era
   , EraCertState era
   ) =>
-  STS (ShelleyMIR era)
+  STS (MIR era)
   where
-  type State (ShelleyMIR era) = EpochState era
-  type Signal (ShelleyMIR era) = ()
-  type Environment (ShelleyMIR era) = ()
-  type BaseM (ShelleyMIR era) = ShelleyBase
-  type Event (ShelleyMIR era) = ShelleyMirEvent era
-  type PredicateFailure (ShelleyMIR era) = Void
+  type State (MIR era) = EpochState era
+  type Signal (MIR era) = ()
+  type Environment (MIR era) = ()
+  type BaseM (MIR era) = ShelleyBase
+  type Event (MIR era) = ShelleyMirEvent era
+  type PredicateFailure (MIR era) = Void
 
   transitionRules = [mirTransition]
 
@@ -93,7 +93,7 @@ instance
 mirTransition ::
   forall era.
   (EraGov era, EraCertState era) =>
-  TransitionRule (ShelleyMIR era)
+  TransitionRule (MIR era)
 mirTransition = do
   TRC
     ( _
