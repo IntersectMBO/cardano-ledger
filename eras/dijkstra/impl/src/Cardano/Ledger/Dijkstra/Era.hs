@@ -31,6 +31,26 @@ module Cardano.Ledger.Dijkstra.Era (
   UTXOW,
   DijkstraEraBlockHeader (..),
   DijkstraBbodySignal (..),
+
+  -- * Deprecated
+  DijkstraBBODY,
+  DijkstraCERT,
+  DijkstraGOV,
+  DijkstraGOVCERT,
+  DijkstraLEDGER,
+  DijkstraMEMPOOL,
+  DijkstraSUBCERT,
+  DijkstraSUBCERTS,
+  DijkstraSUBDELEG,
+  DijkstraSUBGOV,
+  DijkstraSUBGOVCERT,
+  DijkstraSUBLEDGER,
+  DijkstraSUBLEDGERS,
+  DijkstraSUBPOOL,
+  DijkstraSUBUTXOW,
+  DijkstraSUBUTXO,
+  DijkstraUTXO,
+  DijkstraUTXOW,
 ) where
 
 import Cardano.Ledger.BaseTypes (Nonce)
@@ -94,45 +114,89 @@ type instance Value DijkstraEra = MaryValue
 
 data SUBLEDGERS era
 
+type DijkstraSUBLEDGERS = SUBLEDGERS
+
+{-# DEPRECATED DijkstraSUBLEDGERS "In favor of `SUBLEDGERS`" #-}
+
 type instance EraRule "SUBLEDGERS" DijkstraEra = SUBLEDGERS DijkstraEra
 
 data SUBLEDGER era
+
+type DijkstraSUBLEDGER = SUBLEDGER
+
+{-# DEPRECATED DijkstraSUBLEDGER "In favor of `SUBLEDGER`" #-}
 
 type instance EraRule "SUBLEDGER" DijkstraEra = SUBLEDGER DijkstraEra
 
 data SUBCERTS era
 
+type DijkstraSUBCERTS = SUBCERTS
+
+{-# DEPRECATED DijkstraSUBCERTS "In favor of `SUBCERTS`" #-}
+
 type instance EraRule "SUBCERTS" DijkstraEra = SUBCERTS DijkstraEra
 
 data SUBCERT era
+
+type DijkstraSUBCERT = SUBCERT
+
+{-# DEPRECATED DijkstraSUBCERT "In favor of `SUBCERT`" #-}
 
 type instance EraRule "SUBCERT" DijkstraEra = SUBCERT DijkstraEra
 
 data SUBDELEG era
 
+type DijkstraSUBDELEG = SUBDELEG
+
+{-# DEPRECATED DijkstraSUBDELEG "In favor of `SUBDELEG`" #-}
+
 type instance EraRule "SUBDELEG" DijkstraEra = SUBDELEG DijkstraEra
 
 data SUBGOV era
+
+type DijkstraSUBGOV = SUBGOV
+
+{-# DEPRECATED DijkstraSUBGOV "In favor of `SUBGOV`" #-}
 
 type instance EraRule "SUBGOV" DijkstraEra = SUBGOV DijkstraEra
 
 data SUBGOVCERT era
 
+type DijkstraSUBGOVCERT = SUBGOVCERT
+
+{-# DEPRECATED DijkstraSUBGOVCERT "In favor of `SUBGOVCERT`" #-}
+
 type instance EraRule "SUBGOVCERT" DijkstraEra = SUBGOVCERT DijkstraEra
 
 data SUBPOOL era
+
+type DijkstraSUBPOOL = SUBPOOL
+
+{-# DEPRECATED DijkstraSUBPOOL "In favor of `SUBPOOL`" #-}
 
 type instance EraRule "SUBPOOL" DijkstraEra = SUBPOOL DijkstraEra
 
 data SUBUTXO era
 
+type DijkstraSUBUTXO = SUBUTXO
+
+{-# DEPRECATED DijkstraSUBUTXO "In favor of `SUBUTXO`" #-}
+
 type instance EraRule "SUBUTXO" DijkstraEra = SUBUTXO DijkstraEra
 
 data SUBUTXOW era
 
+type DijkstraSUBUTXOW = SUBUTXOW
+
+{-# DEPRECATED DijkstraSUBUTXOW "In favor of `SUBUTXOW`" #-}
+
 type instance EraRule "SUBUTXOW" DijkstraEra = SUBUTXOW DijkstraEra
 
 data GOV era
+
+type DijkstraGOV = GOV
+
+{-# DEPRECATED DijkstraGOV "In favor of `GOV`" #-}
 
 type instance EraRule "GOV" DijkstraEra = GOV DijkstraEra
 
@@ -146,6 +210,10 @@ type instance EraRule "UTXOS" DijkstraEra = Conway.UTXOS DijkstraEra
 
 data LEDGER era
 
+type DijkstraLEDGER = LEDGER
+
+{-# DEPRECATED DijkstraLEDGER "In favor of `LEDGER`" #-}
+
 type instance EraRule "LEDGER" DijkstraEra = LEDGER DijkstraEra
 
 type instance EraRule "TICKF" DijkstraEra = Conway.TICKF DijkstraEra
@@ -156,27 +224,51 @@ type instance EraRule "CERTS" DijkstraEra = Conway.CERTS DijkstraEra
 
 data CERT era
 
+type DijkstraCERT = CERT
+
+{-# DEPRECATED DijkstraCERT "In favor of `CERT`" #-}
+
 type instance EraRule "CERT" DijkstraEra = CERT DijkstraEra
 
 type instance EraRule "DELEG" DijkstraEra = Conway.DELEG DijkstraEra
 
 data GOVCERT era
 
+type DijkstraGOVCERT = GOVCERT
+
+{-# DEPRECATED DijkstraGOVCERT "In favor of `GOVCERT`" #-}
+
 type instance EraRule "GOVCERT" DijkstraEra = GOVCERT DijkstraEra
 
 data UTXOW era
+
+type DijkstraUTXOW = UTXOW
+
+{-# DEPRECATED DijkstraUTXOW "In favor of `UTXOW`" #-}
 
 type instance EraRule "UTXOW" DijkstraEra = UTXOW DijkstraEra
 
 data UTXO era
 
+type DijkstraUTXO = UTXO
+
+{-# DEPRECATED DijkstraUTXO "In favor of `UTXO`" #-}
+
 type instance EraRule "UTXO" DijkstraEra = UTXO DijkstraEra
 
 data BBODY era
 
+type DijkstraBBODY = BBODY
+
+{-# DEPRECATED DijkstraBBODY "In favor of `BBODY`" #-}
+
 type instance EraRule "BBODY" DijkstraEra = BBODY DijkstraEra
 
 data MEMPOOL era
+
+type DijkstraMEMPOOL = MEMPOOL
+
+{-# DEPRECATED DijkstraMEMPOOL "In favor of `MEMPOOL`" #-}
 
 type instance EraRule "MEMPOOL" DijkstraEra = MEMPOOL DijkstraEra
 
