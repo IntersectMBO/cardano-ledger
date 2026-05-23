@@ -115,6 +115,7 @@ deriving instance
   , EraTxCert era
   , EraTxOut era
   , Eq (ContextError era)
+  , era ~ DijkstraEra -- Remove when GHC bug is fixed
   ) =>
   Eq (DijkstraContextError era)
 
@@ -123,6 +124,7 @@ deriving instance
   , EraTxCert era
   , EraTxOut era
   , Ord (ContextError era)
+  , era ~ DijkstraEra -- Remove when GHC bug is fixed
   ) =>
   Ord (DijkstraContextError era)
 
