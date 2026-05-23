@@ -34,6 +34,28 @@ module Cardano.Ledger.Shelley.Era (
   hardforkAlonzoValidatePoolAccountAddressNetID,
   hardforkBabbageForgoRewardPrefilter,
   hardforkConwayDisallowDuplicatedVRFKeys,
+
+  -- * Deprecated
+  ShelleyBBODY,
+  ShelleyDELEG,
+  ShelleyDELEGS,
+  ShelleyDELPL,
+  ShelleyEPOCH,
+  ShelleyLEDGER,
+  ShelleyLEDGERS,
+  ShelleyMIR,
+  ShelleyNEWEPOCH,
+  ShelleyNEWPP,
+  ShelleyPOOL,
+  ShelleyPOOLREAP,
+  ShelleyPPUP,
+  ShelleyRUPD,
+  ShelleySNAP,
+  ShelleyTICK,
+  ShelleyTICKF,
+  ShelleyUPEC,
+  ShelleyUTXO,
+  ShelleyUTXOW,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
@@ -48,43 +70,123 @@ type instance Value ShelleyEra = Coin
 
 data BBODY era
 
+type ShelleyBBODY = BBODY
+
+{-# DEPRECATED ShelleyBBODY "In favor of `BBODY`" #-}
+
 data DELEG era
+
+type ShelleyDELEG = DELEG
+
+{-# DEPRECATED ShelleyDELEG "In favor of `DELEG`" #-}
 
 data DELEGS era
 
+type ShelleyDELEGS = DELEGS
+
+{-# DEPRECATED ShelleyDELEGS "In favor of `DELEGS`" #-}
+
 data DELPL era
+
+type ShelleyDELPL = DELPL
+
+{-# DEPRECATED ShelleyDELPL "In favor of `DELPL`" #-}
 
 data EPOCH era
 
+type ShelleyEPOCH = EPOCH
+
+{-# DEPRECATED ShelleyEPOCH "In favor of `EPOCH`" #-}
+
 data LEDGER era
+
+type ShelleyLEDGER = LEDGER
+
+{-# DEPRECATED ShelleyLEDGER "In favor of `LEDGER`" #-}
 
 data LEDGERS era
 
+type ShelleyLEDGERS = LEDGERS
+
+{-# DEPRECATED ShelleyLEDGERS "In favor of `LEDGERS`" #-}
+
 data MIR era
+
+type ShelleyMIR = MIR
+
+{-# DEPRECATED ShelleyMIR "In favor of `MIR`" #-}
 
 data NEWEPOCH era
 
+type ShelleyNEWEPOCH = NEWEPOCH
+
+{-# DEPRECATED ShelleyNEWEPOCH "In favor of `NEWEPOCH`" #-}
+
 data NEWPP era
+
+type ShelleyNEWPP = NEWPP
+
+{-# DEPRECATED ShelleyNEWPP "In favor of `NEWPP`" #-}
 
 data POOL era
 
+type ShelleyPOOL = POOL
+
+{-# DEPRECATED ShelleyPOOL "In favor of `POOL`" #-}
+
 data POOLREAP era
+
+type ShelleyPOOLREAP = POOLREAP
+
+{-# DEPRECATED ShelleyPOOLREAP "In favor of `POOLREAP`" #-}
 
 data PPUP era
 
+type ShelleyPPUP = PPUP
+
+{-# DEPRECATED ShelleyPPUP "In favor of `PPUP`" #-}
+
 data RUPD era
+
+type ShelleyRUPD = RUPD
+
+{-# DEPRECATED ShelleyRUPD "In favor of `RUPD`" #-}
 
 data SNAP era
 
+type ShelleySNAP = SNAP
+
+{-# DEPRECATED ShelleySNAP "In favor of `SNAP`" #-}
+
 data TICK era
+
+type ShelleyTICK = TICK
+
+{-# DEPRECATED ShelleyTICK "In favor of `TICK`" #-}
 
 data TICKF era
 
+type ShelleyTICKF = TICKF
+
+{-# DEPRECATED ShelleyTICKF "In favor of `TICKF`" #-}
+
 data UPEC era
+
+type ShelleyUPEC = UPEC
+
+{-# DEPRECATED ShelleyUPEC "In favor of `UPEC`" #-}
 
 data UTXO era
 
+type ShelleyUTXO = UTXO
+
+{-# DEPRECATED ShelleyUTXO "In favor of `UTXO`" #-}
+
 data UTXOW era
+
+type ShelleyUTXOW = UTXOW
+
+{-# DEPRECATED ShelleyUTXOW "In favor of `UTXOW`" #-}
 
 type instance EraRule "BBODY" ShelleyEra = BBODY ShelleyEra
 
