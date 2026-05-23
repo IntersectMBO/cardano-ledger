@@ -43,8 +43,8 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded,
  )
 import Cardano.Ledger.Babbage.Rules (
-  BabbageUTXO,
   BabbageUtxoPredFailure (..),
+  UTXO,
   babbageEvalScriptsTxInvalid,
   expectScriptsToPass,
  )
@@ -216,7 +216,7 @@ instance
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
-  Embed (ConwayUTXOS era) (BabbageUTXO era)
+  Embed (ConwayUTXOS era) (UTXO era)
   where
   wrapFailed = AlonzoInBabbageUtxoPredFailure . UtxosFailure
   wrapEvent = UtxosEvent

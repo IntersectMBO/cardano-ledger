@@ -10,15 +10,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER) where
+module Cardano.Ledger.Babbage.Rules.Ledger (LEDGER) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageLEDGER)
+import Cardano.Ledger.Babbage.Era (BabbageEra, LEDGER)
 import Cardano.Ledger.Babbage.Rules.Delegs ()
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPredFailure)
-import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure)
+import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPredFailure, UTXOW)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
@@ -81,8 +81,8 @@ instance InjectRuleFailure "LEDGER" Shelley.ShelleyDelegPredFailure BabbageEra w
 instance
   ( AlonzoEraTx era
   , EraGov era
-  , Embed (EraRule "DELEGS" era) (BabbageLEDGER era)
-  , Embed (EraRule "UTXOW" era) (BabbageLEDGER era)
+  , Embed (EraRule "DELEGS" era) (LEDGER era)
+  , Embed (EraRule "UTXOW" era) (LEDGER era)
   , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
@@ -91,21 +91,21 @@ instance
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , AtMostEra "Babbage" era
   , EraCertState era
-  , EraRule "LEDGER" era ~ BabbageLEDGER era
+  , EraRule "LEDGER" era ~ LEDGER era
   , EraRuleFailure "LEDGER" era ~ Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   ) =>
-  STS (BabbageLEDGER era)
+  STS (LEDGER era)
   where
-  type State (BabbageLEDGER era) = LedgerState era
-  type Signal (BabbageLEDGER era) = StAnnTx TopTx era
-  type Environment (BabbageLEDGER era) = Shelley.LedgerEnv era
-  type BaseM (BabbageLEDGER era) = ShelleyBase
-  type PredicateFailure (BabbageLEDGER era) = Shelley.ShelleyLedgerPredFailure era
-  type Event (BabbageLEDGER era) = Shelley.ShelleyLedgerEvent era
+  type State (LEDGER era) = LedgerState era
+  type Signal (LEDGER era) = StAnnTx TopTx era
+  type Environment (LEDGER era) = Shelley.LedgerEnv era
+  type BaseM (LEDGER era) = ShelleyBase
+  type PredicateFailure (LEDGER era) = Shelley.ShelleyLedgerPredFailure era
+  type Event (LEDGER era) = Shelley.ShelleyLedgerEvent era
 
   initialRules = []
-  transitionRules = [Alonzo.ledgerTransition @BabbageLEDGER]
+  transitionRules = [Alonzo.ledgerTransition @LEDGER]
 
   renderAssertionViolation = Shelley.renderDepositEqualsObligationViolation
 
@@ -117,29 +117,29 @@ instance
   , PredicateFailure (EraRule "DELEGS" era) ~ Shelley.ShelleyDelegsPredFailure era
   , Event (EraRule "DELEGS" era) ~ Shelley.ShelleyDelegsEvent era
   ) =>
-  Embed (Shelley.DELEGS era) (BabbageLEDGER era)
+  Embed (Shelley.DELEGS era) (LEDGER era)
   where
   wrapFailed = Shelley.DelegsFailure
   wrapEvent = Shelley.DelegsEvent
 
 instance
   ( Era era
-  , STS (BabbageUTXOW era)
+  , STS (UTXOW era)
   , Event (EraRule "UTXOW" era) ~ Alonzo.AlonzoUtxowEvent era
   , PredicateFailure (EraRule "UTXOW" era) ~ BabbageUtxowPredFailure era
   ) =>
-  Embed (BabbageUTXOW era) (BabbageLEDGER era)
+  Embed (UTXOW era) (LEDGER era)
   where
   wrapFailed = Shelley.UtxowFailure
   wrapEvent = Shelley.UtxowEvent
 
 instance
   ( Era era
-  , STS (BabbageLEDGER era)
+  , STS (LEDGER era)
   , PredicateFailure (EraRule "LEDGER" era) ~ Shelley.ShelleyLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ Shelley.ShelleyLedgerEvent era
   ) =>
-  Embed (BabbageLEDGER era) (Shelley.LEDGERS era)
+  Embed (LEDGER era) (Shelley.LEDGERS era)
   where
   wrapFailed = Shelley.LedgerFailure
   wrapEvent = Shelley.LedgerEvent

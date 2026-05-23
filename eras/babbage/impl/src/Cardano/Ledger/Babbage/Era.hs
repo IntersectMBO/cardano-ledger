@@ -8,10 +8,10 @@
 
 module Cardano.Ledger.Babbage.Era (
   BabbageEra,
-  BabbageUTXO,
-  BabbageUTXOS,
-  BabbageUTXOW,
-  BabbageLEDGER,
+  UTXO,
+  UTXOS,
+  UTXOW,
+  LEDGER,
 ) where
 
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
@@ -37,21 +37,21 @@ type instance Value BabbageEra = MaryValue
 -- Era Mapping
 -------------------------------------------------------------------------------
 
-data BabbageUTXOS era
+data UTXOS era
 
-type instance EraRule "UTXOS" BabbageEra = BabbageUTXOS BabbageEra
+type instance EraRule "UTXOS" BabbageEra = UTXOS BabbageEra
 
-data BabbageUTXO era
+data UTXO era
 
-type instance EraRule "UTXO" BabbageEra = BabbageUTXO BabbageEra
+type instance EraRule "UTXO" BabbageEra = UTXO BabbageEra
 
-data BabbageUTXOW era
+data UTXOW era
 
-type instance EraRule "UTXOW" BabbageEra = BabbageUTXOW BabbageEra
+type instance EraRule "UTXOW" BabbageEra = UTXOW BabbageEra
 
-data BabbageLEDGER c
+data LEDGER c
 
-type instance EraRule "LEDGER" BabbageEra = BabbageLEDGER BabbageEra
+type instance EraRule "LEDGER" BabbageEra = LEDGER BabbageEra
 
 -- Rules inherited from Alonzo
 
