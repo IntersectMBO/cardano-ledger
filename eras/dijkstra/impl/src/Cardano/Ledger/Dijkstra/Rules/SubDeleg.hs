@@ -13,7 +13,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubDeleg (
-  DijkstraSUBDELEG,
+  SUBDELEG,
   DijkstraSubDelegPredFailure (..),
 ) where
 
@@ -29,7 +29,7 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBDELEG,
+  SUBDELEG,
  )
 import Cardano.Ledger.Dijkstra.State
 import Control.DeepSeq (NFData)
@@ -61,16 +61,16 @@ instance InjectRuleFailure "SUBDELEG" Conway.ConwayDelegPredFailure DijkstraEra 
 instance
   ( EraGov era
   , ConwayEraCertState era
-  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
+  , EraRule "SUBDELEG" era ~ SUBDELEG era
   , InjectRuleFailure "SUBDELEG" Conway.ConwayDelegPredFailure era
   ) =>
-  STS (DijkstraSUBDELEG era)
+  STS (SUBDELEG era)
   where
-  type State (DijkstraSUBDELEG era) = CertState era
-  type Signal (DijkstraSUBDELEG era) = ConwayDelegCert
-  type Environment (DijkstraSUBDELEG era) = Conway.ConwayDelegEnv era
-  type BaseM (DijkstraSUBDELEG era) = ShelleyBase
-  type PredicateFailure (DijkstraSUBDELEG era) = DijkstraSubDelegPredFailure era
-  type Event (DijkstraSUBDELEG era) = Void
+  type State (SUBDELEG era) = CertState era
+  type Signal (SUBDELEG era) = ConwayDelegCert
+  type Environment (SUBDELEG era) = Conway.ConwayDelegEnv era
+  type BaseM (SUBDELEG era) = ShelleyBase
+  type PredicateFailure (SUBDELEG era) = DijkstraSubDelegPredFailure era
+  type Event (SUBDELEG era) = Void
 
   transitionRules = [Conway.conwayDelegTransition]

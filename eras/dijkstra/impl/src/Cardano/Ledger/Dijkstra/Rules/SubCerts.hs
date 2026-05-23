@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubCerts (
-  DijkstraSUBCERTS,
+  SUBCERTS,
   SubCertsEnv (..),
   DijkstraSubCertsPredFailure (..),
   DijkstraSubCertsEvent (..),
@@ -36,8 +36,8 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBCERT,
-  DijkstraSUBCERTS,
+  SUBCERT,
+  SUBCERTS,
  )
 import Cardano.Ledger.Dijkstra.Rules.Cert ()
 import Cardano.Ledger.Dijkstra.Rules.SubCert (DijkstraSubCertEvent, DijkstraSubCertPredFailure)
@@ -96,18 +96,18 @@ instance NFData (Event (EraRule "SUBCERT" era)) => NFData (DijkstraSubCertsEvent
 instance
   ( ConwayEraGov era
   , ConwayEraCertState era
-  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , Embed (EraRule "SUBCERT" era) (DijkstraSUBCERTS era)
+  , EraRule "SUBCERTS" era ~ SUBCERTS era
+  , EraRule "SUBCERT" era ~ SUBCERT era
+  , Embed (EraRule "SUBCERT" era) (SUBCERTS era)
   ) =>
-  STS (DijkstraSUBCERTS era)
+  STS (SUBCERTS era)
   where
-  type State (DijkstraSUBCERTS era) = CertState era
-  type Signal (DijkstraSUBCERTS era) = Seq (TxCert era)
-  type Environment (DijkstraSUBCERTS era) = SubCertsEnv era
-  type BaseM (DijkstraSUBCERTS era) = ShelleyBase
-  type PredicateFailure (DijkstraSUBCERTS era) = DijkstraSubCertsPredFailure era
-  type Event (DijkstraSUBCERTS era) = DijkstraSubCertsEvent era
+  type State (SUBCERTS era) = CertState era
+  type Signal (SUBCERTS era) = Seq (TxCert era)
+  type Environment (SUBCERTS era) = SubCertsEnv era
+  type BaseM (SUBCERTS era) = ShelleyBase
+  type PredicateFailure (SUBCERTS era) = DijkstraSubCertsPredFailure era
+  type Event (SUBCERTS era) = DijkstraSubCertsEvent era
 
   transitionRules = [dijkstraSubCertsTransition @era]
 
@@ -115,9 +115,9 @@ dijkstraSubCertsTransition ::
   forall era.
   ( ConwayEraGov era
   , ConwayEraCertState era
-  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , Embed (EraRule "SUBCERT" era) (DijkstraSUBCERTS era)
+  , EraRule "SUBCERTS" era ~ SUBCERTS era
+  , EraRule "SUBCERT" era ~ SUBCERT era
+  , Embed (EraRule "SUBCERT" era) (SUBCERTS era)
   ) =>
   TransitionRule (EraRule "SUBCERTS" era)
 dijkstraSubCertsTransition = do
@@ -131,16 +131,16 @@ dijkstraSubCertsTransition = do
     Empty -> pure certState
     gamma :|> txCert -> do
       certStateRest <-
-        trans @(DijkstraSUBCERTS era) $ TRC (env, certState, gamma)
+        trans @(SUBCERTS era) $ TRC (env, certState, gamma)
       trans @(EraRule "SUBCERT" era) $
         TRC (Conway.CertEnv pp currentEpoch committee committeeProposals, certStateRest, txCert)
 
 instance
-  ( STS (DijkstraSUBCERT era)
+  ( STS (SUBCERT era)
   , PredicateFailure (EraRule "SUBCERT" era) ~ DijkstraSubCertPredFailure era
   , Event (EraRule "SUBCERT" era) ~ DijkstraSubCertEvent era
   ) =>
-  Embed (DijkstraSUBCERT era) (DijkstraSUBCERTS era)
+  Embed (SUBCERT era) (SUBCERTS era)
   where
   wrapFailed = SubCertFailure
   wrapEvent = SubCertEvent

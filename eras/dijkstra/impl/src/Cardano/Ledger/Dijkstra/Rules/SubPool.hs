@@ -15,7 +15,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubPool (
-  DijkstraSUBPOOL,
+  SUBPOOL,
   DijkstraSubPoolPredFailure (..),
   DijkstraSubPoolEvent (..),
 ) where
@@ -30,7 +30,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBPOOL,
+  SUBPOOL,
  )
 import Cardano.Ledger.Dijkstra.State
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -69,19 +69,19 @@ newtype DijkstraSubPoolEvent era = DijkstraSubPoolEvent (Shelley.PoolEvent era)
 
 instance
   ( EraGov era
-  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
+  , EraRule "SUBPOOL" era ~ SUBPOOL era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
   , InjectRuleEvent "SUBPOOL" Shelley.PoolEvent era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure era
   ) =>
-  STS (DijkstraSUBPOOL era)
+  STS (SUBPOOL era)
   where
-  type State (DijkstraSUBPOOL era) = PState era
-  type Signal (DijkstraSUBPOOL era) = PoolCert
-  type Environment (DijkstraSUBPOOL era) = Shelley.PoolEnv era
-  type BaseM (DijkstraSUBPOOL era) = ShelleyBase
-  type PredicateFailure (DijkstraSUBPOOL era) = DijkstraSubPoolPredFailure era
-  type Event (DijkstraSUBPOOL era) = DijkstraSubPoolEvent era
+  type State (SUBPOOL era) = PState era
+  type Signal (SUBPOOL era) = PoolCert
+  type Environment (SUBPOOL era) = Shelley.PoolEnv era
+  type BaseM (SUBPOOL era) = ShelleyBase
+  type PredicateFailure (SUBPOOL era) = DijkstraSubPoolPredFailure era
+  type Event (SUBPOOL era) = DijkstraSubPoolEvent era
 
   transitionRules = [Shelley.poolTransition]

@@ -39,11 +39,11 @@ instance InjectRuleFailure "CERTS" Conway.ConwayGovCertPredFailure DijkstraEra w
 
 instance
   ( Era era
-  , STS (DijkstraCERT era)
+  , STS (CERT era)
   , Event (EraRule "CERT" era) ~ Conway.ConwayCertEvent era
   , PredicateFailure (EraRule "CERT" era) ~ Conway.ConwayCertPredFailure era
   ) =>
-  Embed (DijkstraCERT era) (Conway.CERTS era)
+  Embed (CERT era) (Conway.CERTS era)
   where
   wrapFailed = Conway.CertFailure
   wrapEvent = Conway.CertEvent
@@ -52,7 +52,7 @@ instance
   ( STS (Conway.DELEG era)
   , PredicateFailure (EraRule "DELEG" era) ~ Conway.ConwayDelegPredFailure era
   ) =>
-  Embed (Conway.DELEG era) (DijkstraCERT era)
+  Embed (Conway.DELEG era) (CERT era)
   where
   wrapFailed = Conway.DelegFailure
   wrapEvent = absurd
@@ -62,7 +62,7 @@ instance
   , PredicateFailure (EraRule "POOL" era) ~ Shelley.ShelleyPoolPredFailure era
   , Event (EraRule "POOL" era) ~ Shelley.PoolEvent era
   ) =>
-  Embed (Shelley.POOL era) (DijkstraCERT era)
+  Embed (Shelley.POOL era) (CERT era)
   where
   wrapFailed = Conway.PoolFailure
   wrapEvent = Conway.PoolEvent
@@ -71,7 +71,7 @@ instance
   ( STS (Conway.GOVCERT era)
   , PredicateFailure (EraRule "GOVCERT" era) ~ Conway.ConwayGovCertPredFailure era
   ) =>
-  Embed (Conway.GOVCERT era) (DijkstraCERT era)
+  Embed (Conway.GOVCERT era) (CERT era)
   where
   wrapFailed = Conway.GovCertFailure
   wrapEvent = absurd

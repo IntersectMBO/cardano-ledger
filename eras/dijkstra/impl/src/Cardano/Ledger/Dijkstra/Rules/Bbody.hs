@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.Bbody (
-  DijkstraBBODY,
+  BBODY,
   DijkstraBbodyPredFailure (..),
   conwayToDijkstraBbodyPredFailure,
 ) where
@@ -51,7 +51,7 @@ import Cardano.Ledger.Dijkstra.BlockBody (
   validatePerasCert,
  )
 import Cardano.Ledger.Dijkstra.Era (
-  DijkstraBBODY,
+  BBODY,
   DijkstraBbodySignal (..),
   DijkstraEra,
   DijkstraEraBlockHeader (..),
@@ -288,25 +288,25 @@ instance
   , InjectRuleFailure "BBODY" Conway.ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
-  , EraRule "BBODY" era ~ DijkstraBBODY era
+  , EraRule "BBODY" era ~ BBODY era
   , AlonzoEraTx era
   , BabbageEraTxBody era
   , ConwayEraPParams era
   , DijkstraEraBlockBody era
   ) =>
-  STS (DijkstraBBODY era)
+  STS (BBODY era)
   where
-  type State (DijkstraBBODY era) = Shelley.ShelleyBbodyState era
+  type State (BBODY era) = Shelley.ShelleyBbodyState era
 
-  type Signal (DijkstraBBODY era) = DijkstraBbodySignal era
+  type Signal (BBODY era) = DijkstraBbodySignal era
 
-  type Environment (DijkstraBBODY era) = Shelley.BbodyEnv era
+  type Environment (BBODY era) = Shelley.BbodyEnv era
 
-  type BaseM (DijkstraBBODY era) = ShelleyBase
+  type BaseM (BBODY era) = ShelleyBase
 
-  type PredicateFailure (DijkstraBBODY era) = DijkstraBbodyPredFailure era
+  type PredicateFailure (BBODY era) = DijkstraBbodyPredFailure era
 
-  type Event (DijkstraBBODY era) = Alonzo.AlonzoBbodyEvent era
+  type Event (BBODY era) = Alonzo.AlonzoBbodyEvent era
 
   initialRules = []
   transitionRules = [dijkstraBbodyTransition @era]
@@ -386,7 +386,7 @@ instance
   , ledgers ~ EraRule "LEDGERS" era
   , STS ledgers
   ) =>
-  Embed ledgers (DijkstraBBODY era)
+  Embed ledgers (BBODY era)
   where
   wrapFailed = LedgersFailure
   wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent

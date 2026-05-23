@@ -13,7 +13,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubGovCert (
-  DijkstraSUBGOVCERT,
+  SUBGOVCERT,
   DijkstraSubGovCertPredFailure (..),
 ) where
 
@@ -30,7 +30,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBGOVCERT,
+  SUBGOVCERT,
  )
 import Cardano.Ledger.Dijkstra.Rules.GovCert (
   DijkstraGovCertPredFailure,
@@ -70,17 +70,17 @@ instance
   ( EraGov era
   , ConwayEraPParams era
   , ConwayEraCertState era
-  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
+  , EraRule "SUBGOVCERT" era ~ SUBGOVCERT era
   , InjectRuleFailure "SUBGOVCERT" Conway.ConwayGovCertPredFailure era
   , InjectRuleFailure "SUBGOVCERT" DijkstraSubGovCertPredFailure era
   ) =>
-  STS (DijkstraSUBGOVCERT era)
+  STS (SUBGOVCERT era)
   where
-  type State (DijkstraSUBGOVCERT era) = CertState era
-  type Signal (DijkstraSUBGOVCERT era) = ConwayGovCert
-  type Environment (DijkstraSUBGOVCERT era) = Conway.ConwayGovCertEnv era
-  type BaseM (DijkstraSUBGOVCERT era) = ShelleyBase
-  type PredicateFailure (DijkstraSUBGOVCERT era) = DijkstraSubGovCertPredFailure era
-  type Event (DijkstraSUBGOVCERT era) = Void
+  type State (SUBGOVCERT era) = CertState era
+  type Signal (SUBGOVCERT era) = ConwayGovCert
+  type Environment (SUBGOVCERT era) = Conway.ConwayGovCertEnv era
+  type BaseM (SUBGOVCERT era) = ShelleyBase
+  type PredicateFailure (SUBGOVCERT era) = DijkstraSubGovCertPredFailure era
+  type Event (SUBGOVCERT era) = Void
 
   transitionRules = [Conway.conwayGovCertTransition]

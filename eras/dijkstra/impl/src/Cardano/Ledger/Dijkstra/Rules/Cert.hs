@@ -11,7 +11,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.Cert (
-  DijkstraCERT,
+  CERT,
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
@@ -56,20 +56,20 @@ instance
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
   , Signal (EraRule "POOL" era) ~ PoolCert
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
-  , Embed (EraRule "DELEG" era) (DijkstraCERT era)
-  , Embed (EraRule "POOL" era) (DijkstraCERT era)
-  , Embed (EraRule "GOVCERT" era) (DijkstraCERT era)
+  , Embed (EraRule "DELEG" era) (CERT era)
+  , Embed (EraRule "POOL" era) (CERT era)
+  , Embed (EraRule "GOVCERT" era) (CERT era)
   , TxCert era ~ DijkstraTxCert era
   , EraCertState era
   ) =>
-  STS (DijkstraCERT era)
+  STS (CERT era)
   where
-  type State (DijkstraCERT era) = CertState era
-  type Signal (DijkstraCERT era) = TxCert era
-  type Environment (DijkstraCERT era) = Conway.CertEnv era
-  type BaseM (DijkstraCERT era) = ShelleyBase
-  type PredicateFailure (DijkstraCERT era) = Conway.ConwayCertPredFailure era
-  type Event (DijkstraCERT era) = Conway.ConwayCertEvent era
+  type State (CERT era) = CertState era
+  type Signal (CERT era) = TxCert era
+  type Environment (CERT era) = Conway.CertEnv era
+  type BaseM (CERT era) = ShelleyBase
+  type PredicateFailure (CERT era) = Conway.ConwayCertPredFailure era
+  type Event (CERT era) = Conway.ConwayCertEvent era
 
   transitionRules = [certTransition @era]
 
@@ -84,13 +84,13 @@ certTransition ::
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
   , Signal (EraRule "POOL" era) ~ PoolCert
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
-  , Embed (EraRule "DELEG" era) (DijkstraCERT era)
-  , Embed (EraRule "POOL" era) (DijkstraCERT era)
-  , Embed (EraRule "GOVCERT" era) (DijkstraCERT era)
+  , Embed (EraRule "DELEG" era) (CERT era)
+  , Embed (EraRule "POOL" era) (CERT era)
+  , Embed (EraRule "GOVCERT" era) (CERT era)
   , TxCert era ~ DijkstraTxCert era
   , EraCertState era
   ) =>
-  TransitionRule (DijkstraCERT era)
+  TransitionRule (CERT era)
 certTransition = do
   TRC (Conway.CertEnv pp currentEpoch committee committeeProposals, certState, c) <- judgmentContext
   let
@@ -109,10 +109,10 @@ certTransition = do
         TRC (Conway.ConwayGovCertEnv pp currentEpoch committee committeeProposals, certState, govCert)
 
 instance
-  ( STS (DijkstraGOVCERT era)
+  ( STS (GOVCERT era)
   , PredicateFailure (EraRule "GOVCERT" era) ~ DijkstraGovCertPredFailure era
   ) =>
-  Embed (DijkstraGOVCERT era) (DijkstraCERT era)
+  Embed (GOVCERT era) (CERT era)
   where
   wrapFailed = Conway.GovCertFailure
   wrapEvent = absurd

@@ -11,24 +11,24 @@
 
 module Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraBBODY,
-  DijkstraCERT,
-  DijkstraGOV,
-  DijkstraGOVCERT,
-  DijkstraLEDGER,
-  DijkstraMEMPOOL,
-  DijkstraSUBCERT,
-  DijkstraSUBCERTS,
-  DijkstraSUBDELEG,
-  DijkstraSUBGOV,
-  DijkstraSUBGOVCERT,
-  DijkstraSUBLEDGER,
-  DijkstraSUBLEDGERS,
-  DijkstraSUBPOOL,
-  DijkstraSUBUTXOW,
-  DijkstraSUBUTXO,
-  DijkstraUTXO,
-  DijkstraUTXOW,
+  BBODY,
+  CERT,
+  GOV,
+  GOVCERT,
+  LEDGER,
+  MEMPOOL,
+  SUBCERT,
+  SUBCERTS,
+  SUBDELEG,
+  SUBGOV,
+  SUBGOVCERT,
+  SUBLEDGER,
+  SUBLEDGERS,
+  SUBPOOL,
+  SUBUTXOW,
+  SUBUTXO,
+  UTXO,
+  UTXOW,
   DijkstraEraBlockHeader (..),
   DijkstraBbodySignal (..),
 ) where
@@ -92,49 +92,49 @@ type instance EraRuleEvent "DELEGS" DijkstraEra = VoidEraRule "DELEGS" DijkstraE
 
 type instance Value DijkstraEra = MaryValue
 
-data DijkstraSUBLEDGERS era
+data SUBLEDGERS era
 
-type instance EraRule "SUBLEDGERS" DijkstraEra = DijkstraSUBLEDGERS DijkstraEra
+type instance EraRule "SUBLEDGERS" DijkstraEra = SUBLEDGERS DijkstraEra
 
-data DijkstraSUBLEDGER era
+data SUBLEDGER era
 
-type instance EraRule "SUBLEDGER" DijkstraEra = DijkstraSUBLEDGER DijkstraEra
+type instance EraRule "SUBLEDGER" DijkstraEra = SUBLEDGER DijkstraEra
 
-data DijkstraSUBCERTS era
+data SUBCERTS era
 
-type instance EraRule "SUBCERTS" DijkstraEra = DijkstraSUBCERTS DijkstraEra
+type instance EraRule "SUBCERTS" DijkstraEra = SUBCERTS DijkstraEra
 
-data DijkstraSUBCERT era
+data SUBCERT era
 
-type instance EraRule "SUBCERT" DijkstraEra = DijkstraSUBCERT DijkstraEra
+type instance EraRule "SUBCERT" DijkstraEra = SUBCERT DijkstraEra
 
-data DijkstraSUBDELEG era
+data SUBDELEG era
 
-type instance EraRule "SUBDELEG" DijkstraEra = DijkstraSUBDELEG DijkstraEra
+type instance EraRule "SUBDELEG" DijkstraEra = SUBDELEG DijkstraEra
 
-data DijkstraSUBGOV era
+data SUBGOV era
 
-type instance EraRule "SUBGOV" DijkstraEra = DijkstraSUBGOV DijkstraEra
+type instance EraRule "SUBGOV" DijkstraEra = SUBGOV DijkstraEra
 
-data DijkstraSUBGOVCERT era
+data SUBGOVCERT era
 
-type instance EraRule "SUBGOVCERT" DijkstraEra = DijkstraSUBGOVCERT DijkstraEra
+type instance EraRule "SUBGOVCERT" DijkstraEra = SUBGOVCERT DijkstraEra
 
-data DijkstraSUBPOOL era
+data SUBPOOL era
 
-type instance EraRule "SUBPOOL" DijkstraEra = DijkstraSUBPOOL DijkstraEra
+type instance EraRule "SUBPOOL" DijkstraEra = SUBPOOL DijkstraEra
 
-data DijkstraSUBUTXO era
+data SUBUTXO era
 
-type instance EraRule "SUBUTXO" DijkstraEra = DijkstraSUBUTXO DijkstraEra
+type instance EraRule "SUBUTXO" DijkstraEra = SUBUTXO DijkstraEra
 
-data DijkstraSUBUTXOW era
+data SUBUTXOW era
 
-type instance EraRule "SUBUTXOW" DijkstraEra = DijkstraSUBUTXOW DijkstraEra
+type instance EraRule "SUBUTXOW" DijkstraEra = SUBUTXOW DijkstraEra
 
-data DijkstraGOV era
+data GOV era
 
-type instance EraRule "GOV" DijkstraEra = DijkstraGOV DijkstraEra
+type instance EraRule "GOV" DijkstraEra = GOV DijkstraEra
 
 type instance EraRule "NEWEPOCH" DijkstraEra = Conway.NEWEPOCH DijkstraEra
 
@@ -144,9 +144,9 @@ type instance EraRule "ENACT" DijkstraEra = Conway.ENACT DijkstraEra
 
 type instance EraRule "UTXOS" DijkstraEra = Conway.UTXOS DijkstraEra
 
-data DijkstraLEDGER era
+data LEDGER era
 
-type instance EraRule "LEDGER" DijkstraEra = DijkstraLEDGER DijkstraEra
+type instance EraRule "LEDGER" DijkstraEra = LEDGER DijkstraEra
 
 type instance EraRule "TICKF" DijkstraEra = Conway.TICKF DijkstraEra
 
@@ -154,31 +154,31 @@ type instance EraRule "RATIFY" DijkstraEra = Conway.RATIFY DijkstraEra
 
 type instance EraRule "CERTS" DijkstraEra = Conway.CERTS DijkstraEra
 
-data DijkstraCERT era
+data CERT era
 
-type instance EraRule "CERT" DijkstraEra = DijkstraCERT DijkstraEra
+type instance EraRule "CERT" DijkstraEra = CERT DijkstraEra
 
 type instance EraRule "DELEG" DijkstraEra = Conway.DELEG DijkstraEra
 
-data DijkstraGOVCERT era
+data GOVCERT era
 
-type instance EraRule "GOVCERT" DijkstraEra = DijkstraGOVCERT DijkstraEra
+type instance EraRule "GOVCERT" DijkstraEra = GOVCERT DijkstraEra
 
-data DijkstraUTXOW era
+data UTXOW era
 
-type instance EraRule "UTXOW" DijkstraEra = DijkstraUTXOW DijkstraEra
+type instance EraRule "UTXOW" DijkstraEra = UTXOW DijkstraEra
 
-data DijkstraUTXO era
+data UTXO era
 
-type instance EraRule "UTXO" DijkstraEra = DijkstraUTXO DijkstraEra
+type instance EraRule "UTXO" DijkstraEra = UTXO DijkstraEra
 
-data DijkstraBBODY era
+data BBODY era
 
-type instance EraRule "BBODY" DijkstraEra = DijkstraBBODY DijkstraEra
+type instance EraRule "BBODY" DijkstraEra = BBODY DijkstraEra
 
-data DijkstraMEMPOOL era
+data MEMPOOL era
 
-type instance EraRule "MEMPOOL" DijkstraEra = DijkstraMEMPOOL DijkstraEra
+type instance EraRule "MEMPOOL" DijkstraEra = MEMPOOL DijkstraEra
 
 type instance EraRule "HARDFORK" DijkstraEra = Conway.HARDFORK DijkstraEra
 
