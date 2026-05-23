@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Cert (
-  ConwayCERT,
+  CERT,
   ConwayCertPredFailure (..),
   ConwayCertEvent (..),
   CertEnv (..),
@@ -27,10 +27,10 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
-  ConwayCERT,
-  ConwayDELEG,
+  CERT,
   ConwayEra,
-  ConwayGOVCERT,
+  DELEG,
+  GOVCERT,
  )
 import Cardano.Ledger.Conway.Governance (
   Committee,
@@ -173,20 +173,20 @@ instance
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
   , Signal (EraRule "POOL" era) ~ PoolCert
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
-  , Embed (EraRule "DELEG" era) (ConwayCERT era)
-  , Embed (EraRule "POOL" era) (ConwayCERT era)
-  , Embed (EraRule "GOVCERT" era) (ConwayCERT era)
+  , Embed (EraRule "DELEG" era) (CERT era)
+  , Embed (EraRule "POOL" era) (CERT era)
+  , Embed (EraRule "GOVCERT" era) (CERT era)
   , TxCert era ~ ConwayTxCert era
   , EraCertState era
   ) =>
-  STS (ConwayCERT era)
+  STS (CERT era)
   where
-  type State (ConwayCERT era) = CertState era
-  type Signal (ConwayCERT era) = TxCert era
-  type Environment (ConwayCERT era) = CertEnv era
-  type BaseM (ConwayCERT era) = ShelleyBase
-  type PredicateFailure (ConwayCERT era) = ConwayCertPredFailure era
-  type Event (ConwayCERT era) = ConwayCertEvent era
+  type State (CERT era) = CertState era
+  type Signal (CERT era) = TxCert era
+  type Environment (CERT era) = CertEnv era
+  type BaseM (CERT era) = ShelleyBase
+  type PredicateFailure (CERT era) = ConwayCertPredFailure era
+  type Event (CERT era) = ConwayCertEvent era
 
   transitionRules = [certTransition @era]
 
@@ -201,13 +201,13 @@ certTransition ::
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
   , Signal (EraRule "POOL" era) ~ PoolCert
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
-  , Embed (EraRule "DELEG" era) (ConwayCERT era)
-  , Embed (EraRule "POOL" era) (ConwayCERT era)
-  , Embed (EraRule "GOVCERT" era) (ConwayCERT era)
+  , Embed (EraRule "DELEG" era) (CERT era)
+  , Embed (EraRule "POOL" era) (CERT era)
+  , Embed (EraRule "GOVCERT" era) (CERT era)
   , TxCert era ~ ConwayTxCert era
   , EraCertState era
   ) =>
-  TransitionRule (ConwayCERT era)
+  TransitionRule (CERT era)
 certTransition = do
   TRC (CertEnv pp currentEpoch committee committeeProposals, certState, c) <- judgmentContext
   let
@@ -225,10 +225,10 @@ certTransition = do
 
 instance
   ( Era era
-  , STS (ConwayDELEG era)
+  , STS (DELEG era)
   , PredicateFailure (EraRule "DELEG" era) ~ ConwayDelegPredFailure era
   ) =>
-  Embed (ConwayDELEG era) (ConwayCERT era)
+  Embed (DELEG era) (CERT era)
   where
   wrapFailed = DelegFailure
   wrapEvent = absurd
@@ -241,17 +241,17 @@ instance
   , PredicateFailure (Shelley.POOL era) ~ Shelley.ShelleyPoolPredFailure era
   , BaseM (Shelley.POOL era) ~ ShelleyBase
   ) =>
-  Embed (Shelley.POOL era) (ConwayCERT era)
+  Embed (Shelley.POOL era) (CERT era)
   where
   wrapFailed = PoolFailure
   wrapEvent = PoolEvent
 
 instance
   ( Era era
-  , STS (ConwayGOVCERT era)
+  , STS (GOVCERT era)
   , PredicateFailure (EraRule "GOVCERT" era) ~ ConwayGovCertPredFailure era
   ) =>
-  Embed (ConwayGOVCERT era) (ConwayCERT era)
+  Embed (GOVCERT era) (CERT era)
   where
   wrapFailed = GovCertFailure
   wrapEvent = absurd

@@ -43,16 +43,16 @@ instance
   , Event (EraRule "CERT" era) ~ Conway.ConwayCertEvent era
   , PredicateFailure (EraRule "CERT" era) ~ Conway.ConwayCertPredFailure era
   ) =>
-  Embed (DijkstraCERT era) (Conway.ConwayCERTS era)
+  Embed (DijkstraCERT era) (Conway.CERTS era)
   where
   wrapFailed = Conway.CertFailure
   wrapEvent = Conway.CertEvent
 
 instance
-  ( STS (Conway.ConwayDELEG era)
+  ( STS (Conway.DELEG era)
   , PredicateFailure (EraRule "DELEG" era) ~ Conway.ConwayDelegPredFailure era
   ) =>
-  Embed (Conway.ConwayDELEG era) (DijkstraCERT era)
+  Embed (Conway.DELEG era) (DijkstraCERT era)
   where
   wrapFailed = Conway.DelegFailure
   wrapEvent = absurd
@@ -68,10 +68,10 @@ instance
   wrapEvent = Conway.PoolEvent
 
 instance
-  ( STS (Conway.ConwayGOVCERT era)
+  ( STS (Conway.GOVCERT era)
   , PredicateFailure (EraRule "GOVCERT" era) ~ Conway.ConwayGovCertPredFailure era
   ) =>
-  Embed (Conway.ConwayGOVCERT era) (DijkstraCERT era)
+  Embed (Conway.GOVCERT era) (DijkstraCERT era)
   where
   wrapFailed = Conway.GovCertFailure
   wrapEvent = absurd

@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Deleg (
-  ConwayDELEG,
+  DELEG,
   ConwayDelegPredFailure (..),
   ConwayDelegEnv (..),
   conwayDelegTransition,
@@ -44,8 +44,8 @@ import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
-  ConwayDELEG,
   ConwayEra,
+  DELEG,
   hardforkConwayBootstrapPhase,
   hardforkConwayDELEGIncorrectDepositsAndRefunds,
  )
@@ -160,17 +160,17 @@ instance
   , State (EraRule "DELEG" era) ~ CertState era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
-  , EraRule "DELEG" era ~ ConwayDELEG era
+  , EraRule "DELEG" era ~ DELEG era
   , InjectRuleFailure "DELEG" ConwayDelegPredFailure era
   ) =>
-  STS (ConwayDELEG era)
+  STS (DELEG era)
   where
-  type State (ConwayDELEG era) = CertState era
-  type Signal (ConwayDELEG era) = ConwayDelegCert
-  type Environment (ConwayDELEG era) = ConwayDelegEnv era
-  type BaseM (ConwayDELEG era) = ShelleyBase
-  type PredicateFailure (ConwayDELEG era) = ConwayDelegPredFailure era
-  type Event (ConwayDELEG era) = Void
+  type State (DELEG era) = CertState era
+  type Signal (DELEG era) = ConwayDelegCert
+  type Environment (DELEG era) = ConwayDelegEnv era
+  type BaseM (DELEG era) = ShelleyBase
+  type PredicateFailure (DELEG era) = ConwayDelegPredFailure era
+  type Event (DELEG era) = Void
 
   transitionRules = [conwayDelegTransition]
 

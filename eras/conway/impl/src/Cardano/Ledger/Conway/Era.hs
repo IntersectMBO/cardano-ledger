@@ -9,23 +9,23 @@
 
 module Cardano.Ledger.Conway.Era (
   ConwayEra,
-  ConwayBBODY,
-  ConwayCERT,
-  ConwayDELEG,
-  ConwayGOVCERT,
-  ConwayCERTS,
-  ConwayGOV,
-  ConwayHARDFORK,
-  ConwayMEMPOOL,
-  ConwayNEWEPOCH,
-  ConwayEPOCH,
-  ConwayENACT,
-  ConwayUTXO,
-  ConwayUTXOS,
-  ConwayUTXOW,
-  ConwayTICKF,
-  ConwayLEDGER,
-  ConwayRATIFY,
+  BBODY,
+  CERT,
+  DELEG,
+  GOVCERT,
+  CERTS,
+  GOV,
+  HARDFORK,
+  MEMPOOL,
+  NEWEPOCH,
+  EPOCH,
+  ENACT,
+  UTXO,
+  UTXOS,
+  UTXOW,
+  TICKF,
+  LEDGER,
+  RATIFY,
   hardforkConwayBootstrapPhase,
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
   hardforkConwayDELEGIncorrectDepositsAndRefunds,
@@ -84,73 +84,73 @@ type instance EraRuleEvent "DELEGS" ConwayEra = VoidEraRule "DELEGS" ConwayEra
 -- Era Mapping
 -------------------------------------------------------------------------------
 
-data ConwayGOV era
+data GOV era
 
-type instance EraRule "GOV" ConwayEra = ConwayGOV ConwayEra
+type instance EraRule "GOV" ConwayEra = GOV ConwayEra
 
-data ConwayNEWEPOCH era
+data NEWEPOCH era
 
-type instance EraRule "NEWEPOCH" ConwayEra = ConwayNEWEPOCH ConwayEra
+type instance EraRule "NEWEPOCH" ConwayEra = NEWEPOCH ConwayEra
 
-data ConwayEPOCH era
+data EPOCH era
 
-type instance EraRule "EPOCH" ConwayEra = ConwayEPOCH ConwayEra
+type instance EraRule "EPOCH" ConwayEra = EPOCH ConwayEra
 
-data ConwayENACT era
+data ENACT era
 
-type instance EraRule "ENACT" ConwayEra = ConwayENACT ConwayEra
+type instance EraRule "ENACT" ConwayEra = ENACT ConwayEra
 
-data ConwayUTXOS era
+data UTXOS era
 
-type instance EraRule "UTXOS" ConwayEra = ConwayUTXOS ConwayEra
+type instance EraRule "UTXOS" ConwayEra = UTXOS ConwayEra
 
-data ConwayLEDGER era
+data LEDGER era
 
-type instance EraRule "LEDGER" ConwayEra = ConwayLEDGER ConwayEra
+type instance EraRule "LEDGER" ConwayEra = LEDGER ConwayEra
 
-data ConwayTICKF era
+data TICKF era
 
-type instance EraRule "TICKF" ConwayEra = ConwayTICKF ConwayEra
+type instance EraRule "TICKF" ConwayEra = TICKF ConwayEra
 
-data ConwayRATIFY era
+data RATIFY era
 
-type instance EraRule "RATIFY" ConwayEra = ConwayRATIFY ConwayEra
+type instance EraRule "RATIFY" ConwayEra = RATIFY ConwayEra
 
-data ConwayCERTS era
+data CERTS era
 
-type instance EraRule "CERTS" ConwayEra = ConwayCERTS ConwayEra
+type instance EraRule "CERTS" ConwayEra = CERTS ConwayEra
 
-data ConwayCERT era
+data CERT era
 
-type instance EraRule "CERT" ConwayEra = ConwayCERT ConwayEra
+type instance EraRule "CERT" ConwayEra = CERT ConwayEra
 
-data ConwayDELEG era
+data DELEG era
 
-type instance EraRule "DELEG" ConwayEra = ConwayDELEG ConwayEra
+type instance EraRule "DELEG" ConwayEra = DELEG ConwayEra
 
-data ConwayGOVCERT era
+data GOVCERT era
 
-type instance EraRule "GOVCERT" ConwayEra = ConwayGOVCERT ConwayEra
+type instance EraRule "GOVCERT" ConwayEra = GOVCERT ConwayEra
 
-data ConwayUTXOW era
+data UTXOW era
 
-type instance EraRule "UTXOW" ConwayEra = ConwayUTXOW ConwayEra
+type instance EraRule "UTXOW" ConwayEra = UTXOW ConwayEra
 
-data ConwayUTXO era
+data UTXO era
 
-type instance EraRule "UTXO" ConwayEra = ConwayUTXO ConwayEra
+type instance EraRule "UTXO" ConwayEra = UTXO ConwayEra
 
-data ConwayBBODY era
+data BBODY era
 
-type instance EraRule "BBODY" ConwayEra = ConwayBBODY ConwayEra
+type instance EraRule "BBODY" ConwayEra = BBODY ConwayEra
 
-data ConwayMEMPOOL era
+data MEMPOOL era
 
-type instance EraRule "MEMPOOL" ConwayEra = ConwayMEMPOOL ConwayEra
+type instance EraRule "MEMPOOL" ConwayEra = MEMPOOL ConwayEra
 
-data ConwayHARDFORK era
+data HARDFORK era
 
-type instance EraRule "HARDFORK" ConwayEra = ConwayHARDFORK ConwayEra
+type instance EraRule "HARDFORK" ConwayEra = HARDFORK ConwayEra
 
 -- Rules inherited from Shelley
 

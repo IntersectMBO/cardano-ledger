@@ -22,7 +22,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Gov (
-  ConwayGOV,
+  GOV,
   GovEnv (..),
   GovSignal (..),
   ConwayGovEvent (..),
@@ -66,7 +66,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (ppGovActionDepositL, ppGovActionLifetimeL)
 import Cardano.Ledger.Conway.Era (
   ConwayEra,
-  ConwayGOV,
+  GOV,
   hardforkConwayBootstrapPhase,
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
  )
@@ -336,18 +336,18 @@ instance
   , ConwayEraTxCert era
   , ConwayEraPParams era
   , ConwayEraGov era
-  , EraRule "GOV" era ~ ConwayGOV era
+  , EraRule "GOV" era ~ GOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
   , InjectRuleEvent "GOV" ConwayGovEvent era
   ) =>
-  STS (ConwayGOV era)
+  STS (GOV era)
   where
-  type State (ConwayGOV era) = Proposals era
-  type Signal (ConwayGOV era) = GovSignal era
-  type Environment (ConwayGOV era) = GovEnv era
-  type BaseM (ConwayGOV era) = ShelleyBase
-  type PredicateFailure (ConwayGOV era) = ConwayGovPredFailure era
-  type Event (ConwayGOV era) = ConwayGovEvent era
+  type State (GOV era) = Proposals era
+  type Signal (GOV era) = GovSignal era
+  type Environment (GOV era) = GovEnv era
+  type BaseM (GOV era) = ShelleyBase
+  type PredicateFailure (GOV era) = ConwayGovPredFailure era
+  type Event (GOV era) = ConwayGovEvent era
 
   initialRules = []
 

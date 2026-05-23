@@ -473,11 +473,11 @@ instance
   assertions = [Shelley.validSizeComputationCheck]
 
 instance
-  ( STS (Conway.ConwayUTXOS era)
+  ( STS (Conway.UTXOS era)
   , PredicateFailure (EraRule "UTXOS" era) ~ Conway.ConwayUtxosPredFailure era
-  , Event (EraRule "UTXOS" era) ~ Event (Conway.ConwayUTXOS era)
+  , Event (EraRule "UTXOS" era) ~ Event (Conway.UTXOS era)
   ) =>
-  Embed (Conway.ConwayUTXOS era) (DijkstraUTXO era)
+  Embed (Conway.UTXOS era) (DijkstraUTXO era)
   where
   wrapFailed = UtxosFailure
   wrapEvent = Alonzo.UtxosEvent

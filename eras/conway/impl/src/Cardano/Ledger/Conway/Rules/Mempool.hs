@@ -13,14 +13,14 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Mempool (
-  ConwayMEMPOOL,
+  MEMPOOL,
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
-  ConwayLEDGER,
-  ConwayMEMPOOL,
+  LEDGER,
+  MEMPOOL,
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
  )
 import Cardano.Ledger.Conway.Governance (
@@ -66,7 +66,7 @@ instance
   , ConwayEraCertState era
   , EraStake era
   , EraCertState era
-  , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
+  , Embed (EraRule "LEDGER" era) (MEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Eq (PredicateFailure (EraRule "CERTS" era))
   , Eq (PredicateFailure (EraRule "GOV" era))
@@ -77,14 +77,14 @@ instance
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
-  STS (ConwayMEMPOOL era)
+  STS (MEMPOOL era)
   where
-  type State (ConwayMEMPOOL era) = LedgerState era
-  type Signal (ConwayMEMPOOL era) = StAnnTx TopTx era
-  type Environment (ConwayMEMPOOL era) = Shelley.LedgerEnv era
-  type BaseM (ConwayMEMPOOL era) = ShelleyBase
-  type PredicateFailure (ConwayMEMPOOL era) = ConwayLedgerPredFailure era
-  type Event (ConwayMEMPOOL era) = ConwayLedgerEvent era
+  type State (MEMPOOL era) = LedgerState era
+  type Signal (MEMPOOL era) = StAnnTx TopTx era
+  type Environment (MEMPOOL era) = Shelley.LedgerEnv era
+  type BaseM (MEMPOOL era) = ShelleyBase
+  type PredicateFailure (MEMPOOL era) = ConwayLedgerPredFailure era
+  type Event (MEMPOOL era) = ConwayLedgerEvent era
 
   transitionRules = [mempoolTransition @era]
 
@@ -94,12 +94,12 @@ mempoolTransition ::
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
-  , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
+  , Embed (EraRule "LEDGER" era) (MEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
-  TransitionRule (ConwayMEMPOOL era)
+  TransitionRule (MEMPOOL era)
 mempoolTransition = do
   TRC trc@(ledgerEnv, ledgerState, stAnnTx) <-
     judgmentContext
@@ -144,9 +144,9 @@ instance
   , BaseM (EraRule "CERTS" era) ~ ShelleyBase
   , BaseM (EraRule "GOV" era) ~ ShelleyBase
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
-  , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
-  , Embed (EraRule "GOV" era) (ConwayLEDGER era)
-  , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
+  , Embed (EraRule "CERTS" era) (LEDGER era)
+  , Embed (EraRule "GOV" era) (LEDGER era)
+  , Embed (EraRule "UTXOW" era) (LEDGER era)
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
@@ -161,12 +161,12 @@ instance
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ConwayEraCertState era
-  , EraRule "LEDGER" era ~ ConwayLEDGER era
+  , EraRule "LEDGER" era ~ LEDGER era
   , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   ) =>
-  Embed (ConwayLEDGER era) (ConwayMEMPOOL era)
+  Embed (LEDGER era) (MEMPOOL era)
   where
   wrapFailed = id
   wrapEvent = id

@@ -65,7 +65,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Conway.Era (ConwayRATIFY)
+import Cardano.Ledger.Conway.Era (RATIFY)
 import Cardano.Ledger.Conway.Governance.Internal
 import Cardano.Ledger.Conway.Governance.Procedures (GovActionState)
 import Cardano.Ledger.Conway.State
@@ -356,12 +356,12 @@ instance
                               rnf poolps
 
 class
-  ( STS (ConwayRATIFY era)
-  , Signal (ConwayRATIFY era) ~ RatifySignal era
-  , BaseM (ConwayRATIFY era) ~ Reader Globals
-  , Environment (ConwayRATIFY era) ~ RatifyEnv era
-  , State (ConwayRATIFY era) ~ RatifyState era
-  , PredicateFailure (ConwayRATIFY era) ~ Void
+  ( STS (RATIFY era)
+  , Signal (RATIFY era) ~ RatifySignal era
+  , BaseM (RATIFY era) ~ Reader Globals
+  , Environment (RATIFY era) ~ RatifyEnv era
+  , State (RATIFY era) ~ RatifyState era
+  , PredicateFailure (RATIFY era) ~ Void
   ) =>
   RunConwayRatify era
   where
@@ -370,7 +370,7 @@ class
   runConwayRatify globals ratifyEnv ratifyState (RatifySignal ratifySig) =
     let ratifyResult =
           runReader
-            ( applySTS @(ConwayRATIFY era) $
+            ( applySTS @(RATIFY era) $
                 TRC (ratifyEnv, ratifyState, RatifySignal $ reorderActions ratifySig)
             )
             globals

@@ -13,13 +13,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.HardFork (
-  ConwayHARDFORK,
+  HARDFORK,
   ConwayHardForkEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra, ConwayHARDFORK)
+import Cardano.Ledger.Conway.Era (ConwayEra, HARDFORK)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
 import Control.DeepSeq (NFData)
@@ -54,19 +54,19 @@ type instance EraRuleEvent "HARDFORK" ConwayEra = ConwayHardForkEvent ConwayEra
 
 instance
   (EraGov era, EraStake era, EraCertState era, ConwayEraCertState era) =>
-  STS (ConwayHARDFORK era)
+  STS (HARDFORK era)
   where
-  type State (ConwayHARDFORK era) = EpochState era
-  type Signal (ConwayHARDFORK era) = ProtVer
-  type Environment (ConwayHARDFORK era) = ()
-  type BaseM (ConwayHARDFORK era) = ShelleyBase
-  type PredicateFailure (ConwayHARDFORK era) = Void
-  type Event (ConwayHARDFORK era) = ConwayHardForkEvent era
+  type State (HARDFORK era) = EpochState era
+  type Signal (HARDFORK era) = ProtVer
+  type Environment (HARDFORK era) = ()
+  type BaseM (HARDFORK era) = ShelleyBase
+  type PredicateFailure (HARDFORK era) = Void
+  type Event (HARDFORK era) = ConwayHardForkEvent era
 
   transitionRules = [hardforkTransition @era]
 
 hardforkTransition ::
-  ConwayEraCertState era => TransitionRule (ConwayHARDFORK era)
+  ConwayEraCertState era => TransitionRule (HARDFORK era)
 hardforkTransition = do
   TRC (_, epochState, newPv) <-
     judgmentContext

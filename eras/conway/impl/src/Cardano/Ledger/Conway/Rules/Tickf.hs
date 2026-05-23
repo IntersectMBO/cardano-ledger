@@ -3,7 +3,7 @@
 
 -- | Like TICK, called only by consensus. But, ticks ledger state to a __future__ slot.
 module Cardano.Ledger.Conway.Rules.Tickf (
-  ConwayTICKF,
+  TICKF,
   ConwayTickfEvent,
 ) where
 
@@ -11,7 +11,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase, SlotNo)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (solidifyNextEpochPParams)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (SnapShots (ssStakeMarkPoolDistr))
 import Control.State.Transition
 import Data.Void (Void)
@@ -21,14 +21,14 @@ data ConwayTickfEvent era
 
 instance
   EraGov era =>
-  STS (ConwayTICKF era)
+  STS (TICKF era)
   where
-  type State (ConwayTICKF era) = NewEpochState era
-  type Signal (ConwayTICKF era) = SlotNo
-  type Environment (ConwayTICKF era) = ()
-  type BaseM (ConwayTICKF era) = ShelleyBase
-  type PredicateFailure (ConwayTICKF era) = Void
-  type Event (ConwayTICKF era) = ConwayTickfEvent era
+  type State (TICKF era) = NewEpochState era
+  type Signal (TICKF era) = SlotNo
+  type Environment (TICKF era) = ()
+  type BaseM (TICKF era) = ShelleyBase
+  type PredicateFailure (TICKF era) = Void
+  type Event (TICKF era) = ConwayTickfEvent era
 
   initialRules = []
   transitionRules = pure $ do
@@ -39,7 +39,7 @@ instance
     -- 'dsGenDelegs', so the correctness of 'validatingTickTransitionFORECAST' only
     -- depends on getting these three fields correct.
 
-    (curEpochNo, nes) <- liftSTS $ solidifyNextEpochPParams nes0 slot
+    (curEpochNo, nes) <- liftSTS $ Shelley.solidifyNextEpochPParams nes0 slot
 
     let es = nesEs nes
         ss = esSnapshots es

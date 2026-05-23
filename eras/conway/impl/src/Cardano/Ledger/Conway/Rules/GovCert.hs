@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.GovCert (
-  ConwayGOVCERT,
+  GOVCERT,
   ConwayGovCertPredFailure (..),
   ConwayGovCertEnv (..),
   computeDRepExpiry,
@@ -40,7 +40,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT, hardforkConwayBootstrapPhase)
+import Cardano.Ledger.Conway.Era (ConwayEra, GOVCERT, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   GovAction (..),
@@ -150,20 +150,20 @@ instance
   , State (EraRule "GOVCERT" era) ~ CertState era
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
-  , EraRule "GOVCERT" era ~ ConwayGOVCERT era
+  , EraRule "GOVCERT" era ~ GOVCERT era
   , InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure era
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
   , ConwayEraCertState era
   ) =>
-  STS (ConwayGOVCERT era)
+  STS (GOVCERT era)
   where
-  type State (ConwayGOVCERT era) = CertState era
-  type Signal (ConwayGOVCERT era) = ConwayGovCert
-  type Environment (ConwayGOVCERT era) = ConwayGovCertEnv era
-  type BaseM (ConwayGOVCERT era) = ShelleyBase
-  type PredicateFailure (ConwayGOVCERT era) = ConwayGovCertPredFailure era
-  type Event (ConwayGOVCERT era) = Void
+  type State (GOVCERT era) = CertState era
+  type Signal (GOVCERT era) = ConwayGovCert
+  type Environment (GOVCERT era) = ConwayGovCertEnv era
+  type BaseM (GOVCERT era) = ShelleyBase
+  type PredicateFailure (GOVCERT era) = ConwayGovCertPredFailure era
+  type Event (GOVCERT era) = Void
 
   transitionRules = [conwayGovCertTransition]
 

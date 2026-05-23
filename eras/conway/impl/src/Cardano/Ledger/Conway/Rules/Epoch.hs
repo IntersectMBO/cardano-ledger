@@ -19,7 +19,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Epoch (
-  ConwayEPOCH,
+  EPOCH,
   PredicateFailure,
   ConwayEpochEvent (..),
 ) where
@@ -29,7 +29,7 @@ import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase)
 import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayHARDFORK, ConwayRATIFY)
+import Cardano.Ledger.Conway.Era (ConwayEra, EPOCH, HARDFORK, RATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee,
   ConwayEraGov (..),
@@ -146,34 +146,34 @@ instance
   , ConwayEraGov era
   , EraStake era
   , EraCertState era
-  , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
+  , Embed (EraRule "SNAP" era) (EPOCH era)
   , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
-  , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
+  , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
-  , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
+  , Embed (EraRule "RATIFY" era) (EPOCH era)
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
   , GovState era ~ ConwayGovState era
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
-  , Embed (EraRule "HARDFORK" era) (ConwayEPOCH era)
+  , Embed (EraRule "HARDFORK" era) (EPOCH era)
   , Environment (EraRule "HARDFORK" era) ~ ()
   , State (EraRule "HARDFORK" era) ~ EpochState era
   , Signal (EraRule "HARDFORK" era) ~ ProtVer
   ) =>
-  STS (ConwayEPOCH era)
+  STS (EPOCH era)
   where
-  type State (ConwayEPOCH era) = EpochState era
-  type Signal (ConwayEPOCH era) = EpochNo
-  type Environment (ConwayEPOCH era) = ()
-  type BaseM (ConwayEPOCH era) = ShelleyBase
+  type State (EPOCH era) = EpochState era
+  type Signal (EPOCH era) = EpochNo
+  type Environment (EPOCH era) = ()
+  type BaseM (EPOCH era) = ShelleyBase
 
   -- EPOCH rule can never fail
-  type PredicateFailure (ConwayEPOCH era) = Void
-  type Event (ConwayEPOCH era) = ConwayEpochEvent era
+  type PredicateFailure (EPOCH era) = Void
+  type Event (EPOCH era) = ConwayEpochEvent era
   transitionRules = [epochTransition]
 
 returnProposalDeposits ::
@@ -249,23 +249,23 @@ epochTransition ::
   , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
-  , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
-  , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
+  , Embed (EraRule "SNAP" era) (EPOCH era)
+  , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
-  , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
+  , Embed (EraRule "RATIFY" era) (EPOCH era)
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , GovState era ~ ConwayGovState era
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
   , ConwayEraGov era
-  , Embed (EraRule "HARDFORK" era) (ConwayEPOCH era)
+  , Embed (EraRule "HARDFORK" era) (EPOCH era)
   , Environment (EraRule "HARDFORK" era) ~ ()
   , State (EraRule "HARDFORK" era) ~ EpochState era
   , Signal (EraRule "HARDFORK" era) ~ ProtVer
   ) =>
-  TransitionRule (ConwayEPOCH era)
+  TransitionRule (EPOCH era)
 epochTransition = do
   TRC
     ( ()
@@ -376,7 +376,7 @@ instance
   , STS (Shelley.POOLREAP era)
   , Event (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapEvent era
   ) =>
-  Embed (Shelley.POOLREAP era) (ConwayEPOCH era)
+  Embed (Shelley.POOLREAP era) (EPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = PoolReapEvent
@@ -387,31 +387,31 @@ instance
   , EraCertState era
   , Event (EraRule "SNAP" era) ~ Shelley.SnapEvent era
   ) =>
-  Embed (Shelley.SNAP era) (ConwayEPOCH era)
+  Embed (Shelley.SNAP era) (EPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = SnapEvent
 
 instance
   ( EraGov era
-  , PredicateFailure (ConwayRATIFY era) ~ Void
-  , STS (ConwayRATIFY era)
-  , BaseM (ConwayRATIFY era) ~ ShelleyBase
-  , Event (ConwayRATIFY era) ~ Void
+  , PredicateFailure (RATIFY era) ~ Void
+  , STS (RATIFY era)
+  , BaseM (RATIFY era) ~ ShelleyBase
+  , Event (RATIFY era) ~ Void
   ) =>
-  Embed (ConwayRATIFY era) (ConwayEPOCH era)
+  Embed (RATIFY era) (EPOCH era)
   where
   wrapFailed = absurd
   wrapEvent = absurd
 
 instance
   ( EraGov era
-  , PredicateFailure (ConwayHARDFORK era) ~ Void
-  , STS (ConwayHARDFORK era)
-  , BaseM (ConwayHARDFORK era) ~ ShelleyBase
+  , PredicateFailure (HARDFORK era) ~ Void
+  , STS (HARDFORK era)
+  , BaseM (HARDFORK era) ~ ShelleyBase
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   ) =>
-  Embed (ConwayHARDFORK era) (ConwayEPOCH era)
+  Embed (HARDFORK era) (EPOCH era)
   where
   wrapFailed = absurd
   wrapEvent = HardForkEvent

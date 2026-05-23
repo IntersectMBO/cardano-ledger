@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Utxos (
-  ConwayUTXOS,
+  UTXOS,
   ConwayUtxosPredFailure (..),
   ConwayUtxosEvent (..),
   alonzoToConwayUtxosPredFailure,
@@ -56,7 +56,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
+import Cardano.Ledger.Conway.Era (ConwayEra, UTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Plutus (PlutusWithContext)
@@ -181,20 +181,20 @@ instance
   , EraPlutusContext era
   , GovState era ~ ConwayGovState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (ConwayUTXOS era) ~ StAnnTx TopTx era
-  , EraRule "UTXOS" era ~ ConwayUTXOS era
+  , Signal (UTXOS era) ~ StAnnTx TopTx era
+  , EraRule "UTXOS" era ~ UTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
-  STS (ConwayUTXOS era)
+  STS (UTXOS era)
   where
-  type BaseM (ConwayUTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
-  type Environment (ConwayUTXOS era) = ()
-  type State (ConwayUTXOS era) = ()
-  type Signal (ConwayUTXOS era) = StAnnTx TopTx era
-  type PredicateFailure (ConwayUTXOS era) = ConwayUtxosPredFailure era
-  type Event (ConwayUTXOS era) = ConwayUtxosEvent era
+  type BaseM (UTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
+  type Environment (UTXOS era) = ()
+  type State (UTXOS era) = ()
+  type Signal (UTXOS era) = StAnnTx TopTx era
+  type PredicateFailure (UTXOS era) = ConwayUtxosPredFailure era
+  type Event (UTXOS era) = ConwayUtxosEvent era
 
   transitionRules = [utxosTransition]
 
@@ -210,13 +210,13 @@ instance
   , GovState era ~ ConwayGovState era
   , PredicateFailure (EraRule "UTXOS" era) ~ ConwayUtxosPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (ConwayUTXOS era) ~ StAnnTx TopTx era
-  , EraRule "UTXOS" era ~ ConwayUTXOS era
+  , Signal (UTXOS era) ~ StAnnTx TopTx era
+  , EraRule "UTXOS" era ~ UTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
-  Embed (ConwayUTXOS era) (UTXO era)
+  Embed (UTXOS era) (UTXO era)
   where
   wrapFailed = AlonzoInBabbageUtxoPredFailure . UtxosFailure
   wrapEvent = UtxosEvent

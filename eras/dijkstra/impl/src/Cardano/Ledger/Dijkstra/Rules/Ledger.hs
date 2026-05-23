@@ -517,11 +517,11 @@ shelleyToDijkstraLedgerPredFailure = \case
   Shelley.ShelleyIncompleteWithdrawals x -> DijkstraIncompleteWithdrawals x
 
 instance
-  ( STS (Conway.ConwayCERTS era)
+  ( STS (Conway.CERTS era)
   , PredicateFailure (EraRule "CERTS" era) ~ Conway.ConwayCertsPredFailure era
   , Event (EraRule "CERTS" era) ~ Conway.ConwayCertsEvent era
   ) =>
-  Embed (Conway.ConwayCERTS era) (DijkstraLEDGER era)
+  Embed (Conway.CERTS era) (DijkstraLEDGER era)
   where
   wrapFailed = DijkstraCertsFailure
   wrapEvent = CertsEvent

@@ -136,29 +136,29 @@ data DijkstraGOV era
 
 type instance EraRule "GOV" DijkstraEra = DijkstraGOV DijkstraEra
 
-type instance EraRule "NEWEPOCH" DijkstraEra = Conway.ConwayNEWEPOCH DijkstraEra
+type instance EraRule "NEWEPOCH" DijkstraEra = Conway.NEWEPOCH DijkstraEra
 
-type instance EraRule "EPOCH" DijkstraEra = Conway.ConwayEPOCH DijkstraEra
+type instance EraRule "EPOCH" DijkstraEra = Conway.EPOCH DijkstraEra
 
-type instance EraRule "ENACT" DijkstraEra = Conway.ConwayENACT DijkstraEra
+type instance EraRule "ENACT" DijkstraEra = Conway.ENACT DijkstraEra
 
-type instance EraRule "UTXOS" DijkstraEra = Conway.ConwayUTXOS DijkstraEra
+type instance EraRule "UTXOS" DijkstraEra = Conway.UTXOS DijkstraEra
 
 data DijkstraLEDGER era
 
 type instance EraRule "LEDGER" DijkstraEra = DijkstraLEDGER DijkstraEra
 
-type instance EraRule "TICKF" DijkstraEra = Conway.ConwayTICKF DijkstraEra
+type instance EraRule "TICKF" DijkstraEra = Conway.TICKF DijkstraEra
 
-type instance EraRule "RATIFY" DijkstraEra = Conway.ConwayRATIFY DijkstraEra
+type instance EraRule "RATIFY" DijkstraEra = Conway.RATIFY DijkstraEra
 
-type instance EraRule "CERTS" DijkstraEra = Conway.ConwayCERTS DijkstraEra
+type instance EraRule "CERTS" DijkstraEra = Conway.CERTS DijkstraEra
 
 data DijkstraCERT era
 
 type instance EraRule "CERT" DijkstraEra = DijkstraCERT DijkstraEra
 
-type instance EraRule "DELEG" DijkstraEra = Conway.ConwayDELEG DijkstraEra
+type instance EraRule "DELEG" DijkstraEra = Conway.DELEG DijkstraEra
 
 data DijkstraGOVCERT era
 
@@ -180,7 +180,7 @@ data DijkstraMEMPOOL era
 
 type instance EraRule "MEMPOOL" DijkstraEra = DijkstraMEMPOOL DijkstraEra
 
-type instance EraRule "HARDFORK" DijkstraEra = Conway.ConwayHARDFORK DijkstraEra
+type instance EraRule "HARDFORK" DijkstraEra = Conway.HARDFORK DijkstraEra
 
 -- Rules inherited from Shelley
 
