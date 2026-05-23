@@ -14,6 +14,13 @@ module Cardano.Ledger.Alonzo.Era (
   UTXOW,
   BBODY,
   LEDGER,
+
+  -- * Deprecated
+  AlonzoUTXO,
+  AlonzoUTXOS,
+  AlonzoUTXOW,
+  AlonzoBBODY,
+  AlonzoLEDGER,
 ) where
 
 import Cardano.Ledger.Internal.Era (AlonzoEra)
@@ -36,21 +43,41 @@ type instance Value AlonzoEra = MaryValue
 
 data UTXOS era
 
+type AlonzoUTXOS = UTXOS
+
+{-# DEPRECATED AlonzoUTXOS "In favor of `UTXOS`" #-}
+
 type instance EraRule "UTXOS" AlonzoEra = UTXOS AlonzoEra
 
 data UTXO era
+
+type AlonzoUTXO = UTXO
+
+{-# DEPRECATED AlonzoUTXO "In favor of `UTXO`" #-}
 
 type instance EraRule "UTXO" AlonzoEra = UTXO AlonzoEra
 
 data UTXOW era
 
+type AlonzoUTXOW = UTXOW
+
+{-# DEPRECATED AlonzoUTXOW "In favor of `UTXOW`" #-}
+
 type instance EraRule "UTXOW" AlonzoEra = UTXOW AlonzoEra
 
 data LEDGER era
 
+type AlonzoLEDGER = LEDGER
+
+{-# DEPRECATED AlonzoLEDGER "In favor of `LEDGER`" #-}
+
 type instance EraRule "LEDGER" AlonzoEra = LEDGER AlonzoEra
 
 data BBODY era
+
+type AlonzoBBODY = BBODY
+
+{-# DEPRECATED AlonzoBBODY "In favor of `BBODY`" #-}
 
 type instance EraRule "BBODY" AlonzoEra = BBODY AlonzoEra
 
