@@ -14,6 +14,10 @@ module Cardano.Ledger.Allegra.Era (
   AllegraEra,
   UTXO,
   UTXOW,
+
+  -- * Deprecated
+  AllegraUTXO,
+  AllegraUTXOW,
 ) where
 
 import Cardano.Ledger.Coin (Coin)
@@ -78,8 +82,16 @@ type instance EraRule "UPEC" AllegraEra = Shelley.UPEC AllegraEra
 
 data UTXO era
 
+type AllegraUTXO = UTXO
+
+{-# DEPRECATED AllegraUTXO "In favor of `UTXO`" #-}
+
 type instance EraRule "UTXO" AllegraEra = UTXO AllegraEra
 
 data UTXOW era
+
+type AllegraUTXOW = UTXOW
+
+{-# DEPRECATED AllegraUTXOW "In favor of `UTXOW`" #-}
 
 type instance EraRule "UTXOW" AllegraEra = UTXOW AllegraEra
