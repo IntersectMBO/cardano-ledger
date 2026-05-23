@@ -68,6 +68,6 @@ type instance EraRule "TICKF" MaryEra = Shelley.TICKF MaryEra
 
 type instance EraRule "UPEC" MaryEra = Shelley.UPEC MaryEra
 
-type instance EraRule "UTXO" MaryEra = Allegra.AllegraUTXO MaryEra
+type instance EraRule "UTXO" MaryEra = Allegra.UTXO MaryEra
 
-type instance EraRule "UTXOW" MaryEra = Allegra.AllegraUTXOW MaryEra
+type instance EraRule "UTXOW" MaryEra = Allegra.UTXOW MaryEra

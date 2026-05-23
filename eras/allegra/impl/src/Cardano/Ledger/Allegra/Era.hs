@@ -12,8 +12,8 @@
 
 module Cardano.Ledger.Allegra.Era (
   AllegraEra,
-  AllegraUTXO,
-  AllegraUTXOW,
+  UTXO,
+  UTXOW,
 ) where
 
 import Cardano.Ledger.Coin (Coin)
@@ -76,10 +76,10 @@ type instance EraRule "UPEC" AllegraEra = Shelley.UPEC AllegraEra
 
 -- These rules are defined anew in the Allegra era
 
-data AllegraUTXO era
+data UTXO era
 
-type instance EraRule "UTXO" AllegraEra = AllegraUTXO AllegraEra
+type instance EraRule "UTXO" AllegraEra = UTXO AllegraEra
 
-data AllegraUTXOW era
+data UTXOW era
 
-type instance EraRule "UTXOW" AllegraEra = AllegraUTXOW AllegraEra
+type instance EraRule "UTXOW" AllegraEra = UTXOW AllegraEra
