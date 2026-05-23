@@ -12,6 +12,12 @@ module Cardano.Ledger.Babbage.Era (
   UTXOS,
   UTXOW,
   LEDGER,
+
+  -- * Deprecated
+  BabbageUTXO,
+  BabbageUTXOS,
+  BabbageUTXOW,
+  BabbageLEDGER,
 ) where
 
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
@@ -39,17 +45,33 @@ type instance Value BabbageEra = MaryValue
 
 data UTXOS era
 
+type BabbageUTXOS = UTXOS
+
+{-# DEPRECATED BabbageUTXOS "In favor of `UTXOS`" #-}
+
 type instance EraRule "UTXOS" BabbageEra = UTXOS BabbageEra
 
 data UTXO era
+
+type BabbageUTXO = UTXO
+
+{-# DEPRECATED BabbageUTXO "In favor of `UTXO`" #-}
 
 type instance EraRule "UTXO" BabbageEra = UTXO BabbageEra
 
 data UTXOW era
 
+type BabbageUTXOW = UTXOW
+
+{-# DEPRECATED BabbageUTXOW "In favor of `UTXOW`" #-}
+
 type instance EraRule "UTXOW" BabbageEra = UTXOW BabbageEra
 
 data LEDGER c
+
+type BabbageLEDGER = LEDGER
+
+{-# DEPRECATED BabbageLEDGER "In favor of `LEDGER`" #-}
 
 type instance EraRule "LEDGER" BabbageEra = LEDGER BabbageEra
 
