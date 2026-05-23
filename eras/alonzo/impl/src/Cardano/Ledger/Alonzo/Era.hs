@@ -9,11 +9,11 @@
 
 module Cardano.Ledger.Alonzo.Era (
   AlonzoEra,
-  AlonzoUTXO,
-  AlonzoUTXOS,
-  AlonzoUTXOW,
-  AlonzoBBODY,
-  AlonzoLEDGER,
+  UTXO,
+  UTXOS,
+  UTXOW,
+  BBODY,
+  LEDGER,
 ) where
 
 import Cardano.Ledger.Internal.Era (AlonzoEra)
@@ -34,25 +34,25 @@ type instance Value AlonzoEra = MaryValue
 
 -- These rules are new or changed in Alonzo
 
-data AlonzoUTXOS era
+data UTXOS era
 
-type instance EraRule "UTXOS" AlonzoEra = AlonzoUTXOS AlonzoEra
+type instance EraRule "UTXOS" AlonzoEra = UTXOS AlonzoEra
 
-data AlonzoUTXO era
+data UTXO era
 
-type instance EraRule "UTXO" AlonzoEra = AlonzoUTXO AlonzoEra
+type instance EraRule "UTXO" AlonzoEra = UTXO AlonzoEra
 
-data AlonzoUTXOW era
+data UTXOW era
 
-type instance EraRule "UTXOW" AlonzoEra = AlonzoUTXOW AlonzoEra
+type instance EraRule "UTXOW" AlonzoEra = UTXOW AlonzoEra
 
-data AlonzoLEDGER era
+data LEDGER era
 
-type instance EraRule "LEDGER" AlonzoEra = AlonzoLEDGER AlonzoEra
+type instance EraRule "LEDGER" AlonzoEra = LEDGER AlonzoEra
 
-data AlonzoBBODY era
+data BBODY era
 
-type instance EraRule "BBODY" AlonzoEra = AlonzoBBODY AlonzoEra
+type instance EraRule "BBODY" AlonzoEra = BBODY AlonzoEra
 
 -- Rules inherited from Shelley
 

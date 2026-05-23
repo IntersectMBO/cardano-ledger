@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
-import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoLEDGER)
+import Cardano.Ledger.Alonzo.Rules (BBODY, LEDGER)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), mkPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), totExUnits)
 import Cardano.Ledger.Core
@@ -53,7 +53,7 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
  )
 import Test.Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
 
-instance Embed (AlonzoBBODY AlonzoEra) (CHAIN AlonzoEra) where
+instance Embed (BBODY AlonzoEra) (CHAIN AlonzoEra) where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
@@ -79,7 +79,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
   where
     (tickedChainSt, ledgerTr) = ledgerTraceFromBlock chainSt block
     pp = (view curPParamsEpochStateL . nesEs . chainNes) tickedChainSt
-    alonzoSpecificPropsLEDGER :: SourceSignalTarget (AlonzoLEDGER AlonzoEra) -> Property
+    alonzoSpecificPropsLEDGER :: SourceSignalTarget (LEDGER AlonzoEra) -> Property
     alonzoSpecificPropsLEDGER
       SourceSignalTarget
         { source = LedgerState UTxOState {utxosUtxo = UTxO u, utxosDeposited = dp, utxosFees = f} ds

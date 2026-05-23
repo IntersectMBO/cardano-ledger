@@ -51,11 +51,11 @@ import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (relevantCasesAreCovered
 
 -- ===============================================================
 
-instance Embed (Alonzo.AlonzoBBODY AlonzoEra) (CHAIN AlonzoEra) where
+instance Embed (Alonzo.BBODY AlonzoEra) (CHAIN AlonzoEra) where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
-instance Embed (Alonzo.AlonzoUTXOW AlonzoEra) (Shelley.LEDGER AlonzoEra) where
+instance Embed (Alonzo.UTXOW AlonzoEra) (Shelley.LEDGER AlonzoEra) where
   wrapFailed = Shelley.UtxowFailure
   wrapEvent = Shelley.UtxowEvent
 

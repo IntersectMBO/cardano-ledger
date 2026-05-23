@@ -55,7 +55,7 @@ type instance EraRule "LEDGER" BabbageEra = BabbageLEDGER BabbageEra
 
 -- Rules inherited from Alonzo
 
-type instance EraRule "BBODY" BabbageEra = Alonzo.AlonzoBBODY BabbageEra
+type instance EraRule "BBODY" BabbageEra = Alonzo.BBODY BabbageEra
 
 -- Rules inherited from Shelley
 

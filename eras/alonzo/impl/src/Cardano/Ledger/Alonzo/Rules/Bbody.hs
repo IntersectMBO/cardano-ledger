@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Rules.Bbody (
-  AlonzoBBODY,
+  BBODY,
   AlonzoBbodyPredFailure (..),
   AlonzoBbodyEvent (..),
   alonzoBbodyTransition,
@@ -25,7 +25,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Era (AlonzoBBODY, AlonzoEra)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra, BBODY)
 import Cardano.Ledger.Alonzo.Rules.Ledgers ()
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
@@ -214,10 +214,10 @@ alonzoBbodyTransition = do
   pure $ Shelley.BbodyState ls' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
 
 instance
-  ( EraRule "BBODY" era ~ AlonzoBBODY era
+  ( EraRule "BBODY" era ~ BBODY era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
-  , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
+  , Embed (EraRule "LEDGERS" era) (BBODY era)
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
@@ -226,18 +226,18 @@ instance
   , AlonzoEraPParams era
   , AlonzoEraTx era
   ) =>
-  STS (AlonzoBBODY era)
+  STS (BBODY era)
   where
-  type State (AlonzoBBODY era) = Shelley.ShelleyBbodyState era
+  type State (BBODY era) = Shelley.ShelleyBbodyState era
 
-  type Signal (AlonzoBBODY era) = Shelley.BbodySignal era
+  type Signal (BBODY era) = Shelley.BbodySignal era
 
-  type Environment (AlonzoBBODY era) = Shelley.BbodyEnv era
+  type Environment (BBODY era) = Shelley.BbodyEnv era
 
-  type BaseM (AlonzoBBODY era) = ShelleyBase
+  type BaseM (BBODY era) = ShelleyBase
 
-  type PredicateFailure (AlonzoBBODY era) = AlonzoBbodyPredFailure era
-  type Event (AlonzoBBODY era) = AlonzoBbodyEvent era
+  type PredicateFailure (BBODY era) = AlonzoBbodyPredFailure era
+  type Event (BBODY era) = AlonzoBbodyEvent era
 
   initialRules = []
   transitionRules = [alonzoBbodyTransition @era]
@@ -249,7 +249,7 @@ instance
   , STS ledgers
   , Era era
   ) =>
-  Embed ledgers (AlonzoBBODY era)
+  Embed ledgers (BBODY era)
   where
   wrapFailed = ShelleyInAlonzoBbodyPredFailure . Shelley.LedgersFailure
   wrapEvent = ShelleyInAlonzoEvent . Shelley.LedgersEvent
