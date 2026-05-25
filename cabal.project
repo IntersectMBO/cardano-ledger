@@ -28,7 +28,7 @@ source-repository-package
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
   , hackage.haskell.org 2026-05-06T14:09:41Z
-  , cardano-haskell-packages 2026-04-11T06:29:42Z
+  , cardano-haskell-packages 2026-05-22T05:43:37Z
 
 packages:
   -- == Byron era ==
@@ -70,7 +70,7 @@ program-options
   ghc-options: -Werror
 
 package plutus-preprocessor
-  haddock-options: "--optghc=-fplugin-opt=PlutusTx.Plugin:defer-errors"
+  haddock-options: "--optghc=-fplugin-opt=Plinth.Plugin:defer-errors"
 
 package cardano-ledger-core
   flags: +asserts
