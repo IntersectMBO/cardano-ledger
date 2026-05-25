@@ -85,6 +85,7 @@ import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Control.Exception (assert)
 import Control.Monad.Identity (Identity)
 import Control.State.Transition (PredicateFailure)
+import Data.Containers.ListUtils (nubOrdOn)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map (fromList)
 import Data.Sequence.Strict (fromList)
@@ -549,7 +550,7 @@ sizedMetadatum 0 =
 sizedMetadatum n =
   let xsGen = listOf (sizedMetadatum (n - 1))
    in oneof
-        [ Map <$> (zip <$> resize maxMetadatumListLens xsGen <*> xsGen)
+        [ Map . nubOrdOn fst <$> (zip <$> resize maxMetadatumListLens xsGen <*> xsGen)
         , List <$> resize maxMetadatumListLens xsGen
         , I <$> arbitrary
         , genMetadatumByteArray
