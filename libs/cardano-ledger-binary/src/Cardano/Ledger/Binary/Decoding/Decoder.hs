@@ -1216,7 +1216,7 @@ decodeSparseKeyed name requiredFields initial decoderByKey = do
       Just len -> defLoop Set.empty initial len
       Nothing -> indefLoop Set.empty initial
   let missing =
-        [ show n <> ":" <> show k
+        [ show n <> ": " <> show k
         | (k, n) <- requiredFields
         , not $ Set.member k seen
         ]
@@ -1249,7 +1249,7 @@ decodeSparseKeyed name requiredFields initial decoderByKey = do
       if Set.member key seen
         then failMsg $ "Duplicate field key " <> show key
         else case decoderByKey acc key of
-          Nothing -> failMsg $ "Unknown field key " <> show key
+          Nothing -> failMsg $ " Unknown field key " <> show key
           Just decoder -> do
             acc' <- decoder
             pure (Set.insert key seen, acc')

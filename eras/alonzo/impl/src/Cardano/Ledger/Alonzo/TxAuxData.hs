@@ -260,16 +260,16 @@ instance
             (\scripts ad -> ad {atadrNativeScripts = atadrNativeScripts ad <> scripts})
               <$> x
               <*> acc
-        2 -> decodeAddPlutus PlutusV1 acc
-        3 -> decodeAddPlutus PlutusV2 acc
-        4 -> decodeAddPlutus PlutusV3 acc
-        5 -> decodeAddPlutus PlutusV4 acc
+        2 -> decodeAddPlutus PlutusV1
+        3 -> decodeAddPlutus PlutusV2
+        4 -> decodeAddPlutus PlutusV3
+        5 -> decodeAddPlutus PlutusV4
         _ -> Nothing
         where
-          decodeAddPlutus lang accu = Just $ do
+          decodeAddPlutus lang = Just $ do
             guardPlutus lang
             !x <- decCBOR
-            pure $ addPlutusScripts lang x <$> accu
+            pure $ addPlutusScripts lang x <$> acc
           {-# INLINE decodeAddPlutus #-}
       {-# INLINE decoderByKey #-}
 

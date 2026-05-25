@@ -80,7 +80,7 @@ txWitsDecodingFailsOnInvalidField version validFields =
             lbl
             ( DeserialiseFailure (if n >= 24 then 3 else 2) $
                 if version >= natVersion @12
-                  then typeName <> ":Unknown field key " <> show n
+                  then typeName <> ": Unknown field key " <> show n
                   -- TODO fix the `occured` typo in the produced value
                   else "An error occured while decoding (Int,Void) not a valid key:.\nError: " <> show n
             )
