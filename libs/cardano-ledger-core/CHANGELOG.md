@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Change `decodeMetadatum` to require definite-length chunks in indefinite-length bytestrings
 * Add `ToPlutusData` instance for `StrictMaybe`
 * Add `MaxPledgeLeverage`, the maximum pledge leverage introduced in CIP-50
 * Add `ppMaxPledgeLeverageG` method to `EraPParams`, which defaults to `MaxPledgeLeverage SNothing` for eras up to Conway
