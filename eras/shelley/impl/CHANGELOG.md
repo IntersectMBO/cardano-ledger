@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `generate-cbor` executable
 * Change `NoThunks` instance for `BlockTransitionError` to not check for thunks in its contents
 * Add `NFData` constraint to `BlockTransitionError` constructor.
 * Add `injectStakeCredentials`, `injectStakePools`, `resolveInjectionSource`, `injectInitialFundsAndStaking` to `Cardano.Ledger.Shelley.Transition`

@@ -85,6 +85,7 @@ library testlib
     Test.Cardano.Ledger.Binary
     Test.Cardano.Ledger.Binary.Arbitrary
     Test.Cardano.Ledger.Binary.Cuddle
+    Test.Cardano.Ledger.Binary.Cuddle.GenerateCBOR
     Test.Cardano.Ledger.Binary.Golden
     Test.Cardano.Ledger.Binary.Plain.Golden
     Test.Cardano.Ledger.Binary.Plain.RoundTrip
@@ -133,6 +134,7 @@ library testlib
     hedgehog,
     hspec,
     hspec-golden,
+    optparse-applicative,
     pretty-show,
     prettyprinter,
     prettyprinter-ansi-terminal,
