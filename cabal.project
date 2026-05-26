@@ -124,61 +124,21 @@ if impl(ghc >=9.14)
     , containers >= 0.8
     , foldl >= 1.4.18
 
+-- cabal-allow-newer begin
+if impl(ghc >=9.14)
   allow-newer:
-    -- https://github.com/IntersectMBO/cardano-ledger/issues/5588
-    -- Plutus stuff has been fixed in the master branch on Github,
-    -- but not yet released to CHaP.
-    , aeson:QuickCheck
-    , aeson:base
-    , aeson:containers
-    , aeson:data-fix
-    , aeson:template-haskell
-    , aeson:time
-    , binary-orphans:base
-    , boring:base
     , canonical-json:containers
     , cborg:base
     , cborg:containers
-    , serialise:base
-    , serialise:containers
-    , config-ini:containers
-    , constraints-extras:base
-    , constraints-extras:template-haskell
-    , dependent-map:constraints-extras
+    , constrained-generators:QuickCheck
     , dependent-map:containers
     , dictionary-sharing:containers
-    , dec:base
-    , bin:base
-    , fin:base
-    , ral:base
-    , http-api-data:base
-    , http-api-data:containers
-    , indexed-traversable:base
-    , indexed-traversable:containers
-    , indexed-traversable-instances:base
-    , microstache:base
-    , microstache:containers
-    , nonempty-vector:base
+    , hedgehog-quickcheck:QuickCheck
     , ordered-containers:containers
+    , partial-order:containers
     , persistent:template-haskell
-    , plutus-core:dependent-map
-    , plutus-core:vty
-    , plutus-core:vty-crossplatform
-    , pqueue:base
-    , quickcheck-instances:base
-    , quickcheck-instances:containers
-    , quickcheck-instances:these
-    , quickcheck-instances:uuid-types
     , safe-wild-cards:template-haskell
-    , semialign:base
-    , semialign:containers
-    , semialign:indexed-traversable
-    , semialign:indexed-traversable-instances
-    , these:base
-    , tree-diff:QuickCheck
-    , tree-diff:base
-    , tree-diff:containers
-    , tree-diff:time
-    , universe-base:base
-    , universe-base:containers
-    , uuid-types:template-haskell
+    , serialise:base
+    , serialise:containers
+    , serialise:time
+-- cabal-allow-newer end
