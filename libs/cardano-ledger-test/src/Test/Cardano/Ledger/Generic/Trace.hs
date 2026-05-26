@@ -59,6 +59,7 @@ import qualified Data.Vector as Vector
 import qualified Debug.Trace as Debug
 import GHC.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..))
@@ -454,7 +455,7 @@ forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 =
 --   like not getting turned off because the tests take too long. A glaring failure is
 --   likely to be caught in 'n' tests, rather than the standard '100'
 testPropMax :: (HasCallStack, Testable prop) => Int -> String -> prop -> Spec
-testPropMax n name x = prop name (withMaxSuccess n x)
+testPropMax n name x = prop name (BaseQC.withNumTests n x)
 
 chainTest ::
   forall era.

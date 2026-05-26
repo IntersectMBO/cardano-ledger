@@ -10,6 +10,7 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR, EncCBOR, EncCBORGroup)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Data.Typeable
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.Annotator ()
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
@@ -31,7 +32,7 @@ roundTripBlockSpec ::
   Spec
 roundTripBlockSpec =
   prop (show (typeRep $ Proxy @(Block h era))) $ do
-    withMaxSuccess 3 $ do
+    BaseQC.withNumTests 3 $ do
       conjoin
         [ roundTripEraExpectation @era @(Block h era)
         , roundTripAnnEraExpectation @era @(Block h era)

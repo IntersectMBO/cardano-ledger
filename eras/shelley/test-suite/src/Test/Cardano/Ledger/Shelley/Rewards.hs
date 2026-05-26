@@ -120,6 +120,7 @@ import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
 import Numeric.Natural (Natural)
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
 import Test.Cardano.Ledger.Core.Utils (mkActiveStake)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
@@ -149,7 +150,6 @@ import Test.Tasty.QuickCheck (
   noShrinking,
   property,
   testProperty,
-  withMaxSuccess,
  )
 
 -- ========================================================================
@@ -671,7 +671,7 @@ lastElem (_ : xs) = lastElem xs
 
 -- | Provide a legitimate NewEpochState to make an test Property
 newEpochProp :: Word64 -> (NewEpochState ShelleyEra -> Property) -> Property
-newEpochProp tracelen propf = withMaxSuccess 100 $
+newEpochProp tracelen propf = BaseQC.withNumTests 100 $
   forAllChainTrace @ShelleyEra tracelen defaultConstants $ \tr ->
     case lastElem (sourceSignalTargets tr) of
       Just SourceSignalTarget {target} -> propf (chainNes target)
@@ -680,7 +680,7 @@ newEpochProp tracelen propf = withMaxSuccess 100 $
 -- | Given a NewEpochState and [ChainEvent], test a Property at every Epoch Boundary
 newEpochEventsProp ::
   Word64 -> ([ChainEvent ShelleyEra] -> NewEpochState ShelleyEra -> Property) -> Property
-newEpochEventsProp tracelen propf = withMaxSuccess 10 $
+newEpochEventsProp tracelen propf = BaseQC.withNumTests 10 $
   forEachEpochTrace @ShelleyEra 10 tracelen defaultConstants $ \tr ->
     case lastElem (sourceSignalTargets tr) of
       Just SourceSignalTarget {target} ->
@@ -724,7 +724,7 @@ eventsMirrorRewards events nes = same eventRew compRew
     total = getMostRecentTotalRewardEvent events
     aggevent = aggIncrementalRewardEvents events
     FilteredRewards aggFilteredEvent _ _ _ = filterAllRewards aggevent (nesEs nes)
-    same x y = withMaxSuccess 1 $ counterexample message (x === y)
+    same x y = BaseQC.withNumTests 1 $ counterexample message (x === y)
       where
         message =
           "events don't mirror rewards "
@@ -810,7 +810,7 @@ tests =
   testGroup
     "Reward Tests"
     [ testProperty "Sum of rewards is bounded by reward pot" $
-        withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @ShelleyEra))
+        BaseQC.withNumTests numberOfTests (rewardsBoundedByPot (Proxy @ShelleyEra))
     , testProperty "compare with reference impl, no provenance, v3" . noShrinking $
         newEpochProp chainlen (oldEqualsNew @ShelleyEra (ProtVer (natVersion @3) 0))
     , testProperty "compare with reference impl, no provenance, v7" . noShrinking $

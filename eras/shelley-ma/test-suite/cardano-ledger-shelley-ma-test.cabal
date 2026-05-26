@@ -100,6 +100,7 @@ test-suite cardano-ledger-shelley-ma-test
     QuickCheck,
     base,
     bytestring,
+    cardano-base:testlib >=0.1.5.0,
     cardano-crypto-class,
     cardano-data,
     cardano-ledger-allegra,

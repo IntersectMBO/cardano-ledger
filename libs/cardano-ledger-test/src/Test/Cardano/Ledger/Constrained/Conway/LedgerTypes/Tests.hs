@@ -26,6 +26,7 @@ import Data.Kind (Type)
 import Data.Map (Map)
 import Data.TreeDiff
 import Data.Typeable
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Constrained.Conway.Cert (
   testConwayCert,
   testShelleyCert,
@@ -43,7 +44,6 @@ import Test.QuickCheck (
   Property,
   counterexample,
   property,
-  withMaxSuccess,
  )
 
 -- ====================================================================================
@@ -114,7 +114,7 @@ soundSpecWith ::
   forall t.
   (HasSpec t, ToExpr t) =>
   Int -> Gen (Specification t) -> SpecWith (Arg Property)
-soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ property $ (soundSpec @t specx)
+soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ BaseQC.withNumTests n $ property $ (soundSpec @t specx)
 
 -- | A bunch of soundness tests on different LederTypes, all in the same Era.
 --   The idea is to run this suite on every era.

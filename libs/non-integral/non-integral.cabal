@@ -54,4 +54,5 @@ test-suite non-integral-test
   build-depends:
     QuickCheck,
     base,
+    cardano-base:testlib >=0.1.5.0,
     non-integral,

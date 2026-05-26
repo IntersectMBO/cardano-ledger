@@ -56,6 +56,7 @@ import qualified Data.Map.Strict as Map
 import Data.TreeDiff.QuickCheck (ediffEq)
 import Lens.Micro hiding (ix)
 import Lens.Micro.Extras (view)
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -88,7 +89,6 @@ import Test.QuickCheck (
   (.||.),
   (===),
  )
-import Test.QuickCheck.Property (withMaxSuccess)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty.QuickCheck as TQC
 
@@ -111,7 +111,7 @@ tests ::
 tests n =
   TQC.testProperty
     "total amount of Ada is preserved (Chain)"
-    (noShrinking $ withMaxSuccess n (adaPreservationProps @era))
+    (noShrinking $ BaseQC.withNumTests n (adaPreservationProps @era))
 
 -- | Various preservation properties
 adaPreservationProps ::

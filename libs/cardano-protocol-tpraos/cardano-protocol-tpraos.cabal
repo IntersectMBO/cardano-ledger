@@ -97,7 +97,7 @@ library testlib
   build-depends:
     base,
     bytestring,
-    cardano-base:{cardano-base, testlib},
+    cardano-base:{cardano-base, testlib} >=0.1.5.0,
     cardano-crypto-class:{cardano-crypto-class, testlib},
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
@@ -136,6 +136,7 @@ test-suite tests
 
   build-depends:
     base,
+    cardano-base:testlib >=0.1.5.0,
     cardano-ledger-allegra:{cardano-ledger-allegra, cddl, testlib},
     cardano-ledger-alonzo:{cardano-ledger-alonzo, cddl, testlib},
     cardano-ledger-binary:{cardano-ledger-binary, testlib},

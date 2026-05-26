@@ -23,6 +23,7 @@ import Data.CanonicalMaps (canonicalInsert)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import GHC.Exts
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Data
 import Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripCborExpectation,
@@ -45,7 +46,7 @@ spec :: Spec
 spec = do
   describe "MultiAsset" $ do
     prop "Canonical construction agrees" $
-      withMaxSuccess 10000 propCanonicalConstructionAgrees
+      BaseQC.withNumTests 10000 propCanonicalConstructionAgrees
   describe "CBOR roundtrip" $ do
     describe "Coin" $ do
       prop "Non-negative Coin succeeds for all eras" $

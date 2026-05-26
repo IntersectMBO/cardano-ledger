@@ -25,6 +25,7 @@ import Cardano.Ledger.State (
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.VMap as VMap
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -35,7 +36,7 @@ calcPoolDistOldEqualsNew :: Spec
 calcPoolDistOldEqualsNew =
   describe "calculatePoolDistr" $ do
     prop "old==new" $
-      withMaxSuccess 500 $ \snap ->
+      BaseQC.withNumTests 500 $ \snap ->
         counterexample "BAD" $
           oldCalculatePoolDistr (const True) snap === Shelley.calculatePoolDistr snap
 

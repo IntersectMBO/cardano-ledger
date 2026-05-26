@@ -9,10 +9,11 @@ module Test.Control.State.Transition.Examples.Sum where
 import Control.State.Transition
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Control.State.Transition.Generator
 import Test.Control.State.Transition.Trace
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
-import Test.QuickCheck (Property, arbitrary, shrink, withMaxSuccess)
+import Test.QuickCheck (Property, arbitrary, shrink)
 
 data SUM
 
@@ -58,7 +59,7 @@ prop_qc_Classified =
 
 prop_qc_onlyValidSignalsAreGenerated :: Property
 prop_qc_onlyValidSignalsAreGenerated =
-  withMaxSuccess 300 $
+  BaseQC.withNumTests 300 $
     STS.Gen.onlyValidSignalsAreGenerated @SUM @() () 100 ()
 
 instance STS.Gen.HasTrace SUM () where

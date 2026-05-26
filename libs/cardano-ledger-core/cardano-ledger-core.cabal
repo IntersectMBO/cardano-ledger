@@ -201,7 +201,7 @@ library cddl
     cardano-ledger-binary,
     cardano-ledger-core,
     cborg,
-    cuddle >=1.7,
+    cuddle >=1.7 && <1.8,
     heredoc,
     mempack,
     quickcheck-transformer,

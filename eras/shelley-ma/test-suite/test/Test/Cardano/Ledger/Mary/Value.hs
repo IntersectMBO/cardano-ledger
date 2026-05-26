@@ -34,6 +34,7 @@ import qualified Data.Group as G
 import Data.Map.Strict (empty, singleton)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -390,7 +391,7 @@ exampleMultiAssets = [s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
 -- This was used to diagnose https://github.com/input-output-hk/cardano-node/issues/4826
 subtractionIsTotal :: TestTree
 subtractionIsTotal = testProperty "multi-asset subtraction is total" $
-  QC.withMaxSuccess 100000 $
+  BaseQC.withNumTests 100000 $
     do
       shuffle1 <- take 12 <$> QC.shuffle exampleMultiAssets
       shuffle2 <- take 2 <$> QC.shuffle exampleMultiAssets
