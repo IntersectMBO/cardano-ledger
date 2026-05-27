@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `decodeAccA`, `failOnNull`, `failOnMempty`
 * Add `decodeSparseKeyed`
 * Add `decodeIntegralRational`
 * Add `decodeNonEmptySetLikeEnforceNoDuplicates`

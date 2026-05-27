@@ -15,16 +15,18 @@ module Test.Cardano.Ledger.Alonzo.Binary.Golden (
 ) where
 
 import Cardano.Ledger.Alonzo.Core (EraTxWits (..), ShelleyEraTxCert)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWitsRaw)
 import Cardano.Ledger.Binary (
   Annotator,
   DecoderError (..),
   DeserialiseFailure (..),
   Tokens (..),
   Version,
+  natVersion,
  )
 import qualified Cardano.Ledger.Binary as Binary
 import Cardano.Ledger.MemoBytes (EqRaw (..))
-import Data.Data (Proxy (..))
+import Data.Data (Proxy (..), typeRep)
 import Data.Void (Void)
 import Test.Cardano.Ledger.Allegra.Binary.Golden hiding (spec)
 import Test.Cardano.Ledger.Alonzo.Era (AlonzoEraTest)
@@ -77,13 +79,16 @@ txWitsDecodingFailsOnInvalidField version validFields =
           DecoderErrorDeserialiseFailure
             lbl
             ( DeserialiseFailure (if n >= 24 then 3 else 2) $
-                -- TODO fix the `occured` typo in the produced value
-                "An error occured while decoding (Int,Void) not a valid key:.\nError: " <> show n
+                if version >= natVersion @12
+                  then typeName <> ": Unknown field key " <> show n
+                  -- TODO fix the `occured` typo in the produced value
+                  else "An error occured while decoding (Int,Void) not a valid key:.\nError: " <> show n
             )
         else
           DecoderErrorDeserialiseFailure lbl (DeserialiseFailure 1 "expected word")
   where
     lbl = Binary.label $ Proxy @(Annotator (TxWits era))
+    typeName = show (typeRep (Proxy @(Annotator (AlonzoTxWitsRaw era))))
 
 spec ::
   forall era.

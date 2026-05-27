@@ -97,6 +97,7 @@ module Cardano.Ledger.Core.PParams (
   ppuMinFeeBL,
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   KeyValuePairs (..),
@@ -115,9 +116,12 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   decodeRecordNamed,
+  decodeSparseKeyed,
   encodeListLen,
   encodeMapLen,
   encodeWord,
+  ifDecoderVersionAtLeast,
+  natVersion,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Field (..), decode, field, invalidField)
 import Cardano.Ledger.Coin (
@@ -252,13 +256,20 @@ instance EraPParams era => EncCBOR (PParamsUpdate era) where
 
 instance EraPParams era => DecCBOR (PParamsUpdate era) where
   decCBOR =
-    decode $
-      SparseKeyed
-        (show . typeRep $ Proxy @(PParamsUpdate era))
-        emptyPParamsUpdate
-        updateField
-        []
+    ifDecoderVersionAtLeast
+      (natVersion @12)
+      (decodeSparseKeyed TypeName [] emptyPParamsUpdate decoderByKey)
+      (decode $ SparseKeyed name emptyPParamsUpdate updateField [])
     where
+      name = show . typeRep $ Proxy @(PParamsUpdate era)
+      decoderByKey ::
+        PParamsUpdate era ->
+        Word ->
+        Maybe (Decoder s (PParamsUpdate era))
+      decoderByKey acc k =
+        case IntMap.lookup (fromIntegral k) updateFieldMap of
+          Just (Field setter dec) -> Just $ (`setter` acc) <$> dec
+          Nothing -> Nothing
       updateField k =
         IntMap.findWithDefault
           (invalidField k)

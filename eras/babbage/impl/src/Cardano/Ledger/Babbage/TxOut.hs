@@ -42,6 +42,7 @@ module Cardano.Ledger.Babbage.TxOut (
   internBabbageTxOut,
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Address (
   CompactAddr,
   compactAddr,
@@ -610,7 +611,7 @@ decodeTxOut decAddr = do
   dtxo <-
     ifDecoderVersionAtLeast
       (natVersion @12)
-      (decodeSparseKeyed "TxOut" requiredFields initial decoderForKey)
+      (decodeSparseKeyed TypeName requiredFields initial decoderByKey)
       (decode $ SparseKeyed "TxOut" initial bodyFields requiredFields)
   case dtxo of
     DecodingTxOut SNothing _ _ _ ->
@@ -620,38 +621,38 @@ decodeTxOut decAddr = do
   where
     initial :: DecodingTxOut era
     initial = DecodingTxOut SNothing mempty NoDatum SNothing
-    decoderForKey :: DecodingTxOut era -> Word -> Maybe (Decoder s (DecodingTxOut era))
-    decoderForKey txo = \case
+    decoderByKey :: DecodingTxOut era -> Word -> Maybe (Decoder s (DecodingTxOut era))
+    decoderByKey txOut = \case
       0 -> Just $ do
         !x <- decAddr
-        pure txo {decodingTxOutAddr = SJust x}
+        pure txOut {decodingTxOutAddr = SJust x}
       1 -> Just $ do
         !x <- decCBOR
-        pure txo {decodingTxOutVal = x}
+        pure txOut {decodingTxOutVal = x}
       2 -> Just $ do
         !x <- decCBOR
-        pure txo {decodingTxOutDatum = x}
+        pure txOut {decodingTxOutDatum = x}
       3 -> Just $ do
         !x <- decodeCIC "Script"
-        pure txo {decodingTxOutScript = SJust x}
+        pure txOut {decodingTxOutScript = SJust x}
       _ -> Nothing
-    {-# INLINE decoderForKey #-}
+    {-# INLINE decoderByKey #-}
     bodyFields :: (Word -> Field (DecodingTxOut era))
     bodyFields 0 =
       field
-        (\x txo -> txo {decodingTxOutAddr = SJust x})
+        (\x txOut -> txOut {decodingTxOutAddr = SJust x})
         (D decAddr)
     bodyFields 1 =
       field
-        (\x txo -> txo {decodingTxOutVal = x})
+        (\x txOut -> txOut {decodingTxOutVal = x})
         From
     bodyFields 2 =
       field
-        (\x txo -> txo {decodingTxOutDatum = x})
+        (\x txOut -> txOut {decodingTxOutDatum = x})
         (D decCBOR)
     bodyFields 3 =
       ofield
-        (\x txo -> txo {decodingTxOutScript = x})
+        (\x txOut -> txOut {decodingTxOutScript = x})
         (D $ decodeCIC "Script")
     bodyFields n = invalidField n
     {-# INLINE bodyFields #-}

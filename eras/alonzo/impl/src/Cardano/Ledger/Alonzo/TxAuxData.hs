@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -49,6 +50,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   atadPlutus',
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts (
@@ -67,6 +69,8 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   ToCBOR,
   TokenType (..),
+  assertTag,
+  decodeSparseKeyed,
   decodeStrictSeq,
   ifDecoderVersionAtLeast,
   natVersion,
@@ -202,7 +206,18 @@ instance
     decodeTxAuxDataByTokenType @(Annotator (AlonzoTxAuxDataRaw era))
       decodeShelley
       (ifDecoderVersionAtLeast (natVersion @12) decodeDijkstra decodeAllegra)
-      decodeAlonzo
+      ( ifDecoderVersionAtLeast
+          (natVersion @12)
+          ( do
+              assertTag 259
+              decodeSparseKeyed
+                TypeName
+                []
+                (pure emptyAlonzoTxAuxDataRaw)
+                decoderByKey
+          )
+          decodeAlonzo
+      )
     where
       decodeShelley =
         decode
@@ -223,11 +238,38 @@ instance
         decodeRecordNamed "AlonzoTxAuxDataRaw" (const 2) $ do
           metadata <- decCBOR
           annScripts <- sequence <$> decodeStrictSeq decCBOR
-          pure $ AlonzoTxAuxDataRaw <$> pure metadata <*> annScripts <*> pure Map.empty
+          pure $ AlonzoTxAuxDataRaw metadata <$> annScripts <*> pure Map.empty
       decodeAlonzo =
         decode $
           TagD 259 $
             SparseKeyed "AlonzoTxAuxData" (pure emptyAlonzoTxAuxDataRaw) auxDataField []
+
+      decoderByKey ::
+        Annotator (AlonzoTxAuxDataRaw era) ->
+        Word ->
+        Maybe (Decoder s (Annotator (AlonzoTxAuxDataRaw era)))
+      decoderByKey acc = \case
+        0 -> Just $ do
+          !x <- decCBOR
+          pure $ (\ad -> ad {atadrMetadata = x}) <$> acc
+        1 -> Just $ do
+          !x <- sequence <$> decodeStrictSeq decCBOR
+          pure $
+            (\scripts ad -> ad {atadrNativeScripts = atadrNativeScripts ad <> scripts})
+              <$> x
+              <*> acc
+        2 -> decodeAddPlutus PlutusV1
+        3 -> decodeAddPlutus PlutusV2
+        4 -> decodeAddPlutus PlutusV3
+        5 -> decodeAddPlutus PlutusV4
+        _ -> Nothing
+        where
+          decodeAddPlutus lang = Just $ do
+            guardPlutus lang
+            !x <- decCBOR
+            pure $ addPlutusScripts lang x <$> acc
+          {-# INLINE decodeAddPlutus #-}
+      {-# INLINE decoderByKey #-}
 
       auxDataField :: Word -> Field (Annotator (AlonzoTxAuxDataRaw era))
       auxDataField 0 = fieldA (\x ad -> ad {atadrMetadata = x}) From

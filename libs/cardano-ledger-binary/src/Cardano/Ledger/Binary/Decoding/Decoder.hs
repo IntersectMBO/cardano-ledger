@@ -80,6 +80,9 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeListLikeEnforceNoDuplicates,
   decodeMapContents,
   decodeSparseKeyed,
+  decodeAccA,
+  failOnNull,
+  failOnMempty,
 
   -- **** Applicaitve
   decodeMapTraverse,
@@ -167,6 +170,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 ) where
 
 import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
+import Cardano.Base.Typeable (TypeName)
 import Cardano.Ledger.Binary.Plain (
   DecoderError (..),
   cborError,
@@ -1194,7 +1198,7 @@ decodeMapContentsTraverse decodeKey decodeValue =
 decodeSparseKeyed ::
   forall a s.
   -- | Type name used in error messages.
-  Text.Text ->
+  TypeName a ->
   -- | Required keys with friendly names per key. After the map is fully
   -- consumed, the absence of any key in this list is reported as a
   -- failure using its name and key.
@@ -1206,13 +1210,13 @@ decodeSparseKeyed ::
   -- indicates the key as unknown and is reported as decoding failure.
   (a -> Word -> Maybe (Decoder s a)) ->
   Decoder s a
-decodeSparseKeyed name requiredFields initial decoderForKey = do
+decodeSparseKeyed name requiredFields initial decoderByKey = do
   (seen, acc) <-
     decodeMapLenOrIndef >>= \case
       Just len -> defLoop Set.empty initial len
       Nothing -> indefLoop Set.empty initial
   let missing =
-        [ show n <> ":" <> show k
+        [ show n <> ": " <> show k
         | (k, n) <- requiredFields
         , not $ Set.member k seen
         ]
@@ -1222,7 +1226,7 @@ decodeSparseKeyed name requiredFields initial decoderForKey = do
   pure acc
   where
     failMsg :: String -> Decoder s b
-    failMsg msg = fail $ Text.unpack name <> ":" <> msg
+    failMsg msg = fail $ show name <> ": " <> msg
 
     defLoop :: Set.Set Word -> a -> Int -> Decoder s (Set.Set Word, a)
     defLoop !seen !acc !i
@@ -1244,13 +1248,35 @@ decodeSparseKeyed name requiredFields initial decoderForKey = do
       key <- decodeWord
       if Set.member key seen
         then failMsg $ "Duplicate field key " <> show key
-        else case decoderForKey acc key of
+        else case decoderByKey acc key of
           Nothing -> failMsg $ "Unknown field key " <> show key
           Just decoder -> do
             acc' <- decoder
             pure (Set.insert key seen, acc')
     {-# INLINE step #-}
 {-# INLINE decodeSparseKeyed #-}
+
+-- | Decode a value and add it to the accumulator using the
+-- `Applicative` instance.
+decodeAccA ::
+  Applicative f =>
+  -- | Applicative accumulator
+  f t ->
+  -- | Function to adds the decoded value to the accumulator
+  (x -> t -> t) ->
+  -- | Decoder of the Applicative value
+  Decoder s (f x) ->
+  Decoder s (f t)
+decodeAccA acc setter dec = do
+  !x <- dec
+  pure $ setter <$> x <*> acc
+{-# INLINE decodeAccA #-}
+
+failOnNull :: (Foldable f, MonadFail m) => f a -> String -> m ()
+failOnNull f msg = when (null f) $ fail msg
+
+failOnMempty :: (Eq f, Monoid f, MonadFail m) => f -> String -> m ()
+failOnMempty f msg = when (f == mempty) $ fail msg
 
 --------------------------------------------------------------------------------
 -- Time

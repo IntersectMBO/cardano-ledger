@@ -98,6 +98,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
   accountBalanceIntervalsDijkstraTxBodyRawL,
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
@@ -106,7 +107,7 @@ import Cardano.Ledger.Babbage.TxBody (
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
-import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), fromSMaybe)
+import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin, decodePositiveCoin)
@@ -145,16 +146,16 @@ import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq)
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.OMap.Strict (OMap)
 import qualified Data.OMap.Strict as OMap
 import Data.OSet.Strict (OSet, decodeOSet)
 import qualified Data.OSet.Strict as OSet
+import Data.Proxy (Proxy (..))
 import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, foldr')
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
+import Data.Typeable (Typeable, typeRep)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to, (.~), (^.))
 import NoThunks.Class (InspectHeap (..), NoThunks)
@@ -327,104 +328,122 @@ instance
   DecCBOR (Annotator (DijkstraTxBodyRaw l era))
   where
   decCBOR = withSTxBothLevels @l $ \sTxLevel ->
-    decode $
-      SparseKeyed
-        "TxBodyRaw"
-        (pure $ basicDijkstraTxBodyRaw sTxLevel)
-        (bodyFields sTxLevel)
-        (requiredFields sTxLevel)
+    decodeSparseKeyed
+      TypeName
+      (requiredFields sTxLevel)
+      (pure $ basicDijkstraTxBodyRaw sTxLevel)
+      (decoderByKey sTxLevel)
     where
-      bodyFields :: STxBothLevels l era -> Word -> Field (Annotator (DijkstraTxBodyRaw l era))
-      bodyFields sTxLevel = \case
-        0 -> fieldA (inputsDijkstraTxBodyRawL .~) From
-        1 -> fieldA (outputsDijkstraTxBodyRawL .~) From
-        2 | STopTx <- sTxLevel -> fieldA (feeDijkstraTxBodyRawL .~) From
-        3 -> ofieldA (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) From
+      name = show . typeRep $ Proxy @(DijkstraTxBodyRaw l era)
+      emptyNamedFailure fieldName requirement =
+        name <> ": " <> emptyFailure fieldName requirement
+      decoderByKey ::
+        STxBothLevels l era ->
+        Annotator (DijkstraTxBodyRaw l era) ->
+        Word ->
+        Maybe (Decoder s (Annotator (DijkstraTxBodyRaw l era)))
+      decoderByKey sTxLevel acc = \case
+        0 -> Just $ decodeAccA acc (inputsDijkstraTxBodyRawL .~) (pure <$> decCBOR)
+        1 -> Just $ decodeAccA acc (outputsDijkstraTxBodyRawL .~) (pure <$> decCBOR)
+        2 | STopTx <- sTxLevel -> Just $ decodeAccA acc (feeDijkstraTxBodyRawL .~) (pure <$> decCBOR)
+        3 -> Just $ decodeAccA acc (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) (pure . SJust <$> decCBOR)
         4 ->
-          fieldAGuarded
-            (emptyFailure "Certificates" "non-empty")
-            OSet.null
-            (certsDijkstraTxBodyRawL .~)
-            From
+          Just $
+            decodeAccA acc (certsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull x $ emptyNamedFailure "Certificates" "non-empty"
+                pure x
         5 ->
-          fieldAGuarded
-            (emptyFailure "Withdrawals" "non-empty")
-            (null . unWithdrawals)
-            (withdrawalsDijkstraTxBodyRawL .~)
-            From
-        7 -> ofieldA (auxDataHashDijkstraTxBodyRawL .~) From
-        8 -> ofieldA (vldtDijkstraTxBodyRawL . invalidBeforeL .~) From
+          Just $
+            decodeAccA acc (withdrawalsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull (unWithdrawals x) $ emptyNamedFailure "Withdrawals" "non-empty"
+                pure x
+        7 -> Just $ decodeAccA acc (auxDataHashDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
+        8 -> Just $ decodeAccA acc (vldtDijkstraTxBodyRawL . invalidBeforeL .~) (pure . SJust <$> decCBOR)
         9 ->
-          fieldAGuarded
-            (emptyFailure "Mint" "non-empty")
-            (== mempty)
-            (mintDijkstraTxBodyRawL .~)
-            From
-        11 -> ofieldA (scriptIntegrityHashDijkstraTxBodyRawL .~) From
+          Just $
+            decodeAccA acc (mintDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnMempty x $ emptyNamedFailure "Mint" "non-empty"
+                pure x
+        11 -> Just $ decodeAccA acc (scriptIntegrityHashDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         13
           | STopTx <- sTxLevel ->
-              fieldAGuarded
-                (emptyFailure "Collateral Inputs" "non-empty")
-                null
-                (collateralInputsDijkstraTxBodyRawL .~)
-                From
+              Just $
+                decodeAccA acc (collateralInputsDijkstraTxBodyRawL .~) $
+                  pure <$> do
+                    x <- decCBOR
+                    failOnNull x $ emptyNamedFailure "Collateral Inputs" "non-empty"
+                    pure x
         14 ->
-          ofieldA
-            (\x -> guardsDijkstraTxBodyRawL .~ fromSMaybe mempty x)
-            (D decodeGuards)
-        15 -> ofieldA (networkIdDijkstraTxBodyRawL .~) From
+          -- plain field - initial accumulator already holds the omit-default
+          Just $ decodeAccA acc (guardsDijkstraTxBodyRawL .~) (pure <$> decodeGuards)
+        15 -> Just $ decodeAccA acc (networkIdDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         16
           | STopTx <- sTxLevel ->
-              ofieldA (collateralReturnDijkstraTxBodyRawL .~) From
+              Just $ decodeAccA acc (collateralReturnDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         17
           | STopTx <- sTxLevel ->
-              ofieldA (totalCollateralDijkstraTxBodyRawL .~) From
+              Just $ decodeAccA acc (totalCollateralDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         18 ->
-          fieldAGuarded
-            (emptyFailure "Reference Inputs" "non-empty")
-            null
-            (referenceInputsDijkstraTxBodyRawL .~)
-            From
+          Just $
+            decodeAccA acc (referenceInputsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull x $ emptyNamedFailure "Reference Inputs" "non-empty"
+                pure x
         19 ->
-          fieldAGuarded
-            (emptyFailure "VotingProcedures" "non-empty")
-            (null . unVotingProcedures)
-            (votingProceduresDijkstraTxBodyRawL .~)
-            From
+          Just $
+            decodeAccA acc (votingProceduresDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull (unVotingProcedures x) $ emptyNamedFailure "VotingProcedures" "non-empty"
+                pure x
         20 ->
-          fieldAGuarded
-            (emptyFailure "ProposalProcedures" "non-empty")
-            OSet.null
-            (proposalProceduresDijkstraTxBodyRawL .~)
-            From
-        21 -> ofieldA (currentTreasuryValueDijkstraTxBodyRawL .~) From
+          Just $
+            decodeAccA acc (proposalProceduresDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull x $ emptyNamedFailure "ProposalProcedures" "non-empty"
+                pure x
+        21 -> Just $ decodeAccA acc (currentTreasuryValueDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         22 ->
-          ofieldA
-            (\x -> treasuryDonationDijkstraTxBodyRawL .~ fromSMaybe zero x)
-            (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
+          -- plain field - initial accumulator already holds the omit-default
+          Just $
+            decodeAccA
+              acc
+              (treasuryDonationDijkstraTxBodyRawL .~)
+              (pure <$> decodePositiveCoin (emptyFailure "Treasury Donation" "non-zero"))
         23
           | STopTx <- sTxLevel ->
-              fieldAA (subTransactionsDijkstraTxBodyRawL .~) (D decodeSubTransactions)
+              Just $ decodeAccA acc (subTransactionsDijkstraTxBodyRawL .~) decodeSubTransactions
         24
           | SSubTx <- sTxLevel ->
-              fieldAGuarded
-                (emptyFailure "RequiredTopLevelGuards" "non-empty")
-                Map.null
-                (requiredTopLevelGuardsDijkstraTxBodyRawL .~)
-                (D (decodeMap decCBOR (decodeNullStrictMaybe decCBOR)))
+              Just $
+                decodeAccA acc (requiredTopLevelGuardsDijkstraTxBodyRawL .~) $
+                  pure <$> do
+                    x <- decodeMap decCBOR (decodeNullStrictMaybe decCBOR)
+                    failOnNull x $ emptyNamedFailure "RequiredTopLevelGuards" "non-empty"
+                    pure x
         25 ->
-          fieldAGuarded
-            (emptyFailure "DirectDeposits" "non-empty")
-            (null . unDirectDeposits)
-            (directDepositsDijkstraTxBodyRawL .~)
-            From
+          Just $
+            decodeAccA acc (directDepositsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull (unDirectDeposits x) $ emptyNamedFailure "DirectDeposits" "non-empty"
+                pure x
         26 ->
-          fieldAGuarded
-            (emptyFailure "AccountBalanceIntervals" "non-empty")
-            (null . unAccountBalanceIntervals)
-            (accountBalanceIntervalsDijkstraTxBodyRawL .~)
-            From
-        n -> invalidField n
+          Just $
+            decodeAccA acc (accountBalanceIntervalsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decCBOR
+                failOnNull (unAccountBalanceIntervals x) $ emptyNamedFailure "AccountBalanceIntervals" "non-empty"
+                pure x
+        _ -> Nothing
       decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
       decodeSubTransactions =
         decodeNonEmptySetLikeEnforceNoDuplicatesAnn
