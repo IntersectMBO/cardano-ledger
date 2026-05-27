@@ -291,14 +291,15 @@ jobs:
       run: tar -xf state.tzst && rm state.tzst
 
     - name: Run tests
+      id: tests
       run: cleret cabal test '${{ matrix.package }}'
 
     - name: Record test failures
-      if: failure()
+      if: failure() && steps.tests.conclusion == 'failure'
       run: cleret failures extract -v -o failures.json
 
     - name: Upload test failures artifact
-      if: failure()
+      if: failure() && steps.tests.conclusion == 'failure'
       uses: actions/upload-artifact@v7
       with:
         name: failures-${{ matrix.package }}-${{ matrix.ghc }}-${{ matrix.os }}
