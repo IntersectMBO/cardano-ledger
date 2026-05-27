@@ -42,14 +42,13 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Decoding (label)
 import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
-import Codec.CBOR.Cuddle.CBOR.Validator (validateCBOR)
+import Codec.CBOR.Cuddle.CBOR.Validator (ValidateCBORError (..), validateCBOR)
 import Codec.CBOR.Cuddle.CBOR.Validator.Trace (
   Evidenced (..),
   SValidity (..),
   TraceOptions (..),
   ValidationTrace,
   defaultTraceOptions,
-  isValid,
   prettyValidationTrace,
  )
 import Codec.CBOR.Cuddle.CDDL (Name (..))
@@ -65,7 +64,6 @@ import Codec.CBOR.Pretty (prettyHexEnc)
 import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
 import qualified Codec.CBOR.Write as CBOR
-import Control.Monad (unless)
 import Data.Data (Proxy (..))
 import Data.Either (isLeft)
 import qualified Data.Text as T
@@ -215,7 +213,17 @@ huddleAntiCborProp version ruleName env@HuddleEnv {heRoot} = property @(Gen Prop
             encoding = toPlainEncoding version $ encodeTerm zrValue
             bs = CBOR.toStrictByteString encoding
           case validateCBOR bs (Name ruleName) (mapIndex heRoot) of
-            Evidenced SInvalid trc -> do
+            -- cborg-level failure (e.g. twiddler turned a tag into a
+            -- bignum tag with a non-bytes body): the decoder will also
+            -- fail, which is exactly what a zap test is meant to detect.
+            --
+            -- It could also be argued that the correct thing to do here would
+            -- be to discard instead, since we're not really testing our decoders
+            -- but `cborg`'s decoders.
+            Left (DecodingFailed _) -> pure $ property ()
+            Left e@LeftoverBytes {} -> pure . property . expectationFailure $ show e
+            Left e@RuleDoesNotExist {} -> pure . property . expectationFailure $ show e
+            Right (Evidenced SInvalid trc) -> do
               let
                 errMsg =
                   unlines
@@ -231,7 +239,7 @@ huddleAntiCborProp version ruleName env@HuddleEnv {heRoot} = property @(Gen Prop
                     , "Decoding succeeded, expected failure"
                     ]
               pure . counterexample errMsg . isLeft $ decodeFull' @a version bs
-            Evidenced SValid _ -> discard
+            Right (Evidenced SValid _) -> discard
       | otherwise -> discard
 
 huddleAntiCborSpec ::
@@ -349,9 +357,11 @@ huddleRoundTripGenValidateProp gen version ruleName HuddleEnv {heRoot = cddl} =
     \(val :: a) -> do
       let
         bs = serialize' version val
-        res = validateCBOR bs (Name ruleName) (mapIndex cddl)
-      unless (isValid res) . expectationFailure $
-        "CBOR Validation failed\nError:\n" <> showValidationTrace res
+      case validateCBOR bs (Name ruleName) (mapIndex cddl) of
+        Left e -> expectationFailure $ "Validation input error:\n" <> show e
+        Right (Evidenced SValid _) -> pure ()
+        Right res@(Evidenced SInvalid _) ->
+          expectationFailure $ "CBOR Validation failed:\n" <> showValidationTrace res
 
 huddleRoundTripGenValidate ::
   forall a.

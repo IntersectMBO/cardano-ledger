@@ -133,6 +133,7 @@ library cddl
   build-depends:
     base,
     cardano-ledger-alonzo,
+    cardano-ledger-core:cddl,
     cardano-ledger-mary:cddl,
     heredoc,
 

@@ -34,18 +34,33 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
 
 import Cardano.Ledger.Conway.HuddleSpec hiding ()
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Huddle.Gen (CBORGen, RuleTerm (..), genArrayTerm, liftAntiGen, withAntiGen)
-import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
+import Cardano.Ledger.Huddle.Gen (
+  CBORGen,
+  MonadGen (choose, liftGen),
+  Name (..),
+  RuleTerm (..),
+  genArrayTerm,
+  genRule,
+  generateFromName,
+  liftAntiGen,
+  scale,
+  shuffle,
+  unwrapSingle,
+  validateArrayTerm,
+  validateFromName,
+  withAntiGen,
+ )
+import Cardano.Ledger.Huddle.Gen qualified as Gen
 import Codec.CBOR.Term (Term (..))
-import Control.Monad (zipWithM)
+import Control.Monad (unless, zipWithM)
+import Data.Foldable (traverse_)
+import Data.List (nub)
+import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Text ()
 import Data.Text qualified as T
 import Data.Word (Word16, Word64)
 import Test.AntiGen (withAnnotation, (|!))
-import Test.QuickCheck (choose, shuffle)
-import Test.QuickCheck qualified as QC
-import Test.QuickCheck.GenT (liftGen)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -93,7 +108,51 @@ subTransactionsRule ::
   Proxy era ->
   Rule
 subTransactionsRule pname p =
-  pname =.= huddleRule1 @"nonempty_oset" p (huddleRule @"sub_transaction" p)
+  withCBORGen generate
+    . withValidator validator
+    $ pname =.= huddleRule1 @"nonempty_oset" p (huddleRule @"sub_transaction" p)
+  where
+    -- The Haskell representation is @OMap TxId (Tx SubTx era)@: dedup is by
+    -- body hash, so both the generator and the validator must work in terms
+    -- of body equality, not full-element equality (which is what the generic
+    -- @nonempty_oset@ validator checks).
+    validator term = do
+      term_ <- unwrapSingle term
+      let
+        bodyOf (TList (b : _)) = Just b
+        bodyOf (TListI (b : _)) = Just b
+        bodyOf _ = Nothing
+        validateInner t = do
+          elems <- validateArrayTerm t
+          let bodies = mapMaybe bodyOf elems
+          unless (length bodies == length (nub bodies)) $
+            fail "duplicate sub_transaction bodies"
+          traverse_ (validateFromName (Name "sub_transaction")) elems
+      case term_ of
+        TTagged 258 x -> validateInner x
+        x -> validateInner x
+    generate = do
+      nElems <- Gen.sized $ \sz -> choose (1, max 1 (min sz 3))
+      let subTxGen = scale (`div` 2) $ genRule @"sub_transaction" @era
+      txs <- uniqueByBody nElems subTxGen
+      elemsArr <- genArrayTerm txs
+      tagged <- Gen.arbitrary
+      pure $ SingleTerm $ if tagged then TTagged 258 elemsArr else elemsArr
+    uniqueByBody :: Int -> CBORGen Term -> CBORGen [Term]
+    uniqueByBody n gen = loop [] n
+      where
+        triesPerElement = 20 :: Int
+        loop acc 0 = pure acc
+        loop acc k = attempt triesPerElement acc k
+        attempt 0 acc _ = pure acc
+        attempt tries acc k = do
+          tx <- gen
+          case bodyOf tx of
+            Just b | b `notElem` mapMaybe bodyOf acc -> loop (tx : acc) (k - 1)
+            _ -> attempt (tries - 1) acc k
+        bodyOf (TList (b : _)) = Just b
+        bodyOf (TListI (b : _)) = Just b
+        bodyOf _ = Nothing
 
 subTransactionRule ::
   forall era.
@@ -917,10 +976,13 @@ instance HuddleRule "block_body" DijkstraEra where
 
 blockBodyGen :: CBORGen RuleTerm
 blockBodyGen = do
-  numTxs <- liftGen . QC.sized $ \s -> choose (0 :: Int, s)
+  numTxs <- liftGen . Gen.sized $ \s -> choose (0 :: Int, s `div` 15)
   txs <-
     mapM
-      (\i -> withAntiGen (withAnnotation (T.pack $ show i)) $ generateFromName "transaction")
+      ( \i ->
+          withAntiGen (withAnnotation (T.pack $ show i)) . scale (`div` max 1 numTxs) $
+            generateFromName "transaction"
+      )
       [0 .. numTxs - 1]
   invalidIxIxs <-
     if numTxs == 0
@@ -941,10 +1003,13 @@ blockBodyGen = do
         liftAntiGen $
           withAnnotation "invalid_transactions" $
             zipWithM faultyIndex [0 :: Int ..] txIndicesWithOverflow
-  invalidTxIxsTerm <- genArrayTerm $ TInteger . toInteger <$> invalidIxIxs
+  invalidTxIxsTerm <-
+    if null invalidIxIxs
+      then pure TNull
+      else genArrayTerm $ TInteger . toInteger <$> invalidIxIxs
   txsTerm <- withAntiGen (withAnnotation "transactions") $ genArrayTerm txs
   perasCertTerm <- generateFromName "peras_certificate"
-  SingleTerm <$> liftGen (genArrayTerm [invalidTxIxsTerm, txsTerm, perasCertTerm])
+  SingleTerm <$> genArrayTerm [invalidTxIxsTerm, txsTerm, perasCertTerm]
 
 instance HuddleRule "auxiliary_scripts" DijkstraEra where
   huddleRuleNamed = auxiliaryScriptsRule

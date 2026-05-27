@@ -33,6 +33,18 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Huddle.Gen (
+  MonadGen (choose),
+  RuleTerm (..),
+  Term (..),
+  genArrayTerm,
+  generateFromGRef,
+  liftAntiGen,
+  listOf,
+  oneof,
+  scale,
+  (|!),
+ )
 import Cardano.Ledger.Mary.HuddleSpec
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
@@ -129,19 +141,40 @@ requiredSignersRule pname p = pname =.= huddleRule1 @"set" p (huddleRule @"addr_
 constr :: IsType0 a => Proxy "constr" -> a -> GRuleCall
 constr pname =
   binding $ \x ->
-    pname
-      =.=
-      -- We use 'unType0 . toType0' to convert each 'Tagged ArrayChoice' to 'Choice Type2',
-      -- making the list homogeneous so that 'foldl1 (/)' can be used.
-      -- Ideally, we should have used `toChoice`, but it's not exported by `cuddle`.
-      foldl1
-        (/)
-        ( fmap
-            (unType0 . toType0)
-            ( tag 102 (arr [a VUInt, a $ arr [0 <+ a x]])
-                : [tag t (arr [0 <+ a x]) | t <- [121 .. 127] ++ [1280 .. 1400]]
-            )
-        )
+    withCBORGen (generator x) $
+      pname
+        =.=
+        -- We use 'unType0 . toType0' to convert each 'Tagged ArrayChoice' to 'Choice Type2',
+        -- making the list homogeneous so that 'foldl1 (/)' can be used.
+        -- Ideally, we should have used `toChoice`, but it's not exported by `cuddle`.
+        foldl1
+          (/)
+          ( fmap
+              (unType0 . toType0)
+              ( tag 102 (arr [a VUInt, a $ arr [0 <+ a x]])
+                  : [tag t (arr [0 <+ a x]) | t <- [121 .. 127] ++ [1280 .. 1400]]
+              )
+          )
+  where
+    generator ref = do
+      t <-
+        liftAntiGen $
+          oneof [choose (121, 127), choose (1280, 1400)]
+            |! oneof [choose (0, 120), choose (128, 1279), choose (1401, 0xffffffffffffffff)]
+      let
+        unwrapElems = traverse $ \case
+          SingleTerm e -> pure e
+          _ -> error "Expected single term"
+      elems <-
+        scale (`div` 2) $
+          if t == 102
+            then do
+              uInt <- TInt <$> choose (0, 2 ^ (64 :: Int) - 1)
+              elems <- genArrayTerm =<< unwrapElems =<< listOf (generateFromGRef ref)
+              pure . SingleTerm <$> genArrayTerm [uInt, elems]
+            else listOf $ generateFromGRef ref
+      singleElems <- unwrapElems elems
+      SingleTerm . TTagged t <$> genArrayTerm singleElems
 
 instance HuddleGroup "operational_cert" AlonzoEra where
   huddleGroupNamed = shelleyOperationalCertGroup

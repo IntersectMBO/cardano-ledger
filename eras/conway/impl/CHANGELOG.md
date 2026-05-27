@@ -43,10 +43,13 @@
 
 ### cddl
 
+* Change the second argument of `mkMaybeTaggedSet` to `Int`
+* Add `generateMaybeTaggedSet`
 * Extend `constr` CDDL rule to include tags 1280–1400 for Plutus `Data` constructor indexes
 
 ### `testlib`
 
+* Add `genNonEmptyVotingProcedures`
 * Add to `Test.Cardano.Ledger.Conway.Examples`:
   - `exampleConwayOnwardsEraPParams`
   - `exampleConwayOnwardsEraPParamsUpdate`
