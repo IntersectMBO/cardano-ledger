@@ -2,6 +2,24 @@
 
 ## 1.23.0.0
 
+* Rename rule types and deprecate the old names:
+  - `ConwayBBODY` -> `BBODY`
+  - `ConwayCERT` -> `CERT`
+  - `ConwayCERTS` -> `CERTS`
+  - `ConwayDELEG` -> `DELEG`
+  - `ConwayENACT` -> `ENACT`
+  - `ConwayEPOCH` -> `EPOCH`
+  - `ConwayGOV` -> `GOV`
+  - `ConwayGOVCERT` -> `GOVCERT`
+  - `ConwayHARDFORK` -> `HARDFORK`
+  - `ConwayLEDGER` -> `LEDGER`
+  - `ConwayMEMPOOL` -> `MEMPOOL`
+  - `ConwayNEWEPOCH` -> `NEWEPOCH`
+  - `ConwayRATIFY` -> `RATIFY`
+  - `ConwayTICKF` -> `TICKF`
+  - `ConwayUTXO` -> `UTXO`
+  - `ConwayUTXOS` -> `UTXOS`
+  - `ConwayUTXOW` -> `UTXOW`
 * Add `ToJSON` instance for `DefaultVote`.
 * Add `injectStakeCredentials`, `injectDRepsThenDelegs` to `Cardano.Ledger.Conway.Transition`
 * Add `ConwayExtraConfig` type and `cgExtraConfig` field to `ConwayGenesis`

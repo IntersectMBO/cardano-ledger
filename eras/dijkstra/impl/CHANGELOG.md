@@ -2,6 +2,25 @@
 
 ## 0.3.0.0
 
+* Rename rule types and deprecate the old names:
+  - `DijkstraBBODY` -> `BBODY`
+  - `DijkstraCERT` -> `CERT`
+  - `DijkstraGOV` -> `GOV`
+  - `DijkstraGOVCERT` -> `GOVCERT`
+  - `DijkstraLEDGER` -> `LEDGER`
+  - `DijkstraMEMPOOL` -> `MEMPOOL`
+  - `DijkstraSUBCERT` -> `SUBCERT`
+  - `DijkstraSUBCERTS` -> `SUBCERTS`
+  - `DijkstraSUBDELEG` -> `SUBDELEG`
+  - `DijkstraSUBGOV` -> `SUBGOV`
+  - `DijkstraSUBGOVCERT` -> `SUBGOVCERT`
+  - `DijkstraSUBLEDGER` -> `SUBLEDGER`
+  - `DijkstraSUBLEDGERS` -> `SUBLEDGERS`
+  - `DijkstraSUBPOOL` -> `SUBPOOL`
+  - `DijkstraSUBUTXO` -> `SUBUTXO`
+  - `DijkstraSUBUTXOW` -> `SUBUTXOW`
+  - `DijkstraUTXO` -> `UTXO`
+  - `DijkstraUTXOW` -> `UTXOW`
 * Add `DijkstraEraUTxO` type class with `subTransactionsStAnnTx` method
 * Add `TranslateEra` instance for `DijkstraEra VState`
 * Fix `TranslateEra` instance for `DijkstraEra CertState`

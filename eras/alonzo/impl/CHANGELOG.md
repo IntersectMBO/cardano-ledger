@@ -2,6 +2,12 @@
 
 ## 1.16.0.0
 
+* Rename rule types and deprecate the old names:
+  - `AlonzoBBODY` -> `BBODY`
+  - `AlonzoLEDGER` -> `LEDGER`
+  - `AlonzoUTXO` -> `UTXO`
+  - `AlonzoUTXOS` -> `UTXOS`
+  - `AlonzoUTXOW` -> `UTXOW`
 * Replace `scriptsProvided` and `scriptsNeeded` in `mkScriptIntegrity` signature with `Set Language`
 * Add `plutusLanguagesUsedStAnnTx` to `AlonzoEraUTxO` and a helper to implement it `plutusLanguagesUsedAlonzoStAnnTx`
 * Add `plutusScriptsWithContextStAnnTx` to `AlonzoEraUTxO` and a helper to implement it `plutusScriptsWithContextAlonzoStAnnTx`
