@@ -1226,7 +1226,7 @@ decodeSparseKeyed name requiredFields initial decoderByKey = do
   pure acc
   where
     failMsg :: String -> Decoder s b
-    failMsg msg = fail $ show name <> ":" <> msg
+    failMsg msg = fail $ show name <> ": " <> msg
 
     defLoop :: Set.Set Word -> a -> Int -> Decoder s (Set.Set Word, a)
     defLoop !seen !acc !i
@@ -1249,7 +1249,7 @@ decodeSparseKeyed name requiredFields initial decoderByKey = do
       if Set.member key seen
         then failMsg $ "Duplicate field key " <> show key
         else case decoderByKey acc key of
-          Nothing -> failMsg $ " Unknown field key " <> show key
+          Nothing -> failMsg $ "Unknown field key " <> show key
           Just decoder -> do
             acc' <- decoder
             pure (Set.insert key seen, acc')

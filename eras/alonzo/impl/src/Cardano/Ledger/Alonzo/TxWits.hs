@@ -132,10 +132,8 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
 import qualified Data.MapExtras as Map (fromElems)
 import Data.Maybe (mapMaybe)
-import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (typeRep)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -609,9 +607,8 @@ instance
     ifDecoderVersionAtLeast
       (natVersion @12)
       (decodeSparseKeyed TypeName [] (pure emptyTxWitsRaw) decoderByKey)
-      (decode $ SparseKeyed name (pure emptyTxWitsRaw) txWitnessField [])
+      (decode $ SparseKeyed "AlonzoTxWits" (pure emptyTxWitsRaw) txWitnessField [])
     where
-      name = show . typeRep $ Proxy @(AlonzoTxWitsRaw era)
       addrWitsSetDecoder :: (Ord a, DecCBOR a) => Decoder s (Set a)
       addrWitsSetDecoder = do
         let

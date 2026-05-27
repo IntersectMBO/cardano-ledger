@@ -117,7 +117,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import Data.MemPack
 import qualified Data.Text as T
-import Data.Typeable (Proxy (..), typeRep)
+import Data.Typeable (Proxy (..))
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', lens, to, (^.))
@@ -612,14 +612,13 @@ decodeTxOut decAddr = do
     ifDecoderVersionAtLeast
       (natVersion @12)
       (decodeSparseKeyed TypeName requiredFields initial decoderByKey)
-      (decode $ SparseKeyed name initial bodyFields requiredFields)
+      (decode $ SparseKeyed "TxOut" initial bodyFields requiredFields)
   case dtxo of
     DecodingTxOut SNothing _ _ _ ->
       cborError $ DecoderErrorCustom "BabbageTxOut" "Impossible: no Addr"
     DecodingTxOut (SJust (addr, cAddr)) val d script ->
       pure $ mkTxOut addr cAddr val d script
   where
-    name = show . typeRep $ Proxy @(BabbageTxOut era)
     initial :: DecodingTxOut era
     initial = DecodingTxOut SNothing mempty NoDatum SNothing
     decoderByKey :: DecodingTxOut era -> Word -> Maybe (Decoder s (DecodingTxOut era))

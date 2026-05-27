@@ -97,10 +97,9 @@ import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing, mapMaybe)
-import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Typeable (Typeable, typeRep)
+import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Stack
@@ -220,7 +219,6 @@ instance
           decodeAlonzo
       )
     where
-      name = show . typeRep $ Proxy @(AlonzoTxAuxDataRaw era)
       decodeShelley =
         decode
           ( Ann (Emit AlonzoTxAuxDataRaw)
@@ -240,11 +238,11 @@ instance
         decodeRecordNamed "AlonzoTxAuxDataRaw" (const 2) $ do
           metadata <- decCBOR
           annScripts <- sequence <$> decodeStrictSeq decCBOR
-          pure $ AlonzoTxAuxDataRaw <$> pure metadata <*> annScripts <*> pure Map.empty
+          pure $ AlonzoTxAuxDataRaw metadata <$> annScripts <*> pure Map.empty
       decodeAlonzo =
         decode $
           TagD 259 $
-            SparseKeyed name (pure emptyAlonzoTxAuxDataRaw) auxDataField []
+            SparseKeyed "AlonzoTxAuxData" (pure emptyAlonzoTxAuxDataRaw) auxDataField []
 
       decoderByKey ::
         Annotator (AlonzoTxAuxDataRaw era) ->
