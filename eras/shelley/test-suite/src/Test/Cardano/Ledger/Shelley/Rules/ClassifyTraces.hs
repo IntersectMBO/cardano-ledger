@@ -59,6 +59,7 @@ import Data.Semigroup (Sum (..))
 import Data.Sequence.Strict (StrictSeq)
 import Lens.Micro
 import Lens.Micro.Extras (view)
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -89,7 +90,6 @@ import Test.QuickCheck (
   forAllBlind,
   property,
   stdConfidence,
-  withMaxSuccess,
  )
 import Test.Tasty (TestTree)
 import qualified Test.Tasty.QuickCheck as TQC
@@ -108,7 +108,7 @@ relevantCasesAreCovered ::
 relevantCasesAreCovered n =
   TQC.testProperty
     "Chain and Ledger traces cover the relevant cases"
-    (TQC.withMaxSuccess n prop)
+    (BaseQC.withNumTests n prop)
   where
     prop = do
       let tl = 100
@@ -314,7 +314,7 @@ onlyValidLedgerSignalsAreGenerated =
   TQC.testProperty "Only valid Ledger STS signals are generated" prop
   where
     prop =
-      withMaxSuccess 200 $
+      BaseQC.withNumTests 200 $
         onlyValidSignalsAreGeneratedFromInitState
           @ledger
           testGlobals
@@ -401,7 +401,7 @@ onlyValidChainSignalsAreGenerated =
   TQC.testProperty "Only valid CHAIN STS signals are generated" prop
   where
     prop =
-      withMaxSuccess 100 $
+      BaseQC.withNumTests 100 $
         onlyValidSignalsAreGeneratedFromInitState @(CHAIN era)
           testGlobals
           100

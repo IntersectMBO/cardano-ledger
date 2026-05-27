@@ -34,6 +34,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import qualified Test.Control.State.Transition.Trace as Trace
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
 import Test.QuickCheck (
@@ -44,7 +45,6 @@ import Test.QuickCheck (
   elements,
   oneof,
   shrink,
-  withMaxSuccess,
  )
 import Prelude hiding (id)
 
@@ -240,7 +240,7 @@ prop_qc_UniqueData =
 -- where it shouldn't be possible to shrink @d0@ any further.
 prop_qc_OnlyValidSignals :: Property
 prop_qc_OnlyValidSignals =
-  withMaxSuccess 5000 $ -- We need to test a large
+  BaseQC.withNumTests 5000 $ -- We need to test a large
   -- number of times to make sure
   -- we get a collision in the
   -- generated data

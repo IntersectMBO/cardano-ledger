@@ -112,6 +112,7 @@ test-suite tests
     QuickCheck,
     Unique,
     base,
+    cardano-base:testlib >=0.1.5.0,
     cardano-crypto-class,
     cardano-ledger-binary,
     containers,

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -6,6 +7,7 @@ module Tests.Cardano.Ledger.NonIntegral where
 
 import Cardano.Ledger.NonIntegral
 import qualified Data.Fixed as FP
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.QuickCheck
 
 data E34
@@ -243,7 +245,7 @@ qcWithLabel :: Testable prop => String -> Int -> prop -> IO ()
 qcWithLabel text count prop = do
   putStrLn text
   if count > 0
-    then quickCheck (withMaxSuccess count prop)
+    then quickCheck (BaseQC.withNumTests count prop)
     else putStrLn "--- SKIPPED, takes too long"
 
 -- Test of Double  --

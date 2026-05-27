@@ -138,7 +138,7 @@ import Test.Cardano.Ledger.Generic.ModelState (
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
-import Test.QuickCheck
+import Test.QuickCheck (Arbitrary (..), Gen, choose, chooseInt, elements, resize, shuffle, vectorOf)
 
 alonzoMkRedeemersFromTags ::
   (AlonzoEraScript era, EraModel era) =>

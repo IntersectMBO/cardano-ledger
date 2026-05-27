@@ -80,6 +80,7 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Lens.Micro ((^.))
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Common hiding (forAll)
 import Test.Cardano.Ledger.Constrained.Conway (
   EraSpecCert (..),
@@ -221,7 +222,7 @@ runMinitrace ::
 runMinitrace cgb classifier =
   prop
     (symbolVal $ Proxy @rule)
-    (withMaxSuccess 50 (minitraceProp @rule @era 50 cgb classifier))
+    (BaseQC.withNumTests 50 (minitraceProp @rule @era 50 cgb classifier))
 
 genDelegCtx :: Gen (WitUniv ConwayEra, ConwayCertGenContext ConwayEra)
 genDelegCtx = do

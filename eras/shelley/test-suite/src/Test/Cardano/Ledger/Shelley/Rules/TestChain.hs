@@ -68,6 +68,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants)
@@ -97,7 +98,6 @@ import Test.QuickCheck (
   Property,
   Testable (..),
   conjoin,
-  withMaxSuccess,
  )
 
 ------------------------------
@@ -135,7 +135,7 @@ shortChainTrace ::
   Constants ->
   (SourceSignalTarget (CHAIN era) -> Property) ->
   Property
-shortChainTrace constants f = withMaxSuccess 100 $ forAllChainTrace @era 10 constants $ \tr -> conjoin (map f (sourceSignalTargets tr))
+shortChainTrace constants f = BaseQC.withNumTests 100 $ forAllChainTrace @era 10 constants $ \tr -> conjoin (map f (sourceSignalTargets tr))
 
 ----------------------------------------------------------------------
 -- Projections of CHAIN Trace
@@ -337,7 +337,7 @@ forAllChainTrace ::
   (Trace (CHAIN era) -> prop) ->
   Property
 forAllChainTrace n constants prop =
-  withMaxSuccess (fromIntegral numberOfTests) . property $
+  BaseQC.withNumTests (fromIntegral numberOfTests) . property $
     forAllTraceFromInitState
       testGlobals
       n

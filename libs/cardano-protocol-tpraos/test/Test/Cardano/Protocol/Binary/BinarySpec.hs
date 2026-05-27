@@ -17,6 +17,7 @@ import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Data.Proxy
 import Data.Typeable (typeRep)
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Binary (decoderEquivalenceProp, decoderEquivalenceSpec)
@@ -44,7 +45,7 @@ blockEraSpec ::
   Spec
 blockEraSpec =
   prop (show (typeRep $ Proxy @(Block (BHeader StandardCrypto) era))) $
-    withMaxSuccess 3 $
+    BaseQC.withNumTests 3 $
       decoderEquivalenceProp @(Block (BHeader StandardCrypto) era)
         (eraProtVerLow @era)
         (eraProtVerHigh @era)
