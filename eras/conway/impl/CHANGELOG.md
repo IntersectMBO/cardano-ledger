@@ -2,7 +2,6 @@
 
 ## 1.23.0.0
 
-* Add `generate-cbor` executable
 * Add `ToJSON` instance for `DefaultVote`.
 * Add `injectStakeCredentials`, `injectDRepsThenDelegs` to `Cardano.Ledger.Conway.Transition`
 * Add `ConwayExtraConfig` type and `cgExtraConfig` field to `ConwayGenesis`

@@ -2,7 +2,6 @@
 
 ## 1.11.0.0
 
-* Add `generate-cbor` executable
 * Add `ApplyTick` instance for `MaryEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `MaryEra`.
 
