@@ -15,10 +15,10 @@ module Test.Cardano.Ledger.Dijkstra.Binary.Annotator (
 
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (decodePositiveCoin)
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -32,8 +32,7 @@ import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.MemoBytes (decodeMemoized)
-import Cardano.Ledger.Val (Val (..))
-import Control.Monad (forM_, unless)
+import Control.Monad (forM_, unless, when)
 import Data.Coerce (coerce)
 import Data.Foldable (Foldable (..))
 import Data.IntSet (IntSet)
@@ -52,108 +51,106 @@ deriving newtype instance Typeable l => DecCBOR (TxBody l DijkstraEra)
 
 instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
   decCBOR = withSTxBothLevels @l $ \sTxLevel ->
-    decode $
-      SparseKeyed
-        "TxBodyRaw"
-        (basicDijkstraTxBodyRaw sTxLevel)
-        (bodyFields sTxLevel)
-        (requiredFields sTxLevel)
+    decodeSparseKeyed
+      TypeName
+      (requiredFields sTxLevel)
+      (basicDijkstraTxBodyRaw sTxLevel)
+      (decoderByKey sTxLevel)
     where
-      bodyFields :: STxBothLevels l DijkstraEra -> Word -> Field (DijkstraTxBodyRaw l DijkstraEra)
-      bodyFields sTxLevel = \case
-        0 -> field (inputsDijkstraTxBodyRawL .~) From
-        1 -> field (outputsDijkstraTxBodyRawL .~) From
-        2 | STopTx <- sTxLevel -> field (feeDijkstraTxBodyRawL .~) From
-        3 -> ofield (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) From
-        4 ->
-          fieldGuarded
-            (emptyFailure "Certificates" "non-empty")
-            OSet.null
-            (certsDijkstraTxBodyRawL .~)
-            From
-        5 ->
-          fieldGuarded
-            (emptyFailure "Withdrawals" "non-empty")
-            (null . unWithdrawals)
-            (withdrawalsDijkstraTxBodyRawL .~)
-            From
-        7 -> ofield (auxDataHashDijkstraTxBodyRawL .~) From
-        8 -> ofield (vldtDijkstraTxBodyRawL . invalidBeforeL .~) From
-        9 ->
-          fieldGuarded
-            (emptyFailure "Mint" "non-empty")
-            (== mempty)
-            (mintDijkstraTxBodyRawL .~)
-            From
-        11 -> ofield (scriptIntegrityHashDijkstraTxBodyRawL .~) From
-        13
-          | STopTx <- sTxLevel ->
-              fieldGuarded
-                (emptyFailure "Collateral Inputs" "non-empty")
-                null
-                (collateralInputsDijkstraTxBodyRawL .~)
-                From
-        14 ->
-          ofield
-            (\x -> guardsDijkstraTxBodyRawL .~ fromSMaybe mempty x)
-            (D decodeGuards)
-        15 -> ofield (networkIdDijkstraTxBodyRawL .~) From
-        16
-          | STopTx <- sTxLevel ->
-              ofield (collateralReturnDijkstraTxBodyRawL .~) From
-        17
-          | STopTx <- sTxLevel ->
-              ofield (totalCollateralDijkstraTxBodyRawL .~) From
-        18 ->
-          fieldGuarded
-            (emptyFailure "Reference Inputs" "non-empty")
-            null
-            (referenceInputsDijkstraTxBodyRawL .~)
-            From
-        19 ->
-          fieldGuarded
-            (emptyFailure "VotingProcedures" "non-empty")
-            (null . unVotingProcedures)
-            (votingProceduresDijkstraTxBodyRawL .~)
-            From
-        20 ->
-          fieldGuarded
-            (emptyFailure "ProposalProcedures" "non-empty")
-            OSet.null
-            (proposalProceduresDijkstraTxBodyRawL .~)
-            From
-        21 -> ofield (currentTreasuryValueDijkstraTxBodyRawL .~) From
-        22 ->
-          ofield
-            (\x -> treasuryDonationDijkstraTxBodyRawL .~ fromSMaybe zero x)
-            (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
-        23
-          | STopTx <- sTxLevel ->
-              fieldGuarded
-                (emptyFailure "Subtransactions" "non-empty")
-                OMap.null
-                (subTransactionsDijkstraTxBodyRawL .~)
-                (D $ allowTag setTag >> decCBOR)
-        24
-          | SSubTx <- sTxLevel ->
-              fieldGuarded
-                (emptyFailure "RequiredTopLevelGuards" "non-empty")
-                Map.null
-                (requiredTopLevelGuardsDijkstraTxBodyRawL .~)
-                (D (decodeMap decCBOR (decodeNullStrictMaybe decCBOR)))
-        25 ->
-          fieldGuarded
-            (emptyFailure "DirectDeposits" "non-empty")
-            (null . unDirectDeposits)
-            (directDepositsDijkstraTxBodyRawL .~)
-            From
-        26 ->
-          fieldGuarded
-            (emptyFailure "AccountBalanceIntervals" "non-empty")
-            (null . unAccountBalanceIntervals)
-            (accountBalanceIntervalsDijkstraTxBodyRawL .~)
-            From
-        n -> invalidField n
+      decoderByKey ::
+        STxBothLevels l DijkstraEra ->
+        DijkstraTxBodyRaw l DijkstraEra ->
+        Word ->
+        Maybe (Decoder s (DijkstraTxBodyRaw l DijkstraEra))
+      decoderByKey sTxLevel acc = \case
+        0 -> Just $ do
+          x <- decCBOR
+          pure $ inputsDijkstraTxBodyRawL .~ x $ acc
+        1 -> Just $ do
+          x <- decCBOR
+          pure $ outputsDijkstraTxBodyRawL .~ x $ acc
+        2 | STopTx <- sTxLevel -> Just $ do
+          x <- decCBOR
+          pure $ feeDijkstraTxBodyRawL .~ x $ acc
+        3 -> Just $ do
+          x <- decCBOR
+          pure $ vldtDijkstraTxBodyRawL . invalidHereAfterL .~ SJust x $ acc
+        4 -> Just $ do
+          x <- decCBOR
+          when (OSet.null x) $ fail (emptyFailure "Certificates" "non-empty")
+          pure $ certsDijkstraTxBodyRawL .~ x $ acc
+        5 -> Just $ do
+          x <- decCBOR
+          when (null (unWithdrawals x)) $ fail (emptyFailure "Withdrawals" "non-empty")
+          pure $ withdrawalsDijkstraTxBodyRawL .~ x $ acc
+        7 -> Just $ do
+          x <- decCBOR
+          pure $ auxDataHashDijkstraTxBodyRawL .~ SJust x $ acc
+        8 -> Just $ do
+          x <- decCBOR
+          pure $ vldtDijkstraTxBodyRawL . invalidBeforeL .~ SJust x $ acc
+        9 -> Just $ do
+          x <- decCBOR
+          when (x == mempty) $ fail (emptyFailure "Mint" "non-empty")
+          pure $ mintDijkstraTxBodyRawL .~ x $ acc
+        11 -> Just $ do
+          x <- decCBOR
+          pure $ scriptIntegrityHashDijkstraTxBodyRawL .~ SJust x $ acc
+        13 | STopTx <- sTxLevel -> Just $ do
+          x <- decCBOR
+          when (null x) $ fail (emptyFailure "Collateral Inputs" "non-empty")
+          pure $ collateralInputsDijkstraTxBodyRawL .~ x $ acc
+        14 -> Just $ do
+          x <- decodeGuards
+          pure $ guardsDijkstraTxBodyRawL .~ x $ acc
+        15 -> Just $ do
+          x <- decCBOR
+          pure $ networkIdDijkstraTxBodyRawL .~ SJust x $ acc
+        16 | STopTx <- sTxLevel -> Just $ do
+          x <- decCBOR
+          pure $ collateralReturnDijkstraTxBodyRawL .~ SJust x $ acc
+        17 | STopTx <- sTxLevel -> Just $ do
+          x <- decCBOR
+          pure $ totalCollateralDijkstraTxBodyRawL .~ SJust x $ acc
+        18 -> Just $ do
+          x <- decCBOR
+          when (null x) $ fail (emptyFailure "Reference Inputs" "non-empty")
+          pure $ referenceInputsDijkstraTxBodyRawL .~ x $ acc
+        19 -> Just $ do
+          x <- decCBOR
+          when (null (unVotingProcedures x)) $ fail (emptyFailure "VotingProcedures" "non-empty")
+          pure $ votingProceduresDijkstraTxBodyRawL .~ x $ acc
+        20 -> Just $ do
+          x <- decCBOR
+          when (OSet.null x) $ fail (emptyFailure "ProposalProcedures" "non-empty")
+          pure $ proposalProceduresDijkstraTxBodyRawL .~ x $ acc
+        21 -> Just $ do
+          x <- decCBOR
+          pure $ currentTreasuryValueDijkstraTxBodyRawL .~ SJust x $ acc
+        22 -> Just $ do
+          x <- decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"
+          pure $ treasuryDonationDijkstraTxBodyRawL .~ x $ acc
+        23 | STopTx <- sTxLevel -> Just $ do
+          allowTag setTag
+          x <- decCBOR
+          when (OMap.null x) $ fail (emptyFailure "Subtransactions" "non-empty")
+          pure $ subTransactionsDijkstraTxBodyRawL .~ x $ acc
+        24 | SSubTx <- sTxLevel -> Just $ do
+          x <- decodeMap decCBOR (decodeNullStrictMaybe decCBOR)
+          when (Map.null x) $ fail (emptyFailure "RequiredTopLevelGuards" "non-empty")
+          pure $ requiredTopLevelGuardsDijkstraTxBodyRawL .~ x $ acc
+        25 -> Just $ do
+          x <- decCBOR
+          when (null (unDirectDeposits x)) $ fail (emptyFailure "DirectDeposits" "non-empty")
+          pure $ directDepositsDijkstraTxBodyRawL .~ x $ acc
+        26 -> Just $ do
+          x <- decCBOR
+          when (null (unAccountBalanceIntervals x)) $
+            fail (emptyFailure "AccountBalanceIntervals" "non-empty")
+          pure $ accountBalanceIntervalsDijkstraTxBodyRawL .~ x $ acc
+        _ -> Nothing
+      {-# INLINE decoderByKey #-}
+
       requiredFields :: STxBothLevels l DijkstraEra -> [(Word, String)]
       requiredFields sTxLevel
         | STopTx <- sTxLevel =
@@ -170,15 +167,30 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
         "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
 
 instance Era era => DecCBOR (DijkstraNativeScriptRaw era) where
-  decCBOR = decode $ Summands "DijkstraNativeScriptRaw" $ \case
-    0 -> SumD DijkstraRequireSignature <! From
-    1 -> SumD DijkstraRequireAllOf <! From
-    2 -> SumD DijkstraRequireAnyOf <! From
-    3 -> SumD DijkstraRequireMOf <! From <! From
-    4 -> SumD DijkstraTimeStart <! From
-    5 -> SumD DijkstraTimeExpire <! From
-    6 -> SumD DijkstraRequireGuard <! From
-    n -> Invalid n
+  decCBOR = decodeRecordSum "DijkstraNativeScriptRaw" $ \case
+    0 -> do
+      hash <- decCBOR
+      pure (2, DijkstraRequireSignature hash)
+    1 -> do
+      xs <- decCBOR
+      pure (2, DijkstraRequireAllOf xs)
+    2 -> do
+      xs <- decCBOR
+      pure (2, DijkstraRequireAnyOf xs)
+    3 -> do
+      m <- decCBOR
+      xs <- decCBOR
+      pure (3, DijkstraRequireMOf m xs)
+    4 -> do
+      m <- decCBOR
+      pure (2, DijkstraTimeStart m)
+    5 -> do
+      m <- decCBOR
+      pure (2, DijkstraTimeExpire m)
+    6 -> do
+      cred <- decCBOR
+      pure (2, DijkstraRequireGuard cred)
+    n -> invalidKey n
 
 instance Era era => DecCBOR (DijkstraNativeScript era) where
   decCBOR = MkDijkstraNativeScript <$> decodeMemoized decCBOR
@@ -187,12 +199,11 @@ instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   decCBOR =
     withSTxBothLevels @l $ \case
       STopTx -> decodeDijkstraTopTx True
-      SSubTx ->
-        decode $
-          RecD DijkstraSubTx
-            <! From
-            <! From
-            <! D (decodeNullStrictMaybe decCBOR)
+      SSubTx -> decodeRecordNamed "DijkstraSubTx" (const 3) $ do
+        body <- decCBOR
+        wits <- decCBOR
+        aux <- decodeNullStrictMaybe decCBOR
+        pure $ DijkstraSubTx body wits aux
   {-# INLINE decCBOR #-}
 
 deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)

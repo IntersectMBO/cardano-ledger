@@ -52,6 +52,7 @@ module Cardano.Ledger.Alonzo.TxWits (
   emptyTxWitsRaw,
   addScriptsTxWitsRaw,
   decodeAlonzoPlutusScript,
+  alonzoPlutusScriptDecoder,
   asHashedScriptPair,
 ) where
 
