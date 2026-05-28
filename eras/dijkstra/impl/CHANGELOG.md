@@ -2,6 +2,14 @@
 
 ## 0.3.0.0
 
+* Add `Ord` instances for `DijkstraBbodyPredFailure`, `DijkstraGovCertPredFailure`,
+  `DijkstraGovPredFailure`, `DijkstraLedgerPredFailure`, `DijkstraMempoolPredFailure`,
+  `DijkstraSubCertPredFailure`, `DijkstraSubCertsPredFailure`, `DijkstraSubDelegPredFailure`,
+  `DijkstraSubGovCertPredFailure`, `DijkstraSubGovPredFailure`, `DijkstraSubLedgerPredFailure`,
+  `DijkstraSubLedgersPredFailure`, `DijkstraSubPoolPredFailure`, `DijkstraSubUtxoPredFailure`,
+  `DijkstraSubUtxowPredFailure`, `DijkstraUtxoPredFailure`, `DijkstraUtxowPredFailure`
+* Add `Ord` instances for `DijkstraContextError`, `DijkstraNativeScriptRaw`, `DijkstraNativeScript`,
+  `PerasCert`
 * Rename `DijkstraRewarding` to `DijkstraWithdrawing` and deprecate the old name
 * Rename rule types and deprecate the old names:
   - `DijkstraBBODY` -> `BBODY`

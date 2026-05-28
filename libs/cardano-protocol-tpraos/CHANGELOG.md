@@ -2,6 +2,8 @@
 
 ## 1.6.0.0
 
+* Add `Ord` instances for `FutureLedgerViewError`, `LastAppliedBlock`, `OcertPredicateFailure`,
+  `OverlayPredicateFailure`, `PrtclPredicateFailure`, `PrtlSeqFailure`, `UpdnPredicateFailure`
 * Remove `FromCBOR` instances for `KESPeriod`, `PrtclState`, `TicknState`
 * Deprecate `GetLedgerView` and related `LedgerView` in favour of `*EraForecast` typeclasses from Shelley and Babbage eras.
   - Add `forecastToTPraosLedgerView` for backwards compatibility.

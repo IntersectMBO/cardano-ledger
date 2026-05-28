@@ -2,6 +2,13 @@
 
 ## 1.23.0.0
 
+* Add `Ord` instances for `ConwayBbodyPredFailure`, `ConwayCertPredFailure`,
+  `ConwayCertsPredFailure`, `ConwayUtxoPredFailure`, `ConwayUtxosPredFailure`,
+  `ConwayUtxowPredFailure`, `ConwayDelegPredFailure`, `ConwayGovCertPredFailure`,
+  `ConwayGovPredFailure`, `ConwayLedgerPredFailure`
+* Add `Ord` instances for
+  `ConwayPlutusPurpose AsItem`, `ConwayPlutusPurpose AsIxItem`, `ConwayContextError`,
+  `VotingProcedure`, `VotingProcedures`
 * Rename `ConwayRewarding` to `ConwayWithdrawing` and deprecate the old name
 * Rename rule types and deprecate the old names:
   - `ConwayBBODY` -> `BBODY`
