@@ -66,7 +66,7 @@ module Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxCert ()
-import Cardano.Ledger.BaseTypes (ProtVer (..), kindObjectValue)
+import Cardano.Ledger.BaseTypes (ProtVer (..), invalidKey, kindObjectValue)
 import Cardano.Ledger.Binary (
   Annotator,
   CBORGroup (..),
@@ -78,8 +78,11 @@ import Cardano.Ledger.Binary (
   ToCBOR (toCBOR),
   Version,
   decodeFullAnnotatorFromHexText,
+  decodeRecordSum,
   decodeWord8,
   encodeWord8,
+  ifDecoderVersionAtLeast,
+  natVersion,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (Ann, D, From, Invalid, SumD, Summands),
@@ -688,7 +691,9 @@ encodeScript = \case
   PlutusScript plutusScript -> encodePlutusScript plutusScript
 
 instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
-  decCBOR = decode (Summands "AlonzoScript" decodeScript)
+  decCBOR =
+    ifDecoderVersionAtLeast (natVersion @12) decodeAlonzoScript $
+      decode (Summands "AlonzoScript" decodeScript)
     where
       decodeAnnPlutus slang =
         Ann (SumD PlutusScript) <*! Ann (D (decodePlutusScript slang))
@@ -702,6 +707,20 @@ instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
         4 -> decodeAnnPlutus SPlutusV4
         n -> Invalid n
       {-# INLINE decodeScript #-}
+      decodePlutusVariant slang = do
+        ps <- decodePlutusScript slang
+        pure (2, pure (PlutusScript ps))
+      {-# INLINE decodePlutusVariant #-}
+      decodeAlonzoScript = decodeRecordSum "AlonzoScript" $ \case
+        0 -> do
+          ns <- decCBOR
+          pure (2, NativeScript <$> ns)
+        1 -> decodePlutusVariant SPlutusV1
+        2 -> decodePlutusVariant SPlutusV2
+        3 -> decodePlutusVariant SPlutusV3
+        4 -> decodePlutusVariant SPlutusV4
+        n -> invalidKey n
+      {-# INLINE decodeAlonzoScript #-}
   {-# INLINE decCBOR #-}
 
 -- | Verify that every `Script` represents a valid script. Force native scripts to Normal
