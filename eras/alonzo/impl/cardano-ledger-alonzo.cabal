@@ -94,7 +94,7 @@ library
     bytestring,
     cardano-base >=0.1.1.0,
     cardano-crypto-class,
-    cardano-data ^>=1.3,
+    cardano-data ^>=1.4,
     cardano-ledger-allegra ^>=1.10,
     cardano-ledger-binary ^>=1.9,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.21,
