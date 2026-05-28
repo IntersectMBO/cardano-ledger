@@ -116,6 +116,7 @@ import Cardano.Ledger.Binary (
   cborError,
   decodeIntegralRational,
   decodeRecordNamed,
+  decodeRecordSum,
   encodeListLen,
   fromPlainDecoder,
   ifDecoderVersionAtLeast,
@@ -583,11 +584,20 @@ instance EncCBOR Nonce where
 
 instance DecCBOR Nonce where
   decCBOR =
-    decode $
-      Summands "Nonce" $ \case
-        0 -> SumD NeutralNonce
-        1 -> SumD Nonce <! From
-        k -> Invalid k
+    ifDecoderVersionAtLeast (natVersion @12) decodeNonce $
+      decode $
+        Summands "Nonce" $ \case
+          0 -> SumD NeutralNonce
+          1 -> SumD Nonce <! From
+          k -> Invalid k
+    where
+      decodeNonce = decodeRecordSum "Nonce" $ \case
+        0 -> pure (1, NeutralNonce)
+        1 -> do
+          n <- decCBOR
+          pure (2, Nonce n)
+        k -> invalidKey k
+      {-# INLINE decodeNonce #-}
   {-# INLINE decCBOR #-}
 
 instance ToJSON Nonce where

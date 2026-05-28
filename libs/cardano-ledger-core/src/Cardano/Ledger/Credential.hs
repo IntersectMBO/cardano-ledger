@@ -36,6 +36,7 @@ import Cardano.Ledger.BaseTypes (
   ToKeyValuePairs (..),
   TxIx (..),
   integralToBounded,
+  invalidKey,
  )
 import Cardano.Ledger.Binary (
   CBORGroup (..),
@@ -45,6 +46,7 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   FromCBOR (..),
   ToCBOR (..),
+  decodeRecordSum,
   encodeListLen,
   ifDecoderVersionAtLeast,
   natVersion,
@@ -324,11 +326,21 @@ instance EncCBOR (Credential kr) where
 
 instance Typeable kr => DecCBOR (Credential kr) where
   decCBOR =
-    decode $
-      Summands "Credential" $ \case
-        0 -> SumD KeyHashObj <! From
-        1 -> SumD ScriptHashObj <! From
-        k -> Invalid k
+    ifDecoderVersionAtLeast (natVersion @12) decodeCredential $
+      decode $
+        Summands "Credential" $ \case
+          0 -> SumD KeyHashObj <! From
+          1 -> SumD ScriptHashObj <! From
+          k -> Invalid k
+    where
+      decodeCredential = decodeRecordSum "Credential" $ \case
+        0 -> do
+          kh <- decCBOR
+          pure (2, KeyHashObj kh)
+        1 -> do
+          sh <- decCBOR
+          pure (2, ScriptHashObj sh)
+        k -> invalidKey k
   {-# INLINE decCBOR #-}
 
 instance Typeable kr => ToCBOR (Credential kr) where
