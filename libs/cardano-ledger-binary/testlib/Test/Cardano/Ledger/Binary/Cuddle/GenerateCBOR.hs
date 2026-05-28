@@ -19,6 +19,7 @@ import Control.Monad (forM_, when)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS8
+import Data.List (intercalate)
 import Data.Maybe (fromMaybe, isJust)
 import qualified Data.Text as T
 import Options.Applicative ((<**>))
@@ -32,17 +33,23 @@ import Test.QuickCheck.Gen (unGen)
 import Test.QuickCheck.Random (mkQCGen)
 
 data GenerateCBOROpts = GenerateCBOROpts
-  { gcboRuleNames :: ![T.Text]
+  { gcboEra :: !T.Text
+  , gcboRuleNames :: ![T.Text]
   , gcboZap :: !(Maybe Int)
   , gcboCount :: !Int
   , gcboSeed :: !(Maybe Int)
   , gcboBinary :: !Bool
   }
 
-optsParser :: Opt.Parser GenerateCBOROpts
-optsParser =
+optsParser :: [String] -> Opt.Parser GenerateCBOROpts
+optsParser eras =
   GenerateCBOROpts
-    <$> Opt.some
+    <$> Opt.strOption
+      ( Opt.long "era"
+          <> Opt.metavar "ERA"
+          <> Opt.help ("Era to generate CBOR for. One of: " <> intercalate ", " eras)
+      )
+    <*> Opt.some
       ( Opt.strArgument $
           Opt.metavar "RULE_NAME..."
             <> Opt.help "CDDL rule names to generate CBOR for"
@@ -73,16 +80,24 @@ optsParser =
           <> Opt.help "Output raw CBOR bytes instead of hex encoding"
       )
 
-generateCBORMain :: Cuddle.Huddle -> IO ()
-generateCBORMain huddle = do
+generateCBORMain :: [(String, Cuddle.Huddle)] -> IO ()
+generateCBORMain eraCDDLs = do
   opts <-
     Opt.execParser $
       Opt.info
-        (optsParser <**> Opt.helper)
+        (optsParser eraNames <**> Opt.helper)
         ( Opt.fullDesc
             <> Opt.progDesc "Generate CBOR data from Cardano Ledger CDDL rules"
             <> Opt.header "generate-cbor - CBOR data generator from Cardano Ledger CDDL specifications"
         )
+  huddle <- case lookup (T.unpack . T.toLower $ gcboEra opts) eraCDDLs of
+    Nothing ->
+      die $
+        "Unknown era: "
+          <> T.unpack (gcboEra opts)
+          <> "\nSupported eras: "
+          <> intercalate ", " eraNames
+    Just h -> pure h
   case resolveHuddle huddle of
     Left err -> die $ "Failed to resolve CDDL: " <> err
     Right root -> do
@@ -94,6 +109,8 @@ generateCBORMain huddle = do
           hPutStrLn stderr $
             "# " <> T.unpack ruleName
         forM_ [0 .. gcboCount opts - 1] $ emitSample opts env ruleName
+  where
+    eraNames = map fst eraCDDLs
 
 emitSample :: GenerateCBOROpts -> HuddleEnv -> T.Text -> Int -> IO ()
 emitSample opts env ruleName sampleIx = do
