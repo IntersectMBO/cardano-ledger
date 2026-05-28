@@ -228,6 +228,9 @@ cradle:
     - path: "libs/cardano-ledger-api/test"
       component: "cardano-ledger-api:test:cardano-ledger-api-test"
 
+    - path: "libs/cardano-ledger-api/app/GenerateCBOR.hs"
+      component: "cardano-ledger-api:exe:generate-cbor"
+
     - path: "libs/cardano-ledger-binary/src"
       component: "lib:cardano-ledger-binary"
 
