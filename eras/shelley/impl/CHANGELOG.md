@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `Ord` instances for `MultiSigRaw`, `MultiSig`, `ProposedPPUpdates`, `ShelleyBbodyPredFailure`, `ShelleyDelegPredFailure`, `ShelleyDelegsPredFailure`, `ShelleyDelplPredFailure`, `ShelleyGovState`, `ShelleyLedgerPredFailure`, `ShelleyLedgersPredFailure`, `ShelleyPoolPredFailure`, `ShelleyPpupPredFailure`, `ShelleyTxOut`, `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`, `VotingPeriod`
 * Rename rule types and deprecate the old names:
   - `ShelleyBBODY` -> `BBODY`
   - `ShelleyDELEG` -> `DELEG`
