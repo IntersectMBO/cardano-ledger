@@ -1568,7 +1568,7 @@ decodeStringDefOrIndef =
 decodeBytesIndefLen :: Decoder s BS.ByteString
 decodeBytesIndefLen = decodeBytesIndef *> go []
   where
-    go acc = do
+    go !acc = do
       stop <- decodeBreakOr
       if stop
         then pure $! BS.concat (reverse acc)
