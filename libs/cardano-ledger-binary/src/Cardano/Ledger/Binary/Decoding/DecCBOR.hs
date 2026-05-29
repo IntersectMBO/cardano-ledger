@@ -368,12 +368,15 @@ instance DecCBOR BS.ByteString where
   decCBOR = decodeByteString
   {-# INLINE decCBOR #-}
 
+decodeText :: Decoder s T.Text
+decodeText =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    decodeStringDefOrIndef
+    decodeString
+
 instance DecCBOR T.Text where
-  decCBOR =
-    ifDecoderVersionAtLeast
-      (natVersion @12)
-      decodeStringDefOrIndef
-      decodeString
+  decCBOR = decodeText
   {-# INLINE decCBOR #-}
 
 instance DecCBOR BSL.ByteString where
