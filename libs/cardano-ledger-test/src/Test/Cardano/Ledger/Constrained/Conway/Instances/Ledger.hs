@@ -12,6 +12,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -76,8 +77,13 @@ import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
-import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  Sized (..),
+  decodeRecordNamed,
+  encodeListLen,
+ )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (ConwayEra, Tx (..))
@@ -1272,23 +1278,17 @@ data ProposalsSplit = ProposalsSplit
 instance EncCBOR ProposalsSplit where
   encCBOR x@(ProposalsSplit _ _ _ _ _) =
     let ProposalsSplit {..} = x
-     in encode $
-          Rec ProposalsSplit
-            !> To psPPChange
-            !> To psHFInitiation
-            !> To psUpdateCommittee
-            !> To psNewConstitution
-            !> To psOthers
+     in encodeListLen 5
+          <> encCBOR psPPChange
+          <> encCBOR psHFInitiation
+          <> encCBOR psUpdateCommittee
+          <> encCBOR psNewConstitution
+          <> encCBOR psOthers
 
 instance DecCBOR ProposalsSplit where
   decCBOR =
-    decode $
-      RecD ProposalsSplit
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
+    decodeRecordNamed "ProposalsSplit" (const 5) $
+      ProposalsSplit <$> decCBOR <*> decCBOR <*> decCBOR <*> decCBOR <*> decCBOR
 
 instance ToExpr ProposalsSplit
 

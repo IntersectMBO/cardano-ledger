@@ -21,8 +21,13 @@ module Test.Cardano.Ledger.Constrained.Conway.Utxo where
 
 import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  encodeWord,
+ )
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   Era (..),
@@ -99,22 +104,27 @@ instance Arbitrary DepositPurpose where
       ]
 
 instance DecCBOR DepositPurpose where
-  decCBOR =
-    decode . Summands "DepositPurpose" $
-      \case
-        0 -> SumD CredentialDeposit <! From
-        1 -> SumD PoolDeposit <! From
-        2 -> SumD DRepDeposit <! From
-        3 -> SumD GovActionDeposit <! From
-        k -> Invalid k
+  decCBOR = decodeRecordSum "DepositPurpose" $ \case
+    0 -> do
+      c <- decCBOR
+      pure (2, CredentialDeposit c)
+    1 -> do
+      kh <- decCBOR
+      pure (2, PoolDeposit kh)
+    2 -> do
+      c <- decCBOR
+      pure (2, DRepDeposit c)
+    3 -> do
+      gaid <- decCBOR
+      pure (2, GovActionDeposit gaid)
+    k -> invalidKey k
 
 instance EncCBOR DepositPurpose where
-  encCBOR =
-    encode . \case
-      CredentialDeposit c -> Sum CredentialDeposit 0 !> To c
-      PoolDeposit kh -> Sum PoolDeposit 1 !> To kh
-      DRepDeposit c -> Sum DRepDeposit 2 !> To c
-      GovActionDeposit gaid -> Sum GovActionDeposit 3 !> To gaid
+  encCBOR = \case
+    CredentialDeposit c -> encodeListLen 2 <> encodeWord 0 <> encCBOR c
+    PoolDeposit kh -> encodeListLen 2 <> encodeWord 1 <> encCBOR kh
+    DRepDeposit c -> encodeListLen 2 <> encodeWord 2 <> encCBOR c
+    GovActionDeposit gaid -> encodeListLen 2 <> encodeWord 3 <> encCBOR gaid
 
 instance NFData DepositPurpose
 
@@ -191,11 +201,10 @@ instance
   where
   encCBOR x@(UtxoExecContext _ _ _) =
     let UtxoExecContext {..} = x
-     in encode $
-          Rec UtxoExecContext
-            !> To uecTx
-            !> To uecUTxO
-            !> To uecUtxoEnv
+     in encodeListLen 3
+          <> encCBOR uecTx
+          <> encCBOR uecUTxO
+          <> encCBOR uecUtxoEnv
 
 instance CertState era ~ ConwayCertState era => Inject (UtxoExecContext era) (ConwayCertState era) where
   inject ctx = (uecUtxoEnv ctx) ^. Shelley.utxoEnvCertStateL

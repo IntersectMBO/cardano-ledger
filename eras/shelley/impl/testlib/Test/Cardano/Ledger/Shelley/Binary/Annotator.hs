@@ -15,9 +15,9 @@ module Test.Cardano.Ledger.Shelley.Binary.Annotator (
   module Test.Cardano.Ledger.Core.Binary.Annotator,
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.BaseTypes (maybeToStrictMaybe)
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -83,11 +83,11 @@ instance
   DecCBOR (ShelleyTx TopTx era)
   where
   decCBOR =
-    decode $
-      RecD ShelleyTx
-        <! From
-        <! From
-        <! D (decodeNullStrictMaybe decCBOR)
+    decodeRecordNamed "ShelleyTx" (const 3) $
+      ShelleyTx
+        <$> decCBOR
+        <*> decCBOR
+        <*> decodeNullStrictMaybe decCBOR
 
 deriving newtype instance DecCBOR (TxBody TopTx ShelleyEra)
 
@@ -96,22 +96,21 @@ deriving newtype instance DecCBOR (Tx TopTx ShelleyEra)
 deriving newtype instance Era era => DecCBOR (ShelleyTxAuxData era)
 
 instance (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWitsRaw era) where
-  decCBOR =
-    decode $
-      SparseKeyed
-        "ShelleyTxWits"
-        (ShelleyTxWitsRaw mempty mempty mempty)
-        witField
-        []
+  decCBOR = decodeSparseKeyed TypeName [] (ShelleyTxWitsRaw mempty mempty mempty) decoderByKey
     where
-      witField :: Word -> Field (ShelleyTxWitsRaw era)
-      witField 0 = field (\x wits -> wits {stwrAddrTxWits = x}) From
-      witField 1 =
-        field
-          (\x wits -> wits {stwrScriptTxWits = x})
-          (D $ Map.fromElems (hashScript @era) <$> decodeList decCBOR)
-      witField 2 = field (\x wits -> wits {stwrBootAddrTxWits = x}) From
-      witField n = invalidField n
+      decoderByKey :: ShelleyTxWitsRaw era -> Word -> Maybe (Decoder s (ShelleyTxWitsRaw era))
+      decoderByKey acc = \case
+        0 -> Just $ do
+          x <- decCBOR
+          pure $ acc {stwrAddrTxWits = x}
+        1 -> Just $ do
+          x <- Map.fromElems (hashScript @era) <$> decodeList decCBOR
+          pure $ acc {stwrScriptTxWits = x}
+        2 -> Just $ do
+          x <- decCBOR
+          pure $ acc {stwrBootAddrTxWits = x}
+        _ -> Nothing
+      {-# INLINE decoderByKey #-}
 
 instance (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWits era) where
   decCBOR = MkShelleyTxWits <$> decodeMemoized decCBOR

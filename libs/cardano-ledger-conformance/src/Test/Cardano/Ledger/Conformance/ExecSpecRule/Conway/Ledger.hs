@@ -14,8 +14,7 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledger (ConwayLedgerExecContext (..)) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe)
-import Cardano.Ledger.Binary (EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
+import Cardano.Ledger.Binary (EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   EraPParams (..),
@@ -98,11 +97,10 @@ instance
   EncCBOR (ConwayLedgerExecContext era)
   where
   encCBOR ConwayLedgerExecContext {..} =
-    encode $
-      Rec ConwayLedgerExecContext
-        !> To clecGuardrailsScriptHash
-        !> To clecEnactState
-        !> To clecUtxoExecContext
+    encodeListLen 3
+      <> encCBOR clecGuardrailsScriptHash
+      <> encCBOR clecEnactState
+      <> encCBOR clecUtxoExecContext
 
 instance ExecSpecRule "LEDGER" ConwayEra where
   type ExecContext "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
