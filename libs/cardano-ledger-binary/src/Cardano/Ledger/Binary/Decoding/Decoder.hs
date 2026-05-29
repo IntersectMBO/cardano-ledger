@@ -183,7 +183,6 @@ import qualified Cardano.Ledger.Binary.Plain as Plain (assertTag, decodeTagMaybe
 import Cardano.Ledger.Binary.Version (Version, mkVersion32, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
 import Codec.CBOR.ByteArray (ByteArray (..))
-import qualified Codec.CBOR.ByteArray as CBA
 import qualified Codec.CBOR.Decoding as C (
   ByteOffset,
   DecodeAction (..),
@@ -1589,7 +1588,15 @@ decodeBytesDefOrIndef =
 -- the leading indefinite-length marker has already been consumed (e.g. via
 -- 'decodeBytesIndef').
 decodeByteArrayIndefLen :: Decoder s ByteArray
-decodeByteArrayIndefLen = CBA.fromByteString <$> decodeBytesIndefLen
+decodeByteArrayIndefLen = decodeBytesIndef *> go []
+  where
+    go !acc = do
+      stop <- decodeBreakOr
+      if stop
+        then pure $! BA (mconcat (reverse acc))
+        else do
+          !chunk <- unBA <$> decodeByteArray
+          go (chunk : acc)
 
 -- | 'decodeBytesDefOrIndef' specialised to the cborg 'ByteArray' type.
 decodeByteArrayDefOrIndef :: Decoder s ByteArray
