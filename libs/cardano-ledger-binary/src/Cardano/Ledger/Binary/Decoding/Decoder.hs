@@ -1537,9 +1537,7 @@ decodeStringIndef = fromPlainDecoder C.decodeStringIndef
 {-# INLINE decodeStringIndef #-}
 
 -- | Loop over chunks of an indefinite-length text string until a break token is
--- encountered, concatenating the chunks in order. Assumes the leading
--- indefinite-length marker has already been consumed (e.g. via
--- 'decodeStringIndef').
+-- encountered, concatenating the chunks in order.
 decodeStringIndefLen :: Decoder s Text.Text
 decodeStringIndefLen = decodeStringIndef *> go []
   where
@@ -1561,9 +1559,7 @@ decodeStringDefOrIndef =
     _ -> cborError $ DecoderErrorCustom "Text" "expected string"
 
 -- | Loop over chunks of an indefinite-length byte string until a break token
--- is encountered, concatenating the chunks in order. Assumes the leading
--- indefinite-length marker has already been consumed (e.g. via
--- 'decodeBytesIndef').
+-- is encountered, concatenating the chunks in order.
 decodeBytesIndefLen :: Decoder s BS.ByteString
 decodeBytesIndefLen = decodeBytesIndef *> go []
   where
@@ -1584,9 +1580,7 @@ decodeBytesDefOrIndef =
     C.TypeBytesIndef -> decodeBytesIndefLen
     _ -> cborError $ DecoderErrorCustom "ByteString" "expected bytes"
 
--- | 'decodeBytesIndefLen' specialised to the cborg 'ByteArray' type. Assumes
--- the leading indefinite-length marker has already been consumed (e.g. via
--- 'decodeBytesIndef').
+-- | 'decodeBytesIndefLen' specialised to the cborg 'ByteArray' type.
 decodeByteArrayIndefLen :: Decoder s ByteArray
 decodeByteArrayIndefLen = decodeBytesIndef *> go []
   where
