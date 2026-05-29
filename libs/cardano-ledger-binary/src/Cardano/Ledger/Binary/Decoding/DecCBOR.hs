@@ -10,7 +10,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
 
@@ -19,6 +18,10 @@ module Cardano.Ledger.Binary.Decoding.DecCBOR (
   fromByronCBOR,
   decodeScriptContextFromData,
   decodeIntegralRational,
+
+  -- *** Network
+  decodeIPv4,
+  decodeIPv6,
 ) where
 
 import qualified Cardano.Binary as Plain (Decoder)
@@ -66,8 +69,9 @@ import Data.ByteString.Short (ShortByteString(SBS))
 #else
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
-import Cardano.Base.IP (IPv4, IPv6)
+import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Control.Monad (when)
+import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.Fixed (Fixed (..))
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
@@ -203,6 +207,46 @@ instance DecCBOR Void where
 instance DecCBOR Term where
   decCBOR = decodeTerm
   {-# INLINE decCBOR #-}
+
+--------------------------------------------------------------------------------
+-- Network
+--------------------------------------------------------------------------------
+
+-- | Convert a `Get` monad from @binary@ package into a `Decoder`
+binaryGetDecoder ::
+  -- | Name of the function or type for error reporting
+  T.Text ->
+  -- | Deserializer for the @binary@ package
+  Get a ->
+  Decoder s a
+binaryGetDecoder name getter = do
+  bs <- decCBOR
+  case runGetOrFail getter (BSL.fromStrict bs) of
+    Left (_, _, err) -> cborError $ DecoderErrorCustom name (T.pack err)
+    Right (leftOver, _, ha)
+      | BSL.null leftOver -> pure ha
+      | otherwise ->
+          cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
+{-# INLINE binaryGetDecoder #-}
+
+decodeIPv4 :: Decoder s IPv4
+decodeIPv4 =
+  toIPv4w <$> binaryGetDecoder "decodeIPv4" getWord32le
+{-# INLINE decodeIPv4 #-}
+
+getHostAddress6 :: Get (Word32, Word32, Word32, Word32)
+getHostAddress6 = do
+  !w1 <- getWord32le
+  !w2 <- getWord32le
+  !w3 <- getWord32le
+  !w4 <- getWord32le
+  return (w1, w2, w3, w4)
+{-# INLINE getHostAddress6 #-}
+
+decodeIPv6 :: Decoder s IPv6
+decodeIPv6 =
+  toIPv6w <$> binaryGetDecoder "decodeIPv6" getHostAddress6
+{-# INLINE decodeIPv6 #-}
 
 instance DecCBOR IPv4 where
   decCBOR = decodeIPv4
