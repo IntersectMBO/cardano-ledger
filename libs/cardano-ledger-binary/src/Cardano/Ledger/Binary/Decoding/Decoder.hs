@@ -91,10 +91,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   -- *** Time
   decodeUTCTime,
 
-  -- *** Network
-  decodeIPv4,
-  decodeIPv6,
-
   -- ** Lifted @cborg@ decoders
   decodeBool,
   decodeBreakOr,
@@ -175,7 +171,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   liftST,
 ) where
 
-import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Cardano.Base.Typeable (TypeName)
 import Cardano.Ledger.Binary.Plain (
   DecoderError (..),
@@ -269,7 +264,6 @@ import Control.Monad
 import Control.Monad.ST (ST)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
-import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Compose (Compose (..))
@@ -1312,50 +1306,6 @@ decodeUTCTime =
           (picosecondsToDiffTime timeOfDayPico)
     {-# INLINE timeDecoder #-}
 {-# INLINE decodeUTCTime #-}
-
---------------------------------------------------------------------------------
--- Network
---------------------------------------------------------------------------------
-
--- | Convert a `Get` monad from @binary@ package into a `Decoder`
-binaryGetDecoder ::
-  -- | Name of the function or type for error reporting
-  Text.Text ->
-  -- | Deserializer for the @binary@ package
-  Get a ->
-  Decoder s a
-binaryGetDecoder name getter = do
-  bs <-
-    ifDecoderVersionAtLeast
-      (natVersion @12)
-      decodeBytesDefOrIndef
-      decodeBytes
-  case runGetOrFail getter (BSL.fromStrict bs) of
-    Left (_, _, err) -> cborError $ DecoderErrorCustom name (Text.pack err)
-    Right (leftOver, _, ha)
-      | BSL.null leftOver -> pure ha
-      | otherwise ->
-          cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
-{-# INLINE binaryGetDecoder #-}
-
-decodeIPv4 :: Decoder s IPv4
-decodeIPv4 =
-  toIPv4w <$> binaryGetDecoder "decodeIPv4" getWord32le
-{-# INLINE decodeIPv4 #-}
-
-getHostAddress6 :: Get (Word32, Word32, Word32, Word32)
-getHostAddress6 = do
-  !w1 <- getWord32le
-  !w2 <- getWord32le
-  !w3 <- getWord32le
-  !w4 <- getWord32le
-  return (w1, w2, w3, w4)
-{-# INLINE getHostAddress6 #-}
-
-decodeIPv6 :: Decoder s IPv6
-decodeIPv6 =
-  toIPv6w <$> binaryGetDecoder "decodeIPv6" getHostAddress6
-{-# INLINE decodeIPv6 #-}
 
 --------------------------------------------------------------------------------
 -- Wrapped CBORG decoders
