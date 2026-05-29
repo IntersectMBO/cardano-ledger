@@ -13,6 +13,7 @@ module Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   BBODY,
   CERT,
+  ENTITIES,
   GOV,
   GOVCERT,
   LEDGER,
@@ -212,6 +213,10 @@ data LEDGER era
 type DijkstraLEDGER = LEDGER
 
 {-# DEPRECATED DijkstraLEDGER "In favor of `LEDGER`" #-}
+
+data ENTITIES era
+
+type instance EraRule "ENTITIES" DijkstraEra = ENTITIES DijkstraEra
 
 type instance EraRule "LEDGER" DijkstraEra = LEDGER DijkstraEra
 

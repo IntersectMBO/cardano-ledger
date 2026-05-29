@@ -2,6 +2,10 @@
 
 ## 0.3.0.0
 
+* Add:
+  - `ENTITIES` and `STS` instance for it
+  - `EntitiesPredFailure`
+  - `EntitiesEvent`
 * Rename `DijkstraRewarding` to `DijkstraWithdrawing` and deprecate the old name
 * Rename rule types and deprecate the old names:
   - `DijkstraBBODY` -> `BBODY`
