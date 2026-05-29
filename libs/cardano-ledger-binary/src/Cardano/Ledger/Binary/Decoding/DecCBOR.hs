@@ -357,12 +357,15 @@ instance
         <* dropCBOR (Proxy @g)
   {-# INLINE decCBOR #-}
 
+decodeByteString :: Decoder s BS.ByteString
+decodeByteString =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    decodeBytesDefOrIndef
+    decodeBytes
+
 instance DecCBOR BS.ByteString where
-  decCBOR =
-    ifDecoderVersionAtLeast
-      (natVersion @12)
-      decodeBytesDefOrIndef
-      decodeBytes
+  decCBOR = decodeByteString
   {-# INLINE decCBOR #-}
 
 instance DecCBOR T.Text where

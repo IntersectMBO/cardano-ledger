@@ -1616,7 +1616,7 @@ decodeStringDefOrIndef =
 -- indefinite-length marker has already been consumed (e.g. via
 -- 'decodeBytesIndef').
 decodeBytesIndefLen :: Decoder s BS.ByteString
-decodeBytesIndefLen = go []
+decodeBytesIndefLen = decodeBytesIndef *> go []
   where
     go acc = do
       stop <- decodeBreakOr
@@ -1632,7 +1632,7 @@ decodeBytesDefOrIndef :: Decoder s BS.ByteString
 decodeBytesDefOrIndef =
   peekTokenType >>= \case
     C.TypeBytes -> decodeBytes
-    C.TypeBytesIndef -> decodeBytesIndef *> decodeBytesIndefLen
+    C.TypeBytesIndef -> decodeBytesIndefLen
     _ -> cborError $ DecoderErrorCustom "ByteString" "expected bytes"
 
 -- | 'decodeBytesIndefLen' specialised to the cborg 'ByteArray' type. Assumes
