@@ -7,7 +7,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wwarn #-}
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Utxo () where
 
