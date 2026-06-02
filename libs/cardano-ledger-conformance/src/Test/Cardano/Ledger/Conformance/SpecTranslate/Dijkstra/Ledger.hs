@@ -37,7 +37,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State (ChainAccountState (..))
 import Cardano.Ledger.TxIn (TxId)
 import Data.Foldable (toList)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe)
 import qualified Data.OMap.Strict as OMap
 import Lens.Micro ((^.))

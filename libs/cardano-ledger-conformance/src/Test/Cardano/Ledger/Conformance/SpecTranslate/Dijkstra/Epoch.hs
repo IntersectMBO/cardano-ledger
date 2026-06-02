@@ -18,7 +18,6 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Rewards (rewardAmount)
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Foldable (Foldable (..))
-import qualified Data.Foldable as Set
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import Lens.Micro
@@ -110,7 +109,7 @@ instance SpecTranslate DijkstraEra PulsingRewUpdate where
       <*> toSpecRepMap rwds
     where
       (RewardUpdate {..}, _) = runShelleyBase $ completeRupd x
-      rwds = Set.foldMap rewardAmount <$> rs
+      rwds = foldMap rewardAmount <$> rs
 
 instance SpecTranslate DijkstraEra (NewEpochState DijkstraEra) where
   type SpecRep DijkstraEra (NewEpochState DijkstraEra) = Agda.NewEpochState

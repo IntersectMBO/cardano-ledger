@@ -32,7 +32,7 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData, MaryValue)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), plutusScriptLanguage)
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..), unTxDats)
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
@@ -41,7 +41,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), THKD (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Conway.Scripts (AlonzoScript (..), ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -325,26 +325,6 @@ instance SpecTranslate DijkstraEra (TxDats DijkstraEra) where
   type SpecRep DijkstraEra (TxDats DijkstraEra) = Agda.HSSet Agda.Datum
 
   toSpecRep = fmap Agda.MkHSSet . traverse (toSpecRep . snd) . Map.toList . unTxDats
-
-instance SpecTranslate DijkstraEra (AlonzoPlutusPurpose AsIx DijkstraEra) where
-  type SpecRep DijkstraEra (AlonzoPlutusPurpose AsIx DijkstraEra) = Agda.RedeemerPtr
-
-  toSpecRep = \case
-    AlonzoSpending (AsIx i) -> pure (Agda.Spend, toInteger i)
-    AlonzoMinting (AsIx i) -> pure (Agda.Mint, toInteger i)
-    AlonzoCertifying (AsIx i) -> pure (Agda.Cert, toInteger i)
-    AlonzoRewarding (AsIx i) -> pure (Agda.Reward, toInteger i)
-
-instance SpecTranslate DijkstraEra (ConwayPlutusPurpose AsIx DijkstraEra) where
-  type SpecRep DijkstraEra (ConwayPlutusPurpose AsIx DijkstraEra) = Agda.RedeemerPtr
-
-  toSpecRep = \case
-    ConwaySpending (AsIx i) -> pure (Agda.Spend, toInteger i)
-    ConwayMinting (AsIx i) -> pure (Agda.Mint, toInteger i)
-    ConwayCertifying (AsIx i) -> pure (Agda.Cert, toInteger i)
-    ConwayRewarding (AsIx i) -> pure (Agda.Reward, toInteger i)
-    ConwayVoting (AsIx i) -> pure (Agda.Vote, toInteger i)
-    ConwayProposing (AsIx i) -> pure (Agda.Propose, toInteger i)
 
 instance SpecTranslate DijkstraEra (DijkstraPlutusPurpose AsIx DijkstraEra) where
   type SpecRep DijkstraEra (DijkstraPlutusPurpose AsIx DijkstraEra) = Agda.RedeemerPtr
