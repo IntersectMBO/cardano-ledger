@@ -25,7 +25,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Internal.Era (BabbageEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
 -- =====================================================
@@ -81,27 +80,27 @@ type instance EraRule "BBODY" BabbageEra = Alonzo.BBODY BabbageEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "DELEG" BabbageEra = API.DELEG BabbageEra
+type instance EraRule "DELEG" BabbageEra = Shelley.DELEG BabbageEra
 
-type instance EraRule "DELEGS" BabbageEra = API.DELEGS BabbageEra
+type instance EraRule "DELEGS" BabbageEra = Shelley.DELEGS BabbageEra
 
-type instance EraRule "DELPL" BabbageEra = API.DELPL BabbageEra
+type instance EraRule "DELPL" BabbageEra = Shelley.DELPL BabbageEra
 
 type instance EraRule "EPOCH" BabbageEra = Shelley.EPOCH BabbageEra
 
-type instance EraRule "LEDGERS" BabbageEra = API.LEDGERS BabbageEra
+type instance EraRule "LEDGERS" BabbageEra = Shelley.LEDGERS BabbageEra
 
 type instance EraRule "MIR" BabbageEra = Shelley.MIR BabbageEra
 
-type instance EraRule "NEWEPOCH" BabbageEra = API.NEWEPOCH BabbageEra
+type instance EraRule "NEWEPOCH" BabbageEra = Shelley.NEWEPOCH BabbageEra
 
 type instance EraRule "NEWPP" BabbageEra = Shelley.NEWPP BabbageEra
 
-type instance EraRule "POOL" BabbageEra = API.POOL BabbageEra
+type instance EraRule "POOL" BabbageEra = Shelley.POOL BabbageEra
 
-type instance EraRule "POOLREAP" BabbageEra = API.POOLREAP BabbageEra
+type instance EraRule "POOLREAP" BabbageEra = Shelley.POOLREAP BabbageEra
 
-type instance EraRule "PPUP" BabbageEra = API.PPUP BabbageEra
+type instance EraRule "PPUP" BabbageEra = Shelley.PPUP BabbageEra
 
 type instance EraRule "RUPD" BabbageEra = Shelley.RUPD BabbageEra
 

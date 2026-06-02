@@ -55,6 +55,21 @@ import Cardano.Ledger.Keys.Bootstrap as X (
   BootstrapWitness (..),
  )
 import Cardano.Ledger.Shelley.BlockBody as X
+import Cardano.Ledger.Shelley.Era as X (
+  ShelleyDELEG,
+  ShelleyDELEGS,
+  ShelleyDELPL,
+  ShelleyLEDGER,
+  ShelleyLEDGERS,
+  ShelleyNEWEPOCH,
+  ShelleyPOOL,
+  ShelleyPOOLREAP,
+  ShelleyPPUP,
+  ShelleyTICK,
+  ShelleyTICKF,
+  ShelleyUTXO,
+  ShelleyUTXOW,
+ )
 import Cardano.Ledger.Shelley.Genesis as X
 import Cardano.Ledger.Shelley.LedgerState as X (
   AccountState,
@@ -78,22 +93,17 @@ import Cardano.Ledger.Shelley.PParams as X (
 import Cardano.Ledger.Shelley.PoolRank as X (
   NonMyopic,
  )
-import Cardano.Ledger.Shelley.Rules.Deleg as X (DELEG, DelegEnv (..))
-import Cardano.Ledger.Shelley.Rules.Delegs as X (DELEGS, DelegsEnv (..))
-import Cardano.Ledger.Shelley.Rules.Delpl as X (DELPL, DelplEnv (..))
-import Cardano.Ledger.Shelley.Rules.Ledger as X (LEDGER, LedgerEnv (..))
-import Cardano.Ledger.Shelley.Rules.Ledgers as X (LEDGERS, ShelleyLedgersEnv (..))
-import Cardano.Ledger.Shelley.Rules.NewEpoch as X (NEWEPOCH)
-import Cardano.Ledger.Shelley.Rules.Pool as X (POOL, PoolEnv (..))
-import Cardano.Ledger.Shelley.Rules.PoolReap as X (POOLREAP)
-import Cardano.Ledger.Shelley.Rules.Ppup as X (PPUP, PpupEnv (..))
+import Cardano.Ledger.Shelley.Rules.Deleg as X (DelegEnv (..))
+import Cardano.Ledger.Shelley.Rules.Delegs as X (DelegsEnv (..))
+import Cardano.Ledger.Shelley.Rules.Delpl as X (DelplEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledger as X (LedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledgers as X (ShelleyLedgersEnv (..))
+import Cardano.Ledger.Shelley.Rules.Pool as X (PoolEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ppup as X (PpupEnv (..))
 import Cardano.Ledger.Shelley.Rules.Snap as X (SnapEnv (..))
-import Cardano.Ledger.Shelley.Rules.Tick as X (TICK, TICKF)
 import Cardano.Ledger.Shelley.Rules.Utxo as X (
-  UTXO,
   UtxoEnv (..),
  )
-import Cardano.Ledger.Shelley.Rules.Utxow as X (UTXOW)
 import Cardano.Ledger.Shelley.Scripts as X (MultiSig)
 import Cardano.Ledger.Shelley.StabilityWindow as X (
   computeRandomnessStabilisationWindow,

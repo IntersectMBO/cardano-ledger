@@ -16,7 +16,6 @@ import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   Block,
   DelplEnv,
-  LEDGERS,
   ShelleyEraForecast,
  )
 import Cardano.Ledger.Shelley.Core
@@ -24,6 +23,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   NewEpochState (..),
  )
+import Cardano.Ledger.Shelley.Rules (LEDGERS)
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended

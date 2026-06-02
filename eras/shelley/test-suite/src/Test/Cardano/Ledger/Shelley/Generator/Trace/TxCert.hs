@@ -24,11 +24,10 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (SlotNo32 (..))
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Cardano.Ledger.Shelley.API (
-  DELPL,
   DelplEnv (..),
   Ptr (..),
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
+import Cardano.Ledger.Shelley.Rules (DELPL, ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.State
 import Cardano.Protocol.Crypto (Crypto)
 import Control.Monad.Trans.Reader (runReaderT)

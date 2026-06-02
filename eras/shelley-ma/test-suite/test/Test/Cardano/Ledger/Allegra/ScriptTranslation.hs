@@ -12,6 +12,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as S
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
   pattern RequireAllOf,
@@ -75,7 +76,7 @@ testScriptPostTranslation =
           txa = fromRight . runExcept $ translateEra @AllegraEra NoGenesis txs
           result =
             runShelleyBase $
-              applySTSTest @(S.LEDGER AllegraEra)
+              applySTSTest @(Shelley.LEDGER AllegraEra)
                 (TRC (env, LedgerState utxoStAllegra def, txa))
        in case result of
             Left e -> error $ show e

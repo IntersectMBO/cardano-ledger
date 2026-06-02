@@ -12,12 +12,11 @@ import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   Credential (..),
-  DELEG,
   DelegEnv (..),
   Ptr (..),
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
+import Cardano.Ledger.Shelley.Rules (DELEG, ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)

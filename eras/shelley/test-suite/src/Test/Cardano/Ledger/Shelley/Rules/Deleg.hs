@@ -13,9 +13,8 @@ module Test.Cardano.Ledger.Shelley.Rules.Deleg (
 
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley (hardforkAlonzoAllowMIRTransfer)
-import Cardano.Ledger.Shelley.API (DELEG)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
+import Cardano.Ledger.Shelley.Rules (DELEG, DelegEnv (..))
 import Cardano.Ledger.Shelley.State
 import Data.Foldable (fold)
 import Data.Foldable as F (foldl')

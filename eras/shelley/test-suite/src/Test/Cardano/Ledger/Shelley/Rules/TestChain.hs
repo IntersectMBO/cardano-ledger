@@ -30,7 +30,7 @@ import Cardano.Ledger.Block (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
-import Cardano.Ledger.Shelley.API (ApplyBlock, DELEG, ShelleyEraForecast)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -43,6 +43,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
+  DELEG,
   DelegEnv (..),
   LedgerEnv (..),
   POOL,

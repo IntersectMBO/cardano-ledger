@@ -55,7 +55,6 @@ import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Internal.Era (ConwayEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
 -- =====================================================
@@ -241,9 +240,9 @@ type instance EraRule "HARDFORK" ConwayEra = HARDFORK ConwayEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "LEDGERS" ConwayEra = API.LEDGERS ConwayEra
+type instance EraRule "LEDGERS" ConwayEra = Shelley.LEDGERS ConwayEra
 
-type instance EraRule "POOLREAP" ConwayEra = API.POOLREAP ConwayEra
+type instance EraRule "POOLREAP" ConwayEra = Shelley.POOLREAP ConwayEra
 
 type instance EraRule "RUPD" ConwayEra = Shelley.RUPD ConwayEra
 

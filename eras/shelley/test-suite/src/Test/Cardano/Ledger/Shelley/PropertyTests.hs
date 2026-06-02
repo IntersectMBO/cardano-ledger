@@ -16,13 +16,14 @@ import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, SlotNo)
 import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (BbodySignal)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.API (ApplyBlock, POOL, ShelleyEraForecast)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv,
   LedgerEnv,
+  POOL,
   PoolEvent,
   ShelleyBbodyState,
   ShelleyLedgersEnv,

@@ -59,7 +59,6 @@ import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Internal.Era (DijkstraEra)
 import Cardano.Ledger.Mary (MaryValue)
-import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Lens.Micro
 
@@ -276,9 +275,9 @@ type instance EraRule "HARDFORK" DijkstraEra = Conway.HARDFORK DijkstraEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "LEDGERS" DijkstraEra = API.LEDGERS DijkstraEra
+type instance EraRule "LEDGERS" DijkstraEra = Shelley.LEDGERS DijkstraEra
 
-type instance EraRule "POOLREAP" DijkstraEra = API.POOLREAP DijkstraEra
+type instance EraRule "POOLREAP" DijkstraEra = Shelley.POOLREAP DijkstraEra
 
 type instance EraRule "RUPD" DijkstraEra = Shelley.RUPD DijkstraEra
 

@@ -20,7 +20,6 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), Stak
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
-  LEDGER,
   LedgerEnv (..),
  )
 import Cardano.Ledger.Shelley.Core
@@ -29,6 +28,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (
+  LEDGER,
   ShelleyDelegsPredFailure (..),
   ShelleyDelplPredFailure (..),
   ShelleyLedgerPredFailure (..),
