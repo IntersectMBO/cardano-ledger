@@ -11,41 +11,41 @@
 
 module Test.Cardano.Ledger.Conformance.Imp.Core where
 
-import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules ()
-import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules qualified as Shelley
+import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.Core (EraRule)
 import Control.State.Transition
 import Data.Bifunctor (Bifunctor (..))
 import Data.Data (Proxy (..))
 import Data.List.NonEmpty
 import Data.Text qualified as T
 import GHC.TypeLits (symbolVal)
-import Lens.Micro
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayLedgerExecContext (..))
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
-import Test.Cardano.Ledger.Constrained.Conway
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
+  ExecSpecRule (..),
+  ExecSpecTopLevelRule (..),
+  SpecTRC (..),
+  diffConformance,
+ )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecNormalize (..),
+  runSpecTransM,
+ )
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
 
 conformanceHook ::
   forall rule era t.
-  ( ShelleyEraImp era
-  , ExecSpecRule rule era
+  ( ExecSpecRule rule era
   , ToExpr (Event (EraRule rule era))
   ) =>
   Globals ->
-  ExecContext rule era ->
   TRC (EraRule rule era) ->
+  ExecContext rule era ->
   Either
     (NonEmpty (PredicateFailure (EraRule rule era)))
     (State (EraRule rule era), [Event (EraRule rule era)]) ->
   ImpM t ()
-conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
+conformanceHook globals trc@(TRC (env, state, signal)) ctx impRuleResult =
   impAnn ("Conformance hook (" <> symbolVal (Proxy @rule) <> ")") $ do
     -- translate inputs
     specTRC@(SpecTRC specEnv specState specSignal) <-
@@ -93,49 +93,19 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
 
 submitTxConformanceHook ::
   forall era t.
-  ( ConwayEraImp era
-  , ExecSpecRule "LEDGER" era
-  , ExecContext "LEDGER" era ~ ConwayLedgerExecContext era
-  , SpecTranslate era (TxWits era)
-  , HasCallStack
-  , SpecTranslate era (TxBody TopTx era)
-  , SpecTranslate era (Tx TopTx era)
-  , ToExpr (SpecRep era (Tx TopTx era))
-  , SpecNormalize (SpecState "LEDGER" era)
-  , Eq (SpecState "LEDGER" era)
-  ) =>
+  (HasCallStack, ExecSpecTopLevelRule "LEDGER" era) =>
   Globals ->
   TRC (EraRule "LEDGER" era) ->
   Either
     (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
     (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
   ImpM t ()
-submitTxConformanceHook globals trc@(TRC (env, state, signal)) =
-  conformanceHook globals ctx trc
-  where
-    ctx =
-      ConwayLedgerExecContext
-        { clecGuardrailsScriptHash =
-            state ^. lsUTxOStateL . utxosGovStateL . constitutionGovStateL . constitutionGuardrailsScriptHashL
-        , clecEnactState = mkEnactState $ state ^. lsUTxOStateL . utxosGovStateL
-        , clecUtxoExecContext =
-            UtxoExecContext
-              { uecTx = signal ^. txStAnnTxG
-              , uecUTxO = state ^. utxoL
-              , uecUtxoEnv =
-                  Shelley.UtxoEnv
-                    { Shelley.ueSlot = env ^. Shelley.ledgerSlotNoL
-                    , Shelley.uePParams = state ^. lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
-                    , Shelley.ueCertState = state ^. lsCertStateL
-                    }
-              }
-        }
+submitTxConformanceHook globals trc =
+  conformanceHook globals trc (mkRuleExecContext globals trc)
 
 epochBoundaryConformanceHook ::
   forall era t.
-  ( ShelleyEraImp era
-  , ExecSpecRule "NEWEPOCH" era
-  , ExecContext "NEWEPOCH" era ~ ()
+  ( ExecSpecTopLevelRule "NEWEPOCH" era
   , ToExpr (Event (EraRule "NEWEPOCH" era))
   ) =>
   Globals ->
@@ -143,4 +113,4 @@ epochBoundaryConformanceHook ::
   State (EraRule "NEWEPOCH" era) ->
   ImpM t ()
 epochBoundaryConformanceHook globals trc res =
-  conformanceHook @"NEWEPOCH" @era globals () trc $ Right (res, [])
+  conformanceHook @"NEWEPOCH" @era globals trc (mkRuleExecContext globals trc) $ Right (res, [])

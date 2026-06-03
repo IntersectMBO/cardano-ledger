@@ -27,15 +27,16 @@ import Cardano.Ledger.Conway.Core (
   ScriptHash,
   TxLevel (..),
  )
+import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraCertState (..))
 import Control.State.Transition.Extended (TRC (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
+import Lens.Micro
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
@@ -44,6 +45,7 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow ()
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
+  ExecSpecTopLevelRule (..),
   SpecTRC (..),
   runFromAgdaFunction,
  )
@@ -127,3 +129,22 @@ instance ExecSpecRule "LEDGER" ConwayEra where
       stFinal =
         first (T.pack . show) $
           runSTS @"UTXOW" @ConwayEra globals utxoEnv lsUTxOState sig
+
+instance ExecSpecTopLevelRule "LEDGER" ConwayEra where
+  mkRuleExecContext _ (TRC (env, state, signal)) =
+    ConwayLedgerExecContext
+      { clecGuardrailsScriptHash =
+          state ^. lsUTxOStateL . utxosGovStateL . constitutionGovStateL . constitutionGuardrailsScriptHashL
+      , clecEnactState = mkEnactState $ state ^. lsUTxOStateL . utxosGovStateL
+      , clecUtxoExecContext =
+          UtxoExecContext
+            { uecTx = signal ^. txStAnnTxG
+            , uecUTxO = state ^. utxoL
+            , uecUtxoEnv =
+                Shelley.UtxoEnv
+                  { Shelley.ueSlot = env ^. Shelley.ledgerSlotNoL
+                  , Shelley.uePParams = state ^. lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
+                  , Shelley.ueCertState = state ^. lsCertStateL
+                  }
+            }
+      }

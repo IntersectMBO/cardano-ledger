@@ -23,8 +23,10 @@ library
     Test.Cardano.Ledger.Conformance
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
+    Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra
     Test.Cardano.Ledger.Conformance.SpecTranslate.Base
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra
     Test.Cardano.Ledger.Conformance.Utils
 
   hs-source-dirs: src
@@ -44,7 +46,11 @@ library
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ratify
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow
-    Test.Cardano.Ledger.Conformance.Orphans
+    Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra.Ledger
+    Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra.NewEpoch
+    Test.Cardano.Ledger.Conformance.Orphans.Conway
+    Test.Cardano.Ledger.Conformance.Orphans.Core
+    Test.Cardano.Ledger.Conformance.Orphans.Dijkstra
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Certs
@@ -56,6 +62,15 @@ library
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo
     Test.Cardano.Ledger.Conformance.SpecTranslate.Core
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Base
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Cert
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Deleg
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Epoch
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Gov
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.GovCert
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Ledger
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Pool
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Utxo
 
   default-language: Haskell2010
   ghc-options:
@@ -90,6 +105,7 @@ library
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core,
     cardano-ledger-core:testlib,
+    cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
     cardano-ledger-executable-spec,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-test,
@@ -121,6 +137,7 @@ test-suite tests
     Test.Cardano.Ledger.Conformance.Imp.Conway
     Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify
     Test.Cardano.Ledger.Conformance.Imp.Core
+    Test.Cardano.Ledger.Conformance.Imp.Dijkstra
     Test.Cardano.Ledger.Conformance.Spec.Base
     Test.Cardano.Ledger.Conformance.Spec.Conway
     Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify
@@ -144,6 +161,7 @@ test-suite tests
     cardano-ledger-conformance,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
     cardano-ledger-executable-spec,
     cardano-ledger-shelley,
     cardano-ledger-test,

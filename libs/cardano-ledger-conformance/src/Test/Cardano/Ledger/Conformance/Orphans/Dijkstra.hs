@@ -1,23 +1,13 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.Orphans where
+module Test.Cardano.Ledger.Conformance.Orphans.Dijkstra where
 
-import Cardano.Ledger.Hashes (standardAddrHashSize)
-import Data.Default (Default)
-import GHC.Generics (Generic)
-import MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
+import MAlonzo.Code.Ledger.Dijkstra.Foreign.API
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
-import Test.Cardano.Ledger.Conformance.Utils
-import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr (..))
-
-deriving instance Generic HsRewardUpdate
-
-deriving instance Ord DepositPurpose
+import Test.Cardano.Ledger.Conformance.Orphans.Core ()
 
 deriving instance Ord Tag
 
@@ -25,15 +15,13 @@ deriving instance Ord HSLanguage
 
 deriving instance Ord LanguageCostModels
 
-deriving instance Ord Credential
-
 deriving instance Ord GovRole
+
+deriving instance Ord Vote
 
 deriving instance Ord GovVotes
 
 deriving instance Ord VDeleg
-
-deriving instance Ord Vote
 
 deriving instance Ord PoolThresholds
 
@@ -41,29 +29,19 @@ deriving instance Ord DrepThresholds
 
 deriving instance Ord PParamsUpdate
 
-deriving instance Ord RewardAddress
-
 deriving instance Ord GovAction
 
 deriving instance Ord GovActionState
 
-instance (NFData k, NFData v) => NFData (HSMap k v)
-
-instance NFData a => NFData (HSSet a)
-
 instance NFData PParamsUpdate
-
-instance NFData RewardAddress
 
 instance NFData GovAction
 
-instance NFData BaseAddr
+instance NFData Anchor
 
-instance NFData BootstrapAddr
+instance NFData NativeScript
 
-instance NFData Timelock
-
-instance NFData HSTimelock
+instance NFData HSNativeScript
 
 instance NFData HSLanguage
 
@@ -75,15 +53,11 @@ instance NFData UTxOState
 
 instance NFData Vote
 
-instance NFData Credential
-
 instance NFData GovRole
 
 instance NFData GovVotes
 
 instance NFData GovActionState
-
-instance NFData Anchor
 
 instance NFData GovVote
 
@@ -105,19 +79,17 @@ instance NFData StakePoolParams
 
 instance NFData DCert
 
-instance NFData TxBody
+instance NFData TxBodyTop
+
+instance NFData TxBodySub
 
 instance NFData Tag
 
-instance NFData HSVKey
-
 instance NFData TxWitnesses
 
-instance NFData Tx
+instance NFData TxTop
 
-instance NFData UTxOEnv
-
-instance NFData DepositPurpose
+instance NFData TxSub
 
 instance NFData CertEnv
 
@@ -147,35 +119,17 @@ instance NFData Snapshot
 
 instance NFData Acnt
 
-instance NFData LState
+instance NFData LedgerState
 
-instance NFData HsRewardUpdate
+instance NFData LedgerEnv
+
+instance NFData RewardUpdate
 
 instance NFData NewEpochState
 
-instance NFData LEnv
-
-instance ToExpr a => ToExpr (HSSet a)
-
-instance ToExpr Credential where
-  toExpr (KeyHashObj h) =
-    App
-      "KeyHashObj"
-      [ agdaHashToExpr standardAddrHashSize h
-      , toExpr h
-      ]
-  toExpr (ScriptObj h) =
-    App
-      "ScriptObj"
-      [ agdaHashToExpr standardAddrHashSize h
-      , toExpr h
-      ]
-
-instance (ToExpr k, ToExpr v) => ToExpr (HSMap k v)
+instance NFData BalanceInterval
 
 instance ToExpr PParamsUpdate
-
-instance ToExpr RewardAddress
 
 instance ToExpr GovAction
 
@@ -186,8 +140,6 @@ instance ToExpr GovVotes
 instance ToExpr Vote
 
 instance ToExpr GovActionState
-
-instance ToExpr Anchor
 
 instance ToExpr GovProposal
 
@@ -209,13 +161,11 @@ instance ToExpr StakePoolParams
 
 instance ToExpr DCert
 
-instance ToExpr BaseAddr
+instance ToExpr Anchor
 
-instance ToExpr BootstrapAddr
+instance ToExpr NativeScript
 
-instance ToExpr Timelock
-
-instance ToExpr HSTimelock
+instance ToExpr HSNativeScript
 
 instance ToExpr HSLanguage
 
@@ -223,21 +173,19 @@ instance ToExpr LanguageCostModels
 
 instance ToExpr HSPlutusScript
 
-instance ToExpr TxBody
+instance ToExpr TxBodyTop
+
+instance ToExpr TxBodySub
 
 instance ToExpr Tag
 
-instance ToExpr HSVKey
-
 instance ToExpr TxWitnesses
 
-instance ToExpr Tx
+instance ToExpr TxTop
+
+instance ToExpr TxSub
 
 instance ToExpr UTxOState
-
-instance ToExpr UTxOEnv
-
-instance ToExpr DepositPurpose
 
 instance ToExpr CertEnv
 
@@ -265,18 +213,14 @@ instance ToExpr Snapshots
 
 instance ToExpr Snapshot
 
-instance ToExpr LState
+instance ToExpr LedgerState
+
+instance ToExpr LedgerEnv
 
 instance ToExpr Acnt
 
-instance ToExpr HsRewardUpdate
+instance ToExpr RewardUpdate
 
 instance ToExpr NewEpochState
 
-instance ToExpr LEnv
-
-instance Default (HSMap k v)
-
-deriving instance Semigroup (HSMap k v)
-
-deriving instance Monoid (HSMap k v)
+instance ToExpr BalanceInterval

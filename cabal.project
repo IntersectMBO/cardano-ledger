@@ -16,7 +16,7 @@ source-repository-package
   subdir: hs
   -- !WARNING!:
   -- MAKE SURE THIS POINTS TO A COMMIT IN `*-artifacts` BEFORE MERGE!
-  tag: cd29f5155f4188320ca67f5e5e34b96112ad7cae
+  tag: 1fabf46209b0388a2690c00a70863ce2d5757f60
 
 source-repository-package
   type: git
