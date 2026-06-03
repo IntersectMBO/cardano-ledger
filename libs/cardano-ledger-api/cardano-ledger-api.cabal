@@ -190,3 +190,5 @@ executable generate-cbor
     cardano-ledger-api,
     cardano-ledger-binary:testlib >=1.9,
     cardano-ledger-dijkstra:cddl,
+    containers,
+    text,

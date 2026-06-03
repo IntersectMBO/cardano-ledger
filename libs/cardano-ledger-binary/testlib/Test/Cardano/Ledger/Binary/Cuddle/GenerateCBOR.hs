@@ -20,6 +20,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS8
 import Data.List (intercalate)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
 import qualified Data.Text as T
 import Options.Applicative ((<**>))
@@ -80,7 +82,7 @@ optsParser eras =
           <> Opt.help "Output raw CBOR bytes instead of hex encoding"
       )
 
-generateCBORMain :: [(String, Cuddle.Huddle)] -> IO ()
+generateCBORMain :: Map T.Text Cuddle.Huddle -> IO ()
 generateCBORMain eraCDDLs = do
   opts <-
     Opt.execParser $
@@ -90,7 +92,7 @@ generateCBORMain eraCDDLs = do
             <> Opt.progDesc "Generate CBOR data from Cardano Ledger CDDL rules"
             <> Opt.header "generate-cbor - CBOR data generator from Cardano Ledger CDDL specifications"
         )
-  huddle <- case lookup (T.unpack . T.toLower $ gcboEra opts) eraCDDLs of
+  huddle <- case Map.lookup (gcboEra opts) eraCDDLs of
     Nothing ->
       die $
         "Unknown era: "
@@ -110,7 +112,7 @@ generateCBORMain eraCDDLs = do
             "# " <> T.unpack ruleName
         forM_ [0 .. gcboCount opts - 1] $ emitSample opts env ruleName
   where
-    eraNames = map fst eraCDDLs
+    eraNames = map T.unpack (Map.keys eraCDDLs)
 
 emitSample :: GenerateCBOROpts -> HuddleEnv -> T.Text -> Int -> IO ()
 emitSample opts env ruleName sampleIx = do
