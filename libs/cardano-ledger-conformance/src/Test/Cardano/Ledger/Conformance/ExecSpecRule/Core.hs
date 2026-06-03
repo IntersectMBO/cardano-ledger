@@ -190,6 +190,10 @@ class
 
 class ExecSpecRule rule era => ExecSpecTopLevelRule rule era where
   mkRuleExecContext :: Globals -> TRC (EraRule rule era) -> ExecContext rule era
+  default mkRuleExecContext ::
+    ExecContext rule era ~ () =>
+    Globals -> TRC (EraRule rule era) -> ExecContext rule era
+  mkRuleExecContext _ _ = ()
 
 dumpCbor ::
   forall era a.

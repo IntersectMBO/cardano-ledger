@@ -24,6 +24,7 @@ import Lens.Micro
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
+  askSpecTransM,
   toSpecRepMap,
   withCtxSpecTransM,
  )
@@ -36,13 +37,17 @@ import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 instance SpecTranslate DijkstraEra (EpochState DijkstraEra) where
   type SpecRep DijkstraEra (EpochState DijkstraEra) = Agda.EpochState
 
-  toSpecRep (EpochState {esLState = esLState@LedgerState {lsUTxOState}, ..}) =
-    Agda.MkEpochState
-      <$> toSpecRep esChainAccountState
-      <*> toSpecRep esSnapshots
-      <*> toSpecRep esLState
-      <*> toSpecRep enactState
-      <*> withCtxSpecTransM govActions (toSpecRep ratifyState)
+  type SpecContext DijkstraEra (EpochState DijkstraEra) = Network
+
+  toSpecRep (EpochState {esLState = esLState@LedgerState {lsUTxOState}, ..}) = do
+    netId <- askSpecTransM
+    withCtxSpecTransM () $
+      Agda.MkEpochState
+        <$> toSpecRep esChainAccountState
+        <*> toSpecRep esSnapshots
+        <*> withCtxSpecTransM netId (toSpecRep esLState)
+        <*> toSpecRep enactState
+        <*> withCtxSpecTransM govActions (toSpecRep ratifyState)
     where
       enactState = mkEnactState $ utxosGovState lsUTxOState
       ratifyState = getRatifyState $ utxosGovState lsUTxOState
@@ -114,14 +119,17 @@ instance SpecTranslate DijkstraEra PulsingRewUpdate where
 instance SpecTranslate DijkstraEra (NewEpochState DijkstraEra) where
   type SpecRep DijkstraEra (NewEpochState DijkstraEra) = Agda.NewEpochState
 
-  toSpecRep (NewEpochState {..}) =
-    Agda.MkNewEpochState
-      <$> toSpecRep nesEL
-      <*> toSpecRep nesBprev
-      <*> toSpecRep nesBcur
-      <*> toSpecRep nesEs
-      <*> toSpecRep nesRu
-      <*> (filterZeroEntries <$> toSpecRep nesPd)
+  type SpecContext DijkstraEra (NewEpochState DijkstraEra) = Network
+  toSpecRep (NewEpochState {..}) = do
+    netId <- askSpecTransM
+    withCtxSpecTransM () $
+      Agda.MkNewEpochState
+        <$> toSpecRep nesEL
+        <*> toSpecRep nesBprev
+        <*> toSpecRep nesBcur
+        <*> withCtxSpecTransM netId (toSpecRep nesEs)
+        <*> toSpecRep nesRu
+        <*> (filterZeroEntries <$> toSpecRep nesPd)
     where
       filterZeroEntries (Agda.MkHSMap lst) =
         Agda.MkHSMap $ filter ((/= 0) . snd) lst

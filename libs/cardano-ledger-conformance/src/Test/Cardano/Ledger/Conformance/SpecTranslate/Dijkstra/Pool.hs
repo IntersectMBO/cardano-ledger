@@ -7,9 +7,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Pool where
+module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Pool () where
 
-import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -17,20 +17,26 @@ import Cardano.Ledger.State
 import qualified Data.Map.Strict as Map
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
-  SpecTranslate (SpecRep, toSpecRep),
+  SpecTranslate (..),
+  askSpecTransM,
   toSpecRepMap,
+  withCtxSpecTransM,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Base ()
 
 instance SpecTranslate DijkstraEra (PState DijkstraEra) where
   type SpecRep DijkstraEra (PState DijkstraEra) = Agda.PState
 
-  toSpecRep PState {..} =
-    Agda.MkPState
-      <$> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools)
-      <*> toSpecRepMap psFutureStakePoolParams
-      <*> toSpecRepMap psRetiring
-      <*> toSpecRepMap (fromCompact . spsDeposit <$> psStakePools)
+  type SpecContext DijkstraEra (PState DijkstraEra) = Network
+
+  toSpecRep PState {..} = do
+    netId <- askSpecTransM
+    withCtxSpecTransM () $
+      Agda.MkPState
+        <$> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams netId) psStakePools)
+        <*> toSpecRepMap psFutureStakePoolParams
+        <*> toSpecRepMap psRetiring
+        <*> toSpecRepMap (fromCompact . spsDeposit <$> psStakePools)
 
 instance SpecTranslate DijkstraEra PoolCert where
   type SpecRep DijkstraEra PoolCert = Agda.DCert

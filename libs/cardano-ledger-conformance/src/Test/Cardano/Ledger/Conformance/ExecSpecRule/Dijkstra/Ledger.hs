@@ -17,7 +17,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra.Ledger (DijkstraLed
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Scripts (AsItem)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
-import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.BaseTypes (Globals (networkId), Network, StrictMaybe)
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Conway.Core (
@@ -49,6 +49,7 @@ import Lens.Micro
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import qualified Test.Cardano.Ledger.Binary.TreeDiff as TD
 import Test.Cardano.Ledger.Common (NFData, ToExpr (..))
+import Test.Cardano.Ledger.Conformance (withSpecTransM)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   ExecSpecTopLevelRule (..),
@@ -70,6 +71,7 @@ data DijkstraLedgerExecContext era
   { dlecGuardrailsScriptHash :: StrictMaybe ScriptHash
   , dlecEnactState :: Conway.EnactState era
   , dlecUtxoExecContext :: UtxoExecContext era
+  , dlecNetworkId :: Network
   }
   deriving (Generic)
 
@@ -109,6 +111,7 @@ instance
         !> To dlecGuardrailsScriptHash
         !> To dlecEnactState
         !> To dlecUtxoExecContext
+        !> To dlecNetworkId
 
 -- | Note: 'TxInfoResult' is forced only to WHNF since it contains thunks/functions
 -- (via 'PlutusTxInfoResult') that cannot be fully evaluated.
@@ -209,14 +212,16 @@ instance ExecSpecRule "LEDGER" DijkstraEra where
   translateInputs (TRC (env, st, sig)) = do
     DijkstraLedgerExecContext {..} <- askSpecTransM
     agdaEnv <- withCtxSpecTransM (dlecGuardrailsScriptHash, dlecEnactState) $ toSpecRep env
-    agdaSt <- withCtxSpecTransM () $ toSpecRep st
+    agdaSt <- withCtxSpecTransM dlecNetworkId $ toSpecRep st
     agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
+
+  translateOutput _ = withSpecTransM dlecNetworkId . toSpecRep
 
   runAgdaRule = runFromAgdaFunction Agda.ledgerStep
 
 instance ExecSpecTopLevelRule "LEDGER" DijkstraEra where
-  mkRuleExecContext _ (TRC (env, state, signal)) =
+  mkRuleExecContext globals (TRC (env, state, signal)) =
     DijkstraLedgerExecContext
       { dlecGuardrailsScriptHash =
           state ^. lsUTxOStateL . utxosGovStateL . constitutionGovStateL . constitutionGuardrailsScriptHashL
@@ -232,4 +237,5 @@ instance ExecSpecTopLevelRule "LEDGER" DijkstraEra where
                   , Shelley.ueCertState = state ^. lsCertStateL
                   }
             }
+      , dlecNetworkId = networkId globals
       }

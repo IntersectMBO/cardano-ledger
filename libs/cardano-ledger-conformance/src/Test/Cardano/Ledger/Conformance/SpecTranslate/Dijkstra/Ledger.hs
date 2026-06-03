@@ -12,6 +12,7 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Ledger () where
 
+import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -71,10 +72,12 @@ instance SpecTranslate DijkstraEra (Shelley.LedgerEnv DijkstraEra) where
 instance SpecTranslate DijkstraEra (LedgerState DijkstraEra) where
   type SpecRep DijkstraEra (LedgerState DijkstraEra) = Agda.LedgerState
 
+  type SpecContext DijkstraEra (LedgerState DijkstraEra) = Network
+
   toSpecRep (LedgerState {..}) =
     Agda.MkLedgerState
-      <$> toSpecRep lsUTxOState
-      <*> toSpecRep (utxosGovState lsUTxOState ^. proposalsGovStateL)
+      <$> withCtxSpecTransM () (toSpecRep lsUTxOState)
+      <*> withCtxSpecTransM () (toSpecRep (utxosGovState lsUTxOState ^. proposalsGovStateL))
       <*> toSpecRep lsCertState
 
 instance SpecTranslate DijkstraEra (TxBody TopTx DijkstraEra) where

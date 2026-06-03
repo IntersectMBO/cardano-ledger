@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Test.Cardano.Ledger.Conformance.Imp.Core where
 
@@ -92,7 +93,7 @@ conformanceHook globals trc@(TRC (env, state, signal)) ctx impRuleResult =
 
 submitTxConformanceHook ::
   forall era t.
-  ExecSpecTopLevelRule "LEDGER" era =>
+  (HasCallStack, ExecSpecTopLevelRule "LEDGER" era) =>
   Globals ->
   TRC (EraRule "LEDGER" era) ->
   Either
@@ -104,8 +105,7 @@ submitTxConformanceHook globals trc =
 
 epochBoundaryConformanceHook ::
   forall era t.
-  ( ExecSpecRule "NEWEPOCH" era
-  , ExecContext "NEWEPOCH" era ~ ()
+  ( ExecSpecTopLevelRule "NEWEPOCH" era
   , ToExpr (Event (EraRule "NEWEPOCH" era))
   ) =>
   Globals ->
@@ -113,4 +113,4 @@ epochBoundaryConformanceHook ::
   State (EraRule "NEWEPOCH" era) ->
   ImpM t ()
 epochBoundaryConformanceHook globals trc res =
-  conformanceHook @"NEWEPOCH" @era globals trc () $ Right (res, [])
+  conformanceHook @"NEWEPOCH" @era globals trc (mkRuleExecContext globals trc) $ Right (res, [])
