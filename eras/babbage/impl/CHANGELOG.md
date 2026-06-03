@@ -2,7 +2,6 @@
 
 ## 1.14.0.0
 
-* Add `generate-cbor` executable
 * Replace arguments of `babbageEvalScriptsTxInvalid` with `StAnnTx`
 * Replace arguments of `expectScriptsToPass` with `StAnnTx`
 * Change `Signal` to `StAnnTx TopTx era` for: `BabbageLEDGER`, `BabbageUTXOW`, `BabbageUTXO`, `BabbageUTXOS`

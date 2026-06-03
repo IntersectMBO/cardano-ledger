@@ -12,9 +12,6 @@ cradle:
     - path: "eras/allegra/impl/cddl/exe/Paths_cardano_ledger_allegra.hs"
       component: "cardano-ledger-allegra:exe:generate-cddl"
 
-    - path: "eras/allegra/impl/cddl/exe/GenerateCBOR.hs"
-      component: "cardano-ledger-allegra:exe:generate-cbor"
-
     - path: "eras/allegra/impl/testlib"
       component: "cardano-ledger-allegra:lib:testlib"
 
@@ -32,9 +29,6 @@ cradle:
 
     - path: "eras/alonzo/impl/cddl/exe/Paths_cardano_ledger_alonzo.hs"
       component: "cardano-ledger-alonzo:exe:generate-cddl"
-
-    - path: "eras/alonzo/impl/cddl/exe/GenerateCBOR.hs"
-      component: "cardano-ledger-alonzo:exe:generate-cbor"
 
     - path: "eras/alonzo/impl/testlib"
       component: "cardano-ledger-alonzo:lib:testlib"
@@ -65,9 +59,6 @@ cradle:
 
     - path: "eras/babbage/impl/cddl/exe/Paths_cardano_ledger_babbage.hs"
       component: "cardano-ledger-babbage:exe:generate-cddl"
-
-    - path: "eras/babbage/impl/cddl/exe/GenerateCBOR.hs"
-      component: "cardano-ledger-babbage:exe:generate-cbor"
 
     - path: "eras/babbage/impl/testlib"
       component: "cardano-ledger-babbage:lib:testlib"
@@ -126,9 +117,6 @@ cradle:
     - path: "eras/conway/impl/cddl/exe/Paths_cardano_ledger_conway.hs"
       component: "cardano-ledger-conway:exe:generate-cddl"
 
-    - path: "eras/conway/impl/cddl/exe/GenerateCBOR.hs"
-      component: "cardano-ledger-conway:exe:generate-cbor"
-
     - path: "eras/conway/impl/testlib"
       component: "cardano-ledger-conway:lib:testlib"
 
@@ -156,9 +144,6 @@ cradle:
     - path: "eras/dijkstra/impl/cddl/exe/Paths_cardano_ledger_dijkstra.hs"
       component: "cardano-ledger-dijkstra:exe:generate-cddl"
 
-    - path: "eras/dijkstra/impl/cddl/exe/GenerateCBOR.hs"
-      component: "cardano-ledger-dijkstra:exe:generate-cbor"
-
     - path: "eras/dijkstra/impl/test"
       component: "cardano-ledger-dijkstra:test:tests"
 
@@ -173,9 +158,6 @@ cradle:
 
     - path: "eras/mary/impl/cddl/exe/Paths_cardano_ledger_mary.hs"
       component: "cardano-ledger-mary:exe:generate-cddl"
-
-    - path: "eras/mary/impl/cddl/exe/GenerateCBOR.hs"
-      component: "cardano-ledger-mary:exe:generate-cbor"
 
     - path: "eras/mary/impl/testlib"
       component: "cardano-ledger-mary:lib:testlib"
@@ -194,9 +176,6 @@ cradle:
 
     - path: "eras/shelley/impl/cddl/exe/Paths_cardano_ledger_shelley.hs"
       component: "cardano-ledger-shelley:exe:generate-cddl"
-
-    - path: "eras/shelley/impl/cddl/exe/GenerateCBOR.hs"
-      component: "cardano-ledger-shelley:exe:generate-cbor"
 
     - path: "eras/shelley/impl/testlib"
       component: "cardano-ledger-shelley:lib:testlib"
@@ -248,6 +227,9 @@ cradle:
 
     - path: "libs/cardano-ledger-api/test"
       component: "cardano-ledger-api:test:cardano-ledger-api-test"
+
+    - path: "libs/cardano-ledger-api/app/GenerateCBOR.hs"
+      component: "cardano-ledger-api:exe:generate-cbor"
 
     - path: "libs/cardano-ledger-binary/src"
       component: "lib:cardano-ledger-binary"

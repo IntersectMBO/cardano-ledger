@@ -2,6 +2,7 @@
 
 ## 1.13.1.0
 
+* Add `generate-cbor` executable.
 * Add `ToJSON` instances for `StakeSnapshot` and `StakeSnapshots`.
 * Add `ToJSON` instance for `QueryPoolStateResult`.
 * Add `querySetSnapshotStakePoolDistr` (`GetPoolDistr2`).
