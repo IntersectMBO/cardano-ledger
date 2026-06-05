@@ -310,7 +310,7 @@ instance SpecTranslate ConwayEra (ConwayPlutusPurpose AsIx ConwayEra) where
     ConwaySpending (AsIx i) -> pure (Agda.Spend, toInteger i)
     ConwayMinting (AsIx i) -> pure (Agda.Mint, toInteger i)
     ConwayCertifying (AsIx i) -> pure (Agda.Cert, toInteger i)
-    ConwayRewarding (AsIx i) -> pure (Agda.Rewrd, toInteger i)
+    ConwayWithdrawing (AsIx i) -> pure (Agda.Rewrd, toInteger i)
     ConwayVoting (AsIx i) -> pure (Agda.Vote, toInteger i)
     ConwayProposing (AsIx i) -> pure (Agda.Propose, toInteger i)
 

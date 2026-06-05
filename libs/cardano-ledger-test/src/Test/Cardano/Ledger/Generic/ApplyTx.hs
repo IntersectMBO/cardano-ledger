@@ -291,6 +291,6 @@ mkConwayPlutusPurposePointer tag i =
     Spending -> ConwaySpending (AsIx i)
     Minting -> ConwayMinting (AsIx i)
     Certifying -> ConwayCertifying (AsIx i)
-    Rewarding -> ConwayRewarding (AsIx i)
+    Rewarding -> ConwayWithdrawing (AsIx i)
     Voting -> ConwayVoting (AsIx i)
     Proposing -> ConwayProposing (AsIx i)

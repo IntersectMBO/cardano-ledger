@@ -115,7 +115,7 @@ instance Inject (ConwayPlutusPurpose f era) (DijkstraPlutusPurpose f era) where
     ConwaySpending p -> DijkstraSpending p
     ConwayMinting p -> DijkstraMinting p
     ConwayCertifying p -> DijkstraCertifying p
-    ConwayRewarding p -> DijkstraRewarding p
+    ConwayWithdrawing p -> DijkstraRewarding p
     ConwayVoting p -> DijkstraVoting p
     ConwayProposing p -> DijkstraProposing p
 
@@ -411,7 +411,7 @@ instance AlonzoEraScript DijkstraEra where
     ConwaySpending (AsIx ix) -> DijkstraSpending (AsIx ix)
     ConwayMinting (AsIx ix) -> DijkstraMinting (AsIx ix)
     ConwayCertifying (AsIx ix) -> DijkstraCertifying (AsIx ix)
-    ConwayRewarding (AsIx ix) -> DijkstraRewarding (AsIx ix)
+    ConwayWithdrawing (AsIx ix) -> DijkstraRewarding (AsIx ix)
     ConwayVoting (AsIx ix) -> DijkstraVoting (AsIx ix)
     ConwayProposing (AsIx ix) -> DijkstraProposing (AsIx ix)
 
