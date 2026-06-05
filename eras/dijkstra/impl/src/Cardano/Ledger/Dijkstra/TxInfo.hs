@@ -104,8 +104,6 @@ data DijkstraContextError era
     DirectDepositsNotSupported DirectDeposits
   | -- | Attempt to use PlutusV1-V3 with non-empty account balance intervals will result in this failure
     AccountBalanceIntervalsNotSupported (AccountBalanceIntervals era)
-  | -- | Attempt to use sub-transactions with PlutusV1-V3 scripts at the top level will result in this failure
-    SubTxsAreNotSupported (NonEmpty TxId)
   | -- | Attempt to use PlutusV1-V3 with script hashes in guards will result in this failure
     GuardScriptHashesNotSupported (NonEmpty ScriptHash)
   deriving (Generic)
@@ -163,8 +161,6 @@ instance
       kindObject "DirectDepositsNotSupported" ["direct_deposits" .= show dd]
     AccountBalanceIntervalsNotSupported abi ->
       kindObject "AccountBalanceIntervalsNotSupported" ["account_balance_intervals" .= show abi]
-    SubTxsAreNotSupported txIds ->
-      kindObject "SubTxsAreNotSupported" ["txIds" .= toJSON txIds]
     GuardScriptHashesNotSupported scriptHashes ->
       kindObject "GuardScriptHashesNotSupported" ["script_hashes" .= toJSON scriptHashes]
 
@@ -185,8 +181,7 @@ instance
     19 -> SumD UnsupportedScriptInSubTx <! From <! From
     20 -> SumD DirectDepositsNotSupported <! From
     21 -> SumD AccountBalanceIntervalsNotSupported <! From
-    22 -> SumD SubTxsAreNotSupported <! From
-    23 -> SumD GuardScriptHashesNotSupported <! From
+    22 -> SumD GuardScriptHashesNotSupported <! From
     k -> Invalid k
 
 instance
@@ -208,9 +203,8 @@ instance
         Sum UnsupportedScriptInSubTx 19 !> To lang !> To txId
       DirectDepositsNotSupported dd -> Sum DirectDepositsNotSupported 20 !> To dd
       AccountBalanceIntervalsNotSupported abi -> Sum AccountBalanceIntervalsNotSupported 21 !> To abi
-      SubTxsAreNotSupported txIds -> Sum SubTxsAreNotSupported 22 !> To txIds
       GuardScriptHashesNotSupported scriptHashes ->
-        Sum GuardScriptHashesNotSupported 23 !> To scriptHashes
+        Sum GuardScriptHashesNotSupported 22 !> To scriptHashes
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
@@ -429,7 +423,6 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
   let txBody = tx ^. bodyTxL
       directDeposits = txBody ^. directDepositsTxBodyL
       accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
-      subTransactions = txBody ^. subTransactionsTxBodyL
       scriptHashes = [sh | ScriptHashObj sh <- toList (txBody ^. guardsTxBodyL)]
   unless (null $ unDirectDeposits directDeposits) $
     Left $
@@ -439,12 +432,6 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
     Left $
       inject $
         AccountBalanceIntervalsNotSupported @era accountBalanceIntervals
-  case NE.nonEmpty . toList $ OMap.toStrictSeqOKeys subTransactions of
-    Nothing -> Right ()
-    Just subTxIds ->
-      Left $
-        inject $
-          SubTxsAreNotSupported @era subTxIds
   case NE.nonEmpty scriptHashes of
     Nothing -> Right ()
     Just neScriptHashes ->

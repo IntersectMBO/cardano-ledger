@@ -25,7 +25,6 @@
 * Add `TranslateEra` instance for `DijkstraEra VState`
 * Fix `TranslateEra` instance for `DijkstraEra CertState`
 * Add `GuardScriptHashesNotSupported` constructor to `DijkstraContextError`
-* Add `SubTxsAreNotSupported` constructor to `DijkstraContextError`
 * Add `decodeDijkstraTopTx`
 * Change `Signal` to `StAnnTx TopTx era` for: `DijkstraLEDGER`, `DijkstraMEMPOOL`, `DijkstraUTXOW`, `DijkstraUTXO`
 * Change `Signal` to `StAnnTx SubTx era` for: `DijkstraSUBLEDGER`, `DijkstraSUBUTXOW`, `DijkstraSUBUTXO`
