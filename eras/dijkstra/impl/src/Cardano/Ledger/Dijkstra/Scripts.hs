@@ -23,7 +23,7 @@
 
 module Cardano.Ledger.Dijkstra.Scripts (
   PlutusScript (..),
-  DijkstraPlutusPurpose (..),
+  DijkstraPlutusPurpose (.., DijkstraRewarding),
   DijkstraEraScript (..),
   DijkstraNativeScript (MkDijkstraNativeScript),
   DijkstraNativeScriptRaw (..),
@@ -104,18 +104,22 @@ data DijkstraPlutusPurpose f era
   = DijkstraSpending !(f Word32 TxIn)
   | DijkstraMinting !(f Word32 PolicyID)
   | DijkstraCertifying !(f Word32 (TxCert era))
-  | DijkstraRewarding !(f Word32 AccountAddress)
+  | DijkstraWithdrawing !(f Word32 AccountAddress)
   | DijkstraVoting !(f Word32 Voter)
   | DijkstraProposing !(f Word32 (ProposalProcedure era))
   | DijkstraGuarding !(f Word32 ScriptHash)
   deriving (Generic)
+
+pattern DijkstraRewarding :: f Word32 AccountAddress -> DijkstraPlutusPurpose f era
+pattern DijkstraRewarding x = DijkstraWithdrawing x
+{-# DEPRECATED DijkstraRewarding "In favor of `DijkstraWithdrawing`" #-}
 
 instance Inject (ConwayPlutusPurpose f era) (DijkstraPlutusPurpose f era) where
   inject = \case
     ConwaySpending p -> DijkstraSpending p
     ConwayMinting p -> DijkstraMinting p
     ConwayCertifying p -> DijkstraCertifying p
-    ConwayWithdrawing p -> DijkstraRewarding p
+    ConwayWithdrawing p -> DijkstraWithdrawing p
     ConwayVoting p -> DijkstraVoting p
     ConwayProposing p -> DijkstraProposing p
 
@@ -152,7 +156,7 @@ instance
       0 -> DijkstraSpending <$> decCBOR
       1 -> DijkstraMinting <$> decCBOR
       2 -> DijkstraCertifying <$> decCBOR
-      3 -> DijkstraRewarding <$> decCBOR
+      3 -> DijkstraWithdrawing <$> decCBOR
       4 -> DijkstraVoting <$> decCBOR
       5 -> DijkstraProposing <$> decCBOR
       6 -> DijkstraGuarding <$> decCBOR
@@ -170,7 +174,7 @@ instance
     DijkstraSpending p -> encodeWord8 0 <> encCBOR p
     DijkstraMinting p -> encodeWord8 1 <> encCBOR p
     DijkstraCertifying p -> encodeWord8 2 <> encCBOR p
-    DijkstraRewarding p -> encodeWord8 3 <> encCBOR p
+    DijkstraWithdrawing p -> encodeWord8 3 <> encCBOR p
     DijkstraVoting p -> encodeWord8 4 <> encCBOR p
     DijkstraProposing p -> encodeWord8 5 <> encCBOR p
     DijkstraGuarding p -> encodeWord8 6 <> encCBOR p
@@ -186,7 +190,7 @@ instance
     DijkstraSpending n -> kindObjectWithValue "DijkstraSpending" n
     DijkstraMinting n -> kindObjectWithValue "DijkstraMinting" n
     DijkstraCertifying n -> kindObjectWithValue "DijkstraCertifying" n
-    DijkstraRewarding n -> kindObjectWithValue "DijkstraRewarding" n
+    DijkstraWithdrawing n -> kindObjectWithValue "DijkstraWithdrawing" n
     DijkstraVoting n -> kindObjectWithValue "DijkstraVoting" n
     DijkstraProposing n -> kindObjectWithValue "DijkstraProposing" n
     DijkstraGuarding n -> kindObjectWithValue "DijkstraGuarding" n
@@ -382,7 +386,7 @@ instance AlonzoEraScript DijkstraEra where
     DijkstraSpending x -> DijkstraSpending $ f x
     DijkstraMinting x -> DijkstraMinting $ f x
     DijkstraCertifying x -> DijkstraCertifying $ f x
-    DijkstraRewarding x -> DijkstraRewarding $ f x
+    DijkstraWithdrawing x -> DijkstraWithdrawing $ f x
     DijkstraVoting x -> DijkstraVoting $ f x
     DijkstraProposing x -> DijkstraProposing $ f x
     DijkstraGuarding x -> DijkstraGuarding $ f x
@@ -402,16 +406,16 @@ instance AlonzoEraScript DijkstraEra where
   toCertifyingPurpose (DijkstraCertifying i) = Just i
   toCertifyingPurpose _ = Nothing
 
-  mkRewardingPurpose = DijkstraRewarding
+  mkRewardingPurpose = DijkstraWithdrawing
 
-  toRewardingPurpose (DijkstraRewarding i) = Just i
+  toRewardingPurpose (DijkstraWithdrawing i) = Just i
   toRewardingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIx = \case
     ConwaySpending (AsIx ix) -> DijkstraSpending (AsIx ix)
     ConwayMinting (AsIx ix) -> DijkstraMinting (AsIx ix)
     ConwayCertifying (AsIx ix) -> DijkstraCertifying (AsIx ix)
-    ConwayWithdrawing (AsIx ix) -> DijkstraRewarding (AsIx ix)
+    ConwayWithdrawing (AsIx ix) -> DijkstraWithdrawing (AsIx ix)
     ConwayVoting (AsIx ix) -> DijkstraVoting (AsIx ix)
     ConwayProposing (AsIx ix) -> DijkstraProposing (AsIx ix)
 

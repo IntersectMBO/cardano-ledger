@@ -333,7 +333,7 @@ instance SpecTranslate DijkstraEra (DijkstraPlutusPurpose AsIx DijkstraEra) wher
     DijkstraSpending (AsIx i) -> pure (Agda.Spend, toInteger i)
     DijkstraMinting (AsIx i) -> pure (Agda.Mint, toInteger i)
     DijkstraCertifying (AsIx i) -> pure (Agda.Cert, toInteger i)
-    DijkstraRewarding (AsIx i) -> pure (Agda.Reward, toInteger i)
+    DijkstraWithdrawing (AsIx i) -> pure (Agda.Reward, toInteger i)
     DijkstraVoting (AsIx i) -> pure (Agda.Vote, toInteger i)
     DijkstraProposing (AsIx i) -> pure (Agda.Propose, toInteger i)
     DijkstraGuarding (AsIx i) -> pure (Agda.Guard, toInteger i)
