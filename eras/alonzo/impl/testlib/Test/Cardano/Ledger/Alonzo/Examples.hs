@@ -231,7 +231,7 @@ addAlonzoBasedTxFeatureExamples tx =
           [ (SpendingPurpose $ AsIx 0, (redeemerData, ExUnits 5000 5000))
           , (MintingPurpose $ AsIx 1, (redeemerData, ExUnits 5000 5000))
           , (CertifyingPurpose $ AsIx 2, (redeemerData, ExUnits 5000 5000))
-          , (RewardingPurpose $ AsIx 3, (redeemerData, ExUnits 5000 5000))
+          , (WithdrawingPurpose $ AsIx 3, (redeemerData, ExUnits 5000 5000))
           ]
     redeemerData = Data (P.Constr 1 [P.List [P.I 1], P.Map [(P.I 2, P.B "2")]])
 

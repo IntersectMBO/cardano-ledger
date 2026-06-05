@@ -12,6 +12,7 @@ module Cardano.Ledger.Alonzo.Core (
   pattern SpendingPurpose,
   pattern MintingPurpose,
   pattern CertifyingPurpose,
+  pattern WithdrawingPurpose,
   pattern RewardingPurpose,
   ScriptIntegrityHash,
   AlonzoEraTxBody (..),
@@ -68,6 +69,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   pattern MintingPurpose,
   pattern RewardingPurpose,
   pattern SpendingPurpose,
+  pattern WithdrawingPurpose,
  )
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoEraTxAuxData (..))

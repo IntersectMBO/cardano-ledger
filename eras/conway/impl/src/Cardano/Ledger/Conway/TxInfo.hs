@@ -633,7 +633,7 @@ transPlutusPurposeV3 proxy pv = \case
   MintingPurpose (AsIxItem _ policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
   CertifyingPurpose (AsIxItem ix txCert) ->
     PV3.Certifying (toInteger ix) <$> toPlutusTxCert proxy pv txCert
-  RewardingPurpose (AsIxItem _ accountAddress) -> pure $ PV3.Rewarding (transAccountAddress accountAddress)
+  WithdrawingPurpose (AsIxItem _ accountAddress) -> pure $ PV3.Rewarding (transAccountAddress accountAddress)
   VotingPurpose (AsIxItem _ voter) -> pure $ PV3.Voting (transVoter voter)
   ProposingPurpose (AsIxItem ix proposal) ->
     pure $ PV3.Proposing (toInteger ix) (transProposal proxy proposal)
@@ -730,7 +730,7 @@ transPlutusPurposeV1V2 proxy pv = \case
   SpendingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoSpending asIxItem
   MintingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoMinting asIxItem
   CertifyingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoCertifying asIxItem
-  RewardingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoWithdrawing asIxItem
+  WithdrawingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoWithdrawing asIxItem
   purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem purpose
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion

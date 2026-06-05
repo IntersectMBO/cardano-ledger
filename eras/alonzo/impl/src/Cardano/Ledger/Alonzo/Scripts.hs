@@ -47,6 +47,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   pattern SpendingPurpose,
   pattern MintingPurpose,
   pattern CertifyingPurpose,
+  pattern WithdrawingPurpose,
   pattern RewardingPurpose,
   AlonzoPlutusPurpose (.., AlonzoRewarding),
   AsPurpose (..),
@@ -440,11 +441,18 @@ pattern CertifyingPurpose c <- (toCertifyingPurpose -> Just c)
   where
     CertifyingPurpose c = mkCertifyingPurpose c
 
+pattern WithdrawingPurpose ::
+  AlonzoEraScript era => f Word32 AccountAddress -> PlutusPurpose f era
+pattern WithdrawingPurpose c <- (toWithdrawingPurpose -> Just c)
+  where
+    WithdrawingPurpose c = mkWithdrawingPurpose c
+
 pattern RewardingPurpose ::
   AlonzoEraScript era => f Word32 AccountAddress -> PlutusPurpose f era
 pattern RewardingPurpose c <- (toWithdrawingPurpose -> Just c)
   where
     RewardingPurpose c = mkWithdrawingPurpose c
+{-# DEPRECATED RewardingPurpose "In favor of `WithdrawingPurpose`" #-}
 
 -- Alonzo Script ===============================================================
 

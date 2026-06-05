@@ -380,7 +380,7 @@ getRewardingScriptsNeeded txBody =
   AlonzoScriptsNeeded $
     catMaybes $
       zipAsIxItem (Map.keys (unWithdrawals $ txBody ^. withdrawalsTxBodyL)) $
-        \asIxItem@(AsIxItem _ accountAddress) -> (RewardingPurpose asIxItem,) <$> credScriptHash (accountAddress ^. accountAddressCredentialL)
+        \asIxItem@(AsIxItem _ accountAddress) -> (WithdrawingPurpose asIxItem,) <$> credScriptHash (accountAddress ^. accountAddressCredentialL)
 {-# INLINEABLE getRewardingScriptsNeeded #-}
 
 getMintingScriptsNeeded ::

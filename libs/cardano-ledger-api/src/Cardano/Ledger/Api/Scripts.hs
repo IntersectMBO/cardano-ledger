@@ -42,6 +42,7 @@ module Cardano.Ledger.Api.Scripts (
   pattern SpendingPurpose,
   pattern MintingPurpose,
   pattern CertifyingPurpose,
+  pattern WithdrawingPurpose,
   pattern RewardingPurpose,
   CostModels,
 
@@ -72,6 +73,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   pattern MintingPurpose,
   pattern RewardingPurpose,
   pattern SpendingPurpose,
+  pattern WithdrawingPurpose,
  )
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Scripts.Data
