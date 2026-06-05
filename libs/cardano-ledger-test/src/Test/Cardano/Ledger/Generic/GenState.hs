@@ -321,8 +321,8 @@ plutusPurposeTags = \case
   Shelley {} -> []
   Allegra {} -> []
   Mary {} -> []
-  Alonzo {} -> [Spending .. Rewarding]
-  Babbage {} -> [Spending .. Rewarding]
+  Alonzo {} -> [Spending .. Withdrawing]
+  Babbage {} -> [Spending .. Withdrawing]
   Conway {} -> [Spending .. Proposing]
 
 -- =====================================================================
@@ -880,7 +880,7 @@ genCredential tag =
     genKeyHash' = do
       kh <- genFreshKeyHash -- We need to avoid some key credentials
       case tag of
-        Rewarding -> do
+        Withdrawing -> do
           accountState <- genNewAccountState
           modifyGenStateInitialAccounts (Map.insert (KeyHashObj kh) accountState)
         _ -> pure ()
@@ -897,7 +897,7 @@ genCredential tag =
               if Map.notMember newcred initialRewards && Set.notMember newcred avoidCredentials
                 then do
                   case tag of
-                    Rewarding -> do
+                    Withdrawing -> do
                       accountState <- genNewAccountState
                       modifyGenStateInitialAccounts (Map.insert newcred accountState)
                     _ -> pure ()
@@ -967,7 +967,7 @@ genStakePoolParams sppId = do
   sppPledge <- lift genPositiveVal
   sppCost <- lift genPositiveVal
   sppMargin <- lift arbitrary
-  sppAccountAddress <- AccountAddress Testnet . AccountId <$> genFreshRegCred Rewarding
+  sppAccountAddress <- AccountAddress Testnet . AccountId <$> genFreshRegCred Withdrawing
   let sppOwners = mempty
   let sppRelays = mempty
   let sppMetadata = SNothing
@@ -1027,7 +1027,7 @@ initStableFields = do
   credentials <- replicateM (maxStablePools geSize) $ do
     old <- gets (Map.keysSet . gsInitialAccounts)
     prev <- gets gsAvoidCred
-    cred <- genFreshCredential 100 Rewarding (Set.union old prev)
+    cred <- genFreshCredential 100 Withdrawing (Set.union old prev)
     return cred
   zipWithM_ (\cred poolId -> registerNewAccount cred (Just poolId)) credentials hashes
   modifyGenStateStableDelegators (Set.union (Set.fromList credentials))
@@ -1057,7 +1057,7 @@ genRewards = do
   -- generated here, or one that arose from gsAvoidCred (i.e. prev)
   old <- gets (Map.keysSet . gsInitialAccounts)
   prev <- gets gsAvoidCred
-  credentials <- genFreshCredentials n 100 Rewarding (Set.union old prev) []
+  credentials <- genFreshCredentials n 100 Withdrawing (Set.union old prev) []
   balances <- forM credentials $ \cred -> do
     registerNewAccount cred Nothing
     (,) cred <$> lift genRewardVal

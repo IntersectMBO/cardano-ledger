@@ -375,7 +375,7 @@ genNoScriptRecipient = do
 genRecipient :: Reflect era => GenRS era Addr
 genRecipient = do
   paymentCred <- genCredential @Payment Spending
-  stakeCred <- genCredential @Staking Rewarding
+  stakeCred <- genCredential @Staking Withdrawing
   pure (mkAddr paymentCred stakeCred)
 
 genDatum :: Era era => GenRS era (Data era)
@@ -887,7 +887,7 @@ genAlonzoTxAndInfo slot = do
       else Just <$> genTxOut (inject withdrawalAmount)
   let wdrlCreds = map ((^. accountAddressCredentialL) . fst) $ Map.toAscList wdrlMap
   (IsValid v2, mkWithdrawalsWits) <-
-    redeemerWitnessMaker Rewarding $ map (Just . (,) genDatum) wdrlCreds
+    redeemerWitnessMaker Withdrawing $ map (Just . (,) genDatum) wdrlCreds
 
   dcerts <- genTxCerts slot
   let dcertCreds = map getTxCertCredential dcerts
@@ -908,7 +908,7 @@ genAlonzoTxAndInfo slot = do
       (genTxOutKeyWitness (Just Spending))
       (toSpendNoCollateralTxOuts ++ Map.elems refInputsUtxo)
   dcertWitsMakers <- mapM (mkWitVKey (Just Certifying)) $ catMaybes dcertCreds
-  rewardsWitsMakers <- mapM (mkWitVKey (Just Rewarding)) wdrlCreds
+  rewardsWitsMakers <- mapM (mkWitVKey (Just Withdrawing)) wdrlCreds
 
   -- 5. Estimate inputs that will be used as collateral
   maxCollateralCount <-

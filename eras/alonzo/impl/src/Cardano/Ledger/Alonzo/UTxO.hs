@@ -292,7 +292,7 @@ getInputDataHashesTxBody (UTxO utxo) txBody (ScriptsProvided scriptsProvided) =
 --    In some Eras there may be multiple sets of inputs, which ones should be included? Currently that
 --    is only the spending inputs. Because collateral inputs can only have key-locked credentials,
 --    and reference inputs are never authorized. That might not always be the case.
--- 2) Rewarding (Withdrawals),
+-- 2) Withdrawing,
 -- 3) Minting (minted field), and
 -- 4) Certifying (Delegating) scripts.
 --
