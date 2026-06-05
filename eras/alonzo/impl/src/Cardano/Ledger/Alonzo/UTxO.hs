@@ -23,6 +23,7 @@ module Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded (..),
   getAlonzoScriptsNeeded,
   getSpendingScriptsNeeded,
+  getWithdrawingScriptsNeeded,
   getRewardingScriptsNeeded,
   getMintingScriptsNeeded,
   getAlonzoScriptsHashesNeeded,
@@ -307,7 +308,7 @@ getAlonzoScriptsNeeded ::
   AlonzoScriptsNeeded era
 getAlonzoScriptsNeeded utxo txBody =
   getSpendingScriptsNeeded utxo txBody
-    <> getRewardingScriptsNeeded txBody
+    <> getWithdrawingScriptsNeeded txBody
     <> certifyingScriptsNeeded
     <> getMintingScriptsNeeded txBody
   where
@@ -372,16 +373,23 @@ getSpendingScriptsNeeded (UTxO utxo) txBody =
           return (SpendingPurpose asIxItem, hash)
 {-# INLINEABLE getSpendingScriptsNeeded #-}
 
-getRewardingScriptsNeeded ::
+getWithdrawingScriptsNeeded ::
   (AlonzoEraScript era, EraTxBody era) =>
   TxBody l era ->
   AlonzoScriptsNeeded era
-getRewardingScriptsNeeded txBody =
+getWithdrawingScriptsNeeded txBody =
   AlonzoScriptsNeeded $
     catMaybes $
       zipAsIxItem (Map.keys (unWithdrawals $ txBody ^. withdrawalsTxBodyL)) $
         \asIxItem@(AsIxItem _ accountAddress) -> (WithdrawingPurpose asIxItem,) <$> credScriptHash (accountAddress ^. accountAddressCredentialL)
-{-# INLINEABLE getRewardingScriptsNeeded #-}
+{-# INLINEABLE getWithdrawingScriptsNeeded #-}
+
+getRewardingScriptsNeeded ::
+  (AlonzoEraScript era, EraTxBody era) =>
+  TxBody l era ->
+  AlonzoScriptsNeeded era
+getRewardingScriptsNeeded = getWithdrawingScriptsNeeded
+{-# DEPRECATED getRewardingScriptsNeeded "In favor of `getWithdrawingScriptsNeeded`" #-}
 
 getMintingScriptsNeeded ::
   (AlonzoEraScript era, MaryEraTxBody era) =>
