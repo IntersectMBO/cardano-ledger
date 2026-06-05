@@ -301,7 +301,7 @@ instance SpecTranslate ConwayEra (AlonzoPlutusPurpose AsIx ConwayEra) where
     AlonzoSpending (AsIx i) -> pure (Agda.Spend, toInteger i)
     AlonzoMinting (AsIx i) -> pure (Agda.Mint, toInteger i)
     AlonzoCertifying (AsIx i) -> pure (Agda.Cert, toInteger i)
-    AlonzoRewarding (AsIx i) -> pure (Agda.Rewrd, toInteger i)
+    AlonzoWithdrawing (AsIx i) -> pure (Agda.Rewrd, toInteger i)
 
 instance SpecTranslate ConwayEra (ConwayPlutusPurpose AsIx ConwayEra) where
   type SpecRep ConwayEra (ConwayPlutusPurpose AsIx ConwayEra) = Agda.RdmrPtr

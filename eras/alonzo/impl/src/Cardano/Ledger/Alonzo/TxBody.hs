@@ -525,8 +525,8 @@ alonzoRedeemerPointer txBody = \case
     AlonzoMinting <$> indexOf policyID (txBody ^. mintedTxBodyF :: Set PolicyID)
   AlonzoCertifying txCert ->
     AlonzoCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
-  AlonzoRewarding accountAddress ->
-    AlonzoRewarding <$> indexOf accountAddress (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  AlonzoWithdrawing accountAddress ->
+    AlonzoWithdrawing <$> indexOf accountAddress (unWithdrawals (txBody ^. withdrawalsTxBodyL))
 
 alonzoRedeemerPointerInverse ::
   MaryEraTxBody era =>
@@ -540,8 +540,8 @@ alonzoRedeemerPointerInverse txBody = \case
     AlonzoMinting <$> fromIndex idx (txBody ^. mintedTxBodyF)
   AlonzoCertifying idx ->
     AlonzoCertifying <$> fromIndex idx (txBody ^. certsTxBodyL)
-  AlonzoRewarding idx ->
-    AlonzoRewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  AlonzoWithdrawing idx ->
+    AlonzoWithdrawing <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
 
 class Indexable elem container where
   indexOf :: AsItem Word32 elem -> container -> StrictMaybe (AsIx Word32 elem)

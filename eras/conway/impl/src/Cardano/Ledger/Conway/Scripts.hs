@@ -140,7 +140,7 @@ instance AlonzoEraScript ConwayEra where
     AlonzoSpending (AsIx ix) -> ConwaySpending (AsIx ix)
     AlonzoMinting (AsIx ix) -> ConwayMinting (AsIx ix)
     AlonzoCertifying (AsIx ix) -> ConwayCertifying (AsIx ix)
-    AlonzoRewarding (AsIx ix) -> ConwayRewarding (AsIx ix)
+    AlonzoWithdrawing (AsIx ix) -> ConwayRewarding (AsIx ix)
 
 instance ConwayEraScript ConwayEra where
   mkVotingPurpose = ConwayVoting

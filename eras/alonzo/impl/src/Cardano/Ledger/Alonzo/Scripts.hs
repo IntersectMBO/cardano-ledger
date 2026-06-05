@@ -48,7 +48,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   pattern MintingPurpose,
   pattern CertifyingPurpose,
   pattern RewardingPurpose,
-  AlonzoPlutusPurpose (..),
+  AlonzoPlutusPurpose (.., AlonzoRewarding),
   AsPurpose (..),
   AsItem (..),
   AsIx (..),
@@ -309,7 +309,7 @@ data AlonzoPlutusPurpose f era
   = AlonzoSpending !(f Word32 TxIn)
   | AlonzoMinting !(f Word32 PolicyID)
   | AlonzoCertifying !(f Word32 (TxCert era))
-  | AlonzoRewarding !(f Word32 AccountAddress)
+  | AlonzoWithdrawing !(f Word32 AccountAddress)
   deriving (Generic)
 
 deriving instance Eq (AlonzoPlutusPurpose AsIx era)
@@ -340,7 +340,7 @@ instance
     AlonzoSpending x -> rnf x
     AlonzoMinting x -> rnf x
     AlonzoCertifying x -> rnf x
-    AlonzoRewarding x -> rnf x
+    AlonzoWithdrawing x -> rnf x
 
 instance
   ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
@@ -354,7 +354,7 @@ instance
     AlonzoSpending p -> encodeWord8 0 <> encCBOR p
     AlonzoMinting p -> encodeWord8 1 <> encCBOR p
     AlonzoCertifying p -> encodeWord8 2 <> encCBOR p
-    AlonzoRewarding p -> encodeWord8 3 <> encCBOR p
+    AlonzoWithdrawing p -> encodeWord8 3 <> encCBOR p
 
 instance
   ( forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)
@@ -369,7 +369,7 @@ instance
       0 -> AlonzoSpending <$> decCBOR
       1 -> AlonzoMinting <$> decCBOR
       2 -> AlonzoCertifying <$> decCBOR
-      3 -> AlonzoRewarding <$> decCBOR
+      3 -> AlonzoWithdrawing <$> decCBOR
       n -> fail $ "Unexpected tag for AlonzoPlutusPurpose: " <> show n
 
 deriving via
@@ -404,9 +404,13 @@ instance
     AlonzoSpending n -> kindObjectWithValue "AlonzoSpending" n
     AlonzoMinting n -> kindObjectWithValue "AlonzoMinting" n
     AlonzoCertifying n -> kindObjectWithValue "AlonzoCertifying" n
-    AlonzoRewarding n -> kindObjectWithValue "AlonzoRewarding" n
+    AlonzoWithdrawing n -> kindObjectWithValue "AlonzoWithdrawing" n
     where
       kindObjectWithValue name n = kindObject name ["value" .= n]
+
+pattern AlonzoRewarding :: f Word32 AccountAddress -> AlonzoPlutusPurpose f era
+pattern AlonzoRewarding x = AlonzoWithdrawing x
+{-# DEPRECATED AlonzoRewarding "In favor of `AlonzoWithdrawing`" #-}
 
 pattern SpendingPurpose ::
   AlonzoEraScript era => f Word32 TxIn -> PlutusPurpose f era
@@ -546,7 +550,7 @@ instance AlonzoEraScript AlonzoEra where
     AlonzoSpending x -> AlonzoSpending $ f x
     AlonzoMinting x -> AlonzoMinting $ f x
     AlonzoCertifying x -> AlonzoCertifying $ f x
-    AlonzoRewarding x -> AlonzoRewarding $ f x
+    AlonzoWithdrawing x -> AlonzoWithdrawing $ f x
 
   mkSpendingPurpose = AlonzoSpending
 
@@ -563,9 +567,9 @@ instance AlonzoEraScript AlonzoEra where
   toCertifyingPurpose (AlonzoCertifying i) = Just i
   toCertifyingPurpose _ = Nothing
 
-  mkRewardingPurpose = AlonzoRewarding
+  mkRewardingPurpose = AlonzoWithdrawing
 
-  toRewardingPurpose (AlonzoRewarding i) = Just i
+  toRewardingPurpose (AlonzoWithdrawing i) = Just i
   toRewardingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIx =
