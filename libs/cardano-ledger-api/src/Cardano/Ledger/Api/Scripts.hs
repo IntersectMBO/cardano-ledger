@@ -35,6 +35,7 @@ module Cardano.Ledger.Api.Scripts (
     toSpendingPurpose,
     toMintingPurpose,
     toCertifyingPurpose,
+    toWithdrawingPurpose,
     toRewardingPurpose
   ),
   isPlutusScript,
@@ -128,7 +129,7 @@ class EraScript era => AnyEraScript era where
   anyEraToRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
   default anyEraToRewardingPurpose ::
     AlonzoEraScript era => PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
-  anyEraToRewardingPurpose = toRewardingPurpose
+  anyEraToRewardingPurpose = toWithdrawingPurpose
 
   anyEraToVotingPurpose :: PlutusPurpose f era -> Maybe (f Word32 Voter)
   default anyEraToVotingPurpose ::

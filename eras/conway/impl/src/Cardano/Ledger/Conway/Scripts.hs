@@ -131,10 +131,10 @@ instance AlonzoEraScript ConwayEra where
   toCertifyingPurpose (ConwayCertifying i) = Just i
   toCertifyingPurpose _ = Nothing
 
-  mkRewardingPurpose = ConwayWithdrawing
+  mkWithdrawingPurpose = ConwayWithdrawing
 
-  toRewardingPurpose (ConwayWithdrawing i) = Just i
-  toRewardingPurpose _ = Nothing
+  toWithdrawingPurpose (ConwayWithdrawing i) = Just i
+  toWithdrawingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIx = \case
     AlonzoSpending (AsIx ix) -> ConwaySpending (AsIx ix)

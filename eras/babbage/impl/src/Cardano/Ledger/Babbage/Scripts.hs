@@ -92,10 +92,10 @@ instance AlonzoEraScript BabbageEra where
   toCertifyingPurpose (AlonzoCertifying i) = Just i
   toCertifyingPurpose _ = Nothing
 
-  mkRewardingPurpose = AlonzoWithdrawing
+  mkWithdrawingPurpose = AlonzoWithdrawing
 
-  toRewardingPurpose (AlonzoWithdrawing i) = Just i
-  toRewardingPurpose _ = Nothing
+  toWithdrawingPurpose (AlonzoWithdrawing i) = Just i
+  toWithdrawingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIx = \case
     AlonzoMinting (AsIx ix) -> AlonzoMinting (AsIx ix)

@@ -200,14 +200,24 @@ class
 
   toCertifyingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (TxCert era))
 
+  mkWithdrawingPurpose :: f Word32 AccountAddress -> PlutusPurpose f era
+
+  toWithdrawingPurpose :: PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
+
   mkRewardingPurpose :: f Word32 AccountAddress -> PlutusPurpose f era
+  mkRewardingPurpose = mkWithdrawingPurpose
 
   toRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
+  toRewardingPurpose = toWithdrawingPurpose
 
   upgradePlutusPurposeAsIx ::
     AlonzoEraScript (PreviousEra era) =>
     PlutusPurpose AsIx (PreviousEra era) ->
     PlutusPurpose AsIx era
+
+{-# DEPRECATED mkRewardingPurpose "In favor of `mkWithdrawingPurpose`" #-}
+
+{-# DEPRECATED toRewardingPurpose "In favor of `toWithdrawingPurpose`" #-}
 
 mkBinaryPlutusScript ::
   (MonadFail m, AlonzoEraScript era) =>
@@ -432,9 +442,9 @@ pattern CertifyingPurpose c <- (toCertifyingPurpose -> Just c)
 
 pattern RewardingPurpose ::
   AlonzoEraScript era => f Word32 AccountAddress -> PlutusPurpose f era
-pattern RewardingPurpose c <- (toRewardingPurpose -> Just c)
+pattern RewardingPurpose c <- (toWithdrawingPurpose -> Just c)
   where
-    RewardingPurpose c = mkRewardingPurpose c
+    RewardingPurpose c = mkWithdrawingPurpose c
 
 -- Alonzo Script ===============================================================
 
@@ -567,10 +577,10 @@ instance AlonzoEraScript AlonzoEra where
   toCertifyingPurpose (AlonzoCertifying i) = Just i
   toCertifyingPurpose _ = Nothing
 
-  mkRewardingPurpose = AlonzoWithdrawing
+  mkWithdrawingPurpose = AlonzoWithdrawing
 
-  toRewardingPurpose (AlonzoWithdrawing i) = Just i
-  toRewardingPurpose _ = Nothing
+  toWithdrawingPurpose (AlonzoWithdrawing i) = Just i
+  toWithdrawingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIx =
     error "Impossible: No `PlutusScript` and `AlonzoEraScript` instances in the previous era"

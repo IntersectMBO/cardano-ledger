@@ -406,10 +406,10 @@ instance AlonzoEraScript DijkstraEra where
   toCertifyingPurpose (DijkstraCertifying i) = Just i
   toCertifyingPurpose _ = Nothing
 
-  mkRewardingPurpose = DijkstraWithdrawing
+  mkWithdrawingPurpose = DijkstraWithdrawing
 
-  toRewardingPurpose (DijkstraWithdrawing i) = Just i
-  toRewardingPurpose _ = Nothing
+  toWithdrawingPurpose (DijkstraWithdrawing i) = Just i
+  toWithdrawingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIx = \case
     ConwaySpending (AsIx ix) -> DijkstraSpending (AsIx ix)
