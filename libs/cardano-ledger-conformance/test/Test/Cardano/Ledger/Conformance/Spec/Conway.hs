@@ -10,14 +10,17 @@
 
 module Test.Cardano.Ledger.Conformance.Spec.Conway (spec) where
 
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Rules (CertEnv (..))
+import Control.State.Transition.Extended (TRC (..))
 import Data.Map.Strict qualified as Map
+import Test.Cardano.Ledger.Conformance.Core (conformsToImpl)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayCertExecContext (..))
 import Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify qualified as Ratify
 import Test.Cardano.Ledger.Conformance.Spec.Core
 import Test.Cardano.Ledger.Constrained.Conway (genUtxoExecContext)
 import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   ConwayCertGenContext (..),
-  constrainedCert,
   constrainedCerts,
   constrainedDeleg,
   constrainedEnact,
@@ -27,6 +30,7 @@ import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   constrainedPool,
   constrainedUtxo,
  )
+import Test.Cardano.Ledger.Conway.Gen (genCertState)
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
@@ -45,7 +49,13 @@ spec = do
           \(_, ConwayCertGenContext {..}) _ _ _ -> pure $ Map.keysSet ccccDelegatees
       prop "GOVCERT" $ conformsToImplConstrained_ constrainedGovCert
       prop "POOL" $ conformsToImplConstrained_ constrainedPool
-      prop "CERT" $ conformsToImplConstrained_ constrainedCert
+      prop "CERT" $
+        conformsToImpl @"CERT" @ConwayEra $ do
+          ctx <- arbitrary
+          env <- genCertEnv
+          st <- genCertState (ceCurrentEpoch env)
+          sig <- arbitrary
+          pure (ctx, TRC (env, st, sig))
       prop "CERTS" $
         conformsToImplConstrained constrainedCerts $
           \(_, ConwayCertGenContext {..}) _ _ _ ->

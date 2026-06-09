@@ -21,6 +21,7 @@ flag asserts
 library
   exposed-modules:
     Test.Cardano.Ledger.Conformance
+    Test.Cardano.Ledger.Conformance.Core
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra
@@ -139,9 +140,9 @@ test-suite tests
     Test.Cardano.Ledger.Conformance.Imp.Core
     Test.Cardano.Ledger.Conformance.Imp.Dijkstra
     Test.Cardano.Ledger.Conformance.Spec.Base
+    Test.Cardano.Ledger.Conformance.Spec.Core
     Test.Cardano.Ledger.Conformance.Spec.Conway
     Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify
-    Test.Cardano.Ledger.Conformance.Spec.Core
 
   default-language: Haskell2010
   ghc-options:
@@ -170,7 +171,6 @@ test-suite tests
     containers,
     microlens,
     microlens-mtl,
-    mtl,
     prettyprinter,
     small-steps,
     text,

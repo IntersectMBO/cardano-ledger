@@ -1,45 +1,27 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conformance.Spec.Core where
+module Test.Cardano.Ledger.Conformance.Spec.Core (
+  genFromBundle_,
+  genFromBundle,
+  conformsToImplConstrained,
+  conformsToImplConstrained_,
+) where
 
-import Cardano.Ledger.Core (EraRule)
-import Constrained.API
-import Control.Monad.Cont (ContT (..))
-import Control.Monad.Trans (MonadTrans (..))
+import Cardano.Ledger.Dijkstra.Core (EraRule)
+import Constrained.Base (HasSpec)
+import Constrained.Generation (genFromSpec)
 import Control.State.Transition.Extended (STS (..), TRC (..))
-import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), testConformance)
-import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
-  ConstrainedGeneratorBundle (..),
- )
-import Test.Cardano.Ledger.Conway.ImpTest (ImpTestM, impAnn)
-import Test.Cardano.Ledger.Imp.Common
-import UnliftIO (MonadIO (..), evaluateDeep)
-
-conformsToImpl ::
-  forall rule era.
-  ExecSpecRule rule era =>
-  Gen (ExecContext rule era, TRC (EraRule rule era)) ->
-  Property
-conformsToImpl genInputs = property @(ImpTestM era Property) . (`runContT` pure) $ do
-  let
-    deepEvalAnn s = "Deep evaluating " <> s
-    deepEval x s = do
-      _ <- lift $ impAnn (deepEvalAnn s) (liftIO (evaluateDeep x))
-      pure ()
-  (ctx, trc@(TRC (env, st, sig))) <- lift $ liftGen genInputs
-  deepEval ctx "context"
-  deepEval env "environment"
-  deepEval st "state"
-  deepEval sig "signal"
-  pure $ testConformance @rule @era ctx trc
+import Test.Cardano.Ledger.Common (Arbitrary (..), Gen, Property)
+import Test.Cardano.Ledger.Conformance (ExecSpecRule (..))
+import Test.Cardano.Ledger.Conformance.Core (conformsToImpl)
+import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (ConstrainedGeneratorBundle (..))
+import Test.Cardano.Ledger.Conway.ImpTest (ImpTestM)
+import Test.Cardano.Ledger.Imp.Common (MonadGen (..))
 
 genFromBundle_ ::
   ( HasSpec (Environment (EraRule rule era))
@@ -47,8 +29,8 @@ genFromBundle_ ::
   , Arbitrary (ExecContext rule era)
   ) =>
   ConstrainedGeneratorBundle ctx rule era ->
-  Gen (ExecContext rule era, TRC (EraRule rule era))
-genFromBundle_ x = genFromBundle x $ \_ _ _ _ -> arbitrary
+  ImpTestM era (ExecContext rule era, TRC (EraRule rule era))
+genFromBundle_ x = liftGen . genFromBundle x $ \_ _ _ _ -> liftGen arbitrary
 
 genFromBundle ::
   ( HasSpec (Environment (EraRule rule era))
@@ -84,7 +66,7 @@ conformsToImplConstrained ::
   ) ->
   Property
 conformsToImplConstrained bundle genExecContext =
-  conformsToImpl @rule @era $ genFromBundle bundle genExecContext
+  conformsToImpl @rule @era . liftGen $ genFromBundle bundle genExecContext
 
 conformsToImplConstrained_ ::
   ( ExecSpecRule rule era
@@ -94,4 +76,4 @@ conformsToImplConstrained_ ::
   ) =>
   ConstrainedGeneratorBundle ctx rule era ->
   Property
-conformsToImplConstrained_ bundle = conformsToImplConstrained bundle $ \_ _ _ _ -> arbitrary
+conformsToImplConstrained_ bundle = conformsToImplConstrained bundle $ \_ _ _ _ -> liftGen arbitrary
