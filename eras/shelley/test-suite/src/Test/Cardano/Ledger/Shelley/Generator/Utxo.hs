@@ -54,7 +54,6 @@ import Lens.Micro.Extras
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common (tracedDiscard)
-import Test.Cardano.Ledger.Random (uniformSubMapElems)
 import Test.Cardano.Ledger.Core.KeyPair (
   KeyPair,
   KeyPairs,
@@ -63,6 +62,7 @@ import Test.Cardano.Ledger.Core.KeyPair (
   mkCredential,
   mkWitnessesVKey,
  )
+import Test.Cardano.Ledger.Random (uniformSubMapElems)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..), defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   GenEnv (..),
