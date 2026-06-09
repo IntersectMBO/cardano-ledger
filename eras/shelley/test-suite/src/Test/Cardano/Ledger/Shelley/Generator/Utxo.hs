@@ -54,7 +54,7 @@ import Lens.Micro.Extras
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common (tracedDiscard)
-import Test.Cardano.Ledger.Core.Arbitrary (uniformSubMapElems)
+import Test.Cardano.Ledger.Random (uniformSubMapElems)
 import Test.Cardano.Ledger.Core.KeyPair (
   KeyPair,
   KeyPairs,

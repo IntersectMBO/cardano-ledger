@@ -73,11 +73,9 @@ import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryStakeSnapshotsExamples,
  )
 import Test.Cardano.Ledger.Binary.Golden (cborGoldenSpec)
-import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
-import Test.Cardano.Ledger.Core.Arbitrary
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Dijkstra.Era (EraTest)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
@@ -567,7 +565,7 @@ queryStakeSnapshotsSpec =
         nonZeroTotal = ssTotalActiveStake
         nonZeroSubTotal ssWhich =
           nonZeroOr (foldMap ssWhich (ssStakeSnapshots result)) (knownNonZeroCoin @1)
-      subPoolIds <- uniformSubSet Nothing allPoolIds QC
+      subPoolIds <- uniformSubSet Nothing allPoolIds
       -- Tricky bit about the query is when all pool ids are requested then ones that do not have
       -- delegations are filtered out, while when poolIds are specified, then they are retained even
       -- if they don't have any delegations
