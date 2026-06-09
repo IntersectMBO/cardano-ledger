@@ -6,8 +6,8 @@ module Test.Cardano.Ledger.Conformance.Imp.Conway (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway (ConwayEra)
+import Test.Cardano.Ledger.Conformance.Imp
 import Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify qualified as RatifySpec
-import Test.Cardano.Ledger.Conformance.Imp.Core
 import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as Bbody
 import Test.Cardano.Ledger.Conway.Imp.CertsSpec qualified as Certs
 import Test.Cardano.Ledger.Conway.Imp.DelegSpec qualified as Deleg

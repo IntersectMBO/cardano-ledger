@@ -24,6 +24,7 @@ library
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra
+    Test.Cardano.Ledger.Conformance.Imp
     Test.Cardano.Ledger.Conformance.SpecTranslate.Base
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway
     Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra
@@ -48,6 +49,7 @@ library
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra.Ledger
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra.NewEpoch
+    Test.Cardano.Ledger.Conformance.Imp.Core
     Test.Cardano.Ledger.Conformance.Orphans.Conway
     Test.Cardano.Ledger.Conformance.Orphans.Core
     Test.Cardano.Ledger.Conformance.Orphans.Dijkstra
@@ -136,7 +138,6 @@ test-suite tests
   other-modules:
     Test.Cardano.Ledger.Conformance.Imp.Conway
     Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify
-    Test.Cardano.Ledger.Conformance.Imp.Core
     Test.Cardano.Ledger.Conformance.Imp.Dijkstra
     Test.Cardano.Ledger.Conformance.Spec.Base
     Test.Cardano.Ledger.Conformance.Spec.Conway

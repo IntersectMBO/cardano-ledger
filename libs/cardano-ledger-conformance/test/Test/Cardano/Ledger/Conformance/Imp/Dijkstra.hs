@@ -8,7 +8,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra ()
-import Test.Cardano.Ledger.Conformance.Imp.Core
+import Test.Cardano.Ledger.Conformance.Imp
 import Test.Cardano.Ledger.Dijkstra.Imp.CertSpec qualified as CERT
 import Test.Cardano.Ledger.Dijkstra.Imp.CertsSpec qualified as CERTS
 import Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec qualified as LEDGER
