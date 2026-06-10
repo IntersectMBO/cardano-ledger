@@ -25,7 +25,7 @@
 -- The contents of this module may change __in any way whatsoever__
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.Dijkstra.BlockBody.Internal (
-  DijkstraBlockBody (DijkstraBlockBody, ..),
+  DijkstraBlockBody (DijkstraBlockBody, DijkstraBlockBodyResolved, ..),
   hashDijkstraSegWits,
   alignedValidFlags,
   mkBasicBlockBodyDijkstra,
@@ -148,6 +148,67 @@ instance DijkstraEraBlockBody DijkstraEra where
   perasCertBlockBodyL =
     lens dbbPerasCert (\bb c -> DijkstraBlockBody (dbbTxs bb) (dbbLeiosCert bb) c)
 
+mkDijkstraBlockBodyInternal ::
+  forall era.
+  ( AlonzoEraTx era
+  , SafeToHash (TxWits era)
+  ) =>
+  Bool ->
+  StrictSeq (Tx TopTx era) ->
+  StrictMaybe LeiosCert ->
+  StrictMaybe PerasCert ->
+  DijkstraBlockBody era
+mkDijkstraBlockBodyInternal keepTxBytes txns mbLeiosCert mbPerasCert =
+  let version = eraProtVerLow @era
+      serializeFoldablePreEncoded x =
+        serialize version $
+          encodeFoldableEncoder encodePreEncoded x
+      metaChunk index m = encodeIndexed <$> strictMaybeToMaybe m
+        where
+          encodeIndexed metadata = encCBOR index <> encodePreEncoded metadata
+      txsAsBytes =
+        ( serializeFoldablePreEncoded $ originalBytes . view bodyTxL <$> txns
+        , serializeFoldablePreEncoded $ originalBytes . view witsTxL <$> txns
+        , serialize version . encodeFoldableMapEncoder metaChunk $
+            fmap originalBytes . view auxDataTxL <$> txns
+        , serialize version $ encCBOR $ nonValidatingIndices txns
+        )
+      emptyTxs =
+        ( serializeFoldablePreEncoded (mempty :: StrictSeq ByteString)
+        , serializeFoldablePreEncoded (mempty :: StrictSeq ByteString)
+        , serialize
+            version
+            (encodeFoldableMapEncoder metaChunk (mempty :: StrictSeq (StrictMaybe ByteString)))
+        , serialize version (encCBOR ([] :: [Int]))
+        )
+      (txSeqBodies, txSeqWits, txSeqAuxDatas, txSeqIsValids) =
+        case mbLeiosCert of
+          SJust _ | not keepTxBytes -> emptyTxs
+          _ -> txsAsBytes
+      mbLeiosCertBytes =
+        Just (serialize version (encodeNullStrictMaybe encCBOR mbLeiosCert))
+      mbPerasCertBytes =
+        Just (serialize version (encodeNullStrictMaybe encCBOR mbPerasCert))
+   in DijkstraBlockBodyInternal
+        { dbbTxs = txns
+        , dbbLeiosCert = mbLeiosCert
+        , dbbPerasCert = mbPerasCert
+        , dbbHash =
+            hashDijkstraSegWits
+              txSeqBodies
+              txSeqWits
+              txSeqAuxDatas
+              txSeqIsValids
+              mbLeiosCertBytes
+              mbPerasCertBytes
+        , dbbTxsBodyBytes = txSeqBodies
+        , dbbTxsWitsBytes = txSeqWits
+        , dbbTxsAuxDataBytes = txSeqAuxDatas
+        , dbbTxsIsValidBytes = txSeqIsValids
+        , dbbLeiosCertBytes = mbLeiosCertBytes
+        , dbbPerasCertBytes = mbPerasCertBytes
+        }
+
 pattern DijkstraBlockBody ::
   forall era.
   ( AlonzoEraTx era
@@ -160,58 +221,26 @@ pattern DijkstraBlockBody ::
 pattern DijkstraBlockBody xs mbLeiosCert mbPerasCert <-
   DijkstraBlockBodyInternal xs mbLeiosCert mbPerasCert _ _ _ _ _ _ _
   where
-    DijkstraBlockBody txns mbLeiosCert mbPerasCert =
-      let version = eraProtVerLow @era
-          serializeFoldablePreEncoded x =
-            serialize version $
-              encodeFoldableEncoder encodePreEncoded x
-          metaChunk index m = encodeIndexed <$> strictMaybeToMaybe m
-            where
-              encodeIndexed metadata = encCBOR index <> encodePreEncoded metadata
-          -- NOTE: When the block contains a LeiosCert, any transactions must
-          -- not be encoded or contribute to the block body hash.
-          (txSeqBodies, txSeqWits, txSeqAuxDatas, txSeqIsValids) =
-            case mbLeiosCert of
-              SJust _ ->
-                ( serializeFoldablePreEncoded (mempty :: StrictSeq ByteString)
-                , serializeFoldablePreEncoded (mempty :: StrictSeq ByteString)
-                , serialize
-                    version
-                    (encodeFoldableMapEncoder metaChunk (mempty :: StrictSeq (StrictMaybe ByteString)))
-                , serialize version (encCBOR ([] :: [Int]))
-                )
-              SNothing ->
-                ( serializeFoldablePreEncoded $ originalBytes . view bodyTxL <$> txns
-                , serializeFoldablePreEncoded $ originalBytes . view witsTxL <$> txns
-                , serialize version . encodeFoldableMapEncoder metaChunk $
-                    fmap originalBytes . view auxDataTxL <$> txns
-                , serialize version $ encCBOR $ nonValidatingIndices txns
-                )
-          mbLeiosCertBytes =
-            Just (serialize version (encodeNullStrictMaybe encCBOR mbLeiosCert))
-          mbPerasCertBytes =
-            Just (serialize version (encodeNullStrictMaybe encCBOR mbPerasCert))
-       in DijkstraBlockBodyInternal
-            { dbbTxs = txns
-            , dbbLeiosCert = mbLeiosCert
-            , dbbPerasCert = mbPerasCert
-            , dbbHash =
-                hashDijkstraSegWits
-                  txSeqBodies
-                  txSeqWits
-                  txSeqAuxDatas
-                  txSeqIsValids
-                  mbLeiosCertBytes
-                  mbPerasCertBytes
-            , dbbTxsBodyBytes = txSeqBodies
-            , dbbTxsWitsBytes = txSeqWits
-            , dbbTxsAuxDataBytes = txSeqAuxDatas
-            , dbbTxsIsValidBytes = txSeqIsValids
-            , dbbLeiosCertBytes = mbLeiosCertBytes
-            , dbbPerasCertBytes = mbPerasCertBytes
-            }
+    DijkstraBlockBody = mkDijkstraBlockBodyInternal False
 
 {-# COMPLETE DijkstraBlockBody #-}
+
+-- | Like 'DijkstraBlockBody', but keeps the tx segments in the cached body
+-- bytes even when a 'LeiosCert' is present. Used by the NTC chainsync
+-- server's resolve path.
+pattern DijkstraBlockBodyResolved ::
+  forall era.
+  ( AlonzoEraTx era
+  , SafeToHash (TxWits era)
+  ) =>
+  StrictSeq (Tx TopTx era) ->
+  StrictMaybe LeiosCert ->
+  StrictMaybe PerasCert ->
+  DijkstraBlockBody era
+pattern DijkstraBlockBodyResolved xs mbLeiosCert mbPerasCert <-
+  DijkstraBlockBodyInternal xs mbLeiosCert mbPerasCert _ _ _ _ _ _ _
+  where
+    DijkstraBlockBodyResolved = mkDijkstraBlockBodyInternal True
 
 deriving via
   AllowThunksIn

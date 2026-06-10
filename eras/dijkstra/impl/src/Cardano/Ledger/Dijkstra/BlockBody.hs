@@ -1,5 +1,5 @@
 module Cardano.Ledger.Dijkstra.BlockBody (
-  DijkstraBlockBody (DijkstraBlockBody),
+  DijkstraBlockBody (DijkstraBlockBody, DijkstraBlockBodyResolved),
   mkBasicBlockBodyDijkstra,
   DijkstraEraBlockBody (..),
 ) where
