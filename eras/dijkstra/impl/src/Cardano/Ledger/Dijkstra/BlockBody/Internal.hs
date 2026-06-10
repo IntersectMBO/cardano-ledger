@@ -31,21 +31,29 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   mkBasicBlockBodyDijkstra,
   DijkstraEraBlockBody (..),
   LeiosCert,
+  encodeLeiosCert,
+  decodeLeiosCert,
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Crypto.Leios (LeiosCert)
+import qualified Cardano.Crypto.Leios as Leios
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (LeiosCert, PerasCert)
+import Cardano.Ledger.BaseTypes (PerasCert)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
+  Decoder,
   EncCBORGroup (..),
+  Encoding,
   decodeNullStrictMaybe,
   encCBOR,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
   encodeNullStrictMaybe,
   encodePreEncoded,
+  fromPlainDecoder,
+  fromPlainEncoding,
   serialize,
   withSlice,
  )
@@ -186,7 +194,7 @@ mkDijkstraBlockBodyInternal keepTxBytes txns mbLeiosCert mbPerasCert =
           SJust _ | not keepTxBytes -> emptyTxs
           _ -> txsAsBytes
       mbLeiosCertBytes =
-        Just (serialize version (encodeNullStrictMaybe encCBOR mbLeiosCert))
+        Just (serialize version (encodeNullStrictMaybe encodeLeiosCert mbLeiosCert))
       mbPerasCertBytes =
         Just (serialize version (encodeNullStrictMaybe encCBOR mbPerasCert))
    in DijkstraBlockBodyInternal
@@ -358,7 +366,7 @@ instance
     -- Each cert slot is always present as 'encodeNullStrictMaybe'
     -- (CBOR null when absent, value when present).
     (leios, leiosSliceAnn) <-
-      withSlice (decodeNullStrictMaybe (decCBOR @LeiosCert))
+      withSlice (decodeNullStrictMaybe decodeLeiosCert)
     (peras, perasSliceAnn) <-
       withSlice (decodeNullStrictMaybe (decCBOR @PerasCert))
     let mbLeiosCert = pure leios
@@ -438,3 +446,13 @@ dijkstraSegwitTx txBodyAnn txWitsAnn txIsValid txAuxDataAnn = Annotator $ \bytes
         .~ maybeToStrictMaybe txAuxData
       & isValidTxL
         .~ txIsValid
+
+-- | Lift the plain 'Leios.encodeLeiosCert' into the era-aware
+-- 'Cardano.Ledger.Binary.Encoding'.
+encodeLeiosCert :: LeiosCert -> Encoding
+encodeLeiosCert = fromPlainEncoding . Leios.encodeLeiosCert
+
+-- | Lift the plain 'Leios.decodeLeiosCert' into the era-aware
+-- 'Cardano.Ledger.Binary.Decoder'.
+decodeLeiosCert :: Decoder s LeiosCert
+decodeLeiosCert = fromPlainDecoder Leios.decodeLeiosCert

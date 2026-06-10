@@ -99,9 +99,6 @@ module Cardano.Ledger.BaseTypes (
   PerasCert (..),
   PerasKey (..),
   validatePerasCert,
-
-  -- * Leios-specific types
-  LeiosCert (..),
 ) where
 
 import Cardano.Crypto.Hash
@@ -1033,24 +1030,6 @@ instance DecCBOR PerasCert where
   decCBOR = do
     enforceSize "PerasCert" 0
     pure PerasCert
-
--- | Placeholder for Leios certificates.
---
--- NOTE: The real type will be brought from elsewhere once it's ready.
-data LeiosCert = LeiosCert
-  deriving (Eq, Show, Generic, NoThunks)
-
-instance NFData LeiosCert
-
--- | See note on the 'PerasCert' instance: encode as CBOR empty list
--- (0x80), NOT as @encCBOR ()@.
-instance EncCBOR LeiosCert where
-  encCBOR LeiosCert = Binary.encodeListLen 0
-
-instance DecCBOR LeiosCert where
-  decCBOR = do
-    enforceSize "LeiosCert" 0
-    pure LeiosCert
 
 -- | Placeholder for Peras public keys
 --

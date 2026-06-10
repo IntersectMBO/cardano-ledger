@@ -20,7 +20,17 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.BaseTypes (LeiosCert (..), PerasCert (..), StrictMaybe)
+import Cardano.Crypto.DSIGN (genKeyDSIGN, signDSIGN)
+import Cardano.Crypto.DSIGN.BLS12381 (BLS12381SignContext (..))
+import Cardano.Crypto.Leios (
+  EbHash (..),
+  LeiosCert (..),
+  LeiosDSIGN,
+  LeiosSignature,
+ )
+import Cardano.Crypto.Seed (mkSeedFromBytes)
+import qualified Data.ByteString as BS
+import Cardano.Ledger.BaseTypes (PerasCert (..), StrictMaybe)
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure)
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
@@ -289,8 +299,28 @@ instance
 instance Arbitrary PerasCert where
   arbitrary = pure PerasCert
 
+instance Arbitrary EbHash where
+  arbitrary = MkEbHash <$> arbitrary
+
+-- 'LeiosSignature' is 'SigDSIGN BLS12381MinSigDSIGN' (a type alias); we
+-- can't write an 'Arbitrary' instance for it directly, and the generic
+-- 'Arbitrary (SigDSIGN v)' from cardano-crypto-class:testlib feeds random
+-- bytes through 'rawDeserialiseSigDSIGN', which BLS rejects for failing
+-- the subgroup check. Sign a fresh dummy message instead.
+arbitraryLeiosSignature :: Gen LeiosSignature
+arbitraryLeiosSignature = do
+  seedBytes <- BS.pack <$> vectorOf 32 arbitrary
+  msg <- BS.pack <$> arbitrary
+  let sk = genKeyDSIGN @LeiosDSIGN (mkSeedFromBytes seedBytes)
+  pure $ signDSIGN (BLS12381SignContext Nothing Nothing) msg sk
+
 instance Arbitrary LeiosCert where
-  arbitrary = pure LeiosCert
+  arbitrary =
+    LeiosCert
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitraryLeiosSignature
 
 instance
   ( EraBlockBody era

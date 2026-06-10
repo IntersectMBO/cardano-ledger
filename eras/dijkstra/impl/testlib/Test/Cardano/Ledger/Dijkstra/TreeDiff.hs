@@ -16,7 +16,12 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
   module Test.Cardano.Ledger.Conway.TreeDiff,
 ) where
 
-import Cardano.Ledger.BaseTypes (LeiosCert, PerasCert, StrictMaybe)
+import Cardano.Crypto.DSIGN (rawSerialiseSigDSIGN)
+import Cardano.Crypto.Leios (
+  EbHash,
+  LeiosCert (..),
+ )
+import Cardano.Ledger.BaseTypes (PerasCert, StrictMaybe)
 import Cardano.Ledger.Conway.Rules (ConwayGovEvent)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core (
@@ -125,7 +130,19 @@ instance ToExpr (TxBody l DijkstraEra)
 
 instance ToExpr PerasCert
 
-instance ToExpr LeiosCert
+instance ToExpr EbHash
+
+-- Manual ToExpr to avoid an orphan 'ToExpr (SigDSIGN BLS12381MinSigDSIGN)':
+-- show the BLS signature as its raw byte representation.
+instance ToExpr LeiosCert where
+  toExpr cert =
+    Rec "LeiosCert" $
+      OMap.fromList
+        [ ("slotNo", toExpr (slotNo cert))
+        , ("endorserBlockHash", toExpr (endorserBlockHash cert))
+        , ("signers", toExpr (signers cert))
+        , ("aggregatedSignature", toExpr (rawSerialiseSigDSIGN (aggregatedSignature cert)))
+        ]
 
 instance
   (ToExpr (Tx TopTx era), ToExpr LeiosCert, ToExpr PerasCert) =>
