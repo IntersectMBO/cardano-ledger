@@ -16,6 +16,8 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
   module Test.Cardano.Ledger.Conway.TreeDiff,
 ) where
 
+import Cardano.Crypto.DSIGN (rawSerialiseSigDSIGN)
+import Cardano.Crypto.Leios (LeiosCert (..), bitFieldToBytes)
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -128,6 +130,16 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
 instance ToExpr (TxBody l DijkstraEra)
 
 instance ToExpr PerasCert
+
+-- Manual ToExpr to avoid an orphan 'ToExpr (SigDSIGN BLS12381MinSigDSIGN)':
+-- show the BLS signature as its raw byte representation.
+instance ToExpr LeiosCert where
+  toExpr cert =
+    Rec "LeiosCert" $
+      OMap.fromList
+        [ ("signers", toExpr (bitFieldToBytes $ signers cert))
+        , ("aggregatedSignature", toExpr (rawSerialiseSigDSIGN $ aggregatedSignature cert))
+        ]
 
 instance ToExpr (Tx TopTx era) => ToExpr (DijkstraBlockBodyRaw era)
 
