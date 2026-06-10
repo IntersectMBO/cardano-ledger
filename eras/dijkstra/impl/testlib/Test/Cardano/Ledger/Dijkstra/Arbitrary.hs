@@ -16,12 +16,15 @@
 
 module Test.Cardano.Ledger.Dijkstra.Arbitrary (genNonEmptyAccountBalanceIntervals, genSmallDijkstraBlockBody) where
 
+import Cardano.Crypto.Leios (
+  LeiosCert (..),
+ )
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
-import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert (..))
@@ -43,10 +46,12 @@ import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
+import Test.Cardano.Crypto.Leios.Gen (genLeiosCert)
 import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
+import Test.QuickCheck.Hedgehog (hedgehog)
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU
@@ -294,6 +299,9 @@ instance
 instance Arbitrary PerasCert where
   arbitrary = PerasCert <$> arbitrary
 
+instance Arbitrary LeiosCert where
+  arbitrary = hedgehog genLeiosCert
+
 instance
   ( EraBlockBody era
   , AlonzoEraTx era
@@ -302,14 +310,24 @@ instance
   ) =>
   Arbitrary (DijkstraBlockBody era)
   where
-  arbitrary = DijkstraBlockBody <$> arbitrary <*> arbitrary
+  arbitrary =
+    DijkstraBlockBody
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 genSmallDijkstraBlockBody ::
   ( AlonzoEraTx era
   , Arbitrary (Tx TopTx era)
   ) =>
   Gen (DijkstraBlockBody era)
-genSmallDijkstraBlockBody = DijkstraBlockBody <$> genFewTxs <*> arbitrary
+genSmallDijkstraBlockBody =
+  DijkstraBlockBody
+    <$> genFewTxs
+    -- REVIEW: What is this function used for exactly? A leios cert body would
+    -- be even smaller (no txs allowed and cert size ~100B).
+    <*> pure SNothing
+    <*> arbitrary
   where
     genFewTxs = sized $ \sz -> do
       numTxs <-

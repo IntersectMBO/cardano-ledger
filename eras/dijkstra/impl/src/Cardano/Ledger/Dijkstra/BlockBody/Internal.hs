@@ -7,7 +7,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -38,6 +37,7 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   validatePerasCert,
 ) where
 
+import Cardano.Crypto.Leios (LeiosCert, decodeLeiosCert, encodeLeiosCert)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..), maybeToStrictMaybe)
 import Cardano.Ledger.Binary (
@@ -53,6 +53,9 @@ import Cardano.Ledger.Binary (
   encCBOR,
   encodeListLen,
   encodeNullStrictMaybe,
+  encodeStrictMaybe,
+  fromPlainDecoder,
+  fromPlainEncoding,
   serialize',
  )
 import Cardano.Ledger.Core
@@ -100,12 +103,16 @@ import NoThunks.Class (NoThunks)
 
 data DijkstraBlockBodyRaw era = DijkstraBlockBodyRaw
   { dbbrTxs :: !(StrictSeq (Tx TopTx era))
+  , dbbrLeiosCert :: !(StrictMaybe LeiosCert)
+  -- ^ Optional Leios certificate
   , dbbrPerasCert :: !(StrictMaybe PerasCert)
   -- ^ Optional Peras certificate
   }
   deriving (Generic)
 
-instance (NFData (Tx TopTx era), NFData PerasCert) => NFData (DijkstraBlockBodyRaw era)
+instance
+  (NFData (Tx TopTx era), NFData LeiosCert, NFData PerasCert) =>
+  NFData (DijkstraBlockBodyRaw era)
 
 type instance MemoHashIndex (DijkstraBlockBodyRaw era) = EraIndependentBlockBody
 
@@ -118,7 +125,9 @@ instance EraBlockBody DijkstraEra where
   blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBOR
 
 mkBasicBlockBodyDijkstra :: forall era. AlonzoEraTx era => DijkstraBlockBody era
-mkBasicBlockBodyDijkstra = mkMemoized (eraProtVerLow @era) $ DijkstraBlockBodyRaw mempty SNothing
+mkBasicBlockBodyDijkstra =
+  mkMemoized (eraProtVerLow @era) $
+    DijkstraBlockBodyRaw mempty SNothing SNothing
 {-# INLINEABLE mkBasicBlockBodyDijkstra #-}
 
 -- | Dijkstra-specific extensions to 'EraBlockBody'
@@ -153,13 +162,17 @@ instance Memoized (DijkstraBlockBody era) where
 pattern DijkstraBlockBody ::
   AlonzoEraTx era =>
   StrictSeq (Tx TopTx era) ->
+  StrictMaybe LeiosCert ->
   StrictMaybe PerasCert ->
   DijkstraBlockBody era
-pattern DijkstraBlockBody txs perasCert <- (getMemoRawType -> DijkstraBlockBodyRaw txs perasCert)
+pattern DijkstraBlockBody txs mbLeiosCert mbPerasCert <-
+  ( getMemoRawType ->
+      DijkstraBlockBodyRaw txs mbLeiosCert mbPerasCert
+    )
   where
-    DijkstraBlockBody txs perasCert =
+    DijkstraBlockBody txs leiosCert perasCert =
       mkMemoizedEra @DijkstraEra $
-        DijkstraBlockBodyRaw txs perasCert
+        DijkstraBlockBodyRaw txs leiosCert perasCert
 
 {-# COMPLETE DijkstraBlockBody #-}
 
@@ -173,11 +186,12 @@ instance
   ) =>
   EncCBOR (DijkstraBlockBodyRaw era)
   where
-  encCBOR (DijkstraBlockBodyRaw txs perasCert) =
-    encodeListLen 3
+  encCBOR (DijkstraBlockBodyRaw txs mbLeiosCert mbPerasCert) =
+    encodeListLen 4
       <> encodeNullStrictMaybe encCBOR invalidIndices
       <> encCBOR txs
-      <> encodeNullStrictMaybe encCBOR perasCert
+      <> encodeNullStrictMaybe (fromPlainEncoding . encodeLeiosCert) mbLeiosCert
+      <> encodeNullStrictMaybe encCBOR mbPerasCert
     where
       invalidIndices =
         maybeToStrictMaybe . NonEmptySet.fromFoldable $
@@ -192,7 +206,7 @@ instance
   ) =>
   DecCBOR (Annotator (DijkstraBlockBodyRaw era))
   where
-  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
+  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 4) $ do
     let
       decodeInvalidTxs =
         decodeNonEmptySetLikeEnforceNoDuplicates
@@ -201,7 +215,8 @@ instance
           (decCBOR @Word16)
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
     txs <- decodeSeq (decodeDijkstraTopTx @era False)
-    perasCert <- decodeNullStrictMaybe decCBOR
+    mbLeiosCert <- decodeNullStrictMaybe (fromPlainDecoder decodeLeiosCert)
+    mbPerasCert <- decodeNullStrictMaybe decCBOR
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x < txsLength
     forM_ (IntSet.toList invalidTxs) $ \i ->
@@ -214,7 +229,8 @@ instance
     pure $
       DijkstraBlockBodyRaw
         <$> sequenceA (StrictSeq.forceToStrict txsWithIsValid)
-        <*> pure perasCert
+        <*> pure mbLeiosCert
+        <*> pure mbPerasCert
 
 deriving via
   Mem (DijkstraBlockBodyRaw era)
@@ -228,8 +244,12 @@ deriving via
     DecCBOR (Annotator (DijkstraBlockBody era))
 
 instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBlockBody era) where
-  encCBORGroup (DijkstraBlockBody txs perasCert) = do
-    encodeListLen 2 <> encCBOR txs <> encCBOR perasCert
+  encCBORGroup (DijkstraBlockBody txs leiosCert perasCert) = do
+    -- REVIEW: Is this really 3 if the EncCBOR of the body is 4?
+    encodeListLen 3
+      <> encCBOR txs
+      <> encodeStrictMaybe (fromPlainEncoding . encodeLeiosCert) leiosCert
+      <> encCBOR perasCert
   listLen _ = 1
 
 --------------------------------------------------------------------------------

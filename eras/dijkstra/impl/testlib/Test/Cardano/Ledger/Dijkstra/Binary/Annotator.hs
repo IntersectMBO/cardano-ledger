@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Dijkstra.Binary.Annotator (
 
 ) where
 
+import Cardano.Crypto.Leios (decodeLeiosCert)
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
@@ -232,7 +233,8 @@ instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
           (decCBOR @Word16)
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
     txs <- decodeSeq (decodeDijkstraTopTx @DijkstraEra False)
-    perasCert <- decodeNullStrictMaybe decCBOR
+    mbLeiosCert <- decodeNullStrictMaybe (fromPlainDecoder decodeLeiosCert)
+    mbPerasCert <- decodeNullStrictMaybe decCBOR
 
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x <= txsLength - 1
@@ -242,7 +244,7 @@ instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
     let
       validityFlags = alignedValidFlags txsLength invalidTxs
       txsWithIsValid = Seq.zipWith (set isValidTxL) validityFlags (coerce <$> txs)
-    pure $ DijkstraBlockBodyRaw (StrictSeq.forceToStrict txsWithIsValid) perasCert
+    pure $ DijkstraBlockBodyRaw (StrictSeq.forceToStrict txsWithIsValid) mbLeiosCert mbPerasCert
 
 instance DecCBOR (DijkstraBlockBody DijkstraEra) where
   decCBOR = MkDijkstraBlockBody <$> decodeMemoized decCBOR
