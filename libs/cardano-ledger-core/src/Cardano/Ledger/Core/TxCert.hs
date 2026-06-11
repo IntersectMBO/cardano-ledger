@@ -34,9 +34,12 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), asWitness)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State.StakePool (StakePoolParams (sppId))
 import Control.DeepSeq (NFData (..), rwhnf)
-import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import Data.Kind (Type)
 import Data.Maybe (isJust)
+import Data.Text (Text)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -156,6 +159,14 @@ instance ToJSON PoolCert where
         [ "poolId" .= toJSON poolId
         , "epochNo" .= toJSON epochNo
         ]
+
+instance FromJSON PoolCert where
+  parseJSON = Aeson.withObject "PoolCert" $ \o -> do
+    kind <- o .: "kind" :: Parser Text
+    case kind of
+      "RegPool" -> RegPool <$> o .: "poolParams"
+      "RetirePool" -> RetirePool <$> o .: "poolId" <*> o .: "epochNo"
+      _ -> fail $ "Unknown PoolCert kind: " <> show kind
 
 poolCertKeyHashWitness :: PoolCert -> KeyHash Witness
 poolCertKeyHashWitness = \case

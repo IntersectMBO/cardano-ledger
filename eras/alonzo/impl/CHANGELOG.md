@@ -40,7 +40,15 @@
 * Remove `NoThunks (ContextError era)` constraint from `EraPlutusContext` class
 * Remove `NoThunks` deriving instance for `CollectError`
 * Make `AlonzoContextError` constructors lazy
-* Add `ToJSON` and `FromJSON` instances for `AlonzoScript era`, `AlonzoTxAuxData era`
+* Add `ToJSON` and `FromJSON` instances for
+  - `AlonzoScript era`
+  - `AlonzoTxAuxData era`
+  - `TxDats era`
+  - `Redeemers era`
+  - `AlonzoTxWits era`
+* Add `FromJSON` instance for
+  - `AsIx ix it`
+  - `AlonzoPlutusPurpose AsIx era`
 
 ### `cddl`
 

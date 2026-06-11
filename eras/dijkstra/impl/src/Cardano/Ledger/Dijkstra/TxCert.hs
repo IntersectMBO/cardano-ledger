@@ -80,7 +80,9 @@ import Cardano.Ledger.Shelley.TxCert (
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson (KeyValue ((.=)), ToJSON (..))
+import Data.Aeson (FromJSON (..), KeyValue ((.=)), ToJSON (..), (.:))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
 import Data.Foldable (Foldable (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -168,6 +170,17 @@ instance ToJSON DijkstraDelegCert where
         , "deposit" .= toJSON deposit
         ]
 
+instance FromJSON DijkstraDelegCert where
+  parseJSON = Aeson.withObject "DijkstraDelegCert" $ \o -> do
+    kind <- o .: "kind" :: Parser Aeson.Value
+    case kind of
+      Aeson.String "RegCert" -> DijkstraRegCert <$> o .: "credential" <*> o .: "deposit"
+      Aeson.String "UnRegCert" -> DijkstraUnRegCert <$> o .: "credential" <*> o .: "refund"
+      Aeson.String "DelegCert" -> DijkstraDelegCert <$> o .: "credential" <*> o .: "delegatee"
+      Aeson.String "RegDelegCert" ->
+        DijkstraRegDelegCert <$> o .: "credential" <*> o .: "delegatee" <*> o .: "deposit"
+      _ -> fail $ "Unknown DijkstraDelegCert kind: " <> show kind
+
 data DijkstraTxCert era
   = DijkstraTxCertDeleg !DijkstraDelegCert
   | DijkstraTxCertPool !PoolCert
@@ -188,6 +201,25 @@ instance Era era => ToJSON (DijkstraTxCert era) where
     DijkstraTxCertDeleg delegCert -> toJSON delegCert
     DijkstraTxCertPool poolCert -> toJSON poolCert
     DijkstraTxCertGov govCert -> toJSON govCert
+
+instance Era era => FromJSON (DijkstraTxCert era) where
+  parseJSON = Aeson.withObject "DijkstraTxCert" $ \o -> do
+    kind <- o .: "kind" :: Parser Aeson.Value
+    case kind of
+      Aeson.String k
+        | k `elem` ["RegCert", "UnRegCert", "DelegCert", "RegDelegCert"] ->
+            DijkstraTxCertDeleg <$> parseJSON (Aeson.Object o)
+        | k `elem` ["RegPool", "RetirePool"] ->
+            DijkstraTxCertPool <$> parseJSON (Aeson.Object o)
+        | k
+            `elem` [ "RegDRep"
+                   , "UnRegDRep"
+                   , "UpdateDRep"
+                   , "AuthCommitteeHotKey"
+                   , "ResignCommitteeColdKey"
+                   ] ->
+            DijkstraTxCertGov <$> parseJSON (Aeson.Object o)
+      _ -> fail $ "Unknown DijkstraTxCert kind: " <> show kind
 
 instance
   ( EraTxCert era
