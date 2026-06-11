@@ -34,6 +34,9 @@
 * Rename `kindObject` (which returned `Value`) to `kindObjectValue`
 * Add `kindObject :: Text -> [Pair] -> Object` returning an `Aeson.Object`
 * Add `NFData (Script era)`, `ToJSON (Script era)`, `FromJSON (Script era)`, `ToJSON (NativeScript era)`, and `FromJSON (NativeScript era)` as superclass constraints to `EraScript`
+* Add `FromJSON (TxOut era)` as `EraTxOut` superclass constraint
+* Add `FromJSON t` as `Val t` superclass constraint
+* Add `ToJSON` and `FromJSON` instances for `Datum era`
 * Add `ToJSON`, `FromJSON` and `NFData` as `EraTxWits` superclass constraints
 * Add `ToJSONKey` and `FromJSONKey` instances to `AccountId`
 * Add `ToJSON` and `FromJSON` instances for `Inclusive a` and `Exclusive a`
@@ -80,6 +83,7 @@
 * Add round-trip JSON property test for `NativeScript era` and `Script era` to the shared era spec
 * Add round-trip JSON property test for `TxAuxData era` to the shared era spec
 * Add round-trip JSON property test for `TxWits era` to the shared era spec
+* Add round-trip JSON property test for `TxOut era` to the shared era spec
 
 ## 1.20.0.0
 

@@ -291,6 +291,7 @@ class
 -- | Abstract interface into specific fields of a `TxOut`
 class
   ( Val (Value era)
+  , FromJSON (TxOut era)
   , ToJSON (TxOut era)
   , DecCBOR (Value era)
   , DecCBOR (CompactForm (Value era))

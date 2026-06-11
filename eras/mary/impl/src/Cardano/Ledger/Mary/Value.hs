@@ -68,7 +68,7 @@ import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Exception (assert)
 import Control.Monad (forM_, guard, unless, when)
 import Control.Monad.ST (runST)
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON (..), (.=))
+import Data.Aeson (FromJSON, FromJSONKey (..), ToJSON (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString as BS
@@ -98,7 +98,7 @@ import qualified Data.Semigroup as Semigroup (Sum (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
-import Data.Text.Encoding (decodeLatin1)
+import Data.Text.Encoding (decodeLatin1, encodeUtf8)
 import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
@@ -122,6 +122,10 @@ assetNameToBytesAsHex = BS16.encode . SBS.fromShort . assetNameBytes
 
 assetNameToTextAsHex :: AssetName -> Text
 assetNameToTextAsHex = decodeLatin1 . assetNameToBytesAsHex
+
+assetNameFromText :: Text -> Either String AssetName
+assetNameFromText t =
+  AssetName . SBS.toShort <$> BS16.decode (encodeUtf8 t)
 
 instance DecCBOR AssetName where
   decCBOR = do
@@ -153,7 +157,7 @@ newtype PolicyID = PolicyID {policyID :: ScriptHash}
 
 -- | The MultiAssets map
 newtype MultiAsset = MultiAsset (Map PolicyID (Map AssetName Integer))
-  deriving (Show, Generic, ToJSON, EncCBOR)
+  deriving (Show, Generic, FromJSON, ToJSON, EncCBOR)
 
 instance Eq MultiAsset where
   MultiAsset x == MultiAsset y = pointWise (pointWise (==)) x y
@@ -383,6 +387,12 @@ decodeIntegerBounded64 = do
 -- ========================================================================
 -- JSON
 
+instance FromJSON MaryValue where
+  parseJSON = Aeson.withObject "MaryValue" $ \o ->
+    MaryValue
+      <$> o .: "lovelace"
+      <*> o .: "policies"
+
 instance ToKeyValuePairs MaryValue where
   toKeyValuePairs (MaryValue l ps) =
     [ "lovelace" .= l
@@ -394,6 +404,18 @@ instance ToJSON AssetName where
 
 instance ToJSONKey AssetName where
   toJSONKey = toJSONKeyText assetNameToTextAsHex
+
+instance FromJSON AssetName where
+  parseJSON = Aeson.withText "AssetName" $ \t ->
+    case assetNameFromText t of
+      Left e -> fail $ "AssetName: invalid hex: " <> e
+      Right bs -> pure bs
+
+instance FromJSONKey AssetName where
+  fromJSONKey = Aeson.FromJSONKeyTextParser $ \t ->
+    case assetNameFromText t of
+      Left e -> fail $ "AssetName: invalid hex: " <> e
+      Right bs -> pure bs
 
 -- ========================================================================
 -- Compactible

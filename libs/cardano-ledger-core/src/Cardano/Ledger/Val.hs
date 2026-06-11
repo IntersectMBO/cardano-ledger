@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | This module defines a generalised notion of a "value" - that is, something
@@ -21,7 +20,7 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson (ToJSON)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Coerce
 import Data.Foldable as F (foldl')
 import Data.Group (Abelian)
@@ -36,6 +35,7 @@ class
   , NoThunks t
   , EncCBOR t
   , DecCBOR t
+  , FromJSON t
   , ToJSON t
   , NFData t
   , Show t

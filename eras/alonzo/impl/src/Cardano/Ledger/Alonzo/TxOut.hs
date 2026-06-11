@@ -77,8 +77,8 @@ import qualified Cardano.Ledger.Shelley.TxOut as Shelley
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (guard)
-import Data.Aeson (ToJSON (..), object, (.=))
-import qualified Data.Aeson as Aeson (Value (Null, String))
+import Data.Aeson (FromJSON (..), ToJSON (..), object, (.:), (.=))
+import qualified Data.Aeson as Aeson
 import Data.Bits
 import Data.Maybe (fromMaybe)
 import Data.MemPack
@@ -444,6 +444,13 @@ instance (Era era, Val (Value era)) => ToJSON (AlonzoTxOut era) where
             Aeson.String . hashToTextAsHex $
               extractHash dHash
       ]
+
+instance (Era era, Val (Value era)) => FromJSON (AlonzoTxOut era) where
+  parseJSON = Aeson.withObject "AlonzoTxOut" $ \o ->
+    AlonzoTxOut
+      <$> o .: "address"
+      <*> o .: "value"
+      <*> o .: "datahash"
 
 pattern TxOutCompact ::
   (Era era, Val (Value era), HasCallStack) =>
