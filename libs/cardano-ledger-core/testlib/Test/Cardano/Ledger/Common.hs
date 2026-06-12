@@ -69,6 +69,14 @@ module Test.Cardano.Ledger.Common (
   uniformMapElem,
   uniformSetElem,
 
+  -- * Long-tail probability distributions
+  stdNormalDouble,
+  logNormalDouble,
+  truncatedLogNormalDouble,
+  paretoDouble,
+  truncatedParetoDouble,
+  logUniformDouble,
+
   -- * Miscellanous helpers
   tracedDiscard,
   forEachEraVersion,
@@ -98,13 +106,7 @@ import Test.Cardano.Ledger.Binary.TreeDiff (
   expectExprEqualWithMessage,
   showExpr,
  )
-import qualified Test.Cardano.Ledger.Random as R (
-  uniformMapElem,
-  uniformSetElem,
-  uniformSubMap,
-  uniformSubMapElems,
-  uniformSubSet,
- )
+import qualified Test.Cardano.Ledger.Random as R
 import Test.Hspec as X
 import qualified Test.Hspec.Golden as Golden (Golden (..))
 import Test.Hspec.QuickCheck as X
@@ -319,3 +321,29 @@ uniformSubMapElems ::
 uniformSubMapElems insert mSubMapSize inputMap =
   askStatefulGen >>= R.uniformSubMapElems insert mSubMapSize inputMap
 {-# INLINE uniformSubMapElems #-}
+
+-- Probability distribution sampling functions, eg for use in generators
+
+stdNormalDouble :: HasStatefulGen g m => m Double
+stdNormalDouble = askStatefulGen >>= R.stdNormalDouble
+{-# INLINE stdNormalDouble #-}
+
+logNormalDouble :: HasStatefulGen g m => Double -> Double -> m Double
+logNormalDouble mu sigma = askStatefulGen >>= R.logNormalDouble mu sigma
+{-# INLINE logNormalDouble #-}
+
+truncatedLogNormalDouble :: HasStatefulGen g m => Double -> Double -> Double -> Double -> m Double
+truncatedLogNormalDouble mu sigma lo hi = askStatefulGen >>= R.truncatedLogNormalDouble mu sigma lo hi
+{-# INLINE truncatedLogNormalDouble #-}
+
+paretoDouble :: HasStatefulGen g m => Double -> Double -> m Double
+paretoDouble alpha xMin = askStatefulGen >>= R.paretoDouble alpha xMin
+{-# INLINE paretoDouble #-}
+
+truncatedParetoDouble :: HasStatefulGen g m => Double -> Double -> Double -> m Double
+truncatedParetoDouble alpha xMin xMax = askStatefulGen >>= R.truncatedParetoDouble alpha xMin xMax
+{-# INLINE truncatedParetoDouble #-}
+
+logUniformDouble :: HasStatefulGen g m => Double -> Double -> m Double
+logUniformDouble xMin xMax = askStatefulGen >>= R.logUniformDouble xMin xMax
+{-# INLINE logUniformDouble #-}
