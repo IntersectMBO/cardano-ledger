@@ -249,8 +249,15 @@ txWithMaxRedeemers tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let
     maxExUnit = pp ^. ppMaxTxExUnitsL
+    existingRedeemers = tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
     mkNewMaxRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
-      (hoistPlutusPurpose @era toAsIx prpIdx, (Data dat, maxExUnit))
+      let ptr = hoistPlutusPurpose @era toAsIx prpIdx
+          -- If the redeemer is already provided in the tx, use it. If not, use
+          -- the default one defined in 'impGetPlutusContexts'. This is
+          -- necessary when the existing redeemer is much larger than the
+          -- default one or else the computed fee value will be too low.
+          rdmrData = maybe (Data dat) fst $ Map.lookup ptr existingRedeemers
+       in (ptr, (rdmrData, maxExUnit))
     newMaxRedeemers = Map.fromList (mkNewMaxRedeemers <$> contexts)
   pure $ tx & witsTxL . rdmrsTxWitsL . unRedeemersL .~ newMaxRedeemers
 
@@ -409,6 +416,8 @@ plutusTestScripts lang =
     , mkScriptTestEntry (datumIsWellformed lang) $ PlutusArgs (P.I 221) (Just $ P.I 5)
     , mkScriptTestEntry (inputsOutputsAreNotEmptyNoDatum lang) $ PlutusArgs (P.I 122) Nothing
     , mkScriptTestEntry (inputsOutputsAreNotEmptyWithDatum lang) $ PlutusArgs (P.I 222) (Just $ P.I 5)
+    , mkScriptTestEntry (txInfoTranslationSpecScript lang) $
+        PlutusArgs (P.Constr 0 [P.List []]) (Just $ P.I 5)
     , mkScriptTestEntry guardrailScript $ PlutusArgs (P.I 0) Nothing
     ]
       ++ [ mkScriptTestEntry (inputsOverlapsWithRefInputs lang) $ PlutusArgs (P.I 0) Nothing

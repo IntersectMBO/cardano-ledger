@@ -28,6 +28,7 @@ $purposeIsWellformedWithDatumQ
 $datumIsWellformedQ
 $inputsOutputsAreNotEmptyNoDatumQ
 $inputsOutputsAreNotEmptyWithDatumQ
+$txInfoTranslationSpecScriptQ
 
 -- ================================================================
 -- Compile and serialize the real functions as Plutus scripts.
@@ -109,4 +110,10 @@ inputsOutputsAreNotEmptyWithDatumBytes :: (Q [Dec], PlutusBinary)
 inputsOutputsAreNotEmptyWithDatumBytes =
   ( inputsOutputsAreNotEmptyWithDatumQ
   , PlutusBinary $ PV1.serialiseCompiledCode $$(P.compile [||inputsOutputsAreNotEmptyWithDatum||])
+  )
+
+txInfoTranslationSpecScriptBytes :: (Q [Dec], PlutusBinary)
+txInfoTranslationSpecScriptBytes =
+  ( txInfoTranslationSpecScriptQ
+  , PlutusBinary $ PV1.serialiseCompiledCode $$(P.compile [||txInfoTranslationSpecScript||])
   )

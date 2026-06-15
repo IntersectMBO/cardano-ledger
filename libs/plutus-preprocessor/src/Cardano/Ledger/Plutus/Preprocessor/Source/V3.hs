@@ -212,6 +212,32 @@ inputsOutputsAreNotEmptyWithDatumQ =
             not $ PLD.null (PV3D.txInfoInputs txInfo) || PLD.null (PV3D.txInfoOutputs txInfo)
     |]
 
+-- | Script for TxInfo translation tests. The redeemer encodes a tagged
+-- payload via @Constr tag [payload]@.
+--
+-- * Tag 0: check that @txInfoInputs@ outRefs match the expected list exactly
+-- * Tag 1: check that @txInfoOutputs@ match the expected list exactly
+txInfoTranslationSpecScriptQ :: Q [Dec]
+txInfoTranslationSpecScriptQ =
+  [d|
+    txInfoTranslationSpecScript :: P.BuiltinData -> P.BuiltinUnit
+    txInfoTranslationSpecScript arg =
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3D.ScriptContext
+            PV3D.TxInfo {PV3D.txInfoInputs = inputs, PV3D.txInfoOutputs = outputs}
+            (PV3D.Redeemer redData)
+            (PV3D.SpendingScript _ (Just _)) ->
+              let redConstr = P.unsafeDataAsConstr redData
+               in case redConstr of
+                    (0, payload : _) ->
+                      unsafeFromBuiltinData payload P.== PLD.map PV3D.txInInfoOutRef inputs
+                    (1, payload : _) ->
+                      unsafeFromBuiltinData payload P.== outputs
+                    _ -> False
+          _ -> False
+    |]
+
 inputsOverlapsWithRefInputsQ :: Q [Dec]
 inputsOverlapsWithRefInputsQ =
   [d|
