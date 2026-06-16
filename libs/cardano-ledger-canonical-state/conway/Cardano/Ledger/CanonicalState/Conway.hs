@@ -24,6 +24,8 @@ module Cardano.Ledger.CanonicalState.Conway (
   fromGovProposalIn,
   fromCanonicalAccountState,
   mkCanonicalAccountState,
+  mkCanonicalGovActionId,
+  fromCanonicalGovActionId,
 ) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), maybeToStrictMaybe, strictMaybeToMaybe)
@@ -375,4 +377,18 @@ fromCanonicalAccountState CanonicalAccountState {..} =
     , casDeposit = unCoin casDeposit
     , casDRepDelegation = strictMaybeToMaybe casDRepDelegation
     , casStakePoolDelegation = strictMaybeToMaybe casStakePoolDelegation
+    }
+
+mkCanonicalGovActionId :: GovActionId -> CanonicalGovActionId
+mkCanonicalGovActionId GovActionId {gaidGovActionIx = GovActionIx idx, gaidTxId} =
+  CanonicalGovActionId
+    { gaidTxId = gaidTxId
+    , gaidGovActionIx = CanonicalGovActionIx idx
+    }
+
+fromCanonicalGovActionId :: CanonicalGovActionId -> GovActionId
+fromCanonicalGovActionId CanonicalGovActionId {gaidGovActionIx = CanonicalGovActionIx idx, gaidTxId} =
+  GovActionId
+    { gaidTxId = gaidTxId
+    , gaidGovActionIx = GovActionIx idx
     }
