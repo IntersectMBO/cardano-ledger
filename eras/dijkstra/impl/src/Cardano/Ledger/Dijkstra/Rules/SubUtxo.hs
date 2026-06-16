@@ -240,3 +240,5 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   BabbageOutputTooSmallUTxO txouts -> SubBabbageOutputTooSmallUTxO txouts
   BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
+  -- Sub-transactions carry no fee and purchase no inclusion strategy.
+  BidBelowQuote _ -> error "Impossible: `BidBelowQuote` for SUBUTXO"

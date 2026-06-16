@@ -70,6 +70,21 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Rules.ValidationMode (failOnJustStatic)
+import Cardano.Ledger.Alonzo.Tx (totExUnits)
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Val ((<->))
+import Cardano.Ledger.DynamicPricing (
+  DynamicPricing,
+  MinimumTxFee (..),
+  Quote (..),
+  addPendingRefund,
+  currentPrice,
+  minimumTxFee,
+  quoteFor,
+  recordTx,
+  txSizeInBytes,
+ )
+import Cardano.Ledger.DynamicPricing.State (PricingState)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
@@ -91,6 +106,7 @@ import Control.State.Transition.Extended (
   TransitionRule,
   judgmentContext,
   trans,
+  (?!),
  )
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
@@ -116,6 +132,10 @@ data DijkstraUtxoPredFailure era
   | MaxTxSizeUTxO (Mismatch RelLTEQ Word32)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
+      (Mismatch RelGTEQ Coin)
+  | -- | Dynamic pricing (U1): the bid (fee field, read as a price cap) does
+    -- not cover the current quote for the declared inclusion strategy.
+    BidBelowQuote
       (Mismatch RelGTEQ Coin)
   | ValueNotConservedUTxO
       (Mismatch RelEQ (Value era)) -- Serialise consumed first, then produced
@@ -256,7 +276,8 @@ dijkstraUtxoTransition ::
   forall era.
   ( EraUTxO era
   , EraCertState era
-  , BabbageEraTxBody era
+  , DijkstraEraTxBody era
+  , PricingState era ~ DynamicPricing era
   , AlonzoEraTx era
   , EraStake era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
@@ -279,10 +300,41 @@ dijkstraUtxoTransition ::
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
   TRC (UtxoEnv _ pp certState, utxos, tx) <- judgmentContext
+  let txBody = tx ^. bodyTxL
+      declared = txBody ^. inclusionTxBodyL
+      bid = txBody ^. feeTxBodyL
+      Quote quote = quoteFor pp tx (currentPrice declared (utxosPricing utxos))
   babbageUtxoValidation
-  validateNoPtrInCollateralReturn $ tx ^. bodyTxL
+  -- U1: the bid covers the current quote for the declared inclusion strategy.
+  -- Subsumes the plain min-fee premise (the quote never undercuts the
+  -- protocol minimum fee), which babbageUtxoValidation still checks anyway.
+  quote <= bid
+    ?! injectFailure
+      (BidBelowQuote Mismatch {mismatchSupplied = bid, mismatchExpected = quote})
+  validateNoPtrInCollateralReturn txBody
   updatedUtxos <- trans @(EraRule "UTXOS" era) $ TRC (pp, utxos, tx)
-  updateUTxOStateByTxValidity pp certState (utxosGovState utxos) tx updatedUtxos
+  finalUtxos <- updateUTxOStateByTxValidity pp certState (utxosGovState utxos) tx updatedUtxos
+  -- U2: usage accounting by declared strategy (spec: processTxTiers).
+  -- Recorded for valid and invalid (collateral-consuming) transactions alike:
+  -- both occupy block space.
+  let recorded =
+        recordTx declared (txSizeInBytes tx) bid (totExUnits tx) (utxosPricing finalUtxos)
+  -- Fee split (rule 3), only when the bidder asked for a refund:
+  --   base    (the protocol minimum)   stays in the fee pot   [prototype answer to Q3]
+  --   premium (quote − base)           goes to the treasury via the donation pot
+  --   refund  (bid − quote)            owed back to the bidder, flushed by LEDGER
+  -- Without a refund account: today's semantics, the full bid stays in the fee pot.
+  pure $! case txBody ^. feeRefundAccountTxBodyL of
+    SNothing -> finalUtxos {utxosPricing = recorded}
+    SJust (AccountAddress _ (AccountId cred)) ->
+      let MinimumTxFee base = minimumTxFee pp tx
+          premium = quote <-> base
+          refund = bid <-> quote
+       in finalUtxos
+            { utxosPricing = addPendingRefund cred refund recorded
+            , utxosFees = utxosFees finalUtxos <-> premium <-> refund
+            , utxosDonation = utxosDonation finalUtxos <> premium
+            }
 
 instance
   forall era.
@@ -290,6 +342,8 @@ instance
   , EraUTxO era
   , EraStake era
   , ConwayEraTxBody era
+  , DijkstraEraTxBody era
+  , PricingState era ~ DynamicPricing era
   , AlonzoEraTx era
   , EraRule "UTXO" era ~ DijkstraUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
@@ -376,6 +430,7 @@ instance
       BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 21 !> To x
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 22 !> To x
       PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 23 !> To x
+      BidBelowQuote mm -> Sum BidBelowQuote 24 !> To mm
 
 instance
   ( Era era
@@ -411,6 +466,7 @@ instance
     21 -> SumD BabbageOutputTooSmallUTxO <! From
     22 -> SumD BabbageNonDisjointRefInputs <! From
     23 -> SumD PtrPresentInCollateralReturn <! From
+    24 -> SumD BidBelowQuote <! From
     n -> Invalid n
 
 -- =====================================================

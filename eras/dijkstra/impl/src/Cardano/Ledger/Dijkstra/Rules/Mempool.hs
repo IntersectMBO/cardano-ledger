@@ -21,6 +21,7 @@ module Cardano.Ledger.Dijkstra.Rules.Mempool (
   DijkstraMempoolEvent (..),
 ) where
 
+import Cardano.Ledger.DynamicPricing.State (DynamicPricing, PricingState)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -236,6 +237,7 @@ instance
   ( AlonzoEraTx era
   , ConwayEraCertState era
   , DijkstraEraTxBody era
+  , PricingState era ~ DynamicPricing era
   , ConwayEraGov era
   , EraPlutusContext era
   , GovState era ~ ConwayGovState era
