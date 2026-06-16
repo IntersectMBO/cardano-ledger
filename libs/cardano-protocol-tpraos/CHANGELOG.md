@@ -11,6 +11,7 @@
 
 ### `testlib`
 
+* Add `NFData` instances for `{VerKeyVRF,SignKeyVRF,CertVRF} FakeVRF`
 * Replace `CuddleData` with `HuddleEnv`
 
 ## 1.5.0.0
