@@ -66,6 +66,7 @@ import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -244,7 +245,7 @@ dijkstraSubLedgersTransition = do
     judgmentContext
 
   let tx = stAnnTx ^. txStAnnTxG
-  curEpochNo <- maybe (liftSTS $ Shelley.epochFromSlot slot) pure mbCurEpochNo
+  curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
   let txBody = tx ^. bodyTxL
   let govState = utxoState ^. utxosGovStateL
   let committee = govState ^. committeeGovStateL

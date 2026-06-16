@@ -18,6 +18,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Rewards
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.Monad (zipWithM_)
+import Control.State.Transition (Event)
 import Data.Coerce
 import Data.Map ((!))
 import qualified Data.Set as Set
@@ -30,7 +31,7 @@ babbageEraSpecificSpec ::
   forall era.
   ( BabbageEraImp era
   , ShelleyEraAccounts era
-  , Shelley.Event (EraRule "NEWEPOCH" era) ~ Shelley.ShelleyNewEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ Shelley.ShelleyNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 babbageEraSpecificSpec = describe "POOL" $ do

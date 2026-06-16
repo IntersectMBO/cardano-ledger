@@ -10,14 +10,6 @@
 module Cardano.Ledger.Shelley.Rules.Rupd (
   ShelleyRUPD,
   RupdEnv (..),
-  PredicateFailure,
-  epochInfoRange,
-  PulsingRewUpdate (..),
-  startStep,
-  pulseStep,
-  completeStep,
-  lift,
-  Identity (..),
   RupdEvent (..),
 ) where
 
@@ -54,10 +46,7 @@ import Cardano.Ledger.Slot (
   (+*),
  )
 import Cardano.Ledger.State (EraCertState)
-import Cardano.Slotting.EpochInfo.API (epochInfoRange)
 import Control.DeepSeq (NFData)
-import Control.Monad.Identity (Identity (..))
-import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Rule,

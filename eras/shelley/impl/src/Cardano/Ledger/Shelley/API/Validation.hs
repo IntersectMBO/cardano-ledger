@@ -232,7 +232,7 @@ updateNewEpochState ss (STS.BbodyState ls bcur) =
   LedgerState.updateNES ss bcur ls
 
 newtype BlockTransitionError era
-  = BlockTransitionErrorInternal (NonEmpty (STS.PredicateFailure (EraRule "BBODY" era)))
+  = BlockTransitionErrorInternal (NonEmpty (PredicateFailure (EraRule "BBODY" era)))
   deriving (Generic)
 
 pattern BlockTransitionError ::
@@ -247,11 +247,11 @@ pattern BlockTransitionError failures <-
 {-# COMPLETE BlockTransitionError #-}
 
 deriving stock instance
-  Eq (STS.PredicateFailure (EraRule "BBODY" era)) =>
+  Eq (PredicateFailure (EraRule "BBODY" era)) =>
   Eq (BlockTransitionError era)
 
 deriving stock instance
-  Show (STS.PredicateFailure (EraRule "BBODY" era)) =>
+  Show (PredicateFailure (EraRule "BBODY" era)) =>
   Show (BlockTransitionError era)
 
 -- | We do not check for thunks in this instance, because `BlockTransitionError` uses `NFData` to

@@ -20,7 +20,6 @@ module Cardano.Ledger.Shelley.Rules.Delegs (
   DelegsEnv (..),
   ShelleyDelegsPredFailure (..),
   ShelleyDelegsEvent (..),
-  PredicateFailure,
 ) where
 
 import Cardano.Ledger.BaseTypes (

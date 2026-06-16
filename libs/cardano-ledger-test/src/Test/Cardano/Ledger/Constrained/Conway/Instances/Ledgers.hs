@@ -11,6 +11,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.Ledgers () where
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Constrained.API
+import Data.Functor.Identity (Identity)
 import Data.Typeable
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger (EraSpecPParams)
 
@@ -20,6 +21,6 @@ instance
   ( EraSpecPParams era
   , EraGov era
   , EraTxOut era
-  , Eq (PParamsHKD Shelley.Identity era)
+  , Eq (PParamsHKD Identity era)
   ) =>
   HasSpec (Shelley.ShelleyLedgersEnv era)

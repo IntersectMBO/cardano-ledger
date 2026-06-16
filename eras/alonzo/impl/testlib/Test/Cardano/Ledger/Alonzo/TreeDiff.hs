@@ -30,8 +30,9 @@ import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided)
+import Control.State.Transition (Event, PredicateFailure)
+import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import PlutusLedgerApi.Common (EvaluationError (..), ExBudget, ExCPU, ExMemory, SatInt)
 import Test.Cardano.Ledger.Mary.TreeDiff
@@ -68,7 +69,7 @@ deriving newtype instance ToExpr OrdExUnits
 
 instance ToExpr (AlonzoPParams StrictMaybe era)
 
-instance ToExpr (AlonzoPParams Shelley.Identity era)
+instance ToExpr (AlonzoPParams Identity era)
 
 -- TxWits
 instance ToExpr (PlutusPurpose AsIx era) => ToExpr (RedeemersRaw era)
@@ -178,7 +179,7 @@ instance
 instance
   ( ToExpr (Value era)
   , ToExpr (TxOut era)
-  , ToExpr (Shelley.PredicateFailure (EraRule "UTXOS" era))
+  , ToExpr (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   ToExpr (AlonzoUtxoPredFailure era)
 
@@ -200,14 +201,14 @@ instance
   ( Era era
   , ToExpr (PlutusPurpose AsIx era)
   , ToExpr (PlutusPurpose AsItem era)
-  , ToExpr (Shelley.PredicateFailure (EraRule "UTXO" era))
+  , ToExpr (PredicateFailure (EraRule "UTXO" era))
   , ToExpr (TxCert era)
   ) =>
   ToExpr (AlonzoUtxowPredFailure era)
 
-instance ToExpr (Shelley.Event (EraRule "UTXO" era)) => ToExpr (AlonzoUtxowEvent era)
+instance ToExpr (Event (EraRule "UTXO" era)) => ToExpr (AlonzoUtxowEvent era)
 
-instance (ToExpr (TxOut era), ToExpr (Shelley.Event (EraRule "UTXOS" era))) => ToExpr (AlonzoUtxoEvent era)
+instance (ToExpr (TxOut era), ToExpr (Event (EraRule "UTXOS" era))) => ToExpr (AlonzoUtxoEvent era)
 
 instance
   ( ToExpr (EraRuleEvent "PPUP" era)
@@ -229,11 +230,11 @@ instance
         ]
 
 instance
-  ToExpr (Shelley.PredicateFailure (EraRule "LEDGERS" era)) =>
+  ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
   ToExpr (AlonzoBbodyPredFailure era)
 
 instance
-  ToExpr (Shelley.Event (EraRule "LEDGERS" era)) =>
+  ToExpr (Event (EraRule "LEDGERS" era)) =>
   ToExpr (AlonzoBbodyEvent era)
 
 instance ToExpr EvaluationError where

@@ -22,7 +22,6 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   UtxoEnv (..),
   ShelleyUtxoPredFailure (..),
   UtxoEvent (..),
-  PredicateFailure,
   validSizeComputationCheck,
   updateUTxOState,
   updateUTxOStateNoFees,

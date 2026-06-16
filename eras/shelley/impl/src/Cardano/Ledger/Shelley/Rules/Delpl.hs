@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.Rules.Delpl (
   DelplEnv (..),
   ShelleyDelplPredFailure (..),
   ShelleyDelplEvent,
-  PredicateFailure,
 ) where
 
 import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, invalidKey)

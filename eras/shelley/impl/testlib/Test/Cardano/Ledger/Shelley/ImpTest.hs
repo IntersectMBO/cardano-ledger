@@ -236,7 +236,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
-  epochFromSlot,
   ledgerPpL,
  )
 import Cardano.Ledger.Shelley.Scripts (
@@ -248,7 +247,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
-import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
+import Cardano.Ledger.Slot (epochFromSlot, epochInfoFirst, getTheSlotOfNoReturn)
 import Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
   ensureMinCoinTxOut,

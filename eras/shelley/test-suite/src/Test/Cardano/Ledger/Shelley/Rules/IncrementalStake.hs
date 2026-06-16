@@ -29,11 +29,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   curPParamsEpochStateL,
  )
-import Cardano.Ledger.Shelley.Rules (Identity, LedgerEnv)
+import Cardano.Ledger.Shelley.Rules (LedgerEnv)
 import Cardano.Ledger.Shelley.State
 import Control.Monad.Reader (ReaderT)
 import Control.State.Transition (STS (..))
 import Data.Foldable (fold)
+import Data.Functor.Identity (Identity)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy

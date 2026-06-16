@@ -13,7 +13,6 @@
 
 module Cardano.Ledger.Shelley.Rules.Mir (
   ShelleyMIR,
-  PredicateFailure,
   ShelleyMirEvent (..),
   emptyInstantaneousRewards,
 ) where

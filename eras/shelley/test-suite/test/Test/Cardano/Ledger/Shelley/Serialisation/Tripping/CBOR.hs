@@ -18,6 +18,7 @@ import qualified Cardano.Ledger.Shelley.Rules as STS
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
+import Control.State.Transition (PredicateFailure)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -57,6 +58,6 @@ tests =
           (eraProtVerLow @ShelleyEra)
           (eraProtVerHigh @ShelleyEra)
     , testProperty "LEDGER Predicate Failures" $
-        roundTripExpectation @[STS.PredicateFailure (STS.ShelleyLEDGERS ShelleyEra)] cborTrip
+        roundTripExpectation @[PredicateFailure (STS.ShelleyLEDGERS ShelleyEra)] cborTrip
     , testCoreTypes
     ]

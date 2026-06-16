@@ -18,7 +18,6 @@
 module Cardano.Ledger.Shelley.Rules.Epoch (
   ShelleyEPOCH,
   ShelleyEpochEvent (..),
-  PredicateFailure,
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)

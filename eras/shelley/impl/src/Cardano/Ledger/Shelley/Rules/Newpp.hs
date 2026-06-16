@@ -12,7 +12,6 @@ module Cardano.Ledger.Shelley.Rules.Newpp (
   ShelleyNEWPP,
   ShelleyNewppState (..),
   NewppEnv (..),
-  PredicateFailure,
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals (quorum), ShelleyBase)

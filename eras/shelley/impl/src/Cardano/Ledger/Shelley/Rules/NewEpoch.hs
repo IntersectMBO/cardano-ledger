@@ -18,10 +18,7 @@
 module Cardano.Ledger.Shelley.Rules.NewEpoch (
   ShelleyNEWEPOCH,
   ShelleyNewEpochEvent (..),
-  PredicateFailure,
   updateRewards,
-  calculatePoolDistr,
-  calculatePoolDistr',
 ) where
 
 import Cardano.Ledger.BaseTypes (

@@ -30,6 +30,8 @@ import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits
 import Cardano.Ledger.Shelley.UTxO
+import Control.State.Transition (Event, PredicateFailure)
+import Data.Functor.Identity (Identity)
 import Data.TreeDiff.OMap as OMap
 import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.TreeDiff

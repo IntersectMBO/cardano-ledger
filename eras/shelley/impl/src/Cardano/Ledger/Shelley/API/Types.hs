@@ -83,11 +83,7 @@ import Cardano.Ledger.Shelley.Rules.Delegs as X (DelegsEnv (..), ShelleyDELEGS)
 import Cardano.Ledger.Shelley.Rules.Delpl as X (DelplEnv (..), ShelleyDELPL)
 import Cardano.Ledger.Shelley.Rules.Ledger as X (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Rules.Ledgers as X (ShelleyLEDGERS, ShelleyLedgersEnv (..))
-import Cardano.Ledger.Shelley.Rules.NewEpoch as X (
-  ShelleyNEWEPOCH,
-  calculatePoolDistr,
-  calculatePoolDistr',
- )
+import Cardano.Ledger.Shelley.Rules.NewEpoch as X (ShelleyNEWEPOCH)
 import Cardano.Ledger.Shelley.Rules.Pool as X (PoolEnv (..), ShelleyPOOL)
 import Cardano.Ledger.Shelley.Rules.PoolReap as X (ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.Rules.Ppup as X (PpupEnv (..), ShelleyPPUP)
@@ -131,6 +127,8 @@ import Cardano.Ledger.State as X (
   StakePoolParams (..),
   StakePoolRelay (..),
   UTxO (..),
+  calculatePoolDistr,
+  calculatePoolDistr',
   individualPoolStake,
  )
 import Cardano.Ledger.TxIn as X (TxId (..), TxIn (..))

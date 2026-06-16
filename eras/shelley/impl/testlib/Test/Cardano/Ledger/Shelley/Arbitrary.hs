@@ -52,7 +52,6 @@ import Cardano.Ledger.Shelley.Rewards (
   StakeShare (..),
  )
 import Cardano.Ledger.Shelley.Rules (
-  PredicateFailure,
   ShelleyBbodyPredFailure,
   ShelleyDelegPredFailure,
   ShelleyDelegsPredFailure,
@@ -85,6 +84,7 @@ import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Control.Exception (assert)
 import Control.Monad.Identity (Identity)
+import Control.State.Transition (PredicateFailure)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map (fromList)
 import Data.Sequence.Strict (fromList)

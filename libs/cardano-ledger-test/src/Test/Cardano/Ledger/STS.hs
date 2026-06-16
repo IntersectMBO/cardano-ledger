@@ -23,6 +23,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Constrained.API hiding (forAll)
 import Control.Monad.Reader
 import Control.State.Transition.Extended
+import Data.Functor.Identity (Identity)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import Data.Set (Set)
@@ -68,7 +69,7 @@ stsPropertyV2 ::
   , Signal (EraRule r era) ~ sig
   , PredicateFailure (EraRule r era) ~ fail
   , STS (EraRule r era)
-  , BaseM (EraRule r era) ~ ReaderT Globals Shelley.Identity
+  , BaseM (EraRule r era) ~ ReaderT Globals Identity
   , Testable p
   , HasSpec env
   , HasSpec st
@@ -93,7 +94,7 @@ stsPropertyV2' ::
   , Signal (EraRule r ConwayEra) ~ sig
   , PredicateFailure (EraRule r ConwayEra) ~ fail
   , STS (EraRule r ConwayEra)
-  , BaseM (EraRule r ConwayEra) ~ ReaderT Globals Shelley.Identity
+  , BaseM (EraRule r ConwayEra) ~ ReaderT Globals Identity
   , Testable p
   , HasSpec env
   , HasSpec st
@@ -149,7 +150,7 @@ stsPropertyV2Gen ::
   , Signal (EraRule r era) ~ sig
   , PredicateFailure (EraRule r era) ~ fail
   , STS (EraRule r era)
-  , BaseM (EraRule r era) ~ ReaderT Globals Shelley.Identity
+  , BaseM (EraRule r era) ~ ReaderT Globals Identity
   , Testable p
   , HasSpec env
   , HasSpec st

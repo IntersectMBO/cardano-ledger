@@ -124,6 +124,7 @@ import Data.ByteString.Short (ShortByteString)
 import Data.ByteString.Short qualified as SBS
 import Data.Coerce
 import Data.Foldable
+import Data.Functor.Identity (Identity)
 import Data.Int
 import Data.Kind
 import Data.List.NonEmpty qualified as NE
@@ -950,9 +951,9 @@ instance HasSimpleRep (ConwayPParams StrictMaybe c)
 
 instance Typeable c => HasSpec (ConwayPParams StrictMaybe c)
 
-instance HasSimpleRep (ConwayPParams Shelley.Identity era)
+instance HasSimpleRep (ConwayPParams Identity era)
 
-instance Era era => HasSpec (ConwayPParams Shelley.Identity era)
+instance Era era => HasSpec (ConwayPParams Identity era)
 
 instance HasSpec Char where
   type TypeSpec Char = ()
@@ -991,8 +992,8 @@ instance Typeable a => HasSimpleRep (THKD tag StrictMaybe a) where
 
 instance (IsNormalType a, Typeable tag, HasSpec a) => HasSpec (THKD tag StrictMaybe a)
 
-instance Typeable a => HasSimpleRep (THKD tag Shelley.Identity a) where
-  type SimpleRep (THKD tag Shelley.Identity a) = a
+instance Typeable a => HasSimpleRep (THKD tag Identity a) where
+  type SimpleRep (THKD tag Identity a) = a
   fromSimpleRep = THKD
   toSimpleRep (THKD a) = a
 
@@ -1000,9 +1001,9 @@ instance
   ( IsNormalType a
   , Typeable tag
   , HasSpec a
-  , GenericallyInstantiated (THKD tag Shelley.Identity a)
+  , GenericallyInstantiated (THKD tag Identity a)
   ) =>
-  HasSpec (THKD tag Shelley.Identity a)
+  HasSpec (THKD tag Identity a)
 
 instance HasSimpleRep GovActionPurpose
 
@@ -1538,10 +1539,10 @@ type DRepPulserTypes =
 
 instance
   HasSimpleRep
-    (DRepPulser ConwayEra Shelley.Identity (RatifyState ConwayEra))
+    (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
   where
   type
-    TheSop (DRepPulser ConwayEra Shelley.Identity (RatifyState ConwayEra)) =
+    TheSop (DRepPulser ConwayEra Identity (RatifyState ConwayEra)) =
       '["DRepPulser" ::: DRepPulserTypes]
   toSimpleRep DRepPulser {..} =
     inject @"DRepPulser" @'["DRepPulser" ::: DRepPulserTypes]
@@ -1564,7 +1565,7 @@ instance
       $ \ps accs b sd spd dd ds ce cs es p pds poolps ->
         DRepPulser ps accs b sd spd dd ds ce cs es p pds testGlobals poolps
 
-instance HasSpec (DRepPulser ConwayEra Shelley.Identity (RatifyState ConwayEra))
+instance HasSpec (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
 
 instance (Typeable (CertState era), Era era) => HasSimpleRep (Shelley.UtxoEnv era)
 
