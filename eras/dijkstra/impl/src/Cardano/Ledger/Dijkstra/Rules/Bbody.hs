@@ -24,7 +24,7 @@ module Cardano.Ledger.Dijkstra.Rules.Bbody (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoBbodyEvent (ShelleyInAlonzoEvent),
   AlonzoBbodyPredFailure,
@@ -73,7 +73,16 @@ import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Ledgers ()
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import Cardano.Ledger.DynamicPricing (
+  DynamicPricing (..),
+  Inclusion (..),
+  InclusionUsage (..),
+  TxSizeInBytes (..),
+  endOfBlock,
+ )
+import Cardano.Ledger.DynamicPricing.State (PricingState)
+import Cardano.Ledger.Plutus.ExUnits (pointWiseExUnits)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsUTxOStateL, utxosPricingL)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   ShelleyBbodyPredFailure,
@@ -95,7 +104,9 @@ import Control.State.Transition (
 import Control.State.Transition.Extended (TRC (..), failBecause, (?!))
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import qualified Data.Map.Strict as Map
+import Data.Word (Word32)
+import Lens.Micro ((%~), (&), (^.))
 import NoThunks.Class (NoThunks (..))
 
 data DijkstraBbodyPredFailure era
@@ -107,6 +118,12 @@ data DijkstraBbodyPredFailure era
   | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | PrevEpochNonceNotPresent
   | PerasCertValidationFailed PerasCert Nonce
+  | -- | Dynamic pricing (B1, spec: @sdChecks@): the optimistic usage of the
+    -- block exceeds the on-chain block byte budget.
+    OptimisticOverflowsBlock (Mismatch RelLTEQ Word32)
+  | -- | Dynamic pricing (B1, spec: @sdChecks@): the optimistic usage of the
+    -- block exceeds the on-chain block ExUnits budget.
+    OptimisticOverflowsBlockExUnits (Mismatch RelLTEQ ExUnits)
   deriving (Generic)
 
 instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (DijkstraBbodyPredFailure era)
@@ -139,6 +156,8 @@ instance
       PrevEpochNonceNotPresent -> Sum PrevEpochNonceNotPresent 5
       PerasCertValidationFailed cert nonce ->
         Sum PerasCertValidationFailed 6 !> To cert !> To nonce
+      OptimisticOverflowsBlock mm -> Sum OptimisticOverflowsBlock 7 !> To mm
+      OptimisticOverflowsBlockExUnits mm -> Sum OptimisticOverflowsBlockExUnits 8 !> To mm
 
 instance
   ( Era era
@@ -154,6 +173,8 @@ instance
     4 -> SumD BodyRefScriptsSizeTooBig <! From
     5 -> SumD PrevEpochNonceNotPresent
     6 -> SumD PerasCertValidationFailed <! From <! From
+    7 -> SumD OptimisticOverflowsBlock <! From
+    8 -> SumD OptimisticOverflowsBlockExUnits <! From
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" DijkstraEra = DijkstraBbodyPredFailure DijkstraEra
@@ -323,6 +344,7 @@ instance
   , BabbageEraTxBody era
   , ConwayEraPParams era
   , DijkstraEraBlockBody era
+  , PricingState era ~ DynamicPricing era
   ) =>
   STS (DijkstraBBODY era)
   where
@@ -343,7 +365,45 @@ instance
     [ dijkstraBbodyTransition @era
         >> Conway.conwayBbodyTransition @era
         >> alonzoBbodyTransition @era
+        >>= divupTransition @era
     ]
+
+-- | Close the block for dynamic pricing (spec: the @DIVUP@ rule), running
+-- AFTER the block's transactions so it sees the accumulated usage:
+--
+-- * B1 (@sdChecks@): the optimistic usage fits the on-chain block budgets.
+--   Praos-only: every block is an RB, so the premise always applies; the
+--   EB exemption arrives with the consensus phase.
+-- * B2 (@endOfBlock@): republish the prices ('reprice', still the identity)
+--   and reset the usage counters. The prices published here are what the
+--   UTXO rule judges the NEXT block's transactions against.
+divupTransition ::
+  forall era.
+  ( State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
+  , AlonzoEraPParams era
+  , PricingState era ~ DynamicPricing era
+  , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
+  ) =>
+  ShelleyBbodyState era ->
+  TransitionRule (EraRule "BBODY" era)
+divupTransition (BbodyState ls blocksMade) = do
+  TRC (BbodyEnv pp _, _, _) <- judgmentContext
+  let pricing = ls ^. lsUTxOStateL . utxosPricingL
+      usage = Map.findWithDefault mempty Optimistic (blockUsage pricing)
+      TxSizeInBytes optimisticBytes = bytesUsed usage
+      maxBytes = pp ^. ppMaxBBSizeL
+      maxExUnits = pp ^. ppMaxBlockExUnitsL
+  optimisticBytes <= maxBytes
+    ?! injectFailure
+      (OptimisticOverflowsBlock Mismatch {mismatchSupplied = optimisticBytes, mismatchExpected = maxBytes})
+  pointWiseExUnits (<=) (exUnitsUsed usage) maxExUnits
+    ?! injectFailure
+      ( OptimisticOverflowsBlockExUnits
+          Mismatch {mismatchSupplied = exUnitsUsed usage, mismatchExpected = maxExUnits}
+      )
+  pure $! BbodyState (ls & lsUTxOStateL . utxosPricingL %~ endOfBlock) blocksMade
 
 dijkstraBbodyTransition ::
   forall era.
