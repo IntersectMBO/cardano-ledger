@@ -35,7 +35,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbTotalCollateral,
     dtbCerts,
     dtbWithdrawals,
-    dtbTxfee,
+    dtbBidFee,
     dtbVldt,
     dtbMint,
     dtbScriptIntegrityHash,
@@ -49,6 +49,8 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbSubTransactions,
     dtbDirectDeposits,
     dtbAccountBalanceIntervals,
+    dtbInclusion,
+    dtbFeeRefundAccount,
     dstbSpendInputs,
     dstbReferenceInputs,
     dstbOutputs,
@@ -75,7 +77,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
   basicDijkstraTxBodyRaw,
   inputsDijkstraTxBodyRawL,
   outputsDijkstraTxBodyRawL,
-  feeDijkstraTxBodyRawL,
+  bidFeeDijkstraTxBodyRawL,
   vldtDijkstraTxBodyRawL,
   certsDijkstraTxBodyRawL,
   withdrawalsDijkstraTxBodyRawL,
@@ -96,6 +98,8 @@ module Cardano.Ledger.Dijkstra.TxBody (
   requiredTopLevelGuardsDijkstraTxBodyRawL,
   directDepositsDijkstraTxBodyRawL,
   accountBalanceIntervalsDijkstraTxBodyRawL,
+  inclusionDijkstraTxBodyRawL,
+  feeRefundAccountDijkstraTxBodyRawL,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
@@ -122,6 +126,7 @@ import Cardano.Ledger.Conway.TxBody (
  )
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DynamicPricing (Inclusion (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..), DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra.TxOut ()
@@ -169,7 +174,7 @@ data DijkstraTxBodyRaw l era where
     , dtbrTotalCollateral :: !(StrictMaybe Coin)
     , dtbrCerts :: !(OSet.OSet (TxCert era))
     , dtbrWithdrawals :: !Withdrawals
-    , dtbrFee :: !Coin
+    , dtbrBidFee :: !Coin
     , dtbrVldt :: !ValidityInterval
     , dtbrGuards :: !(OSet (Credential Guard))
     , dtbrMint :: !MultiAsset
@@ -183,6 +188,8 @@ data DijkstraTxBodyRaw l era where
     , dtbrSubTransactions :: !(OMap TxId (Tx SubTx era))
     , dtbrDirectDeposits :: !DirectDeposits
     , dtbrAccountBalanceIntervals :: !(AccountBalanceIntervals era)
+    , dtbrInclusion :: !Inclusion
+    , dtbrFeeRefundAccount :: !(StrictMaybe AccountAddress)
     } ->
     DijkstraTxBodyRaw TopTx era
   DijkstraSubTxBodyRaw ::
@@ -225,7 +232,7 @@ deriving via
     (Typeable l, EraTxBody era) => NoThunks (DijkstraTxBodyRaw l era)
 
 instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l era) where
-  rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
+  rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraTxBodyRaw {..} = txBodyRaw
      in dtbrSpendInputs `deepseq`
           dtbrCollateralInputs `deepseq`
@@ -235,7 +242,7 @@ instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l e
                   dtbrTotalCollateral `deepseq`
                     dtbrCerts `deepseq`
                       dtbrWithdrawals `deepseq`
-                        dtbrFee `deepseq`
+                        dtbrBidFee `deepseq`
                           dtbrVldt `deepseq`
                             dtbrGuards `deepseq`
                               dtbrMint `deepseq`
@@ -248,7 +255,9 @@ instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l e
                                             dtbrTreasuryDonation `deepseq`
                                               dtbrSubTransactions `deepseq`
                                                 dtbrDirectDeposits `deepseq`
-                                                  rnf dtbrAccountBalanceIntervals
+                                                  dtbrAccountBalanceIntervals `deepseq`
+                                                    dtbrInclusion `deepseq`
+                                                      rnf dtbrFeeRefundAccount
   rnf txBodyRaw@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraSubTxBodyRaw {..} = txBodyRaw
      in dstbrSpendInputs `deepseq`
@@ -297,6 +306,8 @@ basicDijkstraTxBodyRaw STopTx =
     OMap.Empty
     (DirectDeposits mempty)
     (AccountBalanceIntervals mempty)
+    Optimistic
+    SNothing
 basicDijkstraTxBodyRaw SSubTx =
   DijkstraSubTxBodyRaw
     mempty
@@ -338,7 +349,7 @@ instance
       bodyFields sTxLevel = \case
         0 -> fieldA (inputsDijkstraTxBodyRawL .~) From
         1 -> fieldA (outputsDijkstraTxBodyRawL .~) From
-        2 | STopTx <- sTxLevel -> fieldA (feeDijkstraTxBodyRawL .~) From
+        2 | STopTx <- sTxLevel -> fieldA (bidFeeDijkstraTxBodyRawL .~) From
         3 -> ofieldA (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) From
         4 ->
           fieldAGuarded
@@ -424,6 +435,12 @@ instance
             (null . unAccountBalanceIntervals)
             (accountBalanceIntervalsDijkstraTxBodyRawL .~)
             From
+        27
+          | STopTx <- sTxLevel ->
+              fieldA (inclusionDijkstraTxBodyRawL .~) From
+        28
+          | STopTx <- sTxLevel ->
+              ofieldA (feeRefundAccountDijkstraTxBodyRawL .~) From
         n -> invalidField n
       decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
       decodeSubTransactions =
@@ -453,7 +470,7 @@ encodeTxBodyRaw DijkstraTxBodyRaw {..} =
         !> Key 1 (To dtbrOutputs)
         !> encodeKeyedStrictMaybe 16 dtbrCollateralReturn
         !> encodeKeyedStrictMaybe 17 dtbrTotalCollateral
-        !> Key 2 (To dtbrFee)
+        !> Key 2 (To dtbrBidFee)
         !> encodeKeyedStrictMaybe 3 top
         !> Omit OSet.null (Key 4 (To dtbrCerts))
         !> Omit (null . unWithdrawals) (Key 5 (To dtbrWithdrawals))
@@ -470,6 +487,8 @@ encodeTxBodyRaw DijkstraTxBodyRaw {..} =
         !> Omit null (Key 23 $ To dtbrSubTransactions)
         !> Omit (null . unDirectDeposits) (Key 25 (To dtbrDirectDeposits))
         !> Omit (null . unAccountBalanceIntervals) (Key 26 (To dtbrAccountBalanceIntervals))
+        !> Omit (== Optimistic) (Key 27 (To dtbrInclusion))
+        !> encodeKeyedStrictMaybe 28 dtbrFeeRefundAccount
 encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
   let ValidityInterval bot top = dstbrVldt
    in Keyed
@@ -577,6 +596,8 @@ pattern DijkstraTxBody ::
   OMap TxId (Tx SubTx DijkstraEra) ->
   DirectDeposits ->
   AccountBalanceIntervals DijkstraEra ->
+  Inclusion ->
+  StrictMaybe AccountAddress ->
   TxBody TopTx DijkstraEra
 pattern DijkstraTxBody
   { dtbSpendInputs
@@ -587,7 +608,7 @@ pattern DijkstraTxBody
   , dtbTotalCollateral
   , dtbCerts
   , dtbWithdrawals
-  , dtbTxfee
+  , dtbBidFee
   , dtbVldt
   , dtbGuards
   , dtbMint
@@ -601,6 +622,8 @@ pattern DijkstraTxBody
   , dtbSubTransactions
   , dtbDirectDeposits
   , dtbAccountBalanceIntervals
+  , dtbInclusion
+  , dtbFeeRefundAccount
   } <-
   ( getMemoRawType ->
       DijkstraTxBodyRaw
@@ -612,7 +635,7 @@ pattern DijkstraTxBody
         , dtbrTotalCollateral = dtbTotalCollateral
         , dtbrCerts = dtbCerts
         , dtbrWithdrawals = dtbWithdrawals
-        , dtbrFee = dtbTxfee
+        , dtbrBidFee = dtbBidFee
         , dtbrVldt = dtbVldt
         , dtbrGuards = dtbGuards
         , dtbrMint = dtbMint
@@ -626,6 +649,8 @@ pattern DijkstraTxBody
         , dtbrSubTransactions = dtbSubTransactions
         , dtbrDirectDeposits = dtbDirectDeposits
         , dtbrAccountBalanceIntervals = dtbAccountBalanceIntervals
+        , dtbrInclusion = dtbInclusion
+        , dtbrFeeRefundAccount = dtbFeeRefundAccount
         }
     )
   where
@@ -651,7 +676,9 @@ pattern DijkstraTxBody
       treasuryDonation
       subTransactions
       directDeposits
-      accountBalanceIntervals =
+      accountBalanceIntervals
+      serviceLevel
+      feeRefundAccount =
         mkMemoizedEra @DijkstraEra $
           DijkstraTxBodyRaw
             inputsX
@@ -676,6 +703,8 @@ pattern DijkstraTxBody
             subTransactions
             directDeposits
             accountBalanceIntervals
+            serviceLevel
+            feeRefundAccount
 
 pattern DijkstraSubTxBody ::
   ( EncCBOR (Tx SubTx DijkstraEra)
@@ -846,8 +875,8 @@ outputsDijkstraTxBodyRawL =
         x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrOutputs = mkSized (eraProtVerLow @era) <$> y}
     )
 
-feeDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw TopTx era) Coin
-feeDijkstraTxBodyRawL = lens dtbrFee (\txb x -> txb {dtbrFee = x})
+bidFeeDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw TopTx era) Coin
+bidFeeDijkstraTxBodyRawL = lens dtbrBidFee (\txb x -> txb {dtbrBidFee = x})
 
 auxDataHashDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw l era) (StrictMaybe TxAuxDataHash)
 auxDataHashDijkstraTxBodyRawL =
@@ -931,7 +960,7 @@ instance
   outputsTxBodyL = memoRawTypeL @DijkstraEra . outputsDijkstraTxBodyRawL
   {-# INLINE outputsTxBodyL #-}
 
-  feeTxBodyL = memoRawTypeL @DijkstraEra . feeDijkstraTxBodyRawL
+  feeTxBodyL = memoRawTypeL @DijkstraEra . bidFeeDijkstraTxBodyRawL
   {-# INLINE feeTxBodyL #-}
 
   auxDataHashTxBodyL = memoRawTypeL @DijkstraEra . auxDataHashDijkstraTxBodyRawL
@@ -1094,6 +1123,15 @@ instance
   where
   mintTxBodyL = memoRawTypeL @DijkstraEra . mintDijkstraTxBodyRawL
   {-# INLINE mintTxBodyL #-}
+
+inclusionDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw TopTx era) Inclusion
+inclusionDijkstraTxBodyRawL =
+  lens dtbrInclusion $ \txb x -> txb {dtbrInclusion = x}
+
+feeRefundAccountDijkstraTxBodyRawL ::
+  Lens' (DijkstraTxBodyRaw TopTx era) (StrictMaybe AccountAddress)
+feeRefundAccountDijkstraTxBodyRawL =
+  lens dtbrFeeRefundAccount $ \txb x -> txb {dtbrFeeRefundAccount = x}
 
 collateralInputsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw TopTx era) (Set TxIn)
 collateralInputsDijkstraTxBodyRawL =
@@ -1301,6 +1339,12 @@ class ConwayEraTxBody era => DijkstraEraTxBody era where
 
   accountBalanceIntervalsTxBodyL :: Lens' (TxBody l era) (AccountBalanceIntervals era)
 
+  -- | The inclusion strategy the transaction purchases (dynamic pricing).
+  inclusionTxBodyL :: Lens' (TxBody TopTx era) Inclusion
+
+  -- | Where the unused headroom of the bid is refunded (dynamic pricing).
+  feeRefundAccountTxBodyL :: Lens' (TxBody TopTx era) (StrictMaybe AccountAddress)
+
 guardsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw l era) (OSet (Credential Guard))
 guardsDijkstraTxBodyRawL =
   lens
@@ -1344,6 +1388,12 @@ instance
 
   accountBalanceIntervalsTxBodyL = memoRawTypeL @DijkstraEra . accountBalanceIntervalsDijkstraTxBodyRawL
   {-# INLINE accountBalanceIntervalsTxBodyL #-}
+
+  inclusionTxBodyL = memoRawTypeL @DijkstraEra . inclusionDijkstraTxBodyRawL
+  {-# INLINE inclusionTxBodyL #-}
+
+  feeRefundAccountTxBodyL = memoRawTypeL @DijkstraEra . feeRefundAccountDijkstraTxBodyRawL
+  {-# INLINE feeRefundAccountTxBodyL #-}
 
 -- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
 -- the first element and if it's a credential, it decodes the rest of the

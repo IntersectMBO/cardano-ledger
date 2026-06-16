@@ -50,7 +50,7 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
       bodyFields sTxLevel = \case
         0 -> field (inputsDijkstraTxBodyRawL .~) From
         1 -> field (outputsDijkstraTxBodyRawL .~) From
-        2 | STopTx <- sTxLevel -> field (feeDijkstraTxBodyRawL .~) From
+        2 | STopTx <- sTxLevel -> field (bidFeeDijkstraTxBodyRawL .~) From
         3 -> ofield (vldtDijkstraTxBodyRawL . invalidHereAfterL .~) From
         4 ->
           fieldGuarded
@@ -140,6 +140,9 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
             (null . unAccountBalanceIntervals)
             (accountBalanceIntervalsDijkstraTxBodyRawL .~)
             From
+        27
+          | STopTx <- sTxLevel ->
+              field (inclusionDijkstraTxBodyRawL .~) From
         n -> invalidField n
       requiredFields :: STxBothLevels l DijkstraEra -> [(Word, String)]
       requiredFields sTxLevel

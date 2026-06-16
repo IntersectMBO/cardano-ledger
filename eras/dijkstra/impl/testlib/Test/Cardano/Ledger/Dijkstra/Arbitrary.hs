@@ -24,6 +24,7 @@ import Cardano.Ledger.BaseTypes (LeiosCert (..), PerasCert (..), StrictMaybe)
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure)
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.DynamicPricing (Inclusion (..))
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
 import Cardano.Ledger.Dijkstra.Rules
@@ -97,6 +98,11 @@ instance Arbitrary (TxBody TopTx DijkstraEra) where
       <*> (choose (0, 4) >>= \n -> OMap.fromFoldable <$> vectorOf n arbitrary)
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance Arbitrary Inclusion where
+  arbitrary = elements [Urgent, Optimistic]
 
 instance Arbitrary (UpgradeDijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU

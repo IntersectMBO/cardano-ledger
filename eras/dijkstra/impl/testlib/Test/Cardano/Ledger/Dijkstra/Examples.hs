@@ -18,6 +18,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DynamicPricing (Inclusion (..))
 import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Rules (DijkstraLEDGER, DijkstraMEMPOOL)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..), DijkstraPlutusPurpose (..))
@@ -115,6 +116,8 @@ exampleTxBodyDijkstra =
     mempty -- sub-transactions
     (DirectDeposits mempty)
     (AccountBalanceIntervals mempty)
+    Optimistic -- inclusion strategy
+    SNothing -- fee refund account
   where
     MaryValue _ exampleMultiAsset = exampleMultiAssetValue 3
 

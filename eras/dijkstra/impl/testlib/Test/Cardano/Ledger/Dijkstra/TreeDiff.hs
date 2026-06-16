@@ -45,6 +45,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraPlutusPurpose,
  )
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
+import Cardano.Ledger.DynamicPricing (Inclusion)
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
@@ -68,9 +69,11 @@ instance ToExpr (DijkstraPParams Identity DijkstraEra)
 
 instance ToExpr (DijkstraPParams StrictMaybe DijkstraEra)
 
+instance ToExpr Inclusion
+
 instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
   toExpr = \case
-    txBody@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
+    txBody@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
       let DijkstraTxBodyRaw {..} = txBody
        in Rec "DijkstraTxBodyRaw" $
             OMap.fromList
@@ -82,7 +85,7 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dtbrTotalCollateral", toExpr dtbrTotalCollateral)
               , ("dtbrCerts", toExpr dtbrCerts)
               , ("dtbrWithdrawals", toExpr dtbrWithdrawals)
-              , ("dtbrFee", toExpr dtbrFee)
+              , ("dtbrBidFee", toExpr dtbrBidFee)
               , ("dtbrVldt", toExpr dtbrVldt)
               , ("dtbrGuards", toExpr dtbrGuards)
               , ("dtbrMint", toExpr dtbrMint)
@@ -96,6 +99,8 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dtbrSubTransactions", toExpr dtbrSubTransactions)
               , ("dtbrDirectDeposits", toExpr dtbrDirectDeposits)
               , ("dtbrAccountBalanceIntervals", toExpr dtbrAccountBalanceIntervals)
+              , ("dtbrInclusion", toExpr dtbrInclusion)
+              , ("dtbrFeeRefundAccount", toExpr dtbrFeeRefundAccount)
               ]
     txBody@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
       let DijkstraSubTxBodyRaw {..} = txBody
