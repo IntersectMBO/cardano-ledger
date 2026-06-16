@@ -54,6 +54,7 @@ import Cardano.Ledger.Huddle.Gen qualified as Gen
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (unless, zipWithM)
 import Data.Foldable (traverse_)
+import Data.Function ((&))
 import Data.List (nub)
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
@@ -958,6 +959,17 @@ instance HuddleRule "block" DijkstraEra where
 instance HuddleRule "peras_certificate" DijkstraEra where
   huddleRuleNamed pname _era = pname =.= VBytes / VNil
 
+instance HuddleRule "leios_certificate" DijkstraEra where
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ "signers" ==> VBytes & comment "bitfield"
+        , "aggregated_signature" ==> huddleRule @"leios_signature" era
+        ]
+
+instance HuddleRule "leios_signature" DijkstraEra where
+  huddleRuleNamed pname _era = pname =.= VBytes `sized` (48 :: Word64)
+
 instance HuddleRule "invalid_transactions" DijkstraEra where
   huddleRuleNamed pname era = pname =.= huddleRule1 @"nonempty_set" era (huddleRule @"transaction_index" era)
 
@@ -971,6 +983,7 @@ instance HuddleRule "block_body" DijkstraEra where
         =.= arr
           [ "invalid_transactions" ==> huddleRule @"invalid_transactions" era / VNil
           , "transactions" ==> arr [0 <+ a (huddleRule @"transaction" era)]
+          , "leios_certificate" ==> huddleRule @"leios_certificate" era
           , "peras_certificate" ==> huddleRule @"peras_certificate" era
           ]
 
