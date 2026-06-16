@@ -44,7 +44,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
@@ -74,6 +74,12 @@ import Cardano.Ledger.Conway.Rules (
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.DynamicPricing.State (
+  DynamicPricing,
+  PricingState,
+  drainPendingRefunds,
+  pendingRefunds,
+ )
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   DijkstraGOV,
@@ -103,6 +109,9 @@ import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
+  lsCertStateL,
+  lsUTxOStateL,
+  utxosPricingL,
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -334,6 +343,7 @@ instance
   , ConwayEraTxBody era
   , ConwayEraGov era
   , DijkstraEraTxBody era
+  , PricingState era ~ DynamicPricing era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
   , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
@@ -392,6 +402,7 @@ dijkstraLedgerTransition ::
   , ConwayEraCertState era
   , ConwayEraGov era
   , DijkstraEraTxBody era
+  , PricingState era ~ DynamicPricing era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (DijkstraLEDGER era)
   , Embed (EraRule "GOV" era) (DijkstraLEDGER era)
@@ -421,7 +432,31 @@ dijkstraLedgerTransition = do
   ledgerStateAfterSubledgers <-
     trans @(EraRule "SUBLEDGERS" era) $
       TRC (env, ledgerState, tx ^. bodyTxL . subTransactionsTxBodyL)
-  conwayLedgerTransitionTRC (TRC (env, ledgerStateAfterSubledgers, tx))
+  finalLedgerState <- conwayLedgerTransitionTRC (TRC (env, ledgerStateAfterSubledgers, tx))
+  -- Rule 4: deliver the refunds owed by this transaction's fee split into
+  -- account balances (spec: the feeRewards flush, once per transaction).
+  -- NOTE(prototype): refunds to unregistered accounts stay pending.
+  pure $! flushPendingRefunds finalLedgerState
+
+flushPendingRefunds ::
+  forall era.
+  ( EraCertState era
+  , PricingState era ~ DynamicPricing era
+  ) =>
+  LedgerState era ->
+  LedgerState era
+flushPendingRefunds ls
+  | Map.null refunds = ls
+  | otherwise =
+      ls
+        & lsCertStateL . certDStateL . accountsL
+          %~ addToBalanceAccounts (Map.map compactCoinOrError registered)
+        & lsUTxOStateL . utxosPricingL
+          .~ drained {pendingRefunds = unregistered}
+  where
+    (refunds, drained) = drainPendingRefunds (ls ^. lsUTxOStateL . utxosPricingL)
+    accounts = ls ^. lsCertStateL . certDStateL . accountsL . accountsMapL
+    (registered, unregistered) = Map.partitionWithKey (\cred _ -> Map.member cred accounts) refunds
 
 instance
   ( AlonzoEraTx era
@@ -451,6 +486,8 @@ instance
   , Embed (EraRule "SUBLEDGERS" era) (DijkstraSUBLEDGERS era)
   , ConwayEraGov era
   , AlonzoEraTx era
+  , EraAccounts era
+  , PricingState era ~ DynamicPricing era
   , ConwayEraPParams era
   , DijkstraEraTxBody era
   , EraPlutusContext era
