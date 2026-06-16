@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Certs (
-  ConwayCERTS,
+  CERTS,
   ConwayCertsPredFailure (..),
   ConwayCertsEvent (..),
   CertsEnv (..),
@@ -47,8 +47,8 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
-  ConwayCERT,
-  ConwayCERTS,
+  CERT,
+  CERTS,
   ConwayEra,
   hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
  )
@@ -184,19 +184,19 @@ instance
   , State (EraRule "CERT" era) ~ CertState era
   , Signal (EraRule "CERT" era) ~ TxCert era
   , Environment (EraRule "CERT" era) ~ CertEnv era
-  , Embed (EraRule "CERT" era) (ConwayCERTS era)
+  , Embed (EraRule "CERT" era) (CERTS era)
   , EraCertState era
   , ConwayEraCertState era
   , EraRuleFailure "CERT" era ~ PredicateFailure (EraRule "CERT" era)
   ) =>
-  STS (ConwayCERTS era)
+  STS (CERTS era)
   where
-  type State (ConwayCERTS era) = CertState era
-  type Signal (ConwayCERTS era) = Seq (TxCert era)
-  type Environment (ConwayCERTS era) = CertsEnv era
-  type BaseM (ConwayCERTS era) = ShelleyBase
-  type PredicateFailure (ConwayCERTS era) = ConwayCertsPredFailure era
-  type Event (ConwayCERTS era) = ConwayCertsEvent era
+  type State (CERTS era) = CertState era
+  type Signal (CERTS era) = Seq (TxCert era)
+  type Environment (CERTS era) = CertsEnv era
+  type BaseM (CERTS era) = ShelleyBase
+  type PredicateFailure (CERTS era) = ConwayCertsPredFailure era
+  type Event (CERTS era) = ConwayCertsEvent era
 
   transitionRules = [conwayCertsTransition @era]
 
@@ -206,12 +206,12 @@ conwayCertsTransition ::
   , ConwayEraTxBody era
   , ConwayEraCertState era
   , State (EraRule "CERT" era) ~ CertState era
-  , Embed (EraRule "CERT" era) (ConwayCERTS era)
+  , Embed (EraRule "CERT" era) (CERTS era)
   , Environment (EraRule "CERT" era) ~ CertEnv era
   , Signal (EraRule "CERT" era) ~ TxCert era
   , EraRuleFailure "CERT" era ~ PredicateFailure (EraRule "CERT" era)
   ) =>
-  TransitionRule (ConwayCERTS era)
+  TransitionRule (CERTS era)
 conwayCertsTransition = do
   TRC
     ( env@(CertsEnv tx pp currentEpoch committee committeeProposals)
@@ -241,7 +241,7 @@ conwayCertsTransition = do
               & certDStateL . accountsL %~ drainAccounts withdrawals
     gamma :|> txCert -> do
       certState' <-
-        trans @(ConwayCERTS era) $ TRC (env, certState, gamma)
+        trans @(CERTS era) $ TRC (env, certState, gamma)
       trans @(EraRule "CERT" era) $
         TRC (CertEnv pp currentEpoch committee committeeProposals, certState', txCert)
 
@@ -293,12 +293,12 @@ updateVotingDRepExpiries tx currentEpoch drepActivity certState =
 
 instance
   ( Era era
-  , STS (ConwayCERT era)
+  , STS (CERT era)
   , BaseM (EraRule "CERT" era) ~ ShelleyBase
   , Event (EraRule "CERT" era) ~ ConwayCertEvent era
   , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
   ) =>
-  Embed (ConwayCERT era) (ConwayCERTS era)
+  Embed (CERT era) (CERTS era)
   where
   wrapFailed = CertFailure
   wrapEvent = CertEvent

@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubLedger (
-  DijkstraSUBLEDGER,
+  SUBLEDGER,
   DijkstraSubLedgerPredFailure (..),
   DijkstraSubLedgerEvent (..),
   SubLedgerEnv (..),
@@ -36,15 +36,15 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBCERT,
-  DijkstraSUBCERTS,
-  DijkstraSUBDELEG,
-  DijkstraSUBGOV,
-  DijkstraSUBGOVCERT,
-  DijkstraSUBLEDGER,
-  DijkstraSUBPOOL,
-  DijkstraSUBUTXO,
-  DijkstraSUBUTXOW,
+  SUBCERT,
+  SUBCERTS,
+  SUBDELEG,
+  SUBGOV,
+  SUBGOVCERT,
+  SUBLEDGER,
+  SUBPOOL,
+  SUBUTXO,
+  SUBUTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (
@@ -173,18 +173,18 @@ instance
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
-  , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
-  , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
-  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
-  , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
-  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
-  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
-  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
-  , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
-  , Embed (EraRule "SUBUTXOW" era) (DijkstraSUBLEDGER era)
-  , Embed (EraRule "SUBCERTS" era) (DijkstraSUBCERTS era)
+  , EraRule "SUBLEDGER" era ~ SUBLEDGER era
+  , EraRule "SUBGOV" era ~ SUBGOV era
+  , EraRule "SUBUTXO" era ~ SUBUTXO era
+  , EraRule "SUBUTXOW" era ~ SUBUTXOW era
+  , EraRule "SUBCERTS" era ~ SUBCERTS era
+  , EraRule "SUBCERT" era ~ SUBCERT era
+  , EraRule "SUBDELEG" era ~ SUBDELEG era
+  , EraRule "SUBPOOL" era ~ SUBPOOL era
+  , EraRule "SUBGOVCERT" era ~ SUBGOVCERT era
+  , Embed (EraRule "SUBGOV" era) (SUBLEDGER era)
+  , Embed (EraRule "SUBUTXOW" era) (SUBLEDGER era)
+  , Embed (EraRule "SUBCERTS" era) (SUBCERTS era)
   , InjectRuleEvent "SUBPOOL" Shelley.PoolEvent era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
   , InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure era
@@ -197,14 +197,14 @@ instance
   , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
-  STS (DijkstraSUBLEDGER era)
+  STS (SUBLEDGER era)
   where
-  type State (DijkstraSUBLEDGER era) = LedgerState era
-  type Signal (DijkstraSUBLEDGER era) = StAnnTx SubTx era
-  type Environment (DijkstraSUBLEDGER era) = SubLedgerEnv era
-  type BaseM (DijkstraSUBLEDGER era) = ShelleyBase
-  type PredicateFailure (DijkstraSUBLEDGER era) = DijkstraSubLedgerPredFailure era
-  type Event (DijkstraSUBLEDGER era) = DijkstraSubLedgerEvent era
+  type State (SUBLEDGER era) = LedgerState era
+  type Signal (SUBLEDGER era) = StAnnTx SubTx era
+  type Environment (SUBLEDGER era) = SubLedgerEnv era
+  type BaseM (SUBLEDGER era) = ShelleyBase
+  type PredicateFailure (SUBLEDGER era) = DijkstraSubLedgerPredFailure era
+  type Event (SUBLEDGER era) = DijkstraSubLedgerEvent era
 
   transitionRules = [dijkstraSubLedgersTransition @era]
 
@@ -214,16 +214,16 @@ dijkstraSubLedgersTransition ::
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
-  , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
-  , EraRule "SUBGOV" era ~ DijkstraSUBGOV era
-  , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
-  , EraRule "SUBCERTS" era ~ DijkstraSUBCERTS era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
-  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
-  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
-  , Embed (EraRule "SUBGOV" era) (DijkstraSUBLEDGER era)
-  , Embed (EraRule "SUBUTXOW" era) (DijkstraSUBLEDGER era)
+  , EraRule "SUBLEDGER" era ~ SUBLEDGER era
+  , EraRule "SUBGOV" era ~ SUBGOV era
+  , EraRule "SUBUTXOW" era ~ SUBUTXOW era
+  , EraRule "SUBCERTS" era ~ SUBCERTS era
+  , EraRule "SUBCERT" era ~ SUBCERT era
+  , EraRule "SUBDELEG" era ~ SUBDELEG era
+  , EraRule "SUBPOOL" era ~ SUBPOOL era
+  , EraRule "SUBGOVCERT" era ~ SUBGOVCERT era
+  , Embed (EraRule "SUBGOV" era) (SUBLEDGER era)
+  , Embed (EraRule "SUBUTXOW" era) (SUBLEDGER era)
   , InjectRuleFailure "SUBLEDGER" Conway.ConwayLedgerPredFailure era
   , InjectRuleEvent "SUBPOOL" Shelley.PoolEvent era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
@@ -299,31 +299,31 @@ dijkstraSubLedgersTransition = do
       & lsCertStateL .~ certStateAfterSubCerts
 
 instance
-  ( STS (DijkstraSUBGOV era)
+  ( STS (SUBGOV era)
   , PredicateFailure (EraRule "SUBGOV" era) ~ DijkstraSubGovPredFailure era
   , Event (EraRule "SUBGOV" era) ~ DijkstraSubGovEvent era
   ) =>
-  Embed (DijkstraSUBGOV era) (DijkstraSUBLEDGER era)
+  Embed (SUBGOV era) (SUBLEDGER era)
   where
   wrapFailed = SubGovFailure
   wrapEvent = SubGovEvent
 
 instance
-  ( STS (DijkstraSUBUTXOW era)
+  ( STS (SUBUTXOW era)
   , PredicateFailure (EraRule "SUBUTXOW" era) ~ DijkstraSubUtxowPredFailure era
   , Event (EraRule "SUBUTXOW" era) ~ DijkstraSubUtxowEvent era
   ) =>
-  Embed (DijkstraSUBUTXOW era) (DijkstraSUBLEDGER era)
+  Embed (SUBUTXOW era) (SUBLEDGER era)
   where
   wrapFailed = SubUtxowFailure
   wrapEvent = SubUtxowEvent
 
 instance
-  ( STS (DijkstraSUBCERTS era)
+  ( STS (SUBCERTS era)
   , PredicateFailure (EraRule "SUBCERTS" era) ~ DijkstraSubCertsPredFailure era
   , Event (EraRule "SUBCERTS" era) ~ DijkstraSubCertsEvent era
   ) =>
-  Embed (DijkstraSUBCERTS era) (DijkstraSUBLEDGER era)
+  Embed (SUBCERTS era) (SUBLEDGER era)
   where
   wrapFailed = SubCertsFailure
   wrapEvent = SubCertsEvent

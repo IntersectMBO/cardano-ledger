@@ -13,7 +13,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Ratify (
-  ConwayRATIFY,
+  RATIFY,
   RatifyState (..),
   committeeAccepted,
   committeeAcceptedRatio,
@@ -39,7 +39,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY, hardforkConwayBootstrapPhase)
+import Cardano.Ledger.Conway.Era (ENACT, RATIFY, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   DefaultVote (..),
@@ -90,18 +90,18 @@ import Lens.Micro
 instance
   ( ConwayEraPParams era
   , ConwayEraAccounts era
-  , Embed (EraRule "ENACT" era) (ConwayRATIFY era)
+  , Embed (EraRule "ENACT" era) (RATIFY era)
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
   ) =>
-  STS (ConwayRATIFY era)
+  STS (RATIFY era)
   where
-  type Environment (ConwayRATIFY era) = RatifyEnv era
-  type PredicateFailure (ConwayRATIFY era) = Void
-  type Signal (ConwayRATIFY era) = RatifySignal era
-  type State (ConwayRATIFY era) = RatifyState era
-  type BaseM (ConwayRATIFY era) = ShelleyBase
+  type Environment (RATIFY era) = RatifyEnv era
+  type PredicateFailure (RATIFY era) = Void
+  type Signal (RATIFY era) = RatifySignal era
+  type State (RATIFY era) = RatifyState era
+  type BaseM (RATIFY era) = ShelleyBase
 
   initialRules = []
   transitionRules = [ratifyTransition]
@@ -307,14 +307,14 @@ acceptedByEveryone env st gas =
 
 ratifyTransition ::
   forall era.
-  ( Embed (EraRule "ENACT" era) (ConwayRATIFY era)
+  ( Embed (EraRule "ENACT" era) (RATIFY era)
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , ConwayEraPParams era
   , ConwayEraAccounts era
   ) =>
-  TransitionRule (ConwayRATIFY era)
+  TransitionRule (RATIFY era)
 ratifyTransition = do
   TRC
     ( env@RatifyEnv {reCurrentEpoch}
@@ -349,10 +349,10 @@ ratifyTransition = do
                 & rsEnactStateL .~ newEnactState
                 & rsDelayedL .~ delayingAction govAction
                 & rsEnactedL %~ (Seq.:|> gas)
-          trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
+          trans @(RATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do
           -- This action hasn't been ratified yet. Process the remaining actions.
-          st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
+          st' <- trans @(RATIFY era) $ TRC (env, st, RatifySignal sigs)
           -- Finally, filter out actions that have expired.
           if gasExpiresAfter < reCurrentEpoch
             then pure $ st' & rsExpiredL %~ Set.insert gasId
@@ -380,6 +380,6 @@ validCommitteeTerm govAction pp currentEpoch =
     committeeMaxTermLength = pp ^. ppCommitteeMaxTermLengthL
     withinMaxTermLength = all (<= addEpochInterval currentEpoch committeeMaxTermLength)
 
-instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
+instance EraGov era => Embed (ENACT era) (RATIFY era) where
   wrapFailed = absurd
   wrapEvent = absurd

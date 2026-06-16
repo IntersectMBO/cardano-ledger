@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.NewEpoch (
-  ConwayNEWEPOCH,
+  NEWEPOCH,
   ConwayNewEpochEvent (..),
 ) where
 
@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayNEWEPOCH)
+import Cardano.Ledger.Conway.Era (ConwayEra, EPOCH, NEWEPOCH)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
   ConwayGovState,
@@ -91,7 +91,7 @@ instance
   , ConwayEraGov era
   , EraStake era
   , EraCertState era
-  , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
+  , Embed (EraRule "EPOCH" era) (NEWEPOCH era)
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
@@ -104,17 +104,17 @@ instance
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
-  , Eq (PredicateFailure (ConwayNEWEPOCH era))
-  , Show (PredicateFailure (ConwayNEWEPOCH era))
+  , Eq (PredicateFailure (NEWEPOCH era))
+  , Show (PredicateFailure (NEWEPOCH era))
   ) =>
-  STS (ConwayNEWEPOCH era)
+  STS (NEWEPOCH era)
   where
-  type State (ConwayNEWEPOCH era) = NewEpochState era
-  type Signal (ConwayNEWEPOCH era) = EpochNo
-  type Environment (ConwayNEWEPOCH era) = ()
-  type BaseM (ConwayNEWEPOCH era) = ShelleyBase
-  type PredicateFailure (ConwayNEWEPOCH era) = Void
-  type Event (ConwayNEWEPOCH era) = ConwayNewEpochEvent era
+  type State (NEWEPOCH era) = NewEpochState era
+  type Signal (NEWEPOCH era) = EpochNo
+  type Environment (NEWEPOCH era) = ()
+  type BaseM (NEWEPOCH era) = ShelleyBase
+  type PredicateFailure (NEWEPOCH era) = Void
+  type Event (NEWEPOCH era) = ConwayNewEpochEvent era
 
   initialRules =
     [ pure $
@@ -135,7 +135,7 @@ newEpochTransition ::
   ( EraTxOut era
   , ConwayEraGov era
   , EraCertState era
-  , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
+  , Embed (EraRule "EPOCH" era) (NEWEPOCH era)
   , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
@@ -147,10 +147,10 @@ newEpochTransition ::
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
-  , Eq (PredicateFailure (ConwayNEWEPOCH era))
-  , Show (PredicateFailure (ConwayNEWEPOCH era))
+  , Eq (PredicateFailure (NEWEPOCH era))
+  , Show (PredicateFailure (NEWEPOCH era))
   ) =>
-  TransitionRule (ConwayNEWEPOCH era)
+  TransitionRule (NEWEPOCH era)
 newEpochTransition = do
   TRC
     ( _
@@ -176,7 +176,7 @@ newEpochTransition = do
       let adaPots = totalAdaPotsES es2
       tellEvent $ TotalAdaPotsEvent adaPots
       let pd' = ssStakeMarkPoolDistr (esSnapshots es0)
-      -- See `ShelleyNEWEPOCH` for details on the implementation
+      -- See `Shelley.NEWEPOCH` for details on the implementation
       pure $
         nes
           { nesEL = eNo
@@ -191,7 +191,7 @@ newEpochTransition = do
 tellReward ::
   Event (EraRule "RUPD" era) ~ Shelley.RupdEvent =>
   ConwayNewEpochEvent era ->
-  Rule (ConwayNEWEPOCH era) rtype ()
+  Rule (NEWEPOCH era) rtype ()
 tellReward (DeltaRewardEvent (Shelley.RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
@@ -200,7 +200,7 @@ updateRewards ::
   EpochState era ->
   EpochNo ->
   RewardUpdate ->
-  Rule (ConwayNEWEPOCH era) 'Transition (EpochState era)
+  Rule (NEWEPOCH era) 'Transition (EpochState era)
 updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
   let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_
    in assert (Val.isZero (dt <> dr <> toDeltaCoin totRs <> df)) (pure ())
@@ -212,20 +212,20 @@ updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
   pure es'
 
 instance
-  ( STS (ConwayNEWEPOCH era)
+  ( STS (NEWEPOCH era)
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , PredicateFailure (EraRule "NEWEPOCH" era) ~ PredicateFailure (ConwayNEWEPOCH era)
+  , PredicateFailure (EraRule "NEWEPOCH" era) ~ PredicateFailure (NEWEPOCH era)
   ) =>
-  Embed (ConwayNEWEPOCH era) (Shelley.ShelleyTICK era)
+  Embed (NEWEPOCH era) (Shelley.TICK era)
   where
   wrapFailed = \case {}
   wrapEvent = Shelley.TickNewEpochEvent
 
 instance
-  ( STS (ConwayEPOCH era)
+  ( STS (EPOCH era)
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>
-  Embed (ConwayEPOCH era) (ConwayNEWEPOCH era)
+  Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = EpochEvent

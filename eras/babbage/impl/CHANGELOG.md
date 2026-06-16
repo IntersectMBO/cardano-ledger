@@ -2,6 +2,11 @@
 
 ## 1.14.0.0
 
+* Rename rule types and deprecate the old names:
+  - `BabbageLEDGER` -> `LEDGER`
+  - `BabbageUTXO` -> `UTXO`
+  - `BabbageUTXOS` -> `UTXOS`
+  - `BabbageUTXOW` -> `UTXOW`
 * Replace arguments of `babbageEvalScriptsTxInvalid` with `StAnnTx`
 * Replace arguments of `expectScriptsToPass` with `StAnnTx`
 * Change `Signal` to `StAnnTx TopTx era` for: `BabbageLEDGER`, `BabbageUTXOW`, `BabbageUTXO`, `BabbageUTXOS`

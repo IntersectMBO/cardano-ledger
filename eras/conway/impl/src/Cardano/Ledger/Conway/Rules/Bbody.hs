@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Bbody (
-  ConwayBBODY,
+  BBODY,
   ConwayBbodyPredFailure (..),
   alonzoToConwayBbodyPredFailure,
   shelleyToConwayBbodyPredFailure,
@@ -51,7 +51,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
-import Cardano.Ledger.Conway.Era (ConwayBBODY, ConwayEra)
+import Cardano.Ledger.Conway.Era (BBODY, ConwayEra)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsPredFailure)
@@ -245,24 +245,24 @@ instance
   , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
-  , EraRule "BBODY" era ~ ConwayBBODY era
+  , EraRule "BBODY" era ~ BBODY era
   , AlonzoEraTx era
   , BabbageEraTxBody era
   , ConwayEraPParams era
   ) =>
-  STS (ConwayBBODY era)
+  STS (BBODY era)
   where
-  type State (ConwayBBODY era) = Shelley.ShelleyBbodyState era
+  type State (BBODY era) = Shelley.ShelleyBbodyState era
 
-  type Signal (ConwayBBODY era) = Shelley.BbodySignal era
+  type Signal (BBODY era) = Shelley.BbodySignal era
 
-  type Environment (ConwayBBODY era) = Shelley.BbodyEnv era
+  type Environment (BBODY era) = Shelley.BbodyEnv era
 
-  type BaseM (ConwayBBODY era) = ShelleyBase
+  type BaseM (BBODY era) = ShelleyBase
 
-  type PredicateFailure (ConwayBBODY era) = ConwayBbodyPredFailure era
+  type PredicateFailure (BBODY era) = ConwayBbodyPredFailure era
 
-  type Event (ConwayBBODY era) = Alonzo.AlonzoBbodyEvent era
+  type Event (BBODY era) = Alonzo.AlonzoBbodyEvent era
 
   initialRules = []
   transitionRules = [conwayBbodyTransition @era >> Alonzo.alonzoBbodyTransition @era]
@@ -321,7 +321,7 @@ instance
   , ledgers ~ EraRule "LEDGERS" era
   , STS ledgers
   ) =>
-  Embed ledgers (ConwayBBODY era)
+  Embed ledgers (BBODY era)
   where
   wrapFailed = LedgersFailure
   wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent

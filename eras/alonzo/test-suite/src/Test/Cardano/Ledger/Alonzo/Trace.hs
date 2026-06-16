@@ -15,7 +15,7 @@
 module Test.Cardano.Ledger.Alonzo.Trace () where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
+import Cardano.Ledger.Alonzo.Rules (LEDGER)
 import Cardano.Ledger.BaseTypes (Globals, epochInfo, systemStart)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, lsUTxOState, utxosUtxo)
@@ -37,7 +37,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as TQC
 
--- The AlonzoLEDGER STS combines utxo and delegation rules and allows for generating transactions
+-- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
 instance
   ( ApplyTx era
@@ -52,8 +52,8 @@ instance
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
   , PredicateFailure (EraRule "DELPL" era) ~ Shelley.ShelleyDelplPredFailure era
-  , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
-  , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
+  , Embed (EraRule "DELEGS" era) (LEDGER era)
+  , Embed (EraRule "UTXOW" era) (LEDGER era)
   , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
@@ -64,9 +64,9 @@ instance
   , EraCertState era
   , Crypto c
   , EraRuleFailure "LEDGER" era ~ Shelley.ShelleyLedgerPredFailure era
-  , EraRule "LEDGER" era ~ AlonzoLEDGER era
+  , EraRule "LEDGER" era ~ LEDGER era
   ) =>
-  TQC.HasTrace (AlonzoLEDGER era) (GenEnv c era)
+  TQC.HasTrace (LEDGER era) (GenEnv c era)
   where
   envGen GenEnv {geConstants} =
     Shelley.LedgerEnv (SlotNo 0) Nothing minBound
@@ -85,5 +85,5 @@ instance
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 
-  type BaseEnv (AlonzoLEDGER era) = Globals
+  type BaseEnv (LEDGER era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals

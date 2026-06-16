@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.Mempool (
-  DijkstraMEMPOOL,
+  MEMPOOL,
   DijkstraMempoolPredFailure (..),
   DijkstraMempoolEvent (..),
 ) where
@@ -36,8 +36,8 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraLEDGER,
-  DijkstraMEMPOOL,
+  LEDGER,
+  MEMPOOL,
  )
 import Cardano.Ledger.Dijkstra.Rules.Ledger (
   DijkstraLedgerEvent,
@@ -143,7 +143,7 @@ instance
   , ConwayEraCertState era
   , EraStake era
   , EraCertState era
-  , Embed (EraRule "LEDGER" era) (DijkstraMEMPOOL era)
+  , Embed (EraRule "LEDGER" era) (MEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Eq (PredicateFailure (EraRule "CERTS" era))
   , Eq (PredicateFailure (EraRule "GOV" era))
@@ -157,26 +157,26 @@ instance
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , EraRuleFailure "SUBLEDGERS" era ~ DijkstraSubLedgersPredFailure era
   ) =>
-  STS (DijkstraMEMPOOL era)
+  STS (MEMPOOL era)
   where
-  type State (DijkstraMEMPOOL era) = LedgerState era
-  type Signal (DijkstraMEMPOOL era) = StAnnTx TopTx era
-  type Environment (DijkstraMEMPOOL era) = Shelley.LedgerEnv era
-  type BaseM (DijkstraMEMPOOL era) = ShelleyBase
-  type PredicateFailure (DijkstraMEMPOOL era) = DijkstraMempoolPredFailure era
-  type Event (DijkstraMEMPOOL era) = DijkstraMempoolEvent era
+  type State (MEMPOOL era) = LedgerState era
+  type Signal (MEMPOOL era) = StAnnTx TopTx era
+  type Environment (MEMPOOL era) = Shelley.LedgerEnv era
+  type BaseM (MEMPOOL era) = ShelleyBase
+  type PredicateFailure (MEMPOOL era) = DijkstraMempoolPredFailure era
+  type Event (MEMPOOL era) = DijkstraMempoolEvent era
 
   transitionRules = [mempoolTransition @era]
 
 mempoolTransition ::
   forall era.
   ( EraTx era
-  , Embed (EraRule "LEDGER" era) (DijkstraMEMPOOL era)
+  , Embed (EraRule "LEDGER" era) (MEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
-  TransitionRule (DijkstraMEMPOOL era)
+  TransitionRule (MEMPOOL era)
 mempoolTransition = do
   TRC trc@(_ledgerEnv, ledgerState, stAnnTx) <-
     judgmentContext
@@ -198,11 +198,11 @@ mempoolTransition = do
     trans @(EraRule "LEDGER" era) $ TRC trc
 
 instance
-  ( STS (DijkstraLEDGER era)
+  ( STS (LEDGER era)
   , PredicateFailure (EraRule "LEDGER" era) ~ DijkstraLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ DijkstraLedgerEvent era
   ) =>
-  Embed (DijkstraLEDGER era) (DijkstraMEMPOOL era)
+  Embed (LEDGER era) (MEMPOOL era)
   where
   wrapFailed = LedgerFailure
   wrapEvent = LedgerEvent

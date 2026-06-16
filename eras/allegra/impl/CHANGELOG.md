@@ -2,6 +2,9 @@
 
 ## 1.10.0.0
 
+* Rename rule types and deprecate the old names:
+  - `AllegraUTXO` -> `UTXO`
+  - `AllegraUTXOW` -> `UTXOW`
 * Change `Signal` to `StAnnTx TopTx era` for: `AllegraUTXOW`, `AllegraUTXO`
 * Add `FromJSON` instance for `ValidityInterval`
 * Add `ApplyTick` instance for `AllegraEra`

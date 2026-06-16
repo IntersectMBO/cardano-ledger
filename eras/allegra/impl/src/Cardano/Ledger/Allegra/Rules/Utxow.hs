@@ -8,11 +8,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra.Rules.Utxow (AllegraUTXOW) where
+module Cardano.Ledger.Allegra.Rules.Utxow (UTXOW) where
 
 import Cardano.Ledger.Allegra.Core
-import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraUTXOW)
-import Cardano.Ledger.Allegra.Rules.Utxo (AllegraUTXO, AllegraUtxoPredFailure)
+import Cardano.Ledger.Allegra.Era (AllegraEra, UTXOW)
+import Cardano.Ledger.Allegra.Rules.Utxo (AllegraUtxoPredFailure, UTXO)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -47,22 +47,22 @@ instance
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
   , -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (AllegraUTXOW era)
+    Embed (EraRule "UTXO" era) (UTXOW era)
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
-  , EraRule "UTXOW" era ~ AllegraUTXOW era
+  , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , EraCertState era
   ) =>
-  STS (AllegraUTXOW era)
+  STS (UTXOW era)
   where
-  type State (AllegraUTXOW era) = UTxOState era
-  type Signal (AllegraUTXOW era) = StAnnTx TopTx era
-  type Environment (AllegraUTXOW era) = Shelley.UtxoEnv era
-  type BaseM (AllegraUTXOW era) = ShelleyBase
-  type PredicateFailure (AllegraUTXOW era) = Shelley.ShelleyUtxowPredFailure era
-  type Event (AllegraUTXOW era) = Shelley.ShelleyUtxowEvent era
+  type State (UTXOW era) = UTxOState era
+  type Signal (UTXOW era) = StAnnTx TopTx era
+  type Environment (UTXOW era) = Shelley.UtxoEnv era
+  type BaseM (UTXOW era) = ShelleyBase
+  type PredicateFailure (UTXOW era) = Shelley.ShelleyUtxowPredFailure era
+  type Event (UTXOW era) = Shelley.ShelleyUtxowEvent era
 
   transitionRules = [Shelley.transitionRulesUTXOW]
 
@@ -72,22 +72,22 @@ instance
 
 instance
   ( Era era
-  , STS (AllegraUTXO era)
+  , STS (UTXO era)
   , PredicateFailure (EraRule "UTXO" era) ~ AllegraUtxoPredFailure era
-  , Event (EraRule "UTXO" era) ~ Event (AllegraUTXO era)
+  , Event (EraRule "UTXO" era) ~ Event (UTXO era)
   ) =>
-  Embed (AllegraUTXO era) (AllegraUTXOW era)
+  Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = Shelley.UtxoFailure
   wrapEvent = Shelley.UtxoEvent
 
 instance
   ( Era era
-  , STS (AllegraUTXOW era)
+  , STS (UTXOW era)
   , PredicateFailure (EraRule "UTXOW" era) ~ Shelley.ShelleyUtxowPredFailure era
-  , Event (EraRule "UTXOW" era) ~ Event (AllegraUTXOW era)
+  , Event (EraRule "UTXOW" era) ~ Event (UTXOW era)
   ) =>
-  Embed (AllegraUTXOW era) (Shelley.ShelleyLEDGER era)
+  Embed (UTXOW era) (Shelley.LEDGER era)
   where
   wrapFailed = Shelley.UtxowFailure
   wrapEvent = Shelley.UtxowEvent

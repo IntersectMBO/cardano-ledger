@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubUtxo (
-  DijkstraSUBUTXO,
+  SUBUTXO,
   DijkstraSubUtxoPredFailure (..),
   DijkstraSubUtxoEvent (..),
   SubUtxoEnv (..),
@@ -38,7 +38,7 @@ import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBUTXO,
+  SUBUTXO,
  )
 import Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUtxoPredFailure (..),
@@ -194,21 +194,21 @@ instance
   , DijkstraEraTxBody era
   , AlonzoEraTxWits era
   , ConwayEraGov era
-  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , EraRule "SUBUTXO" era ~ SUBUTXO era
   , InjectRuleFailure "SUBUTXO" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   ) =>
-  STS (DijkstraSUBUTXO era)
+  STS (SUBUTXO era)
   where
-  type State (DijkstraSUBUTXO era) = UTxOState era
-  type Signal (DijkstraSUBUTXO era) = StAnnTx SubTx era
-  type Environment (DijkstraSUBUTXO era) = SubUtxoEnv era
-  type BaseM (DijkstraSUBUTXO era) = ShelleyBase
-  type PredicateFailure (DijkstraSUBUTXO era) = DijkstraSubUtxoPredFailure era
-  type Event (DijkstraSUBUTXO era) = DijkstraSubUtxoEvent era
+  type State (SUBUTXO era) = UTxOState era
+  type Signal (SUBUTXO era) = StAnnTx SubTx era
+  type Environment (SUBUTXO era) = SubUtxoEnv era
+  type BaseM (SUBUTXO era) = ShelleyBase
+  type PredicateFailure (SUBUTXO era) = DijkstraSubUtxoPredFailure era
+  type Event (SUBUTXO era) = DijkstraSubUtxoEvent era
 
   transitionRules = [dijkstraSubUtxoTransition @era]
 
@@ -220,7 +220,7 @@ dijkstraSubUtxoTransition ::
   , DijkstraEraTxBody era
   , AlonzoEraTxWits era
   , STS (EraRule "SUBUTXO" era)
-  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
+  , EraRule "SUBUTXO" era ~ SUBUTXO era
   , InjectRuleFailure "SUBUTXO" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure era

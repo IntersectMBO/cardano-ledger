@@ -10,7 +10,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Enact (
-  ConwayENACT,
+  ENACT,
   EnactSignal (..),
   EnactState (..),
 ) where
@@ -20,7 +20,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayEra)
+import Cardano.Ledger.Conway.Era (ConwayEra, ENACT)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
@@ -70,17 +70,17 @@ instance EraPParams era => EncCBOR (EnactSignal era) where
 
 instance EraPParams era => NFData (EnactSignal era)
 
-instance EraGov era => STS (ConwayENACT era) where
-  type Environment (ConwayENACT era) = ()
-  type PredicateFailure (ConwayENACT era) = Void
-  type Signal (ConwayENACT era) = EnactSignal era
-  type State (ConwayENACT era) = EnactState era
-  type BaseM (ConwayENACT era) = ShelleyBase
+instance EraGov era => STS (ENACT era) where
+  type Environment (ENACT era) = ()
+  type PredicateFailure (ENACT era) = Void
+  type Signal (ENACT era) = EnactSignal era
+  type State (ENACT era) = EnactState era
+  type BaseM (ENACT era) = ShelleyBase
 
   initialRules = []
   transitionRules = [enactmentTransition]
 
-enactmentTransition :: forall era. EraPParams era => TransitionRule (ConwayENACT era)
+enactmentTransition :: forall era. EraPParams era => TransitionRule (ENACT era)
 enactmentTransition = do
   TRC ((), st, EnactSignal govActionId act) <- judgmentContext
 

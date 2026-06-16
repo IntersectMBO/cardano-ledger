@@ -2,6 +2,27 @@
 
 ## 1.19.0.0
 
+* Rename rule types and deprecate the old names:
+  - `ShelleyBBODY` -> `BBODY`
+  - `ShelleyDELEG` -> `DELEG`
+  - `ShelleyDELEGS` -> `DELEGS`
+  - `ShelleyDELPL` -> `DELPL`
+  - `ShelleyEPOCH` -> `EPOCH`
+  - `ShelleyLEDGER` -> `LEDGER`
+  - `ShelleyLEDGERS` -> `LEDGERS`
+  - `ShelleyMIR` -> `MIR`
+  - `ShelleyNEWEPOCH` -> `NEWEPOCH`
+  - `ShelleyNEWPP` -> `NEWPP`
+  - `ShelleyPOOL` -> `POOL`
+  - `ShelleyPOOLREAP` -> `POOLREAP`
+  - `ShelleyPPUP` -> `PPUP`
+  - `ShelleyRUPD` -> `RUPD`
+  - `ShelleySNAP` -> `SNAP`
+  - `ShelleyTICK` -> `TICK`
+  - `ShelleyTICKF` -> `TICKF`
+  - `ShelleyUPEC` -> `UPEC`
+  - `ShelleyUTXO` -> `UTXO`
+  - `ShelleyUTXOW` -> `UTXOW`
 * Remove re-exports from `Rules.*` modules:
   - `PredicateFailure`
   - `Event`

@@ -113,7 +113,7 @@ instance (Era era, NoThunks (NewEpochState era)) => NoThunks (MockChainState era
 
 instance
   ( EraGov era
-  , STS (Shelley.ShelleyTICK era)
+  , STS (Shelley.TICK era)
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Environment (EraRule "TICK" era) ~ ()
@@ -164,7 +164,7 @@ instance
 -- Embed instances
 
 instance
-  ( STS (Shelley.ShelleyTICK era)
+  ( STS (Shelley.TICK era)
   , Signal (EraRule "RUPD" era) ~ SlotNo
   , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
   , Environment (EraRule "RUPD" era) ~ Shelley.RupdEnv era
@@ -173,18 +173,18 @@ instance
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   ) =>
-  Embed (Shelley.ShelleyTICK era) (MOCKCHAIN era)
+  Embed (Shelley.TICK era) (MOCKCHAIN era)
   where
   wrapFailed = \case {}
   wrapEvent = MockChainFromTickEvent
 
 instance
-  ( STS (Shelley.ShelleyLEDGERS era)
+  ( STS (Shelley.LEDGERS era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
-  Embed (Shelley.ShelleyLEDGERS era) (MOCKCHAIN era)
+  Embed (Shelley.LEDGERS era) (MOCKCHAIN era)
   where
   wrapFailed = MockChainFromLedgersFailure
   wrapEvent = MockChainFromLedgersEvent

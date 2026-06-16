@@ -11,6 +11,28 @@
 
 module Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
+  BBODY,
+  CERT,
+  GOV,
+  GOVCERT,
+  LEDGER,
+  MEMPOOL,
+  SUBCERT,
+  SUBCERTS,
+  SUBDELEG,
+  SUBGOV,
+  SUBGOVCERT,
+  SUBLEDGER,
+  SUBLEDGERS,
+  SUBPOOL,
+  SUBUTXOW,
+  SUBUTXO,
+  UTXO,
+  UTXOW,
+  DijkstraEraBlockHeader (..),
+  DijkstraBbodySignal (..),
+
+  -- * Deprecated
   DijkstraBBODY,
   DijkstraCERT,
   DijkstraGOV,
@@ -29,8 +51,6 @@ module Cardano.Ledger.Dijkstra.Era (
   DijkstraSUBUTXO,
   DijkstraUTXO,
   DijkstraUTXOW,
-  DijkstraEraBlockHeader (..),
-  DijkstraBbodySignal (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (Nonce)
@@ -39,7 +59,6 @@ import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Internal.Era (DijkstraEra)
 import Cardano.Ledger.Mary (MaryValue)
-import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Lens.Micro
 
@@ -92,106 +111,178 @@ type instance EraRuleEvent "DELEGS" DijkstraEra = VoidEraRule "DELEGS" DijkstraE
 
 type instance Value DijkstraEra = MaryValue
 
-data DijkstraSUBLEDGERS era
+data SUBLEDGERS era
 
-type instance EraRule "SUBLEDGERS" DijkstraEra = DijkstraSUBLEDGERS DijkstraEra
+type DijkstraSUBLEDGERS = SUBLEDGERS
 
-data DijkstraSUBLEDGER era
+{-# DEPRECATED DijkstraSUBLEDGERS "In favor of `SUBLEDGERS`" #-}
 
-type instance EraRule "SUBLEDGER" DijkstraEra = DijkstraSUBLEDGER DijkstraEra
+type instance EraRule "SUBLEDGERS" DijkstraEra = SUBLEDGERS DijkstraEra
 
-data DijkstraSUBCERTS era
+data SUBLEDGER era
 
-type instance EraRule "SUBCERTS" DijkstraEra = DijkstraSUBCERTS DijkstraEra
+type DijkstraSUBLEDGER = SUBLEDGER
 
-data DijkstraSUBCERT era
+{-# DEPRECATED DijkstraSUBLEDGER "In favor of `SUBLEDGER`" #-}
 
-type instance EraRule "SUBCERT" DijkstraEra = DijkstraSUBCERT DijkstraEra
+type instance EraRule "SUBLEDGER" DijkstraEra = SUBLEDGER DijkstraEra
 
-data DijkstraSUBDELEG era
+data SUBCERTS era
 
-type instance EraRule "SUBDELEG" DijkstraEra = DijkstraSUBDELEG DijkstraEra
+type DijkstraSUBCERTS = SUBCERTS
 
-data DijkstraSUBGOV era
+{-# DEPRECATED DijkstraSUBCERTS "In favor of `SUBCERTS`" #-}
 
-type instance EraRule "SUBGOV" DijkstraEra = DijkstraSUBGOV DijkstraEra
+type instance EraRule "SUBCERTS" DijkstraEra = SUBCERTS DijkstraEra
 
-data DijkstraSUBGOVCERT era
+data SUBCERT era
 
-type instance EraRule "SUBGOVCERT" DijkstraEra = DijkstraSUBGOVCERT DijkstraEra
+type DijkstraSUBCERT = SUBCERT
 
-data DijkstraSUBPOOL era
+{-# DEPRECATED DijkstraSUBCERT "In favor of `SUBCERT`" #-}
 
-type instance EraRule "SUBPOOL" DijkstraEra = DijkstraSUBPOOL DijkstraEra
+type instance EraRule "SUBCERT" DijkstraEra = SUBCERT DijkstraEra
 
-data DijkstraSUBUTXO era
+data SUBDELEG era
 
-type instance EraRule "SUBUTXO" DijkstraEra = DijkstraSUBUTXO DijkstraEra
+type DijkstraSUBDELEG = SUBDELEG
 
-data DijkstraSUBUTXOW era
+{-# DEPRECATED DijkstraSUBDELEG "In favor of `SUBDELEG`" #-}
 
-type instance EraRule "SUBUTXOW" DijkstraEra = DijkstraSUBUTXOW DijkstraEra
+type instance EraRule "SUBDELEG" DijkstraEra = SUBDELEG DijkstraEra
 
-data DijkstraGOV era
+data SUBGOV era
 
-type instance EraRule "GOV" DijkstraEra = DijkstraGOV DijkstraEra
+type DijkstraSUBGOV = SUBGOV
 
-type instance EraRule "NEWEPOCH" DijkstraEra = Conway.ConwayNEWEPOCH DijkstraEra
+{-# DEPRECATED DijkstraSUBGOV "In favor of `SUBGOV`" #-}
 
-type instance EraRule "EPOCH" DijkstraEra = Conway.ConwayEPOCH DijkstraEra
+type instance EraRule "SUBGOV" DijkstraEra = SUBGOV DijkstraEra
 
-type instance EraRule "ENACT" DijkstraEra = Conway.ConwayENACT DijkstraEra
+data SUBGOVCERT era
 
-type instance EraRule "UTXOS" DijkstraEra = Conway.ConwayUTXOS DijkstraEra
+type DijkstraSUBGOVCERT = SUBGOVCERT
 
-data DijkstraLEDGER era
+{-# DEPRECATED DijkstraSUBGOVCERT "In favor of `SUBGOVCERT`" #-}
 
-type instance EraRule "LEDGER" DijkstraEra = DijkstraLEDGER DijkstraEra
+type instance EraRule "SUBGOVCERT" DijkstraEra = SUBGOVCERT DijkstraEra
 
-type instance EraRule "TICKF" DijkstraEra = Conway.ConwayTICKF DijkstraEra
+data SUBPOOL era
 
-type instance EraRule "RATIFY" DijkstraEra = Conway.ConwayRATIFY DijkstraEra
+type DijkstraSUBPOOL = SUBPOOL
 
-type instance EraRule "CERTS" DijkstraEra = Conway.ConwayCERTS DijkstraEra
+{-# DEPRECATED DijkstraSUBPOOL "In favor of `SUBPOOL`" #-}
 
-data DijkstraCERT era
+type instance EraRule "SUBPOOL" DijkstraEra = SUBPOOL DijkstraEra
 
-type instance EraRule "CERT" DijkstraEra = DijkstraCERT DijkstraEra
+data SUBUTXO era
 
-type instance EraRule "DELEG" DijkstraEra = Conway.ConwayDELEG DijkstraEra
+type DijkstraSUBUTXO = SUBUTXO
 
-data DijkstraGOVCERT era
+{-# DEPRECATED DijkstraSUBUTXO "In favor of `SUBUTXO`" #-}
 
-type instance EraRule "GOVCERT" DijkstraEra = DijkstraGOVCERT DijkstraEra
+type instance EraRule "SUBUTXO" DijkstraEra = SUBUTXO DijkstraEra
 
-data DijkstraUTXOW era
+data SUBUTXOW era
 
-type instance EraRule "UTXOW" DijkstraEra = DijkstraUTXOW DijkstraEra
+type DijkstraSUBUTXOW = SUBUTXOW
 
-data DijkstraUTXO era
+{-# DEPRECATED DijkstraSUBUTXOW "In favor of `SUBUTXOW`" #-}
 
-type instance EraRule "UTXO" DijkstraEra = DijkstraUTXO DijkstraEra
+type instance EraRule "SUBUTXOW" DijkstraEra = SUBUTXOW DijkstraEra
 
-data DijkstraBBODY era
+data GOV era
 
-type instance EraRule "BBODY" DijkstraEra = DijkstraBBODY DijkstraEra
+type DijkstraGOV = GOV
 
-data DijkstraMEMPOOL era
+{-# DEPRECATED DijkstraGOV "In favor of `GOV`" #-}
 
-type instance EraRule "MEMPOOL" DijkstraEra = DijkstraMEMPOOL DijkstraEra
+type instance EraRule "GOV" DijkstraEra = GOV DijkstraEra
 
-type instance EraRule "HARDFORK" DijkstraEra = Conway.ConwayHARDFORK DijkstraEra
+type instance EraRule "NEWEPOCH" DijkstraEra = Conway.NEWEPOCH DijkstraEra
+
+type instance EraRule "EPOCH" DijkstraEra = Conway.EPOCH DijkstraEra
+
+type instance EraRule "ENACT" DijkstraEra = Conway.ENACT DijkstraEra
+
+type instance EraRule "UTXOS" DijkstraEra = Conway.UTXOS DijkstraEra
+
+data LEDGER era
+
+type DijkstraLEDGER = LEDGER
+
+{-# DEPRECATED DijkstraLEDGER "In favor of `LEDGER`" #-}
+
+type instance EraRule "LEDGER" DijkstraEra = LEDGER DijkstraEra
+
+type instance EraRule "TICKF" DijkstraEra = Conway.TICKF DijkstraEra
+
+type instance EraRule "RATIFY" DijkstraEra = Conway.RATIFY DijkstraEra
+
+type instance EraRule "CERTS" DijkstraEra = Conway.CERTS DijkstraEra
+
+data CERT era
+
+type DijkstraCERT = CERT
+
+{-# DEPRECATED DijkstraCERT "In favor of `CERT`" #-}
+
+type instance EraRule "CERT" DijkstraEra = CERT DijkstraEra
+
+type instance EraRule "DELEG" DijkstraEra = Conway.DELEG DijkstraEra
+
+data GOVCERT era
+
+type DijkstraGOVCERT = GOVCERT
+
+{-# DEPRECATED DijkstraGOVCERT "In favor of `GOVCERT`" #-}
+
+type instance EraRule "GOVCERT" DijkstraEra = GOVCERT DijkstraEra
+
+data UTXOW era
+
+type DijkstraUTXOW = UTXOW
+
+{-# DEPRECATED DijkstraUTXOW "In favor of `UTXOW`" #-}
+
+type instance EraRule "UTXOW" DijkstraEra = UTXOW DijkstraEra
+
+data UTXO era
+
+type DijkstraUTXO = UTXO
+
+{-# DEPRECATED DijkstraUTXO "In favor of `UTXO`" #-}
+
+type instance EraRule "UTXO" DijkstraEra = UTXO DijkstraEra
+
+data BBODY era
+
+type DijkstraBBODY = BBODY
+
+{-# DEPRECATED DijkstraBBODY "In favor of `BBODY`" #-}
+
+type instance EraRule "BBODY" DijkstraEra = BBODY DijkstraEra
+
+data MEMPOOL era
+
+type DijkstraMEMPOOL = MEMPOOL
+
+{-# DEPRECATED DijkstraMEMPOOL "In favor of `MEMPOOL`" #-}
+
+type instance EraRule "MEMPOOL" DijkstraEra = MEMPOOL DijkstraEra
+
+type instance EraRule "HARDFORK" DijkstraEra = Conway.HARDFORK DijkstraEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "LEDGERS" DijkstraEra = API.ShelleyLEDGERS DijkstraEra
+type instance EraRule "LEDGERS" DijkstraEra = Shelley.LEDGERS DijkstraEra
 
-type instance EraRule "POOLREAP" DijkstraEra = API.ShelleyPOOLREAP DijkstraEra
+type instance EraRule "POOLREAP" DijkstraEra = Shelley.POOLREAP DijkstraEra
 
-type instance EraRule "RUPD" DijkstraEra = Shelley.ShelleyRUPD DijkstraEra
+type instance EraRule "RUPD" DijkstraEra = Shelley.RUPD DijkstraEra
 
-type instance EraRule "SNAP" DijkstraEra = Shelley.ShelleySNAP DijkstraEra
+type instance EraRule "SNAP" DijkstraEra = Shelley.SNAP DijkstraEra
 
-type instance EraRule "TICK" DijkstraEra = Shelley.ShelleyTICK DijkstraEra
+type instance EraRule "TICK" DijkstraEra = Shelley.TICK DijkstraEra
 
-type instance EraRule "POOL" DijkstraEra = Shelley.ShelleyPOOL DijkstraEra
+type instance EraRule "POOL" DijkstraEra = Shelley.POOL DijkstraEra

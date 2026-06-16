@@ -276,8 +276,8 @@ adaIsPreservedInEachEpoch ::
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "NEWEPOCH" era) ~ ShelleyBase
   , Embed (EraRule "TICK" era) (MOCKCHAIN era)
-  , Embed (EraRule "NEWEPOCH" era) (Shelley.ShelleyTICK era)
-  , Embed (EraRule "RUPD" era) (Shelley.ShelleyTICK era)
+  , Embed (EraRule "NEWEPOCH" era) (Shelley.TICK era)
+  , Embed (EraRule "RUPD" era) (Shelley.TICK era)
   , Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
   , EraGenericGen era
   , ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))

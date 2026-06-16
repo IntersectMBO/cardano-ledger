@@ -17,7 +17,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Ledger (
-  ShelleyLEDGER,
+  LEDGER,
   LedgerEnv (..),
   ledgerSlotNoL,
   ledgerEpochNoL,
@@ -43,7 +43,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGER)
+import Cardano.Ledger.Shelley.Era (LEDGER, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -52,8 +52,8 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.LedgerState.Types (allObligations, potEqualsObligation)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (
+  DELEGS,
   DelegsEnv (..),
-  ShelleyDELEGS,
   ShelleyDelegsEvent,
   ShelleyDelegsPredFailure,
  )
@@ -62,7 +62,7 @@ import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..), UtxoEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
+import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure, UTXOW)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochFromSlot)
 import Control.DeepSeq (NFData (..))
@@ -268,8 +268,8 @@ instance
   ( EraTx era
   , EraGov era
   , EraCertState era
-  , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
-  , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
+  , Embed (EraRule "DELEGS" era) (LEDGER era)
+  , Embed (EraRule "UTXOW" era) (LEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
@@ -277,18 +277,18 @@ instance
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , AtMostEra "Babbage" era
-  , EraRule "LEDGER" era ~ ShelleyLEDGER era
+  , EraRule "LEDGER" era ~ LEDGER era
   , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
-  STS (ShelleyLEDGER era)
+  STS (LEDGER era)
   where
-  type State (ShelleyLEDGER era) = LedgerState era
-  type Signal (ShelleyLEDGER era) = StAnnTx TopTx era
-  type Environment (ShelleyLEDGER era) = LedgerEnv era
-  type BaseM (ShelleyLEDGER era) = ShelleyBase
-  type PredicateFailure (ShelleyLEDGER era) = ShelleyLedgerPredFailure era
-  type Event (ShelleyLEDGER era) = ShelleyLedgerEvent era
+  type State (LEDGER era) = LedgerState era
+  type Signal (LEDGER era) = StAnnTx TopTx era
+  type Environment (LEDGER era) = LedgerEnv era
+  type BaseM (LEDGER era) = ShelleyBase
+  type PredicateFailure (LEDGER era) = ShelleyLedgerPredFailure era
+  type Event (LEDGER era) = ShelleyLedgerEvent era
 
   initialRules = []
   transitionRules = [ledgerTransition]
@@ -301,19 +301,19 @@ ledgerTransition ::
   forall era.
   ( EraTx era
   , EraCertState era
-  , STS (ShelleyLEDGER era)
-  , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
+  , STS (LEDGER era)
+  , Embed (EraRule "DELEGS" era) (LEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
-  , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
+  , Embed (EraRule "UTXOW" era) (LEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
-  , EraRule "LEDGER" era ~ ShelleyLEDGER era
+  , EraRule "LEDGER" era ~ LEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
-  TransitionRule (ShelleyLEDGER era)
+  TransitionRule (LEDGER era)
 ledgerTransition = do
   TRC (LedgerEnv slot mbCurEpochNo txIx pp account, LedgerState utxoSt certState, stAnnTx) <-
     judgmentContext
@@ -360,21 +360,21 @@ testIncompleteAndMissingWithdrawals accounts withdrawals = do
 
 instance
   ( Era era
-  , STS (ShelleyDELEGS era)
+  , STS (DELEGS era)
   , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
   , Event (EraRule "DELEGS" era) ~ ShelleyDelegsEvent era
   ) =>
-  Embed (ShelleyDELEGS era) (ShelleyLEDGER era)
+  Embed (DELEGS era) (LEDGER era)
   where
   wrapFailed = DelegsFailure
   wrapEvent = DelegsEvent
 
 instance
-  ( STS (ShelleyUTXOW era)
+  ( STS (UTXOW era)
   , PredicateFailure (EraRule "UTXOW" era) ~ ShelleyUtxowPredFailure era
-  , Event (EraRule "UTXOW" era) ~ Event (ShelleyUTXOW era)
+  , Event (EraRule "UTXOW" era) ~ Event (UTXOW era)
   ) =>
-  Embed (ShelleyUTXOW era) (ShelleyLEDGER era)
+  Embed (UTXOW era) (LEDGER era)
   where
   wrapFailed = UtxowFailure
   wrapEvent = UtxowEvent

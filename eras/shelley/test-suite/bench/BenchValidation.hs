@@ -35,6 +35,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   nesBcur,
  )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.API (
@@ -79,8 +80,8 @@ instance NFData (ValidateInput era) where
 validateInput ::
   ( EraGen era
   , EraStake era
-  , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
-  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
+  , EraRule "LEDGERS" era ~ Shelley.LEDGERS era
+  , QC.HasTrace (Shelley.LEDGERS era) (GenEnv MockCrypto era)
   , API.ApplyBlock TestBlockHeader era
   , API.ShelleyEraForecast era
   , MinLEDGER_STS era
@@ -162,8 +163,8 @@ genUpdateInputs ::
   , EraStake era
   , MinLEDGER_STS era
   , API.ShelleyEraForecast era
-  , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
-  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
+  , EraRule "LEDGERS" era ~ Shelley.LEDGERS era
+  , QC.HasTrace (Shelley.LEDGERS era) (GenEnv MockCrypto era)
   , API.ApplyBlock TestBlockHeader era
   , EraBlockHeader (BHeader MockCrypto) era
   ) =>

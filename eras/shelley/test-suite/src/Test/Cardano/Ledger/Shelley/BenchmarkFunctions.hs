@@ -40,7 +40,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLEDGER)
+import Cardano.Ledger.Shelley.Rules (LEDGER, LedgerEnv (..))
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
@@ -130,7 +130,7 @@ testLEDGER ::
   LedgerEnv ShelleyEra ->
   ()
 testLEDGER initSt tx env = do
-  let st = runShelleyBase $ applySTS @(ShelleyLEDGER ShelleyEra) (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTS @(LEDGER ShelleyEra) (TRC (env, initSt, tx))
   case st of
     Right _ -> ()
     Left e -> error $ show e
@@ -218,7 +218,7 @@ initLedgerState n = LedgerState (initUTxO n) def
 makeLEDGERState ::
   HasCallStack => LedgerState ShelleyEra -> Tx TopTx ShelleyEra -> LedgerState ShelleyEra
 makeLEDGERState start tx =
-  let st = applySTS @(ShelleyLEDGER ShelleyEra) (TRC (ledgerEnv, start, tx))
+  let st = applySTS @(LEDGER ShelleyEra) (TRC (ledgerEnv, start, tx))
    in case runShelleyBase st of
         Right st' -> st'
         Left e -> error $ show e

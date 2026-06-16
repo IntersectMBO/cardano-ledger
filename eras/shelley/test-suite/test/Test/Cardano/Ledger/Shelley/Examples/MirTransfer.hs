@@ -14,10 +14,9 @@ import Cardano.Ledger.Shelley.API (
   Credential (..),
   DelegEnv (..),
   Ptr (..),
-  ShelleyDELEG,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
+import Cardano.Ledger.Shelley.Rules (DELEG, ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
@@ -39,8 +38,8 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 ignoreAllButIRWD ::
-  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyEra))) (CertState ShelleyEra) ->
-  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyEra))) InstantaneousRewards
+  Either (NonEmpty (PredicateFailure (DELEG ShelleyEra))) (CertState ShelleyEra) ->
+  Either (NonEmpty (PredicateFailure (DELEG ShelleyEra))) InstantaneousRewards
 ignoreAllButIRWD = fmap (dsIRewards . shelleyCertDState)
 
 env :: ProtVer -> ChainAccountState -> DelegEnv ShelleyEra
@@ -68,15 +67,15 @@ testMirTransfer ::
   MIRTarget ->
   InstantaneousRewards ->
   ChainAccountState ->
-  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyEra))) InstantaneousRewards ->
+  Either (NonEmpty (PredicateFailure (DELEG ShelleyEra))) InstantaneousRewards ->
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
-  checkTrace @(ShelleyDELEG ShelleyEra) runShelleyBase (env pv acnt) $
+  checkTrace @(DELEG ShelleyEra) runShelleyBase (env pv acnt) $
     pure (certStateWithRewards ir) .- MirTxCert (MIRCert pot target) .->> certStateWithRewards expected
 testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
-          applySTSTest @(ShelleyDELEG ShelleyEra)
+          applySTSTest @(DELEG ShelleyEra)
             (TRC (env pv acnt, certStateWithRewards ir, MirTxCert (MIRCert pot target)))
   ignoreAllButIRWD st @?= predicateFailure
 

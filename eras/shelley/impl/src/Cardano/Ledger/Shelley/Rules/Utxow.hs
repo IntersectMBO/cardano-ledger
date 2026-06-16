@@ -17,7 +17,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Utxow (
-  ShelleyUTXOW,
+  UTXOW,
   ShelleyUtxowPredFailure (..),
   ShelleyUtxowEvent (..),
   transitionRulesUTXOW,
@@ -57,12 +57,12 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTestOnSignal,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXOW)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, UTXOW)
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (
-  ShelleyUTXO,
   ShelleyUtxoPredFailure,
+  UTXO,
   UtxoEnv (..),
   UtxoEvent,
  )
@@ -255,11 +255,11 @@ instance
 
 initialLedgerStateUTXOW ::
   forall era.
-  ( Embed (EraRule "UTXO" era) (ShelleyUTXOW era)
+  ( Embed (EraRule "UTXO" era) (UTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   ) =>
-  InitialRule (ShelleyUTXOW era)
+  InitialRule (UTXOW era)
 initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp certState) <- judgmentContext
   trans @(EraRule "UTXO" era) $ IRC (UtxoEnv slots pp certState)
@@ -327,11 +327,11 @@ transitionRulesUTXOW = do
 
 instance
   ( Era era
-  , STS (ShelleyUTXO era)
+  , STS (UTXO era)
   , PredicateFailure (EraRule "UTXO" era) ~ ShelleyUtxoPredFailure era
   , Event (EraRule "UTXO" era) ~ UtxoEvent era
   ) =>
-  Embed (ShelleyUTXO era) (ShelleyUTXOW era)
+  Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = UtxoFailure
   wrapEvent = UtxoEvent
@@ -342,23 +342,23 @@ instance
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
   , -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (ShelleyUTXOW era)
+    Embed (EraRule "UTXO" era) (UTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
-  , EraRule "UTXOW" era ~ ShelleyUTXOW era
+  , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , EraGov era
   , EraCertState era
   ) =>
-  STS (ShelleyUTXOW era)
+  STS (UTXOW era)
   where
-  type State (ShelleyUTXOW era) = UTxOState era
-  type Signal (ShelleyUTXOW era) = StAnnTx TopTx era
-  type Environment (ShelleyUTXOW era) = UtxoEnv era
-  type BaseM (ShelleyUTXOW era) = ShelleyBase
-  type PredicateFailure (ShelleyUTXOW era) = ShelleyUtxowPredFailure era
-  type Event (ShelleyUTXOW era) = ShelleyUtxowEvent era
+  type State (UTXOW era) = UTxOState era
+  type Signal (UTXOW era) = StAnnTx TopTx era
+  type Environment (UTXOW era) = UtxoEnv era
+  type BaseM (UTXOW era) = ShelleyBase
+  type PredicateFailure (UTXOW era) = ShelleyUtxowPredFailure era
+  type Event (UTXOW era) = ShelleyUtxowEvent era
   transitionRules = [transitionRulesUTXOW]
   initialRules = [initialLedgerStateUTXOW]
 

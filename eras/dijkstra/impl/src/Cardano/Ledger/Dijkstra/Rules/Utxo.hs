@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.Utxo (
-  DijkstraUTXO,
+  UTXO,
   DijkstraUtxoEnv (..),
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
@@ -58,7 +58,7 @@ import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (StakeReference (..))
-import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO)
+import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Plutus (ExUnits)
@@ -426,7 +426,7 @@ dijkstraUtxoTransition = do
     (Conway.updateTreasuryDonation tx utxos)
 
 --------------------------------------------------------------------------------
--- DijkstraUTXO STS
+-- UTXO STS
 --------------------------------------------------------------------------------
 
 instance
@@ -436,7 +436,7 @@ instance
   , EraStake era
   , DijkstraEraTxBody era
   , AlonzoEraTx era
-  , EraRule "UTXO" era ~ DijkstraUTXO era
+  , EraRule "UTXO" era ~ UTXO era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Alonzo.AlonzoUtxoPredFailure era
@@ -449,22 +449,22 @@ instance
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
   , -- In this function we we call the UTXOS rule, so we need some assumptions
-    Embed (EraRule "UTXOS" era) (DijkstraUTXO era)
+    Embed (EraRule "UTXOS" era) (UTXO era)
   , Environment (EraRule "UTXOS" era) ~ ()
   , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , EraCertState era
-  , EraRule "UTXO" era ~ DijkstraUTXO era
+  , EraRule "UTXO" era ~ UTXO era
   , SafeToHash (TxWits era)
   ) =>
-  STS (DijkstraUTXO era)
+  STS (UTXO era)
   where
-  type State (DijkstraUTXO era) = UTxOState era
-  type Signal (DijkstraUTXO era) = StAnnTx TopTx era
-  type Environment (DijkstraUTXO era) = DijkstraUtxoEnv era
-  type BaseM (DijkstraUTXO era) = ShelleyBase
-  type PredicateFailure (DijkstraUTXO era) = DijkstraUtxoPredFailure era
-  type Event (DijkstraUTXO era) = Alonzo.AlonzoUtxoEvent era
+  type State (UTXO era) = UTxOState era
+  type Signal (UTXO era) = StAnnTx TopTx era
+  type Environment (UTXO era) = DijkstraUtxoEnv era
+  type BaseM (UTXO era) = ShelleyBase
+  type PredicateFailure (UTXO era) = DijkstraUtxoPredFailure era
+  type Event (UTXO era) = Alonzo.AlonzoUtxoEvent era
 
   initialRules = []
 
@@ -473,11 +473,11 @@ instance
   assertions = [Shelley.validSizeComputationCheck]
 
 instance
-  ( STS (Conway.ConwayUTXOS era)
+  ( STS (Conway.UTXOS era)
   , PredicateFailure (EraRule "UTXOS" era) ~ Conway.ConwayUtxosPredFailure era
-  , Event (EraRule "UTXOS" era) ~ Event (Conway.ConwayUTXOS era)
+  , Event (EraRule "UTXOS" era) ~ Event (Conway.UTXOS era)
   ) =>
-  Embed (Conway.ConwayUTXOS era) (DijkstraUTXO era)
+  Embed (Conway.UTXOS era) (UTXO era)
   where
   wrapFailed = UtxosFailure
   wrapEvent = Alonzo.UtxosEvent
@@ -575,7 +575,7 @@ conwayToDijkstraUtxoPredFailure = \case
   Conway.ValueNotConservedUTxO m -> ValueNotConservedUTxO m
   Conway.WrongNetwork x y -> WrongNetwork x y
   Conway.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
-  Conway.OutputTooSmallUTxO _ -> error "Impossible: `OutputTooSmallUTxO` for DijkstraUTXO"
+  Conway.OutputTooSmallUTxO _ -> error "Impossible: `OutputTooSmallUTxO` for UTXO"
   Conway.UtxosFailure x -> UtxosFailure x
   Conway.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
   Conway.OutputTooBigUTxO xs -> OutputTooBigUTxO xs

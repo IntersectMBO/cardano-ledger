@@ -30,7 +30,7 @@ import Cardano.Ledger.Block (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
-import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG, ShelleyEraForecast)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -43,11 +43,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
+  DELEG,
   DelegEnv (..),
   LedgerEnv (..),
+  POOL,
   PoolEnv (..),
   PoolEvent,
-  ShelleyPOOL,
   ShelleyPoolPredFailure,
   ledgerPpL,
  )
@@ -218,17 +219,17 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
 poolTraceFromBlock ::
   forall era.
   ( ChainProperty era
-  , EraRule "POOL" era ~ ShelleyPOOL era
+  , EraRule "POOL" era ~ POOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
-  (ChainState era, Trace (ShelleyPOOL era))
+  (ChainState era, Trace (POOL era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt
   , runShelleyBase $
-      Trace.closure @(ShelleyPOOL era) poolEnv poolSt0 poolCerts
+      Trace.closure @(POOL era) poolEnv poolSt0 poolCerts
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -249,11 +250,11 @@ delegTraceFromBlock ::
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
-  (DelegEnv era, Trace (ShelleyDELEG era))
+  (DelegEnv era, Trace (DELEG era))
 delegTraceFromBlock chainSt block =
   ( delegEnv
   , runShelleyBase $
-      Trace.closure @(ShelleyDELEG era) delegEnv (ledgerSt0 ^. lsCertStateL) blockCerts
+      Trace.closure @(DELEG era) delegEnv (ledgerSt0 ^. lsCertStateL) blockCerts
   )
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block

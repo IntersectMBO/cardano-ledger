@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubCert (
-  DijkstraSUBCERT,
+  SUBCERT,
   DijkstraSubCertPredFailure (..),
   DijkstraSubCertEvent (..),
 ) where
@@ -35,10 +35,10 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBCERT,
-  DijkstraSUBDELEG,
-  DijkstraSUBGOVCERT,
-  DijkstraSUBPOOL,
+  SUBCERT,
+  SUBDELEG,
+  SUBGOVCERT,
+  SUBPOOL,
  )
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
@@ -138,36 +138,36 @@ instance NFData (Event (EraRule "SUBPOOL" era)) => NFData (DijkstraSubCertEvent 
 instance
   ( ConwayEraGov era
   , ConwayEraCertState era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
-  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
-  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
-  , Embed (EraRule "SUBDELEG" era) (DijkstraSUBCERT era)
-  , Embed (EraRule "SUBPOOL" era) (DijkstraSUBCERT era)
-  , Embed (EraRule "SUBGOVCERT" era) (DijkstraSUBCERT era)
+  , EraRule "SUBCERT" era ~ SUBCERT era
+  , EraRule "SUBDELEG" era ~ SUBDELEG era
+  , EraRule "SUBPOOL" era ~ SUBPOOL era
+  , EraRule "SUBGOVCERT" era ~ SUBGOVCERT era
+  , Embed (EraRule "SUBDELEG" era) (SUBCERT era)
+  , Embed (EraRule "SUBPOOL" era) (SUBCERT era)
+  , Embed (EraRule "SUBGOVCERT" era) (SUBCERT era)
   , TxCert era ~ DijkstraTxCert era
   ) =>
-  STS (DijkstraSUBCERT era)
+  STS (SUBCERT era)
   where
-  type State (DijkstraSUBCERT era) = CertState era
-  type Signal (DijkstraSUBCERT era) = TxCert era
-  type Environment (DijkstraSUBCERT era) = Conway.CertEnv era
-  type BaseM (DijkstraSUBCERT era) = ShelleyBase
-  type PredicateFailure (DijkstraSUBCERT era) = DijkstraSubCertPredFailure era
-  type Event (DijkstraSUBCERT era) = DijkstraSubCertEvent era
+  type State (SUBCERT era) = CertState era
+  type Signal (SUBCERT era) = TxCert era
+  type Environment (SUBCERT era) = Conway.CertEnv era
+  type BaseM (SUBCERT era) = ShelleyBase
+  type PredicateFailure (SUBCERT era) = DijkstraSubCertPredFailure era
+  type Event (SUBCERT era) = DijkstraSubCertEvent era
 
   transitionRules = [dijkstraSubCertTransition @era]
 
 dijkstraSubCertTransition ::
   forall era.
   ( ConwayEraCertState era
-  , EraRule "SUBCERT" era ~ DijkstraSUBCERT era
-  , EraRule "SUBDELEG" era ~ DijkstraSUBDELEG era
-  , EraRule "SUBPOOL" era ~ DijkstraSUBPOOL era
-  , EraRule "SUBGOVCERT" era ~ DijkstraSUBGOVCERT era
-  , Embed (EraRule "SUBDELEG" era) (DijkstraSUBCERT era)
-  , Embed (EraRule "SUBPOOL" era) (DijkstraSUBCERT era)
-  , Embed (EraRule "SUBGOVCERT" era) (DijkstraSUBCERT era)
+  , EraRule "SUBCERT" era ~ SUBCERT era
+  , EraRule "SUBDELEG" era ~ SUBDELEG era
+  , EraRule "SUBPOOL" era ~ SUBPOOL era
+  , EraRule "SUBGOVCERT" era ~ SUBGOVCERT era
+  , Embed (EraRule "SUBDELEG" era) (SUBCERT era)
+  , Embed (EraRule "SUBPOOL" era) (SUBCERT era)
+  , Embed (EraRule "SUBGOVCERT" era) (SUBCERT era)
   , TxCert era ~ DijkstraTxCert era
   ) =>
   TransitionRule (EraRule "SUBCERT" era)
@@ -189,30 +189,30 @@ dijkstraSubCertTransition = do
         TRC (Conway.ConwayGovCertEnv pp currentEpoch committee committeeProposals, certState, govCert)
 
 instance
-  ( STS (DijkstraSUBDELEG era)
+  ( STS (SUBDELEG era)
   , PredicateFailure (EraRule "SUBDELEG" era) ~ DijkstraSubDelegPredFailure era
   ) =>
-  Embed (DijkstraSUBDELEG era) (DijkstraSUBCERT era)
+  Embed (SUBDELEG era) (SUBCERT era)
   where
   wrapFailed = SubDelegFailure
   wrapEvent = absurd
 
 instance
-  ( STS (DijkstraSUBPOOL era)
+  ( STS (SUBPOOL era)
   , PredicateFailure (EraRule "SUBPOOL" era) ~ DijkstraSubPoolPredFailure era
   , Event (EraRule "SUBPOOL" era) ~ DijkstraSubPoolEvent era
   ) =>
-  Embed (DijkstraSUBPOOL era) (DijkstraSUBCERT era)
+  Embed (SUBPOOL era) (SUBCERT era)
   where
   wrapFailed = SubPoolFailure
   wrapEvent = SubPoolEvent
 
 instance
   ( Era era
-  , STS (DijkstraSUBGOVCERT era)
+  , STS (SUBGOVCERT era)
   , PredicateFailure (EraRule "SUBGOVCERT" era) ~ DijkstraSubGovCertPredFailure era
   ) =>
-  Embed (DijkstraSUBGOVCERT era) (DijkstraSUBCERT era)
+  Embed (SUBGOVCERT era) (SUBCERT era)
   where
   wrapFailed = SubGovCertFailure
   wrapEvent = absurd

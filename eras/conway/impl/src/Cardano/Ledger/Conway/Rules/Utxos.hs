@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Utxos (
-  ConwayUTXOS,
+  UTXOS,
   ConwayUtxosPredFailure (..),
   ConwayUtxosEvent (..),
   alonzoToConwayUtxosPredFailure,
@@ -25,29 +25,12 @@ module Cardano.Ledger.Conway.Rules.Utxos (
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxoEvent (..),
-  AlonzoUtxoPredFailure (..),
-  AlonzoUtxosEvent,
-  AlonzoUtxosPredFailure,
-  TagMismatchDescription,
-  validBegin,
-  validEnd,
- )
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
-  AlonzoUtxosEvent (..),
-  AlonzoUtxosPredFailure (..),
- )
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO,
   AlonzoScriptsNeeded,
  )
-import Cardano.Ledger.Babbage.Rules (
-  BabbageUTXO,
-  BabbageUtxoPredFailure (..),
-  babbageEvalScriptsTxInvalid,
-  expectScriptsToPass,
- )
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
@@ -56,7 +39,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
+import Cardano.Ledger.Conway.Era (ConwayEra, UTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Plutus (PlutusWithContext)
@@ -71,7 +54,7 @@ data ConwayUtxosPredFailure era
   = -- | The 'isValid' tag on the transaction is incorrect. The tag given
     --   here is that provided on the transaction (whereas evaluation of the
     --   scripts gives the opposite.). The Text tries to explain why it failed.
-    ValidationTagMismatch IsValid TagMismatchDescription
+    ValidationTagMismatch IsValid Alonzo.TagMismatchDescription
   | -- | We could not find all the necessary inputs for a Plutus Script.
     -- Previous PredicateFailure tests should make this impossible, but the
     -- consequences of not detecting this means scripts get dropped, so things
@@ -98,10 +81,10 @@ instance InjectRuleFailure "UTXOS" ConwayUtxosPredFailure ConwayEra
 
 instance InjectRuleEvent "UTXOS" ConwayUtxosEvent ConwayEra
 
-instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure ConwayEra where
+instance InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure ConwayEra where
   injectFailure = alonzoToConwayUtxosPredFailure
 
-instance InjectRuleEvent "UTXOS" AlonzoUtxosEvent ConwayEra where
+instance InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent ConwayEra where
   injectEvent = alonzoToConwayUtxosEvent
 
 alonzoToConwayUtxosPredFailure ::
@@ -181,20 +164,20 @@ instance
   , EraPlutusContext era
   , GovState era ~ ConwayGovState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (ConwayUTXOS era) ~ StAnnTx TopTx era
-  , EraRule "UTXOS" era ~ ConwayUTXOS era
-  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
-  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , Signal (UTXOS era) ~ StAnnTx TopTx era
+  , EraRule "UTXOS" era ~ UTXOS era
+  , InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
-  STS (ConwayUTXOS era)
+  STS (UTXOS era)
   where
-  type BaseM (ConwayUTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
-  type Environment (ConwayUTXOS era) = ()
-  type State (ConwayUTXOS era) = ()
-  type Signal (ConwayUTXOS era) = StAnnTx TopTx era
-  type PredicateFailure (ConwayUTXOS era) = ConwayUtxosPredFailure era
-  type Event (ConwayUTXOS era) = ConwayUtxosEvent era
+  type BaseM (UTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
+  type Environment (UTXOS era) = ()
+  type State (UTXOS era) = ()
+  type Signal (UTXOS era) = StAnnTx TopTx era
+  type PredicateFailure (UTXOS era) = ConwayUtxosPredFailure era
+  type Event (UTXOS era) = ConwayUtxosEvent era
 
   transitionRules = [utxosTransition]
 
@@ -210,16 +193,16 @@ instance
   , GovState era ~ ConwayGovState era
   , PredicateFailure (EraRule "UTXOS" era) ~ ConwayUtxosPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (ConwayUTXOS era) ~ StAnnTx TopTx era
-  , EraRule "UTXOS" era ~ ConwayUTXOS era
-  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
-  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , Signal (UTXOS era) ~ StAnnTx TopTx era
+  , EraRule "UTXOS" era ~ UTXOS era
+  , InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
-  Embed (ConwayUTXOS era) (BabbageUTXO era)
+  Embed (UTXOS era) (Babbage.UTXO era)
   where
-  wrapFailed = AlonzoInBabbageUtxoPredFailure . UtxosFailure
-  wrapEvent = UtxosEvent
+  wrapFailed = Babbage.AlonzoInBabbageUtxoPredFailure . Alonzo.UtxosFailure
+  wrapEvent = Alonzo.UtxosEvent
 
 utxosTransition ::
   forall era.
@@ -228,8 +211,8 @@ utxosTransition ::
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , Environment (EraRule "UTXOS" era) ~ ()
   , State (EraRule "UTXOS" era) ~ ()
-  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
-  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
@@ -238,7 +221,7 @@ utxosTransition =
     case tx ^. isValidTxL of
       IsValid True -> conwayEvalScriptsTxValid
       IsValid False -> do
-        babbageEvalScriptsTxInvalid @era stAnnTx
+        Babbage.babbageEvalScriptsTxInvalid @era stAnnTx
 
 conwayEvalScriptsTxValid ::
   forall era.
@@ -247,13 +230,13 @@ conwayEvalScriptsTxValid ::
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , Environment (EraRule "UTXOS" era) ~ ()
   , State (EraRule "UTXOS" era) ~ ()
-  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
-  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleFailure "UTXOS" Alonzo.AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" Alonzo.AlonzoUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do
   TRC ((), (), stAnnTx) <- judgmentContext
 
-  () <- pure $! Debug.traceEvent validBegin ()
-  expectScriptsToPass stAnnTx
-  pure $! Debug.traceEvent validEnd ()
+  () <- pure $! Debug.traceEvent Alonzo.validBegin ()
+  Babbage.expectScriptsToPass stAnnTx
+  pure $! Debug.traceEvent Alonzo.validEnd ()

@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Utxo (
-  ShelleyUTXO,
+  UTXO,
   UtxoEnv (..),
   ShelleyUtxoPredFailure (..),
   UtxoEvent (..),
@@ -55,13 +55,13 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, UTXO)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (
+  PPUP,
   PpupEnv (..),
   PpupEvent,
-  ShelleyPPUP,
   ShelleyPpupPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
@@ -266,25 +266,25 @@ instance
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , ExactEra ShelleyEra era
-  , Embed (EraRule "PPUP" era) (ShelleyUTXO era)
+  , Embed (EraRule "PPUP" era) (UTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
-  , EraRule "UTXO" era ~ ShelleyUTXO era
+  , EraRule "UTXO" era ~ UTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , EraCertState era
   , SafeToHash (TxWits era)
   ) =>
-  STS (ShelleyUTXO era)
+  STS (UTXO era)
   where
-  type State (ShelleyUTXO era) = UTxOState era
-  type Signal (ShelleyUTXO era) = StAnnTx TopTx era
-  type Environment (ShelleyUTXO era) = UtxoEnv era
-  type BaseM (ShelleyUTXO era) = ShelleyBase
-  type PredicateFailure (ShelleyUTXO era) = ShelleyUtxoPredFailure era
-  type Event (ShelleyUTXO era) = UtxoEvent era
+  type State (UTXO era) = UTxOState era
+  type Signal (UTXO era) = StAnnTx TopTx era
+  type Environment (UTXO era) = UtxoEnv era
+  type BaseM (UTXO era) = ShelleyBase
+  type PredicateFailure (UTXO era) = ShelleyUtxoPredFailure era
+  type Event (UTXO era) = UtxoEvent era
 
   transitionRules = [utxoInductive]
 
@@ -642,11 +642,11 @@ updateUTxOStateNoFees pp utxos txBody certState govState depositChangeEvent txUt
 
 instance
   ( Era era
-  , STS (ShelleyPPUP era)
+  , STS (PPUP era)
   , EraRuleFailure "PPUP" era ~ ShelleyPpupPredFailure era
   , Event (EraRule "PPUP" era) ~ PpupEvent era
   ) =>
-  Embed (ShelleyPPUP era) (ShelleyUTXO era)
+  Embed (PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure
   wrapEvent = UpdateEvent

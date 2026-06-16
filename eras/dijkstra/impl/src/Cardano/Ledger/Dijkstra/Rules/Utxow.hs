@@ -17,7 +17,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.Utxow (
-  DijkstraUTXOW,
+  UTXOW,
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
 ) where
@@ -50,7 +50,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraUTXO, DijkstraUTXOW)
+import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO, UTXOW)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
@@ -195,7 +195,7 @@ instance
   NFData (DijkstraUtxowPredFailure era)
 
 --------------------------------------------------------------------------------
--- DijkstraUTXOW STS
+-- UTXOW STS
 --------------------------------------------------------------------------------
 
 dijkstraUtxowTransition ::
@@ -204,13 +204,13 @@ dijkstraUtxowTransition ::
   , DijkstraEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , DijkstraEraTxBody era
-  , EraRule "UTXOW" era ~ DijkstraUTXOW era
+  , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Babbage.BabbageUtxowPredFailure era
   , InjectRuleFailure "UTXOW" DijkstraUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
+    Embed (EraRule "UTXO" era) (UTXOW era)
   , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
@@ -306,37 +306,37 @@ instance
   , DijkstraEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , DijkstraEraTxBody era
-  , EraRule "UTXOW" era ~ DijkstraUTXOW era
+  , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Babbage.BabbageUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Conway.ConwayUtxowPredFailure era
   , InjectRuleFailure "UTXOW" DijkstraUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (DijkstraUTXOW era)
+    Embed (EraRule "UTXO" era) (UTXOW era)
   , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  STS (DijkstraUTXOW era)
+  STS (UTXOW era)
   where
-  type State (DijkstraUTXOW era) = UTxOState era
-  type Signal (DijkstraUTXOW era) = StAnnTx TopTx era
-  type Environment (DijkstraUTXOW era) = DijkstraUtxoEnv era
-  type BaseM (DijkstraUTXOW era) = ShelleyBase
-  type PredicateFailure (DijkstraUTXOW era) = DijkstraUtxowPredFailure era
-  type Event (DijkstraUTXOW era) = Alonzo.AlonzoUtxowEvent era
+  type State (UTXOW era) = UTxOState era
+  type Signal (UTXOW era) = StAnnTx TopTx era
+  type Environment (UTXOW era) = DijkstraUtxoEnv era
+  type BaseM (UTXOW era) = ShelleyBase
+  type PredicateFailure (UTXOW era) = DijkstraUtxowPredFailure era
+  type Event (UTXOW era) = Alonzo.AlonzoUtxowEvent era
   transitionRules = [dijkstraUtxowTransition @era]
   initialRules = []
 
 instance
-  ( STS (DijkstraUTXO era)
+  ( STS (UTXO era)
   , PredicateFailure (EraRule "UTXO" era) ~ DijkstraUtxoPredFailure era
   , Event (EraRule "UTXO" era) ~ Alonzo.AlonzoUtxoEvent era
   ) =>
-  Embed (DijkstraUTXO era) (DijkstraUTXOW era)
+  Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = UtxoFailure
   wrapEvent = Alonzo.WrappedShelleyEraEvent . Shelley.UtxoEvent

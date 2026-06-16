@@ -21,7 +21,6 @@ import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   LedgerEnv (..),
-  ShelleyLEDGER,
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -29,6 +28,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (
+  LEDGER,
   ShelleyDelegsPredFailure (..),
   ShelleyDelplPredFailure (..),
   ShelleyLedgerPredFailure (..),
@@ -227,12 +227,12 @@ testLEDGER ::
   LedgerState ShelleyEra ->
   Tx TopTx ShelleyEra ->
   LedgerEnv ShelleyEra ->
-  Either (NonEmpty (PredicateFailure (ShelleyLEDGER ShelleyEra))) (LedgerState ShelleyEra) ->
+  Either (NonEmpty (PredicateFailure (LEDGER ShelleyEra))) (LedgerState ShelleyEra) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
-  checkTrace @(ShelleyLEDGER ShelleyEra) runShelleyBase env $ pure initSt .- tx .->> expectedSt
+  checkTrace @(LEDGER ShelleyEra) runShelleyBase env $ pure initSt .- tx .->> expectedSt
 testLEDGER initSt tx env predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTSTest @(ShelleyLEDGER ShelleyEra) (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTSTest @(LEDGER ShelleyEra) (TRC (env, initSt, tx))
   st @?= predicateFailure
 
 aliceInitCoin :: Coin
@@ -313,7 +313,7 @@ ledgerEnv :: LedgerEnv ShelleyEra
 ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound pp (ChainAccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::
-  NonEmpty (PredicateFailure (ShelleyLEDGER ShelleyEra)) ->
+  NonEmpty (PredicateFailure (LEDGER ShelleyEra)) ->
   Tx TopTx ShelleyEra ->
   Assertion
 testInvalidTx errs tx =
@@ -621,7 +621,7 @@ testProducedOverMaxWord64 =
       tx = mkBasicTx @ShelleyEra txbody & witsTxL .~ txwits
       st =
         runShelleyBase $
-          applySTSTest @(ShelleyLEDGER ShelleyEra) (TRC (ledgerEnv, ledgerState, tx))
+          applySTSTest @(LEDGER ShelleyEra) (TRC (ledgerEnv, ledgerState, tx))
    in -- We test that the predicate failure does not return bottom
       pure $! rnf st
 

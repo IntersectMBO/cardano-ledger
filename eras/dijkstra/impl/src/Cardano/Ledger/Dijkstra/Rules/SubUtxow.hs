@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
-  DijkstraSUBUTXOW,
+  SUBUTXOW,
   DijkstraSubUtxowPredFailure (..),
   DijkstraSubUtxowEvent (..),
 ) where
@@ -39,7 +39,7 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBUTXOW,
+  SUBUTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubUtxo
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure (..))
@@ -179,23 +179,23 @@ instance
   , ConwayEraTxBody era
   , DijkstraEraTxBody era
   , EraPlutusContext era
-  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
-  , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
-  , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
+  , EraRule "SUBUTXO" era ~ SUBUTXO era
+  , EraRule "SUBUTXOW" era ~ SUBUTXOW era
+  , Embed (EraRule "SUBUTXO" era) (SUBUTXOW era)
   , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Babbage.BabbageUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
-  STS (DijkstraSUBUTXOW era)
+  STS (SUBUTXOW era)
   where
-  type State (DijkstraSUBUTXOW era) = UTxOState era
-  type Signal (DijkstraSUBUTXOW era) = StAnnTx SubTx era
-  type Environment (DijkstraSUBUTXOW era) = SubUtxoEnv era
-  type BaseM (DijkstraSUBUTXOW era) = ShelleyBase
-  type PredicateFailure (DijkstraSUBUTXOW era) = DijkstraSubUtxowPredFailure era
-  type Event (DijkstraSUBUTXOW era) = DijkstraSubUtxowEvent era
+  type State (SUBUTXOW era) = UTxOState era
+  type Signal (SUBUTXOW era) = StAnnTx SubTx era
+  type Environment (SUBUTXOW era) = SubUtxoEnv era
+  type BaseM (SUBUTXOW era) = ShelleyBase
+  type PredicateFailure (SUBUTXOW era) = DijkstraSubUtxowPredFailure era
+  type Event (SUBUTXOW era) = DijkstraSubUtxowEvent era
 
   transitionRules = [dijkstraSubUtxowTransition @era]
 
@@ -239,9 +239,9 @@ dijkstraSubUtxowTransition ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , DijkstraEraTxBody era
-  , EraRule "SUBUTXO" era ~ DijkstraSUBUTXO era
-  , EraRule "SUBUTXOW" era ~ DijkstraSUBUTXOW era
-  , Embed (EraRule "SUBUTXO" era) (DijkstraSUBUTXOW era)
+  , EraRule "SUBUTXO" era ~ SUBUTXO era
+  , EraRule "SUBUTXOW" era ~ SUBUTXOW era
+  , Embed (EraRule "SUBUTXO" era) (SUBUTXOW era)
   , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Babbage.BabbageUtxowPredFailure era
@@ -291,11 +291,11 @@ dijkstraSubUtxowTransition = do
   trans @(EraRule "SUBUTXO" era) $ TRC (env, utxoState, stAnnTx)
 
 instance
-  ( STS (DijkstraSUBUTXO era)
+  ( STS (SUBUTXO era)
   , PredicateFailure (EraRule "SUBUTXO" era) ~ DijkstraSubUtxoPredFailure era
   , Event (EraRule "SUBUTXO" era) ~ DijkstraSubUtxoEvent era
   ) =>
-  Embed (DijkstraSUBUTXO era) (DijkstraSUBUTXOW era)
+  Embed (SUBUTXO era) (SUBUTXOW era)
   where
   wrapFailed = SubUtxoFailure
   wrapEvent = SubUtxo

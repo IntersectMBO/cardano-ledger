@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Pool (
-  ShelleyPOOL,
+  POOL,
   PoolEvent (..),
   PoolEnv (..),
   ShelleyPoolPredFailure (..),
@@ -46,8 +46,8 @@ import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (
+  POOL,
   ShelleyEra,
-  ShelleyPOOL,
   hardforkAlonzoValidatePoolAccountAddressNetID,
   hardforkConwayDisallowDuplicatedVRFKeys,
  )
@@ -125,21 +125,21 @@ instance NFData (ShelleyPoolPredFailure era)
 
 instance
   ( EraPParams era
-  , EraRule "POOL" era ~ ShelleyPOOL era
+  , EraRule "POOL" era ~ POOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era
   ) =>
-  STS (ShelleyPOOL era)
+  STS (POOL era)
   where
-  type State (ShelleyPOOL era) = PState era
+  type State (POOL era) = PState era
 
-  type Signal (ShelleyPOOL era) = PoolCert
+  type Signal (POOL era) = PoolCert
 
-  type Environment (ShelleyPOOL era) = PoolEnv era
+  type Environment (POOL era) = PoolEnv era
 
-  type BaseM (ShelleyPOOL era) = ShelleyBase
-  type PredicateFailure (ShelleyPOOL era) = ShelleyPoolPredFailure era
-  type Event (ShelleyPOOL era) = PoolEvent era
+  type BaseM (POOL era) = ShelleyBase
+  type PredicateFailure (POOL era) = ShelleyPoolPredFailure era
+  type Event (POOL era) = PoolEvent era
 
   transitionRules = [poolTransition]
 

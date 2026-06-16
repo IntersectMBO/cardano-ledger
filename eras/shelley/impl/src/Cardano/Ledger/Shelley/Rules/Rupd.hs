@@ -8,7 +8,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Rupd (
-  ShelleyRUPD,
+  RUPD,
   RupdEnv (..),
   RupdEvent (..),
 ) where
@@ -27,7 +27,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Rewards (Reward)
-import Cardano.Ledger.Shelley.Era (ShelleyRUPD)
+import Cardano.Ledger.Shelley.Era (RUPD)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
@@ -70,14 +70,14 @@ instance
   , EraGov era
   , EraCertState era
   ) =>
-  STS (ShelleyRUPD era)
+  STS (RUPD era)
   where
-  type State (ShelleyRUPD era) = StrictMaybe PulsingRewUpdate
-  type Signal (ShelleyRUPD era) = SlotNo
-  type Environment (ShelleyRUPD era) = RupdEnv era
-  type BaseM (ShelleyRUPD era) = ShelleyBase
-  type PredicateFailure (ShelleyRUPD era) = Void
-  type Event (ShelleyRUPD era) = RupdEvent
+  type State (RUPD era) = StrictMaybe PulsingRewUpdate
+  type Signal (RUPD era) = SlotNo
+  type Environment (RUPD era) = RupdEnv era
+  type BaseM (RUPD era) = ShelleyBase
+  type PredicateFailure (RUPD era) = Void
+  type Event (RUPD era) = RupdEvent
 
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
@@ -91,7 +91,7 @@ data RupdEvent
 instance NFData RupdEvent
 
 -- | tell a RupdEvent only if the map is non-empty
-tellRupd :: String -> RupdEvent -> Rule (ShelleyRUPD era) rtype ()
+tellRupd :: String -> RupdEvent -> Rule (RUPD era) rtype ()
 tellRupd _ (RupdEvent _ m) | Map.null m = pure ()
 tellRupd _message x = tellEvent x
 
@@ -104,7 +104,7 @@ determineRewardTiming currentSlot startAfterSlot endSlot
   | currentSlot <= startAfterSlot = RewardsTooEarly
   | otherwise = RewardsJustRight
 
-rupdTransition :: (EraGov era, EraCertState era) => TransitionRule (ShelleyRUPD era)
+rupdTransition :: (EraGov era, EraCertState era) => TransitionRule (RUPD era)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (slotsPerEpoch, slot, slotForce, maxLL, asc, k, e) <- liftSTS $ do

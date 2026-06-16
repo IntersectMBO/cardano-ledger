@@ -10,7 +10,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Snap (
-  ShelleySNAP,
+  SNAP,
   SnapEvent (..),
   SnapEnv (..),
 ) where
@@ -20,7 +20,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Shelley.Era (ShelleySNAP)
+import Cardano.Ledger.Shelley.Era (SNAP)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -54,13 +54,13 @@ instance NFData (SnapEvent era)
 
 data SnapEnv era = SnapEnv (LedgerState era) (PParams era)
 
-instance (EraTxOut era, EraStake era, EraCertState era) => STS (ShelleySNAP era) where
-  type State (ShelleySNAP era) = SnapShots
-  type Signal (ShelleySNAP era) = ()
-  type Environment (ShelleySNAP era) = SnapEnv era
-  type BaseM (ShelleySNAP era) = ShelleyBase
-  type PredicateFailure (ShelleySNAP era) = Void
-  type Event (ShelleySNAP era) = SnapEvent era
+instance (EraTxOut era, EraStake era, EraCertState era) => STS (SNAP era) where
+  type State (SNAP era) = SnapShots
+  type Signal (SNAP era) = ()
+  type Environment (SNAP era) = SnapEnv era
+  type BaseM (SNAP era) = ShelleyBase
+  type PredicateFailure (SNAP era) = Void
+  type Event (SNAP era) = SnapEvent era
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]
 
@@ -73,7 +73,7 @@ instance (EraTxOut era, EraStake era, EraCertState era) => STS (ShelleySNAP era)
 -- but is now computed incrementally. We leave the comment as a historical note about
 -- where important changes were made to the source code.
 snapTransition ::
-  (EraStake era, EraCertState era) => TransitionRule (ShelleySNAP era)
+  (EraStake era, EraCertState era) => TransitionRule (SNAP era)
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext
 

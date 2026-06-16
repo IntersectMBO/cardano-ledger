@@ -18,13 +18,13 @@
 -- The rules of this module determine how the update subsystem of the ledger
 -- handles the epoch transitions.
 module Cardano.Ledger.Shelley.Rules.Upec (
-  ShelleyUPEC,
+  UPEC,
   UpecState (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
+import Cardano.Ledger.Shelley.Era (UPEC)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState,
@@ -32,8 +32,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsUTxOState,
  )
 import Cardano.Ledger.Shelley.Rules.Newpp (
+  NEWPP,
   NewppEnv (..),
-  ShelleyNEWPP,
   ShelleyNewppState (..),
  )
 import Control.State.Transition (
@@ -63,13 +63,13 @@ instance
   , GovState era ~ ShelleyGovState era
   , AtMostEra "Babbage" era
   ) =>
-  STS (ShelleyUPEC era)
+  STS (UPEC era)
   where
-  type State (ShelleyUPEC era) = UpecState era
-  type Signal (ShelleyUPEC era) = ()
-  type Environment (ShelleyUPEC era) = LedgerState era
-  type BaseM (ShelleyUPEC era) = ShelleyBase
-  type PredicateFailure (ShelleyUPEC era) = Void
+  type State (UPEC era) = UpecState era
+  type Signal (UPEC era) = ()
+  type Environment (UPEC era) = LedgerState era
+  type BaseM (UPEC era) = ShelleyBase
+  type PredicateFailure (UPEC era) = Void
   initialRules = []
   transitionRules =
     [ do
@@ -83,13 +83,13 @@ instance
         let utxoState = lsUTxOState ls
             ppNew = nextEpochPParams ppupState
         NewppState pp' ppupState' <-
-          trans @(ShelleyNEWPP era) $
+          trans @(NEWPP era) $
             TRC (NewppEnv (lsCertState ls) utxoState, NewppState pp ppupState, ppNew)
         pure $! UpecState pp' ppupState'
     ]
 
 instance
-  (Era era, STS (ShelleyNEWPP era)) =>
-  Embed (ShelleyNEWPP era) (ShelleyUPEC era)
+  (Era era, STS (NEWPP era)) =>
+  Embed (NEWPP era) (UPEC era)
   where
   wrapFailed = \case {}

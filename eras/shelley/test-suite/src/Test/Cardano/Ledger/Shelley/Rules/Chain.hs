@@ -63,12 +63,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   updateNES,
  )
 import Cardano.Ledger.Shelley.Rules (
+  BBODY,
   BbodyEnv (..),
-  ShelleyBBODY,
   ShelleyBbodyPredFailure,
   ShelleyBbodyState (..),
-  ShelleyTICK,
   ShelleyTickEvent,
+  TICK,
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo)
@@ -374,11 +374,11 @@ chainTransition =
 instance
   ( Era era
   , Era era
-  , STS (ShelleyBBODY era)
+  , STS (BBODY era)
   , PredicateFailure (EraRule "BBODY" era) ~ ShelleyBbodyPredFailure era
-  , Event (EraRule "BBODY" era) ~ Event (ShelleyBBODY era)
+  , Event (EraRule "BBODY" era) ~ Event (BBODY era)
   ) =>
-  Embed (ShelleyBBODY era) (CHAIN era)
+  Embed (BBODY era) (CHAIN era)
   where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
@@ -397,10 +397,10 @@ instance
 instance
   ( Era era
   , Era era
-  , STS (ShelleyTICK era)
+  , STS (TICK era)
   , Event (EraRule "TICK" era) ~ ShelleyTickEvent era
   ) =>
-  Embed (ShelleyTICK era) (CHAIN era)
+  Embed (TICK era) (CHAIN era)
   where
   wrapFailed = \case {}
   wrapEvent = TickEvent

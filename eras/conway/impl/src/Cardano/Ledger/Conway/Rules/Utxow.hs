@@ -18,7 +18,7 @@
 module Cardano.Ledger.Conway.Rules.Utxow (
   alonzoToConwayUtxowPredFailure,
   babbageToConwayUtxowPredFailure,
-  ConwayUTXOW,
+  UTXOW,
   ConwayUtxowPredFailure (..),
   shelleyToConwayUtxowPredFailure,
 ) where
@@ -32,7 +32,7 @@ import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, Stri
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXO, ConwayUTXOW)
+import Cardano.Ledger.Conway.Era (ConwayEra, UTXO, UTXOW)
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Keys (VKey)
@@ -162,7 +162,7 @@ instance
   NFData (ConwayUtxowPredFailure era)
 
 --------------------------------------------------------------------------------
--- ConwayUTXOW STS
+-- UTXOW STS
 --------------------------------------------------------------------------------
 
 instance
@@ -171,40 +171,40 @@ instance
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ConwayEraTxBody era
-  , EraRule "UTXOW" era ~ ConwayUTXOW era
+  , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Babbage.BabbageUtxowPredFailure era
   , InjectRuleFailure "UTXOW" ConwayUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (ConwayUTXOW era)
+    Embed (EraRule "UTXO" era) (UTXOW era)
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  STS (ConwayUTXOW era)
+  STS (UTXOW era)
   where
-  type State (ConwayUTXOW era) = Shelley.UTxOState era
-  type Signal (ConwayUTXOW era) = StAnnTx TopTx era
-  type Environment (ConwayUTXOW era) = Shelley.UtxoEnv era
-  type BaseM (ConwayUTXOW era) = ShelleyBase
-  type PredicateFailure (ConwayUTXOW era) = ConwayUtxowPredFailure era
-  type Event (ConwayUTXOW era) = Alonzo.AlonzoUtxowEvent era
+  type State (UTXOW era) = Shelley.UTxOState era
+  type Signal (UTXOW era) = StAnnTx TopTx era
+  type Environment (UTXOW era) = Shelley.UtxoEnv era
+  type BaseM (UTXOW era) = ShelleyBase
+  type PredicateFailure (UTXOW era) = ConwayUtxowPredFailure era
+  type Event (UTXOW era) = Alonzo.AlonzoUtxowEvent era
   transitionRules = [Babbage.babbageUtxowTransition @era]
   initialRules = []
 
 instance
   ( Era era
-  , STS (ConwayUTXO era)
+  , STS (UTXO era)
   , PredicateFailure (EraRule "UTXO" era) ~ ConwayUtxoPredFailure era
   , Event (EraRule "UTXO" era) ~ Alonzo.AlonzoUtxoEvent era
-  , BaseM (ConwayUTXOW era) ~ ShelleyBase
-  , PredicateFailure (ConwayUTXOW era) ~ ConwayUtxowPredFailure era
-  , Event (ConwayUTXOW era) ~ Alonzo.AlonzoUtxowEvent era
+  , BaseM (UTXOW era) ~ ShelleyBase
+  , PredicateFailure (UTXOW era) ~ ConwayUtxowPredFailure era
+  , Event (UTXOW era) ~ Alonzo.AlonzoUtxowEvent era
   ) =>
-  Embed (ConwayUTXO era) (ConwayUTXOW era)
+  Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = UtxoFailure
   wrapEvent = Alonzo.WrappedShelleyEraEvent . Shelley.UtxoEvent

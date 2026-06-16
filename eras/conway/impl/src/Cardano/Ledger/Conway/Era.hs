@@ -9,6 +9,29 @@
 
 module Cardano.Ledger.Conway.Era (
   ConwayEra,
+  BBODY,
+  CERT,
+  DELEG,
+  GOVCERT,
+  CERTS,
+  GOV,
+  HARDFORK,
+  MEMPOOL,
+  NEWEPOCH,
+  EPOCH,
+  ENACT,
+  UTXO,
+  UTXOS,
+  UTXOW,
+  TICKF,
+  LEDGER,
+  RATIFY,
+  hardforkConwayBootstrapPhase,
+  hardforkConwayDisallowUnelectedCommitteeFromVoting,
+  hardforkConwayDELEGIncorrectDepositsAndRefunds,
+  hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
+
+  -- * Deprecated
   ConwayBBODY,
   ConwayCERT,
   ConwayDELEG,
@@ -26,17 +49,12 @@ module Cardano.Ledger.Conway.Era (
   ConwayTICKF,
   ConwayLEDGER,
   ConwayRATIFY,
-  hardforkConwayBootstrapPhase,
-  hardforkConwayDisallowUnelectedCommitteeFromVoting,
-  hardforkConwayDELEGIncorrectDepositsAndRefunds,
-  hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Internal.Era (ConwayEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
 -- =====================================================
@@ -84,87 +102,155 @@ type instance EraRuleEvent "DELEGS" ConwayEra = VoidEraRule "DELEGS" ConwayEra
 -- Era Mapping
 -------------------------------------------------------------------------------
 
-data ConwayGOV era
+data GOV era
 
-type instance EraRule "GOV" ConwayEra = ConwayGOV ConwayEra
+type ConwayGOV = GOV
 
-data ConwayNEWEPOCH era
+{-# DEPRECATED ConwayGOV "In favor of `GOV`" #-}
 
-type instance EraRule "NEWEPOCH" ConwayEra = ConwayNEWEPOCH ConwayEra
+type instance EraRule "GOV" ConwayEra = GOV ConwayEra
 
-data ConwayEPOCH era
+data NEWEPOCH era
 
-type instance EraRule "EPOCH" ConwayEra = ConwayEPOCH ConwayEra
+type ConwayNEWEPOCH = NEWEPOCH
 
-data ConwayENACT era
+{-# DEPRECATED ConwayNEWEPOCH "In favor of `NEWEPOCH`" #-}
 
-type instance EraRule "ENACT" ConwayEra = ConwayENACT ConwayEra
+type instance EraRule "NEWEPOCH" ConwayEra = NEWEPOCH ConwayEra
 
-data ConwayUTXOS era
+data EPOCH era
 
-type instance EraRule "UTXOS" ConwayEra = ConwayUTXOS ConwayEra
+type ConwayEPOCH = EPOCH
 
-data ConwayLEDGER era
+{-# DEPRECATED ConwayEPOCH "In favor of `EPOCH`" #-}
 
-type instance EraRule "LEDGER" ConwayEra = ConwayLEDGER ConwayEra
+type instance EraRule "EPOCH" ConwayEra = EPOCH ConwayEra
 
-data ConwayTICKF era
+data ENACT era
 
-type instance EraRule "TICKF" ConwayEra = ConwayTICKF ConwayEra
+type ConwayENACT = ENACT
 
-data ConwayRATIFY era
+{-# DEPRECATED ConwayENACT "In favor of `ENACT`" #-}
 
-type instance EraRule "RATIFY" ConwayEra = ConwayRATIFY ConwayEra
+type instance EraRule "ENACT" ConwayEra = ENACT ConwayEra
 
-data ConwayCERTS era
+data UTXOS era
 
-type instance EraRule "CERTS" ConwayEra = ConwayCERTS ConwayEra
+type ConwayUTXOS = UTXOS
 
-data ConwayCERT era
+{-# DEPRECATED ConwayUTXOS "In favor of `UTXOS`" #-}
 
-type instance EraRule "CERT" ConwayEra = ConwayCERT ConwayEra
+type instance EraRule "UTXOS" ConwayEra = UTXOS ConwayEra
 
-data ConwayDELEG era
+data LEDGER era
 
-type instance EraRule "DELEG" ConwayEra = ConwayDELEG ConwayEra
+type ConwayLEDGER = LEDGER
 
-data ConwayGOVCERT era
+{-# DEPRECATED ConwayLEDGER "In favor of `LEDGER`" #-}
 
-type instance EraRule "GOVCERT" ConwayEra = ConwayGOVCERT ConwayEra
+type instance EraRule "LEDGER" ConwayEra = LEDGER ConwayEra
 
-data ConwayUTXOW era
+data TICKF era
 
-type instance EraRule "UTXOW" ConwayEra = ConwayUTXOW ConwayEra
+type ConwayTICKF = TICKF
 
-data ConwayUTXO era
+{-# DEPRECATED ConwayTICKF "In favor of `TICKF`" #-}
 
-type instance EraRule "UTXO" ConwayEra = ConwayUTXO ConwayEra
+type instance EraRule "TICKF" ConwayEra = TICKF ConwayEra
 
-data ConwayBBODY era
+data RATIFY era
 
-type instance EraRule "BBODY" ConwayEra = ConwayBBODY ConwayEra
+type ConwayRATIFY = RATIFY
 
-data ConwayMEMPOOL era
+{-# DEPRECATED ConwayRATIFY "In favor of `RATIFY`" #-}
 
-type instance EraRule "MEMPOOL" ConwayEra = ConwayMEMPOOL ConwayEra
+type instance EraRule "RATIFY" ConwayEra = RATIFY ConwayEra
 
-data ConwayHARDFORK era
+data CERTS era
 
-type instance EraRule "HARDFORK" ConwayEra = ConwayHARDFORK ConwayEra
+type ConwayCERTS = CERTS
+
+{-# DEPRECATED ConwayCERTS "In favor of `CERTS`" #-}
+
+type instance EraRule "CERTS" ConwayEra = CERTS ConwayEra
+
+data CERT era
+
+type ConwayCERT = CERT
+
+{-# DEPRECATED ConwayCERT "In favor of `CERT`" #-}
+
+type instance EraRule "CERT" ConwayEra = CERT ConwayEra
+
+data DELEG era
+
+type ConwayDELEG = DELEG
+
+{-# DEPRECATED ConwayDELEG "In favor of `DELEG`" #-}
+
+type instance EraRule "DELEG" ConwayEra = DELEG ConwayEra
+
+data GOVCERT era
+
+type ConwayGOVCERT = GOVCERT
+
+{-# DEPRECATED ConwayGOVCERT "In favor of `GOVCERT`" #-}
+
+type instance EraRule "GOVCERT" ConwayEra = GOVCERT ConwayEra
+
+data UTXOW era
+
+type ConwayUTXOW = UTXOW
+
+{-# DEPRECATED ConwayUTXOW "In favor of `UTXOW`" #-}
+
+type instance EraRule "UTXOW" ConwayEra = UTXOW ConwayEra
+
+data UTXO era
+
+type ConwayUTXO = UTXO
+
+{-# DEPRECATED ConwayUTXO "In favor of `UTXO`" #-}
+
+type instance EraRule "UTXO" ConwayEra = UTXO ConwayEra
+
+data BBODY era
+
+type ConwayBBODY = BBODY
+
+{-# DEPRECATED ConwayBBODY "In favor of `BBODY`" #-}
+
+type instance EraRule "BBODY" ConwayEra = BBODY ConwayEra
+
+data MEMPOOL era
+
+type ConwayMEMPOOL = MEMPOOL
+
+{-# DEPRECATED ConwayMEMPOOL "In favor of `MEMPOOL`" #-}
+
+type instance EraRule "MEMPOOL" ConwayEra = MEMPOOL ConwayEra
+
+data HARDFORK era
+
+type ConwayHARDFORK = HARDFORK
+
+{-# DEPRECATED ConwayHARDFORK "In favor of `HARDFORK`" #-}
+
+type instance EraRule "HARDFORK" ConwayEra = HARDFORK ConwayEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "LEDGERS" ConwayEra = API.ShelleyLEDGERS ConwayEra
+type instance EraRule "LEDGERS" ConwayEra = Shelley.LEDGERS ConwayEra
 
-type instance EraRule "POOLREAP" ConwayEra = API.ShelleyPOOLREAP ConwayEra
+type instance EraRule "POOLREAP" ConwayEra = Shelley.POOLREAP ConwayEra
 
-type instance EraRule "RUPD" ConwayEra = Shelley.ShelleyRUPD ConwayEra
+type instance EraRule "RUPD" ConwayEra = Shelley.RUPD ConwayEra
 
-type instance EraRule "SNAP" ConwayEra = Shelley.ShelleySNAP ConwayEra
+type instance EraRule "SNAP" ConwayEra = Shelley.SNAP ConwayEra
 
-type instance EraRule "TICK" ConwayEra = Shelley.ShelleyTICK ConwayEra
+type instance EraRule "TICK" ConwayEra = Shelley.TICK ConwayEra
 
-type instance EraRule "POOL" ConwayEra = Shelley.ShelleyPOOL ConwayEra
+type instance EraRule "POOL" ConwayEra = Shelley.POOL ConwayEra
 
 -- | Bootstrap phase
 hardforkConwayBootstrapPhase :: ProtVer -> Bool

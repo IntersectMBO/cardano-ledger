@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Rules.Utxos (
-  AlonzoUTXOS,
+  UTXOS,
   AlonzoUtxosPredFailure (..),
   lbl2Phase,
   TagMismatchDescription (..),
@@ -34,7 +34,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxos (
 ) where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXOS)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra, UTXOS)
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (..),
@@ -88,7 +88,7 @@ import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 --------------------------------------------------------------------------------
--- The AlonzoUTXOS transition system
+-- The UTXOS transition system
 --------------------------------------------------------------------------------
 
 instance
@@ -102,7 +102,7 @@ instance
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
+  , Embed (EraRule "PPUP" era) (UTXOS era)
   , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure,
@@ -112,14 +112,14 @@ instance
   , EraCertState era
   , EraStake era
   ) =>
-  STS (AlonzoUTXOS era)
+  STS (UTXOS era)
   where
-  type BaseM (AlonzoUTXOS era) = ShelleyBase
-  type Environment (AlonzoUTXOS era) = UtxosEnv era
-  type State (AlonzoUTXOS era) = ShelleyGovState era
-  type Signal (AlonzoUTXOS era) = StAnnTx TopTx era
-  type PredicateFailure (AlonzoUTXOS era) = AlonzoUtxosPredFailure era
-  type Event (AlonzoUTXOS era) = AlonzoUtxosEvent era
+  type BaseM (UTXOS era) = ShelleyBase
+  type Environment (UTXOS era) = UtxosEnv era
+  type State (UTXOS era) = ShelleyGovState era
+  type Signal (UTXOS era) = StAnnTx TopTx era
+  type PredicateFailure (UTXOS era) = AlonzoUtxosPredFailure era
+  type Event (UTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
 
 data UtxosEnv era = UtxosEnv
@@ -142,12 +142,12 @@ instance NFData (EraRuleEvent "PPUP" era) => NFData (AlonzoUtxosEvent era)
 
 instance
   ( Era era
-  , STS (Shelley.ShelleyPPUP era)
+  , STS (Shelley.PPUP era)
   , EraRuleFailure "PPUP" era ~ Shelley.ShelleyPpupPredFailure era
-  , Event (EraRule "PPUP" era) ~ Event (Shelley.ShelleyPPUP era)
+  , Event (EraRule "PPUP" era) ~ Event (Shelley.PPUP era)
   , EraRuleEvent "PPUP" era ~ Shelley.PpupEvent era
   ) =>
-  Embed (Shelley.ShelleyPPUP era) (AlonzoUTXOS era)
+  Embed (Shelley.PPUP era) (UTXOS era)
   where
   wrapFailed = UpdateFailure
   wrapEvent = AlonzoPpupToUtxosEvent
@@ -164,7 +164,7 @@ utxosTransition ::
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
-  , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
+  , Embed (EraRule "PPUP" era) (UTXOS era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
@@ -172,7 +172,7 @@ utxosTransition ::
   , EraCertState era
   , EraStake era
   ) =>
-  TransitionRule (AlonzoUTXOS era)
+  TransitionRule (UTXOS era)
 utxosTransition =
   judgmentContext >>= \(TRC (_, _, stAnnTx)) -> do
     let tx = stAnnTx ^. txStAnnTxG
@@ -223,15 +223,15 @@ alonzoEvalScriptsTxValid ::
   , AlonzoEraUTxO era
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , STS (AlonzoUTXOS era)
+  , STS (UTXOS era)
   , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
-  , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
+  , Embed (EraRule "PPUP" era) (UTXOS era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext era
   , EraCertState era
   ) =>
-  TransitionRule (AlonzoUTXOS era)
+  TransitionRule (UTXOS era)
 alonzoEvalScriptsTxValid = do
   TRC (UtxosEnv slot pp certState utxo, pup, stAnnTx) <-
     judgmentContext
@@ -259,10 +259,10 @@ alonzoEvalScriptsTxInvalid ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , STS (AlonzoUTXOS era)
+  , STS (UTXOS era)
   , EraPlutusContext era
   ) =>
-  TransitionRule (AlonzoUTXOS era)
+  TransitionRule (UTXOS era)
 alonzoEvalScriptsTxInvalid = do
   TRC (UtxosEnv slot pp _ utxo, pup, stAnnTx) <- judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
@@ -291,7 +291,7 @@ invalidBegin = intercalate "," ["[LEDGER][SCRIPTS_NOT_VALIDATE_TRANSITION]", "BE
 invalidEnd = intercalate "," ["[LEDGER][SCRIPTS_NOT_VALIDATE_TRANSITION]", "END"]
 
 -- =============================================
--- PredicateFailure data type for AlonzoUTXOS
+-- PredicateFailure data type for UTXOS
 
 data FailureDescription
   = PlutusFailure Text BS.ByteString

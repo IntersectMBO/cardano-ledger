@@ -14,7 +14,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubLedgers (
-  DijkstraSUBLEDGERS,
+  SUBLEDGERS,
   DijkstraSubLedgersPredFailure (..),
   DijkstraSubLedgersEvent (..),
 ) where
@@ -32,8 +32,8 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
-  DijkstraSUBLEDGER,
-  DijkstraSUBLEDGERS,
+  SUBLEDGER,
+  SUBLEDGERS,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubLedger (
   DijkstraSubLedgerEvent,
@@ -99,30 +99,30 @@ instance
   ( ConwayEraGov era
   , ConwayEraCertState era
   , EraPlutusContext era
-  , EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
-  , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
-  , Embed (EraRule "SUBLEDGER" era) (DijkstraSUBLEDGERS era)
+  , EraRule "SUBLEDGERS" era ~ SUBLEDGERS era
+  , EraRule "SUBLEDGER" era ~ SUBLEDGER era
+  , Embed (EraRule "SUBLEDGER" era) (SUBLEDGERS era)
   , InjectRuleEvent "SUBPOOL" Shelley.PoolEvent era
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
   , InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
   ) =>
-  STS (DijkstraSUBLEDGERS era)
+  STS (SUBLEDGERS era)
   where
-  type State (DijkstraSUBLEDGERS era) = LedgerState era
-  type Signal (DijkstraSUBLEDGERS era) = [StAnnTx SubTx era]
-  type Environment (DijkstraSUBLEDGERS era) = SubLedgerEnv era
-  type BaseM (DijkstraSUBLEDGERS era) = ShelleyBase
-  type PredicateFailure (DijkstraSUBLEDGERS era) = DijkstraSubLedgersPredFailure era
-  type Event (DijkstraSUBLEDGERS era) = DijkstraSubLedgersEvent era
+  type State (SUBLEDGERS era) = LedgerState era
+  type Signal (SUBLEDGERS era) = [StAnnTx SubTx era]
+  type Environment (SUBLEDGERS era) = SubLedgerEnv era
+  type BaseM (SUBLEDGERS era) = ShelleyBase
+  type PredicateFailure (SUBLEDGERS era) = DijkstraSubLedgersPredFailure era
+  type Event (SUBLEDGERS era) = DijkstraSubLedgersEvent era
 
   transitionRules = [dijkstraSubLedgersTransition @era]
 
 dijkstraSubLedgersTransition ::
   forall era.
-  ( EraRule "SUBLEDGERS" era ~ DijkstraSUBLEDGERS era
-  , EraRule "SUBLEDGER" era ~ DijkstraSUBLEDGER era
-  , Embed (EraRule "SUBLEDGER" era) (DijkstraSUBLEDGERS era)
+  ( EraRule "SUBLEDGERS" era ~ SUBLEDGERS era
+  , EraRule "SUBLEDGER" era ~ SUBLEDGER era
+  , Embed (EraRule "SUBLEDGER" era) (SUBLEDGERS era)
   ) =>
   TransitionRule (EraRule "SUBLEDGERS" era)
 dijkstraSubLedgersTransition = do
@@ -135,11 +135,11 @@ dijkstraSubLedgersTransition = do
     subTxs
 
 instance
-  ( STS (DijkstraSUBLEDGER era)
+  ( STS (SUBLEDGER era)
   , PredicateFailure (EraRule "SUBLEDGER" era) ~ DijkstraSubLedgerPredFailure era
   , Event (EraRule "SUBLEDGER" era) ~ DijkstraSubLedgerEvent era
   ) =>
-  Embed (DijkstraSUBLEDGER era) (DijkstraSUBLEDGERS era)
+  Embed (SUBLEDGER era) (SUBLEDGERS era)
   where
   wrapFailed = SubLedgerFailure
   wrapEvent = SubLedgerEvent

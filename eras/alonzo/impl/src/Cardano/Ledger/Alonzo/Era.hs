@@ -9,6 +9,13 @@
 
 module Cardano.Ledger.Alonzo.Era (
   AlonzoEra,
+  UTXO,
+  UTXOS,
+  UTXOW,
+  BBODY,
+  LEDGER,
+
+  -- * Deprecated
   AlonzoUTXO,
   AlonzoUTXOS,
   AlonzoUTXOW,
@@ -34,56 +41,76 @@ type instance Value AlonzoEra = MaryValue
 
 -- These rules are new or changed in Alonzo
 
-data AlonzoUTXOS era
+data UTXOS era
 
-type instance EraRule "UTXOS" AlonzoEra = AlonzoUTXOS AlonzoEra
+type AlonzoUTXOS = UTXOS
 
-data AlonzoUTXO era
+{-# DEPRECATED AlonzoUTXOS "In favor of `UTXOS`" #-}
 
-type instance EraRule "UTXO" AlonzoEra = AlonzoUTXO AlonzoEra
+type instance EraRule "UTXOS" AlonzoEra = UTXOS AlonzoEra
 
-data AlonzoUTXOW era
+data UTXO era
 
-type instance EraRule "UTXOW" AlonzoEra = AlonzoUTXOW AlonzoEra
+type AlonzoUTXO = UTXO
 
-data AlonzoLEDGER era
+{-# DEPRECATED AlonzoUTXO "In favor of `UTXO`" #-}
 
-type instance EraRule "LEDGER" AlonzoEra = AlonzoLEDGER AlonzoEra
+type instance EraRule "UTXO" AlonzoEra = UTXO AlonzoEra
 
-data AlonzoBBODY era
+data UTXOW era
 
-type instance EraRule "BBODY" AlonzoEra = AlonzoBBODY AlonzoEra
+type AlonzoUTXOW = UTXOW
+
+{-# DEPRECATED AlonzoUTXOW "In favor of `UTXOW`" #-}
+
+type instance EraRule "UTXOW" AlonzoEra = UTXOW AlonzoEra
+
+data LEDGER era
+
+type AlonzoLEDGER = LEDGER
+
+{-# DEPRECATED AlonzoLEDGER "In favor of `LEDGER`" #-}
+
+type instance EraRule "LEDGER" AlonzoEra = LEDGER AlonzoEra
+
+data BBODY era
+
+type AlonzoBBODY = BBODY
+
+{-# DEPRECATED AlonzoBBODY "In favor of `BBODY`" #-}
+
+type instance EraRule "BBODY" AlonzoEra = BBODY AlonzoEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "DELEG" AlonzoEra = Shelley.ShelleyDELEG AlonzoEra
+type instance EraRule "DELEG" AlonzoEra = Shelley.DELEG AlonzoEra
 
-type instance EraRule "DELEGS" AlonzoEra = Shelley.ShelleyDELEGS AlonzoEra
+type instance EraRule "DELEGS" AlonzoEra = Shelley.DELEGS AlonzoEra
 
-type instance EraRule "DELPL" AlonzoEra = Shelley.ShelleyDELPL AlonzoEra
+type instance EraRule "DELPL" AlonzoEra = Shelley.DELPL AlonzoEra
 
-type instance EraRule "EPOCH" AlonzoEra = Shelley.ShelleyEPOCH AlonzoEra
+type instance EraRule "EPOCH" AlonzoEra = Shelley.EPOCH AlonzoEra
 
-type instance EraRule "LEDGERS" AlonzoEra = Shelley.ShelleyLEDGERS AlonzoEra
+type instance EraRule "LEDGERS" AlonzoEra = Shelley.LEDGERS AlonzoEra
 
-type instance EraRule "MIR" AlonzoEra = Shelley.ShelleyMIR AlonzoEra
+type instance EraRule "MIR" AlonzoEra = Shelley.MIR AlonzoEra
 
-type instance EraRule "NEWEPOCH" AlonzoEra = Shelley.ShelleyNEWEPOCH AlonzoEra
+type instance EraRule "NEWEPOCH" AlonzoEra = Shelley.NEWEPOCH AlonzoEra
 
-type instance EraRule "NEWPP" AlonzoEra = Shelley.ShelleyNEWPP AlonzoEra
+type instance EraRule "NEWPP" AlonzoEra = Shelley.NEWPP AlonzoEra
 
-type instance EraRule "POOL" AlonzoEra = Shelley.ShelleyPOOL AlonzoEra
+type instance EraRule "POOL" AlonzoEra = Shelley.POOL AlonzoEra
 
-type instance EraRule "POOLREAP" AlonzoEra = Shelley.ShelleyPOOLREAP AlonzoEra
+type instance EraRule "POOLREAP" AlonzoEra = Shelley.POOLREAP AlonzoEra
 
-type instance EraRule "PPUP" AlonzoEra = Shelley.ShelleyPPUP AlonzoEra
+type instance EraRule "PPUP" AlonzoEra = Shelley.PPUP AlonzoEra
 
-type instance EraRule "RUPD" AlonzoEra = Shelley.ShelleyRUPD AlonzoEra
+type instance EraRule "RUPD" AlonzoEra = Shelley.RUPD AlonzoEra
 
-type instance EraRule "SNAP" AlonzoEra = Shelley.ShelleySNAP AlonzoEra
+type instance EraRule "SNAP" AlonzoEra = Shelley.SNAP AlonzoEra
 
-type instance EraRule "TICK" AlonzoEra = Shelley.ShelleyTICK AlonzoEra
+type instance EraRule "TICK" AlonzoEra = Shelley.TICK AlonzoEra
 
-type instance EraRule "TICKF" AlonzoEra = Shelley.ShelleyTICKF AlonzoEra
+type instance EraRule "TICKF" AlonzoEra = Shelley.TICKF AlonzoEra
 
-type instance EraRule "UPEC" AlonzoEra = Shelley.ShelleyUPEC AlonzoEra
+type instance EraRule "UPEC" AlonzoEra = Shelley.UPEC AlonzoEra

@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.Gov (
-  DijkstraGOV,
+  GOV,
   DijkstraGovPredFailure (..),
   pattern InvalidPolicyHash,
   conwayToDijkstraGovPredFailure,
@@ -60,7 +60,7 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.Era (DijkstraEra, DijkstraGOV)
+import Cardano.Ledger.Dijkstra.Era (DijkstraEra, GOV)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   STS (..),
@@ -200,20 +200,20 @@ instance
   ( ConwayEraTxCert era
   , ConwayEraPParams era
   , ConwayEraGov era
-  , EraRule "GOV" era ~ DijkstraGOV era
+  , EraRule "GOV" era ~ GOV era
   , InjectRuleFailure "GOV" Conway.ConwayGovPredFailure era
   , InjectRuleEvent "GOV" Conway.ConwayGovEvent era
   , EraCertState era
   , ConwayEraCertState era
   ) =>
-  STS (DijkstraGOV era)
+  STS (GOV era)
   where
-  type State (DijkstraGOV era) = Proposals era
-  type Signal (DijkstraGOV era) = Conway.GovSignal era
-  type Environment (DijkstraGOV era) = Conway.GovEnv era
-  type BaseM (DijkstraGOV era) = ShelleyBase
-  type PredicateFailure (DijkstraGOV era) = DijkstraGovPredFailure era
-  type Event (DijkstraGOV era) = Conway.ConwayGovEvent era
+  type State (GOV era) = Proposals era
+  type Signal (GOV era) = Conway.GovSignal era
+  type Environment (GOV era) = Conway.GovEnv era
+  type BaseM (GOV era) = ShelleyBase
+  type PredicateFailure (GOV era) = DijkstraGovPredFailure era
+  type Event (GOV era) = Conway.ConwayGovEvent era
 
   initialRules = []
 

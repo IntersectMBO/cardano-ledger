@@ -17,7 +17,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Rules.Utxow (
-  AlonzoUTXOW,
+  UTXOW,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
   AlonzoUtxowPredFailure (..),
   hasExactSetOfRedeemers,
@@ -27,11 +27,11 @@ module Cardano.Ledger.Alonzo.Rules.Utxow (
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXOW)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra, UTXOW)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
-  AlonzoUTXO,
   AlonzoUtxoEvent,
   AlonzoUtxoPredFailure (..),
+  UTXO,
  )
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
@@ -297,11 +297,11 @@ alonzoStyleWitness ::
   , ShelleyEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , EraRule "UTXOW" era ~ AlonzoUTXOW era
+  , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
+    Embed (EraRule "UTXO" era) (UTXOW era)
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
@@ -392,37 +392,37 @@ instance
   , AlonzoEraUTxO era
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , EraRule "UTXOW" era ~ AlonzoUTXOW era
+  , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
+    Embed (EraRule "UTXO" era) (UTXOW era)
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , EraCertState era
   ) =>
-  STS (AlonzoUTXOW era)
+  STS (UTXOW era)
   where
-  type State (AlonzoUTXOW era) = UTxOState era
-  type Signal (AlonzoUTXOW era) = StAnnTx TopTx era
-  type Environment (AlonzoUTXOW era) = Shelley.UtxoEnv era
-  type BaseM (AlonzoUTXOW era) = ShelleyBase
-  type PredicateFailure (AlonzoUTXOW era) = AlonzoUtxowPredFailure era
-  type Event (AlonzoUTXOW era) = AlonzoUtxowEvent era
+  type State (UTXOW era) = UTxOState era
+  type Signal (UTXOW era) = StAnnTx TopTx era
+  type Environment (UTXOW era) = Shelley.UtxoEnv era
+  type BaseM (UTXOW era) = ShelleyBase
+  type PredicateFailure (UTXOW era) = AlonzoUtxowPredFailure era
+  type Event (UTXOW era) = AlonzoUtxowEvent era
   transitionRules = [alonzoStyleWitness @era]
   initialRules = []
 
 instance
   ( Era era
-  , STS (AlonzoUTXO era)
+  , STS (UTXO era)
   , PredicateFailure (EraRule "UTXO" era) ~ AlonzoUtxoPredFailure era
   , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
-  , BaseM (AlonzoUTXOW era) ~ ShelleyBase
-  , PredicateFailure (AlonzoUTXOW era) ~ AlonzoUtxowPredFailure era
-  , Event (AlonzoUTXOW era) ~ AlonzoUtxowEvent era
+  , BaseM (UTXOW era) ~ ShelleyBase
+  , PredicateFailure (UTXOW era) ~ AlonzoUtxowPredFailure era
+  , Event (UTXOW era) ~ AlonzoUtxowEvent era
   ) =>
-  Embed (AlonzoUTXO era) (AlonzoUTXOW era)
+  Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure
   wrapEvent = WrappedShelleyEraEvent . Shelley.UtxoEvent

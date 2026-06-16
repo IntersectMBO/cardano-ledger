@@ -167,16 +167,16 @@ tickfR2 globals slot nes =
   liftRule
     globals
     (TRC ((), nes, slot))
-    (Shelley.validatingTickTransitionFORECAST @Shelley.ShelleyTICKF nes slot)
+    (Shelley.validatingTickTransitionFORECAST @Shelley.TICKF nes slot)
 
 mirR :: Globals -> EpochState CurrentEra -> EpochState CurrentEra
-mirR globals es' = liftApplySTS globals (applySTS @(Shelley.ShelleyMIR CurrentEra) (TRC ((), es', ())))
+mirR globals es' = liftApplySTS globals (applySTS @(Shelley.MIR CurrentEra) (TRC ((), es', ())))
 
 newEpochR :: Globals -> EpochNo -> NewEpochState CurrentEra -> NewEpochState CurrentEra
-newEpochR globals epochNo nes = liftApplySTS globals (applySTS @(Shelley.ShelleyNEWEPOCH CurrentEra) (TRC ((), nes, epochNo)))
+newEpochR globals epochNo nes = liftApplySTS globals (applySTS @(Shelley.NEWEPOCH CurrentEra) (TRC ((), nes, epochNo)))
 
 epochR :: Globals -> EpochNo -> EpochState CurrentEra -> EpochState CurrentEra
-epochR globals epochNo es'' = liftApplySTS globals (applySTS @(Shelley.ShelleyEPOCH CurrentEra) (TRC ((), es'', epochNo)))
+epochR globals epochNo es'' = liftApplySTS globals (applySTS @(Shelley.EPOCH CurrentEra) (TRC ((), es'', epochNo)))
 
 -- ============================================================
 

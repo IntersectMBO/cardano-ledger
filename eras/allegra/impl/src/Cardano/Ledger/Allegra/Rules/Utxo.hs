@@ -15,7 +15,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra.Rules.Utxo (
-  AllegraUTXO,
+  UTXO,
   AllegraUtxoEvent (..),
   AllegraUtxoPredFailure (..),
   validateOutsideValidityIntervalUTxO,
@@ -23,7 +23,7 @@ module Cardano.Ledger.Allegra.Rules.Utxo (
 ) where
 
 import Cardano.Ledger.Allegra.Core
-import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraUTXO)
+import Cardano.Ledger.Allegra.Era (AllegraEra, UTXO)
 import Cardano.Ledger.Allegra.Rules.Ppup ()
 import Cardano.Ledger.Allegra.Scripts (inInterval)
 import Cardano.Ledger.BaseTypes (
@@ -160,7 +160,7 @@ utxoTransition ::
   , GovState era ~ ShelleyGovState era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
-  , EraRule "UTXO" era ~ AllegraUTXO era
+  , EraRule "UTXO" era ~ UTXO era
   , SafeToHash (TxWits era)
   ) =>
   TransitionRule (EraRule "UTXO" era)
@@ -286,27 +286,27 @@ instance
   , EraCertState era
   , ShelleyEraTxBody era
   , AllegraEraTxBody era
-  , Embed (EraRule "PPUP" era) (AllegraUTXO era)
+  , Embed (EraRule "PPUP" era) (UTXO era)
   , Environment (EraRule "PPUP" era) ~ Shelley.PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , AtMostEra "Babbage" era
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
-  , EraRule "UTXO" era ~ AllegraUTXO era
+  , EraRule "UTXO" era ~ UTXO era
   , GovState era ~ ShelleyGovState era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
   , SafeToHash (TxWits era)
   ) =>
-  STS (AllegraUTXO era)
+  STS (UTXO era)
   where
-  type State (AllegraUTXO era) = Shelley.UTxOState era
-  type Signal (AllegraUTXO era) = StAnnTx TopTx era
-  type Environment (AllegraUTXO era) = Shelley.UtxoEnv era
-  type BaseM (AllegraUTXO era) = ShelleyBase
-  type PredicateFailure (AllegraUTXO era) = AllegraUtxoPredFailure era
-  type Event (AllegraUTXO era) = AllegraUtxoEvent era
+  type State (UTXO era) = Shelley.UTxOState era
+  type Signal (UTXO era) = StAnnTx TopTx era
+  type Environment (UTXO era) = Shelley.UtxoEnv era
+  type BaseM (UTXO era) = ShelleyBase
+  type PredicateFailure (UTXO era) = AllegraUtxoPredFailure era
+  type Event (UTXO era) = AllegraUtxoEvent era
 
   initialRules = []
   transitionRules = [utxoTransition]
@@ -314,11 +314,11 @@ instance
 
 instance
   ( Era era
-  , STS (Shelley.ShelleyPPUP era)
+  , STS (Shelley.PPUP era)
   , EraRuleFailure "PPUP" era ~ Shelley.ShelleyPpupPredFailure era
-  , Event (EraRule "PPUP" era) ~ Event (Shelley.ShelleyPPUP era)
+  , Event (EraRule "PPUP" era) ~ Event (Shelley.PPUP era)
   ) =>
-  Embed (Shelley.ShelleyPPUP era) (AllegraUTXO era)
+  Embed (Shelley.PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure
   wrapEvent = UpdateEvent
