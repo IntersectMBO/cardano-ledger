@@ -38,6 +38,7 @@ module Test.Cardano.Ledger.Shelley.Examples (
   seedFromWords,
 ) where
 
+import Cardano.Ledger.DynamicPricing.State (EraPricing (..))
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash as Hash
@@ -248,6 +249,7 @@ exampleNewEpochState value ppp pp =
                     , utxosGovState = emptyGovState
                     , utxosInstantStake = mempty
                     , utxosDonation = mempty
+                    , utxosPricing = emptyPricing
                     }
               , lsCertState = def
               }

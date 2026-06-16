@@ -63,6 +63,10 @@ library
     Cardano.Ledger.Core
     Cardano.Ledger.Credential
     Cardano.Ledger.DRep
+    Cardano.Ledger.DynamicPricing
+    Cardano.Ledger.DynamicPricing.InclusionStrategy
+    Cardano.Ledger.DynamicPricing.Pricing
+    Cardano.Ledger.DynamicPricing.State
     Cardano.Ledger.Genesis
     Cardano.Ledger.HKD
     Cardano.Ledger.Hashes

@@ -12,6 +12,7 @@
 
 module Cardano.Ledger.Allegra.Translation (shelleyToAllegraAVVMsToDelete) where
 
+import Cardano.Ledger.DynamicPricing.State (NoPricing (..))
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.State
 import Cardano.Ledger.Allegra.Tx ()
@@ -121,6 +122,7 @@ instance TranslateEra AllegraEra UTxOState where
         , utxosGovState = translateEra' ctxt $ utxosGovState us
         , utxosInstantStake = translateEra' ctxt $ utxosInstantStake us
         , utxosDonation = utxosDonation us
+        , utxosPricing = NoPricing
         }
 
 instance TranslateEra AllegraEra ShelleyInstantStake where

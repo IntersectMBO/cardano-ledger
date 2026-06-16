@@ -93,6 +93,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   utxosFeesL,
   utxosGovStateL,
   utxosDonationL,
+  utxosPricingL,
   epochStateGovStateL,
   epochStateStakeDistrL,
   epochStateStakePoolsL,

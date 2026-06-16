@@ -175,6 +175,7 @@ module Cardano.Ledger.Conway.Governance (
   showGovActionType,
 ) where
 
+import Cardano.Ledger.DynamicPricing.State (EraPricing (..), NoPricing)
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Globals (..),
@@ -403,6 +404,10 @@ instance (ConwayEraAccounts era, EraPParams era, EraStake era) => ToKeyValuePair
         , "previousPParams" .= cgsPrevPParams
         , "futurePParams" .= cgsFuturePParams
         ]
+
+
+instance EraPricing ConwayEra where
+  type PricingState ConwayEra = NoPricing ConwayEra
 
 instance EraGov ConwayEra where
   type GovState ConwayEra = ConwayGovState ConwayEra

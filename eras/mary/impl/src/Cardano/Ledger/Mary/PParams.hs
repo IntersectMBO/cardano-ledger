@@ -3,6 +3,7 @@
 
 module Cardano.Ledger.Mary.PParams () where
 
+import Cardano.Ledger.DynamicPricing.State (EraPricing (..), NoPricing)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Shelley.Governance (
@@ -48,6 +49,10 @@ instance EraPParams MaryEra where
   hkdMinPoolCostCompactL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
   eraPParams = shelleyPParams
+
+
+instance EraPricing MaryEra where
+  type PricingState MaryEra = NoPricing MaryEra
 
 instance EraGov MaryEra where
   type GovState MaryEra = ShelleyGovState MaryEra

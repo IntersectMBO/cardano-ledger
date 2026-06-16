@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Shelley.TreeDiff (
   module Test.Cardano.Ledger.TreeDiff,
 ) where
 
+import Cardano.Ledger.DynamicPricing.State (DynamicPricing, NoPricing, PricingState)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rewards
@@ -151,6 +152,7 @@ instance
   , ToExpr (GovState era)
   , ToExpr (CertState era)
   , ToExpr (InstantStake era)
+  , ToExpr (PricingState era)
   ) =>
   ToExpr (NewEpochState era)
 
@@ -160,6 +162,7 @@ instance
   , ToExpr (GovState era)
   , ToExpr (CertState era)
   , ToExpr (InstantStake era)
+  , ToExpr (PricingState era)
   ) =>
   ToExpr (EpochState era)
 
@@ -168,13 +171,20 @@ instance
   , ToExpr (GovState era)
   , ToExpr (CertState era)
   , ToExpr (InstantStake era)
+  , ToExpr (PricingState era)
   ) =>
   ToExpr (LedgerState era)
+
+instance ToExpr (NoPricing era)
+
+instance ToExpr (DynamicPricing era) where
+  toExpr = defaultExprViaShow
 
 instance
   ( ToExpr (TxOut era)
   , ToExpr (GovState era)
   , ToExpr (InstantStake era)
+  , ToExpr (PricingState era)
   ) =>
   ToExpr (UTxOState era)
 

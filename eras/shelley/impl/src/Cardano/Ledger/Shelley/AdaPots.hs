@@ -65,7 +65,7 @@ totalAdaPotsES (EpochState (ChainAccountState {casTreasury, casReserves}) ls _ _
     , obligationsPot = obligationCertState certState <> govStateObligations
     }
   where
-    UTxOState u _ fees_ _ _ _ = lsUTxOState ls
+    UTxOState u _ fees_ _ _ _ _ = lsUTxOState ls
     certState = ls ^. lsCertStateL
     rewards_ = sumBalancesAccounts (certState ^. certDStateL . accountsL)
     coins = sumCoinUTxO u

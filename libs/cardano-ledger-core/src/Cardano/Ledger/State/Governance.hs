@@ -31,6 +31,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.DynamicPricing.State (EraPricing)
 import Cardano.Ledger.State.CertState (Obligations)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
@@ -43,6 +44,7 @@ import NoThunks.Class (AllowThunk (..), NoThunks (..))
 
 class
   ( EraPParams era
+  , EraPricing era
   , Eq (GovState era)
   , Show (GovState era)
   , NoThunks (GovState era)

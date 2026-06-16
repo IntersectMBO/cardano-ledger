@@ -18,6 +18,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
  )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
+import Cardano.Ledger.DynamicPricing.State (EraPricing (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
@@ -69,6 +70,7 @@ genesisState genDelegs0 utxo0 =
         emptyGovState
         mempty
         mempty
+        emptyPricing
     )
     ( def
         & certDStateL .~ dState

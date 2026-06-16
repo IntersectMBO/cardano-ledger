@@ -78,7 +78,7 @@ snapTransition ::
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext
 
-  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) _pp = snapEnv
+  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _ _) certState) _pp = snapEnv
       instantStake = ls ^. instantStakeG
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
       istakeSnap =

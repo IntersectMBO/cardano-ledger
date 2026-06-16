@@ -3,6 +3,7 @@
 
 module Cardano.Ledger.Dijkstra.Governance () where
 
+import Cardano.Ledger.DynamicPricing.State (DynamicPricing, EraPricing (..), initialPricingState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
@@ -24,6 +25,11 @@ import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.State.Stake ()
 import Data.Foldable (Foldable (..))
 import Lens.Micro ((^.))
+
+
+instance EraPricing DijkstraEra where
+  type PricingState DijkstraEra = DynamicPricing DijkstraEra
+  emptyPricing = initialPricingState
 
 instance EraGov DijkstraEra where
   type GovState DijkstraEra = ConwayGovState DijkstraEra

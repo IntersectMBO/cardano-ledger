@@ -11,6 +11,7 @@
 
 module Cardano.Ledger.Dijkstra.Translation () where
 
+import Cardano.Ledger.DynamicPricing.State (initialPricingState)
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -223,6 +224,7 @@ instance TranslateEra DijkstraEra UTxOState where
         , API.utxosGovState = translateEra' ctxt $ API.utxosGovState us
         , API.utxosInstantStake = coerce $ API.utxosInstantStake us
         , API.utxosDonation = API.utxosDonation us
+        , API.utxosPricing = initialPricingState
         }
 
 instance TranslateEra DijkstraEra API.UTxO where

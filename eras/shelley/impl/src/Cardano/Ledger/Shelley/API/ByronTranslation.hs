@@ -13,6 +13,7 @@ module Cardano.Ledger.Shelley.API.ByronTranslation (
   translateTxIdByronToShelley,
 ) where
 
+import Cardano.Ledger.DynamicPricing.State (EraPricing (..))
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
@@ -167,6 +168,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
               , utxosGovState = emptyGovState
               , utxosInstantStake = mempty
               , utxosDonation = mempty
+              , utxosPricing = emptyPricing
               }
         , lsCertState = mkShelleyCertState def dState
         }

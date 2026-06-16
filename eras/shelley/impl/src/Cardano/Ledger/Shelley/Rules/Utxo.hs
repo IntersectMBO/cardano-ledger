@@ -362,7 +362,7 @@ utxoInductive ::
 utxoInductive = do
   TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let utxo = utxos ^. utxoL
-      UTxOState _ _ _ ppup _ _ = utxos
+      UTxOState _ _ _ ppup _ _ _ = utxos
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
       genDelegs = dsGenDelegs (certState ^. certDStateL)
@@ -596,7 +596,7 @@ updateUTxOState ::
   (UTxO era -> UTxO era -> m ()) ->
   m (UTxOState era)
 updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
-  let UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosDonation} = utxos
+  let UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosDonation, utxosPricing} = utxos
       UTxO utxo = utxosUtxo
       !utxoAdd = txouts txBody -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
@@ -618,6 +618,7 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiff
       , utxosInstantStake =
           deleteInstantStake deletedUTxO (addInstantStake utxoAdd (utxos ^. instantStakeL))
       , utxosDonation = utxosDonation
+      , utxosPricing = utxosPricing
       }
 
 instance

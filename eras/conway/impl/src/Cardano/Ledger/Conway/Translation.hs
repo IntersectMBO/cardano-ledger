@@ -14,6 +14,7 @@
 
 module Cardano.Ledger.Conway.Translation () where
 
+import Cardano.Ledger.DynamicPricing.State (NoPricing (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecoderError)
@@ -184,6 +185,7 @@ instance TranslateEra ConwayEra UTxOState where
         , API.utxosGovState = translateGovState ctxt $ API.utxosGovState us
         , API.utxosInstantStake = ConwayInstantStake . sisCredentialStake $ API.utxosInstantStake us
         , API.utxosDonation = API.utxosDonation us
+        , API.utxosPricing = NoPricing
         }
 
 instance TranslateEra ConwayEra API.UTxO where

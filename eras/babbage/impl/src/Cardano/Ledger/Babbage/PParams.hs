@@ -41,6 +41,7 @@ module Cardano.Ledger.Babbage.PParams (
   bppMinFeeB,
 ) where
 
+import Cardano.Ledger.DynamicPricing.State (EraPricing (..), NoPricing)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
@@ -245,6 +246,10 @@ instance AlonzoEraPParams BabbageEra where
 
 instance BabbageEraPParams BabbageEra where
   hkdCoinsPerUTxOByteL = lens bppCoinsPerUTxOByte (\pp x -> pp {bppCoinsPerUTxOByte = x})
+
+
+instance EraPricing BabbageEra where
+  type PricingState BabbageEra = NoPricing BabbageEra
 
 instance EraGov BabbageEra where
   type GovState BabbageEra = ShelleyGovState BabbageEra

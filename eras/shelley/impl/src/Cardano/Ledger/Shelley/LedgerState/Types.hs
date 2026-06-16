@@ -43,6 +43,7 @@ import Cardano.Ledger.Binary (
   encodeMemPack,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.DynamicPricing.State (EraPricing (..), PricingState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
@@ -98,6 +99,7 @@ deriving stock instance
   , Show (GovState era)
   , Show (CertState era)
   , Show (InstantStake era)
+  , Show (PricingState era)
   ) =>
   Show (EpochState era)
 
@@ -106,6 +108,7 @@ deriving stock instance
   , Eq (GovState era)
   , Eq (CertState era)
   , Eq (InstantStake era)
+  , Eq (PricingState era)
   ) =>
   Eq (EpochState era)
 
@@ -114,6 +117,7 @@ instance
   , NoThunks (GovState era)
   , NoThunks (CertState era)
   , NoThunks (InstantStake era)
+  , NoThunks (PricingState era)
   ) =>
   NoThunks (EpochState era)
 
@@ -122,12 +126,14 @@ instance
   , NFData (GovState era)
   , NFData (CertState era)
   , NFData (InstantStake era)
+  , NFData (PricingState era)
   ) =>
   NFData (EpochState era)
 
 instance
   ( EraTxOut era
   , EraStake era
+  , EraPricing era
   , EncCBOR (GovState era)
   , EncCBOR (CertState era)
   ) =>
@@ -202,6 +208,7 @@ data UTxOState era = UTxOState
   , utxosGovState :: !(GovState era)
   , utxosInstantStake :: !(InstantStake era)
   , utxosDonation :: !Coin
+  , utxosPricing :: !(PricingState era)
   }
   deriving (Generic)
 
@@ -221,6 +228,7 @@ instance
   ( EraTxOut era
   , NFData (GovState era)
   , NFData (InstantStake era)
+  , NFData (PricingState era)
   ) =>
   NFData (UTxOState era)
 
@@ -228,6 +236,7 @@ deriving stock instance
   ( EraTxOut era
   , Show (GovState era)
   , Show (InstantStake era)
+  , Show (PricingState era)
   ) =>
   Show (UTxOState era)
 
@@ -235,6 +244,7 @@ deriving stock instance
   ( EraTxOut era
   , Eq (GovState era)
   , Eq (InstantStake era)
+  , Eq (PricingState era)
   ) =>
   Eq (UTxOState era)
 
@@ -242,17 +252,19 @@ instance
   ( NoThunks (UTxO era)
   , NoThunks (GovState era)
   , NoThunks (InstantStake era)
+  , NoThunks (PricingState era)
   ) =>
   NoThunks (UTxOState era)
 
 instance
   ( EraTxOut era
   , EraStake era
+  , EraPricing era
   , EncCBOR (GovState era)
   ) =>
   EncCBOR (UTxOState era)
   where
-  encCBOR utxos@(UTxOState _ _ _ _ _ _) =
+  encCBOR utxos@(UTxOState _ _ _ _ _ _ _) =
     let UTxOState {..} = utxos
      in encode $
           Rec UTxOState
@@ -264,6 +276,7 @@ instance
             !> To utxosGovState
             !> To utxosInstantStake
             !> To utxosDonation
+            !> To utxosPricing
 
 instance (EraTxOut era, EraGov era, EraStake era) => DecShareCBOR (UTxOState era) where
   type
@@ -274,13 +287,14 @@ instance (EraTxOut era, EraGov era, EraStake era) => DecShareCBOR (UTxOState era
       , Interns (Credential HotCommitteeRole)
       )
   decShareCBOR is@(cs, _, _, _) =
-    decodeRecordNamed "UTxOState" (const 6) $ do
+    decodeRecordNamed "UTxOState" (const 7) $ do
       utxosUtxo <- decShareCBOR cs
       utxosDeposited <- decCBOR
       utxosFees <- decCBOR
       utxosGovState <- decShareCBOR is
       utxosInstantStake <- decShareCBOR cs
       utxosDonation <- decCBOR
+      utxosPricing <- decCBOR
       pure UTxOState {..}
 
 instance (EraTxOut era, EraGov era, EraStake era) => ToCBOR (UTxOState era) where
@@ -295,9 +309,10 @@ deriving via
     (EraTxOut era, EraGov era, EraStake era) => ToJSON (UTxOState era)
 
 instance (EraTxOut era, EraGov era, EraStake era) => ToKeyValuePairs (UTxOState era) where
-  toKeyValuePairs utxoState@(UTxOState _ _ _ _ _ _) =
+  toKeyValuePairs utxoState@(UTxOState _ _ _ _ _ _ _) =
     let UTxOState {..} = utxoState
-     in [ "utxo" .= utxosUtxo
+     in [ "pricing" .= utxosPricing
+        , "utxo" .= utxosUtxo
         , "deposited" .= utxosDeposited
         , "fees" .= utxosFees
         , "ppups" .= utxosGovState
@@ -370,6 +385,7 @@ deriving stock instance
   , Show (GovState era)
   , Show (CertState era)
   , Show (InstantStake era)
+  , Show (PricingState era)
   ) =>
   Show (NewEpochState era)
 
@@ -379,6 +395,7 @@ deriving stock instance
   , Eq (GovState era)
   , Eq (CertState era)
   , Eq (InstantStake era)
+  , Eq (PricingState era)
   ) =>
   Eq (NewEpochState era)
 
@@ -388,12 +405,14 @@ instance
   , NFData (GovState era)
   , NFData (CertState era)
   , NFData (InstantStake era)
+  , NFData (PricingState era)
   ) =>
   NFData (NewEpochState era)
 
 instance
   ( EraTxOut era
   , EraStake era
+  , EraPricing era
   , EncCBOR (StashedAVVMAddresses era)
   , EncCBOR (GovState era)
   , EncCBOR (CertState era)
@@ -474,6 +493,7 @@ deriving stock instance
   , Show (GovState era)
   , Show (CertState era)
   , Show (InstantStake era)
+  , Show (PricingState era)
   ) =>
   Show (LedgerState era)
 
@@ -482,6 +502,7 @@ deriving stock instance
   , Eq (GovState era)
   , Eq (CertState era)
   , Eq (InstantStake era)
+  , Eq (PricingState era)
   ) =>
   Eq (LedgerState era)
 
@@ -490,6 +511,7 @@ instance
   , NoThunks (GovState era)
   , NoThunks (CertState era)
   , NoThunks (InstantStake era)
+  , NoThunks (PricingState era)
   ) =>
   NoThunks (LedgerState era)
 
@@ -498,12 +520,14 @@ instance
   , NFData (GovState era)
   , NFData (CertState era)
   , NFData (InstantStake era)
+  , NFData (PricingState era)
   ) =>
   NFData (LedgerState era)
 
 instance
   ( EraTxOut era
   , EraStake era
+  , EraPricing era
   , EncCBOR (GovState era)
   , EncCBOR (CertState era)
   ) =>
@@ -567,7 +591,7 @@ instance
 --------------------------------------------------------------------------------
 
 instance (EraGov era, EraStake era) => Default (UTxOState era) where
-  def = UTxOState mempty mempty mempty def mempty mempty
+  def = UTxOState mempty mempty mempty def mempty mempty emptyPricing
 
 instance
   Default (LedgerState era) =>
@@ -653,6 +677,9 @@ utxosGovStateL = lens utxosGovState (\x y -> x {utxosGovState = y})
 
 utxosDonationL :: Lens' (UTxOState era) Coin
 utxosDonationL = lens utxosDonation (\x y -> x {utxosDonation = y})
+
+utxosPricingL :: Lens' (UTxOState era) (PricingState era)
+utxosPricingL = lens utxosPricing (\x y -> x {utxosPricing = y})
 
 -- ====================  Compound Lenses =======================
 
