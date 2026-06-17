@@ -342,7 +342,7 @@ genSmallDijkstraTxsBlockBody =
           ]
       SSeq.fromList <$> vectorOf numTxs (scale (`div` numTxs) arbitrary)
 
--- | Generate the "CertRB" form of a Dijsktra block body: a Leios certificate is
+-- | Generate the "CertRB" form of a Dijkstra block body: a Leios certificate is
 -- present and the transaction sequence is empty (per CIP-164, a CertRB never
 -- carries Dijkstra-era transactions). The Peras certificate is also omitted so
 -- the wire form is minimal.
