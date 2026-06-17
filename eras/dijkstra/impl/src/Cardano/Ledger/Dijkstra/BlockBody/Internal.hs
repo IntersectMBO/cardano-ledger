@@ -245,11 +245,15 @@ deriving via
 
 instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBlockBody era) where
   encCBORGroup (DijkstraBlockBody txs leiosCert perasCert) = do
-    -- REVIEW: Is this really 3 if the EncCBOR of the body is 4?
-    encodeListLen 3
+    encodeListLen 4
+      <> encodeNullStrictMaybe encCBOR invalidIndices
       <> encCBOR txs
       <> encodeStrictMaybe (fromPlainEncoding . encodeLeiosCert) leiosCert
       <> encCBOR perasCert
+    where
+      invalidIndices =
+        maybeToStrictMaybe . NonEmptySet.fromFoldable $
+          StrictSeq.findIndicesL (\tx -> tx ^. isValidTxL == IsValid False) txs
   listLen _ = 1
 
 --------------------------------------------------------------------------------
