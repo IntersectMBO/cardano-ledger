@@ -235,7 +235,7 @@ decodeDijkstraTopTx allowIsValid =
       pure (DijkstraTx body wits (IsValid True) aux, isValidFlagSupplied)
 
 instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
-  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
+  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 4) $ do
     let
       decodeInvalidTxs =
         decodeNonEmptySetLikeEnforceNoDuplicates
