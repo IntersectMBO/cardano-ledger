@@ -213,10 +213,12 @@ instance
           (IntSet.insert . fromIntegral @Word16 @Int)
           (\x -> (IntSet.size x, x))
           (decCBOR @Word16)
+
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
     txs <- decodeSeq (decodeDijkstraTopTx @era False)
     mbLeiosCert <- decodeNullStrictMaybe (fromPlainDecoder decodeLeiosCert)
     mbPerasCert <- decodeNullStrictMaybe decCBOR
+
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x < txsLength
     forM_ (IntSet.toList invalidTxs) $ \i ->
