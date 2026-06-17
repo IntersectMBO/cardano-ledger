@@ -19,8 +19,8 @@ module Cardano.Protocol.TPraos.OCert (
   kesPeriod,
 ) where
 
-import Cardano.Base.Proxy (asProxy)
 import qualified Cardano.Crypto.DSIGN as DSIGN
+import Cardano.Crypto.KES (KESAlgorithm (..))
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import Cardano.Ledger.BaseTypes
@@ -28,16 +28,16 @@ import Cardano.Ledger.Binary (
   CBORGroup (..),
   DecCBOR (..),
   DecCBORGroup (..),
+  Decoder,
   EncCBOR (..),
   EncCBORGroup (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  fromPlainDecoder,
-  fromPlainEncoding,
-  listLenInt,
+  Encoding,
+  FixedSizeCodec (..),
+  decodeFixedSized,
+  encodeFixedSized,
+  fixedSize,
   runByteBuilder,
  )
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Keys (
   DSIGN,
   KeyHash,
@@ -78,7 +78,7 @@ currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | otherwise = Nothing
 
 newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
-  deriving (Eq, Generic, Ord, NoThunks, DecCBOR, EncCBOR, ToCBOR)
+  deriving (Eq, Generic, Ord, NoThunks, DecCBOR, EncCBOR)
   deriving (Show) via Quiet KESPeriod
 
 data OCert c = OCert
@@ -106,33 +106,26 @@ instance Crypto c => NoThunks (OCert c)
 -- approach how it is done for types with versioned serialization
 
 instance Crypto c => EncCBORGroup (OCert c) where
-  encCBORGroup = fromPlainEncoding . encodeOCertFields
+  encCBORGroup = encodeOCertFields
   listLen _ = 4
 
 instance Crypto c => DecCBORGroup (OCert c) where
-  decCBORGroup = fromPlainDecoder decodeOCertFields
+  decCBORGroup = decodeOCertFields
 
-instance Crypto c => ToCBOR (OCert c) where
-  toCBOR ocert = Plain.encodeListLen (listLen (asProxy ocert)) <> encodeOCertFields ocert
-
-instance Crypto c => FromCBOR (OCert c) where
-  fromCBOR =
-    Plain.decodeRecordNamed "OCert" (listLenInt . Just) decodeOCertFields
-
-encodeOCertFields :: Crypto c => OCert c -> Plain.Encoding
+encodeOCertFields :: Crypto c => OCert c -> Encoding
 encodeOCertFields ocert =
-  KES.encodeVerKeyKES (ocertVkHot ocert)
-    <> Plain.toCBOR (ocertN ocert)
-    <> Plain.toCBOR (ocertKESPeriod ocert)
-    <> DSIGN.encodeSignedDSIGN (ocertSigma ocert)
+  encodeFixedSized (ocertVkHot ocert)
+    <> encCBOR (ocertN ocert)
+    <> encCBOR (ocertKESPeriod ocert)
+    <> encodeFixedSized (ocertSigma ocert)
 
-decodeOCertFields :: Crypto c => Plain.Decoder s (OCert c)
+decodeOCertFields :: Crypto c => Decoder s (OCert c)
 decodeOCertFields =
   OCert
-    <$> KES.decodeVerKeyKES
-    <*> Plain.fromCBOR
-    <*> (KESPeriod <$> Plain.fromCBOR)
-    <*> DSIGN.decodeSignedDSIGN
+    <$> decodeFixedSized
+    <*> decCBOR
+    <*> (KESPeriod <$> decCBOR)
+    <*> decodeFixedSized
 
 kesPeriod :: SlotNo -> ShelleyBase KESPeriod
 kesPeriod (SlotNo s) =
@@ -149,11 +142,11 @@ instance Crypto c => SignableRepresentation (OCertSignable c) where
   getSignableRepresentation (OCertSignable vk counter period) =
     runByteBuilder
       ( fromIntegral $
-          KES.verKeySizeKES (Proxy @(KES c))
+          fixedSize (Proxy @(VerKeyKES (KES c)))
             + 8
             + 8
       )
-      $ BS.byteStringCopy (KES.rawSerialiseVerKeyKES vk)
+      $ BS.byteStringCopy (rawEncodeFixedSized vk)
         <> BS.word64BE counter
         <> BS.word64BE (fromIntegral $ unKESPeriod period)
 

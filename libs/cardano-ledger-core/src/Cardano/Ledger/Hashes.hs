@@ -92,6 +92,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FixedSizeCodec (..),
   FromCBOR (..),
   ToCBOR (..),
   decodeRecordNamed,
@@ -189,7 +190,7 @@ hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
 hashTxBodySignature ::
   DSIGN.SignedDSIGN DSIGN (Hash.Hash HASH EraIndependentTxBody) ->
   Hash.Hash HASH (DSIGN.SignedDSIGN DSIGN (Hash.Hash HASH EraIndependentTxBody))
-hashTxBodySignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith DSIGN.rawSerialiseSigDSIGN sigDSIGN
+hashTxBodySignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith rawEncodeFixedSized sigDSIGN
 {-# INLINE hashTxBodySignature #-}
 
 --------------------------------------------------------------------------------

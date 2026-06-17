@@ -46,17 +46,13 @@ import Cardano.Ledger.Binary (
   decodeFullDecoder,
   decodeMapTraverse,
   encCBOR,
+  encodeFixedSized,
   fromPlainEncoding,
   hashWithEncoder,
   ipv4ToBytes,
   shelleyProtVer,
   toCBOR,
   toPlainEncoding,
- )
-import Cardano.Ledger.Binary.Crypto (
-  encodeSignedDSIGN,
-  encodeSignedKES,
-  encodeVerKeyDSIGN,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..))
@@ -223,7 +219,7 @@ testBlockIssuerKeyTokens :: Tokens -> Tokens
 testBlockIssuerKeyTokens = e
   where
     VKey vk = vKey testBlockIssuerKey
-    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeVerKeyDSIGN vk)
+    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeFixedSized vk)
 
 testKey1SigToken :: Tokens -> Tokens
 testKey1SigToken = e
@@ -233,7 +229,7 @@ testKey1SigToken = e
         (sKey testKey1)
         (extractHash testTxbHash) ::
         SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
-    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedDSIGN s)
+    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeFixedSized s)
 
 testOpCertSigTokens ::
   Tokens ->
@@ -244,7 +240,7 @@ testOpCertSigTokens = e
       signedDSIGN
         (sKey testKey1)
         (OCertSignable @MockCrypto (kesVerKey testKESKeys) 0 (KESPeriod 0))
-    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedDSIGN s)
+    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeFixedSized s)
 
 testKeyHash1 :: KeyHash Payment
 testKeyHash1 = hashKey $ vKey testKey1
@@ -333,7 +329,7 @@ testBHBSigTokens = e
         0
         (testBHB @era)
         (kesSignKey testKESKeys)
-    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedKES s)
+    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeFixedSized s)
 
 tests :: TestTree
 tests =

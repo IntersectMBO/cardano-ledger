@@ -52,7 +52,6 @@ import Cardano.Crypto.VRF.Class (
 import Cardano.Crypto.VRF.Mock (MockVRF)
 import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
-import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Encoding.Encoder
 import Cardano.Ledger.Binary.Version (Version, byronProtVer)
 import Cardano.Slotting.Block (BlockNo (..))
@@ -358,16 +357,16 @@ instance EncCBOR UTCTime where
 --------------------------------------------------------------------------------
 
 instance DSIGNAlgorithm v => EncCBOR (VerKeyDSIGN v) where
-  encCBOR = encodeVerKeyDSIGN
+  encCBOR = encodeFixedSized
 
 instance DSIGNAlgorithm v => EncCBOR (SignKeyDSIGN v) where
-  encCBOR = encodeSignKeyDSIGN
+  encCBOR = encodeFixedSized
 
 instance DSIGNAlgorithm v => EncCBOR (SigDSIGN v) where
-  encCBOR = encodeSigDSIGN
+  encCBOR = encodeFixedSized
 
 instance DSIGNAlgorithm v => EncCBOR (SignedDSIGN v a) where
-  encCBOR = encodeSignedDSIGN
+  encCBOR = encodeFixedSized
 
 --------------------------------------------------------------------------------
 -- Hash
@@ -377,28 +376,28 @@ instance HashAlgorithm h => EncCBOR (Hash h a) where
   encCBOR (UnsafeHash h) = encCBOR h
 
 instance KESAlgorithm k => EncCBOR (VerKeyKES k) where
-  encCBOR = encodeVerKeyKES
+  encCBOR = encodeFixedSized
 
 instance KESAlgorithm k => EncCBOR (SigKES k) where
-  encCBOR = encodeSigKES
+  encCBOR = encodeFixedSized
 
 instance EncCBOR (VerKeyVRF SimpleVRF) where
-  encCBOR = encodeVerKeyVRF
+  encCBOR = encodeFixedSized
 
 instance EncCBOR (SignKeyVRF SimpleVRF) where
-  encCBOR = encodeSignKeyVRF
+  encCBOR = encodeFixedSized
 
 instance EncCBOR (CertVRF SimpleVRF) where
-  encCBOR = encodeCertVRF
+  encCBOR = encodeFixedSized
 
 instance EncCBOR (VerKeyVRF MockVRF) where
-  encCBOR = encodeVerKeyVRF
+  encCBOR = encodeFixedSized
 
 instance EncCBOR (SignKeyVRF MockVRF) where
-  encCBOR = encodeSignKeyVRF
+  encCBOR = encodeFixedSized
 
 instance EncCBOR (CertVRF MockVRF) where
-  encCBOR = encodeCertVRF
+  encCBOR = encodeFixedSized
 
 deriving instance EncCBOR (OutputVRF v)
 
@@ -406,16 +405,16 @@ instance VRFAlgorithm v => EncCBOR (CertifiedVRF v a) where
   encCBOR cvrf =
     encodeListLen 2
       <> encCBOR (certifiedOutput cvrf)
-      <> encodeCertVRF (certifiedProof cvrf)
+      <> encodeFixedSized (certifiedProof cvrf)
 
 instance EncCBOR Praos.Proof where
-  encCBOR = encCBOR . Praos.proofBytes
+  encCBOR = encodeFixedSized
 
 instance EncCBOR Praos.SignKey where
-  encCBOR = encCBOR . Praos.skBytes
+  encCBOR = encodeFixedSized
 
 instance EncCBOR Praos.VerKey where
-  encCBOR = encCBOR . Praos.vkBytes
+  encCBOR = encodeFixedSized
 
 deriving instance EncCBOR (VerKeyVRF Praos.PraosVRF)
 

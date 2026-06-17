@@ -38,6 +38,7 @@ import Cardano.Ledger.BaseTypes (
   TxIx (..),
   getVersion,
  )
+import Cardano.Ledger.Binary (FixedSizeCodec (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   ADDRHASH,
@@ -157,16 +158,16 @@ instance
   toSpecRep (PParamsUpdate ppu) = toSpecRep ppu
 
 vkeyToInteger :: VKey kd -> Integer
-vkeyToInteger = toInteger . bytesToNatural . rawSerialiseVerKeyDSIGN . unVKey
+vkeyToInteger = toInteger . bytesToNatural . rawEncodeFixedSized . unVKey
 
 vkeyFromInteger :: Integer -> Maybe (VKey kd)
-vkeyFromInteger = fmap VKey . rawDeserialiseVerKeyDSIGN . naturalToBytes 32 . fromInteger
+vkeyFromInteger = fmap VKey . rawDecodeFixedSized . naturalToBytes 32 . fromInteger
 
 signatureToInteger :: DSIGNAlgorithm v => SigDSIGN v -> Integer
-signatureToInteger = toInteger . bytesToNatural . rawSerialiseSigDSIGN
+signatureToInteger = toInteger . bytesToNatural . rawEncodeFixedSized
 
 signatureFromInteger :: DSIGNAlgorithm v => Integer -> Maybe (SigDSIGN v)
-signatureFromInteger = rawDeserialiseSigDSIGN . naturalToBytes 64 . fromInteger
+signatureFromInteger = rawDecodeFixedSized . naturalToBytes 64 . fromInteger
 
 instance SpecTranslate era (VKey k) where
   type SpecRep era (VKey k) = Agda.HSVKey

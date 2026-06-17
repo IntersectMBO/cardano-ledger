@@ -10,8 +10,10 @@ module Cardano.Ledger.Binary (
   C.DeserialiseFailure (..),
   translateViaCBORAnnotator,
   toLazyByteString,
+  fixedSize,
 ) where
 
+import Cardano.Binary.FixedSizeCodec (fixedSize)
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
 import Cardano.Ledger.Binary.Group

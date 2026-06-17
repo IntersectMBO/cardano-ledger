@@ -38,13 +38,16 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
 ) where
 
 import Cardano.Crypto.Leios (LeiosCert)
+import qualified Cardano.Crypto.Leios as C
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
+  Decoder,
   EncCBOR,
   EncCBORGroup (..),
+  Encoding,
   decodeNonEmptySetLikeEnforceNoDuplicates,
   decodeNullMaybe,
   decodeNullStrictMaybe,
@@ -54,9 +57,10 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   encodeNullMaybe,
   encodeNullStrictMaybe,
+  fromPlainDecoder,
+  fromPlainEncoding,
   serialize',
  )
-import Cardano.Ledger.Binary.Crypto (decodeLeiosCert, encodeLeiosCert)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx, Tx (..), decodeDijkstraTopTx)
@@ -296,3 +300,11 @@ data PerasKey = PerasKey
 -- 'cardano-base' once it's ready.
 validatePerasCert :: Nonce -> PerasKey -> PerasCert -> Bool
 validatePerasCert _ _ _ = True
+
+encodeLeiosCert :: C.LeiosCert -> Encoding
+encodeLeiosCert = fromPlainEncoding . C.encodeLeiosCert
+{-# INLINE encodeLeiosCert #-}
+
+decodeLeiosCert :: Decoder s C.LeiosCert
+decodeLeiosCert = fromPlainDecoder C.decodeLeiosCert
+{-# INLINE decodeLeiosCert #-}

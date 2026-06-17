@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Re-export `fixedSize`
 * Add `decodeAccA`, `failOnNull`, `failOnMempty`
 * Add `decodeSparseKeyed`
 * Add `decodeIntegralRational`
@@ -10,6 +11,9 @@
 * Remove default implementation for `DecCBOR` class
 * Remove `binaryGetDecoder` from exports
 * Change `decodeIPv4` and `decodeIPv6` to reject leftover bytes unconditionally, regardless of protocol version
+* Add `encodeFixedSized`
+* Add `decodeFixedSized`, `decodeBytesDefOrIndef`
+* Remove `Cardano.Ledger.Binary.Crypto`
 
 ### `testlib`
 

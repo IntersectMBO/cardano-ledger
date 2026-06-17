@@ -38,8 +38,6 @@ module Cardano.Ledger.Keys (
   -- * To be removed
 
   -- ** Re-exports from cardano-crypto-class
-  decodeSignedDSIGN,
-  encodeSignedDSIGN,
   Hash.hashWithSerialiser,
 ) where
 

@@ -18,7 +18,6 @@ library
   exposed-modules:
     Cardano.Ledger.Binary
     Cardano.Ledger.Binary.Coders
-    Cardano.Ledger.Binary.Crypto
     Cardano.Ledger.Binary.Decoding
     Cardano.Ledger.Binary.Encoding
     Cardano.Ledger.Binary.FlatTerm
@@ -56,9 +55,8 @@ library
     binary,
     bytestring,
     cardano-base >=0.1.2,
-    cardano-binary >=1.7.3,
-    cardano-crypto-class >=2.3 && <2.6,
-    cardano-crypto-leios >=0.1,
+    cardano-binary >=1.9.1,
+    cardano-crypto-class >=2.3 && <2.7,
     cardano-crypto-praos >=2.2.2,
     cardano-slotting >=0.2,
     cardano-strict-containers >=0.1.2,
