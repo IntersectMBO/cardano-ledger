@@ -53,7 +53,6 @@ import Cardano.Ledger.Binary (
   encCBOR,
   encodeListLen,
   encodeNullStrictMaybe,
-  encodeStrictMaybe,
   fromPlainDecoder,
   fromPlainEncoding,
   serialize',
@@ -246,12 +245,12 @@ deriving via
     DecCBOR (Annotator (DijkstraBlockBody era))
 
 instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBlockBody era) where
-  encCBORGroup (DijkstraBlockBody txs leiosCert perasCert) = do
+  encCBORGroup (DijkstraBlockBody txs mbLeiosCert mbPerasCert) = do
     encodeListLen 4
       <> encodeNullStrictMaybe encCBOR invalidIndices
       <> encCBOR txs
-      <> encodeStrictMaybe (fromPlainEncoding . encodeLeiosCert) leiosCert
-      <> encCBOR perasCert
+      <> encodeNullStrictMaybe (fromPlainEncoding . encodeLeiosCert) mbLeiosCert
+      <> encodeNullStrictMaybe encCBOR mbPerasCert
     where
       invalidIndices =
         maybeToStrictMaybe . NonEmptySet.fromFoldable $
