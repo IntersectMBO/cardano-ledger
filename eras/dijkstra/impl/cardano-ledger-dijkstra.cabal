@@ -223,8 +223,8 @@ library cddl
     cardano-ledger-core:cddl,
     cardano-ledger-dijkstra,
     cborg,
-    heredoc,
     hedgehog-quickcheck,
+    heredoc,
     text,
 
 executable generate-cddl
