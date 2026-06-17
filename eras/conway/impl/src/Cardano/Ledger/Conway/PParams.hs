@@ -55,6 +55,7 @@ module Cardano.Ledger.Conway.PParams (
   ppuGovActionDepositL,
   ppuGovActionDepositCompactL,
   ppuDRepDepositL,
+  ppuDRepDepositCompactL,
   ppuDRepActivityL,
   ppuMinFeeRefScriptCostPerByteL,
   PoolVotingThresholds (..),
