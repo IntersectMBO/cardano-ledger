@@ -141,8 +141,8 @@ if impl(ghc >=9.14)
     , serialise:base
     , serialise:containers
     , serialise:time
--- cabal-allow-newer end
 
+-- cabal-allow-newer end
 -- Points to cardano-base/ch1bo/cardano-crypto-leios
 source-repository-package
   type: git
