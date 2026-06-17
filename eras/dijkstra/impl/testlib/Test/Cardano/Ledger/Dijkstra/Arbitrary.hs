@@ -14,7 +14,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Dijkstra.Arbitrary (genNonEmptyAccountBalanceIntervals, genSmallDijkstraBlockBody) where
+module Test.Cardano.Ledger.Dijkstra.Arbitrary (
+  genNonEmptyAccountBalanceIntervals,
+  genSmallDijkstraTxsBlockBody,
+  genSmallDijkstraCertBlockBody,
+) where
 
 import Cardano.Crypto.Leios (
   LeiosCert (..),
@@ -316,16 +320,17 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-genSmallDijkstraBlockBody ::
+-- | Generate the "TxsRB" form of a Dijkstra block body: a few transactions are
+-- present and no Leios certificate is attached. Transaction count and per-tx
+-- size are kept small so the round-trip is fast under shrinking.
+genSmallDijkstraTxsBlockBody ::
   ( AlonzoEraTx era
   , Arbitrary (Tx TopTx era)
   ) =>
   Gen (DijkstraBlockBody era)
-genSmallDijkstraBlockBody =
+genSmallDijkstraTxsBlockBody =
   DijkstraBlockBody
     <$> genFewTxs
-    -- REVIEW: What is this function used for exactly? A leios cert body would
-    -- be even smaller (no txs allowed and cert size ~100B).
     <*> pure SNothing
     <*> arbitrary
   where
@@ -336,6 +341,18 @@ genSmallDijkstraBlockBody =
           , (1, pure 0)
           ]
       SSeq.fromList <$> vectorOf numTxs (scale (`div` numTxs) arbitrary)
+
+-- | Generate the "CertRB" form of a Dijsktra block body: a Leios certificate is
+-- present and the transaction sequence is empty (per CIP-164, a CertRB never
+-- carries Dijkstra-era transactions). The Peras certificate is also omitted so
+-- the wire form is minimal.
+genSmallDijkstraCertBlockBody ::
+  AlonzoEraTx era =>
+  Gen (DijkstraBlockBody era)
+genSmallDijkstraCertBlockBody =
+  DijkstraBlockBody mempty
+    <$> (SJust <$> arbitrary)
+    <*> pure SNothing
 
 deriving newtype instance Arbitrary (ApplyTxError DijkstraEra)
 
