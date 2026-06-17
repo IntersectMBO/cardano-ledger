@@ -131,10 +131,15 @@ mkBasicBlockBodyDijkstra =
 
 -- | Dijkstra-specific extensions to 'EraBlockBody'
 class EraBlockBody era => DijkstraEraBlockBody era where
+  leiosCertBlockBodyL :: Lens' (BlockBody era) (StrictMaybe LeiosCert)
+  -- ^ Lens to access the optional Leios certificate in the block body
+
   perasCertBlockBodyL :: Lens' (BlockBody era) (StrictMaybe PerasCert)
   -- ^ Lens to access the optional Peras certificate in the block body
 
 instance DijkstraEraBlockBody DijkstraEra where
+  leiosCertBlockBodyL = lensMemoRawType @DijkstraEra dbbrLeiosCert (\bb c -> bb {dbbrLeiosCert = c})
+
   perasCertBlockBodyL = lensMemoRawType @DijkstraEra dbbrPerasCert (\bb c -> bb {dbbrPerasCert = c})
 
 deriving instance (Typeable era, NoThunks (Tx TopTx era)) => NoThunks (DijkstraBlockBodyRaw era)
