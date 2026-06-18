@@ -66,6 +66,7 @@ module Test.Cardano.Ledger.Common (
   uniformSubMap,
   uniformSubMapElems,
   uniformSubSet,
+  uniformSubList,
   uniformMapElem,
   uniformSetElem,
 
@@ -101,6 +102,7 @@ import Test.Cardano.Ledger.Binary.TreeDiff (
 import qualified Test.Cardano.Ledger.Random as R (
   uniformMapElem,
   uniformSetElem,
+  uniformSubList,
   uniformSubMap,
   uniformSubMapElems,
   uniformSubSet,
@@ -319,3 +321,16 @@ uniformSubMapElems ::
 uniformSubMapElems insert mSubMapSize inputMap =
   askStatefulGen >>= R.uniformSubMapElems insert mSubMapSize inputMap
 {-# INLINE uniformSubMapElems #-}
+
+uniformSubList ::
+  ( HasStatefulGen g m
+  , Foldable t
+  ) =>
+  -- | Size of the sublist. If supplied will be clamped to @[0, length xs]@,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  t a ->
+  m [a]
+uniformSubList mSubListSize xs =
+  askStatefulGen >>= R.uniformSubList mSubListSize xs
+{-# INLINE uniformSubList #-}
