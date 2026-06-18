@@ -7,8 +7,10 @@ module Test.Cardano.Ledger.Random (
   uniformSubSet,
   uniformSubMap,
   uniformSubMapElems,
+  uniformSubList,
 ) where
 
+import qualified Data.Foldable as F
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -128,3 +130,28 @@ uniformSubMapElems insert mSubMapSize inputMap gen = do
           ix <- uniformRM (0, Map.size s - 1) gen
           let (k, v) = Map.elemAt ix s
           go (Map.deleteAt ix s) (insert k v acc) (i - 1)
+
+uniformSubList ::
+  ( StatefulGen g m
+  , Foldable t
+  ) =>
+  -- | Size of the sublist. If supplied will be clamped to @[0, length xs]@,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  t a ->
+  g ->
+  m [a]
+uniformSubList mSubListSize inputList gen = do
+  let n = length inputList
+  subListSize <- uniformSubSize mSubListSize n gen
+  go (F.toList inputList) n subListSize []
+  where
+    go _ _ 0 !acc = pure $ reverse acc
+    go [] _ _ !acc = pure $ reverse acc
+    go (x : xs) !toTraverse !toPick !acc = do
+      -- Biased coin: keep with probability toPick / toTraverse.
+      -- The upper bound shrinks with the input, preventing more skips than we can afford.
+      r <- uniformRM (1, toTraverse) gen
+      if r <= toPick
+        then go xs (toTraverse - 1) (toPick - 1) (x : acc)
+        else go xs (toTraverse - 1) toPick acc
