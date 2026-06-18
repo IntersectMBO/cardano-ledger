@@ -24,7 +24,7 @@ module Cardano.Ledger.Tools (
   byteStringToNum,
 ) where
 
-import Cardano.Base.Bytes (byteStringToByteArray)
+import Cardano.Base.Bytes (byteArrayFromByteString)
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN.Class (sigSizeDSIGN, verKeySizeDSIGN)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
@@ -278,7 +278,7 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
       Byron.Attributes Byron.AddrAttributes ->
       BootstrapWitness
     mkDummyByronKeyWit key =
-      BootstrapWitness key dummySig chainCode . byteStringToByteArray . serialize' byronProtVer
+      BootstrapWitness key dummySig chainCode . byteArrayFromByteString . serialize' byronProtVer
     dummyByronKeyWits =
       Set.fromList $ zipWith mkDummyByronKeyWit dummyKeys byronAttrs
 
