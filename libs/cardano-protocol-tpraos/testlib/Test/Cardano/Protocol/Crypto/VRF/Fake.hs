@@ -19,7 +19,7 @@ module Test.Cardano.Protocol.Crypto.VRF.Fake (
   WithResult (..),
 ) where
 
-import Cardano.Base.Bytes (byteStringToByteArray, splitsAt)
+import Cardano.Base.Bytes (byteArrayFromByteString, splitsAt)
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)
 import Cardano.Crypto.Util
@@ -79,7 +79,7 @@ instance EncCBOR a => SneakilyContainResult (WithResult a) where
     -- Fill in the word64 as the low 8 bytes of a 16 byte string
     OutputVRF (toByteArray (BS.word64BE 0 <> BS.word64BE nat))
     where
-      toByteArray = byteStringToByteArray . LBS.toStrict . BS.toLazyByteString
+      toByteArray = byteArrayFromByteString . LBS.toStrict . BS.toLazyByteString
 
   unsneakilyExtractPayload (WithResult p _) = p
 
@@ -153,7 +153,7 @@ instance VRFAlgorithm FakeVRF where
     | [kb, smb, xs] <- splitsAt [8, 2, 16] bs
     , let k = readBinaryWord64 kb
     , let s = readBinaryWord16 smb =
-        Just $! CertFakeVRF k s (OutputVRF $ byteStringToByteArray xs)
+        Just $! CertFakeVRF k s (OutputVRF $ byteArrayFromByteString xs)
     | otherwise =
         Nothing
 
