@@ -70,6 +70,10 @@ module Test.Cardano.Ledger.Common (
   uniformMapElem,
   uniformSetElem,
 
+  -- * Perturbation
+  perturbMap,
+  perturbList,
+
   -- * Miscellanous helpers
   tracedDiscard,
   forEachEraVersion,
@@ -84,6 +88,7 @@ import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Types as Aeson (parseEither)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Typeable
 import qualified Debug.Trace as Debug
@@ -111,7 +116,13 @@ import Test.Hspec as X
 import qualified Test.Hspec.Golden as Golden (Golden (..))
 import Test.Hspec.QuickCheck as X
 import Test.Hspec.Runner
-import Test.ImpSpec (HasStatefulGen (..), ansiDocToString, impSpecConfig, impSpecMainWithConfig)
+import Test.ImpSpec (
+  HasStatefulGen (..),
+  ansiDocToString,
+  impSpecConfig,
+  impSpecMainWithConfig,
+  uniformRM,
+ )
 import Test.ImpSpec.Expectations
 import Test.QuickCheck as X hiding (NonZero, Witness)
 import Test.QuickCheck.Gen (Gen (..))
@@ -334,3 +345,36 @@ uniformSubList ::
 uniformSubList mSubListSize xs =
   askStatefulGen >>= R.uniformSubList mSubListSize xs
 {-# INLINE uniformSubList #-}
+
+-- | Drop a random subset of the input map, and optionally grow it.
+perturbMap ::
+  (HasStatefulGen g m, Ord k) =>
+  Maybe (m (k, v)) -> Map k v -> m (Map k v)
+perturbMap mGenEntry initMap = do
+  let n = Map.size initMap
+  nDrop <- uniformRM (0, (n * 15) `div` 100)
+  kept <- uniformSubMap (Just (n - nDrop)) initMap
+  case mGenEntry of
+    Nothing -> pure kept
+    Just genEntry -> do
+      nAdd <- uniformRM (0, (n * 15) `div` 100)
+      added <- Map.fromList <$> replicateM nAdd genEntry
+      pure (Map.union kept added)
+
+-- | Drop a random subset of the input sequence, preserving the
+-- relative order of the kept elements, and optionally append elements.
+perturbList ::
+  ( HasStatefulGen g m
+  , Foldable t
+  ) =>
+  Maybe (m a) -> t a -> m [a]
+perturbList mGenEntry initInput = do
+  let n = length initInput
+  nDrop <- uniformRM (0, (n * 15) `div` 100)
+  kept <- uniformSubList (Just (n - nDrop)) initInput
+  case mGenEntry of
+    Nothing -> pure kept
+    Just genEntry -> do
+      nAdd <- uniformRM (0, (n * 15) `div` 100)
+      added <- replicateM nAdd genEntry
+      pure (kept ++ added)
