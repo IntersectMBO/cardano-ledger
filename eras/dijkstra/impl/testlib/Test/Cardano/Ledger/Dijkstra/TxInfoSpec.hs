@@ -28,7 +28,6 @@ import Cardano.Ledger.Plutus (Language (..), SLanguage (..), plutusLanguage)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
-import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Common
@@ -147,27 +146,6 @@ spec = describe "TxInfo" $ do
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (AccountBalanceIntervalsNotSupported @era abi)
-      it "SubTxsAreNotSupported" $ do
-        let
-          subTx = mkBasicTx @era @SubTx mkBasicTxBody
-          tx =
-            mkBasicTx @era @TopTx $
-              mkBasicTxBody
-                & subTransactionsTxBodyL .~ OMap.singleton subTx
-          ledgerTxInfo =
-            LedgerTxInfo
-              { ltiProtVer = ProtVer (eraProtVerLow @era) 0
-              , ltiEpochInfo = epochInfo testGlobals
-              , ltiSystemStart = systemStart testGlobals
-              , ltiUTxO = mempty
-              , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
-              }
-          txInfoResult =
-            ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
-        txInfoResult
-          `shouldBeLeft` inject (SubTxsAreNotSupported @era (pure (txIdTx subTx)))
       prop "GuardScriptHashesNotSupported" $ \(scriptHash :: ScriptHash) ->
         let
           neScriptHashes = scriptHash :| []
