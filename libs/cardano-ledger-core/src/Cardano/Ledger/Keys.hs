@@ -44,6 +44,7 @@ module Cardano.Ledger.Keys (
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN, encodeSignedDSIGN)
 import Cardano.Ledger.Hashes (
   GenDelegPair (..),
   GenDelegs (..),

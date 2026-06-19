@@ -39,10 +39,7 @@ import Cardano.Crypto.VRF.Class (
   VRFAlgorithm,
   VerKeyVRF,
  )
-import Cardano.Crypto.VRF.Mock (MockVRF)
 import qualified Cardano.Crypto.VRF.Praos as Praos
-import Cardano.Crypto.VRF.Simple (SimpleVRF)
-import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Version (Version, byronProtVer)
 import Cardano.Slotting.Block (BlockNo (..))
@@ -66,6 +63,7 @@ import Data.ByteString.Short (ShortByteString(SBS))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Cardano.Base.IP (IPv4, IPv6)
+import Cardano.Ledger.Binary.Crypto (decFixed, decodeSignedDSIGN)
 import Control.Monad (when)
 import Data.Fixed (Fixed (..))
 import Data.Int (Int16, Int32, Int64, Int8)
@@ -470,15 +468,15 @@ instance DecCBOR UTCTime where
 --------------------------------------------------------------------------------
 
 instance DSIGNAlgorithm v => DecCBOR (VerKeyDSIGN v) where
-  decCBOR = decodeVerKeyDSIGN
+  decCBOR = decFixed
   {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm v => DecCBOR (SignKeyDSIGN v) where
-  decCBOR = decodeSignKeyDSIGN
+  decCBOR = decFixed
   {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm v => DecCBOR (SigDSIGN v) where
-  decCBOR = decodeSigDSIGN
+  decCBOR = decFixed
   {-# INLINE decCBOR #-}
 
 instance (DSIGNAlgorithm v, Typeable a) => DecCBOR (SignedDSIGN v a) where
@@ -502,39 +500,39 @@ instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a) where
 --------------------------------------------------------------------------------
 
 instance KESAlgorithm k => DecCBOR (VerKeyKES k) where
-  decCBOR = decodeVerKeyKES
+  decCBOR = decFixed
   {-# INLINE decCBOR #-}
 
 instance KESAlgorithm k => DecCBOR (SigKES k) where
-  decCBOR = decodeSigKES
+  decCBOR = decFixed
   {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- VRF
 --------------------------------------------------------------------------------
 
-instance DecCBOR (VerKeyVRF SimpleVRF) where
-  decCBOR = decodeVerKeyVRF
+instance VRFAlgorithm v => DecCBOR (SignKeyVRF v) where
+  decCBOR = decFixed
   {-# INLINE decCBOR #-}
 
-instance DecCBOR (SignKeyVRF SimpleVRF) where
-  decCBOR = decodeSignKeyVRF
+instance VRFAlgorithm v => DecCBOR (VerKeyVRF v) where
+  decCBOR = decFixed
   {-# INLINE decCBOR #-}
 
-instance DecCBOR (CertVRF SimpleVRF) where
-  decCBOR = decodeCertVRF
+instance Typeable v => DecCBOR (OutputVRF v) where
+  decCBOR = OutputVRF <$> decCBOR
   {-# INLINE decCBOR #-}
 
-instance DecCBOR (VerKeyVRF MockVRF) where
-  decCBOR = decodeVerKeyVRF
+instance VRFAlgorithm v => DecCBOR (CertVRF v) where
+  decCBOR = decFixed
   {-# INLINE decCBOR #-}
 
-instance DecCBOR (SignKeyVRF MockVRF) where
-  decCBOR = decodeSignKeyVRF
-  {-# INLINE decCBOR #-}
-
-instance DecCBOR (CertVRF MockVRF) where
-  decCBOR = decodeCertVRF
+instance (VRFAlgorithm v, Typeable a) => DecCBOR (CertifiedVRF v a) where
+  decCBOR =
+    CertifiedVRF
+      <$ enforceSize "CertifiedVRF" 2
+      <*> decCBOR
+      <*> decCBOR
   {-# INLINE decCBOR #-}
 
 instance DecCBOR Praos.Proof where
@@ -547,30 +545,6 @@ instance DecCBOR Praos.SignKey where
 
 instance DecCBOR Praos.VerKey where
   decCBOR = decCBOR >>= Praos.vkFromBytes
-  {-# INLINE decCBOR #-}
-
-instance DecCBOR (VerKeyVRF Praos.PraosVRF) where
-  decCBOR = decodeVerKeyVRF
-  {-# INLINE decCBOR #-}
-
-instance DecCBOR (SignKeyVRF Praos.PraosVRF) where
-  decCBOR = decodeSignKeyVRF
-  {-# INLINE decCBOR #-}
-
-instance DecCBOR (CertVRF Praos.PraosVRF) where
-  decCBOR = decodeCertVRF
-  {-# INLINE decCBOR #-}
-
-instance Typeable v => DecCBOR (OutputVRF v) where
-  decCBOR = OutputVRF <$> decCBOR
-  {-# INLINE decCBOR #-}
-
-instance (VRFAlgorithm v, Typeable a) => DecCBOR (CertifiedVRF v a) where
-  decCBOR =
-    CertifiedVRF
-      <$ enforceSize "CertifiedVRF" 2
-      <*> decCBOR
-      <*> decodeCertVRF
   {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------

@@ -49,10 +49,7 @@ import Cardano.Crypto.VRF.Class (
   VRFAlgorithm,
   VerKeyVRF,
  )
-import Cardano.Crypto.VRF.Mock (MockVRF)
 import qualified Cardano.Crypto.VRF.Praos as Praos
-import Cardano.Crypto.VRF.Simple (SimpleVRF)
-import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Encoding.Encoder
 import Cardano.Ledger.Binary.Version (Version, byronProtVer)
 import Cardano.Slotting.Block (BlockNo (..))
@@ -80,6 +77,7 @@ import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Cardano.Base.IP (IPv4, IPv6)
 import qualified Cardano.Binary as Plain (Encoding, ToCBOR (..))
+import Cardano.Ledger.Binary.Crypto (encFixed, encodeSignedDSIGN)
 import Data.Fixed (Fixed (..))
 import Data.Foldable (toList)
 import Data.Int (Int16, Int32, Int64, Int8)
@@ -358,13 +356,13 @@ instance EncCBOR UTCTime where
 --------------------------------------------------------------------------------
 
 instance DSIGNAlgorithm v => EncCBOR (VerKeyDSIGN v) where
-  encCBOR = encodeVerKeyDSIGN
+  encCBOR = encFixed
 
 instance DSIGNAlgorithm v => EncCBOR (SignKeyDSIGN v) where
-  encCBOR = encodeSignKeyDSIGN
+  encCBOR = encFixed
 
 instance DSIGNAlgorithm v => EncCBOR (SigDSIGN v) where
-  encCBOR = encodeSigDSIGN
+  encCBOR = encFixed
 
 instance DSIGNAlgorithm v => EncCBOR (SignedDSIGN v a) where
   encCBOR = encodeSignedDSIGN
@@ -377,28 +375,19 @@ instance HashAlgorithm h => EncCBOR (Hash h a) where
   encCBOR (UnsafeHash h) = encCBOR h
 
 instance KESAlgorithm k => EncCBOR (VerKeyKES k) where
-  encCBOR = encodeVerKeyKES
+  encCBOR = encFixed
 
 instance KESAlgorithm k => EncCBOR (SigKES k) where
-  encCBOR = encodeSigKES
+  encCBOR = encFixed
 
-instance EncCBOR (VerKeyVRF SimpleVRF) where
-  encCBOR = encodeVerKeyVRF
+instance VRFAlgorithm v => EncCBOR (VerKeyVRF v) where
+  encCBOR = encFixed
 
-instance EncCBOR (SignKeyVRF SimpleVRF) where
-  encCBOR = encodeSignKeyVRF
+instance VRFAlgorithm v => EncCBOR (SignKeyVRF v) where
+  encCBOR = encFixed
 
-instance EncCBOR (CertVRF SimpleVRF) where
-  encCBOR = encodeCertVRF
-
-instance EncCBOR (VerKeyVRF MockVRF) where
-  encCBOR = encodeVerKeyVRF
-
-instance EncCBOR (SignKeyVRF MockVRF) where
-  encCBOR = encodeSignKeyVRF
-
-instance EncCBOR (CertVRF MockVRF) where
-  encCBOR = encodeCertVRF
+instance VRFAlgorithm v => EncCBOR (CertVRF v) where
+  encCBOR = encFixed
 
 deriving instance EncCBOR (OutputVRF v)
 
@@ -406,7 +395,7 @@ instance VRFAlgorithm v => EncCBOR (CertifiedVRF v a) where
   encCBOR cvrf =
     encodeListLen 2
       <> encCBOR (certifiedOutput cvrf)
-      <> encodeCertVRF (certifiedProof cvrf)
+      <> encCBOR (certifiedProof cvrf)
 
 instance EncCBOR Praos.Proof where
   encCBOR = encCBOR . Praos.proofBytes
@@ -416,12 +405,6 @@ instance EncCBOR Praos.SignKey where
 
 instance EncCBOR Praos.VerKey where
   encCBOR = encCBOR . Praos.vkBytes
-
-deriving instance EncCBOR (VerKeyVRF Praos.PraosVRF)
-
-deriving instance EncCBOR (SignKeyVRF Praos.PraosVRF)
-
-deriving instance EncCBOR (CertVRF Praos.PraosVRF)
 
 --------------------------------------------------------------------------------
 -- Slotting

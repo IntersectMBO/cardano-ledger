@@ -21,6 +21,7 @@ library
     Cardano.Ledger.Binary.Crypto
     Cardano.Ledger.Binary.Decoding
     Cardano.Ledger.Binary.Encoding
+    Cardano.Ledger.Binary.FixedSizeCodec
     Cardano.Ledger.Binary.FlatTerm
     Cardano.Ledger.Binary.Group
     Cardano.Ledger.Binary.Plain
