@@ -194,6 +194,7 @@ library testlib
     Test.Cardano.Ledger.Conway.Examples
     Test.Cardano.Ledger.Conway.Gen
     Test.Cardano.Ledger.Conway.Gen.PParams
+    Test.Cardano.Ledger.Conway.Gen.Script
     Test.Cardano.Ledger.Conway.Gen.UTxO
     Test.Cardano.Ledger.Conway.Genesis
     Test.Cardano.Ledger.Conway.GenesisSpec

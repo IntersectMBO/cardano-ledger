@@ -6,15 +6,16 @@
 
 module Test.Cardano.Ledger.Conway.Gen.UTxO where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Scripts (ConwayEraScript)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (Datum (..))
-import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript)
 import Control.Monad (foldM)
 import Control.Monad.State.Strict (MonadState)
 import qualified Data.Map.Strict as Map
@@ -22,15 +23,20 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Conway.Gen (freshCredential)
+import Test.Cardano.Ledger.Conway.Gen.Script (genScript)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.Arbitrary ()
-import Test.Cardano.Ledger.Shelley.Era (nativeAlwaysSucceeds)
 import Test.Cardano.Ledger.Shelley.ImpTest (HasKeyPairs)
 
-genScript :: (MonadGen m, ShelleyEraScript era) => m (Script era)
-genScript = pure nativeAlwaysSucceeds
-
-genRefScript :: (MonadGen m, ShelleyEraScript era) => m (StrictMaybe (Script era))
+genRefScript ::
+  ( ConwayEraScript era
+  , EraPlutusContext era
+  , MonadGen m
+  , HasKeyPairs s
+  , MonadState s m
+  , HasStatefulGen g m
+  ) =>
+  m (StrictMaybe (Script era))
 genRefScript =
   frequency
     [ (95, pure SNothing)
@@ -104,7 +110,8 @@ genUTxO ::
   , EraAccounts era
   , Accounts era ~ ConwayAccounts era
   , TxOut era ~ BabbageTxOut era
-  , ShelleyEraScript era
+  , ConwayEraScript era
+  , EraPlutusContext era
   , Value era ~ MaryValue
   ) =>
   ConwayAccounts era ->
