@@ -3,6 +3,10 @@
 ## 0.3.0.0
 
 * Add:
+  - `SUBENTITIES` and `STS` instance for it
+  - `SubEntitiesPredFailure`
+  - `SubEntitiesEvent`
+* Add:
   - `ENTITIES` and `STS` instance for it
   - `EntitiesPredFailure`
   - `EntitiesEvent`
