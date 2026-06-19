@@ -42,6 +42,7 @@ import Cardano.Ledger.Dijkstra.Rules.Pool ()
 import Cardano.Ledger.Dijkstra.Rules.SubCert
 import Cardano.Ledger.Dijkstra.Rules.SubCerts
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg
+import Cardano.Ledger.Dijkstra.Rules.SubEntities ()
 import Cardano.Ledger.Dijkstra.Rules.SubGov
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert
 import Cardano.Ledger.Dijkstra.Rules.SubLedger

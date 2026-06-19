@@ -20,6 +20,7 @@ module Cardano.Ledger.Dijkstra.Era (
   MEMPOOL,
   SUBCERT,
   SUBCERTS,
+  SUBENTITIES,
   SUBDELEG,
   SUBGOV,
   SUBGOVCERT,
@@ -127,6 +128,10 @@ type DijkstraSUBLEDGER = SUBLEDGER
 {-# DEPRECATED DijkstraSUBLEDGER "In favor of `SUBLEDGER`" #-}
 
 type instance EraRule "SUBLEDGER" DijkstraEra = SUBLEDGER DijkstraEra
+
+data SUBENTITIES era
+
+type instance EraRule "SUBENTITIES" DijkstraEra = SUBENTITIES DijkstraEra
 
 data SUBCERTS era
 
