@@ -64,7 +64,6 @@ import Data.Text qualified as T
 import Data.Word (Word16, Word64)
 import Test.AntiGen (withAnnotation, (|!))
 import Test.Cardano.Crypto.Leios.Gen (genLeiosSignature)
-import Test.QuickCheck.Hedgehog (hedgehog)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -976,7 +975,7 @@ instance HuddleRule "leios_signature" DijkstraEra where
       pname =.= VBytes `sized` leiosSignatureSize
     where
       leiosSignatureGen = do
-        sig <- liftGen (hedgehog genLeiosSignature)
+        sig <- liftGen genLeiosSignature
         pure $ SingleTerm $ TBytes (leiosSignatureToBytes sig)
 
 instance HuddleRule "invalid_transactions" DijkstraEra where

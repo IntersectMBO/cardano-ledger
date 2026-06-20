@@ -55,7 +55,6 @@ import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
-import Test.QuickCheck.Hedgehog (hedgehog)
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU
@@ -304,7 +303,7 @@ instance Arbitrary PerasCert where
   arbitrary = PerasCert <$> arbitrary
 
 instance Arbitrary LeiosCert where
-  arbitrary = hedgehog genLeiosCert
+  arbitrary = genLeiosCert
 
 instance
   ( EraBlockBody era

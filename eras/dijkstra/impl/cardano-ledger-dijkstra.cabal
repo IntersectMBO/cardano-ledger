@@ -194,7 +194,6 @@ library testlib
     cardano-strict-containers,
     containers,
     generic-random,
-    hedgehog-quickcheck,
     microlens,
     plutus-ledger-api,
     small-steps,
@@ -224,7 +223,6 @@ library cddl
     cardano-ledger-core:cddl,
     cardano-ledger-dijkstra,
     cborg,
-    hedgehog-quickcheck,
     heredoc,
     text,
 
