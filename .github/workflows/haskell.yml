@@ -59,7 +59,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Free up disk space
       run: |
@@ -245,7 +245,7 @@ jobs:
     name: ${{ matrix.package }}-${{ matrix.ghc }}-${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
@@ -352,7 +352,7 @@ jobs:
       os: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
@@ -390,7 +390,7 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install fourmolu
       uses: ./.github/actions/install-binary
@@ -407,7 +407,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install shellcheck
       uses: ./.github/actions/install-binary
@@ -423,7 +423,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install nix formatter
       uses: ./.github/actions/install-binary
@@ -442,7 +442,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: tfausak/cabal-gild-setup-action@v2
         with:
           version: 1.5.0.1 # Should match `cabalGildVersion` in flake.nix
@@ -481,7 +481,7 @@ jobs:
         cabal install implicit-hie \
           --installdir=${{ env.bindir }} --install-method=copy --overwrite-policy=always
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Regenerate hie.yaml and confirm that it is in sync
       run: ./scripts/gen-hie.sh
@@ -491,7 +491,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.base_ref != '' && github.ref != '' }}  # Only true for PRs
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Ensure the branch doesn't contain any merges
       run: |
         PR_TARGET=${{ github.base_ref }}
@@ -534,7 +534,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Check formal-ledger-specifications SRP commit hash
       run: |
         TAG=$(sed -ne \
@@ -557,7 +557,7 @@ jobs:
     if: ${{ github.base_ref != '' && github.ref != '' }}  # Only true for PRs
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Check for `undefined`s in the diffs
       run: |
         PR_TARGET=${{ github.base_ref }}
@@ -576,7 +576,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
