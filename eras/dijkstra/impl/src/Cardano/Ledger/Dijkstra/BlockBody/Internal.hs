@@ -37,9 +37,9 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   validatePerasCert,
 ) where
 
-import Cardano.Crypto.Leios (LeiosCert, decodeLeiosCert, encodeLeiosCert)
+import Cardano.Crypto.Leios (LeiosCert)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..), maybeToStrictMaybe)
+import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
@@ -52,11 +52,11 @@ import Cardano.Ledger.Binary (
   decodeSeq,
   encCBOR,
   encodeListLen,
+  encodeNullMaybe,
   encodeNullStrictMaybe,
-  fromPlainDecoder,
-  fromPlainEncoding,
   serialize',
  )
+import Cardano.Ledger.Binary.Crypto (decodeLeiosCert, encodeLeiosCert)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx, Tx (..), decodeDijkstraTopTx)
@@ -192,13 +192,13 @@ instance
   where
   encCBOR (DijkstraBlockBodyRaw txs mbLeiosCert mbPerasCert) =
     encodeListLen 4
-      <> encodeNullStrictMaybe encCBOR invalidIndices
+      <> encodeNullMaybe encCBOR invalidIndices
       <> encCBOR txs
-      <> encodeNullStrictMaybe (fromPlainEncoding . encodeLeiosCert) mbLeiosCert
+      <> encodeNullStrictMaybe encodeLeiosCert mbLeiosCert
       <> encodeNullStrictMaybe encCBOR mbPerasCert
     where
       invalidIndices =
-        maybeToStrictMaybe . NonEmptySet.fromFoldable $
+        NonEmptySet.fromFoldable $
           StrictSeq.findIndicesL (\tx -> tx ^. isValidTxL == IsValid False) txs
 
 instance
@@ -220,7 +220,7 @@ instance
 
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
     txs <- decodeSeq (decodeDijkstraTopTx @era False)
-    mbLeiosCert <- decodeNullStrictMaybe (fromPlainDecoder decodeLeiosCert)
+    mbLeiosCert <- decodeNullStrictMaybe decodeLeiosCert
     mbPerasCert <- decodeNullStrictMaybe decCBOR
 
     let txsLength = Seq.length txs
@@ -252,13 +252,13 @@ deriving via
 instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBlockBody era) where
   encCBORGroup (DijkstraBlockBody txs mbLeiosCert mbPerasCert) = do
     encodeListLen 4
-      <> encodeNullStrictMaybe encCBOR invalidIndices
+      <> encodeNullMaybe encCBOR invalidIndices
       <> encCBOR txs
-      <> encodeNullStrictMaybe (fromPlainEncoding . encodeLeiosCert) mbLeiosCert
+      <> encodeNullStrictMaybe encodeLeiosCert mbLeiosCert
       <> encodeNullStrictMaybe encCBOR mbPerasCert
     where
       invalidIndices =
-        maybeToStrictMaybe . NonEmptySet.fromFoldable $
+        NonEmptySet.fromFoldable $
           StrictSeq.findIndicesL (\tx -> tx ^. isValidTxL == IsValid False) txs
   listLen _ = 1
 
