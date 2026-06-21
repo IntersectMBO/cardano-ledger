@@ -52,7 +52,7 @@ import GHC.Generics (Generic)
 
 newtype DijkstraSubGovCertPredFailure era
   = DijkstraSubGovCertPredFailure (DijkstraGovCertPredFailure era)
-  deriving (Show, Eq, Generic, NFData, EncCBOR, DecCBOR)
+  deriving (Show, Eq, Ord, Generic, NFData, EncCBOR, DecCBOR)
 
 type instance EraRuleFailure "SUBGOVCERT" DijkstraEra = DijkstraSubGovCertPredFailure DijkstraEra
 

@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-byron
-version: 1.3.0.0
+version: 1.3.0.1
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -343,8 +343,8 @@ library testlib
     base,
     base16-bytestring >=1,
     bimap,
-    byron-spec-chain,
-    byron-spec-ledger,
+    byron-spec-chain >=1.1,
+    byron-spec-ledger >=1.2,
     bytestring,
     cardano-binary:{cardano-binary, testlib},
     cardano-crypto,
@@ -361,7 +361,7 @@ library testlib
     hedgehog >=1.0.4,
     microlens,
     resourcet,
-    small-steps:{small-steps, testlib},
+    small-steps:{small-steps, testlib} >=1.2,
     streaming,
     tasty,
     tasty-hedgehog,

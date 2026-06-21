@@ -2,6 +2,8 @@
 
 ## 1.16.0.0
 
+* Add `Ord` constraints to `AlonzoEraScript` and `EraPlutusContext` classes
+* Add `Ord` instances for `Addr28Extra`, `AlonzoBbodyPredFailure`, `AlonzoContextError`, `AlonzoPlutusPurpose AsItem`, `AlonzoPlutusPurpose AsIxItem`, `AlonzoScript`, `AlonzoTxOut`, `AlonzoUtxoPredFailure`, `AlonzoUtxosPredFailure`, `AlonzoUtxowPredFailure`, `CollectError`, `DataHash32`, `FailureDescription`, `IsValid`, `TagMismatchDescription`
 * Rename rule types and deprecate the old names:
   - `AlonzoBBODY` -> `BBODY`
   - `AlonzoLEDGER` -> `LEDGER`

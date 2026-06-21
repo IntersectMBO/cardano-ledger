@@ -186,14 +186,14 @@ jobs:
 
     # Archive plan.json and local binaries
     - name: Create state archive
-      if: matrix.ghc == '9.6.7'
+      if: matrix.ghc == '9.14.1'
       run: |
         cleret cabal relativize-plan
         cleret cabal list-bins -i test -i exe |
           xargs tar -caf state.tzst dist-newstyle/cache/plan.json
 
     - name: Upload state archive
-      if: matrix.ghc == '9.6.7'
+      if: matrix.ghc == '9.14.1'
       uses: actions/upload-artifact@v7
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
@@ -236,7 +236,7 @@ jobs:
         - non-integral
         - small-steps
         - vector-map
-        ghc: ["9.6.7"]
+        ghc: ["9.14.1"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -348,7 +348,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ghc-version: "9.6.7"
+      ghc-version: "9.14.1"
       os: ubuntu-latest
 
     steps:

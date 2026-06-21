@@ -273,6 +273,8 @@ newtype ProposedPPUpdates era
 
 deriving instance Eq (PParamsUpdate era) => Eq (ProposedPPUpdates era)
 
+deriving instance Ord (PParamsUpdate era) => Ord (ProposedPPUpdates era)
+
 deriving instance NFData (PParamsUpdate era) => NFData (ProposedPPUpdates era)
 
 deriving instance Show (PParamsUpdate era) => Show (ProposedPPUpdates era)

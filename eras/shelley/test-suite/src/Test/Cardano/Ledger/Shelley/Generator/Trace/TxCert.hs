@@ -84,6 +84,10 @@ deriving stock instance
   Eq (CertsPredicateFailure era)
 
 deriving stock instance
+  Ord (PredicateFailure (Core.EraRule "DELPL" era)) =>
+  Ord (CertsPredicateFailure era)
+
+deriving stock instance
   Show (PredicateFailure (Core.EraRule "DELPL" era)) =>
   Show (CertsPredicateFailure era)
 

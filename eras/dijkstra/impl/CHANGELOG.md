@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `Ord` instances for `DijkstraBbodyPredFailure`, `DijkstraContextError`, `DijkstraGovCertPredFailure`, `DijkstraGovPredFailure`, `DijkstraLedgerPredFailure`, `DijkstraMempoolPredFailure`, `DijkstraNativeScriptRaw`, `DijkstraNativeScript`, `DijkstraSubCertPredFailure`, `DijkstraSubCertsPredFailure`, `DijkstraSubDelegPredFailure`, `DijkstraSubGovCertPredFailure`, `DijkstraSubGovPredFailure`, `DijkstraSubLedgerPredFailure`, `DijkstraSubLedgersPredFailure`, `DijkstraSubPoolPredFailure`, `DijkstraSubUtxoPredFailure`, `DijkstraSubUtxowPredFailure`, `DijkstraUtxoPredFailure`, `DijkstraUtxowPredFailure`, `PerasCert`
 * Rename rule types and deprecate the old names:
   - `DijkstraBBODY` -> `BBODY`
   - `DijkstraCERT` -> `CERT`

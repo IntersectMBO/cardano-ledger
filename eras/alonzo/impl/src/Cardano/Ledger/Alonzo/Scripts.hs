@@ -131,6 +131,7 @@ class
   , NFData (PlutusScript era)
   , SafeToHash (PlutusScript era)
   , Eq (PlutusPurpose AsItem era)
+  , Ord (PlutusPurpose AsItem era)
   , Show (PlutusPurpose AsItem era)
   , EncCBOR (PlutusPurpose AsItem era)
   , DecCBOR (PlutusPurpose AsItem era)
@@ -146,6 +147,7 @@ class
   , NoThunks (PlutusPurpose AsIx era)
   , NFData (PlutusPurpose AsIx era)
   , Eq (PlutusPurpose AsIxItem era)
+  , Ord (PlutusPurpose AsIxItem era)
   , Show (PlutusPurpose AsIxItem era)
   , NoThunks (PlutusPurpose AsIxItem era)
   , NFData (PlutusPurpose AsIxItem era)
@@ -322,11 +324,15 @@ instance NoThunks (AlonzoPlutusPurpose AsIx era)
 
 deriving instance Eq (TxCert era) => Eq (AlonzoPlutusPurpose AsItem era)
 
+deriving instance Ord (TxCert era) => Ord (AlonzoPlutusPurpose AsItem era)
+
 deriving instance Show (TxCert era) => Show (AlonzoPlutusPurpose AsItem era)
 
 instance NoThunks (TxCert era) => NoThunks (AlonzoPlutusPurpose AsItem era)
 
 deriving instance Eq (TxCert era) => Eq (AlonzoPlutusPurpose AsIxItem era)
+
+deriving instance Ord (TxCert era) => Ord (AlonzoPlutusPurpose AsIxItem era)
 
 deriving instance Show (TxCert era) => Show (AlonzoPlutusPurpose AsIxItem era)
 
@@ -462,6 +468,8 @@ instance
   {-# INLINE unpackM #-}
 
 deriving instance (Eq (PlutusScript era), Eq (NativeScript era)) => Eq (AlonzoScript era)
+
+deriving instance (Ord (PlutusScript era), Ord (NativeScript era)) => Ord (AlonzoScript era)
 
 instance
   (Era era, NoThunks (PlutusScript era), NoThunks (NativeScript era)) =>

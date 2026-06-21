@@ -81,7 +81,6 @@ data ExUnits' a = ExUnits'
   , exUnitsSteps' :: !a
   }
   deriving (Eq, Generic, Show, Functor)
-  -- It is deliberate that there is no Ord instance, use `pointWiseExUnits` instead.
   deriving
     (Measure, BoundedMeasure)
     via (InstantiatedAt Generic (ExUnits' a))
@@ -102,6 +101,9 @@ deriving instance FromJSON a => FromJSON (ExUnits' a)
 newtype ExUnits = WrapExUnits {unWrapExUnits :: ExUnits' Natural}
   deriving (Eq, Generic, Show)
   deriving newtype (Monoid, Semigroup)
+
+instance Ord ExUnits where
+  compare = zipSemiExUnits compare
 
 instance NoThunks ExUnits
 
@@ -143,9 +145,9 @@ pattern ExUnits {exUnitsMem, exUnitsSteps} <-
 
 {-# COMPLETE ExUnits #-}
 
--- | It is deliberate that there is no `Ord` instance for `ExUnits`. Use this function to
---   compare if one `ExUnit` is pointwise compareable to another. In case when `Ord`
---   instance like comparison is necessary you can use @`zipSemiExUnits` `compare`@
+-- | It is deliberate that there is no automatically-derived `Ord` instance for `ExUnits`.
+-- Use this function to check if one `ExUnit` is pointwise comparable to another.
+-- In the case when an `Ordering` is required you can use @`zipSemiExUnits` `compare`@
 pointWiseExUnits :: (Natural -> Natural -> Bool) -> ExUnits -> ExUnits -> Bool
 pointWiseExUnits f ex1 ex2 = getAll (zipSemiExUnits (\x y -> All (f x y)) ex1 ex2)
 

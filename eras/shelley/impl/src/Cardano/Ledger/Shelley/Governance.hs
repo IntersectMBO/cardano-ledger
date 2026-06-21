@@ -93,6 +93,12 @@ deriving instance
   ) =>
   Eq (ShelleyGovState era)
 
+deriving instance
+  ( Ord (PParamsUpdate era)
+  , Ord (PParams era)
+  ) =>
+  Ord (ShelleyGovState era)
+
 instance
   ( NFData (PParamsUpdate era)
   , NFData (PParams era)
