@@ -17,9 +17,10 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
 ) where
 
 import Cardano.Crypto.DSIGN (rawSerialiseSigDSIGN)
-import Cardano.Crypto.Leios (LeiosCert (..), bitFieldToBytes)
+import Cardano.Crypto.Leios (LeiosCert (..), encodeBitField)
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.Binary.Plain (serialize)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
@@ -132,12 +133,14 @@ instance ToExpr (TxBody l DijkstraEra)
 instance ToExpr PerasCert
 
 -- Manual ToExpr to avoid an orphan 'ToExpr (SigDSIGN BLS12381MinSigDSIGN)':
--- show the BLS signature as its raw byte representation.
+-- show the BLS signature as its raw byte representation, and the bitfield
+-- as its CBOR encoding (since the wire-format bytes aren't separately
+-- observable through the public API).
 instance ToExpr LeiosCert where
   toExpr cert =
     Rec "LeiosCert" $
       OMap.fromList
-        [ ("signers", toExpr (bitFieldToBytes $ signers cert))
+        [ ("signers", toExpr (serialize (encodeBitField (signers cert))))
         , ("aggregatedSignature", toExpr (rawSerialiseSigDSIGN $ aggregatedSignature cert))
         ]
 
