@@ -58,6 +58,7 @@ library
     cardano-base >=0.1.2,
     cardano-binary >=1.7.3,
     cardano-crypto-class >=2.3 && <2.6,
+    cardano-crypto-leios,
     cardano-crypto-praos >=2.2.2,
     cardano-slotting >=0.2,
     cardano-strict-containers >=0.1.2,
