@@ -182,18 +182,26 @@ instance
 instance
   ( ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , ToExpr (PredicateFailure (EraRule "GOV" era))
-  , ToExpr (PredicateFailure (EraRule "CERTS" era))
+  , ToExpr (PredicateFailure (EraRule "ENTITIES" era))
   , ToExpr (PredicateFailure (EraRule "SUBLEDGERS" era))
   ) =>
   ToExpr (DijkstraLedgerPredFailure era)
 
 instance
   ( ToExpr (Event (EraRule "UTXOW" era))
-  , ToExpr (Event (EraRule "CERTS" era))
+  , ToExpr (Event (EraRule "ENTITIES" era))
   , ToExpr (Event (EraRule "GOV" era))
   , ToExpr (Event (EraRule "SUBLEDGERS" era))
   ) =>
   ToExpr (DijkstraLedgerEvent era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "CERTS" era)) =>
+  ToExpr (DijkstraEntitiesPredFailure era)
+
+instance
+  ToExpr (Event (EraRule "CERTS" era)) =>
+  ToExpr (DijkstraEntitiesEvent era)
 
 instance
   ( ToExpr (Value era)

@@ -13,7 +13,10 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.Rules (DijkstraLedgerPredFailure (..), DijkstraUtxoPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules (
+  DijkstraEntitiesPredFailure (..),
+  DijkstraUtxoPredFailure (..),
+ )
 import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.NonEmpty as NE
 import Lens.Micro ((&), (.~))
@@ -40,9 +43,9 @@ spec = describe "CERTS" $ do
             WithdrawalsExceedAccountBalance @era $
               NE.singleton accountAddress $
                 Mismatch (Coin 20) mempty
-        , injectFailure . DijkstraWithdrawalsMissingAccounts @era $
+        , injectFailure . WithdrawalsMissingAccounts @era $
             Withdrawals [(accountAddress, Coin 20)]
-        , injectFailure (DijkstraWdrlNotDelegatedToDRep [stakeKey])
+        , injectFailure (WdrlNotDelegatedToDRep [stakeKey])
         ]
       (registeredAccountAddress, reward, stakeKey2) <- setupAccountAddress
       void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysNoConfidence
@@ -54,9 +57,9 @@ spec = describe "CERTS" $ do
                 .~ Withdrawals [(accountAddress, zero), (registeredAccountAddress, reward)]
       submitFailingTx
         tx2
-        [ injectFailure . DijkstraWithdrawalsMissingAccounts @era $
+        [ injectFailure . WithdrawalsMissingAccounts @era $
             Withdrawals [(accountAddress, zero)]
-        , injectFailure (DijkstraWdrlNotDelegatedToDRep [stakeKey])
+        , injectFailure (WdrlNotDelegatedToDRep [stakeKey])
         ]
 
     it "Withdrawing the wrong amount" $ do
@@ -80,7 +83,7 @@ spec = describe "CERTS" $ do
               NE.singleton accountAddress1 $
                 Mismatch (reward1 <+> Coin 1) reward1
         , injectFailure $
-            DijkstraIncompleteWithdrawals @era $
+            IncompleteWithdrawals @era $
               NE.singleton accountAddress1 $
                 Mismatch (reward1 <+> Coin 1) reward1
         ]
@@ -92,7 +95,7 @@ spec = describe "CERTS" $ do
                 .~ Withdrawals
                   [(accountAddress1, zero)]
         )
-        [ injectFailure . DijkstraIncompleteWithdrawals @era $
+        [ injectFailure . IncompleteWithdrawals @era $
             NE.singleton accountAddress1 $
               Mismatch zero reward1
         ]
