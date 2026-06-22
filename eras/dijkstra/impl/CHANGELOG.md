@@ -2,6 +2,12 @@
 
 ## 0.3.0.0
 
+* Remove constructors from `DijkstraLedgerPredicateFailure`:
+  - `DijkstraCertsFailure`
+  - `DijkstraWdrlNotDelegatedToDRep`
+  - `DijkstraWithdrawalsMissingAccounts`
+  - `DijkstraIncompleteWithdrawals`
+* Remove `CertsEvent` constructor from `DijkstraLedgerEvent`
 * Add:
   - `SUBENTITIES` and `STS` instance for it
   - `SubEntitiesPredFailure`
