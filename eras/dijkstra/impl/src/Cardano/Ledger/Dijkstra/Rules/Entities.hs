@@ -3,7 +3,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,19 +19,34 @@ module Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesEvent (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals (networkId), Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, ENTITIES)
+import Cardano.Ledger.Dijkstra.Rules.Certs ()
+import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Rules.ValidationMode (runTest)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
+import Data.List.NonEmpty (NonEmpty)
+import Data.Map.NonEmpty (NonEmptyMap)
+import qualified Data.Map.NonEmpty as NEM
+import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
+import Lens.Micro
 
-newtype EntitiesPredFailure era
+data EntitiesPredFailure era
   = CertsFailure (PredicateFailure (EraRule "CERTS" era))
+  | WdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
+  | WithdrawalsMissingAccounts Withdrawals
+  | IncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   deriving (Generic)
 
 deriving stock instance
@@ -42,13 +59,31 @@ instance
   NFData (PredicateFailure (EraRule "CERTS" era)) =>
   NFData (EntitiesPredFailure era)
 
-deriving newtype instance
-  (Era era, EncCBOR (PredicateFailure (EraRule "CERTS" era))) =>
+instance
+  ( Era era
+  , EncCBOR (PredicateFailure (EraRule "CERTS" era))
+  ) =>
   EncCBOR (EntitiesPredFailure era)
+  where
+  encCBOR =
+    encode . \case
+      CertsFailure x -> Sum (CertsFailure @era) 0 !> To x
+      WdrlNotDelegatedToDRep x -> Sum (WdrlNotDelegatedToDRep @era) 1 !> To x
+      WithdrawalsMissingAccounts x -> Sum (WithdrawalsMissingAccounts @era) 2 !> To x
+      IncompleteWithdrawals x -> Sum (IncompleteWithdrawals @era) 3 !> To x
 
-deriving newtype instance
-  (Era era, DecCBOR (PredicateFailure (EraRule "CERTS" era))) =>
+instance
+  ( Era era
+  , DecCBOR (PredicateFailure (EraRule "CERTS" era))
+  ) =>
   DecCBOR (EntitiesPredFailure era)
+  where
+  decCBOR = decode . Summands "EntitiesPredFailure" $ \case
+    0 -> SumD CertsFailure <! From
+    1 -> SumD WdrlNotDelegatedToDRep <! From
+    2 -> SumD WithdrawalsMissingAccounts <! From
+    3 -> SumD IncompleteWithdrawals <! From
+    n -> Invalid n
 
 newtype EntitiesEvent era = CertsEvent (Event (EraRule "CERTS" era))
   deriving (Generic)
@@ -66,13 +101,36 @@ instance InjectRuleFailure "ENTITIES" EntitiesPredFailure DijkstraEra
 instance InjectRuleFailure "ENTITIES" Conway.ConwayCertsPredFailure DijkstraEra where
   injectFailure = CertsFailure
 
+instance InjectRuleFailure "ENTITIES" Conway.ConwayCertPredFailure DijkstraEra where
+  injectFailure = CertsFailure . injectFailure @"CERTS"
+
+instance InjectRuleFailure "ENTITIES" Conway.ConwayDelegPredFailure DijkstraEra where
+  injectFailure = CertsFailure . injectFailure @"CERTS"
+
+instance InjectRuleFailure "ENTITIES" Shelley.ShelleyPoolPredFailure DijkstraEra where
+  injectFailure = CertsFailure . injectFailure @"CERTS"
+
+instance InjectRuleFailure "ENTITIES" Conway.ConwayGovCertPredFailure DijkstraEra where
+  injectFailure = CertsFailure . injectFailure @"CERTS"
+
+instance InjectRuleFailure "ENTITIES" DijkstraGovCertPredFailure DijkstraEra where
+  injectFailure = CertsFailure . injectFailure @"CERTS"
+
+instance InjectRuleFailure "ENTITIES" Conway.ConwayLedgerPredFailure DijkstraEra where
+  injectFailure = conwayToDijkstraEntitiesPredFailure
+
 instance
   ( EraTx era
+  , ConwayEraTxBody era
+  , ConwayEraPParams era
+  , ConwayEraCertState era
   , Embed (EraRule "CERTS" era) (ENTITIES era)
   , State (EraRule "CERTS" era) ~ CertState era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Environment (EraRule "CERTS" era) ~ Conway.CertsEnv era
   , EraRule "ENTITIES" era ~ ENTITIES era
+  , InjectRuleFailure "ENTITIES" EntitiesPredFailure era
+  , InjectRuleFailure "ENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
   STS (ENTITIES era)
   where
@@ -88,15 +146,56 @@ instance
 
 dijkstraEntitiesTransition ::
   forall era.
-  ( Embed (EraRule "CERTS" era) (ENTITIES era)
+  ( EraTx era
+  , ConwayEraTxBody era
+  , ConwayEraCertState era
+  , Embed (EraRule "CERTS" era) (ENTITIES era)
   , State (EraRule "CERTS" era) ~ CertState era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Environment (EraRule "CERTS" era) ~ Conway.CertsEnv era
+  , EraRule "ENTITIES" era ~ ENTITIES era
+  , InjectRuleFailure "ENTITIES" EntitiesPredFailure era
+  , InjectRuleFailure "ENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
   TransitionRule (ENTITIES era)
 dijkstraEntitiesTransition = do
   TRC (env, certState, certificates) <- judgmentContext
-  trans @(EraRule "CERTS" era) $ TRC (env, certState, certificates)
+  let Conway.CertsEnv tx pp curEpoch _committee _committeeProposals = env
+      withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+      accounts = certState ^. certDStateL . accountsL
+
+  runTest $ Conway.validateWithdrawalsDelegated accounts tx
+
+  network <- liftSTS $ asks networkId
+  let (missingWithdrawals, incompleteWithdrawals) =
+        case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
+          Nothing -> (Map.empty, Map.empty)
+          Just (missing, incomplete) -> (unWithdrawals missing, incomplete)
+  failOnNonEmptyMap missingWithdrawals $
+    injectFailure . WithdrawalsMissingAccounts . Withdrawals . NEM.toMap
+  failOnNonEmptyMap incompleteWithdrawals $ injectFailure . IncompleteWithdrawals
+
+  let finalCertState =
+        certState
+          & Conway.updateDormantDRepExpiries tx curEpoch
+          & Conway.updateVotingDRepExpiries tx curEpoch (pp ^. ppDRepActivityL)
+          & certDStateL . accountsL %~ drainAccounts withdrawals
+  trans @(EraRule "CERTS" era) $ TRC (env, finalCertState, certificates)
+
+conwayToDijkstraEntitiesPredFailure ::
+  forall era. Conway.ConwayLedgerPredFailure era -> EntitiesPredFailure era
+conwayToDijkstraEntitiesPredFailure = \case
+  Conway.ConwayWdrlNotDelegatedToDRep khs -> WdrlNotDelegatedToDRep khs
+  Conway.ConwayUtxowFailure _ -> impossible "ConwayUtxowFailure"
+  Conway.ConwayCertsFailure _ -> impossible "ConwayCertsFailure"
+  Conway.ConwayGovFailure _ -> impossible "ConwayGovFailure"
+  Conway.ConwayTreasuryValueMismatch _ -> impossible "ConwayTreasuryValueMismatch"
+  Conway.ConwayTxRefScriptsSizeTooBig _ -> impossible "ConwayTxRefScriptsSizeTooBig"
+  Conway.ConwayMempoolFailure _ -> impossible "ConwayMempoolFailure"
+  Conway.ConwayWithdrawalsMissingAccounts _ -> impossible "ConwayWithdrawalsMissingAccounts"
+  Conway.ConwayIncompleteWithdrawals _ -> impossible "ConwayIncompleteWithdrawals"
+  where
+    impossible name = error $ "Impossible: `" <> name <> "` for ENTITIES"
 
 instance
   ( STS (Conway.CERTS era)
