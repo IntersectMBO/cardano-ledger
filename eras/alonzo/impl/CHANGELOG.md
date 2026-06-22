@@ -2,6 +2,12 @@
 
 ## 1.16.0.0
 
+* Rename the `Rewarding` verb to `Withdrawing` and deprecate the old names:
+  - `AlonzoRewarding` -> `AlonzoWithdrawing`
+  - `RewardingPurpose` -> `WithdrawingPurpose`
+  - `mkRewardingPurpose` -> `mkWithdrawingPurpose`
+  - `toRewardingPurpose` -> `toWithdrawingPurpose`
+  - `getRewardingScriptsNeeded` -> `getWithdrawingScriptsNeeded`
 * Rename rule types and deprecate the old names:
   - `AlonzoBBODY` -> `BBODY`
   - `AlonzoLEDGER` -> `LEDGER`

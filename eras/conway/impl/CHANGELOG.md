@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Rename `ConwayRewarding` to `ConwayWithdrawing` and deprecate the old name
 * Rename rule types and deprecate the old names:
   - `ConwayBBODY` -> `BBODY`
   - `ConwayCERT` -> `CERT`

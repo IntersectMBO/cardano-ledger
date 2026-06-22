@@ -2,6 +2,8 @@
 
 ## 1.13.1.0
 
+* Rename `AnyEraRewardingPurpose` to `AnyEraWithdrawingPurpose` and `anyEraToRewardingPurpose` to `anyEraToWithdrawingPurpose`, deprecating the old names
+* Re-export the new `pattern WithdrawingPurpose` and `toWithdrawingPurpose`
 * Add `generate-cbor` executable.
 * Add `ToJSON` instances for `StakeSnapshot` and `StakeSnapshots`.
 * Add `ToJSON` instance for `QueryPoolStateResult`.
