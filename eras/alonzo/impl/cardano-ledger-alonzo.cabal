@@ -114,6 +114,12 @@ library
     transformers,
     validation-selective,
 
+  -- ghc-9.8 doesn't support the `-fno-spec-eval` option, and unless this is used on some
+  -- modules in this component, ghc generates code that loops during dictionary evaluation
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+  if impl(ghc >=9.8 && <9.10)
+    buildable: False
+
 library cddl
   exposed-modules:
     Cardano.Ledger.Alonzo.HuddleSpec
