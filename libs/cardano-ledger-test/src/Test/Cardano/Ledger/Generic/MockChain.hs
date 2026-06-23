@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -14,6 +15,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Test.Cardano.Ledger.Generic.MockChain where
 
