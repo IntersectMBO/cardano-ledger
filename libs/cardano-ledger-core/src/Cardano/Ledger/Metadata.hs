@@ -22,14 +22,12 @@ import Cardano.Ledger.Binary (
   TokenType (..),
   cborError,
   decodeBreakOr,
-  decodeBytesIndef,
+  decodeByteArrayIndefLen,
   decodeInteger,
   decodeListLen,
-  decodeListLenIndef,
   decodeMapLen,
-  decodeMapLenIndef,
   decodeString,
-  decodeStringIndef,
+  decodeStringIndefLen,
   encodeInteger,
   encodeListLen,
   encodeMapLen,
@@ -38,6 +36,7 @@ import Cardano.Ledger.Binary (
   natVersion,
   peekTokenType,
  )
+import qualified Cardano.Ledger.Binary as CBA
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData (rnf))
 import Control.Monad (when)
@@ -121,8 +120,7 @@ decodeMetadatum = do
         decodeError "bytes .size (0..64): bytestring exceeds 64 bytes"
       return (B ba)
     TypeBytesIndef -> do
-      decodeBytesIndef
-      !ba <- decodeBytesIndefLen []
+      !ba <- CBA.unBA <$> decodeByteArrayIndefLen
       when (checkSizes && Prim.sizeofByteArray ba > 64) $
         decodeError "bytes .size (0..64): bytestring exceeds 64 bytes"
       return (B ba)
@@ -132,8 +130,7 @@ decodeMetadatum = do
         decodeError "text .size (0..64): text exceeds 64 bytes"
       return (S x)
     TypeStringIndef -> do
-      decodeStringIndef
-      !x <- decodeStringIndefLen []
+      !x <- decodeStringIndefLen
       when (checkSizes && TF.lengthWord8 x > 64) $
         decodeError "text .size (0..64): text exceeds 64 bytes"
       return (S x)
@@ -153,7 +150,6 @@ decodeMetadatum = do
       xs <- decodeListN n []
       return (List xs)
     TypeListLenIndef -> do
-      decodeListLenIndef
       xs <- decodeListIndefLen []
       return (List xs)
 
@@ -167,30 +163,11 @@ decodeMetadatum = do
       xs <- decodeMapN n []
       return (Map xs)
     TypeMapLenIndef -> do
-      decodeMapLenIndef
       xs <- decodeMapIndefLen []
       return (Map xs)
     _ -> decodeError ("Unsupported token type " <> T.pack (show tkty))
   where
     decodeError msg = cborError (DecoderErrorCustom "metadata" msg)
-
-decodeBytesIndefLen :: [ByteArray] -> Decoder s ByteArray
-decodeBytesIndefLen acc = do
-  stop <- decodeBreakOr
-  if stop
-    then return $! mconcat $ reverse acc
-    else do
-      !ba <- decCBOR
-      decodeBytesIndefLen (ba : acc)
-
-decodeStringIndefLen :: [T.Text] -> Decoder s T.Text
-decodeStringIndefLen acc = do
-  stop <- decodeBreakOr
-  if stop
-    then return $! T.concat (reverse acc)
-    else do
-      !str <- decodeString
-      decodeStringIndefLen (str : acc)
 
 decodeListN :: Int -> [Metadatum] -> Decoder s [Metadatum]
 decodeListN !n acc =

@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -9,7 +10,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
 
@@ -18,6 +18,10 @@ module Cardano.Ledger.Binary.Decoding.DecCBOR (
   fromByronCBOR,
   decodeScriptContextFromData,
   decodeIntegralRational,
+
+  -- *** Network
+  decodeIPv4,
+  decodeIPv6,
 ) where
 
 import qualified Cardano.Binary as Plain (Decoder)
@@ -44,7 +48,7 @@ import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Decoding.Decoder
-import Cardano.Ledger.Binary.Version (Version, byronProtVer)
+import Cardano.Ledger.Binary.Version (Version, byronProtVer, natVersion)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (
   EpochInterval (..),
@@ -65,8 +69,9 @@ import Data.ByteString.Short (ShortByteString(SBS))
 #else
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
-import Cardano.Base.IP (IPv4, IPv6)
+import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Control.Monad (when)
+import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.Fixed (Fixed (..))
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
@@ -203,6 +208,46 @@ instance DecCBOR Term where
   decCBOR = decodeTerm
   {-# INLINE decCBOR #-}
 
+--------------------------------------------------------------------------------
+-- Network
+--------------------------------------------------------------------------------
+
+-- | Convert a `Get` monad from @binary@ package into a `Decoder`
+binaryGetDecoder ::
+  -- | Name of the function or type for error reporting
+  T.Text ->
+  -- | Deserializer for the @binary@ package
+  Get a ->
+  Decoder s a
+binaryGetDecoder name getter = do
+  bs <- decCBOR
+  case runGetOrFail getter (BSL.fromStrict bs) of
+    Left (_, _, err) -> cborError $ DecoderErrorCustom name (T.pack err)
+    Right (leftOver, _, ha)
+      | BSL.null leftOver -> pure ha
+      | otherwise ->
+          cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
+{-# INLINE binaryGetDecoder #-}
+
+decodeIPv4 :: Decoder s IPv4
+decodeIPv4 =
+  toIPv4w <$> binaryGetDecoder "decodeIPv4" getWord32le
+{-# INLINE decodeIPv4 #-}
+
+getHostAddress6 :: Get (Word32, Word32, Word32, Word32)
+getHostAddress6 = do
+  !w1 <- getWord32le
+  !w2 <- getWord32le
+  !w3 <- getWord32le
+  !w4 <- getWord32le
+  return (w1, w2, w3, w4)
+{-# INLINE getHostAddress6 #-}
+
+decodeIPv6 :: Decoder s IPv6
+decodeIPv6 =
+  toIPv6w <$> binaryGetDecoder "decodeIPv6" getHostAddress6
+{-# INLINE decodeIPv6 #-}
+
 instance DecCBOR IPv4 where
   decCBOR = decodeIPv4
   {-# INLINE decCBOR #-}
@@ -235,87 +280,94 @@ instance (Typeable s, DecCBOR a) => DecCBOR (Tagged s a) where
 -- Containers
 --------------------------------------------------------------------------------
 
+-- | Decode a tuple-shaped CBOR list of fixed arity. Starting at protocol
+-- version 12 we additionally accept indefinite-length list encoding.
+decodeTuple :: Int -> Decoder s a -> Decoder s a
+decodeTuple n body =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    (decodeRecordNamed "Tuple" (const n) body)
+    (decodeListLenOf n *> body)
+{-# INLINE decodeTuple #-}
+
 instance (DecCBOR a, DecCBOR b) => DecCBOR (a, b) where
-  decCBOR = do
-    decodeListLenOf 2
+  decCBOR = decodeTuple 2 $ do
     !x <- decCBOR
     !y <- decCBOR
-    return (x, y)
-  dropCBOR _ = decodeListLenOf 2 <* dropCBOR (Proxy @a) <* dropCBOR (Proxy @b)
+    pure (x, y)
+  dropCBOR _ =
+    decodeTuple 2 $
+      dropCBOR (Proxy @a) <* dropCBOR (Proxy @b)
   {-# INLINE decCBOR #-}
 
 instance (DecCBOR a, DecCBOR b, DecCBOR c) => DecCBOR (a, b, c) where
-  decCBOR = do
-    decodeListLenOf 3
+  decCBOR = decodeTuple 3 $ do
     !x <- decCBOR
     !y <- decCBOR
     !z <- decCBOR
-    return (x, y, z)
+    pure (x, y, z)
   dropCBOR _ =
-    decodeListLenOf 3
-      <* dropCBOR (Proxy @a)
-      <* dropCBOR (Proxy @b)
-      <* dropCBOR (Proxy @c)
+    decodeTuple 3 $
+      dropCBOR (Proxy @a)
+        <* dropCBOR (Proxy @b)
+        <* dropCBOR (Proxy @c)
   {-# INLINE decCBOR #-}
 
 instance (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d) => DecCBOR (a, b, c, d) where
-  decCBOR = do
-    decodeListLenOf 4
+  decCBOR = decodeTuple 4 $ do
     !a <- decCBOR
     !b <- decCBOR
     !c <- decCBOR
     !d <- decCBOR
-    return (a, b, c, d)
+    pure (a, b, c, d)
   dropCBOR _ =
-    decodeListLenOf 4
-      <* dropCBOR (Proxy @a)
-      <* dropCBOR (Proxy @b)
-      <* dropCBOR (Proxy @c)
-      <* dropCBOR (Proxy @d)
+    decodeTuple 4 $
+      dropCBOR (Proxy @a)
+        <* dropCBOR (Proxy @b)
+        <* dropCBOR (Proxy @c)
+        <* dropCBOR (Proxy @d)
   {-# INLINE decCBOR #-}
 
 instance
   (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d, DecCBOR e) =>
   DecCBOR (a, b, c, d, e)
   where
-  decCBOR = do
-    decodeListLenOf 5
+  decCBOR = decodeTuple 5 $ do
     !a <- decCBOR
     !b <- decCBOR
     !c <- decCBOR
     !d <- decCBOR
     !e <- decCBOR
-    return (a, b, c, d, e)
+    pure (a, b, c, d, e)
   dropCBOR _ =
-    decodeListLenOf 5
-      <* dropCBOR (Proxy @a)
-      <* dropCBOR (Proxy @b)
-      <* dropCBOR (Proxy @c)
-      <* dropCBOR (Proxy @d)
-      <* dropCBOR (Proxy @e)
+    decodeTuple 5 $
+      dropCBOR (Proxy @a)
+        <* dropCBOR (Proxy @b)
+        <* dropCBOR (Proxy @c)
+        <* dropCBOR (Proxy @d)
+        <* dropCBOR (Proxy @e)
   {-# INLINE decCBOR #-}
 
 instance
   (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d, DecCBOR e, DecCBOR f) =>
   DecCBOR (a, b, c, d, e, f)
   where
-  decCBOR = do
-    decodeListLenOf 6
+  decCBOR = decodeTuple 6 $ do
     !a <- decCBOR
     !b <- decCBOR
     !c <- decCBOR
     !d <- decCBOR
     !e <- decCBOR
     !f <- decCBOR
-    return (a, b, c, d, e, f)
+    pure (a, b, c, d, e, f)
   dropCBOR _ =
-    decodeListLenOf 6
-      <* dropCBOR (Proxy @a)
-      <* dropCBOR (Proxy @b)
-      <* dropCBOR (Proxy @c)
-      <* dropCBOR (Proxy @d)
-      <* dropCBOR (Proxy @e)
-      <* dropCBOR (Proxy @f)
+    decodeTuple 6 $
+      dropCBOR (Proxy @a)
+        <* dropCBOR (Proxy @b)
+        <* dropCBOR (Proxy @c)
+        <* dropCBOR (Proxy @d)
+        <* dropCBOR (Proxy @e)
+        <* dropCBOR (Proxy @f)
   {-# INLINE decCBOR #-}
 
 instance
@@ -329,8 +381,7 @@ instance
   ) =>
   DecCBOR (a, b, c, d, e, f, g)
   where
-  decCBOR = do
-    decodeListLenOf 7
+  decCBOR = decodeTuple 7 $ do
     !a <- decCBOR
     !b <- decCBOR
     !c <- decCBOR
@@ -338,24 +389,38 @@ instance
     !e <- decCBOR
     !f <- decCBOR
     !g <- decCBOR
-    return (a, b, c, d, e, f, g)
+    pure (a, b, c, d, e, f, g)
   dropCBOR _ =
-    decodeListLenOf 7
-      <* dropCBOR (Proxy @a)
-      <* dropCBOR (Proxy @b)
-      <* dropCBOR (Proxy @c)
-      <* dropCBOR (Proxy @d)
-      <* dropCBOR (Proxy @e)
-      <* dropCBOR (Proxy @f)
-      <* dropCBOR (Proxy @g)
+    decodeTuple 7 $
+      dropCBOR (Proxy @a)
+        <* dropCBOR (Proxy @b)
+        <* dropCBOR (Proxy @c)
+        <* dropCBOR (Proxy @d)
+        <* dropCBOR (Proxy @e)
+        <* dropCBOR (Proxy @f)
+        <* dropCBOR (Proxy @g)
   {-# INLINE decCBOR #-}
+
+decodeByteString :: Decoder s BS.ByteString
+decodeByteString =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    decodeBytesDefOrIndef
+    decodeBytes
 
 instance DecCBOR BS.ByteString where
-  decCBOR = decodeBytes
+  decCBOR = decodeByteString
   {-# INLINE decCBOR #-}
 
+decodeText :: Decoder s T.Text
+decodeText =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    decodeStringDefOrIndef
+    decodeString
+
 instance DecCBOR T.Text where
-  decCBOR = decodeString
+  decCBOR = decodeText
   {-# INLINE decCBOR #-}
 
 instance DecCBOR BSL.ByteString where
@@ -364,21 +429,31 @@ instance DecCBOR BSL.ByteString where
 
 instance DecCBOR ShortByteString where
   decCBOR = do
-    BA (Prim.ByteArray ba) <- decodeByteArray
-    return $ SBS ba
+    BA (Prim.ByteArray ba) <- decodeByteArrayVersioned
+    pure $ SBS ba
   {-# INLINE decCBOR #-}
 
 instance DecCBOR ByteArray where
-  decCBOR = decodeByteArray
+  decCBOR = decodeByteArrayVersioned
   {-# INLINE decCBOR #-}
 
 instance DecCBOR Prim.ByteArray where
-  decCBOR = unBA <$> decodeByteArray
+  decCBOR = unBA <$> decodeByteArrayVersioned
   {-# INLINE decCBOR #-}
 
 instance DecCBOR SlicedByteArray where
-  decCBOR = fromByteArray . unBA <$> decodeByteArray
+  decCBOR = fromByteArray . unBA <$> decodeByteArrayVersioned
   {-# INLINE decCBOR #-}
+
+-- | Like 'decodeByteArray', but accepts indefinite-length byte string
+-- encodings starting at protocol version 12.
+decodeByteArrayVersioned :: Decoder s ByteArray
+decodeByteArrayVersioned =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    decodeByteArrayDefOrIndef
+    decodeByteArray
+{-# INLINE decodeByteArrayVersioned #-}
 
 instance DecCBOR a => DecCBOR [a] where
   decCBOR = decodeList decCBOR
