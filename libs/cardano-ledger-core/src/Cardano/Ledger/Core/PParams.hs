@@ -123,7 +123,7 @@ import Cardano.Ledger.Binary (
   ifDecoderVersionAtLeast,
   natVersion,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), Field (..), decode, field, invalidField)
+import Cardano.Ledger.Binary.Coders (Decode (..), Field (..), decode, invalidField)
 import Cardano.Ledger.Coin (
   Coin (..),
   CoinPerByte (..),
@@ -287,7 +287,9 @@ instance EraPParams era => DecCBOR (PParamsUpdate era) where
         Maybe (EraDecoder t) ->
         Lens' (PParamsUpdate era) (StrictMaybe t) ->
         Field (PParamsUpdate era)
-      mkField Nothing ppuLens = field (set ppuLens . SJust) From
+      mkField Nothing ppuLens =
+        Field (set ppuLens . SJust) $
+          ifDecoderVersionAtLeast (natVersion @12) decCBOR (decode From)
       mkField (Just (EraDecoder d)) ppuLens = Field (set ppuLens . SJust) d
 
 instance EraPParams era => ToCBOR (PParamsUpdate era) where

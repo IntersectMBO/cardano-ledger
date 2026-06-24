@@ -204,7 +204,7 @@ instance
   where
   decCBOR =
     decodeTxAuxDataByTokenType @(Annotator (AlonzoTxAuxDataRaw era))
-      decodeShelley
+      (ifDecoderVersionAtLeast (natVersion @12) decodeShelleyPv12 decodeShelley)
       (ifDecoderVersionAtLeast (natVersion @12) decodeDijkstra decodeAllegra)
       ( ifDecoderVersionAtLeast
           (natVersion @12)
@@ -219,6 +219,10 @@ instance
           decodeAlonzo
       )
     where
+      decodeShelleyPv12 = do
+        metadata <- decCBOR
+        pure $ pure $ AlonzoTxAuxDataRaw metadata StrictSeq.empty Map.empty
+      {-# INLINE decodeShelleyPv12 #-}
       decodeShelley =
         decode
           ( Ann (Emit AlonzoTxAuxDataRaw)

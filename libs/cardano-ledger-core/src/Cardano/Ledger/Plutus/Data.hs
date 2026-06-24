@@ -50,6 +50,8 @@ import Cardano.Ledger.Binary (
   encodeTag,
   fromPlainDecoder,
   fromPlainEncoding,
+  ifDecoderVersionAtLeast,
+  natVersion,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
@@ -235,11 +237,21 @@ instance Era era => EncCBOR (Datum era) where
     NoDatum -> OmitC NoDatum
 
 instance Era era => DecCBOR (Datum era) where
-  decCBOR = decode (Summands "Datum" decodeDatum)
+  decCBOR =
+    ifDecoderVersionAtLeast (natVersion @12) decodeDatumPv12 $
+      decode (Summands "Datum" decodeDatum)
     where
       decodeDatum 0 = SumD DatumHash <! From
       decodeDatum 1 = SumD Datum <! From
       decodeDatum k = Invalid k
+      decodeDatumPv12 = decodeRecordSum "Datum" $ \case
+        0 -> do
+          dh <- decCBOR
+          pure (2, DatumHash dh)
+        1 -> do
+          d <- decCBOR
+          pure (2, Datum d)
+        k -> invalidKey k
 
 instance Era era => ToJSON (Datum era) where
   toJSON d =

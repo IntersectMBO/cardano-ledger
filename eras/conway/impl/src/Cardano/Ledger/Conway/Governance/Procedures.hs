@@ -582,10 +582,15 @@ committeeThresholdL = lens committeeThreshold (\c q -> c {committeeThreshold = q
 
 instance Era era => DecCBOR (Committee era) where
   decCBOR =
-    decode $
-      RecD Committee
-        <! From
-        <! From
+    ifDecoderVersionAtLeast (natVersion @12) decodeCommittee $
+      decode $
+        RecD Committee
+          <! From
+          <! From
+    where
+      decodeCommittee =
+        decodeRecordNamed "Committee" (const 2) $
+          Committee <$> decCBOR <*> decCBOR
   {-# INLINE decCBOR #-}
 
 instance Era era => EncCBOR (Committee era) where
@@ -870,22 +875,54 @@ instance EraPParams era => ToJSON (GovAction era)
 
 instance EraPParams era => DecCBOR (GovAction era) where
   decCBOR =
-    decode $ Summands "GovAction" $ \case
-      0 ->
-        SumD ParameterChange
-          <! D (decodeNullStrictMaybe decCBOR)
-          <! From
-          <! D (decodeNullStrictMaybe decCBOR)
-      1 ->
-        SumD HardForkInitiation
-          <! D (decodeNullStrictMaybe decCBOR)
-          <! D (decodeProtVer @era)
-      2 -> SumD TreasuryWithdrawals <! From <! D (decodeNullStrictMaybe decCBOR)
-      3 -> SumD NoConfidence <! D (decodeNullStrictMaybe decCBOR)
-      4 -> SumD UpdateCommittee <! D (decodeNullStrictMaybe decCBOR) <! From <! From <! From
-      5 -> SumD NewConstitution <! D (decodeNullStrictMaybe decCBOR) <! From
-      6 -> SumD InfoAction
-      k -> Invalid k
+    ifDecoderVersionAtLeast (natVersion @12) decodeGovAction $
+      decode $
+        Summands "GovAction" $ \case
+          0 ->
+            SumD ParameterChange
+              <! D (decodeNullStrictMaybe decCBOR)
+              <! From
+              <! D (decodeNullStrictMaybe decCBOR)
+          1 ->
+            SumD HardForkInitiation
+              <! D (decodeNullStrictMaybe decCBOR)
+              <! D (decodeProtVer @era)
+          2 -> SumD TreasuryWithdrawals <! From <! D (decodeNullStrictMaybe decCBOR)
+          3 -> SumD NoConfidence <! D (decodeNullStrictMaybe decCBOR)
+          4 -> SumD UpdateCommittee <! D (decodeNullStrictMaybe decCBOR) <! From <! From <! From
+          5 -> SumD NewConstitution <! D (decodeNullStrictMaybe decCBOR) <! From
+          6 -> SumD InfoAction
+          k -> Invalid k
+    where
+      decodeGovAction = decodeRecordSum "GovAction" $ \case
+        0 -> do
+          pGovActionId <- decodeNullStrictMaybe decCBOR
+          ppu <- decCBOR
+          govPolicy <- decodeNullStrictMaybe decCBOR
+          pure (4, ParameterChange pGovActionId ppu govPolicy)
+        1 -> do
+          pGovActionId <- decodeNullStrictMaybe decCBOR
+          protVer <- decodeProtVer @era
+          pure (3, HardForkInitiation pGovActionId protVer)
+        2 -> do
+          withdrawals <- decCBOR
+          govPolicy <- decodeNullStrictMaybe decCBOR
+          pure (3, TreasuryWithdrawals withdrawals govPolicy)
+        3 -> do
+          pGovActionId <- decodeNullStrictMaybe decCBOR
+          pure (2, NoConfidence pGovActionId)
+        4 -> do
+          pGovActionId <- decodeNullStrictMaybe decCBOR
+          ccToRemove <- decCBOR
+          ccToAdd <- decCBOR
+          threshold <- decCBOR
+          pure (5, UpdateCommittee pGovActionId ccToRemove ccToAdd threshold)
+        5 -> do
+          pGovActionId <- decodeNullStrictMaybe decCBOR
+          constitution <- decCBOR
+          pure (3, NewConstitution pGovActionId constitution)
+        6 -> pure (1, InfoAction)
+        k -> invalidKey k
   {-# INLINE decCBOR #-}
 
 instance EraPParams era => EncCBOR (GovAction era) where

@@ -64,6 +64,8 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   encodeNullStrictMaybe,
   encodeWord8,
+  ifDecoderVersionAtLeast,
+  natVersion,
   toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -412,12 +414,28 @@ instance EncCBOR Delegatee where
       DelegStakeVote kh dRep -> Sum DelegStakeVote 2 !> To kh !> To dRep
 
 instance DecCBOR Delegatee where
-  decCBOR = decode $
-    Summands "Delegatee" $ \case
-      0 -> SumD DelegStake <! From
-      1 -> SumD DelegVote <! From
-      2 -> SumD DelegStakeVote <! From <! From
-      k -> Invalid k
+  decCBOR =
+    ifDecoderVersionAtLeast (natVersion @12) decodeDelegatee $
+      decode $
+        Summands "Delegatee" $ \case
+          0 -> SumD DelegStake <! From
+          1 -> SumD DelegVote <! From
+          2 -> SumD DelegStakeVote <! From <! From
+          k -> Invalid k
+    where
+      decodeDelegatee = decodeRecordSum "Delegatee" $ \case
+        0 -> do
+          kh <- decCBOR
+          pure (2, DelegStake kh)
+        1 -> do
+          dRep <- decCBOR
+          pure (2, DelegVote dRep)
+        2 -> do
+          kh <- decCBOR
+          dRep <- decCBOR
+          pure (3, DelegStakeVote kh dRep)
+        k -> invalidKey k
+      {-# INLINE decodeDelegatee #-}
 
 mkDelegatee :: Maybe (KeyHash StakePool) -> Maybe DRep -> Maybe Delegatee
 mkDelegatee mStakePool mDRep =

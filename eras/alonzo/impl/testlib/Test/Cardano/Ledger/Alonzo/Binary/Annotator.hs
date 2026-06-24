@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Alonzo.Binary.Annotator (
   module Test.Cardano.Ledger.Mary.Binary.Annotator,
 ) where
 
+import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.BlockBody.Internal
 import Cardano.Ledger.Alonzo.Scripts
@@ -107,12 +108,21 @@ instance
   DecCBOR (AlonzoTx TopTx era)
   where
   decCBOR =
-    decode $
-      RecD AlonzoTx
-        <! From
-        <! From
-        <! From
-        <! D (decodeNullStrictMaybe decCBOR)
+    ifDecoderVersionAtLeast (natVersion @12) decodeAlonzoTxPv12 $
+      decode $
+        RecD AlonzoTx
+          <! From
+          <! From
+          <! From
+          <! D (decodeNullStrictMaybe decCBOR)
+    where
+      decodeAlonzoTxPv12 = decodeRecordNamed "AlonzoTx" (const 4) $ do
+        body <- decCBOR
+        wits <- decCBOR
+        isValid <- decCBOR
+        auxData <- decodeNullStrictMaybe decCBOR
+        pure $ AlonzoTx body wits isValid auxData
+      {-# INLINE decodeAlonzoTxPv12 #-}
   {-# INLINE decCBOR #-}
 
 instance
@@ -121,20 +131,53 @@ instance
   where
   decCBOR =
     decodeTxAuxDataByTokenType @(AlonzoTxAuxDataRaw era)
-      decodeShelley
-      decodeAllegra
-      decodeAlonzo
+      (ifDecoderVersionAtLeast (natVersion @12) decodeShelleyPv12 decodeShelley)
+      (ifDecoderVersionAtLeast (natVersion @12) decodeAllegraPv12 decodeAllegra)
+      (ifDecoderVersionAtLeast (natVersion @12) decodeAlonzoPv12 decodeAlonzo)
     where
+      decodeShelleyPv12 = do
+        metadata <- decCBOR
+        pure $ AlonzoTxAuxDataRaw metadata StrictSeq.empty Map.empty
+      {-# INLINE decodeShelleyPv12 #-}
       decodeShelley =
         decode
           (Emit AlonzoTxAuxDataRaw <! From <! Emit StrictSeq.empty <! Emit Map.empty)
+      decodeAllegraPv12 =
+        decodeRecordNamed "AlonzoTxAuxDataRaw" (const 2) $
+          AlonzoTxAuxDataRaw <$> decCBOR <*> decCBOR <*> pure Map.empty
+      {-# INLINE decodeAllegraPv12 #-}
       decodeAllegra =
         decode
           (RecD AlonzoTxAuxDataRaw <! From <! From <! Emit Map.empty)
+      decodeAlonzoPv12 = do
+        assertTag 259
+        decodeSparseKeyed TypeName [] emptyAlonzoTxAuxDataRaw decoderByKey
+      {-# INLINE decodeAlonzoPv12 #-}
       decodeAlonzo =
         decode $
           TagD 259 $
             SparseKeyed "AlonzoTxAuxData" emptyAlonzoTxAuxDataRaw auxDataField []
+
+      decoderByKey :: AlonzoTxAuxDataRaw era -> Word -> Maybe (Decoder s (AlonzoTxAuxDataRaw era))
+      decoderByKey acc = \case
+        0 -> Just $ do
+          metadata <- decCBOR
+          pure $ acc {atadrMetadata = metadata}
+        1 -> Just $ do
+          scripts <- decCBOR
+          pure $ acc {atadrNativeScripts = atadrNativeScripts acc <> scripts}
+        2 -> decodeAddPlutus PlutusV1
+        3 -> decodeAddPlutus PlutusV2
+        4 -> decodeAddPlutus PlutusV3
+        5 -> decodeAddPlutus PlutusV4
+        _ -> Nothing
+        where
+          decodeAddPlutus lang = Just $ do
+            guardPlutus lang
+            ps <- decCBOR
+            pure $ addPlutusScripts lang ps acc
+          {-# INLINE decodeAddPlutus #-}
+      {-# INLINE decoderByKey #-}
 
       auxDataField :: Word -> Field (AlonzoTxAuxDataRaw era)
       auxDataField 0 = field (\x ad -> ad {atadrMetadata = x}) From
@@ -149,12 +192,10 @@ deriving newtype instance (Era era, DecCBOR (NativeScript era)) => DecCBOR (Alon
 
 instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxWitsRaw era) where
   decCBOR =
-    decode $
-      SparseKeyed
-        "AlonzoTxWits"
-        emptyTxWitsRaw
-        txWitnessField
-        []
+    ifDecoderVersionAtLeast
+      (natVersion @12)
+      (decodeSparseKeyed TypeName [] emptyTxWitsRaw decoderByKey)
+      (decode $ SparseKeyed "AlonzoTxWits" emptyTxWitsRaw txWitnessField [])
     where
       setDecoder :: (Ord a, DecCBOR a) => Decoder s (Set a)
       setDecoder =
@@ -213,6 +254,35 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxW
       txWitnessField 7 = field addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV3)
       txWitnessField n = invalidField n
       {-# INLINE txWitnessField #-}
+
+      decoderByKey :: AlonzoTxWitsRaw era -> Word -> Maybe (Decoder s (AlonzoTxWitsRaw era))
+      decoderByKey acc = \case
+        0 -> Just $ do
+          x <- addrWitsSetDecoder
+          pure $ acc {atwrAddrTxWits = x}
+        1 -> Just $ do
+          x <- nativeScriptsDecoder
+          pure $ addScriptsTxWitsRaw x acc
+        2 -> Just $ do
+          x <- setDecoder
+          pure $ acc {atwrBootAddrTxWits = x}
+        3 -> Just $ do
+          x <- alonzoPlutusScriptDecoder SPlutusV1
+          pure $ addScriptsTxWitsRaw x acc
+        4 -> Just $ do
+          x <- decCBOR
+          pure $ acc {atwrDatsTxWits = x}
+        5 -> Just $ do
+          x <- decCBOR
+          pure $ acc {atwrRdmrsTxWits = x}
+        6 -> Just $ do
+          x <- alonzoPlutusScriptDecoder SPlutusV2
+          pure $ addScriptsTxWitsRaw x acc
+        7 -> Just $ do
+          x <- alonzoPlutusScriptDecoder SPlutusV3
+          pure $ addScriptsTxWitsRaw x acc
+        _ -> Nothing
+      {-# INLINE decoderByKey #-}
 
       noDuplicateNativeScriptsDecoder :: Decoder s (Map ScriptHash (Script era))
       noDuplicateNativeScriptsDecoder =
@@ -291,7 +361,9 @@ instance AlonzoEraScript era => DecCBOR (RedeemersRaw era) where
 deriving newtype instance AlonzoEraScript era => DecCBOR (Redeemers era)
 
 instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoScript era) where
-  decCBOR = decode (Summands "AlonzoScript" decodeScript)
+  decCBOR =
+    ifDecoderVersionAtLeast (natVersion @12) decodeAlonzoScriptPv12 $
+      decode (Summands "AlonzoScript" decodeScript)
     where
       decodeScript = \case
         0 -> SumD NativeScript <! From
@@ -302,6 +374,20 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoScr
         n -> Invalid n
       decodePlutus slang =
         SumD PlutusScript <! D (decodePlutusScript slang)
+      decodePlutusVariant slang = do
+        ps <- decodePlutusScript slang
+        pure (2, PlutusScript ps)
+      {-# INLINE decodePlutusVariant #-}
+      decodeAlonzoScriptPv12 = decodeRecordSum "AlonzoScript" $ \case
+        0 -> do
+          ns <- decCBOR
+          pure (2, NativeScript ns)
+        1 -> decodePlutusVariant SPlutusV1
+        2 -> decodePlutusVariant SPlutusV2
+        3 -> decodePlutusVariant SPlutusV3
+        4 -> decodePlutusVariant SPlutusV4
+        n -> invalidKey n
+      {-# INLINE decodeAlonzoScriptPv12 #-}
 
 -- | Decodes a set of `a`'s and maps a function over it to get key-value pairs.
 -- If the key-value pairs create a non-empty Map without duplicates, then that map is returned,

@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -27,6 +28,8 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   Interns,
   decNoShareCBOR,
+  decodeRecordSum,
+  ifDecoderVersionAtLeast,
   interns,
   internsFromSet,
  )
@@ -85,13 +88,26 @@ instance EncCBOR DRep where
       Sum DRepAlwaysNoConfidence 3
 
 instance DecCBOR DRep where
-  decCBOR = decode $
-    Summands "DRep" $ \case
-      0 -> SumD DRepKeyHash <! From
-      1 -> SumD DRepScriptHash <! From
-      2 -> SumD DRepAlwaysAbstain
-      3 -> SumD DRepAlwaysNoConfidence
-      k -> Invalid k
+  decCBOR =
+    ifDecoderVersionAtLeast (natVersion @12) decodeDRep $
+      decode $
+        Summands "DRep" $ \case
+          0 -> SumD DRepKeyHash <! From
+          1 -> SumD DRepScriptHash <! From
+          2 -> SumD DRepAlwaysAbstain
+          3 -> SumD DRepAlwaysNoConfidence
+          k -> Invalid k
+    where
+      decodeDRep = decodeRecordSum "DRep" $ \case
+        0 -> do
+          kh <- decCBOR
+          pure (2, DRepKeyHash kh)
+        1 -> do
+          sh <- decCBOR
+          pure (2, DRepScriptHash sh)
+        2 -> pure (1, DRepAlwaysAbstain)
+        3 -> pure (1, DRepAlwaysNoConfidence)
+        k -> invalidKey k
 
 instance DecShareCBOR DRep where
   type Share DRep = Interns (Credential DRepRole)

@@ -59,6 +59,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   cborError,
   decodeNullMaybe,
+  decodeRecordSum,
   decodeWord8,
   encodeListLen,
   encodeNull,
@@ -66,14 +67,9 @@ import Cardano.Ledger.Binary (
   enforceSize,
  )
 import Cardano.Ledger.Binary.Coders (
-  Decode (..),
   Encode (..),
-  Wrapped (..),
-  decode,
   encode,
   (!>),
-  (<!),
-  (<*!),
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (ConwayEra)
@@ -270,17 +266,30 @@ instance Era era => EncCBOR (DijkstraNativeScriptRaw era) where
       DijkstraRequireGuard cred -> Sum DijkstraRequireGuard 6 !> To cred
 
 instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
-  decCBOR = decode (Summands "DijkstraNativeScriptRaw" decRaw)
-    where
-      decRaw :: Word -> Decode Open (Annotator (DijkstraNativeScriptRaw era))
-      decRaw 0 = Ann (SumD DijkstraRequireSignature <! From)
-      decRaw 1 = Ann (SumD DijkstraRequireAllOf) <*! D (sequence <$> decCBOR)
-      decRaw 2 = Ann (SumD DijkstraRequireAnyOf) <*! D (sequence <$> decCBOR)
-      decRaw 3 = Ann (SumD DijkstraRequireMOf) <*! Ann From <*! D (sequence <$> decCBOR)
-      decRaw 4 = Ann (SumD DijkstraTimeStart <! From)
-      decRaw 5 = Ann (SumD DijkstraTimeExpire <! From)
-      decRaw 6 = Ann (SumD DijkstraRequireGuard <! From)
-      decRaw n = Invalid n
+  decCBOR = decodeRecordSum "DijkstraNativeScriptRaw" $ \case
+    0 -> do
+      hash <- decCBOR
+      pure (2, pure (DijkstraRequireSignature hash))
+    1 -> do
+      xs <- decCBOR
+      pure (2, DijkstraRequireAllOf <$> sequence xs)
+    2 -> do
+      xs <- decCBOR
+      pure (2, DijkstraRequireAnyOf <$> sequence xs)
+    3 -> do
+      m <- decCBOR
+      xs <- decCBOR
+      pure (3, DijkstraRequireMOf m <$> sequence xs)
+    4 -> do
+      m <- decCBOR
+      pure (2, pure (DijkstraTimeStart m))
+    5 -> do
+      m <- decCBOR
+      pure (2, pure (DijkstraTimeExpire m))
+    6 -> do
+      cred <- decCBOR
+      pure (2, pure (DijkstraRequireGuard cred))
+    n -> invalidKey n
 
 newtype DijkstraNativeScript era = MkDijkstraNativeScript (MemoBytes (DijkstraNativeScriptRaw era))
   deriving (Eq, Generic)
