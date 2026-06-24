@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -14,6 +15,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.Entities (
+  EntitiesEnv (..),
   DijkstraEntitiesPredFailure (..),
   DijkstraEntitiesEvent (..),
   conwayToDijkstraEntitiesPredFailure,
@@ -41,6 +43,26 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import Lens.Micro
+
+data EntitiesEnv era = EntitiesEnv
+  { eeLegacyMode :: !Bool
+  , eeCertsEnv :: !(Conway.CertsEnv era)
+  }
+  deriving (Generic)
+
+deriving instance (EraPParams era, Eq (Tx TopTx era)) => Eq (EntitiesEnv era)
+
+deriving instance (EraPParams era, Show (Tx TopTx era)) => Show (EntitiesEnv era)
+
+instance (EraPParams era, NFData (Tx TopTx era)) => NFData (EntitiesEnv era)
+
+instance EraTx era => EncCBOR (EntitiesEnv era) where
+  encCBOR x@(EntitiesEnv _ _) =
+    let EntitiesEnv {..} = x
+     in encode $
+          Rec EntitiesEnv
+            !> To eeLegacyMode
+            !> To eeCertsEnv
 
 data DijkstraEntitiesPredFailure era
   = CertsFailure (PredicateFailure (EraRule "CERTS" era))
@@ -136,7 +158,7 @@ instance
   where
   type State (ENTITIES era) = CertState era
   type Signal (ENTITIES era) = Seq (TxCert era)
-  type Environment (ENTITIES era) = Conway.CertsEnv era
+  type Environment (ENTITIES era) = EntitiesEnv era
   type BaseM (ENTITIES era) = ShelleyBase
   type PredicateFailure (ENTITIES era) = DijkstraEntitiesPredFailure era
   type Event (ENTITIES era) = DijkstraEntitiesEvent era
@@ -159,8 +181,8 @@ dijkstraEntitiesTransition ::
   ) =>
   TransitionRule (ENTITIES era)
 dijkstraEntitiesTransition = do
-  TRC (env, certState, certificates) <- judgmentContext
-  let Conway.CertsEnv tx pp curEpoch _committee _committeeProposals = env
+  TRC (EntitiesEnv _legacyMode certsEnv, certState, certificates) <- judgmentContext
+  let Conway.CertsEnv tx pp curEpoch _committee _committeeProposals = certsEnv
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
 
@@ -180,7 +202,7 @@ dijkstraEntitiesTransition = do
           & Conway.updateDormantDRepExpiries tx curEpoch
           & Conway.updateVotingDRepExpiries tx curEpoch (pp ^. ppDRepActivityL)
           & certDStateL . accountsL %~ drainAccounts withdrawals
-  trans @(EraRule "CERTS" era) $ TRC (env, certState', certificates)
+  trans @(EraRule "CERTS" era) $ TRC (certsEnv, certState', certificates)
 
 conwayToDijkstraEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> DijkstraEntitiesPredFailure era

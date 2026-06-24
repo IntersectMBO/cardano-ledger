@@ -59,6 +59,7 @@ import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.Entities (
   DijkstraEntitiesEvent,
   DijkstraEntitiesPredFailure (..),
+  EntitiesEnv (..),
  )
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
@@ -280,7 +281,7 @@ instance
   , State (EraRule "ENTITIES" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
   , Environment (EraRule "UTXOW" era) ~ DijkstraUtxoEnv era
-  , Environment (EraRule "ENTITIES" era) ~ Conway.CertsEnv era
+  , Environment (EraRule "ENTITIES" era) ~ EntitiesEnv era
   , Environment (EraRule "GOV" era) ~ Conway.GovEnv era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Signal (EraRule "ENTITIES" era) ~ Seq (TxCert era)
@@ -343,7 +344,7 @@ dijkstraLedgerTransition ::
   , State (EraRule "GOV" era) ~ Proposals era
   , Environment (EraRule "UTXOW" era) ~ DijkstraUtxoEnv era
   , Environment (EraRule "GOV" era) ~ Conway.GovEnv era
-  , Environment (EraRule "ENTITIES" era) ~ Conway.CertsEnv era
+  , Environment (EraRule "ENTITIES" era) ~ EntitiesEnv era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , Signal (EraRule "ENTITIES" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ Conway.GovSignal era
@@ -399,7 +400,9 @@ dijkstraLedgerTransition = do
         certStateAfterENTITIES <-
           trans @(EraRule "ENTITIES" era) $
             TRC
-              ( Conway.CertsEnv tx pp curEpochNo committee committeeProposals
+              ( EntitiesEnv
+                  (stAnnTx ^. plutusLegacyModeStAnnTxG)
+                  (Conway.CertsEnv tx pp curEpochNo committee committeeProposals)
               , certState
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
