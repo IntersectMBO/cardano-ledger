@@ -32,6 +32,7 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
   auxiliaryDataMapRule,
 ) where
 
+import Cardano.Crypto.Leios (leiosSignatureSize, leiosSignatureToBytes)
 import Cardano.Ledger.Conway.HuddleSpec hiding ()
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Huddle.Gen (
@@ -54,6 +55,7 @@ import Cardano.Ledger.Huddle.Gen qualified as Gen
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (unless, zipWithM)
 import Data.Foldable (traverse_)
+import Data.Function ((&))
 import Data.List (nub)
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
@@ -61,6 +63,7 @@ import Data.Text ()
 import Data.Text qualified as T
 import Data.Word (Word16, Word64)
 import Test.AntiGen (withAnnotation, (|!))
+import Test.Cardano.Crypto.Leios.Gen (genLeiosSignature)
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -956,7 +959,24 @@ instance HuddleRule "block" DijkstraEra where
         ]
 
 instance HuddleRule "peras_certificate" DijkstraEra where
-  huddleRuleNamed pname _era = pname =.= VBytes / VNil
+  huddleRuleNamed pname _era = pname =.= VBytes
+
+instance HuddleRule "leios_certificate" DijkstraEra where
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ "signers" ==> VBytes & comment "bitfield"
+        , "aggregated_signature" ==> huddleRule @"leios_signature" era
+        ]
+
+instance HuddleRule "leios_signature" DijkstraEra where
+  huddleRuleNamed pname _era =
+    withCBORGen leiosSignatureGen $
+      pname =.= VBytes `sized` leiosSignatureSize
+    where
+      leiosSignatureGen = do
+        sig <- liftGen genLeiosSignature
+        pure $ SingleTerm $ TBytes (leiosSignatureToBytes sig)
 
 instance HuddleRule "invalid_transactions" DijkstraEra where
   huddleRuleNamed pname era = pname =.= huddleRule1 @"nonempty_set" era (huddleRule @"transaction_index" era)
@@ -971,7 +991,8 @@ instance HuddleRule "block_body" DijkstraEra where
         =.= arr
           [ "invalid_transactions" ==> huddleRule @"invalid_transactions" era / VNil
           , "transactions" ==> arr [0 <+ a (huddleRule @"transaction" era)]
-          , "peras_certificate" ==> huddleRule @"peras_certificate" era
+          , "leios_certificate" ==> huddleRule @"leios_certificate" era / VNil
+          , "peras_certificate" ==> huddleRule @"peras_certificate" era / VNil
           ]
 
 blockBodyGen :: CBORGen RuleTerm
@@ -1008,8 +1029,11 @@ blockBodyGen = do
       then pure TNull
       else genArrayTerm $ TInteger . toInteger <$> invalidIxIxs
   txsTerm <- withAntiGen (withAnnotation "transactions") $ genArrayTerm txs
+  -- NOTE: This would not be a valid block because txs are not allowed when a
+  -- leios cert is also included
+  leiosCertTerm <- generateFromName "leios_certificate"
   perasCertTerm <- generateFromName "peras_certificate"
-  SingleTerm <$> genArrayTerm [invalidTxIxsTerm, txsTerm, perasCertTerm]
+  SingleTerm <$> genArrayTerm [invalidTxIxsTerm, txsTerm, leiosCertTerm, perasCertTerm]
 
 instance HuddleRule "auxiliary_scripts" DijkstraEra where
   huddleRuleNamed = auxiliaryScriptsRule

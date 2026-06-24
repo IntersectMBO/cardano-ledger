@@ -141,4 +141,15 @@ if impl(ghc >=9.14)
     , serialise:base
     , serialise:containers
     , serialise:time
+
 -- cabal-allow-newer end
+-- Points to cardano-base/ch1bo/cardano-crypto-leios
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base
+  tag: 01cc124ba732094358d587fcb0a476912ac545d5
+  --sha256: sha256-dksSrTXC/qlq7UpFonSf4FYaVvrg3XbwKC08kAeT95Q=
+  subdir:
+    cardano-base
+    cardano-crypto-class
+    cardano-crypto-leios

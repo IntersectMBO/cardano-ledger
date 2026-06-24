@@ -21,7 +21,7 @@ module Cardano.Ledger.Keys.Bootstrap (
   verifyBootstrapWit,
 ) where
 
-import Cardano.Base.Bytes (byteStringToByteArray)
+import Cardano.Base.Bytes (byteArrayFromByteString)
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN (SignedDSIGN (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
@@ -156,7 +156,7 @@ unpackByronVKey
     -- is the correct one. (32 bytes). If the XPub was constructed correctly,
     -- we already know that it has this length.
     Nothing -> error "unpackByronVKey: impossible!"
-    Just vk -> (VKey vk, ChainCode $ byteStringToByteArray chainCodeBytes)
+    Just vk -> (VKey vk, ChainCode $ byteArrayFromByteString chainCodeBytes)
 
 verifyBootstrapWit ::
   Hash HASH EraIndependentTxBody ->
@@ -179,7 +179,7 @@ makeBootstrapWitness ::
   Byron.Attributes Byron.AddrAttributes ->
   BootstrapWitness
 makeBootstrapWitness txBodyHash byronSigningKey addrAttributes =
-  BootstrapWitness vk signature cc $ byteStringToByteArray (serialize' addrAttributes)
+  BootstrapWitness vk signature cc $ byteArrayFromByteString (serialize' addrAttributes)
   where
     (vk, cc) = unpackByronVKey $ Byron.toVerification byronSigningKey
     signature =

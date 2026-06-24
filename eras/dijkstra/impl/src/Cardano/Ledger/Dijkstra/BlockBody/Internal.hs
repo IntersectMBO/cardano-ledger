@@ -7,7 +7,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -38,8 +37,9 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   validatePerasCert,
 ) where
 
+import Cardano.Crypto.Leios (LeiosCert)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..), maybeToStrictMaybe)
+import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
@@ -52,9 +52,11 @@ import Cardano.Ledger.Binary (
   decodeSeq,
   encCBOR,
   encodeListLen,
+  encodeNullMaybe,
   encodeNullStrictMaybe,
   serialize',
  )
+import Cardano.Ledger.Binary.Crypto (decodeLeiosCert, encodeLeiosCert)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx, Tx (..), decodeDijkstraTopTx)
@@ -100,12 +102,16 @@ import NoThunks.Class (NoThunks)
 
 data DijkstraBlockBodyRaw era = DijkstraBlockBodyRaw
   { dbbrTxs :: !(StrictSeq (Tx TopTx era))
+  , dbbrLeiosCert :: !(StrictMaybe LeiosCert)
+  -- ^ Optional Leios certificate
   , dbbrPerasCert :: !(StrictMaybe PerasCert)
   -- ^ Optional Peras certificate
   }
   deriving (Generic)
 
-instance (NFData (Tx TopTx era), NFData PerasCert) => NFData (DijkstraBlockBodyRaw era)
+instance
+  (NFData (Tx TopTx era), NFData LeiosCert, NFData PerasCert) =>
+  NFData (DijkstraBlockBodyRaw era)
 
 type instance MemoHashIndex (DijkstraBlockBodyRaw era) = EraIndependentBlockBody
 
@@ -118,15 +124,22 @@ instance EraBlockBody DijkstraEra where
   blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBOR
 
 mkBasicBlockBodyDijkstra :: forall era. AlonzoEraTx era => DijkstraBlockBody era
-mkBasicBlockBodyDijkstra = mkMemoized (eraProtVerLow @era) $ DijkstraBlockBodyRaw mempty SNothing
+mkBasicBlockBodyDijkstra =
+  mkMemoized (eraProtVerLow @era) $
+    DijkstraBlockBodyRaw mempty SNothing SNothing
 {-# INLINEABLE mkBasicBlockBodyDijkstra #-}
 
 -- | Dijkstra-specific extensions to 'EraBlockBody'
 class EraBlockBody era => DijkstraEraBlockBody era where
+  leiosCertBlockBodyL :: Lens' (BlockBody era) (StrictMaybe LeiosCert)
+  -- ^ Lens to access the optional Leios certificate in the block body
+
   perasCertBlockBodyL :: Lens' (BlockBody era) (StrictMaybe PerasCert)
   -- ^ Lens to access the optional Peras certificate in the block body
 
 instance DijkstraEraBlockBody DijkstraEra where
+  leiosCertBlockBodyL = lensMemoRawType @DijkstraEra dbbrLeiosCert (\bb c -> bb {dbbrLeiosCert = c})
+
   perasCertBlockBodyL = lensMemoRawType @DijkstraEra dbbrPerasCert (\bb c -> bb {dbbrPerasCert = c})
 
 deriving instance (Typeable era, NoThunks (Tx TopTx era)) => NoThunks (DijkstraBlockBodyRaw era)
@@ -153,13 +166,17 @@ instance Memoized (DijkstraBlockBody era) where
 pattern DijkstraBlockBody ::
   AlonzoEraTx era =>
   StrictSeq (Tx TopTx era) ->
+  StrictMaybe LeiosCert ->
   StrictMaybe PerasCert ->
   DijkstraBlockBody era
-pattern DijkstraBlockBody txs perasCert <- (getMemoRawType -> DijkstraBlockBodyRaw txs perasCert)
+pattern DijkstraBlockBody txs mbLeiosCert mbPerasCert <-
+  ( getMemoRawType ->
+      DijkstraBlockBodyRaw txs mbLeiosCert mbPerasCert
+    )
   where
-    DijkstraBlockBody txs perasCert =
+    DijkstraBlockBody txs leiosCert perasCert =
       mkMemoizedEra @DijkstraEra $
-        DijkstraBlockBodyRaw txs perasCert
+        DijkstraBlockBodyRaw txs leiosCert perasCert
 
 {-# COMPLETE DijkstraBlockBody #-}
 
@@ -173,14 +190,15 @@ instance
   ) =>
   EncCBOR (DijkstraBlockBodyRaw era)
   where
-  encCBOR (DijkstraBlockBodyRaw txs perasCert) =
-    encodeListLen 3
-      <> encodeNullStrictMaybe encCBOR invalidIndices
+  encCBOR (DijkstraBlockBodyRaw txs mbLeiosCert mbPerasCert) =
+    encodeListLen 4
+      <> encodeNullMaybe encCBOR invalidIndices
       <> encCBOR txs
-      <> encodeNullStrictMaybe encCBOR perasCert
+      <> encodeNullStrictMaybe encodeLeiosCert mbLeiosCert
+      <> encodeNullStrictMaybe encCBOR mbPerasCert
     where
       invalidIndices =
-        maybeToStrictMaybe . NonEmptySet.fromFoldable $
+        NonEmptySet.fromFoldable $
           StrictSeq.findIndicesL (\tx -> tx ^. isValidTxL == IsValid False) txs
 
 instance
@@ -192,16 +210,19 @@ instance
   ) =>
   DecCBOR (Annotator (DijkstraBlockBodyRaw era))
   where
-  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
+  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 4) $ do
     let
       decodeInvalidTxs =
         decodeNonEmptySetLikeEnforceNoDuplicates
           (IntSet.insert . fromIntegral @Word16 @Int)
           (\x -> (IntSet.size x, x))
           (decCBOR @Word16)
+
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
     txs <- decodeSeq (decodeDijkstraTopTx @era False)
-    perasCert <- decodeNullStrictMaybe decCBOR
+    mbLeiosCert <- decodeNullStrictMaybe decodeLeiosCert
+    mbPerasCert <- decodeNullStrictMaybe decCBOR
+
     let txsLength = Seq.length txs
         inRange x = 0 <= x && x < txsLength
     forM_ (IntSet.toList invalidTxs) $ \i ->
@@ -214,7 +235,8 @@ instance
     pure $
       DijkstraBlockBodyRaw
         <$> sequenceA (StrictSeq.forceToStrict txsWithIsValid)
-        <*> pure perasCert
+        <*> pure mbLeiosCert
+        <*> pure mbPerasCert
 
 deriving via
   Mem (DijkstraBlockBodyRaw era)
@@ -228,8 +250,16 @@ deriving via
     DecCBOR (Annotator (DijkstraBlockBody era))
 
 instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBlockBody era) where
-  encCBORGroup (DijkstraBlockBody txs perasCert) = do
-    encodeListLen 2 <> encCBOR txs <> encCBOR perasCert
+  encCBORGroup (DijkstraBlockBody txs mbLeiosCert mbPerasCert) = do
+    encodeListLen 4
+      <> encodeNullMaybe encCBOR invalidIndices
+      <> encCBOR txs
+      <> encodeNullStrictMaybe encodeLeiosCert mbLeiosCert
+      <> encodeNullStrictMaybe encCBOR mbPerasCert
+    where
+      invalidIndices =
+        NonEmptySet.fromFoldable $
+          StrictSeq.findIndicesL (\tx -> tx ^. isValidTxL == IsValid False) txs
   listLen _ = 1
 
 --------------------------------------------------------------------------------
