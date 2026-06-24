@@ -35,7 +35,7 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
-import Cardano.Ledger.BaseTypes (kindObject)
+import Cardano.Ledger.BaseTypes (kindObjectValue)
 import Cardano.Ledger.Binary (
   CBORGroup (..),
   DecCBOR (decCBOR),
@@ -310,7 +310,7 @@ instance
     ConwayVoting n -> kindObjectWithValue "ConwayVoting" n
     ConwayProposing n -> kindObjectWithValue "ConwayProposing" n
     where
-      kindObjectWithValue name n = kindObject name ["value" .= n]
+      kindObjectWithValue name n = kindObjectValue name ["value" .= n]
 
 pattern ConwayRewarding :: f Word32 AccountAddress -> ConwayPlutusPurpose f era
 pattern ConwayRewarding x = ConwayWithdrawing x

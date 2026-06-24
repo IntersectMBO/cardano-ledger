@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
-import Cardano.Ledger.BaseTypes (Inject (..), ProtVer (..), kindObject, strictMaybe)
+import Cardano.Ledger.BaseTypes (Inject (..), ProtVer (..), kindObjectValue, strictMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
@@ -145,24 +145,24 @@ instance
   toJSON = \case
     ConwayContextError x -> toJSON x
     SubTxContextError txId subTxError ->
-      kindObject
+      kindObjectValue
         "SubTxContextError"
         [ "txId" .= toJSON txId
         , "subTxError" .= toJSON subTxError
         ]
-    PointerPresentInOutput x -> kindObject "PointerPresentInOutput" ["txOut" .= toJSON x]
+    PointerPresentInOutput x -> kindObjectValue "PointerPresentInOutput" ["txOut" .= toJSON x]
     UnsupportedScriptInSubTx lang txId ->
-      kindObject
+      kindObjectValue
         "UnsupportedScriptInSubTx"
         [ "language" .= toJSON lang
         , "txId" .= toJSON txId
         ]
     DirectDepositsNotSupported dd ->
-      kindObject "DirectDepositsNotSupported" ["direct_deposits" .= show dd]
+      kindObjectValue "DirectDepositsNotSupported" ["direct_deposits" .= show dd]
     AccountBalanceIntervalsNotSupported abi ->
-      kindObject "AccountBalanceIntervalsNotSupported" ["account_balance_intervals" .= show abi]
+      kindObjectValue "AccountBalanceIntervalsNotSupported" ["account_balance_intervals" .= show abi]
     GuardScriptHashesNotSupported scriptHashes ->
-      kindObject "GuardScriptHashesNotSupported" ["script_hashes" .= toJSON scriptHashes]
+      kindObjectValue "GuardScriptHashesNotSupported" ["script_hashes" .= toJSON scriptHashes]
 
 instance
   ( EraPParams era

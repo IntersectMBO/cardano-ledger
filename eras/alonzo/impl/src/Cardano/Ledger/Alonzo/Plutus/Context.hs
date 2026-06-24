@@ -52,7 +52,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   PlutusPurpose,
   PlutusScript (..),
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..), kindObject)
+import Cardano.Ledger.BaseTypes (ProtVer (..), kindObjectValue)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
@@ -384,19 +384,22 @@ instance
   where
   toJSON = \case
     NoRedeemer sPurpose ->
-      kindObject "CollectError" $
+      kindObjectValue
+        "CollectError"
         [ "error" .= String "NoRedeemer"
         , "plutusPurpose" .= toJSON sPurpose
         ]
     NoWitness sHash ->
-      kindObject "CollectError" $
+      kindObjectValue
+        "CollectError"
         [ "error" .= String "NoWitness"
         , "scriptHash" .= toJSON sHash
         ]
     NoCostModel lang ->
-      kindObject "CollectError" $
+      kindObjectValue
+        "CollectError"
         [ "error" .= String "NoCostModel"
         , "language" .= toJSON lang
         ]
     BadTranslation err ->
-      kindObject "BadTranslation" ["error" .= toJSON err]
+      kindObjectValue "BadTranslation" ["error" .= toJSON err]

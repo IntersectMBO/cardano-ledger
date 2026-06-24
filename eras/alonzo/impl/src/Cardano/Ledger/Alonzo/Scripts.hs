@@ -66,7 +66,7 @@ module Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxCert ()
-import Cardano.Ledger.BaseTypes (ProtVer (..), kindObject)
+import Cardano.Ledger.BaseTypes (ProtVer (..), kindObjectValue)
 import Cardano.Ledger.Binary (
   Annotator,
   CBORGroup (..),
@@ -77,6 +77,7 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   ToCBOR (toCBOR),
   Version,
+  decodeFullAnnotatorFromHexText,
   decodeWord8,
   encodeWord8,
  )
@@ -111,12 +112,23 @@ import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..), nativeMultiSigTag)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (guard, (>=>))
-import Data.Aeson (ToJSON (..), Value (String), object, (.=))
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), object, (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
-import Data.MemPack
+import Data.MemPack (
+  MemPack,
+  packM,
+  packTagM,
+  packedByteCount,
+  packedTagByteCount,
+  unknownTagM,
+  unpackM,
+  unpackTagM,
+ )
+import qualified Data.Text as Text
 import Data.Typeable
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -417,7 +429,7 @@ instance
     AlonzoCertifying n -> kindObjectWithValue "AlonzoCertifying" n
     AlonzoWithdrawing n -> kindObjectWithValue "AlonzoWithdrawing" n
     where
-      kindObjectWithValue name n = kindObject name ["value" .= n]
+      kindObjectWithValue name n = kindObjectValue name ["value" .= n]
 
 pattern AlonzoRewarding :: f Word32 AccountAddress -> AlonzoPlutusPurpose f era
 pattern AlonzoRewarding x = AlonzoWithdrawing x
@@ -602,7 +614,24 @@ instance
   eqRaw = eqAlonzoScriptRaw
 
 instance AlonzoEraScript era => ToJSON (AlonzoScript era) where
-  toJSON = String . serializeAsHexText
+  toJSON = Aeson.String . serializeAsHexText
+
+instance
+  ( AlonzoEraScript era
+  , DecCBOR (Annotator (AlonzoScript era))
+  ) =>
+  FromJSON (AlonzoScript era)
+  where
+  parseJSON value = do
+    let typeName = show $ typeRep (Proxy @(AlonzoScript era))
+    Aeson.withText
+      typeName
+      ( \t ->
+          case decodeFullAnnotatorFromHexText (eraProtVerLow @era) (Text.pack typeName) decCBOR t of
+            Left e -> fail $ show e
+            Right script -> pure script
+      )
+      value
 
 -- | It might seem that this instance unnecessarily utilizes a zero Tag, but it is needed for
 -- forward compatibility with plutus scripts from future eras.
@@ -634,6 +663,20 @@ decodePlutusScript slang = do
   pb <- decCBOR
   mkPlutusScript $ asSLanguage slang $ Plutus pb
 
+instance AlonzoEraScript era => EncCBOR (PlutusScript era)
+
+instance AlonzoEraScript era => ToCBOR (PlutusScript era) where
+  toCBOR = toEraCBOR @era . encode . encodePlutusScript
+
+encodePlutusScript :: AlonzoEraScript era => PlutusScript era -> Encode Open (AlonzoScript era)
+encodePlutusScript plutusScript =
+  withPlutusScript plutusScript $ \plutus@(Plutus pb) ->
+    case plutusSLanguage plutus of
+      SPlutusV1 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV1) 1 !> To pb
+      SPlutusV2 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV2) 2 !> To pb
+      SPlutusV3 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV3) 3 !> To pb
+      SPlutusV4 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV4) 4 !> To pb
+
 instance AlonzoEraScript era => EncCBOR (AlonzoScript era)
 
 instance AlonzoEraScript era => ToCBOR (AlonzoScript era) where
@@ -642,12 +685,7 @@ instance AlonzoEraScript era => ToCBOR (AlonzoScript era) where
 encodeScript :: AlonzoEraScript era => AlonzoScript era -> Encode Open (AlonzoScript era)
 encodeScript = \case
   NativeScript i -> Sum NativeScript 0 !> To i
-  PlutusScript plutusScript -> withPlutusScript plutusScript $ \plutus@(Plutus pb) ->
-    case plutusSLanguage plutus of
-      SPlutusV1 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV1) 1 !> To pb
-      SPlutusV2 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV2) 2 !> To pb
-      SPlutusV3 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV3) 3 !> To pb
-      SPlutusV4 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV4) 4 !> To pb
+  PlutusScript plutusScript -> encodePlutusScript plutusScript
 
 instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
   decCBOR = decode (Summands "AlonzoScript" decodeScript)

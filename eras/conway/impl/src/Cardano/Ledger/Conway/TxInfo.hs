@@ -68,7 +68,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   getVersion32,
   isSJust,
-  kindObject,
+  kindObjectValue,
   strictMaybe,
   txIxToInt,
  )
@@ -272,27 +272,27 @@ instance
   toJSON = \case
     BabbageContextError err -> toJSON err
     CertificateNotSupported txCert ->
-      kindObject "CertificateNotSupported" ["certificate" .= toJSON txCert]
+      kindObjectValue "CertificateNotSupported" ["certificate" .= toJSON txCert]
     PlutusPurposeNotSupported purpose ->
-      kindObject "PlutusPurposeNotSupported" ["purpose" .= toJSON purpose]
+      kindObjectValue "PlutusPurposeNotSupported" ["purpose" .= toJSON purpose]
     CurrentTreasuryFieldNotSupported scoin ->
-      kindObject
+      kindObjectValue
         "CurrentTreasuryFieldNotSupported"
         ["current_treasury_value" .= toJSON scoin]
     VotingProceduresFieldNotSupported votingProcedures ->
-      kindObject
+      kindObjectValue
         "VotingProceduresFieldNotSupported"
         ["voting_procedures" .= toJSON votingProcedures]
     ProposalProceduresFieldNotSupported proposalProcedures ->
-      kindObject
+      kindObjectValue
         "ProposalProceduresFieldNotSupported"
         ["proposal_procedures" .= toJSON proposalProcedures]
     TreasuryDonationFieldNotSupported coin ->
-      kindObject
+      kindObjectValue
         "TreasuryDonationFieldNotSupported"
         ["treasury_donation" .= toJSON coin]
     ReferenceInputsNotDisjointFromInputs common ->
-      kindObject
+      kindObjectValue
         "ReferenceInputsNotDisjointFromInputs"
         ["common" .= toJSON common]
 

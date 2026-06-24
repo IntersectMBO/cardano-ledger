@@ -52,7 +52,7 @@ module Cardano.Ledger.Conway.TxCert (
 ) where
 
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.BaseTypes (Anchor, StrictMaybe (..), invalidKey, kindObject)
+import Cardano.Ledger.BaseTypes (Anchor, StrictMaybe (..), invalidKey, kindObjectValue)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
@@ -384,11 +384,12 @@ data Delegatee
 instance ToJSON Delegatee where
   toJSON = \case
     DelegStake poolId ->
-      kindObject "DelegStake" ["poolId" .= toJSON poolId]
+      kindObjectValue "DelegStake" ["poolId" .= toJSON poolId]
     DelegVote dRep ->
-      kindObject "DelegVote" ["dRep" .= toJSON dRep]
+      kindObjectValue "DelegVote" ["dRep" .= toJSON dRep]
     DelegStakeVote poolId dRep ->
-      kindObject "DelegStakeVote" $
+      kindObjectValue
+        "DelegStakeVote"
         [ "poolId" .= toJSON poolId
         , "dRep" .= toJSON dRep
         ]
@@ -522,22 +523,26 @@ instance NoThunks ConwayDelegCert
 instance ToJSON ConwayDelegCert where
   toJSON = \case
     ConwayRegCert cred deposit ->
-      kindObject "RegCert" $
+      kindObjectValue
+        "RegCert"
         [ "credential" .= toJSON cred
         , "deposit" .= toJSON deposit
         ]
     ConwayUnRegCert cred refund ->
-      kindObject "UnRegCert" $
+      kindObjectValue
+        "UnRegCert"
         [ "credential" .= toJSON cred
         , "refund" .= toJSON refund
         ]
     ConwayDelegCert cred delegatee ->
-      kindObject "DelegCert" $
+      kindObjectValue
+        "DelegCert"
         [ "credential" .= toJSON cred
         , "delegatee" .= toJSON delegatee
         ]
     ConwayRegDelegCert cred delegatee deposit ->
-      kindObject "RegDelegCert" $
+      kindObjectValue
+        "RegDelegCert"
         [ "credential" .= toJSON cred
         , "delegatee" .= toJSON delegatee
         , "deposit" .= toJSON deposit
@@ -558,28 +563,33 @@ instance NoThunks ConwayGovCert
 instance ToJSON ConwayGovCert where
   toJSON = \case
     ConwayRegDRep dRep deposit anchor ->
-      kindObject "RegDRep" $
+      kindObjectValue
+        "RegDRep"
         [ "dRep" .= toJSON dRep
         , "deposit" .= toJSON deposit
         , "anchor" .= toJSON anchor
         ]
     ConwayUnRegDRep dRep refund ->
-      kindObject "UnRegDRep" $
+      kindObjectValue
+        "UnRegDRep"
         [ "dRep" .= toJSON dRep
         , "refund" .= toJSON refund
         ]
     ConwayUpdateDRep dRep anchor ->
-      kindObject "UpdateDRep" $
+      kindObjectValue
+        "UpdateDRep"
         [ "dRep" .= toJSON dRep
         , "anchor" .= toJSON anchor
         ]
     ConwayAuthCommitteeHotKey coldCred hotCred ->
-      kindObject "AuthCommitteeHotKey" $
+      kindObjectValue
+        "AuthCommitteeHotKey"
         [ "coldCredential" .= toJSON coldCred
         , "hotCredential" .= toJSON hotCred
         ]
     ConwayResignCommitteeColdKey coldCred anchor ->
-      kindObject "ResignCommitteeColdKey" $
+      kindObjectValue
+        "ResignCommitteeColdKey"
         [ "coldCredential" .= toJSON coldCred
         , "anchor" .= toJSON anchor
         ]
