@@ -23,8 +23,8 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded (..),
   getAlonzoScriptsHashesNeeded,
   getMintingScriptsNeeded,
-  getRewardingScriptsNeeded,
   getSpendingScriptsNeeded,
+  getWithdrawingScriptsNeeded,
   plutusLanguagesUsedAlonzoStAnnTx,
   plutusScriptsWithContextAlonzoStAnnTx,
   scriptsNeededAlonzoStAnnTx,
@@ -67,7 +67,7 @@ getConwayScriptsNeeded ::
   AlonzoScriptsNeeded era
 getConwayScriptsNeeded utxo txBody =
   getSpendingScriptsNeeded utxo txBody
-    <> getRewardingScriptsNeeded txBody
+    <> getWithdrawingScriptsNeeded txBody
     <> certifyingScriptsNeeded
     <> getMintingScriptsNeeded txBody
     <> votingScriptsNeeded

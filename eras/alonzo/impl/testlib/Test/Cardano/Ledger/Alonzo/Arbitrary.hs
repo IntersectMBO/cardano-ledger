@@ -381,7 +381,7 @@ genAlonzoPlutusPurposePointer i =
     [ AlonzoSpending (AsIx i)
     , AlonzoMinting (AsIx i)
     , AlonzoCertifying (AsIx i)
-    , AlonzoRewarding (AsIx i)
+    , AlonzoWithdrawing (AsIx i)
     ]
 
 instance
@@ -395,7 +395,7 @@ instance
       [ AlonzoSpending <$> arbitrary
       , AlonzoMinting <$> arbitrary
       , AlonzoCertifying <$> arbitrary
-      , AlonzoRewarding <$> arbitrary
+      , AlonzoWithdrawing <$> arbitrary
       ]
 
 instance
@@ -409,7 +409,7 @@ instance
       [ AlonzoSpending <$> arbitrary
       , AlonzoMinting <$> arbitrary
       , AlonzoCertifying <$> arbitrary
-      , AlonzoRewarding <$> arbitrary
+      , AlonzoWithdrawing <$> arbitrary
       ]
 
 instance Era era => Arbitrary (AlonzoPlutusPurpose AsIx era) where

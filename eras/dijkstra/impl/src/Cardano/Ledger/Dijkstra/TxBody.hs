@@ -1031,8 +1031,8 @@ dijkstraRedeemerPointer txBody = \case
     DijkstraMinting <$> indexOf policyID (txBody ^. mintedTxBodyF)
   DijkstraSpending txIn ->
     DijkstraSpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
-  DijkstraRewarding accountAddress ->
-    DijkstraRewarding <$> indexOf accountAddress (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  DijkstraWithdrawing accountAddress ->
+    DijkstraWithdrawing <$> indexOf accountAddress (unWithdrawals (txBody ^. withdrawalsTxBodyL))
   DijkstraCertifying txCert ->
     DijkstraCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
   DijkstraVoting votingProcedure ->
@@ -1053,8 +1053,8 @@ dijkstraRedeemerPointerInverse txBody = \case
     DijkstraMinting <$> fromIndex idx (txBody ^. mintedTxBodyF)
   DijkstraSpending idx ->
     DijkstraSpending <$> fromIndex idx (txBody ^. inputsTxBodyL)
-  DijkstraRewarding idx ->
-    DijkstraRewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  DijkstraWithdrawing idx ->
+    DijkstraWithdrawing <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
   DijkstraCertifying idx ->
     DijkstraCertifying <$> fromIndex idx (txBody ^. certsTxBodyL)
   DijkstraVoting idx ->

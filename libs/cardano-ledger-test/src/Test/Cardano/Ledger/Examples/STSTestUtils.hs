@@ -91,7 +91,7 @@ data PlutusPurposeTag
   = Spending
   | Minting
   | Certifying
-  | Rewarding
+  | Withdrawing
   | Voting
   | Proposing
   deriving (Eq, Ord, Show, Enum, Bounded, Generic)

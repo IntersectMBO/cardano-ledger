@@ -75,7 +75,7 @@ instance AlonzoEraScript BabbageEra where
     AlonzoSpending x -> AlonzoSpending $ f x
     AlonzoMinting x -> AlonzoMinting $ f x
     AlonzoCertifying x -> AlonzoCertifying $ f x
-    AlonzoRewarding x -> AlonzoRewarding $ f x
+    AlonzoWithdrawing x -> AlonzoWithdrawing $ f x
 
   mkSpendingPurpose = AlonzoSpending
 
@@ -92,15 +92,15 @@ instance AlonzoEraScript BabbageEra where
   toCertifyingPurpose (AlonzoCertifying i) = Just i
   toCertifyingPurpose _ = Nothing
 
-  mkRewardingPurpose = AlonzoRewarding
+  mkWithdrawingPurpose = AlonzoWithdrawing
 
-  toRewardingPurpose (AlonzoRewarding i) = Just i
-  toRewardingPurpose _ = Nothing
+  toWithdrawingPurpose (AlonzoWithdrawing i) = Just i
+  toWithdrawingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIx = \case
     AlonzoMinting (AsIx ix) -> AlonzoMinting (AsIx ix)
     AlonzoSpending (AsIx ix) -> AlonzoSpending (AsIx ix)
-    AlonzoRewarding (AsIx ix) -> AlonzoRewarding (AsIx ix)
+    AlonzoWithdrawing (AsIx ix) -> AlonzoWithdrawing (AsIx ix)
     AlonzoCertifying (AsIx ix) -> AlonzoCertifying (AsIx ix)
 
 instance ShelleyEraScript BabbageEra where

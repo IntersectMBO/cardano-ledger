@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Rename `DijkstraRewarding` to `DijkstraWithdrawing` and deprecate the old name
 * Rename rule types and deprecate the old names:
   - `DijkstraBBODY` -> `BBODY`
   - `DijkstraCERT` -> `CERT`

@@ -605,7 +605,7 @@ instance
       [ ConwaySpending <$> arbitrary
       , ConwayMinting <$> arbitrary
       , ConwayCertifying <$> arbitrary
-      , ConwayRewarding <$> arbitrary
+      , ConwayWithdrawing <$> arbitrary
       , ConwayVoting <$> arbitrary
       , ConwayProposing <$> arbitrary
       ]
@@ -622,7 +622,7 @@ instance
       [ ConwaySpending <$> arbitrary
       , ConwayMinting <$> arbitrary
       , ConwayCertifying <$> arbitrary
-      , ConwayRewarding <$> arbitrary
+      , ConwayWithdrawing <$> arbitrary
       , ConwayVoting <$> arbitrary
       , ConwayProposing <$> arbitrary
       ]
@@ -639,7 +639,7 @@ genConwayPlutusPurposePointer i =
     [ ConwaySpending (AsIx i)
     , ConwayMinting (AsIx i)
     , ConwayCertifying (AsIx i)
-    , ConwayRewarding (AsIx i)
+    , ConwayWithdrawing (AsIx i)
     , ConwayVoting (AsIx i)
     , ConwayProposing (AsIx i)
     ]

@@ -63,7 +63,7 @@ spec = describe "BBODY" $ do
             maxExUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
 
             let dex i = (Data $ P.I i, maxExUnits)
-                rPurpose = mkRewardingPurpose (AsIx 0)
+                rPurpose = mkWithdrawingPurpose (AsIx 0)
                 cPurpose = mkCertifyingPurpose (AsIx 0)
 
             impAnn "notValidatingTxWithWithdrawal" $ do

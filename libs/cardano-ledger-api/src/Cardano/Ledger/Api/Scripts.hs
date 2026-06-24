@@ -23,6 +23,7 @@ module Cardano.Ledger.Api.Scripts (
   pattern AnyEraSpendingPurpose,
   pattern AnyEraMintingPurpose,
   pattern AnyEraCertifyingPurpose,
+  pattern AnyEraWithdrawingPurpose,
   pattern AnyEraRewardingPurpose,
   pattern AnyEraVotingPurpose,
   pattern AnyEraProposingPurpose,
@@ -35,12 +36,14 @@ module Cardano.Ledger.Api.Scripts (
     toSpendingPurpose,
     toMintingPurpose,
     toCertifyingPurpose,
+    toWithdrawingPurpose,
     toRewardingPurpose
   ),
   isPlutusScript,
   pattern SpendingPurpose,
   pattern MintingPurpose,
   pattern CertifyingPurpose,
+  pattern WithdrawingPurpose,
   pattern RewardingPurpose,
   CostModels,
 
@@ -71,6 +74,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   pattern MintingPurpose,
   pattern RewardingPurpose,
   pattern SpendingPurpose,
+  pattern WithdrawingPurpose,
  )
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Scripts.Data
@@ -125,10 +129,13 @@ class EraScript era => AnyEraScript era where
     AlonzoEraScript era => PlutusPurpose f era -> Maybe (f Word32 (TxCert era))
   anyEraToCertifyingPurpose = toCertifyingPurpose
 
-  anyEraToRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
-  default anyEraToRewardingPurpose ::
+  anyEraToWithdrawingPurpose :: PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
+  default anyEraToWithdrawingPurpose ::
     AlonzoEraScript era => PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
-  anyEraToRewardingPurpose = toRewardingPurpose
+  anyEraToWithdrawingPurpose = toWithdrawingPurpose
+
+  anyEraToRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
+  anyEraToRewardingPurpose = anyEraToWithdrawingPurpose
 
   anyEraToVotingPurpose :: PlutusPurpose f era -> Maybe (f Word32 Voter)
   default anyEraToVotingPurpose ::
@@ -145,13 +152,15 @@ class EraScript era => AnyEraScript era where
     DijkstraEraScript era => PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
   anyEraToGuardingPurpose = toGuardingPurpose
 
+{-# DEPRECATED anyEraToRewardingPurpose "In favor of `anyEraToWithdrawingPurpose`" #-}
+
 instance AnyEraScript ShelleyEra where
   anyEraMaxLanguage = Nothing
   anyEraToPlutusScript = const Nothing
   anyEraToSpendingPurpose = const Nothing
   anyEraToMintingPurpose = const Nothing
   anyEraToCertifyingPurpose = const Nothing
-  anyEraToRewardingPurpose = const Nothing
+  anyEraToWithdrawingPurpose = const Nothing
   anyEraToVotingPurpose = const Nothing
   anyEraToProposingPurpose = const Nothing
   anyEraToGuardingPurpose = const Nothing
@@ -162,7 +171,7 @@ instance AnyEraScript AllegraEra where
   anyEraToSpendingPurpose = const Nothing
   anyEraToMintingPurpose = const Nothing
   anyEraToCertifyingPurpose = const Nothing
-  anyEraToRewardingPurpose = const Nothing
+  anyEraToWithdrawingPurpose = const Nothing
   anyEraToVotingPurpose = const Nothing
   anyEraToProposingPurpose = const Nothing
   anyEraToGuardingPurpose = const Nothing
@@ -173,7 +182,7 @@ instance AnyEraScript MaryEra where
   anyEraToSpendingPurpose = const Nothing
   anyEraToMintingPurpose = const Nothing
   anyEraToCertifyingPurpose = const Nothing
-  anyEraToRewardingPurpose = const Nothing
+  anyEraToWithdrawingPurpose = const Nothing
   anyEraToVotingPurpose = const Nothing
   anyEraToProposingPurpose = const Nothing
   anyEraToGuardingPurpose = const Nothing
@@ -205,9 +214,14 @@ pattern AnyEraCertifyingPurpose ::
   AnyEraScript era => f Word32 (TxCert era) -> PlutusPurpose f era
 pattern AnyEraCertifyingPurpose c <- (anyEraToCertifyingPurpose -> Just c)
 
+pattern AnyEraWithdrawingPurpose ::
+  AnyEraScript era => f Word32 AccountAddress -> PlutusPurpose f era
+pattern AnyEraWithdrawingPurpose c <- (anyEraToWithdrawingPurpose -> Just c)
+
 pattern AnyEraRewardingPurpose ::
   AnyEraScript era => f Word32 AccountAddress -> PlutusPurpose f era
-pattern AnyEraRewardingPurpose c <- (anyEraToRewardingPurpose -> Just c)
+pattern AnyEraRewardingPurpose c <- (anyEraToWithdrawingPurpose -> Just c)
+{-# DEPRECATED AnyEraRewardingPurpose "In favor of `AnyEraWithdrawingPurpose`" #-}
 
 pattern AnyEraVotingPurpose ::
   AnyEraScript era => f Word32 Voter -> PlutusPurpose f era
@@ -225,7 +239,7 @@ pattern AnyEraGuardingPurpose c <- (anyEraToGuardingPurpose -> Just c)
   AnyEraSpendingPurpose
   , AnyEraMintingPurpose
   , AnyEraCertifyingPurpose
-  , AnyEraRewardingPurpose
+  , AnyEraWithdrawingPurpose
   , AnyEraVotingPurpose
   , AnyEraProposingPurpose
   , AnyEraGuardingPurpose

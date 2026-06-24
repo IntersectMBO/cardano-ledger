@@ -20,7 +20,7 @@ module Cardano.Ledger.Conway.Scripts (
   AlonzoScript (..),
   PlutusScript (..),
   isPlutusScript,
-  ConwayPlutusPurpose (..),
+  ConwayPlutusPurpose (.., ConwayRewarding),
   pattern VotingPurpose,
   pattern ProposingPurpose,
 ) where
@@ -112,7 +112,7 @@ instance AlonzoEraScript ConwayEra where
     ConwaySpending x -> ConwaySpending $ f x
     ConwayMinting x -> ConwayMinting $ f x
     ConwayCertifying x -> ConwayCertifying $ f x
-    ConwayRewarding x -> ConwayRewarding $ f x
+    ConwayWithdrawing x -> ConwayWithdrawing $ f x
     ConwayVoting x -> ConwayVoting $ f x
     ConwayProposing x -> ConwayProposing $ f x
 
@@ -131,16 +131,16 @@ instance AlonzoEraScript ConwayEra where
   toCertifyingPurpose (ConwayCertifying i) = Just i
   toCertifyingPurpose _ = Nothing
 
-  mkRewardingPurpose = ConwayRewarding
+  mkWithdrawingPurpose = ConwayWithdrawing
 
-  toRewardingPurpose (ConwayRewarding i) = Just i
-  toRewardingPurpose _ = Nothing
+  toWithdrawingPurpose (ConwayWithdrawing i) = Just i
+  toWithdrawingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIx = \case
     AlonzoSpending (AsIx ix) -> ConwaySpending (AsIx ix)
     AlonzoMinting (AsIx ix) -> ConwayMinting (AsIx ix)
     AlonzoCertifying (AsIx ix) -> ConwayCertifying (AsIx ix)
-    AlonzoRewarding (AsIx ix) -> ConwayRewarding (AsIx ix)
+    AlonzoWithdrawing (AsIx ix) -> ConwayWithdrawing (AsIx ix)
 
 instance ConwayEraScript ConwayEra where
   mkVotingPurpose = ConwayVoting
@@ -203,7 +203,7 @@ data ConwayPlutusPurpose f era
   = ConwaySpending !(f Word32 TxIn)
   | ConwayMinting !(f Word32 PolicyID)
   | ConwayCertifying !(f Word32 (TxCert era))
-  | ConwayRewarding !(f Word32 AccountAddress)
+  | ConwayWithdrawing !(f Word32 AccountAddress)
   | ConwayVoting !(f Word32 Voter)
   | ConwayProposing !(f Word32 (ProposalProcedure era))
   deriving (Generic)
@@ -257,7 +257,7 @@ instance
     ConwaySpending x -> rnf x
     ConwayMinting x -> rnf x
     ConwayCertifying x -> rnf x
-    ConwayRewarding x -> rnf x
+    ConwayWithdrawing x -> rnf x
     ConwayVoting x -> rnf x
     ConwayProposing x -> rnf x
 
@@ -273,7 +273,7 @@ instance
     ConwaySpending p -> encodeWord8 0 <> encCBOR p
     ConwayMinting p -> encodeWord8 1 <> encCBOR p
     ConwayCertifying p -> encodeWord8 2 <> encCBOR p
-    ConwayRewarding p -> encodeWord8 3 <> encCBOR p
+    ConwayWithdrawing p -> encodeWord8 3 <> encCBOR p
     ConwayVoting p -> encodeWord8 4 <> encCBOR p
     ConwayProposing p -> encodeWord8 5 <> encCBOR p
 
@@ -290,7 +290,7 @@ instance
       0 -> ConwaySpending <$> decCBOR
       1 -> ConwayMinting <$> decCBOR
       2 -> ConwayCertifying <$> decCBOR
-      3 -> ConwayRewarding <$> decCBOR
+      3 -> ConwayWithdrawing <$> decCBOR
       4 -> ConwayVoting <$> decCBOR
       5 -> ConwayProposing <$> decCBOR
       n -> fail $ "Unexpected tag for ConwayPlutusPurpose: " <> show n
@@ -306,11 +306,15 @@ instance
     ConwaySpending n -> kindObjectWithValue "ConwaySpending" n
     ConwayMinting n -> kindObjectWithValue "ConwayMinting" n
     ConwayCertifying n -> kindObjectWithValue "ConwayCertifying" n
-    ConwayRewarding n -> kindObjectWithValue "ConwayRewarding" n
+    ConwayWithdrawing n -> kindObjectWithValue "ConwayWithdrawing" n
     ConwayVoting n -> kindObjectWithValue "ConwayVoting" n
     ConwayProposing n -> kindObjectWithValue "ConwayProposing" n
     where
       kindObjectWithValue name n = kindObject name ["value" .= n]
+
+pattern ConwayRewarding :: f Word32 AccountAddress -> ConwayPlutusPurpose f era
+pattern ConwayRewarding x = ConwayWithdrawing x
+{-# DEPRECATED ConwayRewarding "In favor of `ConwayWithdrawing`" #-}
 
 pattern VotingPurpose ::
   ConwayEraScript era => f Word32 Voter -> PlutusPurpose f era

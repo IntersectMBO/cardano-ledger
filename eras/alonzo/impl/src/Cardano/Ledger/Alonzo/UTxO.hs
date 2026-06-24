@@ -23,6 +23,7 @@ module Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded (..),
   getAlonzoScriptsNeeded,
   getSpendingScriptsNeeded,
+  getWithdrawingScriptsNeeded,
   getRewardingScriptsNeeded,
   getMintingScriptsNeeded,
   getAlonzoScriptsHashesNeeded,
@@ -291,7 +292,7 @@ getInputDataHashesTxBody (UTxO utxo) txBody (ScriptsProvided scriptsProvided) =
 --    In some Eras there may be multiple sets of inputs, which ones should be included? Currently that
 --    is only the spending inputs. Because collateral inputs can only have key-locked credentials,
 --    and reference inputs are never authorized. That might not always be the case.
--- 2) Rewarding (Withdrawals),
+-- 2) Withdrawing,
 -- 3) Minting (minted field), and
 -- 4) Certifying (Delegating) scripts.
 --
@@ -307,7 +308,7 @@ getAlonzoScriptsNeeded ::
   AlonzoScriptsNeeded era
 getAlonzoScriptsNeeded utxo txBody =
   getSpendingScriptsNeeded utxo txBody
-    <> getRewardingScriptsNeeded txBody
+    <> getWithdrawingScriptsNeeded txBody
     <> certifyingScriptsNeeded
     <> getMintingScriptsNeeded txBody
   where
@@ -372,16 +373,23 @@ getSpendingScriptsNeeded (UTxO utxo) txBody =
           return (SpendingPurpose asIxItem, hash)
 {-# INLINEABLE getSpendingScriptsNeeded #-}
 
+getWithdrawingScriptsNeeded ::
+  (AlonzoEraScript era, EraTxBody era) =>
+  TxBody l era ->
+  AlonzoScriptsNeeded era
+getWithdrawingScriptsNeeded txBody =
+  AlonzoScriptsNeeded $
+    catMaybes $
+      zipAsIxItem (Map.keys (unWithdrawals $ txBody ^. withdrawalsTxBodyL)) $
+        \asIxItem@(AsIxItem _ accountAddress) -> (WithdrawingPurpose asIxItem,) <$> credScriptHash (accountAddress ^. accountAddressCredentialL)
+{-# INLINEABLE getWithdrawingScriptsNeeded #-}
+
 getRewardingScriptsNeeded ::
   (AlonzoEraScript era, EraTxBody era) =>
   TxBody l era ->
   AlonzoScriptsNeeded era
-getRewardingScriptsNeeded txBody =
-  AlonzoScriptsNeeded $
-    catMaybes $
-      zipAsIxItem (Map.keys (unWithdrawals $ txBody ^. withdrawalsTxBodyL)) $
-        \asIxItem@(AsIxItem _ accountAddress) -> (RewardingPurpose asIxItem,) <$> credScriptHash (accountAddress ^. accountAddressCredentialL)
-{-# INLINEABLE getRewardingScriptsNeeded #-}
+getRewardingScriptsNeeded = getWithdrawingScriptsNeeded
+{-# DEPRECATED getRewardingScriptsNeeded "In favor of `getWithdrawingScriptsNeeded`" #-}
 
 getMintingScriptsNeeded ::
   (AlonzoEraScript era, MaryEraTxBody era) =>

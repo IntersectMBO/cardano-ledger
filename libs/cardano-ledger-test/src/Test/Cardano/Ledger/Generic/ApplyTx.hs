@@ -282,7 +282,7 @@ mkAlonzoPlutusPurposePointer tag i =
     Spending -> AlonzoSpending (AsIx i)
     Minting -> AlonzoMinting (AsIx i)
     Certifying -> AlonzoCertifying (AsIx i)
-    Rewarding -> AlonzoRewarding (AsIx i)
+    Withdrawing -> AlonzoWithdrawing (AsIx i)
     _ -> error $ "Unsupported tag: " ++ show tag ++ " in era " ++ eraName @era
 
 mkConwayPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> ConwayPlutusPurpose AsIx era
@@ -291,6 +291,6 @@ mkConwayPlutusPurposePointer tag i =
     Spending -> ConwaySpending (AsIx i)
     Minting -> ConwayMinting (AsIx i)
     Certifying -> ConwayCertifying (AsIx i)
-    Rewarding -> ConwayRewarding (AsIx i)
+    Withdrawing -> ConwayWithdrawing (AsIx i)
     Voting -> ConwayVoting (AsIx i)
     Proposing -> ConwayProposing (AsIx i)
