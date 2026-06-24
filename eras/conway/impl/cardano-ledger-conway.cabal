@@ -195,6 +195,7 @@ library testlib
     Test.Cardano.Ledger.Conway.Gen
     Test.Cardano.Ledger.Conway.Gen.PParams
     Test.Cardano.Ledger.Conway.Gen.Script
+    Test.Cardano.Ledger.Conway.Gen.SnapShots
     Test.Cardano.Ledger.Conway.Gen.UTxO
     Test.Cardano.Ledger.Conway.Genesis
     Test.Cardano.Ledger.Conway.GenesisSpec
@@ -276,6 +277,7 @@ library testlib
     text,
     time,
     tree-diff,
+    vector-map,
 
 executable gen-golden
   main-is: GenerateGoldenFileMain.hs
