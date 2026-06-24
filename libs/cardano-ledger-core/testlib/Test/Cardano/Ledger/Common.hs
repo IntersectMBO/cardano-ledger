@@ -12,6 +12,10 @@ module Test.Cardano.Ledger.Common (
   NFData,
   runGen,
 
+  -- * ImpSpec
+  DefaultImp,
+  DefaultImpSpec,
+
   -- * Expr
   ToExpr (..),
   showExpr,
@@ -111,12 +115,25 @@ import Test.Hspec as X
 import qualified Test.Hspec.Golden as Golden (Golden (..))
 import Test.Hspec.QuickCheck as X
 import Test.Hspec.Runner
-import Test.ImpSpec (HasStatefulGen (..), ansiDocToString, impSpecConfig, impSpecMainWithConfig)
+import Test.ImpSpec (
+  HasStatefulGen (..),
+  ImpM,
+  ImpSpec,
+  ansiDocToString,
+  impSpecConfig,
+  impSpecMainWithConfig,
+ )
 import Test.ImpSpec.Expectations
 import Test.QuickCheck as X hiding (NonZero, Witness)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Random (mkQCGen)
 import UnliftIO.Exception (evaluateDeep)
+
+data DefaultImp -- Enable use of a minimal form of ImpSpec
+
+instance ImpSpec DefaultImp
+
+type DefaultImpSpec = ImpM DefaultImp ()
 
 infix 1 `shouldBeExpr`
         , `shouldBeRightExpr`
