@@ -77,7 +77,6 @@ import Lens.Micro ((&), (.~), (^.))
 data CertEnv era = CertEnv
   { cePParams :: PParams era
   , ceCurrentEpoch :: EpochNo
-  -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , ceCurrentCommittee :: StrictMaybe (Committee era)
   , ceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
   }

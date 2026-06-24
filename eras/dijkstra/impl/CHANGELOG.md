@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `plutusLegacyModeStAnnTxG` method to `DijkstraEraUTxO`
 * Remove constructors from `DijkstraLedgerPredicateFailure`:
   - `DijkstraCertsFailure`
   - `DijkstraWdrlNotDelegatedToDRep`
@@ -16,6 +17,7 @@
   - `ENTITIES` and `STS` instance for it
   - `EntitiesPredFailure`
   - `EntitiesEvent`
+  - `EntitiesEnv`
 * Rename `DijkstraRewarding` to `DijkstraWithdrawing` and deprecate the old name
 * Rename rule types and deprecate the old names:
   - `DijkstraBBODY` -> `BBODY`
