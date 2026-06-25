@@ -98,7 +98,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemersL,
   unTxDatsL,
  )
-import Cardano.Ledger.BaseTypes (ProtVer, integralToBounded)
+import Cardano.Ledger.BaseTypes (integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -495,7 +495,6 @@ instance
 data AlonzoStAnnTx l era where
   AlonzoStAnnTx ::
     { asatTx :: !(Tx TopTx era)
-    , asatProtocolVersion :: !ProtVer
     , asatScriptsNeeded :: ScriptsNeeded era
     , asatScriptsProvided :: ScriptsProvided era
     , asatPlutusLanguagesUsed :: Set Language
@@ -536,14 +535,13 @@ instance
   ) =>
   NFData (AlonzoStAnnTx l era)
   where
-  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _) =
+  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _) =
     let AlonzoStAnnTx {..} = stAnnTx
      in asatTx `deepseq`
-          asatProtocolVersion `deepseq`
-            asatScriptsNeeded `deepseq`
-              asatScriptsProvided `deepseq`
-                asatPlutusLanguagesUsed `deepseq`
-                  rnf asatPlutusScriptsWithContext
+          asatScriptsNeeded `deepseq`
+            asatScriptsProvided `deepseq`
+              asatPlutusLanguagesUsed `deepseq`
+                rnf asatPlutusScriptsWithContext
 
 instance EncCBOR (Tx l era) => EncCBOR (AlonzoStAnnTx l era) where
   encCBOR AlonzoStAnnTx {asatTx} = encCBOR asatTx

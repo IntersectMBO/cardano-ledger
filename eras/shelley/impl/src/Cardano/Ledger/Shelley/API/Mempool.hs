@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -17,19 +18,29 @@
 -- mempool.
 module Cardano.Ledger.Shelley.API.Mempool (
   applyTx,
+  applyTxWithFullValidation,
+  reapplyValidatedTx,
   reapplyTx,
   ApplyTx (..),
   ApplyTxError (..),
   Validated,
+  ValidatedTx,
+  getValidatedTxStAnnTx,
+  getValidatedTxProtocolVersion,
+  getValidatedTxSlotNo,
   extractTx,
+  extractValidatedTx,
   coerceValidated,
   translateValidated,
   ruleApplyTxValidation,
+  defaultApplyTxWithValidation,
+  defaultReapplyValidatedTx,
 
   -- * Exports for testing
   MempoolEnv,
   MempoolState,
   unsafeMakeValidated,
+  unsafeMakeValidatedTx,
 
   -- * Exports for compatibility
   mkMempoolEnv,
@@ -37,18 +48,19 @@ module Cardano.Ledger.Shelley.API.Mempool (
   overNewEpochState,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, epochInfo, systemStart)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
-import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
-import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, ShelleyLedgerPredFailure, ledgerPpL)
-import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
-import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.State (UTxO, utxoG)
+import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.Rules.Ledger (
+  LedgerEnv (..),
+  ShelleyLedgerPredFailure,
+  ledgerPpL,
+  ledgerSlotNoL,
+ )
+import Cardano.Ledger.State
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
@@ -65,21 +77,77 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 
+-- | A transaction that has been validated against some chain state.
+data ValidatedTx era = ValidatedTx
+  { vtStAnnTx :: !(StAnnTx TopTx era)
+  -- ^ The transaction paired with the state-derived annotation produced during validation
+  , vtProtocolVersion :: !ProtVer
+  -- ^ Protocol version under which the validation took place
+  , vtSlotNo :: !SlotNo
+  -- ^ Slot number under which the validation took place
+  }
+  deriving (Generic)
+
+deriving instance Eq (StAnnTx TopTx era) => Eq (ValidatedTx era)
+
+deriving instance Show (StAnnTx TopTx era) => Show (ValidatedTx era)
+
+instance NFData (StAnnTx TopTx era) => NFData (ValidatedTx era)
+
+instance NoThunks (StAnnTx TopTx era) => NoThunks (ValidatedTx era)
+
+getValidatedTxStAnnTx :: ValidatedTx era -> StAnnTx TopTx era
+getValidatedTxStAnnTx = vtStAnnTx
+
+getValidatedTxProtocolVersion :: ValidatedTx era -> ProtVer
+getValidatedTxProtocolVersion = vtProtocolVersion
+
+getValidatedTxSlotNo :: ValidatedTx era -> SlotNo
+getValidatedTxSlotNo = vtSlotNo
+
+extractValidatedTx :: EraTx era => ValidatedTx era -> Tx TopTx era
+extractValidatedTx validatedTx = getValidatedTxStAnnTx validatedTx ^. txStAnnTxG
+
 -- | A newtype which indicates that a transaction has been validated against
 -- some chain state.
 newtype Validated tx = Validated tx
   deriving (Eq, NoThunks, Show, NFData)
+{-# DEPRECATED Validated "Use 'ValidatedTx' instead." #-}
 
 -- | Extract the underlying unvalidated Tx.
 extractTx :: Validated tx -> tx
 extractTx (Validated tx) = tx
+{-# DEPRECATED extractTx "Use 'extractValidatedTx'" #-}
 
 coerceValidated :: Coercible a b => Validated a -> Validated b
 coerceValidated (Validated a) = Validated $ coerce a
+{-# DEPRECATED coerceValidated "'Validated' is deprecated; switch to 'ValidatedTx'." #-}
 
 -- Don't use this except in Testing to make Arbitrary instances, etc.
 unsafeMakeValidated :: tx -> Validated tx
 unsafeMakeValidated = Validated
+{-# DEPRECATED unsafeMakeValidated "Use 'unsafeMakeValidatedTx' instead." #-}
+
+-- | Build a 'ValidatedTx' without running the LEDGER rule - should only be used for testing.
+unsafeMakeValidatedTx ::
+  ApplyTx era =>
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  Tx TopTx era ->
+  ValidatedTx era
+unsafeMakeValidatedTx globals env state tx =
+  ValidatedTx
+    { vtStAnnTx =
+        mkStAnnTx
+          (epochInfo globals)
+          (systemStart globals)
+          (env ^. ledgerPpL)
+          (state ^. utxoG)
+          tx
+    , vtProtocolVersion = env ^. ledgerPpL . ppProtocolVersionL
+    , vtSlotNo = env ^. ledgerSlotNoL
+    }
 
 -- | Translate a validated transaction across eras.
 --
@@ -92,6 +160,10 @@ translateValidated ::
   Validated (f (PreviousEra era)) ->
   Except (TranslationError era f) (Validated (f era))
 translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
+{-# DEPRECATED
+  translateValidated
+  "Translation of `Validated` does not make sense. It must be fully re-validated in a new era"
+  #-}
 
 class
   ( EraTx era
@@ -114,9 +186,31 @@ class
     Tx TopTx era ->
     StAnnTx TopTx era
 
-  -- | Validate a state annotated transaction against a mempool state for given STS
-  -- options, and return the new mempool state, a "validated" 'TxInBlock' and,
-  -- depending on the passed options, the emitted events.
+  -- | Validate a transaction against a mempool state for given STS options.
+  --
+  -- /Warning/ - This function is only safe when `ValidateAll` policy is supplied,
+  -- otherwise invariant for `ValidatedTx` could be violated.
+  -- It will always be safer to use `applyTxWithFullValidation` instead.
+  internalApplyTxWithValidation ::
+    ValidationPolicy ->
+    Globals ->
+    MempoolEnv era ->
+    MempoolState era ->
+    Tx TopTx era ->
+    Either (ApplyTxError era) (MempoolState era, ValidatedTx era)
+
+  -- | Reapply a previously validated transaction.
+  --
+  -- /Warning/ - Should not be used directly. `reapplyValidatedTx` should be used instead.
+  internalReapplyValidatedTx ::
+    Globals ->
+    MempoolEnv era ->
+    MempoolState era ->
+    ValidatedTx era ->
+    Either (ApplyTxError era) (MempoolState era)
+
+  -- | Validate a transaction against a mempool state for given STS
+  -- options, and return the new mempool state, a "validated" 'TxInBlock
   applyTxValidation ::
     ValidationPolicy ->
     Globals ->
@@ -124,6 +218,11 @@ class
     MempoolState era ->
     StAnnTx TopTx era ->
     Either (ApplyTxError era) (MempoolState era, Validated (Tx TopTx era))
+  applyTxValidation policy globals env state stAnnTx =
+    fmap (\vtx -> Validated (vtStAnnTx vtx ^. txStAnnTxG))
+      <$> internalApplyTxWithValidation policy globals env state (stAnnTx ^. txStAnnTxG)
+
+{-# DEPRECATED applyTxValidation "Use 'internalApplyTxWithValidation' instead." #-}
 
 ruleApplyTxValidation ::
   forall rule era.
@@ -139,7 +238,7 @@ ruleApplyTxValidation ::
   MempoolEnv era ->
   MempoolState era ->
   StAnnTx TopTx era ->
-  Either (NonEmpty (PredicateFailure (EraRule rule era))) (MempoolState era, Validated (Tx TopTx era))
+  Either (NonEmpty (PredicateFailure (EraRule rule era))) (MempoolState era, ValidatedTx era)
 ruleApplyTxValidation validationPolicy globals env state stAnnTx =
   let opts =
         ApplySTSOpts
@@ -151,7 +250,73 @@ ruleApplyTxValidation validationPolicy globals env state stAnnTx =
         flip runReader globals
           . applySTSOptsEither @(EraRule rule era) opts
           $ TRC (env, state, stAnnTx)
-   in fmap (,Validated (stAnnTx ^. txStAnnTxG)) result
+      validatedTx =
+        ValidatedTx
+          { vtStAnnTx = stAnnTx
+          , vtProtocolVersion = env ^. ledgerPpL . ppProtocolVersionL
+          , vtSlotNo = env ^. ledgerSlotNoL
+          }
+   in fmap (,validatedTx) result
+
+-- | A default implementation for 'internalApplyTxWithValidation', parameterised by the
+-- STS rule to run and a wrapper that lifts predicate failures into the era's
+-- 'ApplyTxError'.
+defaultApplyTxWithValidation ::
+  forall rule era.
+  ( ApplyTx era
+  , STS (EraRule rule era)
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  , Environment (EraRule rule era) ~ LedgerEnv era
+  , State (EraRule rule era) ~ MempoolState era
+  , Signal (EraRule rule era) ~ StAnnTx TopTx era
+  ) =>
+  (NonEmpty (PredicateFailure (EraRule rule era)) -> ApplyTxError era) ->
+  ValidationPolicy ->
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  Tx TopTx era ->
+  Either (ApplyTxError era) (MempoolState era, ValidatedTx era)
+defaultApplyTxWithValidation wrap validationPolicy globals env state tx =
+  let stAnnTx =
+        mkStAnnTx
+          (epochInfo globals)
+          (systemStart globals)
+          (env ^. ledgerPpL)
+          (state ^. utxoG)
+          tx
+   in first wrap $
+        ruleApplyTxValidation @rule validationPolicy globals env state stAnnTx
+
+-- | A default implementation for 'internalReapplyValidatedTx', parameterised by the
+-- STS rule to run and a wrapper that lifts predicate failures into the era's
+-- 'ApplyTxError'.
+defaultReapplyValidatedTx ::
+  forall rule era.
+  ( ApplyTx era
+  , STS (EraRule rule era)
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  , Environment (EraRule rule era) ~ LedgerEnv era
+  , State (EraRule rule era) ~ MempoolState era
+  , Signal (EraRule rule era) ~ StAnnTx TopTx era
+  ) =>
+  (NonEmpty (PredicateFailure (EraRule rule era)) -> ApplyTxError era) ->
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  ValidatedTx era ->
+  Either (ApplyTxError era) (MempoolState era)
+defaultReapplyValidatedTx wrap globals env state vtx =
+  fst
+    <$> first
+      wrap
+      ( ruleApplyTxValidation @rule
+          (ValidateSuchThat (notElem lblStatic))
+          globals
+          env
+          state
+          (vtStAnnTx vtx)
+      )
 
 instance ApplyTx ShelleyEra where
   newtype ApplyTxError ShelleyEra = ShelleyApplyTxError (NonEmpty (ShelleyLedgerPredFailure ShelleyEra))
@@ -160,13 +325,22 @@ instance ApplyTx ShelleyEra where
 
   mkStAnnTx _ _ _ _ = id
 
-  applyTxValidation validationPolicy globals env state stAnnTx =
-    first ShelleyApplyTxError $
-      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
+  internalApplyTxWithValidation validationPolicy globals env state tx =
+    let stAnnTx =
+          mkStAnnTx
+            (epochInfo globals)
+            (systemStart globals)
+            (env ^. ledgerPpL)
+            (state ^. utxoG)
+            tx
+     in first ShelleyApplyTxError $
+          ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
 
-type MempoolEnv era = Ledger.LedgerEnv era
+  internalReapplyValidatedTx = defaultReapplyValidatedTx @"LEDGER" ShelleyApplyTxError
 
-type MempoolState era = LedgerState.LedgerState era
+type MempoolEnv era = LedgerEnv era
+
+type MempoolState era = LedgerState era
 
 -- | Construct the environment used to validate transactions from the full
 -- ledger state.
@@ -187,16 +361,14 @@ mkMempoolEnv ::
   SlotNo ->
   MempoolEnv era
 mkMempoolEnv
-  LedgerState.NewEpochState
-    { LedgerState.nesEs
-    }
+  NewEpochState {nesEs}
   slot =
-    Ledger.LedgerEnv
-      { Ledger.ledgerSlotNo = slot
-      , Ledger.ledgerEpochNo = Nothing
-      , Ledger.ledgerIx = minBound
-      , Ledger.ledgerPp = nesEs ^. curPParamsEpochStateL
-      , Ledger.ledgerAccount = LedgerState.esChainAccountState nesEs
+    LedgerEnv
+      { ledgerSlotNo = slot
+      , ledgerEpochNo = Nothing
+      , ledgerIx = minBound
+      , ledgerPp = nesEs ^. curPParamsEpochStateL
+      , ledgerAccount = esChainAccountState nesEs
       }
 
 -- | Construct a mempool state from the wider ledger state.
@@ -205,7 +377,7 @@ mkMempoolEnv
 --   regenerated when the ledger state gets updated (e.g. through application of
 --   a new block).
 mkMempoolState :: NewEpochState era -> MempoolState era
-mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} = LedgerState.esLState nesEs
+mkMempoolState NewEpochState {nesEs} = esLState nesEs
 
 -- | Transform a function over mempool states to one over the full
 -- 'NewEpochState'.
@@ -218,11 +390,48 @@ overNewEpochState f st = do
   f (mkMempoolState st)
     <&> \ls ->
       st
-        { LedgerState.nesEs =
-            (LedgerState.nesEs st)
-              { LedgerState.esLState = ls
+        { nesEs =
+            (nesEs st)
+              { esLState = ls
               }
         }
+
+-- | Validate a transaction against a mempool state and return the new
+-- mempool state together with a 'ValidatedTx'
+applyTxWithFullValidation ::
+  ApplyTx era =>
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  Tx TopTx era ->
+  Either (ApplyTxError era) (MempoolState era, ValidatedTx era)
+applyTxWithFullValidation = internalApplyTxWithValidation ValidateAll
+
+-- | Reapply a previously validated transaction, skipping static checks.
+-- Use the state-derived annotations in `StAnnTx` if the current protocol version
+-- matches the one in `ValidatedTx`, otherwise reconstruct `StAnnTx.
+-- If major protocol version has changed from when `ValidatedTx`
+-- was constructed, then full validation is triggered again.
+reapplyValidatedTx ::
+  (ApplyTx era, EraGov era) =>
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  ValidatedTx era ->
+  Either (ApplyTxError era) (MempoolState era)
+reapplyValidatedTx globals env ledgerState vtx
+  | pvMajor (vtProtocolVersion vtx) == pvMajor currentPv =
+      internalReapplyValidatedTx globals env ledgerState vtx
+  | otherwise =
+      fst
+        <$> internalApplyTxWithValidation
+          ValidateAll
+          globals
+          env
+          ledgerState
+          (vtStAnnTx vtx ^. txStAnnTxG)
+  where
+    currentPv = ledgerState ^. lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppProtocolVersionL
 
 -- | Validate a transaction against a mempool state using default STS options
 -- and return both the new mempool state and a "validated" 'TxInBlock'.
@@ -237,15 +446,10 @@ applyTx ::
   MempoolState era ->
   Tx TopTx era ->
   Either (ApplyTxError era) (MempoolState era, Validated (Tx TopTx era))
-applyTx globals env state tx =
-  let stAnnTx =
-        mkStAnnTx
-          (epochInfo globals)
-          (systemStart globals)
-          (env ^. ledgerPpL)
-          (state ^. utxoG)
-          tx
-   in applyTxValidation ValidateAll globals env state stAnnTx
+applyTx globals env state tx = do
+  (mempoolState, vtx) <- internalApplyTxWithValidation ValidateAll globals env state tx
+  pure (mempoolState, Validated (vtStAnnTx vtx ^. txStAnnTxG))
+{-# DEPRECATED applyTx "Use 'applyTxWithFullValidation' instead." #-}
 
 -- | Reapply a previously validated 'Tx'.
 --
@@ -258,17 +462,8 @@ reapplyTx ::
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
-  -- TODO: change to `Validated (StAnnTx TopTx era)` once we return this from `applyTx`
   Validated (Tx TopTx era) ->
   Either (ApplyTxError era) (MempoolState era)
 reapplyTx globals env state (Validated tx) =
-  -- TODO: replace `stAnnTx` creation with the argument,
-  -- once the signature is changed to take `Validated (StAnnTx TopTx era)`
-  let stAnnTx =
-        mkStAnnTx
-          (epochInfo globals)
-          (systemStart globals)
-          (env ^. ledgerPpL)
-          (state ^. utxoG)
-          tx
-   in fst <$> applyTxValidation (ValidateSuchThat (notElem lblStatic)) globals env state stAnnTx
+  fst <$> internalApplyTxWithValidation (ValidateSuchThat (notElem lblStatic)) globals env state tx
+{-# DEPRECATED reapplyTx "Use 'reapplyValidatedTx' instead." #-}

@@ -38,7 +38,6 @@ import Cardano.Ledger.Mary.UTxO ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
 
@@ -49,9 +48,9 @@ instance ApplyTx MaryEra where
 
   mkStAnnTx _ _ _ _ = id
 
-  applyTxValidation validationPolicy globals env state stAnnTx =
-    first MaryApplyTxError $
-      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
+  internalApplyTxWithValidation = defaultApplyTxWithValidation @"LEDGER" MaryApplyTxError
+
+  internalReapplyValidatedTx = defaultReapplyValidatedTx @"LEDGER" MaryApplyTxError
 
 instance ApplyTick MaryEra
 

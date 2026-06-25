@@ -27,7 +27,7 @@ import Cardano.Ledger.Shelley.API (
   Globals,
   LedgerEnv,
   LedgerState,
-  applyTx,
+  applyTxWithFullValidation,
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.State
@@ -99,7 +99,7 @@ benchApplyTx px =
               either
                 (error . show)
                 fst
-                (applyTx ateGlobals ateMempoolEnv st ateTx)
+                (applyTxWithFullValidation ateGlobals ateMempoolEnv st ateTx)
           )
           ateState
 

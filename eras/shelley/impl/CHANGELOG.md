@@ -2,6 +2,29 @@
 
 ## 1.19.0.0
 
+* Add `defaultApplyTxWithValidation` and `defaultReapplyValidatedTx` helpers to `Mempool` module
+* Deprecate:
+  - `Validated`
+  - `extractTx`
+  - `coerceValidated`
+  - `unsafeMakeValidated`
+  - `translateValidated`
+  - `applyTxValidation`
+  - `applyTx`
+  - `reapplyTx`
+* Add functions to `Mempool` module:
+  - `applyTxWithFullValidation`
+  - `reapplyValidatedTx`
+  - `unsafeMakeValidatedTx`
+* Add `applyTxWithFullValidation` and `reapplyValidatedTx` to `Mempool` module
+* Add `internalApplyTxWithValidation` and `internalReapplyValidatedTx` to `ApplyTx`
+* Change return type of `ruleApplyTxValidation` to `ValidatedTx`
+* Add:
+  - `ValidatedTx`
+  - `getValidatedTxStAnnTx`
+  - `getValidatedTxProtocolVersion`
+  - `getValidatedTxSlotNo`
+  - `extractValidatedTx`
 * Rename rule types and deprecate the old names:
   - `ShelleyBBODY` -> `BBODY`
   - `ShelleyDELEG` -> `DELEG`

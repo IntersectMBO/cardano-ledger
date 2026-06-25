@@ -571,7 +571,7 @@ utxoTransition = do
 
   updatedGovState <-
     trans @(EraRule "UTXOS" era) $
-      TRC (UtxosEnv slot pp certState utxo, utxosGovState utxos, stAnnTx)
+      TRC (UtxosEnv slot pp certState, utxosGovState utxos, stAnnTx)
 
   case tx ^. isValidTxL of
     IsValid True ->

@@ -53,11 +53,15 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data ()
+import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.Rules (ledgerPpL, ledgerSlotNoL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..))
+import Cardano.Ledger.State (EraUTxO (..), utxoG)
 import Cardano.Slotting.EpochInfo (EpochInfo)
+import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Time (SystemStart)
+import Control.State.Transition.Extended (ValidationPolicy (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Set as Set
@@ -72,9 +76,37 @@ instance ApplyTx AlonzoEra where
 
   mkStAnnTx = mkAlonzoStAnnTx
 
-  applyTxValidation validationPolicy globals env state stAnnTx =
-    first AlonzoApplyTxError $
-      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
+  internalApplyTxWithValidation validationPolicy globals env state tx =
+    let stAnnTx =
+          mkStAnnTx
+            (unsafeLinearExtendEpochInfo (env ^. ledgerSlotNoL) (epochInfo globals))
+            (systemStart globals)
+            (env ^. ledgerPpL)
+            (state ^. utxoG)
+            tx
+     in first AlonzoApplyTxError $
+          ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
+
+  internalReapplyValidatedTx globals env state vtx
+    | getValidatedTxSlotNo vtx == env ^. ledgerSlotNoL =
+        fst
+          <$> first
+            AlonzoApplyTxError
+            ( ruleApplyTxValidation @"LEDGER"
+                (ValidateSuchThat (notElem lblStatic))
+                globals
+                env
+                state
+                (getValidatedTxStAnnTx vtx)
+            )
+    | otherwise =
+        fst
+          <$> internalApplyTxWithValidation
+            ValidateAll
+            globals
+            env
+            state
+            (getValidatedTxStAnnTx vtx ^. txStAnnTxG)
 
 instance ApplyTick AlonzoEra
 
@@ -109,7 +141,6 @@ mkAlonzoStAnnTx ei sysStart pp utxo tx =
    in
     AlonzoStAnnTx
       { asatTx = tx
-      , asatProtocolVersion = pp ^. ppProtocolVersionL
       , asatScriptsNeeded = scriptsNeeded
       , asatScriptsProvided = scriptsProvided
       , asatPlutusLanguagesUsed =

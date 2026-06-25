@@ -122,6 +122,60 @@ instance
   type BaseEnv (LEDGER era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
+ledgersSigGen ::
+  forall c era.
+  ( Crypto c
+  , ApplyTx era
+  , EraGen era
+  , EraUTxO era
+  , ShelleyEraAccounts era
+  , MinLEDGER_STS era
+  , Embed (EraRule "DELPL" era) (CERTS era)
+  , Environment (EraRule "DELPL" era) ~ DelplEnv era
+  , State (EraRule "DELPL" era) ~ CertState era
+  , Signal (EraRule "DELPL" era) ~ TxCert era
+  ) =>
+  GenEnv c era ->
+  ShelleyLedgersEnv era ->
+  LedgerState era ->
+  Gen (Seq (Tx TopTx era))
+ledgersSigGen
+  ge@(GenEnv _ _ Constants {maxTxsPerBlock})
+  (LedgersEnv slotNo epochNo pParams reserves)
+  ls = do
+    (_, txs') <-
+      foldM
+        genAndApplyTx
+        (ls, [])
+        [minBound .. mkTxIxPartial (toInteger maxTxsPerBlock - 1)]
+
+    pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
+    where
+      genAndApplyTx ::
+        HasCallStack =>
+        (LedgerState era, [Tx TopTx era]) ->
+        TxIx ->
+        Gen (LedgerState era, [Tx TopTx era])
+      genAndApplyTx (ls', txs) txIx = do
+        let ledgerEnv = LedgerEnv slotNo (Just epochNo) txIx pParams reserves
+        tx <- genTx ge ledgerEnv ls'
+
+        let utxo = utxosUtxo (lsUTxOState ls')
+            stAnnTx =
+              mkStAnnTx
+                (epochInfo testGlobals)
+                (systemStart testGlobals)
+                pParams
+                utxo
+                tx
+            res =
+              runShelleyBase $
+                applySTSTest @(EraRule "LEDGER" era)
+                  (TRC (ledgerEnv, ls', stAnnTx))
+        case res of
+          Left pf -> error ("LEDGER sigGen: " <> show pf)
+          Right ls'' -> pure (ls'', tx : txs)
+
 instance
   ( Crypto c
   , ApplyTx era
@@ -149,43 +203,7 @@ instance
       <*> genAccountState geConstants
 
   -- a LEDGERS signal is a sequence of LEDGER signals
-  sigGen
-    ge@(GenEnv _ _ Constants {maxTxsPerBlock})
-    (LedgersEnv slotNo epochNo pParams reserves)
-    ls = do
-      (_, txs') <-
-        foldM
-          genAndApplyTx
-          (ls, [])
-          [minBound .. mkTxIxPartial (toInteger maxTxsPerBlock - 1)]
-
-      pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
-      where
-        genAndApplyTx ::
-          HasCallStack =>
-          (LedgerState era, [Tx TopTx era]) ->
-          TxIx ->
-          Gen (LedgerState era, [Tx TopTx era])
-        genAndApplyTx (ls', txs) txIx = do
-          let ledgerEnv = LedgerEnv slotNo (Just epochNo) txIx pParams reserves
-          tx <- genTx ge ledgerEnv ls'
-
-          let utxo = utxosUtxo (lsUTxOState ls')
-              stAnnTx =
-                mkStAnnTx
-                  (epochInfo testGlobals)
-                  (systemStart testGlobals)
-                  pParams
-                  utxo
-                  tx
-              res =
-                runShelleyBase $
-                  applySTSTest @(EraRule "LEDGER" era)
-                    (TRC (ledgerEnv, ls', stAnnTx))
-          case res of
-            Left pf -> error ("LEDGER sigGen: " <> show pf)
-            Right ls'' -> pure (ls'', tx : txs)
-
+  sigGen = ledgersSigGen
   shrinkSignal = const []
 
   type BaseEnv (LEDGERS era) = Globals

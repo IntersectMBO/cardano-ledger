@@ -44,7 +44,6 @@ import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Shelley.API
-import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
 
@@ -55,9 +54,9 @@ instance ApplyTx ConwayEra where
 
   mkStAnnTx = mkAlonzoStAnnTx
 
-  applyTxValidation validationPolicy globals env state stAnnTx =
-    first ConwayApplyTxError $
-      ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state stAnnTx
+  internalApplyTxWithValidation = defaultApplyTxWithValidation @"MEMPOOL" ConwayApplyTxError
+
+  internalReapplyValidatedTx = defaultReapplyValidatedTx @"MEMPOOL" ConwayApplyTxError
 
 instance ApplyTick ConwayEra
 

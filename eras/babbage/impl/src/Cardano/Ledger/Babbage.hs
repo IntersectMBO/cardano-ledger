@@ -53,7 +53,6 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
 
@@ -65,9 +64,9 @@ instance ApplyTx BabbageEra where
 
   mkStAnnTx = mkAlonzoStAnnTx
 
-  applyTxValidation validationPolicy globals env state stAnnTx =
-    first BabbageApplyTxError $
-      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
+  internalApplyTxWithValidation = defaultApplyTxWithValidation @"LEDGER" BabbageApplyTxError
+
+  internalReapplyValidatedTx = defaultReapplyValidatedTx @"LEDGER" BabbageApplyTxError
 
 instance ApplyTick BabbageEra
 

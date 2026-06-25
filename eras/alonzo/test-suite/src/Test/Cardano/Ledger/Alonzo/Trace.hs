@@ -15,14 +15,14 @@
 module Test.Cardano.Ledger.Alonzo.Trace () where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Rules (LEDGER)
+import Cardano.Ledger.Alonzo.Rules (LEDGER, LEDGERS)
 import Cardano.Ledger.BaseTypes (Globals, epochInfo, systemStart)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, lsUTxOState, utxosUtxo)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.Crypto (Crypto)
-import Cardano.Slotting.Slot (SlotNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
 import Data.Functor.Identity (runIdentity)
@@ -31,7 +31,10 @@ import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (genAccountState)
+import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (
+  genAccountState,
+  ledgersSigGen,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (CERTS)
 import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
@@ -86,4 +89,36 @@ instance
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 
   type BaseEnv (LEDGER era) = Globals
+  interpretSTS globals act = runIdentity $ runReaderT act globals
+
+instance
+  ( Crypto c
+  , ApplyTx era
+  , EraGen era
+  , EraGov era
+  , EraUTxO era
+  , EraStake era
+  , EraCertState era
+  , ShelleyEraAccounts era
+  , MinLEDGER_STS era
+  , Embed (EraRule "DELPL" era) (CERTS era)
+  , Environment (EraRule "DELPL" era) ~ Shelley.DelplEnv era
+  , State (EraRule "DELPL" era) ~ CertState era
+  , Signal (EraRule "DELPL" era) ~ TxCert era
+  , PredicateFailure (EraRule "DELPL" era) ~ Shelley.ShelleyDelplPredFailure era
+  , Embed (EraRule "DELEG" era) (Shelley.DELPL era)
+  , Embed (EraRule "LEDGER" era) (LEDGERS era)
+  , AtMostEra "Babbage" era
+  ) =>
+  TQC.HasTrace (LEDGERS era) (GenEnv c era)
+  where
+  envGen GenEnv {geConstants} =
+    Shelley.LedgersEnv (SlotNo 0) (EpochNo 0)
+      <$> genEraPParams @era geConstants
+      <*> genAccountState geConstants
+
+  sigGen = ledgersSigGen
+  shrinkSignal = const []
+
+  type BaseEnv (LEDGERS era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals

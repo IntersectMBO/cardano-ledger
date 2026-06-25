@@ -14,6 +14,7 @@ module Cardano.Ledger.Alonzo.Era (
   UTXOW,
   BBODY,
   LEDGER,
+  LEDGERS,
 
   -- * Deprecated
   AlonzoUTXO,
@@ -40,6 +41,10 @@ type instance Value AlonzoEra = MaryValue
 -------------------------------------------------------------------------------
 
 -- These rules are new or changed in Alonzo
+
+data LEDGERS era
+
+type instance EraRule "LEDGERS" AlonzoEra = LEDGERS AlonzoEra
 
 data UTXOS era
 
@@ -90,8 +95,6 @@ type instance EraRule "DELEGS" AlonzoEra = Shelley.DELEGS AlonzoEra
 type instance EraRule "DELPL" AlonzoEra = Shelley.DELPL AlonzoEra
 
 type instance EraRule "EPOCH" AlonzoEra = Shelley.EPOCH AlonzoEra
-
-type instance EraRule "LEDGERS" AlonzoEra = Shelley.LEDGERS AlonzoEra
 
 type instance EraRule "MIR" AlonzoEra = Shelley.MIR AlonzoEra
 

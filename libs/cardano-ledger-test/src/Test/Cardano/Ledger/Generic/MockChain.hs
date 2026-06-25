@@ -17,6 +17,7 @@
 
 module Test.Cardano.Ledger.Generic.MockChain where
 
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -185,6 +186,17 @@ instance
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   Embed (Shelley.LEDGERS era) (MOCKCHAIN era)
+  where
+  wrapFailed = MockChainFromLedgersFailure
+  wrapEvent = MockChainFromLedgersEvent
+
+instance
+  ( STS (Alonzo.LEDGERS era)
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
+  ) =>
+  Embed (Alonzo.LEDGERS era) (MOCKCHAIN era)
   where
   wrapFailed = MockChainFromLedgersFailure
   wrapEvent = MockChainFromLedgersEvent

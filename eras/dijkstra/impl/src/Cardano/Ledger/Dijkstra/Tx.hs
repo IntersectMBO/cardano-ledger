@@ -33,7 +33,7 @@ import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   IsValid (..),
  )
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), integralToBounded)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -372,7 +372,6 @@ toCBORForMempoolSubmission = \case
 data DijkstraStAnnTx l era where
   DijkstraStAnnTopTx ::
     { dsattTx :: !(Tx TopTx era)
-    , dsattProtocolVersion :: !ProtVer
     , dsattScriptsNeeded :: ScriptsNeeded era
     , dsattScriptsProvided :: ScriptsProvided era
     , dsattPlutusLegacyMode :: Bool

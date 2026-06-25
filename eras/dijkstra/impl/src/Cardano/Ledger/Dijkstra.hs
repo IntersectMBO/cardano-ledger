@@ -58,12 +58,12 @@ import Cardano.Ledger.Shelley.API (
   ApplyBlock (..),
   ApplyTick (..),
   ApplyTx (..),
-  ruleApplyTxValidation,
+  defaultApplyTxWithValidation,
+  defaultReapplyValidatedTx,
  )
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided, UTxO)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
-import Data.Bifunctor (Bifunctor (first))
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
@@ -79,9 +79,9 @@ instance ApplyTx DijkstraEra where
 
   mkStAnnTx = mkDijkstraStAnnTopTx
 
-  applyTxValidation validationPolicy globals env state stAnnTx =
-    first DijkstraApplyTxError $
-      ruleApplyTxValidation @"MEMPOOL" validationPolicy globals env state stAnnTx
+  internalApplyTxWithValidation = defaultApplyTxWithValidation @"MEMPOOL" DijkstraApplyTxError
+
+  internalReapplyValidatedTx = defaultReapplyValidatedTx @"MEMPOOL" DijkstraApplyTxError
 
 instance ApplyTick DijkstraEra
 
@@ -138,7 +138,6 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo tx =
    in
     DijkstraStAnnTopTx
       { dsattTx = tx
-      , dsattProtocolVersion = pp ^. ppProtocolVersionL
       , dsattScriptsNeeded = scriptsNeeded
       , dsattScriptsProvided = scriptsProvided
       , dsattPlutusLegacyMode = not $ Set.null $ Set.filter (<= PlutusV3) languagesUsed
