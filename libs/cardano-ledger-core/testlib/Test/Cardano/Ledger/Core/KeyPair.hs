@@ -43,9 +43,7 @@ import qualified Cardano.Crypto.Signing as Byron (
  )
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (Testnet))
-import Cardano.Ledger.Binary (EncCBOR (encCBOR))
-import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
-import qualified Cardano.Ledger.Binary.Coders as Coders
+import Cardano.Ledger.Binary (EncCBOR (encCBOR), encodeListLen)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
@@ -106,7 +104,7 @@ instance Uniform (KeyPair kd) where
       <$> uniformByteStringM (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @DSIGN))) g
 
 instance EncCBOR (KeyPair r) where
-  encCBOR (KeyPair x y) = encode $ Coders.Rec KeyPair !> To x !> To y
+  encCBOR (KeyPair x y) = encodeListLen 2 <> encCBOR x <> encCBOR y
 
 deriving instance Typeable r => Eq (KeyPair r)
 

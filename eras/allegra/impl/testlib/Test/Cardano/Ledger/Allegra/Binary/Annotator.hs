@@ -20,7 +20,6 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -46,31 +45,38 @@ instance
       TypeListLenIndef -> decodeFromList
       _ -> fail "Failed to decode AuxiliaryDataRaw"
     where
-      decodeFromMap =
-        decode
-          ( Emit AllegraTxAuxDataRaw
-              <! From
-              <! Emit StrictSeq.empty
-          )
+      decodeFromMap = do
+        metadata <- decCBOR
+        pure $ AllegraTxAuxDataRaw metadata StrictSeq.empty
       decodeFromList =
-        decode
-          ( RecD AllegraTxAuxDataRaw
-              <! From
-              <! From
-          )
+        decodeRecordNamed "AllegraTxAuxDataRaw" (const 2) $
+          AllegraTxAuxDataRaw <$> decCBOR <*> decCBOR
 
 deriving newtype instance
   (AllegraEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AllegraTxAuxData era)
 
 instance Era era => DecCBOR (TimelockRaw era) where
-  decCBOR = decode $ Summands "TimelockRaw" $ \case
-    0 -> SumD TimelockSignature <! From
-    1 -> SumD TimelockAllOf <! From
-    2 -> SumD TimelockAnyOf <! From
-    3 -> SumD TimelockMOf <! From <! From
-    4 -> SumD TimelockTimeStart <! From
-    5 -> SumD TimelockTimeExpire <! From
-    n -> Invalid n
+  decCBOR = decodeRecordSum "TimelockRaw" $ \case
+    0 -> do
+      keyHash <- decCBOR
+      pure (2, TimelockSignature keyHash)
+    1 -> do
+      timelocks <- decCBOR
+      pure (2, TimelockAllOf timelocks)
+    2 -> do
+      timelocks <- decCBOR
+      pure (2, TimelockAnyOf timelocks)
+    3 -> do
+      requiredCount <- decCBOR
+      timelocks <- decCBOR
+      pure (3, TimelockMOf requiredCount timelocks)
+    4 -> do
+      slot <- decCBOR
+      pure (2, TimelockTimeStart slot)
+    5 -> do
+      slot <- decCBOR
+      pure (2, TimelockTimeExpire slot)
+    k -> invalidKey k
 
 instance Era era => DecCBOR (Timelock era) where
   decCBOR = MkTimelock <$> decodeMemoized decCBOR

@@ -42,8 +42,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), AsIx (..), PlutusPur
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (Network (..), SlotNo (..))
-import Cardano.Ledger.Binary (EncCBOR (encCBOR))
-import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
+import Cardano.Ledger.Binary (EncCBOR (encCBOR), encodeListLen)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State (
@@ -327,7 +326,8 @@ instance Show (WitUniv era) where
       ++ "\n"
 
 instance Era era => EncCBOR (WitUniv era) where
-  encCBOR (WitUniv n w x y z) = encode $ Rec WitUniv !> To n !> To w !> To x !> To y !> To z
+  encCBOR (WitUniv n w x y z) =
+    encodeListLen 5 <> encCBOR n <> encCBOR w <> encCBOR x <> encCBOR y <> encCBOR z
 
 -- ====================================================================
 -- Purpose 1) To efficiently constrain objects to be witnessed when using constraint generators

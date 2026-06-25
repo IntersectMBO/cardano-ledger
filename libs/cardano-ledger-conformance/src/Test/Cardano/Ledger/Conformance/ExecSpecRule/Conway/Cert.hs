@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -14,8 +15,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (
 ) where
 
 import Cardano.Ledger.Address (AccountAddress)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (Era)
@@ -56,17 +56,14 @@ instance Era era => Arbitrary (ConwayCertExecContext era) where
 instance Era era => EncCBOR (ConwayCertExecContext era) where
   encCBOR x@(ConwayCertExecContext _ _) =
     let ConwayCertExecContext {..} = x
-     in encode $
-          Rec ConwayCertExecContext
-            !> To ccecWithdrawals
-            !> To ccecVotes
+     in encodeListLen 2
+          <> encCBOR ccecWithdrawals
+          <> encCBOR ccecVotes
 
 instance Era era => DecCBOR (ConwayCertExecContext era) where
   decCBOR =
-    decode $
-      RecD ConwayCertExecContext
-        <! From
-        <! From
+    decodeRecordNamed "ConwayCertExecContext" (const 2) $
+      ConwayCertExecContext <$> decCBOR <*> decCBOR
 
 instance Era era => ToExpr (ConwayCertExecContext era)
 

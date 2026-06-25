@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,16 +26,10 @@ import Cardano.Ledger.Binary (
   DecoderError,
   EncCBOR (..),
   decodeFull,
+  decodeRecordNamed,
+  encodeListLen,
   fromPlainDecoder,
   fromPlainEncoding,
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.State (UTxO (..))
@@ -187,14 +182,13 @@ instance
   EncCBOR (TranslationInstance era)
   where
   encCBOR (TranslationInstance pp l u tx p r) =
-    encode $
-      Rec TranslationInstance
-        !> To pp
-        !> To l
-        !> To u
-        !> To tx
-        !> To p
-        !> To r
+    encodeListLen 6
+      <> encCBOR pp
+      <> encCBOR l
+      <> encCBOR u
+      <> encCBOR tx
+      <> encCBOR p
+      <> encCBOR r
 
 instance
   ( DecCBOR (PParams era)
@@ -205,14 +199,14 @@ instance
   DecCBOR (TranslationInstance era)
   where
   decCBOR =
-    decode $
-      RecD TranslationInstance
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
+    decodeRecordNamed "TranslationInstance" (const 6) $
+      TranslationInstance
+        <$> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
 
 deserializeTranslationInstances ::
   forall era.
